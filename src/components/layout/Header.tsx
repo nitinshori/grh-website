@@ -32,12 +32,45 @@ export function Header() {
         <div className="flex items-center justify-between h-16 lg:h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 shrink-0">
-            <span className="text-2xl">&#9877;</span>
-            <div>
-              <span className="text-lg font-bold text-navy-900 tracking-tight">
+            <svg
+              width="190"
+              height="32"
+              viewBox="0 0 190 32"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-8 w-auto"
+            >
+              <rect x="1" y="3" width="26" height="26" rx="7" fill="#2a4d72" />
+              <polyline
+                points="5,17 9,17 12,10 15,24 18,14 20,17 23,17"
+                stroke="#14b8a6"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
+              />
+              <text
+                x="34"
+                y="15"
+                fontFamily="Inter, system-ui, sans-serif"
+                fontWeight="800"
+                fontSize="13.5"
+                fill="#2a4d72"
+              >
                 Get Real Health
-              </span>
-            </div>
+              </text>
+              <text
+                x="34"
+                y="27"
+                fontFamily="Inter, system-ui, sans-serif"
+                fontWeight="600"
+                fontSize="7"
+                fill="#14b8a6"
+                letterSpacing="1.2"
+              >
+                PHARMACY PGD SERVICES
+              </text>
+            </svg>
           </Link>
 
           {/* Desktop Nav */}
