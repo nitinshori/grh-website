@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -93,9 +94,15 @@ export default function HomePage() {
                 <div className="absolute -inset-4 bg-gradient-to-br from-teal-400/20 to-teal-600/10 rounded-2xl blur-xl" />
 
                 <div className="relative bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8 max-w-sm">
-                  {/* Photo placeholder — replace with <Image> when photo is ready */}
-                  <div className="w-32 h-32 mx-auto rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center mb-6 ring-4 ring-white/10">
-                    <span className="text-4xl font-bold text-white">NS</span>
+                  <div className="w-32 h-32 mx-auto rounded-full overflow-hidden mb-6 ring-4 ring-white/10">
+                    <Image
+                      src="/images/nitin-founder.jpg"
+                      alt="Dr Nitin Shori — Founder & Medical Director"
+                      width={128}
+                      height={128}
+                      className="w-full h-full object-cover"
+                      priority
+                    />
                   </div>
 
                   <div className="text-center">
@@ -106,8 +113,8 @@ export default function HomePage() {
                       Founder &amp; Medical Director
                     </p>
                     <p className="text-blue-200 text-sm mt-3 leading-relaxed">
-                      Former Medical Director at Pharmacy2U. Built the UK&apos;s
-                      first online GLP-1 &amp; TRT prescribing service.
+                      NHS GP Partner for 20 years. Pharmacy2U Medical Director
+                      for 12 years. Law degree holder.
                     </p>
                   </div>
 
@@ -456,17 +463,14 @@ export default function HomePage() {
             <div className="lg:col-span-2 flex justify-center">
               <div className="relative">
                 <div className="absolute -inset-3 bg-gradient-to-br from-teal-200/40 to-navy-200/40 rounded-2xl blur-lg" />
-                {/* Photo placeholder — swap for <Image src="/images/nitin-founder.jpg"> */}
-                <div className="relative w-72 h-80 sm:w-80 sm:h-96 rounded-2xl bg-gradient-to-br from-navy-800 to-navy-900 flex flex-col items-center justify-center overflow-hidden shadow-xl">
-                  <div className="w-28 h-28 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center mb-4 ring-4 ring-white/10">
-                    <span className="text-5xl font-bold text-white">NS</span>
-                  </div>
-                  <p className="text-white font-bold text-lg">
-                    Dr Nitin Shori
-                  </p>
-                  <p className="text-teal-300 text-sm mt-1">
-                    Founder &amp; Medical Director
-                  </p>
+                <div className="relative w-72 h-80 sm:w-80 sm:h-96 rounded-2xl overflow-hidden shadow-xl">
+                  <Image
+                    src="/images/nitin-founder.jpg"
+                    alt="Dr Nitin Shori — Founder & Medical Director of Get Real Health"
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 288px, 320px"
+                  />
                 </div>
               </div>
             </div>
@@ -481,26 +485,31 @@ export default function HomePage() {
               </h2>
 
               <p className="text-gray-600 leading-relaxed mb-4">
-                As Medical Director of Pharmacy2U &mdash; the UK&apos;s largest
-                online pharmacy &mdash; Nitin built its online doctor service
-                from scratch: GLP-1 weight management, testosterone replacement,
-                and erectile dysfunction treatments, online, before anyone else
-                in the UK was doing it.
+                Dr Nitin Shori has been an NHS GP Partner for over 20 years and
+                ran a private GP service alongside his NHS practice. He holds a
+                law degree &mdash; giving him a unique perspective on clinical
+                governance, regulatory compliance, and the medico-legal
+                landscape.
+              </p>
+
+              <p className="text-gray-600 leading-relaxed mb-4">
+                As founder of the Pharmacy2U Online Doctor Service and Medical
+                Director for 12 years, Nitin built the UK&apos;s first online
+                GLP-1 and TRT prescribing service from scratch &mdash; safely,
+                at scale, under full CQC oversight.
               </p>
 
               <p className="text-gray-600 leading-relaxed mb-6">
-                That&apos;s not a CV line. It&apos;s the clinical experience
-                behind every PGD we write, every governance framework we build,
-                and every decision we make when something goes wrong.
+                That experience is behind everything at Get Real Health: every
+                PGD we write, the CPD-accredited training we deliver, and every
+                governance framework we build for partner pharmacies.
               </p>
 
               <blockquote className="border-l-4 border-teal-500 pl-5 py-2 mb-6">
                 <p className="text-navy-800 italic leading-relaxed">
-                  &ldquo;We were told GLP-1 prescribing online was too risky,
-                  too complicated, and that pharmacies weren&apos;t ready. We
-                  did it anyway &mdash; safely, at scale, under full CQC
-                  oversight. Everything we build here starts from that same
-                  principle.&rdquo;
+                  &ldquo;Clinical rigour enables commercial success &mdash; not
+                  the other way around. That&apos;s the principle behind every
+                  PGD, every training module, and every decision we make.&rdquo;
                 </p>
               </blockquote>
 
