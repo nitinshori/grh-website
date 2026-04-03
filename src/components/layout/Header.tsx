@@ -38,7 +38,7 @@ export function Header() {
               viewBox="0 0 190 32"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
-              className="h-8 w-auto"
+              className="h-10 w-auto"
             >
               <rect x="1" y="3" width="26" height="26" rx="7" fill="#2a4d72" />
               <polyline

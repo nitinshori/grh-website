@@ -101,6 +101,7 @@ export default function HomePage() {
                       width={128}
                       height={128}
                       className="w-full h-full object-cover"
+                      style={{ objectPosition: "50% 25%" }}
                       priority
                     />
                   </div>
@@ -469,6 +470,7 @@ export default function HomePage() {
                     alt="Dr Nitin Shori — Founder & Medical Director of Get Real Health"
                     fill
                     className="object-cover"
+                    style={{ objectPosition: "50% 20%" }}
                     sizes="(max-width: 768px) 288px, 320px"
                   />
                 </div>
@@ -499,10 +501,18 @@ export default function HomePage() {
                 at scale, under full CQC oversight.
               </p>
 
+              <p className="text-gray-600 leading-relaxed mb-4">
+                Through Get Real Health, we&apos;ve written PGDs for the
+                country&apos;s biggest pharmacy chains and supermarkets, as well
+                as smaller independent pharmacies. Our CPD-accredited training
+                ensures every pharmacist we work with meets the same clinical
+                standard &mdash; regardless of the size of their operation.
+              </p>
+
               <p className="text-gray-600 leading-relaxed mb-6">
-                That experience is behind everything at Get Real Health: every
-                PGD we write, the CPD-accredited training we deliver, and every
-                governance framework we build for partner pharmacies.
+                That breadth of experience is behind everything we do: every PGD
+                we write, every training module we deliver, and every governance
+                framework we build for partner pharmacies.
               </p>
 
               <blockquote className="border-l-4 border-teal-500 pl-5 py-2 mb-6">
