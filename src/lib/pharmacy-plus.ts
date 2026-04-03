@@ -67,11 +67,13 @@ export async function deleteResource(id: string): Promise<PharmacyPlusResource |
 
   const [removed] = manifest.resources.splice(index, 1)
 
-  // Delete the actual file blob
-  try {
-    await del(removed.blobUrl)
-  } catch {
-    // File may already be gone; continue with manifest cleanup
+  // Delete the actual file blob (skip for external links)
+  if (!removed.isExternal) {
+    try {
+      await del(removed.blobUrl)
+    } catch {
+      // File may already be gone; continue with manifest cleanup
+    }
   }
 
   await writeManifest(manifest)
@@ -86,6 +88,14 @@ export async function incrementDownloads(id: string): Promise<PharmacyPlusResour
   resource.downloads += 1
   await writeManifest(manifest)
   return resource
+}
+
+export async function addExternalResource(
+  resource: Omit<PharmacyPlusResource, 'downloads'>
+): Promise<void> {
+  const manifest = await readManifest()
+  manifest.resources.push({ ...resource, downloads: 0 })
+  await writeManifest(manifest)
 }
 
 // ── File upload ─────────────────────────────────────────────────

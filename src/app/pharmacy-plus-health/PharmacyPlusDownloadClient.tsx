@@ -19,7 +19,15 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-function FileIcon({ fileType }: { fileType: string }) {
+function FileIcon({ fileType, isExternal }: { fileType: string; isExternal?: boolean }) {
+  if (isExternal) {
+    return (
+      <div className="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold shrink-0 bg-purple-50 text-purple-600">
+        LINK
+      </div>
+    )
+  }
+
   const isPdf = fileType.includes('pdf')
   const isVideo = fileType.startsWith('video/')
   const isDoc = fileType.includes('word') || fileType.includes('document')
@@ -164,13 +172,14 @@ export function PharmacyPlusDownloadClient() {
         <div className="grid md:grid-cols-2 gap-5">
           {filtered.map((resource) => {
             const cat = CATEGORY_CONFIG[resource.category]
+            const isExt = resource.isExternal
             return (
               <div
                 key={resource.id}
                 className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg hover:border-gray-300 transition-all group"
               >
                 <div className="flex items-start gap-4">
-                  <FileIcon fileType={resource.fileType} />
+                  <FileIcon fileType={resource.fileType} isExternal={isExt} />
                   <div className="flex-1 min-w-0">
                     <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium mb-2 ${cat.colour}`}>
                       {cat.icon} {cat.label}
@@ -188,9 +197,13 @@ export function PharmacyPlusDownloadClient() {
 
                 <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
                   <div className="flex items-center gap-3 text-xs text-gray-400">
-                    <span>{formatFileSize(resource.fileSize)}</span>
-                    <span aria-hidden="true">&middot;</span>
-                    <span>{resource.downloads} downloads</span>
+                    {resource.fileSize > 0 && (
+                      <>
+                        <span>{formatFileSize(resource.fileSize)}</span>
+                        <span aria-hidden="true">&middot;</span>
+                      </>
+                    )}
+                    <span>{resource.downloads} {isExt ? 'views' : 'downloads'}</span>
                     <span aria-hidden="true">&middot;</span>
                     <span>
                       {new Date(resource.uploadedAt).toLocaleDateString('en-GB', {
@@ -202,9 +215,11 @@ export function PharmacyPlusDownloadClient() {
                   </div>
                   <a
                     href={`/api/pharmacy-plus/download/${resource.id}`}
+                    target={isExt ? '_blank' : undefined}
+                    rel={isExt ? 'noopener noreferrer' : undefined}
                     className="shrink-0 px-4 py-2 bg-[#14b8a6] hover:bg-[#0d9488] text-white text-sm font-semibold rounded-lg transition-colors"
                   >
-                    Download
+                    {isExt ? 'Open' : 'Download'}
                   </a>
                 </div>
               </div>

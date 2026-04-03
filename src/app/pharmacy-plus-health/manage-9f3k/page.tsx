@@ -5,6 +5,8 @@ import type { PharmacyPlusResource, ResourceCategory } from '@/types/pharmacy-pl
 
 const CATEGORIES: ResourceCategory[] = ['PGD', 'Video', 'Training', 'Compliance', 'SOP']
 
+type UploadMode = 'file' | 'link'
+
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
@@ -76,7 +78,9 @@ function AdminDashboard({ adminKey }: { adminKey: string }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Upload form state
+  const [uploadMode, setUploadMode] = useState<UploadMode>('file')
   const [file, setFile] = useState<File | null>(null)
+  const [externalUrl, setExternalUrl] = useState('')
   const [name, setName] = useState('')
   const [category, setCategory] = useState<ResourceCategory>('PGD')
   const [description, setDescription] = useState('')
@@ -114,19 +118,36 @@ function AdminDashboard({ adminKey }: { adminKey: string }) {
     }
   }
 
+  const resetForm = () => {
+    setFile(null)
+    setExternalUrl('')
+    setName('')
+    setDescription('')
+    setCategory('PGD')
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!file || !name.trim()) return
+
+    // Validate based on mode
+    if (uploadMode === 'file' && (!file || !name.trim())) return
+    if (uploadMode === 'link' && (!externalUrl.trim() || !name.trim())) return
 
     setUploading(true)
     setAuthError(false)
 
     try {
       const formData = new FormData()
-      formData.append('file', file)
       formData.append('name', name.trim())
       formData.append('category', category)
       formData.append('description', description.trim())
+
+      if (uploadMode === 'link') {
+        formData.append('externalUrl', externalUrl.trim())
+      } else {
+        formData.append('file', file!)
+      }
 
       const res = await fetch('/api/pharmacy-plus/upload', {
         method: 'POST',
@@ -141,13 +162,7 @@ function AdminDashboard({ adminKey }: { adminKey: string }) {
 
       if (!res.ok) throw new Error('Upload failed')
 
-      // Reset form
-      setFile(null)
-      setName('')
-      setDescription('')
-      setCategory('PGD')
-      if (fileInputRef.current) fileInputRef.current.value = ''
-
+      resetForm()
       await fetchResources()
     } catch {
       alert('Upload failed. Please try again.')
@@ -179,6 +194,10 @@ function AdminDashboard({ adminKey }: { adminKey: string }) {
   }
 
   const totalDownloads = resources.reduce((sum, r) => sum + r.downloads, 0)
+
+  const canSubmit = uploadMode === 'file'
+    ? !!file && !!name.trim() && !uploading
+    : !!externalUrl.trim() && !!name.trim() && !uploading
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -225,48 +244,95 @@ function AdminDashboard({ adminKey }: { adminKey: string }) {
 
         {/* Upload form */}
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
-            <h2 className="font-bold text-gray-900">Upload New Resource</h2>
-          </div>
-          <form onSubmit={handleUpload} className="p-6 space-y-5">
-            {/* Drop zone */}
-            <div
-              onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={handleFileDrop}
-              onClick={() => fileInputRef.current?.click()}
-              className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
-                dragOver
-                  ? 'border-[#14b8a6] bg-[#14b8a6]/5'
-                  : file
-                  ? 'border-green-300 bg-green-50'
-                  : 'border-gray-300 hover:border-gray-400'
-              }`}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                onChange={handleFileSelect}
-                className="hidden"
-                accept=".pdf,.doc,.docx,.mp4,.mov,.avi,.pptx,.xlsx,.zip"
-              />
-              {file ? (
-                <div>
-                  <p className="text-sm font-medium text-green-700">{file.name}</p>
-                  <p className="text-xs text-green-600 mt-1">{formatFileSize(file.size)}</p>
-                  <p className="text-xs text-gray-400 mt-2">Click or drop to replace</p>
-                </div>
-              ) : (
-                <div>
-                  <p className="text-sm text-gray-600 font-medium">
-                    Drop a file here or click to browse
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    PDF, Word, PowerPoint, Excel, Video, ZIP
-                  </p>
-                </div>
-              )}
+          <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
+            <h2 className="font-bold text-gray-900">Add New Resource</h2>
+            {/* Mode toggle */}
+            <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => { setUploadMode('file'); setExternalUrl('') }}
+                className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                  uploadMode === 'file'
+                    ? 'bg-[#14b8a6] text-white'
+                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                Upload File
+              </button>
+              <button
+                type="button"
+                onClick={() => { setUploadMode('link'); setFile(null); if (fileInputRef.current) fileInputRef.current.value = '' }}
+                className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                  uploadMode === 'link'
+                    ? 'bg-[#14b8a6] text-white'
+                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                External Link
+              </button>
             </div>
+          </div>
+
+          <form onSubmit={handleUpload} className="p-6 space-y-5">
+            {uploadMode === 'file' ? (
+              /* File drop zone */
+              <div
+                onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={handleFileDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
+                  dragOver
+                    ? 'border-[#14b8a6] bg-[#14b8a6]/5'
+                    : file
+                    ? 'border-green-300 bg-green-50'
+                    : 'border-gray-300 hover:border-gray-400'
+                }`}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                  accept=".pdf,.doc,.docx,.mp4,.mov,.avi,.pptx,.xlsx,.zip"
+                />
+                {file ? (
+                  <div>
+                    <p className="text-sm font-medium text-green-700">{file.name}</p>
+                    <p className="text-xs text-green-600 mt-1">{formatFileSize(file.size)}</p>
+                    <p className="text-xs text-gray-400 mt-2">Click or drop to replace</p>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-sm text-gray-600 font-medium">
+                      Drop a file here or click to browse
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      PDF, Word, PowerPoint, Excel, Video, ZIP &mdash; max ~4 MB
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* External link input */
+              <div>
+                <label htmlFor="ext-url" className="block text-sm font-medium text-gray-700 mb-1">
+                  External URL *
+                </label>
+                <input
+                  id="ext-url"
+                  type="url"
+                  value={externalUrl}
+                  onChange={(e) => setExternalUrl(e.target.value)}
+                  placeholder="https://drive.google.com/... or https://youtu.be/..."
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-[#14b8a6] focus:border-transparent outline-none"
+                  required
+                />
+                <p className="text-xs text-gray-400 mt-2">
+                  Use for large files (videos, presentations). Upload to Google Drive, YouTube, or Vimeo and paste the sharing link here. Clicks are still tracked.
+                </p>
+              </div>
+            )}
 
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
@@ -316,10 +382,12 @@ function AdminDashboard({ adminKey }: { adminKey: string }) {
 
             <button
               type="submit"
-              disabled={uploading || !file || !name.trim()}
+              disabled={!canSubmit}
               className="w-full px-4 py-2.5 bg-[#14b8a6] hover:bg-[#0d9488] disabled:bg-gray-300 text-white font-semibold rounded-lg transition-colors text-sm"
             >
-              {uploading ? 'Uploading...' : 'Upload Resource'}
+              {uploading
+                ? (uploadMode === 'file' ? 'Uploading...' : 'Saving...')
+                : (uploadMode === 'file' ? 'Upload Resource' : 'Add External Link')}
             </button>
           </form>
         </div>
@@ -339,10 +407,18 @@ function AdminDashboard({ adminKey }: { adminKey: string }) {
               {resources.map((r) => (
                 <div key={r.id} className="px-6 py-4 flex items-center gap-4 hover:bg-gray-50 transition-colors">
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 truncate">{r.name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-gray-900 truncate">{r.name}</p>
+                      {r.isExternal && (
+                        <span className="shrink-0 px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-[10px] font-semibold">
+                          LINK
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-gray-400 mt-0.5">
-                      {r.category} &middot; {formatFileSize(r.fileSize)} &middot;{' '}
-                      {r.downloads} downloads &middot;{' '}
+                      {r.category}
+                      {r.fileSize > 0 && <> &middot; {formatFileSize(r.fileSize)}</>}
+                      {' '}&middot; {r.downloads} {r.isExternal ? 'clicks' : 'downloads'} &middot;{' '}
                       {new Date(r.uploadedAt).toLocaleDateString('en-GB', {
                         day: 'numeric', month: 'short', year: 'numeric',
                       })}

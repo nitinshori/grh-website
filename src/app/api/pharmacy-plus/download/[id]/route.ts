@@ -15,7 +15,7 @@ export async function GET(
       return NextResponse.json({ error: 'Resource not found' }, { status: 404 })
     }
 
-    // Redirect to the actual blob URL for download
+    // Redirect to the URL (works for both Blob URLs and external links)
     return NextResponse.redirect(resource.blobUrl, 302)
   } catch (error) {
     console.error('Download error:', error)

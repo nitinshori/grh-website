@@ -11,6 +11,8 @@ export interface PharmacyPlusResource {
   fileType: string
   uploadedAt: string
   downloads: number
+  /** If true, blobUrl is an external link (YouTube, Google Drive, etc.) — not stored in Vercel Blob */
+  isExternal?: boolean
 }
 
 export interface ResourceManifest {
