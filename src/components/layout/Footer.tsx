@@ -5,6 +5,7 @@ const pharmacyLinks = [
   { href: "/for-pharmacies/pgd-catalogue", label: "PGD Catalogue" },
   { href: "/for-pharmacies/pricing", label: "Pricing" },
   { href: "/for-pharmacies/platform", label: "Our Platform" },
+  { href: "/pharmacy-plus-health", label: "Pharmacy Plus Health Hub" },
 ];
 
 const patientLinks = [
