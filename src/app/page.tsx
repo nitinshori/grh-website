@@ -101,7 +101,7 @@ export default function HomePage() {
                       width={128}
                       height={128}
                       className="w-full h-full object-cover"
-                      style={{ objectPosition: "50% 25%" }}
+                      style={{ objectPosition: "40% 25%" }}
                       priority
                     />
                   </div>
@@ -383,10 +383,10 @@ export default function HomePage() {
                 Pharmacist-led clinical expertise
               </h3>
               <p className="text-gray-600 leading-relaxed mb-4">
-                Our founder was Medical Director at Pharmacy2U, where he built
-                the doctor who brought GLP-1 and TRT prescribing to the UK
-                online market. That clinical and regulatory experience is
-                behind every PGD we write.
+                Our founder is the doctor who brought GLP-1 and TRT prescribing
+                to the UK online market as Medical Director at Pharmacy2U. That
+                clinical and regulatory experience is behind every PGD we
+                write.
               </p>
               <p className="text-sm font-semibold text-teal-600">
                 Not a tech company &mdash; a clinical one.
@@ -471,7 +471,7 @@ export default function HomePage() {
                     alt="Dr Nitin Shori — Founder & Medical Director of Get Real Health"
                     fill
                     className="object-cover"
-                    style={{ objectPosition: "50% 20%" }}
+                    style={{ objectPosition: "40% 20%" }}
                     sizes="(max-width: 768px) 288px, 320px"
                   />
                 </div>
