@@ -54,8 +54,8 @@ export default function HomePage() {
 
               <p className="text-lg sm:text-xl text-blue-200 leading-relaxed mb-8 max-w-xl">
                 60+ PGD services. One flat fee. No per-consult charges, no
-                revenue share. Built by the pharmacist who launched GLP-1
-                prescribing at Pharmacy2U.
+                revenue share. Built by the doctor who brought GLP-1 and TRT
+                prescribing to the UK online market.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4">
@@ -384,8 +384,9 @@ export default function HomePage() {
               </h3>
               <p className="text-gray-600 leading-relaxed mb-4">
                 Our founder was Medical Director at Pharmacy2U, where he built
-                the UK&apos;s first online GLP-1 and TRT prescribing service.
-                That regulatory experience is behind every PGD we write.
+                the doctor who brought GLP-1 and TRT prescribing to the UK
+                online market. That clinical and regulatory experience is
+                behind every PGD we write.
               </p>
               <p className="text-sm font-semibold text-teal-600">
                 Not a tech company &mdash; a clinical one.
@@ -496,9 +497,9 @@ export default function HomePage() {
 
               <p className="text-gray-600 leading-relaxed mb-4">
                 As founder of the Pharmacy2U Online Doctor Service and Medical
-                Director for 12 years, Nitin built the UK&apos;s first online
-                GLP-1 and TRT prescribing service from scratch &mdash; safely,
-                at scale, under full CQC oversight.
+                Director for 12 years, Nitin brought GLP-1 weight management
+                and TRT prescribing to the UK online market &mdash; safely, at
+                scale, under full CQC oversight.
               </p>
 
               <p className="text-gray-600 leading-relaxed mb-4">
