@@ -5,17 +5,17 @@ const MANIFEST_PATH = 'pharmacy-plus/manifest.json'
 
 // ── Manifest operations ─────────────────────────────────────────
 
-async function getManifestUrl(): Promise<string | null> {
+async function getManifestBlob(): Promise<{ url: string; downloadUrl: string } | null> {
   const { blobs } = await list({ prefix: MANIFEST_PATH })
-  return blobs.length > 0 ? blobs[0].url : null
+  return blobs.length > 0 ? { url: blobs[0].url, downloadUrl: blobs[0].downloadUrl } : null
 }
 
 export async function readManifest(): Promise<ResourceManifest> {
   try {
-    const url = await getManifestUrl()
-    if (!url) return { resources: [], updatedAt: new Date().toISOString() }
+    const blob = await getManifestBlob()
+    if (!blob) return { resources: [], updatedAt: new Date().toISOString() }
 
-    const response = await fetch(url, { cache: 'no-store' })
+    const response = await fetch(blob.downloadUrl, { cache: 'no-store' })
     if (!response.ok) return { resources: [], updatedAt: new Date().toISOString() }
 
     return (await response.json()) as ResourceManifest
@@ -26,15 +26,15 @@ export async function readManifest(): Promise<ResourceManifest> {
 
 async function writeManifest(manifest: ResourceManifest): Promise<void> {
   // Delete old manifest first (Blob is append-only, so we replace)
-  const url = await getManifestUrl()
-  if (url) {
-    await del(url)
+  const blob = await getManifestBlob()
+  if (blob) {
+    await del(blob.url)
   }
 
   manifest.updatedAt = new Date().toISOString()
 
   await put(MANIFEST_PATH, JSON.stringify(manifest, null, 2), {
-    access: 'public',
+    access: 'private',
     contentType: 'application/json',
     addRandomSuffix: false,
   })
@@ -102,9 +102,10 @@ export async function addExternalResource(
 
 export async function uploadFile(file: File): Promise<{ url: string; size: number }> {
   const blob = await put(`pharmacy-plus/files/${file.name}`, file, {
-    access: 'public',
+    access: 'private',
     contentType: file.type,
   })
 
-  return { url: blob.url, size: file.size }
+  // Use downloadUrl for private stores (permanent signed URL)
+  return { url: blob.downloadUrl, size: file.size }
 }
