@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { incrementDownloads } from '@/lib/pharmacy-plus'
+import { incrementDownloads, getSignedDownloadUrl } from '@/lib/pharmacy-plus'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,8 +15,14 @@ export async function GET(
       return NextResponse.json({ error: 'Resource not found' }, { status: 404 })
     }
 
-    // Redirect to the URL (works for both Blob URLs and external links)
-    return NextResponse.redirect(resource.blobUrl, 302)
+    // External links: redirect directly
+    if (resource.isExternal) {
+      return NextResponse.redirect(resource.blobUrl, 302)
+    }
+
+    // Private blob files: generate a signed download URL
+    const signedUrl = await getSignedDownloadUrl(resource.blobUrl)
+    return NextResponse.redirect(signedUrl, 302)
   } catch (error) {
     console.error('Download error:', error)
     return NextResponse.json({ error: 'Download failed' }, { status: 500 })

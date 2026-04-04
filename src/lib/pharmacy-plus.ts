@@ -1,24 +1,27 @@
-import { put, del, list, head } from '@vercel/blob'
+import { put, del, list, get, getDownloadUrl } from '@vercel/blob'
 import type { ResourceManifest, PharmacyPlusResource } from '@/types/pharmacy-plus'
 
 const MANIFEST_PATH = 'pharmacy-plus/manifest.json'
 
 // ── Manifest operations ─────────────────────────────────────────
 
-async function getManifestBlob(): Promise<{ url: string; downloadUrl: string } | null> {
+async function getManifestUrl(): Promise<string | null> {
   const { blobs } = await list({ prefix: MANIFEST_PATH })
-  return blobs.length > 0 ? { url: blobs[0].url, downloadUrl: blobs[0].downloadUrl } : null
+  return blobs.length > 0 ? blobs[0].url : null
 }
 
 export async function readManifest(): Promise<ResourceManifest> {
   try {
-    const blob = await getManifestBlob()
-    if (!blob) return { resources: [], updatedAt: new Date().toISOString() }
+    const url = await getManifestUrl()
+    if (!url) return { resources: [], updatedAt: new Date().toISOString() }
 
-    const response = await fetch(blob.downloadUrl, { cache: 'no-store' })
-    if (!response.ok) return { resources: [], updatedAt: new Date().toISOString() }
+    // Use the SDK's get() for private blob access (handles auth automatically)
+    const result = await get(url, { access: 'private', useCache: false })
+    if (!result || result.statusCode !== 200) return { resources: [], updatedAt: new Date().toISOString() }
 
-    return (await response.json()) as ResourceManifest
+    // Convert stream to JSON
+    const text = await new Response(result.stream).text()
+    return JSON.parse(text) as ResourceManifest
   } catch {
     return { resources: [], updatedAt: new Date().toISOString() }
   }
@@ -26,9 +29,9 @@ export async function readManifest(): Promise<ResourceManifest> {
 
 async function writeManifest(manifest: ResourceManifest): Promise<void> {
   // Delete old manifest first (Blob is append-only, so we replace)
-  const blob = await getManifestBlob()
-  if (blob) {
-    await del(blob.url)
+  const url = await getManifestUrl()
+  if (url) {
+    await del(url)
   }
 
   manifest.updatedAt = new Date().toISOString()
@@ -106,6 +109,12 @@ export async function uploadFile(file: File): Promise<{ url: string; size: numbe
     contentType: file.type,
   })
 
-  // Use downloadUrl for private stores (permanent signed URL)
-  return { url: blob.downloadUrl, size: file.size }
+  // Store the blob URL (not downloadUrl) — we'll generate signed URLs on demand
+  return { url: blob.url, size: file.size }
+}
+
+// ── Signed URL for client downloads ─────────────────────────────
+
+export function getSignedDownloadUrl(blobUrl: string): string {
+  return getDownloadUrl(blobUrl)
 }
