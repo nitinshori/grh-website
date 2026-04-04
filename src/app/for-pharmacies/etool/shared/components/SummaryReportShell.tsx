@@ -1,0 +1,148 @@
+"use client";
+
+import type { ClinicalAlert, AlertSeverity } from "../types";
+
+// ─── Reusable summary report building blocks ───
+
+export function SectionHeader({ children }: { children: React.ReactNode }) {
+  return (
+    <h3 className="text-sm font-bold text-navy-900 uppercase tracking-wide border-b border-gray-300 pb-1 mb-3 mt-6 first:mt-0 print:text-xs">
+      {children}
+    </h3>
+  );
+}
+
+export function Row({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | React.ReactNode;
+}) {
+  return (
+    <div className="grid grid-cols-3 gap-2 py-1.5 border-b border-gray-100 last:border-0">
+      <dt className="text-xs font-medium text-gray-500 col-span-1">{label}</dt>
+      <dd className="text-xs text-navy-900 col-span-2">{value}</dd>
+    </div>
+  );
+}
+
+export function AlertSummary({ alerts }: { alerts: ClinicalAlert[] }) {
+  if (alerts.length === 0) {
+    return <p className="text-xs text-gray-500">No clinical alerts raised.</p>;
+  }
+  return (
+    <div className="space-y-1.5">
+      {alerts.map((alert) => (
+        <div
+          key={alert.code}
+          className={`text-xs px-2 py-1.5 rounded ${
+            alert.severity === "stop"
+              ? "bg-red-50 text-red-700"
+              : alert.severity === "caution"
+                ? "bg-amber-50 text-amber-700"
+                : "bg-orange-50 text-orange-700"
+          }`}
+        >
+          <span className="font-semibold uppercase">{alert.severity}:</span>{" "}
+          {alert.message}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function CounsellingGrid({
+  items,
+}: {
+  items: [string, boolean][];
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+      {items.map(([label, checked]) => (
+        <div key={label} className="flex items-center gap-2 py-0.5">
+          <span
+            className={`w-3 h-3 rounded border flex items-center justify-center ${
+              checked
+                ? "bg-teal-500 border-teal-500 text-white"
+                : "border-gray-300"
+            }`}
+          >
+            {checked && (
+              <svg className="w-2 h-2" viewBox="0 0 20 20" fill="currentColor">
+                <path
+                  fillRule="evenodd"
+                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            )}
+          </span>
+          <span className="text-gray-700">{label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function PharmacistDeclaration({
+  pgdName,
+  pharmacistName,
+  pharmacistGPhC,
+  pharmacyName,
+}: {
+  pgdName: string;
+  pharmacistName: string;
+  pharmacistGPhC: string;
+  pharmacyName: string;
+}) {
+  return (
+    <>
+      <SectionHeader>Pharmacist Declaration</SectionHeader>
+      <p className="text-xs text-gray-600 mb-4">
+        I confirm that this consultation was conducted in accordance with the
+        Patient Group Direction for {pgdName}, and that the patient met all
+        inclusion criteria and no exclusion criteria applied.
+      </p>
+      <div className="grid grid-cols-2 gap-6">
+        <div>
+          <p className="text-xs font-medium text-gray-500 mb-1">
+            Pharmacist name
+          </p>
+          <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">
+            {pharmacistName || ""}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs font-medium text-gray-500 mb-1">
+            GPhC number
+          </p>
+          <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">
+            {pharmacistGPhC || ""}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs font-medium text-gray-500 mb-1">Pharmacy</p>
+          <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">
+            {pharmacyName || ""}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs font-medium text-gray-500 mb-1">Signature</p>
+          <div className="border-b border-gray-300 min-h-[2rem]" />
+        </div>
+      </div>
+    </>
+  );
+}
+
+export function ReportFooter({ pgdName }: { pgdName: string }) {
+  return (
+    <div className="mt-8 pt-4 border-t border-gray-300 text-center">
+      <p className="text-[10px] text-gray-400">
+        Get Real Health PGD eTool — {pgdName} Consultation Record | Confidential
+        Patient Information | Retain for 8 years (adults)
+      </p>
+    </div>
+  );
+}
