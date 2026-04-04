@@ -548,6 +548,68 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ── CPD ACCREDITATION BANNER ────────────────────────────── */}
+      <section className="bg-white border-y border-gray-100">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
+          <div className="bg-gradient-to-r from-navy-900 to-navy-800 rounded-2xl p-8 sm:p-10 flex flex-col md:flex-row items-center gap-8">
+            {/* Badge */}
+            <div className="flex-shrink-0">
+              <div className="w-24 h-24 rounded-full bg-white/10 border-2 border-teal-400 flex items-center justify-center">
+                <svg
+                  className="w-12 h-12 text-teal-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                  />
+                </svg>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 text-center md:text-left">
+              <p className="text-teal-400 text-sm font-semibold uppercase tracking-wider mb-2">
+                Accredited CPD Provider
+              </p>
+              <h2 className="text-xl sm:text-2xl font-bold text-white mb-3">
+                CPD-accredited training for every PGD
+              </h2>
+              <p className="text-blue-200 leading-relaxed mb-4">
+                Get Real Health is an accredited CPD provider. Every PGD we supply
+                comes with CPD-accredited training, ensuring pharmacists meet the
+                clinical competency standards required for safe, effective
+                consultations under each Patient Group Direction.
+              </p>
+              <div className="flex flex-wrap gap-4 justify-center md:justify-start text-sm">
+                <span className="inline-flex items-center gap-1.5 text-teal-300">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  CPPE-aligned modules
+                </span>
+                <span className="inline-flex items-center gap-1.5 text-teal-300">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Certificate on completion
+                </span>
+                <span className="inline-flex items-center gap-1.5 text-teal-300">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Included with every PGD
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── 6. HOW IT WORKS — 4-Step Process ──────────────────── */}
       <section className="bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">

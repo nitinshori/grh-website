@@ -1,20 +1,46 @@
 "use client";
 
-interface ProgressBarProps {
+type FullProgressBarProps = {
   stepLabels: readonly string[];
   currentStep: number;
   onStepClick: (step: number) => void;
   completedSteps: Set<number>;
-  hasErrors: boolean;
+  hasErrors?: boolean;
+  totalSteps?: number; // ignored — derived from stepLabels.length
+};
+
+type SimpleProgressBarProps = {
+  current: number;
+  total: number;
+};
+
+export type ProgressBarProps = FullProgressBarProps | SimpleProgressBarProps;
+
+function isSimple(props: ProgressBarProps): props is SimpleProgressBarProps {
+  return "current" in props && "total" in props && !("stepLabels" in props);
 }
 
-export function ProgressBar({
-  stepLabels,
-  currentStep,
-  onStepClick,
-  completedSteps,
-  hasErrors,
-}: ProgressBarProps) {
+export function ProgressBar(props: ProgressBarProps) {
+  if (isSimple(props)) {
+    const { current, total } = props;
+    return (
+      <div className="w-full">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-semibold text-navy-900">
+            Step {current} of {total}
+          </span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-2">
+          <div
+            className="h-2 rounded-full transition-all duration-300 bg-teal-500"
+            style={{ width: `${(current / total) * 100}%` }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  const { stepLabels, currentStep, onStepClick, completedSteps, hasErrors = false } = props;
   return (
     <div className="w-full">
       {/* Desktop progress bar */}

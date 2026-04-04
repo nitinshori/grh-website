@@ -11,6 +11,7 @@ export function TextInput({
   placeholder,
   type = "text",
   className = "",
+  disabled,
 }: {
   label: string;
   value: string;
@@ -19,6 +20,7 @@ export function TextInput({
   placeholder?: string;
   type?: string;
   className?: string;
+  disabled?: boolean;
 }) {
   return (
     <div className={className}>
@@ -30,7 +32,8 @@ export function TextInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent"
+        disabled={disabled}
+        className={`w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent ${disabled ? "bg-gray-100 text-gray-500" : ""}`}
       />
     </div>
   );
@@ -110,6 +113,7 @@ export function NumberInput({
   placeholder,
   unit,
   className = "",
+  required,
 }: {
   label: string;
   value: number | null;
@@ -119,11 +123,12 @@ export function NumberInput({
   placeholder?: string;
   unit?: string;
   className?: string;
+  required?: boolean;
 }) {
   return (
     <div className={className}>
       <label className="block text-sm font-medium text-navy-900 mb-1">
-        {label}
+        {label} {required && <span className="text-red-400">*</span>}
       </label>
       <div className="flex items-center gap-2">
         <input
