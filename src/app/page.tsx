@@ -414,7 +414,7 @@ export default function HomePage() {
                 End-to-end platform
               </h3>
               <p className="text-gray-600 leading-relaxed mb-4">
-                PGDs, consultation eTool, online training, clinical support, and
+                PGDs, ePGD consultations, online training, clinical support, and
                 superintendent dashboard &mdash; all built in-house, not
                 licensed from a third party. One login. One fee. One support
                 number.
@@ -600,7 +600,7 @@ export default function HomePage() {
                 Launch services
               </h3>
               <p className="text-sm text-gray-500 leading-relaxed">
-                Start consulting using our built-in eTool. We provide marketing
+                Start consulting using our built-in ePGD. We provide marketing
                 materials to help you promote.
               </p>
             </div>
