@@ -12,7 +12,7 @@ export type PGDCategory =
   | "Occupational"
   | "Paediatrics"
   | "Minor Ailments"
-  | "Post-viral";
+;
 
 export type PGDPriority = 1 | 2 | 3;
 
@@ -42,7 +42,6 @@ export const CATEGORY_COLORS: Record<PGDCategory, string> = {
   Occupational: "bg-cat-occupational",
   Paediatrics: "bg-cat-paediatrics",
   "Minor Ailments": "bg-cat-minor",
-  "Post-viral": "bg-cat-postviral",
 };
 
 export const CATEGORY_TEXT_COLORS: Record<PGDCategory, string> = {
@@ -59,7 +58,6 @@ export const CATEGORY_TEXT_COLORS: Record<PGDCategory, string> = {
   Occupational: "text-cat-occupational",
   Paediatrics: "text-cat-paediatrics",
   "Minor Ailments": "text-cat-minor",
-  "Post-viral": "text-cat-postviral",
 };
 
 export const CATEGORY_BG_LIGHT: Record<PGDCategory, string> = {
@@ -76,7 +74,6 @@ export const CATEGORY_BG_LIGHT: Record<PGDCategory, string> = {
   Occupational: "bg-sky-50",
   Paediatrics: "bg-rose-50",
   "Minor Ailments": "bg-emerald-50",
-  "Post-viral": "bg-indigo-50",
 };
 
 export const ALL_CATEGORIES: PGDCategory[] = [
@@ -93,7 +90,6 @@ export const ALL_CATEGORIES: PGDCategory[] = [
   "Occupational",
   "Paediatrics",
   "Minor Ailments",
-  "Post-viral",
 ];
 
 export const pgds: PGD[] = [
@@ -799,18 +795,6 @@ export const pgds: PGD[] = [
     pharmadoctor: "No",
   },
   {
-    id: "anticoagulation",
-    title: "Anticoagulation Monitoring (DOACs)",
-    category: "CVD",
-    priority: 3,
-    isNew: true,
-    revenueEstimate: "\u00a340\u201370 per review",
-    consultTime: "20 min",
-    description:
-      "Emerging. Not widely offered under PGD. Significant safety need. First mover for pharmacist-led DOAC supply.",
-    pharmadoctor: "No",
-  },
-  {
     id: "diabetes-monitoring",
     title: "Diabetes Type 2 Monitoring + Metformin Continuation",
     category: "CVD",
@@ -846,18 +830,6 @@ export const pgds: PGD[] = [
     consultTime: "20\u201330 min",
     description:
       "DIFFERENTIATION. Occupational health PEP guidance and bridging supply. Not offered by any pharmacy PGD provider.",
-    pharmadoctor: "No",
-  },
-  {
-    id: "occupational-health-checks",
-    title: "Occupational Health Checks",
-    category: "Occupational",
-    priority: 2,
-    isNew: true,
-    revenueEstimate: "\u00a350\u201380 per check",
-    consultTime: "20 min",
-    description:
-      "Pre-employment bloods and BP. Businesses want convenient occupational health \u2014 pharmacy is ideally placed.",
     pharmadoctor: "No",
   },
 
@@ -949,29 +921,4 @@ export const pgds: PGD[] = [
     pharmadoctor: "Partial",
   },
 
-  // ═══ POST-VIRAL ═══
-  {
-    id: "long-covid-ldn",
-    title: "Long COVID Fatigue Management (Low-dose Naltrexone)",
-    category: "Post-viral",
-    priority: 3,
-    isNew: true,
-    revenueEstimate: "\u00a340\u201370 per month",
-    consultTime: "20 min",
-    description:
-      "DIFFERENTIATION. LDN for Long COVID is gaining significant evidence base. No UK pharmacy provider offers this. Niche but passionate patient community.",
-    pharmadoctor: "No",
-  },
-  {
-    id: "post-viral-rehab",
-    title: "Post-viral Rehabilitation Monitoring",
-    category: "Post-viral",
-    priority: 3,
-    isNew: true,
-    revenueEstimate: "\u00a350\u201380 per review",
-    consultTime: "20 min",
-    description:
-      "Emerging. Structured pharmacy-led follow-up for post-COVID and post-viral patients.",
-    pharmadoctor: "No",
-  },
 ];
