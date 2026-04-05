@@ -70,7 +70,18 @@ export async function GET(req: NextRequest) {
       .limit(1)
 
     if (existingJane) {
-      results.push(`Jane already exists: ${existingJane.id}`)
+      // Update Jane's role to client and reset password
+      const passwordHash = await bcrypt.hash('PPH-Client-2026!', 12)
+      await db
+        .update(users)
+        .set({
+          role: 'client',
+          pharmacyId: pphId,
+          passwordHash,
+          isActive: true,
+        })
+        .where(eq(users.id, existingJane.id))
+      results.push(`Updated Jane to client role: ${existingJane.id} (previous role: ${existingJane.role})`)
     } else {
       const passwordHash = await bcrypt.hash('PPH-Client-2026!', 12)
       const [jane] = await db
