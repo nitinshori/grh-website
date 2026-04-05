@@ -7,7 +7,7 @@ import { Suspense } from 'react'
 
 function LoginForm() {
   const searchParams = useSearchParams()
-  const callbackUrl = searchParams.get('callbackUrl') || '/for-pharmacies/epgd'
+  const callbackUrl = searchParams.get('callbackUrl') || '/for-pharmacies/dashboard'
   const error = searchParams.get('error')
 
   const [email, setEmail] = useState('')

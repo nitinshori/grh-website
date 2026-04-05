@@ -19,6 +19,15 @@ export default auth((req: NextRequest & { auth: { user: { role: string } } | nul
     return NextResponse.redirect(loginUrl)
   }
 
+  // ── Protect pharmacy dashboard ───────────────────────────────
+  if (pathname.startsWith('/for-pharmacies/dashboard')) {
+    if (!session) {
+      const loginUrl = new URL('/login', req.nextUrl.origin)
+      loginUrl.searchParams.set('callbackUrl', pathname)
+      return NextResponse.redirect(loginUrl)
+    }
+  }
+
   // ── Protect admin routes ──────────────────────────────────────
   if (pathname.startsWith('/admin')) {
     if (!session) {
@@ -27,7 +36,7 @@ export default auth((req: NextRequest & { auth: { user: { role: string } } | nul
       return NextResponse.redirect(loginUrl)
     }
     if (session.user.role !== 'super_admin') {
-      return NextResponse.redirect(new URL('/for-pharmacies/epgd', req.nextUrl.origin))
+      return NextResponse.redirect(new URL('/for-pharmacies/dashboard', req.nextUrl.origin))
     }
   }
 
@@ -35,5 +44,5 @@ export default auth((req: NextRequest & { auth: { user: { role: string } } | nul
 })
 
 export const config = {
-  matcher: ['/for-pharmacies/epgd/:path+', '/admin/:path*'],
+  matcher: ['/for-pharmacies/epgd/:path+', '/for-pharmacies/dashboard/:path*', '/admin/:path*'],
 }
