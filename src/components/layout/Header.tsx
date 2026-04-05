@@ -142,6 +142,12 @@ export function Header() {
           {/* Desktop CTAs */}
           <div className="hidden lg:flex items-center gap-3">
             <Link
+              href="/for-pharmacies/login"
+              className="text-sm font-medium text-navy-900 hover:text-teal-600 transition-colors"
+            >
+              Pharmacy Login
+            </Link>
+            <Link
               href="/for-pharmacies/pricing"
               className="text-sm font-medium text-navy-900 hover:text-teal-600 transition-colors"
             >
@@ -235,6 +241,13 @@ export function Header() {
 
             <div className="my-3 border-t border-gray-100" />
 
+            <Link
+              href="/for-pharmacies/login"
+              onClick={() => setMobileOpen(false)}
+              className="block w-full text-center px-5 py-3 bg-navy-900 hover:bg-navy-800 text-white text-sm font-semibold rounded-lg transition-colors"
+            >
+              Pharmacy Login
+            </Link>
             <Link
               href="/contact"
               onClick={() => setMobileOpen(false)}
