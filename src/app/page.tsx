@@ -471,7 +471,7 @@ export default function HomePage() {
                     alt="Dr Nitin Shori — Founder & Medical Director of Get Real Health"
                     fill
                     className="object-cover"
-                    style={{ objectPosition: "55% 20%" }}
+                    style={{ objectPosition: "65% 20%" }}
                     sizes="(max-width: 768px) 288px, 320px"
                   />
                 </div>
