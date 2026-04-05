@@ -1,5 +1,8 @@
 "use client";
 
+import { usePathname } from "next/navigation";
+import { useConsultationTracking } from "../hooks/useConsultationTracking";
+
 interface StepWrapperProps {
   title: string;
   description?: string;
@@ -27,6 +30,11 @@ export function StepWrapper({
 }: StepWrapperProps) {
   const isFirstStep = currentStep === 0;
   const isLastStep = currentStep === totalSteps - 1;
+
+  // Extract pgdSlug from URL: /for-pharmacies/epgd/{slug}
+  const pathname = usePathname();
+  const pgdSlug = pathname.split("/").pop() || "";
+  const { markComplete } = useConsultationTracking(pgdSlug, currentStep);
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
@@ -88,7 +96,10 @@ export function StepWrapper({
             </button>
           ) : (
             <button
-              onClick={() => window.print()}
+              onClick={() => {
+                markComplete();
+                window.print();
+              }}
               className="px-6 py-2.5 rounded-lg text-sm font-semibold bg-navy-900 hover:bg-navy-950 text-white transition-colors"
             >
               Print Consultation Record

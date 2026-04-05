@@ -25,10 +25,36 @@ export function ContactForm() {
     value: string
   ) => setFormData((prev) => ({ ...prev, [field]: value }));
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In production, POST to an API route or service (e.g. Resend, SendGrid)
-    setSubmitted(true);
+    setLoading(true);
+    setError("");
+
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Something went wrong. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      setSubmitted(true);
+    } catch {
+      setError(
+        "Unable to send your message. Please try again or email us directly at info@getrealhealthpgd.co.uk."
+      );
+      setLoading(false);
+    }
   };
 
   if (submitted) {
@@ -60,6 +86,11 @@ export function ContactForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
+      {error && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          {error}
+        </div>
+      )}
       {/* Name + Email row */}
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
@@ -181,9 +212,10 @@ export function ContactForm() {
 
       <button
         type="submit"
-        className="w-full sm:w-auto px-8 py-3 bg-teal-500 hover:bg-teal-600 text-white font-semibold rounded-lg transition-colors text-sm"
+        disabled={loading}
+        className="w-full sm:w-auto px-8 py-3 bg-teal-500 hover:bg-teal-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors text-sm"
       >
-        Send message
+        {loading ? "Sending…" : "Send message"}
       </button>
 
       <p className="text-xs text-gray-400">

@@ -5,6 +5,10 @@ import { db } from '@/lib/db'
 import { pharmacies } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { getPharmacyPgdSlugs, ALL_PGDS, PGD_CATEGORIES } from '@/lib/pgd-access'
+import { getPharmacyStats } from '@/lib/analytics'
+
+// Map slug → friendly title
+const pgdTitleMap = new Map(ALL_PGDS.map((p) => [p.slug, p.title]))
 
 // Category colour dots for visual grouping
 const categoryColors: Record<string, string> = {
@@ -74,6 +78,21 @@ export default async function PharmacyDashboard() {
   const categoryCount = Object.keys(pgdsByCategory).length
   const firstName = (session.user.name || 'there').split(' ')[0]
 
+  // Fetch consultation analytics
+  let consultationStats = {
+    totalConsultations: 0,
+    completedConsultations: 0,
+    byPgd: [] as { pgdSlug: string; total: number; completed: number }[],
+    recent: [] as { id: string; pgdSlug: string; startedAt: Date; completedAt: Date | null; userId: string; pharmacyId: string }[],
+  }
+  if (session.user.pharmacyId) {
+    try {
+      consultationStats = await getPharmacyStats(session.user.pharmacyId, 30)
+    } catch {
+      // Analytics table may not exist yet
+    }
+  }
+
   return (
     <div className="px-6 py-8 max-w-6xl mx-auto">
       {/* Welcome Header */}
@@ -125,7 +144,7 @@ export default async function PharmacyDashboard() {
       </div>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-teal-50">
@@ -178,6 +197,30 @@ export default async function PharmacyDashboard() {
 
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
           <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-emerald-50">
+              <svg
+                className="w-5 h-5 text-emerald-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                />
+              </svg>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900">{consultationStats.totalConsultations}</p>
+              <p className="text-sm text-gray-500">Consultations (30d)</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+          <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-green-50">
               <svg
                 className="w-5 h-5 text-green-600"
@@ -194,8 +237,8 @@ export default async function PharmacyDashboard() {
               </svg>
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">Ready</p>
-              <p className="text-sm text-gray-500">All tools active</p>
+              <p className="text-2xl font-bold text-gray-900">{consultationStats.completedConsultations}</p>
+              <p className="text-sm text-gray-500">Completed (30d)</p>
             </div>
           </div>
         </div>
@@ -230,6 +273,51 @@ export default async function PharmacyDashboard() {
           View Full PGD Catalogue
         </Link>
       </div>
+
+      {/* Recent Activity */}
+      {consultationStats.recent.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-8">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            Recent Activity
+          </h2>
+          <div className="space-y-3">
+            {consultationStats.recent.slice(0, 8).map((c) => (
+              <div
+                key={c.id}
+                className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0"
+              >
+                <div
+                  className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                    c.completedAt ? 'bg-emerald-500' : 'bg-amber-400'
+                  }`}
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-gray-900 truncate">
+                    {pgdTitleMap.get(c.pgdSlug) || c.pgdSlug}
+                  </p>
+                </div>
+                <span className="text-xs text-gray-400 flex-shrink-0">
+                  {new Date(c.startedAt).toLocaleDateString('en-GB', {
+                    day: 'numeric',
+                    month: 'short',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </span>
+                <span
+                  className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${
+                    c.completedAt
+                      ? 'bg-emerald-50 text-emerald-700'
+                      : 'bg-amber-50 text-amber-700'
+                  }`}
+                >
+                  {c.completedAt ? 'Completed' : 'Started'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* PGDs by Category */}
       {assignedPgds.length === 0 ? (

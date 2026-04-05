@@ -62,6 +62,22 @@ export const pharmacyPgds = pgTable(
   ]
 )
 
+// ── PGD Consultations (Analytics) ─────────────────────────────
+
+export const pgdConsultations = pgTable('pgd_consultations', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  pharmacyId: uuid('pharmacy_id')
+    .references(() => pharmacies.id, { onDelete: 'cascade' })
+    .notNull(),
+  userId: uuid('user_id')
+    .references(() => users.id, { onDelete: 'cascade' })
+    .notNull(),
+  pgdSlug: varchar('pgd_slug', { length: 255 }).notNull(),
+  startedAt: timestamp('started_at').defaultNow().notNull(),
+  completedAt: timestamp('completed_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
 // ── Type exports ────────────────────────────────────────────────
 
 export type Pharmacy = typeof pharmacies.$inferSelect
@@ -70,3 +86,5 @@ export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
 export type PharmacyPgd = typeof pharmacyPgds.$inferSelect
 export type NewPharmacyPgd = typeof pharmacyPgds.$inferInsert
+export type PgdConsultation = typeof pgdConsultations.$inferSelect
+export type NewPgdConsultation = typeof pgdConsultations.$inferInsert
