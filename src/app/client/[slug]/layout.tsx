@@ -5,7 +5,6 @@ import { db } from '@/lib/db'
 import { pharmacies } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { SignOutButton } from '@/app/admin/SignOutButton'
-import Image from 'next/image'
 
 export default async function ClientLayout({
   children,
@@ -59,24 +58,11 @@ export default async function ClientLayout({
             {/* Sidebar Header */}
             <div className="flex flex-col items-start px-4 py-6 border-b border-gray-200">
               <div className="flex items-center gap-3 mb-6">
-                <div className="relative w-8 h-8 rounded-lg overflow-hidden flex-shrink-0">
-                  <Image
-                    src="/images/logo-icon.png"
-                    alt="GRH"
-                    width={32}
-                    height={32}
-                    className="object-contain"
-                    onError={(e) => {
-                      const el = e.currentTarget as HTMLImageElement
-                      el.style.display = 'none'
-                    }}
-                  />
-                  <div
-                    className="absolute inset-0 w-8 h-8 rounded-lg flex items-center justify-center"
-                    style={{ backgroundColor: '#25b4b4' }}
-                  >
-                    <span className="text-white font-bold text-sm">⚕</span>
-                  </div>
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ backgroundColor: '#25b4b4' }}
+                >
+                  <span className="text-white font-bold text-sm">⚕</span>
                 </div>
                 <span className="font-semibold text-gray-900 text-sm leading-tight">
                   {clientName}
