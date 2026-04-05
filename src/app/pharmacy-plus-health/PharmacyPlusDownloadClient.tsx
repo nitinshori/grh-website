@@ -314,6 +314,10 @@ function ResourcesView() {
   )
 }
 
+// ── Exported ResourcesView for reuse in client portal ────────────
+
+export { ResourcesView }
+
 // ── Main Export ───────────────────────────────────────────────────
 
 export function PharmacyPlusDownloadClient() {
