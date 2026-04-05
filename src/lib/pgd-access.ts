@@ -1,0 +1,174 @@
+import { db } from '@/lib/db'
+import { pharmacyPgds } from '@/lib/db/schema'
+import { eq, and } from 'drizzle-orm'
+
+/**
+ * Check if a pharmacy has access to a specific PGD by slug.
+ */
+export async function hasPharmacyPgdAccess(
+  pharmacyId: string,
+  pgdSlug: string
+): Promise<boolean> {
+  const [assignment] = await db
+    .select()
+    .from(pharmacyPgds)
+    .where(
+      and(eq(pharmacyPgds.pharmacyId, pharmacyId), eq(pharmacyPgds.pgdSlug, pgdSlug))
+    )
+    .limit(1)
+
+  return !!assignment
+}
+
+/**
+ * Get all PGD slugs assigned to a pharmacy.
+ */
+export async function getPharmacyPgdSlugs(pharmacyId: string): Promise<string[]> {
+  const assignments = await db
+    .select({ pgdSlug: pharmacyPgds.pgdSlug })
+    .from(pharmacyPgds)
+    .where(eq(pharmacyPgds.pharmacyId, pharmacyId))
+
+  return assignments.map((a) => a.pgdSlug)
+}
+
+/**
+ * Assign PGD slugs to a pharmacy (replaces existing assignments).
+ */
+export async function setPharmacyPgds(
+  pharmacyId: string,
+  slugs: string[]
+): Promise<void> {
+  // Delete all existing assignments
+  await db.delete(pharmacyPgds).where(eq(pharmacyPgds.pharmacyId, pharmacyId))
+
+  // Insert new assignments
+  if (slugs.length > 0) {
+    await db.insert(pharmacyPgds).values(
+      slugs.map((slug) => ({
+        pharmacyId,
+        pgdSlug: slug,
+      }))
+    )
+  }
+}
+
+/**
+ * Master list of all PGDs available in the system.
+ * Slug must match the directory name under /for-pharmacies/epgd/
+ */
+export const ALL_PGDS: { slug: string; title: string; subtitle: string; category: string }[] = [
+  // Men's Health
+  { slug: 'ed', title: 'Erectile Dysfunction', subtitle: 'Sildenafil / Tadalafil', category: "Men's Health" },
+  { slug: 'trt', title: 'Testosterone Replacement', subtitle: 'Testosterone Undecanoate', category: "Men's Health" },
+  { slug: 'hair-loss', title: 'Male Pattern Hair Loss', subtitle: 'Finasteride', category: "Men's Health" },
+  { slug: 'premature-ejaculation', title: 'Premature Ejaculation', subtitle: 'Dapoxetine / Priligy', category: "Men's Health" },
+  { slug: 'bph', title: 'Benign Prostatic Hyperplasia', subtitle: 'Tamsulosin', category: "Men's Health" },
+
+  // Women's Health
+  { slug: 'emergency-contraception', title: 'Emergency Contraception', subtitle: 'Levonorgestrel / Ulipristal', category: "Women's Health" },
+  { slug: 'postnatal-contraception', title: 'Postnatal Contraception', subtitle: 'Desogestrel', category: "Women's Health" },
+  { slug: 'hrt', title: 'HRT', subtitle: 'Estradiol / Utrogestan', category: "Women's Health" },
+  { slug: 'recurrent-uti', title: 'Recurrent UTI Prevention', subtitle: 'Nitrofurantoin Prophylaxis', category: "Women's Health" },
+  { slug: 'thrush', title: 'Vaginal Thrush', subtitle: 'Fluconazole', category: "Women's Health" },
+  { slug: 'bv', title: 'Bacterial Vaginosis', subtitle: 'Metronidazole', category: "Women's Health" },
+  { slug: 'testosterone-women', title: 'Testosterone for Women', subtitle: 'Androfeme / Testogel (off-label)', category: "Women's Health" },
+  { slug: 'alopecia-minoxidil', title: 'Female Pattern Hair Loss', subtitle: 'Minoxidil', category: "Women's Health" },
+
+  // Sexual Health
+  { slug: 'sti-testing', title: 'STI Testing', subtitle: 'Chlamydia / Gonorrhoea / Syphilis / HIV', category: 'Sexual Health' },
+  { slug: 'genital-warts', title: 'Genital Warts', subtitle: 'Imiquimod / Podophyllotoxin', category: 'Sexual Health' },
+  { slug: 'herpes-management', title: 'Genital Herpes', subtitle: 'Valaciclovir', category: 'Sexual Health' },
+  { slug: 'prep', title: 'PrEP', subtitle: 'Emtricitabine/Tenofovir', category: 'Sexual Health' },
+  { slug: 'gonorrhoea-treatment', title: 'Gonorrhoea Treatment', subtitle: 'Ceftriaxone IM', category: 'Sexual Health' },
+
+  // Weight Management
+  { slug: 'wegovy', title: 'Wegovy', subtitle: 'Semaglutide 2.4mg', category: 'Weight Management' },
+  { slug: 'mounjaro', title: 'Mounjaro', subtitle: 'Tirzepatide', category: 'Weight Management' },
+  { slug: 'saxenda', title: 'Saxenda', subtitle: 'Liraglutide 3.0mg', category: 'Weight Management' },
+  { slug: 'mysimba', title: 'Mysimba', subtitle: 'Naltrexone/Bupropion', category: 'Weight Management' },
+  { slug: 'orlistat', title: 'Orlistat', subtitle: 'Orlistat 120mg', category: 'Weight Management' },
+  { slug: 'glp1-monitoring', title: 'GLP-1 Monitoring', subtitle: 'Ongoing Monitoring', category: 'Weight Management' },
+
+  // Skin
+  { slug: 'acne', title: 'Acne', subtitle: 'Adapalene / Lymecycline', category: 'Skin' },
+  { slug: 'rosacea', title: 'Rosacea', subtitle: 'Ivermectin / Doxycycline', category: 'Skin' },
+  { slug: 'eczema', title: 'Eczema', subtitle: 'Betamethasone / Elidel', category: 'Skin' },
+  { slug: 'impetigo', title: 'Impetigo', subtitle: 'Fusidic Acid / Flucloxacillin', category: 'Skin' },
+  { slug: 'cold-sores', title: 'Cold Sores', subtitle: 'Valaciclovir', category: 'Skin' },
+  { slug: 'shingles-treatment', title: 'Shingles Treatment', subtitle: 'Valaciclovir', category: 'Skin' },
+  { slug: 'wound-care', title: 'Wound Care', subtitle: 'Assessment & Dressing', category: 'Skin' },
+
+  // Acute & Infection
+  { slug: 'uti', title: 'Uncomplicated UTI', subtitle: 'Nitrofurantoin / Trimethoprim', category: 'Acute & Infection' },
+  { slug: 'sore-throat', title: 'Acute Sore Throat', subtitle: 'Phenoxymethylpenicillin', category: 'Acute & Infection' },
+  { slug: 'ear-infection', title: 'Acute Otitis Media', subtitle: 'Amoxicillin', category: 'Acute & Infection' },
+  { slug: 'eye-infections', title: 'Eye Infections', subtitle: 'Chloramphenicol / Fusidic Acid', category: 'Acute & Infection' },
+  { slug: 'threadworms', title: 'Threadworms', subtitle: 'Mebendazole', category: 'Acute & Infection' },
+  { slug: 'chickenpox', title: 'Chickenpox', subtitle: 'Aciclovir (if indicated)', category: 'Acute & Infection' },
+
+  // Respiratory
+  { slug: 'asthma-rescue', title: 'Asthma Rescue', subtitle: 'Salbutamol', category: 'Respiratory' },
+  { slug: 'copd', title: 'COPD', subtitle: 'Rescue Inhalers & Monitoring', category: 'Respiratory' },
+  { slug: 'smoking-nrt', title: 'Smoking Cessation (NRT)', subtitle: 'Patches / Gum / Lozenges', category: 'Respiratory' },
+
+  // Cardiovascular
+  { slug: 'hypertension', title: 'Hypertension Monitoring', subtitle: 'Ambulatory BP Monitoring', category: 'Cardiovascular' },
+  { slug: 'statins', title: 'Statins', subtitle: 'Atorvastatin', category: 'Cardiovascular' },
+  { slug: 'diabetes-monitoring', title: 'Diabetes Monitoring', subtitle: 'HbA1c & Review', category: 'Cardiovascular' },
+
+  // Mental Health & Wellbeing
+  { slug: 'smoking-varenicline', title: 'Smoking Cessation (Varenicline)', subtitle: 'Champix', category: 'Mental Health & Wellbeing' },
+  { slug: 'alcohol-reduction', title: 'Alcohol Reduction', subtitle: 'Nalmefene', category: 'Mental Health & Wellbeing' },
+  { slug: 'sleep-melatonin', title: 'Sleep (Melatonin)', subtitle: 'Circadin / Melatonin', category: 'Mental Health & Wellbeing' },
+  { slug: 'adhd-monitoring', title: 'ADHD Monitoring', subtitle: 'Shared Care Monitoring', category: 'Mental Health & Wellbeing' },
+  { slug: 'anxiety-propranolol', title: 'Situational Anxiety', subtitle: 'Propranolol', category: 'Mental Health & Wellbeing' },
+  { slug: 'hayfever', title: 'Hayfever (Severe)', subtitle: 'Fexofenadine / Mometasone', category: 'Mental Health & Wellbeing' },
+
+  // Vaccines
+  { slug: 'flu', title: 'Flu Vaccination', subtitle: 'Seasonal Influenza', category: 'Vaccines' },
+  { slug: 'covid-booster', title: 'COVID-19 Booster', subtitle: 'mRNA / Protein Subunit', category: 'Vaccines' },
+  { slug: 'shingles-vaccine', title: 'Shingles Vaccine', subtitle: 'Shingrix', category: 'Vaccines' },
+  { slug: 'pneumococcal', title: 'Pneumococcal Vaccine', subtitle: 'PCV / PPV', category: 'Vaccines' },
+  { slug: 'hpv', title: 'HPV Vaccine', subtitle: 'Gardasil 9', category: 'Vaccines' },
+  { slug: 'mmr', title: 'MMR Vaccine', subtitle: 'Measles, Mumps, Rubella', category: 'Vaccines' },
+  { slug: 'meningitis-b', title: 'Meningitis B', subtitle: 'Bexsero', category: 'Vaccines' },
+  { slug: 'meningitis-acwy-travel', title: 'Meningitis ACWY', subtitle: 'MenQuadfi / Nimenrix', category: 'Vaccines' },
+  { slug: 'rsv', title: 'RSV Vaccine', subtitle: 'Abrysvo / Arexvy', category: 'Vaccines' },
+
+  // Travel Health
+  { slug: 'travel-core', title: 'Travel Health Assessment', subtitle: 'Risk Assessment & Advice', category: 'Travel Health' },
+  { slug: 'anti-malarials', title: 'Anti-Malarials', subtitle: 'Atovaquone-Proguanil / Doxycycline', category: 'Travel Health' },
+  { slug: 'hep-b-occupational', title: 'Hepatitis B', subtitle: 'Engerix-B / Fendrix', category: 'Travel Health' },
+  { slug: 'rabies', title: 'Rabies Vaccine', subtitle: 'Pre-exposure Prophylaxis', category: 'Travel Health' },
+  { slug: 'japanese-encephalitis', title: 'Japanese Encephalitis', subtitle: 'Ixiaro', category: 'Travel Health' },
+  { slug: 'dengue', title: 'Dengue Vaccine', subtitle: 'Qdenga', category: 'Travel Health' },
+  { slug: 'altitude-sickness', title: 'Altitude Sickness', subtitle: 'Acetazolamide', category: 'Travel Health' },
+  { slug: 'travellers-diarrhoea', title: "Traveller's Diarrhoea", subtitle: 'Ciprofloxacin / Azithromycin', category: 'Travel Health' },
+
+  // Occupational Health
+  { slug: 'needlestick-pep', title: 'Needlestick PEP', subtitle: 'Post-Exposure Prophylaxis', category: 'Occupational Health' },
+  { slug: 'dental-bridging', title: 'Dental Bridging Rx', subtitle: 'Emergency Dental Treatment', category: 'Occupational Health' },
+
+  // Paediatrics
+  { slug: 'paediatric-uti', title: 'Paediatric UTI', subtitle: 'Trimethoprim / Nitrofurantoin', category: 'Paediatrics' },
+]
+
+/**
+ * All unique categories in display order.
+ */
+export const PGD_CATEGORIES = [
+  "Men's Health",
+  "Women's Health",
+  'Sexual Health',
+  'Weight Management',
+  'Skin',
+  'Acute & Infection',
+  'Respiratory',
+  'Cardiovascular',
+  'Mental Health & Wellbeing',
+  'Vaccines',
+  'Travel Health',
+  'Occupational Health',
+  'Paediatrics',
+] as const
