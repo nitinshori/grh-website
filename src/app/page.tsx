@@ -101,7 +101,7 @@ export default function HomePage() {
                       width={128}
                       height={128}
                       className="w-full h-full object-cover"
-                      style={{ objectPosition: "30% 25%" }}
+                      style={{ objectPosition: "55% 25%" }}
                       priority
                     />
                   </div>
