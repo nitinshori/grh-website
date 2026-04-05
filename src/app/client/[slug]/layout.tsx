@@ -5,54 +5,52 @@ import { db } from '@/lib/db'
 import { pharmacies } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { SignOutButton } from '@/app/admin/SignOutButton'
+import Image from 'next/image'
 
-export const metadata = {
-  title: 'My Dashboard | Get Real Health',
-  description: 'Your pharmacy dashboard',
-}
-
-export default async function PharmacyDashboardLayout({
+export default async function ClientLayout({
   children,
+  params,
 }: {
   children: ReactNode
+  params: Promise<{ slug: string }>
 }) {
+  const { slug } = await params
   const session = await auth()
 
   if (!session?.user) {
     redirect('/login')
   }
 
-  // Super admins have their own panel
-  if (session.user.role === 'super_admin') {
-    redirect('/admin')
+  // Only clients can access client pages
+  if (session.user.role !== 'client') {
+    if (session.user.role === 'super_admin') redirect('/admin')
+    redirect('/for-pharmacies/dashboard')
   }
 
-  // Client users have their own portal
-  if (session.user.role === 'client') {
-    redirect('/login')
-  }
-
-  // Fetch pharmacy name
-  let pharmacyName = 'Your Pharmacy'
+  // Fetch pharmacy/client details
+  let clientName = 'Client Portal'
   if (session.user.pharmacyId) {
     const [pharmacy] = await db
-      .select({ name: pharmacies.name })
+      .select({ name: pharmacies.name, slug: pharmacies.slug })
       .from(pharmacies)
       .where(eq(pharmacies.id, session.user.pharmacyId))
       .limit(1)
+
     if (pharmacy) {
-      pharmacyName = pharmacy.name
+      clientName = pharmacy.name
+      // Ensure the user is accessing their own client page
+      if (pharmacy.slug !== slug) {
+        redirect(`/client/${pharmacy.slug}`)
+      }
     }
   }
 
   const userName = session.user.name || session.user.email || 'User'
-  const roleLabel =
-    session.user.role === 'pharmacy_admin' ? 'Pharmacy Admin' : 'Pharmacist'
 
   return (
     <html lang="en" className="h-full antialiased">
       <head>
-        <title>Dashboard - Get Real Health</title>
+        <title>{clientName} — Get Real Health</title>
       </head>
       <body className="h-full bg-gray-50">
         <div className="flex h-full">
@@ -60,27 +58,40 @@ export default async function PharmacyDashboardLayout({
           <aside className="hidden md:flex md:w-64 md:flex-col bg-white border-r border-gray-200">
             {/* Sidebar Header */}
             <div className="flex flex-col items-start px-4 py-6 border-b border-gray-200">
-              <div className="flex items-center gap-2 mb-6">
-                <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center"
-                  style={{ backgroundColor: '#25b4b4' }}
-                >
-                  <span className="text-white font-bold text-sm">⚕</span>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="relative w-8 h-8 rounded-lg overflow-hidden flex-shrink-0">
+                  <Image
+                    src="/images/logo-icon.png"
+                    alt="GRH"
+                    width={32}
+                    height={32}
+                    className="object-contain"
+                    onError={(e) => {
+                      const el = e.currentTarget as HTMLImageElement
+                      el.style.display = 'none'
+                    }}
+                  />
+                  <div
+                    className="absolute inset-0 w-8 h-8 rounded-lg flex items-center justify-center"
+                    style={{ backgroundColor: '#25b4b4' }}
+                  >
+                    <span className="text-white font-bold text-sm">⚕</span>
+                  </div>
                 </div>
                 <span className="font-semibold text-gray-900 text-sm leading-tight">
-                  {pharmacyName}
+                  {clientName}
                 </span>
               </div>
               <div className="w-full">
                 <p className="text-sm font-medium text-gray-900 truncate">{userName}</p>
-                <p className="text-xs text-gray-500">{roleLabel}</p>
+                <p className="text-xs text-gray-500">Client Administrator</p>
               </div>
             </div>
 
             {/* Navigation */}
             <nav className="flex-1 px-2 py-4 space-y-1">
               <a
-                href="/for-pharmacies/dashboard"
+                href={`/client/${slug}`}
                 className="flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors hover:bg-gray-100 text-gray-700"
               >
                 <svg
@@ -97,26 +108,6 @@ export default async function PharmacyDashboardLayout({
                   />
                 </svg>
                 Dashboard
-              </a>
-
-              <a
-                href="/for-pharmacies/epgd"
-                className="flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors hover:bg-gray-100 text-gray-700"
-              >
-                <svg
-                  className="w-5 h-5 mr-3 flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-                ePGD Tools
               </a>
             </nav>
 
@@ -146,7 +137,7 @@ export default async function PharmacyDashboardLayout({
             </div>
           </aside>
 
-          {/* Mobile Sidebar (collapsed) */}
+          {/* Mobile Header */}
           <aside className="md:hidden w-16 flex flex-col bg-white border-r border-gray-200">
             <div className="flex items-center justify-center px-2 py-4 border-b border-gray-200">
               <div
@@ -159,7 +150,7 @@ export default async function PharmacyDashboardLayout({
 
             <nav className="flex-1 px-2 py-4 space-y-2">
               <a
-                href="/for-pharmacies/dashboard"
+                href={`/client/${slug}`}
                 className="flex items-center justify-center p-3 rounded-lg transition-colors hover:bg-gray-100"
                 title="Dashboard"
               >
@@ -174,26 +165,6 @@ export default async function PharmacyDashboardLayout({
                     strokeLinejoin="round"
                     strokeWidth={2}
                     d="M3 12l2-3m0 0l7-4 7 4M5 9v10a1 1 0 001 1h12a1 1 0 001-1V9m-9 11l4-2m-9-2l4 2m0-5L9 7m5 6l4-2m-9-2l4 2"
-                  />
-                </svg>
-              </a>
-
-              <a
-                href="/for-pharmacies/epgd"
-                className="flex items-center justify-center p-3 rounded-lg transition-colors hover:bg-gray-100"
-                title="ePGD Tools"
-              >
-                <svg
-                  className="w-6 h-6 text-gray-700"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                   />
                 </svg>
               </a>

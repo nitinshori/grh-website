@@ -9,6 +9,7 @@ declare module 'next-auth' {
       name: string
       role: string
       pharmacyId: string | null
+      pharmacySlug: string | null
       image?: string | null
     } & DefaultSession['user']
   }
@@ -16,6 +17,7 @@ declare module 'next-auth' {
   interface User {
     role?: string
     pharmacyId?: string | null
+    pharmacySlug?: string | null
   }
 }
 
@@ -23,5 +25,6 @@ declare module '@auth/core/jwt' {
   interface JWT {
     role?: string
     pharmacyId?: string | null
+    pharmacySlug?: string | null
   }
 }

@@ -7,7 +7,7 @@ import { Suspense } from 'react'
 
 function LoginForm() {
   const searchParams = useSearchParams()
-  const callbackUrl = searchParams.get('callbackUrl') || '/for-pharmacies/dashboard'
+  const callbackUrl = searchParams.get('callbackUrl') || ''
   const error = searchParams.get('error')
 
   const [email, setEmail] = useState('')
@@ -24,14 +24,28 @@ function LoginForm() {
       email: email.toLowerCase().trim(),
       password,
       redirect: false,
-      callbackUrl,
     })
 
     if (result?.error) {
       setLoginError('Invalid email or password.')
       setLoading(false)
-    } else if (result?.url) {
-      window.location.href = result.url
+    } else if (result?.ok) {
+      // Fetch the session to determine role-based redirect
+      try {
+        const sessionRes = await fetch('/api/auth/session')
+        const session = await sessionRes.json()
+
+        if (session?.user?.role === 'client' && session?.user?.pharmacySlug) {
+          window.location.href = `/client/${session.user.pharmacySlug}`
+        } else if (session?.user?.role === 'super_admin') {
+          window.location.href = callbackUrl || '/admin'
+        } else {
+          window.location.href = callbackUrl || '/for-pharmacies/dashboard'
+        }
+      } catch {
+        // Fallback redirect
+        window.location.href = callbackUrl || '/for-pharmacies/dashboard'
+      }
     }
   }
 

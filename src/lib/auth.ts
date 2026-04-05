@@ -2,7 +2,7 @@ import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import { db } from '@/lib/db'
-import { users } from '@/lib/db/schema'
+import { users, pharmacies } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -30,12 +30,24 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const valid = await bcrypt.compare(password, user.passwordHash)
         if (!valid) return null
 
+        // For client users, fetch the pharmacy slug for redirect
+        let pharmacySlug: string | null = null
+        if (user.role === 'client' && user.pharmacyId) {
+          const [pharmacy] = await db
+            .select({ slug: pharmacies.slug })
+            .from(pharmacies)
+            .where(eq(pharmacies.id, user.pharmacyId))
+            .limit(1)
+          pharmacySlug = pharmacy?.slug || null
+        }
+
         return {
           id: user.id,
           email: user.email,
           name: `${user.firstName} ${user.lastName}`,
           role: user.role,
           pharmacyId: user.pharmacyId,
+          pharmacySlug,
         }
       },
     }),
@@ -47,6 +59,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const u = user as any
         token.role = u.role as string
         token.pharmacyId = u.pharmacyId as string | null
+        token.pharmacySlug = u.pharmacySlug as string | null
       }
       return token
     },
@@ -55,6 +68,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.id = token.sub!
         session.user.role = token.role as string
         session.user.pharmacyId = token.pharmacyId as string | null
+        session.user.pharmacySlug = token.pharmacySlug as string | null
       }
       return session
     },

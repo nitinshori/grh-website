@@ -15,6 +15,7 @@ export const userRoleEnum = pgEnum('user_role', [
   'super_admin',
   'pharmacy_admin',
   'pharmacist',
+  'client',
 ])
 
 // ── Pharmacies ──────────────────────────────────────────────────
@@ -22,6 +23,7 @@ export const userRoleEnum = pgEnum('user_role', [
 export const pharmacies = pgTable('pharmacies', {
   id: uuid('id').defaultRandom().primaryKey(),
   name: varchar('name', { length: 255 }).notNull(),
+  slug: varchar('slug', { length: 100 }),
   address: text('address'),
   phone: varchar('phone', { length: 50 }),
   email: varchar('email', { length: 255 }),
