@@ -548,6 +548,82 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ── 6. HEAD PHARMACIST ─────────────────────────────────── */}
+      <section className="bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+          <div className="grid lg:grid-cols-5 gap-12 lg:gap-16 items-center">
+            {/* Left: Bio */}
+            <div className="lg:col-span-3 order-2 lg:order-1">
+              <p className="text-sm font-semibold text-teal-600 uppercase tracking-wider mb-2">
+                Meet our head pharmacist
+              </p>
+              <h2 className="text-2xl sm:text-3xl font-bold text-navy-900 mb-6">
+                Three decades at the pharmacy frontline
+              </h2>
+
+              <p className="text-gray-600 leading-relaxed mb-4">
+                Christopher Pilkington brings over 30 years of pharmacy
+                experience spanning community independents, supermarkets, small
+                and large multiples, and locum work. He has served as a
+                pharmacist manager, held operations and governance roles, and
+                practised as an independent prescriber &mdash; most recently
+                moving into a prescribing role within a GP practice.
+              </p>
+
+              <p className="text-gray-600 leading-relaxed mb-4">
+                His understanding of PGDs stretches back to 2011, when the Welsh
+                NHS established an emergency contraception PGD and began
+                championing community pharmacy&apos;s unique accessibility for
+                patients. He has seen first-hand how PGD-delivered services have
+                expanded across the sector ever since.
+              </p>
+
+              <p className="text-gray-600 leading-relaxed mb-4">
+                In an evolving pharmacy landscape &mdash; where newly qualified
+                pharmacists will join the register as independent prescribers
+                &mdash; Christopher believes private PGDs offer a dual
+                advantage: enabling experienced pharmacists to fully utilise
+                their clinical skills while providing newly qualified IPs with
+                the training, guidelines, and clinical frameworks they need as
+                they expand their scope.
+              </p>
+
+              <p className="text-gray-600 leading-relaxed mb-6">
+                At Get Real Health, Christopher oversees PGD implementation,
+                pharmacist training standards, and day-to-day clinical
+                governance &mdash; ensuring every partner pharmacy delivers
+                services that are safe, consistent, and built to last.
+              </p>
+
+              <blockquote className="border-l-4 border-teal-500 pl-5 py-2">
+                <p className="text-navy-800 italic leading-relaxed">
+                  &ldquo;Private PGDs let experienced pharmacists do what
+                  they&apos;ve always been capable of &mdash; and give the next
+                  generation a clinical framework to grow into.&rdquo;
+                </p>
+              </blockquote>
+            </div>
+
+            {/* Right: Photo */}
+            <div className="lg:col-span-2 flex justify-center order-1 lg:order-2">
+              <div className="relative">
+                <div className="absolute -inset-3 bg-gradient-to-br from-teal-200/40 to-navy-200/40 rounded-2xl blur-lg" />
+                <div className="relative w-72 h-80 sm:w-80 sm:h-96 rounded-2xl overflow-hidden shadow-xl">
+                  <Image
+                    src="/images/chris-pilkington.jpg"
+                    alt="Christopher Pilkington — Head Pharmacist at Get Real Health"
+                    fill
+                    className="object-cover"
+                    style={{ objectPosition: "50% 20%" }}
+                    sizes="(max-width: 768px) 288px, 320px"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── CPD ACCREDITATION BANNER ────────────────────────────── */}
       <section className="bg-white border-y border-gray-100">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">

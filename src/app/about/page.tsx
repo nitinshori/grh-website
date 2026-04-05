@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 
 export const metadata: Metadata = {
   title: "About Us",
@@ -82,51 +83,61 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* ── TEAM PLACEHOLDER ───────────────────────────────── */}
+      {/* ── TEAM ────────────────────────────────────────────── */}
       <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
         <h2 className="text-2xl sm:text-3xl font-bold text-navy-900 mb-10 text-center">
           Our team
         </h2>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {[
-            {
-              name: "Founder & Medical Director",
-              role: "Clinical Lead",
-              bio: "Former Medical Director of Pharmacy2U. Built the UK\u2019s first online GLP-1, TRT, and ED prescribing service.",
-            },
-            {
-              name: "Chief Operating Officer",
-              role: "Operations",
-              bio: "Experienced in scaling pharmacy operations and clinical service delivery across the UK.",
-            },
-            {
-              name: "Head of Clinical Governance",
-              role: "Governance",
-              bio: "Specialist in PGD writing, MHRA compliance, and pharmacist training programme design.",
-            },
-          ].map((member, i) => (
-            <div
-              key={i}
-              className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
-            >
-              <div className="h-48 bg-navy-100 flex items-center justify-center">
-                <svg
-                  className="w-20 h-20 text-navy-300"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-                </svg>
-              </div>
-              <div className="p-6">
-                <h3 className="font-bold text-navy-900 mb-1">{member.name}</h3>
-                <p className="text-sm text-teal-600 font-medium mb-3">
-                  {member.role}
-                </p>
-                <p className="text-sm text-gray-600">{member.bio}</p>
-              </div>
+        <div className="grid sm:grid-cols-2 gap-8 max-w-3xl mx-auto">
+          {/* Dr Nitin Shori */}
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="h-64 relative">
+              <Image
+                src="/images/nitin-founder.jpg"
+                alt="Dr Nitin Shori"
+                fill
+                className="object-cover"
+                style={{ objectPosition: "65% 20%" }}
+                sizes="320px"
+              />
             </div>
-          ))}
+            <div className="p-6">
+              <h3 className="font-bold text-navy-900 mb-1">Dr Nitin Shori</h3>
+              <p className="text-sm text-teal-600 font-medium mb-3">
+                Founder &amp; Medical Director
+              </p>
+              <p className="text-sm text-gray-600">
+                NHS GP Partner for over 20 years. Former Medical Director of
+                Pharmacy2U, where he built the UK&apos;s first online GLP-1,
+                TRT, and ED prescribing service. Law degree holder.
+              </p>
+            </div>
+          </div>
+
+          {/* Christopher Pilkington */}
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="h-64 relative">
+              <Image
+                src="/images/chris-pilkington.jpg"
+                alt="Christopher Pilkington"
+                fill
+                className="object-cover"
+                style={{ objectPosition: "50% 20%" }}
+                sizes="320px"
+              />
+            </div>
+            <div className="p-6">
+              <h3 className="font-bold text-navy-900 mb-1">Christopher Pilkington</h3>
+              <p className="text-sm text-teal-600 font-medium mb-3">
+                Head Pharmacist
+              </p>
+              <p className="text-sm text-gray-600">
+                Over 30 years of community pharmacy experience across
+                independents, multiples, and GP practice prescribing.
+                Specialist in PGD implementation and pharmacist training.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
