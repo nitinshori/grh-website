@@ -3,9 +3,9 @@ import Image from "next/image";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Get Real Health | PGD Services for UK Pharmacies",
+  title: "Get Real Health | PGDs, Clinical Training & Governance for UK Pharmacies",
   description:
-    "UK pharmacy PGD provider, CQC registered. 60+ services, flat annual fee, no per-consult charges. Your patients, your data, your business.",
+    "60+ PGDs with built-in clinical training and competency assessments. CQC registered. One flat annual fee \u2014 no per-consult charges, no revenue share. Founded by clinicians with 20 years of UK pharmacy experience.",
 };
 
 export default function HomePage() {
@@ -43,19 +43,20 @@ export default function HomePage() {
                     d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
                   />
                 </svg>
-                Founded by a Pharmacy2U Medical Director
+                20 years of pharmacy experience
               </div>
 
               <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold leading-tight mb-6">
-                Clinical expertise.
+                PGDs, training and governance.
                 <br />
-                <span className="text-teal-400">Commercial sense.</span>
+                <span className="text-teal-400">Built for UK pharmacies.</span>
               </h1>
 
               <p className="text-lg sm:text-xl text-blue-200 leading-relaxed mb-8 max-w-xl">
-                60+ PGD services. One flat fee. No per-consult charges, no
-                revenue share. Built by clinicians with deep experience of
-                large-scale online prescribing under CQC oversight.
+                60+ PGDs with built-in clinical training and competency
+                assessments. CQC registered. One flat annual fee &mdash; no
+                per-consult charges, no revenue share. Built by clinicians
+                with two decades of UK pharmacy experience.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4">
@@ -114,21 +115,27 @@ export default function HomePage() {
                       Founder &amp; Medical Director
                     </p>
                     <p className="text-blue-200 text-sm mt-3 leading-relaxed">
-                      NHS GP Partner. Former Pharmacy2U Medical Director. Law
-                      degree holder.
+                      NHS GP Partner. Former Medical Director, Pharmacy2U. 20
+                      years of UK pharmacy experience. Law degree holder.
                     </p>
                   </div>
 
-                  <div className="mt-6 pt-6 border-t border-white/10 grid grid-cols-2 gap-4 text-center">
+                  <div className="mt-6 pt-6 border-t border-white/10 grid grid-cols-3 gap-3 text-center">
                     <div>
                       <p className="text-2xl font-bold text-teal-400">60+</p>
-                      <p className="text-xs text-blue-200 mt-0.5">
+                      <p className="text-[11px] text-blue-200 mt-0.5 leading-tight">
                         PGD services
                       </p>
                     </div>
                     <div>
+                      <p className="text-2xl font-bold text-teal-400">CPD</p>
+                      <p className="text-[11px] text-blue-200 mt-0.5 leading-tight">
+                        training built in
+                      </p>
+                    </div>
+                    <div>
                       <p className="text-2xl font-bold text-teal-400">CQC</p>
-                      <p className="text-xs text-blue-200 mt-0.5">
+                      <p className="text-[11px] text-blue-200 mt-0.5 leading-tight">
                         registered
                       </p>
                     </div>
@@ -165,8 +172,8 @@ export default function HomePage() {
                 For UK Pharmacies
               </h3>
               <p className="text-blue-200 text-sm mt-1">
-                60+ PGDs, flat fee, your data &mdash; a clearer way to launch
-                private services.
+                60+ PGDs with built-in training, flat fee, your data &mdash; a
+                clearer way to launch private services.
               </p>
             </div>
             <Link
