@@ -5,15 +5,58 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const pharmacyLinks = [
-  { href: "/for-pharmacies", label: "Why Partner With Us" },
-  { href: "/for-pharmacies/pgd-catalogue", label: "PGD Catalogue" },
-  { href: "/for-pharmacies/pricing", label: "Pricing" },
-  { href: "/for-pharmacies/platform", label: "Our Platform" },
-  { href: "/pharmacy-plus-health", label: "Pharmacy Plus Health Hub" },
+  {
+    href: "/for-pharmacies",
+    label: "Why Partner With Us",
+    description: "How we differ from Pharmadoctor and ECG.",
+  },
+  {
+    href: "/for-pharmacies/pgd-catalogue",
+    label: "PGD Catalogue",
+    description: "60+ PGDs across travel, weight, sexual health and more.",
+  },
+  {
+    href: "/for-pharmacies/pricing",
+    label: "Pricing",
+    description: "Flat annual fee. Get in touch for a quote.",
+  },
+  {
+    href: "/for-pharmacies/platform",
+    label: "Our Platform",
+    description: "The consultation tool, training hub, and dashboard.",
+  },
+  {
+    href: "/pharmacy-plus-health",
+    label: "Pharmacy+ Health Hub",
+    description:
+      "Our patient-facing directory \u2014 helps your customers find you.",
+  },
+];
+
+const patientLinks = [
+  {
+    href: "/for-patients/find-service",
+    label: "Find a Service",
+    description: "Search by service or postcode.",
+  },
+  {
+    href: "/for-patients/services/travel",
+    label: "Travel Vaccinations",
+    description: "",
+  },
+  {
+    href: "/for-patients/services/weight",
+    label: "Weight Management",
+    description: "",
+  },
+  {
+    href: "/for-patients/services/sexual-health",
+    label: "Sexual Health",
+    description: "",
+  },
 ];
 
 const mainLinks = [
-  { href: "/for-patients/find-service", label: "Find a Service" },
   { href: "/about", label: "About Us" },
   { href: "/resources", label: "Resources" },
   { href: "/contact", label: "Contact" },
@@ -22,6 +65,7 @@ const mainLinks = [
 export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [pharmacyDropdown, setPharmacyDropdown] = useState(false);
+  const [patientDropdown, setPatientDropdown] = useState(false);
   const pathname = usePathname();
 
   const isActive = (href: string) =>
@@ -84,7 +128,7 @@ export function Header() {
             >
               <button
                 className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                  isActive("/for-pharmacies")
+                  isActive("/for-pharmacies") || isActive("/pharmacy-plus-health")
                     ? "text-teal-600"
                     : "text-gray-700 hover:text-navy-900 hover:bg-gray-50"
                 }`}
@@ -106,8 +150,61 @@ export function Header() {
               </button>
 
               {pharmacyDropdown && (
-                <div className="absolute top-full left-0 mt-0 w-56 bg-white border border-gray-100 rounded-lg shadow-lg py-2">
+                <div className="absolute top-full left-0 mt-0 w-80 bg-white border border-gray-100 rounded-lg shadow-lg py-2">
                   {pharmacyLinks.map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className={`block px-4 py-3 text-sm transition-colors ${
+                        isActive(link.href)
+                          ? "text-teal-600 bg-teal-50"
+                          : "text-gray-700 hover:text-navy-900 hover:bg-gray-50"
+                      }`}
+                    >
+                      <span className="font-medium block">{link.label}</span>
+                      {link.description && (
+                        <span className="text-xs text-gray-500 mt-0.5 block leading-snug">
+                          {link.description}
+                        </span>
+                      )}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* For Patients dropdown */}
+            <div
+              className="relative"
+              onMouseEnter={() => setPatientDropdown(true)}
+              onMouseLeave={() => setPatientDropdown(false)}
+            >
+              <button
+                className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                  isActive("/for-patients")
+                    ? "text-teal-600"
+                    : "text-gray-700 hover:text-navy-900 hover:bg-gray-50"
+                }`}
+              >
+                For Patients
+                <svg
+                  className="inline-block ml-1 w-3.5 h-3.5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </button>
+
+              {patientDropdown && (
+                <div className="absolute top-full left-0 mt-0 w-72 bg-white border border-gray-100 rounded-lg shadow-lg py-2">
+                  {patientLinks.map((link) => (
                     <Link
                       key={link.href}
                       href={link.href}
@@ -117,7 +214,12 @@ export function Header() {
                           : "text-gray-700 hover:text-navy-900 hover:bg-gray-50"
                       }`}
                     >
-                      {link.label}
+                      <span className="font-medium block">{link.label}</span>
+                      {link.description && (
+                        <span className="text-xs text-gray-500 mt-0.5 block leading-snug">
+                          {link.description}
+                        </span>
+                      )}
                     </Link>
                   ))}
                 </div>
@@ -208,6 +310,26 @@ export function Header() {
               For Pharmacies
             </p>
             {pharmacyLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setMobileOpen(false)}
+                className={`block px-3 py-2.5 text-sm rounded-md ${
+                  isActive(link.href)
+                    ? "text-teal-600 bg-teal-50 font-medium"
+                    : "text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
+
+            <div className="my-3 border-t border-gray-100" />
+
+            <p className="px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+              For Patients
+            </p>
+            {patientLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}

@@ -4,9 +4,9 @@ import { SavingsCalculator } from "./SavingsCalculator";
 import { FAQAccordion } from "./FAQAccordion";
 
 export const metadata: Metadata = {
-  title: "Pricing \u2014 Simple, Transparent, No Surprises",
+  title: "Pricing \u2014 Request a Quote",
   description:
-    "Flat annual fee. No per-consult charges. See our pricing tiers \u2014 no registration required. Compare with Pharmadoctor and ECG.",
+    "Flat annual fee. No per-consult charges. Get in touch for a quote on our Starter, Growth, and Enterprise tiers.",
 };
 
 const tiers = [
@@ -86,11 +86,12 @@ export default function PricingPage() {
       <section className="bg-navy-950 text-white">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-20">
           <h1 className="text-3xl sm:text-4xl font-bold mb-3">
-            Simple, transparent pricing. No surprises.
+            Pricing &mdash; request a quote
           </h1>
           <p className="text-lg text-blue-200 max-w-2xl">
-            We show our prices here \u2014 no registration, no sales call, no
-            pressure.
+            One flat annual fee. No per-consult charges. We&apos;re finalising
+            our public pricing tiers &mdash; in the meantime, get in touch for
+            a quote tailored to your pharmacy.
           </p>
         </div>
       </section>
@@ -98,12 +99,13 @@ export default function PricingPage() {
       {/* Why this matters callout */}
       <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="bg-navy-50 border border-navy-100 rounded-xl p-6">
-          <h2 className="font-bold text-navy-900 mb-2">Why this matters</h2>
+          <h2 className="font-bold text-navy-900 mb-2">Our pricing principle</h2>
           <p className="text-gray-700 leading-relaxed">
-            Pharmadoctor doesn&apos;t show pricing without registration. ECG
-            charges per PGD, per pharmacist, per year \u2014 plus Charac on top.
-            We charge one flat annual fee and show it to you upfront. Because
-            that&apos;s how we&apos;d want to be treated.
+            Pharmadoctor charges per consultation. ECG charges per PGD, per
+            pharmacist, per year &mdash; plus Charac on top. We charge one flat
+            annual fee that covers PGDs, platform, training and support.
+            Public tier pricing is being finalised; please get in touch for a
+            quote.
           </p>
         </div>
       </section>

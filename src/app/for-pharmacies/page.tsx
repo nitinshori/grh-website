@@ -41,11 +41,12 @@ export default function ForPharmaciesPage() {
       <section className="bg-navy-900 text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
           <p className="text-lg leading-relaxed text-blue-100">
-            Our founder was Medical Director of Pharmacy2U &mdash; the UK&apos;s
-            largest online pharmacy &mdash; and built its online doctor service
-            from scratch: GLP-1 weight management, testosterone replacement, and
-            erectile dysfunction treatments, online, before anyone else in the UK
-            was doing it.
+            Our founder spent years as Medical Director of Pharmacy2U &mdash;
+            the UK&apos;s largest online pharmacy &mdash; helping build its
+            online doctor service from the ground up: GLP-1 weight management,
+            testosterone replacement, and erectile dysfunction treatments,
+            among the earliest large-scale online pharmacy programmes for these
+            therapies in the UK.
           </p>
           <p className="text-lg leading-relaxed text-blue-200 mt-4">
             That&apos;s not a CV line. It&apos;s the clinical experience behind
@@ -146,24 +147,33 @@ export default function ForPharmaciesPage() {
       {/* ── NHS FUNDING REALITY ────────────────────────────── */}
       <section className="bg-gray-50 border-y border-gray-100">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
-          <h2 className="text-2xl sm:text-3xl font-bold text-navy-900 mb-8">
+          <h2 className="text-2xl sm:text-3xl font-bold text-navy-900 mb-4">
             The NHS funding reality
           </h2>
+          <p className="text-gray-600 mb-10 max-w-2xl mx-auto">
+            Community pharmacy NHS funding has fallen sharply in real terms,
+            and many contractors report private services now account for a
+            meaningful share of their bottom line.
+          </p>
           <div className="grid sm:grid-cols-2 gap-8 mb-8">
             <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-100">
-              <p className="text-4xl font-bold text-red-600 mb-2">
-                &pound;67,000
+              <p className="text-2xl font-bold text-red-600 mb-2">
+                NHS funding shortfall
               </p>
               <p className="text-gray-600">
-                Average annual NHS funding shortfall per community pharmacy
+                Independent analysis of community pharmacy contractor finances
+                consistently points to significant per-pharmacy shortfalls
+                under the current contractual framework.
               </p>
             </div>
             <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-100">
-              <p className="text-4xl font-bold text-teal-600 mb-2">
-                &pound;50,000+
+              <p className="text-2xl font-bold text-teal-600 mb-2">
+                PGD revenue opportunity
               </p>
               <p className="text-gray-600">
-                Average annual revenue from PGD private services
+                Pharmacies running well-marketed private PGD services
+                (travel, weight, sexual health, ED) routinely report
+                meaningful additional annual revenue.
               </p>
             </div>
           </div>
@@ -206,10 +216,10 @@ export default function ForPharmaciesPage() {
       <section className="bg-navy-900 text-white">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
           <blockquote className="text-lg sm:text-xl italic leading-relaxed text-blue-100 mb-6">
-            &ldquo;I was the Medical Director at Pharmacy2U when we launched
-            GLP-1 prescribing online in 2016. We were told it was too risky, too
-            complicated, and that pharmacies weren&apos;t ready. We did it anyway
-            &mdash; safely, at scale, under full CQC oversight.&rdquo;
+            &ldquo;I was the Medical Director at Pharmacy2U when we built out
+            online prescribing for GLP-1, TRT and ED. We were told it was too
+            risky, too complicated, and that pharmacies weren&apos;t ready. We
+            did it anyway &mdash; safely, at scale, under full CQC oversight.&rdquo;
           </blockquote>
           <blockquote className="text-lg sm:text-xl italic leading-relaxed text-blue-100 mb-8">
             &ldquo;Everything we build here starts from that same principle:

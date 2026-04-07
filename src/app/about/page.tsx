@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import { legal } from "@/lib/legal";
 
 export const metadata: Metadata = {
   title: "About Us",
   description:
-    "Founded by the Medical Director who built the UK\u2019s first online GLP-1 and TRT prescribing service at Pharmacy2U. Learn about our story, values, and team.",
+    "Founded by the former Medical Director of Pharmacy2U, who helped shape early online GLP-1 and TRT prescribing in UK pharmacy. Learn about our story, values, and team.",
 };
 
 const values = [
@@ -35,11 +36,11 @@ export default function AboutPage() {
         <div className="prose prose-lg max-w-none">
           <p className="text-lg text-gray-700 leading-relaxed mb-6">
             Our founder spent years as Medical Director of Pharmacy2U &mdash; the
-            UK&apos;s largest online pharmacy &mdash; and built its online doctor
-            service from the ground up. In 2016, that meant designing the clinical
-            governance for GLP-1 weight management, testosterone replacement
-            therapy, and erectile dysfunction medications prescribed entirely
-            online. At the time, it hadn&apos;t been done in UK pharmacy before.
+            UK&apos;s largest online pharmacy &mdash; and helped build its online
+            doctor service from the ground up. That work involved designing
+            clinical governance for online prescribing of GLP-1 weight management,
+            testosterone replacement therapy, and erectile dysfunction medications
+            in the early days of UK online pharmacy.
           </p>
           <p className="text-lg text-gray-700 leading-relaxed mb-6">
             What that experience taught us is that clinical governance isn&apos;t
@@ -108,8 +109,8 @@ export default function AboutPage() {
               </p>
               <p className="text-sm text-gray-600">
                 NHS GP Partner for over 20 years. Former Medical Director of
-                Pharmacy2U, where he built the UK&apos;s first online GLP-1,
-                TRT, and ED prescribing service. Law degree holder.
+                Pharmacy2U, where he helped build its early online GLP-1,
+                TRT, and ED prescribing services. Law degree holder.
               </p>
             </div>
           </div>
@@ -146,10 +147,29 @@ export default function AboutPage() {
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-14 text-center">
           <h2 className="text-xl font-bold mb-4">CQC &amp; Regulatory Status</h2>
           <p className="text-blue-200 leading-relaxed">
-            Get Real Health is registered with the Care Quality Commission as an
-            Independent Medical Agency. Our Patient Group Directions are written
-            and governed in accordance with Human Medicines Regulations 2012 and
-            MHRA guidance.
+            {legal.companyName} is registered with the Care Quality Commission
+            as an Independent Medical Agency (provider ID{" "}
+            <a
+              href={legal.cqcUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-teal-300 underline-offset-2 hover:underline"
+            >
+              {legal.cqcProviderId}
+            </a>
+            ). Our Patient Group Directions are written and governed in
+            accordance with Human Medicines Regulations 2012 and MHRA guidance.
+          </p>
+          <p className="text-sm text-blue-300 mt-4">
+            Companies House registration:{" "}
+            <a
+              href={legal.companyHouseUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-teal-300 underline-offset-2 hover:underline"
+            >
+              {legal.companyNumber}
+            </a>
           </p>
         </div>
       </section>
