@@ -13,17 +13,43 @@ import {
 
 type FilterOption = "All" | "Exclusives" | PGDCategory;
 
+// Priority ordering for the default "All" view. The groups are applied in order:
+// everything matching the first group lands at the top, then the next group, etc.
+// Anything not matched falls through to a popularity sort by the PGD's `priority`
+// field (1 = most popular, 3 = niche).
+const PRIORITY_GROUPS: Array<(p: PGD) => boolean> = [
+  (p) => p.category === "Travel",
+  (p) => /\bHRT\b/i.test(p.title),
+  (p) => /Testosterone|\bTRT\b/i.test(p.title),
+  (p) => p.category === "Weight Management",
+  (p) => /Erectile Dysfunction|Premature Ejaculation/i.test(p.title),
+  (p) => /Anxiety/i.test(p.title),
+  (p) => /Sleep/i.test(p.title),
+];
+
+function sortedForAllView(list: PGD[]): PGD[] {
+  const seen = new Set<string>();
+  const ordered: PGD[] = [];
+  for (const match of PRIORITY_GROUPS) {
+    for (const p of list) {
+      if (!seen.has(p.id) && match(p)) {
+        ordered.push(p);
+        seen.add(p.id);
+      }
+    }
+  }
+  const remaining = list
+    .filter((p) => !seen.has(p.id))
+    .sort((a, b) => a.priority - b.priority);
+  return [...ordered, ...remaining];
+}
+
 export function PGDCatalogueClient() {
   const [activeFilter, setActiveFilter] = useState<FilterOption>("All");
   const [selectedPGDs, setSelectedPGDs] = useState<Set<string>>(new Set());
 
   const filtered = useMemo(() => {
-    if (activeFilter === "All") {
-      // Exclusives first, then the rest (stable — keeps category grouping)
-      const exclusives = pgds.filter((p) => p.isNew);
-      const rest = pgds.filter((p) => !p.isNew);
-      return [...exclusives, ...rest];
-    }
+    if (activeFilter === "All") return sortedForAllView(pgds);
     if (activeFilter === "Exclusives") return pgds.filter((p) => p.isNew);
     return pgds.filter((p) => p.category === activeFilter);
   }, [activeFilter]);
@@ -53,9 +79,11 @@ export function PGDCatalogueClient() {
           </p>
           <h1 className="text-3xl sm:text-4xl font-bold mb-3">PGD Catalogue</h1>
           <p className="text-lg text-blue-200 max-w-2xl">
-            {pgds.length}+ PGDs across {ALL_CATEGORIES.length} categories &mdash;
-            including {exclusiveCount} exclusives like HRT initiation, PrEP, TRT
-            and GLP-1 monitoring. Build your list and request a tailored quote.
+            {pgds.length}+ PGDs across {ALL_CATEGORIES.length} categories. We
+            lead with the highest-demand services &mdash; travel, HRT, TRT,
+            weight management, ED, anxiety and sleep &mdash; then everything
+            else in popularity order. Build your list and request a tailored
+            quote.
           </p>
         </div>
       </section>
