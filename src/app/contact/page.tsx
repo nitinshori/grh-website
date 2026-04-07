@@ -46,30 +46,10 @@ export default function ContactPage() {
                 See the full platform in 20 minutes — consultations, patient
                 records, superintendent dashboard, the lot. No obligation.
               </p>
-              <p className="text-sm text-gray-500 italic mb-4">
-                Calendly booking widget will appear here once your account is
-                set up.
+              <p className="text-sm text-gray-600 mb-2">
+                To book a demo, send us a message using the form and we&apos;ll
+                come back to you with a few suggested times.
               </p>
-              <div className="bg-white border border-teal-200 rounded-lg p-8 flex items-center justify-center">
-                <div className="text-center">
-                  <svg
-                    className="w-10 h-10 text-teal-400 mx-auto mb-2"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.5}
-                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                    />
-                  </svg>
-                  <p className="text-xs text-gray-400 font-medium">
-                    Demo booking calendar
-                  </p>
-                </div>
-              </div>
             </div>
 
             {/* Direct contacts */}
@@ -158,8 +138,8 @@ export default function ContactPage() {
                     How long does onboarding take?
                   </p>
                   <p className="text-gray-500">
-                    48 hours from sign-up to delivering your first PGD
-                    consultation.
+                    A structured onboarding process &mdash; days, not months.
+                    We&apos;ll walk you through it on your demo call.
                   </p>
                 </div>
                 <div>

@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Mysimba (Naltrexone-Bupropion) Consultation ePGD",
+  title: "Naltrexone-Bupropion Weight Management Consultation ePGD",
   description:
-    "Digital consultation tool for Mysimba weight management under Patient Group Direction. 4-week titration protocol with careful BP and seizure risk monitoring.",
+    "Digital consultation tool for naltrexone-bupropion weight management under Patient Group Direction. For use by registered pharmacy professionals only.",
+  robots: { index: false, follow: false },
 };
 
 export default function MySIMBAToolPage() {
@@ -17,26 +18,33 @@ export default function MySIMBAToolPage() {
             </a>
             <span>/</span>
             <span className="text-navy-900 font-medium">
-              Mysimba Consultation ePGD
+              Naltrexone-Bupropion Consultation ePGD
             </span>
           </div>
+          <p className="text-xs font-semibold text-teal-700 uppercase tracking-wider mb-2">
+            For registered pharmacy professionals only
+          </p>
           <h1 className="text-2xl sm:text-3xl font-bold text-navy-900">
-            Mysimba — Naltrexone-Bupropion PGD Consultation
+            Naltrexone-Bupropion Weight Management PGD
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Weight management with 4-week titration protocol
+            Weight management with 4-week titration protocol and BP / seizure
+            risk monitoring
           </p>
         </div>
 
         <div className="bg-white p-6 rounded-lg border border-gray-200">
           <p className="text-center text-gray-600 text-sm">
-            ePGD consultation wizard coming soon. Core clinical logic and validation in place.
+            ePGD consultation wizard coming soon. Core clinical logic and
+            validation in place.
           </p>
         </div>
 
         <div className="mt-8 text-center">
           <p className="text-[11px] text-gray-400 max-w-2xl mx-auto">
-            This ePGD is provided as a clinical decision support aid and does not replace professional clinical judgement. Based on UK medicines guidance and the Get Real Health PGD for Mysimba (Naltrexone-Bupropion).
+            This ePGD is provided as a clinical decision support aid and does
+            not replace professional clinical judgement. Based on UK medicines
+            guidance.
           </p>
         </div>
       </div>

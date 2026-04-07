@@ -4,12 +4,12 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "For Pharmacies \u2014 Why Partner With Us",
   description:
-    "PGDs with no per-consult fees, full data ownership, and an integrated consultation tool. See why pharmacies are switching from Pharmadoctor and ECG.",
+    "PGDs with no per-consult fees, full data ownership and an integrated consultation tool. See why pharmacies are switching to Get Real Health.",
 };
 
 const features = [
-  "60+ PGD services available at launch \u2014 more than any other provider",
-  "Exclusive services: HRT initiation, private PrEP, TRT, propranolol for anxiety \u2014 not available anywhere else via pharmacy PGD",
+  "A wide and growing PGD catalogue across travel, vaccines, weight management, sexual health and more",
+  "Less common services included \u2014 such as HRT initiation, private PrEP and short-term anxiety symptom support",
   "Integrated consultation tool \u2014 built in-house, not licensed from a third party",
   "Online training with CPD-compliant certificates for every PGD",
   "Clinical support line \u2014 speak to a clinician when you need one",
@@ -17,7 +17,7 @@ const features = [
   "Patient-facing directory listing \u2014 patients find you, not us",
   "Marketing materials \u2014 posters, social graphics, email templates",
   "Seasonal campaign support \u2014 flu, travel, weight management",
-  "48-hour onboarding \u2014 sign up today, consult by end of the week",
+  "Structured onboarding \u2014 supported and quick, not a multi-month implementation",
 ];
 
 export default function ForPharmaciesPage() {
@@ -27,12 +27,12 @@ export default function ForPharmaciesPage() {
       <section className="bg-navy-950 text-white">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight mb-6 max-w-3xl">
-            You&apos;ve been giving Pharmadoctor a cut of every patient you see.
+            Stop giving away a cut of every consultation you do.
           </h1>
           <p className="text-xl text-blue-200 max-w-2xl leading-relaxed">
-            We built the clinical governance for the UK&apos;s largest online
-            pharmacy. We know what good looks like. And we know what it costs
-            when it isn&apos;t.
+            We helped build clinical governance for one of the UK&apos;s
+            largest online pharmacies. We know what good looks like &mdash;
+            and we know what it costs when it isn&apos;t.
           </p>
         </div>
       </section>
@@ -42,11 +42,10 @@ export default function ForPharmaciesPage() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
           <p className="text-lg leading-relaxed text-blue-100">
             Our founder spent years as Medical Director of Pharmacy2U &mdash;
-            the UK&apos;s largest online pharmacy &mdash; helping build its
-            online doctor service from the ground up: GLP-1 weight management,
-            testosterone replacement, and erectile dysfunction treatments,
-            among the earliest large-scale online pharmacy programmes for these
-            therapies in the UK.
+            one of the UK&apos;s largest online pharmacies &mdash; helping
+            build out its online doctor service. That work included some of
+            the UK&apos;s earliest large-scale online prescribing programmes
+            for GLP-1 weight management and testosterone replacement therapy.
           </p>
           <p className="text-lg leading-relaxed text-blue-200 mt-4">
             That&apos;s not a CV line. It&apos;s the clinical experience behind
@@ -80,8 +79,9 @@ export default function ForPharmaciesPage() {
             <p className="text-gray-600 leading-relaxed">
               Every consultation you carry out is recorded in your system &mdash;
               not ours. Patient records, booking history, risk assessment forms.
-              Exportable at any time. When you leave Pharmadoctor, you leave
-              without your patient history. With us, you take everything.
+              Exportable at any time. When you leave a typical PGD provider,
+              you usually leave without your patient history. With us, you take
+              everything.
             </p>
           </div>
 
@@ -106,10 +106,10 @@ export default function ForPharmaciesPage() {
               One flat fee
             </h3>
             <p className="text-gray-600 leading-relaxed">
-              Pharmadoctor charges per consultation. The busier you get, the more
-              they earn. We charge one flat annual fee. Your 500th travel
-              consultation of the year costs us exactly the same as your first.
-              You keep the difference.
+              Most PGD providers charge per consultation. The busier you get,
+              the more they earn. We charge one flat annual fee. Your 500th
+              travel consultation of the year costs us exactly the same as
+              your first. You keep the difference.
             </p>
           </div>
 
@@ -216,10 +216,10 @@ export default function ForPharmaciesPage() {
       <section className="bg-navy-900 text-white">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
           <blockquote className="text-lg sm:text-xl italic leading-relaxed text-blue-100 mb-6">
-            &ldquo;I was the Medical Director at Pharmacy2U when we built out
-            online prescribing for GLP-1, TRT and ED. We were told it was too
-            risky, too complicated, and that pharmacies weren&apos;t ready. We
-            did it anyway &mdash; safely, at scale, under full CQC oversight.&rdquo;
+            &ldquo;I spent years as Medical Director at Pharmacy2U, helping
+            build out online prescribing services at scale. That work taught
+            me what good clinical governance actually looks like in practice
+            &mdash; and how much it matters when something goes wrong.&rdquo;
           </blockquote>
           <blockquote className="text-lg sm:text-xl italic leading-relaxed text-blue-100 mb-8">
             &ldquo;Everything we build here starts from that same principle:

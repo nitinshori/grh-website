@@ -28,11 +28,11 @@ export const patientCategories: PatientCategory[] = [
     color: "bg-blue-50",
     textColor: "text-blue-700",
     popularServices: [
-      "Travel vaccinations (Typhoid, Hepatitis A & B, Yellow Fever, and more)",
-      "Anti-malarials (Malarone, Doxycycline)",
-      "Dengue fever vaccination (Qdenga)",
+      "Travel vaccinations (typhoid, hepatitis A & B, yellow fever, and more)",
+      "Anti-malarial tablets",
+      "Dengue fever vaccination",
       "Rabies pre-exposure vaccination",
-      "Japanese Encephalitis vaccination",
+      "Japanese encephalitis vaccination",
       "Meningitis ACWY (travel & Hajj/Umrah)",
       "Altitude sickness prevention",
       "Traveller's diarrhoea standby treatment",
@@ -54,12 +54,12 @@ export const patientCategories: PatientCategory[] = [
     textColor: "text-green-700",
     popularServices: [
       "Private flu vaccination",
-      "Shingles vaccine (Shingrix)",
-      "Chickenpox vaccine",
-      "Pneumococcal vaccine",
+      "Shingles vaccination",
+      "Chickenpox vaccination",
+      "Pneumococcal vaccination",
       "RSV vaccination",
-      "Meningitis B (Bexsero)",
-      "HPV vaccine (Gardasil 9) for adults",
+      "Meningitis B vaccination",
+      "HPV vaccination for adults",
       "COVID-19 boosters",
     ],
     whyPharmacy:
@@ -71,24 +71,23 @@ export const patientCategories: PatientCategory[] = [
   {
     slug: "weight-management",
     name: "Weight Management",
-    tagline: "Wegovy, Mounjaro, and ongoing support",
+    tagline: "Clinically supported weight management at your pharmacy",
     description:
-      "Pharmacy-based weight management gives you access to the latest treatments — including GLP-1 injections like Wegovy and Mounjaro — with regular face-to-face check-ins from a qualified pharmacist.",
+      "Pharmacy-based weight management combines clinical assessment, structured monitoring and ongoing support from a qualified pharmacist. Your pharmacist will discuss whether you may be eligible for treatment based on UK clinical guidelines, and what the right next step is for you.",
     icon: "⚖️",
     color: "bg-orange-50",
     textColor: "text-orange-700",
     popularServices: [
-      "Wegovy (Semaglutide) weight loss injections",
-      "Mounjaro (Tirzepatide) weight loss injections",
-      "Orlistat (Xenical)",
-      "Saxenda (Liraglutide)",
-      "Ongoing GLP-1 monitoring and dose titration",
+      "Eligibility assessment against UK weight management guidelines",
+      "Ongoing monitoring and dose review for those already in treatment",
+      "BMI, blood pressure and lifestyle review",
+      "Onward referral where appropriate",
     ],
     whyPharmacy:
-      "Online clinics post you medication with no follow-up. Your pharmacy provides face-to-face consultations, regular monitoring, and real support throughout your journey.",
-    seoTitle: "Weight Loss Injections & Management at Your Pharmacy",
+      "Weight management works best when it's supported in person. Your pharmacist can offer face-to-face consultations, regular monitoring, and continuity of care &mdash; not just a one-off prescription.",
+    seoTitle: "Weight Management Services at Your Local Pharmacy",
     seoDescription:
-      "Access Wegovy, Mounjaro, and weight management support at a pharmacy near you. Face-to-face consultations and ongoing monitoring included.",
+      "Clinically supported weight management at a pharmacy near you. Eligibility assessment, monitoring and face-to-face support from a qualified pharmacist.",
   },
   {
     slug: "womens-health",
@@ -123,8 +122,8 @@ export const patientCategories: PatientCategory[] = [
     color: "bg-purple-50",
     textColor: "text-purple-700",
     popularServices: [
-      "Erectile dysfunction treatment (Sildenafil, Tadalafil)",
-      "Hair loss treatment (Finasteride)",
+      "Erectile dysfunction assessment and treatment",
+      "Male pattern hair loss treatment",
       "Premature ejaculation treatment",
       "Testosterone replacement therapy (TRT)",
     ],
@@ -165,10 +164,10 @@ export const patientCategories: PatientCategory[] = [
     color: "bg-violet-50",
     textColor: "text-violet-700",
     popularServices: [
-      "Smoking cessation (Champix / NRT)",
+      "Smoking cessation support (with prescription options where suitable)",
       "Alcohol reduction support",
-      "Short-term anxiety relief (Propranolol)",
-      "Sleep support (Melatonin)",
+      "Short-term physical anxiety symptom relief",
+      "Short-term sleep support",
     ],
     whyPharmacy:
       "NHS mental health services have some of the longest waits in healthcare. Your pharmacy provides quick, practical support for everyday wellbeing concerns.",
@@ -209,12 +208,12 @@ export const patientCategories: PatientCategory[] = [
     textColor: "text-cyan-700",
     popularServices: [
       "Prescription-strength hayfever treatment",
-      "Asthma rescue inhaler (Salbutamol)",
+      "Rescue inhaler bridging supply",
       "Sore throat test and treat",
       "COPD symptom management",
     ],
     whyPharmacy:
-      "When you can't breathe or swallow, you don't want to wait a week for a GP. Your pharmacy can assess and treat you today.",
+      "Respiratory symptoms often need rapid attention. Your pharmacy can assess and treat many common respiratory conditions the same day, freeing up GP appointments for more complex care.",
     seoTitle: "Respiratory Treatment at Your Local Pharmacy",
     seoDescription:
       "Hayfever, asthma, sore throat, and respiratory treatment at a pharmacy near you. Same-day access, no GP referral.",
@@ -222,9 +221,9 @@ export const patientCategories: PatientCategory[] = [
   {
     slug: "heart-health",
     name: "Heart & Diabetes",
-    tagline: "Monitoring and medication without GP delays",
+    tagline: "Convenient monitoring for long-term conditions",
     description:
-      "Blood pressure checks, cholesterol management, diabetes monitoring, and medication continuation — your pharmacy helps you stay on top of long-term conditions without chasing GP appointments.",
+      "Blood pressure checks, cholesterol management and diabetes monitoring at your local pharmacy &mdash; complementing your GP care and making it easier to stay on top of long-term conditions between appointments.",
     icon: "❤️",
     color: "bg-red-50",
     textColor: "text-red-700",
@@ -234,17 +233,17 @@ export const patientCategories: PatientCategory[] = [
       "Diabetes type 2 monitoring",
     ],
     whyPharmacy:
-      "Repeat prescription delays leave patients without essential medication. Your pharmacy can provide continuation supply and regular check-ups.",
+      "Pharmacies are well placed to provide continuation supply and regular check-ups for long-term conditions, working alongside your existing GP care.",
     seoTitle: "Heart & Diabetes Monitoring at Your Pharmacy",
     seoDescription:
-      "Blood pressure, cholesterol, and diabetes monitoring at a pharmacy near you. Medication continuation without GP delays.",
+      "Blood pressure, cholesterol and diabetes monitoring at a pharmacy near you. Bridging supply and check-ups to support your existing care.",
   },
   {
     slug: "children",
     name: "Children's Health",
     tagline: "Fast treatment for common childhood illnesses",
     description:
-      "When your child is unwell, waiting days for a GP isn't good enough. Your pharmacy can treat common childhood conditions quickly and safely — impetigo, UTIs, threadworms, and more.",
+      "When your child is unwell, you want a quick clinical assessment from someone you trust. Your pharmacy can assess and treat a range of common childhood conditions &mdash; impetigo, UTIs, threadworms, and more.",
     icon: "👶",
     color: "bg-rose-50",
     textColor: "text-rose-700",
@@ -275,7 +274,7 @@ export const patientCategories: PatientCategory[] = [
       "Dental pain bridging antibiotics",
     ],
     whyPharmacy:
-      "These conditions often need treatment quickly. Shingles must be treated within 72 hours. Your pharmacy is faster than A&E or a GP callback.",
+      "These conditions often need treatment quickly &mdash; shingles, for example, is most effective when started within 72 hours. Your pharmacy can often assess and treat you the same day.",
     seoTitle: "Minor Ailment Treatment at Your Local Pharmacy",
     seoDescription:
       "Ear infections, eye infections, shingles, and dental pain treated at a pharmacy near you. Fast, no GP referral.",

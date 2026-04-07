@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Get Real Health | PGD Services for UK Pharmacies",
   description:
-    "UK pharmacy PGD provider. 60+ services, flat annual fee, no per-consult charges. Your patients. Your data. Your business.",
+    "UK pharmacy PGD provider, CQC registered. 60+ services, flat annual fee, no per-consult charges. Your patients, your data, your business.",
 };
 
 export default function HomePage() {
@@ -54,8 +54,8 @@ export default function HomePage() {
 
               <p className="text-lg sm:text-xl text-blue-200 leading-relaxed mb-8 max-w-xl">
                 60+ PGD services. One flat fee. No per-consult charges, no
-                revenue share. Built by the doctor who brought GLP-1 and TRT
-                prescribing to the UK online market.
+                revenue share. Built by clinicians with deep experience of
+                large-scale online prescribing under CQC oversight.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4">
@@ -114,8 +114,8 @@ export default function HomePage() {
                       Founder &amp; Medical Director
                     </p>
                     <p className="text-blue-200 text-sm mt-3 leading-relaxed">
-                      NHS GP Partner for 20 years. Pharmacy2U Medical Director
-                      for 12 years. Law degree holder.
+                      NHS GP Partner. Former Pharmacy2U Medical Director. Law
+                      degree holder.
                     </p>
                   </div>
 
@@ -123,13 +123,13 @@ export default function HomePage() {
                     <div>
                       <p className="text-2xl font-bold text-teal-400">60+</p>
                       <p className="text-xs text-blue-200 mt-0.5">
-                        PGD Services
+                        PGD services
                       </p>
                     </div>
                     <div>
-                      <p className="text-2xl font-bold text-teal-400">48hrs</p>
+                      <p className="text-2xl font-bold text-teal-400">CQC</p>
                       <p className="text-xs text-blue-200 mt-0.5">
-                        To Go Live
+                        registered
                       </p>
                     </div>
                   </div>
@@ -165,8 +165,8 @@ export default function HomePage() {
                 For UK Pharmacies
               </h3>
               <p className="text-blue-200 text-sm mt-1">
-                60+ PGDs, flat fee, your data &mdash; launch private services in
-                48 hours.
+                60+ PGDs, flat fee, your data &mdash; a clearer way to launch
+                private services.
               </p>
             </div>
             <Link
@@ -261,15 +261,16 @@ export default function HomePage() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
                   />
                 </svg>
               </div>
               <p className="text-3xl sm:text-4xl font-bold text-navy-900">
-                &pound;50k+
+                CQC
               </p>
               <p className="text-sm text-gray-500 mt-1">
-                Average annual PGD revenue per pharmacy
+                Independent Medical Agency, registered with the Care Quality
+                Commission
               </p>
             </div>
 
@@ -338,10 +339,10 @@ export default function HomePage() {
                 </svg>
               </div>
               <p className="text-3xl sm:text-4xl font-bold text-navy-900">
-                48hrs
+                Days
               </p>
               <p className="text-sm text-gray-500 mt-1">
-                From sign-up to authorised and ready
+                From sign-up to authorised and ready &mdash; not weeks
               </p>
             </div>
           </div>
@@ -383,10 +384,10 @@ export default function HomePage() {
                 Pharmacist-led clinical expertise
               </h3>
               <p className="text-gray-600 leading-relaxed mb-4">
-                Our founder is the doctor who brought GLP-1 and TRT prescribing
-                to the UK online market as Medical Director at Pharmacy2U. That
-                clinical and regulatory experience is behind every PGD we
-                write.
+                Our founder helped build some of the UK&apos;s earliest
+                large-scale online prescribing services for GLP-1 and TRT, as
+                Medical Director at Pharmacy2U. That clinical and regulatory
+                experience is behind every PGD we write.
               </p>
               <p className="text-sm font-semibold text-teal-600">
                 Not a tech company &mdash; a clinical one.
@@ -490,24 +491,24 @@ export default function HomePage() {
               <p className="text-gray-600 leading-relaxed mb-4">
                 Dr Nitin Shori has been an NHS GP Partner for over 20 years and
                 ran a private GP service alongside his NHS practice. He holds a
-                law degree &mdash; giving him a unique perspective on clinical
-                governance, regulatory compliance, and the medico-legal
-                landscape.
+                law degree &mdash; giving him a perspective on clinical
+                governance, regulatory compliance and the medico-legal
+                landscape that very few prescribers bring to this work.
               </p>
 
               <p className="text-gray-600 leading-relaxed mb-4">
-                As founder of the Pharmacy2U Online Doctor Service and Medical
-                Director for 12 years, Nitin brought GLP-1 weight management
-                and TRT prescribing to the UK online market &mdash; safely, at
-                scale, under full CQC oversight.
+                Nitin spent years as Medical Director of the Pharmacy2U Online
+                Doctor Service, helping build out online prescribing for GLP-1
+                weight management and TRT &mdash; safely, at scale, under full
+                CQC oversight.
               </p>
 
               <p className="text-gray-600 leading-relaxed mb-4">
-                Through Get Real Health, we&apos;ve written PGDs for the
-                country&apos;s biggest pharmacy chains and supermarkets, as well
-                as smaller independent pharmacies. Our CPD-accredited training
-                ensures every pharmacist we work with meets the same clinical
-                standard &mdash; regardless of the size of their operation.
+                Through Get Real Health, we work with pharmacy chains,
+                supermarkets and independent pharmacies of all sizes. Every
+                pharmacist we work with completes the same structured
+                clinical training and assessment &mdash; so the standard of
+                care is consistent regardless of the size of the operation.
               </p>
 
               <p className="text-gray-600 leading-relaxed mb-6">
@@ -650,29 +651,29 @@ export default function HomePage() {
             {/* Content */}
             <div className="flex-1 text-center md:text-left">
               <p className="text-teal-400 text-sm font-semibold uppercase tracking-wider mb-2">
-                Accredited CPD Provider
+                Pharmacist training built in
               </p>
               <h2 className="text-xl sm:text-2xl font-bold text-white mb-3">
-                CPD-accredited training for every PGD
+                Structured clinical training with every PGD
               </h2>
               <p className="text-blue-200 leading-relaxed mb-4">
-                Get Real Health is an accredited CPD provider. Every PGD we supply
-                comes with CPD-accredited training, ensuring pharmacists meet the
-                clinical competency standards required for safe, effective
-                consultations under each Patient Group Direction.
+                Every PGD we supply comes with structured clinical training and
+                a written competency assessment, so pharmacists are demonstrably
+                ready to deliver safe, effective consultations under each
+                Patient Group Direction before they go live.
               </p>
               <div className="flex flex-wrap gap-4 justify-center md:justify-start text-sm">
                 <span className="inline-flex items-center gap-1.5 text-teal-300">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  CPPE-aligned modules
+                  Built around national pharmacy training frameworks
                 </span>
                 <span className="inline-flex items-center gap-1.5 text-teal-300">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  Certificate on completion
+                  Written competency assessment
                 </span>
                 <span className="inline-flex items-center gap-1.5 text-teal-300">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -694,7 +695,8 @@ export default function HomePage() {
               Go live in four steps
             </h2>
             <p className="text-gray-500 max-w-xl mx-auto">
-              From sign-up to your first consultation in as little as 48 hours.
+              A structured, supported onboarding &mdash; not a multi-month
+              implementation project.
             </p>
           </div>
 
@@ -775,8 +777,8 @@ export default function HomePage() {
 
           <div className="grid sm:grid-cols-2 gap-8 mb-10">
             {/* Shortfall card */}
-            <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-100 text-center">
-              <div className="w-14 h-14 mx-auto rounded-xl bg-red-50 flex items-center justify-center mb-4">
+            <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-100">
+              <div className="w-14 h-14 rounded-xl bg-red-50 flex items-center justify-center mb-4">
                 <svg
                   className="w-7 h-7 text-red-500"
                   fill="none"
@@ -791,17 +793,19 @@ export default function HomePage() {
                   />
                 </svg>
               </div>
-              <p className="text-4xl sm:text-5xl font-bold text-red-600 mb-2">
-                &pound;67k
-              </p>
-              <p className="text-gray-600">
-                Average annual NHS funding shortfall per community pharmacy
+              <h3 className="text-lg font-bold text-navy-900 mb-2">
+                NHS funding shortfall
+              </h3>
+              <p className="text-gray-600 leading-relaxed">
+                Community pharmacies are facing a sustained NHS funding gap
+                &mdash; the kind of pressure that&apos;s closing branches and
+                forcing diversification beyond traditional dispensing.
               </p>
             </div>
 
             {/* Revenue card */}
-            <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-100 text-center">
-              <div className="w-14 h-14 mx-auto rounded-xl bg-teal-50 flex items-center justify-center mb-4">
+            <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-100">
+              <div className="w-14 h-14 rounded-xl bg-teal-50 flex items-center justify-center mb-4">
                 <svg
                   className="w-7 h-7 text-teal-600"
                   fill="none"
@@ -816,11 +820,14 @@ export default function HomePage() {
                   />
                 </svg>
               </div>
-              <p className="text-4xl sm:text-5xl font-bold text-teal-600 mb-2">
-                &pound;50k+
-              </p>
-              <p className="text-gray-600">
-                Average annual revenue from PGD private services
+              <h3 className="text-lg font-bold text-navy-900 mb-2">
+                PGD revenue opportunity
+              </h3>
+              <p className="text-gray-600 leading-relaxed">
+                A well-run private PGD service can become a meaningful,
+                recurring revenue stream &mdash; covering staff time,
+                contributing to overheads, and reducing dependency on
+                prescription margin.
               </p>
             </div>
           </div>
@@ -845,7 +852,7 @@ export default function HomePage() {
             See what GRH can do for your pharmacy
           </h2>
           <p className="text-blue-200 mb-8 max-w-xl mx-auto">
-            Browse our full PGD catalogue and transparent pricing &mdash; no
+            Browse our full PGD catalogue and request a quote &mdash; no
             registration required.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">

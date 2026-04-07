@@ -205,7 +205,7 @@ function PGDCard({
         )}
         {pgd.pharmadoctor.startsWith("No") && (
           <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-red-50 text-red-600">
-            Not on Pharmadoctor
+            Not on competitor
           </span>
         )}
       </div>
@@ -222,7 +222,6 @@ function PGDCard({
 
       {/* Stats */}
       <div className="flex items-center gap-4 text-xs text-gray-500 mb-4">
-        <span title="Estimated revenue">{pgd.revenueEstimate}</span>
         <span title="Consultation time">{pgd.consultTime}</span>
       </div>
 

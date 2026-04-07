@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: 'Pharmacy Plus Health — Resource Hub | Get Real Health',
   description:
     'PGD documents, training videos, and compliance resources for Pharmacy Plus Health pharmacies.',
+  robots: { index: false, follow: false },
 }
 
 export default function PharmacyPlusHealthPage() {
