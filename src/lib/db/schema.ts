@@ -4,6 +4,7 @@ import {
   varchar,
   text,
   boolean,
+  integer,
   timestamp,
   pgEnum,
   uniqueIndex,
@@ -80,6 +81,29 @@ export const pgdConsultations = pgTable('pgd_consultations', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 
+// ── Voice Calls (AI Receptionist) ──────────────────────────────
+
+export const voiceCalls = pgTable('voice_calls', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  vapiCallId: varchar('vapi_call_id', { length: 255 }).unique(),
+  callerNumber: varchar('caller_number', { length: 50 }),
+  callerName: varchar('caller_name', { length: 255 }),
+  callerEmail: varchar('caller_email', { length: 255 }),
+  pharmacyName: varchar('pharmacy_name', { length: 255 }),
+  enquiryType: varchar('enquiry_type', { length: 100 }), // sales | demo | support | other
+  summary: text('summary'),
+  transcript: text('transcript'),
+  recordingUrl: text('recording_url'),
+  durationSeconds: integer('duration_seconds'),
+  appointmentBooked: boolean('appointment_booked').default(false).notNull(),
+  appointmentTime: timestamp('appointment_time'),
+  calendarEventId: varchar('calendar_event_id', { length: 255 }),
+  status: varchar('status', { length: 50 }), // completed | voicemail | failed
+  startedAt: timestamp('started_at').notNull(),
+  endedAt: timestamp('ended_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
 // ── Type exports ────────────────────────────────────────────────
 
 export type Pharmacy = typeof pharmacies.$inferSelect
@@ -90,3 +114,5 @@ export type PharmacyPgd = typeof pharmacyPgds.$inferSelect
 export type NewPharmacyPgd = typeof pharmacyPgds.$inferInsert
 export type PgdConsultation = typeof pgdConsultations.$inferSelect
 export type NewPgdConsultation = typeof pgdConsultations.$inferInsert
+export type VoiceCall = typeof voiceCalls.$inferSelect
+export type NewVoiceCall = typeof voiceCalls.$inferInsert
