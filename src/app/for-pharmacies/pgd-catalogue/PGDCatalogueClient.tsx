@@ -11,15 +11,20 @@ import {
   type PGD,
 } from "@/data/pgds";
 
-type FilterOption = "All" | "NEW" | PGDCategory;
+type FilterOption = "All" | "Exclusives" | PGDCategory;
 
 export function PGDCatalogueClient() {
   const [activeFilter, setActiveFilter] = useState<FilterOption>("All");
   const [selectedPGDs, setSelectedPGDs] = useState<Set<string>>(new Set());
 
   const filtered = useMemo(() => {
-    if (activeFilter === "All") return pgds;
-    if (activeFilter === "NEW") return pgds.filter((p) => p.isNew);
+    if (activeFilter === "All") {
+      // Exclusives first, then the rest (stable — keeps category grouping)
+      const exclusives = pgds.filter((p) => p.isNew);
+      const rest = pgds.filter((p) => !p.isNew);
+      return [...exclusives, ...rest];
+    }
+    if (activeFilter === "Exclusives") return pgds.filter((p) => p.isNew);
     return pgds.filter((p) => p.category === activeFilter);
   }, [activeFilter]);
 
@@ -35,18 +40,22 @@ export function PGDCatalogueClient() {
   const selectedItems = pgds.filter((p) => selectedPGDs.has(p.id));
   const selectedCount = selectedItems.length;
 
-  const filterOptions: FilterOption[] = ["All", "NEW", ...ALL_CATEGORIES];
+  const exclusiveCount = pgds.filter((p) => p.isNew).length;
+  const filterOptions: FilterOption[] = ["All", "Exclusives", ...ALL_CATEGORIES];
 
   return (
     <>
       {/* Hero */}
       <section className="bg-navy-950 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-20">
+          <p className="text-xs font-semibold text-teal-400 uppercase tracking-wider mb-3">
+            {exclusiveCount} PGDs you won&apos;t find on other providers
+          </p>
           <h1 className="text-3xl sm:text-4xl font-bold mb-3">PGD Catalogue</h1>
           <p className="text-lg text-blue-200 max-w-2xl">
-            Browse {pgds.length}+ PGD services across {ALL_CATEGORIES.length}{" "}
-            categories. Add services to your enquiry list and request a tailored
-            quote.
+            {pgds.length}+ PGDs across {ALL_CATEGORIES.length} categories &mdash;
+            including {exclusiveCount} exclusives like HRT initiation, PrEP, TRT
+            and GLP-1 monitoring. Build your list and request a tailored quote.
           </p>
         </div>
       </section>
@@ -59,8 +68,8 @@ export function PGDCatalogueClient() {
             const count =
               option === "All"
                 ? pgds.length
-                : option === "NEW"
-                  ? pgds.filter((p) => p.isNew).length
+                : option === "Exclusives"
+                  ? exclusiveCount
                   : pgds.filter((p) => p.category === option).length;
 
             return (
@@ -69,10 +78,12 @@ export function PGDCatalogueClient() {
                 onClick={() => setActiveFilter(option)}
                 className={`px-3 py-1.5 text-sm rounded-full font-medium transition-colors ${
                   isActive
-                    ? option === "NEW"
+                    ? option === "Exclusives"
                       ? "bg-teal-500 text-white"
                       : "bg-navy-900 text-white"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    : option === "Exclusives"
+                      ? "bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
               >
                 {option}
@@ -200,7 +211,7 @@ function PGDCard({
         </span>
         {pgd.isNew && (
           <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-700">
-            NEW &mdash; Exclusive
+            Exclusive
           </span>
         )}
         {pgd.pharmadoctor.startsWith("No") && (
