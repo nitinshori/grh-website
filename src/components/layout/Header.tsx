@@ -256,7 +256,7 @@ export function Header() {
               View Pricing
             </Link>
             <Link
-              href="/contact"
+              href="/book"
               className="px-5 py-2.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
             >
               Book a Demo
@@ -371,7 +371,7 @@ export function Header() {
               Pharmacy Login
             </Link>
             <Link
-              href="/contact"
+              href="/book"
               onClick={() => setMobileOpen(false)}
               className="block w-full text-center px-5 py-3 bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold rounded-lg transition-colors"
             >

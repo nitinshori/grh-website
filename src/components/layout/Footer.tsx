@@ -49,7 +49,7 @@ export function Footer() {
               View PGD Catalogue
             </Link>
             <Link
-              href="/contact"
+              href="/book"
               className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-lg transition-colors border border-white/20"
             >
               Book a Demo
