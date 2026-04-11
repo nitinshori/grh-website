@@ -25,7 +25,7 @@ export default function HomePage() {
           />
         </div>
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28 lg:py-32">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-20 lg:py-24">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             {/* Left: Copy */}
             <div>
@@ -351,6 +351,55 @@ export default function HomePage() {
               <p className="text-sm text-gray-500 mt-1">
                 From sign-up to authorised and ready &mdash; not weeks
               </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── SOCIAL PROOF — Trusted by pharmacies across the UK ── */}
+      <section className="bg-navy-950">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 md:py-16">
+          {/* Credibility headline */}
+          <p className="text-center text-sm font-semibold text-teal-400 uppercase tracking-wider mb-8">
+            Trusted by national supermarkets, large multiples and independent pharmacies
+          </p>
+
+          {/* Stats row */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 mb-12">
+            <div className="text-center">
+              <p className="text-3xl sm:text-4xl font-bold text-white">Millions</p>
+              <p className="text-sm text-blue-200 mt-1">of patients served under our PGDs</p>
+            </div>
+            <div className="text-center">
+              <p className="text-3xl sm:text-4xl font-bold text-white">60+</p>
+              <p className="text-sm text-blue-200 mt-1">PGD services available</p>
+            </div>
+            <div className="text-center">
+              <p className="text-3xl sm:text-4xl font-bold text-white">20 yrs</p>
+              <p className="text-sm text-blue-200 mt-1">of pharmacy experience</p>
+            </div>
+            <div className="text-center">
+              <p className="text-3xl sm:text-4xl font-bold text-white">CQC</p>
+              <p className="text-sm text-blue-200 mt-1">registered &amp; inspected</p>
+            </div>
+          </div>
+
+          {/* Dan testimonial */}
+          <div className="max-w-3xl mx-auto bg-white/5 border border-white/10 rounded-2xl p-8 md:p-10">
+            <div className="flex items-start gap-4">
+              {/* Quote mark */}
+              <svg className="w-10 h-10 text-teal-500 shrink-0 mt-1" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10H14.017zM0 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151C7.546 6.068 5.983 8.789 5.983 11H10v10H0z" />
+              </svg>
+              <div>
+                <p className="text-white text-lg md:text-xl leading-relaxed mb-4">
+                  GRH made it straightforward to launch private services in my pharmacy. The training is thorough, the platform is simple to use, and the flat fee means I know exactly what I&apos;m paying. No surprises, no per-consult charges eating into my margins.
+                </p>
+                <div>
+                  <p className="text-white font-semibold">Dan</p>
+                  <p className="text-blue-300 text-sm">Pharmacy Owner</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
