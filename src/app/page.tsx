@@ -359,8 +359,8 @@ export default function HomePage() {
           {/* Stats row */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 mb-12">
             <div className="text-center">
-              <p className="text-3xl sm:text-4xl font-bold text-white">Millions</p>
-              <p className="text-sm text-blue-200 mt-1">of patients served under our PGDs</p>
+              <p className="text-3xl sm:text-4xl font-bold text-white">1,000s</p>
+              <p className="text-sm text-blue-200 mt-1">of consultations delivered under our PGDs</p>
             </div>
             <div className="text-center">
               <p className="text-3xl sm:text-4xl font-bold text-white">60+</p>
@@ -372,7 +372,7 @@ export default function HomePage() {
             </div>
             <div className="text-center">
               <p className="text-3xl sm:text-4xl font-bold text-white">CQC &amp; HIW</p>
-              <p className="text-sm text-blue-200 mt-1">registered &amp; inspected</p>
+              <p className="text-sm text-blue-200 mt-1">registered</p>
             </div>
           </div>
 
