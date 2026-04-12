@@ -881,9 +881,9 @@ export default function HomePage() {
               Compare the true cost
             </h2>
             <p className="text-gray-500 max-w-2xl mx-auto">
-              A leading competitor charges &pound;2,639 per pharmacy, paid
-              upfront annually. With GRH you pay a lower flat monthly fee
-              &mdash; no lock-in, no upfront commitment.
+              Other providers charge &pound;1,699&ndash;&pound;2,639 per
+              pharmacy per year, paid upfront. With GRH you pay a lower flat
+              monthly fee &mdash; no lock-in, no upfront commitment.
             </p>
           </div>
           <SavingsCalculator compact />

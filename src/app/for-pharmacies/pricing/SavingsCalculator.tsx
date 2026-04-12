@@ -1,13 +1,21 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 
-/* ── Competitor benchmark ────────────────────────────────────────
-   Based on publicly listed pricing from a leading UK PGD provider.
-   Their "Unlimited Clinic Package" (60+ services):
+/* ── Competitor benchmarks ──────────────────────────────────────
+   Based on publicly listed pricing from two leading UK PGD providers.
+
+   Competitor A — "All-in-one provider"
      • £2,639 per pharmacy per year (inc. VAT)
-     • No per-consultation fee on the unlimited package               */
-const COMPETITOR_ANNUAL = 2639; // inc. VAT
+     • 60+ services, paid upfront annually
+     • No per-consultation fee on unlimited package
+
+   Competitor B — "Per-PGD + platform provider"
+     • £1,699 per pharmacy per year for their ePGD platform (44+ ePGDs)
+     • Or individual PGDs from ~£61 each (inc. VAT)
+     • Separate platform subscription required for digital workflow      */
+const COMPETITOR_A_ANNUAL = 2639; // all-in-one, inc. VAT
+const COMPETITOR_B_ANNUAL = 1699; // ePGD platform plan
 
 // GRH pricing tiers: £/pharmacy/month
 const GRH_PRICING = {
@@ -35,9 +43,13 @@ function getGRHTier(pharmacyCount: number): {
 export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
   const [pharmacyCount, setPharmacyCount] = useState(1);
 
-  // ── Competitor costs ──────────────────────────────────────
-  const competitorAnnualTotal = COMPETITOR_ANNUAL * pharmacyCount;
-  const competitorMonthlyEquiv = competitorAnnualTotal / 12;
+  // ── Competitor A costs ────────────────────────────────────
+  const compAAnnualTotal = COMPETITOR_A_ANNUAL * pharmacyCount;
+  const compAMonthlyEquiv = compAAnnualTotal / 12;
+
+  // ── Competitor B costs ────────────────────────────────────
+  const compBAnnualTotal = COMPETITOR_B_ANNUAL * pharmacyCount;
+  const compBMonthlyEquiv = compBAnnualTotal / 12;
 
   // ── GRH costs ─────────────────────────────────────────────
   const grhTier = getGRHTier(pharmacyCount);
@@ -47,13 +59,16 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
     : grhTier.monthlyPerPharmacy * pharmacyCount;
   const grhAnnualFee = grhMonthlyFee * 12;
 
-  // ── Savings ───────────────────────────────────────────────
-  const annualSaving = competitorAnnualTotal - grhAnnualFee;
-  const perPharmacyAnnualSaving =
-    pharmacyCount > 0 ? annualSaving / pharmacyCount : 0;
-  const savingPct =
-    competitorAnnualTotal > 0
-      ? Math.round((annualSaving / competitorAnnualTotal) * 100)
+  // ── Savings (vs most expensive competitor) ────────────────
+  const savingVsA = compAAnnualTotal - grhAnnualFee;
+  const savingVsB = compBAnnualTotal - grhAnnualFee;
+  const savingPctA =
+    compAAnnualTotal > 0
+      ? Math.round((savingVsA / compAAnnualTotal) * 100)
+      : 0;
+  const savingPctB =
+    compBAnnualTotal > 0
+      ? Math.round((savingVsB / compBAnnualTotal) * 100)
       : 0;
 
   const updatePharmacyCount = (value: string) => {
@@ -71,7 +86,7 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
         <h3 className="text-lg font-bold text-navy-900 mb-1">
           {compact
             ? "See how much you could save"
-            : "Estimate your savings vs a leading competitor"}
+            : "Estimate your savings vs other providers"}
         </h3>
         <p className="text-sm text-gray-500 mb-6">
           Enter your pharmacy count to see a side-by-side annual cost
@@ -100,118 +115,188 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
         </div>
       </div>
 
-      {/* ── Side-by-side comparison ───────────────────────────── */}
+      {/* ── Three-column comparison ─────────────────────────── */}
       <div className="bg-navy-950 text-white p-6 sm:p-8">
-        <div className="grid md:grid-cols-2 gap-6 mb-6">
-          {/* ── Competitor column ──────────────────────────────── */}
-          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-            <p className="text-xs text-red-300 uppercase tracking-wide font-semibold mb-4">
-              A leading competitor
+        <div className="grid md:grid-cols-3 gap-4 mb-6">
+          {/* ── Competitor A ──────────────────────────────────── */}
+          <div className="bg-white/5 border border-white/10 rounded-xl p-5">
+            <p className="text-xs text-red-300 uppercase tracking-wide font-semibold mb-1">
+              Provider A
             </p>
-            <div className="space-y-3">
-              <div className="flex justify-between items-baseline">
-                <span className="text-sm text-blue-200">
-                  Annual fee per pharmacy
+            <p className="text-[11px] text-blue-300 mb-4">
+              All-in-one annual package
+            </p>
+            <div className="space-y-2.5">
+              <div className="flex justify-between items-baseline gap-2">
+                <span className="text-xs text-blue-200">
+                  Annual fee
                 </span>
-                <span className="text-sm font-semibold text-white">
-                  &pound;{fmt(COMPETITOR_ANNUAL)}
-                </span>
-              </div>
-              <div className="flex justify-between items-baseline">
-                <span className="text-sm text-blue-200">
-                  Per-consultation charge
-                </span>
-                <span className="text-sm text-blue-200">
-                  Included
+                <span className="text-xs font-semibold text-white">
+                  &pound;{fmt(COMPETITOR_A_ANNUAL)}/pharmacy
                 </span>
               </div>
-              <div className="flex justify-between items-baseline">
-                <span className="text-sm text-blue-200">Payment</span>
-                <span className="text-sm text-blue-200">
+              <div className="flex justify-between items-baseline gap-2">
+                <span className="text-xs text-blue-200">
+                  Services
+                </span>
+                <span className="text-xs text-blue-200">60+</span>
+              </div>
+              <div className="flex justify-between items-baseline gap-2">
+                <span className="text-xs text-blue-200">Payment</span>
+                <span className="text-xs text-blue-200">
                   Upfront annual
                 </span>
               </div>
-              <div className="pt-3 border-t border-white/10">
-                <div className="flex justify-between items-baseline">
-                  <span className="text-sm text-blue-200">Monthly equiv.</span>
-                  <span className="text-lg font-bold text-red-400">
-                    &pound;{fmt(Math.round(competitorMonthlyEquiv))}
+              <div className="flex justify-between items-baseline gap-2">
+                <span className="text-xs text-blue-200">Training</span>
+                <span className="text-xs text-blue-200">
+                  Not included
+                </span>
+              </div>
+              <div className="pt-2.5 border-t border-white/10">
+                <div className="flex justify-between items-baseline gap-2">
+                  <span className="text-xs text-blue-200">Monthly equiv.</span>
+                  <span className="text-base font-bold text-red-400">
+                    &pound;{fmt(Math.round(compAMonthlyEquiv))}
                   </span>
                 </div>
               </div>
-              <div className="flex justify-between items-baseline">
-                <span className="text-sm font-semibold text-blue-200">
+              <div className="flex justify-between items-baseline gap-2">
+                <span className="text-xs font-semibold text-blue-200">
                   Annual total
                 </span>
-                <span className="text-xl font-bold text-red-400">
-                  &pound;{fmt(competitorAnnualTotal)}
+                <span className="text-lg font-bold text-red-400">
+                  &pound;{fmt(compAAnnualTotal)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Competitor B ──────────────────────────────────── */}
+          <div className="bg-white/5 border border-white/10 rounded-xl p-5">
+            <p className="text-xs text-amber-300 uppercase tracking-wide font-semibold mb-1">
+              Provider B
+            </p>
+            <p className="text-[11px] text-blue-300 mb-4">
+              Per-PGD + platform subscription
+            </p>
+            <div className="space-y-2.5">
+              <div className="flex justify-between items-baseline gap-2">
+                <span className="text-xs text-blue-200">
+                  Platform fee
+                </span>
+                <span className="text-xs font-semibold text-white">
+                  &pound;{fmt(COMPETITOR_B_ANNUAL)}/pharmacy
+                </span>
+              </div>
+              <div className="flex justify-between items-baseline gap-2">
+                <span className="text-xs text-blue-200">
+                  Services
+                </span>
+                <span className="text-xs text-blue-200">44+</span>
+              </div>
+              <div className="flex justify-between items-baseline gap-2">
+                <span className="text-xs text-blue-200">Payment</span>
+                <span className="text-xs text-blue-200">
+                  Annual subscription
+                </span>
+              </div>
+              <div className="flex justify-between items-baseline gap-2">
+                <span className="text-xs text-blue-200">Training</span>
+                <span className="text-xs text-blue-200">
+                  Separate cost
+                </span>
+              </div>
+              <div className="pt-2.5 border-t border-white/10">
+                <div className="flex justify-between items-baseline gap-2">
+                  <span className="text-xs text-blue-200">Monthly equiv.</span>
+                  <span className="text-base font-bold text-amber-400">
+                    &pound;{fmt(Math.round(compBMonthlyEquiv))}
+                  </span>
+                </div>
+              </div>
+              <div className="flex justify-between items-baseline gap-2">
+                <span className="text-xs font-semibold text-blue-200">
+                  Annual total
+                </span>
+                <span className="text-lg font-bold text-amber-400">
+                  &pound;{fmt(compBAnnualTotal)}
                 </span>
               </div>
             </div>
           </div>
 
           {/* ── GRH column ────────────────────────────────────── */}
-          <div className="bg-teal-500/10 border border-teal-400/20 rounded-xl p-6">
-            <p className="text-xs text-teal-400 uppercase tracking-wide font-semibold mb-4">
+          <div className="bg-teal-500/10 border border-teal-400/20 rounded-xl p-5">
+            <p className="text-xs text-teal-400 uppercase tracking-wide font-semibold mb-1">
               Get Real Health
             </p>
-            <div className="space-y-3">
-              <div className="flex justify-between items-baseline">
-                <span className="text-sm text-blue-200">
-                  Monthly fee per pharmacy
+            <p className="text-[11px] text-blue-300 mb-4">
+              Flat monthly fee, everything included
+            </p>
+            <div className="space-y-2.5">
+              <div className="flex justify-between items-baseline gap-2">
+                <span className="text-xs text-blue-200">
+                  Monthly fee
                 </span>
                 {isCustom ? (
-                  <span className="text-sm font-semibold text-teal-400">
+                  <span className="text-xs font-semibold text-teal-400">
                     Custom
                   </span>
                 ) : (
-                  <span className="text-sm font-semibold text-white">
-                    &pound;{grhTier.monthlyPerPharmacy}
+                  <span className="text-xs font-semibold text-white">
+                    &pound;{grhTier.monthlyPerPharmacy}/pharmacy
                   </span>
                 )}
               </div>
-              <div className="flex justify-between items-baseline">
-                <span className="text-sm text-blue-200">
-                  Per-consultation charge
+              <div className="flex justify-between items-baseline gap-2">
+                <span className="text-xs text-blue-200">
+                  Services
                 </span>
-                <span className="text-sm font-bold text-teal-400">
-                  &pound;0 &mdash; ever
+                <span className="text-xs font-bold text-teal-400">60+</span>
+              </div>
+              <div className="flex justify-between items-baseline gap-2">
+                <span className="text-xs text-blue-200">Payment</span>
+                <span className="text-xs text-teal-300">
+                  Monthly rolling
                 </span>
               </div>
-              <div className="flex justify-between items-baseline">
-                <span className="text-sm text-blue-200">Payment</span>
-                <span className="text-sm text-teal-300">Monthly rolling</span>
+              <div className="flex justify-between items-baseline gap-2">
+                <span className="text-xs text-blue-200">Training</span>
+                <span className="text-xs font-bold text-teal-400">
+                  Included
+                </span>
               </div>
-              <div className="pt-3 border-t border-white/10">
-                <div className="flex justify-between items-baseline">
-                  <span className="text-sm text-blue-200">Monthly total</span>
+              <div className="pt-2.5 border-t border-white/10">
+                <div className="flex justify-between items-baseline gap-2">
+                  <span className="text-xs text-blue-200">Monthly total</span>
                   {isCustom ? (
-                    <span className="text-lg font-bold text-teal-400">
+                    <span className="text-base font-bold text-teal-400">
                       Custom
                     </span>
                   ) : (
-                    <span className="text-lg font-bold text-teal-400">
+                    <span className="text-base font-bold text-teal-400">
                       &pound;{fmt(grhMonthlyFee)}
                     </span>
                   )}
                 </div>
                 {!isCustom && pharmacyCount > 1 && (
-                  <p className="text-xs text-blue-300 mt-1 text-right">
+                  <p className="text-[10px] text-blue-300 mt-0.5 text-right">
                     {grhTier.name}: &pound;{grhTier.monthlyPerPharmacy} &times;{" "}
                     {pharmacyCount}
                   </p>
                 )}
               </div>
-              <div className="flex justify-between items-baseline">
-                <span className="text-sm font-semibold text-blue-200">
+              <div className="flex justify-between items-baseline gap-2">
+                <span className="text-xs font-semibold text-blue-200">
                   Annual total
                 </span>
                 {isCustom ? (
-                  <span className="text-xl font-bold text-teal-400">
+                  <span className="text-lg font-bold text-teal-400">
                     Custom
                   </span>
                 ) : (
-                  <span className="text-xl font-bold text-teal-400">
+                  <span className="text-lg font-bold text-teal-400">
                     &pound;{fmt(grhAnnualFee)}
                   </span>
                 )}
@@ -221,30 +306,37 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
         </div>
 
         {/* ── Savings banner ──────────────────────────────────── */}
-        {!isCustom && annualSaving > 0 && (
+        {!isCustom && savingVsA > 0 && (
           <div className="bg-green-500/10 border border-green-400/20 rounded-xl p-6 text-center">
             <p className="text-xs text-green-300 uppercase tracking-wide font-semibold mb-2">
-              Your estimated annual saving
+              Your estimated annual savings
             </p>
-            <p className="text-4xl sm:text-5xl font-bold text-green-400 mb-1">
-              &pound;{fmt(annualSaving)}
-            </p>
-            <p className="text-sm text-blue-200">
-              That&apos;s{" "}
-              <span className="text-green-400 font-semibold">
-                {savingPct}% less
-              </span>{" "}
-              than a leading competitor
-              {pharmacyCount > 1 && (
-                <>
-                  {" "}&mdash;{" "}
-                  <span className="text-green-400 font-semibold">
-                    &pound;{fmt(perPharmacyAnnualSaving)}
-                  </span>{" "}
-                  saved per pharmacy
-                </>
+            <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-8 mb-2">
+              <div>
+                <p className="text-3xl sm:text-4xl font-bold text-green-400">
+                  &pound;{fmt(savingVsA)}
+                </p>
+                <p className="text-xs text-blue-200 mt-1">
+                  vs Provider A ({savingPctA}% less)
+                </p>
+              </div>
+              {savingVsB > 0 && (
+                <div>
+                  <p className="text-3xl sm:text-4xl font-bold text-green-400">
+                    &pound;{fmt(savingVsB)}
+                  </p>
+                  <p className="text-xs text-blue-200 mt-1">
+                    vs Provider B ({savingPctB}% less)
+                  </p>
+                </div>
               )}
-            </p>
+            </div>
+            {pharmacyCount > 1 && (
+              <p className="text-xs text-blue-300">
+                &pound;{fmt(Math.round(savingVsA / pharmacyCount))} saved per
+                pharmacy vs Provider A
+              </p>
+            )}
           </div>
         )}
 
@@ -311,10 +403,11 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
           </div>
         )}
 
-        <p className="text-center text-xs text-blue-300 mt-6 pt-4 border-t border-blue-900">
-          Competitor pricing based on their publicly listed Unlimited Clinic
-          Package (&pound;{fmt(COMPETITOR_ANNUAL)}/yr per pharmacy, inc.
-          VAT). Your actual savings may vary.{" "}
+        <p className="text-center text-[11px] text-blue-300 mt-6 pt-4 border-t border-blue-900">
+          Competitor pricing based on publicly listed rates. Provider A:
+          all-in-one annual package. Provider B: ePGD platform subscription
+          (44+ services). GRH includes 60+ PGDs, training, and clinical
+          support. Your actual savings may vary.{" "}
           <a href="/contact" className="text-teal-400 underline">
             Get your exact quote &rarr;
           </a>
