@@ -93,7 +93,7 @@ const faqs = [
   },
   {
     q: "How does your pricing compare to other PGD providers?",
-    a: "A leading competitor charges £2,199 + VAT per pharmacy per year for their full package — paid upfront annually. GRH is a flat monthly fee with zero per-consultation charges. Use the savings calculator above to see your potential savings based on your actual volumes.",
+    a: "A leading competitor charges £2,639 per pharmacy per year for their full package — paid upfront annually. GRH is a flat monthly fee with zero per-consultation charges. Use the savings calculator above to see your potential savings based on your actual volumes.",
   },
   {
     q: "How does your pricing compare to ECG?",
@@ -127,7 +127,7 @@ export default function PricingPage() {
           <ul className="text-gray-700 leading-relaxed space-y-2">
             <li><strong>Flat monthly fee per pharmacy.</strong> No per-consultation charges, no per-PGD upcharges, no hidden layers.</li>
             <li><strong>All PGDs included at every tier.</strong> Travel vaccines, flu jabs, UTI, weight management &mdash; everything covered by one fee.</li>
-            <li><strong>Zero per-consultation fees ever.</strong> Unlike a leading competitor’s £2,199 + VAT upfront annual fee, GRH is a simple monthly subscription with no long-term commitment.</li>
+            <li><strong>Zero per-consultation fees ever.</strong> Unlike a leading competitor’s £2,639 upfront annual fee, GRH is a simple monthly subscription with no long-term commitment.</li>
             <li><strong>Price goes down as you grow.</strong> Volume discounts: £125/pharmacy for 1\u20135 sites, down to £99 for 16\u201330, and custom pricing for networks of 30+.</li>
           </ul>
         </div>

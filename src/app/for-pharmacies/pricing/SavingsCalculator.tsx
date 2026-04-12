@@ -5,18 +5,9 @@ import { useState, useMemo } from "react";
 /* ── Competitor benchmark ────────────────────────────────────────
    Based on publicly listed pricing from a leading UK PGD provider.
    Their "Unlimited Clinic Package" (60+ services):
-     • £2,199 + VAT per pharmacy per year  (= £2,638.80 inc. VAT)
+     • £2,639 per pharmacy per year (inc. VAT)
      • No per-consultation fee on the unlimited package               */
-const COMPETITOR_ANNUAL_EX_VAT = 2199;
-const COMPETITOR_ANNUAL_INC_VAT = 2639; // £2,199 + 20% VAT, rounded
-
-const servicePresets = [
-  { label: "Travel vaccines", defaultVolume: 30 },
-  { label: "Flu jabs", defaultVolume: 50 },
-  { label: "Weight management", defaultVolume: 20 },
-  { label: "UTI consultations", defaultVolume: 15 },
-  { label: "Other PGD services", defaultVolume: 10 },
-];
+const COMPETITOR_ANNUAL = 2639; // inc. VAT
 
 // GRH pricing tiers: £/pharmacy/month
 const GRH_PRICING = {
@@ -45,7 +36,7 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
   const [pharmacyCount, setPharmacyCount] = useState(1);
 
   // ── Competitor costs ──────────────────────────────────────
-  const competitorAnnualTotal = COMPETITOR_ANNUAL_INC_VAT * pharmacyCount;
+  const competitorAnnualTotal = COMPETITOR_ANNUAL * pharmacyCount;
   const competitorMonthlyEquiv = competitorAnnualTotal / 12;
 
   // ── GRH costs ─────────────────────────────────────────────
@@ -123,7 +114,7 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
                   Annual fee per pharmacy
                 </span>
                 <span className="text-sm font-semibold text-white">
-                  &pound;{fmt(COMPETITOR_ANNUAL_EX_VAT)} + VAT
+                  &pound;{fmt(COMPETITOR_ANNUAL)}
                 </span>
               </div>
               <div className="flex justify-between items-baseline">
@@ -150,7 +141,7 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
               </div>
               <div className="flex justify-between items-baseline">
                 <span className="text-sm font-semibold text-blue-200">
-                  Annual total (inc. VAT)
+                  Annual total
                 </span>
                 <span className="text-xl font-bold text-red-400">
                   &pound;{fmt(competitorAnnualTotal)}
@@ -322,8 +313,8 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
 
         <p className="text-center text-xs text-blue-300 mt-6 pt-4 border-t border-blue-900">
           Competitor pricing based on their publicly listed Unlimited Clinic
-          Package (&pound;{fmt(COMPETITOR_ANNUAL_EX_VAT)}&nbsp;+&nbsp;VAT/yr
-          per pharmacy). Your actual savings may vary.{" "}
+          Package (&pound;{fmt(COMPETITOR_ANNUAL)}/yr per pharmacy, inc.
+          VAT). Your actual savings may vary.{" "}
           <a href="/contact" className="text-teal-400 underline">
             Get your exact quote &rarr;
           </a>
