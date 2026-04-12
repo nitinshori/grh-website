@@ -8,7 +8,7 @@ const pharmacyLinks = [
   {
     href: "/for-pharmacies",
     label: "Why Partner With Us",
-    description: "How we differ from Pharmadoctor and ECG.",
+    description: "How we differ from leading competitors.",
   },
   {
     href: "/for-pharmacies/pgd-catalogue",

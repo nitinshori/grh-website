@@ -2,7 +2,11 @@
 
 import { useState, useMemo } from "react";
 
-const PHARMADOCTOR_PER_CONSULT = 6.5; // £ per consultation (published rate)
+/* ── Competitor benchmark ────────────────────────────────────────
+   Based on publicly available pricing from a leading UK PGD provider.
+   Their model: monthly platform fee + per-consultation charge.        */
+const COMPETITOR_MONTHLY_FEE = 50; // £ platform / subscription fee
+const COMPETITOR_PER_CONSULT = 6.5; // £ per consultation
 
 const servicePresets = [
   { label: "Travel vaccines", defaultVolume: 30 },
@@ -35,7 +39,7 @@ function getGRHTier(pharmacyCount: number): {
   }
 }
 
-export function SavingsCalculator() {
+export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
   const [volumes, setVolumes] = useState<number[]>(
     servicePresets.map((s) => s.defaultVolume)
   );
@@ -46,19 +50,25 @@ export function SavingsCalculator() {
     [volumes]
   );
 
-  const monthlyConsults = totalConsults;
-  const monthlyPDCost = monthlyConsults * pharmacyCount * PHARMADOCTOR_PER_CONSULT;
-  const annualPDCost = monthlyPDCost * 12;
+  // ── Competitor costs ──────────────────────────────────────
+  const competitorMonthlyPlatform =
+    COMPETITOR_MONTHLY_FEE * pharmacyCount;
+  const competitorMonthlyConsults =
+    totalConsults * pharmacyCount * COMPETITOR_PER_CONSULT;
+  const competitorMonthlyTotal =
+    competitorMonthlyPlatform + competitorMonthlyConsults;
+  const competitorAnnualTotal = competitorMonthlyTotal * 12;
 
-  // GRH pricing based on pharmacy count and tier
+  // ── GRH costs ─────────────────────────────────────────────
   const grhTier = getGRHTier(pharmacyCount);
-  const grhMonthlyFee =
-    pharmacyCount > 30
-      ? 0 // Custom pricing
-      : grhTier.monthlyPerPharmacy * pharmacyCount;
+  const isCustom = pharmacyCount > 30;
+  const grhMonthlyFee = isCustom
+    ? 0
+    : grhTier.monthlyPerPharmacy * pharmacyCount;
   const grhAnnualFee = grhMonthlyFee * 12;
-  const annualSaving = annualPDCost - grhAnnualFee;
 
+  // ── Savings ───────────────────────────────────────────────
+  const annualSaving = competitorAnnualTotal - grhAnnualFee;
   const perPharmacyAnnualSaving =
     pharmacyCount > 0 ? annualSaving / pharmacyCount : 0;
 
@@ -78,13 +88,16 @@ export function SavingsCalculator() {
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-      {/* Input section */}
+      {/* ── Input section ─────────────────────────────────────── */}
       <div className="p-6 sm:p-8">
-        <h3 className="font-bold text-navy-900 mb-1">
-          Estimate your savings
+        <h3 className="text-lg font-bold text-navy-900 mb-1">
+          {compact
+            ? "See how much you could save"
+            : "Estimate your savings vs a leading competitor"}
         </h3>
         <p className="text-sm text-gray-500 mb-6">
-          Enter your pharmacy count and estimated monthly consultation volumes.
+          Enter your pharmacy count and estimated monthly consultation volumes
+          to see a side-by-side cost comparison.
         </p>
 
         {/* Pharmacy count */}
@@ -110,7 +123,8 @@ export function SavingsCalculator() {
 
         {/* Consultation volumes */}
         <h4 className="text-sm font-semibold text-gray-700 mb-4">
-          Monthly consultation volumes
+          Monthly consultation volumes{" "}
+          <span className="font-normal text-gray-400">(per pharmacy)</span>
         </h4>
         <div className="space-y-4">
           {servicePresets.map((service, i) => (
@@ -141,108 +155,158 @@ export function SavingsCalculator() {
             Total monthly consultations
           </span>
           <span className="text-xl font-bold text-navy-900">
-            {totalConsults.toLocaleString()}
+            {(totalConsults * pharmacyCount).toLocaleString()}
           </span>
         </div>
       </div>
 
-      {/* Results section */}
+      {/* ── Side-by-side comparison ───────────────────────────── */}
       <div className="bg-navy-950 text-white p-6 sm:p-8">
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 text-center">
-          {/* Pharmadoctor cost */}
-          <div>
-            <p className="text-xs text-blue-300 uppercase tracking-wide mb-1">
-              Pharmadoctor annual cost
+        <div className="grid md:grid-cols-2 gap-6 mb-6">
+          {/* ── Competitor column ──────────────────────────────── */}
+          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+            <p className="text-xs text-red-300 uppercase tracking-wide font-semibold mb-3">
+              A leading competitor
             </p>
-            <p className="text-2xl sm:text-3xl font-bold text-red-400">
-              £{annualPDCost.toLocaleString()}
-            </p>
-            <p className="text-xs text-blue-300 mt-1">
-              {monthlyConsults.toLocaleString()} consults &times; {pharmacyCount}{" "}
-              pharmacies &times; £{PHARMADOCTOR_PER_CONSULT.toFixed(2)}
-            </p>
+            <div className="space-y-3">
+              <div className="flex justify-between items-baseline">
+                <span className="text-sm text-blue-200">Monthly platform fee</span>
+                <span className="text-sm font-semibold text-white">
+                  £{COMPETITOR_MONTHLY_FEE.toLocaleString()}{" "}
+                  <span className="text-blue-300 font-normal">&times; {pharmacyCount}</span>
+                </span>
+              </div>
+              <div className="flex justify-between items-baseline">
+                <span className="text-sm text-blue-200">Per-consultation charge</span>
+                <span className="text-sm font-semibold text-white">
+                  £{COMPETITOR_PER_CONSULT.toFixed(2)}{" "}
+                  <span className="text-blue-300 font-normal">per consult</span>
+                </span>
+              </div>
+              <div className="pt-3 border-t border-white/10">
+                <div className="flex justify-between items-baseline">
+                  <span className="text-sm text-blue-200">Monthly total</span>
+                  <span className="text-lg font-bold text-red-400">
+                    £{competitorMonthlyTotal.toLocaleString()}
+                  </span>
+                </div>
+                <p className="text-xs text-blue-300 mt-1 text-right">
+                  £{competitorMonthlyPlatform.toLocaleString()} platform +
+                  £{competitorMonthlyConsults.toLocaleString()} consults
+                </p>
+              </div>
+              <div className="flex justify-between items-baseline">
+                <span className="text-sm text-blue-200">Annual total</span>
+                <span className="text-xl font-bold text-red-400">
+                  £{competitorAnnualTotal.toLocaleString()}
+                </span>
+              </div>
+            </div>
           </div>
 
-          {/* GRH cost */}
-          <div>
-            <p className="text-xs text-blue-300 uppercase tracking-wide mb-1">
-              GRH annual cost
+          {/* ── GRH column ────────────────────────────────────── */}
+          <div className="bg-teal-500/10 border border-teal-400/20 rounded-xl p-6">
+            <p className="text-xs text-teal-400 uppercase tracking-wide font-semibold mb-3">
+              Get Real Health
             </p>
-            {pharmacyCount > 30 ? (
-              <>
-                <p className="text-2xl sm:text-3xl font-bold text-teal-400">
-                  Custom
-                </p>
-                <p className="text-xs text-blue-300 mt-1">
-                  Contact us for Network pricing
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="text-2xl sm:text-3xl font-bold text-teal-400">
-                  £{grhAnnualFee.toLocaleString()}
-                </p>
-                <p className="text-xs text-blue-300 mt-1">
-                  {grhTier.name}: £{grhTier.monthlyPerPharmacy}/pharmacy/month
-                </p>
-              </>
-            )}
-          </div>
-
-          {/* Total saving */}
-          <div>
-            <p className="text-xs text-blue-300 uppercase tracking-wide mb-1">
-              Total annual saving
-            </p>
-            <p className="text-2xl sm:text-3xl font-bold text-green-400">
-              {pharmacyCount > 30
-                ? "—"
-                : annualSaving > 0
-                  ? `£${annualSaving.toLocaleString()}`
-                  : "—"}
-            </p>
-            <p className="text-xs text-blue-300 mt-1">
-              {annualSaving > 0 && "All pharmacies"}
-            </p>
-          </div>
-
-          {/* Per-pharmacy saving */}
-          <div>
-            <p className="text-xs text-blue-300 uppercase tracking-wide mb-1">
-              Per-pharmacy saving
-            </p>
-            <p className="text-2xl sm:text-3xl font-bold text-green-400">
-              {pharmacyCount > 30
-                ? "—"
-                : annualSaving > 0
-                  ? `£${perPharmacyAnnualSaving.toLocaleString("en-GB", {
-                      maximumFractionDigits: 0,
-                    })}`
-                  : "—"}
-            </p>
-            <p className="text-xs text-blue-300 mt-1">
-              {annualSaving > 0 && "Per location"}
-            </p>
+            <div className="space-y-3">
+              <div className="flex justify-between items-baseline">
+                <span className="text-sm text-blue-200">Monthly fee</span>
+                {isCustom ? (
+                  <span className="text-sm font-semibold text-teal-400">
+                    Custom
+                  </span>
+                ) : (
+                  <span className="text-sm font-semibold text-white">
+                    £{grhTier.monthlyPerPharmacy}{" "}
+                    <span className="text-blue-300 font-normal">&times; {pharmacyCount}</span>
+                  </span>
+                )}
+              </div>
+              <div className="flex justify-between items-baseline">
+                <span className="text-sm text-blue-200">Per-consultation charge</span>
+                <span className="text-sm font-bold text-teal-400">£0.00</span>
+              </div>
+              <div className="pt-3 border-t border-white/10">
+                <div className="flex justify-between items-baseline">
+                  <span className="text-sm text-blue-200">Monthly total</span>
+                  {isCustom ? (
+                    <span className="text-lg font-bold text-teal-400">
+                      Custom
+                    </span>
+                  ) : (
+                    <span className="text-lg font-bold text-teal-400">
+                      £{grhMonthlyFee.toLocaleString()}
+                    </span>
+                  )}
+                </div>
+                {!isCustom && (
+                  <p className="text-xs text-blue-300 mt-1 text-right">
+                    {grhTier.name}: £{grhTier.monthlyPerPharmacy}/pharmacy/month
+                  </p>
+                )}
+              </div>
+              <div className="flex justify-between items-baseline">
+                <span className="text-sm text-blue-200">Annual total</span>
+                {isCustom ? (
+                  <span className="text-xl font-bold text-teal-400">
+                    Custom
+                  </span>
+                ) : (
+                  <span className="text-xl font-bold text-teal-400">
+                    £{grhAnnualFee.toLocaleString()}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
-        {annualSaving > 0 && (
-          <p className="text-center text-sm text-blue-200 mt-6 pt-4 border-t border-blue-900">
-            Based on Pharmadoctor&apos;s published £
-            {PHARMADOCTOR_PER_CONSULT.toFixed(2)} per-consultation fee.{" "}
-            <a href="/contact" className="text-teal-400 underline">
-              Get your exact quote →
-            </a>
-          </p>
+        {/* ── Savings banner ──────────────────────────────────── */}
+        {!isCustom && annualSaving > 0 && (
+          <div className="bg-green-500/10 border border-green-400/20 rounded-xl p-6 text-center">
+            <p className="text-xs text-green-300 uppercase tracking-wide font-semibold mb-2">
+              Your estimated annual saving
+            </p>
+            <p className="text-4xl sm:text-5xl font-bold text-green-400 mb-1">
+              £{annualSaving.toLocaleString()}
+            </p>
+            <p className="text-sm text-blue-200">
+              That&apos;s{" "}
+              <span className="text-green-400 font-semibold">
+                £{perPharmacyAnnualSaving.toLocaleString("en-GB", {
+                  maximumFractionDigits: 0,
+                })}
+              </span>{" "}
+              saved per pharmacy, per year
+            </p>
+          </div>
         )}
-        {pharmacyCount > 30 && (
-          <p className="text-center text-sm text-blue-200 mt-6 pt-4 border-t border-blue-900">
-            Your network qualifies for custom Network pricing.{" "}
-            <a href="/contact" className="text-teal-400 underline">
-              Contact us for a tailored quote →
+
+        {isCustom && (
+          <div className="bg-white/5 border border-white/10 rounded-xl p-6 text-center">
+            <p className="text-blue-200 mb-3">
+              Your network qualifies for custom Network pricing.
+            </p>
+            <a
+              href="/contact"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-teal-500 hover:bg-teal-400 text-white font-semibold rounded-lg transition-colors"
+            >
+              Get a tailored quote
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
             </a>
-          </p>
+          </div>
         )}
+
+        <p className="text-center text-xs text-blue-300 mt-6 pt-4 border-t border-blue-900">
+          Competitor pricing based on typical per-consultation PGD provider rates.
+          Your actual savings may vary.{" "}
+          <a href="/contact" className="text-teal-400 underline">
+            Get your exact quote &rarr;
+          </a>
+        </p>
       </div>
     </div>
   );

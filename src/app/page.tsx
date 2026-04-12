@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
+import { SavingsCalculator } from "./for-pharmacies/pricing/SavingsCalculator";
 
 export const metadata: Metadata = {
   title: "Get Real Health | PGDs, Clinical Training & Governance for UK Pharmacies",
@@ -868,6 +869,34 @@ export default function HomePage() {
                 who you&apos;re splitting the revenue with.
               </span>
             </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ── PRICING COMPARISON TOOL ────────────────────────────── */}
+      <section className="bg-gray-50 border-t border-gray-100">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+          <div className="text-center mb-10">
+            <h2 className="text-2xl sm:text-3xl font-bold text-navy-900 mb-3">
+              Compare the true cost
+            </h2>
+            <p className="text-gray-500 max-w-2xl mx-auto">
+              Most PGD providers charge a monthly platform fee <em>plus</em> a
+              per-consultation charge. With GRH you pay one flat monthly fee
+              &mdash; no matter how many consultations you do.
+            </p>
+          </div>
+          <SavingsCalculator compact />
+          <div className="text-center mt-8">
+            <Link
+              href="/for-pharmacies/pricing"
+              className="inline-flex items-center gap-2 text-teal-600 hover:text-teal-700 font-semibold transition-colors"
+            >
+              See full pricing details
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
+            </Link>
           </div>
         </div>
       </section>
