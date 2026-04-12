@@ -84,7 +84,7 @@ export default function SaxendaToolPage() {
         {/* Disclaimer */}
         <div className="mt-8 text-center">
           <p className="text-[11px] text-gray-400 max-w-2xl mx-auto">
-            This ePGD is provided as clinical decision support for weight management. Requires confirmed BMI >30 or >27 with comorbidity.
+            This ePGD is provided as clinical decision support for weight management. Requires confirmed BMI &gt;30 or &gt;27 with comorbidity.
           </p>
         </div>
       </div>
