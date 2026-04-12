@@ -881,7 +881,7 @@ export default function HomePage() {
               Compare the true cost
             </h2>
             <p className="text-gray-500 max-w-2xl mx-auto">
-              Other providers charge &pound;1,699&ndash;&pound;2,639 per
+              Other providers charge &pound;2,160&ndash;&pound;2,639 per
               pharmacy per year, paid upfront. With GRH you pay a lower flat
               monthly fee &mdash; no lock-in, no upfront commitment.
             </p>

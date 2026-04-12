@@ -11,11 +11,12 @@ import { useState } from "react";
      • No per-consultation fee on unlimited package
 
    Competitor B — "Per-PGD + platform provider"
-     • £1,699 per pharmacy per year for their ePGD platform (44+ ePGDs)
-     • Or individual PGDs from ~£61 each (inc. VAT)
+     • £2,160 per pharmacy per year for their Advanced bundle
+       (appointments, Rx, deliveries, PGDs, eCommerce)
+     • Or lower tiers from £1,699/yr (PGD-only plan)
      • Separate platform subscription required for digital workflow      */
 const COMPETITOR_A_ANNUAL = 2639; // all-in-one, inc. VAT
-const COMPETITOR_B_ANNUAL = 1699; // ePGD platform plan
+const COMPETITOR_B_ANNUAL = 2160; // Advanced bundle (ePGDs + full platform)
 
 // GRH pricing tiers: £/pharmacy/month
 const GRH_PRICING = {
@@ -178,12 +179,12 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
               Provider B
             </p>
             <p className="text-[11px] text-blue-300 mb-4">
-              Per-PGD + platform subscription
+              PGDs + platform bundle
             </p>
             <div className="space-y-2.5">
               <div className="flex justify-between items-baseline gap-2">
                 <span className="text-xs text-blue-200">
-                  Platform fee
+                  Annual fee
                 </span>
                 <span className="text-xs font-semibold text-white">
                   &pound;{fmt(COMPETITOR_B_ANNUAL)}/pharmacy
@@ -405,9 +406,9 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
 
         <p className="text-center text-[11px] text-blue-300 mt-6 pt-4 border-t border-blue-900">
           Competitor pricing based on publicly listed rates. Provider A:
-          all-in-one annual package. Provider B: ePGD platform subscription
-          (44+ services). GRH includes 60+ PGDs, training, and clinical
-          support. Your actual savings may vary.{" "}
+          all-in-one annual package. Provider B: full platform bundle with
+          ePGDs (44+ services). GRH includes 60+ PGDs, training, and
+          clinical support. Your actual savings may vary.{" "}
           <a href="/contact" className="text-teal-400 underline">
             Get your exact quote &rarr;
           </a>
