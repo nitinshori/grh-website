@@ -21,9 +21,9 @@ export default function EyeInfectionsClient() {
       redEye: false,
       grittySensation: false,
       eyelidSwelling: false,
-      crustigOnWaking: false,
+      crustingOnWaking: false,
       contactLensWearer: false,
-      chloramphenicol Allergy: false,
+      chloramphenicolAllergy: false,
       boneMarrowProblems: false,
       pregnantOrBreastfeeding: false,
       painInsideEye: false,
@@ -257,8 +257,8 @@ export default function EyeInfectionsClient() {
                 />
                 <Checkbox
                   label="Crusting on waking"
-                  checked={state.assessment.crustigOnWaking}
-                  onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, crustigOnWaking: v } }))}
+                  checked={state.assessment.crustingOnWaking}
+                  onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, crustingOnWaking: v } }))}
                 />
               </div>
             </div>
