@@ -11,71 +11,97 @@ export const metadata: Metadata = {
 
 const tiers = [
   {
-    name: "Starter",
-    pgds: "Up to 5 PGDs",
-    price: "Contact us",
+    name: "Single Site",
+    pgds: "1\u20135 pharmacies",
+    price: "£125",
+    priceSubtitle: "/pharmacy/month",
     highlighted: false,
     features: [
-      "Platform access included",
-      "Online training for all included PGDs",
-      "Clinical support line (Mon\u2013Fri)",
+      "All PGDs included",
+      "Platform access",
+      "Online training for all PGDs",
+      "Clinical support (Mon\u2013Fri)",
       "Patient directory listing",
       "Marketing materials",
       "Zero per-consult fees \u2014 ever",
     ],
   },
   {
-    name: "Growth",
-    pgds: "Up to 20 PGDs",
-    price: "Contact us",
+    name: "Group",
+    pgds: "6\u201315 pharmacies",
+    price: "£109",
+    priceSubtitle: "/pharmacy/month",
     highlighted: true,
     badge: "Most popular",
     features: [
-      "Everything in Starter, plus:",
-      "Up to 20 PGDs across any category",
+      "All PGDs included",
+      "Everything in Single Site, plus:",
       "Superintendent dashboard",
       "Seasonal campaign support",
       "Priority onboarding (24hr)",
-      "Zero per-consult fees \u2014 ever",
+      "Dedicated onboarding call",
+      "Save up to £192/pharmacy vs Single Site",
     ],
   },
   {
     name: "Enterprise",
-    pgds: "Unlimited PGDs",
-    price: "Contact us",
+    pgds: "16\u201330 pharmacies",
+    price: "£99",
+    priceSubtitle: "/pharmacy/month",
     highlighted: false,
     features: [
-      "Everything in Growth, plus:",
-      "Unlimited PGDs across all categories",
+      "All PGDs included",
+      "Everything in Group, plus:",
       "Multi-branch superintendent overview",
       "Dedicated account manager",
-      "Bespoke onboarding for your team",
-      "Volume discount on training",
-      "Zero per-consult fees \u2014 ever",
+      "Bespoke onboarding",
+      "Custom integrations",
+    ],
+  },
+  {
+    name: "Network",
+    pgds: "30+ pharmacies",
+    price: "Custom",
+    priceSubtitle: "Contact us",
+    highlighted: false,
+    features: [
+      "Everything in Enterprise, plus:",
+      "Tailored pricing",
+      "SLA guarantees",
+      "White-label options",
+      "Strategic account support",
     ],
   },
 ];
 
 const faqs = [
   {
-    q: "Are there any hidden fees?",
-    a: "No. The annual fee covers everything listed in your plan. We do not charge per consultation, per patient, per service, or per renewal of individual PGDs. The price you see is the price you pay.",
+    q: "What\u2019s included in the monthly fee?",
+    a: "Everything. The flat monthly fee per pharmacy covers all PGDs across every category, platform access, training, clinical support, patient directory listing, and marketing materials. No per-consultation fees, no per-PGD upcharges, no hidden charges.",
   },
   {
-    q: "What happens when I want to add more PGDs?",
-    a: "If you\u2019re on Starter and want more than 5 PGDs, you can upgrade to Growth at any time. We\u2019ll credit the remaining time on your current plan.",
+    q: "Are there any hidden fees?",
+    a: "No. Your monthly fee covers everything listed in your plan. We do not charge per consultation, per patient, per service, or per PGD. The price you see is the price you pay.",
+  },
+  {
+    q: "How does pricing work if I have multiple pharmacies?",
+    a: "You pay per pharmacy per month at the tier rate. So if you have 10 pharmacies, you\u2019re on the Group tier (6\u201315 pharmacies): 10 \u00d7 £109 = £1,090/month. No per-pharmacy setup fees, no platform surcharges.",
+  },
+  {
+    q: "Can I start small and scale up?",
+    a: "Yes. Start with Single Site (1\u20135 pharmacies) and add more pharmacies anytime. Once you reach the next tier threshold, your per-pharmacy rate automatically drops. We\u2019ll adjust your next invoice accordingly.",
+  },
+  {
+    q: "How does your pricing compare to Pharmadoctor?",
+    a: "Pharmadoctor charges £4\u20136.50 per consultation \u2014 the busier you get, the more you pay. GRH is a flat monthly fee with zero per-consultation charges. Use the savings calculator above to see your potential savings based on your actual volumes.",
+  },
+  {
+    q: "How does your pricing compare to ECG?",
+    a: "ECG charges per PGD, per pharmacist, per year \u2014 plus a separate third-party platform subscription for the digital workflow. GRH is one flat fee that covers everything: all PGDs, platform, training, clinical support, and onboarding. No hidden layers.",
   },
   {
     q: "Can I cancel?",
     a: "You can cancel at the end of your annual term. All your consultation records remain accessible and exportable. They\u2019re your data \u2014 you keep them.",
-  },
-  {
-    q: "How does your pricing compare to Pharmadoctor?",
-    a: "Pharmadoctor charges per consultation \u2014 the busier you get, the more you pay them. We charge one flat annual fee. Use the savings calculator above to see the difference based on your consultation volume.",
-  },
-  {
-    q: "How does your pricing compare to ECG?",
-    a: "ECG charges per PGD, per pharmacist, per year \u2014 plus a separate third-party platform subscription for the digital workflow. We charge one flat fee that covers everything: PGDs, platform, training, and support.",
   },
 ];
 
@@ -86,12 +112,10 @@ export default function PricingPage() {
       <section className="bg-navy-950 text-white">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-20">
           <h1 className="text-3xl sm:text-4xl font-bold mb-3">
-            Pricing &mdash; request a quote
+            Transparent pricing
           </h1>
           <p className="text-lg text-blue-200 max-w-2xl">
-            One flat annual fee. No per-consult charges. We&apos;re finalising
-            our public pricing tiers &mdash; in the meantime, get in touch for
-            a quote tailored to your pharmacy.
+            One flat monthly fee per pharmacy. All PGDs included. Zero per-consult charges. Price goes down as you grow.
           </p>
         </div>
       </section>
@@ -100,13 +124,12 @@ export default function PricingPage() {
       <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="bg-navy-50 border border-navy-100 rounded-xl p-6">
           <h2 className="font-bold text-navy-900 mb-2">Our pricing principle</h2>
-          <p className="text-gray-700 leading-relaxed">
-            Pharmadoctor charges per consultation. ECG charges per PGD, per
-            pharmacist, per year &mdash; plus a separate third-party platform subscription on top. We charge one flat
-            annual fee that covers PGDs, platform, training and support.
-            Public tier pricing is being finalised; please get in touch for a
-            quote.
-          </p>
+          <ul className="text-gray-700 leading-relaxed space-y-2">
+            <li><strong>Flat monthly fee per pharmacy.</strong> No per-consultation charges, no per-PGD upcharges, no hidden layers.</li>
+            <li><strong>All PGDs included at every tier.</strong> Travel vaccines, flu jabs, UTI, weight management &mdash; everything covered by one fee.</li>
+            <li><strong>Zero per-consultation fees ever.</strong> Unlike Pharmadoctor\u2019s £4\u20136.50/item model, your cost doesn\u2019t rise with volume.</li>
+            <li><strong>Price goes down as you grow.</strong> Volume discounts: £125/pharmacy for 1\u20135 sites, down to £99 for 16\u201330, and custom pricing for networks of 30+.</li>
+          </ul>
         </div>
       </section>
 
@@ -131,9 +154,14 @@ export default function PricingPage() {
                 {tier.name}
               </h3>
               <p className="text-sm text-gray-500 mb-4">{tier.pgds}</p>
-              <p className="text-3xl font-bold text-navy-900 mb-6">
-                {tier.price}
-              </p>
+              <div className="mb-6">
+                <p className="text-3xl font-bold text-navy-900">
+                  {tier.price}
+                </p>
+                {tier.priceSubtitle && (
+                  <p className="text-sm text-gray-500">{tier.priceSubtitle}</p>
+                )}
+              </div>
               <ul className="space-y-3 mb-8">
                 {tier.features.map((f, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm">

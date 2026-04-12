@@ -846,18 +846,7 @@ export const pgds: PGD[] = [
       "Healthcare workers, first responders, care home staff. High volume B2B opportunity.",
     pharmadoctor: "Yes",
   },
-  {
-    id: "needlestick-pep",
-    title: "Needle-stick Post-Exposure Prophylaxis (PEP)",
-    category: "Occupational",
-    priority: 2,
-    isNew: true,
-    revenueEstimate: "\u00a380\u2013150 per consultation",
-    consultTime: "20\u201330 min",
-    description:
-      "DIFFERENTIATION. Occupational health PEP guidance and bridging supply. Not offered by any pharmacy PGD provider.",
-    pharmadoctor: "No",
-  },
+  // needlestick-pep removed — not suitable for pharmacy-level PGD supply without specialist oversight
 
   // ═══ PAEDIATRICS ═══
   {
