@@ -52,7 +52,7 @@ export function Footer() {
               href="/book"
               className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-lg transition-colors border border-white/20"
             >
-              Book a Demo
+              Book a Discovery Call
             </Link>
           </div>
         </div>
@@ -69,7 +69,7 @@ export function Footer() {
                 Get Real Health
               </span>
             </Link>
-            <p className="text-sm text-blue-300 leading-relaxed mb-4">
+            <p className="text-sm text-blue-200 leading-relaxed mb-4">
               UK pharmacy PGD provider. Flat fee. Your data. Your business.
             </p>
             <a
@@ -100,7 +100,7 @@ export function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-blue-300 hover:text-teal-300 transition-colors"
+                    className="text-sm text-blue-200 hover:text-teal-300 transition-colors"
                   >
                     {link.label}
                   </Link>
@@ -119,7 +119,7 @@ export function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-blue-300 hover:text-teal-300 transition-colors"
+                    className="text-sm text-blue-200 hover:text-teal-300 transition-colors"
                   >
                     {link.label}
                   </Link>
@@ -136,7 +136,7 @@ export function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-blue-300 hover:text-teal-300 transition-colors"
+                    className="text-sm text-blue-200 hover:text-teal-300 transition-colors"
                   >
                     {link.label}
                   </Link>
@@ -153,7 +153,7 @@ export function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-blue-300 hover:text-teal-300 transition-colors"
+                    className="text-sm text-blue-200 hover:text-teal-300 transition-colors"
                   >
                     {link.label}
                   </Link>
@@ -165,7 +165,7 @@ export function Footer() {
 
         {/* Legal entity / regulatory block */}
         <div className="mt-12 pt-8 border-t border-white/10">
-          <div className="grid md:grid-cols-2 gap-6 text-sm text-blue-300">
+          <div className="grid md:grid-cols-2 gap-6 text-sm text-blue-200">
             <div>
               <p className="font-semibold text-white mb-1">
                 {legal.companyName}

@@ -95,7 +95,7 @@ const comparisonPoints = [
   {
     label: "Consultation tool",
     grh: "Built in — included in every plan",
-    competitor: "Charac subscription required (extra cost)",
+    competitor: "Third-party platform subscription required (extra cost)",
   },
   {
     label: "Patient data ownership",
@@ -140,10 +140,10 @@ export default function PlatformPage() {
       <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="bg-navy-50 border border-navy-100 rounded-xl p-6">
           <h2 className="font-bold text-navy-900 mb-2">
-            No Charac subscription needed
+            No third-party platform contracts or lock-in
           </h2>
           <p className="text-gray-700 leading-relaxed">
-            ECG requires a separate Charac subscription for the digital
+            ECG requires a separate third-party platform subscription for the digital
             consultation workflow — that&apos;s an extra cost on top of their PGD
             fees. With GRH, the consultation platform is built in. One provider,
             one fee, one login.

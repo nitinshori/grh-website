@@ -13,6 +13,7 @@ export interface PatientCategory {
   textColor: string; // tailwind text class
   popularServices: string[];
   whyPharmacy: string;
+  pomDisclaimer?: boolean; // true if category includes prescription-only medicines
   seoTitle: string;
   seoDescription: string;
 }
@@ -85,6 +86,7 @@ export const patientCategories: PatientCategory[] = [
     ],
     whyPharmacy:
       "Weight management works best when it's supported in person. Your pharmacist can offer face-to-face consultations, regular monitoring, and continuity of care &mdash; not just a one-off prescription.",
+    pomDisclaimer: true,
     seoTitle: "Weight Management Services at Your Local Pharmacy",
     seoDescription:
       "Clinically supported weight management at a pharmacy near you. Eligibility assessment, monitoring and face-to-face support from a qualified pharmacist.",
@@ -94,7 +96,7 @@ export const patientCategories: PatientCategory[] = [
     name: "Women's Health",
     tagline: "From contraception to menopause — on your terms",
     description:
-      "Access women's health services at your local pharmacy without the long GP wait. Emergency contraception, HRT, UTI treatment, and more — private, convenient, and clinician-led.",
+      "Access women's health services at your local pharmacy without the long GP wait. Emergency contraception, HRT, urinary tract infection (UTI) treatment, and more — private, convenient, and clinician-led.",
     icon: "🌸",
     color: "bg-pink-50",
     textColor: "text-pink-700",
@@ -108,9 +110,10 @@ export const patientCategories: PatientCategory[] = [
     ],
     whyPharmacy:
       "Women's health services are overstretched in the NHS. Your pharmacy offers same-day or next-day consultations for conditions that shouldn't mean weeks of waiting.",
+    pomDisclaimer: true,
     seoTitle: "Women's Health Services at Your Local Pharmacy",
     seoDescription:
-      "Emergency contraception, HRT, UTI treatment, and more at a pharmacy near you. Private, convenient, no GP referral needed.",
+      "Emergency contraception, HRT, urinary tract infection (UTI) treatment, and more at a pharmacy near you. Private, convenient, no GP referral needed.",
   },
   {
     slug: "mens-health",
@@ -129,6 +132,7 @@ export const patientCategories: PatientCategory[] = [
     ],
     whyPharmacy:
       "Many men avoid their GP for these conversations. Your pharmacist is trained, professional, and discreet — and you can often be seen the same day.",
+    pomDisclaimer: true,
     seoTitle: "Men's Health Services at Your Local Pharmacy",
     seoDescription:
       "Erectile dysfunction, hair loss, and men's health treatment at a pharmacy near you. Private, discreet, no GP referral required.",
@@ -138,21 +142,22 @@ export const patientCategories: PatientCategory[] = [
     name: "Sexual Health",
     tagline: "Testing, treatment, and prevention — fast",
     description:
-      "STI testing, PrEP for HIV prevention, and treatment for common infections — available privately at your local pharmacy. Confidential, quick, and no referral needed.",
+      "Sexually transmitted infection (STI) testing, treatment for common infections, and sexual health support — available privately at your local pharmacy. Confidential, quick, and no referral needed. PrEP for HIV prevention coming soon.",
     icon: "🛡️",
     color: "bg-indigo-50",
     textColor: "text-indigo-700",
     popularServices: [
       "STI testing (Chlamydia, Gonorrhoea, HIV)",
-      "PrEP (HIV pre-exposure prophylaxis)",
+      "PrEP — coming soon (HIV pre-exposure prophylaxis)",
       "Herpes management",
       "Genital warts treatment",
     ],
     whyPharmacy:
       "Sexual health clinic waits can be weeks long. Your pharmacy offers confidential, same-day access to testing and treatment.",
+    pomDisclaimer: true,
     seoTitle: "Sexual Health Services at Your Local Pharmacy",
     seoDescription:
-      "STI testing, PrEP, and sexual health treatment at a pharmacy near you. Confidential, fast, no GP referral needed.",
+      "Sexually transmitted infection (STI) testing, PrEP, and sexual health treatment at a pharmacy near you. Confidential, fast, no GP referral needed.",
   },
   {
     slug: "mental-wellbeing",
@@ -166,11 +171,12 @@ export const patientCategories: PatientCategory[] = [
     popularServices: [
       "Smoking cessation support (with prescription options where suitable)",
       "Alcohol reduction support",
-      "Short-term physical anxiety symptom relief",
-      "Short-term sleep support",
+      "Short-term physical anxiety symptom relief (propranolol for situational anxiety)",
+      "Short-term sleep support (prescription melatonin — POM in the UK)",
     ],
     whyPharmacy:
       "NHS mental health services have some of the longest waits in healthcare. Your pharmacy provides quick, practical support for everyday wellbeing concerns.",
+    pomDisclaimer: true,
     seoTitle: "Mental Wellbeing Support at Your Pharmacy",
     seoDescription:
       "Smoking cessation, anxiety relief, sleep support, and alcohol reduction at a pharmacy near you. Quick, practical help.",
@@ -243,7 +249,7 @@ export const patientCategories: PatientCategory[] = [
     name: "Children's Health",
     tagline: "Fast treatment for common childhood illnesses",
     description:
-      "When your child is unwell, you want a quick clinical assessment from someone you trust. Your pharmacy can assess and treat a range of common childhood conditions &mdash; impetigo, UTIs, threadworms, and more.",
+      "When your child is unwell, you want a quick clinical assessment from someone you trust. Your pharmacy can assess and treat a range of common childhood conditions &mdash; impetigo, urinary tract infections (UTIs), threadworms, and more.",
     icon: "👶",
     color: "bg-rose-50",
     textColor: "text-rose-700",
@@ -256,7 +262,7 @@ export const patientCategories: PatientCategory[] = [
       "Parents know how stressful it is when your child is unwell. Your pharmacy can often see and treat children the same day.",
     seoTitle: "Children's Health Services at Your Local Pharmacy",
     seoDescription:
-      "Quick treatment for childhood impetigo, UTIs, and threadworms at a pharmacy near you. Same-day access for parents.",
+      "Quick treatment for childhood impetigo, urinary tract infections (UTIs), and threadworms at a pharmacy near you. Same-day access for parents.",
   },
   {
     slug: "minor-ailments",

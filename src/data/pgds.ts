@@ -22,6 +22,7 @@ export interface PGD {
   category: PGDCategory;
   priority: PGDPriority;
   isNew: boolean;
+  comingSoon?: boolean;
   revenueEstimate: string;
   consultTime: string;
   description: string;
@@ -187,7 +188,7 @@ export const pgds: PGD[] = [
     revenueEstimate: "\u00a325\u201340 per consultation",
     consultTime: "10 min",
     description:
-      "Ciprofloxacin and Azithromycin standby packs. High demand, simple consultation, strong margin.",
+      "Ciprofloxacin and Azithromycin standby packs, plus OTC loperamide for symptomatic relief. High demand, simple consultation, strong margin.",
     pharmadoctor: "Partial",
   },
 
@@ -218,7 +219,7 @@ export const pgds: PGD[] = [
   },
   {
     id: "rsv",
-    title: "RSV Vaccination (Abrysvo / mRESVIA)",
+    title: "RSV Vaccination (Abrysvo)",
     category: "Vaccines",
     priority: 1,
     isNew: false,
@@ -407,7 +408,7 @@ export const pgds: PGD[] = [
     revenueEstimate: "\u00a360\u2013100 per consultation",
     consultTime: "20 min",
     description:
-      "DIFFERENTIATION. Growing clinical recognition. NICE-backed. Completely unaddressed by competitors.",
+      "DIFFERENTIATION. Growing clinical recognition, supported by British Menopause Society guidelines. Completely unaddressed by competitors.",
     pharmadoctor: "No",
   },
   {
@@ -505,7 +506,7 @@ export const pgds: PGD[] = [
     revenueEstimate: "\u00a335\u201360 per consultation",
     consultTime: "15 min",
     description:
-      "Underserved. Limited GP willingness to discuss. Pharmacy is neutral ground.",
+      "Underserved. Limited GP willingness to discuss. Pharmacy is neutral ground. Note: verify current UK marketing authorisation status before supply.",
     pharmadoctor: "Partial",
   },
   {
@@ -552,10 +553,11 @@ export const pgds: PGD[] = [
     category: "Sexual Health",
     priority: 1,
     isNew: true,
+    comingSoon: true,
     revenueEstimate: "\u00a350\u201380 per month",
     consultTime: "20\u201330 min",
     description:
-      "MAJOR GAP. NHS PrEP only through sexual health clinics with long waits. Private pharmacy PrEP is completely unaddressed. Thousands paying \u00a350+/month at online clinics.",
+      "COMING SOON. NHS PrEP only through sexual health clinics with long waits. Private pharmacy PrEP is completely unaddressed. Thousands paying \u00a350+/month at online clinics. Currently in development — not yet available for supply.",
     pharmadoctor: "No \u2014 not offered",
   },
   {
@@ -641,7 +643,7 @@ export const pgds: PGD[] = [
     revenueEstimate: "\u00a325\u201340 per consultation",
     consultTime: "15 min",
     description:
-      "DIFFERENTIATION. Propranolol for situational anxiety (presentations, exams, events) is a huge unmet demand with no pharmacy PGD pathway. Well within pharmacist competence.",
+      "DIFFERENTIATION. Propranolol for situational anxiety (presentations, exams, events) — note this is an off-label indication (licensed for hypertension, angina, migraine prophylaxis). Huge unmet demand with no pharmacy PGD pathway. Well within pharmacist competence with appropriate clinical governance.",
     pharmadoctor: "No",
   },
   {
@@ -653,7 +655,7 @@ export const pgds: PGD[] = [
     revenueEstimate: "\u00a320\u201335 per consultation",
     consultTime: "10 min",
     description:
-      "DIFFERENTIATION. Melatonin is OTC in most of Europe and USA. Private PGD route fills this UK gap. Large demand from shift workers, jet lag, insomnia.",
+      "DIFFERENTIATION. Melatonin is a prescription-only medicine (POM) in the UK, unlike most of Europe and the USA. Private PGD route fills this gap. Large demand from shift workers, jet lag, insomnia. Supply requires appropriate clinical assessment.",
     pharmadoctor: "No",
   },
   {
@@ -739,7 +741,7 @@ export const pgds: PGD[] = [
     revenueEstimate: "\u00a330\u201360 per month",
     consultTime: "15 min",
     description:
-      "DIFFERENTIATION. Oral minoxidil is off-label but increasingly prescribed privately. PGD pathway would be a first.",
+      "DIFFERENTIATION. Oral minoxidil (off-label use — licensed for hypertension only) is increasingly prescribed privately for hair loss. PGD pathway would be a first. Requires informed consent regarding off-label status.",
     pharmadoctor: "No",
   },
 

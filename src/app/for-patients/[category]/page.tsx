@@ -76,6 +76,20 @@ export default async function CategoryPage({
         </div>
       </section>
 
+      {/* POM Disclaimer */}
+      {cat.pomDisclaimer && (
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+            <svg className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-amber-800 text-sm">
+              Some services in this category involve prescription-only medicines (POMs). These are supplied under a Patient Group Direction (PGD) by a qualified, registered pharmacist following a clinical consultation.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Services list */}
       <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <h2 className="text-xl font-bold text-navy-900 mb-6">

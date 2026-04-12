@@ -51,7 +51,7 @@ export function ContactForm() {
       setSubmitted(true);
     } catch {
       setError(
-        "Unable to send your message. Please try again or email us directly at info@getrealhealthpgd.co.uk."
+        "Unable to send your message. Please try again or email us directly at hello@getrealhealth.co.uk."
       );
       setLoading(false);
     }

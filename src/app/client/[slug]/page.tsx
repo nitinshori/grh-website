@@ -199,7 +199,7 @@ export default async function ClientDashboard({
           would like to add more services, our team is here to help.
         </p>
         <a
-          href="mailto:info@getrealhealthpgd.co.uk"
+          href="mailto:hello@getrealhealth.co.uk"
           className="inline-flex items-center px-4 py-2 bg-[#25b4b4] hover:bg-[#1e9e9e] text-white text-sm font-medium rounded-lg transition-colors"
         >
           Contact Get Real Health

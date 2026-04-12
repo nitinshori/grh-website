@@ -5,6 +5,23 @@ import { verifyVapiToolsSecret } from '@/lib/vapi'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+// Simple in-memory rate limiter for availability checks
+const rateLimiter = new Map<string, { count: number; resetAt: number }>()
+const RATE_LIMIT = 10 // max requests per minute
+const RATE_WINDOW = 60_000
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now()
+  const entry = rateLimiter.get(ip)
+  if (!entry || now > entry.resetAt) {
+    rateLimiter.set(ip, { count: 1, resetAt: now + RATE_WINDOW })
+    return true
+  }
+  if (entry.count >= RATE_LIMIT) return false
+  entry.count++
+  return true
+}
+
 interface ToolRequestBody {
   // Vapi sends tool calls under message.toolCalls[].function.arguments
   message?: {
@@ -26,6 +43,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  // Rate limiting
+  const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
+  if (!checkRateLimit(ip)) {
+    return NextResponse.json({ error: 'Too many requests. Please try again shortly.' }, { status: 429 })
+  }
+
   let body: ToolRequestBody = {}
   try {
     body = await request.json()
@@ -37,10 +60,18 @@ export async function POST(request: Request) {
   const toolCall = body.message?.toolCalls?.[0]
   let args: { daysAhead?: number; date?: string } = {}
   if (toolCall?.function?.arguments) {
-    args =
-      typeof toolCall.function.arguments === 'string'
-        ? JSON.parse(toolCall.function.arguments)
-        : toolCall.function.arguments
+    try {
+      args =
+        typeof toolCall.function.arguments === 'string'
+          ? JSON.parse(toolCall.function.arguments)
+          : toolCall.function.arguments
+    } catch {
+      const message = 'Invalid tool call arguments format'
+      if (toolCall?.id) {
+        return NextResponse.json({ results: [{ toolCallId: toolCall.id, error: message }] })
+      }
+      return NextResponse.json({ error: message }, { status: 400 })
+    }
   } else {
     args = { daysAhead: body.daysAhead, date: body.date }
   }

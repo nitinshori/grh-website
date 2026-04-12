@@ -75,7 +75,7 @@ const faqs = [
   },
   {
     q: "How does your pricing compare to ECG?",
-    a: "ECG charges per PGD, per pharmacist, per year \u2014 plus a separate Charac subscription for the digital workflow. We charge one flat fee that covers everything: PGDs, platform, training, and support.",
+    a: "ECG charges per PGD, per pharmacist, per year \u2014 plus a separate third-party platform subscription for the digital workflow. We charge one flat fee that covers everything: PGDs, platform, training, and support.",
   },
 ];
 
@@ -102,7 +102,7 @@ export default function PricingPage() {
           <h2 className="font-bold text-navy-900 mb-2">Our pricing principle</h2>
           <p className="text-gray-700 leading-relaxed">
             Pharmadoctor charges per consultation. ECG charges per PGD, per
-            pharmacist, per year &mdash; plus Charac on top. We charge one flat
+            pharmacist, per year &mdash; plus a separate third-party platform subscription on top. We charge one flat
             annual fee that covers PGDs, platform, training and support.
             Public tier pricing is being finalised; please get in touch for a
             quote.

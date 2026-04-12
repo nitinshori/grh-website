@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { ContactForm } from "./ContactForm";
 
 export const metadata: Metadata = {
-  title: "Contact Us — Book a Demo",
+  title: "Contact Us — Get in Touch",
   description:
-    "Get in touch or book a 20-minute demo. See the full consultation platform in action.",
+    "Get in touch or book a 20-minute discovery call. See the full consultation platform in action.",
 };
 
 export default function ContactPage() {
@@ -41,13 +41,13 @@ export default function ContactPage() {
           <div className="lg:col-span-2 space-y-8">
             {/* Book a demo */}
             <div className="bg-teal-50 border border-teal-200 rounded-xl p-6">
-              <h3 className="font-bold text-navy-900 mb-2">Book a demo</h3>
+              <h3 className="font-bold text-navy-900 mb-2">Book a discovery call</h3>
               <p className="text-gray-600 text-sm mb-4 leading-relaxed">
                 See the full platform in 20 minutes — consultations, patient
                 records, superintendent dashboard, the lot. No obligation.
               </p>
               <p className="text-sm text-gray-600 mb-2">
-                To book a demo, send us a message using the form and we&apos;ll
+                To book a discovery call, send us a message using the form and we&apos;ll
                 come back to you with a few suggested times.
               </p>
             </div>
@@ -95,7 +95,7 @@ export default function ContactPage() {
                 <div>
                   <p className="text-sm font-medium text-navy-900">Phone</p>
                   <p className="text-sm text-gray-600">
-                    Available on request
+                    0113 519 8330
                   </p>
                 </div>
               </div>

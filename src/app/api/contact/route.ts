@@ -71,7 +71,7 @@ export async function POST(request: Request) {
     const resend = getResend()
     await resend.emails.send({
       from: 'Get Real Health <noreply@getrealhealthpgd.co.uk>',
-      to: 'info@getrealhealthpgd.co.uk',
+      to: 'hello@getrealhealth.co.uk',
       replyTo: email,
       subject: `New Contact: ${enquiryLabel} from ${name}`,
       html: `
@@ -149,7 +149,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Contact form error:', error)
     return NextResponse.json(
-      { error: 'Something went wrong. Please try again or email us directly at info@getrealhealthpgd.co.uk.' },
+      { error: 'Something went wrong. Please try again or email us directly at hello@getrealhealth.co.uk.' },
       { status: 500 }
     )
   }

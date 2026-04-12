@@ -1,10 +1,27 @@
 import { NextResponse } from 'next/server'
-import { createAppointment } from '@/lib/google-calendar'
+import { createAppointment, getAvailability } from '@/lib/google-calendar'
 import { verifyVapiToolsSecret } from '@/lib/vapi'
 import { sendEmail, escapeHtml } from '@/lib/email'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+
+// Simple in-memory rate limiter
+const rateLimiter = new Map<string, { count: number; resetAt: number }>()
+const RATE_LIMIT = 3 // max bookings per minute
+const RATE_WINDOW = 60_000 // 1 minute
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now()
+  const entry = rateLimiter.get(ip)
+  if (!entry || now > entry.resetAt) {
+    rateLimiter.set(ip, { count: 1, resetAt: now + RATE_WINDOW })
+    return true
+  }
+  if (entry.count >= RATE_LIMIT) return false
+  entry.count++
+  return true
+}
 
 interface BookArgs {
   callerName?: string
@@ -39,6 +56,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  // Rate limiting
+  const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
+  if (!checkRateLimit(ip)) {
+    return NextResponse.json({ error: 'Too many booking requests. Please try again shortly.' }, { status: 429 })
+  }
+
   let body: ToolRequestBody = {}
   try {
     body = await request.json()
@@ -50,10 +73,18 @@ export async function POST(request: Request) {
   const toolCall = body.message?.toolCalls?.[0]
   let args: BookArgs = {}
   if (toolCall?.function?.arguments) {
-    args =
-      typeof toolCall.function.arguments === 'string'
-        ? JSON.parse(toolCall.function.arguments)
-        : toolCall.function.arguments
+    try {
+      args =
+        typeof toolCall.function.arguments === 'string'
+          ? JSON.parse(toolCall.function.arguments)
+          : toolCall.function.arguments
+    } catch {
+      const message = 'Invalid tool call arguments format'
+      if (toolCall?.id) {
+        return NextResponse.json({ results: [{ toolCallId: toolCall.id, error: message }] })
+      }
+      return NextResponse.json({ error: message }, { status: 400 })
+    }
   } else {
     args = {
       callerName: body.callerName,
@@ -73,6 +104,68 @@ export async function POST(request: Request) {
       })
     }
     return NextResponse.json({ error: message }, { status: 400 })
+  }
+
+  // Validate startTime is a valid ISO date
+  const requestedStart = new Date(args.startTime)
+  if (isNaN(requestedStart.getTime())) {
+    const message = 'startTime must be a valid ISO date string'
+    if (toolCall?.id) {
+      return NextResponse.json({ results: [{ toolCallId: toolCall.id, error: message }] })
+    }
+    return NextResponse.json({ error: message }, { status: 400 })
+  }
+
+  // Validate startTime is in the future (at least 30 minutes ahead)
+  const now = new Date()
+  if (requestedStart.getTime() < now.getTime() + 30 * 60 * 1000) {
+    const message = 'Appointment must be at least 30 minutes in the future'
+    if (toolCall?.id) {
+      return NextResponse.json({ results: [{ toolCallId: toolCall.id, error: message }] })
+    }
+    return NextResponse.json({ error: message }, { status: 400 })
+  }
+
+  // Validate startTime is within working hours (9-17 UK time, weekdays)
+  const ukHour = parseInt(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', hour12: false }).format(requestedStart))
+  const ukDow = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', weekday: 'short' }).format(requestedStart)
+  if (ukHour < 9 || ukHour >= 17) {
+    const message = 'Appointments are only available between 9am and 5pm UK time'
+    if (toolCall?.id) {
+      return NextResponse.json({ results: [{ toolCallId: toolCall.id, error: message }] })
+    }
+    return NextResponse.json({ error: message }, { status: 400 })
+  }
+  if (ukDow === 'Sat' || ukDow === 'Sun') {
+    const message = 'Appointments are only available on weekdays'
+    if (toolCall?.id) {
+      return NextResponse.json({ results: [{ toolCallId: toolCall.id, error: message }] })
+    }
+    return NextResponse.json({ error: message }, { status: 400 })
+  }
+
+  // Re-validate availability to prevent double-booking
+  try {
+    const slotEnd = new Date(requestedStart.getTime() + 35 * 60 * 1000) // check 35 min window
+    const freeSlots = await getAvailability(
+      new Date(requestedStart.getTime() - 5 * 60 * 1000),
+      slotEnd,
+      10
+    )
+    const isStillFree = freeSlots.some(s => {
+      const slotTime = new Date(s.start).getTime()
+      return Math.abs(slotTime - requestedStart.getTime()) < 5 * 60 * 1000
+    })
+    if (!isStillFree) {
+      const message = 'Sorry, that time slot is no longer available. Please check availability again.'
+      if (toolCall?.id) {
+        return NextResponse.json({ results: [{ toolCallId: toolCall.id, error: message }] })
+      }
+      return NextResponse.json({ error: message }, { status: 409 })
+    }
+  } catch (availErr) {
+    console.error('Availability re-check failed:', availErr)
+    // Continue anyway — better to book than to block entirely
   }
 
   try {
@@ -101,7 +194,11 @@ export async function POST(request: Request) {
 
     // Optional: send a confirmation email to Dr Shori
     try {
-      const notify = process.env.VOICE_NOTIFY_EMAIL || 'nitinshori@me.com'
+      const notify = process.env.VOICE_NOTIFY_EMAIL
+      if (!notify) {
+        console.warn('VOICE_NOTIFY_EMAIL not set — skipping notification')
+        throw new Error('skip')
+      }
       await sendEmail({
         to: notify,
         subject: `Appointment booked via AI: ${args.callerName}`,

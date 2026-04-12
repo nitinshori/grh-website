@@ -136,8 +136,7 @@ export default function ForPharmaciesPage() {
             <p className="text-gray-600 leading-relaxed">
               Our consultation tool was built for PGD delivery &mdash; not
               licensed from a third party. PGD governance and the clinical
-              workflow sit in the same product, from the same team. No Charac
-              contract. No integration risk. One login, one fee, one support
+              workflow sit in the same product, from the same team. No third-party platform contracts or lock-in. No integration risk. One login, one fee, one support
               number.
             </p>
           </div>
