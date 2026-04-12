@@ -6,7 +6,7 @@ import { SavingsCalculator } from "./for-pharmacies/pricing/SavingsCalculator";
 export const metadata: Metadata = {
   title: "Get Real Health | PGDs, Clinical Training & Governance for UK Pharmacies",
   description:
-    "60+ PGDs with built-in clinical training and competency assessments. CQC registered. One flat annual fee \u2014 no per-consult charges, no revenue share. Founded by clinicians with 20 years of UK pharmacy experience.",
+    "60+ PGDs with built-in clinical training and competency assessments. CQC and HIW registered. One flat annual fee \u2014 no per-consult charges, no revenue share. Founded by clinicians with 20 years of UK pharmacy experience.",
 };
 
 export default function HomePage() {
@@ -65,8 +65,8 @@ export default function HomePage() {
               <p className="text-lg sm:text-xl text-blue-200 leading-relaxed mb-8 max-w-xl">
                 60+ electronically enabled PGDs with built-in training, competency
                 assessments and a simple digital step-by-step consultation process.
-                CQC registered. Founded by clinicians with 20 years of
-                UK pharmacy experience.
+                CQC and HIW registered. Founded by clinicians with 20 years
+                of UK pharmacy experience.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4">
@@ -125,28 +125,48 @@ export default function HomePage() {
                       Founder &amp; Medical Director
                     </p>
                     <p className="text-blue-200 text-sm mt-3 leading-relaxed">
-                      NHS GP Partner. Former Medical Director, Pharmacy2U. 20
-                      years of UK pharmacy experience. Law degree holder.
+                      NHS GP Partner. Medical Director of Pharmacy2U for 10+
+                      years. 20 years of UK pharmacy experience.
                     </p>
                   </div>
 
-                  <div className="mt-6 pt-6 border-t border-white/10 grid grid-cols-3 gap-3 text-center">
+                  <div className="mt-6 pt-6 border-t border-white/10 grid grid-cols-2 gap-3 text-center">
                     <div>
-                      <p className="text-2xl font-bold text-teal-400">60+</p>
+                      <p className="text-2xl font-bold text-teal-400">20 yrs</p>
                       <p className="text-[11px] text-blue-200 mt-0.5 leading-tight">
+                        UK pharmacy experience
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-teal-400">10+ yrs</p>
+                      <p className="text-[11px] text-blue-200 mt-0.5 leading-tight">
+                        Medical Director, Pharmacy2U
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3 grid grid-cols-4 gap-2 text-center">
+                    <div>
+                      <p className="text-xl font-bold text-teal-400">60+</p>
+                      <p className="text-[10px] text-blue-200 mt-0.5 leading-tight">
                         ePGD services
                       </p>
                     </div>
                     <div>
-                      <p className="text-2xl font-bold text-teal-400">CPD</p>
-                      <p className="text-[11px] text-blue-200 mt-0.5 leading-tight">
-                        training built in
+                      <p className="text-xl font-bold text-teal-400">CQC</p>
+                      <p className="text-[10px] text-blue-200 mt-0.5 leading-tight">
+                        registered
                       </p>
                     </div>
                     <div>
-                      <p className="text-2xl font-bold text-teal-400">CQC</p>
-                      <p className="text-[11px] text-blue-200 mt-0.5 leading-tight">
+                      <p className="text-xl font-bold text-teal-400">HIW</p>
+                      <p className="text-[10px] text-blue-200 mt-0.5 leading-tight">
                         registered
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xl font-bold text-teal-400">NHS</p>
+                      <p className="text-[10px] text-blue-200 mt-0.5 leading-tight">
+                        GP Partner
                       </p>
                     </div>
                   </div>
@@ -245,11 +265,11 @@ export default function HomePage() {
                 </svg>
               </div>
               <p className="text-3xl sm:text-4xl font-bold text-navy-900">
-                CQC
+                CQC &amp; HIW
               </p>
               <p className="text-sm text-gray-500 mt-1">
-                Independent Medical Agency, registered with the Care Quality
-                Commission
+                Registered with the Care Quality Commission and Healthcare
+                Inspectorate Wales
               </p>
             </div>
 
@@ -351,7 +371,7 @@ export default function HomePage() {
               <p className="text-sm text-blue-200 mt-1">of pharmacy experience</p>
             </div>
             <div className="text-center">
-              <p className="text-3xl sm:text-4xl font-bold text-white">CQC</p>
+              <p className="text-3xl sm:text-4xl font-bold text-white">CQC &amp; HIW</p>
               <p className="text-sm text-blue-200 mt-1">registered &amp; inspected</p>
             </div>
           </div>
