@@ -68,93 +68,93 @@ export default function EyeInfectionsClient() {
     // HARD STOPS
     if (state.assessment.chloramphenicolAllergy) {
       alerts.push({
-        type: "stop",
-        severity: "critical",
-        title: "Contraindication",
-        message: "Known allergy to chloramphenicol. Cannot supply. Refer to GP or A&E.",
+        severity: "stop",
+        code: "CHLOR_ALLERGY",
+        message: "Contraindication",
+        detail: "Known allergy to chloramphenicol. Cannot supply. Refer to GP or A&E.",
       });
     }
     if (state.assessment.boneMarrowProblems) {
       alerts.push({
-        type: "stop",
-        severity: "critical",
-        title: "Contraindication",
-        message: "History of bone marrow problems/blood disorders. Cannot supply. Refer to GP.",
+        severity: "stop",
+        code: "BONE_MARROW",
+        message: "Contraindication",
+        detail: "History of bone marrow problems/blood disorders. Cannot supply. Refer to GP.",
       });
     }
     if (state.assessment.childUnder2) {
       alerts.push({
-        type: "stop",
-        severity: "critical",
-        title: "Contraindication",
-        message: "Child under 2 years. Cannot supply. Refer to GP.",
+        severity: "stop",
+        code: "CHILD_UNDER_2",
+        message: "Contraindication",
+        detail: "Child under 2 years. Cannot supply. Refer to GP.",
       });
     }
 
     // RED FLAGS (urgent referral)
     if (state.assessment.painInsideEye) {
       alerts.push({
-        type: "alert",
-        severity: "high",
-        title: "Possible Iritis/Uveitis",
-        message: "Pain inside the eye (not surface irritation) suggests possible iritis or uveitis. Refer to urgent eye care.",
+        severity: "red-flag",
+        code: "EYE_PAIN",
+        message: "Possible Iritis/Uveitis",
+        detail: "Pain inside the eye (not surface irritation) suggests possible iritis or uveitis. Refer to urgent eye care.",
       });
     }
     if (state.assessment.photophobia) {
       alerts.push({
-        type: "alert",
-        severity: "high",
-        title: "Photophobia or Visual Disturbance",
-        message: "Photophobia and/or visual disturbance detected. Refer urgently to ophthalmology.",
+        severity: "red-flag",
+        code: "PHOTOPHOBIA",
+        message: "Photophobia or Visual Disturbance",
+        detail: "Photophobia and/or visual disturbance detected. Refer urgently to ophthalmology.",
       });
     }
     if (state.assessment.recentSurgeryOrTrauma) {
       alerts.push({
-        type: "alert",
-        severity: "high",
-        title: "Recent Eye Surgery or Trauma",
-        message: "Recent eye surgery or trauma. Cannot supply under PGD. Refer to GP or eye care.",
+        severity: "red-flag",
+        code: "SURGERY_TRAUMA",
+        message: "Recent Eye Surgery or Trauma",
+        detail: "Recent eye surgery or trauma. Cannot supply under PGD. Refer to GP or eye care.",
       });
     }
     if (state.assessment.symptomsRecurrent) {
       alerts.push({
-        type: "alert",
-        severity: "high",
-        title: "Recurrent or Persistent Infection",
-        message: "Symptoms >7 days or recurrent episodes. Refer to GP for further investigation.",
+        severity: "red-flag",
+        code: "RECURRENT",
+        message: "Recurrent or Persistent Infection",
+        detail: "Symptoms >7 days or recurrent episodes. Refer to GP for further investigation.",
       });
     }
 
     // CAUTIONS
     if (state.assessment.contactLensWearer) {
       alerts.push({
-        type: "caution",
-        severity: "medium",
-        title: "Contact Lens Wearer",
-        message: "Patient must stop wearing contact lenses during treatment and for 24 hours after completion.",
+        severity: "caution",
+        code: "CONTACT_LENS",
+        message: "Contact Lens Wearer",
+        detail: "Patient must stop wearing contact lenses during treatment and for 24 hours after completion.",
       });
     }
     if (state.assessment.pregnantOrBreastfeeding) {
       alerts.push({
-        type: "caution",
-        severity: "medium",
-        title: "Pregnancy/Breastfeeding",
-        message: "Patient is pregnant or breastfeeding. Use caution; discuss risks vs benefits. Consider GP referral.",
+        severity: "caution",
+        code: "PREGNANCY",
+        message: "Pregnancy/Breastfeeding",
+        detail: "Patient is pregnant or breastfeeding. Use caution; discuss risks vs benefits. Consider GP referral.",
       });
     }
     if (state.assessment.onlyOneFunctionalEye) {
       alerts.push({
-        type: "caution",
-        severity: "medium",
-        title: "Only One Functional Eye",
-        message: "Patient has only one functional eye. Lower threshold for referral if symptoms do not improve.",
+        severity: "caution",
+        code: "ONE_EYE",
+        message: "Only One Functional Eye",
+        detail: "Patient has only one functional eye. Lower threshold for referral if symptoms do not improve.",
       });
     }
 
     return alerts;
   }, [state.assessment]);
 
-  const hasStopAlerts = clinicalAlerts.some(a => a.type === "stop");
+  const hasStopAlerts = clinicalAlerts.some(a => a.severity === "stop");
 
   const handleNext = useCallback(() => setCurrentStep(prev => Math.min(prev + 1, 6)), []);
   const handlePrev = useCallback(() => setCurrentStep(prev => Math.max(prev - 1, 0)), []);
@@ -168,11 +168,7 @@ export default function EyeInfectionsClient() {
       <ProgressBar current={currentStep + 1} total={7} />
 
       {clinicalAlerts.length > 0 && (
-        <div className="space-y-3">
-          {clinicalAlerts.map((alert, idx) => (
-            <AlertBanner key={idx} type={alert.type} severity={alert.severity} title={alert.title} message={alert.message} />
-          ))}
-        </div>
+        <AlertBanner alerts={clinicalAlerts} />
       )}
 
       <StepWrapper

@@ -249,11 +249,7 @@ export default function EarInfectionClient() {
         {currentStep === 2 && (
           <div className="space-y-6">
             {alerts.length > 0 && (
-              <div className="space-y-3">
-                {alerts.map((alert, idx) => (
-                  <AlertBanner key={idx} alert={alert} />
-                ))}
-              </div>
+              <AlertBanner alerts={alerts} />
             )}
 
             <div className="space-y-4">
@@ -262,6 +258,7 @@ export default function EarInfectionClient() {
                   Which ear is affected? *
                 </label>
                 <SelectInput
+                  label="Which ear is affected?"
                   value={state.assessment.earAffected}
                   onChange={(v) =>
                     setState((prev) => ({
@@ -284,6 +281,7 @@ export default function EarInfectionClient() {
                   Duration of symptoms *
                 </label>
                 <SelectInput
+                  label="Duration of symptoms"
                   value={state.assessment.symptomDuration}
                   onChange={(v) =>
                     setState((prev) => ({

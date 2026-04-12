@@ -122,45 +122,50 @@ export default function ThreadwormsClient() {
 
     if (age !== null && age < 2) {
       clinicalAlerts.push({
-        type: "error",
-        title: "Not Licensed",
-        message:
+        severity: "stop",
+        code: "AGE_UNDER_2",
+        message: "Not Licensed",
+        detail:
           "Mebendazole is not licensed for children under 2 years of age. Refer to GP for alternative treatment.",
       });
     }
 
     if (state.assessment.pregnancy) {
       clinicalAlerts.push({
-        type: "error",
-        title: "Contraindicated in Pregnancy",
-        message:
+        severity: "stop",
+        code: "PREGNANCY",
+        message: "Contraindicated in Pregnancy",
+        detail:
           "Mebendazole is contraindicated in pregnancy. Alternative treatment required.",
       });
     }
 
     if (state.assessment.allergyMebendazole) {
       clinicalAlerts.push({
-        type: "error",
-        title: "Known Allergy",
-        message:
+        severity: "stop",
+        code: "ALLERGY",
+        message: "Known Allergy",
+        detail:
           "Known allergy to mebendazole. Alternative anthelmintic required.",
       });
     }
 
     if (state.assessment.breastfeeding) {
       clinicalAlerts.push({
-        type: "warning",
-        title: "Caution in Breastfeeding",
-        message:
+        severity: "caution",
+        code: "BREASTFEEDING",
+        message: "Caution in Breastfeeding",
+        detail:
           "Caution with mebendazole in breastfeeding. Minimal excretion but consider alternatives if available.",
       });
     }
 
     if (state.assessment.ibd) {
       clinicalAlerts.push({
-        type: "warning",
-        title: "IBD/Crohn's Disease",
-        message:
+        severity: "caution",
+        code: "IBD",
+        message: "IBD/Crohn's Disease",
+        detail:
           "Use with caution in inflammatory bowel disease or Crohn's disease.",
       });
     }
@@ -171,27 +176,30 @@ export default function ThreadwormsClient() {
       state.assessment.phenytoin
     ) {
       clinicalAlerts.push({
-        type: "warning",
-        title: "Drug Interaction",
-        message:
+        severity: "caution",
+        code: "DRUG_INTERACTION",
+        message: "Drug Interaction",
+        detail:
           "Current medication may interact with mebendazole. Verify compatibility.",
       });
     }
 
     if (state.assessment.recurrentInfection) {
       clinicalAlerts.push({
-        type: "warning",
-        title: "Recurrent Infection",
-        message:
+        severity: "red-flag",
+        code: "RECURRENT",
+        message: "Recurrent Infection",
+        detail:
           "3+ episodes in 12 months. Emphasise strict hygiene measures for 2 weeks post-treatment.",
       });
     }
 
     if (state.assessment.bloodInStool || state.assessment.persistentAbdominalPain) {
       clinicalAlerts.push({
-        type: "warning",
-        title: "Atypical Presentation",
-        message:
+        severity: "red-flag",
+        code: "ATYPICAL",
+        message: "Atypical Presentation",
+        detail:
           "Blood in stool or persistent abdominal pain. May not be simple threadworms. Refer if symptoms persist.",
       });
     }
@@ -214,7 +222,7 @@ export default function ThreadwormsClient() {
       return state.consent.informedConsentGiven && state.consent.idVerified;
     }
     if (currentStep === 2) {
-      const hardStops = alerts.some((a) => a.type === "error");
+      const hardStops = alerts.some((a) => a.severity === "stop");
       return (
         !hardStops &&
         Object.values(state.assessment.symptoms).some((v) => v)
@@ -289,11 +297,7 @@ export default function ThreadwormsClient() {
         {currentStep === 2 && (
           <div className="space-y-6">
             {alerts.length > 0 && (
-              <div className="space-y-2">
-                {alerts.map((alert, idx) => (
-                  <AlertBanner key={idx} {...alert} />
-                ))}
-              </div>
+              <AlertBanner alerts={alerts} />
             )}
 
             {state.patient.age !== null && (
@@ -541,7 +545,6 @@ export default function ThreadwormsClient() {
                       }))
                     }
                     type="number"
-                    min="1"
                   />
                 )}
               </div>

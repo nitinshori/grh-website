@@ -44,7 +44,7 @@ export default function PaediatricUTIClient() {
         offensive: false,
         cloudy: false,
       },
-      temperatureC: "",
+      temperatureC: null as number | null,
       recurrentUTI: false,
       knownAbnormality: false,
       systemic: false,
@@ -54,7 +54,7 @@ export default function PaediatricUTIClient() {
       pregnancy: false,
     },
     treatment: {
-      dose: "",
+      dose: null as number | null,
       doseUnit: "mg",
       frequency: "BD",
       duration: "3",
@@ -118,12 +118,12 @@ export default function PaediatricUTIClient() {
     [calculateAge]
   );
 
-  const calculateTrimethoprimDose = (age: number): string => {
-    if (age < 1 / 12) return ""; // less than 1 month
-    if (age < 5 / 12) return "25"; // 3-5 months
-    if (age < 6) return "50"; // 6 months to 5 years
-    if (age < 12) return "100"; // 6-11 years
-    return "200"; // 12+ years
+  const calculateTrimethoprimDose = (age: number): number | null => {
+    if (age < 1 / 12) return null; // less than 1 month
+    if (age < 5 / 12) return 25; // 3-5 months
+    if (age < 6) return 50; // 6 months to 5 years
+    if (age < 12) return 100; // 6-11 years
+    return 200; // 12+ years
   };
 
   const alerts = useMemo((): ClinicalAlert[] => {
@@ -132,99 +132,110 @@ export default function PaediatricUTIClient() {
 
     if (age !== null && age < 3 / 12) {
       clinicalAlerts.push({
-        type: "error",
-        title: "Urgent Referral Required",
-        message:
+        severity: "stop",
+        code: "URGENT_REFERRAL_UNDER_3M",
+        message: "Urgent Referral Required",
+        detail:
           "Child under 3 months with UTI symptoms. Refer urgently to paediatric assessment.",
       });
     }
 
     if (age !== null && age >= 3 / 12 && age < 3) {
       clinicalAlerts.push({
-        type: "warning",
-        title: "Lower Threshold for Referral",
-        message:
+        severity: "red-flag",
+        code: "LOWER_THRESHOLD_REFERRAL",
+        message: "Lower Threshold for Referral",
+        detail:
           "Child aged 3 months to 3 years requires careful assessment. Lower threshold for referral to specialist.",
       });
     }
 
     if (state.assessment.gender === "male") {
       clinicalAlerts.push({
-        type: "error",
-        title: "Urgent Investigation Required",
-        message:
+        severity: "stop",
+        code: "MALE_UTI_INVESTIGATION",
+        message: "Urgent Investigation Required",
+        detail:
           "All males with UTI in childhood require urgent urological investigation. Refer to urology.",
       });
     }
 
     if (state.assessment.knownAbnormality) {
       clinicalAlerts.push({
-        type: "error",
-        title: "Refer to Specialist",
-        message:
+        severity: "stop",
+        code: "KNOWN_ABNORMALITY",
+        message: "Refer to Specialist",
+        detail:
           "Known urinary tract abnormality. This patient requires specialist assessment.",
       });
     }
 
     if (state.assessment.vomiting) {
       clinicalAlerts.push({
-        type: "error",
-        title: "Cannot Prescribe Oral",
-        message:
+        severity: "stop",
+        code: "CANNOT_PRESCRIBE_ORAL",
+        message: "Cannot Prescribe Oral",
+        detail:
           "Patient unable to keep down oral medication. Requires parenteral antibiotics and medical assessment.",
       });
     }
 
     if (state.assessment.allergyTrimethoprim) {
       clinicalAlerts.push({
-        type: "error",
-        title: "Contraindicated",
-        message:
+        severity: "stop",
+        code: "ALLERGY_CONTRAINDICATED",
+        message: "Contraindicated",
+        detail:
           "Known allergy to trimethoprim. Alternative antibiotics required.",
       });
     }
 
     if (state.assessment.folateAntagonists) {
       clinicalAlerts.push({
-        type: "error",
-        title: "Drug Interaction",
-        message:
+        severity: "stop",
+        code: "DRUG_INTERACTION",
+        message: "Drug Interaction",
+        detail:
           "Patient currently taking folate antagonists (e.g., methotrexate). Trimethoprim is contraindicated.",
       });
     }
 
     if (age !== null && age >= 12 && state.assessment.pregnancy) {
       clinicalAlerts.push({
-        type: "error",
-        title: "Teratogenic",
-        message:
+        severity: "stop",
+        code: "PREGNANCY_TERATOGENIC",
+        message: "Teratogenic",
+        detail:
           "Pregnancy confirmed. Trimethoprim is teratogenic. Alternative antibiotics required.",
       });
     }
 
     if (state.assessment.recurrentUTI) {
       clinicalAlerts.push({
-        type: "warning",
-        title: "Recurrent UTI",
-        message:
+        severity: "red-flag",
+        code: "RECURRENT_UTI",
+        message: "Recurrent UTI",
+        detail:
           "Child has had 2 or more UTI episodes. Requires investigation for structural or functional abnormality.",
       });
     }
 
-    if (state.assessment.systemic || (state.assessment.fever && state.assessment.temperatureC && parseFloat(state.assessment.temperatureC) > 38.5)) {
+    if (state.assessment.systemic || (state.assessment.symptoms.fever && state.assessment.temperatureC && state.assessment.temperatureC > 38.5)) {
       clinicalAlerts.push({
-        type: "warning",
-        title: "Systemic Illness",
-        message:
+        severity: "red-flag",
+        code: "SYSTEMIC_ILLNESS",
+        message: "Systemic Illness",
+        detail:
           "High fever or systemically unwell. May require parenteral antibiotics and medical assessment.",
       });
     }
 
-    if (state.assessment.bloodInUrine) {
+    if (state.assessment.symptoms.bloodInUrine) {
       clinicalAlerts.push({
-        type: "warning",
-        title: "Blood in Urine",
-        message:
+        severity: "red-flag",
+        code: "HAEMATURIA",
+        message: "Blood in Urine",
+        detail:
           "Haematuria present. Requires further investigation to exclude other pathology.",
       });
     }
@@ -247,7 +258,7 @@ export default function PaediatricUTIClient() {
       return state.consent.informedConsentGiven && state.consent.idVerified;
     }
     if (currentStep === 2) {
-      const hardStops = alerts.some((a) => a.type === "error");
+      const hardStops = alerts.some((a) => a.severity === "stop");
       return !hardStops && (Object.values(state.assessment.symptoms).some((v) => v) || state.assessment.systemic);
     }
     if (currentStep === 3) {
@@ -319,11 +330,7 @@ export default function PaediatricUTIClient() {
         {currentStep === 2 && (
           <div className="space-y-6">
             {alerts.length > 0 && (
-              <div className="space-y-2">
-                {alerts.map((alert, idx) => (
-                  <AlertBanner key={idx} {...alert} />
-                ))}
-              </div>
+              <AlertBanner alerts={alerts} />
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -410,9 +417,8 @@ export default function PaediatricUTIClient() {
                       assessment: { ...prev.assessment, temperatureC: v },
                     }))
                   }
-                  min="35"
-                  max="42"
-                  step="0.1"
+                  min={35}
+                  max={42}
                 />
                 <Checkbox
                   label="Systemically unwell"
@@ -532,7 +538,7 @@ export default function PaediatricUTIClient() {
                     treatment: { ...prev.treatment, dose: v },
                   }))
                 }
-                required
+                required={true}
               />
             </div>
 

@@ -35,7 +35,7 @@ export default function DentalBridgingClient() {
     },
     treatment: {
       antibiotic: "",
-      quantity: 15,
+      quantity: 15 as number | null,
       batchNumber: "",
       expiryDate: "",
       paracetamol: false,
@@ -60,73 +60,81 @@ export default function DentalBridgingClient() {
 
     if (state.assessment.difficultSwallowingBreathing) {
       alerts.push({
-        type: "stop",
-        title: "Emergency Referral Required",
-        message: "Facial swelling with difficulty swallowing or breathing suggests Ludwig's angina. Refer immediately to emergency services (999).",
+        severity: "stop",
+        code: "EMERGENCY_REFERRAL",
+        message: "Emergency Referral Required",
+        detail: "Facial swelling with difficulty swallowing or breathing suggests Ludwig's angina. Refer immediately to emergency services (999).",
       });
     }
 
     if (state.assessment.penicillinAllergy && state.assessment.metronidazoleAllergy) {
       alerts.push({
-        type: "stop",
-        title: "Unsuitable for Bridging Treatment",
-        message: "Patient is allergic to both penicillin and metronidazole. Refer to dentist immediately for alternative management.",
+        severity: "stop",
+        code: "UNSUITABLE_BOTH_ALLERGIES",
+        message: "Unsuitable for Bridging Treatment",
+        detail: "Patient is allergic to both penicillin and metronidazole. Refer to dentist immediately for alternative management.",
       });
     }
 
     if (state.assessment.trismus) {
       alerts.push({
-        type: "warning",
-        title: "Red Flag: Limited Mouth Opening",
-        message: "Trismus (difficulty opening mouth) may indicate deeper infection. Ensure urgent dental assessment is arranged.",
+        severity: "red-flag",
+        code: "TRISMUS_LIMITED_OPENING",
+        message: "Red Flag: Limited Mouth Opening",
+        detail: "Trismus (difficulty opening mouth) may indicate deeper infection. Ensure urgent dental assessment is arranged.",
       });
     }
 
     if (state.assessment.temperature38) {
       alerts.push({
-        type: "warning",
-        title: "Red Flag: Elevated Temperature",
-        message: "Temperature >38°C indicates systemic infection. Urgent dental assessment required. Advise patient to monitor temperature.",
+        severity: "red-flag",
+        code: "ELEVATED_TEMPERATURE",
+        message: "Red Flag: Elevated Temperature",
+        detail: "Temperature >38°C indicates systemic infection. Urgent dental assessment required. Advise patient to monitor temperature.",
       });
     }
 
     if (state.assessment.warfarin) {
       alerts.push({
-        type: "caution",
-        title: "Drug Interaction: Warfarin",
-        message: "Metronidazole may increase warfarin effect. Ensure GP is informed and INR monitoring arranged if prescribed.",
+        severity: "caution",
+        code: "WARFARIN_INTERACTION",
+        message: "Drug Interaction: Warfarin",
+        detail: "Metronidazole may increase warfarin effect. Ensure GP is informed and INR monitoring arranged if prescribed.",
       });
     }
 
     if (state.assessment.pregnancy) {
       alerts.push({
-        type: "caution",
-        title: "Pregnancy Consideration",
-        message: "Amoxicillin is safe. Metronidazole should be avoided in first trimester. Confirm treatment appropriately.",
+        severity: "caution",
+        code: "PREGNANCY_CONSIDERATION",
+        message: "Pregnancy Consideration",
+        detail: "Amoxicillin is safe. Metronidazole should be avoided in first trimester. Confirm treatment appropriately.",
       });
     }
 
     if (state.assessment.breastfeeding) {
       alerts.push({
-        type: "caution",
-        title: "Breastfeeding",
-        message: "Both amoxicillin and metronidazole are compatible with breastfeeding but present in breast milk.",
+        severity: "caution",
+        code: "BREASTFEEDING_COMPAT",
+        message: "Breastfeeding",
+        detail: "Both amoxicillin and metronidazole are compatible with breastfeeding but present in breast milk.",
       });
     }
 
     if (state.assessment.otherAntibiotics) {
       alerts.push({
-        type: "caution",
-        title: "Concurrent Antibiotic Use",
-        message: "Patient already taking other antibiotics. Verify compatibility and avoid duplication of therapy.",
+        severity: "caution",
+        code: "CONCURRENT_ANTIBIOTICS",
+        message: "Concurrent Antibiotic Use",
+        detail: "Patient already taking other antibiotics. Verify compatibility and avoid duplication of therapy.",
       });
     }
 
     return alerts;
   }, [state.assessment]);
 
-  const hasStopAlerts = clinicalAlerts.some(a => a.type === "stop");
-  const canProceedFromAssessment = !hasStopAlerts && state.assessment.painType && state.assessment.painDuration && state.assessment.painSeverity;
+  const hasStopAlerts = clinicalAlerts.some(a => a.severity === "stop");
+  const canProceedFromAssessment = !hasStopAlerts && !!state.assessment.painType && !!state.assessment.painDuration && !!state.assessment.painSeverity;
 
   const handleNext = useCallback(() => {
     if (currentStep === 2 && hasStopAlerts) return;
@@ -168,11 +176,7 @@ export default function DentalBridgingClient() {
       <ProgressBar current={currentStep + 1} total={7} />
 
       {currentStep === 2 && clinicalAlerts.length > 0 && (
-        <div className="space-y-2">
-          {clinicalAlerts.map((alert, idx) => (
-            <AlertBanner key={idx} alert={alert} />
-          ))}
-        </div>
+        <AlertBanner alerts={clinicalAlerts} />
       )}
 
       <StepWrapper

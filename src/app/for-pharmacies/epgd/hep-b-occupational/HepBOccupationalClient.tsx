@@ -107,46 +107,46 @@ export default function HepBOccupationalClient() {
     const newAlerts: ClinicalAlert[] = [];
 
     if (state.assessment.knownHBPositive) {
-      newAlerts.push({ type: "stop", title: "Known Hepatitis B Positive", message: "Do not vaccinate. Refer for specialist care." });
+      newAlerts.push({ severity: "stop", code: "HBV_POSITIVE", message: "Known Hepatitis B Positive", detail: "Do not vaccinate. Refer for specialist care." });
     }
 
     if (state.assessment.allergyVaccineComponent) {
-      newAlerts.push({ type: "stop", title: "Vaccine Component Allergy", message: "Contraindicated. Do not administer vaccine." });
+      newAlerts.push({ severity: "stop", code: "VACCINE_ALLERGY", message: "Vaccine Component Allergy", detail: "Contraindicated. Do not administer vaccine." });
     }
 
     if (state.assessment.previousSevereReaction) {
-      newAlerts.push({ type: "stop", title: "Previous Severe Reaction", message: "Absolute contraindication. Do not vaccinate." });
+      newAlerts.push({ severity: "stop", code: "SEVERE_REACTION", message: "Previous Severe Reaction", detail: "Absolute contraindication. Do not vaccinate." });
     }
 
     if (state.assessment.knownHCVPositive || state.assessment.knownHIVPositive) {
-      newAlerts.push({ type: "caution", title: "HCV/HIV Co-infection", message: "May need specialist vaccination schedule. Consider higher dose or additional doses." });
+      newAlerts.push({ severity: "caution", code: "HCV_HIV", message: "HCV/HIV Co-infection", detail: "May need specialist vaccination schedule. Consider higher dose or additional doses." });
     }
 
     if (state.assessment.currentAcuteIllness) {
-      newAlerts.push({ type: "caution", title: "Acute Illness with Fever", message: "Defer vaccination until illness resolved." });
+      newAlerts.push({ severity: "caution", code: "ACUTE_ILLNESS", message: "Acute Illness with Fever", detail: "Defer vaccination until illness resolved." });
     }
 
     if (state.assessment.immunosuppressed) {
-      newAlerts.push({ type: "caution", title: "Immunosuppressed Patient", message: "May need higher dose or additional doses. Consult specialist." });
+      newAlerts.push({ severity: "caution", code: "IMMUNOSUPPRESSED", message: "Immunosuppressed Patient", detail: "May need higher dose or additional doses. Consult specialist." });
     }
 
     if (state.assessment.pregnancy) {
-      newAlerts.push({ type: "caution", title: "Pregnancy", message: "Vaccine can be given if high occupational risk. Consider timing and specialist advice." });
+      newAlerts.push({ severity: "caution", code: "PREGNANCY", message: "Pregnancy", detail: "Vaccine can be given if high occupational risk. Consider timing and specialist advice." });
     }
 
     if (state.assessment.ageUnder16) {
-      newAlerts.push({ type: "caution", title: "Age <16 Years", message: "Occupational health PGDs typically for workers. Verify employer requirement." });
+      newAlerts.push({ severity: "caution", code: "AGE_UNDER_16", message: "Age Under 16 Years", detail: "Occupational health PGDs typically for workers. Verify employer requirement." });
     }
 
     if (state.assessment.previousVaccination === "full-course" && state.assessment.antiHBsLevelChecked && state.assessment.antiHBsLevel === "above-10") {
-      newAlerts.push({ type: "info", title: "Good Immunity Documented", message: "Anti-HBs >10 IU/L. Revaccination may not be necessary. Consider workplace exposure risk." });
+      newAlerts.push({ severity: "caution", code: "GOOD_IMMUNITY", message: "Good Immunity Documented", detail: "Anti-HBs >10 IU/L. Revaccination may not be necessary. Consider workplace exposure risk." });
     }
 
     setAlerts(newAlerts);
   }, [state.assessment]);
 
   const canProceedAssessment = useCallback(() => {
-    return (
+    return !!(
       state.assessment.reasonForVaccination &&
       state.assessment.previousVaccination !== "" &&
       state.assessment.knownHBPositive === false &&
@@ -156,7 +156,7 @@ export default function HepBOccupationalClient() {
   }, [state.assessment]);
 
   const canProceedTreatment = useCallback(() => {
-    return (
+    return !!(
       state.treatment.schedule &&
       state.treatment.doseNumber &&
       state.treatment.injectionSite &&
@@ -167,7 +167,7 @@ export default function HepBOccupationalClient() {
   }, [state.treatment]);
 
   const canProceedCounselling = useCallback(() => {
-    return (
+    return !!(
       state.counselling.counsellingProvided &&
       state.counselling.nextDoseDate &&
       state.counselling.counsellingNotes
@@ -175,7 +175,7 @@ export default function HepBOccupationalClient() {
   }, [state.counselling]);
 
   const canProceedSummary = useCallback(() => {
-    return (
+    return !!(
       state.summary.pharmacistName &&
       state.summary.pharmacistGPhC &&
       state.summary.pharmacyName
@@ -185,7 +185,7 @@ export default function HepBOccupationalClient() {
   const validateAndMove = useCallback((nextStep: number) => {
     if (nextStep === 3) {
       evaluateAssessmentAlerts();
-      const hasStopAlerts = alerts.some(a => a.type === "stop");
+      const hasStopAlerts = alerts.some(a => a.severity === "stop");
       if (hasStopAlerts) {
         return;
       }
@@ -218,7 +218,7 @@ export default function HepBOccupationalClient() {
     return null;
   }, [currentStep, canProceedAssessment, canProceedTreatment, canProceedCounselling, canProceedSummary]);
 
-  const hasStopAlerts = alerts.some(a => a.type === "stop");
+  const hasStopAlerts = alerts.some(a => a.severity === "stop");
 
   const getNextDoseDatePlus30Days = () => {
     const today = new Date();
@@ -276,11 +276,7 @@ export default function HepBOccupationalClient() {
         {currentStep === 2 && (
           <div className="space-y-6">
             {alerts.length > 0 && (
-              <div className="space-y-2">
-                {alerts.map((alert, idx) => (
-                  <AlertBanner key={idx} alert={alert} />
-                ))}
-              </div>
+              <AlertBanner alerts={alerts} />
             )}
 
             <SelectInput
@@ -400,11 +396,7 @@ export default function HepBOccupationalClient() {
         {currentStep === 3 && (
           <div className="space-y-6">
             {alerts.length > 0 && (
-              <div className="space-y-2">
-                {alerts.map((alert, idx) => (
-                  <AlertBanner key={idx} alert={alert} />
-                ))}
-              </div>
+              <AlertBanner alerts={alerts} />
             )}
 
             <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">

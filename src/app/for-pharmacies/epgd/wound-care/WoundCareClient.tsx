@@ -103,59 +103,59 @@ export default function WoundCareClient() {
     const newAlerts: ClinicalAlert[] = [];
 
     if (!state.assessment.activeBleedingControlled) {
-      newAlerts.push({ type: "stop", title: "Active Bleeding Not Controlled", message: "Emergency referral required. Patient needs urgent attention." });
+      newAlerts.push({ severity: "stop", code: "ACTIVE_BLEEDING", message: "Active Bleeding Not Controlled", detail: "Emergency referral required. Patient needs urgent attention." });
     }
 
     if (state.assessment.redTrackingLines) {
-      newAlerts.push({ type: "stop", title: "Red Tracking Lines Detected", message: "Possible sepsis. Urgent referral required." });
+      newAlerts.push({ severity: "stop", code: "RED_TRACKING", message: "Red Tracking Lines Detected", detail: "Possible sepsis. Urgent referral required." });
     }
 
     if (state.assessment.foreignBody) {
-      newAlerts.push({ type: "stop", title: "Foreign Body in Wound", message: "Refer for wound exploration." });
+      newAlerts.push({ severity: "stop", code: "FOREIGN_BODY", message: "Foreign Body in Wound", detail: "Refer for wound exploration." });
     }
 
     if (state.assessment.tendonNerveDamage) {
-      newAlerts.push({ type: "stop", title: "Tendon/Nerve Damage Suspected", message: "Refer for specialist assessment." });
+      newAlerts.push({ severity: "stop", code: "TENDON_NERVE", message: "Tendon/Nerve Damage Suspected", detail: "Refer for specialist assessment." });
     }
 
     if (state.assessment.woundDepth === "full-thickness" || state.assessment.woundDepth === "deep") {
-      newAlerts.push({ type: "flag", title: "Deep Wound Detected", message: "May require suturing. Consider specialist referral." });
+      newAlerts.push({ severity: "red-flag", code: "DEEP_WOUND", message: "Deep Wound Detected", detail: "May require suturing. Consider specialist referral." });
     }
 
     if (state.assessment.woundLocation === "face") {
-      newAlerts.push({ type: "caution", title: "Facial Wound", message: "Consider referral for cosmetic outcome." });
+      newAlerts.push({ severity: "caution", code: "FACIAL_WOUND", message: "Facial Wound", detail: "Consider referral for cosmetic outcome." });
     }
 
     if (state.assessment.woundType === "bite-animal" || state.assessment.woundType === "bite-human") {
-      newAlerts.push({ type: "flag", title: "Bite Wound Detected", message: "High infection risk. Antibiotic consideration required." });
+      newAlerts.push({ severity: "red-flag", code: "BITE_WOUND", message: "Bite Wound Detected", detail: "High infection risk. Antibiotic consideration required." });
     }
 
     const hoursOld = state.assessment.timeOfInjury ? Math.floor((Date.now() - new Date(state.assessment.timeOfInjury).getTime()) / (1000 * 60 * 60)) : 0;
     if (hoursOld > 6) {
-      newAlerts.push({ type: "caution", title: "Wound Age >6 Hours", message: "Increased infection risk. Closure may not be appropriate." });
+      newAlerts.push({ severity: "caution", code: "WOUND_AGE", message: "Wound Age Over 6 Hours", detail: "Increased infection risk. Closure may not be appropriate." });
     }
 
     if (state.assessment.signsOfInfection.length > 0) {
-      newAlerts.push({ type: "flag", title: "Signs of Infection Present", message: `Detected: ${state.assessment.signsOfInfection.join(", ")}. May need antibiotic treatment.` });
+      newAlerts.push({ severity: "red-flag", code: "INFECTION_SIGNS", message: "Signs of Infection Present", detail: `Detected: ${state.assessment.signsOfInfection.join(", ")}. May need antibiotic treatment.` });
     }
 
     if (state.assessment.tetanusStatus === "not-up-to-date" && (state.assessment.woundType === "puncture-wound" || state.assessment.woundType === "bite-animal" || state.assessment.woundType === "bite-human")) {
-      newAlerts.push({ type: "flag", title: "Tetanus Booster Required", message: "Dirty wound with outdated tetanus status. Arrange tetanus prophylaxis." });
+      newAlerts.push({ severity: "red-flag", code: "TETANUS", message: "Tetanus Booster Required", detail: "Dirty wound with outdated tetanus status. Arrange tetanus prophylaxis." });
     }
 
     if (state.assessment.immunosuppressed || state.assessment.diabetic) {
-      newAlerts.push({ type: "caution", title: "Increased Infection Risk", message: "Patient is immunosuppressed or diabetic. Higher risk of complications." });
+      newAlerts.push({ severity: "caution", code: "INFECTION_RISK", message: "Increased Infection Risk", detail: "Patient is immunosuppressed or diabetic. Higher risk of complications." });
     }
 
     if (state.assessment.takingAnticoagulants) {
-      newAlerts.push({ type: "caution", title: "Anticoagulant Use", message: "Increased bleeding risk. Monitor wound carefully." });
+      newAlerts.push({ severity: "caution", code: "ANTICOAGULANT", message: "Anticoagulant Use", detail: "Increased bleeding risk. Monitor wound carefully." });
     }
 
     setAlerts(newAlerts);
   }, [state.assessment]);
 
   const canProceedAssessment = useCallback(() => {
-    return (
+    return !!(
       state.assessment.woundType &&
       state.assessment.woundLocation &&
       state.assessment.woundSize &&
@@ -166,7 +166,7 @@ export default function WoundCareClient() {
   }, [state.assessment]);
 
   const canProceedTreatment = useCallback(() => {
-    return (
+    return !!(
       state.treatment.irrigationMethod &&
       state.treatment.closureMethod &&
       state.treatment.dressingType &&
@@ -176,11 +176,11 @@ export default function WoundCareClient() {
   }, [state.treatment]);
 
   const canProceedCounselling = useCallback(() => {
-    return state.counselling.counsellingProvided && state.counselling.counsellingNotes;
+    return !!(state.counselling.counsellingProvided && state.counselling.counsellingNotes);
   }, [state.counselling]);
 
   const canProceedSummary = useCallback(() => {
-    return (
+    return !!(
       state.summary.pharmacistName &&
       state.summary.pharmacistGPhC &&
       state.summary.pharmacyName
@@ -190,7 +190,7 @@ export default function WoundCareClient() {
   const validateAndMove = useCallback((nextStep: number) => {
     if (nextStep === 3) {
       evaluateAssessmentAlerts();
-      const hasStopAlerts = alerts.some(a => a.type === "stop");
+      const hasStopAlerts = alerts.some(a => a.severity === "stop");
       if (hasStopAlerts) {
         return;
       }
@@ -223,7 +223,7 @@ export default function WoundCareClient() {
     return null;
   }, [currentStep, canProceedAssessment, canProceedTreatment, canProceedCounselling, canProceedSummary]);
 
-  const hasStopAlerts = alerts.some(a => a.type === "stop");
+  const hasStopAlerts = alerts.some(a => a.severity === "stop");
 
   return (
     <div className="space-y-6">
@@ -254,11 +254,7 @@ export default function WoundCareClient() {
         {currentStep === 2 && (
           <div className="space-y-6">
             {alerts.length > 0 && (
-              <div className="space-y-2">
-                {alerts.map((alert, idx) => (
-                  <AlertBanner key={idx} alert={alert} />
-                ))}
-              </div>
+              <AlertBanner alerts={alerts} />
             )}
 
             <div className="grid grid-cols-2 gap-4">
@@ -410,11 +406,7 @@ export default function WoundCareClient() {
         {currentStep === 3 && (
           <div className="space-y-6">
             {alerts.length > 0 && (
-              <div className="space-y-2">
-                {alerts.map((alert, idx) => (
-                  <AlertBanner key={idx} alert={alert} />
-                ))}
-              </div>
+              <AlertBanner alerts={alerts} />
             )}
 
             <SelectInput
