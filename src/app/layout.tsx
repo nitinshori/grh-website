@@ -3,6 +3,7 @@ import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { CookieConsent } from "@/components/legal/CookieConsent";
+import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 
 export const metadata: Metadata = {
   title: {
@@ -59,6 +60,7 @@ export default function RootLayout({
         <main className="flex-1">{children}</main>
         <Footer />
         <CookieConsent />
+        <GoogleAnalytics />
       </body>
     </html>
   );
