@@ -702,20 +702,20 @@ export default function HomePage() {
                 Pharmacist training built in
               </p>
               <h2 className="text-xl sm:text-2xl font-bold text-white mb-3">
-                Structured clinical training with every PGD
+                Online videos and training with every PGD
               </h2>
               <p className="text-blue-200 leading-relaxed mb-4">
-                Every PGD we supply comes with structured clinical training and
-                a written competency assessment, so pharmacists are demonstrably
-                ready to deliver safe, effective consultations under each
-                Patient Group Direction before they go live.
+                Every PGD comes with online video training and a written
+                competency assessment, so every clinician using our PGDs is
+                demonstrably ready to deliver safe, effective consultations
+                before they go live.
               </p>
               <div className="flex flex-wrap gap-4 justify-center md:justify-start text-sm">
                 <span className="inline-flex items-center gap-1.5 text-teal-300">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  Built around national pharmacy training frameworks
+                  Online video training modules
                 </span>
                 <span className="inline-flex items-center gap-1.5 text-teal-300">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
