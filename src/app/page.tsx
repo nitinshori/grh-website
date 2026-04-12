@@ -11,7 +11,16 @@ export const metadata: Metadata = {
 export default function HomePage() {
   return (
     <>
-      {/* ── 1. HERO — Founder-Led Credibility + Dual CTAs ─────── */}
+      {/* ── PROFESSIONAL DISCLAIMER ────────────────────────── */}
+      <div className="bg-navy-950 border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 text-center">
+          <p className="text-xs text-blue-300">
+            This website is intended for UK registered pharmacists and pharmacy technicians only.
+          </p>
+        </div>
+      </div>
+
+      {/* ── 1. HERO — Pharmacy-Focused with Key USPs ─────── */}
       <section className="relative bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800 text-white overflow-hidden">
         {/* Subtle background pattern */}
         <div className="absolute inset-0 opacity-5">
@@ -43,28 +52,28 @@ export default function HomePage() {
                     d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
                   />
                 </svg>
-                20 years of pharmacy experience
+                Trusted by national supermarket chains &amp; pharmacies across the UK
               </div>
 
               <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold leading-tight mb-6">
-                PGDs, training and governance.
+                Flat-fee PGDs.
                 <br />
-                <span className="text-teal-400">Built for UK pharmacies.</span>
+                <span className="text-teal-400">No per-consultation charges. Ever.</span>
               </h1>
 
               <p className="text-lg sm:text-xl text-blue-200 leading-relaxed mb-8 max-w-xl">
-                60+ PGDs with built-in clinical training and competency
-                assessments. CQC registered. One flat annual fee &mdash; no
-                per-consult charges, no revenue share. Built by clinicians
-                with two decades of UK pharmacy experience.
+                60+ electronically enabled PGDs with built-in training, competency
+                assessments and a simple digital step-by-step consultation process.
+                CQC registered. Founded by clinicians with 20 years of
+                UK pharmacy experience.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link
-                  href="/for-pharmacies"
+                  href="/for-pharmacies/pgd-catalogue"
                   className="inline-flex items-center justify-center gap-2 px-7 py-3.5 bg-teal-500 hover:bg-teal-400 text-white font-semibold rounded-lg transition-colors text-lg shadow-lg shadow-teal-500/20"
                 >
-                  I&apos;m a pharmacist
+                  View PGD Catalogue
                   <svg
                     className="w-5 h-5"
                     fill="none"
@@ -80,10 +89,10 @@ export default function HomePage() {
                   </svg>
                 </Link>
                 <Link
-                  href="/for-patients/find-service"
+                  href="/book"
                   className="inline-flex items-center justify-center gap-2 px-7 py-3.5 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-lg transition-colors text-lg border border-white/20"
                 >
-                  Find a service near me
+                  Book a Discovery Call
                 </Link>
               </div>
             </div>
@@ -124,7 +133,7 @@ export default function HomePage() {
                     <div>
                       <p className="text-2xl font-bold text-teal-400">60+</p>
                       <p className="text-[11px] text-blue-200 mt-0.5 leading-tight">
-                        PGD services
+                        ePGD services
                       </p>
                     </div>
                     <div>
@@ -147,107 +156,69 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── 2. DUAL-AUDIENCE STRIP ────────────────────────────── */}
-      <section className="grid md:grid-cols-2">
-        {/* Pharmacies */}
-        <div className="bg-navy-900 px-6 sm:px-8 py-8 flex items-center">
-          <div className="max-w-lg mx-auto flex items-center gap-5">
-            <div className="w-12 h-12 rounded-lg bg-teal-500/10 flex items-center justify-center shrink-0">
-              <svg
-                className="w-6 h-6 text-teal-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                />
-              </svg>
+      {/* ── 2. KEY USP HIGHLIGHTS ────────────────────────────── */}
+      <section className="bg-white border-b border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-12">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+            {/* USP 1: Flat Pricing */}
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-teal-50 flex items-center justify-center shrink-0">
+                <svg className="w-6 h-6 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-bold text-navy-900">Flat Pricing</h3>
+                <p className="text-sm text-gray-500 mt-1 leading-relaxed">
+                  One annual fee per pharmacy. No per-consultation charges. No revenue share. Keep 100% of what you earn.
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-white font-bold text-lg">
-                For UK Pharmacies
-              </h3>
-              <p className="text-blue-200 text-sm mt-1">
-                60+ PGDs with built-in training, flat fee, your data &mdash; a
-                clearer way to launch private services.
-              </p>
-            </div>
-            <Link
-              href="/for-pharmacies"
-              className="ml-auto shrink-0 text-teal-400 hover:text-teal-300 transition-colors"
-              aria-label="For Pharmacies"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </Link>
-          </div>
-        </div>
 
-        {/* Patients */}
-        <div className="bg-teal-600 px-6 sm:px-8 py-8 flex items-center">
-          <div className="max-w-lg mx-auto flex items-center gap-5">
-            <div className="w-12 h-12 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
-              <svg
-                className="w-6 h-6 text-white"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-              </svg>
+            {/* USP 2: Trusted Nationwide */}
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-teal-50 flex items-center justify-center shrink-0">
+                <svg className="w-6 h-6 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-bold text-navy-900">Trusted Nationwide</h3>
+                <p className="text-sm text-gray-500 mt-1 leading-relaxed">
+                  Used by national supermarket chains, large multiples and independent pharmacies across the UK.
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-white font-bold text-lg">For Patients</h3>
-              <p className="text-teal-100 text-sm mt-1">
-                Private healthcare at your local pharmacy &mdash; book travel
-                jabs, weight management &amp; more.
-              </p>
+
+            {/* USP 3: 20 Years Experience */}
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-teal-50 flex items-center justify-center shrink-0">
+                <svg className="w-6 h-6 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-bold text-navy-900">20 Years&apos; Experience</h3>
+                <p className="text-sm text-gray-500 mt-1 leading-relaxed">
+                  Founded by clinicians with two decades of UK pharmacy, prescribing and clinical governance experience.
+                </p>
+              </div>
             </div>
-            <Link
-              href="/for-patients/find-service"
-              className="ml-auto shrink-0 text-white/80 hover:text-white transition-colors"
-              aria-label="Find a service"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </Link>
+
+            {/* USP 4: Electronic PGDs */}
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-teal-50 flex items-center justify-center shrink-0">
+                <svg className="w-6 h-6 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-bold text-navy-900">Digital ePGDs</h3>
+                <p className="text-sm text-gray-500 mt-1 leading-relaxed">
+                  All 60+ PGDs are electronically enabled &mdash; a simple, step-by-step digital consultation process with built-in clinical safeguards.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </section>

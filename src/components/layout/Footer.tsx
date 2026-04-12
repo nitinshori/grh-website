@@ -9,12 +9,7 @@ const pharmacyLinks = [
   { href: "/pharmacy-plus-health", label: "Pharmacy+ Health Hub" },
 ];
 
-const patientLinks = [
-  { href: "/for-patients/find-service", label: "Find a Service" },
-  { href: "/for-patients/services/travel", label: "Travel Vaccinations" },
-  { href: "/for-patients/services/weight", label: "Weight Management" },
-  { href: "/for-patients/services/sexual-health", label: "Sexual Health" },
-];
+/* Patient links removed — site is for pharmacy professionals only */
 
 const companyLinks = [
   { href: "/about", label: "About Us" },
@@ -60,7 +55,7 @@ export function Footer() {
 
       {/* Links */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
             <Link href="/" className="flex items-center gap-2 mb-4">
@@ -97,25 +92,6 @@ export function Footer() {
             </h3>
             <ul className="space-y-2.5">
               {pharmacyLinks.map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="text-sm text-blue-200 hover:text-teal-300 transition-colors"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* For Patients */}
-          <div>
-            <h3 className="text-sm font-semibold text-white mb-4">
-              For Patients
-            </h3>
-            <ul className="space-y-2.5">
-              {patientLinks.map((link) => (
                 <li key={link.href}>
                   <Link
                     href={link.href}
@@ -213,8 +189,15 @@ export function Footer() {
           </div>
         </div>
 
+        {/* Disclaimer */}
+        <div className="mt-8 pt-6 border-t border-white/10 text-center">
+          <p className="text-xs text-blue-400">
+            This website is intended for UK registered pharmacists and pharmacy technicians only.
+          </p>
+        </div>
+
         {/* Bottom */}
-        <div className="mt-8 pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="mt-4 pt-4 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-blue-400">
             &copy; {new Date().getFullYear()} {legal.companyName}. All rights
             reserved.
