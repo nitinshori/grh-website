@@ -3,10 +3,12 @@
 import { useState, useMemo } from "react";
 
 /* ── Competitor benchmark ────────────────────────────────────────
-   Based on publicly available pricing from a leading UK PGD provider.
-   Their model: monthly platform fee + per-consultation charge.        */
-const COMPETITOR_MONTHLY_FEE = 50; // £ platform / subscription fee
-const COMPETITOR_PER_CONSULT = 6.5; // £ per consultation
+   Based on publicly listed pricing from a leading UK PGD provider.
+   Their "Unlimited Clinic Package" (60+ services):
+     • £2,199 + VAT per pharmacy per year  (= £2,638.80 inc. VAT)
+     • Plus £4–6.50 per consultation on top                          */
+const COMPETITOR_ANNUAL_FEE = 2639; // £2,199 + 20% VAT, rounded
+const COMPETITOR_PER_CONSULT = 6.5; // £ per consultation (upper end)
 
 const servicePresets = [
   { label: "Travel vaccines", defaultVolume: 30 },
@@ -51,13 +53,12 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
   );
 
   // ── Competitor costs ──────────────────────────────────────
-  const competitorMonthlyPlatform =
-    COMPETITOR_MONTHLY_FEE * pharmacyCount;
-  const competitorMonthlyConsults =
-    totalConsults * pharmacyCount * COMPETITOR_PER_CONSULT;
-  const competitorMonthlyTotal =
-    competitorMonthlyPlatform + competitorMonthlyConsults;
-  const competitorAnnualTotal = competitorMonthlyTotal * 12;
+  const competitorAnnualPlatform = COMPETITOR_ANNUAL_FEE * pharmacyCount;
+  const competitorAnnualConsults =
+    totalConsults * pharmacyCount * COMPETITOR_PER_CONSULT * 12;
+  const competitorAnnualTotal =
+    competitorAnnualPlatform + competitorAnnualConsults;
+  const competitorMonthlyTotal = competitorAnnualTotal / 12;
 
   // ── GRH costs ─────────────────────────────────────────────
   const grhTier = getGRHTier(pharmacyCount);
@@ -85,6 +86,9 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
     const parsed = parseInt(value, 10);
     setPharmacyCount(isNaN(parsed) ? 1 : Math.max(1, Math.min(999, parsed)));
   };
+
+  const fmt = (n: number) =>
+    n.toLocaleString("en-GB", { maximumFractionDigits: 0 });
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
@@ -155,7 +159,7 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
             Total monthly consultations
           </span>
           <span className="text-xl font-bold text-navy-900">
-            {(totalConsults * pharmacyCount).toLocaleString()}
+            {fmt(totalConsults * pharmacyCount)}
           </span>
         </div>
       </div>
@@ -170,35 +174,39 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
             </p>
             <div className="space-y-3">
               <div className="flex justify-between items-baseline">
-                <span className="text-sm text-blue-200">Monthly platform fee</span>
+                <span className="text-sm text-blue-200">Annual access fee</span>
                 <span className="text-sm font-semibold text-white">
-                  £{COMPETITOR_MONTHLY_FEE.toLocaleString()}{" "}
-                  <span className="text-blue-300 font-normal">&times; {pharmacyCount}</span>
+                  &pound;{fmt(COMPETITOR_ANNUAL_FEE)}{" "}
+                  <span className="text-blue-300 font-normal">
+                    &times;&nbsp;{pharmacyCount}
+                  </span>
                 </span>
               </div>
               <div className="flex justify-between items-baseline">
                 <span className="text-sm text-blue-200">Per-consultation charge</span>
                 <span className="text-sm font-semibold text-white">
-                  £{COMPETITOR_PER_CONSULT.toFixed(2)}{" "}
+                  &pound;{COMPETITOR_PER_CONSULT.toFixed(2)}{" "}
                   <span className="text-blue-300 font-normal">per consult</span>
                 </span>
               </div>
               <div className="pt-3 border-t border-white/10">
                 <div className="flex justify-between items-baseline">
-                  <span className="text-sm text-blue-200">Monthly total</span>
+                  <span className="text-sm text-blue-200">Monthly equiv.</span>
                   <span className="text-lg font-bold text-red-400">
-                    £{competitorMonthlyTotal.toLocaleString()}
+                    &pound;{fmt(Math.round(competitorMonthlyTotal))}
                   </span>
                 </div>
                 <p className="text-xs text-blue-300 mt-1 text-right">
-                  £{competitorMonthlyPlatform.toLocaleString()} platform +
-                  £{competitorMonthlyConsults.toLocaleString()} consults
+                  &pound;{fmt(Math.round(competitorAnnualPlatform / 12))} access
+                  + &pound;{fmt(Math.round(competitorAnnualConsults / 12))} consults
                 </p>
               </div>
               <div className="flex justify-between items-baseline">
-                <span className="text-sm text-blue-200">Annual total</span>
+                <span className="text-sm font-semibold text-blue-200">
+                  Annual total
+                </span>
                 <span className="text-xl font-bold text-red-400">
-                  £{competitorAnnualTotal.toLocaleString()}
+                  &pound;{fmt(competitorAnnualTotal)}
                 </span>
               </div>
             </div>
@@ -218,14 +226,18 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
                   </span>
                 ) : (
                   <span className="text-sm font-semibold text-white">
-                    £{grhTier.monthlyPerPharmacy}{" "}
-                    <span className="text-blue-300 font-normal">&times; {pharmacyCount}</span>
+                    &pound;{grhTier.monthlyPerPharmacy}{" "}
+                    <span className="text-blue-300 font-normal">
+                      &times;&nbsp;{pharmacyCount}
+                    </span>
                   </span>
                 )}
               </div>
               <div className="flex justify-between items-baseline">
                 <span className="text-sm text-blue-200">Per-consultation charge</span>
-                <span className="text-sm font-bold text-teal-400">£0.00</span>
+                <span className="text-sm font-bold text-teal-400">
+                  &pound;0.00
+                </span>
               </div>
               <div className="pt-3 border-t border-white/10">
                 <div className="flex justify-between items-baseline">
@@ -236,25 +248,27 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
                     </span>
                   ) : (
                     <span className="text-lg font-bold text-teal-400">
-                      £{grhMonthlyFee.toLocaleString()}
+                      &pound;{fmt(grhMonthlyFee)}
                     </span>
                   )}
                 </div>
                 {!isCustom && (
                   <p className="text-xs text-blue-300 mt-1 text-right">
-                    {grhTier.name}: £{grhTier.monthlyPerPharmacy}/pharmacy/month
+                    {grhTier.name}: &pound;{grhTier.monthlyPerPharmacy}/pharmacy/month
                   </p>
                 )}
               </div>
               <div className="flex justify-between items-baseline">
-                <span className="text-sm text-blue-200">Annual total</span>
+                <span className="text-sm font-semibold text-blue-200">
+                  Annual total
+                </span>
                 {isCustom ? (
                   <span className="text-xl font-bold text-teal-400">
                     Custom
                   </span>
                 ) : (
                   <span className="text-xl font-bold text-teal-400">
-                    £{grhAnnualFee.toLocaleString()}
+                    &pound;{fmt(grhAnnualFee)}
                   </span>
                 )}
               </div>
@@ -269,14 +283,12 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
               Your estimated annual saving
             </p>
             <p className="text-4xl sm:text-5xl font-bold text-green-400 mb-1">
-              £{annualSaving.toLocaleString()}
+              &pound;{fmt(annualSaving)}
             </p>
             <p className="text-sm text-blue-200">
               That&apos;s{" "}
               <span className="text-green-400 font-semibold">
-                £{perPharmacyAnnualSaving.toLocaleString("en-GB", {
-                  maximumFractionDigits: 0,
-                })}
+                &pound;{fmt(perPharmacyAnnualSaving)}
               </span>{" "}
               saved per pharmacy, per year
             </p>
@@ -293,16 +305,27 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
               className="inline-flex items-center gap-2 px-6 py-3 bg-teal-500 hover:bg-teal-400 text-white font-semibold rounded-lg transition-colors"
             >
               Get a tailored quote
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 8l4 4m0 0l-4 4m4-4H3"
+                />
               </svg>
             </a>
           </div>
         )}
 
         <p className="text-center text-xs text-blue-300 mt-6 pt-4 border-t border-blue-900">
-          Competitor pricing based on typical per-consultation PGD provider rates.
-          Your actual savings may vary.{" "}
+          Competitor pricing based on their publicly listed Unlimited Clinic
+          Package (&pound;2,199&nbsp;+&nbsp;VAT/yr) plus per-consultation
+          charges. Your actual savings may vary.{" "}
           <a href="/contact" className="text-teal-400 underline">
             Get your exact quote &rarr;
           </a>
