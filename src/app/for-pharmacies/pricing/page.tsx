@@ -93,7 +93,7 @@ const faqs = [
   },
   {
     q: "How does your pricing compare to other PGD providers?",
-    a: "A leading competitor charges an annual access fee of £2,199 + VAT per pharmacy, plus £4–6.50 per consultation on top — the busier you get, the more you pay. GRH is a flat monthly fee with zero per-consultation charges. Use the savings calculator above to see your potential savings based on your actual volumes.",
+    a: "A leading competitor charges £2,199 + VAT per pharmacy per year for their full package — paid upfront annually. GRH is a flat monthly fee with zero per-consultation charges. Use the savings calculator above to see your potential savings based on your actual volumes.",
   },
   {
     q: "How does your pricing compare to ECG?",
@@ -127,7 +127,7 @@ export default function PricingPage() {
           <ul className="text-gray-700 leading-relaxed space-y-2">
             <li><strong>Flat monthly fee per pharmacy.</strong> No per-consultation charges, no per-PGD upcharges, no hidden layers.</li>
             <li><strong>All PGDs included at every tier.</strong> Travel vaccines, flu jabs, UTI, weight management &mdash; everything covered by one fee.</li>
-            <li><strong>Zero per-consultation fees ever.</strong> Unlike a leading competitor’s £2,199 + VAT annual access fee plus £4–6.50 per consultation, your cost doesn’t rise with volume.</li>
+            <li><strong>Zero per-consultation fees ever.</strong> Unlike a leading competitor’s £2,199 + VAT upfront annual fee, GRH is a simple monthly subscription with no long-term commitment.</li>
             <li><strong>Price goes down as you grow.</strong> Volume discounts: £125/pharmacy for 1\u20135 sites, down to £99 for 16\u201330, and custom pricing for networks of 30+.</li>
           </ul>
         </div>
@@ -204,7 +204,7 @@ export default function PricingPage() {
             How much could you save?
           </h2>
           <p className="text-gray-500 text-center mb-8 max-w-xl mx-auto">
-            Compare your costs against a leading per-consultation PGD provider.
+            Compare your annual costs against a leading PGD provider.
             Your actual savings will vary depending on volume and services.
           </p>
           <SavingsCalculator />

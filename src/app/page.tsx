@@ -881,9 +881,9 @@ export default function HomePage() {
               Compare the true cost
             </h2>
             <p className="text-gray-500 max-w-2xl mx-auto">
-              Most PGD providers charge a monthly platform fee <em>plus</em> a
-              per-consultation charge. With GRH you pay one flat monthly fee
-              &mdash; no matter how many consultations you do.
+              A leading competitor charges &pound;2,199&nbsp;+&nbsp;VAT per
+              pharmacy, paid upfront annually. With GRH you pay a lower flat
+              monthly fee &mdash; no lock-in, no upfront commitment.
             </p>
           </div>
           <SavingsCalculator compact />

@@ -6,9 +6,9 @@ import { useState, useMemo } from "react";
    Based on publicly listed pricing from a leading UK PGD provider.
    Their "Unlimited Clinic Package" (60+ services):
      • £2,199 + VAT per pharmacy per year  (= £2,638.80 inc. VAT)
-     • Plus £4–6.50 per consultation on top                          */
-const COMPETITOR_ANNUAL_FEE = 2639; // £2,199 + 20% VAT, rounded
-const COMPETITOR_PER_CONSULT = 6.5; // £ per consultation (upper end)
+     • No per-consultation fee on the unlimited package               */
+const COMPETITOR_ANNUAL_EX_VAT = 2199;
+const COMPETITOR_ANNUAL_INC_VAT = 2639; // £2,199 + 20% VAT, rounded
 
 const servicePresets = [
   { label: "Travel vaccines", defaultVolume: 30 },
@@ -42,23 +42,11 @@ function getGRHTier(pharmacyCount: number): {
 }
 
 export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
-  const [volumes, setVolumes] = useState<number[]>(
-    servicePresets.map((s) => s.defaultVolume)
-  );
   const [pharmacyCount, setPharmacyCount] = useState(1);
 
-  const totalConsults = useMemo(
-    () => volumes.reduce((sum, v) => sum + v, 0),
-    [volumes]
-  );
-
   // ── Competitor costs ──────────────────────────────────────
-  const competitorAnnualPlatform = COMPETITOR_ANNUAL_FEE * pharmacyCount;
-  const competitorAnnualConsults =
-    totalConsults * pharmacyCount * COMPETITOR_PER_CONSULT * 12;
-  const competitorAnnualTotal =
-    competitorAnnualPlatform + competitorAnnualConsults;
-  const competitorMonthlyTotal = competitorAnnualTotal / 12;
+  const competitorAnnualTotal = COMPETITOR_ANNUAL_INC_VAT * pharmacyCount;
+  const competitorMonthlyEquiv = competitorAnnualTotal / 12;
 
   // ── GRH costs ─────────────────────────────────────────────
   const grhTier = getGRHTier(pharmacyCount);
@@ -72,15 +60,10 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
   const annualSaving = competitorAnnualTotal - grhAnnualFee;
   const perPharmacyAnnualSaving =
     pharmacyCount > 0 ? annualSaving / pharmacyCount : 0;
-
-  const updateVolume = (index: number, value: string) => {
-    const parsed = parseInt(value, 10);
-    setVolumes((prev) => {
-      const next = [...prev];
-      next[index] = isNaN(parsed) ? 0 : Math.max(0, Math.min(9999, parsed));
-      return next;
-    });
-  };
+  const savingPct =
+    competitorAnnualTotal > 0
+      ? Math.round((annualSaving / competitorAnnualTotal) * 100)
+      : 0;
 
   const updatePharmacyCount = (value: string) => {
     const parsed = parseInt(value, 10);
@@ -100,12 +83,12 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
             : "Estimate your savings vs a leading competitor"}
         </h3>
         <p className="text-sm text-gray-500 mb-6">
-          Enter your pharmacy count and estimated monthly consultation volumes
-          to see a side-by-side cost comparison.
+          Enter your pharmacy count to see a side-by-side annual cost
+          comparison.
         </p>
 
         {/* Pharmacy count */}
-        <div className="mb-6 pb-6 border-b border-gray-100">
+        <div>
           <label className="block text-sm text-gray-700 font-semibold mb-2">
             Number of pharmacies
           </label>
@@ -124,44 +107,6 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
             </span>
           </div>
         </div>
-
-        {/* Consultation volumes */}
-        <h4 className="text-sm font-semibold text-gray-700 mb-4">
-          Monthly consultation volumes{" "}
-          <span className="font-normal text-gray-400">(per pharmacy)</span>
-        </h4>
-        <div className="space-y-4">
-          {servicePresets.map((service, i) => (
-            <div
-              key={service.label}
-              className="flex items-center justify-between gap-4"
-            >
-              <label className="text-sm text-gray-700 flex-1">
-                {service.label}
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min={0}
-                  max={9999}
-                  value={volumes[i]}
-                  onChange={(e) => updateVolume(i, e.target.value)}
-                  className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-sm text-right focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent"
-                />
-                <span className="text-xs text-gray-400 w-12">/month</span>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between">
-          <span className="font-semibold text-navy-900">
-            Total monthly consultations
-          </span>
-          <span className="text-xl font-bold text-navy-900">
-            {fmt(totalConsults * pharmacyCount)}
-          </span>
-        </div>
       </div>
 
       {/* ── Side-by-side comparison ───────────────────────────── */}
@@ -169,41 +114,43 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
         <div className="grid md:grid-cols-2 gap-6 mb-6">
           {/* ── Competitor column ──────────────────────────────── */}
           <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-            <p className="text-xs text-red-300 uppercase tracking-wide font-semibold mb-3">
+            <p className="text-xs text-red-300 uppercase tracking-wide font-semibold mb-4">
               A leading competitor
             </p>
             <div className="space-y-3">
               <div className="flex justify-between items-baseline">
-                <span className="text-sm text-blue-200">Annual access fee</span>
+                <span className="text-sm text-blue-200">
+                  Annual fee per pharmacy
+                </span>
                 <span className="text-sm font-semibold text-white">
-                  &pound;{fmt(COMPETITOR_ANNUAL_FEE)}{" "}
-                  <span className="text-blue-300 font-normal">
-                    &times;&nbsp;{pharmacyCount}
-                  </span>
+                  &pound;{fmt(COMPETITOR_ANNUAL_EX_VAT)} + VAT
                 </span>
               </div>
               <div className="flex justify-between items-baseline">
-                <span className="text-sm text-blue-200">Per-consultation charge</span>
-                <span className="text-sm font-semibold text-white">
-                  &pound;{COMPETITOR_PER_CONSULT.toFixed(2)}{" "}
-                  <span className="text-blue-300 font-normal">per consult</span>
+                <span className="text-sm text-blue-200">
+                  Per-consultation charge
+                </span>
+                <span className="text-sm text-blue-200">
+                  Included
+                </span>
+              </div>
+              <div className="flex justify-between items-baseline">
+                <span className="text-sm text-blue-200">Payment</span>
+                <span className="text-sm text-blue-200">
+                  Upfront annual
                 </span>
               </div>
               <div className="pt-3 border-t border-white/10">
                 <div className="flex justify-between items-baseline">
                   <span className="text-sm text-blue-200">Monthly equiv.</span>
                   <span className="text-lg font-bold text-red-400">
-                    &pound;{fmt(Math.round(competitorMonthlyTotal))}
+                    &pound;{fmt(Math.round(competitorMonthlyEquiv))}
                   </span>
                 </div>
-                <p className="text-xs text-blue-300 mt-1 text-right">
-                  &pound;{fmt(Math.round(competitorAnnualPlatform / 12))} access
-                  + &pound;{fmt(Math.round(competitorAnnualConsults / 12))} consults
-                </p>
               </div>
               <div className="flex justify-between items-baseline">
                 <span className="text-sm font-semibold text-blue-200">
-                  Annual total
+                  Annual total (inc. VAT)
                 </span>
                 <span className="text-xl font-bold text-red-400">
                   &pound;{fmt(competitorAnnualTotal)}
@@ -214,30 +161,35 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
 
           {/* ── GRH column ────────────────────────────────────── */}
           <div className="bg-teal-500/10 border border-teal-400/20 rounded-xl p-6">
-            <p className="text-xs text-teal-400 uppercase tracking-wide font-semibold mb-3">
+            <p className="text-xs text-teal-400 uppercase tracking-wide font-semibold mb-4">
               Get Real Health
             </p>
             <div className="space-y-3">
               <div className="flex justify-between items-baseline">
-                <span className="text-sm text-blue-200">Monthly fee</span>
+                <span className="text-sm text-blue-200">
+                  Monthly fee per pharmacy
+                </span>
                 {isCustom ? (
                   <span className="text-sm font-semibold text-teal-400">
                     Custom
                   </span>
                 ) : (
                   <span className="text-sm font-semibold text-white">
-                    &pound;{grhTier.monthlyPerPharmacy}{" "}
-                    <span className="text-blue-300 font-normal">
-                      &times;&nbsp;{pharmacyCount}
-                    </span>
+                    &pound;{grhTier.monthlyPerPharmacy}
                   </span>
                 )}
               </div>
               <div className="flex justify-between items-baseline">
-                <span className="text-sm text-blue-200">Per-consultation charge</span>
-                <span className="text-sm font-bold text-teal-400">
-                  &pound;0.00
+                <span className="text-sm text-blue-200">
+                  Per-consultation charge
                 </span>
+                <span className="text-sm font-bold text-teal-400">
+                  &pound;0 &mdash; ever
+                </span>
+              </div>
+              <div className="flex justify-between items-baseline">
+                <span className="text-sm text-blue-200">Payment</span>
+                <span className="text-sm text-teal-300">Monthly rolling</span>
               </div>
               <div className="pt-3 border-t border-white/10">
                 <div className="flex justify-between items-baseline">
@@ -252,9 +204,10 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
                     </span>
                   )}
                 </div>
-                {!isCustom && (
+                {!isCustom && pharmacyCount > 1 && (
                   <p className="text-xs text-blue-300 mt-1 text-right">
-                    {grhTier.name}: &pound;{grhTier.monthlyPerPharmacy}/pharmacy/month
+                    {grhTier.name}: &pound;{grhTier.monthlyPerPharmacy} &times;{" "}
+                    {pharmacyCount}
                   </p>
                 )}
               </div>
@@ -288,9 +241,18 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
             <p className="text-sm text-blue-200">
               That&apos;s{" "}
               <span className="text-green-400 font-semibold">
-                &pound;{fmt(perPharmacyAnnualSaving)}
+                {savingPct}% less
               </span>{" "}
-              saved per pharmacy, per year
+              than a leading competitor
+              {pharmacyCount > 1 && (
+                <>
+                  {" "}&mdash;{" "}
+                  <span className="text-green-400 font-semibold">
+                    &pound;{fmt(perPharmacyAnnualSaving)}
+                  </span>{" "}
+                  saved per pharmacy
+                </>
+              )}
             </p>
           </div>
         )}
@@ -322,10 +284,46 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
           </div>
         )}
 
+        {!isCustom && (
+          <div className="mt-6 pt-5 border-t border-blue-900">
+            <p className="text-xs text-blue-300 text-center mb-4">
+              Plus, with GRH you also get &mdash; included in your monthly fee:
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                "Built-in clinical training",
+                "Competency assessments",
+                "ePGD consultation tool",
+                "Clinical support (Mon\u2013Fri)",
+              ].map((item) => (
+                <div
+                  key={item}
+                  className="flex items-start gap-2 text-xs text-blue-200"
+                >
+                  <svg
+                    className="w-3.5 h-3.5 text-teal-400 mt-0.5 shrink-0"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2.5}
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                  {item}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <p className="text-center text-xs text-blue-300 mt-6 pt-4 border-t border-blue-900">
           Competitor pricing based on their publicly listed Unlimited Clinic
-          Package (&pound;2,199&nbsp;+&nbsp;VAT/yr) plus per-consultation
-          charges. Your actual savings may vary.{" "}
+          Package (&pound;{fmt(COMPETITOR_ANNUAL_EX_VAT)}&nbsp;+&nbsp;VAT/yr
+          per pharmacy). Your actual savings may vary.{" "}
           <a href="/contact" className="text-teal-400 underline">
             Get your exact quote &rarr;
           </a>
