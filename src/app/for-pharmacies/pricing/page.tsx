@@ -14,7 +14,7 @@ const tiers = [
     name: "Single Site",
     pgds: "1\u20135 pharmacies",
     price: "£125",
-    priceSubtitle: "/pharmacy/month",
+    priceSubtitle: "/pharmacy/month + VAT",
     highlighted: false,
     features: [
       "All PGDs included",
@@ -30,7 +30,7 @@ const tiers = [
     name: "Group",
     pgds: "6\u201315 pharmacies",
     price: "£109",
-    priceSubtitle: "/pharmacy/month",
+    priceSubtitle: "/pharmacy/month + VAT",
     highlighted: true,
     badge: "Most popular",
     features: [
@@ -47,7 +47,7 @@ const tiers = [
     name: "Enterprise",
     pgds: "16\u201330 pharmacies",
     price: "£99",
-    priceSubtitle: "/pharmacy/month",
+    priceSubtitle: "/pharmacy/month + VAT",
     highlighted: false,
     features: [
       "All PGDs included",
@@ -81,7 +81,7 @@ const faqs = [
   },
   {
     q: "Are there any hidden fees?",
-    a: "No. Your monthly fee covers everything listed in your plan. We do not charge per consultation, per patient, per service, or per PGD. The price you see is the price you pay.",
+    a: "No. Your monthly fee covers everything listed in your plan. We do not charge per consultation, per patient, per service, or per PGD. All prices are shown excluding VAT. VAT at 20% is added to all invoices.",
   },
   {
     q: "How does pricing work if I have multiple pharmacies?",
@@ -93,7 +93,7 @@ const faqs = [
   },
   {
     q: "How does your pricing compare to other PGD providers?",
-    a: "One provider charges £2,639 per pharmacy per year for an all-in-one annual package, paid upfront. Another charges per PGD per pharmacist plus a separate platform subscription for the digital workflow (£2,160/yr for their full bundle). GRH is one flat monthly fee that covers everything: 60+ PGDs, ePGD platform, training, clinical support, and onboarding. Use the savings calculator above to see your potential savings.",
+    a: "One provider charges £2,639 per pharmacy per year (inc. VAT) for an all-in-one annual package, paid upfront. Another charges per PGD per pharmacist plus a separate platform subscription (£2,592/yr inc. VAT for their full bundle). GRH is one flat monthly fee + VAT that covers everything: 60+ PGDs, ePGD platform, training, clinical support, and onboarding. All prices are shown excluding VAT. Use the savings calculator above to see your potential savings.",
   },
 
   {
@@ -124,7 +124,7 @@ export default function PricingPage() {
           <ul className="text-gray-700 leading-relaxed space-y-2">
             <li><strong>Flat monthly fee per pharmacy.</strong> No per-consultation charges, no per-PGD upcharges, no hidden layers.</li>
             <li><strong>All PGDs included at every tier.</strong> Travel vaccines, flu jabs, UTI, weight management &mdash; everything covered by one fee.</li>
-            <li><strong>Zero per-consultation fees ever.</strong> Other providers charge £2,160–£2,639 per pharmacy per year, paid upfront. GRH is a simple monthly subscription with no long-term commitment.</li>
+            <li><strong>Zero per-consultation fees ever.</strong> Other providers charge £2,592–£2,639 per pharmacy per year (inc. VAT), paid upfront. GRH is a simple monthly subscription + VAT with no long-term commitment.</li>
             <li><strong>Price goes down as you grow.</strong> Volume discounts: £125/pharmacy for 1\u20135 sites, down to £99 for 16\u201330, and custom pricing for networks of 30+.</li>
           </ul>
         </div>

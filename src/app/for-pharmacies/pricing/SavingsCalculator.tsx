@@ -15,14 +15,15 @@ import { useState } from "react";
        (appointments, Rx, deliveries, PGDs, eCommerce)
      • Or lower tiers from £1,699/yr (PGD-only plan)
      • Separate platform subscription required for digital workflow      */
+const VAT_RATE = 0.2;
 const COMPETITOR_A_ANNUAL = 2639; // all-in-one, inc. VAT
-const COMPETITOR_B_ANNUAL = 2160; // Advanced bundle (ePGDs + full platform)
+const COMPETITOR_B_ANNUAL = 2592; // Advanced bundle inc. VAT (£2,160 + VAT)
 
-// GRH pricing tiers: £/pharmacy/month
+// GRH pricing tiers: £/pharmacy/month (ex-VAT)
 const GRH_PRICING = {
-  singleSite: 125, // 1–5 pharmacies
-  group: 109, // 6–15 pharmacies
-  enterprise: 99, // 16–30 pharmacies
+  singleSite: 125, // 1–5 pharmacies (ex-VAT)
+  group: 109, // 6–15 pharmacies (ex-VAT)
+  enterprise: 99, // 16–30 pharmacies (ex-VAT)
   // 30+ = custom
 };
 
@@ -52,13 +53,15 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
   const compBAnnualTotal = COMPETITOR_B_ANNUAL * pharmacyCount;
   const compBMonthlyEquiv = compBAnnualTotal / 12;
 
-  // ── GRH costs ─────────────────────────────────────────────
+  // ── GRH costs (inc. VAT for fair comparison) ──────────────
   const grhTier = getGRHTier(pharmacyCount);
   const isCustom = pharmacyCount > 30;
-  const grhMonthlyFee = isCustom
+  const grhMonthlyExVat = isCustom
     ? 0
     : grhTier.monthlyPerPharmacy * pharmacyCount;
-  const grhAnnualFee = grhMonthlyFee * 12;
+  const grhMonthlyFee = Math.round(grhMonthlyExVat * (1 + VAT_RATE));
+  const grhAnnualFee = Math.round(grhMonthlyExVat * 12 * (1 + VAT_RATE));
+  const grhMonthlyPerPharmacyIncVat = Math.round(grhTier.monthlyPerPharmacy * (1 + VAT_RATE));
 
   // ── Savings (vs most expensive competitor) ────────────────
   const savingVsA = compAAnnualTotal - grhAnnualFee;
@@ -246,7 +249,8 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
                   </span>
                 ) : (
                   <span className="text-xs font-semibold text-white">
-                    &pound;{grhTier.monthlyPerPharmacy}/pharmacy
+                    &pound;{grhMonthlyPerPharmacyIncVat}/pharmacy
+                    <span className="text-[10px] text-blue-300 ml-1">inc VAT</span>
                   </span>
                 )}
               </div>
@@ -283,8 +287,8 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
                 </div>
                 {!isCustom && pharmacyCount > 1 && (
                   <p className="text-[10px] text-blue-300 mt-0.5 text-right">
-                    {grhTier.name}: &pound;{grhTier.monthlyPerPharmacy} &times;{" "}
-                    {pharmacyCount}
+                    {grhTier.name}: &pound;{grhMonthlyPerPharmacyIncVat} &times;{" "}
+                    {pharmacyCount} inc VAT
                   </p>
                 )}
               </div>
@@ -405,10 +409,10 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
         )}
 
         <p className="text-center text-[11px] text-blue-300 mt-6 pt-4 border-t border-blue-900">
-          Competitor pricing based on publicly listed rates. Provider A:
-          all-in-one annual package. Provider B: full platform bundle with
-          ePGDs (44+ services). GRH includes 60+ PGDs, training, and
-          clinical support. Your actual savings may vary.{" "}
+          All prices shown inc. VAT. Competitor pricing based on publicly
+          listed rates. Provider A: all-in-one annual package. Provider B:
+          full platform bundle with ePGDs (44+ services). GRH includes 60+
+          PGDs, training, and clinical support. Your actual savings may vary.{" "}
           <a href="/contact" className="text-teal-400 underline">
             Get your exact quote &rarr;
           </a>
