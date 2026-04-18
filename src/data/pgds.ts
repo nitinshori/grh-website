@@ -207,7 +207,7 @@ export const pgds: PGD[] = [
   },
   {
     id: "pneumococcal",
-    title: "Pneumococcal (Prevenar 13/23)",
+    title: "Pneumococcal (Prevenar 20)",
     category: "Vaccines",
     priority: 1,
     isNew: false,
@@ -658,18 +658,14 @@ export const pgds: PGD[] = [
       "DIFFERENTIATION. Melatonin is a prescription-only medicine (POM) in the UK, unlike most of Europe and the USA. Private PGD route fills this gap. Large demand from shift workers, jet lag, insomnia. Supply requires appropriate clinical assessment.",
     pharmadoctor: "No",
   },
-  {
-    id: "adhd-monitoring",
-    title: "ADHD Support Monitoring (Titration Consultations)",
-    category: "Mental Health",
-    priority: 3,
-    isNew: true,
-    revenueEstimate: "\u00a350\u201380 per review",
-    consultTime: "20 min",
-    description:
-      "Emerging. Cannot initiate under PGD but monitoring/bridging for diagnosed patients is pharmacy-feasible and massively underserved.",
-    pharmadoctor: "No",
-  },
+  // ADHD monitoring removed from public catalogue per head-pharmacist
+  // clinical review (Apr 2026). Consultation-record code retained in
+  // /epgd/adhd-monitoring for potential future reinstatement.
+  // {
+  //   id: "adhd-monitoring",
+  //   title: "ADHD Support Monitoring (Titration Consultations)",
+  //   ...
+  // },
 
   // ═══ SKIN ═══
   {
@@ -899,18 +895,14 @@ export const pgds: PGD[] = [
       "High volume, easy consultation. Pharmadoctor offers free \u2014 match and extend.",
     pharmadoctor: "Yes (free)",
   },
-  {
-    id: "eye-infections",
-    title: "Eye Infections (Chloramphenicol \u2014 Prescription Strength)",
-    category: "Minor Ailments",
-    priority: 1,
-    isNew: false,
-    revenueEstimate: "\u00a315\u201325 per consultation",
-    consultTime: "5\u201310 min",
-    description:
-      "Very high demand. Prescription-strength significantly outperforms OTC.",
-    pharmadoctor: "Partial",
-  },
+  // Chloramphenicol eye infections removed from public catalogue per
+  // head-pharmacist clinical review (Apr 2026): ointment now available
+  // OTC, making a private PGD route commercially unviable.
+  // {
+  //   id: "eye-infections",
+  //   title: "Eye Infections (Chloramphenicol — Prescription Strength)",
+  //   ...
+  // },
   {
     id: "dental-bridging",
     title: "Dental Pain (Amoxicillin Bridging)",

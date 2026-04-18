@@ -17,12 +17,16 @@ type FilterOption = "All" | "Exclusives" | PGDCategory;
 // everything matching the first group lands at the top, then the next group, etc.
 // Anything not matched falls through to a popularity sort by the PGD's `priority`
 // field (1 = most popular, 3 = niche).
+//
+// Ordering updated 18 Apr 2026 per Nitin: testosterone, weight, ED and
+// menopause/HRT are the headline services; travel alongside them.
 const PRIORITY_GROUPS: Array<(p: PGD) => boolean> = [
-  (p) => p.category === "Travel",
-  (p) => /\bHRT\b/i.test(p.title),
   (p) => /Testosterone|\bTRT\b/i.test(p.title),
   (p) => p.category === "Weight Management",
-  (p) => /Erectile Dysfunction|Premature Ejaculation/i.test(p.title),
+  (p) => /Erectile Dysfunction/i.test(p.title),
+  (p) => /\bHRT\b|Menopaus|Testosterone for Women/i.test(p.title),
+  (p) => p.category === "Travel",
+  (p) => /Premature Ejaculation/i.test(p.title),
   (p) => /Anxiety/i.test(p.title),
   (p) => /Sleep/i.test(p.title),
 ];
@@ -80,10 +84,10 @@ export function PGDCatalogueClient() {
           <h1 className="text-3xl sm:text-4xl font-bold mb-3">PGD Catalogue</h1>
           <p className="text-lg text-blue-200 max-w-2xl">
             {pgds.length}+ PGDs across {ALL_CATEGORIES.length} categories. We
-            lead with the highest-demand services &mdash; travel, HRT, TRT,
-            weight management, ED, anxiety and sleep &mdash; then everything
-            else in popularity order. Build your list and request a tailored
-            quote.
+            lead with the highest-demand private services &mdash; testosterone,
+            weight management, ED, menopause &amp; HRT, and travel health
+            &mdash; then everything else in popularity order. Build your list
+            and request a tailored quote.
           </p>
         </div>
       </section>

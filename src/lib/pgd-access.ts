@@ -103,7 +103,7 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
   { slug: 'uti', title: 'Uncomplicated UTI', subtitle: 'Nitrofurantoin / Trimethoprim', category: 'Acute & Infection' },
   { slug: 'sore-throat', title: 'Acute Sore Throat', subtitle: 'Phenoxymethylpenicillin', category: 'Acute & Infection' },
   { slug: 'ear-infection', title: 'Acute Otitis Media', subtitle: 'Amoxicillin', category: 'Acute & Infection' },
-  { slug: 'eye-infections', title: 'Eye Infections', subtitle: 'Chloramphenicol / Fusidic Acid', category: 'Acute & Infection' },
+  // eye-infections removed from public catalogue — chloramphenicol OTC (Apr 2026)
   { slug: 'threadworms', title: 'Threadworms', subtitle: 'Mebendazole', category: 'Acute & Infection' },
   { slug: 'chickenpox', title: 'Chickenpox', subtitle: 'Aciclovir (if indicated)', category: 'Acute & Infection' },
 
@@ -121,7 +121,7 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
   { slug: 'smoking-varenicline', title: 'Smoking Cessation (Varenicline)', subtitle: 'Champix', category: 'Mental Health & Wellbeing' },
   { slug: 'alcohol-reduction', title: 'Alcohol Reduction', subtitle: 'Nalmefene', category: 'Mental Health & Wellbeing' },
   { slug: 'sleep-melatonin', title: 'Sleep (Melatonin)', subtitle: 'Circadin / Melatonin', category: 'Mental Health & Wellbeing' },
-  { slug: 'adhd-monitoring', title: 'ADHD Monitoring', subtitle: 'Shared Care Monitoring', category: 'Mental Health & Wellbeing' },
+  // adhd-monitoring removed from public catalogue — clinical review (Apr 2026)
   { slug: 'anxiety-propranolol', title: 'Situational Anxiety', subtitle: 'Propranolol', category: 'Mental Health & Wellbeing' },
   { slug: 'hayfever', title: 'Hayfever (Severe)', subtitle: 'Fexofenadine / Mometasone', category: 'Mental Health & Wellbeing' },
 
@@ -129,7 +129,7 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
   { slug: 'flu', title: 'Flu Vaccination', subtitle: 'Seasonal Influenza', category: 'Vaccines' },
   { slug: 'covid-booster', title: 'COVID-19 Booster', subtitle: 'mRNA / Protein Subunit', category: 'Vaccines' },
   { slug: 'shingles-vaccine', title: 'Shingles Vaccine', subtitle: 'Shingrix', category: 'Vaccines' },
-  { slug: 'pneumococcal', title: 'Pneumococcal Vaccine', subtitle: 'PCV / PPV', category: 'Vaccines' },
+  { slug: 'pneumococcal', title: 'Pneumococcal Vaccine', subtitle: 'PCV20 (Prevenar 20)', category: 'Vaccines' },
   { slug: 'hpv', title: 'HPV Vaccine', subtitle: 'Gardasil 9', category: 'Vaccines' },
   { slug: 'mmr', title: 'MMR Vaccine', subtitle: 'Measles, Mumps, Rubella', category: 'Vaccines' },
   { slug: 'meningitis-b', title: 'Meningitis B', subtitle: 'Bexsero', category: 'Vaccines' },

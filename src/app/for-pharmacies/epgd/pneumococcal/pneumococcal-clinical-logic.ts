@@ -1,3 +1,20 @@
+/**
+ * ⚠️  CLINICAL REVIEW REQUIRED — Apr 2026
+ *
+ * This file's vaccine-recommendation logic is built around the legacy
+ * PCV13 + PPV23 two-dose schedule. The catalogue title has been updated
+ * to "Pneumococcal (Prevenar 20)" to reflect the JCVI-recommended switch
+ * to PCV20, but the clinical pathways below still reference PCV13.
+ *
+ * PCV20 changes the decision tree materially:
+ *   - For most at-risk adults who have NOT had PCV13 or PPV23, a single
+ *     dose of PCV20 may replace the two-dose series.
+ *   - For patients already partially vaccinated, the sequencing is
+ *     different and depends on which vaccines they've already received.
+ *
+ * Before this ePGD goes live, Janey must review and sign off the updated
+ * clinical logic, including new Green Book Chapter 25 guidance.
+ */
 import type { ClinicalAlert } from '../shared/types';
 import type {
   PneumococcalPatientDetails,
