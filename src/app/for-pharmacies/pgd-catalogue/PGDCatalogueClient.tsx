@@ -50,25 +50,12 @@ function sortedForAllView(list: PGD[]): PGD[] {
 
 export function PGDCatalogueClient() {
   const [activeFilter, setActiveFilter] = useState<FilterOption>("All");
-  const [selectedPGDs, setSelectedPGDs] = useState<Set<string>>(new Set());
 
   const filtered = useMemo(() => {
     if (activeFilter === "All") return sortedForAllView(pgds);
     if (activeFilter === "Exclusives") return pgds.filter((p) => p.isNew);
     return pgds.filter((p) => p.category === activeFilter);
   }, [activeFilter]);
-
-  const togglePGD = (id: string) => {
-    setSelectedPGDs((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const selectedItems = pgds.filter((p) => selectedPGDs.has(p.id));
-  const selectedCount = selectedItems.length;
 
   const exclusiveCount = pgds.filter((p) => p.isNew).length;
   const filterOptions: FilterOption[] = ["All", "Exclusives", ...ALL_CATEGORIES];
@@ -82,13 +69,25 @@ export function PGDCatalogueClient() {
             {exclusiveCount} PGDs you won&apos;t find on other providers
           </p>
           <h1 className="text-3xl sm:text-4xl font-bold mb-3">PGD Catalogue</h1>
-          <p className="text-lg text-blue-200 max-w-2xl">
-            {pgds.length}+ PGDs across {ALL_CATEGORIES.length} categories. We
-            lead with the highest-demand private services &mdash; testosterone,
-            weight management, ED, menopause &amp; HRT, and travel health
-            &mdash; then everything else in popularity order. Build your list
-            and request a tailored quote.
+          <p className="text-lg text-blue-200 max-w-2xl mb-6">
+            {pgds.length}+ PGDs across {ALL_CATEGORIES.length} categories.
+            One flat-fee package. Every PGD included. No per-consultation
+            charges, no hidden extras.
           </p>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Link
+              href="/book"
+              className="inline-flex items-center justify-center px-6 py-3 bg-teal-500 hover:bg-teal-600 text-white font-semibold rounded-lg transition-colors text-base"
+            >
+              Book a discovery call
+            </Link>
+            <Link
+              href="/for-pharmacies/pricing"
+              className="inline-flex items-center justify-center px-6 py-3 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-lg transition-colors text-base"
+            >
+              View pricing
+            </Link>
+          </div>
         </div>
       </section>
 
@@ -125,115 +124,57 @@ export function PGDCatalogueClient() {
           })}
         </div>
 
-        <div className="flex gap-8">
-          {/* Cards grid */}
-          <div className="flex-1">
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filtered.map((pgd) => (
-                <PGDCard
-                  key={pgd.id}
-                  pgd={pgd}
-                  selected={selectedPGDs.has(pgd.id)}
-                  onToggle={() => togglePGD(pgd.id)}
-                />
-              ))}
-            </div>
-
-            {filtered.length === 0 && (
-              <p className="text-center text-gray-500 py-12">
-                No services found for this filter.
-              </p>
-            )}
-          </div>
-
-          {/* Sticky enquiry sidebar (desktop) */}
-          <aside className="hidden xl:block w-80 shrink-0">
-            <div className="sticky top-32 bg-white border border-gray-200 rounded-xl shadow-sm p-6">
-              <h3 className="font-bold text-navy-900 mb-1">Your enquiry list</h3>
-              <p className="text-sm text-gray-500 mb-4">
-                {selectedCount === 0
-                  ? "Click \u201cAdd\u201d on any service to build your list."
-                  : `${selectedCount} service${selectedCount !== 1 ? "s" : ""} selected`}
-              </p>
-
-              {selectedCount > 0 && (
-                <div className="space-y-2 mb-4 max-h-64 overflow-y-auto">
-                  {selectedItems.map((pgd) => (
-                    <div
-                      key={pgd.id}
-                      className="flex items-center justify-between text-sm py-1.5"
-                    >
-                      <span className="text-gray-700 truncate pr-2">
-                        {pgd.title}
-                      </span>
-                      <button
-                        onClick={() => togglePGD(pgd.id)}
-                        className="text-red-400 hover:text-red-600 shrink-0 text-xs"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <Link
-                href="/contact"
-                className={`block w-full text-center px-4 py-3 rounded-lg font-semibold text-sm transition-colors ${
-                  selectedCount > 0
-                    ? "bg-teal-500 hover:bg-teal-600 text-white"
-                    : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                }`}
-              >
-                {selectedCount > 0
-                  ? `Request these ${selectedCount} PGDs`
-                  : "Select services to enquire"}
-              </Link>
-            </div>
-          </aside>
+        {/* Cards grid — full width, no sidebar */}
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filtered.map((pgd) => (
+            <PGDCard key={pgd.id} pgd={pgd} />
+          ))}
         </div>
+
+        {filtered.length === 0 && (
+          <p className="text-center text-gray-500 py-12">
+            No services found for this filter.
+          </p>
+        )}
       </div>
 
-      {/* Mobile sticky bar */}
-      {selectedCount > 0 && (
-        <div className="xl:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50 px-4 py-3">
-          <div className="flex items-center justify-between max-w-7xl mx-auto">
-            <span className="text-sm font-medium text-navy-900">
-              {selectedCount} service{selectedCount !== 1 ? "s" : ""} selected
-            </span>
+      {/* Bottom CTA */}
+      <section className="bg-gray-50 border-t border-gray-100">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-14 text-center">
+          <h2 className="text-2xl sm:text-3xl font-bold text-navy-900 mb-3">
+            Every PGD above. One flat fee.
+          </h2>
+          <p className="text-gray-600 mb-6 max-w-xl mx-auto">
+            No per-consultation charges. No picking and choosing. Your team
+            gets access to the full catalogue, the consultation tool, training
+            and clinical support &mdash; all included.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link
+              href="/book"
+              className="px-7 py-3.5 bg-teal-500 hover:bg-teal-600 text-white font-semibold rounded-lg transition-colors text-lg"
+            >
+              Book a 20-minute discovery call
+            </Link>
             <Link
               href="/contact"
-              className="px-5 py-2.5 bg-teal-500 hover:bg-teal-600 text-white font-semibold text-sm rounded-lg transition-colors"
+              className="px-7 py-3.5 bg-navy-900 hover:bg-navy-800 text-white font-semibold rounded-lg transition-colors text-lg"
             >
-              Request these PGDs
+              Get in touch
             </Link>
           </div>
         </div>
-      )}
+      </section>
     </>
   );
 }
 
-function PGDCard({
-  pgd,
-  selected,
-  onToggle,
-}: {
-  pgd: PGD;
-  selected: boolean;
-  onToggle: () => void;
-}) {
+function PGDCard({ pgd }: { pgd: PGD }) {
   const catColor = CATEGORY_TEXT_COLORS[pgd.category] || "text-gray-600";
   const catBg = CATEGORY_BG_LIGHT[pgd.category] || "bg-gray-50";
 
   return (
-    <div
-      className={`relative border rounded-xl p-5 transition-all ${
-        selected
-          ? "border-teal-400 bg-teal-50/30 shadow-md"
-          : "border-gray-100 bg-white hover:shadow-sm"
-      }`}
-    >
+    <div className="border border-gray-100 rounded-xl p-5 bg-white hover:shadow-sm transition-all">
       {/* Badges */}
       <div className="flex items-center gap-2 mb-3">
         <span
@@ -264,21 +205,9 @@ function PGDCard({
       </p>
 
       {/* Stats */}
-      <div className="flex items-center gap-4 text-xs text-gray-500 mb-4">
+      <div className="flex items-center gap-4 text-xs text-gray-500">
         <span title="Consultation time">{pgd.consultTime}</span>
       </div>
-
-      {/* Add/Remove button */}
-      <button
-        onClick={onToggle}
-        className={`w-full text-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-          selected
-            ? "bg-teal-500 text-white hover:bg-teal-600"
-            : "bg-gray-50 text-navy-900 hover:bg-gray-100 border border-gray-200"
-        }`}
-      >
-        {selected ? "\u2713 Added to enquiry" : "Add to enquiry"}
-      </button>
     </div>
   );
 }

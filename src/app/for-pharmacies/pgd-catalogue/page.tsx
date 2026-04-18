@@ -4,7 +4,7 @@ import { PGDCatalogueClient } from "./PGDCatalogueClient";
 export const metadata: Metadata = {
   title: "PGD Catalogue \u2014 Services for UK Pharmacies",
   description:
-    "Browse our PGD catalogue. Travel, vaccines, weight management, sexual health and more &mdash; filterable by category. Add services to your enquiry list and request a quote.",
+    "Browse our full PGD catalogue. Testosterone, weight management, ED, menopause, travel health and more. One flat-fee package includes every PGD, the consultation tool, training and clinical support.",
 };
 
 export default function PGDCataloguePage() {

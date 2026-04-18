@@ -928,8 +928,8 @@ export default function HomePage() {
             See what GRH can do for your pharmacy
           </h2>
           <p className="text-blue-200 mb-8 max-w-xl mx-auto">
-            Browse our full PGD catalogue and request a quote &mdash; no
-            registration required.
+            One flat-fee package. Every PGD, the consultation tool,
+            training and clinical support &mdash; all included.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
