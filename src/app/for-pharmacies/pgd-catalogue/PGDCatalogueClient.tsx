@@ -174,10 +174,7 @@ function PGDCard({ pgd }: { pgd: PGD }) {
   const catBg = CATEGORY_BG_LIGHT[pgd.category] || "bg-gray-50";
 
   return (
-    <Link
-      href={`/for-pharmacies/epgd/${pgd.id}`}
-      className="block border border-gray-100 rounded-xl p-5 bg-white hover:shadow-md hover:border-teal-200 transition-all group"
-    >
+    <div className="border border-gray-100 rounded-xl p-5 bg-white hover:shadow-sm transition-all flex flex-col">
       {/* Badges */}
       <div className="flex items-center gap-2 mb-3">
         <span
@@ -198,7 +195,7 @@ function PGDCard({ pgd }: { pgd: PGD }) {
       </div>
 
       {/* Title */}
-      <h3 className="font-bold text-navy-900 mb-2 text-sm leading-snug group-hover:text-teal-700 transition-colors">
+      <h3 className="font-bold text-navy-900 mb-2 text-sm leading-snug">
         {pgd.title}
       </h3>
 
@@ -207,13 +204,26 @@ function PGDCard({ pgd }: { pgd: PGD }) {
         {pgd.description}
       </p>
 
-      {/* Stats + CTA */}
-      <div className="flex items-center justify-between text-xs text-gray-500">
+      {/* Stats */}
+      <div className="text-xs text-gray-500 mb-4">
         <span title="Consultation time">{pgd.consultTime}</span>
-        <span className="text-teal-600 font-medium group-hover:text-teal-800 transition-colors">
-          Open ePGD &rarr;
-        </span>
       </div>
-    </Link>
+
+      {/* Action links */}
+      <div className="mt-auto flex flex-col gap-2">
+        <Link
+          href={`/for-pharmacies/epgd/${pgd.id}`}
+          className="w-full text-center px-3 py-2 rounded-lg text-sm font-medium bg-teal-500 text-white hover:bg-teal-600 transition-colors"
+        >
+          Open ePGD tool
+        </Link>
+        <Link
+          href={`/contact?enquiry=pgd-document&service=${encodeURIComponent(pgd.title)}`}
+          className="w-full text-center px-3 py-2 rounded-lg text-sm font-medium bg-gray-50 text-navy-900 hover:bg-gray-100 border border-gray-200 transition-colors"
+        >
+          View PGD document
+        </Link>
+      </div>
+    </div>
   );
 }
