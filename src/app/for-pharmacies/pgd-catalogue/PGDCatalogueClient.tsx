@@ -174,7 +174,10 @@ function PGDCard({ pgd }: { pgd: PGD }) {
   const catBg = CATEGORY_BG_LIGHT[pgd.category] || "bg-gray-50";
 
   return (
-    <div className="border border-gray-100 rounded-xl p-5 bg-white hover:shadow-sm transition-all">
+    <Link
+      href={`/for-pharmacies/epgd/${pgd.id}`}
+      className="block border border-gray-100 rounded-xl p-5 bg-white hover:shadow-md hover:border-teal-200 transition-all group"
+    >
       {/* Badges */}
       <div className="flex items-center gap-2 mb-3">
         <span
@@ -195,7 +198,7 @@ function PGDCard({ pgd }: { pgd: PGD }) {
       </div>
 
       {/* Title */}
-      <h3 className="font-bold text-navy-900 mb-2 text-sm leading-snug">
+      <h3 className="font-bold text-navy-900 mb-2 text-sm leading-snug group-hover:text-teal-700 transition-colors">
         {pgd.title}
       </h3>
 
@@ -204,10 +207,13 @@ function PGDCard({ pgd }: { pgd: PGD }) {
         {pgd.description}
       </p>
 
-      {/* Stats */}
-      <div className="flex items-center gap-4 text-xs text-gray-500">
+      {/* Stats + CTA */}
+      <div className="flex items-center justify-between text-xs text-gray-500">
         <span title="Consultation time">{pgd.consultTime}</span>
+        <span className="text-teal-600 font-medium group-hover:text-teal-800 transition-colors">
+          Open ePGD &rarr;
+        </span>
       </div>
-    </div>
+    </Link>
   );
 }
