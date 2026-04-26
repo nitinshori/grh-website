@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { patientCategories } from "@/data/patient-services";
 import { articles } from "@/data/articles";
 
-const BASE_URL = "https://www.getrealhealth.co.uk";
+const BASE_URL = "https://getrealhealthpgd.co.uk";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date().toISOString();

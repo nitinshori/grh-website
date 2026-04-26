@@ -100,7 +100,10 @@ export async function POST(request: Request) {
 
     // Send admin notification
     try {
-      const notify = process.env.VOICE_NOTIFY_EMAIL || 'nitinshori@me.com'
+      const notify = process.env.VOICE_NOTIFY_EMAIL
+      if (!notify) {
+        console.error('VOICE_NOTIFY_EMAIL env var is not set — skipping admin notification')
+      } else {
       await sendEmail({
         to: notify,
         subject: `New booking: ${name.trim()}${pharmacyName?.trim() ? ` (${pharmacyName.trim()})` : ''}`,
@@ -120,6 +123,7 @@ export async function POST(request: Request) {
           </div>
         `,
       })
+      }
     } catch (emailErr) {
       console.error('Admin booking notification failed:', emailErr)
     }

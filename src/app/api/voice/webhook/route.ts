@@ -121,7 +121,11 @@ interface NotificationParams {
 }
 
 async function sendCallNotificationEmail(p: NotificationParams) {
-  const notifyEmail = process.env.VOICE_NOTIFY_EMAIL || 'nitinshori@me.com'
+  const notifyEmail = process.env.VOICE_NOTIFY_EMAIL
+  if (!notifyEmail) {
+    console.error('VOICE_NOTIFY_EMAIL env var is not set — skipping notification')
+    return
+  }
 
   const callerName = p.callerName || 'Unknown caller'
   const pharmacy = p.pharmacyName || ''

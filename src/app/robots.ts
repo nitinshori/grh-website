@@ -21,6 +21,6 @@ export default function robots(): MetadataRoute.Robots {
         ],
       },
     ],
-    sitemap: "https://www.getrealhealth.co.uk/sitemap.xml",
+    sitemap: "https://getrealhealthpgd.co.uk/sitemap.xml",
   };
 }

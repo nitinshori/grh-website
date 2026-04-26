@@ -32,7 +32,7 @@ const jsonLd = {
   "@context": "https://schema.org",
   "@type": "Organization",
   name: "Get Real Health",
-  url: "https://www.getrealhealth.co.uk",
+  url: "https://getrealhealthpgd.co.uk",
   description:
     "UK pharmacy PGD provider. 60+ services, flat annual fee, no per-consult charges.",
   areaServed: {
