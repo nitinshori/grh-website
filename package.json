@@ -35,6 +35,6 @@
     "pg": "^8.20.0",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vercel": "^50.38.2"
+    "vercel": "^52.2.0"
   }
 }
