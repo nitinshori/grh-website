@@ -117,6 +117,16 @@ const comparisonPoints = [
     grh: "£0 — always",
     competitor: "£5–£7 per consultation",
   },
+  {
+    label: "Pricing model",
+    grh: "Per store — covers your whole team",
+    competitor: "Per pharmacist — costs multiply with staff",
+  },
+  {
+    label: "Appointment diary",
+    grh: "Built in — manage patient bookings in-platform",
+    competitor: "Not included — use separate software",
+  },
 ];
 
 export default function PlatformPage() {
@@ -130,8 +140,9 @@ export default function PlatformPage() {
           </h1>
           <p className="text-lg text-blue-200 max-w-2xl">
             Built for PGD delivery from the ground up — not a bolt-on from a
-            third party. Consultations, patient records, training, and
-            superintendent oversight in one place.
+            third party. Consultations, patient records, appointment diary,
+            training, and superintendent oversight in one place. One fee per
+            store covers your entire team.
           </p>
         </div>
       </section>

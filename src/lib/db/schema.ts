@@ -25,9 +25,12 @@ export const pharmacies = pgTable('pharmacies', {
   id: uuid('id').defaultRandom().primaryKey(),
   name: varchar('name', { length: 255 }).notNull(),
   slug: varchar('slug', { length: 100 }),
+  groupSlug: varchar('group_slug', { length: 100 }),  // shared across multi-site groups e.g. "pritchards"
   address: text('address'),
   phone: varchar('phone', { length: 50 }),
   email: varchar('email', { length: 255 }),
+  brandColor: varchar('brand_color', { length: 7 }),   // hex e.g. "#3d8b37" for white-label booking
+  brandName: varchar('brand_name', { length: 255 }),    // display name for public booking page
   isActive: boolean('is_active').default(true).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -104,6 +107,89 @@ export const voiceCalls = pgTable('voice_calls', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 
+// ── Clinicians ─────────────────────────────────────────────────
+
+export const clinicians = pgTable('clinicians', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  groupSlug: varchar('group_slug', { length: 100 }).notNull(), // links to pharmacies.groupSlug
+  name: varchar('name', { length: 255 }).notNull(),
+  gphcNumber: varchar('gphc_number', { length: 20 }),
+  role: varchar('role', { length: 100 }).default('Pharmacist'),  // Pharmacist, Technician, etc.
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
+// ── Appointment Types ──────────────────────────────────────────
+
+export const appointmentTypes = pgTable('appointment_types', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  groupSlug: varchar('group_slug', { length: 100 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  durationMinutes: integer('duration_minutes').default(15).notNull(),
+  color: varchar('color', { length: 7 }).default('#25b4b4'),
+  requiresDetails: boolean('requires_details').default(false).notNull(), // show "additional details" textarea
+  isActive: boolean('is_active').default(true).notNull(),
+  sortOrder: integer('sort_order').default(0).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
+// ── Clinician Availability ─────────────────────────────────────
+// Recurring weekly slots: "Jacqueline is available Mon 9:00–17:00 at Victoria Road"
+
+export const clinicianAvailability = pgTable('clinician_availability', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  clinicianId: uuid('clinician_id')
+    .references(() => clinicians.id, { onDelete: 'cascade' })
+    .notNull(),
+  pharmacyId: uuid('pharmacy_id')
+    .references(() => pharmacies.id, { onDelete: 'cascade' })
+    .notNull(),
+  dayOfWeek: integer('day_of_week').notNull(), // 0=Sunday, 1=Monday … 6=Saturday
+  startTime: varchar('start_time', { length: 5 }).notNull(), // "09:00"
+  endTime: varchar('end_time', { length: 5 }).notNull(),     // "17:00"
+  isActive: boolean('is_active').default(true).notNull(),
+})
+
+// ── Appointments (Pharmacy Booking System) ─────────────────────
+
+export const appointmentStatusEnum = pgEnum('appointment_status', [
+  'available',
+  'booked',
+  'completed',
+  'cancelled',
+  'no_show',
+])
+
+export const appointments = pgTable('appointments', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  pharmacyId: uuid('pharmacy_id')
+    .references(() => pharmacies.id, { onDelete: 'cascade' })
+    .notNull(),
+  clinicianId: uuid('clinician_id')
+    .references(() => clinicians.id, { onDelete: 'set null' }),
+  appointmentTypeId: uuid('appointment_type_id')
+    .references(() => appointmentTypes.id, { onDelete: 'set null' }),
+  createdByUserId: uuid('created_by_user_id')
+    .references(() => users.id, { onDelete: 'set null' }),
+  startTime: timestamp('start_time').notNull(),
+  endTime: timestamp('end_time').notNull(),
+  status: appointmentStatusEnum('status').default('available').notNull(),
+  // Patient details
+  patientName: varchar('patient_name', { length: 255 }),
+  patientFirstName: varchar('patient_first_name', { length: 100 }),
+  patientSurname: varchar('patient_surname', { length: 100 }),
+  patientDob: varchar('patient_dob', { length: 10 }),  // "YYYY-MM-DD"
+  patientPhone: varchar('patient_phone', { length: 50 }),
+  patientEmail: varchar('patient_email', { length: 255 }),
+  serviceDetails: text('service_details'),  // additional info for service
+  notes: text('notes'),                      // internal staff notes
+  bookedOnline: boolean('booked_online').default(false).notNull(),
+  consentGiven: boolean('consent_given').default(false).notNull(),
+  emailConfirmation: boolean('email_confirmation').default(false).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
 // ── Type exports ────────────────────────────────────────────────
 
 export type Pharmacy = typeof pharmacies.$inferSelect
@@ -116,3 +202,11 @@ export type PgdConsultation = typeof pgdConsultations.$inferSelect
 export type NewPgdConsultation = typeof pgdConsultations.$inferInsert
 export type VoiceCall = typeof voiceCalls.$inferSelect
 export type NewVoiceCall = typeof voiceCalls.$inferInsert
+export type Appointment = typeof appointments.$inferSelect
+export type NewAppointment = typeof appointments.$inferInsert
+export type Clinician = typeof clinicians.$inferSelect
+export type NewClinician = typeof clinicians.$inferInsert
+export type AppointmentType = typeof appointmentTypes.$inferSelect
+export type NewAppointmentType = typeof appointmentTypes.$inferInsert
+export type ClinicianAvailability = typeof clinicianAvailability.$inferSelect
+export type NewClinicianAvailability = typeof clinicianAvailability.$inferInsert

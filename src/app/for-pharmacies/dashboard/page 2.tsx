@@ -6,6 +6,7 @@ import { pharmacies } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { getPharmacyPgdSlugs, ALL_PGDS, PGD_CATEGORIES } from '@/lib/pgd-access'
 import { getPharmacyStats } from '@/lib/analytics'
+import { listVisibleAnnouncements } from '@/lib/announcements'
 
 // Map slug → friendly title
 const pgdTitleMap = new Map(ALL_PGDS.map((p) => [p.slug, p.title]))
@@ -43,6 +44,7 @@ export default async function PharmacyDashboard() {
   let pharmacyAddress = ''
   let pharmacyEmail = ''
   let pharmacyPhone = ''
+  let pharmacyGroupId: string | null = null
 
   if (session.user.pharmacyId) {
     const [pharmacy] = await db
@@ -55,7 +57,39 @@ export default async function PharmacyDashboard() {
       pharmacyAddress = pharmacy.address || ''
       pharmacyEmail = pharmacy.email || ''
       pharmacyPhone = pharmacy.phone || ''
+      pharmacyGroupId = pharmacy.groupId
     }
+  }
+
+  // Fetch visible announcements (global + group + pharmacy scoped)
+  let announcementItems: Array<{
+    id: string
+    kind: string
+    title: string
+    body: string
+    ctaLabel: string | null
+    ctaUrl: string | null
+    isPinned: boolean
+    publishedAt: Date | null
+  }> = []
+  try {
+    const rows = await listVisibleAnnouncements({
+      groupId: pharmacyGroupId,
+      pharmacyId: session.user.pharmacyId ?? null,
+      limit: 5,
+    })
+    announcementItems = rows.map((r) => ({
+      id: r.id,
+      kind: r.kind,
+      title: r.title,
+      body: r.body,
+      ctaLabel: r.ctaLabel,
+      ctaUrl: r.ctaUrl,
+      isPinned: r.isPinned,
+      publishedAt: r.publishedAt,
+    }))
+  } catch {
+    // Announcements table may not exist in older DBs
   }
 
   // Fetch assigned PGDs
@@ -142,6 +176,84 @@ export default async function PharmacyDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Announcements */}
+      {announcementItems.length > 0 && (
+        <div className="mb-8 space-y-3">
+          {announcementItems.map((a) => {
+            const kindStyle =
+              a.kind === 'regulatory'
+                ? 'border-red-200 bg-red-50'
+                : a.kind === 'new_pgd'
+                  ? 'border-emerald-200 bg-emerald-50'
+                  : a.kind === 'platform_update'
+                    ? 'border-blue-200 bg-blue-50'
+                    : a.isPinned
+                      ? 'border-amber-200 bg-amber-50'
+                      : 'border-gray-200 bg-white'
+            const kindLabel = a.kind.replace('_', ' ')
+            return (
+              <div
+                key={a.id}
+                className={`rounded-xl border shadow-sm p-5 ${kindStyle}`}
+              >
+                <div className="flex items-start justify-between gap-3 mb-1">
+                  <div className="flex items-center gap-2">
+                    {a.isPinned && (
+                      <svg
+                        className="w-4 h-4 text-amber-600"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path d="M10 2a1 1 0 011 1v5.586l3.293 3.293a1 1 0 01-1.414 1.414L10 10.414l-2.879 2.879a1 1 0 01-1.414-1.414L9 8.586V3a1 1 0 011-1z" />
+                      </svg>
+                    )}
+                    <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                      {kindLabel}
+                    </span>
+                  </div>
+                  {a.publishedAt && (
+                    <span className="text-xs text-gray-500">
+                      {new Date(a.publishedAt).toLocaleDateString('en-GB', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </span>
+                  )}
+                </div>
+                <h3 className="font-semibold text-gray-900 mb-1">{a.title}</h3>
+                <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                  {a.body}
+                </p>
+                {a.ctaLabel && a.ctaUrl && (
+                  <a
+                    href={a.ctaUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center mt-3 text-sm font-semibold text-teal-700 hover:text-teal-800"
+                  >
+                    {a.ctaLabel}
+                    <svg
+                      className="ml-1 w-3 h-3"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                      />
+                    </svg>
+                  </a>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
 
       {/* Stats Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -267,25 +379,6 @@ export default async function PharmacyDashboard() {
           Open ePGD Tools
         </Link>
         <Link
-          href="/for-pharmacies/dashboard/appointments"
-          className="inline-flex items-center px-5 py-2.5 rounded-lg text-sm font-semibold text-white transition-colors bg-navy-900 hover:bg-navy-800"
-        >
-          <svg
-            className="w-4 h-4 mr-2"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-            />
-          </svg>
-          Appointment Diary
-        </Link>
-        <Link
           href="/for-pharmacies/pgd-catalogue"
           className="inline-flex items-center px-5 py-2.5 rounded-lg text-sm font-semibold text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 transition-colors"
         >
@@ -296,14 +389,23 @@ export default async function PharmacyDashboard() {
       {/* Recent Activity */}
       {consultationStats.recent.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-8">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            Recent Activity
-          </h2>
-          <div className="space-y-3">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Recent Activity
+            </h2>
+            <Link
+              href="/for-pharmacies/dashboard/consultations"
+              className="text-sm font-medium text-teal-700 hover:text-teal-800"
+            >
+              View all →
+            </Link>
+          </div>
+          <div className="space-y-1">
             {consultationStats.recent.slice(0, 8).map((c) => (
-              <div
+              <Link
                 key={c.id}
-                className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0"
+                href={`/for-pharmacies/dashboard/consultations/${c.id}`}
+                className="flex items-center gap-3 py-2 px-2 -mx-2 rounded-lg border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors"
               >
                 <div
                   className={`w-2 h-2 rounded-full flex-shrink-0 ${
@@ -332,7 +434,7 @@ export default async function PharmacyDashboard() {
                 >
                   {c.completedAt ? 'Completed' : 'Started'}
                 </span>
-              </div>
+              </Link>
             ))}
           </div>
         </div>

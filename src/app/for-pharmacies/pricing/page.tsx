@@ -41,6 +41,8 @@ const tiers = [
       "Priority onboarding (24hr)",
       "Dedicated onboarding call",
       "Save up to £192/pharmacy vs Single Site",
+      "Per-store pricing — not per pharmacist",
+      "Appointment diary included",
     ],
   },
   {
@@ -56,6 +58,8 @@ const tiers = [
       "Dedicated account manager",
       "Bespoke onboarding",
       "Custom integrations",
+      "Per-store pricing — not per pharmacist",
+      "Appointment diary included",
     ],
   },
   {
@@ -70,6 +74,8 @@ const tiers = [
       "SLA guarantees",
       "White-label options",
       "Strategic account support",
+      "Per-store pricing — not per pharmacist",
+      "Appointment diary included",
     ],
   },
 ];
@@ -92,8 +98,12 @@ const faqs = [
     a: "Yes. Start with Single Site (1\u20135 pharmacies) and add more pharmacies anytime. Once you reach the next tier threshold, your per-pharmacy rate automatically drops. We\u2019ll adjust your next invoice accordingly.",
   },
   {
+    q: "Why do you charge per store instead of per pharmacist?",
+    a: "Because it\u2019s fairer. Many pharmacies have two pharmacists, use locums, or rotate staff. Per-pharmacist pricing means your costs go up every time you add cover. With GRH, one monthly fee per store covers everyone on your team \u2014 no surprises, no extra licences.",
+  },
+  {
     q: "How does your pricing compare to other PGD providers?",
-    a: "One provider charges £2,639 per pharmacy per year (inc. VAT) for an all-in-one annual package, paid upfront. Another charges per PGD per pharmacist plus a separate platform subscription (£2,592/yr inc. VAT for their full bundle). GRH is one flat monthly fee + VAT that covers everything: 60+ PGDs, ePGD platform, training, clinical support, and onboarding. All prices are shown excluding VAT. Use the savings calculator above to see your potential savings.",
+    a: "Some providers charge per pharmacist \u2014 so if you have two pharmacists or use locums, your costs double. Others charge £2,639 per pharmacy per year (inc. VAT) upfront. GRH charges one flat monthly fee per store + VAT that covers your entire team \u2014 all pharmacists, locums included. That fee includes 60+ PGDs, the ePGD platform, training, clinical support, onboarding, and a built-in appointment diary. All prices are shown excluding VAT. Use the savings calculator above to see your potential savings.",
   },
 
   {
@@ -112,7 +122,7 @@ export default function PricingPage() {
             Transparent pricing
           </h1>
           <p className="text-lg text-blue-200 max-w-2xl">
-            One flat monthly fee per pharmacy. All PGDs included. Zero per-consult charges. Price goes down as you grow.
+            One flat monthly fee per store &mdash; not per pharmacist. All PGDs included. Zero per-consult charges. Appointment diary included. Price goes down as you grow.
           </p>
         </div>
       </section>
@@ -122,9 +132,11 @@ export default function PricingPage() {
         <div className="bg-navy-50 border border-navy-100 rounded-xl p-6">
           <h2 className="font-bold text-navy-900 mb-2">Our pricing principle</h2>
           <ul className="text-gray-700 leading-relaxed space-y-2">
+            <li><strong>Charged per store, not per pharmacist.</strong> One fee covers your whole team &mdash; locums, second pharmacists, everyone. No nasty surprises when staff change.</li>
             <li><strong>Flat monthly fee per pharmacy.</strong> No per-consultation charges, no per-PGD upcharges, no hidden layers.</li>
             <li><strong>All PGDs included at every tier.</strong> Travel vaccines, flu jabs, UTI, weight management &mdash; everything covered by one fee.</li>
             <li><strong>Zero per-consultation fees ever.</strong> Other providers charge £2,592–£2,639 per pharmacy per year (inc. VAT), paid upfront. GRH is a simple monthly subscription + VAT with no long-term commitment.</li>
+            <li><strong>Appointment diary included.</strong> Built-in scheduling so your team can manage patient bookings &mdash; no extra software or bolt-on fees.</li>
             <li><strong>Price goes down as you grow.</strong> Volume discounts: £125/pharmacy for 1\u20135 sites, down to £99 for 16\u201330, and custom pricing for networks of 30+.</li>
           </ul>
         </div>

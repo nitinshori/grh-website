@@ -18,6 +18,8 @@ const features = [
   "Marketing materials \u2014 posters, social graphics, email templates",
   "Seasonal campaign support \u2014 flu, travel, weight management",
   "Structured onboarding \u2014 supported and quick, not a multi-month implementation",
+  "Built-in appointment diary \u2014 manage patient bookings without extra software",
+  "Charged per store, not per pharmacist \u2014 locums and second pharmacists included at no extra cost",
 ];
 
 export default function ForPharmaciesPage() {
@@ -27,12 +29,13 @@ export default function ForPharmaciesPage() {
       <section className="bg-navy-950 text-white">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight mb-6 max-w-3xl">
-            Stop giving away a cut of every consultation you do.
+            One fee per store. Zero per-consultation charges. Your whole team covered.
           </h1>
           <p className="text-xl text-blue-200 max-w-2xl leading-relaxed">
-            We helped build clinical governance for one of the UK&apos;s
-            largest online pharmacies. We know what good looks like &mdash;
-            and we know what it costs when it isn&apos;t.
+            Other providers charge per pharmacist &mdash; so your costs go up
+            every time you add cover. We charge per store, not per head. All
+            PGDs, consultation platform, appointment diary, and training
+            included. No per-consult fees, ever.
           </p>
         </div>
       </section>
@@ -103,13 +106,14 @@ export default function ForPharmaciesPage() {
               </svg>
             </div>
             <h3 className="text-xl font-bold text-navy-900 mb-3">
-              One flat fee
+              One flat fee per store
             </h3>
             <p className="text-gray-600 leading-relaxed">
-              Most PGD providers charge per consultation. The busier you get,
-              the more they earn. We charge one flat annual fee. Your 500th
-              travel consultation of the year costs us exactly the same as
-              your first. You keep the difference.
+              Most PGD providers charge per pharmacist or per consultation.
+              The more staff you have, the more they earn. We charge one flat
+              monthly fee per store &mdash; covering all your pharmacists,
+              locums included. Zero per-consultation fees. Your 500th consult
+              costs the same as your first. You keep the difference.
             </p>
           </div>
 

@@ -57,16 +57,16 @@ export default function HomePage() {
               </div>
 
               <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold leading-tight mb-6">
-                Flat-fee PGDs.
+                One fee per store.
                 <br />
-                <span className="text-teal-400">No per-consultation charges. Ever.</span>
+                <span className="text-teal-400">Not per pharmacist. Not per consult.</span>
               </h1>
 
               <p className="text-lg sm:text-xl text-blue-200 leading-relaxed mb-8 max-w-xl">
-                60+ electronically enabled PGDs with built-in training, competency
-                assessments and a simple digital step-by-step consultation process.
-                CQC and HIW registered. Founded by clinicians with 20 years
-                of UK pharmacy experience.
+                60+ electronically enabled PGDs with built-in training,
+                consultation platform, and appointment diary. One monthly fee
+                covers your whole team &mdash; locums included. Zero per-consult
+                charges. CQC and HIW registered.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4">
@@ -189,9 +189,9 @@ export default function HomePage() {
                 </svg>
               </div>
               <div>
-                <h3 className="font-bold text-navy-900">Flat Pricing</h3>
+                <h3 className="font-bold text-navy-900">Per-Store Pricing</h3>
                 <p className="text-sm text-gray-500 mt-1 leading-relaxed">
-                  One annual fee per pharmacy. No per-consultation charges. No revenue share. Keep 100% of what you earn.
+                  One monthly fee per store &mdash; not per pharmacist. Covers your whole team including locums. Zero per-consultation charges. Appointment diary included.
                 </p>
               </div>
             </div>
@@ -494,8 +494,9 @@ export default function HomePage() {
                 Your data. Your business.
               </h3>
               <p className="text-gray-600 leading-relaxed mb-4">
-                Flat annual fee &mdash; no per-consult charges, no revenue
-                share. You own every patient record, every booking, every
+                One monthly fee per store &mdash; not per pharmacist. No
+                per-consult charges, no revenue share. Appointment diary
+                built in. You own every patient record, every booking, every
                 consultation. When you leave, you take everything with you.
               </p>
               <p className="text-sm font-semibold text-teal-600">
