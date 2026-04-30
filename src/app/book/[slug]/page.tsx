@@ -7,6 +7,7 @@ import BookingWidget from './BookingWidget'
 
 interface Props {
   params: Promise<{ slug: string }>
+  searchParams: Promise<{ site?: string }>
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -24,8 +25,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export default async function BookingPage({ params }: Props) {
+export default async function BookingPage({ params, searchParams }: Props) {
   const { slug } = await params
+  const { site: siteIdParam } = await searchParams
 
   // Fetch all sites in this group
   const sites = await db
@@ -69,11 +71,19 @@ export default async function BookingPage({ params }: Props) {
   const brandColor = sites[0].brandColor || '#3d8b37'
   const brandName = sites[0].brandName || sites[0].name
 
+  // Check if a site was pre-selected via query param
+  const preSelectedSite = siteIdParam
+    ? sites.find((s) => s.id === siteIdParam) || null
+    : sites.length === 1
+      ? sites[0]
+      : null
+
   return (
     <div>
       <BookingWidget
         slug={slug}
         brandColor={brandColor}
+        preSelectedSite={preSelectedSite ? { id: preSelectedSite.id, name: preSelectedSite.name, address: preSelectedSite.address, phone: preSelectedSite.phone } : null}
         initialConfig={{
           brandName,
           brandColor,

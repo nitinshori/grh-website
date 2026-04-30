@@ -89,18 +89,19 @@ export default function BookingWidget({
   slug,
   brandColor,
   initialConfig,
+  preSelectedSite,
 }: {
   slug: string
   brandColor: string
   initialConfig: BookingConfig
+  preSelectedSite: Site | null
 }) {
-  const [step, setStep] = useState<Step>(initialConfig.sites.length === 1 ? 'service' : 'location')
+  const [step, setStep] = useState<Step>(preSelectedSite ? 'service' : 'location')
   const [config] = useState<BookingConfig>(initialConfig)
   const [error, setError] = useState<string | null>(null)
-  const [selectedSiteInit] = useState<Site | null>(initialConfig.sites.length === 1 ? initialConfig.sites[0] : null)
 
   // Selections
-  const [selectedSite, setSelectedSite] = useState<Site | null>(selectedSiteInit)
+  const [selectedSite, setSelectedSite] = useState<Site | null>(preSelectedSite)
   const [selectedType, setSelectedType] = useState<AppointmentType | null>(null)
   const [selectedDate, setSelectedDate] = useState<string>('')
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null)
@@ -349,13 +350,15 @@ export default function BookingWidget({
 
             <div className="space-y-3">
               {config.sites.map((site) => (
-                <button
+                <a
                   key={site.id}
-                  onClick={() => {
+                  href={`/book/${slug}?site=${site.id}`}
+                  onClick={(e) => {
+                    e.preventDefault()
                     setSelectedSite(site)
                     setStep('service')
                   }}
-                  className="w-full text-left p-5 rounded-xl border-2 transition-all hover:shadow-md"
+                  className="block w-full text-left p-5 rounded-xl border-2 transition-all hover:shadow-md cursor-pointer"
                   style={{
                     borderColor: selectedSite?.id === site.id ? brandColor : '#e5e7eb',
                   }}
@@ -367,7 +370,7 @@ export default function BookingWidget({
                   {site.phone && (
                     <p className="text-sm text-gray-400 mt-1">{site.phone}</p>
                   )}
-                </button>
+                </a>
               ))}
             </div>
           </div>
