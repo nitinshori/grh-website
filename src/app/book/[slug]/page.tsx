@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { db } from '@/lib/db'
-import { pharmacies } from '@/lib/db/schema'
+import { pharmacies, appointmentTypes, clinicians } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { notFound } from 'next/navigation'
 import BookingWidget from './BookingWidget'
@@ -27,9 +27,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function BookingPage({ params }: Props) {
   const { slug } = await params
 
-  // Check the group exists
+  // Fetch all sites in this group
   const sites = await db
-    .select({ id: pharmacies.id, brandName: pharmacies.brandName, brandColor: pharmacies.brandColor })
+    .select({
+      id: pharmacies.id,
+      name: pharmacies.name,
+      address: pharmacies.address,
+      phone: pharmacies.phone,
+      brandName: pharmacies.brandName,
+      brandColor: pharmacies.brandColor,
+    })
     .from(pharmacies)
     .where(and(eq(pharmacies.groupSlug, slug), eq(pharmacies.isActive, true)))
 
@@ -37,11 +44,49 @@ export default async function BookingPage({ params }: Props) {
     notFound()
   }
 
+  // Fetch appointment types for this group
+  const types = await db
+    .select({
+      id: appointmentTypes.id,
+      name: appointmentTypes.name,
+      durationMinutes: appointmentTypes.durationMinutes,
+      requiresDetails: appointmentTypes.requiresDetails,
+    })
+    .from(appointmentTypes)
+    .where(and(eq(appointmentTypes.groupSlug, slug), eq(appointmentTypes.isActive, true)))
+    .orderBy(appointmentTypes.sortOrder)
+
+  // Fetch clinicians for this group
+  const clinicianList = await db
+    .select({
+      id: clinicians.id,
+      name: clinicians.name,
+      role: clinicians.role,
+    })
+    .from(clinicians)
+    .where(and(eq(clinicians.groupSlug, slug), eq(clinicians.isActive, true)))
+
   const brandColor = sites[0].brandColor || '#3d8b37'
+  const brandName = sites[0].brandName || sites[0].name
 
   return (
     <div>
-      <BookingWidget slug={slug} brandColor={brandColor} />
+      <BookingWidget
+        slug={slug}
+        brandColor={brandColor}
+        initialConfig={{
+          brandName,
+          brandColor,
+          sites: sites.map((s) => ({
+            id: s.id,
+            name: s.name,
+            address: s.address,
+            phone: s.phone,
+          })),
+          appointmentTypes: types,
+          clinicians: clinicianList,
+        }}
+      />
     </div>
   )
 }

@@ -48,7 +48,7 @@ interface ConfirmationData {
   durationMinutes: number
 }
 
-type Step = 'loading' | 'location' | 'service' | 'datetime' | 'details' | 'submitting' | 'confirmed'
+type Step = 'location' | 'service' | 'datetime' | 'details' | 'submitting' | 'confirmed'
 
 // ── Helpers ─────────────────────────────────────────────────────
 
@@ -88,16 +88,19 @@ function getNextDays(count: number): string[] {
 export default function BookingWidget({
   slug,
   brandColor,
+  initialConfig,
 }: {
   slug: string
   brandColor: string
+  initialConfig: BookingConfig
 }) {
-  const [step, setStep] = useState<Step>('loading')
-  const [config, setConfig] = useState<BookingConfig | null>(null)
+  const [step, setStep] = useState<Step>(initialConfig.sites.length === 1 ? 'service' : 'location')
+  const [config] = useState<BookingConfig>(initialConfig)
   const [error, setError] = useState<string | null>(null)
+  const [selectedSiteInit] = useState<Site | null>(initialConfig.sites.length === 1 ? initialConfig.sites[0] : null)
 
   // Selections
-  const [selectedSite, setSelectedSite] = useState<Site | null>(null)
+  const [selectedSite, setSelectedSite] = useState<Site | null>(selectedSiteInit)
   const [selectedType, setSelectedType] = useState<AppointmentType | null>(null)
   const [selectedDate, setSelectedDate] = useState<string>('')
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null)
@@ -119,30 +122,6 @@ export default function BookingWidget({
 
   // Available dates
   const availableDates = getNextDays(21)
-
-  // ── Load config ───────────────────────────────────────────────
-
-  useEffect(() => {
-    async function load() {
-      try {
-        const res = await fetch(`/api/booking/${slug}/services`)
-        if (!res.ok) throw new Error('Not found')
-        const data = await res.json()
-        setConfig(data)
-        // If only one site, skip location step
-        if (data.sites.length === 1) {
-          setSelectedSite(data.sites[0])
-          setStep('service')
-        } else {
-          setStep('location')
-        }
-      } catch {
-        setError('Unable to load booking information.')
-        setStep('location')
-      }
-    }
-    load()
-  }, [slug])
 
   // ── Fetch slots ───────────────────────────────────────────────
 
@@ -229,20 +208,6 @@ export default function BookingWidget({
   const stepLabels = ['Location', 'Service', 'Date & Time', 'Your Details']
   const stepMap: Record<string, number> = { location: 0, service: 1, datetime: 2, details: 3 }
   const currentStepIdx = stepMap[step] ?? -1
-
-  // ── Render: Loading ───────────────────────────────────────────
-
-  if (step === 'loading') {
-    return (
-      <div className="flex flex-col items-center justify-center py-24">
-        <div
-          className="w-10 h-10 border-4 border-t-transparent rounded-full animate-spin"
-          style={{ borderColor: `${brandColor} transparent ${brandColor} ${brandColor}` }}
-        />
-        <p className="mt-4 text-gray-500 text-sm">Loading...</p>
-      </div>
-    )
-  }
 
   // ── Render: Confirmed ─────────────────────────────────────────
 
