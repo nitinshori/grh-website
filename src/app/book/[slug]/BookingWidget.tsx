@@ -90,19 +90,24 @@ export default function BookingWidget({
   brandColor,
   initialConfig,
   preSelectedSite,
+  preSelectedType,
 }: {
   slug: string
   brandColor: string
   initialConfig: BookingConfig
   preSelectedSite: Site | null
+  preSelectedType: AppointmentType | null
 }) {
-  const [step, setStep] = useState<Step>(preSelectedSite ? 'service' : 'location')
+  const [step, setStep] = useState<Step>(
+    preSelectedSite && preSelectedType ? 'datetime' :
+    preSelectedSite ? 'service' : 'location'
+  )
   const [config] = useState<BookingConfig>(initialConfig)
   const [error, setError] = useState<string | null>(null)
 
   // Selections
   const [selectedSite, setSelectedSite] = useState<Site | null>(preSelectedSite)
-  const [selectedType, setSelectedType] = useState<AppointmentType | null>(null)
+  const [selectedType, setSelectedType] = useState<AppointmentType | null>(preSelectedType)
   const [selectedDate, setSelectedDate] = useState<string>('')
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null)
   const [slots, setSlots] = useState<Slot[]>([])
@@ -388,33 +393,37 @@ export default function BookingWidget({
 
             <div className="space-y-2">
               {config.appointmentTypes.map((type) => (
-                <button
+                <a
                   key={type.id}
-                  onClick={() => {
+                  href={`/book/${slug}?site=${selectedSite?.id}&type=${type.id}`}
+                  onClick={(e) => {
+                    e.preventDefault()
                     setSelectedType(type)
                     setSelectedDate('')
                     setSlots([])
                     setStep('datetime')
                   }}
-                  className="w-full text-left p-4 rounded-xl border-2 transition-all hover:shadow-md flex items-center justify-between"
+                  className="block w-full text-left p-4 rounded-xl border-2 transition-all hover:shadow-md flex items-center justify-between cursor-pointer"
                   style={{
                     borderColor: selectedType?.id === type.id ? brandColor : '#e5e7eb',
                   }}
                 >
                   <span className="font-medium text-gray-900">{type.name}</span>
                   <span className="text-xs text-gray-400">{type.durationMinutes} min</span>
-                </button>
+                </a>
               ))}
             </div>
 
-            <button
-              onClick={() =>
-                config.sites.length > 1 ? setStep('location') : undefined
-              }
-              className="mt-6 text-sm text-gray-500 hover:text-gray-700 underline"
+            <a
+              href={`/book/${slug}`}
+              onClick={(e) => {
+                e.preventDefault()
+                if (config.sites.length > 1) setStep('location')
+              }}
+              className="inline-block mt-6 text-sm text-gray-500 hover:text-gray-700 underline"
             >
               ← Change branch
-            </button>
+            </a>
           </div>
         )}
 

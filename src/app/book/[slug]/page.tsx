@@ -7,7 +7,7 @@ import BookingWidget from './BookingWidget'
 
 interface Props {
   params: Promise<{ slug: string }>
-  searchParams: Promise<{ site?: string }>
+  searchParams: Promise<{ site?: string; type?: string }>
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function BookingPage({ params, searchParams }: Props) {
   const { slug } = await params
-  const { site: siteIdParam } = await searchParams
+  const { site: siteIdParam, type: typeIdParam } = await searchParams
 
   // Fetch all sites in this group
   const sites = await db
@@ -78,12 +78,18 @@ export default async function BookingPage({ params, searchParams }: Props) {
       ? sites[0]
       : null
 
+  // Check if an appointment type was pre-selected via query param
+  const preSelectedType = typeIdParam
+    ? types.find((t) => t.id === typeIdParam) || null
+    : null
+
   return (
     <div>
       <BookingWidget
         slug={slug}
         brandColor={brandColor}
         preSelectedSite={preSelectedSite ? { id: preSelectedSite.id, name: preSelectedSite.name, address: preSelectedSite.address, phone: preSelectedSite.phone } : null}
+        preSelectedType={preSelectedType || null}
         initialConfig={{
           brandName,
           brandColor,
