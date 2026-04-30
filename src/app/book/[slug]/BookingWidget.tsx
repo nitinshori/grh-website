@@ -91,14 +91,21 @@ export default function BookingWidget({
   initialConfig,
   preSelectedSite,
   preSelectedType,
+  preSelectedDate,
+  preSelectedSlot,
+  initialSlots,
 }: {
   slug: string
   brandColor: string
   initialConfig: BookingConfig
   preSelectedSite: Site | null
   preSelectedType: AppointmentType | null
+  preSelectedDate: string | null
+  preSelectedSlot: Slot | null
+  initialSlots: Slot[]
 }) {
   const [step, setStep] = useState<Step>(
+    preSelectedSlot ? 'details' :
     preSelectedSite && preSelectedType ? 'datetime' :
     preSelectedSite ? 'service' : 'location'
   )
@@ -108,9 +115,9 @@ export default function BookingWidget({
   // Selections
   const [selectedSite, setSelectedSite] = useState<Site | null>(preSelectedSite)
   const [selectedType, setSelectedType] = useState<AppointmentType | null>(preSelectedType)
-  const [selectedDate, setSelectedDate] = useState<string>('')
-  const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null)
-  const [slots, setSlots] = useState<Slot[]>([])
+  const [selectedDate, setSelectedDate] = useState<string>(preSelectedDate || '')
+  const [selectedSlot, setSelectedSlot] = useState<Slot | null>(preSelectedSlot)
+  const [slots, setSlots] = useState<Slot[]>(initialSlots)
   const [loadingSlots, setLoadingSlots] = useState(false)
 
   // Patient form
@@ -446,10 +453,14 @@ export default function BookingWidget({
                 {availableDates.map((d) => {
                   const isSelected = d === selectedDate
                   return (
-                    <button
+                    <a
                       key={d}
-                      onClick={() => setSelectedDate(d)}
-                      className={`p-2.5 rounded-lg border text-xs font-medium transition-all ${
+                      href={`/book/${slug}?site=${selectedSite?.id}&type=${selectedType?.id}&date=${d}`}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        setSelectedDate(d)
+                      }}
+                      className={`p-2.5 rounded-lg border text-xs font-medium transition-all text-center cursor-pointer ${
                         isSelected
                           ? 'text-white border-transparent'
                           : 'border-gray-200 text-gray-700 hover:border-gray-400'
@@ -457,7 +468,7 @@ export default function BookingWidget({
                       style={isSelected ? { backgroundColor: brandColor } : {}}
                     >
                       {formatDateLabel(d)}
-                    </button>
+                    </a>
                   )
                 })}
               </div>
@@ -487,10 +498,14 @@ export default function BookingWidget({
                         selectedSlot?.startTime === slot.startTime &&
                         selectedSlot?.clinicianId === slot.clinicianId
                       return (
-                        <button
+                        <a
                           key={`${slot.clinicianId}-${slot.startTime}`}
-                          onClick={() => setSelectedSlot(slot)}
-                          className={`p-3 rounded-lg border text-sm font-medium transition-all ${
+                          href={`/book/${slug}?site=${selectedSite?.id}&type=${selectedType?.id}&date=${selectedDate}&slot=${encodeURIComponent(slot.startTime)}&clinician=${slot.clinicianId}`}
+                          onClick={(e) => {
+                            e.preventDefault()
+                            setSelectedSlot(slot)
+                          }}
+                          className={`p-3 rounded-lg border text-sm font-medium transition-all text-center cursor-pointer ${
                             isSelected
                               ? 'text-white border-transparent'
                               : 'border-gray-200 text-gray-700 hover:border-gray-400'
@@ -502,7 +517,7 @@ export default function BookingWidget({
                           <span className="block text-xs opacity-75 mt-0.5 truncate">
                             {slot.clinicianName.split(' ')[0]}
                           </span>
-                        </button>
+                        </a>
                       )
                     })}
                   </div>
@@ -511,20 +526,36 @@ export default function BookingWidget({
             )}
 
             <div className="flex justify-between mt-8">
-              <button
-                onClick={() => setStep('service')}
+              <a
+                href={`/book/${slug}?site=${selectedSite?.id}`}
+                onClick={(e) => {
+                  e.preventDefault()
+                  setStep('service')
+                }}
                 className="text-sm text-gray-500 hover:text-gray-700 underline"
               >
                 ← Change service
-              </button>
-              <button
-                onClick={() => selectedSlot && setStep('details')}
-                disabled={!selectedSlot}
-                className="px-6 py-2.5 text-sm font-semibold text-white rounded-lg disabled:opacity-40 transition-colors"
-                style={{ backgroundColor: brandColor }}
-              >
-                Continue
-              </button>
+              </a>
+              {selectedSlot ? (
+                <a
+                  href={`/book/${slug}?site=${selectedSite?.id}&type=${selectedType?.id}&date=${selectedDate}&slot=${encodeURIComponent(selectedSlot.startTime)}&clinician=${selectedSlot.clinicianId}`}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    setStep('details')
+                  }}
+                  className="px-6 py-2.5 text-sm font-semibold text-white rounded-lg transition-colors inline-block"
+                  style={{ backgroundColor: brandColor }}
+                >
+                  Continue
+                </a>
+              ) : (
+                <span
+                  className="px-6 py-2.5 text-sm font-semibold text-white rounded-lg opacity-40 inline-block"
+                  style={{ backgroundColor: brandColor }}
+                >
+                  Continue
+                </span>
+              )}
             </div>
           </div>
         )}
