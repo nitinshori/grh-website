@@ -9,6 +9,34 @@ export const metadata: Metadata = {
 
 const capabilities = [
   {
+    title: "Appointment diary & booking system",
+    description:
+      "A built-in appointment diary that works both ways. Patients can book online through your own branded booking page, and your team can book appointments from inside the pharmacy — for walk-ins, phone calls, or email requests. Set clinician availability in a few clicks and the system handles the rest.",
+    details: [
+      "Patient self-service booking via your own white-label booking page",
+      "Staff-side booking for walk-ins, phone enquiries, and email requests",
+      "Set clinician availability per day and branch — takes minutes, not hours",
+      "Automatic conflict detection — no double-bookings",
+      "Branded booking page embeds directly into your pharmacy website",
+      "Multi-branch support — one diary per site, one view for oversight",
+    ],
+    icon: (
+      <svg
+        className="w-8 h-8 text-teal-500"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+        />
+      </svg>
+    ),
+  },
+  {
     title: "Guided consultation flow",
     description:
       "Every PGD has a step-by-step protocol built in. Your pharmacists follow the guided flow — inclusion criteria, exclusion criteria, counselling points, supply decision — all in one screen. No paper forms, no guesswork, no missed steps.",
@@ -124,8 +152,18 @@ const comparisonPoints = [
   },
   {
     label: "Appointment diary",
-    grh: "Built in — manage patient bookings in-platform",
+    grh: "Built in — staff and patient booking, multi-branch",
     competitor: "Not included — use separate software",
+  },
+  {
+    label: "Patient-facing booking page",
+    grh: "White-label booking page on your own website",
+    competitor: "No online booking — phone only",
+  },
+  {
+    label: "PMR-ready architecture",
+    grh: "Service platform designed to work alongside your PMR",
+    competitor: "Siloed — no PMR consideration",
   },
 ];
 
@@ -140,9 +178,10 @@ export default function PlatformPage() {
           </h1>
           <p className="text-lg text-blue-200 max-w-2xl">
             Built for PGD delivery from the ground up — not a bolt-on from a
-            third party. Consultations, patient records, appointment diary,
-            training, and superintendent oversight in one place. One fee per
-            store covers your entire team.
+            third party. Consultations, patient records, appointment diary with
+            online booking, training, and superintendent oversight in one place.
+            Your team books from the pharmacy. Your patients book from your
+            website. One fee per store covers everything.
           </p>
         </div>
       </section>
@@ -300,6 +339,49 @@ export default function PlatformPage() {
         </div>
       </section>
 
+      {/* PMR & service platform convergence */}
+      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="bg-navy-50 border border-navy-100 rounded-xl p-8">
+          <div className="flex items-center gap-3 mb-4">
+            <svg
+              className="w-8 h-8 text-navy-700"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+                d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+              />
+            </svg>
+            <h2 className="text-xl font-bold text-navy-900">
+              Service platforms and PMRs — built to work together
+            </h2>
+          </div>
+          <p className="text-gray-700 leading-relaxed mb-4">
+            The pharmacy world is moving toward combining service delivery
+            platforms with patient medication records. We&apos;re building with
+            that future in mind. Our platform is designed as a complementary
+            clinical services layer that sits alongside your PMR — not as a
+            replacement for it.
+          </p>
+          <p className="text-gray-700 leading-relaxed mb-4">
+            Appointment bookings, consultation records, and patient history live
+            in one place, while your PMR continues to handle dispensing and NHS
+            services. The result is a single view of your private clinical
+            services without disrupting the workflows your team already knows.
+          </p>
+          <p className="text-gray-600 text-sm">
+            As PMR integrations become available across the sector, our
+            architecture is ready. Your data is structured, exportable, and
+            built on open standards — so when the time comes to connect, the
+            heavy lifting is already done.
+          </p>
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
         <h2 className="text-2xl sm:text-3xl font-bold text-navy-900 mb-3">
@@ -307,8 +389,8 @@ export default function PlatformPage() {
         </h2>
         <p className="text-gray-600 mb-8 max-w-xl mx-auto">
           Book a 20-minute demo and we&apos;ll walk you through the full
-          platform — consultations, patient records, the superintendent
-          dashboard, everything.
+          platform — appointment diary, online booking, consultations, patient
+          records, the superintendent dashboard, everything.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link

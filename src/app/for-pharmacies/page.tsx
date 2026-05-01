@@ -11,6 +11,10 @@ const features = [
   "A wide and growing PGD catalogue across travel, vaccines, weight management, sexual health and more",
   "Less common services included \u2014 such as HRT initiation, private PrEP and short-term anxiety symptom support",
   "Integrated consultation tool \u2014 built in-house, not licensed from a third party",
+  "Built-in appointment diary \u2014 your team books walk-ins, phone calls, and email requests in one place",
+  "Online patient booking \u2014 a branded booking page that sits on your own pharmacy website",
+  "Easy availability setup \u2014 set clinician hours per branch in minutes, not hours",
+  "PMR-ready architecture \u2014 designed to complement your PMR, not compete with it",
   "Online training with CPD-compliant certificates for every PGD",
   "Clinical support line \u2014 speak to a clinician when you need one",
   "Superintendent dashboard \u2014 oversight across all your branches",
@@ -18,7 +22,6 @@ const features = [
   "Marketing materials \u2014 posters, social graphics, email templates",
   "Seasonal campaign support \u2014 flu, travel, weight management",
   "Structured onboarding \u2014 supported and quick, not a multi-month implementation",
-  "Built-in appointment diary \u2014 manage patient bookings without extra software",
   "Charged per store, not per pharmacist \u2014 locums and second pharmacists included at no extra cost",
 ];
 
@@ -34,8 +37,9 @@ export default function ForPharmaciesPage() {
           <p className="text-xl text-blue-200 max-w-2xl leading-relaxed">
             Other providers charge per pharmacist &mdash; so your costs go up
             every time you add cover. We charge per store, not per head. All
-            PGDs, consultation platform, appointment diary, and training
-            included. No per-consult fees, ever.
+            PGDs, consultation platform, appointment diary with online booking,
+            and training included. Patients book from your website. Your team
+            books from the pharmacy. No per-consult fees, ever.
           </p>
         </div>
       </section>
@@ -139,9 +143,11 @@ export default function ForPharmaciesPage() {
             </h3>
             <p className="text-gray-600 leading-relaxed">
               Our consultation tool was built for PGD delivery &mdash; not
-              licensed from a third party. PGD governance and the clinical
-              workflow sit in the same product, from the same team. No third-party platform contracts or lock-in. No integration risk. One login, one fee, one support
-              number.
+              licensed from a third party. PGD governance, clinical workflows,
+              appointment diary, and online patient booking sit in the same
+              product, from the same team. No third-party platform contracts
+              or lock-in. No integration risk. One login, one fee, one support
+              number. Designed to work alongside your PMR, not replace it.
             </p>
           </div>
         </div>
