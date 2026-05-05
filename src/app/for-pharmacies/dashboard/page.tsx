@@ -4,7 +4,7 @@ import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { pharmacies } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
-import { getPharmacyPgdSlugs, ALL_PGDS, PGD_CATEGORIES } from '@/lib/pgd-access'
+import { getPharmacyPgdSlugs, ALL_PGDS, PGD_CATEGORIES, COMING_SOON_SLUGS } from '@/lib/pgd-access'
 import { getPharmacyStats } from '@/lib/analytics'
 
 // Map slug → friendly title
@@ -394,7 +394,11 @@ export default async function PharmacyDashboard() {
                     <Link
                       key={pgd.slug}
                       href={`/for-pharmacies/epgd/${pgd.slug}`}
-                      className="group bg-white rounded-lg border border-gray-200 p-4 hover:border-[#25b4b4] hover:shadow-md transition-all"
+                      className={`group bg-white rounded-lg border p-4 transition-all ${
+                        COMING_SOON_SLUGS.has(pgd.slug)
+                          ? 'border-gray-200 opacity-70 hover:opacity-100 hover:border-amber-300'
+                          : 'border-gray-200 hover:border-[#25b4b4] hover:shadow-md'
+                      }`}
                     >
                       <div className="flex items-start justify-between">
                         <div className="min-w-0 flex-1">
@@ -404,6 +408,11 @@ export default async function PharmacyDashboard() {
                           <p className="text-xs text-gray-500 mt-0.5 truncate">
                             {pgd.subtitle}
                           </p>
+                          {COMING_SOON_SLUGS.has(pgd.slug) && (
+                            <span className="inline-block mt-1.5 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">
+                              Coming Soon
+                            </span>
+                          )}
                         </div>
                         <svg
                           className="w-4 h-4 text-gray-400 group-hover:text-[#25b4b4] flex-shrink-0 ml-2 mt-0.5 transition-colors"

@@ -156,6 +156,14 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
 ]
 
 /**
+ * PGD slugs where the ePGD tool is still "Coming Soon" (placeholder page only).
+ */
+export const COMING_SOON_SLUGS = new Set([
+  'saxenda',
+  'glp1-monitoring',
+])
+
+/**
  * All unique categories in display order.
  */
 export const PGD_CATEGORIES = [

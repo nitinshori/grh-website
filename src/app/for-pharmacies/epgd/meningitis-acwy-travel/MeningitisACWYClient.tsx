@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { TextInput, Checkbox, SelectInput, TextArea } from '../shared/components/FormInputs';
 import { ProgressBar } from '../shared/components/ProgressBar';
 import { StepWrapper } from '../shared/components/StepWrapper';
@@ -30,6 +30,8 @@ import {
   validateMeningitisACWYSummaryStep,
 } from './meningitis-acwy-travel-validation';
 import { calculateAge } from '../shared/types';
+import { usePharmacistProfile } from '../shared/hooks/usePharmacistProfile';
+import { useFormPersistence } from '../shared/hooks/useFormPersistence';
 import MeningitisACWYSummaryReport from './components/MeningitisACWYSummaryReport';
 
 const STEP_LABELS = [
@@ -83,6 +85,42 @@ export function MeningitisACWYClient() {
   });
 
   const [showSummaryReport, setShowSummaryReport] = useState(false);
+
+  // Persist form data to sessionStorage so it survives accidental navigation
+  const formState = useMemo(() => ({
+    currentStep, patientDetails, consent, travelAssessment, medicalHistory,
+    contraIndicationsReviewed, summary, postVaccineAdvice,
+  }), [currentStep, patientDetails, consent, travelAssessment, medicalHistory,
+    contraIndicationsReviewed, summary, postVaccineAdvice]);
+
+  const { clearSaved } = useFormPersistence(
+    'epgd-meningitis-acwy',
+    formState,
+    useCallback((saved: typeof formState) => {
+      setCurrentStep(saved.currentStep);
+      setPatientDetails(saved.patientDetails);
+      setConsent(saved.consent);
+      setTravelAssessment(saved.travelAssessment);
+      setMedicalHistory(saved.medicalHistory);
+      setContraIndicationsReviewed(saved.contraIndicationsReviewed);
+      setSummary(saved.summary);
+      setPostVaccineAdvice(saved.postVaccineAdvice);
+    }, [])
+  );
+
+  // Auto-fill pharmacist details from logged-in user profile
+  const profile = usePharmacistProfile();
+  useEffect(() => {
+    if (profile) {
+      setSummary((prev) => ({
+        ...prev,
+        pharmacistName: prev.pharmacistName || profile.name,
+        pharmacistGPhC: prev.pharmacistGPhC || profile.gphcNumber,
+        pharmacyName: prev.pharmacyName || profile.pharmacyName,
+        pharmacyAddress: prev.pharmacyAddress || profile.pharmacyAddress,
+      }));
+    }
+  }, [profile]);
 
   // Calculate age when DOB changes
   const handlePatientDetailsChange = useCallback(
@@ -653,7 +691,7 @@ export function MeningitisACWYClient() {
           description="Complete pharmacist declaration and generate consultation record"
           currentStep={currentStep}
           totalSteps={STEP_LABELS.length}
-          onNext={() => setShowSummaryReport(true)}
+          onNext={() => { clearSaved(); setShowSummaryReport(true); }}
           onPrev={handlePrev}
           canProceed={canProceedStep7}
           validationError={summaryValidationError}

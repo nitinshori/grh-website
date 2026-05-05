@@ -377,7 +377,41 @@ export default function AppointmentDiary() {
           <div className="w-8 h-8 border-3 border-teal-500 border-t-transparent rounded-full animate-spin" />
         </div>
       ) : (
-        /* Weekly grid */
+        <>
+        {/* Empty state — onboarding guidance for new pharmacies */}
+        {appointments.length === 0 && (
+          <div className="bg-white rounded-xl border border-dashed border-teal-300 shadow-sm p-8 text-center mb-6">
+            <div className="mx-auto w-14 h-14 rounded-full bg-teal-50 flex items-center justify-center mb-4">
+              <svg className="w-7 h-7 text-teal-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">
+              No appointment slots this week
+            </h3>
+            <p className="text-sm text-gray-500 max-w-md mx-auto mb-6">
+              Create your first available slots so patients can book consultations.
+              Use <strong>Add Slots</strong> to generate a full day of evenly
+              spaced slots in one go, or click <strong>+ Add</strong> on any day
+              below to add individual slots.
+            </p>
+            <button
+              onClick={() => {
+                setBatchDate(new Date().toISOString().split('T')[0])
+                setShowBatch(true)
+              }}
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white rounded-lg transition-colors"
+              style={{ backgroundColor: '#25b4b4' }}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Create Your First Slots
+            </button>
+          </div>
+        )}
+
+        {/* Weekly grid */}
         <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
           {days.map((day) => {
             const isToday = day.toDateString() === todayStr
@@ -459,6 +493,7 @@ export default function AppointmentDiary() {
             )
           })}
         </div>
+      </>
       )}
 
       {/* Summary stats */}
