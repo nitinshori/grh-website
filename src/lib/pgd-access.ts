@@ -148,7 +148,7 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
   { slug: 'travellers-diarrhoea', title: "Traveller's Diarrhoea", subtitle: 'Ciprofloxacin / Azithromycin', category: 'Travel Health' },
 
   // Occupational Health
-  { slug: 'needlestick-pep', title: 'Needlestick PEP', subtitle: 'Post-Exposure Prophylaxis', category: 'Occupational Health' },
+  // needlestick-pep removed from public catalogue — not suitable for pharmacy-level supply (Apr 2026)
   { slug: 'dental-bridging', title: 'Dental Bridging Rx', subtitle: 'Emergency Dental Treatment', category: 'Occupational Health' },
 
   // Paediatrics
