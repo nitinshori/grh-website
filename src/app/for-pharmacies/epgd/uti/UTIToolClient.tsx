@@ -172,7 +172,11 @@ export function UTIToolClient() {
     return validateUTIStep(currentStep, state);
   }, [currentStep, state]);
 
-  const canProceed = validationError === null && !isBlocked;
+  // Clinical alerts should only block navigation from step 2 onwards (clinical steps).
+  // Steps 0 (Patient Details) and 1 (Consent) should not be blocked by clinical logic
+  // since the pharmacist hasn't entered clinical data yet.
+  const isBlockedForStep = currentStep >= 2 && isBlocked;
+  const canProceed = validationError === null && !isBlockedForStep;
 
   // Step navigation
   const handleNext = () => {
@@ -202,7 +206,6 @@ export function UTIToolClient() {
       case 0:
         return (
           <div>
-            <AlertBanner alerts={alerts} />
             <PatientDetailsStep
               patient={state.patient}
               onChange={handlePatientChange}
@@ -220,7 +223,6 @@ export function UTIToolClient() {
       case 1:
         return (
           <div>
-            <AlertBanner alerts={alerts} />
             <ConsentStep
               consent={state.consent}
               onChange={(field: string, value: any) =>
@@ -902,7 +904,7 @@ export function UTIToolClient() {
           onPrev={handlePrev}
           canProceed={canProceed}
           validationError={validationError}
-          isBlocked={isBlocked}
+          isBlocked={isBlockedForStep}
         >
           {renderStepContent()}
         </StepWrapper>

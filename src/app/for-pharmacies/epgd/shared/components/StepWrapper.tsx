@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useConsultationTracking } from "../hooks/useConsultationTracking";
 
@@ -28,6 +29,13 @@ export function StepWrapper({
   isBlocked = false,
   children,
 }: StepWrapperProps) {
+  const [hasAttemptedNext, setHasAttemptedNext] = useState(false);
+
+  // Reset attempted state when the step changes (user successfully advanced)
+  useEffect(() => {
+    setHasAttemptedNext(false);
+  }, [currentStep]);
+
   const isFirstStep = currentStep === 0;
   const isLastStep = currentStep === totalSteps - 1;
 
@@ -49,8 +57,8 @@ export function StepWrapper({
       {/* Step content */}
       <div className="px-6 py-6">{children}</div>
 
-      {/* Validation error */}
-      {validationError && (
+      {/* Validation error — only shown after user has attempted to proceed */}
+      {hasAttemptedNext && validationError && (
         <div className="mx-6 mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg">
           <p className="text-sm text-red-700">{validationError}</p>
         </div>
@@ -81,8 +89,13 @@ export function StepWrapper({
           )}
           {!isLastStep ? (
             <button
-              onClick={onNext}
-              disabled={!canProceed || isBlocked}
+              onClick={() => {
+                if (!canProceed || isBlocked) {
+                  setHasAttemptedNext(true);
+                } else {
+                  onNext();
+                }
+              }}
               className={`
                 px-6 py-2.5 rounded-lg text-sm font-semibold transition-colors
                 ${
