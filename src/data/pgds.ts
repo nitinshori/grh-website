@@ -448,6 +448,18 @@ export const pgds: PGD[] = [
     pharmadoctor: "Yes",
   },
   {
+    id: "period-delay",
+    title: "Period Delay (Norethisterone)",
+    category: "Women's Health",
+    priority: 1,
+    isNew: true,
+    revenueEstimate: "£20–35 per consultation",
+    consultTime: "10–15 min",
+    description:
+      "Norethisterone 5mg TDS for short-term delay of menstruation. High demand before holidays, events, and religious observances. Simple consultation with clear contraindication screening.",
+    pharmadoctor: "Partial",
+  },
+  {
     id: "bv",
     title: "Bacterial Vaginosis",
     category: "Women's Health",
