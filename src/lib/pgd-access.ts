@@ -71,6 +71,7 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
   { slug: 'hrt', title: 'HRT', subtitle: 'Estradiol / Utrogestan', category: "Women's Health" },
   { slug: 'recurrent-uti', title: 'Recurrent UTI Prevention', subtitle: 'Nitrofurantoin Prophylaxis', category: "Women's Health" },
   { slug: 'thrush', title: 'Vaginal Thrush', subtitle: 'Fluconazole', category: "Women's Health" },
+  { slug: 'period-delay', title: 'Period Delay', subtitle: 'Norethisterone 5mg', category: "Women's Health" },
   { slug: 'bv', title: 'Bacterial Vaginosis', subtitle: 'Metronidazole', category: "Women's Health" },
   { slug: 'testosterone-women', title: 'Testosterone for Women', subtitle: 'Androfeme / Testogel (off-label)', category: "Women's Health" },
   { slug: 'alopecia-minoxidil', title: 'Female Pattern Hair Loss', subtitle: 'Minoxidil', category: "Women's Health" },
