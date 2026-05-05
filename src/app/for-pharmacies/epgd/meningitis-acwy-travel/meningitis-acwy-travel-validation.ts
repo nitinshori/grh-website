@@ -15,9 +15,23 @@ export function validateMeningitisACWYPatientStep(
     // Less than 3 months
     return 'Patient must be at least 6 weeks old (Nimenrix minimum age)';
   }
+  return null;
+}
+
+export function validateMeningitisACWYTravelStep(
+  patient: MeningitisACWYPatientDetails,
+  travelAssessment: {
+    travelDestinationConfirmed: boolean;
+    travelReasonConfirmed: boolean;
+    timingConfirmed: boolean;
+  }
+): string | null {
   if (!patient.travelDestination.trim()) return 'Travel destination is required';
   if (!patient.travelReason) return 'Travel reason must be selected';
   if (!patient.departureDate) return 'Departure date is required';
+  if (!travelAssessment.travelDestinationConfirmed) return 'Please confirm travel destination';
+  if (!travelAssessment.travelReasonConfirmed) return 'Please confirm travel reason';
+  if (!travelAssessment.timingConfirmed) return 'Please confirm departure timing';
   return null;
 }
 

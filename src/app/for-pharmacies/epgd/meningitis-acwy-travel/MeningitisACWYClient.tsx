@@ -24,6 +24,7 @@ import {
 } from './meningitis-acwy-travel-clinical-logic';
 import {
   validateMeningitisACWYPatientStep,
+  validateMeningitisACWYTravelStep,
   validateMeningitisACWYConsentStep,
   validateMeningitisACWYAdministrationStep,
   validateMeningitisACWYSummaryStep,
@@ -121,13 +122,14 @@ export function MeningitisACWYClient() {
     return validateMeningitisACWYSummaryStep(summary);
   }, [summary]);
 
+  const travelValidationError = useMemo(() => {
+    return validateMeningitisACWYTravelStep(patientDetails, travelAssessment);
+  }, [patientDetails, travelAssessment]);
+
   // Step can proceed checks
   const canProceedStep0 = patientValidationError === null;
   const canProceedStep1 = consentValidationError === null;
-  const canProceedStep2 =
-    travelAssessment.travelDestinationConfirmed &&
-    travelAssessment.travelReasonConfirmed &&
-    travelAssessment.timingConfirmed;
+  const canProceedStep2 = travelValidationError === null;
   const canProceedStep3 = true; // Medical history is always valid
   const canProceedStep4 = contraIndicationsReviewed.confirmedNoAbsoluteContraindications;
   const canProceedStep5 = administrationValidationError === null;
@@ -188,11 +190,11 @@ export function MeningitisACWYClient() {
             }
           }}
           completedSteps={completedSteps}
-          hasErrors={patientValidationError !== null || consentValidationError !== null}
+          hasErrors={completedSteps.size > 0 && (patientValidationError !== null || consentValidationError !== null)}
         />
       </div>
 
-      {clinicalAlerts.length > 0 && <AlertBanner alerts={clinicalAlerts} />}
+      {currentStep >= 2 && clinicalAlerts.length > 0 && <AlertBanner alerts={clinicalAlerts} />}
 
       {/* Step 0: Patient Details */}
       {currentStep === 0 && (
@@ -262,7 +264,7 @@ export function MeningitisACWYClient() {
           onNext={handleNext}
           onPrev={handlePrev}
           canProceed={canProceedStep2}
-          validationError={null}
+          validationError={travelValidationError}
         >
           <div className="space-y-4">
             <TextInput
