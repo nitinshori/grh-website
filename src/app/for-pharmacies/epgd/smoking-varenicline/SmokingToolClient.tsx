@@ -12,6 +12,7 @@ import { FagerstromScore } from "./components/FagerstromScore";
 import { SmokingSummaryReport } from "./components/SmokingSummaryReport";
 import { ProgressBar } from "../shared/components/ProgressBar";
 import { AlertBanner } from "../shared/components/AlertBanner";
+import Link from 'next/link';
 import { TextInput, SelectInput, NumberInput, TextArea, Checkbox } from "../shared/components/FormInputs";
 
 export const SmokingToolClient: React.FC = () => {
@@ -126,6 +127,20 @@ export const SmokingToolClient: React.FC = () => {
             Varenicline (Champix) PGD Consultation for UK Pharmacies
           </p>
         </div>
+
+        {currentStep === 0 && (
+          <div className="mb-4 print:hidden">
+            <Link
+              href="/for-pharmacies/dashboard"
+              className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-teal-600 transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back to Dashboard
+            </Link>
+          </div>
+        )}
 
         {/* Progress Bar */}
         <ProgressBar

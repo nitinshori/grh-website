@@ -1,5 +1,6 @@
 "use client";
 
+import Link from 'next/link';
 import { TOTAL_STEPS } from "../lib/ed-types";
 
 interface EDStepWrapperProps {
@@ -30,6 +31,19 @@ export function EDStepWrapper({
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      {isFirstStep && (
+        <div className="mb-4 print:hidden">
+          <Link
+            href="/for-pharmacies/dashboard"
+            className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-teal-600 transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Dashboard
+          </Link>
+        </div>
+      )}
       {/* Step header */}
       <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
         <h2 className="text-lg font-bold text-navy-900">{title}</h2>

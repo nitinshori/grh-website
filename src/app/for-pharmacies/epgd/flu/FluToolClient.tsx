@@ -31,6 +31,7 @@ import {
 } from './lib/flu-validation';
 import { TextInput, Checkbox, SelectInput, NumberInput, TextArea } from '../shared/components/FormInputs';
 import { ProgressBar } from '../shared/components/ProgressBar';
+import Link from 'next/link';
 import { AlertBanner } from '../shared/components/AlertBanner';
 import VaccineAdminFields from './components/VaccineAdminFields';
 import FluSummaryReport from './components/FluSummaryReport';
@@ -570,6 +571,20 @@ export default function FluToolClient({
             UK Pharmacy PGD Consultation
           </p>
         </div>
+
+        {state.step === 0 && (
+          <div className="mb-4 print:hidden">
+            <Link
+              href="/for-pharmacies/dashboard"
+              className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-teal-600 transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back to Dashboard
+            </Link>
+          </div>
+        )}
 
         {/* Progress Bar */}
         <ProgressBar

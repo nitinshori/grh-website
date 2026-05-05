@@ -159,7 +159,12 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
  * PGD slugs where the ePGD tool is still "Coming Soon" (placeholder page only).
  */
 export const COMING_SOON_SLUGS = new Set([
+  'trt',
+  'genital-warts',
+  'herpes-management',
+  'gonorrhoea-treatment',
   'saxenda',
+  'mysimba',
   'glp1-monitoring',
 ])
 

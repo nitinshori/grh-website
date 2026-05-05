@@ -32,6 +32,7 @@ import {
 } from './rabies-validation';
 import { TextInput, Checkbox, SelectInput, NumberInput, TextArea } from '../shared/components/FormInputs';
 import { ProgressBar } from '../shared/components/ProgressBar';
+import Link from 'next/link';
 import { AlertBanner } from '../shared/components/AlertBanner';
 import { PatientDetailsStep } from '../shared/steps/PatientDetailsStep';
 import { ConsentStep } from '../shared/steps/ConsentStep';
@@ -486,6 +487,19 @@ export default function RabiesClient({
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
+        {state.step === 0 && (
+          <div className="mb-4 print:hidden">
+            <Link
+              href="/for-pharmacies/dashboard"
+              className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-teal-600 transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back to Dashboard
+            </Link>
+          </div>
+        )}
         <ProgressBar
           currentStep={state.step}
           stepLabels={STEP_LABELS}
