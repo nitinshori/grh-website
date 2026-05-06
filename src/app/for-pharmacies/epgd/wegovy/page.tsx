@@ -1,4 +1,5 @@
 import { WegovyToolClient } from "./WegovyToolClient";
+import { PgdPageActions } from "@/components/PgdPageActions";
 
 export const metadata = {
   title: "Semaglutide Weight Management ePGD",
@@ -11,18 +12,7 @@ export default function WegovyToolPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
-        {/* Back to Dashboard */}
-        <div className="mb-4 print:hidden">
-          <a
-            href="/for-pharmacies/dashboard"
-            className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-teal-600 transition-colors"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Back to Dashboard
-          </a>
-        </div>
+        <PgdPageActions />
 
         {/* Header */}
         <div className="mb-8">

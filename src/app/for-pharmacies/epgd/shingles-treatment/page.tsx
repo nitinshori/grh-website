@@ -30,6 +30,7 @@ import {
   ShinglesSummary,
 } from './shingles-types';
 import {
+import { PgdPageActions } from "@/components/PgdPageActions";
   generateClinicalAlerts,
   canProceedToMedicineSelection,
 } from './shingles-clinical-logic';
@@ -154,6 +155,7 @@ export default function ShinglesTreatmentPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-4xl mx-auto">
+        <PgdPageActions />
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Shingles Acute Treatment ePGD</h1>

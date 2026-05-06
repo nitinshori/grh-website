@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import WoundCareClient from "./WoundCareClient";
+import { PgdPageActions } from "@/components/PgdPageActions";
 export const metadata: Metadata = { title: "Wound Care Management Consultation ePGD", description: "Digital consultation tool for Wound Care Management under Patient Group Direction." };
 export default function Page() {
   return (
     <div className="bg-gray-50 min-h-screen">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <PgdPageActions />
         <div className="mb-6">
           <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
             <a href="/for-pharmacies" className="hover:text-teal-600 transition-colors">For Pharmacies</a>

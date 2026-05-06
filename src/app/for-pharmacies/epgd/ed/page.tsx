@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { EDToolClient } from "./EDToolClient";
+import { PgdPageActions } from "@/components/PgdPageActions";
 
 export const metadata: Metadata = {
   title: "ED Consultation ePGD",
@@ -11,6 +12,7 @@ export default function EDToolPage() {
   return (
     <div className="bg-gray-50 min-h-screen">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <PgdPageActions />
         {/* Page header */}
         <div className="mb-6">
           <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">

@@ -1,4 +1,5 @@
 import { RSVClient } from './RSVClient';
+import { PgdPageActions } from "@/components/PgdPageActions";
 
 export const metadata = {
   title: 'RSV Vaccination ePGD | Pharmacy PGD',
@@ -10,6 +11,7 @@ export default function RSVPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
+        <PgdPageActions />
         <div className="mb-8">
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 sm:p-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">RSV Vaccination ePGD</h1>

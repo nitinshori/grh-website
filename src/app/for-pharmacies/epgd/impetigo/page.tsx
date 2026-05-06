@@ -1,4 +1,5 @@
 import { ImpetigoConsultationClient } from './ImpetigoConsultationClient';
+import { PgdPageActions } from "@/components/PgdPageActions";
 
 export const metadata = {
   title: 'Impetigo ePGD - UK Pharmacy PGD',
@@ -6,5 +7,12 @@ export const metadata = {
 };
 
 export default function ImpetigoPage() {
-  return <ImpetigoConsultationClient />;
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-6xl mx-auto px-4 py-6">
+        <PgdPageActions />
+      </div>
+      <ImpetigoConsultationClient />
+    </div>
+  );
 }

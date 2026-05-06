@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { SoreThroatToolPage } from "./SoreThroatToolPage";
+import { PgdPageActions } from "@/components/PgdPageActions";
 
 export const metadata: Metadata = {
   title: "Sore Throat Test & Treat ePGD | Get Real Health",
@@ -8,5 +9,12 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <SoreThroatToolPage />;
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-6xl mx-auto px-4 py-6">
+        <PgdPageActions />
+      </div>
+      <SoreThroatToolPage />
+    </div>
+  );
 }

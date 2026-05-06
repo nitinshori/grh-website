@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { UTIToolClient } from "./UTIToolClient";
+import { PgdPageActions } from "@/components/PgdPageActions";
 
 export const metadata: Metadata = {
   title: "UTI Consultation ePGD | PGD Consultation",
@@ -11,18 +12,7 @@ export default function UTIToolPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-5xl mx-auto px-4 py-8">
-        {/* Back to Dashboard */}
-        <div className="mb-4 print:hidden">
-          <a
-            href="/for-pharmacies/dashboard"
-            className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-teal-600 transition-colors"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Back to Dashboard
-          </a>
-        </div>
+        <PgdPageActions />
 
         {/* Breadcrumb */}
         <div className="mb-6 text-sm text-gray-600">

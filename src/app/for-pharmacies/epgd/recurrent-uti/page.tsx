@@ -1,8 +1,10 @@
 import RecurrentUTIClient from "./RecurrentUTIClient";
+import { PgdPageActions } from "@/components/PgdPageActions";
 
 export default function RecurrentUTIPage() {
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
+        <PgdPageActions />
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-navy-900 mb-2">
           Recurrent UTI Prevention

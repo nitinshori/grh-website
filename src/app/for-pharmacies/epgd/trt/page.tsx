@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { PgdPageActions } from "@/components/PgdPageActions";
 
 export const metadata: Metadata = {
   title: "TRT - Testosterone Replacement Therapy ePGD",
@@ -9,6 +10,7 @@ export default function TRTToolPage() {
   return (
     <div className="bg-gray-50 min-h-screen">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <PgdPageActions />
         <div className="mb-4 print:hidden">
           <a
             href="/for-pharmacies/dashboard"
