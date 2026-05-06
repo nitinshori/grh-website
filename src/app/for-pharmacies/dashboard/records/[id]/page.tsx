@@ -89,11 +89,6 @@ export default async function RecordDetailPage({
             }`}>
               {record.outcome === 'completed' ? 'Medicine Supplied' : record.outcome === 'referred' ? 'Referred' : 'Not Supplied'}
             </span>
-            <button
-              onClick={() => {}}
-              className="hidden"
-              id="print-btn"
-            />
           </div>
         </div>
       </div>
