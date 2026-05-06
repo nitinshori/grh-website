@@ -4,6 +4,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { TextInput, Checkbox, SelectInput, TextArea } from '../shared/components/FormInputs';
 import { ProgressBar } from '../shared/components/ProgressBar';
 import { StepWrapper } from '../shared/components/StepWrapper';
+import type { ConsultationRecordData } from '../shared/hooks/useConsultationTracking';
 import { AlertBanner } from '../shared/components/AlertBanner';
 import { PatientDetailsStep } from '../shared/steps/PatientDetailsStep';
 import { ConsentStep } from '../shared/steps/ConsentStep';
@@ -176,6 +177,49 @@ export function PneumococcalClient() {
       setCurrentStep(currentStep - 1);
     }
   };
+
+  // ─── Consultation Record Data (for saving to database) ───
+  const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    return {
+      patient: {
+        firstName: patientDetails.firstName,
+        lastName: patientDetails.lastName,
+        dateOfBirth: patientDetails.dateOfBirth,
+        nhsNumber: patientDetails.nhsNumber,
+        phone: patientDetails.phone,
+        email: patientDetails.email,
+        address: patientDetails.address,
+        gpName: patientDetails.gpName,
+        gpPractice: patientDetails.gpPractice,
+      },
+      clinicalData: {
+        patient: patientDetails,
+        consent,
+        riskAssessment,
+        medicalHistory,
+        contraIndicationsReviewed,
+        postVaccineAdvice,
+        summary,
+        clinicalAlerts,
+      } as unknown as Record<string, unknown>,
+      outcome: clinicalAlerts.some((a) => a.severity === 'block') ? "not_supplied" : "completed",
+      summary: {
+        pharmacistName: summary.pharmacistName,
+        pharmacistGPhC: summary.pharmacistGPhC,
+        consultationDate: summary.consultationDate,
+        consultationTime: summary.consultationTime,
+      },
+    };
+  }, [patientDetails, consent, riskAssessment, medicalHistory, contraIndicationsReviewed, postVaccineAdvice, summary, clinicalAlerts]);
+
+  const handleNewConsultation = useCallback(() => {
+    setCurrentStep(0);
+    setCompletedSteps(new Set());
+    setPatientDetails(initialPneumococcalPatientDetails);
+    setConsent(initialPneumococcalConsent);
+    setSummary(initialPneumococcalSummary());
+    setShowSummaryReport(false);
+  }, []);
 
   if (showSummaryReport) {
     return (
@@ -723,6 +767,8 @@ export function PneumococcalClient() {
           onPrev={handlePrev}
           canProceed={canProceedStep7}
           validationError={summaryValidationError}
+          getConsultationData={getConsultationData}
+          onNewConsultation={handleNewConsultation}
         >
           <div className="space-y-4">
             <TextInput

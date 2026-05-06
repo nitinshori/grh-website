@@ -14,6 +14,7 @@ import { ProgressBar } from "../shared/components/ProgressBar";
 import { AlertBanner } from "../shared/components/AlertBanner";
 import Link from 'next/link';
 import { TextInput, SelectInput, NumberInput, TextArea, Checkbox } from "../shared/components/FormInputs";
+import { useConsultationTracking, type ConsultationRecordData } from "../shared/hooks/useConsultationTracking";
 
 export const SmokingToolClient: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<number>(0);
@@ -99,16 +100,95 @@ export const SmokingToolClient: React.FC = () => {
 
   const { hardStops, cautions, redFlags } = getAllClinicalAlerts(formData);
 
+  // ─── Consultation tracking + record saving ───
+  const { markComplete, saveRecord } = useConsultationTracking('smoking-varenicline', currentStep);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+
+  const getConsultationData = useCallback((): ConsultationRecordData => {
+    return {
+      patient: {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        dateOfBirth: formData.dateOfBirth,
+        phone: formData.contactNumber,
+        email: formData.email,
+      },
+      clinicalData: formData as unknown as Record<string, unknown>,
+      outcome: hardStops.length > 0 ? 'not_supplied' : 'completed',
+      summary: {
+        pharmacistName: formData.pharmacistName,
+        pharmacistGPhC: formData.pharmacistGMCNumber,
+        consultationDate: formData.consultationDate,
+      },
+    };
+  }, [formData, hardStops]);
+
+  const handleSaveAndPrint = useCallback(async (): Promise<void> => {
+    markComplete();
+    setSaveStatus('saving');
+    const success = await saveRecord(getConsultationData());
+    setSaveStatus(success ? 'saved' : 'error');
+    window.print();
+  }, [markComplete, saveRecord, getConsultationData]);
+
+  const handleNewConsultation = useCallback((): void => {
+    if (!window.confirm('Start a new consultation? The current consultation data will be cleared.')) return;
+    setFormData(DEFAULT_FORM_DATA);
+    setCurrentStep(0);
+    setCompletedSteps(new Set());
+    setValidationErrors([]);
+    setShowSummary(false);
+    setSaveStatus('idle');
+  }, []);
+
   if (showSummary) {
     return (
       <div className="min-h-screen bg-gray-100 py-12">
         <div className="max-w-4xl mx-auto">
-          <button
-            onClick={() => setShowSummary(false)}
-            className="mb-6 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
-          >
-            Back to Edit
-          </button>
+          <div className="flex gap-2 mb-6 print:hidden">
+            <button
+              onClick={() => setShowSummary(false)}
+              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+            >
+              Back to Edit
+            </button>
+            <button
+              onClick={handleSaveAndPrint}
+              disabled={saveStatus === 'saving'}
+              className={`px-4 py-2 rounded-lg ${
+                saveStatus === 'saving'
+                  ? 'bg-gray-300 text-gray-500 cursor-wait'
+                  : 'bg-navy-900 hover:bg-navy-950 text-white'
+              }`}
+            >
+              {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Print Again' : 'Save & Print Record'}
+            </button>
+            {saveStatus === 'saved' && (
+              <button
+                onClick={handleNewConsultation}
+                className="px-4 py-2 rounded-lg text-teal-600 border border-teal-300 hover:bg-teal-50"
+              >
+                New Consultation
+              </button>
+            )}
+          </div>
+          {saveStatus !== 'idle' && (
+            <div className={`mb-4 px-4 py-3 rounded-lg print:hidden ${
+              saveStatus === 'saving' ? 'bg-blue-50 border border-blue-200' :
+              saveStatus === 'saved' ? 'bg-green-50 border border-green-200' :
+              'bg-red-50 border border-red-200'
+            }`}>
+              <p className={`text-sm ${
+                saveStatus === 'saving' ? 'text-blue-700' :
+                saveStatus === 'saved' ? 'text-green-700' :
+                'text-red-700'
+              }`}>
+                {saveStatus === 'saving' && 'Saving consultation record...'}
+                {saveStatus === 'saved' && 'Consultation record saved. You can access it from Patient Records on your dashboard.'}
+                {saveStatus === 'error' && 'Could not save consultation record. Please print this page as a backup.'}
+              </p>
+            </div>
+          )}
           <SmokingSummaryReport formData={formData} />
         </div>
       </div>

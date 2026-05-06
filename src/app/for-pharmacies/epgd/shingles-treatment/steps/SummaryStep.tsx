@@ -14,6 +14,7 @@ import {
 import { ShinglesSummary } from '../shingles-types';
 import { ClinicalAlert } from '../../shared/types';
 import { calculateAge } from '../../shared/types';
+import type { ConsultationRecordData } from '../../shared/hooks/useConsultationTracking';
 
 interface SummaryStepProps {
   summary: ShinglesSummary;
@@ -22,6 +23,8 @@ interface SummaryStepProps {
   totalSteps: number;
   onNext: () => void;
   onPrev: () => void;
+  getConsultationData?: () => ConsultationRecordData | null;
+  onNewConsultation?: () => void;
 }
 
 export const SummaryStep: React.FC<SummaryStepProps> = ({
@@ -31,6 +34,8 @@ export const SummaryStep: React.FC<SummaryStepProps> = ({
   totalSteps,
   onNext,
   onPrev,
+  getConsultationData,
+  onNewConsultation,
 }) => {
   const [agreed, setAgreed] = useState(false);
   const [printed, setPrinted] = useState(false);
@@ -64,6 +69,8 @@ export const SummaryStep: React.FC<SummaryStepProps> = ({
       onPrev={onPrev}
       canProceed={agreed}
       validationError={validationError}
+      getConsultationData={getConsultationData}
+      onNewConsultation={onNewConsultation}
     >
       <div className="space-y-6">
         {/* Print Section */}

@@ -103,6 +103,7 @@ export default function TravelCoreClient() {
     createInitialTravelCoreState()
   );
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
 
   const alerts = useMemo(
     () => getAllAlerts(state.destination, state.malariaRisk),
@@ -116,6 +117,7 @@ export default function TravelCoreClient() {
       return;
     }
     setValidationError(null);
+    setCompletedSteps((prev) => new Set([...prev, state.currentStep]));
     dispatch({
       type: "SET_STEP",
       step: Math.min(state.currentStep + 1, TOTAL_STEPS - 1),
@@ -125,6 +127,24 @@ export default function TravelCoreClient() {
   const handlePrev = useCallback(() => {
     setValidationError(null);
     dispatch({ type: "SET_STEP", step: Math.max(state.currentStep - 1, 0) });
+  }, []);
+
+  const handleStepClick = useCallback(
+    (step: number) => {
+      if (completedSteps.has(step) || step <= state.currentStep) {
+        setValidationError(null);
+        dispatch({ type: "SET_STEP", step });
+      }
+    },
+    [completedSteps, state.currentStep]
+  );
+
+  const handleNewConsultation = useCallback(() => {
+    setCompletedSteps(new Set());
+    setValidationError(null);
+    dispatch({ type: "SET_STEP", step: 0 });
+    // Note: full reducer reset would require a RESET action in the reducer.
+    // For now, just reset the step and completed steps state.
   }, []);
 
   const canProceed = validateStep(state.currentStep, state) === null;
@@ -173,7 +193,8 @@ export default function TravelCoreClient() {
           onPrev={handlePrev}
           canProceed={true}
           validationError={null}
-            getConsultationData={getConsultationData}
+          getConsultationData={getConsultationData}
+          onNewConsultation={handleNewConsultation}
         >
           <TravelCoreSummaryReport state={state} alerts={alerts} />
         </StepWrapper>
@@ -183,7 +204,13 @@ export default function TravelCoreClient() {
 
   return (
     <div className="space-y-6">
-      <ProgressBar current={state.currentStep + 1} total={TOTAL_STEPS} />
+      <ProgressBar
+        stepLabels={STEP_LABELS}
+        currentStep={state.currentStep}
+        onStepClick={handleStepClick}
+        completedSteps={completedSteps}
+        hasErrors={validationError !== null}
+      />
 
       {alerts.length > 0 && (
         <AlertBanner alerts={alerts} />

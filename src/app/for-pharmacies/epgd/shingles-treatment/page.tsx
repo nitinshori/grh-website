@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { PgdPageActions } from "@/components/PgdPageActions";
 import { ProgressBar } from '../shared/components/ProgressBar';
+import type { ConsultationRecordData } from '../shared/hooks/useConsultationTracking';
 import Link from 'next/link';
 import { AlertBanner } from '../shared/components/AlertBanner';
 import { PatientDetailsStep } from '../shared/steps/PatientDetailsStep';
@@ -151,6 +152,56 @@ export default function ShinglesTreatmentPage() {
 
   const blockingAlerts = alerts.filter((a) => a.blocking);
   const isBlocked = blockingAlerts.length > 0;
+
+  // ─── Consultation Record Data (for saving to database) ───
+  const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    return {
+      patient: {
+        firstName: patientDetails.firstName,
+        lastName: patientDetails.lastName,
+        dateOfBirth: patientDetails.dateOfBirth,
+        nhsNumber: patientDetails.nhsNumber,
+        phone: patientDetails.phone,
+        email: patientDetails.email,
+        address: patientDetails.address,
+        gpName: patientDetails.gpName,
+        gpPractice: patientDetails.gpPractice,
+      },
+      clinicalData: {
+        patientDetails,
+        consent,
+        symptoms,
+        medicalHistory,
+        medicineSelection,
+        counselling,
+        alerts,
+      } as unknown as Record<string, unknown>,
+      outcome: isBlocked ? 'not_supplied' : 'completed',
+      medicine: {
+        name: medicineSelection.medicine,
+        dose: medicineSelection.dose,
+        duration: medicineSelection.duration,
+        quantity: medicineSelection.quantity?.toString(),
+      },
+      summary: {
+        pharmacistName: summary.pharmacistName,
+        pharmacistGPhC: summary.pharmacistGPhC,
+        consultationDate: summary.consultationDate,
+        consultationTime: summary.consultationTime,
+      },
+    };
+  }, [patientDetails, consent, symptoms, medicalHistory, medicineSelection, counselling, alerts, isBlocked, summary]);
+
+  const handleNewConsultation = useCallback(() => {
+    setCurrentStep(0);
+    setCompletedSteps(new Set());
+    setPatientDetails(initialPatientDetails as ShinglesPatientDetails);
+    setConsent(initialConsent as ShinglesConsent);
+    setSymptoms(initialShinglesSymptoms());
+    setMedicalHistory(initialShinglesMedicalHistory());
+    setMedicineSelection(initialShinglesMedicineSelection());
+    setCounselling(initialShinglesCounselling());
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
@@ -324,6 +375,8 @@ export default function ShinglesTreatmentPage() {
               totalSteps={STEP_LABELS.length}
               onNext={handleNext}
               onPrev={handlePrev}
+              getConsultationData={getConsultationData}
+              onNewConsultation={handleNewConsultation}
             />
           )}
         </div>

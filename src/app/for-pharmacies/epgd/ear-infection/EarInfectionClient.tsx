@@ -12,6 +12,7 @@ import type { ClinicalAlert } from "../shared/types";
 
 export default function EarInfectionClient() {
   const [currentStep, setCurrentStep] = useState(0);
+  const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [state, setState] = useState({
     patient: {
       firstName: "",
@@ -184,13 +185,23 @@ export default function EarInfectionClient() {
 
   const hasStopAlerts = alerts.some((a) => a.severity === "stop");
 
-  const handleNext = useCallback(
-    () => setCurrentStep((prev) => Math.min(prev + 1, 6)),
-    []
-  );
+  const handleNext = useCallback(() => {
+    setCompletedSteps((prev) => new Set([...prev, currentStep]));
+    setCurrentStep((prev) => Math.min(prev + 1, 6));
+  }, [currentStep]);
+
   const handlePrev = useCallback(
     () => setCurrentStep((prev) => Math.max(prev - 1, 0)),
     []
+  );
+
+  const handleStepClick = useCallback(
+    (step: number) => {
+      if (completedSteps.has(step) || step <= currentStep) {
+        setCurrentStep(step);
+      }
+    },
+    [completedSteps, currentStep]
   );
 
   const stepTitles = [
@@ -202,6 +213,75 @@ export default function EarInfectionClient() {
     "Summary",
     "Consultation Complete",
   ];
+
+  const handleNewConsultation = useCallback(() => {
+    setCurrentStep(0);
+    setCompletedSteps(new Set());
+    setState({
+      patient: {
+        firstName: "",
+        lastName: "",
+        dateOfBirth: "",
+        age: null as number | null,
+        gpName: "",
+        gpPractice: "",
+        nhsNumber: "",
+        address: "",
+        phone: "",
+        email: "",
+      },
+      consent: {
+        informedConsentGiven: false,
+        idVerified: false,
+        idType: "",
+        patientAwarePrivateService: false,
+      },
+      assessment: {
+        earAffected: "" as "" | "left" | "right" | "both",
+        symptomDuration: "" as "" | "<48h" | "2-7d" | ">7d" | ">14d",
+        earPain: false,
+        discharge: false,
+        reducedHearing: false,
+        itching: false,
+        earSurgeryHistory: false,
+        grommetsInPlace: false,
+        foreignBodySuspected: false,
+        quinoloneAllergy: false,
+        otherEarDrops: false,
+        immunosuppressed: false,
+        highTemperature: false,
+        pregnancy: false,
+      },
+      treatment: {
+        dose: "0.25ml (one single-dose container)",
+        frequency: "Twice daily",
+        duration: 7,
+        quantity: "1 box (10 single-dose containers)",
+        batchNumber: "",
+        expiryDate: "",
+      },
+      counselling: {
+        warmDrops: false,
+        liedPosition: false,
+        instilTechnique: false,
+        completeCourse: false,
+        avoidWater: false,
+        seekAdvice: false,
+      },
+      summary: {
+        pharmacistName: "",
+        pharmacistGPhC: "",
+        pharmacyName: "",
+        pharmacyAddress: "",
+        consultationDate: new Date().toISOString().split("T")[0],
+        consultationTime: new Date().toLocaleTimeString("en-GB", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        clinicalNotes: "",
+      },
+    });
+  }, []);
 
 
   // ─── Consultation Record Data (for saving to database) ───
@@ -231,7 +311,13 @@ export default function EarInfectionClient() {
 
   return (
     <div className="space-y-6">
-      <ProgressBar current={currentStep + 1} total={7} />
+      <ProgressBar
+        stepLabels={stepTitles}
+        currentStep={currentStep}
+        onStepClick={handleStepClick}
+        completedSteps={completedSteps}
+        hasErrors={currentStep === 2 && hasStopAlerts}
+      />
       <StepWrapper
         title={stepTitles[currentStep]}
         currentStep={currentStep}
@@ -245,7 +331,9 @@ export default function EarInfectionClient() {
             ? "Cannot proceed: contraindications present"
             : null
         }
-       getConsultationData={getConsultationData}>
+        getConsultationData={getConsultationData}
+        onNewConsultation={handleNewConsultation}
+      >
         {/* Step 0: Patient Details */}
         {currentStep === 0 && (
           <PatientDetailsStep

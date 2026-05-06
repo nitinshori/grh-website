@@ -22,6 +22,7 @@ import {
   calculateDoseRecommendation,
 } from "./lib/ed-clinical-logic";
 import { validateStep, calculateAge } from "./lib/ed-validation";
+import type { ConsultationRecordData } from "../shared/hooks/useConsultationTracking";
 import { EDProgressBar } from "./components/EDProgressBar";
 import { EDStepWrapper } from "./components/EDStepWrapper";
 import { EDAlertBanner } from "./components/EDAlertBanner";
@@ -428,6 +429,37 @@ export function EDToolClient() {
     },
     [completedSteps, state.currentStep]
   );
+
+  // ─── Consultation Record Data (for saving to database) ───
+  const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    return {
+      patient: {
+        firstName: state.patient.firstName,
+        lastName: state.patient.lastName,
+        dateOfBirth: state.patient.dateOfBirth,
+        nhsNumber: state.patient.nhsNumber,
+        phone: state.patient.phone,
+        email: state.patient.email,
+        address: state.patient.address,
+        gpName: state.patient.gpName,
+        gpPractice: state.patient.gpPractice,
+      },
+      clinicalData: state as unknown as Record<string, unknown>,
+      outcome: isBlocked ? "not_supplied" : "completed",
+      summary: {
+        pharmacistName: state.summary.pharmacistName,
+        pharmacistGPhC: state.summary.pharmacistGPhC,
+        consultationDate: state.summary.consultationDate,
+        consultationTime: state.summary.consultationTime,
+      },
+    };
+  }, [state, isBlocked]);
+
+  const handleNewConsultation = useCallback(() => {
+    dispatch({ type: "RESET" });
+    setCompletedSteps(new Set());
+    setValidationError(null);
+  }, []);
 
   // Helper to update nested fields
   const updatePatient = (field: keyof PatientDetails, value: PatientDetails[keyof PatientDetails]) =>
@@ -1296,25 +1328,11 @@ export function EDToolClient() {
         canProceed={true}
         validationError={validationError}
         isBlocked={isBlocked}
+        getConsultationData={getConsultationData}
+        onNewConsultation={handleNewConsultation}
       >
         {renderStep()}
       </EDStepWrapper>
-
-      {/* New consultation button */}
-      {state.currentStep === 9 && (
-        <div className="text-center">
-          <button
-            onClick={() => {
-              dispatch({ type: "RESET" });
-              setCompletedSteps(new Set());
-              setValidationError(null);
-            }}
-            className="text-sm text-gray-500 hover:text-navy-900 underline transition-colors"
-          >
-            Start new consultation
-          </button>
-        </div>
-      )}
     </div>
   );
 }
