@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { PgdPageActions } from "@/components/PgdPageActions";
 import { ProgressBar } from '../shared/components/ProgressBar';
 import Link from 'next/link';
 import { AlertBanner } from '../shared/components/AlertBanner';
@@ -30,7 +31,6 @@ import {
   ShinglesSummary,
 } from './shingles-types';
 import {
-import { PgdPageActions } from "@/components/PgdPageActions";
   generateClinicalAlerts,
   canProceedToMedicineSelection,
 } from './shingles-clinical-logic';
