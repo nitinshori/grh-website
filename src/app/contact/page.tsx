@@ -147,7 +147,7 @@ export default function ContactPage() {
                     Is there a contract?
                   </p>
                   <p className="text-gray-500">
-                    Annual subscription. Cancel anytime — no exit fees.
+                    Minimum 12-month contract. Simple annual subscription.
                   </p>
                 </div>
                 <div>

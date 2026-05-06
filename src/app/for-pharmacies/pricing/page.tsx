@@ -45,7 +45,7 @@ const faqs = [
   },
   {
     q: "Can I cancel?",
-    a: "You can cancel at the end of your annual term. All your consultation records remain accessible and exportable. They’re your data — you keep them.",
+    a: "It’s a minimum 12-month contract — standard for clinical service agreements. You can cancel at the end of your term with 30 days’ notice. All your consultation records remain accessible and exportable. They’re your data — you keep them.",
   },
 ];
 

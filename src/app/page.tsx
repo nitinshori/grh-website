@@ -904,7 +904,7 @@ export default function HomePage() {
             <p className="text-gray-500 max-w-2xl mx-auto">
               Other providers charge &pound;2,592&ndash;&pound;2,639 per
               pharmacy per year (inc. VAT), paid upfront. With GRH you pay a
-              lower flat monthly fee + VAT &mdash; no lock-in, no upfront commitment.
+              lower flat monthly fee + VAT &mdash; minimum 12-month contract, no upfront lump sum.
             </p>
           </div>
           <SavingsCalculator compact />
