@@ -19,28 +19,8 @@ const VAT_RATE = 0.2;
 const COMPETITOR_A_ANNUAL = 2639; // all-in-one, inc. VAT
 const COMPETITOR_B_ANNUAL = 2592; // Advanced bundle inc. VAT (£2,160 + VAT)
 
-// GRH pricing tiers: £/pharmacy/month (ex-VAT)
-const GRH_PRICING = {
-  singleSite: 125, // 1–5 pharmacies (ex-VAT)
-  group: 109, // 6–15 pharmacies (ex-VAT)
-  enterprise: 99, // 16–30 pharmacies (ex-VAT)
-  // 30+ = custom
-};
-
-function getGRHTier(pharmacyCount: number): {
-  name: string;
-  monthlyPerPharmacy: number;
-} {
-  if (pharmacyCount <= 5) {
-    return { name: "Single Site", monthlyPerPharmacy: GRH_PRICING.singleSite };
-  } else if (pharmacyCount <= 15) {
-    return { name: "Group", monthlyPerPharmacy: GRH_PRICING.group };
-  } else if (pharmacyCount <= 30) {
-    return { name: "Enterprise", monthlyPerPharmacy: GRH_PRICING.enterprise };
-  } else {
-    return { name: "Network", monthlyPerPharmacy: 0 }; // Custom pricing
-  }
-}
+// GRH pricing: flat £100/pharmacy/month (ex-VAT)
+const GRH_MONTHLY_PER_PHARMACY = 100;
 
 export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
   const [pharmacyCount, setPharmacyCount] = useState(1);
@@ -54,14 +34,13 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
   const compBMonthlyEquiv = compBAnnualTotal / 12;
 
   // ── GRH costs (inc. VAT for fair comparison) ──────────────
-  const grhTier = getGRHTier(pharmacyCount);
   const isCustom = pharmacyCount > 30;
   const grhMonthlyExVat = isCustom
     ? 0
-    : grhTier.monthlyPerPharmacy * pharmacyCount;
+    : GRH_MONTHLY_PER_PHARMACY * pharmacyCount;
   const grhMonthlyFee = Math.round(grhMonthlyExVat * (1 + VAT_RATE));
   const grhAnnualFee = Math.round(grhMonthlyExVat * 12 * (1 + VAT_RATE));
-  const grhMonthlyPerPharmacyIncVat = Math.round(grhTier.monthlyPerPharmacy * (1 + VAT_RATE));
+  const grhMonthlyPerPharmacyIncVat = Math.round(GRH_MONTHLY_PER_PHARMACY * (1 + VAT_RATE));
 
   // ── Savings (vs most expensive competitor) ────────────────
   const savingVsA = compAAnnualTotal - grhAnnualFee;
@@ -112,8 +91,7 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
               className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent"
             />
             <span className="text-sm text-gray-600">
-              {pharmacyCount === 1 ? "pharmacy" : "pharmacies"} (
-              {grhTier.name} tier)
+              {pharmacyCount === 1 ? "pharmacy" : "pharmacies"}
             </span>
           </div>
         </div>
@@ -287,8 +265,8 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
                 </div>
                 {!isCustom && pharmacyCount > 1 && (
                   <p className="text-[10px] text-blue-300 mt-0.5 text-right">
-                    {grhTier.name}: &pound;{grhMonthlyPerPharmacyIncVat} &times;{" "}
-                    {pharmacyCount} inc VAT
+                    &pound;{grhMonthlyPerPharmacyIncVat} &times;{" "}
+                    {pharmacyCount} pharmacies inc VAT
                   </p>
                 )}
               </div>
@@ -348,7 +326,7 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
         {isCustom && (
           <div className="bg-white/5 border border-white/10 rounded-xl p-6 text-center">
             <p className="text-blue-200 mb-3">
-              Your network qualifies for custom Network pricing.
+              Your network qualifies for custom pricing.
             </p>
             <a
               href="/contact"
@@ -382,7 +360,7 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
                 "Built-in clinical training",
                 "Competency assessments",
                 "ePGD consultation tool",
-                "Clinical support (Mon\u2013Fri)",
+                "Clinical support (Mon–Fri)",
               ].map((item) => (
                 <div
                   key={item}
