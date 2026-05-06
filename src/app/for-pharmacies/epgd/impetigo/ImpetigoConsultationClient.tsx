@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import type { BasePatientDetails, BaseConsent, BaseSummary } from '../shared/types';
 import { calculateAge, initialSummary } from '../shared/types';
 import { ImpetigoData, ImpetigoLesionAssessment, ImpetigoMedicalHistory, ImpetigoTreatmentSelection, ImpetigoCounselling } from './impetigo-types';
@@ -14,6 +14,7 @@ import { PatientDetailsStep } from '../shared/steps/PatientDetailsStep';
 import { ConsentStep } from '../shared/steps/ConsentStep';
 import { ProgressBar } from '../shared/components/ProgressBar';
 import { StepWrapper } from '../shared/components/StepWrapper';
+import type { ConsultationRecordData } from '../shared/hooks/useConsultationTracking';
 import { AlertBanner } from '../shared/components/AlertBanner';
 import {
   calculateAgeFromDOB,
@@ -289,6 +290,45 @@ export function ImpetigoConsultationClient() {
     window.print();
   };
 
+  // ─── Consultation Record Data (for saving to database) ───
+  const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    return {
+      patient: {
+        firstName: data.patientDetails.firstName,
+        lastName: data.patientDetails.lastName,
+        dateOfBirth: data.patientDetails.dateOfBirth,
+        nhsNumber: data.patientDetails.nhsNumber,
+        phone: data.patientDetails.phone,
+        email: data.patientDetails.email,
+        address: data.patientDetails.address,
+        gpName: data.patientDetails.gpName,
+        gpPractice: data.patientDetails.gpPractice,
+      },
+      clinicalData: data as unknown as Record<string, unknown>,
+      outcome: shouldRefer ? "not_supplied" : "completed",
+      summary: {
+        pharmacistName: data.summary.pharmacistName,
+        pharmacistGPhC: data.summary.pharmacistGPhC,
+        consultationDate: data.summary.consultationDate,
+        consultationTime: data.summary.consultationTime,
+      },
+    };
+  }, [data, shouldRefer]);
+
+  const handleNewConsultation = useCallback(() => {
+    setCurrentStep(0);
+    setCompletedSteps(new Set());
+    setData({
+      patientDetails: INITIAL_PATIENT_DETAILS,
+      consent: INITIAL_CONSENT,
+      lesionAssessment: INITIAL_LESION_ASSESSMENT,
+      medicalHistory: INITIAL_MEDICAL_HISTORY,
+      treatmentSelection: INITIAL_TREATMENT_SELECTION,
+      counselling: INITIAL_COUNSELLING,
+      summary: initialSummary(),
+    });
+  }, []);
+
   const handleReset = () => {
     if (window.confirm('Are you sure you want to start a new consultation?')) {
       setCurrentStep(0);
@@ -346,6 +386,8 @@ export function ImpetigoConsultationClient() {
             canProceed={canProceedToNextStep(currentStep)}
             validationError={getValidationError(currentStep)}
             isBlocked={isBlockedByReferral}
+            getConsultationData={getConsultationData}
+            onNewConsultation={handleNewConsultation}
           >
             {currentStep === 0 && (
               <PatientDetailsStep

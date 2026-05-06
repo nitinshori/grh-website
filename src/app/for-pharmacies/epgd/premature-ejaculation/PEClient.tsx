@@ -22,6 +22,7 @@ import { validateStep } from "./lib/pe-validation";
 import { calculateAge } from "../shared/types";
 import { ProgressBar } from "../shared/components/ProgressBar";
 import { StepWrapper } from "../shared/components/StepWrapper";
+import type { ConsultationRecordData } from "../shared/hooks/useConsultationTracking";
 import { AlertBanner } from "../shared/components/AlertBanner";
 import { PatientDetailsStep } from "../shared/steps/PatientDetailsStep";
 import { ConsentStep } from "../shared/steps/ConsentStep";
@@ -151,6 +152,32 @@ export default function PEClient() {
   }, [completedSteps, state.currentStep]);
 
   // ─── Step content rendering ───
+
+
+  // ─── Consultation Record Data (for saving to database) ───
+  const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    return {
+      patient: {
+        firstName: state.patient.firstName,
+        lastName: state.patient.lastName,
+        dateOfBirth: state.patient.dateOfBirth,
+        nhsNumber: state.patient.nhsNumber,
+        phone: state.patient.phone,
+        email: state.patient.email,
+        address: state.patient.address,
+        gpName: state.patient.gpName,
+        gpPractice: state.patient.gpPractice,
+      },
+      clinicalData: state as unknown as Record<string, unknown>,
+      outcome: hardStops ? "not_supplied" : "completed",
+      summary: {
+        pharmacistName: state.summary.pharmacistName,
+        pharmacistGPhC: state.summary.pharmacistGPhC,
+        consultationDate: state.summary.consultationDate,
+        consultationTime: state.summary.consultationTime,
+      },
+    };
+  }, [state, hardStops]);
 
   const renderStep = () => {
     switch (state.currentStep) {
@@ -648,7 +675,7 @@ export default function PEClient() {
         canProceed={canProceed}
         validationError={validationError}
         isBlocked={hardStops}
-      >
+       getConsultationData={getConsultationData}>
         {renderStep()}
       </StepWrapper>
 

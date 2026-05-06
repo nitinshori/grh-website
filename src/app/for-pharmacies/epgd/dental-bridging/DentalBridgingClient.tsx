@@ -3,6 +3,7 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { ProgressBar } from "../shared/components/ProgressBar";
 import { StepWrapper } from "../shared/components/StepWrapper";
+import type { ConsultationRecordData } from "../shared/hooks/useConsultationTracking";
 import { AlertBanner } from "../shared/components/AlertBanner";
 import { PatientDetailsStep } from "../shared/steps/PatientDetailsStep";
 import { ConsentStep } from "../shared/steps/ConsentStep";
@@ -171,6 +172,32 @@ export default function DentalBridgingClient() {
     "Consultation Complete",
   ];
 
+
+  // ─── Consultation Record Data (for saving to database) ───
+  const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    return {
+      patient: {
+        firstName: state.patient.firstName,
+        lastName: state.patient.lastName,
+        dateOfBirth: state.patient.dateOfBirth,
+        nhsNumber: state.patient.nhsNumber,
+        phone: state.patient.phone,
+        email: state.patient.email,
+        address: state.patient.address,
+        gpName: state.patient.gpName,
+        gpPractice: state.patient.gpPractice,
+      },
+      clinicalData: state as unknown as Record<string, unknown>,
+      outcome: "completed",
+      summary: {
+        pharmacistName: state.summary.pharmacistName,
+        pharmacistGPhC: state.summary.pharmacistGPhC,
+        consultationDate: state.summary.consultationDate,
+        consultationTime: state.summary.consultationTime,
+      },
+    };
+  }, [state]);
+
   return (
     <div className="space-y-6">
       <ProgressBar current={currentStep + 1} total={7} />
@@ -187,7 +214,7 @@ export default function DentalBridgingClient() {
         onPrev={handlePrev}
         canProceed={currentStep === 2 ? canProceedFromAssessment : true}
         validationError={currentStep === 2 && !canProceedFromAssessment ? "Complete required fields and resolve clinical alerts" : null}
-      >
+       getConsultationData={getConsultationData}>
         {currentStep === 0 && (
           <PatientDetailsStep
             patient={state.patient}

@@ -8,6 +8,7 @@ import { validateStep } from "./lib/sleep-melatonin-validation";
 import { calculateAge } from "../shared/types";
 import { ProgressBar } from "../shared/components/ProgressBar";
 import { StepWrapper } from "../shared/components/StepWrapper";
+import type { ConsultationRecordData } from "../shared/hooks/useConsultationTracking";
 import { AlertBanner } from "../shared/components/AlertBanner";
 import { PatientDetailsStep } from "../shared/steps/PatientDetailsStep";
 import { ConsentStep } from "../shared/steps/ConsentStep";
@@ -74,11 +75,54 @@ export default function SleepMelatoninClient() {
 
   const canProceed = validateStep(state.currentStep, state) === null;
 
+
+  // ─── Consultation Record Data (for saving to database) ───
+  const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    return {
+      patient: {
+        firstName: state.patient.firstName,
+        lastName: state.patient.lastName,
+        dateOfBirth: state.patient.dateOfBirth,
+        nhsNumber: state.patient.nhsNumber,
+        phone: state.patient.phone,
+        email: state.patient.email,
+        address: state.patient.address,
+        gpName: state.patient.gpName,
+        gpPractice: state.patient.gpPractice,
+      },
+      clinicalData: state as unknown as Record<string, unknown>,
+      outcome: isBlocked ? "not_supplied" : "completed",
+      summary: {
+        pharmacistName: state.summary.pharmacistName,
+        pharmacistGPhC: state.summary.pharmacistGPhC,
+        consultationDate: state.summary.consultationDate,
+        consultationTime: state.summary.consultationTime,
+      },
+    };
+  }, [state, isBlocked]);
+
   if (state.currentStep === TOTAL_STEPS - 1) {
     return (
       <div className="space-y-6">
-        <ProgressBar current={state.currentStep + 1} total={TOTAL_STEPS} />
-        <SleepMelatoninSummaryReport state={state} alerts={alerts} />
+        <ProgressBar
+          currentStep={state.currentStep}
+          totalSteps={TOTAL_STEPS}
+          stepLabels={STEP_LABELS}
+          completedSteps={completedSteps}
+          onStepClick={handleStepClick}
+        />
+        <StepWrapper
+          currentStep={state.currentStep}
+          totalSteps={TOTAL_STEPS}
+          title={STEP_LABELS[state.currentStep]}
+          onNext={handleNext}
+          onPrev={handlePrev}
+          canProceed={true}
+          validationError={null}
+            getConsultationData={getConsultationData}
+        >
+          <SleepMelatoninSummaryReport state={state} alerts={alerts} />
+        </StepWrapper>
       </div>
     );
   }

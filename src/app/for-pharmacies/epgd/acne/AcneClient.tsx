@@ -21,6 +21,7 @@ import {
 } from "./lib/acne-clinical-logic";
 import { validateStep } from "./lib/acne-validation";
 import { calculateAge } from "../shared/types";
+import type { ConsultationRecordData } from "../shared/hooks/useConsultationTracking";
 import { ProgressBar } from "../shared/components/ProgressBar";
 import { StepWrapper } from "../shared/components/StepWrapper";
 import { AlertBanner } from "../shared/components/AlertBanner";
@@ -161,6 +162,42 @@ export default function AcneClient() {
       dispatch({ type: "SET_STEP", step });
     }
   };
+
+  // ─── Consultation Record Data (for saving to database) ───
+  const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    return {
+      patient: {
+        firstName: state.patient.firstName,
+        lastName: state.patient.lastName,
+        dateOfBirth: state.patient.dateOfBirth,
+        nhsNumber: state.patient.nhsNumber,
+        phone: state.patient.phone,
+        email: state.patient.email,
+        address: state.patient.address,
+        gpName: state.patient.gpName,
+        gpPractice: state.patient.gpPractice,
+      },
+      clinicalData: state as unknown as Record<string, unknown>,
+      outcome: hasStops ? "not_supplied" : "completed",
+      medicine: {
+        name: state.medicineSelection?.medicine,
+        dose: state.medicineSelection?.dose,
+        duration: state.medicineSelection?.duration,
+        quantity: state.medicineSelection?.quantity,
+      },
+      summary: {
+        pharmacistName: state.summary.pharmacistName,
+        pharmacistGPhC: state.summary.pharmacistGPhC,
+        consultationDate: state.summary.consultationDate,
+        consultationTime: state.summary.consultationTime,
+      },
+    };
+  }, [state, hasStops]);
+
+  const handleNewConsultation = useCallback(() => {
+    dispatch({ type: "RESET" });
+    setCompletedSteps(new Set());
+  }, []);
 
   // Handle patient field change
   const handlePatientChange = (field: keyof AcnePatientDetails, value: any) => {
@@ -497,6 +534,8 @@ export default function AcneClient() {
             onPrev={handlePrevStep}
             canProceed={canProceed}
             validationError={validationError}
+            getConsultationData={getConsultationData}
+            onNewConsultation={handleNewConsultation}
           >
             <div className="space-y-4">
               <TextInput

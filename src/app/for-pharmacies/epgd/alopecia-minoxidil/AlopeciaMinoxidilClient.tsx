@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { ProgressBar } from "../shared/components/ProgressBar";
 import { StepWrapper } from "../shared/components/StepWrapper";
+import type { ConsultationRecordData } from "../shared/hooks/useConsultationTracking";
 import { PatientDetailsStep } from "../shared/steps/PatientDetailsStep";
 import { ConsentStep } from "../shared/steps/ConsentStep";
 import { TextInput, TextArea } from "../shared/components/FormInputs";
@@ -16,10 +17,36 @@ export default function AlopeciaMinoxidilClient() {
   });
   const handleNext = useCallback(() => setCurrentStep(prev => Math.min(prev + 1, 6)), []);
   const handlePrev = useCallback(() => setCurrentStep(prev => Math.max(prev - 1, 0)), []);
+
+  // ─── Consultation Record Data (for saving to database) ───
+  const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    return {
+      patient: {
+        firstName: state.patient.firstName,
+        lastName: state.patient.lastName,
+        dateOfBirth: state.patient.dateOfBirth,
+        nhsNumber: state.patient.nhsNumber,
+        phone: state.patient.phone,
+        email: state.patient.email,
+        address: state.patient.address,
+        gpName: state.patient.gpName,
+        gpPractice: state.patient.gpPractice,
+      },
+      clinicalData: state as unknown as Record<string, unknown>,
+      outcome: "completed",
+      summary: {
+        pharmacistName: state.summary.pharmacistName,
+        pharmacistGPhC: state.summary.pharmacistGPhC,
+        consultationDate: state.summary.consultationDate,
+        consultationTime: state.summary.consultationTime,
+      },
+    };
+  }, [state]);
+
   return (
     <div className="space-y-6">
       <ProgressBar current={currentStep + 1} total={7} />
-      <StepWrapper title={["Patient Details", "Consent", "Assessment", "Treatment", "Counselling", "Summary", "Consultation Complete"][currentStep]} currentStep={currentStep} totalSteps={7} onNext={handleNext} onPrev={handlePrev} canProceed={true} validationError={null}>
+      <StepWrapper title={["Patient Details", "Consent", "Assessment", "Treatment", "Counselling", "Summary", "Consultation Complete"][currentStep]} currentStep={currentStep} totalSteps={7} onNext={handleNext} onPrev={handlePrev} canProceed={true} validationError={null} getConsultationData={getConsultationData}>
         {currentStep === 0 && <PatientDetailsStep patient={state.patient} onChange={(field, value) => setState(prev => ({ ...prev, patient: { ...prev.patient, [field]: value } }))} />}
         {currentStep === 1 && <ConsentStep consent={state.consent} onChange={(field, value) => setState(prev => ({ ...prev, consent: { ...prev.consent, [field]: value } }))} />}
         {currentStep === 5 && (

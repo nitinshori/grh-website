@@ -19,6 +19,7 @@ import { validateStep } from "./lib/sti-validation";
 import { calculateAge } from "../shared/types";
 import { ProgressBar } from "../shared/components/ProgressBar";
 import { StepWrapper } from "../shared/components/StepWrapper";
+import type { ConsultationRecordData } from "../shared/hooks/useConsultationTracking";
 import { AlertBanner } from "../shared/components/AlertBanner";
 import { ConsentStep } from "../shared/steps/ConsentStep";
 import { STISummaryReport } from "./components/STISummaryReport";
@@ -131,6 +132,32 @@ export default function STIClient() {
   }, [completedSteps, state.currentStep]);
 
   // ─── Step content rendering ───
+
+
+  // ─── Consultation Record Data (for saving to database) ───
+  const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    return {
+      patient: {
+        firstName: state.patient.firstName,
+        lastName: state.patient.lastName,
+        dateOfBirth: state.patient.dateOfBirth,
+        nhsNumber: state.patient.nhsNumber,
+        phone: state.patient.phone,
+        email: state.patient.email,
+        address: state.patient.address,
+        gpName: state.patient.gpName,
+        gpPractice: state.patient.gpPractice,
+      },
+      clinicalData: state as unknown as Record<string, unknown>,
+      outcome: "completed",
+      summary: {
+        pharmacistName: state.summary.pharmacistName,
+        pharmacistGPhC: state.summary.pharmacistGPhC,
+        consultationDate: state.summary.consultationDate,
+        consultationTime: state.summary.consultationTime,
+      },
+    };
+  }, [state]);
 
   const renderStep = () => {
     switch (state.currentStep) {
@@ -742,7 +769,7 @@ export default function STIClient() {
         onPrev={handlePrev}
         canProceed={canProceed}
         validationError={validationError}
-      >
+       getConsultationData={getConsultationData}>
         {renderStep()}
       </StepWrapper>
     </div>

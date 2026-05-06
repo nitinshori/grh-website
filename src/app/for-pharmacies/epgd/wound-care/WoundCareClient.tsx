@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { ProgressBar } from "../shared/components/ProgressBar";
 import { StepWrapper } from "../shared/components/StepWrapper";
+import type { ConsultationRecordData } from "../shared/hooks/useConsultationTracking";
 import { AlertBanner } from "../shared/components/AlertBanner";
 import { PatientDetailsStep } from "../shared/steps/PatientDetailsStep";
 import { ConsentStep } from "../shared/steps/ConsentStep";
@@ -225,6 +226,32 @@ export default function WoundCareClient() {
 
   const hasStopAlerts = alerts.some(a => a.severity === "stop");
 
+
+  // ─── Consultation Record Data (for saving to database) ───
+  const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    return {
+      patient: {
+        firstName: state.patient.firstName,
+        lastName: state.patient.lastName,
+        dateOfBirth: state.patient.dateOfBirth,
+        nhsNumber: state.patient.nhsNumber,
+        phone: state.patient.phone,
+        email: state.patient.email,
+        address: state.patient.address,
+        gpName: state.patient.gpName,
+        gpPractice: state.patient.gpPractice,
+      },
+      clinicalData: state as unknown as Record<string, unknown>,
+      outcome: "completed",
+      summary: {
+        pharmacistName: state.summary.pharmacistName,
+        pharmacistGPhC: state.summary.pharmacistGPhC,
+        consultationDate: state.summary.consultationDate,
+        consultationTime: state.summary.consultationTime,
+      },
+    };
+  }, [state]);
+
   return (
     <div className="space-y-6">
       <ProgressBar current={currentStep + 1} total={7} />
@@ -236,7 +263,7 @@ export default function WoundCareClient() {
         onPrev={handlePrev}
         canProceed={currentStep === 3 ? !hasStopAlerts : true}
         validationError={getValidationError()}
-      >
+       getConsultationData={getConsultationData}>
         {currentStep === 0 && (
           <PatientDetailsStep
             patient={state.patient}

@@ -7,6 +7,7 @@ import { validateStep } from "./lib/bv-validation";
 import { calculateAge } from "../shared/types";
 import { ProgressBar } from "../shared/components/ProgressBar";
 import { StepWrapper } from "../shared/components/StepWrapper";
+import type { ConsultationRecordData } from "../shared/hooks/useConsultationTracking";
 import { AlertBanner } from "../shared/components/AlertBanner";
 import { PatientDetailsStep } from "../shared/steps/PatientDetailsStep";
 import { ConsentStep } from "../shared/steps/ConsentStep";
@@ -97,6 +98,36 @@ export default function BVClient() {
     if (step < state.currentStep) dispatch({ type: "SET_STEP", step });
   };
 
+  // ─── Consultation Record Data (for saving to database) ───
+  const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    return {
+      patient: {
+        firstName: state.patient.firstName,
+        lastName: state.patient.lastName,
+        dateOfBirth: state.patient.dateOfBirth,
+        nhsNumber: state.patient.nhsNumber,
+        phone: state.patient.phone,
+        email: state.patient.email,
+        address: state.patient.address,
+        gpName: state.patient.gpName,
+        gpPractice: state.patient.gpPractice,
+      },
+      clinicalData: state as unknown as Record<string, unknown>,
+      outcome: hasStops ? "not_supplied" : "completed",
+      summary: {
+        pharmacistName: state.summary.pharmacistName,
+        pharmacistGPhC: state.summary.pharmacistGPhC,
+        consultationDate: state.summary.consultationDate,
+        consultationTime: state.summary.consultationTime,
+      },
+    };
+  }, [state, hasStops]);
+
+  const handleNewConsultation = useCallback(() => {
+    dispatch({ type: "RESET" });
+    setCompletedSteps(new Set());
+  }, []);
+
   const renderStep = () => {
     switch (state.currentStep) {
       case 0:
@@ -185,25 +216,29 @@ export default function BVClient() {
         );
       case 7:
         return (
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50"><h2 className="text-lg font-bold text-navy-900">Summary & Consultation Record</h2></div>
-            <div className="px-6 py-6">
-              <div className="space-y-4 mb-6">
-                <TextInput label="Pharmacist name" value={state.summary.pharmacistName} onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "pharmacistName", value: v })} required />
-                <TextInput label="GPhC registration number" value={state.summary.pharmacistGPhC} onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "pharmacistGPhC", value: v })} required />
-                <TextInput label="Pharmacy name" value={state.summary.pharmacyName} onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "pharmacyName", value: v })} />
-                <TextArea label="Additional clinical notes" value={state.summary.clinicalNotes} onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "clinicalNotes", value: v })} />
-              </div>
-              <div className="border-t border-gray-200 pt-6">
-                <p className="text-sm text-gray-600 mb-4">Review the summary below before printing.</p>
-                <BVSummaryReport state={updatedState} />
-              </div>
+          <StepWrapper
+            title="Summary & Consultation Record"
+            currentStep={state.currentStep}
+            totalSteps={TOTAL_STEPS}
+            onNext={handleNext}
+            onPrev={handlePrev}
+            canProceed={true}
+            validationError={null}
+            isBlocked={false}
+            getConsultationData={getConsultationData}
+            onNewConsultation={handleNewConsultation}
+          >
+            <div className="space-y-4 mb-6">
+              <TextInput label="Pharmacist name" value={state.summary.pharmacistName} onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "pharmacistName", value: v })} required />
+              <TextInput label="GPhC registration number" value={state.summary.pharmacistGPhC} onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "pharmacistGPhC", value: v })} required />
+              <TextInput label="Pharmacy name" value={state.summary.pharmacyName} onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "pharmacyName", value: v })} />
+              <TextArea label="Additional clinical notes" value={state.summary.clinicalNotes} onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "clinicalNotes", value: v })} />
             </div>
-            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/30 flex items-center justify-between">
-              <button onClick={() => dispatch({ type: "PREV_STEP" })} className="px-5 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors">&larr; Previous</button>
-              <button onClick={() => window.print()} className="px-6 py-2.5 rounded-lg text-sm font-semibold bg-navy-900 hover:bg-navy-950 text-white transition-colors">Print Consultation Record</button>
+            <div className="border-t border-gray-200 pt-6">
+              <p className="text-sm text-gray-600 mb-4">Review the summary below before printing.</p>
+              <BVSummaryReport state={updatedState} />
             </div>
-          </div>
+          </StepWrapper>
         );
       default:
         return null;
