@@ -1,6 +1,8 @@
 import PeriodDelayClient from './PeriodDelayClient';
 import { PgdPageActions } from "@/components/PgdPageActions";
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'Period Delay ePGD Consultation',
   description: 'Digital consultation tool for pharmacist-led period delay PGD (Norethisterone 5mg). Step-by-step guidance for patient assessment and treatment.',
