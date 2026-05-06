@@ -19,7 +19,6 @@ const epgds = [
   { slug: 'trt', title: 'Testosterone Replacement', subtitle: 'Testosterone Undecanoate / Gel', category: "Men's Health", color: 'bg-blue-500' },
 
   // ── Women's Health ──
-  { slug: 'uti', title: 'UTI Treatment', subtitle: 'Nitrofurantoin & Trimethoprim', category: "Women's Health", color: 'bg-pink-500' },
   { slug: 'emergency-contraception', title: 'Emergency Contraception', subtitle: 'Levonorgestrel & Ulipristal', category: "Women's Health", color: 'bg-pink-500' },
   { slug: 'hrt', title: 'HRT (Menopause)', subtitle: 'Oestradiol / Combined HRT', category: "Women's Health", color: 'bg-pink-500' },
   { slug: 'thrush', title: 'Thrush (Vaginal Candidiasis)', subtitle: 'Fluconazole / Clotrimazole', category: "Women's Health", color: 'bg-pink-500' },
@@ -27,6 +26,7 @@ const epgds = [
   { slug: 'recurrent-uti', title: 'Recurrent UTI Prophylaxis', subtitle: 'Nitrofurantoin Low-Dose Prophylaxis', category: "Women's Health", color: 'bg-pink-500' },
   { slug: 'postnatal-contraception', title: 'Postnatal Contraception', subtitle: 'POP / Desogestrel Initiation', category: "Women's Health", color: 'bg-pink-500' },
   { slug: 'testosterone-women', title: 'Testosterone for Women', subtitle: 'Androfeme Cream for Menopausal Libido', category: "Women's Health", color: 'bg-pink-500' },
+  { slug: 'period-delay', title: 'Period Delay', subtitle: 'Norethisterone 5mg', category: "Women's Health", color: 'bg-pink-500' },
 
   // ── Sexual Health ──
   { slug: 'sti-testing', title: 'STI Testing & Treatment', subtitle: 'Chlamydia / Gonorrhoea / Syphilis', category: 'Sexual Health', color: 'bg-fuchsia-500' },
@@ -53,6 +53,7 @@ const epgds = [
   { slug: 'alopecia-minoxidil', title: 'Alopecia (Minoxidil)', subtitle: 'Topical Minoxidil Supply', category: 'Skin', color: 'bg-amber-500' },
 
   // ── Acute & Infection ──
+  { slug: 'uti', title: 'UTI Treatment', subtitle: 'Nitrofurantoin & Trimethoprim', category: 'Acute & Infection', color: 'bg-orange-500' },
   { slug: 'sore-throat', title: 'Sore Throat Test & Treat', subtitle: 'FeverPAIN Score + Pen V / Clarithromycin', category: 'Acute & Infection', color: 'bg-orange-500' },
   { slug: 'shingles-treatment', title: 'Shingles Acute Treatment', subtitle: 'Valaciclovir & Aciclovir', category: 'Acute & Infection', color: 'bg-orange-500' },
   { slug: 'ear-infection', title: 'Ear Infection (Otitis)', subtitle: 'Amoxicillin / Ciprofloxacin Drops', category: 'Acute & Infection', color: 'bg-orange-500' },
@@ -101,7 +102,6 @@ const epgds = [
 
   // ── Occupational Health ──
   { slug: 'hep-b-occupational', title: 'Hepatitis B (Occupational)', subtitle: 'Engerix-B / HBvaxPRO', category: 'Occupational Health', color: 'bg-violet-500' },
-  { slug: 'needlestick-pep', title: 'Needlestick PEP', subtitle: 'Post-Exposure Prophylaxis', category: 'Occupational Health', color: 'bg-violet-500' },
 
   // ── Paediatrics ──
   { slug: 'paediatric-uti', title: 'Paediatric UTI', subtitle: 'Trimethoprim / Nitrofurantoin (Paeds)', category: 'Paediatrics', color: 'bg-lime-500' },

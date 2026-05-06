@@ -11,6 +11,19 @@ export default function TravelCorePage() {
   return (
     <div className="bg-gray-50 min-h-screen">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        {/* Back to Dashboard */}
+        <div className="mb-4 print:hidden">
+          <a
+            href="/for-pharmacies/dashboard"
+            className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-teal-600 transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Dashboard
+          </a>
+        </div>
+
         <div className="mb-6">
           <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
             <a
@@ -24,6 +37,9 @@ export default function TravelCorePage() {
               Travel Health Core Package Consultation ePGD
             </span>
           </div>
+          <p className="text-xs font-semibold text-teal-700 uppercase tracking-wider mb-2">
+            For registered pharmacy professionals only
+          </p>
           <h1 className="text-2xl sm:text-3xl font-bold text-navy-900">
             Travel Health Core Package — PGD Consultation
           </h1>
