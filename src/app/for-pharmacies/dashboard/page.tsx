@@ -2,8 +2,8 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { pharmacies } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { pharmacies, consultationRecords } from '@/lib/db/schema'
+import { eq, desc } from 'drizzle-orm'
 import { getPharmacyPgdSlugs, ALL_PGDS, PGD_CATEGORIES, COMING_SOON_SLUGS } from '@/lib/pgd-access'
 import { getPharmacyStats } from '@/lib/analytics'
 import { hasPgdDocument } from '@/lib/pgd-documents'
@@ -91,6 +91,41 @@ export default async function PharmacyDashboard() {
       consultationStats = await getPharmacyStats(session.user.pharmacyId, 30)
     } catch {
       // Analytics table may not exist yet
+    }
+  }
+
+  // Fetch recent patient records
+  let recentRecords: {
+    id: string
+    pgdSlug: string
+    patientFirstName: string
+    patientLastName: string
+    patientDob: string
+    outcome: string
+    medicineSupplied: string | null
+    pharmacistName: string
+    consultationDate: Date
+  }[] = []
+  if (session.user.pharmacyId) {
+    try {
+      recentRecords = await db
+        .select({
+          id: consultationRecords.id,
+          pgdSlug: consultationRecords.pgdSlug,
+          patientFirstName: consultationRecords.patientFirstName,
+          patientLastName: consultationRecords.patientLastName,
+          patientDob: consultationRecords.patientDob,
+          outcome: consultationRecords.outcome,
+          medicineSupplied: consultationRecords.medicineSupplied,
+          pharmacistName: consultationRecords.pharmacistName,
+          consultationDate: consultationRecords.consultationDate,
+        })
+        .from(consultationRecords)
+        .where(eq(consultationRecords.pharmacyId, session.user.pharmacyId))
+        .orderBy(desc(consultationRecords.consultationDate))
+        .limit(10)
+    } catch {
+      // Table may not exist yet
     }
   }
 
@@ -287,6 +322,15 @@ export default async function PharmacyDashboard() {
           Appointment Diary
         </Link>
         <Link
+          href="/for-pharmacies/dashboard/records"
+          className="inline-flex items-center px-5 py-2.5 rounded-lg text-sm font-semibold text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 transition-colors"
+        >
+          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+          </svg>
+          Patient Records
+        </Link>
+        <Link
           href="/for-pharmacies/pgd-catalogue"
           className="inline-flex items-center px-5 py-2.5 rounded-lg text-sm font-semibold text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 transition-colors"
         >
@@ -338,6 +382,79 @@ export default async function PharmacyDashboard() {
           </div>
         </div>
       )}
+
+      {/* Patient Records */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">
+            Patient Records
+          </h2>
+          <Link
+            href="/for-pharmacies/dashboard/records"
+            className="text-sm font-medium text-teal-600 hover:text-teal-700 transition-colors"
+          >
+            View all &rarr;
+          </Link>
+        </div>
+        {recentRecords.length === 0 ? (
+          <p className="text-sm text-gray-500 py-4 text-center">
+            No consultation records yet. Records are automatically saved when you complete an ePGD consultation.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Patient</th>
+                  <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500 uppercase tracking-wider">PGD</th>
+                  <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Medicine</th>
+                  <th className="text-left py-2 pr-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th className="text-left py-2 text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {recentRecords.map((r) => (
+                  <tr key={r.id} className="group">
+                    <td className="py-2.5 pr-4">
+                      <Link
+                        href={`/for-pharmacies/dashboard/records/${r.id}`}
+                        className="text-gray-900 font-medium group-hover:text-teal-600 transition-colors"
+                      >
+                        {r.patientFirstName} {r.patientLastName}
+                      </Link>
+                      <p className="text-xs text-gray-400">DOB: {r.patientDob}</p>
+                    </td>
+                    <td className="py-2.5 pr-4 text-gray-600">
+                      {pgdTitleMap.get(r.pgdSlug) || r.pgdSlug}
+                    </td>
+                    <td className="py-2.5 pr-4 text-gray-600">
+                      {r.medicineSupplied || '—'}
+                    </td>
+                    <td className="py-2.5 pr-4 text-gray-500">
+                      {new Date(r.consultationDate).toLocaleDateString('en-GB', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </td>
+                    <td className="py-2.5">
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                        r.outcome === 'completed'
+                          ? 'bg-emerald-50 text-emerald-700'
+                          : r.outcome === 'referred'
+                          ? 'bg-blue-50 text-blue-700'
+                          : 'bg-amber-50 text-amber-700'
+                      }`}>
+                        {r.outcome === 'completed' ? 'Supplied' : r.outcome === 'referred' ? 'Referred' : 'Not supplied'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       {/* PGDs by Category */}
       {assignedPgds.length === 0 ? (

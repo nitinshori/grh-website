@@ -1,9 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { useConsultationTracking } from "../hooks/useConsultationTracking";
+import {
+  useConsultationTracking,
+  type ConsultationRecordData,
+} from "../hooks/useConsultationTracking";
 
 interface StepWrapperProps {
   title: string;
@@ -16,6 +19,10 @@ interface StepWrapperProps {
   validationError: string | null;
   isBlocked?: boolean;
   children: React.ReactNode;
+  /** Return the consultation data to save. If omitted, no record is saved. */
+  getConsultationData?: () => ConsultationRecordData | null;
+  /** Called after a successful save+print or new-consultation reset */
+  onNewConsultation?: () => void;
 }
 
 export function StepWrapper({
@@ -29,8 +36,13 @@ export function StepWrapper({
   validationError,
   isBlocked = false,
   children,
+  getConsultationData,
+  onNewConsultation,
 }: StepWrapperProps) {
   const [hasAttemptedNext, setHasAttemptedNext] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
 
   // Reset attempted state when the step changes (user successfully advanced)
   useEffect(() => {
@@ -43,7 +55,41 @@ export function StepWrapper({
   // Extract pgdSlug from URL: /for-pharmacies/epgd/{slug}
   const pathname = usePathname();
   const pgdSlug = pathname.split("/").pop() || "";
-  const { markComplete } = useConsultationTracking(pgdSlug, currentStep);
+  const { markComplete, saveRecord } = useConsultationTracking(
+    pgdSlug,
+    currentStep
+  );
+
+  const handleCompleteAndSave = useCallback(async () => {
+    // Mark analytics complete
+    markComplete();
+
+    // Save clinical record if callback is provided
+    if (getConsultationData) {
+      setSaveStatus("saving");
+      const data = getConsultationData();
+      if (data) {
+        const success = await saveRecord(data);
+        setSaveStatus(success ? "saved" : "error");
+      } else {
+        setSaveStatus("error");
+      }
+    }
+
+    // Print
+    window.print();
+  }, [markComplete, getConsultationData, saveRecord]);
+
+  const handleNewConsultation = useCallback(() => {
+    if (
+      window.confirm(
+        "Start a new consultation? The current consultation data will be cleared."
+      )
+    ) {
+      setSaveStatus("idle");
+      onNewConsultation?.();
+    }
+  }, [onNewConsultation]);
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
@@ -54,8 +100,18 @@ export function StepWrapper({
             href="/for-pharmacies/dashboard"
             className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-teal-600 transition-colors"
           >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            <svg
+              className="w-3.5 h-3.5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
             </svg>
             Back to Dashboard
           </Link>
@@ -80,8 +136,37 @@ export function StepWrapper({
         </div>
       )}
 
+      {/* Save status banner on final step */}
+      {isLastStep && saveStatus !== "idle" && (
+        <div
+          className={`mx-6 mb-4 px-4 py-3 rounded-lg print:hidden ${
+            saveStatus === "saving"
+              ? "bg-blue-50 border border-blue-200"
+              : saveStatus === "saved"
+              ? "bg-green-50 border border-green-200"
+              : "bg-red-50 border border-red-200"
+          }`}
+        >
+          <p
+            className={`text-sm ${
+              saveStatus === "saving"
+                ? "text-blue-700"
+                : saveStatus === "saved"
+                ? "text-green-700"
+                : "text-red-700"
+            }`}
+          >
+            {saveStatus === "saving" && "Saving consultation record..."}
+            {saveStatus === "saved" &&
+              "Consultation record saved. You can access it from Patient Records on your dashboard."}
+            {saveStatus === "error" &&
+              "Could not save consultation record. Please print this page as a backup."}
+          </p>
+        </div>
+      )}
+
       {/* Navigation buttons */}
-      <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/30 flex items-center justify-between">
+      <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/30 flex items-center justify-between print:hidden">
         <button
           onClick={onPrev}
           disabled={isFirstStep}
@@ -124,15 +209,32 @@ export function StepWrapper({
               Next &rarr;
             </button>
           ) : (
-            <button
-              onClick={() => {
-                markComplete();
-                window.print();
-              }}
-              className="px-6 py-2.5 rounded-lg text-sm font-semibold bg-navy-900 hover:bg-navy-950 text-white transition-colors"
-            >
-              Print Consultation Record
-            </button>
+            <div className="flex items-center gap-2">
+              {/* New Consultation button — shown after save */}
+              {onNewConsultation && saveStatus === "saved" && (
+                <button
+                  onClick={handleNewConsultation}
+                  className="px-5 py-2.5 rounded-lg text-sm font-medium text-teal-600 border border-teal-300 hover:bg-teal-50 transition-colors"
+                >
+                  New Consultation
+                </button>
+              )}
+              <button
+                onClick={handleCompleteAndSave}
+                disabled={saveStatus === "saving"}
+                className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
+                  saveStatus === "saving"
+                    ? "bg-gray-300 text-gray-500 cursor-wait"
+                    : "bg-navy-900 hover:bg-navy-950 text-white"
+                }`}
+              >
+                {saveStatus === "saving"
+                  ? "Saving..."
+                  : saveStatus === "saved"
+                  ? "Print Again"
+                  : "Save & Print Record"}
+              </button>
+            </div>
           )}
         </div>
       </div>

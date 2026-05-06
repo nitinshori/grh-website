@@ -2,6 +2,7 @@
 
 import { useReducer, useState, useCallback, useMemo } from "react";
 import { calculateAge, initialConsent, initialSummary } from "../shared/types";
+import type { ConsultationRecordData } from "../shared/hooks/useConsultationTracking";
 import { ProgressBar } from "../shared/components/ProgressBar";
 import { StepWrapper } from "../shared/components/StepWrapper";
 import { AlertBanner } from "../shared/components/AlertBanner";
@@ -197,6 +198,46 @@ export function UTIToolClient() {
       setCurrentStep(step);
     }
   };
+
+  // ─── Consultation Record Data (for saving to database) ───
+
+  const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    return {
+      patient: {
+        firstName: state.patient.firstName,
+        lastName: state.patient.lastName,
+        dateOfBirth: state.patient.dateOfBirth,
+        nhsNumber: state.patient.nhsNumber,
+        phone: state.patient.phone,
+        email: state.patient.email,
+        address: state.patient.address,
+        gpName: state.patient.gpName,
+        gpPractice: state.patient.gpPractice,
+      },
+      clinicalData: state as unknown as Record<string, unknown>,
+      outcome: isBlocked ? 'not_supplied' : 'completed',
+      medicine: {
+        name: state.medicineSelection.medicine === 'nitrofurantoin'
+          ? 'Nitrofurantoin 100mg MR'
+          : 'Trimethoprim 200mg',
+        dose: state.medicineSelection.dose,
+        duration: state.medicineSelection.duration,
+        quantity: medicineQuantity.toString(),
+      },
+      summary: {
+        pharmacistName: state.summary.pharmacistName,
+        pharmacistGPhC: state.summary.pharmacistGPhC,
+        consultationDate: state.summary.consultationDate,
+        consultationTime: state.summary.consultationTime,
+      },
+    };
+  }, [state, isBlocked, medicineQuantity]);
+
+  const handleNewConsultation = useCallback(() => {
+    dispatch({ type: "RESET" });
+    setCurrentStep(0);
+    setCompletedSteps(new Set());
+  }, []);
 
   // ─── RENDER STEP CONTENT ───
 
@@ -891,6 +932,8 @@ export function UTIToolClient() {
             canProceed={validationError === null}
             validationError={validationError}
             isBlocked={false}
+            getConsultationData={getConsultationData}
+            onNewConsultation={handleNewConsultation}
           >
             {renderStepContent()}
           </StepWrapper>

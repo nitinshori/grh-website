@@ -190,6 +190,58 @@ export const appointments = pgTable('appointments', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
 
+// ── Consultation Records (Clinical Patient Data) ───────────────
+
+export const consultationOutcomeEnum = pgEnum('consultation_outcome', [
+  'completed',
+  'referred',
+  'not_supplied',
+])
+
+export const consultationRecords = pgTable('consultation_records', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  consultationId: uuid('consultation_id')
+    .references(() => pgdConsultations.id, { onDelete: 'set null' }),
+  pharmacyId: uuid('pharmacy_id')
+    .references(() => pharmacies.id, { onDelete: 'cascade' })
+    .notNull(),
+  userId: uuid('user_id')
+    .references(() => users.id, { onDelete: 'cascade' })
+    .notNull(),
+  pgdSlug: varchar('pgd_slug', { length: 255 }).notNull(),
+
+  // Patient demographics (structured for search)
+  patientFirstName: varchar('patient_first_name', { length: 100 }).notNull(),
+  patientLastName: varchar('patient_last_name', { length: 100 }).notNull(),
+  patientDob: varchar('patient_dob', { length: 10 }).notNull(),
+  patientNhsNumber: varchar('patient_nhs_number', { length: 20 }),
+  patientPhone: varchar('patient_phone', { length: 50 }),
+  patientEmail: varchar('patient_email', { length: 255 }),
+  patientAddress: text('patient_address'),
+  patientGpName: varchar('patient_gp_name', { length: 255 }),
+  patientGpPractice: varchar('patient_gp_practice', { length: 255 }),
+
+  // Full clinical data as JSON (flexible per-PGD)
+  clinicalData: text('clinical_data').notNull(),
+
+  // Outcome (structured for queries)
+  outcome: consultationOutcomeEnum('outcome').default('completed').notNull(),
+  medicineSupplied: varchar('medicine_supplied', { length: 255 }),
+  medicineDose: varchar('medicine_dose', { length: 255 }),
+  medicineDuration: varchar('medicine_duration', { length: 100 }),
+  medicineQuantity: varchar('medicine_quantity', { length: 50 }),
+
+  // Pharmacist sign-off
+  pharmacistName: varchar('pharmacist_name', { length: 255 }).notNull(),
+  pharmacistGphc: varchar('pharmacist_gphc', { length: 50 }).notNull(),
+
+  // Timestamps
+  consultationDate: timestamp('consultation_date').notNull(),
+  completedAt: timestamp('completed_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
 // ── Type exports ────────────────────────────────────────────────
 
 export type Pharmacy = typeof pharmacies.$inferSelect
@@ -210,3 +262,5 @@ export type AppointmentType = typeof appointmentTypes.$inferSelect
 export type NewAppointmentType = typeof appointmentTypes.$inferInsert
 export type ClinicianAvailability = typeof clinicianAvailability.$inferSelect
 export type NewClinicianAvailability = typeof clinicianAvailability.$inferInsert
+export type ConsultationRecord = typeof consultationRecords.$inferSelect
+export type NewConsultationRecord = typeof consultationRecords.$inferInsert
