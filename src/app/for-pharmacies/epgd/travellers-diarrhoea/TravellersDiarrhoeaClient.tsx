@@ -161,8 +161,10 @@ export function TravellersDiarrhoeaClient() {
   }, []);
 
   const handleStepClick = useCallback((step: number) => {
-    dispatch({ type: 'SET_STEP', step });
-  }, []);
+    if (completedSteps.has(step) || step <= state.currentStep) {
+      dispatch({ type: 'SET_STEP', step });
+    }
+  }, [completedSteps, state.currentStep]);
 
   // ─── Handlers by step ───
 

@@ -421,10 +421,12 @@ export function EDToolClient() {
 
   const handleStepClick = useCallback(
     (step: number) => {
-      setValidationError(null);
-      dispatch({ type: "SET_STEP", step });
+      if (completedSteps.has(step) || step <= state.currentStep) {
+        setValidationError(null);
+        dispatch({ type: "SET_STEP", step });
+      }
     },
-    []
+    [completedSteps, state.currentStep]
   );
 
   // Helper to update nested fields
