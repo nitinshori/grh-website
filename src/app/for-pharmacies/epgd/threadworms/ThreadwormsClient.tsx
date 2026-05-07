@@ -279,7 +279,7 @@ export default function ThreadwormsClient() {
         gpPractice: state.patient.gpPractice,
       },
       clinicalData: state as unknown as Record<string, unknown>,
-      outcome: hardStops ? "not_supplied" : "completed",
+      outcome: alerts.some((a) => a.severity === "stop") ? "not_supplied" : "completed",
       summary: {
         pharmacistName: state.summary.pharmacistName,
         pharmacistGPhC: state.summary.pharmacistGPhC,
@@ -287,7 +287,7 @@ export default function ThreadwormsClient() {
         consultationTime: state.summary.consultationTime,
       },
     };
-  }, [state, hardStops]);
+  }, [state, alerts]);
 
   return (
     <div className="space-y-6">
