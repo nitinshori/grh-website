@@ -445,7 +445,7 @@ export function EDToolClient() {
         gpPractice: state.patient.gpPractice,
       },
       clinicalData: state as unknown as Record<string, unknown>,
-      outcome: isBlocked ? "not_supplied" : "completed",
+      outcome: "completed",
       summary: {
         pharmacistName: state.summary.pharmacistName,
         pharmacistGPhC: state.summary.pharmacistGPhC,
@@ -453,7 +453,7 @@ export function EDToolClient() {
         consultationTime: state.summary.consultationTime,
       },
     };
-  }, [state, isBlocked]);
+  }, [state]);
 
   const handleNewConsultation = useCallback(() => {
     dispatch({ type: "RESET" });
