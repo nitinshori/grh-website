@@ -1,6 +1,6 @@
 "use client";
 
-import { useReducer, useMemo } from "react";
+import { useReducer, useMemo, useCallback } from "react";
 import type { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/types";
 import {
   validatePatientStep,
