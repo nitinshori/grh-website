@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { consultationRecords } from '@/lib/db/schema'
-import { eq, and, or, desc, ilike, sql } from 'drizzle-orm'
+import { eq, and, or, desc, ilike, sql, isNull, gte, lte } from 'drizzle-orm'
+import { audit } from '@/lib/audit'
+import { rateLimit } from '@/lib/rate-limit'
 
 /**
  * POST /api/consultation-records — save a completed consultation record
@@ -12,6 +14,11 @@ export async function POST(request: Request) {
     const session = await auth()
     if (!session?.user?.id || !session.user.pharmacyId) {
       return NextResponse.json({ error: 'Unauthorised' }, { status: 401 })
+    }
+
+    const limited = rateLimit(`save:${session.user.id}`, 60, 60_000)
+    if (!limited.ok) {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
     }
 
     const body = await request.json()
@@ -25,7 +32,6 @@ export async function POST(request: Request) {
       summary,
     } = body
 
-    // Validate required fields
     if (!pgdSlug || !patient?.firstName || !patient?.lastName || !patient?.dateOfBirth) {
       return NextResponse.json(
         { error: 'Missing required fields: pgdSlug, patient name and DOB' },
@@ -47,7 +53,6 @@ export async function POST(request: Request) {
       )
     }
 
-    // Parse consultation date
     const consultationDate = summary.consultationDate
       ? new Date(summary.consultationDate)
       : new Date()
@@ -82,6 +87,16 @@ export async function POST(request: Request) {
       })
       .returning({ id: consultationRecords.id })
 
+    await audit({
+      pharmacyId: session.user.pharmacyId,
+      userId: session.user.id,
+      userEmail: session.user.email || null,
+      action: 'record_create',
+      recordId: record.id,
+      details: { pgdSlug },
+      request,
+    })
+
     return NextResponse.json({ success: true, recordId: record.id })
   } catch (error) {
     console.error('Consultation record save error:', error)
@@ -91,7 +106,7 @@ export async function POST(request: Request) {
 
 /**
  * GET /api/consultation-records — list records for the pharmacy
- * Query params: search, pgdSlug, page, limit
+ * Query params: search, pgdSlug, page, limit, dateFrom, dateTo, outcome
  */
 export async function GET(request: Request) {
   try {
@@ -100,18 +115,47 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorised' }, { status: 401 })
     }
 
+    const limited = rateLimit(`list:${session.user.id}`, 100, 60_000)
+    if (!limited.ok) {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+    }
+
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search')?.trim()
     const pgdSlug = searchParams.get('pgdSlug')
+    const dateFrom = searchParams.get('dateFrom')
+    const dateTo = searchParams.get('dateTo')
+    const outcome = searchParams.get('outcome')
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10))
     const limit = Math.min(50, Math.max(1, parseInt(searchParams.get('limit') || '20', 10)))
     const offset = (page - 1) * limit
 
-    // Build conditions
-    const conditions = [eq(consultationRecords.pharmacyId, session.user.pharmacyId)]
+    const conditions = [
+      eq(consultationRecords.pharmacyId, session.user.pharmacyId),
+      isNull(consultationRecords.deletedAt),
+    ]
 
     if (pgdSlug) {
       conditions.push(eq(consultationRecords.pgdSlug, pgdSlug))
+    }
+
+    if (outcome === 'completed' || outcome === 'referred' || outcome === 'not_supplied') {
+      conditions.push(eq(consultationRecords.outcome, outcome))
+    }
+
+    if (dateFrom) {
+      const d = new Date(dateFrom)
+      if (!isNaN(d.getTime())) {
+        conditions.push(gte(consultationRecords.consultationDate, d))
+      }
+    }
+    if (dateTo) {
+      const d = new Date(dateTo)
+      if (!isNaN(d.getTime())) {
+        // include the entire end day
+        d.setHours(23, 59, 59, 999)
+        conditions.push(lte(consultationRecords.consultationDate, d))
+      }
     }
 
     if (search) {
@@ -120,19 +164,20 @@ export async function GET(request: Request) {
           ilike(consultationRecords.patientFirstName, `%${search}%`),
           ilike(consultationRecords.patientLastName, `%${search}%`),
           ilike(consultationRecords.patientNhsNumber, `%${search}%`),
+          ilike(consultationRecords.patientDob, `%${search}%`),
+          ilike(consultationRecords.medicineSupplied, `%${search}%`),
+          ilike(consultationRecords.pharmacistName, `%${search}%`),
         )!
       )
     }
 
     const whereClause = and(...conditions)
 
-    // Count total
     const [countResult] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(consultationRecords)
       .where(whereClause)
 
-    // Fetch records (without full clinicalData for list view)
     const records = await db
       .select({
         id: consultationRecords.id,
@@ -152,6 +197,16 @@ export async function GET(request: Request) {
       .orderBy(desc(consultationRecords.consultationDate))
       .limit(limit)
       .offset(offset)
+
+    await audit({
+      pharmacyId: session.user.pharmacyId,
+      userId: session.user.id,
+      userEmail: session.user.email || null,
+      action: 'record_list',
+      recordCount: records.length,
+      details: { search, pgdSlug, outcome, dateFrom, dateTo, page },
+      request,
+    })
 
     return NextResponse.json({
       records,

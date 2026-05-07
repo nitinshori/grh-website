@@ -79,5 +79,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   session: {
     strategy: 'jwt',
+    // Hard expiry: 12 hours regardless of activity. After this the user must
+    // log in again. Keeps unattended laptops from staying signed in overnight.
+    maxAge: 12 * 60 * 60,
+    // Sliding window: any request from the user refreshes the cookie, so an
+    // active user is never logged out mid-session, but 30 minutes of idle
+    // results in a forced re-login.
+    updateAge: 30 * 60,
   },
 })

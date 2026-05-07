@@ -26,16 +26,29 @@ export default function PatientRecordsClient({ pgdTitles }: PatientRecordsClient
   const [total, setTotal] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
   const [page, setPage] = useState(1)
-  const [search, setSearch] = useState('')
   const [searchInput, setSearchInput] = useState('')
+  const [search, setSearch] = useState('')
+  const [pgdSlug, setPgdSlug] = useState('')
+  const [outcome, setOutcome] = useState('')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
   const [loading, setLoading] = useState(true)
+  const [showFilters, setShowFilters] = useState(false)
+
+  const buildParams = useCallback(() => {
+    const params = new URLSearchParams({ page: page.toString(), limit: '20' })
+    if (search) params.set('search', search)
+    if (pgdSlug) params.set('pgdSlug', pgdSlug)
+    if (outcome) params.set('outcome', outcome)
+    if (dateFrom) params.set('dateFrom', dateFrom)
+    if (dateTo) params.set('dateTo', dateTo)
+    return params
+  }, [page, search, pgdSlug, outcome, dateFrom, dateTo])
 
   const fetchRecords = useCallback(async () => {
     setLoading(true)
     try {
-      const params = new URLSearchParams({ page: page.toString(), limit: '20' })
-      if (search) params.set('search', search)
-      const res = await fetch(`/api/consultation-records?${params}`)
+      const res = await fetch(`/api/consultation-records?${buildParams()}`)
       if (res.ok) {
         const data = await res.json()
         setRecords(data.records || [])
@@ -47,7 +60,7 @@ export default function PatientRecordsClient({ pgdTitles }: PatientRecordsClient
     } finally {
       setLoading(false)
     }
-  }, [page, search])
+  }, [buildParams])
 
   useEffect(() => {
     fetchRecords()
@@ -59,10 +72,29 @@ export default function PatientRecordsClient({ pgdTitles }: PatientRecordsClient
     setSearch(searchInput)
   }
 
+  const clearAll = () => {
+    setSearch('')
+    setSearchInput('')
+    setPgdSlug('')
+    setOutcome('')
+    setDateFrom('')
+    setDateTo('')
+    setPage(1)
+  }
+
+  const hasActiveFilters = !!(search || pgdSlug || outcome || dateFrom || dateTo)
+
+  const downloadCsv = () => {
+    const params = buildParams()
+    params.delete('page')
+    params.delete('limit')
+    window.location.href = `/api/consultation-records/export?${params.toString()}`
+  }
+
   return (
     <div>
       {/* Search bar */}
-      <form onSubmit={handleSearch} className="mb-6">
+      <form onSubmit={handleSearch} className="mb-3">
         <div className="flex gap-3">
           <div className="relative flex-1">
             <svg
@@ -80,7 +112,7 @@ export default function PatientRecordsClient({ pgdTitles }: PatientRecordsClient
             </svg>
             <input
               type="text"
-              placeholder="Search by patient name or NHS number..."
+              placeholder="Search by name, DOB, NHS number, medicine, or pharmacist..."
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
@@ -92,24 +124,94 @@ export default function PatientRecordsClient({ pgdTitles }: PatientRecordsClient
           >
             Search
           </button>
-          {search && (
+          <button
+            type="button"
+            onClick={() => setShowFilters((s) => !s)}
+            className="px-4 py-2.5 rounded-lg text-sm font-medium text-gray-700 border border-gray-300 hover:bg-gray-50 transition-colors"
+          >
+            {showFilters ? 'Hide filters' : 'Filters'}
+          </button>
+          {hasActiveFilters && (
             <button
               type="button"
-              onClick={() => { setSearch(''); setSearchInput(''); setPage(1) }}
+              onClick={clearAll}
               className="px-4 py-2.5 rounded-lg text-sm font-medium text-gray-600 border border-gray-300 hover:bg-gray-50 transition-colors"
             >
-              Clear
+              Clear all
             </button>
           )}
         </div>
       </form>
 
-      {/* Results count */}
+      {/* Advanced filters */}
+      {showFilters && (
+        <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">PGD</label>
+            <select
+              value={pgdSlug}
+              onChange={(e) => { setPgdSlug(e.target.value); setPage(1) }}
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm bg-white"
+            >
+              <option value="">All PGDs</option>
+              {Object.entries(pgdTitles)
+                .sort(([, a], [, b]) => a.localeCompare(b))
+                .map(([slug, title]) => (
+                  <option key={slug} value={slug}>{title}</option>
+                ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Outcome</label>
+            <select
+              value={outcome}
+              onChange={(e) => { setOutcome(e.target.value); setPage(1) }}
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm bg-white"
+            >
+              <option value="">All outcomes</option>
+              <option value="completed">Supplied</option>
+              <option value="referred">Referred</option>
+              <option value="not_supplied">Not supplied</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Date from</label>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => { setDateFrom(e.target.value); setPage(1) }}
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm bg-white"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Date to</label>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => { setDateTo(e.target.value); setPage(1) }}
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm bg-white"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Results count + export */}
       <div className="flex items-center justify-between mb-4">
         <p className="text-sm text-gray-500">
           {total} record{total !== 1 ? 's' : ''} found
           {search && <span> for &ldquo;{search}&rdquo;</span>}
         </p>
+        {total > 0 && (
+          <button
+            onClick={downloadCsv}
+            className="text-xs font-medium text-teal-600 hover:text-teal-700 inline-flex items-center gap-1.5"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" />
+            </svg>
+            Export {total > 5000 ? 'first 5,000' : 'all'} as CSV
+          </button>
+        )}
       </div>
 
       {/* Records table */}
@@ -122,8 +224,8 @@ export default function PatientRecordsClient({ pgdTitles }: PatientRecordsClient
         ) : records.length === 0 ? (
           <div className="p-12 text-center">
             <p className="text-gray-500">
-              {search
-                ? 'No records match your search.'
+              {hasActiveFilters
+                ? 'No records match your filters.'
                 : 'No consultation records yet. Records are automatically saved when you complete an ePGD consultation.'}
             </p>
           </div>
