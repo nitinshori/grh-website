@@ -180,10 +180,7 @@ export default function AcneClient() {
       clinicalData: state as unknown as Record<string, unknown>,
       outcome: hasStops ? "not_supplied" : "completed",
       medicine: {
-        name: state.medicineSelection?.medicine,
-        dose: state.medicineSelection?.dose,
-        duration: state.medicineSelection?.duration,
-        quantity: state.medicineSelection?.quantity,
+        name: state.medicineSelection?.medicineChoice,
       },
       summary: {
         pharmacistName: state.summary.pharmacistName,
