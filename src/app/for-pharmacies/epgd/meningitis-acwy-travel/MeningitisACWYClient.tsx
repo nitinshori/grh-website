@@ -225,7 +225,7 @@ export function MeningitisACWYClient() {
         summary,
         clinicalAlerts,
       } as unknown as Record<string, unknown>,
-      outcome: clinicalAlerts.some((a) => a.severity === 'block') ? "not_supplied" : "completed",
+      outcome: clinicalAlerts.some((a) => a.severity === 'stop') ? "not_supplied" : "completed",
       summary: {
         pharmacistName: summary.pharmacistName,
         pharmacistGPhC: summary.pharmacistGPhC,
