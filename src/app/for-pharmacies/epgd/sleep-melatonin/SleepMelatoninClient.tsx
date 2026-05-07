@@ -51,6 +51,7 @@ function reducer(state: SleepMelatoninConsultationState, action: SleepMelatoninA
 export default function SleepMelatoninClient() {
   const [state, dispatch] = useReducer(reducer, createInitialSleepMelatoninState());
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const alerts = useMemo(() => getAllAlerts(state.assessment, state.contraindications), [state.assessment, state.contraindications]);
   const isBlocked = hasHardStops(state.contraindications);
 
@@ -65,6 +66,7 @@ export default function SleepMelatoninClient() {
       return;
     }
     setValidationError(null);
+    setCompletedSteps((prev) => new Set([...prev, state.currentStep]));
     dispatch({ type: "SET_STEP", step: Math.min(state.currentStep + 1, TOTAL_STEPS - 1) });
   }, [state, isBlocked]);
 
@@ -72,6 +74,13 @@ export default function SleepMelatoninClient() {
     setValidationError(null);
     dispatch({ type: "SET_STEP", step: Math.max(state.currentStep - 1, 0) });
   }, []);
+
+  const handleStepClick = useCallback((step: number) => {
+    if (completedSteps.has(step) || step <= state.currentStep) {
+      setValidationError(null);
+      dispatch({ type: "SET_STEP", step });
+    }
+  }, [completedSteps, state.currentStep]);
 
   const canProceed = validateStep(state.currentStep, state) === null;
 
