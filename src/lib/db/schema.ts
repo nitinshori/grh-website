@@ -47,6 +47,11 @@ export const users = pgTable('users', {
   role: userRoleEnum('role').default('pharmacist').notNull(),
   pharmacyId: uuid('pharmacy_id').references(() => pharmacies.id),
   isActive: boolean('is_active').default(true).notNull(),
+  // Two-factor auth (TOTP / authenticator app). When totpEnabled is true the
+  // login flow requires a 6-digit code in addition to email + password.
+  totpSecret: varchar('totp_secret', { length: 64 }),
+  totpEnabled: boolean('totp_enabled').default(false).notNull(),
+  totpBackupCodes: text('totp_backup_codes'), // JSON array of one-use bcrypt hashes
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
@@ -240,6 +245,44 @@ export const consultationRecords = pgTable('consultation_records', {
   completedAt: timestamp('completed_at').defaultNow().notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+
+  // Soft-delete (GDPR Art. 17 right-to-erasure). Records are not visible to
+  // pharmacists once deletedAt is set; admin tooling permanently purges
+  // after a 30-day grace period.
+  deletedAt: timestamp('deleted_at'),
+  deletedBy: uuid('deleted_by').references(() => users.id, { onDelete: 'set null' }),
+  deletedReason: varchar('deleted_reason', { length: 255 }),
+})
+
+// ── Audit log ────────────────────────────────────────────────────
+// Immutable record of every read or write touching consultation records.
+// Required for CQC inspection and GDPR accountability.
+
+export const auditActionEnum = pgEnum('audit_action', [
+  'record_create',
+  'record_view',
+  'record_list',
+  'record_export',
+  'record_soft_delete',
+  'record_purge',
+  'login',
+  'login_failed',
+  'logout',
+  'password_change',
+])
+
+export const auditLogs = pgTable('audit_logs', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  pharmacyId: uuid('pharmacy_id').references(() => pharmacies.id, { onDelete: 'set null' }),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+  userEmail: varchar('user_email', { length: 255 }),
+  action: auditActionEnum('action').notNull(),
+  recordId: uuid('record_id'),         // consultation_records.id when applicable
+  recordCount: integer('record_count'), // for list/export actions
+  details: text('details'),             // JSON blob with extra context (filters, search query, etc.)
+  ipAddress: varchar('ip_address', { length: 64 }),
+  userAgent: text('user_agent'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 
 // ── Type exports ────────────────────────────────────────────────
