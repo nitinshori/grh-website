@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { usePharmacistProfile } from '../shared/hooks/usePharmacistProfile';
 import type { BasePatientDetails, BaseConsent, BaseSummary } from '../shared/types';
 import { calculateAge, initialSummary } from '../shared/types';
 import { ImpetigoData, ImpetigoLesionAssessment, ImpetigoMedicalHistory, ImpetigoTreatmentSelection, ImpetigoCounselling } from './impetigo-types';
@@ -114,6 +115,24 @@ export function ImpetigoConsultationClient() {
     counselling: INITIAL_COUNSELLING,
     summary: initialSummary(),
   });
+
+  // Auto-fill pharmacist details from logged-in user. Refires when fields
+  // are empty (e.g. after "New Consultation"), so subsequent patients fill too.
+  const __pharmProfile = usePharmacistProfile();
+  useEffect(() => {
+    if (!__pharmProfile) return;
+    if (data.summary.pharmacistName || data.summary.pharmacistGPhC) return;
+    setData((prev) => ({
+      ...prev,
+      summary: {
+        ...prev.summary,
+        pharmacistName: __pharmProfile.name,
+        pharmacistGPhC: __pharmProfile.gphcNumber,
+        pharmacyName: __pharmProfile.pharmacyName,
+        pharmacyAddress: __pharmProfile.pharmacyAddress,
+      },
+    }));
+  }, [__pharmProfile, data.summary.pharmacistName, data.summary.pharmacistGPhC]);
 
   // Calculate patient age
   const patientAge = data.patientDetails.age || (data.patientDetails.dateOfBirth ? calculateAge(data.patientDetails.dateOfBirth) : null);

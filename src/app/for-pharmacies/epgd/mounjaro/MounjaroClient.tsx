@@ -1,6 +1,6 @@
 "use client";
 
-import { useReducer, useMemo, useState, useCallback } from "react";
+import { useReducer, useMemo, useState, useCallback, useEffect } from "react";
 import type {
   MounjaroConsultationState,
   MounjaroAction,
@@ -33,6 +33,7 @@ import {
 } from "../shared/components/FormInputs";
 import { MounjaroSummaryReport } from "./components/MounjaroSummaryReport";
 
+import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 // ─── Reducer ───
 
 function reducer(state: MounjaroConsultationState, action: MounjaroAction): MounjaroConsultationState {
@@ -137,6 +138,18 @@ function reducer(state: MounjaroConsultationState, action: MounjaroAction): Moun
 
 export default function MounjaroClient() {
   const [state, dispatch] = useReducer(reducer, createInitialConsultationState());
+  // Auto-fill pharmacist details from logged-in user. Refires when fields
+  // are empty (e.g. after "New Consultation"), so subsequent patients fill too.
+  const __pharmProfile = usePharmacistProfile();
+  useEffect(() => {
+    if (!__pharmProfile) return;
+    if (state.summary.pharmacistName || state.summary.pharmacistGPhC) return;
+    dispatch({ type: "UPDATE_SUMMARY", field: "pharmacistName", value: __pharmProfile.name } as any);
+    dispatch({ type: "UPDATE_SUMMARY", field: "pharmacistGPhC", value: __pharmProfile.gphcNumber } as any);
+    dispatch({ type: "UPDATE_SUMMARY", field: "pharmacyName", value: __pharmProfile.pharmacyName } as any);
+    dispatch({ type: "UPDATE_SUMMARY", field: "pharmacyAddress", value: __pharmProfile.pharmacyAddress } as any);
+  }, [__pharmProfile, state.summary.pharmacistName, state.summary.pharmacistGPhC]);
+
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
 
   // Compute alerts and recommendations

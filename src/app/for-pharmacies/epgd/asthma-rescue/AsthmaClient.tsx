@@ -1,6 +1,6 @@
 "use client";
 
-import { useReducer, useMemo, useState, useCallback } from "react";
+import { useReducer, useMemo, useState, useCallback, useEffect } from "react";
 import type {
   AsthmaConsultationState,
   AsthmaAction,
@@ -26,6 +26,7 @@ import { AlertBanner } from "../shared/components/AlertBanner";
 import { PatientDetailsStep } from "../shared/steps/PatientDetailsStep";
 import { ConsentStep } from "../shared/steps/ConsentStep";
 import { AsthmaSummaryReport } from "./components/AsthmaSummaryReport";
+import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 import {
   TextInput,
   Checkbox,
@@ -102,6 +103,18 @@ function reducer(state: AsthmaConsultationState, action: AsthmaAction): AsthmaCo
 
 export default function AsthmaClient() {
   const [state, dispatch] = useReducer(reducer, createInitialConsultationState());
+  // Auto-fill pharmacist details from logged-in user. Refires when fields
+  // are empty (e.g. after "New Consultation"), so subsequent patients fill too.
+  const __pharmProfile = usePharmacistProfile();
+  useEffect(() => {
+    if (!__pharmProfile) return;
+    if (state.summary.pharmacistName || state.summary.pharmacistGPhC) return;
+    dispatch({ type: "UPDATE_SUMMARY", field: "pharmacistName", value: __pharmProfile.name } as any);
+    dispatch({ type: "UPDATE_SUMMARY", field: "pharmacistGPhC", value: __pharmProfile.gphcNumber } as any);
+    dispatch({ type: "UPDATE_SUMMARY", field: "pharmacyName", value: __pharmProfile.pharmacyName } as any);
+    dispatch({ type: "UPDATE_SUMMARY", field: "pharmacyAddress", value: __pharmProfile.pharmacyAddress } as any);
+  }, [__pharmProfile, state.summary.pharmacistName, state.summary.pharmacistGPhC]);
+
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
 
   // ─── Computed values ───

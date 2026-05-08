@@ -10,6 +10,7 @@ import { ConsentStep } from "../shared/steps/ConsentStep";
 import { TextInput, Checkbox, SelectInput, NumberInput, TextArea } from "../shared/components/FormInputs";
 import type { ClinicalAlert } from "../shared/types";
 
+import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 export default function DentalBridgingClient() {
   const [currentStep, setCurrentStep] = useState(0);
   const [state, setState] = useState({
@@ -55,6 +56,16 @@ export default function DentalBridgingClient() {
       clinicalNotes: "",
     },
   });
+
+  // Auto-fill pharmacist details from logged-in user. Refires when fields
+  // are empty (e.g. after "New Consultation"), so subsequent patients fill too.
+  const __pharmProfile = usePharmacistProfile();
+  useEffect(() => {
+    if (!__pharmProfile) return;
+    if ((state as any).summary?.pharmacistName || (state as any).summary?.pharmacistGPhC) return;
+    setState((prev: any) => ({ ...prev, summary: { ...(prev.summary || {}), pharmacistName: __pharmProfile.name, pharmacistGPhC: __pharmProfile.gphcNumber, pharmacyName: __pharmProfile.pharmacyName, pharmacyAddress: __pharmProfile.pharmacyAddress } }));
+  }, [__pharmProfile, (state as any).summary?.pharmacistName, (state as any).summary?.pharmacistGPhC]);
+
 
   const clinicalAlerts = useMemo<ClinicalAlert[]>(() => {
     const alerts: ClinicalAlert[] = [];

@@ -109,19 +109,21 @@ export function MeningitisACWYClient() {
     }, [])
   );
 
-  // Auto-fill pharmacist details from logged-in user profile
+  // Auto-fill pharmacist details from logged-in user profile.
+  // Refires whenever the pharmacist fields are empty (e.g. after a "New
+  // Consultation" reset), so subsequent patients also get the autofill.
   const profile = usePharmacistProfile();
   useEffect(() => {
-    if (profile) {
-      setSummary((prev) => ({
-        ...prev,
-        pharmacistName: prev.pharmacistName || profile.name,
-        pharmacistGPhC: prev.pharmacistGPhC || profile.gphcNumber,
-        pharmacyName: prev.pharmacyName || profile.pharmacyName,
-        pharmacyAddress: prev.pharmacyAddress || profile.pharmacyAddress,
-      }));
-    }
-  }, [profile]);
+    if (!profile) return;
+    if (summary.pharmacistName || summary.pharmacistGPhC) return;
+    setSummary((prev) => ({
+      ...prev,
+      pharmacistName: profile.name,
+      pharmacistGPhC: profile.gphcNumber,
+      pharmacyName: profile.pharmacyName,
+      pharmacyAddress: profile.pharmacyAddress,
+    }));
+  }, [profile, summary.pharmacistName, summary.pharmacistGPhC]);
 
   // Calculate age when DOB changes
   const handlePatientDetailsChange = useCallback(

@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
+import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 import { SmokingToolFormData, STEP_LABELS, DEFAULT_FORM_DATA, ClinicalAlert } from "./lib/smoking-types";
 import { validateStep, ValidationError } from "./lib/smoking-validation";
 import {
@@ -19,6 +20,19 @@ import { useConsultationTracking, type ConsultationRecordData } from "../shared/
 export const SmokingToolClient: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [formData, setFormData] = useState<SmokingToolFormData>(DEFAULT_FORM_DATA);
+  // Auto-fill pharmacist details from logged-in user. Refires when fields
+  // are empty (e.g. after "New Consultation"), so subsequent patients fill too.
+  const __pharmProfile = usePharmacistProfile();
+  useEffect(() => {
+    if (!__pharmProfile) return;
+    if (formData.pharmacistName || formData.pharmacistGMCNumber) return;
+    setFormData((prev) => ({
+      ...prev,
+      pharmacistName: __pharmProfile.name,
+      pharmacistGMCNumber: __pharmProfile.gphcNumber,
+      pharmacyName: __pharmProfile.pharmacyName,
+    }));
+  }, [__pharmProfile, formData.pharmacistName, formData.pharmacistGMCNumber]);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [showSummary, setShowSummary] = useState<boolean>(false);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { ProgressBar } from "../shared/components/ProgressBar";
 import { StepWrapper } from "../shared/components/StepWrapper";
 import type { ConsultationRecordData } from "../shared/hooks/useConsultationTracking";
@@ -10,6 +10,7 @@ import { ConsentStep } from "../shared/steps/ConsentStep";
 import { TextInput, Checkbox, SelectInput, TextArea } from "../shared/components/FormInputs";
 import type { ClinicalAlert } from "../shared/types";
 
+import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 interface HepBState {
   patient: { firstName: string; lastName: string; dateOfBirth: string; age: number | null; gpName: string; gpPractice: string; nhsNumber: string; address: string; phone: string; email: string };
   consent: { informedConsentGiven: boolean; idVerified: boolean; idType: string; patientAwarePrivateService: boolean };
@@ -103,6 +104,24 @@ export default function HepBOccupationalClient() {
       clinicalNotes: "",
     },
   });
+
+
+  // Auto-fill pharmacist details from logged-in user. Refires when fields
+
+  // are empty (e.g. after "New Consultation"), so subsequent patients fill too.
+
+  const __pharmProfile = usePharmacistProfile();
+
+  useEffect(() => {
+
+    if (!__pharmProfile) return;
+
+    if ((state as any).summary?.pharmacistName || (state as any).summary?.pharmacistGPhC) return;
+
+    setState((prev: any) => ({ ...prev, summary: { ...(prev.summary || {}), pharmacistName: __pharmProfile.name, pharmacistGPhC: __pharmProfile.gphcNumber, pharmacyName: __pharmProfile.pharmacyName, pharmacyAddress: __pharmProfile.pharmacyAddress } }));
+
+  }, [__pharmProfile, (state as any).summary?.pharmacistName, (state as any).summary?.pharmacistGPhC]);
+
 
   const evaluateAssessmentAlerts = useCallback(() => {
     const newAlerts: ClinicalAlert[] = [];

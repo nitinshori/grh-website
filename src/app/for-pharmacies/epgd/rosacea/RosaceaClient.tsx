@@ -1,6 +1,6 @@
 "use client";
 
-import { useReducer, useMemo, useState, useCallback } from "react";
+import { useReducer, useMemo, useState, useCallback, useEffect } from "react";
 import type { RosaceaConsultationState, RosaceaAction } from "./lib/rosacea-types";
 import { STEP_LABELS, TOTAL_STEPS, createInitialRosaceaState } from "./lib/rosacea-types";
 import { getAllAlerts, hasHardStops } from "./lib/rosacea-clinical-logic";
@@ -14,6 +14,7 @@ import { PatientDetailsStep } from "../shared/steps/PatientDetailsStep";
 import { ConsentStep } from "../shared/steps/ConsentStep";
 import { TextInput, Checkbox, SelectInput, TextArea } from "../shared/components/FormInputs";
 
+import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 function reducer(state: RosaceaConsultationState, action: RosaceaAction): RosaceaConsultationState {
   const newState = { ...state };
   switch (action.type) {
@@ -51,6 +52,18 @@ function reducer(state: RosaceaConsultationState, action: RosaceaAction): Rosace
 
 export default function RosaceaClient() {
   const [state, dispatch] = useReducer(reducer, createInitialRosaceaState());
+  // Auto-fill pharmacist details from logged-in user. Refires when fields
+  // are empty (e.g. after "New Consultation"), so subsequent patients fill too.
+  const __pharmProfile = usePharmacistProfile();
+  useEffect(() => {
+    if (!__pharmProfile) return;
+    if (state.summary.pharmacistName || state.summary.pharmacistGPhC) return;
+    dispatch({ type: "UPDATE_SUMMARY", field: "pharmacistName", value: __pharmProfile.name } as any);
+    dispatch({ type: "UPDATE_SUMMARY", field: "pharmacistGPhC", value: __pharmProfile.gphcNumber } as any);
+    dispatch({ type: "UPDATE_SUMMARY", field: "pharmacyName", value: __pharmProfile.pharmacyName } as any);
+    dispatch({ type: "UPDATE_SUMMARY", field: "pharmacyAddress", value: __pharmProfile.pharmacyAddress } as any);
+  }, [__pharmProfile, state.summary.pharmacistName, state.summary.pharmacistGPhC]);
+
   const [validationError, setValidationError] = useState<string | null>(null);
   const alerts = useMemo(() => getAllAlerts(state.assessment, state.contraindications), [state.assessment, state.contraindications]);
   const isBlocked = hasHardStops(state.contraindications);
