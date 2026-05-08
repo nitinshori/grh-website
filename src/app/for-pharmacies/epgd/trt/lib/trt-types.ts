@@ -35,7 +35,7 @@ export const TOTAL_STEPS = STEP_LABELS.length;
 
 export function createInitialConsultationState(): TRTConsultationState {
   return {
-    patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", nhsNumber: "", address: "", phone: "", email: "" },
+    patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", gpAddress: "", gpPhone: "", gpOdsCode: "", nhsNumber: "", address: "", phone: "", email: "" },
     consent: { informedConsentGiven: false, idVerified: false, idType: "", patientAwarePrivateService: false },
     assessment: { maleConfirmed: false, labConfirmedLowTestosterone: false, symptomsPresent: false, prostateCancer: false, breastCancer: false, severeCardiacDisease: false, severeHepaticDisease: false, severeRenalDisease: false, psa: null, hematocrit: null, polycythaemia: false },
     counselling: { explainedApplicationTechnique: false, discussedTransferRisk: false, discussedMonitoring: false, counselledOnSymptoms: false },

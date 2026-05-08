@@ -21,6 +21,12 @@ export interface BasePatientDetails {
   age: number | null;
   gpName: string;
   gpPractice: string;
+  /** Auto-populated by NHS ODS lookup. Defaults to "" for older records. */
+  gpAddress: string;
+  /** Auto-populated by NHS ODS lookup. Defaults to "" for older records. */
+  gpPhone: string;
+  /** ODS code (e.g. "F84662") for the matched practice — used for audit only. */
+  gpOdsCode: string;
   nhsNumber: string;
   address: string;
   phone: string;
@@ -68,6 +74,9 @@ export const initialPatientDetails: BasePatientDetails = {
   age: null,
   gpName: "",
   gpPractice: "",
+  gpAddress: "",
+  gpPhone: "",
+  gpOdsCode: "",
   nhsNumber: "",
   address: "",
   phone: "",

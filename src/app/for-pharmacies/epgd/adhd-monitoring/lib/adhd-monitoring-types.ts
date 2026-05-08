@@ -43,7 +43,7 @@ export const TOTAL_STEPS = STEP_LABELS.length;
 export function createInitialADHDMonitoringState(): ADHDMonitoringConsultationState {
   return {
     currentStep: 0,
-    patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", nhsNumber: "", address: "", phone: "", email: "" },
+    patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", gpAddress: "", gpPhone: "", gpOdsCode: "", nhsNumber: "", address: "", phone: "", email: "" },
     consent: { informedConsentGiven: false, idVerified: false, idType: "", patientAwarePrivateService: false },
     assessment: { currentMedication: "", currentDose: "", baselineHR: null, baselineBP: "", baselineWeight: null },
     monitoring: { currentHR: null, currentBP: "", currentWeight: null, appetite: "", sleepQuality: "", moodChanges: false, ticsDeveloped: false, redFlagsPresent: false },

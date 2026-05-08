@@ -12,7 +12,7 @@ import type { ClinicalAlert } from "../shared/types";
 
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 interface HepBState {
-  patient: { firstName: string; lastName: string; dateOfBirth: string; age: number | null; gpName: string; gpPractice: string; nhsNumber: string; address: string; phone: string; email: string };
+  patient: { firstName: string; lastName: string; dateOfBirth: string; age: number | null; gpName: string; gpPractice: string; gpAddress: string; gpPhone: string; gpOdsCode: string; nhsNumber: string; address: string; phone: string; email: string };
   consent: { informedConsentGiven: boolean; idVerified: boolean; idType: string; patientAwarePrivateService: boolean };
   assessment: {
     reasonForVaccination: string;
@@ -61,7 +61,7 @@ export default function HepBOccupationalClient() {
   const [alerts, setAlerts] = useState<ClinicalAlert[]>([]);
 
   const [state, setState] = useState<HepBState>({
-    patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", nhsNumber: "", address: "", phone: "", email: "" },
+    patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", gpAddress: "", gpPhone: "", gpOdsCode: "", nhsNumber: "", address: "", phone: "", email: "" },
     consent: { informedConsentGiven: false, idVerified: false, idType: "", patientAwarePrivateService: false },
     assessment: {
       reasonForVaccination: "",

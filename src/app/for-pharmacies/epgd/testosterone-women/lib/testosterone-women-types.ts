@@ -76,7 +76,7 @@ export const TOTAL_STEPS = STEP_LABELS.length;
 export function createInitialTestosteroneWomenState(): TestosteroneWomenConsultationState {
   return {
     currentStep: 0,
-    patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", nhsNumber: "", address: "", phone: "", email: "" },
+    patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", gpAddress: "", gpPhone: "", gpOdsCode: "", nhsNumber: "", address: "", phone: "", email: "" },
     consent: { informedConsentGiven: false, idVerified: false, idType: "", patientAwarePrivateService: false },
     assessment: { menopausalStatus: "", libioDysfunction: false, onHRTDuration: null, hrtType: "", femaleConfirmed: false, ageConfirmed: false },
     contraindications: { breastCancer: false, endometrialCancer: false, activeLiverDisease: false, pregnancy: false, contraindicated: false },

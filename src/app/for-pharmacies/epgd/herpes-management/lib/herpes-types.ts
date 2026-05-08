@@ -33,7 +33,7 @@ export const TOTAL_STEPS = STEP_LABELS.length;
 
 export function createInitialConsultationState(): HerpesConsultationState {
   return {
-    patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", nhsNumber: "", address: "", phone: "", email: "" },
+    patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", gpAddress: "", gpPhone: "", gpOdsCode: "", nhsNumber: "", address: "", phone: "", email: "" },
     consent: { informedConsentGiven: false, idVerified: false, idType: "", patientAwarePrivateService: false },
     assessment: { herpesDiagnosed: false, firstEpisode: false, episodeFrequency: "", severeRenalImpairment: false, pregnancyFirstEpisode: false, lesionCount: null, symptomsPresent: false, daysFromOnset: null },
     counselling: { explainedViralShedding: false, counselledOnCondoms: false, discussedDisclosure: false, counselledOnTriggers: false, providedWrittenInfo: false },

@@ -57,7 +57,7 @@ export const TOTAL_STEPS = STEP_LABELS.length;
 export function createInitialRosaceaState(): RosaceaConsultationState {
   return {
     currentStep: 0,
-    patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", nhsNumber: "", address: "", phone: "", email: "" },
+    patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", gpAddress: "", gpPhone: "", gpOdsCode: "", nhsNumber: "", address: "", phone: "", email: "" },
     consent: { informedConsentGiven: false, idVerified: false, idType: "", patientAwarePrivateService: false },
     assessment: { subtype: "", severity: "", flushing: false, erythema: false, papulesPostules: false, triggersIdentified: "" },
     contraindications: { pregnancy: false, underEighteen: false, contraindicated: false },

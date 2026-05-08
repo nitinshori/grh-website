@@ -14,7 +14,7 @@ import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 export default function EyeInfectionsClient() {
   const [currentStep, setCurrentStep] = useState(0);
   const [state, setState] = useState({
-    patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", nhsNumber: "", address: "", phone: "", email: "" },
+    patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", gpAddress: "", gpPhone: "", gpOdsCode: "", nhsNumber: "", address: "", phone: "", email: "" },
     consent: { informedConsentGiven: false, idVerified: false, idType: "", patientAwarePrivateService: false },
     assessment: {
       eyeAffected: "",

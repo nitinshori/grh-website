@@ -78,7 +78,7 @@ export const TOTAL_STEPS = STEP_LABELS.length;
 export function createInitialConsultationState(): BVConsultationState {
   return {
     currentStep: 0,
-    patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", nhsNumber: "", address: "", phone: "", email: "" },
+    patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", gpAddress: "", gpPhone: "", gpOdsCode: "", nhsNumber: "", address: "", phone: "", email: "" },
     consent: { informedConsentGiven: false, idVerified: false, idType: "", patientAwarePrivateService: false },
     assessment: { thinGrayishDischarge: false, fishyOdour: false, odourWorseSexOrMenses: false, itching: false, soreness: false, dysuria: false, dyspareunia: false, bloodStainedDischarge: false, fever: false, pelvicPain: false },
     medicalHistory: { pregnancy: false, firstEpisode: false, recurrentBV: false, activePelvicInflammation: false, planningPregnancy: false },
