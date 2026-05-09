@@ -5,6 +5,7 @@ import { consultationRecords } from '@/lib/db/schema'
 import { eq, and, isNull } from 'drizzle-orm'
 import { audit } from '@/lib/audit'
 import { rateLimit } from '@/lib/rate-limit'
+import { tryDecrypt } from '@/lib/encryption'
 
 /**
  * GET /api/consultation-records/[id] — get full record with clinical data
@@ -51,7 +52,9 @@ export async function GET(
       request,
     })
 
-    return NextResponse.json({ record })
+    // Decrypt clinical_data before returning (handles legacy plaintext too)
+    const decrypted = { ...record, clinicalData: tryDecrypt(record.clinicalData) }
+    return NextResponse.json({ record: decrypted })
   } catch (error) {
     console.error('Consultation record detail error:', error)
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })

@@ -66,3 +66,35 @@ export function decrypt(payload: string): string {
 export function isEncrypted(payload: string): boolean {
   return payload.startsWith(VERSION_PREFIX)
 }
+
+/**
+ * Encrypt if a key is configured; otherwise pass-through plaintext and log
+ * a warning. Lets us deploy the wiring before DATA_ENCRYPTION_KEY is set,
+ * then flip on encryption by populating the env var without redeploying
+ * code. Existing plaintext rows continue to read fine via the prefix check
+ * in `decrypt()`.
+ */
+export function tryEncrypt(plaintext: string): string {
+  if (!process.env.DATA_ENCRYPTION_KEY) {
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('[encryption] DATA_ENCRYPTION_KEY not set — clinical_data being stored as plaintext.')
+    }
+    return plaintext
+  }
+  try { return encrypt(plaintext) }
+  catch (e) {
+    console.error('[encryption] encrypt() failed, falling back to plaintext:', e)
+    return plaintext
+  }
+}
+
+/** Decrypt-or-passthrough: handles both encrypted and legacy plaintext rows. */
+export function tryDecrypt(payload: string): string {
+  if (!isEncrypted(payload)) return payload
+  try { return decrypt(payload) }
+  catch (e) {
+    console.error('[encryption] decrypt() failed:', e)
+    // Don't expose the encrypted blob to the user — return an empty object
+    return '{}'
+  }
+}

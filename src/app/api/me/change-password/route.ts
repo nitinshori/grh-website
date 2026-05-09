@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm'
 import bcrypt from 'bcryptjs'
 import { audit } from '@/lib/audit'
 import { rateLimit } from '@/lib/rate-limit'
+import { validatePassword, BCRYPT_COST } from '@/lib/password-policy'
 
 /**
  * POST /api/me/change-password
@@ -41,11 +42,9 @@ export async function POST(request: Request) {
       )
     }
 
-    if (typeof newPassword !== 'string' || newPassword.length < 8) {
-      return NextResponse.json(
-        { error: 'New password must be at least 8 characters' },
-        { status: 400 }
-      )
+    const v = validatePassword(newPassword)
+    if (!v.ok) {
+      return NextResponse.json({ error: v.errors.join(' · ') }, { status: 400 })
     }
 
     if (newPassword === currentPassword) {
@@ -76,7 +75,7 @@ export async function POST(request: Request) {
     }
 
     // Hash and store new password
-    const newHash = await bcrypt.hash(newPassword, 10)
+    const newHash = await bcrypt.hash(newPassword, BCRYPT_COST)
     await db
       .update(users)
       .set({ passwordHash: newHash, updatedAt: new Date() })

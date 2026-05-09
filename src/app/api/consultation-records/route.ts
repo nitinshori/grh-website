@@ -6,6 +6,7 @@ import { eq, and, or, desc, ilike, sql, isNull, gte, lte } from 'drizzle-orm'
 import { audit } from '@/lib/audit'
 import { rateLimit } from '@/lib/rate-limit'
 import { sendGpNotification } from '@/lib/gp-notification'
+import { tryEncrypt } from '@/lib/encryption'
 
 /**
  * POST /api/consultation-records — save a completed consultation record
@@ -58,6 +59,12 @@ export async function POST(request: Request) {
       ? new Date(summary.consultationDate)
       : new Date()
 
+    // Capture network fingerprint for fair-use checks (per-location billing)
+    const ipAddress =
+      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+      request.headers.get('x-real-ip') || null
+    const userAgent = request.headers.get('user-agent') || null
+
     const [record] = await db
       .insert(consultationRecords)
       .values({
@@ -74,9 +81,9 @@ export async function POST(request: Request) {
         patientAddress: patient.address?.trim() || null,
         patientGpName: patient.gpName?.trim() || null,
         patientGpPractice: patient.gpPractice?.trim() || null,
-        clinicalData: typeof clinicalData === 'string'
-          ? clinicalData
-          : JSON.stringify(clinicalData),
+        clinicalData: tryEncrypt(
+          typeof clinicalData === 'string' ? clinicalData : JSON.stringify(clinicalData)
+        ),
         outcome: outcome || 'completed',
         medicineSupplied: medicine?.name || medicine?.medicine || null,
         medicineDose: medicine?.dose || null,
@@ -85,6 +92,8 @@ export async function POST(request: Request) {
         pharmacistName: summary.pharmacistName.trim(),
         pharmacistGphc: summary.pharmacistGPhC.trim(),
         consultationDate,
+        ipAddress,
+        userAgent,
       })
       .returning({ id: consultationRecords.id })
 
