@@ -108,6 +108,36 @@ export async function getMandate(mandateId: string) {
   return out.mandates
 }
 
+interface CreateSubscriptionOptions {
+  mandateId: string
+  /** Amount in pence (e.g. 49500 = £495.00) */
+  amountPence: number
+  currency?: string                    // default 'GBP'
+  intervalUnit?: 'monthly' | 'yearly'  // default 'monthly'
+  interval?: number                    // default 1
+  name: string                         // shown to customer
+  metadata?: Record<string, string>
+}
+
+export async function createSubscription(opts: CreateSubscriptionOptions) {
+  const body = {
+    subscriptions: {
+      amount: opts.amountPence,
+      currency: opts.currency ?? 'GBP',
+      interval_unit: opts.intervalUnit ?? 'monthly',
+      interval: opts.interval ?? 1,
+      name: opts.name,
+      links: { mandate: opts.mandateId },
+      ...(opts.metadata ? { metadata: opts.metadata } : {}),
+    },
+  }
+  const out = await gcFetch<{ subscriptions: { id: string; status: string; amount: number } }>(
+    '/subscriptions',
+    { method: 'POST', body: JSON.stringify(body) },
+  )
+  return out.subscriptions
+}
+
 /**
  * Verify a GoCardless webhook signature. Compute HMAC-SHA256 of the request
  * body using GOCARDLESS_WEBHOOK_SECRET and compare to the Webhook-Signature

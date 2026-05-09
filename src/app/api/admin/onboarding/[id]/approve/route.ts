@@ -7,6 +7,7 @@ import { eq } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
 import { ALL_PGDS } from '@/lib/pgd-access'
 import { Resend } from 'resend'
+import { createSubscription } from '@/lib/gocardless'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,7 +18,7 @@ export const dynamic = 'force-dynamic'
  * directly — they're invited via email after we approve.
  */
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await auth()
@@ -26,6 +27,12 @@ export async function POST(
   }
 
   const { id } = await params
+  const body = await request.json().catch(() => ({})) as { monthlyFeePence?: number }
+  const monthlyFeePence = Number.isFinite(body.monthlyFeePence) ? Math.floor(body.monthlyFeePence as number) : null
+  if (!monthlyFeePence || monthlyFeePence < 100) {
+    return NextResponse.json({ error: 'Monthly fee (in pence) is required and must be at least £1.00' }, { status: 400 })
+  }
+
   const [req] = await db
     .select()
     .from(onboardingRequests)
@@ -34,6 +41,9 @@ export async function POST(
   if (!req) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   if (req.status === 'approved' || req.status === 'completed') {
     return NextResponse.json({ error: 'Already approved' }, { status: 409 })
+  }
+  if (!req.gocardlessMandateId) {
+    return NextResponse.json({ error: 'No GoCardless mandate on record — direct debit not set up.' }, { status: 400 })
   }
 
   // 1. Create pharmacy row
@@ -58,7 +68,27 @@ export async function POST(
     await db.insert(pharmacyPgds).values({ pharmacyId: newPharmacy.id, pgdSlug: s }).onConflictDoNothing()
   }
 
-  // 3. Generate single-use setup token (signed URL)
+  // 3. Create the GoCardless subscription with the admin-set fee
+  let subscriptionId: string | null = null
+  let subscriptionError: string | null = null
+  try {
+    const sub = await createSubscription({
+      mandateId: req.gocardlessMandateId,
+      amountPence: monthlyFeePence,
+      name: `Get Real Health monthly subscription — ${req.pharmacyName}`,
+      metadata: {
+        pharmacy_id: newPharmacy.id,
+        onboarding_id: req.id,
+      },
+    })
+    subscriptionId = sub.id
+  } catch (e) {
+    subscriptionError = e instanceof Error ? e.message : String(e)
+    // Don't abort — pharmacy is provisioned, admin can retry the subscription
+    // separately. We still mark approved so the customer can set their password.
+  }
+
+  // 4. Generate single-use setup token (signed URL)
   const rawToken = crypto.randomBytes(32).toString('hex')
   const tokenHash = await bcrypt.hash(rawToken, 10)
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
@@ -72,6 +102,8 @@ export async function POST(
       pharmacyId: newPharmacy.id,
       setupTokenHash: tokenHash,
       setupTokenExpiresAt: expiresAt,
+      monthlyFeePence,
+      gocardlessSubscriptionId: subscriptionId,
       updatedAt: new Date(),
     })
     .where(eq(onboardingRequests.id, req.id))
@@ -106,5 +138,7 @@ export async function POST(
     setupUrl,
     emailed,
     emailError,
+    subscriptionId,
+    subscriptionError,
   })
 }

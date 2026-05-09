@@ -29,12 +29,27 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
   const visible = filter === 'all' ? list : list.filter((r) => r.status === filter);
 
   async function handleApprove(id: string) {
-    if (!window.confirm("Approve this pharmacy? This will create the pharmacy + first user, assign all PGDs, and email the contact a setup link.")) return;
+    const feeStr = window.prompt("Monthly fee for this pharmacy in £ (ex. VAT)?\n\nThe customer's GoCardless mandate will be billed this amount monthly. Enter as a number, e.g. 495 for £495/month.");
+    if (feeStr === null) return;
+    const feePounds = parseFloat(feeStr.trim());
+    if (!Number.isFinite(feePounds) || feePounds < 1) {
+      alert('That doesn\'t look like a valid fee. Try again, e.g. 495');
+      return;
+    }
+    const monthlyFeePence = Math.round(feePounds * 100);
+    if (!window.confirm(`Approve this pharmacy at £${feePounds}/month?\n\nThis will:\n  • Create the pharmacy + first user, assign all PGDs\n  • Create a £${feePounds}/month subscription in GoCardless\n  • Email the contact a setup link.`)) return;
     setBusyId(id);
     try {
-      const r = await fetch(`/api/admin/onboarding/${id}/approve`, { method: 'POST' });
+      const r = await fetch(`/api/admin/onboarding/${id}/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ monthlyFeePence }),
+      });
       const body = await r.json();
       if (!r.ok) { alert(`Could not approve: ${body.error || r.status}`); return; }
+      if (body.subscriptionError) {
+        alert(`Pharmacy provisioned but the GoCardless subscription failed: ${body.subscriptionError}\n\nCreate it manually in the GoCardless dashboard.`);
+      }
       setSetupUrl(body.setupUrl || null);
       setList((prev) => prev.map((x) => x.id === id ? { ...x, status: 'approved' } : x));
     } finally { setBusyId(null); }

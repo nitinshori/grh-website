@@ -358,6 +358,9 @@ export const onboardingRequests = pgTable('onboarding_requests', {
   gocardlessCustomerId: varchar('gocardless_customer_id', { length: 100 }),
   gocardlessMandateId: varchar('gocardless_mandate_id', { length: 100 }),
   gocardlessMandateStatus: varchar('gocardless_mandate_status', { length: 50 }),
+  gocardlessSubscriptionId: varchar('gocardless_subscription_id', { length: 100 }),
+  /** Monthly fee in pence (e.g. 49500 = £495). Captured at approval time. */
+  monthlyFeePence: integer('monthly_fee_pence'),
 
   pharmacyId: uuid('pharmacy_id').references(() => pharmacies.id, { onDelete: 'set null' }),
   approvedBy: uuid('approved_by').references(() => users.id, { onDelete: 'set null' }),
