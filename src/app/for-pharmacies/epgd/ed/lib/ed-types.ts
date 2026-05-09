@@ -8,6 +8,9 @@ export interface PatientDetails {
   genderConfirmed: boolean; // must confirm male
   gpName: string;
   gpPractice: string;
+  gpAddress: string;
+  gpPhone: string;
+  gpEmail: string; gpOdsCode: string;
   nhsNumber: string;
   address: string;
   phone: string;

@@ -33,7 +33,7 @@ export const TOTAL_STEPS = STEP_LABELS.length;
 
 export function createInitialConsultationState(): GonorrhoeaConsultationState {
   return {
-    patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", nhsNumber: "", address: "", phone: "", email: "" },
+    patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", gpAddress: "", gpPhone: "", gpEmail: "", gpOdsCode: "", nhsNumber: "", address: "", phone: "", email: "" },
     consent: { informedConsentGiven: false, idVerified: false, idType: "", patientAwarePrivateService: false },
     assessment: { neatPositive: false, pharyngealGonorrhoea: false, cephalosporinAllergy: false, pregnancyStatus: "", partnerNotificationPlanned: false, testOfCurePlanned: false, coTestsOffered: false, lastSexualContact: "" },
     counselling: { counselledOnTreatment: false, discussedPartnerNotification: false, counselledOnAbstinence: false, offeredCoTesting: false, providedWrittenInfo: false },

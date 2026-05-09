@@ -1,6 +1,6 @@
 "use client";
 
-import { useReducer, useMemo, useState, useCallback } from "react";
+import { useReducer, useMemo, useState, useCallback, useEffect } from "react";
 import type {
   EDConsultationState,
   EDAction,
@@ -30,6 +30,7 @@ import { EDMedicineSelector } from "./components/EDMedicineSelector";
 import { EDCounsellingChecklist } from "./components/EDCounsellingChecklist";
 import { EDSummaryReport } from "./components/EDSummaryReport";
 
+import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 // ─── Initial state ───
 
 const initialState: EDConsultationState = {
@@ -42,6 +43,10 @@ const initialState: EDConsultationState = {
     genderConfirmed: false,
     gpName: "",
     gpPractice: "",
+    gpAddress: "",
+    gpPhone: "",
+gpEmail: "",
+    gpOdsCode: "",
     nhsNumber: "",
     address: "",
     phone: "",
@@ -392,6 +397,18 @@ function NumberInput({
 
 export function EDToolClient() {
   const [state, dispatch] = useReducer(edReducer, initialState);
+  // Auto-fill pharmacist details from logged-in user. Refires when fields
+  // are empty (e.g. after "New Consultation"), so subsequent patients fill too.
+  const __pharmProfile = usePharmacistProfile();
+  useEffect(() => {
+    if (!__pharmProfile) return;
+    if (state.summary.pharmacistName || state.summary.pharmacistGPhC) return;
+    dispatch({ type: "UPDATE_SUMMARY", field: "pharmacistName", value: __pharmProfile.name } as any);
+    dispatch({ type: "UPDATE_SUMMARY", field: "pharmacistGPhC", value: __pharmProfile.gphcNumber } as any);
+    dispatch({ type: "UPDATE_SUMMARY", field: "pharmacyName", value: __pharmProfile.pharmacyName } as any);
+    dispatch({ type: "UPDATE_SUMMARY", field: "pharmacyAddress", value: __pharmProfile.pharmacyAddress } as any);
+  }, [__pharmProfile, state.summary.pharmacistName, state.summary.pharmacistGPhC]);
+
   const [validationError, setValidationError] = useState<string | null>(null);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(
     new Set()

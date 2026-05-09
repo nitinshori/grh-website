@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   FluConsultationState,
   FluScreening,
@@ -38,6 +38,7 @@ import FluSummaryReport from './components/FluSummaryReport';
 import { BasePatientDetails, BaseConsent, BaseSummary } from '../shared/types';
 import { useConsultationTracking, type ConsultationRecordData } from '../shared/hooks/useConsultationTracking';
 
+import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 // Inline date utility function
 const calculateAge = (dateOfBirth: string): number => {
   if (!dateOfBirth) return 0;
@@ -77,6 +78,10 @@ export default function FluToolClient({
       age: null,
       gpName: '',
       gpPractice: '',
+gpAddress: '',
+gpPhone: '',
+gpEmail: '',
+gpOdsCode: '',
       nhsNumber: '',
       address: '',
       phone: '',
@@ -105,6 +110,16 @@ export default function FluToolClient({
     alerts: [],
     step: 0,
   });
+
+  // Auto-fill pharmacist details from logged-in user. Refires when fields
+  // are empty (e.g. after "New Consultation"), so subsequent patients fill too.
+  const __pharmProfile = usePharmacistProfile();
+  useEffect(() => {
+    if (!__pharmProfile) return;
+    if ((state as any).summary?.pharmacistName || (state as any).summary?.pharmacistGPhC) return;
+    setState((prev: any) => ({ ...prev, summary: { ...(prev.summary || {}), pharmacistName: __pharmProfile.name, pharmacistGPhC: __pharmProfile.gphcNumber, pharmacyName: __pharmProfile.pharmacyName, pharmacyAddress: __pharmProfile.pharmacyAddress } }));
+  }, [__pharmProfile, (state as any).summary?.pharmacistName, (state as any).summary?.pharmacistGPhC]);
+
 
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(
     new Set<number>()
@@ -574,6 +589,9 @@ export default function FluToolClient({
         age: null,
         gpName: '',
         gpPractice: '',
+        gpAddress: '',
+        gpPhone: '', gpEmail: '',
+        gpOdsCode: '',
         nhsNumber: '',
         address: '',
         phone: '',

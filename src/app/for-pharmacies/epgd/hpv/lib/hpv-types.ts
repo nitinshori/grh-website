@@ -32,7 +32,7 @@ export interface HPVConsultationState {
 
 export type HPVAction =
   | { type: "UPDATE_PATIENT"; field: keyof HPVPatientDetails; value: string | number | boolean | null }
-  | { type: "UPDATE_CONSENT"; field: keyof BaseConsent; value: string | boolean }
+  | { type: "UPDATE_CONSENT"; field: keyof BaseConsent; value: string | boolean | undefined }
   | { type: "UPDATE_ASSESSMENT"; field: keyof HPVVaccineAssessment; value: string | boolean }
   | { type: "UPDATE_COUNSELLING"; field: keyof HPVCounselling; value: boolean }
   | { type: "UPDATE_SUMMARY"; field: keyof BaseSummary; value: string }
@@ -60,6 +60,10 @@ export function createInitialConsultationState(): HPVConsultationState {
       age: null,
       gpName: "",
       gpPractice: "",
+      gpAddress: "",
+      gpPhone: "",
+gpEmail: "",
+      gpOdsCode: "",
       nhsNumber: "",
       address: "",
       phone: "",

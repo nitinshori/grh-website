@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { ProgressBar } from "../shared/components/ProgressBar";
 import { StepWrapper } from "../shared/components/StepWrapper";
 import type { ConsultationRecordData } from "../shared/hooks/useConsultationTracking";
@@ -10,8 +10,9 @@ import { ConsentStep } from "../shared/steps/ConsentStep";
 import { TextInput, Checkbox, SelectInput, TextArea } from "../shared/components/FormInputs";
 import type { ClinicalAlert } from "../shared/types";
 
+import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 interface HepBState {
-  patient: { firstName: string; lastName: string; dateOfBirth: string; age: number | null; gpName: string; gpPractice: string; nhsNumber: string; address: string; phone: string; email: string };
+  patient: { firstName: string; lastName: string; dateOfBirth: string; age: number | null; gpName: string; gpPractice: string; gpAddress: string; gpPhone: string; gpEmail: string; gpOdsCode: string; nhsNumber: string; address: string; phone: string; email: string };
   consent: { informedConsentGiven: boolean; idVerified: boolean; idType: string; patientAwarePrivateService: boolean };
   assessment: {
     reasonForVaccination: string;
@@ -60,7 +61,7 @@ export default function HepBOccupationalClient() {
   const [alerts, setAlerts] = useState<ClinicalAlert[]>([]);
 
   const [state, setState] = useState<HepBState>({
-    patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", nhsNumber: "", address: "", phone: "", email: "" },
+    patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", gpAddress: "", gpPhone: "", gpEmail: "", gpOdsCode: "", nhsNumber: "", address: "", phone: "", email: "" },
     consent: { informedConsentGiven: false, idVerified: false, idType: "", patientAwarePrivateService: false },
     assessment: {
       reasonForVaccination: "",
@@ -103,6 +104,24 @@ export default function HepBOccupationalClient() {
       clinicalNotes: "",
     },
   });
+
+
+  // Auto-fill pharmacist details from logged-in user. Refires when fields
+
+  // are empty (e.g. after "New Consultation"), so subsequent patients fill too.
+
+  const __pharmProfile = usePharmacistProfile();
+
+  useEffect(() => {
+
+    if (!__pharmProfile) return;
+
+    if ((state as any).summary?.pharmacistName || (state as any).summary?.pharmacistGPhC) return;
+
+    setState((prev: any) => ({ ...prev, summary: { ...(prev.summary || {}), pharmacistName: __pharmProfile.name, pharmacistGPhC: __pharmProfile.gphcNumber, pharmacyName: __pharmProfile.pharmacyName, pharmacyAddress: __pharmProfile.pharmacyAddress } }));
+
+  }, [__pharmProfile, (state as any).summary?.pharmacistName, (state as any).summary?.pharmacistGPhC]);
+
 
   const evaluateAssessmentAlerts = useCallback(() => {
     const newAlerts: ClinicalAlert[] = [];

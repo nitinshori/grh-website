@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   JapaneseEncephalitisConsultationState,
   JapaneseEncephalitisScreening,
@@ -40,6 +40,7 @@ import { ConsentStep } from '../shared/steps/ConsentStep';
 import JapaneseEncephalitisSummaryReport from './components/JapaneseEncephalitisSummaryReport';
 import { calculateAge, initialPatientDetails, initialConsent, initialSummary } from '../shared/types';
 
+import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 const STEP_LABELS = [
   'Patient Details',
   'Consent',
@@ -70,6 +71,16 @@ export default function JapaneseEncephalitisClient({
     alerts: [],
     step: 0,
   });
+
+  // Auto-fill pharmacist details from logged-in user. Refires when fields
+  // are empty (e.g. after "New Consultation"), so subsequent patients fill too.
+  const __pharmProfile = usePharmacistProfile();
+  useEffect(() => {
+    if (!__pharmProfile) return;
+    if ((state as any).summary?.pharmacistName || (state as any).summary?.pharmacistGPhC) return;
+    setState((prev: any) => ({ ...prev, summary: { ...(prev.summary || {}), pharmacistName: __pharmProfile.name, pharmacistGPhC: __pharmProfile.gphcNumber, pharmacyName: __pharmProfile.pharmacyName, pharmacyAddress: __pharmProfile.pharmacyAddress } }));
+  }, [__pharmProfile, (state as any).summary?.pharmacistName, (state as any).summary?.pharmacistGPhC]);
+
 
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(
     new Set<number>()

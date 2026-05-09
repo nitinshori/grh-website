@@ -1,6 +1,6 @@
 "use client";
 
-import { useReducer, useState, useCallback, useMemo } from "react";
+import { useReducer, useState, useCallback, useMemo, useEffect } from "react";
 import { calculateAge, initialConsent, initialSummary } from "../shared/types";
 import type { ConsultationRecordData } from "../shared/hooks/useConsultationTracking";
 import { ProgressBar } from "../shared/components/ProgressBar";
@@ -40,6 +40,7 @@ import {
 } from "./lib/uti-validation";
 import { UTISummaryReport } from "./components/UTISummaryReport";
 
+import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 // ─── Step Titles ───
 
 const STEP_LABELS = [
@@ -121,6 +122,29 @@ export function UTIToolClient() {
   };
 
   const [state, dispatch] = useReducer(utiReducer, initialState);
+
+  // Auto-fill pharmacist details from logged-in user. Refires when fields
+
+  // are empty (e.g. after "New Consultation"), so subsequent patients fill too.
+
+  const __pharmProfile = usePharmacistProfile();
+
+  useEffect(() => {
+
+    if (!__pharmProfile) return;
+
+    if (state.summary.pharmacistName || state.summary.pharmacistGPhC) return;
+
+    dispatch({ type: "UPDATE_SUMMARY", field: "pharmacistName", value: __pharmProfile.name } as any);
+
+    dispatch({ type: "UPDATE_SUMMARY", field: "pharmacistGPhC", value: __pharmProfile.gphcNumber } as any);
+
+    dispatch({ type: "UPDATE_SUMMARY", field: "pharmacyName", value: __pharmProfile.pharmacyName } as any);
+
+    dispatch({ type: "UPDATE_SUMMARY", field: "pharmacyAddress", value: __pharmProfile.pharmacyAddress } as any);
+
+  }, [__pharmProfile, state.summary.pharmacistName, state.summary.pharmacistGPhC]);
+
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
 

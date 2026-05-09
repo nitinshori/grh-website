@@ -21,6 +21,14 @@ export interface BasePatientDetails {
   age: number | null;
   gpName: string;
   gpPractice: string;
+  /** Auto-populated by NHS ODS lookup. Defaults to "" for older records. */
+  gpAddress: string;
+  /** Auto-populated by NHS ODS lookup. Defaults to "" for older records. */
+  gpPhone: string;
+  /** Pharmacist enters this manually (NHS ODS doesn't reliably publish it). */
+  gpEmail: string;
+  /** ODS code (e.g. "F84662") for the matched practice — used for audit only. */
+  gpOdsCode: string;
   nhsNumber: string;
   address: string;
   phone: string;
@@ -34,6 +42,9 @@ export interface BaseConsent {
   idVerified: boolean;
   idType: string;
   patientAwarePrivateService: boolean;
+  /** Optional: patient consents to a copy of this consultation being emailed
+   *  to their GP. The actual send only fires if gpEmail is also set. */
+  notifyGp?: boolean;
 }
 
 // ─── Base Summary (shared across all PGDs) ───
@@ -68,6 +79,10 @@ export const initialPatientDetails: BasePatientDetails = {
   age: null,
   gpName: "",
   gpPractice: "",
+  gpAddress: "",
+  gpPhone: "",
+  gpEmail: "",
+  gpOdsCode: "",
   nhsNumber: "",
   address: "",
   phone: "",

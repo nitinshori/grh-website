@@ -34,7 +34,7 @@ export const TOTAL_STEPS = STEP_LABELS.length;
 
 export function createInitialConsultationState(): GenitalWartsConsultationState {
   return {
-    patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", nhsNumber: "", address: "", phone: "", email: "" },
+    patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", gpAddress: "", gpPhone: "", gpEmail: "", gpOdsCode: "", nhsNumber: "", address: "", phone: "", email: "" },
     consent: { informedConsentGiven: false, idVerified: false, idType: "", patientAwarePrivateService: false },
     assessment: { externalWartsOnly: false, keratinisedSkinConfirmed: false, internalWartsPresent: false, cervicalWarts: false, analWarts: false, immunosuppressed: false, pregnancyStatus: "", openWoundsPresent: false, wartCount: null },
     counselling: { explainedApplicationTechnique: false, discussedBurningIrritation: false, counselledOnCondoms: false, discussedHPVVaccination: false, providedWrittenInfo: false },

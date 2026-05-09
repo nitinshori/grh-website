@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { usePharmacistProfile } from '../shared/hooks/usePharmacistProfile';
 import { TextInput, Checkbox, SelectInput, TextArea } from '../shared/components/FormInputs';
 import { ProgressBar } from '../shared/components/ProgressBar';
 import { StepWrapper } from '../shared/components/StepWrapper';
@@ -75,6 +76,21 @@ export function PneumococcalClient() {
   });
 
   const [summary, setSummary] = useState<PneumococcalSummary>(initialPneumococcalSummary());
+
+  // Auto-fill pharmacist details from logged-in user. Refires when fields
+  // are empty (e.g. after "New Consultation"), so subsequent patients fill too.
+  const __pharmProfile = usePharmacistProfile();
+  useEffect(() => {
+    if (!__pharmProfile) return;
+    if (summary.pharmacistName || summary.pharmacistGPhC) return;
+    setSummary((prev) => ({
+      ...prev,
+      pharmacistName: __pharmProfile.name,
+      pharmacistGPhC: __pharmProfile.gphcNumber,
+      pharmacyName: __pharmProfile.pharmacyName,
+      pharmacyAddress: __pharmProfile.pharmacyAddress,
+    }));
+  }, [__pharmProfile, summary.pharmacistName, summary.pharmacistGPhC]);
 
   const [postVaccineAdvice, setPostVaccineAdvice] = useState({
     patientAdvised: false,

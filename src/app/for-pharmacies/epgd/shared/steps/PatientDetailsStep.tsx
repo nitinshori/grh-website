@@ -2,6 +2,7 @@
 
 import type { BasePatientDetails } from "../types";
 import { TextInput, Checkbox } from "../components/FormInputs";
+import { GPPracticeSearch } from "../components/GPPracticeSearch";
 
 interface PatientDetailsStepProps {
   patient: BasePatientDetails;
@@ -74,20 +75,51 @@ export function PatientDetailsStep({ patient, onChange, genderOption }: PatientD
           description={genderOption.description}
         />
       )}
+      <div>
+        <label className="block text-sm font-medium text-navy-900 mb-1">
+          GP practice
+        </label>
+        <GPPracticeSearch
+          practice={patient.gpPractice}
+          onSelect={(match) => {
+            onChange("gpPractice", match.name);
+            onChange("gpAddress", match.address);
+            onChange("gpPhone", match.phone);
+            onChange("gpOdsCode", match.odsCode);
+          }}
+          onClear={() => {
+            onChange("gpPractice", "");
+            onChange("gpAddress", "");
+            onChange("gpPhone", "");
+            onChange("gpOdsCode", "");
+          }}
+        />
+        {patient.gpAddress && (
+          <p className="text-xs text-gray-500 mt-1.5">{patient.gpAddress}{patient.gpPhone ? ` · ${patient.gpPhone}` : ""}</p>
+        )}
+      </div>
       <div className="grid sm:grid-cols-2 gap-4">
         <TextInput
-          label="GP name"
+          label="GP name (the doctor)"
           value={patient.gpName}
           onChange={(v) => onChange("gpName", v)}
           placeholder="Dr. Jane Doe"
         />
         <TextInput
-          label="GP practice"
-          value={patient.gpPractice}
-          onChange={(v) => onChange("gpPractice", v)}
-          placeholder="High Street Medical Centre"
+          label="Practice phone (optional)"
+          value={patient.gpPhone}
+          onChange={(v) => onChange("gpPhone", v)}
+          type="tel"
+          placeholder="Auto-fills from search"
         />
       </div>
+      <TextInput
+        label="GP practice email (optional — required to notify GP)"
+        value={patient.gpEmail}
+        onChange={(v) => onChange("gpEmail", v)}
+        type="email"
+        placeholder="practice.admin@nhs.net"
+      />
       <div className="grid sm:grid-cols-2 gap-4">
         <TextInput
           label="NHS number (optional)"

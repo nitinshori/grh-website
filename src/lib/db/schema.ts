@@ -285,6 +285,35 @@ export const auditLogs = pgTable('audit_logs', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 
+// ── Consultation drafts ─────────────────────────────────────────
+// Pharmacy assistants can prep patient details / consent and save as a
+// draft. The pharmacist later opens the draft, completes the clinical
+// portion, and saves the final consultation_records row. Drafts auto-
+// expire 7 days after creation (cron job hard-deletes them).
+
+export const consultationDrafts = pgTable('consultation_drafts', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  pharmacyId: uuid('pharmacy_id')
+    .references(() => pharmacies.id, { onDelete: 'cascade' })
+    .notNull(),
+  // The user (typically an assistant) who started the draft.
+  createdByUserId: uuid('created_by_user_id')
+    .references(() => users.id, { onDelete: 'set null' }),
+  pgdSlug: varchar('pgd_slug', { length: 255 }).notNull(),
+  // Light demographics for the drafts list view (no full clinical data on display).
+  patientFirstName: varchar('patient_first_name', { length: 100 }),
+  patientLastName: varchar('patient_last_name', { length: 100 }),
+  patientDob: varchar('patient_dob', { length: 10 }),
+  // The full PGD form state — opaque JSON the client serialises before save.
+  draftState: text('draft_state').notNull(),
+  // Pharmacist's optional note when handing off ("ready for clinical review").
+  note: text('note'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  // Auto-expire 7 days from creation. Cron deletes any row past expiresAt.
+  expiresAt: timestamp('expires_at').notNull(),
+})
+
 // ── Type exports ────────────────────────────────────────────────
 
 export type Pharmacy = typeof pharmacies.$inferSelect
@@ -307,3 +336,5 @@ export type ClinicianAvailability = typeof clinicianAvailability.$inferSelect
 export type NewClinicianAvailability = typeof clinicianAvailability.$inferInsert
 export type ConsultationRecord = typeof consultationRecords.$inferSelect
 export type NewConsultationRecord = typeof consultationRecords.$inferInsert
+export type ConsultationDraft = typeof consultationDrafts.$inferSelect
+export type NewConsultationDraft = typeof consultationDrafts.$inferInsert

@@ -29,7 +29,7 @@ export interface ShinglesConsultationState {
 
 export type ShinglesAction =
   | { type: "UPDATE_PATIENT"; field: keyof BasePatientDetails; value: string | number | boolean | null }
-  | { type: "UPDATE_CONSENT"; field: keyof BaseConsent; value: string | boolean }
+  | { type: "UPDATE_CONSENT"; field: keyof BaseConsent; value: string | boolean | undefined }
   | { type: "UPDATE_ASSESSMENT"; field: keyof ShinglesAssessment; value: string | boolean }
   | { type: "UPDATE_COUNSELLING"; field: keyof ShinglesCounselling; value: boolean }
   | { type: "UPDATE_SUMMARY"; field: keyof BaseSummary; value: string }
@@ -57,6 +57,10 @@ export function createInitialConsultationState(): ShinglesConsultationState {
       age: null,
       gpName: "",
       gpPractice: "",
+      gpAddress: "",
+      gpPhone: "",
+gpEmail: "",
+      gpOdsCode: "",
       nhsNumber: "",
       address: "",
       phone: "",

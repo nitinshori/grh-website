@@ -1,6 +1,6 @@
 "use client";
 
-import { useReducer, useMemo, useState, useCallback } from "react";
+import { useReducer, useMemo, useState, useCallback, useEffect } from "react";
 import type { DiabetesConsultationState, DiabetesAction } from "./lib/diabetes-types";
 import { STEP_LABELS, TOTAL_STEPS, createInitialConsultationState } from "./lib/diabetes-types";
 import { getAllAlerts, hasHardStops, calculateDoseRecommendation } from "./lib/diabetes-clinical-logic";
@@ -15,6 +15,7 @@ import { ConsentStep } from "../shared/steps/ConsentStep";
 import { DiabetesSummaryReport } from "./components/DiabetesSummaryReport";
 import { TextInput, Checkbox, SelectInput, NumberInput, TextArea } from "../shared/components/FormInputs";
 
+import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 function reducer(state: DiabetesConsultationState, action: DiabetesAction): DiabetesConsultationState {
   const newState = { ...state };
   switch (action.type) {
@@ -52,6 +53,18 @@ function reducer(state: DiabetesConsultationState, action: DiabetesAction): Diab
 
 export default function DiabetesClient() {
   const [state, dispatch] = useReducer(reducer, createInitialConsultationState());
+  // Auto-fill pharmacist details from logged-in user. Refires when fields
+  // are empty (e.g. after "New Consultation"), so subsequent patients fill too.
+  const __pharmProfile = usePharmacistProfile();
+  useEffect(() => {
+    if (!__pharmProfile) return;
+    if (state.summary.pharmacistName || state.summary.pharmacistGPhC) return;
+    dispatch({ type: "UPDATE_SUMMARY", field: "pharmacistName", value: __pharmProfile.name } as any);
+    dispatch({ type: "UPDATE_SUMMARY", field: "pharmacistGPhC", value: __pharmProfile.gphcNumber } as any);
+    dispatch({ type: "UPDATE_SUMMARY", field: "pharmacyName", value: __pharmProfile.pharmacyName } as any);
+    dispatch({ type: "UPDATE_SUMMARY", field: "pharmacyAddress", value: __pharmProfile.pharmacyAddress } as any);
+  }, [__pharmProfile, state.summary.pharmacistName, state.summary.pharmacistGPhC]);
+
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
 
   const alerts = useMemo(() => getAllAlerts(state), [state]);

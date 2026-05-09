@@ -80,7 +80,7 @@ export const TOTAL_STEPS = STEP_LABELS.length;
 export function createInitialConsultationState(): ThrushConsultationState {
   return {
     currentStep: 0,
-    patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", nhsNumber: "", address: "", phone: "", email: "" },
+    patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", gpAddress: "", gpPhone: "", gpEmail: "", gpOdsCode: "", nhsNumber: "", address: "", phone: "", email: "" },
     consent: { informedConsentGiven: false, idVerified: false, idType: "", patientAwarePrivateService: false },
     assessment: { vulvalItching: false, vulvalSoreness: false, thickWhiteDischarge: false, dysuria: false, dyspareunia: false, bloodStainedDischarge: false, offensiveSmell: false, fever: false, pelvicPain: false, recurrentEpisodes: null },
     medicalHistory: { diabetes: false, pregnancy: false, breastfeeding: false, immunocompromised: false, ageUnder16: false, ageOver60: false, firstEpisode: false, recurrentThrush: false },

@@ -4,6 +4,7 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { TextInput, Checkbox, SelectInput, TextArea } from '../shared/components/FormInputs';
 import { ProgressBar } from '../shared/components/ProgressBar';
 import { StepWrapper } from '../shared/components/StepWrapper';
+import { SaveDraftButton } from '../shared/components/SaveDraftButton';
 import type { ConsultationRecordData } from '../shared/hooks/useConsultationTracking';
 import { AlertBanner } from '../shared/components/AlertBanner';
 import { PatientDetailsStep } from '../shared/steps/PatientDetailsStep';
@@ -109,19 +110,46 @@ export function MeningitisACWYClient() {
     }, [])
   );
 
-  // Auto-fill pharmacist details from logged-in user profile
+  // Auto-fill pharmacist details from logged-in user profile.
+  // Refires whenever the pharmacist fields are empty (e.g. after a "New
+  // Consultation" reset), so subsequent patients also get the autofill.
   const profile = usePharmacistProfile();
   useEffect(() => {
-    if (profile) {
-      setSummary((prev) => ({
-        ...prev,
-        pharmacistName: prev.pharmacistName || profile.name,
-        pharmacistGPhC: prev.pharmacistGPhC || profile.gphcNumber,
-        pharmacyName: prev.pharmacyName || profile.pharmacyName,
-        pharmacyAddress: prev.pharmacyAddress || profile.pharmacyAddress,
-      }));
-    }
-  }, [profile]);
+    if (!profile) return;
+    if (summary.pharmacistName || summary.pharmacistGPhC) return;
+    setSummary((prev) => ({
+      ...prev,
+      pharmacistName: profile.name,
+      pharmacistGPhC: profile.gphcNumber,
+      pharmacyName: profile.pharmacyName,
+      pharmacyAddress: profile.pharmacyAddress,
+    }));
+  }, [profile, summary.pharmacistName, summary.pharmacistGPhC]);
+
+  // Resume from a saved draft when the URL contains ?draftId=...
+  // Hydrates every state slice from the draft once on mount.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('draftId');
+    if (!id) return;
+    fetch(`/api/consultation-drafts/${id}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: { draftState?: typeof formState } | null) => {
+        if (!data?.draftState) return;
+        const s = data.draftState;
+        if (s.currentStep !== undefined) setCurrentStep(s.currentStep);
+        if (s.patientDetails) setPatientDetails(s.patientDetails);
+        if (s.consent) setConsent(s.consent);
+        if (s.travelAssessment) setTravelAssessment(s.travelAssessment);
+        if (s.medicalHistory) setMedicalHistory(s.medicalHistory);
+        if (s.contraIndicationsReviewed) setContraIndicationsReviewed(s.contraIndicationsReviewed);
+        if (s.summary) setSummary(s.summary);
+        if (s.postVaccineAdvice) setPostVaccineAdvice(s.postVaccineAdvice);
+      })
+      .catch(() => { /* draft missing or expired — ignore */ });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Calculate age when DOB changes
   const handlePatientDetailsChange = useCallback(
@@ -262,6 +290,16 @@ export function MeningitisACWYClient() {
 
   return (
     <>
+      <div className="mb-3 flex justify-end">
+        <SaveDraftButton
+          pgdSlug="meningitis-acwy-travel"
+          patientFirstName={patientDetails.firstName}
+          patientLastName={patientDetails.lastName}
+          patientDob={patientDetails.dateOfBirth}
+          getDraftState={() => formState}
+        />
+      </div>
+
       <div className="mb-6">
         <ProgressBar
           stepLabels={STEP_LABELS}

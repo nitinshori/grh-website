@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { ProgressBar } from "../shared/components/ProgressBar";
 import { StepWrapper } from "../shared/components/StepWrapper";
 import type { ConsultationRecordData } from "../shared/hooks/useConsultationTracking";
@@ -10,6 +10,7 @@ import { ConsentStep } from "../shared/steps/ConsentStep";
 import { TextInput, Checkbox, SelectInput, NumberInput, TextArea } from "../shared/components/FormInputs";
 import type { ClinicalAlert } from "../shared/types";
 
+import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 export default function EarInfectionClient() {
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
@@ -21,6 +22,10 @@ export default function EarInfectionClient() {
       age: null as number | null,
       gpName: "",
       gpPractice: "",
+      gpAddress: "",
+      gpPhone: "",
+gpEmail: "",
+      gpOdsCode: "",
       nhsNumber: "",
       address: "",
       phone: "",
@@ -77,6 +82,16 @@ export default function EarInfectionClient() {
       clinicalNotes: "",
     },
   });
+
+  // Auto-fill pharmacist details from logged-in user. Refires when fields
+  // are empty (e.g. after "New Consultation"), so subsequent patients fill too.
+  const __pharmProfile = usePharmacistProfile();
+  useEffect(() => {
+    if (!__pharmProfile) return;
+    if ((state as any).summary?.pharmacistName || (state as any).summary?.pharmacistGPhC) return;
+    setState((prev: any) => ({ ...prev, summary: { ...(prev.summary || {}), pharmacistName: __pharmProfile.name, pharmacistGPhC: __pharmProfile.gphcNumber, pharmacyName: __pharmProfile.pharmacyName, pharmacyAddress: __pharmProfile.pharmacyAddress } }));
+  }, [__pharmProfile, (state as any).summary?.pharmacistName, (state as any).summary?.pharmacistGPhC]);
+
 
   const alerts: ClinicalAlert[] = useMemo(() => {
     const issues: ClinicalAlert[] = [];
@@ -225,6 +240,10 @@ export default function EarInfectionClient() {
         age: null as number | null,
         gpName: "",
         gpPractice: "",
+        gpAddress: "",
+        gpPhone: "",
+        gpEmail: "",
+        gpOdsCode: "",
         nhsNumber: "",
         address: "",
         phone: "",
