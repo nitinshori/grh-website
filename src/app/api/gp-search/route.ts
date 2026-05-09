@@ -6,9 +6,9 @@ import { auth } from '@/lib/auth'
  *
  * Public, free API. We proxy to:
  *   https://directory.spineservices.nhs.uk/ORD/2-0-0/organisations
- *     ?Name=<query>&PrimaryRoleId=RO76&Status=Active&Limit=20
+ *     ?Name=<query>&PrimaryRoleId=RO180&Status=Active&Limit=20
  *
- * RO76 = "GP PRACTICE" primary role.
+ * RO180 = "GP PRACTICE" primary role in the current ODS taxonomy.
  *
  * Auth-gated so unauthenticated traffic can't abuse it (it's a free upstream
  * but we still don't want to be a public proxy).
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
   }
 
   // ODS expects URL-encoded name; uses startswith match by default
-  const url = `https://directory.spineservices.nhs.uk/ORD/2-0-0/organisations?Name=${encodeURIComponent(q)}&PrimaryRoleId=RO76&Status=Active&Limit=15`
+  const url = `https://directory.spineservices.nhs.uk/ORD/2-0-0/organisations?Name=${encodeURIComponent(q)}&PrimaryRoleId=RO180&Status=Active&Limit=15`
   let listRes: Response
   try {
     listRes = await fetch(url, { next: { revalidate: 3600 } })
