@@ -32,7 +32,9 @@ export async function POST(
   }
 
   // session_token is a per-flow nonce we own — anti-CSRF for the GoCardless callback
-  const sessionToken = crypto.randomBytes(24).toString('hex')
+  // Keep this short — we tuck it into the 50-char gocardlessMandateStatus column
+  // until the redirect-flow is completed and the real mandate status overwrites it.
+  const sessionToken = crypto.randomBytes(16).toString('hex')  // 32 hex chars
 
   const appUrl = process.env.APP_URL || 'https://getrealhealthpgd.co.uk'
   const successUrl = `${appUrl}/onboard/dd-complete?id=${req.id}&token=${sessionToken}`
@@ -61,18 +63,23 @@ export async function POST(
 
   // Stash the redirect-flow id and session token (token in mandateStatus
   // until we promote it after completion — we re-use the column as scratch space)
-  await db
-    .update(onboardingRequests)
-    .set({
-      gocardlessRedirectFlowId: flow.id,
-      // We can't add a column right now without another migration; tuck the
-      // session token into the mandate-status column temporarily. Once the
-      // redirect is completed, we overwrite this with the real status.
-      gocardlessMandateStatus: `session:${sessionToken}`,
-      status: 'dd_pending',
-      updatedAt: new Date(),
-    })
-    .where(eq(onboardingRequests.id, req.id))
+  try {
+    await db
+      .update(onboardingRequests)
+      .set({
+        gocardlessRedirectFlowId: flow.id,
+        gocardlessMandateStatus: `session:${sessionToken}`,
+        status: 'dd_pending',
+        updatedAt: new Date(),
+      })
+      .where(eq(onboardingRequests.id, req.id))
+  } catch (err) {
+    console.error('[onboarding/start-mandate] DB update failed:', err)
+    return NextResponse.json(
+      { error: 'Could not save flow id', detail: err instanceof Error ? err.message : String(err) },
+      { status: 500 },
+    )
+  }
 
   return NextResponse.json({ redirectUrl: flow.redirectUrl })
 }
