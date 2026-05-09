@@ -102,6 +102,7 @@ export function createInitialConsultationState(): HypertensionConsultationState 
       gpPractice: "",
       gpAddress: "",
       gpPhone: "",
+gpEmail: "",
       gpOdsCode: "",
       nhsNumber: "",
       address: "",

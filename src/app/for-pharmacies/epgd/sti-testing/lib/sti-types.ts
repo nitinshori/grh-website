@@ -99,6 +99,7 @@ export function createInitialConsultationState(): STIConsultationState {
       gpPractice: "",
       gpAddress: "",
       gpPhone: "",
+gpEmail: "",
       gpOdsCode: "",
       nhsNumber: "",
       address: "",

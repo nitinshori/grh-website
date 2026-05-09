@@ -98,6 +98,7 @@ export function createInitialConsultationState(): ColdSoresConsultationState {
       gpPractice: "",
       gpAddress: "",
       gpPhone: "",
+gpEmail: "",
       gpOdsCode: "",
       nhsNumber: "",
       address: "",

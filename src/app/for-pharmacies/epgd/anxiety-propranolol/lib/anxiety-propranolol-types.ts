@@ -105,6 +105,7 @@ export function createInitialConsultationState(): AnxietyPropranololConsultation
       gpPractice: "",
       gpAddress: "",
       gpPhone: "",
+gpEmail: "",
       gpOdsCode: "",
       nhsNumber: "",
       address: "",

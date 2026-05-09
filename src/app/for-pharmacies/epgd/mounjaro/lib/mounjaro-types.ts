@@ -137,6 +137,7 @@ export function createInitialConsultationState(): MounjaroConsultationState {
       gpPractice: "",
       gpAddress: "",
       gpPhone: "",
+gpEmail: "",
       gpOdsCode: "",
       nhsNumber: "",
       address: "",

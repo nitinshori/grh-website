@@ -63,7 +63,7 @@ export const TOTAL_STEPS = STEP_LABELS.length;
 export function createInitialSleepMelatoninState(): SleepMelatoninConsultationState {
   return {
     currentStep: 0,
-    patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", gpAddress: "", gpPhone: "", gpOdsCode: "", nhsNumber: "", address: "", phone: "", email: "" },
+    patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", gpAddress: "", gpPhone: "", gpEmail: "", gpOdsCode: "", nhsNumber: "", address: "", phone: "", email: "" },
     consent: { informedConsentGiven: false, idVerified: false, idType: "", patientAwarePrivateService: false },
     assessment: { sleepOnsetIssue: false, sleepMaintenanceIssue: false, durationOfInsomnia: "", sleepHygieneAttempted: false, ageConfirmed: false },
     contraindications: { autoimmuneDiseaseActive: false, hepaticImpairment: false, pregnancy: false, breastfeeding: false, contraindicated: false },

@@ -45,6 +45,7 @@ const initialState: EDConsultationState = {
     gpPractice: "",
     gpAddress: "",
     gpPhone: "",
+gpEmail: "",
     gpOdsCode: "",
     nhsNumber: "",
     address: "",

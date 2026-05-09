@@ -91,6 +91,7 @@ export function createInitialTravelCoreState(): TravelCoreConsultationState {
       gpPractice: "",
       gpAddress: "",
       gpPhone: "",
+gpEmail: "",
       gpOdsCode: "",
       nhsNumber: "",
       address: "",

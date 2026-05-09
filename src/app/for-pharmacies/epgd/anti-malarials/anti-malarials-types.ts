@@ -152,6 +152,7 @@ export function createInitialAMState(): AMConsultationState {
       gpPractice: '',
 gpAddress: '',
 gpPhone: '',
+gpEmail: '',
 gpOdsCode: '',
       nhsNumber: '',
       address: '',

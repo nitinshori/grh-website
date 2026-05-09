@@ -97,6 +97,7 @@ export function createInitialConsultationState(): DiabetesConsultationState {
       gpPractice: "",
       gpAddress: "",
       gpPhone: "",
+gpEmail: "",
       gpOdsCode: "",
       nhsNumber: "",
       address: "",

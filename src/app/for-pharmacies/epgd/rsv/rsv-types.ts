@@ -44,6 +44,7 @@ export const initialRSVPatientDetails: RSVPatientDetails = {
   gpPractice: '',
 gpAddress: '',
 gpPhone: '',
+gpEmail: '',
 gpOdsCode: '',
   nhsNumber: '',
   address: '',

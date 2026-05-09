@@ -112,6 +112,7 @@ export function createInitialConsultationState(): OrlistatConsultationState {
       gpPractice: "",
       gpAddress: "",
       gpPhone: "",
+gpEmail: "",
       gpOdsCode: "",
       nhsNumber: "",
       address: "",

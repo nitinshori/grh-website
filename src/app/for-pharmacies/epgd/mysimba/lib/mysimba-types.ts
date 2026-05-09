@@ -64,6 +64,7 @@ export function createInitialConsultationState(): MySimbaConsultationState {
       gpPractice: "",
       gpAddress: "",
       gpPhone: "",
+gpEmail: "",
       gpOdsCode: "",
       nhsNumber: "",
       address: "",

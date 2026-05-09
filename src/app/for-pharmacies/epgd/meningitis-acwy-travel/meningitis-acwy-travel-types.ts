@@ -41,6 +41,7 @@ export const initialMeningitisACWYPatientDetails: MeningitisACWYPatientDetails =
   gpPractice: '',
 gpAddress: '',
 gpPhone: '',
+gpEmail: '',
 gpOdsCode: '',
   nhsNumber: '',
   address: '',

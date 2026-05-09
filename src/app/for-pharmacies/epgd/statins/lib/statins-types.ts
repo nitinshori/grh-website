@@ -96,6 +96,7 @@ export function createInitialConsultationState(): StatinsConsultationState {
       gpPractice: "",
       gpAddress: "",
       gpPhone: "",
+gpEmail: "",
       gpOdsCode: "",
       nhsNumber: "",
       address: "",

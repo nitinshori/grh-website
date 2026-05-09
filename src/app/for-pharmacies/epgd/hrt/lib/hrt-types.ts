@@ -108,6 +108,7 @@ export function createInitialConsultationState(): HRTConsultationState {
       gpPractice: "",
       gpAddress: "",
       gpPhone: "",
+gpEmail: "",
       gpOdsCode: "",
       nhsNumber: "",
       address: "",

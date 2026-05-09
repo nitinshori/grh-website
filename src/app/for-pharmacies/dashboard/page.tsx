@@ -44,6 +44,7 @@ export default async function PharmacyDashboard() {
   let pharmacyAddress = ''
   let pharmacyEmail = ''
   let pharmacyPhone = ''
+  let pharmacyGroupSlug = ''
 
   if (session.user.pharmacyId) {
     const [pharmacy] = await db
@@ -56,6 +57,7 @@ export default async function PharmacyDashboard() {
       pharmacyAddress = pharmacy.address || ''
       pharmacyEmail = pharmacy.email || ''
       pharmacyPhone = pharmacy.phone || ''
+      pharmacyGroupSlug = pharmacy.groupSlug || ''
     }
   }
 
@@ -330,6 +332,29 @@ export default async function PharmacyDashboard() {
           </svg>
           Patient Records
         </Link>
+        <Link
+          href="/for-pharmacies/dashboard/drafts"
+          className="inline-flex items-center px-5 py-2.5 rounded-lg text-sm font-semibold text-amber-900 bg-amber-50 border border-amber-300 hover:bg-amber-100 transition-colors"
+        >
+          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 4v16l7-3.5L19 20V4a2 2 0 00-2-2H7a2 2 0 00-2 2z" />
+          </svg>
+          Drafts
+        </Link>
+        {pharmacyGroupSlug && (
+          <a
+            href={`/book/${pharmacyGroupSlug}`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center px-5 py-2.5 rounded-lg text-sm font-semibold text-teal-900 bg-teal-50 border border-teal-300 hover:bg-teal-100 transition-colors"
+            title="The page patients use to book appointments online. Share this URL on your website / social media."
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5M21 3l-9 9m0 0H9m3 0V9" />
+            </svg>
+            Patient Booking Page
+          </a>
+        )}
         <Link
           href="/for-pharmacies/pgd-catalogue"
           className="inline-flex items-center px-5 py-2.5 rounded-lg text-sm font-semibold text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 transition-colors"

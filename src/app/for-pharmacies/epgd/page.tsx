@@ -99,6 +99,9 @@ const epgds = [
   { slug: 'rabies', title: 'Rabies Vaccine', subtitle: 'Pre-Exposure Prophylaxis', category: 'Travel Health', color: 'bg-indigo-500' },
   { slug: 'japanese-encephalitis', title: 'Japanese Encephalitis', subtitle: 'Ixiaro Vaccine', category: 'Travel Health', color: 'bg-indigo-500' },
   { slug: 'meningitis-acwy-travel', title: 'Meningitis ACWY (Travel)', subtitle: 'Nimenrix / MenQuadfi', category: 'Travel Health', color: 'bg-indigo-500' },
+  { slug: 'hep-ab-travel', title: 'Hepatitis A/B (Travel)', subtitle: 'Twinrix / Havrix / Engerix-B', category: 'Travel Health', color: 'bg-indigo-500' },
+  { slug: 'typhoid', title: 'Typhoid', subtitle: 'Typhim Vi / Vivotif', category: 'Travel Health', color: 'bg-indigo-500' },
+  { slug: 'yellow-fever', title: 'Yellow Fever', subtitle: 'Stamaril (registered YFVCs only)', category: 'Travel Health', color: 'bg-indigo-500' },
 
   // ── Occupational Health ──
   { slug: 'hep-b-occupational', title: 'Hepatitis B (Occupational)', subtitle: 'Engerix-B / HBvaxPRO', category: 'Occupational Health', color: 'bg-violet-500' },

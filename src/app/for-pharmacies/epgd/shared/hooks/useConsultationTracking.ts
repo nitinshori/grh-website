@@ -17,6 +17,10 @@ export interface ConsultationRecordData {
     address?: string
     gpName?: string
     gpPractice?: string
+    gpAddress?: string
+    gpPhone?: string
+    gpEmail?: string
+    gpOdsCode?: string
   }
   clinicalData: Record<string, unknown> // the full ePGD state
   outcome?: 'completed' | 'referred' | 'not_supplied'
@@ -30,8 +34,16 @@ export interface ConsultationRecordData {
   summary: {
     pharmacistName: string
     pharmacistGPhC: string
+    pharmacyName?: string
+    pharmacyAddress?: string
     consultationDate?: string
     consultationTime?: string
+    clinicalNotes?: string
+  }
+  /** Optional top-level consent — surfaced so the server can read notifyGp etc.
+   *  Each ePGD should pass at minimum { notifyGp } when the patient consented. */
+  consent?: {
+    notifyGp?: boolean
   }
 }
 
@@ -114,6 +126,7 @@ export function useConsultationTracking(pgdSlug: string, currentStep: number) {
             outcome: data.outcome || 'completed',
             medicine: data.medicine,
             summary: data.summary,
+            consent: data.consent,
           }),
         })
 

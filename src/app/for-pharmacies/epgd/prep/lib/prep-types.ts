@@ -113,6 +113,7 @@ export function createInitialConsultationState(): PrEPConsultationState {
       gpPractice: "",
       gpAddress: "",
       gpPhone: "",
+gpEmail: "",
       gpOdsCode: "",
       nhsNumber: "",
       address: "",

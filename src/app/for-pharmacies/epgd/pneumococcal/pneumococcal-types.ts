@@ -39,6 +39,7 @@ export const initialPneumococcalPatientDetails: PneumococcalPatientDetails = {
   gpPractice: '',
 gpAddress: '',
 gpPhone: '',
+gpEmail: '',
 gpOdsCode: '',
   nhsNumber: '',
   address: '',

@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { consultationRecords } from '@/lib/db/schema'
+import { consultationRecords, pharmacies } from '@/lib/db/schema'
 import { eq, and, or, desc, ilike, sql, isNull, gte, lte } from 'drizzle-orm'
 import { audit } from '@/lib/audit'
 import { rateLimit } from '@/lib/rate-limit'
+import { sendGpNotification } from '@/lib/gp-notification'
 
 /**
  * POST /api/consultation-records — save a completed consultation record
@@ -97,7 +98,62 @@ export async function POST(request: Request) {
       request,
     })
 
-    return NextResponse.json({ success: true, recordId: record.id })
+    // Optional: send GP notification email if patient consented + GP email provided.
+    // Best-effort — failures don't block the save. Audited separately.
+    let gpNotified = false
+    let gpNotifyError: string | undefined
+    // Look in three places — top-level consent, top-level notifyGp, or
+    // nested clinicalData.consent (most PGDs put consent inside clinicalData).
+    const cd = body?.clinicalData
+    const wantsGpNotify =
+      body?.consent?.notifyGp === true ||
+      body?.notifyGp === true ||
+      (typeof cd === 'object' && cd !== null && (cd as { consent?: { notifyGp?: boolean } }).consent?.notifyGp === true)
+    const gpEmailRaw = patient.gpEmail
+      || (typeof cd === 'object' && cd !== null
+          ? (cd as { patient?: { gpEmail?: string } }).patient?.gpEmail
+          : undefined)
+      || ''
+    const gpEmail = String(gpEmailRaw).trim()
+    if (wantsGpNotify && gpEmail) {
+      const [pharmacy] = await db
+        .select({ name: pharmacies.name, address: pharmacies.address })
+        .from(pharmacies)
+        .where(eq(pharmacies.id, session.user.pharmacyId))
+        .limit(1)
+      const result = await sendGpNotification({
+        to: gpEmail,
+        patientFirstName: patient.firstName.trim(),
+        patientLastName: patient.lastName.trim(),
+        patientDob: patient.dateOfBirth,
+        patientNhsNumber: patient.nhsNumber?.trim() || null,
+        pgdTitle: pgdSlug,
+        outcome: outcome || 'completed',
+        medicineSupplied: medicine?.name || medicine?.medicine || null,
+        medicineDose: medicine?.dose || null,
+        medicineDuration: medicine?.duration || null,
+        consultationDate,
+        pharmacistName: summary.pharmacistName.trim(),
+        pharmacistGphc: summary.pharmacistGPhC.trim(),
+        pharmacyName: pharmacy?.name || summary.pharmacyName || '',
+        pharmacyAddress: pharmacy?.address || summary.pharmacyAddress || '',
+        clinicalNotes: summary.clinicalNotes,
+      })
+      gpNotified = result.ok
+      gpNotifyError = result.error
+      // Audit either way
+      await audit({
+        pharmacyId: session.user.pharmacyId,
+        userId: session.user.id,
+        userEmail: session.user.email || null,
+        action: result.ok ? 'record_export' : 'record_export', // re-use existing enum value
+        recordId: record.id,
+        details: { kind: 'gp_notify', to: gpEmail, ok: result.ok, error: result.error },
+        request,
+      })
+    }
+
+    return NextResponse.json({ success: true, recordId: record.id, gpNotified, gpNotifyError })
   } catch (error) {
     console.error('Consultation record save error:', error)
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })

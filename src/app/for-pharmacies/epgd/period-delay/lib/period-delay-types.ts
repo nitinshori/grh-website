@@ -84,7 +84,7 @@ export const TOTAL_STEPS = STEP_LABELS.length;
 export function createInitialConsultationState(): PeriodDelayConsultationState {
   return {
     currentStep: 0,
-    patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", gpAddress: "", gpPhone: "", gpOdsCode: "", nhsNumber: "", address: "", phone: "", email: "" },
+    patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", gpAddress: "", gpPhone: "", gpEmail: "", gpOdsCode: "", nhsNumber: "", address: "", phone: "", email: "" },
     consent: { informedConsentGiven: false, idVerified: false, idType: "", patientAwarePrivateService: false },
     assessment: { reasonForDelay: "", reasonDetails: "", lastPeriodDate: "", cycleRegular: false, daysUntilExpected: null, previousUse: false, previousIssues: "" },
     medicalHistory: { pregnancy: false, breastfeeding: false, liverDisease: false, historyOfDVT: false, historyOfPE: false, historyOfStroke: false, activeBreastCancer: false, severeArterialDisease: false, porphyria: false, abnormalVaginalBleeding: false, hormonalContraception: false, hormonalContraceptionType: "", ageUnder18: false },

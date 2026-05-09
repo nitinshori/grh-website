@@ -42,6 +42,12 @@ export function ConsentStep({ consent, onChange }: ConsentStepProps) {
         onChange={(v) => onChange("patientAwarePrivateService", v)}
         description="The patient understands there will be a consultation fee and the medication is not available on NHS prescription through this service."
       />
+      <Checkbox
+        label="Patient consents to a copy of this consultation being sent to their GP (optional)"
+        checked={consent.notifyGp ?? false}
+        onChange={(v) => onChange("notifyGp", v)}
+        description="If ticked AND the patient's GP practice email is recorded on the previous step, an email summary will be sent automatically when the consultation is saved."
+      />
     </div>
   );
 }

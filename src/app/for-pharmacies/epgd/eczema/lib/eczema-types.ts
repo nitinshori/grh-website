@@ -100,6 +100,7 @@ export function createInitialConsultationState(): EczemaConsultationState {
       gpPractice: "",
       gpAddress: "",
       gpPhone: "",
+gpEmail: "",
       gpOdsCode: "",
       nhsNumber: "",
       address: "",

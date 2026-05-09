@@ -94,6 +94,7 @@ export function createInitialConsultationState(): HayfeverConsultationState {
       gpPractice: "",
       gpAddress: "",
       gpPhone: "",
+gpEmail: "",
       gpOdsCode: "",
       nhsNumber: "",
       address: "",

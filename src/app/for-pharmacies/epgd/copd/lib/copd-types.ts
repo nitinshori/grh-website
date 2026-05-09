@@ -91,6 +91,7 @@ export function createInitialConsultationState(): COPDConsultationState {
       gpPractice: "",
       gpAddress: "",
       gpPhone: "",
+gpEmail: "",
       gpOdsCode: "",
       nhsNumber: "",
       address: "",

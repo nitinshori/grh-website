@@ -101,6 +101,7 @@ export function createInitialConsultationState(): AlcoholReductionConsultationSt
       gpPractice: "",
       gpAddress: "",
       gpPhone: "",
+gpEmail: "",
       gpOdsCode: "",
       nhsNumber: "",
       address: "",

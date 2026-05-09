@@ -99,6 +99,7 @@ export function createInitialConsultationState(): AcneConsultationState {
       gpPractice: "",
       gpAddress: "",
       gpPhone: "",
+gpEmail: "",
       gpOdsCode: "",
       nhsNumber: "",
       address: "",

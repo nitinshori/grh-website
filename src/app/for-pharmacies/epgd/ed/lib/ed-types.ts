@@ -10,7 +10,7 @@ export interface PatientDetails {
   gpPractice: string;
   gpAddress: string;
   gpPhone: string;
-  gpOdsCode: string;
+  gpEmail: string; gpOdsCode: string;
   nhsNumber: string;
   address: string;
   phone: string;

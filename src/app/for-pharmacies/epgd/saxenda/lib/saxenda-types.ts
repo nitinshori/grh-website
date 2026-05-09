@@ -62,6 +62,7 @@ export function createInitialConsultationState(): SaxendaConsultationState {
       gpPractice: "",
       gpAddress: "",
       gpPhone: "",
+gpEmail: "",
       gpOdsCode: "",
       nhsNumber: "",
       address: "",

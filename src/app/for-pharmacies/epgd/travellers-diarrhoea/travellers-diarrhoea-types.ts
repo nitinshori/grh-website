@@ -145,6 +145,7 @@ export function createInitialTDState(): TDConsultationState {
       gpPractice: '',
 gpAddress: '',
 gpPhone: '',
+gpEmail: '',
 gpOdsCode: '',
       nhsNumber: '',
       address: '',

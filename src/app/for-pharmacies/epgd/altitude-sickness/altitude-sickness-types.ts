@@ -143,6 +143,7 @@ export function createInitialASState(): ASConsultationState {
       gpPractice: '',
 gpAddress: '',
 gpPhone: '',
+gpEmail: '',
 gpOdsCode: '',
       nhsNumber: '',
       address: '',

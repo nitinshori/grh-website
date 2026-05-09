@@ -91,6 +91,7 @@ const INITIAL_PATIENT_DETAILS: BasePatientDetails = {
   gpPractice: '',
 gpAddress: '',
 gpPhone: '',
+gpEmail: '',
 gpOdsCode: '',
   nhsNumber: '',
   address: '',

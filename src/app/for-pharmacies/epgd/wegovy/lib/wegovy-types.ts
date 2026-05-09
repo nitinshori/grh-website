@@ -223,6 +223,7 @@ export function createInitialConsultationState(): WegovyConsultationState {
       gpPractice: "",
       gpAddress: "",
       gpPhone: "",
+gpEmail: "",
       gpOdsCode: "",
       nhsNumber: "",
       address: "",

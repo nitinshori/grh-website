@@ -23,6 +23,7 @@ export default function PaediatricUTIClient() {
       gpPractice: "",
       gpAddress: "",
       gpPhone: "",
+gpEmail: "",
       gpOdsCode: "",
       nhsNumber: "",
       address: "",

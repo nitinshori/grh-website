@@ -31,7 +31,7 @@ export interface CovidBoosterConsultationState {
 
 export type CovidBoosterAction =
   | { type: "UPDATE_PATIENT"; field: keyof BasePatientDetails; value: string | number | boolean | null }
-  | { type: "UPDATE_CONSENT"; field: keyof BaseConsent; value: string | boolean }
+  | { type: "UPDATE_CONSENT"; field: keyof BaseConsent; value: string | boolean | undefined }
   | { type: "UPDATE_ASSESSMENT"; field: keyof CovidBoosterAssessment; value: boolean }
   | { type: "UPDATE_COUNSELLING"; field: keyof CovidBoosterCounselling; value: boolean }
   | { type: "UPDATE_SUMMARY"; field: keyof BaseSummary; value: string }
@@ -61,6 +61,7 @@ export function createInitialConsultationState(): CovidBoosterConsultationState 
       gpPractice: "",
       gpAddress: "",
       gpPhone: "",
+gpEmail: "",
       gpOdsCode: "",
       nhsNumber: "",
       address: "",

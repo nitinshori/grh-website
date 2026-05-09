@@ -109,6 +109,7 @@ export function createInitialConsultationState(): BPHConsultationState {
       gpPractice: "",
       gpAddress: "",
       gpPhone: "",
+gpEmail: "",
       gpOdsCode: "",
       nhsNumber: "",
       address: "",

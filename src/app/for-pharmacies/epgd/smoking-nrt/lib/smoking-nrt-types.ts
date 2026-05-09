@@ -101,6 +101,7 @@ export function createInitialConsultationState(): SmokingNRTConsultationState {
       gpPractice: "",
       gpAddress: "",
       gpPhone: "",
+gpEmail: "",
       gpOdsCode: "",
       nhsNumber: "",
       address: "",

@@ -113,6 +113,13 @@ export function PatientDetailsStep({ patient, onChange, genderOption }: PatientD
           placeholder="Auto-fills from search"
         />
       </div>
+      <TextInput
+        label="GP practice email (optional — required to notify GP)"
+        value={patient.gpEmail}
+        onChange={(v) => onChange("gpEmail", v)}
+        type="email"
+        placeholder="practice.admin@nhs.net"
+      />
       <div className="grid sm:grid-cols-2 gap-4">
         <TextInput
           label="NHS number (optional)"

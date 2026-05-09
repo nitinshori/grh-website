@@ -36,7 +36,7 @@ export const TOTAL_STEPS = STEP_LABELS.length;
 
 export function createInitialConsultationState(): GLP1ConsultationState {
   return {
-    patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", gpAddress: "", gpPhone: "", gpOdsCode: "", nhsNumber: "", address: "", phone: "", email: "" },
+    patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", gpAddress: "", gpPhone: "", gpEmail: "", gpOdsCode: "", nhsNumber: "", address: "", phone: "", email: "" },
     consent: { informedConsentGiven: false, idVerified: false, idType: "", patientAwarePrivateService: false },
     assessment: { patientOnGLP1: false, medicationName: "", weightChangePercent: null, giTolerability: "", doseAdequate: false, injectionTechniqueCorrect: false, pancreatitisSymptoms: false, gallbladderSymptoms: false, severeVomiting: false, systolicBP: null, diastolicBP: null, heartRate: null },
     counselling: { reinforcedInjectionTechnique: false, discussedContinuation: false, counselledOnWarnings: false, offeredWrittenInfo: false },
