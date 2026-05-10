@@ -179,13 +179,19 @@ export function Header() {
               href="/for-pharmacies/pricing"
               className="text-sm font-medium text-navy-900 hover:text-teal-600 transition-colors"
             >
-              View Pricing
+              Pricing
             </Link>
             <Link
               href="/book"
-              className="px-5 py-2.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
+              className="text-sm font-medium text-navy-900 hover:text-teal-600 transition-colors"
             >
               Book a Demo
+            </Link>
+            <Link
+              href="/onboard"
+              className="px-5 py-2.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
+            >
+              Sign up
             </Link>
           </div>
 
@@ -279,9 +285,16 @@ export function Header() {
             <Link
               href="/book"
               onClick={() => setMobileOpen(false)}
-              className="block w-full text-center px-5 py-3 bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold rounded-lg transition-colors"
+              className="block w-full text-center px-5 py-3 border border-teal-500 text-teal-700 text-sm font-semibold rounded-lg hover:bg-teal-50 transition-colors"
             >
               Book a Demo
+            </Link>
+            <Link
+              href="/onboard"
+              onClick={() => setMobileOpen(false)}
+              className="block w-full text-center px-5 py-3 bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold rounded-lg transition-colors"
+            >
+              Sign up
             </Link>
           </div>
         </div>

@@ -112,8 +112,11 @@ function LoginForm() {
           </form>
         </div>
 
-        <p className="text-center text-sm text-gray-400 mt-6">
-          Don&apos;t have an account? Contact your administrator.
+        <p className="text-center text-sm text-gray-500 mt-6">
+          New pharmacy? <a href="/onboard" className="text-teal-700 hover:text-teal-800 font-semibold underline">Sign up</a>
+        </p>
+        <p className="text-center text-xs text-gray-400 mt-2">
+          Already part of a pharmacy? Contact your account holder to be added.
         </p>
       </div>
     </div>

@@ -71,10 +71,10 @@ export default function HomePage() {
 
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link
-                  href="/for-pharmacies/pgd-catalogue"
+                  href="/onboard"
                   className="inline-flex items-center justify-center gap-2 px-7 py-3.5 bg-teal-500 hover:bg-teal-400 text-white font-semibold rounded-lg transition-colors text-lg shadow-lg shadow-teal-500/20"
                 >
-                  View PGD Catalogue
+                  Sign up your pharmacy
                   <svg
                     className="w-5 h-5"
                     fill="none"
@@ -90,10 +90,16 @@ export default function HomePage() {
                   </svg>
                 </Link>
                 <Link
-                  href="/book"
+                  href="/for-pharmacies/pgd-catalogue"
                   className="inline-flex items-center justify-center gap-2 px-7 py-3.5 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-lg transition-colors text-lg border border-white/20"
                 >
-                  Book a Discovery Call
+                  View PGD Catalogue
+                </Link>
+                <Link
+                  href="/book"
+                  className="inline-flex items-center justify-center gap-2 px-7 py-3.5 text-white/90 hover:text-white font-semibold transition-colors text-lg"
+                >
+                  Book a demo →
                 </Link>
               </div>
             </div>

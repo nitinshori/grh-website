@@ -248,16 +248,22 @@ export default function ForPharmaciesPage() {
         </h2>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link
-            href="/for-pharmacies/pgd-catalogue"
-            className="px-7 py-3.5 bg-teal-500 hover:bg-teal-600 text-white font-semibold rounded-lg transition-colors text-lg"
+            href="/onboard"
+            className="px-7 py-3.5 bg-teal-500 hover:bg-teal-600 text-white font-semibold rounded-lg transition-colors text-lg shadow-sm"
           >
-            View our PGD catalogue and pricing
+            Sign up your pharmacy
+          </Link>
+          <Link
+            href="/for-pharmacies/pgd-catalogue"
+            className="px-7 py-3.5 border border-teal-500 text-teal-700 hover:bg-teal-50 font-semibold rounded-lg transition-colors text-lg"
+          >
+            View PGD catalogue
           </Link>
           <Link
             href="/contact"
             className="px-7 py-3.5 bg-navy-900 hover:bg-navy-800 text-white font-semibold rounded-lg transition-colors text-lg"
           >
-            Book a 20-minute demo
+            Book a demo
           </Link>
         </div>
       </section>
