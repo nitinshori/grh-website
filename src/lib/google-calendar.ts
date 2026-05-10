@@ -75,6 +75,41 @@ const WORK_END_HOUR = 17 // 17:00 (last slot starts 16:30)
 const SLOT_MINUTES = 30
 const DEFAULT_APPOINTMENT_MINUTES = 30
 
+// ── Per-day specific availability overrides ────────────────────
+//
+// Map of YYYY-MM-DD (UK calendar date) → array of HH:MM slot start times.
+// On dates listed here, ONLY these slots are offered (subject to the usual
+// busy-period and lead-time checks). Dates not listed fall through to
+// the default WORK_START_HOUR..WORK_END_HOUR Mon-Fri envelope.
+//
+// Use this for one-off availability changes (evening discovery calls,
+// blocked travel days, etc) without changing the core working-hours
+// constants. Once a date is past, leave the entry or remove it — past
+// dates are ignored automatically by the start-time filter.
+
+const SPECIFIC_AVAILABILITY: Record<string, string[]> = {
+  // Week of 11–15 May 2026 — launch-week discovery calls
+  '2026-05-11': ['16:00', '16:30', '17:00', '17:30', '19:30', '20:00', '20:30'],
+  '2026-05-12': ['08:30'],
+  '2026-05-13': ['19:00', '19:30', '20:00'],
+  '2026-05-14': ['19:00', '19:30', '20:00'],
+  '2026-05-15': ['19:00', '19:30', '20:00'],
+}
+
+function ukDateKey(date: Date): string {
+  const formatter = new Intl.DateTimeFormat('en-GB', {
+    timeZone: WORK_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  })
+  const parts = formatter.formatToParts(date)
+  const y = parts.find((p) => p.type === 'year')?.value
+  const m = parts.find((p) => p.type === 'month')?.value
+  const d = parts.find((p) => p.type === 'day')?.value
+  return `${y}-${m}-${d}`
+}
+
 // ── Availability ────────────────────────────────────────────────
 
 /**
@@ -114,30 +149,43 @@ export async function getAvailability(
   cursor.setUTCHours(0, 0, 0, 0)
 
   while (cursor <= endDate && slots.length < maxSlots) {
-    // Skip weekends (Saturday=6, Sunday=0) using UK time
+    const dateKey = ukDateKey(cursor)
+    const override = SPECIFIC_AVAILABILITY[dateKey]
     const ukDow = ukDayOfWeek(cursor)
-    if (ukDow !== 0 && ukDow !== 6) {
-      // Build slots for this day
+
+    // Build candidate (hour, minute) tuples for this day
+    let candidates: Array<[number, number]> = []
+    if (override) {
+      // Use the explicit overrides for this date, regardless of weekday
+      candidates = override.flatMap((hhmm) => {
+        const [h, m] = hhmm.split(':').map((n) => parseInt(n, 10))
+        return Number.isFinite(h) && Number.isFinite(m) ? [[h, m] as [number, number]] : []
+      })
+    } else if (ukDow !== 0 && ukDow !== 6) {
+      // Default weekday working-hours envelope
       for (let hour = WORK_START_HOUR; hour < WORK_END_HOUR; hour++) {
         for (let minute = 0; minute < 60; minute += SLOT_MINUTES) {
-          const slotStart = ukDateAt(cursor, hour, minute)
-          const slotEnd = new Date(slotStart.getTime() + SLOT_MINUTES * 60 * 1000)
-
-          if (slotStart < minStart) continue
-          if (slotStart > endDate) break
-
-          const overlaps = busy.some(
-            (b) => slotStart < b.end && slotEnd > b.start
-          )
-          if (!overlaps) {
-            slots.push({
-              start: slotStart.toISOString(),
-              end: slotEnd.toISOString(),
-              startLabel: formatSlotLabel(slotStart),
-            })
-            if (slots.length >= maxSlots) break
-          }
+          candidates.push([hour, minute])
         }
+      }
+    }
+
+    for (const [hour, minute] of candidates) {
+      const slotStart = ukDateAt(cursor, hour, minute)
+      const slotEnd = new Date(slotStart.getTime() + SLOT_MINUTES * 60 * 1000)
+
+      if (slotStart < minStart) continue
+      if (slotStart > endDate) break
+
+      const overlaps = busy.some(
+        (b) => slotStart < b.end && slotEnd > b.start
+      )
+      if (!overlaps) {
+        slots.push({
+          start: slotStart.toISOString(),
+          end: slotEnd.toISOString(),
+          startLabel: formatSlotLabel(slotStart),
+        })
         if (slots.length >= maxSlots) break
       }
     }

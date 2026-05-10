@@ -5,11 +5,13 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: Request) {
-  let daysAhead = 14
+  // Cap the booking horizon at 5 days. Anything further out should
+  // be requested by email/phone — keeps the calendar fresh.
+  let daysAhead = 5
   try {
     const body = await request.json()
     if (typeof body.daysAhead === 'number') {
-      daysAhead = Math.min(Math.max(body.daysAhead, 1), 30)
+      daysAhead = Math.min(Math.max(body.daysAhead, 1), 5)
     }
   } catch {
     // empty body is fine — use defaults
@@ -19,7 +21,7 @@ export async function POST(request: Request) {
   const endDate = new Date(startDate.getTime() + daysAhead * 24 * 60 * 60 * 1000)
 
   try {
-    const slots = await getAvailability(startDate, endDate, 12)
+    const slots = await getAvailability(startDate, endDate, 30)
     return NextResponse.json({
       slots: slots.map((s) => ({
         start: s.start,

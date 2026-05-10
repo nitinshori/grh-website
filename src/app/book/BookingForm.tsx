@@ -64,7 +64,7 @@ export default function BookingForm() {
   const [slots, setSlots] = useState<Slot[]>([])
   const [error, setError] = useState<string | null>(null)
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null)
-  const [daysAhead, setDaysAhead] = useState(14)
+  const [daysAhead, setDaysAhead] = useState(5)
   const [confirmedTime, setConfirmedTime] = useState<string | null>(null)
 
   // Form fields
@@ -113,7 +113,9 @@ export default function BookingForm() {
   // ── Load more ───────────────────────────────────────────────
 
   function handleLoadMore() {
-    const next = daysAhead + 14
+    // Cap lookahead at 5 days — keep the booking horizon short and
+    // fresh, so it tracks the live availability map week by week.
+    const next = Math.min(daysAhead + 5, 5)
     setDaysAhead(next)
     setStep('loading')
     fetchSlots(next)
@@ -386,14 +388,16 @@ export default function BookingForm() {
             ))}
           </div>
 
-          <div className="mt-8 text-center">
-            <button
-              onClick={handleLoadMore}
-              className="text-sm text-teal-600 hover:text-teal-700 font-medium underline"
-            >
-              Show more times
-            </button>
-          </div>
+          {daysAhead < 5 && (
+            <div className="mt-8 text-center">
+              <button
+                onClick={handleLoadMore}
+                className="text-sm text-teal-600 hover:text-teal-700 font-medium underline"
+              >
+                Show more times
+              </button>
+            </div>
+          )}
         </>
       )}
 
