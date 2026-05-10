@@ -126,25 +126,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: message }, { status: 400 })
   }
 
-  // Validate startTime is within working hours (9-17 UK time, weekdays)
-  const ukHour = parseInt(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', hour12: false }).format(requestedStart))
-  const ukDow = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', weekday: 'short' }).format(requestedStart)
-  if (ukHour < 9 || ukHour >= 17) {
-    const message = 'Appointments are only available between 9am and 5pm UK time'
-    if (toolCall?.id) {
-      return NextResponse.json({ results: [{ toolCallId: toolCall.id, error: message }] })
-    }
-    return NextResponse.json({ error: message }, { status: 400 })
-  }
-  if (ukDow === 'Sat' || ukDow === 'Sun') {
-    const message = 'Appointments are only available on weekdays'
-    if (toolCall?.id) {
-      return NextResponse.json({ results: [{ toolCallId: toolCall.id, error: message }] })
-    }
-    return NextResponse.json({ error: message }, { status: 400 })
-  }
-
-  // Re-validate availability to prevent double-booking
+  // Re-validate against the offered-slot map. This implicitly covers
+  // working-hours, weekend, and per-day-override rules — getAvailability()
+  // only ever returns slots that the website itself would offer.
   try {
     const slotEnd = new Date(requestedStart.getTime() + 35 * 60 * 1000) // check 35 min window
     const freeSlots = await getAvailability(
