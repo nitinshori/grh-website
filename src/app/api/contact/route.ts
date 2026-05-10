@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
+import { verifyTurnstile } from '@/lib/turnstile'
 
 // Lazy-init so the build succeeds without the key present locally
 let _resend: Resend | null = null
@@ -28,7 +29,17 @@ const ENQUIRY_LABELS: Record<string, string> = {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { name, email, phone, pharmacyName, enquiryType, message } = body
+    const { name, email, phone, pharmacyName, enquiryType, message, turnstileToken } = body
+
+    // Captcha gate (no-op if TURNSTILE_SECRET_KEY isn't set)
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+    const captcha = await verifyTurnstile(turnstileToken, ip)
+    if (!captcha.ok) {
+      return NextResponse.json(
+        { error: 'Captcha verification failed', detail: captcha.error },
+        { status: 400 }
+      )
+    }
 
     // Validation
     if (!name || !email || !enquiryType || !message) {
