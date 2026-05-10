@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 
 const pharmacyLinks = [
   {
@@ -46,6 +47,10 @@ export function Header() {
   const [pharmacyDropdown, setPharmacyDropdown] = useState(false);
   /* patientDropdown removed — site is for pharmacy professionals only */
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const isLoggedIn = !!session?.user;
+  const isAdmin = session?.user?.role === "super_admin";
+  const dashboardHref = isAdmin ? "/admin" : "/for-pharmacies/dashboard";
 
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(href + "/");
@@ -169,30 +174,50 @@ export function Header() {
 
           {/* Desktop CTAs */}
           <div className="hidden lg:flex items-center gap-3">
-            <Link
-              href="/login"
-              className="text-sm font-medium text-navy-900 hover:text-teal-600 transition-colors"
-            >
-              Pharmacy Login
-            </Link>
-            <Link
-              href="/for-pharmacies/pricing"
-              className="text-sm font-medium text-navy-900 hover:text-teal-600 transition-colors"
-            >
-              Pricing
-            </Link>
-            <Link
-              href="/book"
-              className="text-sm font-medium text-navy-900 hover:text-teal-600 transition-colors"
-            >
-              Book a Demo
-            </Link>
-            <Link
-              href="/onboard"
-              className="px-5 py-2.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
-            >
-              Sign up
-            </Link>
+            {isLoggedIn ? (
+              <>
+                <Link
+                  href={dashboardHref}
+                  className="text-sm font-medium text-navy-900 hover:text-teal-600 transition-colors"
+                >
+                  My Dashboard
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => signOut({ callbackUrl: "/" })}
+                  className="px-5 py-2.5 bg-navy-900 hover:bg-navy-800 text-white text-sm font-semibold rounded-lg transition-colors"
+                >
+                  Sign out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="text-sm font-medium text-navy-900 hover:text-teal-600 transition-colors"
+                >
+                  Pharmacy Login
+                </Link>
+                <Link
+                  href="/for-pharmacies/pricing"
+                  className="text-sm font-medium text-navy-900 hover:text-teal-600 transition-colors"
+                >
+                  Pricing
+                </Link>
+                <Link
+                  href="/book"
+                  className="text-sm font-medium text-navy-900 hover:text-teal-600 transition-colors"
+                >
+                  Book a Demo
+                </Link>
+                <Link
+                  href="/onboard"
+                  className="px-5 py-2.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
+                >
+                  Sign up
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -275,27 +300,48 @@ export function Header() {
 
             <div className="my-3 border-t border-gray-100" />
 
-            <Link
-              href="/login"
-              onClick={() => setMobileOpen(false)}
-              className="block w-full text-center px-5 py-3 bg-navy-900 hover:bg-navy-800 text-white text-sm font-semibold rounded-lg transition-colors"
-            >
-              Pharmacy Login
-            </Link>
-            <Link
-              href="/book"
-              onClick={() => setMobileOpen(false)}
-              className="block w-full text-center px-5 py-3 border border-teal-500 text-teal-700 text-sm font-semibold rounded-lg hover:bg-teal-50 transition-colors"
-            >
-              Book a Demo
-            </Link>
-            <Link
-              href="/onboard"
-              onClick={() => setMobileOpen(false)}
-              className="block w-full text-center px-5 py-3 bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold rounded-lg transition-colors"
-            >
-              Sign up
-            </Link>
+            {isLoggedIn ? (
+              <>
+                <Link
+                  href={dashboardHref}
+                  onClick={() => setMobileOpen(false)}
+                  className="block w-full text-center px-5 py-3 bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold rounded-lg transition-colors"
+                >
+                  My Dashboard
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => { setMobileOpen(false); signOut({ callbackUrl: "/" }); }}
+                  className="block w-full text-center px-5 py-3 bg-navy-900 hover:bg-navy-800 text-white text-sm font-semibold rounded-lg transition-colors"
+                >
+                  Sign out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  onClick={() => setMobileOpen(false)}
+                  className="block w-full text-center px-5 py-3 bg-navy-900 hover:bg-navy-800 text-white text-sm font-semibold rounded-lg transition-colors"
+                >
+                  Pharmacy Login
+                </Link>
+                <Link
+                  href="/book"
+                  onClick={() => setMobileOpen(false)}
+                  className="block w-full text-center px-5 py-3 border border-teal-500 text-teal-700 text-sm font-semibold rounded-lg hover:bg-teal-50 transition-colors"
+                >
+                  Book a Demo
+                </Link>
+                <Link
+                  href="/onboard"
+                  onClick={() => setMobileOpen(false)}
+                  className="block w-full text-center px-5 py-3 bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold rounded-lg transition-colors"
+                >
+                  Sign up
+                </Link>
+              </>
+            )}
           </div>
         </div>
       )}
