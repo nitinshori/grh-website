@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 
 // ── Types ───────────────────────────────────────────────────────
 
@@ -110,8 +110,14 @@ export default function AppointmentDiary() {
   const [batchEndHour, setBatchEndHour] = useState('17:00')
   const [batchDuration, setBatchDuration] = useState(15)
 
-  const weekEnd = addDays(weekStart, 7)
-  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
+  // weekEnd / days must be memoised — deriving them inline would create a
+  // fresh Date object on every render, which would re-trigger fetchAppointments
+  // (→ loading=true forever, the bug we hit on launch day).
+  const weekEnd = useMemo(() => addDays(weekStart, 7), [weekStart])
+  const days = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
+    [weekStart]
+  )
 
   // ── Fetch ─────────────────────────────────────────────────────
 
