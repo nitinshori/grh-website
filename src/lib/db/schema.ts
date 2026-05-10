@@ -246,6 +246,13 @@ export const consultationRecords = pgTable('consultation_records', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 
+  // Network fingerprint of the device that saved the record. Used by the
+  // admin fair-use checker — pharmacies whose consults originate from many
+  // distinct /24 subnets are flagged for review (we charge per location).
+  // /24 lookup is done at query time so we don't store sensitive bytes.
+  ipAddress: varchar('ip_address', { length: 64 }),
+  userAgent: text('user_agent'),
+
   // Soft-delete (GDPR Art. 17 right-to-erasure). Records are not visible to
   // pharmacists once deletedAt is set; admin tooling permanently purges
   // after a 30-day grace period.
@@ -314,6 +321,60 @@ export const consultationDrafts = pgTable('consultation_drafts', {
   expiresAt: timestamp('expires_at').notNull(),
 })
 
+// ── Onboarding requests ─────────────────────────────────────────
+// Self-serve sign-up flow for new pharmacies. Created when the customer
+// fills the public /onboard form. Moves through GoCardless and admin
+// approval before becoming a real pharmacy + user pair.
+
+export const onboardingStatusEnum = pgEnum('onboarding_status', [
+  'started',
+  'dd_pending',
+  'awaiting_approval',
+  'approved',
+  'rejected',
+  'completed',
+])
+
+export const onboardingRequests = pgTable('onboarding_requests', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  status: onboardingStatusEnum('status').default('started').notNull(),
+
+  pharmacyName: varchar('pharmacy_name', { length: 255 }).notNull(),
+  pharmacyAddress: text('pharmacy_address'),
+  pharmacyPostcode: varchar('pharmacy_postcode', { length: 20 }),
+  pharmacyPhone: varchar('pharmacy_phone', { length: 50 }),
+  pharmacyEmail: varchar('pharmacy_email', { length: 255 }),
+  pharmacyGphc: varchar('pharmacy_gphc', { length: 50 }),
+  pharmacyOdsCode: varchar('pharmacy_ods_code', { length: 20 }),
+
+  contactFirstName: varchar('contact_first_name', { length: 100 }).notNull(),
+  contactLastName: varchar('contact_last_name', { length: 100 }).notNull(),
+  contactEmail: varchar('contact_email', { length: 255 }).notNull(),
+  contactPhone: varchar('contact_phone', { length: 50 }),
+  contactGphc: varchar('contact_gphc', { length: 50 }),
+  contactRole: varchar('contact_role', { length: 50 }),
+
+  gocardlessRedirectFlowId: varchar('gocardless_redirect_flow_id', { length: 100 }),
+  gocardlessCustomerId: varchar('gocardless_customer_id', { length: 100 }),
+  gocardlessMandateId: varchar('gocardless_mandate_id', { length: 100 }),
+  gocardlessMandateStatus: varchar('gocardless_mandate_status', { length: 50 }),
+  gocardlessSubscriptionId: varchar('gocardless_subscription_id', { length: 100 }),
+  /** Monthly fee in pence (e.g. 49500 = £495). Captured at approval time. */
+  monthlyFeePence: integer('monthly_fee_pence'),
+
+  pharmacyId: uuid('pharmacy_id').references(() => pharmacies.id, { onDelete: 'set null' }),
+  approvedBy: uuid('approved_by').references(() => users.id, { onDelete: 'set null' }),
+  approvedAt: timestamp('approved_at'),
+  rejectedReason: text('rejected_reason'),
+
+  setupTokenHash: varchar('setup_token_hash', { length: 255 }),
+  setupTokenExpiresAt: timestamp('setup_token_expires_at'),
+  setupTokenUsedAt: timestamp('setup_token_used_at'),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
 // ── Type exports ────────────────────────────────────────────────
 
 export type Pharmacy = typeof pharmacies.$inferSelect
@@ -338,3 +399,5 @@ export type ConsultationRecord = typeof consultationRecords.$inferSelect
 export type NewConsultationRecord = typeof consultationRecords.$inferInsert
 export type ConsultationDraft = typeof consultationDrafts.$inferSelect
 export type NewConsultationDraft = typeof consultationDrafts.$inferInsert
+export type OnboardingRequest = typeof onboardingRequests.$inferSelect
+export type NewOnboardingRequest = typeof onboardingRequests.$inferInsert

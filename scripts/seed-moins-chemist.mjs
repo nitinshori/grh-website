@@ -145,9 +145,10 @@ async function run() {
   const clinicianRows = await sql`SELECT id, name, gphc_number FROM clinicians WHERE group_slug = 'moins-chemist'`
   const mohammad = clinicianRows.find(c => c.gphc_number === '2082423')
 
+  const clinicianIds = clinicianRows.map(c => c.id)
   const existingAvail = await sql`
     SELECT id FROM clinician_availability
-    WHERE clinician_id IN (${sql(clinicianRows.map(c => c.id))})
+    WHERE clinician_id = ANY(${clinicianIds})
     LIMIT 1
   `
 

@@ -1,0 +1,1 @@
+src/app/for-pharmacies/dashboard/records/[id]/page.tsx

@@ -4,6 +4,8 @@ import bcrypt from 'bcryptjs'
 import { db } from '@/lib/db'
 import { users, pharmacies } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
+import { rateLimit } from '@/lib/rate-limit'
+import { audit } from '@/lib/audit'
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   trustHost: true,
@@ -17,19 +19,48 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null
 
-        const email = credentials.email as string
+        const email = (credentials.email as string).toLowerCase().trim()
         const password = credentials.password as string
+
+        // Anti-brute-force: 5 attempts per 15 min per email. Token bucket
+        // is in-memory per Vercel instance — enough for casual abuse;
+        // stronger protection requires Redis/Upstash.
+        const limited = rateLimit(`login:${email}`, 5, 15 * 60_000)
+        if (!limited.ok) {
+          await audit({
+            action: 'login_failed',
+            userEmail: email,
+            details: { reason: 'rate_limited' },
+          })
+          return null
+        }
 
         const [user] = await db
           .select()
           .from(users)
-          .where(eq(users.email, email.toLowerCase()))
+          .where(eq(users.email, email))
           .limit(1)
 
-        if (!user || !user.isActive) return null
+        if (!user || !user.isActive) {
+          await audit({
+            action: 'login_failed',
+            userEmail: email,
+            details: { reason: user ? 'inactive' : 'no_user' },
+          })
+          return null
+        }
 
         const valid = await bcrypt.compare(password, user.passwordHash)
-        if (!valid) return null
+        if (!valid) {
+          await audit({
+            action: 'login_failed',
+            userId: user.id,
+            userEmail: email,
+            pharmacyId: user.pharmacyId,
+            details: { reason: 'bad_password' },
+          })
+          return null
+        }
 
         // For client users, fetch the pharmacy slug for redirect
         let pharmacySlug: string | null = null
@@ -41,6 +72,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             .limit(1)
           pharmacySlug = pharmacy?.slug || null
         }
+
+        await audit({
+          action: 'login',
+          userId: user.id,
+          userEmail: email,
+          pharmacyId: user.pharmacyId,
+        })
 
         return {
           id: user.id,
