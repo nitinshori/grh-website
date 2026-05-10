@@ -104,78 +104,26 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Right: Founder card */}
-            <div className="hidden lg:flex justify-center">
-              <div className="relative">
+            {/* Right: Intro video */}
+            <div className="flex justify-center">
+              <div className="relative w-full max-w-md lg:max-w-lg">
                 {/* Decorative ring */}
                 <div className="absolute -inset-4 bg-gradient-to-br from-teal-400/20 to-teal-600/10 rounded-2xl blur-xl" />
 
-                <div className="relative bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8 max-w-sm">
-                  <div className="w-32 h-32 mx-auto rounded-full overflow-hidden mb-6 ring-4 ring-white/10">
-                    <Image
-                      src="/images/nitin-founder.jpg"
-                      alt="Dr Nitin Shori — Founder & Medical Director"
-                      width={128}
-                      height={128}
-                      className="w-full h-full object-cover"
-                      style={{ objectPosition: "55% 25%" }}
-                      priority
-                    />
-                  </div>
-
-                  <div className="text-center">
-                    <h3 className="text-xl font-bold text-white">
-                      Dr Nitin Shori
-                    </h3>
-                    <p className="text-teal-300 font-medium mt-1">
-                      Founder &amp; Medical Director
-                    </p>
-                    <p className="text-blue-200 text-sm mt-3 leading-relaxed">
-                      NHS GP Partner. Medical Director of Pharmacy2U for 10+
-                      years. 20 years of UK pharmacy experience.
-                    </p>
-                  </div>
-
-                  <div className="mt-6 pt-6 border-t border-white/10 grid grid-cols-2 gap-3 text-center">
-                    <div>
-                      <p className="text-2xl font-bold text-teal-400">20 yrs</p>
-                      <p className="text-[11px] text-blue-200 mt-0.5 leading-tight">
-                        UK pharmacy experience
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold text-teal-400">10+ yrs</p>
-                      <p className="text-[11px] text-blue-200 mt-0.5 leading-tight">
-                        Medical Director, Pharmacy2U
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-3 grid grid-cols-4 gap-2 text-center">
-                    <div>
-                      <p className="text-xl font-bold text-teal-400">60+</p>
-                      <p className="text-[10px] text-blue-200 mt-0.5 leading-tight">
-                        ePGD services
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xl font-bold text-teal-400">CQC</p>
-                      <p className="text-[10px] text-blue-200 mt-0.5 leading-tight">
-                        registered
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xl font-bold text-teal-400">HIW</p>
-                      <p className="text-[10px] text-blue-200 mt-0.5 leading-tight">
-                        registered
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xl font-bold text-teal-400">NHS</p>
-                      <p className="text-[10px] text-blue-200 mt-0.5 leading-tight">
-                        GP Partner
-                      </p>
-                    </div>
-                  </div>
+                <div className="relative bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-3">
+                  <video
+                    src="/videos/grh-intro.mp4"
+                    poster="/images/nitin-founder.jpg"
+                    controls
+                    playsInline
+                    preload="metadata"
+                    className="w-full h-auto rounded-xl shadow-lg shadow-black/30"
+                    aria-label="Dr Nitin Shori introduces Get Real Health — a PGD platform for UK community pharmacy."
+                  />
+                  <p className="text-center text-blue-200 text-xs mt-3 px-2">
+                    Dr Nitin Shori &mdash; Founder &amp; Medical Director.
+                    NHS GP Partner. Medical Director of Pharmacy2U for 10+ years.
+                  </p>
                 </div>
               </div>
             </div>
