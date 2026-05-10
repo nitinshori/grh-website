@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { consultationRecords } from '@/lib/db/schema'
-import { and, eq, isNotNull, lt, sql } from 'drizzle-orm'
+import { and, isNotNull, lt, sql } from 'drizzle-orm'
+import { audit } from '@/lib/audit'
 
 /**
  * GET /api/cron/retention — runs the data retention policy.
@@ -64,6 +65,25 @@ export async function GET(request: Request) {
       )
     )
     .returning({ id: consultationRecords.id })
+
+  // Audit each purged + archived record. CQC-grade retention policy proof:
+  // every legally-significant deletion has an immutable trail with timestamp.
+  for (const row of purged) {
+    await audit({
+      action: 'record_purge',
+      recordId: row.id,
+      userEmail: 'cron@retention',
+      details: { reason: 'soft_deleted_more_than_30d', purgedAt: now.toISOString() },
+    })
+  }
+  for (const row of archived) {
+    await audit({
+      action: 'record_soft_delete',
+      recordId: row.id,
+      userEmail: 'cron@retention',
+      details: { reason: '8y_retention_policy', archivedAt: now.toISOString() },
+    })
+  }
 
   return NextResponse.json({
     success: true,

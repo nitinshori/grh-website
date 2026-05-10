@@ -1,6 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+
+// Cloudflare Turnstile script tag is added once on first render.
+// Site key is exposed via NEXT_PUBLIC_TURNSTILE_SITE_KEY (safe to publish).
+const TURNSTILE_SCRIPT = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+declare global {
+  interface Window {
+    turnstile?: {
+      render: (
+        el: HTMLElement,
+        opts: { sitekey: string; callback: (token: string) => void; "error-callback"?: () => void }
+      ) => string;
+      reset: (id: string) => void;
+    };
+  }
+}
 
 type Step = 1 | 2 | 3;
 
@@ -41,6 +56,41 @@ export default function OnboardClient() {
   const [form, setForm] = useState<FormState>(initial);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<HTMLDivElement>(null);
+  const turnstileWidgetIdRef = useRef<string | null>(null);
+  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+
+  // Mount Turnstile when the user reaches step 3 (DD).
+  useEffect(() => {
+    if (step !== 3 || !siteKey || !turnstileRef.current) return;
+    function render() {
+      if (!window.turnstile || !turnstileRef.current) return;
+      // Avoid double-render on rerenders
+      if (turnstileWidgetIdRef.current) return;
+      turnstileWidgetIdRef.current = window.turnstile.render(turnstileRef.current, {
+        sitekey: siteKey!,
+        callback: (token: string) => setTurnstileToken(token),
+        "error-callback": () => setTurnstileToken(null),
+      });
+    }
+    if (window.turnstile) {
+      render();
+    } else {
+      const existing = document.querySelector(`script[src="${TURNSTILE_SCRIPT}"]`);
+      if (!existing) {
+        const s = document.createElement("script");
+        s.src = TURNSTILE_SCRIPT;
+        s.async = true;
+        s.defer = true;
+        s.onload = render;
+        document.head.appendChild(s);
+      } else {
+        existing.addEventListener("load", render);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
   const set = (field: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [field]: e.target.value }));
 
@@ -54,11 +104,11 @@ export default function OnboardClient() {
     setBusy(true);
     setError(null);
     try {
-      // 1. Create the onboarding request
+      // 1. Create the onboarding request (with captcha token if Turnstile is configured)
       const createRes = await fetch("/api/onboarding", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, turnstileToken }),
       });
       const createBody = (await createRes.json()) as { id?: string; error?: string };
       if (!createRes.ok || !createBody.id) {
@@ -185,6 +235,11 @@ export default function OnboardClient() {
                 <li>Protected by the UK Direct Debit Guarantee</li>
                 <li>No charges while we review your application</li>
               </ul>
+              {siteKey && (
+                <div className="pt-2">
+                  <div ref={turnstileRef} />
+                </div>
+              )}
               {error && (
                 <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
                   {error}
@@ -196,8 +251,9 @@ export default function OnboardClient() {
                 </button>
                 <button
                   onClick={handleStartDirectDebit}
-                  disabled={busy}
+                  disabled={busy || (!!siteKey && !turnstileToken)}
                   className="flex-1 py-3 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-300 text-white font-semibold rounded-lg transition-colors"
+                  title={siteKey && !turnstileToken ? "Complete the captcha first" : undefined}
                 >
                   {busy ? "Redirecting to GoCardless…" : "Continue to GoCardless →"}
                 </button>

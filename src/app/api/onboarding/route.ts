@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { onboardingRequests } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
+import { verifyTurnstile } from '@/lib/turnstile'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,8 +15,13 @@ export const dynamic = 'force-dynamic'
  * Self-serve — no auth required. Lightly rate-limited at the IP level.
  */
 export async function POST(request: NextRequest) {
-  const body = await request.json().catch(() => null) as Record<string, string> | null
+  const body = await request.json().catch(() => null) as (Record<string, string> & { turnstileToken?: string }) | null
   if (!body) return NextResponse.json({ error: 'Bad body' }, { status: 400 })
+
+  // Captcha gate (anti-bot). No-op if TURNSTILE_SECRET_KEY isn't set.
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+  const captcha = await verifyTurnstile(body.turnstileToken, ip)
+  if (!captcha.ok) return NextResponse.json({ error: 'Captcha verification failed', detail: captcha.error }, { status: 400 })
 
   // Required fields
   const required = ['pharmacyName', 'contactFirstName', 'contactLastName', 'contactEmail']
