@@ -1,7 +1,6 @@
 import type { MetadataRoute } from "next";
 import { patientCategories } from "@/data/patient-services";
 import { articles } from "@/data/articles";
-import { pgds } from "@/data/pgds";
 
 const BASE_URL = "https://getrealhealthpgd.co.uk";
 
@@ -9,6 +8,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date().toISOString();
 
   // Static pages
+  // NOTE: /for-pharmacies/epgd/* are deliberately NOT included.
+  // Those routes are the consultation tools used by registered
+  // pharmacy professionals during patient sessions — they carry
+  // robots: { index: false, follow: false } in their page metadata
+  // and are blocked at robots.txt. They are NOT marketing landing
+  // pages. If we want SEO landing pages per service, build them
+  // separately under /services/<slug>.
   const staticPages: MetadataRoute.Sitemap = [
     { url: BASE_URL, lastModified: now, changeFrequency: "weekly", priority: 1.0 },
     { url: `${BASE_URL}/for-pharmacies`, lastModified: now, changeFrequency: "weekly", priority: 0.9 },
@@ -40,17 +46,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.7,
   }));
 
-  // ePGD landing pages — high-intent keywords like "Wegovy PGD UK pharmacy"
-  // each map to a dedicated page; surfacing them in the sitemap gives Google
-  // 60+ topical landing pages instead of one mega-catalogue.
-  const epgdPages: MetadataRoute.Sitemap = pgds
-    .filter((p) => !p.comingSoon)
-    .map((p) => ({
-      url: `${BASE_URL}/for-pharmacies/epgd/${p.id}`,
-      lastModified: now,
-      changeFrequency: "monthly" as const,
-      priority: 0.7,
-    }));
-
-  return [...staticPages, ...categoryPages, ...articlePages, ...epgdPages];
+  return [...staticPages, ...categoryPages, ...articlePages];
 }
