@@ -4,10 +4,19 @@
 
 import type { TrainingModule } from "./types";
 import { edModule } from "./ed";
+import { wegovyModule } from "./wegovy";
+import { mounjaroModule } from "./mounjaro";
+import { trtModule } from "./trt";
+import { hrtModule } from "./hrt";
 
 export const modules: TrainingModule[] = [
+  // Tier 1 — headlined in launch video / highest-traffic
   edModule,
-  // Add additional modules here as they're written and clinically reviewed.
+  wegovyModule,
+  mounjaroModule,
+  trtModule,
+  hrtModule,
+  // Tier 2+ to follow as drafted.
 ];
 
 export function getModuleBySlug(slug: string): TrainingModule | undefined {
