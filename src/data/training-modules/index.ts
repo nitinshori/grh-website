@@ -3,48 +3,82 @@
 // `modules` array. Slugs must be unique and should match the PGD slug.
 
 import type { TrainingModule } from "./types";
+// Tier 1 — highest traffic / launch headlines
 import { edModule } from "./ed";
 import { wegovyModule } from "./wegovy";
 import { mounjaroModule } from "./mounjaro";
+import { trtModule } from "./trt";
+import { hrtModule } from "./hrt";
+import { utiModule } from "./uti";
+import { emergencyContraceptionModule } from "./emergency-contraception";
+import { hairLossModule } from "./hair-loss";
+import { travelCoreModule } from "./travel-core";
+// Tier 2 — weight management family + men's & women's health
 import { saxendaModule } from "./saxenda";
 import { orlistatModule } from "./orlistat";
 import { mysimbaModule } from "./mysimba";
 import { glp1MonitoringModule } from "./glp1-monitoring";
-import { trtModule } from "./trt";
-import { hrtModule } from "./hrt";
-import { utiModule } from "./uti";
+import { periodDelayModule } from "./period-delay";
+import { prematureEjaculationModule } from "./premature-ejaculation";
+import { bphModule } from "./bph";
 import { recurrentUtiModule } from "./recurrent-uti";
-import { emergencyContraceptionModule } from "./emergency-contraception";
-import { hairLossModule } from "./hair-loss";
-import { travelCoreModule } from "./travel-core";
+// Tier 3 — sexual health, dermatology, common conditions
 import { bvModule } from "./bv";
 import { thrushModule } from "./thrush";
 import { coldSoresModule } from "./cold-sores";
 import { hayfeverModule } from "./hayfever";
-import { periodDelayModule } from "./period-delay";
 import { acneModule } from "./acne";
 import { rosaceaModule } from "./rosacea";
 import { eczemaModule } from "./eczema";
 import { impetigoModule } from "./impetigo";
 import { soreThroatModule } from "./sore-throat";
 import { earInfectionModule } from "./ear-infection";
+import { woundCareModule } from "./wound-care";
+import { threadwormsModule } from "./threadworms";
+import { gonorrhoeaTreatmentModule } from "./gonorrhoea-treatment";
+import { herpesManagementModule } from "./herpes-management";
+import { genitalWartsModule } from "./genital-warts";
+import { stiTestingModule } from "./sti-testing";
+import { prepModule } from "./prep";
+import { postnatalContraceptionModule } from "./postnatal-contraception";
+import { testosteroneWomenModule } from "./testosterone-women";
+import { alopeciaMinoxidilModule } from "./alopecia-minoxidil";
+// Tier 4 — vaccines
 import { fluModule } from "./flu";
 import { covidBoosterModule } from "./covid-booster";
 import { shinglesVaccineModule } from "./shingles-vaccine";
 import { pneumococcalModule } from "./pneumococcal";
+import { hpvModule } from "./hpv";
+import { mmrModule } from "./mmr";
+import { chickenpoxModule } from "./chickenpox";
+import { meningitisBModule } from "./meningitis-b";
+import { rsvModule } from "./rsv";
+import { hepBOccupationalModule } from "./hep-b-occupational";
+// Tier 5 — respiratory, CVD, mental health, smoking, sleep, alcohol
 import { asthmaRescueModule } from "./asthma-rescue";
 import { copdModule } from "./copd";
-import { threadwormsModule } from "./threadworms";
-import { smokingVareniclineModule } from "./smoking-varenicline";
-import { smokingNrtModule } from "./smoking-nrt";
 import { hypertensionModule } from "./hypertension";
 import { statinsModule } from "./statins";
-import { prematureEjaculationModule } from "./premature-ejaculation";
-import { bphModule } from "./bph";
 import { anxietyPropranololModule } from "./anxiety-propranolol";
 import { sleepMelatoninModule } from "./sleep-melatonin";
-import { woundCareModule } from "./wound-care";
+import { smokingVareniclineModule } from "./smoking-varenicline";
+import { smokingNrtModule } from "./smoking-nrt";
 import { alcoholReductionModule } from "./alcohol-reduction";
+// Tier 6 — travel medicine specifics
+import { antiMalarialsModule } from "./anti-malarials";
+import { yellowFeverModule } from "./yellow-fever";
+import { rabiesModule } from "./rabies";
+import { japaneseEncephalitisModule } from "./japanese-encephalitis";
+import { meningitisAcwyTravelModule } from "./meningitis-acwy-travel";
+import { dengueModule } from "./dengue";
+import { altitudeSicknessModule } from "./altitude-sickness";
+import { travellersDiarrhoeaModule } from "./travellers-diarrhoea";
+import { typhoidModule } from "./typhoid";
+// Tier 7 — paediatrics, dental, monitoring, treatment
+import { diabetesMonitoringModule } from "./diabetes-monitoring";
+import { dentalBridgingModule } from "./dental-bridging";
+import { paediatricUtiModule } from "./paediatric-uti";
+import { shinglesTreatmentModule } from "./shingles-treatment";
 
 export const modules: TrainingModule[] = [
   // Tier 1 — headlined in launch video / highest-traffic
@@ -79,11 +113,25 @@ export const modules: TrainingModule[] = [
   earInfectionModule,
   woundCareModule,
   threadwormsModule,
+  gonorrhoeaTreatmentModule,
+  herpesManagementModule,
+  genitalWartsModule,
+  stiTestingModule,
+  prepModule,
+  postnatalContraceptionModule,
+  testosteroneWomenModule,
+  alopeciaMinoxidilModule,
   // Tier 4 — vaccines
   fluModule,
   covidBoosterModule,
   shinglesVaccineModule,
   pneumococcalModule,
+  hpvModule,
+  mmrModule,
+  chickenpoxModule,
+  meningitisBModule,
+  rsvModule,
+  hepBOccupationalModule,
   // Tier 5 — respiratory, CVD, mental health, smoking, sleep, alcohol
   asthmaRescueModule,
   copdModule,
@@ -94,11 +142,21 @@ export const modules: TrainingModule[] = [
   smokingVareniclineModule,
   smokingNrtModule,
   alcoholReductionModule,
-  // Remaining tier 3-5 modules to follow in next session:
-  // Sexual health: gonorrhoea, herpes, genital-warts, STI testing, PrEP, testosterone-women, postnatal-contraception
-  // Vaccines: HPV, MMR, chickenpox, meningitis-B, RSV, hep-B-occupational
-  // Travel-specific: anti-malarials, yellow-fever, rabies, JE, meningitis-ACWY-travel, dengue, altitude-sickness, travellers-diarrhoea, typhoid, hep-AB-travel
-  // Other: diabetes monitoring, dental bridging, paediatric UTI, shingles treatment
+  // Tier 6 — travel medicine specifics
+  antiMalarialsModule,
+  yellowFeverModule,
+  rabiesModule,
+  japaneseEncephalitisModule,
+  meningitisAcwyTravelModule,
+  dengueModule,
+  altitudeSicknessModule,
+  travellersDiarrhoeaModule,
+  typhoidModule,
+  // Tier 7 — paediatrics, dental, monitoring, treatment
+  diabetesMonitoringModule,
+  dentalBridgingModule,
+  paediatricUtiModule,
+  shinglesTreatmentModule,
 ];
 
 export function getModuleBySlug(slug: string): TrainingModule | undefined {
