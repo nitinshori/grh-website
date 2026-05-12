@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import { pushDataLayerEvent } from '@/lib/gtm'
 
 // ── Types ───────────────────────────────────────────────────────
 
@@ -160,6 +161,8 @@ export default function BookingForm() {
 
       setConfirmedTime(data.formattedTime || formatFullTime(selectedSlot.start))
       setStep('confirmed')
+      // Google Ads conversion — discovery call booked
+      pushDataLayerEvent('book_demo_submit')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
       setStep('form')

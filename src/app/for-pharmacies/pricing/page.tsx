@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 };
 
 const features = [
-  "All PGDs included — 60+ across every category",
+  "All PGDs included — 70 across every category",
   "Unlimited consultations — zero per-consult fees",
   "Platform access via web and mobile",
   "Online training with CPD certificates for every PGD",
@@ -41,7 +41,7 @@ const faqs = [
   },
   {
     q: "How does your pricing compare to other PGD providers?",
-    a: "Some providers charge per pharmacist — so if you have two pharmacists or use locums, your costs double. Others charge £2,639 per pharmacy per year (inc. VAT) upfront. GRH is £100/month per store — all pharmacists and locums included, all 60+ PGDs, the ePGD platform, training, clinical support, onboarding, and a built-in appointment diary. Use the savings calculator above to compare.",
+    a: "Some providers charge per pharmacist — so if you have two pharmacists or use locums, your costs double. Others charge £2,639 per pharmacy per year (inc. VAT) upfront. GRH is £100/month per store — all pharmacists and locums included, all 70 PGDs, the ePGD platform, training, clinical support, onboarding, and a built-in appointment diary. Use the savings calculator above to compare.",
   },
   {
     q: "Can I cancel?",
@@ -49,9 +49,59 @@ const faqs = [
   },
 ];
 
+// FAQ JSON-LD — gets cited verbatim by Google AI Overviews and ChatGPT Search.
+// Mirrors the faqs array above so on-page content and structured data stay in sync.
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: faqs.map((f) => ({
+    "@type": "Question",
+    name: f.q,
+    acceptedAnswer: {
+      "@type": "Answer",
+      text: f.a,
+    },
+  })),
+};
+
+// Offer JSON-LD — gives AI engines a clean structured price + currency to quote.
+const offerJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Product",
+  name: "Get Real Health PGD Platform",
+  description:
+    "All-inclusive PGD platform for UK community pharmacies. 70 PGDs, ePGD consultation tool, training, appointment diary, clinical support.",
+  brand: { "@type": "Brand", name: "Get Real Health" },
+  offers: {
+    "@type": "Offer",
+    price: "100",
+    priceCurrency: "GBP",
+    priceSpecification: {
+      "@type": "UnitPriceSpecification",
+      price: "100",
+      priceCurrency: "GBP",
+      unitCode: "MON",
+      referenceQuantity: { "@type": "QuantitativeValue", value: 1, unitCode: "C62" },
+    },
+    eligibleRegion: [
+      { "@type": "Country", name: "United Kingdom" },
+    ],
+    availability: "https://schema.org/InStock",
+    url: "https://getrealhealthpgd.co.uk/for-pharmacies/pricing",
+  },
+};
+
 export default function PricingPage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(offerJsonLd) }}
+      />
       {/* Hero */}
       <section className="bg-navy-950 text-white">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-20">

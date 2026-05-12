@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { pushDataLayerEvent } from "@/lib/gtm";
 
 type State = "loading" | "ok" | "error";
 
@@ -24,7 +25,13 @@ export default function DdCompleteClient() {
         const body = (await r.json().catch(() => ({}))) as { error?: string };
         if (!r.ok) throw new Error(body.error || `${r.status}`);
       })
-      .then(() => { if (!cancelled) setState("ok"); })
+      .then(() => {
+        if (!cancelled) {
+          setState("ok");
+          // Google Ads conversion — onboarding + GoCardless mandate complete
+          pushDataLayerEvent("onboard_complete");
+        }
+      })
       .catch((e) => { if (!cancelled) { setState("error"); setErrorMsg(String(e.message || e)); } });
     return () => { cancelled = true; };
   }, [id, token]);

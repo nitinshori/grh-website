@@ -64,8 +64,43 @@ export default async function ArticlePage({
 
   const allRelated = [...related, ...otherRelated];
 
+  // Article JSON-LD — cited by Google AI Overviews, ChatGPT Search, etc.
+  // Gives AI engines structured authorship, publish date, and topic.
+  const articleJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: article.title,
+    description: article.description,
+    datePublished: article.publishDate,
+    dateModified: article.publishDate,
+    author: {
+      "@type": "Organization",
+      name: "Get Real Health",
+      url: "https://getrealhealthpgd.co.uk",
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "Get Real Health",
+      url: "https://getrealhealthpgd.co.uk",
+      logo: {
+        "@type": "ImageObject",
+        url: "https://getrealhealthpgd.co.uk/og-image.png",
+      },
+    },
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": `https://getrealhealthpgd.co.uk/resources/${article.slug}`,
+    },
+    keywords: [article.primaryKeyword, "PGD", "UK pharmacy", article.category],
+    articleSection: article.category,
+  };
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
+      />
       {/* Article header */}
       <article>
         <header className="bg-navy-950 text-white">
@@ -151,9 +186,9 @@ export default async function ArticlePage({
               Want to offer these services?
             </h3>
             <p className="text-gray-600 text-sm mb-4">
-              Get Real Health provides 60+ PGDs, built-in training, and a
-              consultation platform — all for one flat annual fee. No
-              per-consult charges.
+              Get Real Health provides 70 PGDs, built-in training, and a
+              consultation platform — all for one flat £100/month fee per
+              pharmacy. No per-consult charges.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <Link

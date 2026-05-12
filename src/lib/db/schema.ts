@@ -5,9 +5,12 @@ import {
   text,
   boolean,
   integer,
+  numeric,
   timestamp,
   pgEnum,
   uniqueIndex,
+  index,
+  jsonb,
 } from 'drizzle-orm/pg-core'
 
 // ── Enums ───────────────────────────────────────────────────────
@@ -375,6 +378,52 @@ export const onboardingRequests = pgTable('onboarding_requests', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
 
+// ── Training attempts ───────────────────────────────────────────
+// One row per quiz attempt at a training module. Used both for the live
+// "is this pharmacist currently certified to deliver PGD X?" lookup and
+// as an audit log of CPD activity. The pharmacist is considered competent
+// in PGD X if the latest `passed=true` attempt's `module_version` is >=
+// the current published version of that module (and the module has not
+// had a `materialClinicalChange` published since).
+
+export const trainingAttempts = pgTable(
+  'training_attempts',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    pharmacyId: uuid('pharmacy_id').references(() => pharmacies.id, { onDelete: 'set null' }),
+    moduleSlug: varchar('module_slug', { length: 100 }).notNull(),
+    /** Semver of the module the user attempted (e.g. "1.0.0"). */
+    moduleVersion: varchar('module_version', { length: 20 }).notNull(),
+    correctCount: integer('correct_count').notNull(),
+    totalCount: integer('total_count').notNull(),
+    /** 0.0000–1.0000 — exact fraction of correct answers. */
+    scoreFraction: numeric('score_fraction', { precision: 5, scale: 4 }).notNull(),
+    passed: boolean('passed').notNull(),
+    /**
+     * Question IDs the user got wrong AND that were marked `critical: true`
+     * on the module. If non-empty, the attempt fails regardless of overall
+     * score.
+     */
+    failedCriticalQuestionIds: jsonb('failed_critical_question_ids').$type<string[]>(),
+    /**
+     * Submitted answers, keyed by question id → option ids. Stored verbatim
+     * for audit defensibility.
+     */
+    answers: jsonb('answers').$type<Record<string, string[]>>().notNull(),
+    attemptedAt: timestamp('attempted_at').defaultNow().notNull(),
+  },
+  (t) => ({
+    userModuleIdx: index('idx_training_attempts_user_module').on(t.userId, t.moduleSlug),
+    latestPassIdx: index('idx_training_attempts_latest_pass').on(
+      t.userId,
+      t.moduleSlug,
+      t.passed,
+      t.attemptedAt,
+    ),
+  }),
+)
+
 // ── Type exports ────────────────────────────────────────────────
 
 export type Pharmacy = typeof pharmacies.$inferSelect
@@ -401,3 +450,5 @@ export type ConsultationDraft = typeof consultationDrafts.$inferSelect
 export type NewConsultationDraft = typeof consultationDrafts.$inferInsert
 export type OnboardingRequest = typeof onboardingRequests.$inferSelect
 export type NewOnboardingRequest = typeof onboardingRequests.$inferInsert
+export type TrainingAttempt = typeof trainingAttempts.$inferSelect
+export type NewTrainingAttempt = typeof trainingAttempts.$inferInsert

@@ -4,6 +4,7 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { CookieConsent } from "@/components/legal/CookieConsent";
 import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
+import { GoogleTagManager } from "@/components/analytics/GoogleTagManager";
 import { AuthSessionProvider } from "@/components/providers/AuthSessionProvider";
 
 export const metadata: Metadata = {
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
     template: "%s | Get Real Health",
   },
   description:
-    "UK pharmacy PGD provider. 60+ services, flat annual fee, no per-consult charges. Your patients. Your data. Your business.",
+    "UK pharmacy PGD provider. 70 PGDs, £100/month flat, no per-consult charges. Your patients. Your data. Your business.",
   keywords: [
     "PGD provider",
     "pharmacy PGD",
@@ -26,6 +27,25 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_GB",
     siteName: "Get Real Health",
+    url: "https://getrealhealthpgd.co.uk",
+    title: "Get Real Health | PGD Services for UK Pharmacies",
+    description:
+      "70 PGDs. £100/month flat. No per-consult charges. CQC + HIW registered.",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Get Real Health — PGD platform for UK pharmacies",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Get Real Health | PGD Services for UK Pharmacies",
+    description:
+      "70 PGDs. £100/month flat. No per-consult charges. CQC + HIW registered.",
+    images: ["/og-image.png"],
   },
 };
 
@@ -35,7 +55,7 @@ const jsonLd = {
   name: "Get Real Health",
   url: "https://getrealhealthpgd.co.uk",
   description:
-    "UK pharmacy PGD provider. 60+ services, flat annual fee, no per-consult charges.",
+    "UK pharmacy PGD provider. 70 PGDs, £100/month flat, no per-consult charges.",
   areaServed: {
     "@type": "Country",
     name: "United Kingdom",
@@ -63,6 +83,7 @@ export default function RootLayout({
           <Footer />
           <CookieConsent />
           <GoogleAnalytics />
+          <GoogleTagManager />
         </AuthSessionProvider>
       </body>
     </html>
