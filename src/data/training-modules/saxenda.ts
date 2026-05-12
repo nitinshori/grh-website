@@ -1,0 +1,215 @@
+// Saxenda (liraglutide 3 mg) — weight management PGD training
+//
+// DRAFT — pending clinical sign-off by Dr Nitin Shori.
+
+import type { TrainingModule } from "./types";
+
+export const saxendaModule: TrainingModule = {
+  slug: "saxenda",
+  title: "Saxenda (Liraglutide 3 mg) — Weight Management PGD",
+  description:
+    "Eligibility, contraindications, daily titration and counselling for liraglutide 3 mg under PGD.",
+  pgdSlugs: ["saxenda"],
+  authoredBy: "Get Real Health Clinical Team",
+  reviewedBy: "DRAFT — pending clinical sign-off",
+  version: "1.0.0",
+  materialClinicalChange: true,
+  publishedAt: "2026-05-12",
+  estimatedMinutes: 15,
+  passMark: 0.8,
+  slides: [
+    {
+      id: "intro",
+      type: "intro",
+      title: "Saxenda — Training",
+      subtitle: "Liraglutide 3 mg — once-daily GLP-1 receptor agonist for weight management",
+      estimatedMinutes: 15,
+      objectives: [
+        "Identify which patients are eligible for Saxenda under the GRH PGD.",
+        "Recognise the absolute contraindications (mostly shared with semaglutide).",
+        "Apply the correct daily dose-titration schedule (0.6 → 1.2 → 1.8 → 2.4 → 3.0 mg).",
+        "Counsel on injection technique, GI side effects, and red flags.",
+        "Use the ePGD tool to record the consultation defensibly.",
+      ],
+    },
+    {
+      id: "background",
+      type: "content",
+      title: "Clinical background",
+      body: [
+        "Saxenda is liraglutide 3 mg — a GLP-1 receptor agonist licensed for chronic weight management. Unlike Wegovy (semaglutide, weekly) and Mounjaro (tirzepatide, weekly), Saxenda is dosed ONCE DAILY by subcutaneous injection.",
+        "Pivotal trials (SCALE programme) showed average weight loss of 7–8% at 56 weeks. Lower than semaglutide and tirzepatide but established with a longer evidence base. Some patients tolerate daily dosing better than weekly.",
+      ],
+      highlights: [
+        "Daily injection (versus weekly for Wegovy/Mounjaro).",
+        "Average weight loss ~7–8% at 56 weeks.",
+        "Generally less effective than newer GLP-1s but well-established.",
+      ],
+    },
+    {
+      id: "eligibility",
+      type: "checklist",
+      title: "Eligibility under the PGD",
+      intro: "Supply is permitted only when ALL of the following are true:",
+      items: [
+        { label: "Aged 18–75", detail: "Outside this range refer." },
+        { label: "BMI ≥30, OR BMI ≥27 with qualifying comorbidity", detail: "Hypertension, dyslipidaemia, prediabetes, type 2 diabetes (GP-managed), OSA, CVD. BMI measured today." },
+        { label: "Resident in England or Wales", detail: "CQC / HIW coverage only." },
+        { label: "Engaged with diet and lifestyle change", detail: "Saxenda is an adjunct, not a substitute." },
+        { label: "No absolute contraindications", detail: "Reviewed next." },
+        { label: "Has signed the patient declaration", detail: "Includes GI side effects, daily injection commitment, red flags." },
+      ],
+    },
+    {
+      id: "absolute-contraindications",
+      type: "callout",
+      title: "Absolute contraindications — NEVER supply",
+      tone: "danger",
+      message: "If ANY apply, the PGD cannot be used. Refer to GP.",
+      detail: [
+        "Personal or family history of medullary thyroid carcinoma (MTC) or MEN2.",
+        "Personal history of pancreatitis (any cause).",
+        "Pregnancy or planning pregnancy within 2 months. Breastfeeding.",
+        "Type 1 diabetes.",
+        "Severe gastrointestinal disease (gastroparesis, IBD in flare).",
+        "Severe hepatic impairment.",
+        "End-stage renal disease (eGFR <15).",
+        "Hypersensitivity to liraglutide.",
+        "Concurrent use of another GLP-1 receptor agonist.",
+      ],
+    },
+    {
+      id: "dosing",
+      type: "checklist",
+      title: "Dose titration — 5-step daily",
+      intro: "Once daily, any time of day, with or without food. Titrate weekly.",
+      items: [
+        { label: "Week 1", detail: "0.6 mg once daily." },
+        { label: "Week 2", detail: "1.2 mg once daily." },
+        { label: "Week 3", detail: "1.8 mg once daily." },
+        { label: "Week 4", detail: "2.4 mg once daily." },
+        { label: "Week 5 onwards", detail: "3.0 mg once daily (maintenance)." },
+        { label: "If GI side effects severe at any step", detail: "Hold at current dose for another week before escalating." },
+        { label: "Missed dose", detail: "If <12 hours since usual time, take as soon as remembered. If >12 hours, skip and take next scheduled dose." },
+        { label: "If treatment paused ≥3 days", detail: "Re-titrate from 0.6 mg." },
+      ],
+    },
+    {
+      id: "counselling",
+      type: "checklist",
+      title: "Counselling — every supply",
+      items: [
+        { label: "Injection technique", detail: "Subcut into abdomen, thigh, or upper arm. Rotate sites. Same time each day not required." },
+        { label: "Storage", detail: "Refrigerate 2–8°C before first use. In-use pen at room temperature ≤30°C for up to 30 days." },
+        { label: "Common side effects", detail: "Nausea, vomiting, diarrhoea, constipation. Usually mild and short-lived; peak in early titration." },
+        { label: "Hydration", detail: "Maintain fluid intake. AKI risk if severe vomiting/diarrhoea." },
+        { label: "Hypoglycaemia in diabetic patients", detail: "Especially if on insulin/sulphonylureas — GP coordination required." },
+        { label: "Contraception", detail: "Stop Saxenda 1 month before planned conception. Confirm reliable contraception in women of childbearing age." },
+        { label: "Discontinuation criterion", detail: "<5% weight loss at 12 weeks on 3 mg maintenance suggests inadequate response — consider stopping." },
+      ],
+    },
+    {
+      id: "red-flags",
+      type: "callout",
+      title: "Red flags — STOP and refer",
+      tone: "danger",
+      message: "Stop the next dose and refer to appropriate care.",
+      detail: [
+        "Severe persistent abdominal pain radiating to back — possible pancreatitis. A&E.",
+        "Acute RUQ pain with fever/jaundice — possible cholecystitis. A&E.",
+        "Severe persistent vomiting preventing oral fluids — AKI risk.",
+        "Neck swelling, hoarseness, dysphagia — refer urgently.",
+        "Allergic reaction — 999/A&E.",
+        "New/worsening depression or suicidal ideation.",
+        "Pregnancy — stop immediately.",
+      ],
+    },
+    {
+      id: "case-1",
+      type: "case",
+      title: "Case 1 — daily dosing preference",
+      scenario:
+        "Beth, 45, BMI 31, hypertensive (controlled). Doesn't like weekly injections (needle phobia, prefers smaller daily action). No contraindications. Wants Saxenda.",
+      question: "What's the correct supply?",
+      answer:
+        "Initiate liraglutide 0.6 mg once daily for week 1, then weekly step-up to 3 mg by week 5. Counsel on storage, injection technique, GI side effects, hydration, and contraception. Review at week 5 (when she reaches maintenance) for tolerability and weight check. Discontinuation review at 12 weeks on maintenance dose.",
+      rationale:
+        "Patient preference is a legitimate driver of agent choice. Saxenda is a reasonable choice when daily injection is preferred or when newer GLP-1s aren't accessible. Standard titration protocol.",
+    },
+    {
+      id: "summary",
+      type: "summary",
+      title: "Key points",
+      keyPoints: [
+        "Daily injection (NOT weekly).",
+        "Same eligibility and contraindications as other GLP-1 RAs.",
+        "Titration: 0.6 → 1.2 → 1.8 → 2.4 → 3.0 mg, increase weekly.",
+        "Discontinuation: <5% weight loss at 12 weeks on 3 mg.",
+        "Stop 1 month before planned conception.",
+        "Document every consultation in the ePGD tool.",
+      ],
+    },
+  ],
+  quiz: [
+    { id: "q-frequency", type: "single-choice", critical: true, question: "How often is Saxenda dosed?", options: [
+      { id: "a", label: "Once weekly." },
+      { id: "b", label: "Once daily." },
+      { id: "c", label: "Twice daily." },
+      { id: "d", label: "Once monthly." },
+    ], correctOptionIds: ["b"], explanation: "Saxenda (liraglutide 3 mg) is once-daily subcutaneous. Wegovy (semaglutide) and Mounjaro (tirzepatide) are weekly. Mistaking the frequency causes either over- or under-dosing." },
+    { id: "q-pancreatitis", type: "single-choice", critical: true, question: "A patient with a history of acute pancreatitis 6 years ago wants Saxenda. What's the action?", options: [
+      { id: "a", label: "Supply." },
+      { id: "b", label: "Do not supply — personal history of pancreatitis is an absolute contraindication. Refer." },
+      { id: "c", label: "Supply with reduced titration." },
+      { id: "d", label: "Switch to Wegovy." },
+    ], correctOptionIds: ["b"], explanation: "Pancreatitis history (any time, any cause) is an absolute contraindication across all GLP-1 RAs. Wegovy and Mounjaro have the same rule." },
+    { id: "q-pregnancy", type: "single-choice", critical: true, question: "When should Saxenda be stopped before planned conception?", options: [
+      { id: "a", label: "Same week as conception attempt." },
+      { id: "b", label: "1 month before planned conception." },
+      { id: "c", label: "1 week before." },
+      { id: "d", label: "Not necessary to stop." },
+    ], correctOptionIds: ["b"], explanation: "Liraglutide should be stopped at least 1 month before planned conception. (Semaglutide needs 2 months due to longer half-life.)" },
+    { id: "q-mtc", type: "single-choice", critical: true, question: "Family history of medullary thyroid cancer is:", options: [
+      { id: "a", label: "Acceptable — only personal history matters." },
+      { id: "b", label: "An absolute contraindication." },
+      { id: "c", label: "A caution requiring monitoring." },
+      { id: "d", label: "Irrelevant." },
+    ], correctOptionIds: ["b"], explanation: "Both personal and family history of MTC or MEN2 are absolute contraindications for all GLP-1 RAs." },
+    { id: "q-titration", type: "single-choice", question: "A patient starts Saxenda at 0.6 mg and tolerates well. When do you escalate to 1.2 mg?", options: [
+      { id: "a", label: "After 1 day." },
+      { id: "b", label: "After 1 week." },
+      { id: "c", label: "After 1 month." },
+      { id: "d", label: "Not at all." },
+    ], correctOptionIds: ["b"], explanation: "Weekly titration: 0.6 → 1.2 → 1.8 → 2.4 → 3.0 mg, each step lasting one week. Total titration 4 weeks; maintenance from week 5." },
+    { id: "q-pause", type: "single-choice", question: "A patient pauses Saxenda for 5 days while on holiday. What's the restart procedure?", options: [
+      { id: "a", label: "Restart at previous dose." },
+      { id: "b", label: "Re-titrate from 0.6 mg — pauses of 3+ days require re-titration." },
+      { id: "c", label: "Restart at half previous dose." },
+      { id: "d", label: "Stop entirely." },
+    ], correctOptionIds: ["b"], explanation: "Pauses of 3 or more days require re-titration from 0.6 mg. Tolerance is lost quickly with daily GLP-1s." },
+    { id: "q-stop-criterion", type: "single-choice", question: "A patient has been on Saxenda 3 mg maintenance for 12 weeks and has lost 3% body weight. She wants to continue.", options: [
+      { id: "a", label: "Continue indefinitely." },
+      { id: "b", label: "Consider stopping. The PGD criterion is <5% weight loss after 12 weeks on the 3 mg maintenance dose — inadequate response." },
+      { id: "c", label: "Increase to 4 mg." },
+      { id: "d", label: "Add Wegovy." },
+    ], correctOptionIds: ["b"], explanation: "Saxenda's discontinuation criterion is <5% loss at 12 weeks on 3 mg. (Wegovy uses 6 months; differs.) No higher dose exists; stacking is contraindicated." },
+    { id: "q-stacking", type: "single-choice", question: "A patient on Wegovy 2.4 mg asks to add Saxenda for 'extra effect'.", options: [
+      { id: "a", label: "Acceptable — different agents at different times of day." },
+      { id: "b", label: "Contraindicated — concurrent use of two GLP-1 RAs is not safe. To switch, stop Wegovy with washout, then start Saxenda at 0.6 mg." },
+      { id: "c", label: "Halve both doses." },
+      { id: "d", label: "Alternate days." },
+    ], correctOptionIds: ["b"], explanation: "Stacking GLP-1 RAs is contraindicated. Same rule as Wegovy + Mounjaro." },
+    { id: "q-pancreatitis-er", type: "single-choice", question: "A patient on Saxenda 1.8 mg calls with severe epigastric pain radiating to the back, vomiting for 4 hours.", options: [
+      { id: "a", label: "Take paracetamol." },
+      { id: "b", label: "Stop Saxenda and go to A&E — likely pancreatitis." },
+      { id: "c", label: "Skip the next dose." },
+      { id: "d", label: "Drink fluids and lie down." },
+    ], correctOptionIds: ["b"], explanation: "Classic acute pancreatitis presentation. Stop and refer to A&E. Future Saxenda is then contraindicated." },
+    { id: "q-record", type: "single-choice", question: "Required documentation per consultation?", options: [
+      { id: "a", label: "Medicine label only." },
+      { id: "b", label: "Today's weight/BMI, tolerability, side effects, contraception, GP-informed status, supply detail — all in the ePGD tool." },
+      { id: "c", label: "GP email only." },
+      { id: "d", label: "Free-text note." },
+    ], correctOptionIds: ["b"], explanation: "Same as other GLP-1 RA consultations — full structured record in the ePGD tool." },
+  ],
+};

@@ -6,8 +6,22 @@ import type { TrainingModule } from "./types";
 import { edModule } from "./ed";
 import { wegovyModule } from "./wegovy";
 import { mounjaroModule } from "./mounjaro";
+import { saxendaModule } from "./saxenda";
+import { orlistatModule } from "./orlistat";
+import { mysimbaModule } from "./mysimba";
+import { glp1MonitoringModule } from "./glp1-monitoring";
 import { trtModule } from "./trt";
 import { hrtModule } from "./hrt";
+import { utiModule } from "./uti";
+import { emergencyContraceptionModule } from "./emergency-contraception";
+import { hairLossModule } from "./hair-loss";
+import { travelCoreModule } from "./travel-core";
+import { bvModule } from "./bv";
+import { thrushModule } from "./thrush";
+import { coldSoresModule } from "./cold-sores";
+import { hayfeverModule } from "./hayfever";
+import { periodDelayModule } from "./period-delay";
+import { acneModule } from "./acne";
 
 export const modules: TrainingModule[] = [
   // Tier 1 — headlined in launch video / highest-traffic
@@ -16,7 +30,23 @@ export const modules: TrainingModule[] = [
   mounjaroModule,
   trtModule,
   hrtModule,
-  // Tier 2+ to follow as drafted.
+  utiModule,
+  emergencyContraceptionModule,
+  hairLossModule,
+  travelCoreModule,
+  // Tier 2 — weight management family + cycle/sexual health
+  saxendaModule,
+  orlistatModule,
+  mysimbaModule,
+  glp1MonitoringModule,
+  periodDelayModule,
+  // Tier 3 — sexual health + dermatology + minor ailments
+  bvModule,
+  thrushModule,
+  coldSoresModule,
+  hayfeverModule,
+  acneModule,
+  // More tiers to follow as drafted.
 ];
 
 export function getModuleBySlug(slug: string): TrainingModule | undefined {

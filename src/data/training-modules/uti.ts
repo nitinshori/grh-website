@@ -1,0 +1,315 @@
+// UTI (uncomplicated lower UTI in women) — PGD training
+//
+// DRAFT — pending clinical sign-off by Dr Nitin Shori.
+
+import type { TrainingModule } from "./types";
+
+export const utiModule: TrainingModule = {
+  slug: "uti",
+  title: "UTI (Uncomplicated Lower UTI in Women) — PGD",
+  description:
+    "Eligibility, antibiotic choice and red flags for the supply of trimethoprim or nitrofurantoin for uncomplicated UTI under PGD.",
+  pgdSlugs: ["uti"],
+  authoredBy: "Get Real Health Clinical Team",
+  reviewedBy: "DRAFT — pending clinical sign-off",
+  version: "1.0.0",
+  materialClinicalChange: true,
+  publishedAt: "2026-05-12",
+  estimatedMinutes: 15,
+  passMark: 0.8,
+
+  slides: [
+    {
+      id: "intro",
+      type: "intro",
+      title: "UTI — Training",
+      subtitle: "Uncomplicated lower urinary tract infection in adult non-pregnant women",
+      estimatedMinutes: 15,
+      objectives: [
+        "Identify women eligible for empirical antibiotic supply under the PGD.",
+        "Recognise red flags that mandate referral rather than supply (upper-tract signs, pregnancy, recurrent infections, complicating factors).",
+        "Choose between nitrofurantoin and trimethoprim, and apply correct dosing.",
+        "Counsel patients on what to expect, fluid advice, and when to return.",
+        "Use the ePGD tool to capture a defensible clinical record.",
+      ],
+    },
+    {
+      id: "background",
+      type: "content",
+      title: "Clinical background",
+      body: [
+        "Uncomplicated UTI affects ~50% of women in their lifetime. The vast majority are caused by ascending E. coli from the perineum. Classic symptoms are dysuria, urinary frequency, urgency, suprapubic discomfort, and sometimes mild haematuria. The infection is confined to the bladder (cystitis) and does not involve the kidneys.",
+        "Empirical treatment without urine culture is appropriate where the clinical picture is typical, symptoms are recent (<7 days), and there are no complicating factors. NICE NG109 and BNF support 3-day antibiotic courses as first-line for uncomplicated cystitis in women.",
+        "The GRH PGD covers nitrofurantoin and trimethoprim for symptomatic non-pregnant adult women. Pyelonephritis, pregnancy, recurrent UTI, men, and children are out of scope and must be referred.",
+      ],
+      highlights: [
+        "Empirical treatment is appropriate only when the picture is typical and there are no red flags.",
+        "3-day course is sufficient for uncomplicated cystitis in non-pregnant women.",
+        "Pregnant women, men, children, recurrent UTI — refer, do not supply under this PGD.",
+      ],
+    },
+    {
+      id: "eligibility",
+      type: "checklist",
+      title: "Eligibility under the PGD",
+      intro: "Supply is permitted only when ALL of the following are true:",
+      items: [
+        { label: "Female, aged 16–65", detail: "Outside this range refer to GP." },
+        { label: "Not pregnant, not trying to conceive, not breastfeeding", detail: "Pregnancy mandates GP/midwife assessment and different antibiotic choice. Confirm at consultation." },
+        { label: "At least 2 of the classic symptoms", detail: "Dysuria, urgency, frequency, suprapubic pain, mild haematuria. Symptoms onset within the last 7 days." },
+        { label: "No fever, no flank pain, no rigors, no vomiting", detail: "Any of these signs upper-tract involvement (pyelonephritis) — refer urgently." },
+        { label: "No vaginal discharge or unusual bleeding", detail: "Could indicate STI or other gynae pathology — refer." },
+        { label: "Not had ≥3 UTIs in the last 12 months, or ≥2 in the last 6 months", detail: "Recurrent UTI needs GP-led workup and possible prophylaxis. Refer." },
+        { label: "No catheter, no recent urological procedure", detail: "Complicated UTI scope — refer." },
+        { label: "No structural urinary tract abnormality known", detail: "E.g. previous reflux, stones, single kidney — refer." },
+      ],
+    },
+    {
+      id: "absolute-contraindications",
+      type: "callout",
+      title: "When NOT to supply — refer",
+      tone: "danger",
+      message: "Any of the following means the PGD cannot be used. Refer to GP or out-of-hours service.",
+      detail: [
+        "Pregnancy or possibility of pregnancy.",
+        "Signs of upper-tract infection: fever, flank/loin pain, rigors, nausea/vomiting, feeling systemically unwell.",
+        "Visible haematuria (frank blood, not just dipstick trace).",
+        "Symptoms duration >7 days without improvement.",
+        "Three or more UTIs in last 12 months, or two in last 6 months (recurrent).",
+        "Catheter in situ, recent urological procedure, known structural abnormality.",
+        "Immunosuppression (steroids, chemo, biologics).",
+        "Diabetes that's not well-controlled.",
+        "Known severe renal impairment (eGFR <30) — drug-specific considerations.",
+      ],
+    },
+    {
+      id: "antibiotic-choice",
+      type: "comparison",
+      title: "Antibiotic choice — first and second line",
+      intro:
+        "Nitrofurantoin is first-line where eGFR ≥45. Trimethoprim is second-line where local resistance is acceptable and there are no contraindications.",
+      columns: [
+        {
+          label: "Nitrofurantoin (first-line)",
+          rows: [
+            { heading: "Dose", body: "100 mg modified-release twice daily for 3 days (or 50 mg four times daily if MR not available)." },
+            { heading: "When to use", body: "First-line if eGFR ≥45 mL/min/1.73 m²." },
+            { heading: "Don't use if", body: "eGFR <45, G6PD deficiency, near-term pregnancy (avoid in last month — neonatal haemolysis), known hypersensitivity." },
+            { heading: "Counselling", body: "Take with food to reduce nausea; may turn urine brown (harmless); complete the course." },
+          ],
+        },
+        {
+          label: "Trimethoprim (second-line)",
+          rows: [
+            { heading: "Dose", body: "200 mg twice daily for 3 days." },
+            { heading: "When to use", body: "If nitrofurantoin contraindicated. Note rising E. coli resistance in many areas." },
+            { heading: "Don't use if", body: "Pregnancy (folate antagonist), known hypersensitivity, current methotrexate, severe renal impairment (eGFR <15)." },
+            { heading: "Counselling", body: "Take with or without food; complete the course; avoid in early pregnancy (folate antagonist)." },
+          ],
+        },
+      ],
+    },
+    {
+      id: "counselling",
+      type: "checklist",
+      title: "Counselling points — every patient",
+      items: [
+        { label: "Complete the course", detail: "Even if symptoms improve at 24–48 hours, complete the 3 days. Stopping early increases recurrence risk." },
+        { label: "Hydration", detail: "Drink plenty of water — 2 litres per day during the infection." },
+        { label: "What to expect", detail: "Symptoms typically improve within 48 hours. If no improvement at 48 hours, or worsening, return for review." },
+        { label: "When to seek urgent help", detail: "Fever, flank pain, rigors, vomiting — these signal upper-tract infection. Go to GP or out-of-hours service same day." },
+        { label: "Pain relief", detail: "Paracetamol and/or ibuprofen as needed for dysuria/suprapubic pain. Standard OTC dosing." },
+        { label: "Prevention", detail: "Wipe front-to-back, void after intercourse, avoid holding urine, consider d-mannose or cranberry products (limited evidence)." },
+        { label: "GP follow-up if recurrent", detail: "If she has another UTI within 6 months, encourage GP review for prophylactic considerations." },
+      ],
+    },
+    {
+      id: "red-flags",
+      type: "callout",
+      title: "Red flags — refer urgently",
+      tone: "danger",
+      message: "Any of the following warrant same-day GP, out-of-hours, or A&E referral.",
+      detail: [
+        "Fever ≥38°C, rigors, or chills.",
+        "Flank or loin pain (kidney area).",
+        "Nausea, vomiting, feeling systemically unwell.",
+        "Visible blood in the urine.",
+        "Severe pain unrelieved by simple analgesia.",
+        "Confusion (especially in older women — UTI can present as delirium).",
+        "Symptoms persisting beyond 48 hours of starting antibiotics with no improvement.",
+      ],
+    },
+    {
+      id: "case-1",
+      type: "case",
+      title: "Case 1 — straightforward",
+      scenario:
+        "Emma, 28, presents with 2 days of dysuria, urgency, and suprapubic discomfort. No fever, no flank pain, no nausea. Not pregnant (using IUS). No previous UTIs in past 12 months. No medication, no relevant medical history.",
+      question: "What is the correct supply?",
+      answer:
+        "Nitrofurantoin 100 mg MR twice daily for 3 days. Counsel on completing the course, hydration, brown urine, and to return at 48 hours if no improvement or any red flag emerges.",
+      rationale:
+        "Classic uncomplicated cystitis. Nitrofurantoin first-line (eGFR assumed normal in healthy 28-year-old). 3-day course is sufficient.",
+    },
+    {
+      id: "case-2",
+      type: "case",
+      title: "Case 2 — the trap",
+      scenario:
+        "Margaret, 42, presents with dysuria and frequency for 3 days. Today she also feels feverish (temperature 38.2°C at home) and has a dull ache in her right loin. No nausea but feeling 'off'.",
+      question: "What is the correct action?",
+      answer:
+        "Do NOT supply under the PGD. Flank pain + fever signals pyelonephritis (upper-tract infection). This needs same-day GP review and likely a longer course (e.g. ciprofloxacin or co-amoxiclav for 7–10 days) plus potential hospital review depending on severity. Refer.",
+      rationale:
+        "Pyelonephritis is the commonest miss under PGD UTI supply. Loin pain and fever should never be treated as simple cystitis. Refer regardless of how convenient pharmacy supply would be.",
+    },
+    {
+      id: "summary",
+      type: "summary",
+      title: "Key points",
+      keyPoints: [
+        "PGD applies to non-pregnant women 16–65 with classic cystitis symptoms <7 days, no red flags.",
+        "Do not supply if pregnant, fever, flank pain, vomiting, visible haematuria, recurrent UTI, catheter, or structural abnormality.",
+        "Nitrofurantoin first-line (eGFR ≥45). Trimethoprim second-line.",
+        "3-day course in non-pregnant women is sufficient.",
+        "Counsel: complete course, hydrate, return at 48 hours if no improvement, urgent care if fever/flank pain.",
+      ],
+    },
+  ],
+  quiz: [
+    {
+      id: "q-pregnancy",
+      type: "single-choice",
+      critical: true,
+      question: "A 32-year-old woman presents with classic cystitis symptoms. She mentions she is 8 weeks pregnant.",
+      options: [
+        { id: "a", label: "Supply nitrofurantoin 100 mg MR BD for 3 days." },
+        { id: "b", label: "Supply trimethoprim 200 mg BD for 3 days." },
+        { id: "c", label: "Do not supply under the PGD. Pregnancy is out of scope — refer to GP/midwife same day for assessment and pregnancy-safe antibiotic." },
+        { id: "d", label: "Supply nitrofurantoin for 5 days." },
+      ],
+      correctOptionIds: ["c"],
+      explanation: "Pregnancy is outside the PGD's scope. UTI in pregnancy carries risk of pyelonephritis and preterm labour; choice of antibiotic depends on gestation (nitrofurantoin contraindicated near term, trimethoprim contraindicated in first trimester). GP/midwife handles this.",
+    },
+    {
+      id: "q-pyelo",
+      type: "single-choice",
+      critical: true,
+      question: "Which of the following findings means you must refer rather than supply under the PGD?",
+      options: [
+        { id: "a", label: "Mild suprapubic discomfort." },
+        { id: "b", label: "Slight dipstick haematuria with no visible blood." },
+        { id: "c", label: "Temperature 38.4°C and right-sided flank pain." },
+        { id: "d", label: "Symptoms started 2 days ago." },
+      ],
+      correctOptionIds: ["c"],
+      explanation: "Fever and flank pain signal pyelonephritis, which is outside the PGD. The other findings are consistent with uncomplicated cystitis.",
+    },
+    {
+      id: "q-recurrent",
+      type: "single-choice",
+      critical: true,
+      question: "A 38-year-old woman tells you this is her fourth UTI this year. She has cystitis symptoms now.",
+      options: [
+        { id: "a", label: "Supply nitrofurantoin — she knows her own pattern." },
+        { id: "b", label: "Do not supply under the PGD. Recurrent UTI (≥3 in 12 months) requires GP-led workup and possible prophylaxis. Refer." },
+        { id: "c", label: "Supply trimethoprim for 7 days to be on the safe side." },
+        { id: "d", label: "Supply nitrofurantoin alongside prophylactic doses." },
+      ],
+      correctOptionIds: ["b"],
+      explanation: "Recurrent UTI (≥3 in 12 months or ≥2 in 6 months) is outside the PGD. The patient needs urine culture, possible imaging, and prophylactic strategy decided by GP.",
+    },
+    {
+      id: "q-egfr-nitro",
+      type: "single-choice",
+      critical: true,
+      question: "A 72-year-old woman has classic cystitis symptoms. Her last eGFR (in her medical records) was 38 mL/min/1.73 m².",
+      options: [
+        { id: "a", label: "Supply nitrofurantoin 100 mg MR BD for 3 days." },
+        { id: "b", label: "Do not use nitrofurantoin (eGFR <45). Plus age >65 is outside the PGD anyway — refer to GP." },
+        { id: "c", label: "Supply nitrofurantoin at half dose." },
+        { id: "d", label: "Supply trimethoprim 200 mg BD for 3 days." },
+      ],
+      correctOptionIds: ["b"],
+      explanation: "Two strikes: nitrofurantoin needs eGFR ≥45 (the drug accumulates and reduces efficacy at lower eGFR), AND the PGD's upper age limit is 65. Refer.",
+    },
+    {
+      id: "q-dose-duration",
+      type: "single-choice",
+      question: "What is the correct dose and duration of nitrofurantoin for uncomplicated UTI in a non-pregnant woman under the PGD?",
+      options: [
+        { id: "a", label: "50 mg once daily for 7 days." },
+        { id: "b", label: "100 mg MR twice daily for 3 days." },
+        { id: "c", label: "200 mg once daily for 5 days." },
+        { id: "d", label: "100 mg MR four times daily for 7 days." },
+      ],
+      correctOptionIds: ["b"],
+      explanation: "Nitrofurantoin 100 mg modified-release BD for 3 days is the standard regimen in non-pregnant adult women. (50 mg QDS for 3 days is acceptable if MR not available.) Longer courses or higher frequencies are not needed for uncomplicated cystitis.",
+    },
+    {
+      id: "q-trim-mtx",
+      type: "single-choice",
+      question: "A patient on long-term methotrexate (for rheumatoid arthritis) presents with cystitis. Which antibiotic is contraindicated?",
+      options: [
+        { id: "a", label: "Nitrofurantoin." },
+        { id: "b", label: "Trimethoprim — concurrent methotrexate use is contraindicated due to additive folate antagonism and bone marrow suppression risk." },
+        { id: "c", label: "Amoxicillin." },
+        { id: "d", label: "All antibiotics are contraindicated." },
+      ],
+      correctOptionIds: ["b"],
+      explanation: "Trimethoprim and methotrexate together significantly increase bone marrow suppression risk. Use nitrofurantoin (if eGFR allows) or refer to GP for alternative.",
+    },
+    {
+      id: "q-counselling-urine",
+      type: "single-choice",
+      question: "What should you tell a patient about the appearance of her urine on nitrofurantoin?",
+      options: [
+        { id: "a", label: "Urine may turn brown or dark yellow — this is normal and not a cause for concern." },
+        { id: "b", label: "Urine should be clear; any colour change means stop the medicine." },
+        { id: "c", label: "Urine may turn green." },
+        { id: "d", label: "Urine colour is unaffected." },
+      ],
+      correctOptionIds: ["a"],
+      explanation: "Nitrofurantoin commonly causes brown or dark yellow urine — harmless and expected. Counsel pre-emptively so the patient isn't alarmed and doesn't stop the course unnecessarily.",
+    },
+    {
+      id: "q-no-improvement",
+      type: "single-choice",
+      question: "A patient calls 48 hours into her 3-day nitrofurantoin course saying she feels no better and now has slight back pain.",
+      options: [
+        { id: "a", label: "Continue the course and reassess in another 48 hours." },
+        { id: "b", label: "Add trimethoprim alongside." },
+        { id: "c", label: "Same-day GP / out-of-hours review. No improvement at 48 hours, plus new back pain, suggests treatment failure or upper-tract involvement." },
+        { id: "d", label: "Tell her to stop the antibiotic." },
+      ],
+      correctOptionIds: ["c"],
+      explanation: "Symptoms should be improving by 48 hours. No improvement plus new back pain is a red flag — possible resistant organism or pyelonephritis. Same-day GP review.",
+    },
+    {
+      id: "q-cranberry",
+      type: "single-choice",
+      question: "A patient asks whether she should drink cranberry juice for prevention.",
+      options: [
+        { id: "a", label: "Cranberry products have limited evidence — they may help some women but are not proven. Hydration, voiding habits, and post-coital voiding are higher-yield." },
+        { id: "b", label: "Cranberry juice is the gold standard for prevention." },
+        { id: "c", label: "Tell her never to drink cranberry juice." },
+        { id: "d", label: "Cranberry is a substitute for antibiotics." },
+      ],
+      correctOptionIds: ["a"],
+      explanation: "Evidence for cranberry products in UTI prevention is mixed. It's a reasonable adjunct for women interested in it but should not replace medical advice or be presented as definitive. Hydration and behavioural measures have stronger evidence.",
+    },
+    {
+      id: "q-record",
+      type: "single-choice",
+      question: "What is required documentation for a PGD UTI consultation?",
+      options: [
+        { id: "a", label: "Just the medicine label." },
+        { id: "b", label: "Symptoms (which, duration), exclusion of red flags, choice of antibiotic with rationale, counselling covered, and supply detail — in the ePGD tool." },
+        { id: "c", label: "An email to the patient's GP only." },
+        { id: "d", label: "Free-text note in the pharmacy logbook." },
+      ],
+      correctOptionIds: ["b"],
+      explanation: "Every PGD UTI consultation captures the symptom set, deliberate exclusion of red flags, antibiotic choice and rationale, counselling, and supply detail in the ePGD tool. This is your audit trail and defensibility record.",
+    },
+  ],
+};
