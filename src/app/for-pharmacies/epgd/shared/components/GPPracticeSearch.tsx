@@ -28,9 +28,13 @@ export function GPPracticeSearch({ practice, onSelect, onClear }: GPPracticeSear
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Debounced search
+  // Debounced search. Allow 2-char queries when they look like postcode
+  // area codes (e.g. "LE", "BS") because the backend handles postcode
+  // searches separately from name searches.
   useEffect(() => {
-    if (!query || query.length < 3) {
+    const isPostcodeish = /^[A-Z]{1,2}\d/i.test(query.trim());
+    const minChars = isPostcodeish ? 2 : 3;
+    if (!query || query.length < minChars) {
       setResults([]);
       setLoading(false);
       return;
@@ -109,10 +113,10 @@ export function GPPracticeSearch({ practice, onSelect, onClear }: GPPracticeSear
         value={query}
         onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
         onFocus={() => setOpen(true)}
-        placeholder="Search NHS GP practices by name…"
+        placeholder="Search by GP practice name or postcode (e.g. LE2)…"
         className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent"
       />
-      {open && query.length >= 3 && (
+      {open && query.length >= 2 && (
         <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-72 overflow-y-auto">
           {loading && (
             <div className="px-3 py-2 text-xs text-gray-500">Searching NHS directory…</div>
@@ -136,7 +140,7 @@ export function GPPracticeSearch({ practice, onSelect, onClear }: GPPracticeSear
         </div>
       )}
       <p className="text-xs text-gray-500 mt-1">
-        Search by practice name (3+ chars). Pulls live data from the NHS Spine ODS.
+        Search by practice name (3+ chars) or postcode (e.g. LE2). Pulls live data from the NHS Spine ODS.
       </p>
     </div>
   );

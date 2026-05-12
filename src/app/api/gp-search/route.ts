@@ -4,16 +4,22 @@ import { auth } from '@/lib/auth'
 /**
  * GP practice search via NHS Spine ODS (Organisation Data Service).
  *
- * Public, free API. We proxy to:
+ * Public, free API. We support two query modes:
+ *   • Name search — ODS does startswith match on Name. Good for users
+ *     who know the practice name ("Belgrave Surgery", "Hockley Farm").
+ *   • Postcode search — used when the query looks like a UK postcode
+ *     prefix (e.g. "LE2", "LE2 7AB", "BS1"). Crucial because most
+ *     surgeries don't have their city name in the practice name, so
+ *     searching for "Leicester" returns almost nothing.
+ *
+ * If the input could plausibly be either, we run both in parallel and
+ * merge — de-duping by ODS code.
+ *
+ * Endpoint:
  *   https://directory.spineservices.nhs.uk/ORD/2-0-0/organisations
- *     ?Name=<query>&PrimaryRoleId=RO180&Status=Active&Limit=20
+ *     ?Name=<query>|PostCode=<query>&PrimaryRoleId=RO180&Status=Active&Limit=15
  *
  * RO180 = "GP PRACTICE" primary role in the current ODS taxonomy.
- *
- * Auth-gated so unauthenticated traffic can't abuse it (it's a free upstream
- * but we still don't want to be a public proxy).
- *
- * Returns: { results: Array<{ odsCode, name, address, phone, postcode }> }
  */
 export const dynamic = 'force-dynamic'
 
@@ -33,34 +39,49 @@ interface OdsSearchResponse {
   Organisations?: OdsOrganisation[]
 }
 
-interface OdsOrgDetail {
-  Organisation?: {
-    Name: string
-    OrgId?: { extension: string }
-    GeoLoc?: {
-      Location?: {
-        AddrLn1?: string
-        AddrLn2?: string
-        AddrLn3?: string
-        Town?: string
-        County?: string
-        PostCode?: string
-        Country?: string
-      }
-    }
-    Contacts?: {
-      Contact?: Array<{ type: string; value: string }>
-    }
+/**
+ * UK postcode prefix matcher. Matches:
+ *   • Full postcodes: "LE2 7AB", "SW1A 1AA"
+ *   • Outward only: "LE2", "SW1A"
+ *   • Area only: "LE", "SW" (length 1–2 letters)
+ * Designed to be generous so a partial type-as-you-go triggers postcode mode.
+ */
+function looksLikePostcode(q: string): boolean {
+  const trimmed = q.trim().toUpperCase()
+  // Reject if it contains spaces in odd positions or non-postcode chars
+  if (!/^[A-Z][A-Z0-9 ]*$/.test(trimmed)) return false
+  // Must contain at least one digit OR be a known 1-2 letter area prefix
+  // followed by something looking postcode-y.
+  if (/^[A-Z]{1,2}\d/.test(trimmed)) return true // LE1, SW1A, B23
+  // Pure area prefix only (2 letters, no digit) — likely a name (e.g. "BS"),
+  // don't trigger postcode mode unless 1 letter only (E, M, B = real areas).
+  return false
+}
+
+async function searchByName(q: string): Promise<OdsOrganisation[]> {
+  const url = `https://directory.spineservices.nhs.uk/ORD/2-0-0/organisations?Name=${encodeURIComponent(q)}&PrimaryRoleId=RO180&Status=Active&Limit=15`
+  try {
+    const res = await fetch(url, { next: { revalidate: 3600 } })
+    if (!res.ok) return []
+    const data = (await res.json()) as OdsSearchResponse
+    return data.Organisations ?? []
+  } catch {
+    return []
   }
 }
 
-function formatAddress(loc: OdsOrgDetail['Organisation'] extends infer T ? T extends { GeoLoc?: infer G } ? G : never : never): string {
-  if (!loc || typeof loc !== 'object') return ''
-  const l = (loc as { Location?: Record<string, string | undefined> }).Location
-  if (!l) return ''
-  return [l.AddrLn1, l.AddrLn2, l.AddrLn3, l.Town, l.County, l.PostCode]
-    .filter((s): s is string => Boolean(s))
-    .join(', ')
+async function searchByPostcode(q: string): Promise<OdsOrganisation[]> {
+  // ODS PostCode filter accepts partial postcodes (e.g. "LE2" returns all
+  // Leicester central practices).
+  const url = `https://directory.spineservices.nhs.uk/ORD/2-0-0/organisations?PostCode=${encodeURIComponent(q)}&PrimaryRoleId=RO180&Status=Active&Limit=25`
+  try {
+    const res = await fetch(url, { next: { revalidate: 3600 } })
+    if (!res.ok) return []
+    const data = (await res.json()) as OdsSearchResponse
+    return data.Organisations ?? []
+  } catch {
+    return []
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -70,26 +91,33 @@ export async function GET(request: NextRequest) {
   }
 
   const q = request.nextUrl.searchParams.get('q')?.trim() ?? ''
-  if (q.length < 3) {
+  if (q.length < 2) {
     return NextResponse.json({ results: [] })
   }
 
-  // ODS expects URL-encoded name; uses startswith match by default
-  const url = `https://directory.spineservices.nhs.uk/ORD/2-0-0/organisations?Name=${encodeURIComponent(q)}&PrimaryRoleId=RO180&Status=Active&Limit=15`
-  let listRes: Response
-  try {
-    listRes = await fetch(url, { next: { revalidate: 3600 } })
-  } catch (err) {
-    return NextResponse.json({ error: 'NHS directory unreachable', detail: String(err) }, { status: 502 })
-  }
-  if (!listRes.ok) {
-    return NextResponse.json({ error: 'NHS directory error', status: listRes.status }, { status: 502 })
-  }
-  const list = (await listRes.json()) as OdsSearchResponse
-  const orgs = list.Organisations ?? []
+  // Decide which searches to run. Postcode-looking queries hit BOTH endpoints
+  // in case the practice name also matches; name-looking queries hit name only.
+  const isPostcode = looksLikePostcode(q)
 
-  // Lightweight result without full details (faster). Keep it under 15.
-  const lite = orgs.slice(0, 15).map((o) => ({
+  const [byName, byPostcode] = await Promise.all([
+    // For postcode-looking queries we skip the name search — ODS rejects very
+    // short startswith name searches anyway and the postcode search is what
+    // the user actually wants.
+    isPostcode ? Promise.resolve<OdsOrganisation[]>([]) : (q.length >= 3 ? searchByName(q) : Promise.resolve<OdsOrganisation[]>([])),
+    isPostcode ? searchByPostcode(q) : Promise.resolve<OdsOrganisation[]>([]),
+  ])
+
+  // Merge, de-dupe by OrgId, cap at 25.
+  const seen = new Set<string>()
+  const merged: OdsOrganisation[] = []
+  for (const o of [...byName, ...byPostcode]) {
+    if (seen.has(o.OrgId)) continue
+    seen.add(o.OrgId)
+    merged.push(o)
+    if (merged.length >= 25) break
+  }
+
+  const lite = merged.map((o) => ({
     odsCode: o.OrgId,
     name: o.Name,
     postcode: o.PostCode ?? '',

@@ -5,8 +5,9 @@ import { eq, and, gt, desc } from 'drizzle-orm'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { DraftsClient } from './DraftsClient'
+import { pgds } from '@/data/pgds'
 
-export const metadata = { title: 'Draft Consultations | Get Real Health' }
+export const metadata = { title: 'Drafts & Phone Bookings | Get Real Health' }
 export const dynamic = 'force-dynamic'
 
 export default async function DraftsPage() {
@@ -24,9 +25,12 @@ export default async function DraftsPage() {
     .select({
       id: consultationDrafts.id,
       pgdSlug: consultationDrafts.pgdSlug,
+      bookingType: consultationDrafts.bookingType,
       patientFirstName: consultationDrafts.patientFirstName,
       patientLastName: consultationDrafts.patientLastName,
       patientDob: consultationDrafts.patientDob,
+      patientPhone: consultationDrafts.patientPhone,
+      expectedVisitDate: consultationDrafts.expectedVisitDate,
       note: consultationDrafts.note,
       createdAt: consultationDrafts.createdAt,
       updatedAt: consultationDrafts.updatedAt,
@@ -40,6 +44,11 @@ export default async function DraftsPage() {
       )
     )
     .orderBy(desc(consultationDrafts.updatedAt))
+
+  const pgdOptions = pgds
+    .filter((p) => !p.comingSoon)
+    .map((p) => ({ id: p.id, title: p.title }))
+    .sort((a, b) => a.title.localeCompare(b.title))
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -56,24 +65,30 @@ export default async function DraftsPage() {
           </Link>
         </div>
 
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Draft consultations</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Drafts &amp; phone bookings</h1>
         <p className="text-sm text-gray-500 mb-6 max-w-2xl">
-          Patient details started by your team and waiting for the pharmacist
-          to complete. Drafts are deleted automatically 7 days after they are
-          created.
+          Phone bookings captured from the front of shop and in-progress
+          consultations waiting for the pharmacist. Records are deleted
+          automatically 30 days after they are created.
         </p>
 
-        <DraftsClient initialDrafts={rows.map(r => ({
-          id: r.id,
-          pgdSlug: r.pgdSlug,
-          patientFirstName: r.patientFirstName,
-          patientLastName: r.patientLastName,
-          patientDob: r.patientDob,
-          note: r.note,
-          createdAt: r.createdAt.toISOString(),
-          updatedAt: r.updatedAt.toISOString(),
-          expiresAt: r.expiresAt.toISOString(),
-        }))} />
+        <DraftsClient
+          initialDrafts={rows.map(r => ({
+            id: r.id,
+            pgdSlug: r.pgdSlug,
+            bookingType: (r.bookingType as 'in_progress' | 'phone_booking') ?? 'in_progress',
+            patientFirstName: r.patientFirstName,
+            patientLastName: r.patientLastName,
+            patientDob: r.patientDob,
+            patientPhone: r.patientPhone,
+            expectedVisitDate: r.expectedVisitDate,
+            note: r.note,
+            createdAt: r.createdAt.toISOString(),
+            updatedAt: r.updatedAt.toISOString(),
+            expiresAt: r.expiresAt.toISOString(),
+          }))}
+          pgdOptions={pgdOptions}
+        />
       </div>
     </div>
   )

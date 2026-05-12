@@ -41,9 +41,12 @@ export async function GET(
   return NextResponse.json({
     id: draft.id,
     pgdSlug: draft.pgdSlug,
+    bookingType: draft.bookingType,
     patientFirstName: draft.patientFirstName,
     patientLastName: draft.patientLastName,
     patientDob: draft.patientDob,
+    patientPhone: draft.patientPhone,
+    expectedVisitDate: draft.expectedVisitDate,
     note: draft.note,
     createdAt: draft.createdAt,
     updatedAt: draft.updatedAt,
@@ -70,6 +73,9 @@ export async function PATCH(
     patientFirstName?: string
     patientLastName?: string
     patientDob?: string
+    patientPhone?: string
+    expectedVisitDate?: string
+    bookingType?: 'in_progress' | 'phone_booking'
     draftState?: unknown
     note?: string
   } | null
@@ -79,6 +85,13 @@ export async function PATCH(
   if (typeof body.patientFirstName === 'string') updates.patientFirstName = body.patientFirstName.slice(0, 100)
   if (typeof body.patientLastName === 'string') updates.patientLastName = body.patientLastName.slice(0, 100)
   if (typeof body.patientDob === 'string') updates.patientDob = body.patientDob.slice(0, 10)
+  if (typeof body.patientPhone === 'string') updates.patientPhone = body.patientPhone.slice(0, 50)
+  if (typeof body.expectedVisitDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.expectedVisitDate)) {
+    updates.expectedVisitDate = body.expectedVisitDate
+  }
+  if (body.bookingType === 'in_progress' || body.bookingType === 'phone_booking') {
+    updates.bookingType = body.bookingType
+  }
   if (typeof body.note === 'string') updates.note = body.note.slice(0, 1000)
   if (body.draftState !== undefined) {
     const stateJson = JSON.stringify(body.draftState)

@@ -296,10 +296,14 @@ export const auditLogs = pgTable('audit_logs', {
 })
 
 // ── Consultation drafts ─────────────────────────────────────────
-// Pharmacy assistants can prep patient details / consent and save as a
-// draft. The pharmacist later opens the draft, completes the clinical
-// portion, and saves the final consultation_records row. Drafts auto-
-// expire 7 days after creation (cron job hard-deletes them).
+// Two flavours, both stored in the same table:
+//   • in_progress  — pharmacy team has started a consultation and saved
+//                    it mid-way for the pharmacist to complete.
+//   • phone_booking — patient phoned to book; team captured details and
+//                    expected visit date; pharmacist resumes when patient
+//                    arrives. draftState starts as '{}' and is populated
+//                    once the consultation actually begins.
+// Drafts auto-expire 30 days after creation (cron job hard-deletes them).
 
 export const consultationDrafts = pgTable('consultation_drafts', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -310,17 +314,23 @@ export const consultationDrafts = pgTable('consultation_drafts', {
   createdByUserId: uuid('created_by_user_id')
     .references(() => users.id, { onDelete: 'set null' }),
   pgdSlug: varchar('pgd_slug', { length: 255 }).notNull(),
+  // 'in_progress' (default) or 'phone_booking'.
+  bookingType: varchar('booking_type', { length: 20 }).default('in_progress').notNull(),
   // Light demographics for the drafts list view (no full clinical data on display).
   patientFirstName: varchar('patient_first_name', { length: 100 }),
   patientLastName: varchar('patient_last_name', { length: 100 }),
   patientDob: varchar('patient_dob', { length: 10 }),
+  // Patient contact number (phone bookings — for callbacks if needed).
+  patientPhone: varchar('patient_phone', { length: 50 }),
+  // Expected visit date — phone bookings only.
+  expectedVisitDate: varchar('expected_visit_date', { length: 10 }),
   // The full PGD form state — opaque JSON the client serialises before save.
   draftState: text('draft_state').notNull(),
   // Pharmacist's optional note when handing off ("ready for clinical review").
   note: text('note'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-  // Auto-expire 7 days from creation. Cron deletes any row past expiresAt.
+  // Auto-expire 30 days from creation. Cron deletes any row past expiresAt.
   expiresAt: timestamp('expires_at').notNull(),
 })
 
