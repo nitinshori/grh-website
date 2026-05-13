@@ -46,10 +46,22 @@ export const alopeciaMinoxidilModule: TrainingModule = {
       "Hypersensitivity to minoxidil.",
       "Concurrent use of guanethidine (risk of severe hypotension).",
     ]},
-    { id: "dosing", type: "comparison", title: "Dose options", columns: ["Patient group", "Starting dose", "Titration", "Max under PGD"], rows: [
-      ["Women, AGA or telogen effluvium", "0.25–0.625 mg once daily", "Review at 12 weeks; increase by 0.625 mg if needed", "2.5 mg daily"],
-      ["Men, AGA", "1.25 mg once daily", "Review at 12 weeks; increase by 1.25 mg if needed", "5 mg daily"],
-      ["Older patients (>60)", "0.25 mg once daily", "Cautious titration; lower max", "1.25 mg daily"],
+    { id: "dosing", type: "comparison", title: "Dose options", intro: "Start low, titrate slowly, monitor BP / HR at each step.", columns: [
+      { label: "Women, AGA or telogen effluvium", rows: [
+        { heading: "Starting dose", body: "0.25–0.625 mg once daily." },
+        { heading: "Titration", body: "Review at 12 weeks; increase by 0.625 mg if needed and tolerated." },
+        { heading: "Max under PGD", body: "2.5 mg daily." },
+      ]},
+      { label: "Men, AGA", rows: [
+        { heading: "Starting dose", body: "1.25 mg once daily." },
+        { heading: "Titration", body: "Review at 12 weeks; increase by 1.25 mg if needed and tolerated." },
+        { heading: "Max under PGD", body: "5 mg daily." },
+      ]},
+      { label: "Older patients (>60)", rows: [
+        { heading: "Starting dose", body: "0.25 mg once daily." },
+        { heading: "Titration", body: "Cautious titration; lower maximum dose." },
+        { heading: "Max under PGD", body: "1.25 mg daily." },
+      ]},
     ]},
     { id: "monitoring", type: "checklist", title: "Monitoring", items: [
       { label: "Baseline BP, HR, weight, ankle oedema check", detail: "Document. Photograph scalp if possible (with consent) for objective response tracking." },
