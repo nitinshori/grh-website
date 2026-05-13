@@ -1,5 +1,6 @@
 "use client";
 
+import { useSession } from "next-auth/react";
 import { getPgdDocumentUrl } from "@/lib/pgd-documents";
 
 interface PgdDocumentLinkProps {
@@ -14,6 +15,13 @@ export function PgdDocumentLink({
   variant = "button",
   className = "",
 }: PgdDocumentLinkProps) {
+  const { data: session } = useSession();
+  const role = session?.user?.role;
+  // Prospects (preview accounts for interested pharmacies) cannot download
+  // the signed PGD documents — they can browse the platform but not pull
+  // the legal PDFs.
+  if (role === "prospect") return null;
+
   const url = getPgdDocumentUrl(slug);
   if (!url) return null;
 

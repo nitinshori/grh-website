@@ -1,19 +1,22 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { getPgdDocumentUrl } from "@/lib/pgd-documents";
 
 /**
  * Renders "Back to Dashboard" and "Download Written PGD" links.
  * Auto-detects the PGD slug from the current URL path.
- * Place this as the first child inside the main content container.
+ * Hides the download link for prospect-role users (preview accounts).
  */
 export function PgdPageActions() {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const role = session?.user?.role;
   // Extract slug from /for-pharmacies/epgd/{slug}
   const segments = pathname.split("/");
   const slug = segments[segments.indexOf("epgd") + 1] || "";
-  const pdfUrl = getPgdDocumentUrl(slug);
+  const pdfUrl = role === "prospect" ? null : getPgdDocumentUrl(slug);
 
   return (
     <div className="flex items-center justify-between mb-4 print:hidden">

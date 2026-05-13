@@ -33,8 +33,11 @@ export default async function PharmacyDashboardLayout({
   }
 
   // Fetch pharmacy name. For super_admin (clinical lead) with no pharmacy
-  // assignment, show "Clinical Review" instead of "Your Pharmacy".
-  let pharmacyName = session.user.role === 'super_admin' ? 'Clinical Review' : 'Your Pharmacy'
+  // assignment, show "Clinical Review". For prospects, show "Preview".
+  let pharmacyName =
+    session.user.role === 'super_admin' ? 'Clinical Review' :
+    session.user.role === 'prospect' ? 'Preview' :
+    'Your Pharmacy'
   if (session.user.pharmacyId) {
     const [pharmacy] = await db
       .select({ name: pharmacies.name })
@@ -49,7 +52,9 @@ export default async function PharmacyDashboardLayout({
   const userName = session.user.name || session.user.email || 'User'
   const roleLabel =
     session.user.role === 'super_admin' ? 'Clinical Lead' :
-    session.user.role === 'pharmacy_admin' ? 'Pharmacy Admin' : 'Pharmacist'
+    session.user.role === 'pharmacy_admin' ? 'Pharmacy Admin' :
+    session.user.role === 'prospect' ? 'Preview' :
+    'Pharmacist'
 
   return (
     <html lang="en" className="h-full antialiased">

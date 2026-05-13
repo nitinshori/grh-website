@@ -20,6 +20,7 @@ export const userRoleEnum = pgEnum('user_role', [
   'pharmacy_admin',
   'pharmacist',
   'client',
+  'prospect', // browse-only access for interested pharmacies; cannot download PGDs
 ])
 
 // ── Pharmacies ──────────────────────────────────────────────────
