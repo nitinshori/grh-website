@@ -22,18 +22,19 @@ export default async function PharmacyDashboardLayout({
     redirect('/login')
   }
 
-  // Super admins have their own panel
-  if (session.user.role === 'super_admin') {
-    redirect('/admin')
-  }
+  // Super admins (e.g. clinical lead) can navigate into dashboard subpages
+  // like /training for content review. The dashboard ROOT page redirects
+  // them to /admin instead — see dashboard/page.tsx. This way Janey at
+  // PPH can sign off training without needing a pharmacy assignment.
 
   // Client users have their own portal
   if (session.user.role === 'client') {
     redirect('/login')
   }
 
-  // Fetch pharmacy name
-  let pharmacyName = 'Your Pharmacy'
+  // Fetch pharmacy name. For super_admin (clinical lead) with no pharmacy
+  // assignment, show "Clinical Review" instead of "Your Pharmacy".
+  let pharmacyName = session.user.role === 'super_admin' ? 'Clinical Review' : 'Your Pharmacy'
   if (session.user.pharmacyId) {
     const [pharmacy] = await db
       .select({ name: pharmacies.name })
@@ -47,6 +48,7 @@ export default async function PharmacyDashboardLayout({
 
   const userName = session.user.name || session.user.email || 'User'
   const roleLabel =
+    session.user.role === 'super_admin' ? 'Clinical Lead' :
     session.user.role === 'pharmacy_admin' ? 'Pharmacy Admin' : 'Pharmacist'
 
   return (
