@@ -6,6 +6,7 @@ import { CookieConsent } from "@/components/legal/CookieConsent";
 import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 import { GoogleTagManager } from "@/components/analytics/GoogleTagManager";
 import { AuthSessionProvider } from "@/components/providers/AuthSessionProvider";
+import { ChatWidget } from "@/components/chat/ChatWidget";
 
 export const metadata: Metadata = {
   title: {
@@ -82,6 +83,7 @@ export default function RootLayout({
           <main className="flex-1">{children}</main>
           <Footer />
           <CookieConsent />
+          <ChatWidget />
           <GoogleAnalytics />
           <GoogleTagManager />
         </AuthSessionProvider>
