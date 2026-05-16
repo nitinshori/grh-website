@@ -5,6 +5,7 @@ import { db } from '@/lib/db'
 import { pharmacies, consultationRecords } from '@/lib/db/schema'
 import { eq, desc } from 'drizzle-orm'
 import { getPharmacyPgdSlugs, ALL_PGDS, PGD_CATEGORIES, COMING_SOON_SLUGS } from '@/lib/pgd-access'
+import { pgds as PGD_CATALOGUE, isPgdAccessibleByEmail } from '@/data/pgds'
 import { getPharmacyStats } from '@/lib/analytics'
 import { hasPgdDocument } from '@/lib/pgd-documents'
 
@@ -67,8 +68,24 @@ export default async function PharmacyDashboard() {
     : []
   const slugSet = new Set(assignedSlugs)
 
-  // Filter and group PGDs by category
-  const assignedPgds = ALL_PGDS.filter((pgd) => slugSet.has(pgd.slug))
+  // Build a lookup of restrictedToEmails by slug from the catalogue
+  const restrictedSlugs = new Map<string, string[]>()
+  for (const p of PGD_CATALOGUE) {
+    if (p.restrictedToEmails && p.restrictedToEmails.length > 0) {
+      restrictedSlugs.set(p.id, p.restrictedToEmails)
+    }
+  }
+
+  // Filter and group PGDs by category, dropping any restricted ones the
+  // current user is not on the allowlist for.
+  const userEmail = session.user.email ?? null
+  const assignedPgds = ALL_PGDS.filter((pgd) => {
+    if (!slugSet.has(pgd.slug)) return false
+    const allowlist = restrictedSlugs.get(pgd.slug)
+    if (!allowlist) return true
+    if (!userEmail) return false
+    return allowlist.some((e) => e.toLowerCase() === userEmail.toLowerCase())
+  })
   const pgdsByCategory: Record<string, typeof assignedPgds> = {}
   for (const pgd of assignedPgds) {
     if (!pgdsByCategory[pgd.category]) {

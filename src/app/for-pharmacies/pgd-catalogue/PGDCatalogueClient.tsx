@@ -3,13 +3,16 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import {
-  pgds,
+  pgds as allPgds,
   ALL_CATEGORIES,
   CATEGORY_TEXT_COLORS,
   CATEGORY_BG_LIGHT,
   type PGDCategory,
   type PGD,
 } from "@/data/pgds";
+
+// Public catalogue must never advertise restricted (private/pilot) PGDs.
+const pgds = allPgds.filter((p) => !p.restrictedToEmails || p.restrictedToEmails.length === 0);
 
 type FilterOption = "All" | "Exclusives" | PGDCategory;
 

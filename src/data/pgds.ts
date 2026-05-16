@@ -27,6 +27,22 @@ export interface PGD {
   consultTime: string;
   description: string;
   pharmadoctor: string;
+  /**
+   * If set, this PGD is restricted to the listed user email addresses
+   * (case-insensitive). Hidden from the public catalogue, hidden from
+   * other pharmacies' dashboards, and the ePGD page returns 404 unless
+   * the logged-in user's email matches. Use for in-development PGDs
+   * that should not be exposed to all customers.
+   */
+  restrictedToEmails?: string[];
+}
+
+/** Helper: is this PGD accessible to a user with the given email? */
+export function isPgdAccessibleByEmail(pgd: PGD, userEmail: string | null | undefined): boolean {
+  if (!pgd.restrictedToEmails || pgd.restrictedToEmails.length === 0) return true;
+  if (!userEmail) return false;
+  const needle = userEmail.toLowerCase();
+  return pgd.restrictedToEmails.some((e) => e.toLowerCase() === needle);
 }
 
 export const CATEGORY_COLORS: Record<PGDCategory, string> = {
@@ -327,6 +343,19 @@ export const pgds: PGD[] = [
     pharmadoctor: "Yes",
   },
   {
+    id: "wegovy-oral",
+    title: "Oral Semaglutide for Weight Management (Off-label)",
+    category: "Weight Management",
+    priority: 3,
+    isNew: true,
+    revenueEstimate: "\u00a3180\u2013320 per month",
+    consultTime: "30 min initial, 15 min follow-up",
+    description:
+      "PRIVATE PILOT \u2014 restricted access. Off-label use of oral semaglutide (Rybelsus 14 mg daily, or Wegovy oral 25/50 mg where available) for weight management. Strict empty-stomach administration; informed consent for off-label use mandatory.",
+    pharmadoctor: "No",
+    restrictedToEmails: ["admin@getrealhealthpgd.co.uk", "nitin@getrealhealth.co.uk", "nitinshori@me.com"],
+  },
+  {
     id: "orlistat",
     title: "Orlistat (Xenical)",
     category: "Weight Management",
@@ -446,6 +475,30 @@ export const pgds: PGD[] = [
     description:
       "Fluconazole oral and clotrimazole. Very high demand, simple consultation.",
     pharmadoctor: "Yes",
+  },
+  {
+    id: "thrush-combi",
+    title: "Vaginal Thrush \u2014 Combi (Pessary + Cream)",
+    category: "Women's Health",
+    priority: 1,
+    isNew: true,
+    revenueEstimate: "\u00a318\u201332 per consultation",
+    consultTime: "10 min",
+    description:
+      "Generic clotrimazole 500mg pessary + clotrimazole 1% external cream. The classic combination supply for symptomatic vaginal thrush \u2014 covers both internal and external symptoms in one supply.",
+    pharmadoctor: "No",
+  },
+  {
+    id: "thrush-duo",
+    title: "Vaginal Thrush \u2014 Duo (Oral + Cream)",
+    category: "Women's Health",
+    priority: 1,
+    isNew: true,
+    revenueEstimate: "\u00a318\u201332 per consultation",
+    consultTime: "10 min",
+    description:
+      "Generic fluconazole 150mg single oral dose + clotrimazole 1% external cream. Patient-friendly oral-tablet route (no pessary) plus topical cream for vulval symptoms.",
+    pharmadoctor: "No",
   },
   {
     id: "period-delay",

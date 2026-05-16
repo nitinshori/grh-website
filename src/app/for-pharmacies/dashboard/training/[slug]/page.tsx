@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { getModuleBySlug } from "@/data/training-modules";
+import { pgds as PGD_CATALOGUE, isPgdAccessibleByEmail } from "@/data/pgds";
+import { auth } from "@/lib/auth";
 import { ModulePlayer } from "./ModulePlayer";
 
 export async function generateMetadata({
@@ -26,6 +28,18 @@ export default async function TrainingModulePage({
   const { slug } = await params;
   const module = getModuleBySlug(slug);
   if (!module) notFound();
+
+  // If this module backs any restricted PGD, gate access by email allowlist.
+  const restrictedPgd = module.pgdSlugs
+    .map((s) => PGD_CATALOGUE.find((p) => p.id === s))
+    .find((p) => p && p.restrictedToEmails && p.restrictedToEmails.length > 0);
+  if (restrictedPgd) {
+    const session = await auth();
+    if (!session?.user) redirect("/login");
+    if (!isPgdAccessibleByEmail(restrictedPgd, session.user.email)) {
+      notFound();
+    }
+  }
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-gray-50">

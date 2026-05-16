@@ -18,6 +18,7 @@ import { saxendaModule } from "./saxenda";
 import { orlistatModule } from "./orlistat";
 import { mysimbaModule } from "./mysimba";
 import { glp1MonitoringModule } from "./glp1-monitoring";
+import { wegovyOralModule } from "./wegovy-oral";
 import { periodDelayModule } from "./period-delay";
 import { prematureEjaculationModule } from "./premature-ejaculation";
 import { bphModule } from "./bph";
@@ -25,6 +26,8 @@ import { recurrentUtiModule } from "./recurrent-uti";
 // Tier 3 — sexual health, dermatology, common conditions
 import { bvModule } from "./bv";
 import { thrushModule } from "./thrush";
+import { thrushCombiModule } from "./thrush-combi";
+import { thrushDuoModule } from "./thrush-duo";
 import { coldSoresModule } from "./cold-sores";
 import { hayfeverModule } from "./hayfever";
 import { acneModule } from "./acne";
@@ -96,6 +99,7 @@ export const modules: TrainingModule[] = [
   orlistatModule,
   mysimbaModule,
   glp1MonitoringModule,
+  wegovyOralModule,
   periodDelayModule,
   prematureEjaculationModule,
   bphModule,
@@ -103,6 +107,8 @@ export const modules: TrainingModule[] = [
   // Tier 3 — sexual health, dermatology, common conditions
   bvModule,
   thrushModule,
+  thrushCombiModule,
+  thrushDuoModule,
   coldSoresModule,
   hayfeverModule,
   acneModule,

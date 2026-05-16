@@ -86,6 +86,7 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
   // Weight Management
   { slug: 'wegovy', title: 'Wegovy', subtitle: 'Semaglutide 2.4mg', category: 'Weight Management' },
   { slug: 'mounjaro', title: 'Mounjaro', subtitle: 'Tirzepatide', category: 'Weight Management' },
+  { slug: 'wegovy-oral', title: 'Oral Semaglutide (Off-label)', subtitle: 'Rybelsus / Wegovy oral', category: 'Weight Management' },
   { slug: 'saxenda', title: 'Saxenda', subtitle: 'Liraglutide 3.0mg', category: 'Weight Management' },
   { slug: 'mysimba', title: 'Mysimba', subtitle: 'Naltrexone/Bupropion', category: 'Weight Management' },
   { slug: 'orlistat', title: 'Orlistat', subtitle: 'Orlistat 120mg', category: 'Weight Management' },

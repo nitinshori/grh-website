@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { trainingAttempts } from "@/lib/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { modules } from "@/data/training-modules";
+import { pgds as PGD_CATALOGUE, isPgdAccessibleByEmail } from "@/data/pgds";
 
 export const metadata: Metadata = {
   title: "Training Modules",
@@ -77,6 +78,22 @@ export default async function TrainingIndexPage() {
     }
   }
 
+  // Hide training modules that are tied to restricted PGDs the current user
+  // is not on the allowlist for (e.g. wegovy-oral pilot).
+  const userEmail = session.user.email ?? null;
+  const restrictedPgdsBySlug = new Map(
+    PGD_CATALOGUE.filter((p) => p.restrictedToEmails && p.restrictedToEmails.length > 0).map((p) => [p.id, p])
+  );
+  const visibleModules = modules.filter((m) => {
+    for (const pgdSlug of m.pgdSlugs) {
+      const restricted = restrictedPgdsBySlug.get(pgdSlug);
+      if (restricted && !isPgdAccessibleByEmail(restricted, userEmail)) {
+        return false;
+      }
+    }
+    return true;
+  });
+
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-gray-50">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -89,7 +106,7 @@ export default async function TrainingIndexPage() {
         </header>
 
         <div className="space-y-3">
-          {modules.map((m) => {
+          {visibleModules.map((m) => {
             const status = statusFor(m.version, latestByModule.get(m.slug));
             return (
               <Link
@@ -120,7 +137,7 @@ export default async function TrainingIndexPage() {
           })}
         </div>
 
-        {modules.length === 0 && (
+        {visibleModules.length === 0 && (
           <div className="bg-white border border-gray-200 rounded-xl p-8 text-center">
             <p className="text-sm text-gray-500">No training modules available yet.</p>
           </div>
