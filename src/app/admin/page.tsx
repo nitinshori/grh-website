@@ -3,6 +3,8 @@ import { pharmacies, users, pharmacyPgds } from '@/lib/db/schema'
 import { count, eq } from 'drizzle-orm'
 import { getSystemStats } from '@/lib/analytics'
 import { ALL_PGDS } from '@/lib/pgd-access'
+import { getPharmacySignupsByWeek, getConsultationsByDay, getOnboardingBreakdown } from './lib/admin-stats'
+import { LineChart, HBarChart, DonutChart, Sparkline } from './components/Charts'
 
 async function getStats() {
   const [pharmacyCount] = await db
@@ -45,7 +47,17 @@ async function getStats() {
 const pgdTitleMap = new Map(ALL_PGDS.map((p) => [p.slug, p.title]))
 
 export default async function AdminDashboard() {
-  const stats = await getStats()
+  const [stats, signupsByWeek, consultsByDay, onboarding] = await Promise.all([
+    getStats(),
+    getPharmacySignupsByWeek(12),
+    getConsultationsByDay(30),
+    getOnboardingBreakdown(),
+  ])
+
+  const signupSparkline = signupsByWeek.map((b) => b.count)
+  const consultSparkline = consultsByDay.map((b) => b.total)
+  const totalSignups12w = signupsByWeek.reduce((a, b) => a + b.count, 0)
+  const mrr = '£' + (onboarding.monthlyRevenuePence / 100).toLocaleString('en-GB')
 
   return (
     <div className="p-6 md:p-8">
@@ -168,6 +180,90 @@ export default async function AdminDashboard() {
               </div>
             </div>
             <p className="text-xs text-gray-500 mt-4">Active PGD assignments</p>
+          </div>
+        </div>
+
+        {/* GoCardless / Onboarding strip */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <a href="/admin/onboarding" className="bg-white rounded-lg shadow p-5 hover:shadow-md transition-shadow group">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Onboarding requests</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{onboarding.total}</p>
+                <p className="text-[10px] text-gray-500 mt-0.5">All time</p>
+              </div>
+              <span className="text-[10px] text-teal-600 font-semibold group-hover:translate-x-0.5 transition-transform">View →</span>
+            </div>
+          </a>
+          <div className="bg-white rounded-lg shadow p-5">
+            <p className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Active DD mandates</p>
+            <p className="text-2xl font-bold text-green-700 mt-1">{onboarding.mandateActive}</p>
+            <p className="text-[10px] text-gray-500 mt-0.5">GoCardless — paying</p>
+          </div>
+          <div className="bg-white rounded-lg shadow p-5">
+            <p className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Pending mandates</p>
+            <p className="text-2xl font-bold text-amber-700 mt-1">{onboarding.mandatePending}</p>
+            <p className="text-[10px] text-gray-500 mt-0.5">Awaiting customer</p>
+          </div>
+          <div className="bg-white rounded-lg shadow p-5">
+            <p className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Monthly recurring</p>
+            <p className="text-2xl font-bold text-teal-700 mt-1">{mrr}</p>
+            <p className="text-[10px] text-gray-500 mt-0.5">From completed subs</p>
+          </div>
+        </div>
+
+        {/* Trend charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Pharmacy signups</h2>
+                <p className="text-xs text-gray-500">Last 12 weeks &middot; {totalSignups12w} new pharmacies</p>
+              </div>
+              <Sparkline values={signupSparkline} width={80} height={28} color="#25b4b4" />
+            </div>
+            <LineChart data={signupsByWeek.map((b) => ({ label: b.weekLabel, value: b.count }))} height={220} color="#25b4b4" />
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Consultations</h2>
+                <p className="text-xs text-gray-500">Last 30 days &middot; {stats.analytics.totalConsultations} started</p>
+              </div>
+              <Sparkline values={consultSparkline} width={80} height={28} color="#10b981" />
+            </div>
+            <LineChart data={consultsByDay.map((b) => ({ label: b.label, value: b.total }))} height={220} color="#10b981" />
+          </div>
+        </div>
+
+        {/* Top PGDs + Mandate donut */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white rounded-lg shadow p-6 lg:col-span-2">
+            <h2 className="text-lg font-bold text-gray-900 mb-4">Top PGDs (30 days)</h2>
+            <HBarChart
+              data={stats.analytics.topPgds.slice(0, 10).map((p) => ({
+                label: pgdTitleMap.get(p.pgdSlug) ?? p.pgdSlug,
+                value: p.total,
+              }))}
+              color="#25b4b4"
+            />
+          </div>
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-sm font-bold text-gray-900 mb-4">Mandate breakdown</h2>
+            <DonutChart
+              segments={[
+                { label: 'Active', value: onboarding.mandateActive, color: '#10b981' },
+                { label: 'Pending', value: onboarding.mandatePending, color: '#f59e0b' },
+                { label: 'Failed', value: onboarding.mandateFailed, color: '#ef4444' },
+                { label: 'None', value: onboarding.noMandate, color: '#9ca3af' },
+              ]}
+              size={140}
+              thickness={16}
+            />
+            <a href="/admin/onboarding" className="block mt-4 text-xs text-teal-600 hover:text-teal-700 font-semibold text-right">
+              Manage onboarding →
+            </a>
           </div>
         </div>
 
