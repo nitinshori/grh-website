@@ -60,8 +60,21 @@ function reducer(state: ThrushConsultationState, action: ThrushAction): ThrushCo
   return newState;
 }
 
-export default function ThrushClient() {
+interface ThrushClientProps {
+  /** Pre-select and lock the medicine choice. Used by combi/duo wrapper pages. */
+  lockedMedicine?: "fluconazole-oral" | "clotrimazole-pessary";
+}
+
+export default function ThrushClient({ lockedMedicine }: ThrushClientProps = {}) {
   const [state, dispatch] = useReducer(reducer, createInitialConsultationState());
+
+  // If lockedMedicine is provided, pre-fill the medicine choice so the
+  // pharmacist can't accidentally pick the wrong combo on a combi/duo page.
+  useEffect(() => {
+    if (lockedMedicine && state.medicineSelection.medicineChoice !== lockedMedicine) {
+      dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "medicineChoice", value: lockedMedicine });
+    }
+  }, [lockedMedicine, state.medicineSelection.medicineChoice]);
   // Auto-fill pharmacist details from logged-in user. Refires when fields
   // are empty (e.g. after "New Consultation"), so subsequent patients fill too.
   const __pharmProfile = usePharmacistProfile();
@@ -197,9 +210,20 @@ export default function ThrushClient() {
         );
       case 5:
         return (
-          <StepWrapper title="Medicine Selection" description="Choose treatment option." currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={validationError} isBlocked={hasStops}>
+          <StepWrapper title="Medicine Selection" description={lockedMedicine ? "This consultation is for a fixed combo PGD — medicine pre-selected." : "Choose treatment option."} currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={validationError} isBlocked={hasStops}>
             <div className="space-y-4">
-              <SelectInput label="Treatment" value={state.medicineSelection.medicineChoice} onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "medicineChoice", value: v })} options={[{ value: "fluconazole-oral", label: "Fluconazole 150mg single oral dose" }, { value: "clotrimazole-pessary", label: "Clotrimazole 500mg pessary + 1% cream" }]} required />
+              {lockedMedicine ? (
+                <div className="p-4 bg-teal-50 border border-teal-200 rounded-md">
+                  <p className="text-sm text-teal-900 font-medium">
+                    {lockedMedicine === "fluconazole-oral"
+                      ? "Supply: Fluconazole 150mg single oral dose + Clotrimazole 1% external cream (Duo pack)"
+                      : "Supply: Clotrimazole 500mg pessary + Clotrimazole 1% external cream (Combi pack)"}
+                  </p>
+                  <p className="text-xs text-teal-700 mt-1">Medicine choice is fixed by this PGD; both products supplied as the combo pack.</p>
+                </div>
+              ) : (
+                <SelectInput label="Treatment" value={state.medicineSelection.medicineChoice} onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "medicineChoice", value: v })} options={[{ value: "fluconazole-oral", label: "Fluconazole 150mg single oral dose" }, { value: "clotrimazole-pessary", label: "Clotrimazole 500mg pessary + 1% cream" }]} required />
+              )}
             </div>
           </StepWrapper>
         );
