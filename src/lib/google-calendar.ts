@@ -124,6 +124,12 @@ export async function getAvailability(
 ): Promise<AvailableSlot[]> {
   const calendar = getCalendar()
 
+  // Pull the live config from the DB (cached 30s). Admin edits land
+  // within half a minute without redeploying.
+  const { getAvailabilityConfig, candidatesForDate } = await import('@/lib/booking-availability')
+  const config = await getAvailabilityConfig()
+  const slotMinutes = config.slotMinutes
+
   // Look up busy periods using freebusy
   const fb = await calendar.freebusy.query({
     requestBody: {
@@ -150,29 +156,16 @@ export async function getAvailability(
 
   while (cursor <= endDate && slots.length < maxSlots) {
     const dateKey = ukDateKey(cursor)
-    const override = SPECIFIC_AVAILABILITY[dateKey]
+    // Convert UK weekday: ukDayOfWeek returns 0=Sun..6=Sat; we want
+    // ISO 1=Mon..7=Sun for the config lookup.
     const ukDow = ukDayOfWeek(cursor)
+    const isoDow = ukDow === 0 ? 7 : ukDow
 
-    // Build candidate (hour, minute) tuples for this day
-    let candidates: Array<[number, number]> = []
-    if (override) {
-      // Use the explicit overrides for this date, regardless of weekday
-      candidates = override.flatMap((hhmm) => {
-        const [h, m] = hhmm.split(':').map((n) => parseInt(n, 10))
-        return Number.isFinite(h) && Number.isFinite(m) ? [[h, m] as [number, number]] : []
-      })
-    } else if (ukDow !== 0 && ukDow !== 6) {
-      // Default weekday working-hours envelope
-      for (let hour = WORK_START_HOUR; hour < WORK_END_HOUR; hour++) {
-        for (let minute = 0; minute < 60; minute += SLOT_MINUTES) {
-          candidates.push([hour, minute])
-        }
-      }
-    }
+    const candidates = candidatesForDate(config, dateKey, isoDow)
 
     for (const [hour, minute] of candidates) {
       const slotStart = ukDateAt(cursor, hour, minute)
-      const slotEnd = new Date(slotStart.getTime() + SLOT_MINUTES * 60 * 1000)
+      const slotEnd = new Date(slotStart.getTime() + slotMinutes * 60 * 1000)
 
       if (slotStart < minStart) continue
       if (slotStart > endDate) break

@@ -463,3 +463,17 @@ export type OnboardingRequest = typeof onboardingRequests.$inferSelect
 export type NewOnboardingRequest = typeof onboardingRequests.$inferInsert
 export type TrainingAttempt = typeof trainingAttempts.$inferSelect
 export type NewTrainingAttempt = typeof trainingAttempts.$inferInsert
+
+// ── Booking availability ───────────────────────────────────────
+// Single-row table holding the working-hours envelope + per-date
+// overrides for the /book discovery-call page. Read on every booking
+// request — admin edits are live immediately, no redeploy needed.
+
+export const bookingAvailability = pgTable('booking_availability', {
+  id: integer('id').primaryKey().default(1),
+  weeklyDefaults: jsonb('weekly_defaults').notNull(),
+  dateOverrides: jsonb('date_overrides').notNull(),
+  slotMinutes: integer('slot_minutes').notNull().default(30),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+})
+export type BookingAvailability = typeof bookingAvailability.$inferSelect
