@@ -235,38 +235,38 @@ export function WegovyOralClient() {
 
   // ── Alerts / contraindication summary ───────────────────────
   const alerts = useMemo(() => {
-    const out: { id: string; severity: "stop" | "caution" | "red-flag"; title: string; message: string }[] = [];
+    const out: { code: string; severity: "stop" | "caution" | "red-flag"; message: string; detail: string }[] = [];
     const c = state.contraindications;
-    if (c.pregnancyOrTryingConceive) out.push({ id: "preg", severity: "stop", title: "Pregnancy / trying to conceive", message: "Oral semaglutide is contraindicated. Stop pregnancy 2 months before planned conception." });
-    if (c.breastfeeding) out.push({ id: "bf", severity: "stop", title: "Breastfeeding", message: "Avoid — limited data; use alternative or defer." });
-    if (c.type1Diabetes) out.push({ id: "t1d", severity: "stop", title: "Type 1 diabetes", message: "Not indicated. Refer specialist diabetes service." });
-    if (c.mtcOrMen2) out.push({ id: "mtc", severity: "stop", title: "Personal / family MTC or MEN 2", message: "Contraindicated." });
-    if (c.pancreatitisHistory) out.push({ id: "panc", severity: "stop", title: "Pancreatitis history", message: "Contraindicated." });
-    if (c.diabeticRetinopathy) out.push({ id: "retino", severity: "stop", title: "Diabetic retinopathy", message: "Risk of progression — refer specialist." });
-    if (c.severeGastroparesisOrIBD) out.push({ id: "gp", severity: "stop", title: "Severe gastroparesis / IBD", message: "Contraindicated — oral absorption unreliable + symptom risk." });
-    if (c.eatingDisorder) out.push({ id: "ed", severity: "stop", title: "Active eating disorder", message: "Contraindicated. Refer specialist." });
-    if (c.severeRenalImpairment) out.push({ id: "renal", severity: "stop", title: "Severe renal impairment (eGFR <30)", message: "Avoid." });
-    if (c.severeHepaticImpairment) out.push({ id: "hep", severity: "stop", title: "Severe hepatic impairment", message: "Avoid." });
-    if (c.hypersensitivity) out.push({ id: "allergy", severity: "stop", title: "Hypersensitivity", message: "Contraindicated." });
-    if (c.concurrentGlp1) out.push({ id: "glp1", severity: "stop", title: "Concurrent GLP-1 / GIP RA", message: "Do not double up." });
+    if (c.pregnancyOrTryingConceive) out.push({ code: "preg", severity: "stop", message: "Pregnancy / trying to conceive", detail: "Oral semaglutide is contraindicated. Stop pregnancy 2 months before planned conception." });
+    if (c.breastfeeding) out.push({ code: "bf", severity: "stop", message: "Breastfeeding", detail: "Avoid — limited data; use alternative or defer." });
+    if (c.type1Diabetes) out.push({ code: "t1d", severity: "stop", message: "Type 1 diabetes", detail: "Not indicated. Refer specialist diabetes service." });
+    if (c.mtcOrMen2) out.push({ code: "mtc", severity: "stop", message: "Personal / family MTC or MEN 2", detail: "Contraindicated." });
+    if (c.pancreatitisHistory) out.push({ code: "panc", severity: "stop", message: "Pancreatitis history", detail: "Contraindicated." });
+    if (c.diabeticRetinopathy) out.push({ code: "retino", severity: "stop", message: "Diabetic retinopathy", detail: "Risk of progression — refer specialist." });
+    if (c.severeGastroparesisOrIBD) out.push({ code: "gp", severity: "stop", message: "Severe gastroparesis / IBD", detail: "Contraindicated — oral absorption unreliable + symptom risk." });
+    if (c.eatingDisorder) out.push({ code: "ed", severity: "stop", message: "Active eating disorder", detail: "Contraindicated. Refer specialist." });
+    if (c.severeRenalImpairment) out.push({ code: "renal", severity: "stop", message: "Severe renal impairment (eGFR <30)", detail: "Avoid." });
+    if (c.severeHepaticImpairment) out.push({ code: "hep", severity: "stop", message: "Severe hepatic impairment", detail: "Avoid." });
+    if (c.hypersensitivity) out.push({ code: "allergy", severity: "stop", message: "Hypersensitivity", detail: "Contraindicated." });
+    if (c.concurrentGlp1) out.push({ code: "glp1", severity: "stop", message: "Concurrent GLP-1 / GIP RA", detail: "Do not double up." });
 
     const i = state.interactions;
-    if (i.warfarin) out.push({ id: "warf", severity: "caution", title: "Warfarin", message: "Monitor INR closely; gastric emptying delay alters absorption." });
-    if (i.levothyroxine) out.push({ id: "levo", severity: "caution", title: "Levothyroxine", message: "Take levothyroxine 4h apart from oral semaglutide — oral semaglutide significantly delays absorption." });
-    if (i.sulfonylureaOrInsulin) out.push({ id: "su", severity: "caution", title: "Sulfonylurea / insulin", message: "Hypo risk — counsel + refer prescribing GP." });
-    if (i.oralContraception) out.push({ id: "oc", severity: "caution", title: "Oral contraception", message: "GI symptoms may reduce absorption — counsel additional barrier for 7 days after vomiting/diarrhoea." });
+    if (i.warfarin) out.push({ code: "warf", severity: "caution", message: "Warfarin", detail: "Monitor INR closely; gastric emptying delay alters absorption." });
+    if (i.levothyroxine) out.push({ code: "levo", severity: "caution", message: "Levothyroxine", detail: "Take levothyroxine 4h apart from oral semaglutide — oral semaglutide significantly delays absorption." });
+    if (i.sulfonylureaOrInsulin) out.push({ code: "su", severity: "caution", message: "Sulfonylurea / insulin", detail: "Hypo risk — counsel + refer prescribing GP." });
+    if (i.oralContraception) out.push({ code: "oc", severity: "caution", message: "Oral contraception", detail: "GI symptoms may reduce absorption — counsel additional barrier for 7 days after vomiting/diarrhoea." });
 
     // Off-label consent gate
     if (!state.offLabelConsent.writtenConsentObtained) {
-      out.push({ id: "consent", severity: "stop", title: "Off-label written consent not yet obtained", message: "Cannot proceed until informed written consent for off-label use is documented." });
+      out.push({ code: "consent", severity: "stop", message: "Off-label written consent not yet obtained", detail: "Cannot proceed until informed written consent for off-label use is documented." });
     }
 
     // Eligibility
     if (state.eligibility.bmi !== null && state.eligibility.bmi < 27) {
-      out.push({ id: "bmi", severity: "stop", title: "BMI below threshold", message: `BMI ${state.eligibility.bmi} — must be ≥30, or ≥27 with weight-related comorbidity.` });
+      out.push({ code: "bmi", severity: "stop", message: "BMI below threshold", detail: `BMI ${state.eligibility.bmi} — must be ≥30, or ≥27 with weight-related comorbidity.` });
     }
     if (state.eligibility.bmi !== null && state.eligibility.bmi >= 27 && state.eligibility.bmi < 30 && !state.eligibility.hasComorbidity) {
-      out.push({ id: "bmi-comorb", severity: "stop", title: "BMI 27–30 requires comorbidity", message: "Patient must have at least one weight-related comorbidity." });
+      out.push({ code: "bmi-comorb", severity: "stop", message: "BMI 27–30 requires comorbidity", detail: "Patient must have at least one weight-related comorbidity." });
     }
 
     return out;
