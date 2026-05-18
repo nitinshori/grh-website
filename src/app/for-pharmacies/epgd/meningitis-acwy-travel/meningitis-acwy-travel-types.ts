@@ -12,6 +12,13 @@ export interface MeningitisACWYPatientDetails extends BasePatientDetails {
   previousMenACWYDose: boolean;
   previousDoseDate?: string;
   knownAllergies: string;
+  /**
+   * Travel passport number. Captured so we can reissue an ICVP/ACWY
+   * vaccination certificate if the patient loses theirs. Particularly
+   * useful for Hajj/Umrah where the certificate is mandatory for entry
+   * to Saudi Arabia and must match the passport.
+   */
+  passportNumber: string;
 }
 
 export interface MeningitisACWYConsent extends BaseConsent {
@@ -53,6 +60,7 @@ gpOdsCode: '',
   previousMenACWYDose: false,
   previousDoseDate: '',
   knownAllergies: '',
+  passportNumber: '',
 };
 
 export const initialMeningitisACWYConsent: MeningitisACWYConsent = {

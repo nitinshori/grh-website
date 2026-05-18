@@ -56,6 +56,13 @@ export const users = pgTable('users', {
   totpSecret: varchar('totp_secret', { length: 64 }),
   totpEnabled: boolean('totp_enabled').default(false).notNull(),
   totpBackupCodes: text('totp_backup_codes'), // JSON array of one-use bcrypt hashes
+  // Single-use setup token for inviting a new user. When a pharmacy admin
+  // invites a staff member, a random token is hashed here, expiry is set,
+  // and the user is emailed a /set-password link. Token is cleared once
+  // used (setup_token_used_at set).
+  setupTokenHash: varchar('setup_token_hash', { length: 255 }),
+  setupTokenExpiresAt: timestamp('setup_token_expires_at'),
+  setupTokenUsedAt: timestamp('setup_token_used_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })

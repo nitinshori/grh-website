@@ -74,6 +74,7 @@ export default function MeningitisACWYSummaryReport({
           <SectionHeader>Travel Assessment</SectionHeader>
           <div className="space-y-1.5">
             <Row label="Destination" value={patientDetails.travelDestination} />
+            <Row label="Passport number" value={patientDetails.passportNumber || 'Not recorded'} />
             <Row label="Reason for travel" value={patientDetails.travelReason || 'Not specified'} />
             <Row label="Departure date" value={patientDetails.departureDate} />
             <Row
