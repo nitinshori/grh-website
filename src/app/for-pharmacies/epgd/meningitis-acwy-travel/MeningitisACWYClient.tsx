@@ -395,13 +395,18 @@ export function MeningitisACWYClient() {
               placeholder="e.g., Saudi Arabia, Senegal, Sub-Saharan Africa"
             />
 
-            <TextInput
-              label="Passport number"
-              value={patientDetails.passportNumber}
-              onChange={(v) => handlePatientDetailsChange('passportNumber', v)}
-              placeholder="e.g., 123456789"
-              description="Capture for the vaccination certificate. Needed for Saudi entry (Hajj/Umrah). Stored in the consultation record so you can reissue the certificate if the patient loses theirs."
-            />
+            <div>
+              <TextInput
+                label="Passport number"
+                value={patientDetails.passportNumber}
+                onChange={(v) => handlePatientDetailsChange('passportNumber', v)}
+                placeholder="e.g., 123456789"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Capture for the vaccination certificate. Needed for Saudi entry (Hajj/Umrah).
+                Stored in the consultation record so you can reissue the certificate if the patient loses theirs.
+              </p>
+            </div>
 
             <SelectInput
               label="Reason for travel"
