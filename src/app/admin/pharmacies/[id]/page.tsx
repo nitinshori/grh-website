@@ -35,8 +35,16 @@ async function getPharmacyData(id: string) {
     .from(pharmacyPgds)
     .where(eq(pharmacyPgds.pharmacyId, id))
 
+  // Return only the fields the client component declares — strips out
+  // Date objects (createdAt, updatedAt) and any extra columns that don't
+  // serialize cleanly when passed from server component to client.
   return {
-    ...pharmacy,
+    id: pharmacy.id,
+    name: pharmacy.name,
+    address: pharmacy.address,
+    phone: pharmacy.phone,
+    email: pharmacy.email,
+    isActive: pharmacy.isActive,
     users: pharmacyUsers,
     pgdSlugs: assignedPgds.map((p) => p.pgdSlug),
   }
