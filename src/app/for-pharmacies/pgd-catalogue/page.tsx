@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
 import { PGDCatalogueClient } from "./PGDCatalogueClient";
+import { ALL_PGDS } from "@/lib/pgd-access";
+
+const BASE_URL = "https://getrealhealthpgd.co.uk";
 
 export const metadata: Metadata = {
   title: "PGD Catalogue — 70 Services for UK Pharmacies",
   description:
     "70 PGDs for UK community pharmacies: weight management (Wegovy, Mounjaro, Saxenda), travel vaccines, HRT, TRT, ED, hair loss, contraception, UTIs and more. All included in the £100/month flat fee.",
+  alternates: { canonical: `${BASE_URL}/for-pharmacies/pgd-catalogue` },
 };
 
 // FAQ JSON-LD — answers the catalogue questions AI engines actually receive
@@ -58,12 +62,92 @@ const faqJsonLd = {
   })),
 };
 
+// ItemList JSON-LD — exposes the full PGD catalogue as a structured list.
+// AI engines (Google AI Overviews, ChatGPT, Perplexity) use this to cite
+// "Wegovy PGD pharmacy" type queries by enumerating which provider offers
+// which PGD. Each item is also a Service in its own right.
+const provider = {
+  "@type": "Organization",
+  name: "Get Real Health",
+  url: BASE_URL,
+};
+
+const offer = {
+  "@type": "Offer",
+  price: "100",
+  priceCurrency: "GBP",
+  priceSpecification: {
+    "@type": "UnitPriceSpecification",
+    price: "100",
+    priceCurrency: "GBP",
+    unitCode: "MON",
+  },
+  availability: "https://schema.org/InStock",
+  eligibleRegion: [{ "@type": "Country", name: "United Kingdom" }],
+  url: `${BASE_URL}/for-pharmacies/pricing`,
+};
+
+const itemListJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  name: "Get Real Health — PGD Catalogue",
+  description:
+    "Patient Group Directions available to GRH-subscribed UK community pharmacies. All included in the single £100/month per pharmacy fee.",
+  numberOfItems: ALL_PGDS.length,
+  itemListElement: ALL_PGDS.map((pgd, i) => ({
+    "@type": "ListItem",
+    position: i + 1,
+    item: {
+      "@type": "Service",
+      name: `${pgd.title} PGD`,
+      description: `${pgd.title} (${pgd.subtitle}) — ${pgd.category} Patient Group Direction for UK community pharmacies. Includes electronic consultation tool, training and clinical governance.`,
+      category: pgd.category,
+      serviceType: "Patient Group Direction",
+      provider,
+      areaServed: { "@type": "Country", name: "United Kingdom" },
+      audience: {
+        "@type": "Audience",
+        audienceType: "UK community pharmacies and pharmacists",
+      },
+      offers: offer,
+    },
+  })),
+};
+
+const breadcrumbJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Home", item: BASE_URL },
+    {
+      "@type": "ListItem",
+      position: 2,
+      name: "For Pharmacies",
+      item: `${BASE_URL}/for-pharmacies`,
+    },
+    {
+      "@type": "ListItem",
+      position: 3,
+      name: "PGD Catalogue",
+      item: `${BASE_URL}/for-pharmacies/pgd-catalogue`,
+    },
+  ],
+};
+
 export default function PGDCataloguePage() {
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
       <PGDCatalogueClient />
     </>

@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { patientCategories } from "@/data/patient-services";
 import { articles } from "@/data/articles";
+import { SERVICE_PAGES } from "@/data/service-pages";
 
 const BASE_URL = "https://getrealhealthpgd.co.uk";
 
@@ -28,7 +29,17 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE_URL}/resources`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
     { url: `${BASE_URL}/onboard`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: `${BASE_URL}/book`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${BASE_URL}/services`, lastModified: now, changeFrequency: "weekly", priority: 0.9 },
   ];
+
+  // Headline SEO landing pages — /services/<slug>. Distinct from the
+  // /for-pharmacies/epgd/* consultation tools (which are noindex).
+  const servicePages: MetadataRoute.Sitemap = SERVICE_PAGES.map((p) => ({
+    url: `${BASE_URL}/services/${p.slug}`,
+    lastModified: now,
+    changeFrequency: "weekly" as const,
+    priority: 0.85,
+  }));
 
   // Patient category pages
   const categoryPages: MetadataRoute.Sitemap = patientCategories.map((cat) => ({
@@ -46,5 +57,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.7,
   }));
 
-  return [...staticPages, ...categoryPages, ...articlePages];
+  return [...staticPages, ...servicePages, ...categoryPages, ...articlePages];
 }

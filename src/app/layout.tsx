@@ -10,28 +10,39 @@ import { ChatWidget } from "@/components/chat/ChatWidget";
 
 export const metadata: Metadata = {
   title: {
-    default: "Get Real Health | PGD Services for UK Pharmacies",
+    default: "Pharmacy PGD Provider | 70+ ePGDs, Flat Fee | Get Real Health",
     template: "%s | Get Real Health",
   },
   description:
-    "UK pharmacy PGD provider. 70 PGDs, £100/month flat, no per-consult charges. Your patients. Your data. Your business.",
+    "UK pharmacy PGD provider. 70+ Patient Group Directions, £100/month flat, no per-consult charges. CQC + HIW registered. Includes training, ePGD tools and clinical governance.",
   keywords: [
-    "PGD provider",
+    "pharmacy PGD provider",
+    "PGD provider UK",
     "pharmacy PGD",
     "Patient Group Direction",
+    "ePGD",
+    "electronic PGD",
+    "Wegovy PGD",
+    "Mounjaro PGD",
+    "weight management PGD",
+    "TRT PGD",
+    "HRT PGD",
+    "travel vaccination PGD",
     "pharmacy private services",
-    "travel clinic pharmacy",
-    "weight management pharmacy",
+    "pharmacy clinical governance",
     "UK pharmacy",
   ],
+  alternates: {
+    canonical: "https://getrealhealthpgd.co.uk",
+  },
   openGraph: {
     type: "website",
     locale: "en_GB",
     siteName: "Get Real Health",
     url: "https://getrealhealthpgd.co.uk",
-    title: "Get Real Health | PGD Services for UK Pharmacies",
+    title: "Pharmacy PGD Provider | 70+ ePGDs, Flat Fee | Get Real Health",
     description:
-      "70 PGDs. £100/month flat. No per-consult charges. CQC + HIW registered.",
+      "70+ PGDs. £100/month flat. No per-consult charges. CQC + HIW registered. Training, ePGD tools and clinical governance included.",
     images: [
       {
         url: "/og-image.png",
@@ -43,9 +54,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Get Real Health | PGD Services for UK Pharmacies",
+    title: "Pharmacy PGD Provider | 70+ ePGDs, Flat Fee | Get Real Health",
     description:
-      "70 PGDs. £100/month flat. No per-consult charges. CQC + HIW registered.",
+      "70+ PGDs. £100/month flat. No per-consult charges. CQC + HIW registered.",
     images: ["/og-image.png"],
   },
 };
