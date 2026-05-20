@@ -1,57 +1,14 @@
-import { db } from '@/lib/db'
-import { pharmacyPgds } from '@/lib/db/schema'
-import { eq, and } from 'drizzle-orm'
-
-/**
- * Check if a pharmacy has access to a specific PGD by slug.
- */
-export async function hasPharmacyPgdAccess(
-  pharmacyId: string,
-  pgdSlug: string
-): Promise<boolean> {
-  const [assignment] = await db
-    .select()
-    .from(pharmacyPgds)
-    .where(
-      and(eq(pharmacyPgds.pharmacyId, pharmacyId), eq(pharmacyPgds.pgdSlug, pgdSlug))
-    )
-    .limit(1)
-
-  return !!assignment
-}
-
-/**
- * Get all PGD slugs assigned to a pharmacy.
- */
-export async function getPharmacyPgdSlugs(pharmacyId: string): Promise<string[]> {
-  const assignments = await db
-    .select({ pgdSlug: pharmacyPgds.pgdSlug })
-    .from(pharmacyPgds)
-    .where(eq(pharmacyPgds.pharmacyId, pharmacyId))
-
-  return assignments.map((a) => a.pgdSlug)
-}
-
-/**
- * Assign PGD slugs to a pharmacy (replaces existing assignments).
- */
-export async function setPharmacyPgds(
-  pharmacyId: string,
-  slugs: string[]
-): Promise<void> {
-  // Delete all existing assignments
-  await db.delete(pharmacyPgds).where(eq(pharmacyPgds.pharmacyId, pharmacyId))
-
-  // Insert new assignments
-  if (slugs.length > 0) {
-    await db.insert(pharmacyPgds).values(
-      slugs.map((slug) => ({
-        pharmacyId,
-        pgdSlug: slug,
-      }))
-    )
-  }
-}
+// ── pgd-access.ts ──────────────────────────────────────────────
+// CLIENT-SAFE module: contains ONLY static constants. No DB code,
+// no re-exports from server-only modules — re-exporting from
+// `pgd-queries.ts` would still pull `db` into the client bundle.
+//
+// Server-side query functions (hasPharmacyPgdAccess, getPharmacyPgdSlugs,
+// setPharmacyPgds) live in `@/lib/pgd-queries` and must be imported
+// from there directly. That module has an `import "server-only"`
+// guard that will throw at build time if a client component pulls it in.
+//
+// Constants below are pure data and safe to use from "use client".
 
 /**
  * Master list of all PGDs available in the system.

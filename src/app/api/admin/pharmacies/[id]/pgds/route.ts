@@ -1,5 +1,5 @@
 import { auth } from '@/lib/auth'
-import { setPharmacyPgds } from '@/lib/pgd-access'
+import { setPharmacyPgds } from '@/lib/pgd-queries'
 import { db } from '@/lib/db'
 import { pharmacies } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'

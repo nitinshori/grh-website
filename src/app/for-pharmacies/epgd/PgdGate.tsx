@@ -1,6 +1,6 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import { hasPharmacyPgdAccess } from '@/lib/pgd-access'
+import { hasPharmacyPgdAccess } from '@/lib/pgd-queries'
 import AccessDenied from './AccessDenied'
 
 interface PgdGateProps {

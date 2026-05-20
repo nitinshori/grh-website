@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import { getPharmacyPgdSlugs } from '@/lib/pgd-access'
+import { getPharmacyPgdSlugs } from '@/lib/pgd-queries'
 
 export const metadata: Metadata = {
   title: 'ePGD Consultations',
