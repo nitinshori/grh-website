@@ -35,6 +35,9 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://getrealhealthpgd.co.uk",
   },
+  verification: {
+    google: "Rdesn9BmMRZw8GTb5RG5xkFvgcDdkkOqx0xdR4vcdr0",
+  },
   openGraph: {
     type: "website",
     locale: "en_GB",
