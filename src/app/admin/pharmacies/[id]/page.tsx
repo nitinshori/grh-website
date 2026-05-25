@@ -1,6 +1,6 @@
 import { db } from '@/lib/db'
-import { pharmacies, users, pharmacyPgds } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { pharmacies, users, pharmacyPgds, pgdConsultations } from '@/lib/db/schema'
+import { eq, sql } from 'drizzle-orm'
 import { notFound } from 'next/navigation'
 import { PharmacyDetailClient } from './PharmacyDetailClient'
 
@@ -35,6 +35,38 @@ async function getPharmacyData(id: string) {
     .from(pharmacyPgds)
     .where(eq(pharmacyPgds.pharmacyId, id))
 
+  // Fetch per-PGD usage counts for this pharmacy.
+  //   started      = total consultations begun for that PGD
+  //   completed    = subset that hit "complete"
+  //   lastUsed     = most recent start timestamp
+  // Source: pgd_consultations table, grouped by pgd_slug.
+  const usageRows = await db
+    .select({
+      pgdSlug: pgdConsultations.pgdSlug,
+      started: sql<number>`COUNT(*)::int`,
+      completed: sql<number>`SUM(CASE WHEN ${pgdConsultations.completedAt} IS NOT NULL THEN 1 ELSE 0 END)::int`,
+      lastUsed: sql<Date>`MAX(${pgdConsultations.startedAt})`,
+    })
+    .from(pgdConsultations)
+    .where(eq(pgdConsultations.pharmacyId, id))
+    .groupBy(pgdConsultations.pgdSlug)
+
+  // Convert to a slug→stats map. Dates → ISO strings so they cross the
+  // server/client boundary cleanly (Next won't serialize Date objects).
+  const pgdUsage: Record<
+    string,
+    { started: number; completed: number; lastUsed: string | null }
+  > = {}
+  for (const row of usageRows) {
+    pgdUsage[row.pgdSlug] = {
+      started: row.started ?? 0,
+      completed: row.completed ?? 0,
+      lastUsed: row.lastUsed
+        ? new Date(row.lastUsed as unknown as string).toISOString()
+        : null,
+    }
+  }
+
   // Return only the fields the client component declares — strips out
   // Date objects (createdAt, updatedAt) and any extra columns that don't
   // serialize cleanly when passed from server component to client.
@@ -47,6 +79,7 @@ async function getPharmacyData(id: string) {
     isActive: pharmacy.isActive,
     users: pharmacyUsers,
     pgdSlugs: assignedPgds.map((p) => p.pgdSlug),
+    pgdUsage,
   }
 }
 

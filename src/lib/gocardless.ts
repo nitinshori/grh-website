@@ -138,6 +138,61 @@ export async function createSubscription(opts: CreateSubscriptionOptions) {
   return out.subscriptions
 }
 
+// ── Payments ───────────────────────────────────────────────────────
+// Read-through to GoCardless /payments. We don't persist payment events
+// locally yet — for the admin view, querying GC directly is fast enough
+// and means we always see the source-of-truth status.
+
+export interface GoCardlessPayment {
+  id: string
+  /** "pending_submission" | "submitted" | "confirmed" | "paid_out" | "cancelled" | "customer_approval_denied" | "failed" | "charged_back" */
+  status: string
+  /** Amount in pence */
+  amount: number
+  currency: string
+  /** ISO date string (no time component) — date the customer's bank will be charged */
+  charge_date: string
+  description?: string | null
+  reference?: string | null
+  created_at: string
+  links: {
+    mandate?: string
+    subscription?: string
+    customer?: string
+  }
+}
+
+interface ListPaymentsOptions {
+  /** Default 100, max 500 */
+  limit?: number
+  /** Filter by mandate id */
+  mandate?: string
+  /** Filter by subscription id */
+  subscription?: string
+  /** Filter by customer id */
+  customer?: string
+  /** "charge_date" (default), "created_at" */
+  sort?: 'charge_date' | 'created_at'
+  /** "asc" | "desc" — default desc */
+  order?: 'asc' | 'desc'
+}
+
+/**
+ * List payments from GoCardless. Returns the raw payment objects so the
+ * admin view can render them however it wants.
+ */
+export async function listPayments(opts: ListPaymentsOptions = {}): Promise<GoCardlessPayment[]> {
+  const params = new URLSearchParams()
+  params.set('limit', String(opts.limit ?? 100))
+  if (opts.mandate) params.set('mandate', opts.mandate)
+  if (opts.subscription) params.set('subscription', opts.subscription)
+  if (opts.customer) params.set('customer', opts.customer)
+  // GoCardless API doesn't actually support sort/order on /payments — it
+  // returns in creation order. We'll sort client-side.
+  const out = await gcFetch<{ payments: GoCardlessPayment[] }>(`/payments?${params.toString()}`)
+  return out.payments ?? []
+}
+
 /**
  * Verify a GoCardless webhook signature. Compute HMAC-SHA256 of the request
  * body using GOCARDLESS_WEBHOOK_SECRET and compare to the Webhook-Signature

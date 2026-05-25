@@ -20,6 +20,11 @@ interface PharmacyData {
     isActive: boolean
   }>
   pgdSlugs: string[]
+  // Per-PGD usage. Keyed by slug. Slugs with zero usage are NOT in the map.
+  pgdUsage: Record<
+    string,
+    { started: number; completed: number; lastUsed: string | null }
+  >
 }
 
 interface PharmacyDetailClientProps {
@@ -396,6 +401,68 @@ export function PharmacyDetailClient({ pharmacy: initialPharmacy }: PharmacyDeta
             {/* PGDs Tab */}
             {activeTab === 'pgds' && (
               <div className="space-y-6">
+                {/* Usage Summary — only relevant once at least one consultation exists */}
+                {Object.keys(pharmacy.pgdUsage).length > 0 && (() => {
+                  const totalConsultations = Object.values(pharmacy.pgdUsage).reduce((a, u) => a + u.started, 0)
+                  const totalCompleted = Object.values(pharmacy.pgdUsage).reduce((a, u) => a + u.completed, 0)
+                  const activePgds = Object.keys(pharmacy.pgdUsage).length
+
+                  // Build a ranked list (most-used first) to show "top 5"
+                  const ranked = Object.entries(pharmacy.pgdUsage)
+                    .map(([slug, u]) => ({
+                      slug,
+                      title: ALL_PGDS.find((p) => p.slug === slug)?.title ?? slug,
+                      started: u.started,
+                      completed: u.completed,
+                      lastUsed: u.lastUsed,
+                    }))
+                    .sort((a, b) => b.started - a.started)
+
+                  return (
+                    <div className="bg-gradient-to-r from-teal-50 to-blue-50 border border-teal-200 rounded-lg p-5 mb-6">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">Total consultations</p>
+                          <p className="text-3xl font-bold text-gray-900">{totalConsultations}</p>
+                          <p className="text-xs text-gray-600">{totalCompleted} completed · {totalConsultations - totalCompleted} in-progress / abandoned</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">PGDs in use</p>
+                          <p className="text-3xl font-bold text-gray-900">{activePgds}</p>
+                          <p className="text-xs text-gray-600">of {pharmacy.pgdSlugs.length} assigned ({pharmacy.pgdSlugs.length - activePgds} never used)</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">Most used</p>
+                          <p className="text-lg font-bold text-gray-900 truncate">{ranked[0]?.title ?? '—'}</p>
+                          <p className="text-xs text-gray-600">{ranked[0]?.started ?? 0} consultations</p>
+                        </div>
+                      </div>
+
+                      {/* Top 5 used */}
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-teal-700 mb-2">Top {Math.min(5, ranked.length)} by usage</p>
+                        <div className="space-y-1">
+                          {ranked.slice(0, 5).map((r) => (
+                            <div key={r.slug} className="flex items-center justify-between text-sm bg-white rounded px-3 py-2 border border-gray-100">
+                              <span className="font-medium text-gray-900 truncate">{r.title}</span>
+                              <span className="text-gray-600 whitespace-nowrap ml-2">
+                                <span className="font-semibold text-teal-700">{r.started}</span>
+                                <span className="text-gray-400"> started</span>
+                                <span className="text-gray-300"> · </span>
+                                <span className="font-semibold text-green-700">{r.completed}</span>
+                                <span className="text-gray-400"> done</span>
+                                {r.lastUsed && (
+                                  <span className="text-gray-400"> · last {new Date(r.lastUsed).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</span>
+                                )}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })()}
+
                 {/* Global Actions */}
                 <div className="flex gap-3 mb-6">
                   <button
@@ -457,25 +524,41 @@ export function PharmacyDetailClient({ pharmacy: initialPharmacy }: PharmacyDeta
 
                         {/* PGD Checkboxes */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {categoryPgds.map((pgd) => (
-                            <label key={pgd.slug} className="flex items-start gap-3 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={selectedPgds.has(pgd.slug)}
-                                onChange={() => togglePgd(pgd.slug)}
-                                disabled={loading}
-                                className="w-4 h-4 text-blue-600 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 mt-1 disabled:opacity-50"
-                              />
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-gray-900">
-                                  {pgd.title}
-                                </p>
-                                <p className="text-xs text-gray-500">
-                                  {pgd.subtitle}
-                                </p>
-                              </div>
-                            </label>
-                          ))}
+                          {categoryPgds.map((pgd) => {
+                            const usage = pharmacy.pgdUsage[pgd.slug]
+                            return (
+                              <label key={pgd.slug} className="flex items-start gap-3 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedPgds.has(pgd.slug)}
+                                  onChange={() => togglePgd(pgd.slug)}
+                                  disabled={loading}
+                                  className="w-4 h-4 text-blue-600 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 mt-1 disabled:opacity-50"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <p className="text-sm font-medium text-gray-900">
+                                      {pgd.title}
+                                    </p>
+                                    {usage && usage.started > 0 && (
+                                      <span
+                                        className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-teal-100 text-teal-800"
+                                        title={
+                                          `${usage.started} started, ${usage.completed} completed` +
+                                          (usage.lastUsed ? ` · last used ${new Date(usage.lastUsed).toLocaleDateString('en-GB')}` : '')
+                                        }
+                                      >
+                                        {usage.started} used
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-gray-500">
+                                    {pgd.subtitle}
+                                  </p>
+                                </div>
+                              </label>
+                            )
+                          })}
                         </div>
                       </div>
                     )
