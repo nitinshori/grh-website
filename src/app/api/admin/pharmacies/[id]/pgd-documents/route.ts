@@ -11,12 +11,6 @@ export const runtime = 'nodejs'
 
 const VALID_SLUGS = new Set(ALL_PGDS.map((p) => p.slug))
 
-function requireSuperAdmin(session: Awaited<ReturnType<typeof auth>>) {
-  if (!session?.user) return { error: 'Forbidden', status: 401 as const }
-  if (session.user.role !== 'super_admin') return { error: 'Forbidden — super admin only', status: 403 as const }
-  return null
-}
-
 // ── POST — upload a new override PDF for (pharmacy, slug) ────────
 //   multipart/form-data:
 //     file:           PDF file
@@ -25,8 +19,11 @@ function requireSuperAdmin(session: Awaited<ReturnType<typeof auth>>) {
 //     notes:          optional free text
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
-  const denied = requireSuperAdmin(session)
-  if (denied) return NextResponse.json({ error: denied.error }, { status: denied.status })
+  if (!session?.user) return NextResponse.json({ error: 'Forbidden' }, { status: 401 })
+  if (session.user.role !== 'super_admin') {
+    return NextResponse.json({ error: 'Forbidden — super admin only' }, { status: 403 })
+  }
+  const adminUserId = session.user.id
 
   const { id: pharmacyId } = await params
 
@@ -107,7 +104,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       signedByNames,
       notes,
       isCurrent: true,
-      uploadedBy: session!.user.id,
+      uploadedBy: adminUserId,
     })
     .returning({
       id: pharmacyPgdDocuments.id,
@@ -131,8 +128,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 //   we don't proactively GC it. (Re-upload creates a new version row.)
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
-  const denied = requireSuperAdmin(session)
-  if (denied) return NextResponse.json({ error: denied.error }, { status: denied.status })
+  if (!session?.user) return NextResponse.json({ error: 'Forbidden' }, { status: 401 })
+  if (session.user.role !== 'super_admin') {
+    return NextResponse.json({ error: 'Forbidden — super admin only' }, { status: 403 })
+  }
 
   const { id: pharmacyId } = await params
   const url = new URL(req.url)
