@@ -3,6 +3,7 @@ import { pharmacies, users, pharmacyPgds, pgdConsultations } from '@/lib/db/sche
 import { eq, sql } from 'drizzle-orm'
 import { notFound } from 'next/navigation'
 import { PharmacyDetailClient } from './PharmacyDetailClient'
+import { listPgdDocumentOverrides } from '@/lib/pgd-document-overrides'
 
 async function getPharmacyData(id: string) {
   // Fetch pharmacy
@@ -67,6 +68,31 @@ async function getPharmacyData(id: string) {
     }
   }
 
+  // Per-PGD document overrides (custom signed PDFs uploaded for this pharmacy)
+  const overridesMap = await listPgdDocumentOverrides(id)
+  const pgdOverrides: Record<string, {
+    id: string
+    url: string
+    filename: string | null
+    fileSizeBytes: number | null
+    version: number
+    signedByNames: string | null
+    notes: string | null
+    uploadedAt: string
+  }> = {}
+  for (const [slug, o] of overridesMap.entries()) {
+    pgdOverrides[slug] = {
+      id: o.id,
+      url: o.url,
+      filename: o.filename,
+      fileSizeBytes: o.fileSizeBytes,
+      version: o.version,
+      signedByNames: o.signedByNames,
+      notes: o.notes,
+      uploadedAt: o.uploadedAt.toISOString(),
+    }
+  }
+
   // Return only the fields the client component declares — strips out
   // Date objects (createdAt, updatedAt) and any extra columns that don't
   // serialize cleanly when passed from server component to client.
@@ -80,6 +106,7 @@ async function getPharmacyData(id: string) {
     users: pharmacyUsers,
     pgdSlugs: assignedPgds.map((p) => p.pgdSlug),
     pgdUsage,
+    pgdOverrides,
   }
 }
 

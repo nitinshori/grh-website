@@ -84,6 +84,37 @@ export const pharmacyPgds = pgTable(
   ]
 )
 
+// ── Per-pharmacy PGD document overrides ─────────────────────────
+//
+// For customers (e.g. Pharmacy Plus Health) who supply their own
+// clinically-signed versions of specific PGDs. The clinical engine
+// stays canonical; only the downloadable PDF is per-pharmacy.
+
+export const pharmacyPgdDocuments = pgTable(
+  'pharmacy_pgd_documents',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    pharmacyId: uuid('pharmacy_id')
+      .references(() => pharmacies.id, { onDelete: 'cascade' })
+      .notNull(),
+    pgdSlug: varchar('pgd_slug', { length: 255 }).notNull(),
+    documentUrl: text('document_url').notNull(),
+    filename: varchar('filename', { length: 500 }),
+    fileSizeBytes: integer('file_size_bytes'),
+    version: integer('version').default(1).notNull(),
+    signedByNames: text('signed_by_names'),
+    notes: text('notes'),
+    isCurrent: boolean('is_current').default(true).notNull(),
+    uploadedBy: uuid('uploaded_by').references(() => users.id, { onDelete: 'set null' }),
+    uploadedAt: timestamp('uploaded_at').defaultNow().notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (table) => [
+    index('pharmacy_pgd_documents_pharmacy_slug_idx').on(table.pharmacyId, table.pgdSlug),
+  ],
+)
+
 // ── PGD Consultations (Analytics) ─────────────────────────────
 
 export const pgdConsultations = pgTable('pgd_consultations', {

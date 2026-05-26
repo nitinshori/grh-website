@@ -25,6 +25,22 @@ interface PharmacyData {
     string,
     { started: number; completed: number; lastUsed: string | null }
   >
+  // Per-PGD document overrides — uploaded customised signed PDFs.
+  // Slugs without an override are NOT in this map. The pharmacist sees the
+  // override if present, otherwise the GRH master from /public/pgd-documents.
+  pgdOverrides: Record<
+    string,
+    {
+      id: string
+      url: string
+      filename: string | null
+      fileSizeBytes: number | null
+      version: number
+      signedByNames: string | null
+      notes: string | null
+      uploadedAt: string
+    }
+  >
 }
 
 interface PharmacyDetailClientProps {
@@ -54,6 +70,73 @@ export function PharmacyDetailClient({ pharmacy: initialPharmacy }: PharmacyDeta
   const [selectedPgds, setSelectedPgds] = useState<Set<string>>(
     new Set(pharmacy.pgdSlugs)
   )
+
+  // Override upload state
+  const [overrides, setOverrides] = useState<PharmacyData['pgdOverrides']>(
+    pharmacy.pgdOverrides ?? {},
+  )
+  const [uploadingSlug, setUploadingSlug] = useState<string | null>(null)
+  const [removingSlug, setRemovingSlug] = useState<string | null>(null)
+
+  async function handleOverrideUpload(slug: string, file: File, signedByNames: string, notes: string) {
+    setUploadingSlug(slug)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('pgdSlug', slug)
+      if (signedByNames) fd.append('signedByNames', signedByNames)
+      if (notes) fd.append('notes', notes)
+      const res = await fetch(`/api/admin/pharmacies/${pharmacy.id}/pgd-documents`, {
+        method: 'POST',
+        body: fd,
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Upload failed')
+      setOverrides((prev) => ({
+        ...prev,
+        [slug]: {
+          id: data.documentId,
+          url: data.url,
+          filename: file.name,
+          fileSizeBytes: file.size,
+          version: data.version,
+          signedByNames: signedByNames || null,
+          notes: notes || null,
+          uploadedAt: new Date().toISOString(),
+        },
+      }))
+      showMessage(`Uploaded custom PDF for ${slug} (v${data.version})`)
+    } catch (e) {
+      showMessage(e instanceof Error ? e.message : 'Upload failed', true)
+    } finally {
+      setUploadingSlug(null)
+    }
+  }
+
+  async function handleOverrideRemove(slug: string) {
+    if (!confirm(`Remove the custom PDF for ${slug}? Pharmacists at this pharmacy will revert to the GRH master.`)) return
+    setRemovingSlug(slug)
+    try {
+      const res = await fetch(
+        `/api/admin/pharmacies/${pharmacy.id}/pgd-documents?slug=${encodeURIComponent(slug)}`,
+        { method: 'DELETE' },
+      )
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error ?? 'Remove failed')
+      }
+      setOverrides((prev) => {
+        const next = { ...prev }
+        delete next[slug]
+        return next
+      })
+      showMessage(`Removed custom PDF for ${slug}`)
+    } catch (e) {
+      showMessage(e instanceof Error ? e.message : 'Remove failed', true)
+    } finally {
+      setRemovingSlug(null)
+    }
+  }
 
   const showMessage = (message: string, isError = false) => {
     if (isError) {
@@ -526,37 +609,125 @@ export function PharmacyDetailClient({ pharmacy: initialPharmacy }: PharmacyDeta
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {categoryPgds.map((pgd) => {
                             const usage = pharmacy.pgdUsage[pgd.slug]
+                            const override = overrides[pgd.slug]
                             return (
-                              <label key={pgd.slug} className="flex items-start gap-3 cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={selectedPgds.has(pgd.slug)}
-                                  onChange={() => togglePgd(pgd.slug)}
-                                  disabled={loading}
-                                  className="w-4 h-4 text-blue-600 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 mt-1 disabled:opacity-50"
-                                />
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <p className="text-sm font-medium text-gray-900">
-                                      {pgd.title}
+                              <div key={pgd.slug} className="flex flex-col gap-1">
+                                <label className="flex items-start gap-3 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedPgds.has(pgd.slug)}
+                                    onChange={() => togglePgd(pgd.slug)}
+                                    disabled={loading}
+                                    className="w-4 h-4 text-blue-600 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 mt-1 disabled:opacity-50"
+                                  />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <p className="text-sm font-medium text-gray-900">
+                                        {pgd.title}
+                                      </p>
+                                      {usage && usage.started > 0 && (
+                                        <span
+                                          className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-teal-100 text-teal-800"
+                                          title={
+                                            `${usage.started} started, ${usage.completed} completed` +
+                                            (usage.lastUsed ? ` · last used ${new Date(usage.lastUsed).toLocaleDateString('en-GB')}` : '')
+                                          }
+                                        >
+                                          {usage.started} used
+                                        </span>
+                                      )}
+                                      {override && (
+                                        <span
+                                          className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-100 text-purple-800"
+                                          title={
+                                            `Custom PDF (v${override.version})` +
+                                            (override.signedByNames ? ` — signed by ${override.signedByNames}` : '')
+                                          }
+                                        >
+                                          custom PDF
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-xs text-gray-500">
+                                      {pgd.subtitle}
                                     </p>
-                                    {usage && usage.started > 0 && (
-                                      <span
-                                        className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-teal-100 text-teal-800"
-                                        title={
-                                          `${usage.started} started, ${usage.completed} completed` +
-                                          (usage.lastUsed ? ` · last used ${new Date(usage.lastUsed).toLocaleDateString('en-GB')}` : '')
-                                        }
-                                      >
-                                        {usage.started} used
-                                      </span>
+                                  </div>
+                                </label>
+
+                                {/* Custom PDF override controls — only show when the PGD is assigned */}
+                                {selectedPgds.has(pgd.slug) && (
+                                  <div className="ml-7 mt-1 mb-2 text-[11px]">
+                                    {override ? (
+                                      <div className="bg-purple-50 border border-purple-200 rounded-md p-2 flex items-start justify-between gap-2">
+                                        <div className="min-w-0">
+                                          <a
+                                            href={override.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-purple-800 font-semibold hover:underline truncate block"
+                                          >
+                                            {override.filename ?? 'Custom PDF'}
+                                          </a>
+                                          {override.signedByNames && (
+                                            <p className="text-purple-700">Signed by {override.signedByNames}</p>
+                                          )}
+                                          <p className="text-purple-500">
+                                            v{override.version} · {new Date(override.uploadedAt).toLocaleDateString('en-GB')}
+                                          </p>
+                                        </div>
+                                        <div className="flex flex-col gap-1 flex-shrink-0">
+                                          <button
+                                            type="button"
+                                            disabled={removingSlug === pgd.slug}
+                                            onClick={() => handleOverrideRemove(pgd.slug)}
+                                            className="text-[10px] font-medium text-red-700 hover:text-red-900 underline disabled:opacity-50"
+                                          >
+                                            {removingSlug === pgd.slug ? 'Removing…' : 'Remove'}
+                                          </button>
+                                          <label className={`text-[10px] font-medium text-purple-700 hover:text-purple-900 underline cursor-pointer ${uploadingSlug === pgd.slug ? 'opacity-50 pointer-events-none' : ''}`}>
+                                            {uploadingSlug === pgd.slug ? 'Uploading…' : 'Replace'}
+                                            <input
+                                              type="file"
+                                              accept="application/pdf,.pdf"
+                                              className="hidden"
+                                              onChange={(e) => {
+                                                const f = e.target.files?.[0]
+                                                if (f) {
+                                                  const signed = prompt('Signed by (e.g. "Janey Tipping, Sarah Passmore")', override.signedByNames ?? '') ?? ''
+                                                  const notes = prompt('Notes (optional)', override.notes ?? '') ?? ''
+                                                  handleOverrideUpload(pgd.slug, f, signed, notes)
+                                                }
+                                                e.target.value = ''
+                                              }}
+                                            />
+                                          </label>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <label className={`inline-flex items-center gap-1 text-purple-700 hover:text-purple-900 cursor-pointer ${uploadingSlug === pgd.slug ? 'opacity-50 pointer-events-none' : ''}`}>
+                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                        </svg>
+                                        {uploadingSlug === pgd.slug ? 'Uploading…' : 'Upload custom signed PDF'}
+                                        <input
+                                          type="file"
+                                          accept="application/pdf,.pdf"
+                                          className="hidden"
+                                          onChange={(e) => {
+                                            const f = e.target.files?.[0]
+                                            if (f) {
+                                              const signed = prompt('Signed by (e.g. "Janey Tipping, Sarah Passmore")') ?? ''
+                                              const notes = prompt('Notes (optional)') ?? ''
+                                              handleOverrideUpload(pgd.slug, f, signed, notes)
+                                            }
+                                            e.target.value = ''
+                                          }}
+                                        />
+                                      </label>
                                     )}
                                   </div>
-                                  <p className="text-xs text-gray-500">
-                                    {pgd.subtitle}
-                                  </p>
-                                </div>
-                              </label>
+                                )}
+                              </div>
                             )
                           })}
                         </div>

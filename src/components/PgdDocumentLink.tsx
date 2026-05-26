@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { getPgdDocumentUrl } from "@/lib/pgd-documents";
+import { hasPgdDocument } from "@/lib/pgd-documents";
 
 interface PgdDocumentLinkProps {
   slug: string;
@@ -22,8 +22,15 @@ export function PgdDocumentLink({
   // the legal PDFs.
   if (role === "prospect") return null;
 
-  const url = getPgdDocumentUrl(slug);
-  if (!url) return null;
+  // Hide button if no GRH master exists for this slug. If the pharmacy has
+  // an override but no master, the admin needs to ensure both exist — edge
+  // case for trt / testosterone-women / travellers-diarrhoea (no master).
+  if (!hasPgdDocument(slug)) return null;
+
+  // Route through the server resolver so the pharmacy sees its custom signed
+  // version (if uploaded) or the GRH master. The auth + pharmacy_id resolution
+  // happens server-side; the client only knows it's a download link.
+  const url = `/api/dashboard/pgd-document/${slug}`;
 
   if (variant === "compact") {
     return (
