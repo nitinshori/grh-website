@@ -42,7 +42,7 @@ const COMMON_INCLUDED = [
   "Monitoring schedule template and follow-up reminders",
   "Audit-ready digital consultation records — kept indefinitely, exportable on request",
   "Clinical governance: SOP templates, audit forms, incident-reporting workflow",
-  "Marketing pack: customer-facing pages, social tiles, in-store posters",
+  "Marketing pack: customer-facing copy, social tiles, in-store posters",
 ];
 
 const COMMON_HOW_IT_WORKS = [
@@ -405,8 +405,8 @@ export const SERVICE_PAGES: ServicePage[] = [
         a: "Correct, and we respect that. The Yellow Fever PGD is included but the tool checks whether your pharmacy is registered as a Yellow Fever Vaccination Centre before allowing supply. Registration is via the National Travel Health Network and Centre (NaTHNaC) — we can help you through that process.",
       },
       {
-        q: "Can patients book travel appointments online?",
-        a: "Yes. Every GRH-subscribed pharmacy gets a public listing page where patients can book a travel appointment directly. Bookings sync to your in-pharmacy calendar.",
+        q: "How do patients book a travel appointment?",
+        a: "Through your pharmacy's existing channels — phone, walk-in, or whatever online booking you already use. GRH provides the clinical workflow, PGDs, country risk assessment and certificate issuing once the patient is in front of you; the front-of-shop booking flow stays with your pharmacy.",
       },
       {
         q: "How does the MenACWY workflow handle Hajj certificates?",

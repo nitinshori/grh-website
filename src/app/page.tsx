@@ -63,10 +63,10 @@ export default function HomePage() {
               </h1>
 
               <p className="text-lg sm:text-xl text-blue-200 leading-relaxed mb-8 max-w-xl">
-                60+ electronically enabled PGDs with built-in training,
-                consultation platform, and appointment diary. One monthly fee
-                covers your whole team &mdash; locums included. Zero per-consult
-                charges. CQC and HIW registered.
+                60+ electronically enabled PGDs with built-in training and
+                consultation platform. One monthly fee covers your whole team
+                &mdash; locums included. Zero per-consult charges. CQC and HIW
+                registered.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4">
@@ -100,6 +100,15 @@ export default function HomePage() {
                   className="inline-flex items-center justify-center gap-2 px-7 py-3.5 text-white/90 hover:text-white font-semibold transition-colors text-lg"
                 >
                   See a demo →
+                </Link>
+              </div>
+              <div className="mt-4">
+                <Link
+                  href="/cost-calculator"
+                  className="inline-flex items-center gap-2 text-sm font-medium text-teal-300 hover:text-teal-200 transition-colors"
+                >
+                  See how much you&apos;d save vs Pharmadoctor or ECG
+                  <span aria-hidden="true">→</span>
                 </Link>
               </div>
             </div>
@@ -145,7 +154,7 @@ export default function HomePage() {
               <div>
                 <h3 className="font-bold text-navy-900">Per-Store Pricing</h3>
                 <p className="text-sm text-gray-500 mt-1 leading-relaxed">
-                  One monthly fee per store &mdash; not per pharmacist. Covers your whole team including locums. Zero per-consultation charges. Appointment diary included.
+                  One monthly fee per store &mdash; not per pharmacist. Covers your whole team including locums. Zero per-consultation charges. Every PGD included.
                 </p>
               </div>
             </div>
@@ -449,9 +458,9 @@ export default function HomePage() {
               </h3>
               <p className="text-gray-600 leading-relaxed mb-4">
                 One monthly fee per store &mdash; not per pharmacist. No
-                per-consult charges, no revenue share. Appointment diary
-                built in. You own every patient record, every booking, every
-                consultation. When you leave, you take everything with you.
+                per-consult charges, no revenue share. You own every patient
+                record and every consultation. When you leave, you take
+                everything with you.
               </p>
               <p className="text-sm font-semibold text-teal-600">
                 Keep 100% of what you earn.
