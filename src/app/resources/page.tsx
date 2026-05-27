@@ -116,10 +116,10 @@ export default function ResourcesPage() {
               Browse our PGDs
             </Link>
             <Link
-              href="/contact"
+              href="/demo"
               className="px-7 py-3 bg-teal-700 hover:bg-teal-800 text-white font-semibold rounded-lg transition-colors text-sm"
             >
-              Book a demo
+              See a demo
             </Link>
           </div>
         </div>

@@ -96,10 +96,10 @@ export default function HomePage() {
                   View PGD Catalogue
                 </Link>
                 <Link
-                  href="/book"
+                  href="/demo"
                   className="inline-flex items-center justify-center gap-2 px-7 py-3.5 text-white/90 hover:text-white font-semibold transition-colors text-lg"
                 >
-                  Book a demo →
+                  See a demo →
                 </Link>
               </div>
             </div>

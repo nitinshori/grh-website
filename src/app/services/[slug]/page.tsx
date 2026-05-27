@@ -163,10 +163,10 @@ export default async function ServicePage({
               Start onboarding
             </Link>
             <Link
-              href="/book"
+              href="/demo"
               className="inline-flex items-center justify-center border border-blue-300 text-white hover:bg-white/10 font-semibold px-6 py-3 rounded-lg transition-colors"
             >
-              Book a 15-min call
+              See a demo
             </Link>
           </div>
         </div>

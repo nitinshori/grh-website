@@ -260,10 +260,10 @@ export default function ForPharmaciesPage() {
             View PGD catalogue
           </Link>
           <Link
-            href="/contact"
+            href="/demo"
             className="px-7 py-3.5 bg-navy-900 hover:bg-navy-800 text-white font-semibold rounded-lg transition-colors text-lg"
           >
-            Book a demo
+            See a demo
           </Link>
         </div>
       </section>

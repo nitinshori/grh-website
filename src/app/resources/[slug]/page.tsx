@@ -198,10 +198,10 @@ export default async function ArticlePage({
                 Browse PGDs
               </Link>
               <Link
-                href="/contact"
+                href="/demo"
                 className="px-6 py-2.5 bg-white border border-gray-200 hover:border-gray-300 text-navy-900 text-sm font-semibold rounded-lg transition-colors text-center"
               >
-                Book a demo
+                See a demo
               </Link>
             </div>
           </div>

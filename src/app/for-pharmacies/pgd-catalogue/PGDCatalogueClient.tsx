@@ -79,10 +79,10 @@ export function PGDCatalogueClient() {
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
             <Link
-              href="/book"
+              href="/demo"
               className="inline-flex items-center justify-center px-6 py-3 bg-teal-500 hover:bg-teal-600 text-white font-semibold rounded-lg transition-colors text-base"
             >
-              Book a discovery call
+              See a demo
             </Link>
             <Link
               href="/for-pharmacies/pricing"
@@ -154,10 +154,10 @@ export function PGDCatalogueClient() {
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link
-              href="/book"
+              href="/demo"
               className="px-7 py-3.5 bg-teal-500 hover:bg-teal-600 text-white font-semibold rounded-lg transition-colors text-lg"
             >
-              Book a 20-minute discovery call
+              See a demo
             </Link>
             <Link
               href="/contact"

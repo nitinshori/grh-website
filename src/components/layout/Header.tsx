@@ -17,6 +17,11 @@ const pharmacyLinks = [
     description: "60+ PGDs across travel, weight, sexual health and more.",
   },
   {
+    href: "/services/comparison",
+    label: "Service Comparison",
+    description: "GRH vs Pharmacy First (England + Scotland) and Welsh CAS.",
+  },
+  {
     href: "/for-pharmacies/pricing",
     label: "Pricing",
     description: "Flat annual fee. Get in touch for a quote.",
@@ -205,10 +210,10 @@ export function Header() {
                   Pricing
                 </Link>
                 <Link
-                  href="/book"
+                  href="/demo"
                   className="text-sm font-medium text-navy-900 hover:text-teal-600 transition-colors"
                 >
-                  Book a Demo
+                  See a demo
                 </Link>
                 <Link
                   href="/onboard"
@@ -327,11 +332,11 @@ export function Header() {
                   Pharmacy Login
                 </Link>
                 <Link
-                  href="/book"
+                  href="/demo"
                   onClick={() => setMobileOpen(false)}
                   className="block w-full text-center px-5 py-3 border border-teal-500 text-teal-700 text-sm font-semibold rounded-lg hover:bg-teal-50 transition-colors"
                 >
-                  Book a Demo
+                  See a demo
                 </Link>
                 <Link
                   href="/onboard"

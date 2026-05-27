@@ -394,10 +394,10 @@ export default function PlatformPage() {
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link
-            href="/contact"
+            href="/demo"
             className="px-8 py-3 bg-teal-500 hover:bg-teal-600 text-white font-semibold rounded-lg transition-colors text-sm"
           >
-            Book a demo
+            See a demo
           </Link>
           <Link
             href="/for-pharmacies/pricing"
