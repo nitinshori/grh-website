@@ -46,9 +46,11 @@ export async function POST(
       sessionToken,
       successRedirectUrl: successUrl,
       prefilledCustomer: {
-        given_name: req.contactFirstName,
-        family_name: req.contactLastName,
-        email: req.contactEmail,
+        // Contact fields are nullable since migration 018 — GoCardless
+        // expects undefined, not null, for missing optional fields.
+        given_name: req.contactFirstName ?? undefined,
+        family_name: req.contactLastName ?? undefined,
+        email: req.contactEmail ?? undefined,
         company_name: req.pharmacyName,
         ...(req.pharmacyAddress ? { address_line1: req.pharmacyAddress } : {}),
         ...(req.pharmacyPostcode ? { postal_code: req.pharmacyPostcode } : {}),

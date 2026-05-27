@@ -399,12 +399,20 @@ export const onboardingRequests = pgTable('onboarding_requests', {
   pharmacyGphc: varchar('pharmacy_gphc', { length: 50 }),
   pharmacyOdsCode: varchar('pharmacy_ods_code', { length: 20 }),
 
-  contactFirstName: varchar('contact_first_name', { length: 100 }).notNull(),
-  contactLastName: varchar('contact_last_name', { length: 100 }).notNull(),
-  contactEmail: varchar('contact_email', { length: 255 }).notNull(),
+  // Contact fields were notNull until migration 018. They now allow null
+  // because step 1 of the /onboard flow captures pharmacy details only —
+  // contact details land on step 2. See last_step_completed below.
+  contactFirstName: varchar('contact_first_name', { length: 100 }),
+  contactLastName: varchar('contact_last_name', { length: 100 }),
+  contactEmail: varchar('contact_email', { length: 255 }),
   contactPhone: varchar('contact_phone', { length: 50 }),
   contactGphc: varchar('contact_gphc', { length: 50 }),
   contactRole: varchar('contact_role', { length: 50 }),
+  // Furthest step the customer has completed in the /onboard wizard.
+  //   1 = pharmacy details captured
+  //   2 = pharmacist details captured
+  //   3 = DD flow started (mandate redirect generated)
+  lastStepCompleted: integer('last_step_completed').default(0).notNull(),
 
   gocardlessRedirectFlowId: varchar('gocardless_redirect_flow_id', { length: 100 }),
   gocardlessCustomerId: varchar('gocardless_customer_id', { length: 100 }),

@@ -45,6 +45,18 @@ export async function POST(
   if (!req.gocardlessMandateId) {
     return NextResponse.json({ error: 'No GoCardless mandate on record — direct debit not set up.' }, { status: 400 })
   }
+  // Contact fields are nullable since migration 018 (drafts at step 1 may not
+  // have them). By the time we get to approval the customer should have filled
+  // step 2; refuse approval if they haven't, since we need contactEmail to
+  // send the set-password invite.
+  if (!req.contactEmail || !req.contactFirstName) {
+    return NextResponse.json(
+      { error: 'Onboarding draft is incomplete — contact details missing. The customer has not finished step 2.' },
+      { status: 400 },
+    )
+  }
+  const contactEmail = req.contactEmail
+  const contactFirstName = req.contactFirstName
 
   // 1. Create pharmacy row
   const slug = (req.pharmacyName.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 80) +
@@ -57,7 +69,7 @@ export async function POST(
       groupSlug: slug, // single-site default; admin can change later
       address: req.pharmacyAddress,
       phone: req.pharmacyPhone,
-      email: req.pharmacyEmail || req.contactEmail,
+      email: req.pharmacyEmail || contactEmail,
       isActive: true,
     })
     .returning({ id: pharmacies.id })
@@ -118,10 +130,10 @@ export async function POST(
       const resend = new Resend(process.env.RESEND_API_KEY)
       await resend.emails.send({
         from: 'Get Real Health <noreply@getrealhealthpgd.co.uk>',
-        to: req.contactEmail,
+        to: contactEmail,
         subject: `Welcome to Get Real Health — set up your account`,
         text:
-          `Hi ${req.contactFirstName},\n\n` +
+          `Hi ${contactFirstName},\n\n` +
           `Your application for ${req.pharmacyName} has been approved. ` +
           `Click the link below to set your password and access the Get Real Health PGD platform:\n\n` +
           `${setupUrl}\n\n` +

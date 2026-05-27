@@ -164,9 +164,12 @@ export async function getOnboardingBreakdown(): Promise<OnboardingStatusBreakdow
 export interface RecentOnboarding {
   id: string;
   pharmacyName: string;
-  contactFirstName: string;
-  contactLastName: string;
-  contactEmail: string;
+  // Contact fields are nullable since migration 018 — they're collected at
+  // step 2 of the onboarding wizard, not step 1. A row at step 1 only has
+  // pharmacy details. UI consumers must handle null.
+  contactFirstName: string | null;
+  contactLastName: string | null;
+  contactEmail: string | null;
   status: string;
   gocardlessMandateStatus: string | null;
   gocardlessMandateId: string | null;

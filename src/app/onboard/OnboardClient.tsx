@@ -57,6 +57,9 @@ export default function OnboardClient() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  // Onboarding row id — persists across step transitions so we can update the
+  // same draft as the user progresses, and re-use it for the GoCardless flow.
+  const [onboardingId, setOnboardingId] = useState<string | null>(null);
   const turnstileRef = useRef<HTMLDivElement>(null);
   const turnstileWidgetIdRef = useRef<string | null>(null);
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
@@ -100,22 +103,79 @@ export default function OnboardClient() {
     form.contactLastName.trim().length > 0 &&
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contactEmail);
 
+  /**
+   * Persist whatever's been entered so far. Called when the user clicks Next
+   * on step 1 (captures pharmacy details) or step 2 (captures pharmacist).
+   * On the very first call we don't have a turnstile token yet — the server
+   * skips captcha verification when no `id` is present AND no token? No — we
+   * pass `step` so the server allows partial saves without captcha gating.
+   * The captcha runs only on step 3 before the GoCardless redirect.
+   */
+  async function saveStep(stepNum: 1 | 2): Promise<boolean> {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/onboarding", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...form,
+          step: stepNum,
+          id: onboardingId ?? undefined,
+        }),
+      });
+      const body = (await res.json()) as { id?: string; error?: string };
+      if (!res.ok || !body.id) {
+        throw new Error(body.error || "Couldn't save your progress. Please try again.");
+      }
+      if (body.id !== onboardingId) setOnboardingId(body.id);
+      setBusy(false);
+      return true;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setBusy(false);
+      return false;
+    }
+  }
+
+  async function handleStep1Next() {
+    if (!canStep1) return;
+    const ok = await saveStep(1);
+    if (ok) setStep(2);
+  }
+
+  async function handleStep2Next() {
+    if (!canStep2) return;
+    const ok = await saveStep(2);
+    if (ok) setStep(3);
+  }
+
   async function handleStartDirectDebit() {
     setBusy(true);
     setError(null);
     try {
-      // 1. Create the onboarding request (with captcha token if Turnstile is configured)
-      const createRes = await fetch("/api/onboarding", {
+      // We may already have an onboarding row from the step-1/step-2 saves.
+      // Make sure step 2 data is committed (idempotent — server resolves by id)
+      // and capture the captcha token now.
+      const res = await fetch("/api/onboarding", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, turnstileToken }),
+        body: JSON.stringify({
+          ...form,
+          step: 2,
+          id: onboardingId ?? undefined,
+          turnstileToken,
+        }),
       });
-      const createBody = (await createRes.json()) as { id?: string; error?: string };
-      if (!createRes.ok || !createBody.id) {
-        throw new Error(createBody.error || "Could not start sign-up");
+      const body = (await res.json()) as { id?: string; error?: string };
+      if (!res.ok || !body.id) {
+        throw new Error(body.error || "Could not start sign-up");
       }
-      // 2. Create GoCardless redirect flow + go to it
-      const ddRes = await fetch(`/api/onboarding/${createBody.id}/start-mandate`, { method: "POST" });
+      const id = body.id;
+      if (id !== onboardingId) setOnboardingId(id);
+
+      // Now create the GoCardless redirect flow
+      const ddRes = await fetch(`/api/onboarding/${id}/start-mandate`, { method: "POST" });
       const ddBody = (await ddRes.json()) as { redirectUrl?: string; error?: string };
       if (!ddRes.ok || !ddBody.redirectUrl) {
         throw new Error(ddBody.error || "Could not start direct debit");
@@ -171,12 +231,17 @@ export default function OnboardClient() {
                 <Input label="Phone" value={form.pharmacyPhone} onChange={set("pharmacyPhone")} placeholder="01234 567890" type="tel" />
               </div>
               <Input label="Pharmacy email *" value={form.pharmacyEmail} onChange={set("pharmacyEmail")} placeholder="info@pharmacy.co.uk" type="email" />
+              {error && (
+                <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
+                  {error}
+                </div>
+              )}
               <button
-                disabled={!canStep1}
-                onClick={() => setStep(2)}
+                disabled={!canStep1 || busy}
+                onClick={handleStep1Next}
                 className="w-full mt-4 py-3 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-300 text-white font-semibold rounded-lg transition-colors"
               >
-                Next: pharmacist details
+                {busy ? "Saving…" : "Next: pharmacist details"}
               </button>
             </div>
           )}
@@ -209,16 +274,21 @@ export default function OnboardClient() {
                   <option value="other">Other</option>
                 </select>
               </div>
+              {error && (
+                <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
+                  {error}
+                </div>
+              )}
               <div className="flex gap-3 mt-4">
-                <button onClick={() => setStep(1)} className="px-5 py-3 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50">
+                <button onClick={() => setStep(1)} disabled={busy} className="px-5 py-3 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 disabled:opacity-50">
                   Back
                 </button>
                 <button
-                  disabled={!canStep2}
-                  onClick={() => setStep(3)}
+                  disabled={!canStep2 || busy}
+                  onClick={handleStep2Next}
                   className="flex-1 py-3 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-300 text-white font-semibold rounded-lg transition-colors"
                 >
-                  Next: direct debit
+                  {busy ? "Saving…" : "Next: direct debit"}
                 </button>
               </div>
             </div>

@@ -93,9 +93,12 @@ export default async function OnboardingQueuePage() {
             pharmacyName: r.pharmacyName,
             pharmacyAddress: r.pharmacyAddress || '',
             pharmacyGphc: r.pharmacyGphc || '',
-            contactFirstName: r.contactFirstName,
-            contactLastName: r.contactLastName,
-            contactEmail: r.contactEmail,
+            // Contact fields are nullable from migration 018 (drafts at step 1
+            // don't have them yet). Coerce to empty strings for the client UI
+            // which still expects strings.
+            contactFirstName: r.contactFirstName ?? '',
+            contactLastName: r.contactLastName ?? '',
+            contactEmail: r.contactEmail ?? '',
             contactGphc: r.contactGphc || '',
             mandateId: r.gocardlessMandateId || '',
             mandateStatus: r.gocardlessMandateStatus || '',

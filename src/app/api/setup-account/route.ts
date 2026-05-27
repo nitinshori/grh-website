@@ -54,12 +54,24 @@ export async function POST(request: NextRequest) {
   if (!req.pharmacyId) {
     return NextResponse.json({ error: 'No pharmacy on record — contact support' }, { status: 500 })
   }
+  // Contact fields are nullable since migration 018. A row reaching the
+  // setup-account stage MUST have them (approval refuses without them) — but
+  // the type checker doesn't know that, so guard explicitly.
+  if (!req.contactEmail || !req.contactFirstName || !req.contactLastName) {
+    return NextResponse.json(
+      { error: 'Contact details missing on this onboarding record — please contact support.' },
+      { status: 500 },
+    )
+  }
+  const contactEmail = req.contactEmail
+  const contactFirstName = req.contactFirstName
+  const contactLastName = req.contactLastName
 
   // Don't create a duplicate if a user already exists for this email
   const existing = await db
     .select({ id: users.id })
     .from(users)
-    .where(eq(users.email, req.contactEmail))
+    .where(eq(users.email, contactEmail))
     .limit(1)
   if (existing[0]) {
     return NextResponse.json({ error: 'An account already exists for this email' }, { status: 409 })
@@ -67,10 +79,10 @@ export async function POST(request: NextRequest) {
 
   const passwordHash = await bcrypt.hash(body.password, BCRYPT_COST)
   await db.insert(users).values({
-    email: req.contactEmail,
+    email: contactEmail,
     passwordHash,
-    firstName: req.contactFirstName,
-    lastName: req.contactLastName,
+    firstName: contactFirstName,
+    lastName: contactLastName,
     role: 'pharmacist',
     pharmacyId: req.pharmacyId,
     isActive: true,
