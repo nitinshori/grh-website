@@ -208,19 +208,24 @@ export default function PlatformPage() {
                 </ul>
               </div>
 
-              {/* Placeholder screenshot area */}
+              {/* See it in the demo video — replaces the placeholder
+                  screenshot cards that used to live here. Until we have
+                  per-feature screenshots, point at the single demo video. */}
               <div className="flex-1 w-full">
-                <div className="bg-gray-100 border border-gray-200 rounded-xl aspect-video flex items-center justify-center">
+                <Link
+                  href="/demo"
+                  className="group block bg-gradient-to-br from-navy-900 to-navy-950 hover:from-navy-800 hover:to-navy-900 border border-navy-200 rounded-xl aspect-video flex items-center justify-center transition-colors shadow-md"
+                >
                   <div className="text-center px-6">
-                    {cap.icon}
-                    <p className="text-sm text-gray-400 mt-3 font-medium">
-                      Platform screenshot
-                    </p>
-                    <p className="text-xs text-gray-300 mt-1">
-                      {cap.title}
-                    </p>
+                    <div className="w-14 h-14 mx-auto rounded-full bg-teal-500 group-hover:bg-teal-400 flex items-center justify-center mb-3 transition-colors">
+                      <svg className="w-7 h-7 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    </div>
+                    <p className="text-sm text-white font-semibold">See it in the demo video</p>
+                    <p className="text-xs text-blue-200 mt-1">{cap.title}</p>
                   </div>
-                </div>
+                </Link>
               </div>
             </div>
           ))}

@@ -217,7 +217,7 @@ export default function CostCalculatorPage() {
       <section className="bg-navy-950 text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-14 md:py-20 text-center">
           <h2 className="text-2xl md:text-3xl font-bold mb-4">
-            All your locums. Every PGD. £100 per store. Forever.
+            All your locums. Every PGD. £100 per store, per month.
           </h2>
           <p className="text-blue-200 text-lg mb-8 max-w-2xl mx-auto">
             That&apos;s the headline. Onboard in 10 minutes, see your first private patient this week.

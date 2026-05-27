@@ -150,7 +150,7 @@ export function PGDCatalogueClient() {
           <p className="text-gray-600 mb-6 max-w-xl mx-auto">
             No per-consultation charges. No picking and choosing. Your team
             gets access to the full catalogue, the consultation tool, training
-            and clinical support &mdash; all included.
+            and clinical governance &mdash; all included.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link

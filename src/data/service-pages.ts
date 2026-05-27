@@ -42,7 +42,7 @@ const COMMON_INCLUDED = [
   "Monitoring schedule template and follow-up reminders",
   "Audit-ready digital consultation records — kept indefinitely, exportable on request",
   "Clinical governance: SOP templates, audit forms, incident-reporting workflow",
-  "Marketing pack: customer-facing copy, social tiles, in-store posters",
+  "Per-pharmacy custom PGD documents — multi-site groups can upload their own clinically-signed versions",
 ];
 
 const COMMON_HOW_IT_WORKS = [

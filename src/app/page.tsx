@@ -61,7 +61,7 @@ export default function HomePage() {
                 <br />
                 Every PGD.
                 <br />
-                <span className="text-teal-400">£100 per store. Forever.</span>
+                <span className="text-teal-400">£100 per store, per month.</span>
               </h1>
 
               <p className="text-lg sm:text-xl text-blue-200 leading-relaxed mb-8 max-w-xl">
@@ -365,10 +365,10 @@ export default function HomePage() {
                 </svg>
               </div>
               <p className="text-3xl sm:text-4xl font-bold text-navy-900">
-                Days
+                10 min
               </p>
               <p className="text-sm text-gray-500 mt-1">
-                From sign-up to authorised and ready &mdash; not weeks
+                Self-serve sign-up via /onboard. Authorised same business day.
               </p>
             </div>
           </div>
@@ -490,10 +490,9 @@ export default function HomePage() {
                 End-to-end platform
               </h3>
               <p className="text-gray-600 leading-relaxed mb-4">
-                PGDs, ePGD consultations, online training, clinical support, and
-                superintendent dashboard &mdash; all built in-house, not
-                licensed from a third party. One login. One fee. One support
-                number.
+                PGDs, ePGD consultations, online training, clinical governance
+                and superintendent dashboard &mdash; all built in-house, not
+                licensed from a third party. One login, one fee.
               </p>
               <p className="text-sm font-semibold text-teal-600">
                 Everything in one place.
@@ -730,10 +729,10 @@ export default function HomePage() {
                 Pharmacist training built in
               </p>
               <h2 className="text-xl sm:text-2xl font-bold text-white mb-3">
-                Online videos and training with every PGD
+                Online training with every PGD
               </h2>
               <p className="text-blue-200 leading-relaxed mb-4">
-                Every PGD comes with online video training and a written
+                Every PGD comes with online training and a written
                 competency assessment, so every clinician using our PGDs is
                 demonstrably ready to deliver safe, effective consultations
                 before they go live.
@@ -743,7 +742,7 @@ export default function HomePage() {
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  Online video training modules
+                  Online training modules
                 </span>
                 <span className="inline-flex items-center gap-1.5 text-teal-300">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -956,8 +955,8 @@ export default function HomePage() {
             See what GRH can do for your pharmacy
           </h2>
           <p className="text-blue-200 mb-8 max-w-xl mx-auto">
-            One flat-fee package. Every PGD, the consultation tool,
-            training and clinical support &mdash; all included.
+            One flat-fee package. Every PGD, the consultation tool, training
+            and clinical governance &mdash; all included.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link

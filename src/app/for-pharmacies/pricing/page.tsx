@@ -14,17 +14,17 @@ const features = [
   "Unlimited consultations — zero per-consult fees",
   "Platform access via web and mobile",
   "Online training with CPD certificates for every PGD",
-  "Clinical support line (Mon–Fri, 09:00–17:00)",
-  "Audit-ready digital consultation records",
-  "Marketing materials and seasonal campaign support",
-  "Onboarding and dedicated setup call",
+  "ePGD consultation tool with built-in eligibility, contraindication and dose-escalation logic",
+  "Audit-ready digital consultation records — exportable, kept indefinitely",
+  "Clinical governance pack: SOPs, audit forms, incident reporting",
+  "Per-pharmacy custom PGD documents (multi-site)",
   "Per-store pricing — covers your whole team, including locums",
 ];
 
 const faqs = [
   {
     q: "What’s included in the £100/month?",
-    a: "Everything. The monthly fee covers all PGDs across every category, platform access, training, clinical support, audit-ready consultation records, and marketing materials. No per-consultation fees, no per-PGD upcharges, no hidden charges.",
+    a: "Everything that's on the platform. The monthly fee covers all PGDs across every category, the ePGD consultation tool, online training with CPD certificates, clinical governance documents, and audit-ready consultation records. No per-consultation fees, no per-PGD upcharges, no hidden charges.",
   },
   {
     q: "Are there any hidden fees?",
@@ -40,7 +40,7 @@ const faqs = [
   },
   {
     q: "How does your pricing compare to other PGD providers?",
-    a: "Some providers charge per pharmacist — so if you have two pharmacists or use locums, your costs double. Others charge £2,639 per pharmacy per year (inc. VAT) upfront. GRH is £100/month per store — all pharmacists and locums included, all 70 PGDs, the ePGD platform, training, clinical support, and onboarding. Use the savings calculator above to compare.",
+    a: "Some providers charge per pharmacist — so if you have two pharmacists or use locums, your costs double. Others charge £2,639 per pharmacy per year (inc. VAT) upfront. GRH is £100/month per store — all pharmacists and locums included, all 70 PGDs, the ePGD platform and training. Use the savings calculator above to compare.",
   },
   {
     q: "Can I cancel?",
@@ -69,7 +69,7 @@ const offerJsonLd = {
   "@type": "Product",
   name: "Get Real Health PGD Platform",
   description:
-    "All-inclusive PGD platform for UK community pharmacies. 70 PGDs, ePGD consultation tool, training, clinical governance, clinical support.",
+    "All-inclusive PGD platform for UK community pharmacies. 70 PGDs, ePGD consultation tool, training, clinical governance.",
   brand: { "@type": "Brand", name: "Get Real Health" },
   offers: {
     "@type": "Offer",

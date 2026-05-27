@@ -360,7 +360,7 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
                 "Built-in clinical training",
                 "Competency assessments",
                 "ePGD consultation tool",
-                "Clinical support (Mon–Fri)",
+                "Audit-ready consultation records",
               ].map((item) => (
                 <div
                   key={item}
@@ -390,7 +390,7 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
           All prices shown inc. VAT. Competitor pricing based on publicly
           listed rates. Provider A: all-in-one annual package. Provider B:
           full platform bundle with ePGDs (44+ services). GRH includes 60+
-          PGDs, training, and clinical support. Your actual savings may vary.{" "}
+          PGDs, training, and the ePGD consultation tool. Your actual savings may vary.{" "}
           <a href="/contact" className="text-teal-400 underline">
             Get your exact quote &rarr;
           </a>

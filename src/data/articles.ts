@@ -329,7 +329,7 @@ Day 1–2: Sign-up, contract, payment mandate, account creation. PGDs available 
 
 Day 2–5: Each pharmacist on your team completes the online training and competency assessment for the PGDs you want to offer. Most experienced pharmacists complete a single PGD's training in 30–60 minutes. The bottleneck is staff time, not the platform.
 
-Day 3–5: Set up your patient-facing booking page, marketing materials, in-pharmacy signage. Run a soft-launch to staff and family members to test the workflow end-to-end.
+Day 3–5: Add the new private services to your shop signage and patient-facing communications. Run a soft-launch to staff and family members to test the workflow end-to-end.
 
 Day 5+: Start consulting paying patients.
 
@@ -343,15 +343,15 @@ Per-pharmacist seat plus per-consultation fee. Common with legacy providers. Pre
 
 Annual licence per pharmacy. Typically £2,500–£2,700 per pharmacy per year (inc. VAT), paid upfront. Better than per-pharmacist seats, but you commit to the full year on day one.
 
-Flat monthly fee per pharmacy. £100 per pharmacy per month is the current Get Real Health price — covers every pharmacist on the team (including locums), every PGD on the platform, every consultation, training, clinical support, and the ePGD tool. No per-consultation fees.
+Flat monthly fee per pharmacy. £100 per pharmacy per month is the current Get Real Health price — covers every pharmacist on the team (including locums), every PGD on the platform, every consultation, training, clinical governance, and the ePGD tool. No per-consultation fees.
 
 Most pharmacies break even on PGD services in their first month — a single GLP-1 patient typically covers the monthly platform fee with margin to spare. Travel consultations break even on the platform inside the first booking.
 
-What about insurance, indemnity, and clinical support?
+What about insurance and indemnity?
 
 You need clinical-negligence cover that explicitly covers private prescribing under PGD. Standard NPA cover does not always extend automatically to private services — check with your insurer before going live. Your PGD provider should have its own professional-indemnity policy covering the PGD authoring itself.
 
-Clinical support — a phone or message line where your pharmacists can speak to a senior clinician for edge cases — is a non-negotiable. If your provider doesn't supply this, build a relationship with a friendly GP or pharmacist independent prescriber who can take calls.
+For clinical edge cases, build a relationship with a friendly GP or pharmacist independent prescriber who can take calls. Many independent owners use their local GP partner; others use a paid clinical-advisor service.
 
 What the leading PGD platforms have in common
 
@@ -359,7 +359,7 @@ Look for: a single flat fee, complete PGD coverage from day one (not "available 
 
 Avoid: per-pharmacist licensing, per-consultation fees, "platform fees" on top of the licence fee, providers without CQC/HIW registration, providers without a named clinician on each PGD, providers that require you to author your own PGDs as part of "white-labelling".
 
-Get Real Health is built around this checklist — 70 PGDs, £100 per pharmacy per month, CQC and HIW registered, Dr Nitin Shori (NHS GP and ex-Medical Director of Pharmacy2U) named on every PGD, onboarding in 48 hours, no per-consultation fees, locums included. If you'd like to see the platform in action, book a 30-minute discovery call at getrealhealthpgd.co.uk/book.
+Get Real Health is built around this checklist — 70 PGDs, £100 per pharmacy per month, CQC and HIW registered, Dr Nitin Shori (NHS GP and ex-Medical Director of Pharmacy2U) named on every PGD, onboarding in 10 minutes, no per-consultation fees, locums included. Watch a 5-minute demo at getrealhealthpgd.co.uk/demo or sign up at getrealhealthpgd.co.uk/onboard.
 
 The bigger picture
 

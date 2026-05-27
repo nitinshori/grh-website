@@ -33,8 +33,8 @@ export function Footer() {
             Ready to stop sharing your revenue?
           </h2>
           <p className="text-blue-200 mb-6 max-w-xl mx-auto">
-            One flat-fee package. Every PGD, the consultation tool,
-            training and clinical support &mdash; all included.
+            One flat-fee package. Every PGD, the consultation tool, training
+            and clinical governance &mdash; all included.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link

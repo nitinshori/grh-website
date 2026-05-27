@@ -14,12 +14,9 @@ const features = [
   "Audit-ready digital consultation records \u2014 exportable, kept indefinitely",
   "PMR-ready architecture \u2014 designed to complement your PMR, not compete with it",
   "Online training with CPD-compliant certificates for every PGD",
-  "Clinical support line \u2014 speak to a clinician when you need one",
   "Superintendent dashboard \u2014 oversight across all your branches",
   "Patient-facing directory listing \u2014 patients find you, not us",
-  "Marketing materials \u2014 posters, social graphics, email templates",
-  "Seasonal campaign support \u2014 flu, travel, weight management",
-  "Structured onboarding \u2014 supported and quick, not a multi-month implementation",
+  "Per-pharmacy custom PGD documents \u2014 for multi-site groups with their own clinical sign-off",
   "Charged per store, not per pharmacist \u2014 locums and second pharmacists included at no extra cost",
 ];
 

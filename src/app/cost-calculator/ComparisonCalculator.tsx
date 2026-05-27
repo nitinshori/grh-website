@@ -170,6 +170,16 @@ export function ComparisonCalculator() {
         </div>
       </div>
 
+      {/* Disclaimer */}
+      <div className="px-6 sm:px-8 pb-4 -mt-2">
+        <p className="text-[11px] text-gray-500 leading-snug">
+          <strong className="text-gray-600">Disclaimer:</strong> Pharmadoctor and ECG Training
+          figures are based on customer-reported prices in 2025&ndash;26. Each provider runs
+          multiple tiers and per-pharmacist training fees vary by service &mdash; your actual
+          quote may be higher or lower. GRH&apos;s £100/month is exact and applies to every customer.
+        </p>
+      </div>
+
       {/* Headline savings */}
       <div className="p-6 sm:p-8 bg-gradient-to-r from-teal-600 to-teal-700 text-white">
         <div className="grid md:grid-cols-2 gap-6">
