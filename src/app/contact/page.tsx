@@ -4,7 +4,7 @@ import { ContactForm } from "./ContactForm";
 export const metadata: Metadata = {
   title: "Contact Us — Get in Touch",
   description:
-    "Get in touch or book a 20-minute discovery call. See the full consultation platform in action.",
+    "Get in touch with the Get Real Health team. We typically respond within one working day.",
 };
 
 export default function ContactPage() {
@@ -17,8 +17,8 @@ export default function ContactPage() {
             Let&apos;s talk
           </h1>
           <p className="text-blue-200 text-lg max-w-xl">
-            Whether you want a full demo, a quick question answered, or
-            you&apos;re ready to sign up — we&apos;re here.
+            Got a question or ready to sign up? Drop us a line and we&apos;ll
+            come back to you within one working day.
           </p>
         </div>
       </section>
@@ -39,17 +39,28 @@ export default function ContactPage() {
 
           {/* Sidebar */}
           <div className="lg:col-span-2 space-y-8">
-            {/* Book a demo */}
+            {/* See a demo — replaces the old discovery-call card */}
             <div className="bg-teal-50 border border-teal-200 rounded-xl p-6">
-              <h3 className="font-bold text-navy-900 mb-2">Book a discovery call</h3>
+              <h3 className="font-bold text-navy-900 mb-2">See the platform</h3>
               <p className="text-gray-600 text-sm mb-4 leading-relaxed">
-                See the full platform in 20 minutes — consultations, patient
-                records, superintendent dashboard, the lot. No obligation.
+                Watch a self-serve 5-minute walkthrough of the ePGD tool,
+                training and patient records &mdash; narrated by Dr Nitin Shori.
+                When you&apos;re ready, sign up directly.
               </p>
-              <p className="text-sm text-gray-600 mb-2">
-                To book a discovery call, send us a message using the form and we&apos;ll
-                come back to you with a few suggested times.
-              </p>
+              <div className="flex flex-wrap gap-2">
+                <a
+                  href="/demo"
+                  className="inline-flex items-center justify-center px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold rounded-lg transition-colors"
+                >
+                  Watch the demo
+                </a>
+                <a
+                  href="/onboard"
+                  className="inline-flex items-center justify-center px-4 py-2 bg-white border border-teal-300 hover:bg-teal-100 text-teal-700 text-sm font-semibold rounded-lg transition-colors"
+                >
+                  Sign up now
+                </a>
+              </div>
             </div>
 
             {/* Direct contacts */}
@@ -72,31 +83,12 @@ export default function ContactPage() {
                 </svg>
                 <div>
                   <p className="text-sm font-medium text-navy-900">Email</p>
-                  <p className="text-sm text-gray-600">
-                    hello@getrealhealth.co.uk
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <svg
-                  className="w-5 h-5 text-teal-500 mt-0.5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                  />
-                </svg>
-                <div>
-                  <p className="text-sm font-medium text-navy-900">Phone</p>
-                  <p className="text-sm text-gray-600">
-                    0113 519 8330
-                  </p>
+                  <a
+                    href="mailto:info@getrealhealthpgd.co.uk"
+                    className="text-sm text-gray-600 hover:text-teal-700"
+                  >
+                    info@getrealhealthpgd.co.uk
+                  </a>
                 </div>
               </div>
 
@@ -138,8 +130,8 @@ export default function ContactPage() {
                     How long does onboarding take?
                   </p>
                   <p className="text-gray-500">
-                    A structured onboarding process &mdash; days, not months.
-                    We&apos;ll walk you through it on your demo call.
+                    10 minutes via the self-serve sign-up at{" "}
+                    <a href="/onboard" className="text-teal-700 hover:underline">/onboard</a>.
                   </p>
                 </div>
                 <div>
@@ -147,7 +139,7 @@ export default function ContactPage() {
                     Is there a contract?
                   </p>
                   <p className="text-gray-500">
-                    Minimum 12-month contract. Simple annual subscription.
+                    Minimum 12-month contract. Simple monthly subscription.
                   </p>
                 </div>
                 <div>
@@ -155,7 +147,7 @@ export default function ContactPage() {
                     Do you charge per consultation?
                   </p>
                   <p className="text-gray-500">
-                    Never. Flat annual fee, unlimited consultations.
+                    Never. Flat £100 per pharmacy per month, unlimited consultations.
                   </p>
                 </div>
               </div>
