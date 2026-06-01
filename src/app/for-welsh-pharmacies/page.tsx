@@ -218,7 +218,7 @@ export default function WelshPharmaciesPage() {
             Add a private service to your Welsh pharmacy this week
           </h2>
           <p className="text-blue-200 text-lg mb-8 max-w-2xl mx-auto">
-            HIW-registered. Every PGD. All your locums. £100 per store per month, flat.
+            HIW-registered. 70+ electronic PGDs. £100 per month, per pharmacy &mdash; no per-pharmacist charge, locums included.
           </p>
           <div className="flex flex-wrap justify-center gap-3">
             <Link
