@@ -57,17 +57,17 @@ export default function HomePage() {
               </div>
 
               <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold leading-tight mb-6">
-                All your locums.
+                70+ electronic PGDs.
                 <br />
-                Every PGD.
+                £100 per store, per month.
                 <br />
-                <span className="text-teal-400">£100 per store, per month.</span>
+                <span className="text-teal-400">No per-pharmacist or locum charge.</span>
               </h1>
 
               <p className="text-lg sm:text-xl text-blue-200 leading-relaxed mb-8 max-w-xl">
-                70+ electronically enabled PGDs with built-in training and
-                consultation platform. One flat monthly fee covers every
-                pharmacist on your team &mdash; permanent and locum. Zero
+                Every PGD electronically enabled. Built-in training and
+                consultation platform. One flat monthly fee covers your whole
+                team &mdash; permanent staff and locums included. Zero
                 per-consult charges. CQC and HIW registered.
               </p>
 
