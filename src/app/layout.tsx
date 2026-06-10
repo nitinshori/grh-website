@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
+import { HeaderShell } from "@/components/layout/HeaderShell";
+import { FooterShell } from "@/components/layout/FooterShell";
 import { CookieConsent } from "@/components/legal/CookieConsent";
 import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 import { GoogleTagManager } from "@/components/analytics/GoogleTagManager";
@@ -93,9 +93,9 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col font-sans">
         <AuthSessionProvider>
-          <Header />
+          <HeaderShell />
           <main className="flex-1">{children}</main>
-          <Footer />
+          <FooterShell />
           <CookieConsent />
           <ChatWidget />
           <GoogleAnalytics />

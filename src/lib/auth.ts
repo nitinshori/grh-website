@@ -7,6 +7,14 @@ import { eq } from 'drizzle-orm'
 import { rateLimit } from '@/lib/rate-limit'
 import { audit } from '@/lib/audit'
 
+// NOTE: resolveSsoUser is loaded LAZILY inside the hubrx-sso authorize()
+// callback. It transitively imports `jose`, `node:crypto`, and DB clients
+// which are NOT compatible with the Edge Middleware runtime. Since auth.ts
+// is imported by src/middleware.ts (Edge), keeping these as a top-level
+// import would crash the build. Lazy-loading means they only resolve in
+// the Node runtime (the /sso route handler), which is the only place
+// authorize('hubrx-sso') is ever actually triggered.
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   trustHost: true,
   providers: [
@@ -87,6 +95,55 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           role: user.role,
           pharmacyId: user.pharmacyId,
           pharmacySlug,
+        }
+      },
+    }),
+    // ── HubRx SSO ────────────────────────────────────────────────
+    // Trusts a JWT signed by HubRx Insights with the HUBRX_SSO_SECRET
+    // shared key. Used by /sso/route.ts only — pharmacists never see
+    // this provider on the login screen. resolveSsoUser does the
+    // signature check, claim validation, and find-or-just-in-time-
+    // create. If anything is wrong it returns null and NextAuth rejects.
+    Credentials({
+      id: 'hubrx-sso',
+      name: 'HubRx SSO',
+      credentials: {
+        token: { label: 'SSO token', type: 'text' },
+      },
+      async authorize(credentials) {
+        const token = credentials?.token as string | undefined
+        if (!token) return null
+        try {
+          // Lazy-loaded — see top-of-file note for why.
+          const { resolveSsoUser } = await import(
+            '@/lib/sso/resolve-sso-user'
+          )
+          const resolved = await resolveSsoUser({ tenantSlug: 'hubrx', token })
+          if (!resolved) return null
+          await audit({
+            action: 'login',
+            userId: resolved.id,
+            userEmail: resolved.email,
+            pharmacyId: resolved.pharmacyId,
+            details: { via: 'hubrx_sso' },
+          })
+          return {
+            id: resolved.id,
+            email: resolved.email,
+            name: resolved.name,
+            role: resolved.role,
+            pharmacyId: resolved.pharmacyId,
+            pharmacySlug: resolved.pharmacySlug,
+          }
+        } catch (err) {
+          await audit({
+            action: 'login_failed',
+            details: {
+              via: 'hubrx_sso',
+              reason: err instanceof Error ? err.message : 'unknown',
+            },
+          })
+          return null
         }
       },
     }),

@@ -2,6 +2,33 @@ import { auth } from '@/lib/auth'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { neon } from '@neondatabase/serverless'
+import { tenantFromHost } from '@/lib/tenants'
+import { TENANT_HEADER } from '@/lib/tenant-context'
+
+// ── Per-tenant routing ───────────────────────────────────────────────
+// On non-default tenants (e.g. hubrx.getrealhealthpgd.co.uk), the public
+// marketing site is deliberately hidden — HubRx pharmacies should only
+// ever see the SSO landing, login fallback, and the authenticated portal.
+// Anything outside this allow-list returns 404.
+const TENANT_ALLOWED_PREFIXES = [
+  '/login',
+  '/logout',
+  '/sso',
+  '/for-pharmacies/dashboard',
+  '/for-pharmacies/epgd',
+  '/api/auth',           // NextAuth endpoints (signin/signout/session)
+  '/api/voice',          // existing AI receptionist webhooks (unaffected)
+  '/_next',              // build assets
+  '/favicon',
+  '/logos',              // tenant logos under /public/logos
+  '/healthcare-professional', // HCP self-cert gate
+]
+
+function isTenantAllowedPath(pathname: string): boolean {
+  return TENANT_ALLOWED_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(p + '/') || pathname.startsWith(p + '?'),
+  )
+}
 
 // ── HCP self-certification gate ──────────────────────────────────────
 // Routes that require a "yes I am a healthcare professional" confirmation
@@ -77,6 +104,22 @@ export default auth(async (req: NextRequest & { auth: { user: { id?: string; rol
   const { pathname } = req.nextUrl
   const session = req.auth
 
+  // ── Tenant resolution ────────────────────────────────────────
+  // Pick the tenant from the Host header so downstream code can theme
+  // / restrict / SSO accordingly. The slug is forwarded to server
+  // components via the `x-tenant` request header so they don't need to
+  // re-parse the host.
+  const host = req.headers.get('host')
+  const tenant = tenantFromHost(host)
+
+  // On a tenant that hides marketing (e.g. HubRx), block any path that
+  // isn't on the allow-list. Done BEFORE the is_active and HCP checks
+  // so an unauthenticated visitor to the HubRx subdomain just sees the
+  // tenant login screen, not the public GRH marketing site.
+  if (tenant.hideMarketing && !isTenantAllowedPath(pathname)) {
+    return new NextResponse('Not found', { status: 404 })
+  }
+
   // ── Just-in-time is_active check on every authenticated request ────
   if (session?.user?.id) {
     const active = await isUserActive(session.user.id)
@@ -151,19 +194,24 @@ export default auth(async (req: NextRequest & { auth: { user: { id?: string; rol
     }
   }
 
-  return NextResponse.next()
+  // Forward the active tenant slug to server components via a request
+  // header. They read it via `getTenant()` in src/lib/tenant-context.ts.
+  const res = NextResponse.next()
+  res.headers.set(TENANT_HEADER, tenant.slug)
+  return res
 })
 
 export const config = {
   matcher: [
-    // HCP-gated public routes
-    '/for-pharmacies/pgd-catalogue/:path*',
-    '/pharmacy-plus-health/:path*',
-    '/resources/:path*',
-    // Auth-gated routes (also pass through HCP gate)
-    '/for-pharmacies/epgd/:path+',
-    '/for-pharmacies/dashboard/:path*',
-    '/admin/:path*',
-    '/client/:path*',
+    // Catch-all so the tenant header is set on every page request. We
+    // exclude:
+    //   - /api/  → keeps webhook endpoints (Vapi, GoCardless, NextAuth
+    //              internal routes) untouched by our auth + tenant logic.
+    //              NextAuth handles its own callback routing.
+    //   - Next.js build/internal paths
+    //   - public static files we never want to gate
+    //
+    // Add new excludes here, not new matches.
+    '/((?!api/|_next/static|_next/image|favicon.ico|logos/|videos/|images/).*)',
   ],
 }

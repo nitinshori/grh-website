@@ -36,6 +36,16 @@ export const pharmacies = pgTable('pharmacies', {
   brandColor: varchar('brand_color', { length: 7 }),   // hex e.g. "#3d8b37" for white-label booking
   brandName: varchar('brand_name', { length: 255 }),    // display name for public booking page
   isActive: boolean('is_active').default(true).notNull(),
+  // ── Tenant / partner attribution ─────────────────────────────
+  // Which acquisition channel this pharmacy came in via. 'direct' for
+  // pharmacies that signed up via /onboard or were manually provisioned.
+  // 'hubrx' for pharmacies SSO'd through HubRx Insights. Used by the
+  // white-label theming and by future partner reporting.
+  authSource: varchar('auth_source', { length: 32 }).default('direct').notNull(),
+  // Partner-side identifier — e.g. the HubRx pharmacy id passed in the
+  // SSO JWT. Lets us reliably re-resolve the same pharmacy on subsequent
+  // SSO calls even if name / email change.
+  externalId: varchar('external_id', { length: 255 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
@@ -63,6 +73,14 @@ export const users = pgTable('users', {
   setupTokenHash: varchar('setup_token_hash', { length: 255 }),
   setupTokenExpiresAt: timestamp('setup_token_expires_at'),
   setupTokenUsedAt: timestamp('setup_token_used_at'),
+  // ── Tenant / partner attribution ─────────────────────────────
+  // Same semantics as on `pharmacies`. 'direct' for users created
+  // via /onboard, admin console, or pharmacy-admin invite. 'hubrx'
+  // for users provisioned via the HubRx SSO endpoint.
+  authSource: varchar('auth_source', { length: 32 }).default('direct').notNull(),
+  // Partner-side identifier (e.g. HubRx Insights user id). Required for
+  // SSO'd users so we can re-resolve the same GRH user on each token.
+  externalId: varchar('external_id', { length: 255 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
