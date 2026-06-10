@@ -137,21 +137,27 @@ const hubrxTenant: TenantConfig = {
   displayName: 'HubRx PGD Service',
   strapline: 'Patient Group Directions for HubRx member pharmacies',
   logo: {
-    // PLACEHOLDER. Replace with actual HubRx logo once Sam shares it.
-    // Until then the Header component falls back to a text wordmark.
-    src: null,
-    width: 180,
-    height: 40,
-    alt: 'HubRx',
+    // HubRx wordmark + "Transforming Independent Pharmacy" strapline.
+    // Saved at public/logos/hubrx.png. 200x122 native (taller aspect
+    // because it includes the strapline beneath the wordmark) — the
+    // TenantHeader applies h-12 w-auto so it stays inline with the
+    // standard header height.
+    src: '/logos/hubrx.png',
+    width: 200,
+    height: 122,
+    alt: 'HubRx — Transforming Independent Pharmacy',
   },
   theme: {
-    // Provisional brand colours derived from HubRx's site visual ID —
-    // deep blue chevron family. Confirm exact hex with Sam.
-    primary: '#1F3D7A', // deep royal blue
-    primaryHover: '#163063',
+    // Sampled directly from hrx.creedev.co.uk:
+    //   primary       #046bd2  (chevron blue, primary link colour)
+    //   primaryHover  #045cb4  (darker variant for hover state)
+    //   accent        #ef7627  ("BOOK A CALL" CTA orange)
+    //   navBg         #283382  (deep indigo of the hero banner / nav)
+    primary: '#046bd2',
+    primaryHover: '#045cb4',
     textOnPrimary: '#FFFFFF',
-    accent: '#3B82F6', // mid blue accent
-    navBg: '#0B1E3F',
+    accent: '#ef7627',
+    navBg: '#283382',
     surface: '#FFFFFF',
   },
   sso: {

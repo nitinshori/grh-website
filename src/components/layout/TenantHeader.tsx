@@ -44,7 +44,7 @@ export function TenantHeader({ tenant }: Props) {
                 alt={tenant.logo.alt}
                 width={tenant.logo.width}
                 height={tenant.logo.height}
-                className="h-10 w-auto"
+                className="h-12 lg:h-14 w-auto"
               />
             ) : (
               // Text fallback until the partner ships a logo file.
