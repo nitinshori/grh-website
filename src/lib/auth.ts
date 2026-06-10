@@ -168,6 +168,35 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
       return session
     },
+    // Custom redirect callback. By default NextAuth treats redirects to
+    // any host other than NEXTAUTH_URL as cross-origin and rewrites them
+    // to baseUrl — which on Vercel is the canonical getrealhealthpgd.co.uk.
+    // That's the wrong behaviour for our multi-tenant setup: a user who
+    // SSOs in at hubrx.getrealhealthpgd.co.uk must STAY on the hubrx
+    // subdomain (their session cookie is scoped there). This callback
+    // explicitly allows any subdomain of getrealhealthpgd.co.uk so the
+    // /sso endpoint can hand us an absolute URL pointing back at hubrx.*
+    // and we'll honour it.
+    async redirect({ url, baseUrl }) {
+      try {
+        const target = new URL(url, baseUrl)
+        const base = new URL(baseUrl)
+        // Same origin — always safe.
+        if (target.origin === base.origin) return target.toString()
+        // Any subdomain of the canonical brand domain.
+        const apex = 'getrealhealthpgd.co.uk'
+        if (
+          target.hostname === apex ||
+          target.hostname.endsWith('.' + apex)
+        ) {
+          return target.toString()
+        }
+        // Anything else: don't follow.
+        return baseUrl
+      } catch {
+        return baseUrl
+      }
+    },
   },
   pages: {
     signIn: '/login',

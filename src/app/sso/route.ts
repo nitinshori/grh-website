@@ -44,10 +44,20 @@ export async function GET(req: NextRequest) {
 
   // Only allow safe relative redirects — never an off-site redirect via
   // ?next=https://evil.com.
-  let dashboardRedirect = tenant.sso.dashboardRedirect
+  let dashboardPath = tenant.sso.dashboardRedirect
   if (nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//')) {
-    dashboardRedirect = nextParam
+    dashboardPath = nextParam
   }
+
+  // Build an ABSOLUTE redirect URL anchored to the current request host
+  // (hubrx.getrealhealthpgd.co.uk). Without this, NextAuth's default
+  // redirect callback rewrites relative paths against NEXTAUTH_URL — which
+  // on production points at the main getrealhealthpgd.co.uk domain — so
+  // the user gets bounced off the hubrx subdomain after sign-in. The
+  // custom `redirect` callback in src/lib/auth.ts is what permits this
+  // cross-subdomain redirect to actually be honoured.
+  const reqOrigin = new URL(req.url).origin
+  const dashboardRedirect = reqOrigin + dashboardPath
 
   // signIn() will run the hubrx-sso provider's authorize() — that
   // validates the JWT signature, performs JIT provisioning, and on
