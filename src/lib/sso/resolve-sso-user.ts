@@ -22,10 +22,13 @@
  * Anything else in the claims is ignored.
  */
 
-// Use the subpath import — Turbopack 16 / Next 16 can't resolve `jwtVerify`
-// off the package root for jose v6 because of how the exports map is set
-// up. The subpath form is explicitly documented in the jose README.
-import { jwtVerify } from 'jose/jwt/verify'
+// We hand-roll HS256 verification using node:crypto rather than pulling
+// in jose. Reason: jose v6 + Next 16 + Turbopack 16 fail to resolve the
+// `jwtVerify` export from jose's ESM bundle ("The module has no exports
+// at all"), and a dynamic import doesn't help because Turbopack still
+// walks the dependency graph statically. HS256 is an HMAC-SHA256 over
+// the header.payload string — implementing it directly is ~30 lines and
+// avoids the whole bundler interop mess.
 import bcrypt from 'bcryptjs'
 import crypto from 'node:crypto'
 import { eq, and } from 'drizzle-orm'
@@ -64,16 +67,7 @@ export async function resolveSsoUser(
   // 1. Verify the JWT signature + standard time claims
   let claims: Record<string, unknown>
   try {
-    const verified = await jwtVerify(
-      args.token,
-      new TextEncoder().encode(secret),
-      {
-        algorithms: ['HS256'],
-        // We don't enforce iss/aud at this stage — Sam can add them later.
-        clockTolerance: 5, // 5s grace for clock skew
-      },
-    )
-    claims = verified.payload as Record<string, unknown>
+    claims = verifyHS256(args.token, secret)
   } catch (err) {
     throw new Error(
       `Token verification failed: ${err instanceof Error ? err.message : 'unknown'}`,
@@ -229,4 +223,77 @@ function splitName(full: string): { firstName: string; lastName: string } {
     firstName: parts[0],
     lastName: parts.slice(1).join(' '),
   }
+}
+
+/**
+ * Verify an HS256 JWT and return its payload. Throws on any failure
+ * (malformed token, wrong algorithm, bad signature, expired, not-yet-valid).
+ *
+ * We intentionally implement this ourselves instead of using a library —
+ * see comment at top of file. HS256 is simple enough to do safely with
+ * just node:crypto.
+ */
+const CLOCK_TOLERANCE_SECONDS = 5
+
+function verifyHS256(
+  token: string,
+  secret: string,
+): Record<string, unknown> {
+  const parts = token.split('.')
+  if (parts.length !== 3) throw new Error('Malformed token (expected 3 parts)')
+  const [headerB64, payloadB64, sigB64] = parts
+
+  let header: Record<string, unknown>
+  try {
+    header = JSON.parse(b64urlDecode(headerB64))
+  } catch {
+    throw new Error('Malformed token header')
+  }
+  if (header.alg !== 'HS256') {
+    throw new Error(`Unsupported algorithm: ${String(header.alg)}`)
+  }
+  if (header.typ && header.typ !== 'JWT') {
+    throw new Error(`Unsupported token type: ${String(header.typ)}`)
+  }
+
+  // Verify the signature in constant time
+  const expected = crypto
+    .createHmac('sha256', secret)
+    .update(`${headerB64}.${payloadB64}`)
+    .digest()
+  const provided = Buffer.from(sigB64, 'base64url')
+  if (
+    expected.length !== provided.length ||
+    !crypto.timingSafeEqual(expected, provided)
+  ) {
+    throw new Error('Invalid signature')
+  }
+
+  // Parse + validate standard time claims
+  let payload: Record<string, unknown>
+  try {
+    payload = JSON.parse(b64urlDecode(payloadB64))
+  } catch {
+    throw new Error('Malformed token payload')
+  }
+
+  const now = Math.floor(Date.now() / 1000)
+  if (
+    typeof payload.exp === 'number' &&
+    payload.exp + CLOCK_TOLERANCE_SECONDS < now
+  ) {
+    throw new Error('Token has expired')
+  }
+  if (
+    typeof payload.nbf === 'number' &&
+    payload.nbf - CLOCK_TOLERANCE_SECONDS > now
+  ) {
+    throw new Error('Token not yet valid (nbf)')
+  }
+
+  return payload
+}
+
+function b64urlDecode(s: string): string {
+  return Buffer.from(s, 'base64url').toString('utf8')
 }

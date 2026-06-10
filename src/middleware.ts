@@ -1,4 +1,8 @@
-import { auth } from '@/lib/auth'
+// Import from auth-edge (not auth.ts) — keeps the heavy Credentials
+// providers (bcryptjs, drizzle, node:crypto) out of the Edge Middleware
+// bundle. The cookie-based session reading still works identically
+// because both configs sign / decode with the same NEXTAUTH_SECRET.
+import { auth } from '@/lib/auth-edge'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { neon } from '@neondatabase/serverless'
