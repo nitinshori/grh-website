@@ -203,12 +203,13 @@ function QuestionPanel({
 
   const { asks } = destination
 
-  const questions: {
+  type QuestionItem = {
     key: keyof ConsultationAnswers
     label: string
     description: string
     show: boolean
-  }[] = [
+  }
+  const allQuestions: QuestionItem[] = [
     {
       key: 'rural',
       label: 'Rural travel',
@@ -268,7 +269,8 @@ function QuestionPanel({
         'Travelling for Hajj or Umrah — triggers Saudi vaccination entry requirements.',
       show: !!asks.hajj,
     },
-  ].filter((q) => q.show)
+  ]
+  const questions = allQuestions.filter((q) => q.show)
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-5 lg:p-6">
