@@ -59,9 +59,9 @@ export default function HomePage() {
               <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold leading-tight mb-6">
                 70+ electronic PGDs.
                 <br />
-                £100 per store, per month.
+                <span className="text-teal-400">£100 per month, per pharmacy.</span>
                 <br />
-                <span className="text-teal-400">No per-pharmacist or locum charge.</span>
+                No per-pharmacist charge &mdash; locums included.
               </h1>
 
               <p className="text-lg sm:text-xl text-blue-200 leading-relaxed mb-8 max-w-xl">
@@ -143,6 +143,9 @@ export default function HomePage() {
       </section>
 
       {/* ── 1.5 TESTIMONIALS ────────────────────────────────── */}
+      {/* TEMPORARILY HIDDEN — restore by removing the `false &&` guard
+          immediately below and the matching `)}` at the section close. */}
+      {false && (
       <section className="bg-gradient-to-b from-white to-gray-50 border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
           <h2 className="text-center text-xs sm:text-sm font-semibold uppercase tracking-wider text-teal-700 mb-8">
@@ -203,6 +206,8 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+      )}
+      {/* end TEMPORARILY HIDDEN testimonials */}
 
       {/* ── 2. KEY USP HIGHLIGHTS ────────────────────────────── */}
       <section className="bg-white border-b border-gray-100">
