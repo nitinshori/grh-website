@@ -3,7 +3,7 @@ import Credentials from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import { db } from '@/lib/db'
 import { users, pharmacies } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { eq, or, sql } from 'drizzle-orm'
 import { rateLimit } from '@/lib/rate-limit'
 import { audit } from '@/lib/audit'
 
@@ -21,32 +21,44 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     Credentials({
       name: 'Credentials',
       credentials: {
-        email: { label: 'Email', type: 'email' },
+        // The form input is labelled "Email or GPHC number" in the UI but
+        // we keep the credential key as `email` to stay backward-compatible
+        // with NextAuth callers that hard-coded it.
+        email: { label: 'Email or GPHC number', type: 'text' },
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null
 
-        const email = (credentials.email as string).toLowerCase().trim()
+        // `identifier` is what the user typed. It might be an email
+        // (Jane, Moin, anyone signed up directly) or a GPHC number
+        // (PPH pharmacists onboarded in bulk via the import script).
+        const identifier = (credentials.email as string).toLowerCase().trim()
         const password = credentials.password as string
 
-        // Anti-brute-force: 5 attempts per 15 min per email. Token bucket
-        // is in-memory per Vercel instance — enough for casual abuse;
-        // stronger protection requires Redis/Upstash.
-        const limited = rateLimit(`login:${email}`, 5, 15 * 60_000)
+        // Anti-brute-force: 5 attempts per 15 min per identifier.
+        const limited = rateLimit(`login:${identifier}`, 5, 15 * 60_000)
         if (!limited.ok) {
           await audit({
             action: 'login_failed',
-            userEmail: email,
+            userEmail: identifier,
             details: { reason: 'rate_limited' },
           })
           return null
         }
 
+        // Match by email OR username (case-insensitive on both).
+        // Username is set only for partner-bulk-imported pharmacists;
+        // for direct users it's null and the OR still works.
         const [user] = await db
           .select()
           .from(users)
-          .where(eq(users.email, email))
+          .where(
+            or(
+              eq(users.email, identifier),
+              sql`LOWER(${users.username}) = ${identifier}`,
+            ),
+          )
           .limit(1)
 
         if (!user || !user.isActive) {
@@ -84,8 +96,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         await audit({
           action: 'login',
           userId: user.id,
-          userEmail: email,
+          userEmail: user.email,
           pharmacyId: user.pharmacyId,
+          details: identifier === user.email ? undefined : { via: 'username' },
         })
 
         return {
@@ -95,6 +108,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           role: user.role,
           pharmacyId: user.pharmacyId,
           pharmacySlug,
+          mustChangePassword: user.mustChangePassword,
         }
       },
     }),
@@ -156,6 +170,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.role = u.role as string
         token.pharmacyId = u.pharmacyId as string | null
         token.pharmacySlug = u.pharmacySlug as string | null
+        token.mustChangePassword = !!u.mustChangePassword
       }
       return token
     },
@@ -165,6 +180,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.role = token.role as string
         session.user.pharmacyId = token.pharmacyId as string | null
         session.user.pharmacySlug = token.pharmacySlug as string | null
+        session.user.mustChangePassword = !!token.mustChangePassword
       }
       return session
     },

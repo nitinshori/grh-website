@@ -10,6 +10,7 @@ declare module 'next-auth' {
       role: string
       pharmacyId: string | null
       pharmacySlug: string | null
+      mustChangePassword?: boolean
       image?: string | null
     } & DefaultSession['user']
   }
@@ -18,6 +19,7 @@ declare module 'next-auth' {
     role?: string
     pharmacyId?: string | null
     pharmacySlug?: string | null
+    mustChangePassword?: boolean
   }
 }
 
@@ -26,5 +28,6 @@ declare module '@auth/core/jwt' {
     role?: string
     pharmacyId?: string | null
     pharmacySlug?: string | null
+    mustChangePassword?: boolean
   }
 }

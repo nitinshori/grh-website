@@ -81,6 +81,19 @@ export const users = pgTable('users', {
   // Partner-side identifier (e.g. HubRx Insights user id). Required for
   // SSO'd users so we can re-resolve the same GRH user on each token.
   externalId: varchar('external_id', { length: 255 }),
+  // ── Alternate login identifier ────────────────────────────────
+  // For pharmacists onboarded in bulk via a partner where personal
+  // emails aren't available (e.g. PPH's 43 staff pharmacists). We
+  // store the GPHC registration number here, and login accepts either
+  // email OR username. Direct/self-signup users never have a username
+  // set; only the partner-import script populates it.
+  // Unique-when-set is enforced via a partial index in the migration.
+  username: varchar('username', { length: 64 }),
+  // When true, the user is forced to change their password on next
+  // login. Set by the bulk-import script (since the initial temp
+  // password is shared with their pharmacy admin) and by admin
+  // password-reset actions.
+  mustChangePassword: boolean('must_change_password').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })

@@ -104,9 +104,32 @@ function buildBlockedResponse(origin: string): NextResponse {
   return res
 }
 
-export default auth(async (req: NextRequest & { auth: { user: { id?: string; role: string } } | null }) => {
+export default auth(async (req: NextRequest & { auth: { user: { id?: string; role: string; mustChangePassword?: boolean } } | null }) => {
   const { pathname } = req.nextUrl
   const session = req.auth
+
+  // ── Forced password change gate ─────────────────────────────
+  // PPH (and other bulk-imported) users are created with a temporary
+  // password and `must_change_password = true`. Once they sign in,
+  // every page redirects to /change-password until the flag clears.
+  // We let only the change-password page itself, the API that backs
+  // it, and the sign-out routes through.
+  if (session?.user?.mustChangePassword) {
+    const allowedWhileForcing = [
+      '/change-password',
+      '/api/account/change-password',
+      '/api/auth', // NextAuth callbacks incl. sign-out
+      '/_next',
+      '/logos',
+      '/favicon',
+    ]
+    const allowed = allowedWhileForcing.some(
+      (p) => pathname === p || pathname.startsWith(p + '/'),
+    )
+    if (!allowed) {
+      return NextResponse.redirect(new URL('/change-password', req.nextUrl.origin))
+    }
+  }
 
   // ── Tenant resolution ────────────────────────────────────────
   // Pick the tenant from the Host header so downstream code can theme

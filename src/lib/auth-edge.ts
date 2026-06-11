@@ -31,6 +31,7 @@ export const authEdgeConfig = {
         token.role = u.role as string
         token.pharmacyId = u.pharmacyId as string | null
         token.pharmacySlug = u.pharmacySlug as string | null
+        token.mustChangePassword = !!u.mustChangePassword
       }
       return token
     },
@@ -40,6 +41,7 @@ export const authEdgeConfig = {
         session.user.role = token.role as string
         session.user.pharmacyId = token.pharmacyId as string | null
         session.user.pharmacySlug = token.pharmacySlug as string | null
+        session.user.mustChangePassword = !!token.mustChangePassword
       }
       return session
     },

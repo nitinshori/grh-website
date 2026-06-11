@@ -41,14 +41,19 @@ function LoginForm({ tenant }: Props) {
     })
 
     if (result?.error) {
-      setLoginError('Invalid email or password.')
+      setLoginError('Invalid email/GPHC number or password.')
       setLoading(false)
     } else if (result?.ok) {
       try {
         const sessionRes = await fetch('/api/auth/session')
         const session = await sessionRes.json()
 
-        if (session?.user?.role === 'client' && session?.user?.pharmacySlug) {
+        // Forced password change overrides everything else — the user
+        // is logged in but every other page redirects here until they
+        // set a new password.
+        if (session?.user?.mustChangePassword) {
+          window.location.href = '/change-password'
+        } else if (session?.user?.role === 'client' && session?.user?.pharmacySlug) {
           window.location.href = `/client/${session.user.pharmacySlug}`
         } else if (session?.user?.role === 'super_admin') {
           window.location.href = callbackUrl || '/admin'
@@ -131,13 +136,13 @@ function LoginForm({ tenant }: Props) {
                 htmlFor="email"
                 className="block text-sm font-medium text-gray-700 mb-1.5"
               >
-                Email address
+                Email or GPHC number
               </label>
               <input
                 id="email"
-                type="email"
+                type="text"
                 required
-                autoComplete="email"
+                autoComplete="username"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:border-transparent outline-none transition-shadow"
@@ -145,7 +150,7 @@ function LoginForm({ tenant }: Props) {
                   // Tenant colour for focus ring via CSS variable
                   ['--tw-ring-color' as never]: primary,
                 }}
-                placeholder="you@pharmacy.co.uk"
+                placeholder="you@pharmacy.co.uk or 1234567"
               />
             </div>
 
