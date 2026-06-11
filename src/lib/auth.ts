@@ -64,7 +64,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (!user || !user.isActive) {
           await audit({
             action: 'login_failed',
-            userEmail: email,
+            userEmail: identifier,
             details: { reason: user ? 'inactive' : 'no_user' },
           })
           return null
@@ -75,7 +75,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           await audit({
             action: 'login_failed',
             userId: user.id,
-            userEmail: email,
+            userEmail: user.email,
             pharmacyId: user.pharmacyId,
             details: { reason: 'bad_password' },
           })
