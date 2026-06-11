@@ -13,9 +13,21 @@ interface PatientDetailsStepProps {
     checked: boolean;
     onToggle: (v: boolean) => void;
   };
+  /**
+   * Whether to show the inline "Must be 18+" warning next to the
+   * calculated age. Defaults to true to preserve behaviour for the
+   * adult-only PGDs that use this shared step. Paediatric PGDs (e.g.
+   * paediatric-uti, threadworms) pass false so under-18s aren't flagged
+   * as ineligible.
+   *
+   * Note: this is purely visual. Real age gating lives in each PGD's
+   * own validation file via the `minAge`/`maxAge` opts passed to
+   * `validatePatientStep`.
+   */
+  requireAdult?: boolean;
 }
 
-export function PatientDetailsStep({ patient, onChange, genderOption }: PatientDetailsStepProps) {
+export function PatientDetailsStep({ patient, onChange, genderOption, requireAdult = true }: PatientDetailsStepProps) {
   return (
     <div className="space-y-4">
       <div className="grid sm:grid-cols-2 gap-4">
@@ -55,7 +67,7 @@ export function PatientDetailsStep({ patient, onChange, genderOption }: PatientD
             {patient.age !== null ? (
               <>
                 {patient.age} years
-                {patient.age < 18 && (
+                {requireAdult && patient.age < 18 && (
                   <span className="ml-2 text-red-500 text-xs font-medium">
                     Must be 18+
                   </span>

@@ -339,6 +339,31 @@ gpEmail: "",
 
   return (
     <div className="space-y-6">
+      {/* Emergency-only scope banner — shown on every step so the
+          pharmacist can't miss it. The paediatric UTI service is NOT a
+          primary-care replacement; it's a safety-net for out-of-hours
+          when GP / 111 / paediatric assessment are unavailable. */}
+      <div className="rounded-xl border-2 border-red-300 bg-red-50 p-4">
+        <div className="flex items-start gap-3">
+          <svg className="w-5 h-5 text-red-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <div className="text-sm">
+            <p className="font-semibold text-red-900 mb-1">
+              Emergency / out-of-hours use only
+            </p>
+            <p className="text-red-900/90 leading-relaxed">
+              This paediatric UTI PGD is to be used <strong>only</strong> when
+              primary care (the child&apos;s GP, NHS 111, and paediatric
+              assessment services) is unavailable &mdash; for example
+              evenings, weekends, and bank holidays. If primary care is open,
+              refer the patient there instead. Document the reason primary
+              care was not accessible in the consultation notes.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <ProgressBar current={currentStep + 1} total={7} />
 
       <StepWrapper
@@ -354,6 +379,7 @@ gpEmail: "",
           <PatientDetailsStep
             patient={state.patient}
             onChange={handlePatientChange}
+            requireAdult={false}
           />
         )}
 

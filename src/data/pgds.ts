@@ -919,7 +919,7 @@ export const pgds: PGD[] = [
     revenueEstimate: "\u00a320\u201335 per consultation",
     consultTime: "10\u201315 min",
     description:
-      "High demand in children under 12. Parents seeking fast treatment.",
+      "Emergency / out-of-hours cover only \u2014 to be used when primary care (the child's GP, NHS 111 and paediatric assessment) is unavailable. Not a routine primary-care alternative.",
     pharmadoctor: "Partial",
   },
   {
