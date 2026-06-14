@@ -43,12 +43,19 @@ export function B12InjectionClient() {
       pregnant: false,
       breastfeeding: false,
       anticoagulants: false,
+      // Drug interactions / additional cautions (per CKS)
+      onChloramphenicol: false,
+      onOralContraceptives: false,
     },
     treatment: {
-      regime: "" as "" | "loading" | "maintenance",
+      regime: "" as "" | "loading" | "maintenance" | "oral-tablets",
       doseNumber: "" as "" | "1" | "2" | "3" | "4" | "5" | "6",
       nextDueDate: "",
-      maintenanceInterval: "" as "" | "8-weeks" | "12-weeks",
+      // Diet-related maintenance: cyanocobalamin tablets 50–150 mcg daily
+      // OR 6-monthly hydroxocobalamin 1 mg IM.
+      maintenanceInterval: "" as "" | "8-weeks" | "12-weeks" | "26-weeks-diet-related",
+      // Diet-related vs not-diet-related pathway
+      maintenancePathway: "" as "" | "not-diet-related" | "diet-related",
     },
     administration: {
       batchNumber: "",
@@ -261,19 +268,31 @@ export function B12InjectionClient() {
                   label="Patient is pregnant"
                   checked={state.eligibility.pregnant}
                   onChange={(v) => updateEligibility("pregnant", v)}
-                  description="Hydroxocobalamin can be used in pregnancy when clearly indicated. Counsel risk/benefit."
+                  description="Per NICE CKS: hydroxocobalamin CAN be used in pregnancy to correct an established B12 deficiency. SmPC restriction relates to megaloblastic anaemia of pregnancy specifically — refer if that's the indication."
                 />
                 <Checkbox
                   label="Patient is breastfeeding"
                   checked={state.eligibility.breastfeeding}
                   onChange={(v) => updateEligibility("breastfeeding", v)}
-                  description="Compatible with breastfeeding."
+                  description="Compatible with breastfeeding — hydroxocobalamin is excreted in breast milk but is unlikely to be harmful."
                 />
                 <Checkbox
                   label="Patient takes oral anticoagulants"
                   checked={state.eligibility.anticoagulants}
                   onChange={(v) => updateEligibility("anticoagulants", v)}
                   description="Apply pressure to injection site for ≥2 min post-injection."
+                />
+                <Checkbox
+                  label="Patient takes chloramphenicol"
+                  checked={state.eligibility.onChloramphenicol}
+                  onChange={(v) => updateEligibility("onChloramphenicol", v)}
+                  description="Chloramphenicol may reduce the haematological response to hydroxocobalamin. Discuss with patient and consider extended monitoring."
+                />
+                <Checkbox
+                  label="Patient is on oral contraceptives (combined or progesterone-only)"
+                  checked={state.eligibility.onOralContraceptives}
+                  onChange={(v) => updateEligibility("onOralContraceptives", v)}
+                  description="May lower serum B12 due to reduced carrier protein. Unlikely to be clinically significant but document for the record."
                 />
               </div>
             </div>
@@ -364,20 +383,57 @@ export function B12InjectionClient() {
             )}
 
             {state.treatment.regime === "maintenance" && (
-              <div>
-                <label className="block text-sm font-medium text-navy-900 mb-1">
-                  Maintenance interval <span className="text-red-400">*</span>
-                </label>
-                <select
-                  value={state.treatment.maintenanceInterval}
-                  onChange={(e) => updateTreatment("maintenanceInterval", e.target.value as typeof state.treatment.maintenanceInterval)}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
-                >
-                  <option value="">— select —</option>
-                  <option value="8-weeks">Every 8 weeks (if neurological involvement)</option>
-                  <option value="12-weeks">Every 12 weeks (no neurological involvement)</option>
-                </select>
-              </div>
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-navy-900 mb-1">
+                    Maintenance pathway <span className="text-red-400">*</span>
+                  </label>
+                  <div className="space-y-2">
+                    <label className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                      <input
+                        type="radio"
+                        name="maintenancePathway"
+                        checked={state.treatment.maintenancePathway === "not-diet-related"}
+                        onChange={() => updateTreatment("maintenancePathway", "not-diet-related")}
+                        className="mt-1"
+                      />
+                      <div className="text-sm">
+                        <div className="font-medium text-navy-900">Non-diet-related deficiency</div>
+                        <div className="text-gray-600">e.g. pernicious anaemia, post-bariatric surgery, atrophic gastritis. Maintenance is 1 mg IM every 2–3 months for life (8 weeks if neuro involvement; 12 weeks otherwise). Alternatively, large oral daily doses (500–1000 micrograms cyanocobalamin) can be considered.</div>
+                      </div>
+                    </label>
+                    <label className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                      <input
+                        type="radio"
+                        name="maintenancePathway"
+                        checked={state.treatment.maintenancePathway === "diet-related"}
+                        onChange={() => updateTreatment("maintenancePathway", "diet-related")}
+                        className="mt-1"
+                      />
+                      <div className="text-sm">
+                        <div className="font-medium text-navy-900">Diet-related deficiency</div>
+                        <div className="text-gray-600">e.g. vegan / vegetarian. Maintenance is either cyanocobalamin tablets 50–150 micrograms daily, OR 6-monthly hydroxocobalamin 1 mg IM.</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-navy-900 mb-1">
+                    Maintenance interval <span className="text-red-400">*</span>
+                  </label>
+                  <select
+                    value={state.treatment.maintenanceInterval}
+                    onChange={(e) => updateTreatment("maintenanceInterval", e.target.value as typeof state.treatment.maintenanceInterval)}
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                  >
+                    <option value="">— select —</option>
+                    <option value="8-weeks">Every 8 weeks — non-diet-related with neurological involvement</option>
+                    <option value="12-weeks">Every 12 weeks — non-diet-related, no neurological involvement</option>
+                    <option value="26-weeks-diet-related">Every 6 months — diet-related deficiency only</option>
+                  </select>
+                </div>
+              </>
             )}
 
             <div>

@@ -499,7 +499,20 @@ export function WegovyToolClient() {
               />
 
               <Checkbox
-                label="Gallbladder disease"
+                label="Heart failure with reduced ejection fraction (HFrEF, LVEF ≤40%)"
+                checked={state.medicalHistory.heartFailureReducedEF}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "heartFailureReducedEF",
+                    value: v,
+                  })
+                }
+                description="EXCLUSION. HFpEF (preserved EF >40%) is NOT excluded — semaglutide has shown benefit (STEP-HFpEF). If EF is unknown but patient is under cardiology review for heart failure, refer to GP to confirm."
+              />
+
+              <Checkbox
+                label="Gallbladder disease (cholelithiasis / cholecystitis)"
                 checked={state.medicalHistory.gallbladderDisease}
                 onChange={(v) =>
                   dispatch({
@@ -509,6 +522,19 @@ export function WegovyToolClient() {
                   })
                 }
                 description="Increased cholelithiasis risk"
+              />
+
+              <Checkbox
+                label="Cholecystectomy within the last 3 months"
+                checked={state.medicalHistory.recentCholecystectomy}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "recentCholecystectomy",
+                    value: v,
+                  })
+                }
+                description="Caution. Counsel on biliary warning signs; consider deferring initiation."
               />
 
               <Checkbox

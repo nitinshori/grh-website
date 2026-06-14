@@ -32,6 +32,13 @@ export interface WegovyMedicalHistory {
   severeGIDisease: boolean; // inflammatory bowel, gastroparesis
   pancreatitisHistory: boolean;
   gallbladderDisease: boolean;
+  // Recent cholecystectomy (within the last 3 months). Caution.
+  recentCholecystectomy: boolean;
+  // Heart failure with REDUCED ejection fraction (LVEF ≤40%). Exclusion.
+  // HFpEF (preserved EF) is NOT excluded — semaglutide / GLP-1 evidence
+  // shows benefit in HFpEF (STEP-HFpEF trial). If EF unknown but under
+  // cardiology review for "heart failure", refer to GP to clarify.
+  heartFailureReducedEF: boolean;
   diabeticRetinopathy: boolean;
   eatingDisorder: boolean;
   severeHepatic: boolean;
@@ -253,6 +260,8 @@ gpEmail: "",
       severeGIDisease: false,
       pancreatitisHistory: false,
       gallbladderDisease: false,
+      recentCholecystectomy: false,
+      heartFailureReducedEF: false,
       diabeticRetinopathy: false,
       eatingDisorder: false,
       severeHepatic: false,

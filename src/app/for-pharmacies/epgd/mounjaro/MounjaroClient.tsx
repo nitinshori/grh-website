@@ -506,7 +506,20 @@ export default function MounjaroClient() {
               </div>
 
               <Checkbox
-                label="Gallbladder disease"
+                label="Heart failure with reduced ejection fraction (HFrEF, LVEF ≤40%)"
+                checked={state.medicalHistory.heartFailureReducedEF}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "heartFailureReducedEF",
+                    value: v,
+                  })
+                }
+                description="EXCLUSION. HFpEF (preserved EF >40%) is NOT excluded. If EF is unknown but patient is under cardiology review for heart failure, refer to GP to confirm."
+              />
+
+              <Checkbox
+                label="Gallbladder disease (cholelithiasis / cholecystitis)"
                 checked={state.medicalHistory.gallbladderDisease}
                 onChange={(v) =>
                   dispatch({
@@ -516,6 +529,19 @@ export default function MounjaroClient() {
                   })
                 }
                 description="Increased cholelithiasis risk"
+              />
+
+              <Checkbox
+                label="Cholecystectomy within the last 3 months"
+                checked={state.medicalHistory.recentCholecystectomy}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "recentCholecystectomy",
+                    value: v,
+                  })
+                }
+                description="Caution. Counsel on biliary warning signs; consider deferring initiation."
               />
 
               <Checkbox
@@ -879,7 +905,7 @@ export default function MounjaroClient() {
               />
 
               <Checkbox
-                label="Storage instructions provided (refrigeration 2-8°C)"
+                label="Storage instructions provided"
                 checked={state.counselling.storageRefrigeration}
                 onChange={(v) =>
                   dispatch({
@@ -888,6 +914,7 @@ export default function MounjaroClient() {
                     value: v,
                   })
                 }
+                description="Refrigerate at 2-8°C. After first use, the pen may be stored unrefrigerated for up to 30 days at no more than 30°C, then discard. Keep the cap on when not in use to protect from light. If travelling by plane, keep in hand luggage — do not put in the hold (risk of freezing). Discard if frozen."
               />
 
               <Checkbox

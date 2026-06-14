@@ -18,6 +18,9 @@ export interface OrlistatMedicalHistory {
   gallbladderDisease: boolean;
   severeGastrointestinal: boolean;
   chronic_diarrhea: boolean;
+  // Chronic kidney disease / volume depletion — increased hyperoxaluria
+  // and oxalate-nephropathy risk on orlistat. Caution.
+  chronicKidneyDisease: boolean;
 }
 
 export interface OrlistatMedications {
@@ -26,6 +29,12 @@ export interface OrlistatMedications {
   takesAntiEpileptics: boolean;
   takesCiclosporin: boolean;
   takesOralContraceptives: boolean;
+  // Antiretrovirals for HIV — orlistat may reduce their absorption and
+  // efficacy. Caution.
+  takesHIVAntiretrovirals: boolean;
+  // Any other clinically significant drug interaction. Exclusion under
+  // Janey's amendment — refer to GP for medicines reconciliation.
+  otherSignificantInteraction: boolean;
   otherMedications: string;
   allergies: string;
 }
@@ -142,6 +151,7 @@ gpEmail: "",
       gallbladderDisease: false,
       severeGastrointestinal: false,
       chronic_diarrhea: false,
+      chronicKidneyDisease: false,
     },
     medications: {
       takesWarfarin: false,
@@ -149,6 +159,8 @@ gpEmail: "",
       takesAntiEpileptics: false,
       takesCiclosporin: false,
       takesOralContraceptives: false,
+      takesHIVAntiretrovirals: false,
+      otherSignificantInteraction: false,
       otherMedications: "",
       allergies: "",
     },

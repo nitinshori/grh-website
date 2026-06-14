@@ -94,6 +94,69 @@ export function getAllAlerts(state: OrlistatConsultationState): ClinicalAlert[] 
     });
   }
 
+  // Chronic kidney disease — increased hyperoxaluria / oxalate-nephropathy
+  // risk. Per orlistat SmPC + recent post-marketing reports.
+  if (state.medicalHistory.chronicKidneyDisease) {
+    alerts.push({
+      severity: "caution",
+      code: "RENAL_CKD",
+      message: "Chronic kidney disease / volume depletion",
+      detail:
+        "Orlistat may cause hyperoxaluria and oxalate nephropathy leading to renal failure, particularly in patients with underlying CKD or volume depletion. Counsel patient on adequate fluid intake; monitor renal function.",
+    });
+  }
+
+  // Antiretrovirals — orlistat may reduce absorption.
+  if (state.medications.takesHIVAntiretrovirals) {
+    alerts.push({
+      severity: "caution",
+      code: "ANTIRETROVIRALS",
+      message: "Concurrent HIV antiretroviral therapy",
+      detail:
+        "Orlistat may reduce absorption of HIV antiretroviral medications and could negatively affect their efficacy. Discuss with HIV specialist team before initiating.",
+    });
+  }
+
+  // Other clinically significant drug interaction — exclusion per Janey.
+  if (state.medications.otherSignificantInteraction) {
+    alerts.push({
+      severity: "stop",
+      code: "DRUG_INTERACTION",
+      message: "Clinically significant drug interaction",
+      detail:
+        "Excluded under this PGD. Refer to GP for medicines reconciliation before considering orlistat.",
+    });
+  }
+
+  // Antiepileptic interaction — promote to a more visible caution (orlistat
+  // may unbalance anticonvulsant treatment by reducing absorption →
+  // convulsions). The existing takesAntiEpileptics field is already
+  // captured in medications; add an explicit alert here.
+  if (state.medications.takesAntiEpileptics) {
+    alerts.push({
+      severity: "caution",
+      code: "ANTIEPILEPTICS",
+      message: "Concurrent antiepileptic therapy",
+      detail:
+        "Orlistat may decrease absorption of antiepileptic drugs and unbalance treatment, leading to convulsions. Counsel patient; if poorly controlled epilepsy, refer to GP.",
+    });
+  }
+
+  // Rectal bleeding caution — surfaces as a counselling point rather than
+  // a per-patient alert; included in the patient counselling step below.
+
+  // Severe-diarrhoea contraception caution — surfaces in counselling /
+  // OC users.
+  if (state.medications.takesOralContraceptives) {
+    alerts.push({
+      severity: "caution",
+      code: "ORAL_CONTRACEPTIVE",
+      message: "Patient on oral contraceptive",
+      detail:
+        "In case of severe diarrhoea, the efficacy of oral contraceptives may be reduced. Advise an additional barrier method during episodes of severe diarrhoea.",
+    });
+  }
+
   return alerts;
 }
 

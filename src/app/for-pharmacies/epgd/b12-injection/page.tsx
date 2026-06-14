@@ -23,16 +23,55 @@ export default function B12InjectionPage(): React.ReactNode {
               B12 deficiency or established maintenance therapy.
             </p>
             <div className="bg-lime-50 border border-lime-200 rounded-lg p-4">
-              <p className="text-sm text-lime-900">
+              <p className="text-sm text-lime-900 mb-3">
+                <strong>Hydroxocobalamin 1 mg/mL Solution for Injection.</strong>{" "}
                 This ePGD covers loading therapy (1 mg IM three times weekly
-                for two weeks) and maintenance therapy (1 mg IM every 2–3
-                months, depending on the presence of neurological involvement).
-                Suitable for patients aged 18 and over with documented B12
-                deficiency, post-bariatric surgery, atrophic gastritis, or
-                established vegan / vegetarian dietary deficiency. Not
-                appropriate for unconfirmed symptomatic patients without
-                laboratory evidence — refer to GP for diagnostic workup.
+                for two weeks) and maintenance therapy. For patients aged 18
+                and over with documented B12 deficiency, post-bariatric
+                surgery, atrophic gastritis, or established vegan /
+                vegetarian dietary deficiency. Not appropriate for
+                unconfirmed symptomatic patients without laboratory evidence
+                — refer to GP for diagnostic workup.
               </p>
+              <details className="text-xs text-lime-900">
+                <summary className="cursor-pointer font-semibold">
+                  Interpreting blood test results (CKS guidance)
+                </summary>
+                <div className="mt-2 space-y-2">
+                  <p>
+                    <strong>Vitamin B12 thresholds</strong> (NICE / CKS):
+                    confirmed deficiency at total B12 &lt;180 ng/L (133
+                    pmol/L) or active B12 (holoTC) &lt;25 pmol/L; possible
+                    deficiency at 180–350 ng/L (133–258 pmol/L) or active
+                    25–70 pmol/L; unlikely at &gt;350 ng/L (258 pmol/L) or
+                    active &gt;70 pmol/L. Where total/active B12 is
+                    indeterminate but symptoms suggest deficiency, consider
+                    serum methylmalonic acid (MMA).
+                  </p>
+                  <p>
+                    <strong>FBC:</strong> high MCV (&gt;100 fL) suggests
+                    macrocytosis but MCV may be normal in concurrent iron
+                    deficiency or rapid-onset anaemia. A normal MCV does
+                    NOT exclude B12 deficiency — 25% of neuro cases have
+                    normal MCV.
+                  </p>
+                  <p>
+                    <strong>Folate:</strong> serum folate &lt;7 nmol/L (3
+                    µg/L) suggests deficiency; 7–10 nmol/L is indeterminate
+                    (treat as suggestive). If suspecting folate deficiency
+                    but normal serum levels, request red-cell folate AFTER
+                    excluding B12 deficiency.
+                  </p>
+                  <p>
+                    <strong>Note:</strong> people of Black ethnicity may
+                    have a higher normal range for serum B12. Pregnant
+                    women have physiologically lower B12 levels — less
+                    reliable in pregnancy. People on oral contraceptives
+                    may show decreased B12 due to reduced carrier protein
+                    (not necessarily deficient).
+                  </p>
+                </div>
+              </details>
             </div>
           </div>
         </div>

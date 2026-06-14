@@ -214,6 +214,28 @@ function getCautionAlerts(state: WegovyConsultationState): ClinicalAlert[] {
     });
   }
 
+  // Recent cholecystectomy
+  if (state.medicalHistory.recentCholecystectomy) {
+    alerts.push({
+      severity: "caution",
+      code: "RECENT_CHOLECYSTECTOMY",
+      message: "Cholecystectomy within the last 3 months",
+      detail:
+        "Semaglutide-related GI / biliary symptoms could complicate the post-operative recovery period. Counsel on warning signs (severe RUQ pain, fever, jaundice) and consider deferring initiation until recovery is established.",
+    });
+  }
+
+  // Heart failure with reduced ejection fraction — EXCLUSION
+  if (state.medicalHistory.heartFailureReducedEF) {
+    alerts.push({
+      severity: "stop",
+      code: "HFREF",
+      message: "Heart failure with reduced ejection fraction (HFrEF)",
+      detail:
+        "Excluded under this PGD where left ventricular ejection fraction is ≤40%. Semaglutide has shown benefit in HFpEF (preserved EF, STEP-HFpEF trial) but benefit is NOT established in HFrEF. Refer to GP. If EF is unknown but patient is under cardiology review for 'heart failure', refer to GP to confirm.",
+    });
+  }
+
   // Diabetic retinopathy
   if (state.medicalHistory.diabeticRetinopathy) {
     alerts.push({

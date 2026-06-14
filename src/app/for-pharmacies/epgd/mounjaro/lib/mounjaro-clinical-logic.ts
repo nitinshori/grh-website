@@ -78,6 +78,16 @@ export function getAllAlerts(state: MounjaroConsultationState): ClinicalAlert[] 
     });
   }
 
+  if (state.medicalHistory.heartFailureReducedEF) {
+    alerts.push({
+      severity: "stop",
+      code: "HFREF",
+      message: "Heart failure with reduced ejection fraction (HFrEF)",
+      detail:
+        "Excluded under this PGD where left ventricular ejection fraction is ≤40%. Where evidence shows GLP-1s have benefit in HFpEF (preserved EF), benefit is NOT established for HFrEF and there are signals of harm. Refer to GP. (If EF is unknown but patient under cardiology review for 'heart failure', refer to GP to confirm EF before considering treatment.)",
+    });
+  }
+
   // ─── CAUTION Alerts ───
 
   if (state.medicalHistory.gallbladderDisease) {
@@ -86,6 +96,16 @@ export function getAllAlerts(state: MounjaroConsultationState): ClinicalAlert[] 
       code: "GALLBLADDER",
       message: "Gallbladder disease",
       detail: "Increased cholelithiasis risk. Monitor closely; advise on warning signs.",
+    });
+  }
+
+  if (state.medicalHistory.recentCholecystectomy) {
+    alerts.push({
+      severity: "caution",
+      code: "RECENT_CHOLECYSTECTOMY",
+      message: "Cholecystectomy within the last 3 months",
+      detail:
+        "Tirzepatide-related GI / biliary symptoms could complicate the post-operative recovery period. Counsel carefully on warning signs (severe RUQ pain, fever, jaundice) and consider deferring initiation until recovery is established.",
     });
   }
 

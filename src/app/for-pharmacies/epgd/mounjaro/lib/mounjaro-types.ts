@@ -22,8 +22,18 @@ export interface MounjaroMedicalHistory {
   breastfeeding: boolean;
   planningPregnancy: boolean;
   type1Diabetes: boolean;
+  // Heart failure with REDUCED ejection fraction (EF ≤40%). Exclusion under
+  // this PGD per Chris/Janey clinical decision. HF with PRESERVED ejection
+  // fraction (HFpEF) is NOT an exclusion — there's emerging evidence of
+  // GLP-1 benefit in HFpEF. If the EF is unknown but the patient is under
+  // cardiology review for "heart failure", refer to the GP for clarification.
+  heartFailureReducedEF: boolean;
   // Cautions
   gallbladderDisease: boolean;
+  // Recent cholecystectomy (within the last 3 months). Treated as a caution
+  // alongside other gallbladder disease — worsening biliary symptoms are a
+  // recognised tirzepatide side effect.
+  recentCholecystectomy: boolean;
   renalImpairment: boolean;
   diabeticRetinopathy: boolean;
   depression: boolean;
@@ -168,7 +178,9 @@ gpEmail: "",
       breastfeeding: false,
       planningPregnancy: false,
       type1Diabetes: false,
+      heartFailureReducedEF: false,
       gallbladderDisease: false,
+      recentCholecystectomy: false,
       renalImpairment: false,
       diabeticRetinopathy: false,
       depression: false,

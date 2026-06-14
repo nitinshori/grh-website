@@ -453,6 +453,19 @@ export default function OrlistatClient() {
               />
 
               <Checkbox
+                label="Chronic kidney disease / volume depletion"
+                checked={state.medicalHistory.chronicKidneyDisease}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "chronicKidneyDisease",
+                    value: v,
+                  })
+                }
+                description="Increased hyperoxaluria / oxalate-nephropathy risk on orlistat."
+              />
+
+              <Checkbox
                 label="Severe gastrointestinal disease"
                 checked={state.medicalHistory.severeGastrointestinal}
                 onChange={(v) =>
@@ -542,6 +555,33 @@ export default function OrlistatClient() {
                     value: v,
                   })
                 }
+                description="Severe diarrhoea may reduce contraceptive efficacy — advise additional barrier method during episodes."
+              />
+
+              <Checkbox
+                label="Taking antiretroviral therapy for HIV"
+                checked={state.medications.takesHIVAntiretrovirals}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICATIONS",
+                    field: "takesHIVAntiretrovirals",
+                    value: v,
+                  })
+                }
+                description="Orlistat may reduce absorption — discuss with HIV specialist team before initiating."
+              />
+
+              <Checkbox
+                label="Taking any other medication with a clinically significant drug interaction"
+                checked={state.medications.otherSignificantInteraction}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICATIONS",
+                    field: "otherSignificantInteraction",
+                    value: v,
+                  })
+                }
+                description="EXCLUSION. Refer to GP for medicines reconciliation."
               />
 
               <TextArea
