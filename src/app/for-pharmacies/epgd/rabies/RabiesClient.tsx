@@ -593,7 +593,8 @@ export default function RabiesClient({
             <PatientDetailsStep
               patient={state.patient}
               onChange={handlePatientChange}
-            />
+              requireAdult={false}
+          />
           )}
 
           {state.step === 1 && (

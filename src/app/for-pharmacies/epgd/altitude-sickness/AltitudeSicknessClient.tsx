@@ -303,6 +303,7 @@ export function AltitudeSicknessClient() {
           <PatientDetailsStep
             patient={state.patient}
             onChange={handlePatientChange}
+            requireAdult={false}
           />
         </StepWrapper>
       )}

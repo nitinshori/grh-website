@@ -419,7 +419,8 @@ export function ImpetigoConsultationClient() {
                   ...data,
                   patientDetails: { ...data.patientDetails, [field]: value }
                 })}
-              />
+                requireAdult={false}
+          />
             )}
 
             {currentStep === 1 && (

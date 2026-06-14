@@ -124,6 +124,7 @@ export default function HayfeverClient() {
             onChange={(field, value) =>
               dispatch({ type: "UPDATE_PATIENT", field: field as keyof HayfeverPatientDetails, value })
             }
+            requireAdult={false}
           />
         );
 

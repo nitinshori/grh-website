@@ -390,7 +390,6 @@ export const pgds: PGD[] = [
     category: "Weight Management",
     priority: 2,
     isNew: false,
-    comingSoon: true,
     revenueEstimate: "\u00a370\u2013100 per month",
     consultTime: "20 min",
     description:
@@ -398,12 +397,12 @@ export const pgds: PGD[] = [
     pharmadoctor: "Yes",
   },
   {
+    // Saxenda ePGD built and live — no longer Coming Soon.
     id: "saxenda",
     title: "Liraglutide (Saxenda)",
     category: "Weight Management",
     priority: 2,
     isNew: false,
-    comingSoon: true,
     revenueEstimate: "\u00a3150\u2013250 per month",
     consultTime: "20 min",
     description: "Older GLP-1 but still prescribed. Include for completeness.",
@@ -595,17 +594,52 @@ export const pgds: PGD[] = [
     pharmadoctor: "Partial",
   },
   {
-    id: "trt",
-    title: "Testosterone Replacement (TRT \u2014 Topical)",
+    id: "testogel",
+    title: "TRT \u2014 Testogel (Testosterone Gel)",
+    category: "Men's Health",
+    priority: 1,
+    isNew: true,
+    revenueEstimate: "\u00a3100\u2013150 per month",
+    consultTime: "30 min initial / 15 min monitoring",
+    description:
+      "Daily topical testosterone gel for hypogonadism. Includes both Testogel 16.2 mg/g pump and Testogel 40.5 mg sachet. Age 25\u201365. Indefinite use with annual pharmacy review. 3-month supply per visit once stable.",
+    pharmadoctor: "Partial",
+  },
+  {
+    id: "tostran",
+    title: "TRT \u2014 Tostran (Testosterone Gel)",
     category: "Men's Health",
     priority: 2,
     isNew: true,
-    comingSoon: true,
     revenueEstimate: "\u00a3100\u2013150 per month",
-    consultTime: "30 min initial",
+    consultTime: "30 min initial / 15 min monitoring",
     description:
-      "DIFFERENTIATION. Private TRT clinics are booming. A pharmacy-based TRT PGD with monitoring consultations is a major gap in the market.",
-    pharmadoctor: "No",
+      "Daily topical testosterone gel (Tostran 20 mg/g) \u2014 alternative gel formulation for hypogonadism. Age 25\u201365. Indefinite with annual pharmacy review. 3-month supply once stable.",
+    pharmadoctor: "Partial",
+  },
+  {
+    id: "sustanon",
+    title: "TRT \u2014 Sustanon (Testosterone IM)",
+    category: "Men's Health",
+    priority: 2,
+    isNew: true,
+    revenueEstimate: "\u00a380\u2013120 per month",
+    consultTime: "20 min per injection",
+    description:
+      "Sustanon 250 IM injection \u2014 testosterone esters in oily solution. 1 mL deep IM every 3 weeks. Age 25\u201365. Indefinite with annual pharmacy review. 3-month supply (4 ampoules) once stable.",
+    pharmadoctor: "Partial",
+  },
+  {
+    id: "nebido",
+    title: "TRT \u2014 Nebido (Long-acting Testosterone IM)",
+    category: "Men's Health",
+    priority: 2,
+    isNew: true,
+    revenueEstimate: "\u00a3200\u2013280 per dose",
+    consultTime: "30 min per injection",
+    description:
+      "Nebido 1000 mg/4 mL IM \u2014 long-acting testosterone undecanoate. Loading then every 10\u201314 weeks. Age 25\u201365. Counsel risk of pulmonary oily microembolism \u2014 strict observation post-injection.",
+    pharmadoctor: "Partial",
   },
   {
     id: "bph",
@@ -1027,8 +1061,20 @@ export const pgds: PGD[] = [
     revenueEstimate: "\u00a325\u201345 per injection",
     consultTime: "15 min",
     description:
-      "Hydroxocobalamin 1 mg IM for confirmed B12 deficiency or established maintenance. Loading regime + 3-monthly maintenance. High recurring revenue, strong wellness-market demand.",
+      "Hydroxocobalamin 1 mg IM for confirmed B12 deficiency. Loading regime + lifelong maintenance via PGD. Annual pharmacy review. High recurring revenue.",
     pharmadoctor: "Partial",
+  },
+  {
+    id: "folic-acid",
+    title: "Folic Acid 5 mg (Folate Deficiency)",
+    category: "Wellness",
+    priority: 2,
+    isNew: true,
+    revenueEstimate: "\u00a315\u201325 per course",
+    consultTime: "10 min",
+    description:
+      "Folic acid 5 mg oral tablets for confirmed folate deficiency (serum folate <7 nmol/L or indeterminate 7\u201310 nmol/L with clinical context). 4-month treatment course in most patients. Frequently identified alongside B12 deficiency.",
+    pharmadoctor: "No",
   },
 
 ];

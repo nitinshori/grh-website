@@ -167,6 +167,7 @@ export default function SleepMelatoninClient() {
           <PatientDetailsStep
             patient={state.patient}
             onChange={(field, value) => dispatch({ type: "UPDATE_PATIENT", field, value })}
+            requireAdult={false}
           />
         )}
 

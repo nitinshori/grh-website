@@ -299,6 +299,7 @@ export function TravellersDiarrhoeaClient() {
           <PatientDetailsStep
             patient={state.patient}
             onChange={handlePatientChange}
+            requireAdult={false}
           />
         </StepWrapper>
       )}

@@ -12,16 +12,16 @@ import type { TrainingModule } from "./types";
 
 export const edModule: TrainingModule = {
   slug: "ed",
-  title: "Erectile Dysfunction — PDE5 inhibitor PGD",
+  title: "Erectile Dysfunction — PGD (PDE5i + Alprostadil cream)",
   description:
-    "Eligibility, contraindications, dosing, and counselling for the supply of sildenafil and tadalafil under PGD.",
+    "Eligibility, contraindications, dosing, and counselling for the supply of sildenafil, tadalafil, vardenafil, avanafil, and alprostadil cream (Vitaros) under PGD.",
   pgdSlugs: ["ed"],
   authoredBy: "Get Real Health Clinical Team",
-  reviewedBy: "Dr Nitin Shori, Medical Director",
-  version: "1.0.0",
-  materialClinicalChange: true, // initial publication
-  publishedAt: "2026-05-11",
-  estimatedMinutes: 18,
+  reviewedBy: "DRAFT — pending clinical sign-off (v1.1 update)",
+  version: "1.1.0",
+  materialClinicalChange: true, // expansion to 5 drugs from sildenafil + tadalafil
+  publishedAt: "2026-05-13",
+  estimatedMinutes: 22,
   passMark: 0.8,
 
   slides: [
@@ -29,12 +29,13 @@ export const edModule: TrainingModule = {
       id: "intro",
       type: "intro",
       title: "Erectile Dysfunction PGD — Training",
-      subtitle: "Sildenafil and Tadalafil under Patient Group Direction",
-      estimatedMinutes: 18,
+      subtitle: "Sildenafil, tadalafil, vardenafil, avanafil, and alprostadil cream under Patient Group Direction",
+      estimatedMinutes: 22,
       objectives: [
         "Identify which patients are eligible to be supplied under the ED PGD, and which must be referred.",
-        "Recognise the absolute contraindications — particularly nitrates, riociguat, and recent cardiovascular events.",
-        "Apply correct starting doses, including dose adjustments for alpha-blockers, CYP3A4 inhibitors, and age ≥65.",
+        "Recognise the absolute contraindications — particularly nitrates, riociguat, and recent cardiovascular events — and know when to use Vitaros (alprostadil) instead.",
+        "Apply correct starting doses across all four PDE5 inhibitors, including dose adjustments for alpha-blockers, CYP3A4 inhibitors, and age ≥65.",
+        "Match the patient to the right drug — onset, duration, food interaction, partner planning — across sildenafil / tadalafil / vardenafil / avanafil.",
         "Deliver structured counselling on onset, duration, side effects, and red flags (NAION, priapism, sudden hearing loss).",
         "Use the GRH ePGD consultation tool to produce a defensible clinical record.",
       ],
@@ -149,32 +150,87 @@ export const edModule: TrainingModule = {
     {
       id: "agents",
       type: "comparison",
-      title: "Sildenafil vs Tadalafil",
+      title: "PDE5 inhibitor options",
       intro:
-        "The two agents available under the PGD have different pharmacokinetic profiles. Patient preference, lifestyle, and concomitant medication guide the choice.",
+        "Four PDE5 inhibitors are available under the PGD. Patient preference, lifestyle, food intake, and concomitant medication guide the choice. All require sexual stimulation to work.",
       columns: [
         {
-          label: "Sildenafil",
+          label: "Sildenafil (Viagra, generic)",
           rows: [
             { heading: "Onset", body: "~30–60 minutes" },
             { heading: "Duration", body: "~4–6 hours" },
-            { heading: "Standard starting dose", body: "50 mg as needed, 1 hour before activity" },
-            { heading: "Lower starting dose if…", body: "Age ≥65, CYP3A4 inhibitor, mild-moderate hepatic impairment, alpha-blocker (must be stable): 25 mg" },
-            { heading: "Food effect", body: "High-fat meals delay absorption — take on empty stomach for fastest onset" },
-            { heading: "Max frequency", body: "Once in 24 hours" },
+            { heading: "Starting dose", body: "50 mg as needed, 1 hour before activity. Step to 25 mg or 100 mg based on response." },
+            { heading: "Lower start if", body: "Age ≥65, CYP3A4 inhibitor, mild-moderate hepatic impairment, alpha-blocker (must be stable): 25 mg." },
+            { heading: "Food effect", body: "High-fat meals delay onset. Take on empty stomach for fastest effect." },
+            { heading: "Max frequency", body: "Once in 24 hours." },
           ],
         },
         {
-          label: "Tadalafil",
+          label: "Tadalafil (Cialis, generic)",
           rows: [
             { heading: "Onset", body: "~30 minutes" },
             { heading: "Duration", body: "Up to 36 hours" },
-            { heading: "Standard starting dose", body: "10 mg as needed, increased to 20 mg if 10 mg insufficient" },
-            { heading: "Lower starting dose if…", body: "CYP3A4 inhibitor: maximum 10 mg in any 72 hours" },
-            { heading: "Food effect", body: "Negligible — can be taken with food" },
-            { heading: "Max frequency", body: "Once daily for on-demand use; daily 5 mg available separately" },
+            { heading: "Starting dose", body: "10 mg as needed; can step to 20 mg if 10 mg insufficient. Daily 5 mg also available for spontaneous use." },
+            { heading: "Lower start if", body: "CYP3A4 inhibitor: max 10 mg in any 72 hours." },
+            { heading: "Food effect", body: "Negligible — can be taken with food." },
+            { heading: "Max frequency", body: "On-demand: once daily. Daily 5 mg: continuously." },
           ],
         },
+        {
+          label: "Vardenafil (Levitra, generic)",
+          rows: [
+            { heading: "Onset", body: "~25–60 minutes" },
+            { heading: "Duration", body: "~4–5 hours" },
+            { heading: "Starting dose", body: "10 mg as needed, 25–60 minutes before activity. Step to 5 mg or 20 mg based on response/tolerance." },
+            { heading: "Lower start if", body: "Age ≥65, CYP3A4 inhibitor, mild-moderate hepatic impairment: 5 mg. Avoid with alpha-blockers within 6 hours." },
+            { heading: "Food effect", body: "High-fat meals delay onset. Empty stomach preferred." },
+            { heading: "Max frequency", body: "Once in 24 hours." },
+          ],
+        },
+        {
+          label: "Avanafil (Spedra)",
+          rows: [
+            { heading: "Onset", body: "~15–30 minutes (fastest of the class)" },
+            { heading: "Duration", body: "~6 hours" },
+            { heading: "Starting dose", body: "100 mg as needed, 15–30 minutes before activity. Step to 50 mg or 200 mg based on response." },
+            { heading: "Lower start if", body: "Age ≥65, CYP3A4 inhibitor, mild-moderate hepatic impairment: 100 mg max in 24 hours." },
+            { heading: "Food effect", body: "Modestly delayed by food but still rapid onset." },
+            { heading: "Max frequency", body: "Once in 24 hours." },
+          ],
+        },
+      ],
+    },
+
+    {
+      id: "alprostadil-cream",
+      type: "content",
+      title: "Alprostadil cream (Vitaros)",
+      body: [
+        "Vitaros (alprostadil 3 mg/g cream) is a non-PDE5i alternative for ED. Mechanism: prostaglandin E1 analogue — relaxes corporal smooth muscle and dilates penile arteries via direct local action, independent of NO/cGMP signalling.",
+        "Why it matters: Vitaros is the only ED treatment a PGD pharmacist can supply that is SAFE WITH NITRATES. PDE5 inhibitors are absolutely contraindicated with nitrates / nicorandil — many cardiac patients cannot use them. Vitaros gives this group a treatment option.",
+        "Application: small bead of cream applied to the meatus of the penis using the supplied applicator, 5–30 minutes before sexual activity. Wash hands before and after. Single use, max once per 24 hours, max 3 times per 7 days.",
+        "Onset is usually within 5–30 minutes; duration up to 1–2 hours. Most common side effects are local: penile burning/erythema, mild urethral discomfort. Partner may experience mild local irritation — counsel on barrier use.",
+      ],
+      highlights: [
+        "Non-systemic — usable with nitrates / nicorandil where PDE5is are contraindicated.",
+        "Local side effects (burning, erythema) common but usually mild.",
+        "Latex condom advised when sexual activity may include a partner who could become pregnant — alprostadil is teratogenic via topical exposure.",
+        "Not for use if penile deformity, sickle cell, or history of priapism predisposition.",
+      ],
+    },
+
+    {
+      id: "vitaros-decision",
+      type: "callout",
+      title: "When to choose Vitaros over a PDE5i",
+      tone: "info",
+      message: "Vitaros is the alternative for patients who cannot use PDE5 inhibitors.",
+      detail: [
+        "Patient on regular nitrates (ISMN, GTN, nicorandil) — PDE5is absolutely contraindicated.",
+        "Patient who has tried multiple PDE5is at maximum tolerated dose without adequate response.",
+        "Patient who experiences intolerable PDE5i side effects (severe headache, visual disturbance, etc.).",
+        "Patient who prefers a non-systemic option (e.g. cardiovascular history, patient preference).",
+        "Patient cannot tolerate intracavernosal alprostadil but wants a topical alternative.",
       ],
     },
 
@@ -450,6 +506,55 @@ export const edModule: TrainingModule = {
       correctOptionIds: ["b"],
       explanation:
         "Clarithromycin is a potent CYP3A4 inhibitor; sildenafil should start at 25 mg, tadalafil maximum 10 mg in 72 hours. The other options do not require dose adjustment. (If the antibiotic course has finished and a reasonable washout has elapsed, standard dosing resumes.)",
+    },
+
+    {
+      id: "q-vitaros-nitrate",
+      type: "single-choice",
+      critical: true,
+      question:
+        "A 67-year-old man with stable angina takes ISMN 20 mg BD. He requests treatment for ED. Which of the following is appropriate under the PGD?",
+      options: [
+        { id: "a", label: "Sildenafil 25 mg with strong counselling on hypotension risk." },
+        { id: "b", label: "Tadalafil 10 mg, instructing him to skip ISMN on the day of activity." },
+        { id: "c", label: "Vitaros (alprostadil cream) — the only PGD-supplied ED treatment safe with nitrates, applied 5–30 minutes before activity." },
+        { id: "d", label: "No treatment is appropriate — refer GP." },
+      ],
+      correctOptionIds: ["c"],
+      explanation:
+        "All PDE5 inhibitors (sildenafil, tadalafil, vardenafil, avanafil) are absolutely contraindicated with any nitrate. Vitaros (alprostadil cream) acts locally via prostaglandin E1 — no nitrate interaction — and is the appropriate PGD option for this patient.",
+    },
+
+    {
+      id: "q-avanafil-onset",
+      type: "single-choice",
+      question:
+        "A patient asks for the fastest-acting PDE5 inhibitor — he has limited time before activity. Which agent has the quickest onset?",
+      options: [
+        { id: "a", label: "Sildenafil — 30–60 minutes." },
+        { id: "b", label: "Tadalafil — 30 minutes." },
+        { id: "c", label: "Vardenafil — 25–60 minutes." },
+        { id: "d", label: "Avanafil — 15–30 minutes." },
+      ],
+      correctOptionIds: ["d"],
+      explanation:
+        "Avanafil (Spedra) has the fastest onset of the PDE5 inhibitor class — 15–30 minutes. Useful when patients value spontaneity. Standard starting dose is 100 mg.",
+    },
+
+    {
+      id: "q-vitaros-counselling",
+      type: "single-choice",
+      question:
+        "Which counselling point is correct for a patient supplied with Vitaros (alprostadil cream)?",
+      options: [
+        { id: "a", label: "Apply once daily at bedtime regardless of sexual activity." },
+        { id: "b", label: "Apply 5–30 minutes before activity to the meatus using the supplied applicator. Wash hands before/after. Latex condom advised if partner could become pregnant." },
+        { id: "c", label: "Apply liberally to the whole penile shaft." },
+        { id: "d", label: "Take orally if topical not effective." },
+      ],
+      correctOptionIds: ["b"],
+      explanation:
+        "Vitaros is applied as a small bead to the meatus using the supplied applicator, 5–30 minutes pre-activity. Latex condom is advised if a partner could become pregnant — alprostadil is teratogenic via topical exposure. Max once per 24 hours, max 3 times per 7 days.",
     },
 
     {

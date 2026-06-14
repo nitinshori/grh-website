@@ -223,6 +223,7 @@ export default function EyeInfectionsClient() {
           <PatientDetailsStep
             patient={state.patient}
             onChange={(field, value) => setState(prev => ({ ...prev, patient: { ...prev.patient, [field]: value } }))}
+            requireAdult={false}
           />
         )}
 

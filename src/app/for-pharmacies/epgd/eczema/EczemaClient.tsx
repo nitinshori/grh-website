@@ -210,7 +210,8 @@ export default function EczemaClient() {
             <PatientDetailsStep
               patient={state.patient}
               onChange={(field, value) => dispatch({ type: "UPDATE_PATIENT", field, value })}
-            />
+              requireAdult={false}
+          />
           </StepWrapper>
         );
 

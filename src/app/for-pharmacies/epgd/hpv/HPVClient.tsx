@@ -166,6 +166,7 @@ export default function HPVClient() {
                   value: v,
                 }),
             }}
+            requireAdult={false}
           />
         );
 

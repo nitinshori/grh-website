@@ -1,107 +1,45 @@
-import type { Metadata } from "next";
-import { PgdPageActions } from "@/components/PgdPageActions";
+import React from 'react'
+import { PgdPageActions } from '@/components/PgdPageActions'
+import { SaxendaClient } from './SaxendaClient'
 
-export const metadata: Metadata = {
-  title: "Saxenda (Liraglutide) Consultation ePGD",
-  description: "Saxenda (Liraglutide) Consultation ePGD - Coming Soon. GLP-1 receptor agonist for weight management.",
-  robots: { index: false, follow: false },
-};
+export const metadata = {
+  title: 'Saxenda (Liraglutide) ePGD | Pharmacy PGD',
+  description:
+    'UK Pharmacy Patient Group Direction (PGD) consultation tool for Saxenda (liraglutide) for chronic weight management.',
+}
 
-export default function SaxendaToolPage() {
+export default function SaxendaPage(): React.ReactNode {
   return (
-    <div className="bg-gray-50 min-h-screen">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto">
         <PgdPageActions />
-        <div className="mb-4 print:hidden">
-          <a
-            href="/for-pharmacies/dashboard"
-            className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-teal-600 transition-colors"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Back to Dashboard
-          </a>
-        </div>
-
-        {/* Breadcrumb */}
-        <div className="mb-6">
-          <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-            <a href="/for-pharmacies/dashboard" className="hover:text-teal-600">For Pharmacies</a>
-            <span>/</span>
-            <span className="text-navy-900 font-medium">Saxenda Consultation ePGD</span>
+        <div className="mb-8">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 sm:p-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Saxenda (Liraglutide) ePGD
+            </h1>
+            <p className="text-gray-600 mb-4">
+              Daily subcutaneous liraglutide for chronic weight management. Adults
+              aged 18–75 with BMI ≥30, or ≥27 with a weight-related comorbidity.
+            </p>
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+              <p className="text-sm text-orange-900">
+                <strong>Saxenda 6 mg/mL solution for injection in pre-filled pen.</strong>{" "}
+                Daily SC injection, titrated from 0.6 mg to 3.0 mg over 5 weeks
+                (one-week increments). Treatment must be discontinued if the
+                patient has not lost ≥5% of initial body weight after 12 weeks
+                on the 3.0 mg maintenance dose. After first use, the pen may
+                be stored up to 28 days at &lt;30°C; otherwise refrigerate 2–8°C.
+                Keep cap on when not in use to protect from light.
+              </p>
+            </div>
           </div>
-          <p className="text-xs font-semibold text-teal-700 uppercase tracking-wider mb-2">
-            For registered pharmacy professionals only
-          </p>
-          <h1 className="text-2xl sm:text-3xl font-bold text-navy-900">
-            Saxenda (Liraglutide) Consultation
-          </h1>
-          <p className="text-sm text-gray-600 mt-1">
-            GLP-1 receptor agonist for weight management
-          </p>
         </div>
-
-        {/* Coming Soon Badge */}
-        <div className="mb-6">
-          <span className="inline-block bg-amber-100 border border-amber-300 text-amber-800 text-sm font-semibold px-3 py-1 rounded-full">
-            Coming Soon
-          </span>
-        </div>
-
-        {/* Clinical Description */}
-        <div className="bg-white p-6 rounded-lg border border-gray-200 mb-6">
-          <h2 className="text-lg font-semibold text-navy-900 mb-3">What This Tool Will Include</h2>
-          <ul className="space-y-2 text-gray-700 text-sm">
-            <li className="flex gap-2">
-              <span className="text-teal-600 font-bold">•</span>
-              <span>GLP-1 receptor agonist for weight management consultation</span>
-            </li>
-            <li className="flex gap-2">
-              <span className="text-teal-600 font-bold">•</span>
-              <span>BMI eligibility screening and assessment</span>
-            </li>
-            <li className="flex gap-2">
-              <span className="text-teal-600 font-bold">•</span>
-              <span>Injection technique counselling and training</span>
-            </li>
-            <li className="flex gap-2">
-              <span className="text-teal-600 font-bold">•</span>
-              <span>Dose titration guidance (0.6mg to 3.0mg over 5 weeks)</span>
-            </li>
-            <li className="flex gap-2">
-              <span className="text-teal-600 font-bold">•</span>
-              <span>Side effect monitoring and management</span>
-            </li>
-            <li className="flex gap-2">
-              <span className="text-teal-600 font-bold">•</span>
-              <span>12-week efficacy review and escalation pathways</span>
-            </li>
-          </ul>
-        </div>
-
-        {/* Status Message */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
-          <p className="text-gray-700 text-sm">
-            This ePGD consultation tool is currently in development. We're creating a comprehensive GLP-1 weight management system to support Saxenda consultation, titration, and monitoring.
-          </p>
-        </div>
-
-        {/* Interim Guidance */}
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
-          <h3 className="font-semibold text-amber-900 mb-2">In the meantime</h3>
-          <p className="text-amber-900 text-sm">
-            Please refer to the printed PGD documentation for clinical guidance.
-          </p>
-        </div>
-
-        {/* Disclaimer */}
-        <div className="mt-8 text-center">
-          <p className="text-[11px] text-gray-400 max-w-2xl mx-auto">
-            This ePGD is provided as clinical decision support for weight management. Requires confirmed BMI &gt;30 or &gt;27 with comorbidity.
-          </p>
+        <SaxendaClient />
+        <div className="mt-8 text-center text-xs text-gray-500">
+          <p>Get Real Health ePGD — Saxenda (Liraglutide) | Confidential Patient Information</p>
         </div>
       </div>
     </div>
-  );
+  )
 }

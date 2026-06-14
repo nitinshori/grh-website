@@ -321,6 +321,7 @@ gpEmail: "",
           <PatientDetailsStep
             patient={state.patient}
             onChange={handlePatientChange}
+            requireAdult={false}
           />
         )}
 

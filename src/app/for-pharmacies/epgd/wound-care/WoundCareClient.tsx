@@ -287,6 +287,7 @@ export default function WoundCareClient() {
           <PatientDetailsStep
             patient={state.patient}
             onChange={(field, value) => setState(prev => ({ ...prev, patient: { ...prev.patient, [field]: value } }))}
+            requireAdult={false}
           />
         )}
 

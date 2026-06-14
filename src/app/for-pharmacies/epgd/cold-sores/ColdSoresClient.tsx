@@ -214,7 +214,8 @@ export default function ColdSoresClient() {
             <PatientDetailsStep
               patient={state.patient}
               onChange={(field, value) => dispatch({ type: "UPDATE_PATIENT", field, value })}
-            />
+              requireAdult={false}
+          />
           </StepWrapper>
         );
 

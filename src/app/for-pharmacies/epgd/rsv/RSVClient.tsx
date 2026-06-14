@@ -299,6 +299,7 @@ export function RSVClient() {
                   }
                 : undefined
             }
+            requireAdult={false}
           />
           <div className="mt-6 border-t pt-6 space-y-4">
             <SelectInput

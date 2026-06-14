@@ -363,6 +363,7 @@ gpEmail: "",
                 patient: { ...prev.patient, [field]: value },
               }))
             }
+            requireAdult={false}
           />
         )}
 

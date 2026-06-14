@@ -26,12 +26,14 @@ export default function B12InjectionPage(): React.ReactNode {
               <p className="text-sm text-lime-900 mb-3">
                 <strong>Hydroxocobalamin 1 mg/mL Solution for Injection.</strong>{" "}
                 This ePGD covers loading therapy (1 mg IM three times weekly
-                for two weeks) and maintenance therapy. For patients aged 18
-                and over with documented B12 deficiency, post-bariatric
-                surgery, atrophic gastritis, or established vegan /
-                vegetarian dietary deficiency. Not appropriate for
+                for two weeks) and lifelong maintenance therapy via PGD for
+                patients with non-diet-related B12 deficiency. For patients
+                aged 18 and over with documented B12 deficiency,
+                post-bariatric surgery, atrophic gastritis, or established
+                vegan / vegetarian dietary deficiency. Not appropriate for
                 unconfirmed symptomatic patients without laboratory evidence
-                — refer to GP for diagnostic workup.
+                — refer to GP for diagnostic workup. Annual pharmacy review
+                with patient is recommended even on lifelong therapy.
               </p>
               <details className="text-xs text-lime-900">
                 <summary className="cursor-pointer font-semibold">

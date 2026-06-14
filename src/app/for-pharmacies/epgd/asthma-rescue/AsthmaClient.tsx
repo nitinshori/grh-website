@@ -167,6 +167,7 @@ export default function AsthmaClient() {
             onChange={(field, value) =>
               dispatch({ type: "UPDATE_PATIENT", field: field as keyof AsthmaPatientDetails, value })
             }
+            requireAdult={false}
           />
         );
 

@@ -591,7 +591,8 @@ export default function JapaneseEncephalitisClient({
             <PatientDetailsStep
               patient={state.patient}
               onChange={handlePatientChange}
-            />
+              requireAdult={false}
+          />
           )}
 
           {state.step === 1 && (

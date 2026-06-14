@@ -143,6 +143,7 @@ export default function CovidBoosterClient() {
             onChange={(field, value) =>
               dispatch({ type: "UPDATE_PATIENT", field, value })
             }
+            requireAdult={false}
           />
         );
 

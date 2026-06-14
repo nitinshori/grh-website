@@ -287,6 +287,7 @@ export function PneumococcalClient() {
           <PatientDetailsStep
             patient={patientDetails}
             onChange={handlePatientDetailsChange}
+            requireAdult={false}
           />
           <div className="mt-6 border-t pt-6 space-y-4">
             <SelectInput

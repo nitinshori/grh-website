@@ -331,6 +331,7 @@ export function MeningitisACWYClient() {
           <PatientDetailsStep
             patient={patientDetails}
             onChange={handlePatientDetailsChange}
+            requireAdult={false}
           />
         </StepWrapper>
       )}

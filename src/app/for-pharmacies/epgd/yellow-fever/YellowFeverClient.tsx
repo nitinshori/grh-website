@@ -331,6 +331,7 @@ export function YellowFeverClient() {
           <PatientDetailsStep
             patient={patientDetails}
             onChange={handlePatientDetailsChange}
+            requireAdult={false}
           />
         </StepWrapper>
       )}

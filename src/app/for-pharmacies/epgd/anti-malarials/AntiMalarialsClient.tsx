@@ -311,6 +311,7 @@ export function AntiMalarialsClient() {
           <PatientDetailsStep
             patient={state.patient}
             onChange={handlePatientChange}
+            requireAdult={false}
           />
         </StepWrapper>
       )}

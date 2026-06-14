@@ -208,7 +208,8 @@ export default function ChickenpoxClient() {
               onChange={(field, value) =>
                 dispatch({ type: "UPDATE_PATIENT", field, value })
               }
-            />
+              requireAdult={false}
+          />
           </StepWrapper>
         );
 
