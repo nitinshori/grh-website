@@ -189,7 +189,7 @@ export function TostranClient() {
               <label className="block text-sm font-medium text-navy-900 mb-1">Daily dose (actuations) <span className="text-red-400">*</span></label>
               <select value={state.treatment.dailyActuations} onChange={(ev) => updateTreatment("dailyActuations", ev.target.value as typeof state.treatment.dailyActuations)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400">
                 <option value="">— select —</option>
-                <option value="4">4 actuations / 2 g / 40 mg — reduced (serum >15 µg/L)</option>
+                <option value="4">4 actuations / 2 g / 40 mg — reduced (serum &gt;15 µg/L)</option>
                 <option value="5">5 actuations / 2.5 g / 50 mg</option>
                 <option value="6">6 actuations / 3 g / 60 mg — STARTING DOSE</option>
                 <option value="7">7 actuations / 3.5 g / 70 mg</option>
