@@ -28,7 +28,11 @@ export const PGD_DOCUMENT_SLUGS = new Set([
   'dengue',
   'dental-bridging',
   'diabetes-monitoring',
-  'ear-infection',
+  // 'ear-infection' TEMPORARILY REMOVED. The PDF on disk describes
+  // Dexamethasone/Neomycin/Acetic acid ear SPRAY for otitis externa
+  // — a different product. The catalogue + ePGD tool are for Cetraxal
+  // (ciprofloxacin ear drops). Hiding download until correct
+  // Cetraxal-source PGD is supplied.
   'eczema',
   'ed',
   'emergency-contraception',
@@ -63,7 +67,11 @@ export const PGD_DOCUMENT_SLUGS = new Set([
   'rosacea',
   'rsv',
   'saxenda',
-  'shingles-treatment',
+  // 'shingles-treatment' TEMPORARILY REMOVED. The PDF on disk
+  // describes Shingrix VACCINE for prevention, but this PGD is for
+  // VALACICLOVIR acute antiviral treatment. Wrong document was
+  // uploaded into this slot. Hiding download until correct
+  // valaciclovir source PGD is supplied.
   'shingles-vaccine',
   'sleep-melatonin',
   'smoking-nrt',

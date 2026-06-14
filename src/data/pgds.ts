@@ -390,6 +390,7 @@ export const pgds: PGD[] = [
     category: "Weight Management",
     priority: 2,
     isNew: false,
+    comingSoon: true,
     revenueEstimate: "\u00a370\u2013100 per month",
     consultTime: "20 min",
     description:
@@ -402,6 +403,7 @@ export const pgds: PGD[] = [
     category: "Weight Management",
     priority: 2,
     isNew: false,
+    comingSoon: true,
     revenueEstimate: "\u00a3150\u2013250 per month",
     consultTime: "20 min",
     description: "Older GLP-1 but still prescribed. Include for completeness.",
@@ -413,6 +415,7 @@ export const pgds: PGD[] = [
     category: "Weight Management",
     priority: 1,
     isNew: true,
+    comingSoon: true,
     revenueEstimate: "\u00a350\u201380 per review",
     consultTime: "15\u201320 min",
     description:
@@ -597,6 +600,7 @@ export const pgds: PGD[] = [
     category: "Men's Health",
     priority: 2,
     isNew: true,
+    comingSoon: true,
     revenueEstimate: "\u00a3100\u2013150 per month",
     consultTime: "30 min initial",
     description:
@@ -648,6 +652,7 @@ export const pgds: PGD[] = [
     category: "Sexual Health",
     priority: 2,
     isNew: false,
+    comingSoon: true,
     revenueEstimate: "\u00a360\u201390 per consultation",
     consultTime: "20 min",
     description:
@@ -660,6 +665,7 @@ export const pgds: PGD[] = [
     category: "Sexual Health",
     priority: 2,
     isNew: false,
+    comingSoon: true,
     revenueEstimate: "\u00a330\u201360 per consultation",
     consultTime: "15 min",
     description:
@@ -672,6 +678,7 @@ export const pgds: PGD[] = [
     category: "Sexual Health",
     priority: 2,
     isNew: false,
+    comingSoon: true,
     revenueEstimate: "\u00a325\u201345 per consultation",
     consultTime: "15 min",
     description:
