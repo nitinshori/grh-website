@@ -12,6 +12,7 @@ export type PGDCategory =
   | "Occupational"
   | "Paediatrics"
   | "Minor Ailments"
+  | "Wellness"
 ;
 
 export type PGDPriority = 1 | 2 | 3;
@@ -59,6 +60,7 @@ export const CATEGORY_COLORS: Record<PGDCategory, string> = {
   Occupational: "bg-cat-occupational",
   Paediatrics: "bg-cat-paediatrics",
   "Minor Ailments": "bg-cat-minor",
+  Wellness: "bg-cat-wellness",
 };
 
 export const CATEGORY_TEXT_COLORS: Record<PGDCategory, string> = {
@@ -75,6 +77,7 @@ export const CATEGORY_TEXT_COLORS: Record<PGDCategory, string> = {
   Occupational: "text-cat-occupational",
   Paediatrics: "text-cat-paediatrics",
   "Minor Ailments": "text-cat-minor",
+  Wellness: "text-cat-wellness",
 };
 
 export const CATEGORY_BG_LIGHT: Record<PGDCategory, string> = {
@@ -91,6 +94,7 @@ export const CATEGORY_BG_LIGHT: Record<PGDCategory, string> = {
   Occupational: "bg-sky-50",
   Paediatrics: "bg-rose-50",
   "Minor Ailments": "bg-emerald-50",
+  Wellness: "bg-lime-50",
 };
 
 export const ALL_CATEGORIES: PGDCategory[] = [
@@ -107,6 +111,7 @@ export const ALL_CATEGORIES: PGDCategory[] = [
   "Occupational",
   "Paediatrics",
   "Minor Ailments",
+  "Wellness",
 ];
 
 export const pgds: PGD[] = [
@@ -170,6 +175,18 @@ export const pgds: PGD[] = [
     description:
       "Two-dose course for travellers to rural areas of Southeast Asia and the Far East. Specialist vaccine that completes a full travel clinic offering.",
     pharmadoctor: "Yes",
+  },
+  {
+    id: "chikungunya",
+    title: "Chikungunya Vaccination",
+    category: "Travel",
+    priority: 2,
+    isNew: true,
+    revenueEstimate: "\u00a3150\u2013200 per dose",
+    consultTime: "15 min",
+    description:
+      "Single-dose vaccine (VIMKUNYA / IXCHIQ) for travellers to outbreak areas across the Caribbean, South America, South Asia and parts of Africa. Increasing clinical demand as outbreaks expand.",
+    pharmadoctor: "Partial",
   },
   {
     id: "meningitis-acwy-travel",
@@ -990,6 +1007,20 @@ export const pgds: PGD[] = [
     consultTime: "15 min",
     description:
       "Time-critical (must start within 72h). Pharmacy is ideally placed vs GP.",
+    pharmadoctor: "Partial",
+  },
+
+  // \u2550\u2550\u2550 WELLNESS \u2550\u2550\u2550
+  {
+    id: "b12-injection",
+    title: "Vitamin B12 Injection (Hydroxocobalamin)",
+    category: "Wellness",
+    priority: 1,
+    isNew: true,
+    revenueEstimate: "\u00a325\u201345 per injection",
+    consultTime: "15 min",
+    description:
+      "Hydroxocobalamin 1 mg IM for confirmed B12 deficiency or established maintenance. Loading regime + 3-monthly maintenance. High recurring revenue, strong wellness-market demand.",
     pharmadoctor: "Partial",
   },
 

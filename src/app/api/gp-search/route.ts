@@ -17,9 +17,12 @@ import { auth } from '@/lib/auth'
  *
  * Endpoint:
  *   https://directory.spineservices.nhs.uk/ORD/2-0-0/organisations
- *     ?Name=<query>|PostCode=<query>&PrimaryRoleId=RO180&Status=Active&Limit=15
+ *     ?Name=<query>|PostCode=<query>&PrimaryRoleId=RO177&Status=Active&Limit=15
  *
- * RO180 = "GP PRACTICE" primary role in the current ODS taxonomy.
+ * RO177 = "PRESCRIBING COST CENTRE" — this is the role current GP
+ * practices register under in the ODS taxonomy. (RO180 = "PRIMARY CARE
+ * TRUST SITE" is legacy and almost empty — using it was the bug behind
+ * the Leicester GP search returning zero results.)
  */
 export const dynamic = 'force-dynamic'
 
@@ -106,7 +109,7 @@ function normaliseCity(s: string): string {
 }
 
 async function searchByName(q: string): Promise<OdsOrganisation[]> {
-  const url = `https://directory.spineservices.nhs.uk/ORD/2-0-0/organisations?Name=${encodeURIComponent(q)}&PrimaryRoleId=RO180&Status=Active&Limit=15`
+  const url = `https://directory.spineservices.nhs.uk/ORD/2-0-0/organisations?Name=${encodeURIComponent(q)}&PrimaryRoleId=RO177&Status=Active&Limit=15`
   try {
     const res = await fetch(url, { next: { revalidate: 3600 } })
     if (!res.ok) return []
@@ -118,7 +121,7 @@ async function searchByName(q: string): Promise<OdsOrganisation[]> {
 }
 
 async function searchByPostcode(q: string): Promise<OdsOrganisation[]> {
-  const url = `https://directory.spineservices.nhs.uk/ORD/2-0-0/organisations?PostCode=${encodeURIComponent(q)}&PrimaryRoleId=RO180&Status=Active&Limit=25`
+  const url = `https://directory.spineservices.nhs.uk/ORD/2-0-0/organisations?PostCode=${encodeURIComponent(q)}&PrimaryRoleId=RO177&Status=Active&Limit=25`
   try {
     const res = await fetch(url, { next: { revalidate: 3600 } })
     if (!res.ok) return []

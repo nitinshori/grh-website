@@ -33,6 +33,7 @@ export type PgdRoute =
   | 'typhoid'
   | 'yellow-fever'
   | 'hep-ab-travel'
+  | 'chikungunya'
 
 /** Single trigger object. A recommendation fires if ANY trigger
  *  matches the consultation answers, and within a trigger ALL set
@@ -266,6 +267,12 @@ export const destinations: TravelDestination[] = [
           'Risk in rural rice-growing/pig-farming areas, particularly during/after monsoon. Consider for rural travel of ≥1 month or repeated travel to risk areas.',
         trigger: [{ rural: true, longStay: true }],
       },
+          {
+        vaccine: 'Chikungunya',
+        pgdId: 'chikungunya',
+        reason: "Chikungunya virus is endemic in India with recurrent regional outbreaks (Maharashtra, Karnataka, Kerala, Tamil Nadu and others). High transmission during/after monsoon. Recommend single-dose VIMKUNYA (preferred — safer in >65s and immunised group); IXCHIQ acceptable in fit adults with no contraindications.",
+        trigger: [{ longStay: true }, { rural: true }, { vfr: true }, { outdoorActivities: true }],
+      },
     ],
     malaria: {
       risk: 'moderate',
@@ -348,6 +355,12 @@ export const destinations: TravelDestination[] = [
         reason:
           'Risk in rural rice-growing/pig-farming areas. Recommend for rural stays of ≥1 month or shorter stays with significant rural exposure.',
         trigger: [{ rural: true, longStay: true }],
+      },
+          {
+        vaccine: 'Chikungunya',
+        pgdId: 'chikungunya',
+        reason: "Chikungunya virus is endemic in Thailand, including periodic urban outbreaks. Recommend single-dose VIMKUNYA (preferred — safer in >65s and immunised group); IXCHIQ acceptable in fit adults with no contraindications.",
+        trigger: [{ longStay: true }, { rural: true }, { vfr: true }, { outdoorActivities: true }],
       },
     ],
     malaria: {
@@ -432,6 +445,12 @@ export const destinations: TravelDestination[] = [
           { longStay: true },
           { outdoorActivities: true },
         ],
+      },
+          {
+        vaccine: 'Chikungunya',
+        pgdId: 'chikungunya',
+        reason: "Chikungunya virus is endemic in coastal Kenya (Mombasa, Lamu) and rural Eastern Province. Recommend single-dose VIMKUNYA (preferred — safer in >65s and immunised group); IXCHIQ acceptable in fit adults with no contraindications.",
+        trigger: [{ longStay: true }, { rural: true }, { vfr: true }, { outdoorActivities: true }],
       },
     ],
     malaria: {
@@ -564,6 +583,12 @@ export const destinations: TravelDestination[] = [
       { vaccine: 'Hepatitis B', pgdId: 'travel-core', reason: 'For long stays, healthcare/aid work, sexual contact, body modifications, or VFR.', trigger: [{ longStay: true }, { medicalWork: true }, { sexualContact: true }, { bodyMods: true }, { vfr: true }] },
       { vaccine: 'Rabies (pre-exposure)', pgdId: 'rabies', reason: 'Dog-mediated rabies endemic. Consider for rural travel, animal contact, long stays, and children.', trigger: [{ rural: true }, { animalContact: true }, { longStay: true }, { outdoorActivities: true }] },
       { vaccine: 'Japanese Encephalitis', pgdId: 'japanese-encephalitis', reason: 'Risk in rural rice-growing areas, particularly monsoon (Jun–Oct). Consider for rural stays ≥1 month.', trigger: [{ rural: true, longStay: true }] },
+          {
+        vaccine: 'Chikungunya',
+        pgdId: 'chikungunya',
+        reason: "Chikungunya virus is endemic in Bangladesh with periodic urban outbreaks (notably Dhaka). Recommend single-dose VIMKUNYA (preferred — safer in >65s and immunised group); IXCHIQ acceptable in fit adults with no contraindications.",
+        trigger: [{ longStay: true }, { rural: true }, { vfr: true }, { outdoorActivities: true }],
+      },
     ],
     malaria: {
       risk: 'low',
@@ -592,6 +617,12 @@ export const destinations: TravelDestination[] = [
       { vaccine: 'Hepatitis B', pgdId: 'travel-core', reason: 'For long stays, healthcare/aid work, sexual contact, body modifications, or VFR.', trigger: [{ longStay: true }, { medicalWork: true }, { sexualContact: true }, { bodyMods: true }, { vfr: true }] },
       { vaccine: 'Rabies (pre-exposure)', pgdId: 'rabies', reason: 'Endemic. Recommend for rural travel, animal contact, long stays, children.', trigger: [{ rural: true }, { animalContact: true }, { longStay: true }, { outdoorActivities: true }] },
       { vaccine: 'Japanese Encephalitis', pgdId: 'japanese-encephalitis', reason: 'Limited rural risk. Consider for extended rural stays during transmission season.', trigger: [{ rural: true, longStay: true }] },
+          {
+        vaccine: 'Chikungunya',
+        pgdId: 'chikungunya',
+        reason: "Chikungunya virus is endemic in Sri Lanka, with sustained transmission in the wet southern lowlands. Recommend single-dose VIMKUNYA (preferred — safer in >65s and immunised group); IXCHIQ acceptable in fit adults with no contraindications.",
+        trigger: [{ longStay: true }, { rural: true }, { vfr: true }, { outdoorActivities: true }],
+      },
     ],
     malaria: { risk: 'none', recommendAntimalarials: false, notes: 'WHO-certified malaria-free since September 2016. Bite-avoidance for dengue still important.' },
     entryRequirements: [
@@ -645,6 +676,12 @@ export const destinations: TravelDestination[] = [
       { vaccine: 'Hepatitis B', pgdId: 'travel-core', reason: 'For long stays, healthcare/aid work, sexual contact, body modifications, or VFR.', trigger: [{ longStay: true }, { medicalWork: true }, { sexualContact: true }, { bodyMods: true }, { vfr: true }] },
       { vaccine: 'Rabies (pre-exposure)', pgdId: 'rabies', reason: 'Endemic. Recommend for rural travel, animal contact, long stays.', trigger: [{ rural: true }, { animalContact: true }, { longStay: true }, { outdoorActivities: true }] },
       { vaccine: 'Japanese Encephalitis', pgdId: 'japanese-encephalitis', reason: 'Risk in rural rice-growing areas. Consider for rural stays ≥1 month or significant rural exposure during transmission season.', trigger: [{ rural: true, longStay: true }] },
+          {
+        vaccine: 'Chikungunya',
+        pgdId: 'chikungunya',
+        reason: "Chikungunya virus is endemic in southern Vietnam with rural transmission. Recommend single-dose VIMKUNYA (preferred — safer in >65s and immunised group); IXCHIQ acceptable in fit adults with no contraindications.",
+        trigger: [{ longStay: true }, { rural: true }, { vfr: true }, { outdoorActivities: true }],
+      },
     ],
     malaria: {
       risk: 'very-low',
@@ -673,6 +710,12 @@ export const destinations: TravelDestination[] = [
       { vaccine: 'Hepatitis B', pgdId: 'travel-core', reason: 'For long stays, healthcare/aid work, sexual contact, body modifications, or VFR.', trigger: [{ longStay: true }, { medicalWork: true }, { sexualContact: true }, { bodyMods: true }, { vfr: true }] },
       { vaccine: 'Rabies (pre-exposure)', pgdId: 'rabies', reason: 'Endemic — particular concern in Bali where dog-bite incidents are high among tourists. Recommend for most travellers spending time outdoors, with children, or on longer stays.', trigger: [{ rural: true }, { animalContact: true }, { longStay: true }, { outdoorActivities: true }] },
       { vaccine: 'Japanese Encephalitis', pgdId: 'japanese-encephalitis', reason: 'Risk in rural rice-growing/pig-farming areas — Java, Bali, eastern islands. Consider for rural stays ≥1 month.', trigger: [{ rural: true, longStay: true }] },
+          {
+        vaccine: 'Chikungunya',
+        pgdId: 'chikungunya',
+        reason: "Chikungunya virus is endemic in Indonesia including Bali; recurrent urban and rural outbreaks. Recommend single-dose VIMKUNYA (preferred — safer in >65s and immunised group); IXCHIQ acceptable in fit adults with no contraindications.",
+        trigger: [{ longStay: true }, { rural: true }, { vfr: true }, { outdoorActivities: true }],
+      },
     ],
     malaria: {
       risk: 'moderate',
@@ -701,6 +744,12 @@ export const destinations: TravelDestination[] = [
       { vaccine: 'Hepatitis B', pgdId: 'travel-core', reason: 'For long stays, healthcare/aid work, sexual contact, body modifications, or VFR.', trigger: [{ longStay: true }, { medicalWork: true }, { sexualContact: true }, { bodyMods: true }, { vfr: true }] },
       { vaccine: 'Rabies (pre-exposure)', pgdId: 'rabies', reason: 'Endemic — Philippines has one of the highest rabies burdens in SE Asia. Recommend broadly for rural travel, animal contact, children, long stays.', trigger: [{ rural: true }, { animalContact: true }, { longStay: true }, { outdoorActivities: true }] },
       { vaccine: 'Japanese Encephalitis', pgdId: 'japanese-encephalitis', reason: 'Risk in rural rice-growing/pig-farming areas year-round. Consider for rural stays ≥1 month.', trigger: [{ rural: true, longStay: true }] },
+          {
+        vaccine: 'Chikungunya',
+        pgdId: 'chikungunya',
+        reason: "Chikungunya virus is endemic in the Philippines, particularly rural/forested regions. Recommend single-dose VIMKUNYA (preferred — safer in >65s and immunised group); IXCHIQ acceptable in fit adults with no contraindications.",
+        trigger: [{ longStay: true }, { rural: true }, { vfr: true }, { outdoorActivities: true }],
+      },
     ],
     malaria: {
       risk: 'low',
@@ -729,6 +778,12 @@ export const destinations: TravelDestination[] = [
       { vaccine: 'Hepatitis B', pgdId: 'travel-core', reason: 'For long stays, healthcare/aid work, sexual contact, body modifications, or VFR.', trigger: [{ longStay: true }, { medicalWork: true }, { sexualContact: true }, { bodyMods: true }, { vfr: true }] },
       { vaccine: 'Rabies (pre-exposure)', pgdId: 'rabies', reason: 'Endemic. Limited post-exposure access outside Phnom Penh.', trigger: [{ rural: true }, { animalContact: true }, { longStay: true }, { outdoorActivities: true }] },
       { vaccine: 'Japanese Encephalitis', pgdId: 'japanese-encephalitis', reason: 'Risk in rural rice-growing areas. Consider for rural stays ≥1 month.', trigger: [{ rural: true, longStay: true }] },
+          {
+        vaccine: 'Chikungunya',
+        pgdId: 'chikungunya',
+        reason: "Chikungunya virus is endemic in Cambodia. Recommend single-dose VIMKUNYA (preferred — safer in >65s and immunised group); IXCHIQ acceptable in fit adults with no contraindications.",
+        trigger: [{ longStay: true }, { rural: true }, { vfr: true }, { outdoorActivities: true }],
+      },
     ],
     malaria: {
       risk: 'moderate',
@@ -845,6 +900,12 @@ export const destinations: TravelDestination[] = [
       { vaccine: 'Hepatitis B', pgdId: 'travel-core', reason: 'For long stays, healthcare/aid work, sexual contact, body modifications, or VFR.', trigger: [{ longStay: true }, { medicalWork: true }, { sexualContact: true }, { bodyMods: true }, { vfr: true }] },
       { vaccine: 'Rabies (pre-exposure)', pgdId: 'rabies', reason: 'Endemic. Recommend for rural travel, animal contact, long stays, safari, children.', trigger: [{ rural: true }, { animalContact: true }, { longStay: true }, { outdoorActivities: true }] },
       { vaccine: 'Altitude sickness prophylaxis', pgdId: 'altitude-sickness', reason: 'For Kilimanjaro climbers (summit 5895m).', trigger: [{ outdoorActivities: true }] },
+          {
+        vaccine: 'Chikungunya',
+        pgdId: 'chikungunya',
+        reason: "Chikungunya virus is endemic in Tanzania including Zanzibar. Recommend single-dose VIMKUNYA (preferred — safer in >65s and immunised group); IXCHIQ acceptable in fit adults with no contraindications.",
+        trigger: [{ longStay: true }, { rural: true }, { vfr: true }, { outdoorActivities: true }],
+      },
     ],
     malaria: {
       risk: 'high',
@@ -1048,6 +1109,12 @@ export const destinations: TravelDestination[] = [
       { vaccine: 'Hepatitis B', pgdId: 'travel-core', reason: 'For long stays, healthcare/aid work, sexual contact, body modifications, or VFR.', trigger: [{ longStay: true }, { medicalWork: true }, { sexualContact: true }, { bodyMods: true }, { vfr: true }] },
       { vaccine: 'Rabies (pre-exposure)', pgdId: 'rabies', reason: 'Endemic. Recommend for rural travel, animal contact, long stays, children. Bat-mediated rabies particularly important in Amazon.', trigger: [{ rural: true }, { animalContact: true }, { longStay: true }, { outdoorActivities: true }] },
       { vaccine: 'Dengue (Qdenga)', pgdId: 'dengue', reason: 'Dengue widespread. Consider for repeat travellers or those with prior dengue exposure spending extended time in transmission areas.', trigger: [{ longStay: true }, { vfr: true }] },
+          {
+        vaccine: 'Chikungunya',
+        pgdId: 'chikungunya',
+        reason: "Chikungunya virus is very widespread transmission across Brazil — large outbreaks recent in the north and north-east. Endemic in most lowlands. Recommend single-dose VIMKUNYA (preferred — safer in >65s and immunised group); IXCHIQ acceptable in fit adults with no contraindications.",
+        trigger: [{ longStay: true }, { rural: true }, { vfr: true }, { outdoorActivities: true }],
+      },
     ],
     malaria: {
       risk: 'moderate',
@@ -1077,6 +1144,12 @@ export const destinations: TravelDestination[] = [
       { vaccine: 'Hepatitis B', pgdId: 'travel-core', reason: 'For long stays, healthcare/aid work, sexual contact, body modifications, or VFR.', trigger: [{ longStay: true }, { medicalWork: true }, { sexualContact: true }, { bodyMods: true }, { vfr: true }] },
       { vaccine: 'Rabies (pre-exposure)', pgdId: 'rabies', reason: 'Endemic. Bat-mediated rabies in Amazon. Recommend for rural / jungle travel, animal contact, long stays, children.', trigger: [{ rural: true }, { animalContact: true }, { longStay: true }, { outdoorActivities: true }] },
       { vaccine: 'Altitude sickness prophylaxis', pgdId: 'altitude-sickness', reason: 'Essential to discuss for travel to Cusco (3400m), Machu Picchu, Lake Titicaca (3800m), Colca Canyon.', trigger: [{ outdoorActivities: true }] },
+          {
+        vaccine: 'Chikungunya',
+        pgdId: 'chikungunya',
+        reason: "Chikungunya virus is active transmission in the Peruvian Amazon and northern coast. Recommend single-dose VIMKUNYA (preferred — safer in >65s and immunised group); IXCHIQ acceptable in fit adults with no contraindications.",
+        trigger: [{ longStay: true }, { rural: true }, { vfr: true }, { outdoorActivities: true }],
+      },
     ],
     malaria: {
       risk: 'moderate',
@@ -1107,6 +1180,12 @@ export const destinations: TravelDestination[] = [
       { vaccine: 'Typhoid', pgdId: 'travel-core', reason: 'For travellers visiting non-tourist areas, rural stays or VFR.', trigger: [{ rural: true }, { longStay: true }, { vfr: true }] },
       { vaccine: 'Hepatitis B', pgdId: 'travel-core', reason: 'For long stays, healthcare/aid work, sexual contact, body modifications, or VFR.', trigger: [{ longStay: true }, { medicalWork: true }, { sexualContact: true }, { bodyMods: true }, { vfr: true }] },
       { vaccine: 'Rabies (pre-exposure)', pgdId: 'rabies', reason: 'Endemic. Recommend for rural travel, animal contact, long stays.', trigger: [{ rural: true }, { animalContact: true }, { longStay: true }, { outdoorActivities: true }] },
+          {
+        vaccine: 'Chikungunya',
+        pgdId: 'chikungunya',
+        reason: "Chikungunya virus is limited transmission in northern jungle provinces (Misiones, Salta) — recommend for travellers to those areas. Recommend single-dose VIMKUNYA (preferred — safer in >65s and immunised group); IXCHIQ acceptable in fit adults with no contraindications.",
+        trigger: [{ longStay: true }, { rural: true }, { vfr: true }, { outdoorActivities: true }],
+      },
     ],
     malaria: { risk: 'none', recommendAntimalarials: false, notes: 'No malaria risk. Argentina certified malaria-free by WHO in 2019.' },
     entryRequirements: [
@@ -1129,6 +1208,12 @@ export const destinations: TravelDestination[] = [
       { vaccine: 'Typhoid', pgdId: 'travel-core', reason: 'For travellers visiting non-tourist areas, rural stays or VFR.', trigger: [{ rural: true }, { longStay: true }, { vfr: true }] },
       { vaccine: 'Hepatitis B', pgdId: 'travel-core', reason: 'For long stays, healthcare/aid work, sexual contact, body modifications, or VFR.', trigger: [{ longStay: true }, { medicalWork: true }, { sexualContact: true }, { bodyMods: true }, { vfr: true }] },
       { vaccine: 'Rabies (pre-exposure)', pgdId: 'rabies', reason: 'Endemic. Recommend for rural travel, animal contact, long stays, children.', trigger: [{ rural: true }, { animalContact: true }, { longStay: true }, { outdoorActivities: true }] },
+          {
+        vaccine: 'Chikungunya',
+        pgdId: 'chikungunya',
+        reason: "Chikungunya virus is endemic across Colombia below 1800m with periodic urban outbreaks. Recommend single-dose VIMKUNYA (preferred — safer in >65s and immunised group); IXCHIQ acceptable in fit adults with no contraindications.",
+        trigger: [{ longStay: true }, { rural: true }, { vfr: true }, { outdoorActivities: true }],
+      },
     ],
     malaria: {
       risk: 'moderate',
@@ -1156,6 +1241,12 @@ export const destinations: TravelDestination[] = [
       { vaccine: 'Typhoid', pgdId: 'travel-core', reason: 'For travellers eating outside resorts, rural stays or VFR.', trigger: [{ rural: true }, { longStay: true }, { vfr: true }] },
       { vaccine: 'Hepatitis B', pgdId: 'travel-core', reason: 'For long stays, healthcare/aid work, sexual contact, body modifications, or VFR.', trigger: [{ longStay: true }, { medicalWork: true }, { sexualContact: true }, { bodyMods: true }, { vfr: true }] },
       { vaccine: 'Rabies (pre-exposure)', pgdId: 'rabies', reason: 'Bat-mediated rabies present. Consider for rural travel, animal contact, long stays.', trigger: [{ rural: true }, { animalContact: true }, { longStay: true }] },
+          {
+        vaccine: 'Chikungunya',
+        pgdId: 'chikungunya',
+        reason: "Chikungunya virus is endemic in Jamaica with recurrent outbreaks (major outbreak 2014–15). Recommend single-dose VIMKUNYA (preferred — safer in >65s and immunised group); IXCHIQ acceptable in fit adults with no contraindications.",
+        trigger: [{ longStay: true }, { rural: true }, { vfr: true }, { outdoorActivities: true }],
+      },
     ],
     malaria: { risk: 'none', recommendAntimalarials: false, notes: 'No malaria risk. Dengue and chikungunya present — bite avoidance.' },
     entryRequirements: [
@@ -1177,6 +1268,12 @@ export const destinations: TravelDestination[] = [
       { vaccine: 'Typhoid', pgdId: 'travel-core', reason: 'For travellers eating outside resorts, rural stays or VFR.', trigger: [{ rural: true }, { longStay: true }, { vfr: true }] },
       { vaccine: 'Hepatitis B', pgdId: 'travel-core', reason: 'For long stays, healthcare/aid work, sexual contact, body modifications, or VFR.', trigger: [{ longStay: true }, { medicalWork: true }, { sexualContact: true }, { bodyMods: true }, { vfr: true }] },
       { vaccine: 'Rabies (pre-exposure)', pgdId: 'rabies', reason: 'Endemic. Recommend for rural travel, animal contact, long stays.', trigger: [{ rural: true }, { animalContact: true }, { longStay: true }] },
+          {
+        vaccine: 'Chikungunya',
+        pgdId: 'chikungunya',
+        reason: "Chikungunya virus is endemic in the Dominican Republic with ongoing transmission. Recommend single-dose VIMKUNYA (preferred — safer in >65s and immunised group); IXCHIQ acceptable in fit adults with no contraindications.",
+        trigger: [{ longStay: true }, { rural: true }, { vfr: true }, { outdoorActivities: true }],
+      },
     ],
     malaria: {
       risk: 'low',
@@ -1204,6 +1301,12 @@ export const destinations: TravelDestination[] = [
       { vaccine: 'Typhoid', pgdId: 'travel-core', reason: 'For travellers eating outside main tourist circuit, rural stays or VFR.', trigger: [{ rural: true }, { longStay: true }, { vfr: true }] },
       { vaccine: 'Hepatitis B', pgdId: 'travel-core', reason: 'For long stays, healthcare/aid work, sexual contact, body modifications, or VFR.', trigger: [{ longStay: true }, { medicalWork: true }, { sexualContact: true }, { bodyMods: true }, { vfr: true }] },
       { vaccine: 'Rabies (pre-exposure)', pgdId: 'rabies', reason: 'Endemic. Recommend for rural travel, animal contact, long stays, children. Bat-mediated rabies in caves.', trigger: [{ rural: true }, { animalContact: true }, { longStay: true }, { outdoorActivities: true }] },
+          {
+        vaccine: 'Chikungunya',
+        pgdId: 'chikungunya',
+        reason: "Chikungunya virus is endemic in southern Mexico (Chiapas, Oaxaca, Quintana Roo lowlands). Recommend single-dose VIMKUNYA (preferred — safer in >65s and immunised group); IXCHIQ acceptable in fit adults with no contraindications.",
+        trigger: [{ longStay: true }, { rural: true }, { vfr: true }, { outdoorActivities: true }],
+      },
     ],
     malaria: {
       risk: 'very-low',
