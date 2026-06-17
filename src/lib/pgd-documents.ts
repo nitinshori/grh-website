@@ -21,6 +21,7 @@ export const PGD_DOCUMENT_SLUGS = new Set([
   'asthma-rescue',
   'bph',
   'bv',
+  'chest-service',
   'chickenpox',
   'cold-sores',
   'copd',

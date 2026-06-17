@@ -878,6 +878,18 @@ export const pgds: PGD[] = [
     pharmadoctor: "Yes",
   },
   {
+    id: "chest-service",
+    title: "Acute Bacterial Bronchitis (Chest Service)",
+    category: "Respiratory",
+    priority: 1,
+    isNew: true,
+    revenueEstimate: "\u00a325\u201345 per consultation",
+    consultTime: "15 min",
+    description:
+      "Amoxicillin, Doxycycline or Clarithromycin for acute bacterial bronchitis in patients aged 12 and above. CKS-aligned assessment and red-flag exclusions built in.",
+    pharmadoctor: "Partial",
+  },
+  {
     id: "copd",
     title: "COPD Symptom Management",
     category: "Respiratory",
