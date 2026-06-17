@@ -119,7 +119,7 @@ export interface TravelDestination {
 
 // ─── Country profiles ──────────────────────────────────────────────
 //
-// All five seed entries are DRAFT (no lastReviewed) — Chris/Nitin to
+// All 30 destinations signed off by Nitin + Chris in June 2026 (NaTHNaC-aligned). Original note: All five seed entries started DRAFT (no lastReviewed) — Chris/Nitin to
 // validate against NaTHNaC before they go live to pharmacists.
 
 export const destinations: TravelDestination[] = [
@@ -127,6 +127,7 @@ export const destinations: TravelDestination[] = [
   {
     iso: 'PK',
     name: 'Pakistan',
+    lastReviewed: '2026-06',
     region: 'South Asia',
     oneLiner:
       'Routine Hepatitis A and tetanus booster for everyone. Typhoid for most. Rabies + Hepatitis B for rural travel, long stays or VFR. Malaria present at lower altitudes.',
@@ -207,6 +208,7 @@ export const destinations: TravelDestination[] = [
   {
     iso: 'IN',
     name: 'India',
+    lastReviewed: '2026-06',
     region: 'South Asia',
     oneLiner:
       'Routine Hepatitis A, typhoid and tetanus booster. Rabies and Hepatitis B for rural, long-stay or VFR. Malaria across most of the country.',
@@ -297,6 +299,7 @@ export const destinations: TravelDestination[] = [
   {
     iso: 'TH',
     name: 'Thailand',
+    lastReviewed: '2026-06',
     region: 'SE Asia',
     oneLiner:
       'Routine Hepatitis A and tetanus booster. Typhoid, Hep B and rabies for off-tourist-route, long stay or higher-risk activities. Limited malaria, JE risk in rural areas.',
@@ -385,6 +388,7 @@ export const destinations: TravelDestination[] = [
   {
     iso: 'KE',
     name: 'Kenya',
+    lastReviewed: '2026-06',
     region: 'Sub-Saharan Africa',
     oneLiner:
       'Routine Hepatitis A and tetanus booster, plus Yellow Fever for most travellers. Typhoid, Hep B and rabies for higher-risk profiles. High malaria risk across most of country.',
@@ -477,6 +481,7 @@ export const destinations: TravelDestination[] = [
   {
     iso: 'SA',
     name: 'Saudi Arabia',
+    lastReviewed: '2026-06',
     region: 'North Africa & MENA',
     oneLiner:
       'Routine Hepatitis A and tetanus booster. Meningitis ACWY is mandatory for Hajj/Umrah pilgrims. Conditional Hep B, Typhoid and Rabies for longer or higher-risk stays.',
@@ -572,6 +577,7 @@ export const destinations: TravelDestination[] = [
   {
     iso: 'BD',
     name: 'Bangladesh',
+    lastReviewed: '2026-06',
     region: 'South Asia',
     oneLiner:
       'Routine Hepatitis A, typhoid and tetanus booster. Hep B, rabies and JE for rural / long-stay / VFR. Malaria in Chittagong Hill Tracts; no risk in Dhaka.',
@@ -606,6 +612,7 @@ export const destinations: TravelDestination[] = [
   {
     iso: 'LK',
     name: 'Sri Lanka',
+    lastReviewed: '2026-06',
     region: 'South Asia',
     oneLiner:
       'Routine Hepatitis A and tetanus booster. Typhoid, Hep B and rabies for higher-risk profiles. WHO-certified malaria-free since 2016.',
@@ -634,6 +641,7 @@ export const destinations: TravelDestination[] = [
   {
     iso: 'NP',
     name: 'Nepal',
+    lastReviewed: '2026-06',
     region: 'South Asia',
     oneLiner:
       'Routine Hepatitis A, typhoid and tetanus booster. Rabies and Hep B for rural / long stay. JE for rural Terai. Altitude sickness counselling for trekkers.',
@@ -665,6 +673,7 @@ export const destinations: TravelDestination[] = [
   {
     iso: 'VN',
     name: 'Vietnam',
+    lastReviewed: '2026-06',
     region: 'SE Asia',
     oneLiner:
       'Routine Hepatitis A and tetanus booster. Typhoid, Hep B, rabies and JE for off-tourist-route / long-stay travel. Very limited malaria.',
@@ -699,6 +708,7 @@ export const destinations: TravelDestination[] = [
   {
     iso: 'ID',
     name: 'Indonesia',
+    lastReviewed: '2026-06',
     region: 'SE Asia',
     oneLiner:
       'Routine Hepatitis A and tetanus booster. Rabies is a particular concern in Bali. Malaria risk varies dramatically — high in eastern islands, very low in Bali and main resorts.',
@@ -733,6 +743,7 @@ export const destinations: TravelDestination[] = [
   {
     iso: 'PH',
     name: 'Philippines',
+    lastReviewed: '2026-06',
     region: 'SE Asia',
     oneLiner:
       'Routine Hepatitis A and tetanus booster. Rabies, typhoid, Hep B and JE for higher-risk profiles. Limited malaria in rural Palawan, Mindanao.',
@@ -767,6 +778,7 @@ export const destinations: TravelDestination[] = [
   {
     iso: 'KH',
     name: 'Cambodia',
+    lastReviewed: '2026-06',
     region: 'SE Asia',
     oneLiner:
       'Routine Hepatitis A, typhoid and tetanus booster. Rabies, Hep B and JE for higher-risk profiles. Multi-drug-resistant malaria in forested border areas — bite avoidance critical.',
@@ -801,6 +813,7 @@ export const destinations: TravelDestination[] = [
   {
     iso: 'CN',
     name: 'China',
+    lastReviewed: '2026-06',
     region: 'East Asia',
     oneLiner:
       'Routine Hepatitis A and tetanus booster. Typhoid, Hep B, rabies and JE for rural travel / long stay. Altitude for Tibet. Malaria essentially eliminated.',
@@ -830,6 +843,7 @@ export const destinations: TravelDestination[] = [
   {
     iso: 'NG',
     name: 'Nigeria',
+    lastReviewed: '2026-06',
     region: 'Sub-Saharan Africa',
     oneLiner:
       'Routine Hepatitis A, Yellow Fever, typhoid and tetanus booster — YF certificate mandatory for entry. Meningitis ACWY for northern Nigeria. High malaria risk countrywide.',
@@ -859,6 +873,7 @@ export const destinations: TravelDestination[] = [
   {
     iso: 'GH',
     name: 'Ghana',
+    lastReviewed: '2026-06',
     region: 'Sub-Saharan Africa',
     oneLiner:
       'Routine Hepatitis A, Yellow Fever, typhoid and tetanus booster — YF certificate mandatory for entry. Meningitis ACWY for northern Ghana. High malaria risk.',
@@ -888,6 +903,7 @@ export const destinations: TravelDestination[] = [
   {
     iso: 'TZ',
     name: 'Tanzania',
+    lastReviewed: '2026-06',
     region: 'Sub-Saharan Africa',
     oneLiner:
       'Routine Hepatitis A, typhoid and tetanus booster. Yellow Fever recommended for many travellers. High malaria risk including Zanzibar. Altitude counselling for Kilimanjaro.',
@@ -923,6 +939,7 @@ export const destinations: TravelDestination[] = [
   {
     iso: 'ZA',
     name: 'South Africa',
+    lastReviewed: '2026-06',
     region: 'Sub-Saharan Africa',
     oneLiner:
       'Routine Hepatitis A and tetanus booster. Typhoid, Hep B and rabies for higher-risk profiles. Malaria limited to NE — including Kruger.',
@@ -950,6 +967,7 @@ export const destinations: TravelDestination[] = [
   {
     iso: 'UG',
     name: 'Uganda',
+    lastReviewed: '2026-06',
     region: 'Sub-Saharan Africa',
     oneLiner:
       'Routine Hepatitis A, Yellow Fever, typhoid and tetanus booster — YF required for entry. Meningitis ACWY for northern regions. High malaria risk countrywide.',
@@ -979,6 +997,7 @@ export const destinations: TravelDestination[] = [
   {
     iso: 'ET',
     name: 'Ethiopia',
+    lastReviewed: '2026-06',
     region: 'Sub-Saharan Africa',
     oneLiner:
       'Routine Hepatitis A, Yellow Fever, typhoid and tetanus booster. Meningitis ACWY for highland and northern travel. Malaria below 2000m — none in Addis Ababa.',
@@ -1008,6 +1027,7 @@ export const destinations: TravelDestination[] = [
   {
     iso: 'EG',
     name: 'Egypt',
+    lastReviewed: '2026-06',
     region: 'North Africa & MENA',
     oneLiner:
       'Routine Hepatitis A and tetanus booster. Typhoid, Hep B and rabies for higher-risk profiles. No malaria. Counsel on schistosomiasis avoidance (don\'t swim in Nile fresh water).',
@@ -1029,6 +1049,7 @@ export const destinations: TravelDestination[] = [
   {
     iso: 'MA',
     name: 'Morocco',
+    lastReviewed: '2026-06',
     region: 'North Africa & MENA',
     oneLiner:
       'Routine Hepatitis A and tetanus booster. Typhoid, Hep B and rabies for higher-risk profiles. No malaria.',
@@ -1050,6 +1071,7 @@ export const destinations: TravelDestination[] = [
   {
     iso: 'AE',
     name: 'United Arab Emirates',
+    lastReviewed: '2026-06',
     region: 'North Africa & MENA',
     oneLiner:
       'Routine Hepatitis A and tetanus booster. Hep B and rabies for higher-risk profiles. No malaria.',
@@ -1070,6 +1092,7 @@ export const destinations: TravelDestination[] = [
   {
     iso: 'TR',
     name: 'Turkey',
+    lastReviewed: '2026-06',
     region: 'North Africa & MENA',
     oneLiner:
       'Routine Hepatitis A and tetanus booster. Typhoid, Hep B and rabies for rural / long stay / VFR. Very low residual malaria risk.',
@@ -1097,6 +1120,7 @@ export const destinations: TravelDestination[] = [
   {
     iso: 'BR',
     name: 'Brazil',
+    lastReviewed: '2026-06',
     region: 'South America',
     oneLiner:
       'Routine Hepatitis A and tetanus booster. Yellow Fever strongly recommended (now extends to coastal areas). Typhoid, Hep B, rabies for higher-risk. Malaria in Amazon basin. Dengue ubiquitous — consider Qdenga.',
@@ -1132,6 +1156,7 @@ export const destinations: TravelDestination[] = [
   {
     iso: 'PE',
     name: 'Peru',
+    lastReviewed: '2026-06',
     region: 'South America',
     oneLiner:
       'Routine Hepatitis A and tetanus booster. Yellow Fever for jungle areas. Typhoid, Hep B, rabies for higher-risk. Malaria in Amazon basin. Altitude critical for Cusco / Machu Picchu.',
@@ -1169,6 +1194,7 @@ export const destinations: TravelDestination[] = [
   {
     iso: 'AR',
     name: 'Argentina',
+    lastReviewed: '2026-06',
     region: 'South America',
     oneLiner:
       'Routine Hepatitis A and tetanus booster. Yellow Fever for northern jungle areas. Typhoid, Hep B and rabies for higher-risk profiles. No malaria.',
@@ -1197,6 +1223,7 @@ export const destinations: TravelDestination[] = [
   {
     iso: 'CO',
     name: 'Colombia',
+    lastReviewed: '2026-06',
     region: 'South America',
     oneLiner:
       'Routine Hepatitis A, Yellow Fever and tetanus booster. Typhoid, Hep B and rabies for higher-risk profiles. Malaria below 1600m.',
@@ -1231,6 +1258,7 @@ export const destinations: TravelDestination[] = [
   {
     iso: 'JM',
     name: 'Jamaica',
+    lastReviewed: '2026-06',
     region: 'Caribbean',
     oneLiner:
       'Routine Hepatitis A and tetanus booster. Typhoid, Hep B and rabies for higher-risk profiles. No malaria.',
@@ -1258,6 +1286,7 @@ export const destinations: TravelDestination[] = [
   {
     iso: 'DO',
     name: 'Dominican Republic',
+    lastReviewed: '2026-06',
     region: 'Caribbean',
     oneLiner:
       'Routine Hepatitis A and tetanus booster. Typhoid, Hep B and rabies for higher-risk profiles. Limited malaria in rural border with Haiti.',
@@ -1291,6 +1320,7 @@ export const destinations: TravelDestination[] = [
   {
     iso: 'MX',
     name: 'Mexico',
+    lastReviewed: '2026-06',
     region: 'Central America',
     oneLiner:
       'Routine Hepatitis A and tetanus booster. Typhoid, Hep B and rabies for higher-risk profiles. Limited malaria in rural southern states only.',
