@@ -413,11 +413,10 @@ export const pgds: PGD[] = [
     category: "Weight Management",
     priority: 1,
     isNew: true,
-    comingSoon: true,
     revenueEstimate: "\u00a350\u201380 per review",
     consultTime: "15\u201320 min",
     description:
-      "DIFFERENTIATION: Pharmadoctor offers initiation but ongoing monitoring is poorly supported. Monthly review consultations built into the tool.",
+      "Structured monitoring and dose-titration follow-up for patients on Wegovy, Mounjaro, or Oral Wegovy. NICE 5%-by-12-weeks gate, red-flag screening, dose decisions all built in.",
     pharmadoctor: "Partial",
   },
 
