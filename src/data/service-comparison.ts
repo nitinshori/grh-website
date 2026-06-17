@@ -238,9 +238,10 @@ export const SERVICE_COMPARISON: ServiceComparisonCategory[] = [
   },
 
   // ── Weight Management ──────────────────────────────────────────
-  // Note: wegovy-oral (off-label oral semaglutide) is intentionally
-  // omitted from the public comparison page — it is a restricted-access
-  // pilot PGD and should not be advertised externally.
+  // wegovy-oral (Oral Wegovy, semaglutide 25/50 mg) became UK-licensed
+  // in June 2026 and can now be advertised externally. The previous
+  // restriction (off-label pilot framing) has been removed from the
+  // catalogue entry and access registry.
   {
     category: "Weight Management",
     rows: [

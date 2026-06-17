@@ -176,8 +176,8 @@ export const TOPICS: Topic[] = [
       "glp-1", "glp1", "glp 1", "weight loss injection",
     ],
     answer:
-      "<p>Yes — Wegovy (semaglutide) and Mounjaro (tirzepatide) are both included under your £100/month, alongside Saxenda, Orlistat and Mysimba. Full off-label oral semaglutide pilot is restricted-access (not part of the standard catalogue).</p>" +
-      "<p>The Wegovy PGD covers titration up to 7.2 mg. The Mounjaro PGD covers 2.5–15 mg weekly. Both have full training modules + audit trail in the platform.</p>",
+      "<p>Yes — Wegovy injection (semaglutide) and Mounjaro (tirzepatide) are both included under your £100/month, alongside Saxenda, Orlistat and Mysimba. <strong>Oral Wegovy (semaglutide 25/50 mg)</strong> has been approved in the UK and is now available as a licensed PGD on the platform.</p>" +
+      "<p>The Wegovy injection PGD covers titration up to 7.2 mg. The Mounjaro PGD covers 2.5–15 mg weekly. Oral Wegovy uses a 25 mg / 50 mg tablet titration with empty-stomach administration. All have full training modules and audit trail.</p>",
   },
   {
     id: "hrt-trt",

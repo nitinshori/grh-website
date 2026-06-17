@@ -361,16 +361,15 @@ export const pgds: PGD[] = [
   },
   {
     id: "wegovy-oral",
-    title: "Oral Semaglutide for Weight Management (Off-label)",
+    title: "Oral Wegovy (Semaglutide 25/50 mg) \u2014 Weight Management",
     category: "Weight Management",
-    priority: 3,
+    priority: 2,
     isNew: true,
     revenueEstimate: "\u00a3180\u2013320 per month",
     consultTime: "30 min initial, 15 min follow-up",
     description:
-      "PRIVATE PILOT \u2014 restricted access. Off-label use of oral semaglutide (Rybelsus 14 mg daily, or Wegovy oral 25/50 mg where available) for weight management. Strict empty-stomach administration; informed consent for off-label use mandatory.",
+      "Oral Wegovy (semaglutide 25 mg and 50 mg tablets) \u2014 now licensed in the UK for chronic weight management in adults with BMI \u226530 (or \u226527 with weight-related comorbidity). Strict empty-stomach administration with at least 30 minutes before food, drink or other medication. Same clinical safeguards as injectable Wegovy.",
     pharmadoctor: "No",
-    restrictedToEmails: ["admin@getrealhealthpgd.co.uk", "nitin@getrealhealth.co.uk", "nitinshori@me.com"],
   },
   {
     id: "orlistat",

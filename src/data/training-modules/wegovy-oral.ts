@@ -1,19 +1,22 @@
-// Oral semaglutide for weight management — OFF-LABEL pilot training
+// Oral Wegovy (semaglutide 25/50 mg) for weight management — UK LICENSED
 //
-// RESTRICTED: this module backs a restricted-access PGD. The training
-// page and module pages must hide it from users not on the allowlist.
-// See pgds.ts → wegovy-oral.restrictedToEmails.
+// Oral Wegovy received UK marketing authorisation in June 2026 for chronic
+// weight management. The off-label restricted-pilot framing has been retired.
+// Clinical content below is the existing pilot training, lightly relicensed —
+// Janey + Chris to review and resign the dose-titration ladder and any
+// remaining off-label references before the next training-module audit.
 
 import type { TrainingModule } from "./types";
 
 export const wegovyOralModule: TrainingModule = {
   slug: "wegovy-oral",
-  title: "Oral Semaglutide for Weight Management (Off-label PILOT)",
-  description: "Restricted-access pilot training for the off-label use of oral semaglutide (Rybelsus 14 mg, or Wegovy oral 25/50 mg) for weight management.",
+  title: "Oral Wegovy (Semaglutide 25/50 mg) — Weight Management",
+  description:
+    "Training for the UK-licensed use of Oral Wegovy (semaglutide 25 mg and 50 mg) for chronic weight management. Same molecule as injectable Wegovy with strict empty-stomach administration for reliable absorption.",
   pgdSlugs: ["wegovy-oral"],
   authoredBy: "Get Real Health Clinical Team",
-  reviewedBy: "DRAFT — clinical-lead pilot, not yet released",
-  version: "0.1.0",
+  reviewedBy: "Pending Janey + Chris re-sign following UK licensing (June 2026)",
+  version: "0.2.0",
   materialClinicalChange: true,
   publishedAt: "2026-05-13",
   estimatedMinutes: 15,

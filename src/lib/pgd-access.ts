@@ -43,7 +43,7 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
   // Weight Management
   { slug: 'wegovy', title: 'Wegovy', subtitle: 'Semaglutide 2.4mg', category: 'Weight Management' },
   { slug: 'mounjaro', title: 'Mounjaro', subtitle: 'Tirzepatide', category: 'Weight Management' },
-  { slug: 'wegovy-oral', title: 'Oral Semaglutide (Off-label)', subtitle: 'Rybelsus / Wegovy oral', category: 'Weight Management' },
+  { slug: 'wegovy-oral', title: 'Oral Wegovy (Semaglutide 25/50 mg)', subtitle: 'UK-licensed weight management — empty-stomach dosing', category: 'Weight Management' },
   { slug: 'saxenda', title: 'Saxenda', subtitle: 'Liraglutide 3.0mg', category: 'Weight Management' },
   { slug: 'mysimba', title: 'Mysimba', subtitle: 'Naltrexone/Bupropion', category: 'Weight Management' },
   { slug: 'orlistat', title: 'Orlistat', subtitle: 'Orlistat 120mg', category: 'Weight Management' },
@@ -94,12 +94,7 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
   { slug: 'meningitis-b', title: 'Meningitis B', subtitle: 'Bexsero', category: 'Vaccines' },
   { slug: 'meningitis-acwy-travel', title: 'Meningitis ACWY', subtitle: 'MenQuadfi / Nimenrix', category: 'Vaccines' },
   { slug: 'rsv', title: 'RSV Vaccine', subtitle: 'Abrysvo / Arexvy', category: 'Vaccines' },
-  // hep-ab-travel TEMPORARILY HIDDEN — previous tool showed MenACWY content
-  // under a Hepatitis A/B wrapper (reported by Moin, 16 Jun 2026). The URL
-  // still exists with a "being rewritten" notice; removed from this access
-  // registry so it doesn't surface in pharmacist nav or search until the
-  // proper Hep A/B PGD is written.
-  // { slug: 'hep-ab-travel', title: 'Hepatitis A/B (Travel)', subtitle: 'Twinrix / Havrix / Engerix-B', category: 'Vaccines' },
+  { slug: 'hep-ab-travel', title: 'Hepatitis A/B (Travel)', subtitle: 'Twinrix / Havrix / Engerix-B', category: 'Vaccines' },
   { slug: 'typhoid', title: 'Typhoid', subtitle: 'Typhim Vi / Vivotif', category: 'Vaccines' },
   { slug: 'yellow-fever', title: 'Yellow Fever', subtitle: 'Stamaril (registered YFVCs only)', category: 'Vaccines' },
 
