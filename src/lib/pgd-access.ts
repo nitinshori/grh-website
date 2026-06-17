@@ -94,7 +94,12 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
   { slug: 'meningitis-b', title: 'Meningitis B', subtitle: 'Bexsero', category: 'Vaccines' },
   { slug: 'meningitis-acwy-travel', title: 'Meningitis ACWY', subtitle: 'MenQuadfi / Nimenrix', category: 'Vaccines' },
   { slug: 'rsv', title: 'RSV Vaccine', subtitle: 'Abrysvo / Arexvy', category: 'Vaccines' },
-  { slug: 'hep-ab-travel', title: 'Hepatitis A/B (Travel)', subtitle: 'Twinrix / Havrix / Engerix-B', category: 'Vaccines' },
+  // hep-ab-travel TEMPORARILY HIDDEN — previous tool showed MenACWY content
+  // under a Hepatitis A/B wrapper (reported by Moin, 16 Jun 2026). The URL
+  // still exists with a "being rewritten" notice; removed from this access
+  // registry so it doesn't surface in pharmacist nav or search until the
+  // proper Hep A/B PGD is written.
+  // { slug: 'hep-ab-travel', title: 'Hepatitis A/B (Travel)', subtitle: 'Twinrix / Havrix / Engerix-B', category: 'Vaccines' },
   { slug: 'typhoid', title: 'Typhoid', subtitle: 'Typhim Vi / Vivotif', category: 'Vaccines' },
   { slug: 'yellow-fever', title: 'Yellow Fever', subtitle: 'Stamaril (registered YFVCs only)', category: 'Vaccines' },
 

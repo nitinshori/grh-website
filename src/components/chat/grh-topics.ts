@@ -100,7 +100,7 @@ export const TOPICS: Topic[] = [
       "what is the company", "about the company",
     ],
     answer:
-      "<p><strong>Get Real Health (GRH)</strong> is a private PGD platform for UK community pharmacies. We give your pharmacy 70+ Patient Group Directions across weight management, travel, sexual health, hormones, dermatology, vaccines and more — under one flat monthly fee.</p>" +
+      "<p><strong>Get Real Health (GRH)</strong> is a private PGD platform for UK community pharmacies. We give your pharmacy 60+ Patient Group Directions across weight management, travel, sexual health, hormones, dermatology, vaccines and more — under one flat monthly fee.</p>" +
       "<p>CQC + HIW registered. Built and clinically led by Dr Nitin Shori (NHS GP and former Medical Director of Pharmacy2U Online Doctor Service).</p>" +
       "<p>See the <a href=\"/for-pharmacies/pgd-catalogue\">full PGD catalogue</a> or <a href=\"/services/comparison\">how we compare with NHS Pharmacy First</a>.</p>",
   },
@@ -129,7 +129,7 @@ export const TOPICS: Topic[] = [
       "<p><strong>£100/month flat</strong> per pharmacy. That's it.</p>" +
       "<ul>" +
       "<li>Covers your whole team — every pharmacist, technician, and locum on your premises</li>" +
-      "<li>All 70+ PGDs included, no per-service add-ons</li>" +
+      "<li>All 60+ PGDs included, no per-service add-ons</li>" +
       "<li>No per-consultation fees</li>" +
       "<li>No revenue-sharing</li>" +
       "<li>Direct Debit via GoCardless, monthly</li>" +
@@ -158,7 +158,7 @@ export const TOPICS: Topic[] = [
       "what can i offer", "what services can i offer",
     ],
     answer:
-      "<p>70+ PGDs across:</p>" +
+      "<p>60+ PGDs across:</p>" +
       "<ul>" +
       "<li><strong>Weight management</strong> — Wegovy, Mounjaro, Saxenda, Mysimba, Orlistat, GLP-1 monitoring</li>" +
       "<li><strong>Travel</strong> — yellow fever, rabies, JE, MenACWY, dengue, anti-malarials, traveller's diarrhoea, altitude, typhoid</li>" +
@@ -235,7 +235,7 @@ export const TOPICS: Topic[] = [
     ],
     answer:
       "<p>Pharmacy First (England) covers <strong>7 conditions</strong>: sore throat, otitis media, sinusitis, infected insect bites, impetigo, shingles, uncomplicated UTI in women. Scotland's is a bit broader. The Welsh Common Ailments Service covers ~26 conditions free-OTC.</p>" +
-      "<p>GRH adds 70+ <strong>private</strong> PGDs on top — Wegovy, Mounjaro, HRT, TRT, ED, travel vaccines, STI testing, and many more. Patients pay for the consultation; you keep all the revenue (no per-consultation fee from us).</p>" +
+      "<p>GRH adds 60+ <strong>private</strong> PGDs on top — Wegovy, Mounjaro, HRT, TRT, ED, travel vaccines, STI testing, and many more. Patients pay for the consultation; you keep all the revenue (no per-consultation fee from us).</p>" +
       "<p>Side-by-side comparison at <a href=\"/services/comparison\">/services/comparison</a>.</p>",
   },
   {

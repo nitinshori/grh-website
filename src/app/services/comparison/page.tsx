@@ -24,7 +24,7 @@ export default function ServiceComparisonPage() {
             What can your pharmacy offer?
           </h1>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-            How Get Real Health&apos;s 70+ private PGDs compare with the NHS-funded
+            How Get Real Health&apos;s 60+ private PGDs compare with the NHS-funded
             Pharmacy First (England), Pharmacy First Scotland, and the Welsh
             Common Ailment Service. Use this to see what you can already deliver
             on the NHS — and where private PGDs unlock additional revenue.
@@ -153,7 +153,7 @@ export default function ServiceComparisonPage() {
           </h2>
           <p className="text-gray-600 mb-6">
             NHS schemes are free for patients but cover only a handful of
-            conditions. Adding GRH&apos;s 70+ private PGDs lets you serve patients
+            conditions. Adding GRH&apos;s 60+ private PGDs lets you serve patients
             who fall outside NHS criteria — and capture the revenue.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">

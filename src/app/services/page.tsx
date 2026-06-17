@@ -90,7 +90,7 @@ export default function ServicesIndexPage() {
               href="/for-pharmacies/pgd-catalogue"
               className="inline-flex items-center justify-center border border-blue-300 text-white hover:bg-white/10 font-semibold px-6 py-3 rounded-lg transition-colors"
             >
-              See all 70+ PGDs
+              See all 60+ PGDs
             </Link>
           </div>
         </div>
@@ -123,7 +123,7 @@ export default function ServicesIndexPage() {
       <section className="bg-gray-50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16 text-center">
           <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
-            70+ PGDs included
+            60+ PGDs included
           </h2>
           <p className="text-gray-700 max-w-2xl mx-auto mb-6">
             The five services above are our most-asked-about. The full catalogue covers

@@ -99,7 +99,10 @@ const epgds = [
   { slug: 'rabies', title: 'Rabies Vaccine', subtitle: 'Pre-Exposure Prophylaxis', category: 'Travel Health', color: 'bg-indigo-500' },
   { slug: 'japanese-encephalitis', title: 'Japanese Encephalitis', subtitle: 'Ixiaro Vaccine', category: 'Travel Health', color: 'bg-indigo-500' },
   { slug: 'meningitis-acwy-travel', title: 'Meningitis ACWY (Travel)', subtitle: 'Nimenrix / MenQuadfi', category: 'Travel Health', color: 'bg-indigo-500' },
-  { slug: 'hep-ab-travel', title: 'Hepatitis A/B (Travel)', subtitle: 'Twinrix / Havrix / Engerix-B', category: 'Travel Health', color: 'bg-indigo-500' },
+  // hep-ab-travel TEMPORARILY HIDDEN — previous tool showed MenACWY content
+  // under a Hepatitis A/B wrapper. Page kept at the URL with a notice; not
+  // surfaced in the dashboard until the proper Hep A/B PGD is written.
+  // { slug: 'hep-ab-travel', title: 'Hepatitis A/B (Travel)', subtitle: 'Twinrix / Havrix / Engerix-B', category: 'Travel Health', color: 'bg-indigo-500' },
   { slug: 'typhoid', title: 'Typhoid', subtitle: 'Typhim Vi / Vivotif', category: 'Travel Health', color: 'bg-indigo-500' },
   { slug: 'yellow-fever', title: 'Yellow Fever', subtitle: 'Stamaril (registered YFVCs only)', category: 'Travel Health', color: 'bg-indigo-500' },
 

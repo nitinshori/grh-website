@@ -144,7 +144,7 @@ export default function DemoPage() {
             Sign up and start seeing private patients this week
           </h2>
           <p className="text-blue-200 text-lg mb-8 max-w-2xl mx-auto">
-            70+ PGDs. Training included. Locums included. £100 per pharmacy per month, flat.
+            60+ PGDs. Training included. Locums included. £100 per pharmacy per month, flat.
           </p>
           <div className="flex flex-wrap justify-center gap-3">
             <Link

@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic'
 
 /**
  * POST /api/admin/onboarding/[id]/approve
- * Admin-only. Creates the pharmacy + assigns all 70 PGDs + emails the contact
+ * Admin-only. Creates the pharmacy + assigns all 60+ PGDs + emails the contact
  * a tokenised "set your password" link. The customer never sees this endpoint
  * directly — they're invited via email after we approve.
  */

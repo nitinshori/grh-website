@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 };
 
 const features = [
-  "All PGDs included — 70 across every category",
+  "All PGDs included — 60+ across every category",
   "Unlimited consultations — zero per-consult fees",
   "Platform access via web and mobile",
   "Online training with CPD certificates for every PGD",
@@ -40,7 +40,7 @@ const faqs = [
   },
   {
     q: "How does your pricing compare to other PGD providers?",
-    a: "Some providers charge per pharmacist — so if you have two pharmacists or use locums, your costs double. Others charge £2,639 per pharmacy per year (inc. VAT) upfront. GRH is £100/month per store — all pharmacists and locums included, all 70 PGDs, the ePGD platform and training. Use the savings calculator above to compare.",
+    a: "Some providers charge per pharmacist — so if you have two pharmacists or use locums, your costs double. Others charge £2,639 per pharmacy per year (inc. VAT) upfront. GRH is £100/month per store — all pharmacists and locums included, all 60+ PGDs, the ePGD platform and training. Use the savings calculator above to compare.",
   },
   {
     q: "Can I cancel?",
@@ -69,7 +69,7 @@ const offerJsonLd = {
   "@type": "Product",
   name: "Get Real Health PGD Platform",
   description:
-    "All-inclusive PGD platform for UK community pharmacies. 70 PGDs, ePGD consultation tool, training, clinical governance.",
+    "All-inclusive PGD platform for UK community pharmacies. 60+ PGDs, ePGD consultation tool, training, clinical governance.",
   brand: { "@type": "Brand", name: "Get Real Health" },
   offers: {
     "@type": "Offer",

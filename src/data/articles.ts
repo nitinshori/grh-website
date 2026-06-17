@@ -359,7 +359,7 @@ Look for: a single flat fee, complete PGD coverage from day one (not "available 
 
 Avoid: per-pharmacist licensing, per-consultation fees, "platform fees" on top of the licence fee, providers without CQC/HIW registration, providers without a named clinician on each PGD, providers that require you to author your own PGDs as part of "white-labelling".
 
-Get Real Health is built around this checklist — 70 PGDs, £100 per pharmacy per month, CQC and HIW registered, Dr Nitin Shori (NHS GP and ex-Medical Director of Pharmacy2U) named on every PGD, onboarding in 10 minutes, no per-consultation fees, locums included. Watch a 5-minute demo at getrealhealthpgd.co.uk/demo or sign up at getrealhealthpgd.co.uk/onboard.
+Get Real Health is built around this checklist — 60+ PGDs, £100 per pharmacy per month, CQC and HIW registered, Dr Nitin Shori (NHS GP and ex-Medical Director of Pharmacy2U) named on every PGD, onboarding in 10 minutes, no per-consultation fees, locums included. Watch a 5-minute demo at getrealhealthpgd.co.uk/demo or sign up at getrealhealthpgd.co.uk/onboard.
 
 The bigger picture
 

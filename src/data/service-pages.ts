@@ -176,7 +176,7 @@ export const SERVICE_PAGES: ServicePage[] = [
     faqs: [
       {
         q: "Is the Mounjaro PGD included or is it an add-on?",
-        a: "Included. All 70+ PGDs on our platform — Mounjaro, Wegovy, the GLP-1 monitoring PGD, HRT, TRT and everything else — are covered by the single £100/month per pharmacy fee.",
+        a: "Included. All 60+ PGDs on our platform — Mounjaro, Wegovy, the GLP-1 monitoring PGD, HRT, TRT and everything else — are covered by the single £100/month per pharmacy fee.",
       },
       {
         q: "What about the dose-escalation logic? Is that automated?",
@@ -196,7 +196,7 @@ export const SERVICE_PAGES: ServicePage[] = [
       },
       {
         q: "How does this compare with Pharmadoctor or ECG Training?",
-        a: "Pharmadoctor offers a Mounjaro PGD but charges per pharmacist for training and separately for the service pack. ECG sells the PGD and training as separate products. GRH bundles everything — PGD, training, ePGD tool, all 70+ other PGDs — into one flat £100/month per pharmacy fee.",
+        a: "Pharmadoctor offers a Mounjaro PGD but charges per pharmacist for training and separately for the service pack. ECG sells the PGD and training as separate products. GRH bundles everything — PGD, training, ePGD tool, all 60+ other PGDs — into one flat £100/month per pharmacy fee.",
       },
     ],
     ctaHeadline: "Launch a Mounjaro service in your pharmacy",
@@ -265,7 +265,7 @@ export const SERVICE_PAGES: ServicePage[] = [
       },
       {
         q: "Is TRT included in the £100/month or extra?",
-        a: "Included. All 70+ PGDs — TRT, HRT, Wegovy, Mounjaro, every other service — are in the same flat £100/month per pharmacy fee. No per-PGD upcharges.",
+        a: "Included. All 60+ PGDs — TRT, HRT, Wegovy, Mounjaro, every other service — are in the same flat £100/month per pharmacy fee. No per-PGD upcharges.",
       },
     ],
     ctaHeadline: "Add a TRT service to your pharmacy",
@@ -336,7 +336,7 @@ export const SERVICE_PAGES: ServicePage[] = [
       },
       {
         q: "Is HRT included or extra?",
-        a: "Included. All 70+ PGDs are bundled into the £100/month per pharmacy fee.",
+        a: "Included. All 60+ PGDs are bundled into the £100/month per pharmacy fee.",
       },
     ],
     ctaHeadline: "Help your patients get HRT without the waitlist",

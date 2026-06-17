@@ -186,7 +186,7 @@ export default async function ArticlePage({
               Want to offer these services?
             </h3>
             <p className="text-gray-600 text-sm mb-4">
-              Get Real Health provides 70 PGDs, built-in training, and a
+              Get Real Health provides 60+ PGDs, built-in training, and a
               consultation platform — all for one flat £100/month fee per
               pharmacy. No per-consult charges.
             </p>

@@ -227,8 +227,8 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
                   </span>
                 ) : (
                   <span className="text-xs font-semibold text-white">
-                    &pound;{grhMonthlyPerPharmacyIncVat}/pharmacy
-                    <span className="text-[10px] text-blue-300 ml-1">inc VAT</span>
+                    &pound;{GRH_MONTHLY_PER_PHARMACY}/pharmacy
+                    <span className="text-[10px] text-blue-300 ml-1">+ VAT (if applicable)</span>
                   </span>
                 )}
               </div>
@@ -265,8 +265,8 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
                 </div>
                 {!isCustom && pharmacyCount > 1 && (
                   <p className="text-[10px] text-blue-300 mt-0.5 text-right">
-                    &pound;{grhMonthlyPerPharmacyIncVat} &times;{" "}
-                    {pharmacyCount} pharmacies inc VAT
+                    &pound;{GRH_MONTHLY_PER_PHARMACY} &times;{" "}
+                    {pharmacyCount} pharmacies + VAT, shown inc VAT for like-for-like
                   </p>
                 )}
               </div>
@@ -387,10 +387,12 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
         )}
 
         <p className="text-center text-[11px] text-blue-300 mt-6 pt-4 border-t border-blue-900">
-          All prices shown inc. VAT. Competitor pricing based on publicly
-          listed rates. Provider A: all-in-one annual package. Provider B:
-          full platform bundle with ePGDs (44+ services). GRH includes 60+
-          PGDs, training, and the ePGD consultation tool. Your actual savings may vary.{" "}
+          GRH headline price: <strong className="text-teal-400">£100 per pharmacy per month + VAT (if applicable)</strong>.
+          Totals above are shown inc. VAT for like-for-like comparison with
+          competitor pricing (which is publicly listed inc. VAT). Provider A:
+          all-in-one annual package. Provider B: full platform bundle with
+          ePGDs (44+ services). GRH includes 60+ PGDs, training, and the ePGD
+          consultation tool. Your actual savings may vary.{" "}
           <a href="/contact" className="text-teal-400 underline">
             Get your exact quote &rarr;
           </a>

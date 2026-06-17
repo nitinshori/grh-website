@@ -57,12 +57,15 @@ export default function HomePage() {
               </div>
 
               <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold leading-tight mb-6">
-                70+ electronic PGDs.
+                60+ electronic PGDs.
                 <br />
                 <span className="text-teal-400">£100 per month, per pharmacy.</span>
                 <br />
                 No per-pharmacist charge &mdash; locums included.
               </h1>
+              <p className="text-xs text-blue-300/80 -mt-3 mb-6">
+                + VAT (if applicable). One flat monthly fee per store.
+              </p>
 
               <p className="text-lg sm:text-xl text-blue-200 leading-relaxed mb-8 max-w-xl">
                 Every PGD electronically enabled. Built-in training and

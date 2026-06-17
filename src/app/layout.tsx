@@ -10,11 +10,11 @@ import { ChatWidget } from "@/components/chat/ChatWidget";
 
 export const metadata: Metadata = {
   title: {
-    default: "Pharmacy PGD Provider | 70+ ePGDs, Flat Fee | Get Real Health",
+    default: "Pharmacy PGD Provider | 60+ ePGDs, Flat Fee | Get Real Health",
     template: "%s | Get Real Health",
   },
   description:
-    "UK pharmacy PGD provider. 70+ Patient Group Directions, £100/month flat, no per-consult charges. CQC + HIW registered. Includes training, ePGD tools and clinical governance.",
+    "UK pharmacy PGD provider. 60+ Patient Group Directions, £100/month flat, no per-consult charges. CQC + HIW registered. Includes training, ePGD tools and clinical governance.",
   keywords: [
     "pharmacy PGD provider",
     "PGD provider UK",
@@ -43,9 +43,9 @@ export const metadata: Metadata = {
     locale: "en_GB",
     siteName: "Get Real Health",
     url: "https://getrealhealthpgd.co.uk",
-    title: "Pharmacy PGD Provider | 70+ ePGDs, Flat Fee | Get Real Health",
+    title: "Pharmacy PGD Provider | 60+ ePGDs, Flat Fee | Get Real Health",
     description:
-      "70+ PGDs. £100/month flat. No per-consult charges. CQC + HIW registered. Training, ePGD tools and clinical governance included.",
+      "60+ PGDs. £100/month flat. No per-consult charges. CQC + HIW registered. Training, ePGD tools and clinical governance included.",
     images: [
       {
         url: "/og-image.png",
@@ -57,9 +57,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Pharmacy PGD Provider | 70+ ePGDs, Flat Fee | Get Real Health",
+    title: "Pharmacy PGD Provider | 60+ ePGDs, Flat Fee | Get Real Health",
     description:
-      "70+ PGDs. £100/month flat. No per-consult charges. CQC + HIW registered.",
+      "60+ PGDs. £100/month flat. No per-consult charges. CQC + HIW registered.",
     images: ["/og-image.png"],
   },
 };
@@ -70,7 +70,7 @@ const jsonLd = {
   name: "Get Real Health",
   url: "https://getrealhealthpgd.co.uk",
   description:
-    "UK pharmacy PGD provider. 70 PGDs, £100/month flat, no per-consult charges.",
+    "UK pharmacy PGD provider. 60+ PGDs, £100/month flat, no per-consult charges.",
   areaServed: {
     "@type": "Country",
     name: "United Kingdom",
