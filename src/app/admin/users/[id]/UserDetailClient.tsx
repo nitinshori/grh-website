@@ -32,6 +32,13 @@ export default function UserDetailClient({ user, pharmacies }: UserDetailClientP
   const [isSavingDetails, setIsSavingDetails] = useState(false)
   const [isSavingPassword, setIsSavingPassword] = useState(false)
   const [isDeactivating, setIsDeactivating] = useState(false)
+  const [isResettingToTemp, setIsResettingToTemp] = useState(false)
+  // The plain-text temporary password returned by the server when an admin
+  // clicks "Reset to temporary password". Shown ONCE in a banner so the admin
+  // can copy it; cleared when the user navigates away or triggers a new
+  // reset. Never persisted client-side.
+  const [tempPassword, setTempPassword] = useState<string | null>(null)
+  const [tempPasswordCopied, setTempPasswordCopied] = useState(false)
 
   const [formData, setFormData] = useState({
     firstName: user.firstName,
@@ -212,6 +219,63 @@ export default function UserDetailClient({ user, pharmacies }: UserDetailClientP
       setErrors({ passwordSubmit: 'An error occurred while updating the password' })
     } finally {
       setIsSavingPassword(false)
+    }
+  }
+
+  const handleResetToTemp = async () => {
+    if (
+      !confirm(
+        `Reset ${user.firstName} ${user.lastName}'s password to a new temporary one?\n\n` +
+          `They will be forced to change it on next login. The temporary password ` +
+          `will be shown to you ONCE — make sure to copy it before navigating away.`
+      )
+    ) {
+      return
+    }
+
+    setIsResettingToTemp(true)
+    setSuccessMessage('')
+    setErrors({})
+    setTempPassword(null)
+    setTempPasswordCopied(false)
+
+    try {
+      const response = await fetch(
+        `/api/admin/users/${user.id}/reset-password`,
+        { method: 'POST' }
+      )
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setErrors({
+          tempReset: data.error || 'Failed to reset password',
+        })
+        return
+      }
+
+      setTempPassword(data.tempPassword)
+      setSuccessMessage(
+        `Temporary password generated. Copy it now — it will not be shown again.`
+      )
+    } catch (error) {
+      console.error('Error resetting to temp password:', error)
+      setErrors({
+        tempReset: 'An error occurred while resetting the password',
+      })
+    } finally {
+      setIsResettingToTemp(false)
+    }
+  }
+
+  const handleCopyTempPassword = async () => {
+    if (!tempPassword) return
+    try {
+      await navigator.clipboard.writeText(tempPassword)
+      setTempPasswordCopied(true)
+      window.setTimeout(() => setTempPasswordCopied(false), 2500)
+    } catch (error) {
+      console.error('Clipboard write failed:', error)
     }
   }
 
@@ -496,10 +560,87 @@ export default function UserDetailClient({ user, pharmacies }: UserDetailClientP
         </form>
       </div>
 
+      {/* Quick Reset to Temporary Password */}
+      <div className="bg-white rounded-lg shadow border-l-4 border-teal-500">
+        <div className="border-b border-gray-200 px-6 py-4">
+          <h2 className="text-xl font-bold text-gray-900">
+            Reset to Temporary Password
+          </h2>
+          <p className="text-sm text-gray-600 mt-1">
+            Recommended for forgotten / locked-out users. Generates a random
+            secure password and forces the user to change it on next login.
+          </p>
+        </div>
+
+        <div className="p-6 space-y-4">
+          {errors.tempReset && (
+            <div className="p-4 rounded-lg bg-red-50 border border-red-200">
+              <p className="text-sm font-medium text-red-800">
+                {errors.tempReset}
+              </p>
+            </div>
+          )}
+
+          {tempPassword ? (
+            <div className="p-4 rounded-lg bg-amber-50 border border-amber-300">
+              <p className="text-sm font-semibold text-amber-900 mb-2">
+                One-time temporary password — copy it now
+              </p>
+              <p className="text-xs text-amber-800 mb-3">
+                This will not be shown again. The user must change it the
+                moment they log in.
+              </p>
+              <div className="flex gap-2 items-center">
+                <code className="flex-1 px-3 py-2.5 bg-white border border-amber-300 rounded-lg font-mono text-base text-gray-900 select-all">
+                  {tempPassword}
+                </code>
+                <button
+                  type="button"
+                  onClick={handleCopyTempPassword}
+                  className="px-4 py-2.5 rounded-lg font-medium text-white transition-colors"
+                  style={{
+                    backgroundColor: tempPasswordCopied ? '#16a34a' : '#25b4b4',
+                  }}
+                >
+                  {tempPasswordCopied ? 'Copied ✓' : 'Copy'}
+                </button>
+              </div>
+              <p className="text-xs text-amber-800 mt-3">
+                Suggested message: &ldquo;Your temporary password is{' '}
+                <strong>{tempPassword}</strong>. Log in with your usual
+                username/email; you&rsquo;ll be prompted to set a new password
+                straight away.&rdquo;
+              </p>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleResetToTemp}
+              disabled={isResettingToTemp}
+              className="inline-flex items-center justify-center px-4 py-2 rounded-lg font-medium transition-colors text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                backgroundColor: isResettingToTemp ? '#999' : '#25b4b4',
+              }}
+            >
+              {isResettingToTemp
+                ? 'Generating temporary password…'
+                : 'Reset to temporary password'}
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Password Reset Section */}
       <div className="bg-white rounded-lg shadow">
         <div className="border-b border-gray-200 px-6 py-4">
-          <h2 className="text-xl font-bold text-gray-900">Reset Password</h2>
+          <h2 className="text-xl font-bold text-gray-900">
+            Set Specific Password
+          </h2>
+          <p className="text-sm text-gray-600 mt-1">
+            Only use this if you need to set a specific password (rare).
+            Most resets should use the &ldquo;Reset to temporary password&rdquo;
+            option above.
+          </p>
         </div>
 
         <form onSubmit={handleSavePassword} className="p-6 space-y-6">
