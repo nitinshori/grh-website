@@ -26,8 +26,14 @@ export function validatePatientDetailsStep(
   if (patient.age < 18)
     return 'This PGD applies to patients aged 18 years or older (under 18 requires specialist guidance)';
 
-  if (!patient.maleConfirmed && !patient.femaleConfirmed)
-    return 'Please confirm the patient\'s gender';
+  // Gender confirmation removed (Moin bug report, 18 Jun 2026). The previous
+  // check required maleConfirmed || femaleConfirmed but no UI existed on the
+  // patient-details step to set either field, so pharmacists were trapped
+  // with no way to proceed. Pregnancy / breastfeeding considerations
+  // (the actual clinical reason gender ever mattered here) are captured
+  // explicitly in the travel-assessment step via the dedicated
+  // currentlyPregnant / planningPregnancy / breastfeeding flags, which is
+  // where the antimalarial product decision actually happens.
 
   return null;
 }
