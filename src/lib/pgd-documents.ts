@@ -19,6 +19,7 @@ export const PGD_DOCUMENT_SLUGS = new Set([
   'anti-malarials',
   'anxiety-propranolol',
   'asthma-rescue',
+  'b12-injection',
   'bph',
   'bv',
   'chest-service',
