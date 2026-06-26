@@ -61,7 +61,11 @@ const CITY_TO_POSTCODE_PREFIXES: Record<string, string[]> = {
   bradford: ['BD1', 'BD2', 'BD3', 'BD4', 'BD5', 'BD6', 'BD7', 'BD8', 'BD9', 'BD10', 'BD11', 'BD12', 'BD13', 'BD14', 'BD15', 'BD16', 'BD17', 'BD18'],
   leeds: ['LS1', 'LS2', 'LS3', 'LS4', 'LS5', 'LS6', 'LS7', 'LS8', 'LS9', 'LS10', 'LS11', 'LS12', 'LS13', 'LS14', 'LS15', 'LS16'],
   sheffield: ['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9', 'S10', 'S11', 'S12', 'S13', 'S14'],
-  leicester: ['LE1', 'LE2', 'LE3', 'LE4', 'LE5'],
+  // Leicester city (LE1-LE9) + wider Leicestershire (LE10-LE19: Hinckley,
+  // Loughborough, Coalville, Melton Mowbray, Market Harborough, Lutterworth,
+  // Wigston). Moin reported wider-area surgeries were missing - June 2026.
+  leicester: ['LE1', 'LE2', 'LE3', 'LE4', 'LE5', 'LE6', 'LE7', 'LE8', 'LE9',
+              'LE10', 'LE11', 'LE12', 'LE13', 'LE14', 'LE15', 'LE16', 'LE17', 'LE18', 'LE19'],
   nottingham: ['NG1', 'NG2', 'NG3', 'NG4', 'NG5', 'NG6', 'NG7', 'NG8', 'NG9'],
   birmingham: ['B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'B10', 'B11', 'B12', 'B13', 'B14', 'B15', 'B16', 'B17', 'B18', 'B19', 'B20', 'B21'],
   coventry: ['CV1', 'CV2', 'CV3', 'CV4', 'CV5', 'CV6'],
@@ -109,7 +113,7 @@ function normaliseCity(s: string): string {
 }
 
 async function searchByName(q: string): Promise<OdsOrganisation[]> {
-  const url = `https://directory.spineservices.nhs.uk/ORD/2-0-0/organisations?Name=${encodeURIComponent(q)}&PrimaryRoleId=RO177&Status=Active&Limit=15`
+  const url = `https://directory.spineservices.nhs.uk/ORD/2-0-0/organisations?Name=${encodeURIComponent(q)}&PrimaryRoleId=RO177&Status=Active&Limit=50`
   try {
     const res = await fetch(url, { next: { revalidate: 3600 } })
     if (!res.ok) return []
@@ -121,7 +125,7 @@ async function searchByName(q: string): Promise<OdsOrganisation[]> {
 }
 
 async function searchByPostcode(q: string): Promise<OdsOrganisation[]> {
-  const url = `https://directory.spineservices.nhs.uk/ORD/2-0-0/organisations?PostCode=${encodeURIComponent(q)}&PrimaryRoleId=RO177&Status=Active&Limit=25`
+  const url = `https://directory.spineservices.nhs.uk/ORD/2-0-0/organisations?PostCode=${encodeURIComponent(q)}&PrimaryRoleId=RO177&Status=Active&Limit=50`
   try {
     const res = await fetch(url, { next: { revalidate: 3600 } })
     if (!res.ok) return []

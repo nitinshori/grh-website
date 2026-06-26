@@ -31,6 +31,10 @@ export async function GET(
   if (!res.ok) {
     return NextResponse.json({ error: 'Practice not found', status: res.status }, { status: 404 })
   }
+  // NHS ODS quirk: Contacts.Contact comes back as either an array (multi-contact)
+  // OR a single object (one contact). The original code assumed array-only and
+  // silently failed on single-contact practices. Reported by Moin June 2026 —
+  // "GP details not auto-filling on selection". Defensive normalisation below.
   const body = await res.json() as { Organisation?: {
     Name: string
     OrgId?: { extension: string }
@@ -38,7 +42,7 @@ export async function GET(
       AddrLn1?: string; AddrLn2?: string; AddrLn3?: string
       Town?: string; County?: string; PostCode?: string; Country?: string
     } }
-    Contacts?: { Contact?: OdsContact[] }
+    Contacts?: { Contact?: OdsContact[] | OdsContact }
   } }
   const org = body.Organisation
   if (!org) return NextResponse.json({ error: 'Empty response' }, { status: 502 })
@@ -46,7 +50,14 @@ export async function GET(
   const loc = org.GeoLoc?.Location ?? {}
   const address = [loc.AddrLn1, loc.AddrLn2, loc.AddrLn3, loc.Town, loc.County, loc.PostCode]
     .filter((s): s is string => Boolean(s)).join(', ')
-  const contacts = org.Contacts?.Contact ?? []
+  // Normalise Contact to always be an array. Cover all three shapes:
+  // missing, single object, or already an array.
+  const rawContacts = org.Contacts?.Contact
+  const contacts: OdsContact[] = Array.isArray(rawContacts)
+    ? rawContacts
+    : rawContacts
+    ? [rawContacts]
+    : []
   const phone = contacts.find((c) => c.type?.toLowerCase() === 'tel')?.value ?? ''
 
   return NextResponse.json({
