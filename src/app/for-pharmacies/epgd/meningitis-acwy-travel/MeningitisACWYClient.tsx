@@ -832,6 +832,85 @@ export function MeningitisACWYClient() {
               placeholder="Any additional clinical notes or recommendations"
               rows={4}
             />
+
+            {/* Vaccination certificate generation. Built in response to
+                Moin (June 2026) asking for an ACWY certificate option that
+                a patient can take away as proof of vaccination — most
+                relevant for Hajj/Umrah visa requirements and university
+                enrolment evidence. Opens a printable certificate page in a
+                new tab; user can print to paper or save as PDF from the
+                browser print dialog. Data carried via sessionStorage to
+                avoid PHI in the URL. */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h3 className="text-sm font-semibold text-navy-900 mb-1">
+                Vaccination certificate
+              </h3>
+              <p className="text-xs text-gray-700 mb-3">
+                Print a certificate for the patient confirming the vaccine
+                administered, batch, date, and pharmacist. Suitable for
+                Hajj/Umrah visa documentation, university enrolment, or
+                employer travel records.
+              </p>
+              <button
+                type="button"
+                disabled={
+                  !summary.vaccineType ||
+                  !summary.batchNumber ||
+                  !summary.pharmacistName
+                }
+                onClick={() => {
+                  try {
+                    const certPayload = {
+                      patientFirstName: patientDetails.firstName,
+                      patientLastName: patientDetails.lastName,
+                      patientDob: patientDetails.dateOfBirth,
+                      patientNhsNumber: patientDetails.nhsNumber,
+                      vaccineType: summary.vaccineType,
+                      batchNumber: summary.batchNumber,
+                      expiryDate: summary.expiryDate,
+                      administrationSite: summary.administrationSite,
+                      travelReason: patientDetails.travelReason,
+                      consultationDate: summary.consultationDate,
+                      pharmacistName: summary.pharmacistName,
+                      pharmacistGPhC: summary.pharmacistGPhC,
+                      pharmacyName: summary.pharmacyName,
+                      pharmacyAddress: summary.pharmacyAddress,
+                    };
+                    sessionStorage.setItem(
+                      "grh-menacwy-cert",
+                      JSON.stringify(certPayload),
+                    );
+                    window.open(
+                      "/for-pharmacies/epgd/certificate/menacwy",
+                      "_blank",
+                      "noopener,noreferrer",
+                    );
+                  } catch (err) {
+                    console.error("Certificate open failed:", err);
+                  }
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-white bg-teal-500 hover:bg-teal-400 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                Generate vaccination certificate
+              </button>
+              <p className="text-[10px] text-gray-500 mt-2">
+                Opens in a new tab. Requires vaccine, batch, and pharmacist
+                name to be filled in.
+              </p>
+            </div>
           </div>
         </StepWrapper>
       )}

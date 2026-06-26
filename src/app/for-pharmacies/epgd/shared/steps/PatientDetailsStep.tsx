@@ -3,6 +3,7 @@
 import type { BasePatientDetails } from "../types";
 import { TextInput, Checkbox } from "../components/FormInputs";
 import { GPPracticeSearch } from "../components/GPPracticeSearch";
+import { ReturningPatientSearch } from "../components/ReturningPatientSearch";
 
 interface PatientDetailsStepProps {
   patient: BasePatientDetails;
@@ -28,8 +29,23 @@ interface PatientDetailsStepProps {
 }
 
 export function PatientDetailsStep({ patient, onChange, genderOption, requireAdult = true }: PatientDetailsStepProps) {
+  // When pharmacist picks a returning patient from the search dropdown
+  // we get back a partial BasePatientDetails. Fan it out to onChange so
+  // every consumer's state updates without us caring which fields the
+  // particular PGD tracks.
+  function handleReturningPatientSelect(partial: Partial<BasePatientDetails>) {
+    (Object.keys(partial) as (keyof BasePatientDetails)[]).forEach((key) => {
+      const value = partial[key];
+      if (value !== undefined) {
+        onChange(key, value as BasePatientDetails[keyof BasePatientDetails]);
+      }
+    });
+  }
+
   return (
     <div className="space-y-4">
+      <ReturningPatientSearch onSelect={handleReturningPatientSelect} />
+
       <div className="grid sm:grid-cols-2 gap-4">
         <TextInput
           label="First name"
