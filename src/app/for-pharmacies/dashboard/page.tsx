@@ -9,6 +9,7 @@ import { getPharmacyPgdSlugs } from '@/lib/pgd-queries'
 import { pgds as PGD_CATALOGUE, isPgdAccessibleByEmail } from '@/data/pgds'
 import { getPharmacyStats } from '@/lib/analytics'
 import { hasPgdDocument } from '@/lib/pgd-documents'
+import { isAppointmentsOnlyGroup } from '@/lib/access-pharmacies'
 
 // Map slug → friendly title
 const pgdTitleMap = new Map(ALL_PGDS.map((p) => [p.slug, p.title]))
@@ -61,6 +62,13 @@ export default async function PharmacyDashboard() {
       pharmacyPhone = pharmacy.phone || ''
       pharmacyGroupSlug = pharmacy.groupSlug || ''
     }
+  }
+
+  // Appointments-only groups (Pritchards) don't need to see the PGD-heavy
+  // dashboard at all — send them straight to the diary, which is their
+  // primary workflow.
+  if (isAppointmentsOnlyGroup(pharmacyGroupSlug)) {
+    redirect('/for-pharmacies/dashboard/appointments')
   }
 
   // Fetch assigned PGDs
@@ -166,7 +174,7 @@ export default async function PharmacyDashboard() {
         <div className="flex items-start gap-4">
           <div
             className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-            style={{ backgroundColor: '#25b4b4' }}
+            style={{ backgroundColor: 'var(--tenant-primary)' }}
           >
             <svg
               className="w-6 h-6 text-white"
@@ -203,10 +211,10 @@ export default async function PharmacyDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-teal-50">
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-[color:var(--tenant-primary)]/10">
               <svg
                 className="w-5 h-5"
-                style={{ color: '#25b4b4' }}
+                style={{ color: 'var(--tenant-primary)' }}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -228,10 +236,10 @@ export default async function PharmacyDashboard() {
 
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-teal-50">
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-[color:var(--tenant-primary)]/10">
               <svg
                 className="w-5 h-5"
-                style={{ color: '#25b4b4' }}
+                style={{ color: 'var(--tenant-primary)' }}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -305,7 +313,7 @@ export default async function PharmacyDashboard() {
         <Link
           href="/for-pharmacies/epgd"
           className="inline-flex items-center px-5 py-2.5 rounded-lg text-sm font-semibold text-white transition-colors"
-          style={{ backgroundColor: '#25b4b4' }}
+          style={{ backgroundColor: 'var(--tenant-primary)' }}
         >
           <svg
             className="w-4 h-4 mr-2"
@@ -364,7 +372,7 @@ export default async function PharmacyDashboard() {
             href={`/book/${pharmacyGroupSlug}`}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center px-5 py-2.5 rounded-lg text-sm font-semibold text-teal-900 bg-teal-50 border border-teal-300 hover:bg-teal-100 transition-colors"
+            className="inline-flex items-center px-5 py-2.5 rounded-lg text-sm font-semibold text-[color:var(--tenant-primary)] bg-[color:var(--tenant-primary)]/10 border border-[color:var(--tenant-primary)]/30 hover:bg-[color:var(--tenant-primary)]/20 transition-colors"
             title="The page patients use to book appointments online. Share this URL on your website / social media."
           >
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -443,7 +451,7 @@ export default async function PharmacyDashboard() {
           </h2>
           <Link
             href="/for-pharmacies/dashboard/records"
-            className="text-sm font-medium text-teal-600 hover:text-teal-700 transition-colors"
+            className="text-sm font-medium text-[color:var(--tenant-primary)] hover:text-[color:var(--tenant-primary)] transition-colors"
           >
             View all &rarr;
           </Link>
@@ -470,7 +478,7 @@ export default async function PharmacyDashboard() {
                     <td className="py-2.5 pr-4">
                       <Link
                         href={`/for-pharmacies/dashboard/records/${r.id}`}
-                        className="text-gray-900 font-medium group-hover:text-teal-600 transition-colors"
+                        className="text-gray-900 font-medium group-hover:text-[color:var(--tenant-primary)] transition-colors"
                       >
                         {r.patientFirstName} {r.patientLastName}
                       </Link>
@@ -536,6 +544,28 @@ export default async function PharmacyDashboard() {
         </div>
       ) : (
         <div>
+          {/* Practice Digital cross-sell — grow the services this pharmacy runs */}
+          <div className="mb-6 bg-navy-950 rounded-xl p-6 flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex-1">
+              <p className="text-teal-400 font-semibold text-xs uppercase tracking-wider mb-1">
+                Practice Digital
+              </p>
+              <p className="text-white font-semibold mb-1">
+                Want more patients booking these services?
+              </p>
+              <p className="text-blue-200 text-sm">
+                Our sister agency runs your local ads, service pages, patient
+                campaigns and AI call answering — preferential rates for GRH
+                partners.
+              </p>
+            </div>
+            <a
+              href="/for-pharmacies/growth"
+              className="shrink-0 px-5 py-2.5 bg-teal-500 hover:bg-teal-400 text-white font-semibold rounded-lg transition-colors text-sm text-center"
+            >
+              Get a growth plan
+            </a>
+          </div>
           <h2 className="text-lg font-semibold text-gray-900 mb-4">
             Your ePGD Tools
           </h2>
@@ -567,12 +597,12 @@ export default async function PharmacyDashboard() {
                       className={`group bg-white rounded-lg border p-4 transition-all ${
                         COMING_SOON_SLUGS.has(pgd.slug)
                           ? 'border-gray-200 opacity-70 hover:opacity-100 hover:border-amber-300'
-                          : 'border-gray-200 hover:border-[#25b4b4] hover:shadow-md'
+                          : 'border-gray-200 hover:border-[color:var(--tenant-primary)] hover:shadow-md'
                       }`}
                     >
                       <div className="flex items-start justify-between">
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-gray-900 group-hover:text-[#25b4b4] transition-colors">
+                          <p className="text-sm font-semibold text-gray-900 group-hover:text-[color:var(--tenant-primary)] transition-colors">
                             {pgd.title}
                           </p>
                           <p className="text-xs text-gray-500 mt-0.5 truncate">
@@ -585,7 +615,7 @@ export default async function PharmacyDashboard() {
                           )}
                         </div>
                         <svg
-                          className="w-4 h-4 text-gray-400 group-hover:text-[#25b4b4] flex-shrink-0 ml-2 mt-0.5 transition-colors"
+                          className="w-4 h-4 text-gray-400 group-hover:text-[color:var(--tenant-primary)] flex-shrink-0 ml-2 mt-0.5 transition-colors"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -611,8 +641,8 @@ export default async function PharmacyDashboard() {
       {assignedPgds.length > 0 && (
         <div className="mt-10">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-teal-50">
-              <svg className="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[color:var(--tenant-primary)]/10">
+              <svg className="w-4 h-4 text-[color:var(--tenant-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </div>
@@ -652,7 +682,7 @@ export default async function PharmacyDashboard() {
                               href={`/pgd-documents/${pgd.slug}.pdf`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-teal-50 text-teal-700 rounded-md text-xs font-medium hover:bg-teal-100 transition-colors flex-shrink-0"
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-[color:var(--tenant-primary)]/10 text-[color:var(--tenant-primary)] rounded-md text-xs font-medium hover:bg-[color:var(--tenant-primary)]/20 transition-colors flex-shrink-0"
                             >
                               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />

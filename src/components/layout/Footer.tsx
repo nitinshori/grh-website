@@ -7,6 +7,7 @@ const pharmacyLinks = [
   { href: "/for-pharmacies/pricing", label: "Pricing" },
   { href: "/for-pharmacies/platform", label: "Our Platform" },
   { href: "/pharmacy-plus-health", label: "Pharmacy+ Health Hub" },
+  { href: "/for-pharmacies/growth", label: "Grow Your Pharmacy (Practice Digital)" },
 ];
 
 /* Patient links removed — site is for pharmacy professionals only */

@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: "Get Real Health | PGDs, Clinical Training & Governance for UK Pharmacies",
   description:
     "60+ PGDs with built-in clinical training and competency assessments. CQC and HIW registered. One flat annual fee \u2014 no per-consult charges, no revenue share. Founded by clinicians with 20 years of UK pharmacy experience.",
+  alternates: { canonical: "/" },
 };
 
 export default function HomePage() {
@@ -948,6 +949,57 @@ export default function HomePage() {
               className="inline-flex items-center gap-2 text-teal-600 hover:text-teal-700 font-semibold transition-colors"
             >
               See full pricing details
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ── 7b. ONE-STOP SHOP: PRACTICE DIGITAL CROSS-SELL ────── */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="bg-white border border-gray-100 rounded-xl p-8 shadow-sm">
+            <p className="text-teal-600 font-semibold text-sm uppercase tracking-wider mb-2">
+              The clinical side
+            </p>
+            <h3 className="text-xl font-bold text-navy-900 mb-3">
+              Get Real Health
+            </h3>
+            <p className="text-gray-600 text-sm leading-relaxed mb-5">
+              60+ PGDs, training, competency assessment and the ePGD
+              consultation platform. Everything you need to deliver private
+              services safely — one flat fee.
+            </p>
+            <Link
+              href="/for-pharmacies/pgd-catalogue"
+              className="inline-flex items-center gap-2 text-teal-600 hover:text-teal-700 font-semibold text-sm transition-colors"
+            >
+              Browse the PGD catalogue
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
+            </Link>
+          </div>
+          <div className="bg-navy-950 rounded-xl p-8 shadow-sm">
+            <p className="text-teal-400 font-semibold text-sm uppercase tracking-wider mb-2">
+              The growth side
+            </p>
+            <h3 className="text-xl font-bold text-white mb-3">
+              Practice Digital
+            </h3>
+            <p className="text-blue-100 text-sm leading-relaxed mb-5">
+              Our sister agency fills the services you launch: patient-facing
+              web pages, Google Ads, local SEO, social content, patient
+              campaigns and an AI receptionist that answers your phone and
+              books consultations.
+            </p>
+            <Link
+              href="/for-pharmacies/growth"
+              className="inline-flex items-center gap-2 text-teal-400 hover:text-teal-300 font-semibold text-sm transition-colors"
+            >
+              Grow your pharmacy
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>

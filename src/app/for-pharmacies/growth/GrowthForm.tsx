@@ -2,57 +2,74 @@
 
 import { useState } from "react";
 
-type Enquiry =
-  | "demo"
-  | "pricing"
-  | "pgd-enquiry"
-  | "patient-enquiry"
-  | "growth"
-  | "other";
+// Practice Digital lead form. Posts to the existing /api/contact pipeline
+// with enquiryType "growth" — same rate limiting, notification email and
+// auto-reply as the main contact form. Selected services are folded into
+// the message body.
 
-export function ContactForm() {
+const SERVICES = [
+  "Patient-facing service pages / website",
+  "Google Ads & local SEO",
+  "Social media content",
+  "Patient email & SMS campaigns",
+  "AI phone receptionist (call answering + booking)",
+  "Not sure — recommend a plan",
+];
+
+export function GrowthForm() {
   const [submitted, setSubmitted] = useState(false);
-  const [formData, setFormData] = useState({
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [form, setForm] = useState({
     name: "",
     email: "",
     phone: "",
     pharmacyName: "",
-    enquiryType: "" as Enquiry | "",
     message: "",
   });
+  const [services, setServices] = useState<string[]>([]);
 
-  const update = (
-    field: keyof typeof formData,
-    value: string
-  ) => setFormData((prev) => ({ ...prev, [field]: value }));
+  const update = (field: keyof typeof form, value: string) =>
+    setForm((prev) => ({ ...prev, [field]: value }));
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const toggle = (s: string) =>
+    setServices((prev) =>
+      prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s],
+    );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
-
     try {
+      const message = [
+        services.length > 0 ? `Interested in: ${services.join("; ")}` : null,
+        form.message.trim() || null,
+      ]
+        .filter(Boolean)
+        .join("\n\n") || "General Practice Digital enquiry";
       const res = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          phone: form.phone,
+          pharmacyName: form.pharmacyName,
+          enquiryType: "growth",
+          message,
+        }),
       });
-
       const data = await res.json();
-
       if (!res.ok) {
         setError(data.error || "Something went wrong. Please try again.");
         setLoading(false);
         return;
       }
-
       setSubmitted(true);
     } catch {
       setError(
-        "Unable to send your message. Please try again or email us directly at hello@getrealhealth.co.uk."
+        "Unable to send your message. Please try again or email us directly at info@getrealhealthpgd.co.uk.",
       );
       setLoading(false);
     }
@@ -74,12 +91,10 @@ export function ContactForm() {
             d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
           />
         </svg>
-        <h3 className="font-bold text-navy-900 text-lg mb-1">
-          Message sent
-        </h3>
+        <h3 className="font-bold text-navy-900 text-lg mb-1">Request received</h3>
         <p className="text-gray-600 text-sm">
-          Thanks, {formData.name.split(" ")[0]}. We&apos;ll be in touch within
-          one working day.
+          Thanks, {form.name.split(" ")[0]}. The Practice Digital team will be
+          in touch within one working day with a growth plan for your pharmacy.
         </p>
       </div>
     );
@@ -92,123 +107,102 @@ export function ContactForm() {
           {error}
         </div>
       )}
-      {/* Name + Email row */}
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
-          <label
-            htmlFor="name"
-            className="block text-sm font-medium text-navy-900 mb-1"
-          >
+          <label htmlFor="g-name" className="block text-sm font-medium text-navy-900 mb-1">
             Full name <span className="text-red-400">*</span>
           </label>
           <input
-            id="name"
+            id="g-name"
             type="text"
             required
-            value={formData.name}
+            value={form.name}
             onChange={(e) => update("name", e.target.value)}
             className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent"
             placeholder="Your name"
           />
         </div>
         <div>
-          <label
-            htmlFor="email"
-            className="block text-sm font-medium text-navy-900 mb-1"
-          >
+          <label htmlFor="g-email" className="block text-sm font-medium text-navy-900 mb-1">
             Email <span className="text-red-400">*</span>
           </label>
           <input
-            id="email"
+            id="g-email"
             type="email"
             required
-            value={formData.email}
+            value={form.email}
             onChange={(e) => update("email", e.target.value)}
             className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent"
-            placeholder="you@example.com"
+            placeholder="you@yourpharmacy.co.uk"
           />
         </div>
       </div>
-
-      {/* Phone + Pharmacy */}
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
-          <label
-            htmlFor="phone"
-            className="block text-sm font-medium text-navy-900 mb-1"
-          >
+          <label htmlFor="g-phone" className="block text-sm font-medium text-navy-900 mb-1">
             Phone (optional)
           </label>
           <input
-            id="phone"
+            id="g-phone"
             type="tel"
-            value={formData.phone}
+            value={form.phone}
             onChange={(e) => update("phone", e.target.value)}
             className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent"
             placeholder="07..."
           />
         </div>
         <div>
-          <label
-            htmlFor="pharmacy"
-            className="block text-sm font-medium text-navy-900 mb-1"
-          >
+          <label htmlFor="g-pharmacy" className="block text-sm font-medium text-navy-900 mb-1">
             Pharmacy name (optional)
           </label>
           <input
-            id="pharmacy"
+            id="g-pharmacy"
             type="text"
-            value={formData.pharmacyName}
+            value={form.pharmacyName}
             onChange={(e) => update("pharmacyName", e.target.value)}
             className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent"
-            placeholder="e.g. Well Pharmacy, Kamsons"
+            placeholder="e.g. Highfield Pharmacy"
           />
         </div>
       </div>
 
-      {/* Enquiry type */}
-      <div>
-        <label
-          htmlFor="enquiry-type"
-          className="block text-sm font-medium text-navy-900 mb-1"
-        >
-          What is this about? <span className="text-red-400">*</span>
-        </label>
-        <select
-          id="enquiry-type"
-          required
-          value={formData.enquiryType}
-          onChange={(e) => update("enquiryType", e.target.value)}
-          className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent bg-white"
-        >
-          <option value="" disabled>
-            Select an option
-          </option>
-          <option value="demo">Book a demo</option>
-          <option value="pricing">Pricing question</option>
-          <option value="pgd-enquiry">PGD enquiry (pharmacists)</option>
-          <option value="patient-enquiry">Patient enquiry</option>
-          <option value="growth">Marketing &amp; growth (Practice Digital)</option>
-          <option value="other">Something else</option>
-        </select>
-      </div>
+      <fieldset>
+        <legend className="block text-sm font-medium text-navy-900 mb-2">
+          What would help you most? (tick any)
+        </legend>
+        <div className="grid sm:grid-cols-2 gap-2">
+          {SERVICES.map((s) => (
+            <label
+              key={s}
+              className={`flex items-start gap-2 p-3 rounded-lg border text-sm cursor-pointer transition-colors ${
+                services.includes(s)
+                  ? "border-teal-400 bg-teal-50 text-navy-900"
+                  : "border-gray-200 hover:border-gray-300 text-gray-700"
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={services.includes(s)}
+                onChange={() => toggle(s)}
+                className="mt-0.5 accent-teal-500"
+              />
+              {s}
+            </label>
+          ))}
+        </div>
+      </fieldset>
 
-      {/* Message */}
       <div>
-        <label
-          htmlFor="message"
-          className="block text-sm font-medium text-navy-900 mb-1"
-        >
-          Message <span className="text-red-400">*</span>
+        <label htmlFor="g-message" className="block text-sm font-medium text-navy-900 mb-1">
+          Anything else? (optional)
         </label>
         <textarea
-          id="message"
-          required
-          rows={5}
-          value={formData.message}
+          id="g-message"
+          rows={3}
+          value={form.message}
           onChange={(e) => update("message", e.target.value)}
           className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent resize-y"
-          placeholder="Tell us how we can help..."
+          placeholder="Tell us about your pharmacy and what you want to grow…"
         />
       </div>
 
@@ -217,9 +211,8 @@ export function ContactForm() {
         disabled={loading}
         className="w-full sm:w-auto px-8 py-3 bg-teal-500 hover:bg-teal-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors text-sm"
       >
-        {loading ? "Sending…" : "Send message"}
+        {loading ? "Sending…" : "Get my growth plan"}
       </button>
-
       <p className="text-xs text-gray-400">
         By submitting this form you agree to our privacy policy. We&apos;ll
         never share your data with third parties.

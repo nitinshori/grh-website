@@ -5,8 +5,15 @@ import { SERVICE_PAGES } from "@/data/service-pages";
 
 const BASE_URL = "https://getrealhealthpgd.co.uk";
 
+// Stable "site last reviewed" date. Using a fixed date (bumped when the
+// marketing pages meaningfully change) instead of new Date() avoids sending
+// Google a fresh lastModified on every deploy, which is a meaningless — and
+// eventually distrusted — freshness signal. Article pages use their own
+// publishDate below.
+const SITE_UPDATED = "2026-07-01T00:00:00.000Z";
+
 export default function sitemap(): MetadataRoute.Sitemap {
-  const now = new Date().toISOString();
+  const now = SITE_UPDATED;
 
   // Static pages
   // NOTE: /for-pharmacies/epgd/* are deliberately NOT included.
@@ -22,6 +29,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE_URL}/for-pharmacies/pgd-catalogue`, lastModified: now, changeFrequency: "weekly", priority: 0.9 },
     { url: `${BASE_URL}/for-pharmacies/pricing`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${BASE_URL}/for-pharmacies/platform`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
+    { url: `${BASE_URL}/for-pharmacies/growth`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${BASE_URL}/for-patients`, lastModified: now, changeFrequency: "weekly", priority: 0.9 },
     { url: `${BASE_URL}/for-patients/find-service`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
     { url: `${BASE_URL}/about`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
@@ -32,6 +40,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE_URL}/services`, lastModified: now, changeFrequency: "weekly", priority: 0.9 },
     { url: `${BASE_URL}/services/comparison`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: `${BASE_URL}/cost-calculator`, lastModified: now, changeFrequency: "monthly", priority: 0.85 },
+    { url: `${BASE_URL}/for-welsh-pharmacies`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${BASE_URL}/legal/privacy`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
+    { url: `${BASE_URL}/legal/terms`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
+    { url: `${BASE_URL}/legal/cookies`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
   ];
 
   // Headline SEO landing pages — /services/<slug>. Distinct from the

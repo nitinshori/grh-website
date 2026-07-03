@@ -23,6 +23,7 @@ const ENQUIRY_LABELS: Record<string, string> = {
   pricing: 'Pricing Enquiry',
   'pgd-enquiry': 'PGD Enquiry',
   'patient-enquiry': 'Patient Enquiry',
+  growth: 'Practice Digital — Growth & Marketing',
   other: 'General Enquiry',
 }
 

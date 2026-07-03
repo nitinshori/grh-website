@@ -37,6 +37,12 @@ const pharmacyLinks = [
     description:
       "Our patient-facing directory \u2014 helps your customers find you.",
   },
+  {
+    href: "/for-pharmacies/growth",
+    label: "Grow Your Pharmacy",
+    description:
+      "Practice Digital \u2014 marketing, ads and AI call answering from our sister agency.",
+  },
 ];
 
 /* Patient links removed — site is for pharmacy professionals only */

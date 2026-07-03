@@ -61,9 +61,9 @@ export default function ForPharmaciesPage() {
         <div className="grid md:grid-cols-3 gap-8">
           {/* Pillar 1 */}
           <div className="bg-white border border-gray-100 rounded-xl p-8 shadow-sm">
-            <div className="w-12 h-12 rounded-lg bg-teal-50 flex items-center justify-center mb-5">
+            <div className="w-12 h-12 rounded-lg bg-[color:var(--tenant-primary)]/10 flex items-center justify-center mb-5">
               <svg
-                className="w-6 h-6 text-teal-600"
+                className="w-6 h-6 text-[color:var(--tenant-primary)]"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -88,9 +88,9 @@ export default function ForPharmaciesPage() {
 
           {/* Pillar 2 */}
           <div className="bg-white border border-gray-100 rounded-xl p-8 shadow-sm">
-            <div className="w-12 h-12 rounded-lg bg-teal-50 flex items-center justify-center mb-5">
+            <div className="w-12 h-12 rounded-lg bg-[color:var(--tenant-primary)]/10 flex items-center justify-center mb-5">
               <svg
-                className="w-6 h-6 text-teal-600"
+                className="w-6 h-6 text-[color:var(--tenant-primary)]"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -117,9 +117,9 @@ export default function ForPharmaciesPage() {
 
           {/* Pillar 3 */}
           <div className="bg-white border border-gray-100 rounded-xl p-8 shadow-sm">
-            <div className="w-12 h-12 rounded-lg bg-teal-50 flex items-center justify-center mb-5">
+            <div className="w-12 h-12 rounded-lg bg-[color:var(--tenant-primary)]/10 flex items-center justify-center mb-5">
               <svg
-                className="w-6 h-6 text-teal-600"
+                className="w-6 h-6 text-[color:var(--tenant-primary)]"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -170,7 +170,7 @@ export default function ForPharmaciesPage() {
               </p>
             </div>
             <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-100">
-              <p className="text-2xl font-bold text-teal-600 mb-2">
+              <p className="text-2xl font-bold text-[color:var(--tenant-primary)] mb-2">
                 PGD revenue opportunity
               </p>
               <p className="text-gray-600">
@@ -197,7 +197,7 @@ export default function ForPharmaciesPage() {
           {features.map((feature, i) => (
             <div key={i} className="flex items-start gap-3 p-4">
               <svg
-                className="w-5 h-5 text-teal-500 mt-0.5 shrink-0"
+                className="w-5 h-5 text-[color:var(--tenant-primary)] mt-0.5 shrink-0"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -235,6 +235,32 @@ export default function ForPharmaciesPage() {
         </div>
       </section>
 
+      {/* ── ONE-STOP SHOP: PRACTICE DIGITAL ────────────────── */}
+      <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="bg-navy-950 rounded-2xl p-8 sm:p-12 flex flex-col md:flex-row md:items-center gap-8">
+          <div className="flex-1">
+            <p className="text-teal-400 font-semibold text-sm uppercase tracking-wider mb-2">
+              New — Practice Digital
+            </p>
+            <h2 className="text-2xl font-bold text-white mb-3">
+              Don&apos;t just launch services. Fill them.
+            </h2>
+            <p className="text-blue-100 leading-relaxed">
+              Our sister marketing agency promotes your private services to
+              local patients — web pages, Google Ads, social content, patient
+              campaigns and AI call answering. One family, one accountable
+              team, preferential rates for GRH partners.
+            </p>
+          </div>
+          <Link
+            href="/for-pharmacies/growth"
+            className="shrink-0 px-7 py-3.5 bg-teal-500 hover:bg-teal-400 text-white font-semibold rounded-lg transition-colors text-lg shadow-lg shadow-teal-500/20 text-center"
+          >
+            Grow your pharmacy
+          </Link>
+        </div>
+      </section>
+
       {/* ── CTA ────────────────────────────────────────────── */}
       <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
         <h2 className="text-2xl sm:text-3xl font-bold text-navy-900 mb-4">
@@ -243,13 +269,13 @@ export default function ForPharmaciesPage() {
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link
             href="/onboard"
-            className="px-7 py-3.5 bg-teal-500 hover:bg-teal-600 text-white font-semibold rounded-lg transition-colors text-lg shadow-sm"
+            className="px-7 py-3.5 bg-[color:var(--tenant-primary)]/100 hover:bg-[color:var(--tenant-primary)]/15 text-white font-semibold rounded-lg transition-colors text-lg shadow-sm"
           >
             Sign up your pharmacy
           </Link>
           <Link
             href="/for-pharmacies/pgd-catalogue"
-            className="px-7 py-3.5 border border-teal-500 text-teal-700 hover:bg-teal-50 font-semibold rounded-lg transition-colors text-lg"
+            className="px-7 py-3.5 border border-[color:var(--tenant-primary)]/30 text-[color:var(--tenant-primary)] hover:bg-[color:var(--tenant-primary)]/10 font-semibold rounded-lg transition-colors text-lg"
           >
             View PGD catalogue
           </Link>
