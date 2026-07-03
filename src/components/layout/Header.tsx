@@ -48,6 +48,7 @@ const pharmacyLinks = [
 /* Patient links removed — site is for pharmacy professionals only */
 
 const mainLinks = [
+  { href: "/for-pharmacies/growth", label: "Grow Your Pharmacy" },
   { href: "/about", label: "About Us" },
   { href: "/resources", label: "Resources" },
   { href: "/contact", label: "Contact" },
