@@ -551,12 +551,12 @@ export default async function PharmacyDashboard() {
                 Practice Digital
               </p>
               <p className="text-white font-semibold mb-1">
-                Want more patients booking these services?
+                Want patients booking these services online?
               </p>
               <p className="text-blue-200 text-sm">
-                Our sister agency runs your local ads, service pages, patient
-                campaigns and AI call answering — preferential rates for GRH
-                partners.
+                Our sister company Practice Digital builds pharmacy websites
+                with clinic booking and an AI chatbot — £399/year, £0 setup,
+                preferential rates for GRH partners.
               </p>
             </div>
             <a

@@ -990,10 +990,10 @@ export default function HomePage() {
               Practice Digital
             </h3>
             <p className="text-blue-100 text-sm leading-relaxed mb-5">
-              Our sister agency fills the services you launch: patient-facing
-              web pages, Google Ads, local SEO, social content, patient
-              campaigns and an AI receptionist that answers your phone and
-              books consultations.
+              Our sister company Practice Digital builds pharmacy websites
+              that drive Pharmacy First walk-ins — clinic booking, repeat
+              ordering, six languages and an AI patient chatbot. £399 a year,
+              £0 setup, price locked for five years.
             </p>
             <Link
               href="/for-pharmacies/growth"

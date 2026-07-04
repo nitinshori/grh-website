@@ -243,13 +243,13 @@ export default function ForPharmaciesPage() {
               New — Practice Digital
             </p>
             <h2 className="text-2xl font-bold text-white mb-3">
-              Don&apos;t just launch services. Fill them.
+              Don&apos;t just launch services. Let patients book them.
             </h2>
             <p className="text-blue-100 leading-relaxed">
-              Our sister marketing agency promotes your private services to
-              local patients — web pages, Google Ads, social content, patient
-              campaigns and AI call answering. One family, one accountable
-              team, preferential rates for GRH partners.
+              Our sister company Practice Digital builds your pharmacy&apos;s
+              website — Pharmacy First foregrounded, clinic booking, repeat
+              ordering and an AI chatbot. £399 a year, £0 setup, built by
+              working clinicians. See the Bridgegate Pharmacy demo.
             </p>
           </div>
           <Link

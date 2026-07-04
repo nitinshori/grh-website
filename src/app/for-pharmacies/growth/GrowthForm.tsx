@@ -8,12 +8,10 @@ import { useState } from "react";
 // the message body.
 
 const SERVICES = [
-  "Patient-facing service pages / website",
-  "Google Ads & local SEO",
-  "Social media content",
-  "Patient email & SMS campaigns",
-  "AI phone receptionist (call answering + booking)",
-  "Not sure — recommend a plan",
+  "Pharmacy website (£399/yr, £0 setup)",
+  "AI patient chatbot add-on",
+  "Clinic booking for my services",
+  "Not sure — talk me through it",
 ];
 
 export function GrowthForm() {

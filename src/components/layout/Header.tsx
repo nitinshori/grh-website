@@ -41,7 +41,7 @@ const pharmacyLinks = [
     href: "/for-pharmacies/growth",
     label: "Grow Your Pharmacy",
     description:
-      "Practice Digital \u2014 marketing, ads and AI call answering from our sister agency.",
+      "Practice Digital \u2014 we build your website, booking system and AI chatbot.",
   },
 ];
 
