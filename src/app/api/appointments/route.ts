@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { appointments } from '@/lib/db/schema'
-import { eq, and, gte, lte, desc } from 'drizzle-orm'
+import { and, gte, lte, inArray, eq } from 'drizzle-orm'
+import { getAccessiblePharmacyIds } from '@/lib/access-pharmacies'
 
 // ── GET /api/appointments?from=ISO&to=ISO ───────────────────────
-// Returns appointments for the logged-in user's pharmacy in range
+// Returns appointments for the logged-in user's pharmacy — OR all
+// pharmacies in the same group, if the pharmacy is part of a multi-site
+// group like Pritchards (Meliden + Victoria Road).
 
 export async function GET(req: NextRequest) {
   const session = await auth()
@@ -24,14 +27,19 @@ export async function GET(req: NextRequest) {
     )
   }
 
+  const pharmacyIds = await getAccessiblePharmacyIds(session.user.pharmacyId)
+  if (pharmacyIds.length === 0) {
+    return NextResponse.json({ appointments: [] })
+  }
+
   const rows = await db
     .select()
     .from(appointments)
     .where(
       and(
-        eq(appointments.pharmacyId, session.user.pharmacyId),
+        inArray(appointments.pharmacyId, pharmacyIds),
         gte(appointments.startTime, new Date(from)),
-        lte(appointments.endTime, new Date(to))
+        lte(appointments.endTime, new Date(to)),
       )
     )
     .orderBy(appointments.startTime)
@@ -40,7 +48,9 @@ export async function GET(req: NextRequest) {
 }
 
 // ── POST /api/appointments ──────────────────────────────────────
-// Create a new appointment slot (or booked appointment)
+// Create a new appointment slot (or booked appointment). If the caller
+// belongs to a group, they can pass `pharmacyId` to specify which branch
+// the appointment is at — otherwise it defaults to their own pharmacy.
 
 export async function POST(req: NextRequest) {
   const session = await auth()
@@ -49,7 +59,23 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json()
-  const { startTime, endTime, status, patientName, patientPhone, patientEmail, notes } = body
+  const {
+    pharmacyId: requestedPharmacyId,
+    clinicianId,
+    appointmentTypeId,
+    bookedByStaffId,
+    startTime,
+    endTime,
+    status,
+    patientName,
+    patientFirstName,
+    patientSurname,
+    patientDob,
+    patientPhone,
+    patientEmail,
+    serviceDetails,
+    notes,
+  } = body
 
   if (!startTime || !endTime) {
     return NextResponse.json(
@@ -72,17 +98,31 @@ export async function POST(req: NextRequest) {
     )
   }
 
+  // Validate that the target pharmacy is one the user can access.
+  const accessibleIds = await getAccessiblePharmacyIds(session.user.pharmacyId)
+  const targetPharmacyId =
+    (requestedPharmacyId && accessibleIds.includes(requestedPharmacyId))
+      ? requestedPharmacyId
+      : session.user.pharmacyId
+
   const [created] = await db
     .insert(appointments)
     .values({
-      pharmacyId: session.user.pharmacyId,
+      pharmacyId: targetPharmacyId,
+      clinicianId: clinicianId || null,
+      appointmentTypeId: appointmentTypeId || null,
+      bookedByStaffId: bookedByStaffId || null,
       createdByUserId: session.user.id,
       startTime: start,
       endTime: end,
       status: status || 'available',
       patientName: patientName?.trim() || null,
+      patientFirstName: patientFirstName?.trim() || null,
+      patientSurname: patientSurname?.trim() || null,
+      patientDob: patientDob?.trim() || null,
       patientPhone: patientPhone?.trim() || null,
       patientEmail: patientEmail?.trim() || null,
+      serviceDetails: serviceDetails?.trim() || null,
       notes: notes?.trim() || null,
     })
     .returning()

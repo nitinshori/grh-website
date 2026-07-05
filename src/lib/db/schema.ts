@@ -197,6 +197,19 @@ export const clinicians = pgTable('clinicians', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 
+// ── Staff Members ──────────────────────────────────────────────
+// Whole-team list per group ("who booked this appointment") — distinct
+// from clinicians, who deliver the consultations.
+
+export const staffMembers = pgTable('staff_members', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  groupSlug: varchar('group_slug', { length: 100 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  sortOrder: integer('sort_order').default(0).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
 // ── Appointment Types ──────────────────────────────────────────
 
 export const appointmentTypes = pgTable('appointment_types', {
@@ -249,6 +262,8 @@ export const appointments = pgTable('appointments', {
     .references(() => appointmentTypes.id, { onDelete: 'set null' }),
   createdByUserId: uuid('created_by_user_id')
     .references(() => users.id, { onDelete: 'set null' }),
+  bookedByStaffId: uuid('booked_by_staff_id')
+    .references(() => staffMembers.id, { onDelete: 'set null' }),
   startTime: timestamp('start_time').notNull(),
   endTime: timestamp('end_time').notNull(),
   status: appointmentStatusEnum('status').default('available').notNull(),
@@ -511,6 +526,70 @@ export const trainingAttempts = pgTable(
     ),
   }),
 )
+
+// ── Custom PGDs (admin PGD Builder) ─────────────────────────────
+// Self-serve PGDs authored in /admin/pgd-builder. Each row holds the
+// full structured definition (screening questions, medicines, doses,
+// document sections) as JSON — one generic engine renders the ePGD
+// tool and the printable PGD document from it, so new services need
+// no code. `status` gates visibility: drafts are only usable by
+// super_admin (with a banner); live PGDs behave exactly like the
+// hand-built ones, gated per pharmacy via pharmacy_pgds.
+
+export const customPgdStatusEnum = pgEnum('custom_pgd_status', [
+  'draft',
+  'live',
+  'archived',
+])
+
+export const customPgds = pgTable(
+  'custom_pgds',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    slug: varchar('slug', { length: 100 }).notNull(),
+    title: varchar('title', { length: 255 }).notNull(),
+    subtitle: varchar('subtitle', { length: 255 }).default('').notNull(),
+    category: varchar('category', { length: 100 }).default('Custom').notNull(),
+    status: customPgdStatusEnum('status').default('draft').notNull(),
+    /** CustomPgdDefinition JSON — see src/lib/custom-pgd/types.ts */
+    definition: jsonb('definition').notNull(),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (t) => [uniqueIndex('custom_pgds_slug_unique').on(t.slug)],
+)
+
+export type CustomPgd = typeof customPgds.$inferSelect
+export type NewCustomPgd = typeof customPgds.$inferInsert
+
+// ── Device tokens (mobile push notifications) ───────────────────
+// One row per app install that has granted notification permission.
+// iOS rows hold raw APNs tokens; Android rows hold FCM registration
+// tokens. The sender in lib/push.ts routes on `platform`. Tokens are
+// upserted on every app launch (lastSeenAt refresh) and deleted when
+// the provider reports them invalid.
+
+export const deviceTokens = pgTable(
+  'device_tokens',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    token: text('token').notNull(),
+    platform: varchar('platform', { length: 10 }).notNull(), // 'ios' | 'android'
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    lastSeenAt: timestamp('last_seen_at').defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex('device_tokens_token_unique').on(t.token),
+    index('device_tokens_user_idx').on(t.userId),
+  ],
+)
+
+export type DeviceToken = typeof deviceTokens.$inferSelect
+export type NewDeviceToken = typeof deviceTokens.$inferInsert
 
 // ── Type exports ────────────────────────────────────────────────
 

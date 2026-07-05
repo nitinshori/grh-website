@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/migrate.mjs && next build",
     "start": "next start",
     "lint": "eslint"
   },
@@ -35,6 +35,6 @@
     "pg": "^8.20.0",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vercel": "^53.1.1"
+    "vercel": "^54.18.5"
   }
 }
