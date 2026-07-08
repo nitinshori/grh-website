@@ -4,7 +4,9 @@ import { validatePatientStep, validateConsentStep, validateSummaryStep } from ".
 export function validateStep(step: number, state: PeriodDelayConsultationState): string | null {
   switch (step) {
     case 0:
-      return validatePatientStep(state.patient);
+      // Age criterion 16+ — agreed by Dr Shori (MD) & C. Pilkington, Jul 2026
+      // (PGD version bump; was 18+).
+      return validatePatientStep(state.patient, { minAge: 16 });
     case 1:
       return validateConsentStep(state.consent);
     case 2:

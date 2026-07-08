@@ -37,8 +37,8 @@ export function getAllAlerts(state: PeriodDelayConsultationState): ClinicalAlert
     alerts.push({ severity: "stop", code: "VAGINAL_BLEEDING", message: "Undiagnosed vaginal bleeding", detail: "Must be investigated before progestogen use. Refer to GP." });
   }
 
-  if (state.medicalHistory.ageUnder18) {
-    alerts.push({ severity: "stop", code: "AGE", message: "Patient under 18 years", detail: "Outside the scope of this PGD. Refer to GP." });
+  if (state.medicalHistory.ageUnder16) {
+    alerts.push({ severity: "stop", code: "AGE", message: "Patient under 16 years", detail: "Outside the scope of this PGD. Refer to GP." });
   }
 
   // Cautions

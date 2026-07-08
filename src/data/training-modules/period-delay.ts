@@ -28,7 +28,7 @@ export const periodDelayModule: TrainingModule = {
       "Important: norethisterone for period delay is NOT a contraceptive at this dose. Patients on hormonal contraception generally don't need period delay (extended COCP regimens are simpler).",
     ], highlights: ["Start 3 days before expected period. Continue up to ~14 days.", "Not a contraceptive at this dose — barrier methods required if needed.", "Withdrawal bleed begins 2–3 days after stopping."] },
     { id: "eligibility", type: "checklist", title: "Eligibility", intro: "Supply only if ALL apply:", items: [
-      { label: "Female, aged 18–50", detail: "Outside this range refer. Pregnancy is contraindicated; postmenopausal not relevant." },
+      { label: "Female, aged 16–50", detail: "Outside this range refer (age criterion lowered from 18 to 16, PGD v002, Jul 2026). Pregnancy is contraindicated; postmenopausal not relevant." },
       { label: "Regular menstrual cycle", detail: "Knows when period is due (timing critical for efficacy)." },
       { label: "Not currently pregnant or breastfeeding", detail: "Refer." },
       { label: "Wants short-term delay (≤14 days)", detail: "Longer-term cycle manipulation needs GP/specialist." },

@@ -147,7 +147,7 @@ export default function PeriodDelayClient() {
       case 0:
         return (
           <StepWrapper title="Patient Details" currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={validationError}>
-            <PatientDetailsStep patient={state.patient} onChange={(field, value) => dispatch({ type: "UPDATE_PATIENT", field, value })} requireAdult={false} />
+            <PatientDetailsStep patient={state.patient} onChange={(field, value) => dispatch({ type: "UPDATE_PATIENT", field, value })} />
           </StepWrapper>
         );
       case 1:
@@ -188,7 +188,7 @@ export default function PeriodDelayClient() {
               <Checkbox label="Active liver disease or liver tumours" checked={state.medicalHistory.liverDisease} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "liverDisease", value: v })} />
               <Checkbox label="Acute porphyria" checked={state.medicalHistory.porphyria} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "porphyria", value: v })} />
               <Checkbox label="Undiagnosed abnormal vaginal bleeding" checked={state.medicalHistory.abnormalVaginalBleeding} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "abnormalVaginalBleeding", value: v })} />
-              <Checkbox label="Patient under 16 years" checked={state.medicalHistory.ageUnder16} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "ageUnder16", value: v })} />
+              <Checkbox label="Patient under 18 years" checked={state.medicalHistory.ageUnder18} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "ageUnder18", value: v })} />
               <div className="border-t pt-4"><p className="text-sm font-semibold text-amber-700">CAUTIONS:</p></div>
               <Checkbox label="Currently breastfeeding" checked={state.medicalHistory.breastfeeding} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "breastfeeding", value: v })} description="Small amounts pass into breast milk" />
               <Checkbox label="Currently using hormonal contraception" checked={state.medicalHistory.hormonalContraception} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "hormonalContraception", value: v })} description="Combined pill users may be able to run packs back-to-back instead" />
