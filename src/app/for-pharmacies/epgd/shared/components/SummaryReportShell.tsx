@@ -61,15 +61,20 @@ export function CounsellingGrid({
     <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
       {items.map(([label, checked]) => (
         <div key={label} className="flex items-center gap-2 py-0.5">
+          {/* Print-safe tick: browsers drop background colours when printing,
+              which used to leave a white check invisible on white paper
+              (Rachel's bug). The tick is now drawn in a dark stroke that
+              doesn't depend on the background surviving print, and we also
+              ask the browser to keep colours where supported. */}
           <span
-            className={`w-3 h-3 rounded border flex items-center justify-center ${
+            className={`w-3 h-3 rounded border flex items-center justify-center [print-color-adjust:exact] [-webkit-print-color-adjust:exact] ${
               checked
-                ? "bg-teal-500 border-teal-500 text-white"
+                ? "bg-[color:var(--tenant-primary)]/100 border-[color:var(--tenant-primary)] text-white print:bg-white print:text-black print:border-black"
                 : "border-gray-300"
             }`}
           >
             {checked && (
-              <svg className="w-2 h-2" viewBox="0 0 20 20" fill="currentColor">
+              <svg className="w-2 h-2" viewBox="0 0 20 20" fill="currentColor" strokeWidth={1}>
                 <path
                   fillRule="evenodd"
                   d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"

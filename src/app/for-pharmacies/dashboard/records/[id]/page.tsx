@@ -5,6 +5,7 @@ import { db } from '@/lib/db'
 import { consultationRecords } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { ALL_PGDS } from '@/lib/pgd-access'
+import { tryDecrypt } from '@/lib/encryption'
 
 const pgdTitleMap = new Map(ALL_PGDS.map((p) => [p.slug, p.title]))
 
@@ -37,12 +38,15 @@ export default async function RecordDetailPage({
 
   if (!record) notFound()
 
-  // Parse clinical data
+  // Parse clinical data. The save endpoint encrypts the field via
+  // tryEncrypt() when DATA_ENCRYPTION_KEY is set, so we must decrypt
+  // first; tryDecrypt is a no-op for plaintext (legacy) rows.
   let clinicalData: Record<string, unknown> = {}
   try {
-    clinicalData = JSON.parse(record.clinicalData)
+    const raw = tryDecrypt(record.clinicalData)
+    clinicalData = JSON.parse(raw)
   } catch {
-    // invalid JSON
+    // invalid JSON — surface an empty state rather than crash the page
   }
 
   const pgdTitle = pgdTitleMap.get(record.pgdSlug) || record.pgdSlug
@@ -53,7 +57,7 @@ export default async function RecordDetailPage({
       <div className="mb-6 print:hidden">
         <Link
           href="/for-pharmacies/dashboard/records"
-          className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-teal-600 transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-[color:var(--tenant-primary)] transition-colors"
         >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -100,12 +104,19 @@ export default async function RecordDetailPage({
           <Field label="Full Name" value={`${record.patientFirstName} ${record.patientLastName}`} />
           <Field label="Date of Birth" value={record.patientDob} />
           <Field label="NHS Number" value={record.patientNhsNumber || 'Not provided'} />
-          <Field label="Phone" value={record.patientPhone || 'Not provided'} />
-          <Field label="Email" value={record.patientEmail || 'Not provided'} />
+          <Field label="Mobile" value={record.patientPhone || 'Not provided'} />
+          <Field label="Contact Email" value={record.patientEmail || 'Not provided'} />
           <Field label="Address" value={record.patientAddress || 'Not provided'} />
           <Field label="GP Name" value={record.patientGpName || 'Not provided'} />
           <Field label="GP Practice" value={record.patientGpPractice || 'Not provided'} />
+          <Field label="Delivery Details" value={record.deliveryDetails || 'Not provided'} />
         </div>
+        {record.consultationNotes && (
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Consultation Notes</p>
+            <p className="text-sm text-gray-900 whitespace-pre-wrap">{record.consultationNotes}</p>
+          </div>
+        )}
       </div>
 
       {/* Medicine Details */}

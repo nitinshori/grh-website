@@ -126,7 +126,7 @@ export default function ShinglesClient() {
         return (
           <PatientDetailsStep
             patient={state.patient}
-            onChange={(field, value) => dispatch({ type: "UPDATE_PATIENT", field, value })}
+            onChange={(field, value) => dispatch({ type: "UPDATE_PATIENT", field, value: value ?? "" })}
           />
         );
 
@@ -306,14 +306,14 @@ export default function ShinglesClient() {
       case 4:
         return (
           <div className="space-y-4">
-            <div className="p-3 bg-teal-50 border border-teal-200 rounded-lg">
-              <p className="text-sm font-medium text-teal-900">
+            <div className="p-3 bg-[color:var(--tenant-primary)]/10 border border-[color:var(--tenant-primary)]/30 rounded-lg">
+              <p className="text-sm font-medium text-[color:var(--tenant-primary)]">
                 Shingrix (Recombinant Zoster Vaccine)
               </p>
-              <p className="text-xs text-teal-700 mt-1">
+              <p className="text-xs text-[color:var(--tenant-primary)] mt-1">
                 0.5 mL intramuscular injection into deltoid
               </p>
-              <p className="text-xs text-teal-700 mt-2">
+              <p className="text-xs text-[color:var(--tenant-primary)] mt-2">
                 Schedule: Dose 1 today, Dose 2 in 2 months
               </p>
             </div>
@@ -412,8 +412,8 @@ export default function ShinglesClient() {
       case 6:
         return (
           <div className="text-center py-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-teal-50 rounded-full mb-4">
-              <svg className="w-8 h-8 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-[color:var(--tenant-primary)]/10 rounded-full mb-4">
+              <svg className="w-8 h-8 text-[color:var(--tenant-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>

@@ -81,6 +81,8 @@ export async function POST(request: Request) {
         patientAddress: patient.address?.trim() || null,
         patientGpName: patient.gpName?.trim() || null,
         patientGpPractice: patient.gpPractice?.trim() || null,
+        deliveryDetails: patient.deliveryDetails?.trim() || null,
+        consultationNotes: patient.consultationNotes?.trim() || null,
         clinicalData: tryEncrypt(
           typeof clinicalData === 'string' ? clinicalData : JSON.stringify(clinicalData)
         ),

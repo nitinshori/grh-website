@@ -313,6 +313,8 @@ export const consultationRecords = pgTable('consultation_records', {
   patientAddress: text('patient_address'),
   patientGpName: varchar('patient_gp_name', { length: 255 }),
   patientGpPractice: varchar('patient_gp_practice', { length: 255 }),
+  deliveryDetails: text('delivery_details'),
+  consultationNotes: text('consultation_notes'),
 
   // Full clinical data as JSON (flexible per-PGD)
   clinicalData: text('clinical_data').notNull(),

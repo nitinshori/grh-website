@@ -33,6 +33,13 @@ export interface BasePatientDetails {
   address: string;
   phone: string;
   email: string;
+  /** Free-text delivery instructions (e.g. home delivery address/notes).
+   *  Optional so per-PGD initial-state literals (which predate the field)
+   *  remain valid; the shared step treats undefined as "". */
+  deliveryDetails?: string;
+  /** General consultation note captured alongside patient details. Optional
+   *  for the same reason. */
+  consultationNotes?: string;
 }
 
 // ─── Base Consent (shared across all PGDs) ───
@@ -87,6 +94,8 @@ export const initialPatientDetails: BasePatientDetails = {
   address: "",
   phone: "",
   email: "",
+  deliveryDetails: "",
+  consultationNotes: "",
 };
 
 export const initialConsent: BaseConsent = {

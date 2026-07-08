@@ -141,7 +141,7 @@ export default function CovidBoosterClient() {
           <PatientDetailsStep
             patient={state.patient}
             onChange={(field, value) =>
-              dispatch({ type: "UPDATE_PATIENT", field, value })
+              dispatch({ type: "UPDATE_PATIENT", field, value: value ?? "" })
             }
             requireAdult={false}
           />
@@ -335,14 +335,14 @@ export default function CovidBoosterClient() {
       case 4:
         return (
           <div className="space-y-4">
-            <div className="p-3 bg-teal-50 border border-teal-200 rounded-lg">
-              <p className="text-sm font-medium text-teal-900">
+            <div className="p-3 bg-[color:var(--tenant-primary)]/10 border border-[color:var(--tenant-primary)]/30 rounded-lg">
+              <p className="text-sm font-medium text-[color:var(--tenant-primary)]">
                 COVID-19 mRNA Booster (XBB.1.5 or current variant-updated)
               </p>
-              <p className="text-xs text-teal-700 mt-1">
+              <p className="text-xs text-[color:var(--tenant-primary)] mt-1">
                 0.3 mL intramuscular injection into deltoid
               </p>
-              <p className="text-xs text-teal-700 mt-2">
+              <p className="text-xs text-[color:var(--tenant-primary)] mt-2">
                 Single dose booster. Observe for 15 minutes post-injection.
               </p>
             </div>
@@ -441,9 +441,9 @@ export default function CovidBoosterClient() {
       case 6:
         return (
           <div className="text-center py-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-teal-50 rounded-full mb-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-[color:var(--tenant-primary)]/10 rounded-full mb-4">
               <svg
-                className="w-8 h-8 text-teal-600"
+                className="w-8 h-8 text-[color:var(--tenant-primary)]"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"

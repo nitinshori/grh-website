@@ -4,6 +4,7 @@ import type { BasePatientDetails } from "../types";
 import { TextInput, Checkbox } from "../components/FormInputs";
 import { GPPracticeSearch } from "../components/GPPracticeSearch";
 import { ReturningPatientSearch } from "../components/ReturningPatientSearch";
+import { PostcodeLookup } from "../components/PostcodeLookup";
 
 interface PatientDetailsStepProps {
   patient: BasePatientDetails;
@@ -62,6 +63,36 @@ export function PatientDetailsStep({ patient, onChange, genderOption, requireAdu
           placeholder="Smith"
         />
       </div>
+      {/* Address directly after the name (Rachel/Pritchards request) */}
+      <PostcodeLookup
+        onResolved={({ town, postcode }) => {
+          // Prefill the locality + postcode; pharmacist adds house no./street.
+          const locality = [town, postcode].filter(Boolean).join(", ");
+          onChange("address", patient.address?.trim() ? `${patient.address.trim()}, ${locality}` : locality);
+        }}
+      />
+      <TextInput
+        label="Patient address"
+        value={patient.address}
+        onChange={(v) => onChange("address", v)}
+        placeholder="123 High Street, London"
+      />
+      <div className="grid sm:grid-cols-2 gap-4">
+        <TextInput
+          label="Mobile number (optional)"
+          value={patient.phone}
+          onChange={(v) => onChange("phone", v)}
+          type="tel"
+          placeholder="07..."
+        />
+        <TextInput
+          label="Contact email (optional)"
+          value={patient.email}
+          onChange={(v) => onChange("email", v)}
+          type="email"
+          placeholder="patient@example.com"
+        />
+      </div>
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-navy-900 mb-1">
@@ -72,7 +103,7 @@ export function PatientDetailsStep({ patient, onChange, genderOption, requireAdu
             value={patient.dateOfBirth}
             onChange={(e) => onChange("dateOfBirth", e.target.value)}
             max={new Date().toISOString().split("T")[0]}
-            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent"
+            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
           />
         </div>
         <div>
@@ -113,12 +144,14 @@ export function PatientDetailsStep({ patient, onChange, genderOption, requireAdu
             onChange("gpPractice", match.name);
             onChange("gpAddress", match.address);
             onChange("gpPhone", match.phone);
+            if (match.email) onChange("gpEmail", match.email);
             onChange("gpOdsCode", match.odsCode);
           }}
           onClear={() => {
             onChange("gpPractice", "");
             onChange("gpAddress", "");
             onChange("gpPhone", "");
+            onChange("gpEmail", "");
             onChange("gpOdsCode", "");
           }}
         />
@@ -148,27 +181,30 @@ export function PatientDetailsStep({ patient, onChange, genderOption, requireAdu
         type="email"
         placeholder="practice.admin@nhs.net"
       />
-      <div className="grid sm:grid-cols-2 gap-4">
-        <TextInput
-          label="NHS number (optional)"
-          value={patient.nhsNumber}
-          onChange={(v) => onChange("nhsNumber", v)}
-          placeholder="123 456 7890"
-        />
-        <TextInput
-          label="Phone (optional)"
-          value={patient.phone}
-          onChange={(v) => onChange("phone", v)}
-          type="tel"
-          placeholder="07..."
+      <TextInput
+        label="NHS number (optional)"
+        value={patient.nhsNumber}
+        onChange={(v) => onChange("nhsNumber", v)}
+        placeholder="123 456 7890"
+      />
+      <TextInput
+        label="Delivery details (optional)"
+        value={patient.deliveryDetails ?? ""}
+        onChange={(v) => onChange("deliveryDetails", v)}
+        placeholder="e.g. home delivery to address above; leave with neighbour at no. 5"
+      />
+      <div>
+        <label className="block text-sm font-medium text-navy-900 mb-1">
+          Consultation notes (optional)
+        </label>
+        <textarea
+          value={patient.consultationNotes ?? ""}
+          onChange={(e) => onChange("consultationNotes", e.target.value)}
+          rows={3}
+          placeholder="Anything worth recording about this consultation…"
+          className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent resize-y"
         />
       </div>
-      <TextInput
-        label="Address (optional)"
-        value={patient.address}
-        onChange={(v) => onChange("address", v)}
-        placeholder="123 High Street, London"
-      />
     </div>
   );
 }
