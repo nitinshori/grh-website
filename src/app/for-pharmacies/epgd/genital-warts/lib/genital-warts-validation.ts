@@ -4,7 +4,7 @@ import { validatePatientStep, validateConsentStep, validateSummaryStep } from ".
 export function validateStep(state: GenitalWartsConsultationState, step: number): string | null {
   switch (step) {
     case 0:
-      return validatePatientStep(state.patient);
+      return validatePatientStep(state.patient, { minAge: 18 }) // age gate per signed PGD (consistency review Jul 2026);
     case 1:
       if (!state.assessment.wartCount) return "Wart count required";
       return null;

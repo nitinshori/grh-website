@@ -4,7 +4,7 @@ import { validatePatientStep, validateConsentStep, validateSummaryStep } from ".
 export function validateStep(state: GLP1ConsultationState, step: number): string | null {
   switch (step) {
     case 0:
-      return validatePatientStep(state.patient);
+      return validatePatientStep(state.patient, { minAge: 18 }) // age gate per signed PGD (consistency review Jul 2026);
     case 1:
       if (!state.assessment.patientOnGLP1) return "Confirm patient is on GLP-1 therapy";
       if (!state.assessment.medicationName.trim()) return "GLP-1 medication name required";

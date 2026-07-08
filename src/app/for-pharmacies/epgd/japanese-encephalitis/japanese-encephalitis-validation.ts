@@ -26,6 +26,11 @@ export function validatePatientDetails(
   if (!patient.dateOfBirth) {
     errors.push('Date of birth is required');
   }
+
+  // Age gate per signed PGD — adults 18+ (consistency review Jul 2026)
+  if (patient.age !== null && patient.age < 18) {
+    errors.push('This PGD applies to adults aged 18 years and over');
+  }
   if (!patient.nhsNumber?.trim()) {
     errors.push('NHS number is required');
   }

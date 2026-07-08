@@ -17,7 +17,7 @@ import {
 export function validateStep(stepNumber: number, state: WegovyConsultationState): string | null {
   switch (stepNumber) {
     case 0:
-      return validatePatientStep(state);
+      return validatePatientStep(state); // already gates 18+ internally (verified, consistency review Jul 2026)
     case 1:
       return validateConsentStep(state);
     case 2:

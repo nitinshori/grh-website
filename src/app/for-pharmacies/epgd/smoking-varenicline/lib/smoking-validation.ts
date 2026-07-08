@@ -35,6 +35,12 @@ export function validatePatientDetails(
         field: "dateOfBirth",
         message: "Please enter a valid date of birth",
       });
+    } else if (age < 18) {
+      // Age gate per signed PGD — adults 18+ (consistency review Jul 2026)
+      errors.push({
+        field: "dateOfBirth",
+        message: "This PGD applies to adults aged 18 years and over",
+      });
     }
   }
 

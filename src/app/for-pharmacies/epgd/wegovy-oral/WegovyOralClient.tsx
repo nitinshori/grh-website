@@ -261,6 +261,11 @@ export function WegovyOralClient() {
       out.push({ code: "consent", severity: "stop", message: "Off-label written consent not yet obtained", detail: "Cannot proceed until informed written consent for off-label use is documented." });
     }
 
+    // Age gate per signed PGD — adults 18+ (consistency review Jul 2026)
+    if (state.patient.age !== null && state.patient.age < 18) {
+      out.push({ code: "age", severity: "stop", message: "Patient under 18", detail: "This PGD applies to adults aged 18 years and over." });
+    }
+
     // Eligibility
     if (state.eligibility.bmi !== null && state.eligibility.bmi < 27) {
       out.push({ code: "bmi", severity: "stop", message: "BMI below threshold", detail: `BMI ${state.eligibility.bmi} — must be ≥30, or ≥27 with weight-related comorbidity.` });
@@ -361,9 +366,9 @@ export function WegovyOralClient() {
                 <NumberInput label="Weight (kg)" value={state.eligibility.weightKg} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "weightKg", value: v })} min={30} max={250} />
               </div>
               {state.eligibility.bmi !== null && (
-                <div className="p-3 bg-teal-50 border border-teal-200 rounded-md">
-                  <p className="text-sm text-teal-900"><strong>BMI: {state.eligibility.bmi}</strong></p>
-                  <p className="text-xs text-teal-800 mt-1">
+                <div className="p-3 bg-[color:var(--tenant-primary)]/10 border border-[color:var(--tenant-primary)]/30 rounded-md">
+                  <p className="text-sm text-[color:var(--tenant-primary)]"><strong>BMI: {state.eligibility.bmi}</strong></p>
+                  <p className="text-xs text-[color:var(--tenant-primary)] mt-1">
                     {state.eligibility.bmi >= 30
                       ? "BMI ≥30 — eligible (no comorbidity required)."
                       : state.eligibility.bmi >= 27

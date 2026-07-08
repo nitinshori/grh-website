@@ -4,7 +4,7 @@ import { validatePatientStep, validateConsentStep, validateSummaryStep } from ".
 export function validateStep(state: GonorrhoeaConsultationState, step: number): string | null {
   switch (step) {
     case 0:
-      return validatePatientStep(state.patient);
+      return validatePatientStep(state.patient, { minAge: 18 }) // age gate per signed PGD (consistency review Jul 2026);
     case 1:
       if (!state.assessment.neatPositive) return "NAAT-confirmed gonorrhoea diagnosis required";
       if (state.assessment.pharyngealGonorrhoea) return "Pharyngeal gonorrhoea requires specialist referral (not in this PGD)";

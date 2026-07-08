@@ -8,7 +8,7 @@ import type {
 } from "./travel-core-types";
 
 export function validatePatient(patient: BasePatientDetails): string | null {
-  return validatePatientStep(patient);
+  return validatePatientStep(patient, { minAge: 18 }) // age gate per signed PGD (consistency review Jul 2026);
 }
 
 export function validateConsent(consent: BaseConsent): string | null {

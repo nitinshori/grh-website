@@ -2,7 +2,7 @@ import type { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/
 import { validatePatientStep, validateConsentStep, validateSummaryStep } from "../../shared/types";
 
 export function validatePatient(patient: BasePatientDetails): string | null {
-  return validatePatientStep(patient);
+  return validatePatientStep(patient, { minAge: 18 }) // age gate per signed PGD (consistency review Jul 2026);
 }
 
 export function validateAssessment(assessment: { subtype: string }): string | null {

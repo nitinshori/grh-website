@@ -8,6 +8,7 @@ import { PatientDetailsStep } from "../shared/steps/PatientDetailsStep"
 import { ConsentStep } from "../shared/steps/ConsentStep"
 import { TextInput, TextArea, Checkbox } from "../shared/components/FormInputs"
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile"
+import { calculateAge } from "../shared/types"
 
 const STEP_TITLES = [
   "Patient Details",
@@ -108,7 +109,11 @@ export function B12InjectionClient() {
     !!state.administration.postObsMinutes &&
     state.administration.patientWell
 
-  const canProceedByStep = [true, true, eligibilityValid, treatmentValid, adminValid, true, true]
+  // Age gate per signed PGD — adults 18+ (consistency review Jul 2026)
+  const patientAge = calculateAge(state.patient.dateOfBirth)
+  const patientValid = !state.patient.dateOfBirth || patientAge === null || patientAge >= 18
+
+  const canProceedByStep = [patientValid, true, eligibilityValid, treatmentValid, adminValid, true, true]
   const canProceed = canProceedByStep[currentStep]
 
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
@@ -156,7 +161,13 @@ export function B12InjectionClient() {
         onNext={handleNext}
         onPrev={handlePrev}
         canProceed={canProceed}
-        validationError={!canProceed ? "Please complete all required fields" : null}
+        validationError={
+          !canProceed
+            ? currentStep === 0 && !patientValid
+              ? "This PGD applies to adults aged 18 years and over"
+              : "Please complete all required fields"
+            : null
+        }
         getConsultationData={getConsultationData}
       >
         {currentStep === 0 && (
@@ -202,7 +213,7 @@ export function B12InjectionClient() {
                 <select
                   value={state.eligibility.deficiencySource}
                   onChange={(e) => updateEligibility("deficiencySource", e.target.value as typeof state.eligibility.deficiencySource)}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
                 >
                   <option value="">— select —</option>
                   <option value="labs">Laboratory-confirmed (low serum B12 ± raised MMA / low holoTC)</option>
@@ -227,7 +238,7 @@ export function B12InjectionClient() {
                     type="date"
                     value={state.eligibility.labDate}
                     onChange={(e) => updateEligibility("labDate", e.target.value)}
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent"
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
                   />
                 </div>
               </div>
@@ -369,7 +380,7 @@ export function B12InjectionClient() {
                 <select
                   value={state.treatment.doseNumber}
                   onChange={(e) => updateTreatment("doseNumber", e.target.value as typeof state.treatment.doseNumber)}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
                 >
                   <option value="">— select —</option>
                   <option value="1">1st of 6 (Week 1, Day 1)</option>
@@ -425,7 +436,7 @@ export function B12InjectionClient() {
                   <select
                     value={state.treatment.maintenanceInterval}
                     onChange={(e) => updateTreatment("maintenanceInterval", e.target.value as typeof state.treatment.maintenanceInterval)}
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
                   >
                     <option value="">— select —</option>
                     <option value="8-weeks">Every 8 weeks — non-diet-related with neurological involvement</option>
@@ -445,7 +456,7 @@ export function B12InjectionClient() {
                 value={state.treatment.nextDueDate}
                 onChange={(e) => updateTreatment("nextDueDate", e.target.value)}
                 min={new Date().toISOString().split("T")[0]}
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
               />
             </div>
           </div>
@@ -470,7 +481,7 @@ export function B12InjectionClient() {
                   value={state.administration.expiryDate}
                   onChange={(e) => updateAdmin("expiryDate", e.target.value)}
                   min={new Date().toISOString().split("T")[0]}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
                 />
               </div>
             </div>
@@ -482,7 +493,7 @@ export function B12InjectionClient() {
               <select
                 value={state.administration.injectionSite}
                 onChange={(e) => updateAdmin("injectionSite", e.target.value as typeof state.administration.injectionSite)}
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
               >
                 <option value="">— select —</option>
                 <option value="left-deltoid">Left deltoid</option>
@@ -510,7 +521,7 @@ export function B12InjectionClient() {
                 <select
                   value={state.administration.postObsMinutes}
                   onChange={(e) => updateAdmin("postObsMinutes", e.target.value as typeof state.administration.postObsMinutes)}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
                 >
                   <option value="">— select —</option>
                   <option value="5">5 minutes (low risk, returning patient)</option>
