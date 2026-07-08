@@ -5,8 +5,8 @@ import { useEffect, useRef, useState } from "react";
 interface GPPracticeSearchProps {
   /** Current GP practice name (read-only display once selected; user can also clear). */
   practice: string;
-  /** Called with the matched practice. address/phone/email/odsCode are all optional. */
-  onSelect: (match: { name: string; address: string; phone: string; email: string; odsCode: string }) => void;
+  /** Called with the matched practice. address/phone/odsCode are all optional. */
+  onSelect: (match: { name: string; address: string; phone: string; odsCode: string }) => void;
   /** Called when user clears the practice selection. */
   onClear: () => void;
 }
@@ -104,13 +104,13 @@ export function GPPracticeSearch({ practice, onSelect, onClear }: GPPracticeSear
     try {
       const res = await fetch(`/api/gp-search/${r.odsCode}`);
       if (res.ok) {
-        const data = (await res.json()) as { name: string; address: string; phone: string; email?: string; odsCode: string };
-        onSelect({ name: data.name, address: data.address, phone: data.phone, email: data.email ?? "", odsCode: data.odsCode });
+        const data = (await res.json()) as { name: string; address: string; phone: string; odsCode: string };
+        onSelect({ name: data.name, address: data.address, phone: data.phone, odsCode: data.odsCode });
         return;
       }
     } catch { /* fall through */ }
     // Fallback: at least set the name
-    onSelect({ name: r.name, address: "", phone: "", email: "", odsCode: r.odsCode });
+    onSelect({ name: r.name, address: "", phone: "", odsCode: r.odsCode });
   }
 
   if (practice) {

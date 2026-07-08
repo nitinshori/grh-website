@@ -62,7 +62,7 @@ export function ProgressBar(props: ProgressBarProps) {
                       isActive
                         ? hasErrors
                           ? "bg-red-50 text-red-700 ring-2 ring-red-300"
-                          : "bg-[color:var(--tenant-primary)]/10 text-[color:var(--tenant-primary)] ring-2 ring-[color:var(--tenant-primary)]/30"
+                          : "bg-[color:var(--tenant-primary)]/10 text-[color:var(--tenant-primary)] ring-2 ring-teal-300"
                         : isCompleted
                           ? "bg-[color:var(--tenant-primary)]/10 text-[color:var(--tenant-primary)] hover:bg-[color:var(--tenant-primary)]/20 cursor-pointer"
                           : "bg-gray-50 text-gray-400"
@@ -102,7 +102,7 @@ export function ProgressBar(props: ProgressBarProps) {
                 {i < stepLabels.length - 1 && (
                   <div
                     className={`w-2 h-0.5 flex-shrink-0 ${
-                      isCompleted ? "bg-[color:var(--tenant-primary)]" : "bg-gray-200"
+                      isCompleted ? "bg-teal-300" : "bg-gray-200"
                     }`}
                   />
                 )}

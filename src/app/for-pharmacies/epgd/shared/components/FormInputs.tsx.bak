@@ -33,7 +33,7 @@ export function TextInput({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         disabled={disabled}
-        className={`w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent ${disabled ? "bg-gray-100 text-gray-500" : ""}`}
+        className={`w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent ${disabled ? "bg-gray-100 text-gray-500" : ""}`}
       />
     </div>
   );
@@ -58,7 +58,7 @@ export function Checkbox({
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="mt-0.5 rounded border-gray-300 text-[color:var(--tenant-primary)] focus:ring-[color:var(--tenant-primary)]"
+        className="mt-0.5 rounded border-gray-300 text-teal-500 focus:ring-teal-400"
       />
       <div>
         <span className="text-sm text-navy-900">{label}</span>
@@ -94,7 +94,7 @@ export function SelectInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        className={`w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent bg-white ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
+        className={`w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent bg-white ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
       >
         <option value="" disabled>
           Select...
@@ -146,7 +146,7 @@ export function NumberInput({
           min={min}
           max={max}
           placeholder={placeholder}
-          className="w-24 px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
+          className="w-24 px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent"
         />
         {unit && <span className="text-xs text-gray-500">{unit}</span>}
       </div>
@@ -179,7 +179,7 @@ export function TextArea({
         onChange={(e) => onChange(e.target.value)}
         rows={rows}
         placeholder={placeholder}
-        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent resize-y"
+        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent resize-y"
       />
     </div>
   );

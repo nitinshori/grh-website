@@ -62,7 +62,7 @@ export function ProgressBar(props: ProgressBarProps) {
                       isActive
                         ? hasErrors
                           ? "bg-red-50 text-red-700 ring-2 ring-red-300"
-                          : "bg-[color:var(--tenant-primary)]/10 text-[color:var(--tenant-primary)] ring-2 ring-[color:var(--tenant-primary)]/30"
+                          : "bg-[color:var(--tenant-primary)]/10 text-[color:var(--tenant-primary)] ring-2 ring-teal-300"
                         : isCompleted
                           ? "bg-[color:var(--tenant-primary)]/10 text-[color:var(--tenant-primary)] hover:bg-[color:var(--tenant-primary)]/20 cursor-pointer"
                           : "bg-gray-50 text-gray-400"

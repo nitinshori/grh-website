@@ -5,8 +5,8 @@ import { useEffect, useRef, useState } from "react";
 interface GPPracticeSearchProps {
   /** Current GP practice name (read-only display once selected; user can also clear). */
   practice: string;
-  /** Called with the matched practice. address/phone/email/odsCode are all optional. */
-  onSelect: (match: { name: string; address: string; phone: string; email: string; odsCode: string }) => void;
+  /** Called with the matched practice. address/phone/odsCode are all optional. */
+  onSelect: (match: { name: string; address: string; phone: string; odsCode: string }) => void;
   /** Called when user clears the practice selection. */
   onClear: () => void;
 }
@@ -104,20 +104,20 @@ export function GPPracticeSearch({ practice, onSelect, onClear }: GPPracticeSear
     try {
       const res = await fetch(`/api/gp-search/${r.odsCode}`);
       if (res.ok) {
-        const data = (await res.json()) as { name: string; address: string; phone: string; email?: string; odsCode: string };
-        onSelect({ name: data.name, address: data.address, phone: data.phone, email: data.email ?? "", odsCode: data.odsCode });
+        const data = (await res.json()) as { name: string; address: string; phone: string; odsCode: string };
+        onSelect({ name: data.name, address: data.address, phone: data.phone, odsCode: data.odsCode });
         return;
       }
     } catch { /* fall through */ }
     // Fallback: at least set the name
-    onSelect({ name: r.name, address: "", phone: "", email: "", odsCode: r.odsCode });
+    onSelect({ name: r.name, address: "", phone: "", odsCode: r.odsCode });
   }
 
   if (practice) {
     // Already selected → show as a chip with a clear button
     return (
-      <div className="flex items-start gap-2 px-3 py-2.5 bg-[color:var(--tenant-primary)]/10 border border-[color:var(--tenant-primary)]/30 rounded-lg text-sm">
-        <svg className="w-4 h-4 text-[color:var(--tenant-primary)] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="flex items-start gap-2 px-3 py-2.5 bg-teal-50 border border-teal-200 rounded-lg text-sm">
+        <svg className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
         </svg>
         <span className="flex-1 text-navy-900">{practice}</span>
@@ -140,7 +140,7 @@ export function GPPracticeSearch({ practice, onSelect, onClear }: GPPracticeSear
         onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
         onFocus={() => setOpen(true)}
         placeholder="Search by name, postcode (LE2), or city (Leicester)…"
-        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
+        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent"
       />
       {open && query.length >= 2 && (
         <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-80 overflow-y-auto">
@@ -149,7 +149,7 @@ export function GPPracticeSearch({ practice, onSelect, onClear }: GPPracticeSear
           )}
 
           {!loading && searchMode === "city-fallback" && matchedCity && results.length > 0 && (
-            <div className="px-3 py-2 text-[11px] text-[color:var(--tenant-primary)] bg-[color:var(--tenant-primary)]/10 border-b border-[color:var(--tenant-primary)]/30">
+            <div className="px-3 py-2 text-[11px] text-teal-800 bg-teal-50 border-b border-teal-100">
               Showing GP practices in <strong className="capitalize">{matchedCity}</strong> by postcode.
               For an exact match, try the surgery name (e.g. &ldquo;Highfields&rdquo;).
             </div>
@@ -172,7 +172,7 @@ export function GPPracticeSearch({ practice, onSelect, onClear }: GPPracticeSear
               key={r.odsCode}
               type="button"
               onClick={() => handlePick(r)}
-              className="w-full text-left px-3 py-2 text-sm hover:bg-[color:var(--tenant-primary)]/10 border-b border-gray-100 last:border-0"
+              className="w-full text-left px-3 py-2 text-sm hover:bg-teal-50 border-b border-gray-100 last:border-0"
             >
               <div className="text-navy-900 font-medium">{r.name}</div>
               <div className="text-xs text-gray-500">

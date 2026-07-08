@@ -120,9 +120,9 @@ export function ReturningPatientSearch({ onSelect }: Props) {
   return (
     <div
       ref={wrapperRef}
-      className="relative bg-[color:var(--tenant-primary)]/10 border border-[color:var(--tenant-primary)]/30 rounded-lg p-3"
+      className="relative bg-teal-50 border border-teal-200 rounded-lg p-3"
     >
-      <label className="block text-xs font-medium text-[color:var(--tenant-primary)] mb-1 uppercase tracking-wide">
+      <label className="block text-xs font-medium text-teal-800 mb-1 uppercase tracking-wide">
         Returning patient? Search to pre-fill
       </label>
       <input
@@ -131,11 +131,11 @@ export function ReturningPatientSearch({ onSelect }: Props) {
         onChange={(e) => setQuery(e.target.value)}
         onFocus={() => results.length > 0 && setOpen(true)}
         placeholder="Type name (≥2 chars) or NHS number"
-        className="w-full px-3 py-2 border border-[color:var(--tenant-primary)]/30 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
+        className="w-full px-3 py-2 border border-teal-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent"
         autoComplete="off"
       />
       {open && (
-        <div className="absolute left-3 right-3 mt-1 bg-white border border-[color:var(--tenant-primary)]/30 rounded-lg shadow-lg max-h-80 overflow-y-auto z-10">
+        <div className="absolute left-3 right-3 mt-1 bg-white border border-teal-300 rounded-lg shadow-lg max-h-80 overflow-y-auto z-10">
           {loading && (
             <div className="px-3 py-2 text-xs text-gray-500">Searching…</div>
           )}
@@ -151,7 +151,7 @@ export function ReturningPatientSearch({ onSelect }: Props) {
                 key={r.consultationId}
                 type="button"
                 onClick={() => handlePick(r)}
-                className="w-full text-left px-3 py-2 hover:bg-[color:var(--tenant-primary)]/10 border-b border-gray-100 last:border-0"
+                className="w-full text-left px-3 py-2 hover:bg-teal-50 border-b border-gray-100 last:border-0"
               >
                 <div className="text-sm font-medium text-navy-900">
                   {r.firstName} {r.lastName}{" "}
@@ -178,7 +178,7 @@ export function ReturningPatientSearch({ onSelect }: Props) {
             ))}
         </div>
       )}
-      <p className="text-[10px] text-[color:var(--tenant-primary)]/80 mt-1.5">
+      <p className="text-[10px] text-teal-700/80 mt-1.5">
         Searches only consultations recorded at your pharmacy. Patient
         privacy maintained per tenant.
       </p>
