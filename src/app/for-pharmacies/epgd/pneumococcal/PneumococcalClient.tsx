@@ -103,13 +103,18 @@ export function PneumococcalClient() {
   // Calculate age when DOB changes
   const handlePatientDetailsChange = useCallback(
     (field: keyof PneumococcalPatientDetails, value: any) => {
-      const updated = { ...patientDetails, [field]: value };
-      if (field === 'dateOfBirth') {
-        updated.age = calculateAge(value);
-      }
-      setPatientDetails(updated);
+      setPatientDetails((prev) => {
+        // Functional update: GP-practice autofill fires several field updates
+        // in the same tick; a closure-captured spread made each call overwrite
+        // the previous one (only the last field survived).
+        const updated = { ...prev, [field]: value };
+        if (field === 'dateOfBirth') {
+          updated.age = calculateAge(value);
+        }
+        return updated;
+      });
     },
-    [patientDetails]
+    []
   );
 
   // Get clinical alerts
