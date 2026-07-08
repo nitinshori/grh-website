@@ -197,6 +197,20 @@ export const clinicians = pgTable('clinicians', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 
+// ── User Consents (SSO first-use terms/DPA acceptance) ─────────
+
+export const userConsents = pgTable('user_consents', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id')
+    .references(() => users.id, { onDelete: 'cascade' })
+    .notNull(),
+  document: varchar('document', { length: 100 }).default('terms-dpa').notNull(),
+  version: varchar('version', { length: 20 }).notNull(),
+  acceptedAt: timestamp('accepted_at').defaultNow().notNull(),
+  ipAddress: varchar('ip_address', { length: 64 }),
+  userAgent: text('user_agent'),
+})
+
 // ── Staff Members ──────────────────────────────────────────────
 // Whole-team list per group ("who booked this appointment") — distinct
 // from clinicians, who deliver the consultations.
