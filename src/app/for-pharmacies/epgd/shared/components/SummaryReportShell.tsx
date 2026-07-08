@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { ClinicalAlert, AlertSeverity } from "../types";
 
 // ─── Reusable summary report building blocks ───
@@ -90,6 +91,8 @@ export function CounsellingGrid({
   );
 }
 
+export type PractitionerRole = "pharmacist" | "technician";
+
 export function PharmacistDeclaration({
   pgdName,
   pharmacistName,
@@ -101,18 +104,55 @@ export function PharmacistDeclaration({
   pharmacistGPhC: string;
   pharmacyName: string;
 }) {
+  // Role selector (Rachel's request, Jul 2026): GRH PGDs authorise
+  // GPhC-registered pharmacy technicians as well as pharmacists, so the
+  // person completing the consultation declares their own registration.
+  // The radios are screen-only; the printed record shows the chosen role.
+  const [role, setRole] = useState<PractitionerRole>("pharmacist");
+  const roleLabel =
+    role === "technician" ? "Pharmacy technician" : "Pharmacist";
   return (
     <>
-      <SectionHeader>Pharmacist Declaration</SectionHeader>
+      <SectionHeader>
+        {roleLabel} Declaration
+      </SectionHeader>
+      <div className="mb-3 print:hidden">
+        <p className="text-xs font-medium text-gray-500 mb-1">
+          I am completing this consultation as a:
+        </p>
+        <div className="flex gap-4">
+          {(
+            [
+              ["pharmacist", "Pharmacist"],
+              ["technician", "Pharmacy technician (GPhC-registered)"],
+            ] as const
+          ).map(([value, label]) => (
+            <label
+              key={value}
+              className="flex items-center gap-1.5 text-xs text-gray-700 cursor-pointer"
+            >
+              <input
+                type="radio"
+                name="practitioner-role"
+                value={value}
+                checked={role === value}
+                onChange={() => setRole(value)}
+                className="accent-teal-600"
+              />
+              {label}
+            </label>
+          ))}
+        </div>
+      </div>
       <p className="text-xs text-gray-600 mb-4">
-        I confirm that this consultation was conducted in accordance with the
-        Patient Group Direction for {pgdName}, and that the patient met all
-        inclusion criteria and no exclusion criteria applied.
+        {role === "technician"
+          ? `I confirm that I am a pharmacy technician registered with the General Pharmaceutical Council, that I am named and authorised to supply under the Patient Group Direction for ${pgdName}, that I have completed the required training, and that this consultation was conducted in accordance with that PGD — the patient met all inclusion criteria and no exclusion criteria applied.`
+          : `I confirm that this consultation was conducted in accordance with the Patient Group Direction for ${pgdName}, and that the patient met all inclusion criteria and no exclusion criteria applied.`}
       </p>
       <div className="grid grid-cols-2 gap-6">
         <div>
           <p className="text-xs font-medium text-gray-500 mb-1">
-            Pharmacist name
+            {roleLabel} name
           </p>
           <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">
             {pharmacistName || ""}
