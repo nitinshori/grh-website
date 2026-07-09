@@ -288,9 +288,12 @@ export function PharmacyDetailClient({ pharmacy: initialPharmacy }: PharmacyDeta
     }
   }
 
+  // NB: JSON.stringify on a Set always yields "{}", which made this
+  // comparison permanently true and the Save button permanently disabled
+  // (bug found 10 Jul 2026). Compare sorted arrays instead.
   const isSaveDisabled =
-    JSON.stringify(selectedPgds) ===
-    JSON.stringify(new Set(pharmacy.pgdSlugs))
+    JSON.stringify([...selectedPgds].sort()) ===
+    JSON.stringify([...pharmacy.pgdSlugs].sort())
 
   // ────────────────────────────────────────────────────────────────
   // Render

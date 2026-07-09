@@ -365,6 +365,57 @@ The bigger picture
 
 The community pharmacy operating model is changing whether owners want it to or not. The NHS contract alone is no longer enough to keep most branches profitable. Private services are not a growth strategy — they're now a survival strategy. The pharmacies that will be standing in five years are the ones that move into private services this year and treat them as a core line of business, not a side experiment. The infrastructure to do that — PGDs, training, governance, technology — is now available off the shelf, at a price that even a single-store independent can absorb in week one.`,
   },
+  {
+    slug: "how-to-choose-a-pgd-provider",
+    title: "How to Choose a PGD Provider: A Comparison Framework for UK Pharmacies (2026)",
+    description:
+      "The questions that actually separate PGD providers: pricing model, clinical authorship, what's included, technology, and onboarding speed. A practical framework any UK pharmacy owner can score providers against.",
+    category: "Revenue & Growth",
+    readTime: "8 min read",
+    publishDate: "2026-07-09",
+    primaryKeyword: "best pgd provider uk",
+    content: `Search for "best PGD provider UK" and you'll find every provider claiming to be it. This guide gives you something more useful: the five dimensions on which PGD providers genuinely differ, the questions to ask each one, and the red flags that cost pharmacies real money.
+
+Dimension 1 — Pricing model
+
+This is where the biggest differences hide. There are three models in the UK market:
+
+Per-pharmacy flat fee: one price covers the whole pharmacy — every pharmacist, every locum, every consultation, every PGD. Your margin per consultation is fully yours and fully predictable. This is the model Get Real Health uses (£100 per pharmacy per month).
+
+Per-pharmacist licensing: each pharmacist pays (or is paid for) individually — typically £250–£400 per pharmacist per year, per PGD bundle. Costs balloon with locums and staff turnover, and pharmacists who leave take their training investment with them.
+
+Per-consultation fees or revenue share: the provider takes a cut of every consultation. Easy to start, expensive to succeed — the more your service grows, the more you pay.
+
+Typical incumbent pricing runs £2,500–£2,700 per pharmacy per year, often with per-consultation or per-pharmacist charges on top. Always model your year-two cost at realistic consultation volumes, not the headline price.
+
+Dimension 2 — Clinical authorship and governance
+
+A PGD is a legal instrument. Ask: who is the named doctor on each PGD, what is their prescribing background, and are they accessible when your pharmacists have clinical questions? Is the provider registered with the CQC (England) or HIW (Wales)? How are PGD updates handled when guidance changes — and how quickly did the provider act the last time NICE or the MHRA moved?
+
+Providers differ enormously here. Some license documents written elsewhere; some have a named clinician who authors, signs, and stands behind every PGD. Get Real Health's PGDs are authored and signed by Dr Nitin Shori (NHS GP partner, former Medical Director of the Pharmacy2U Online Doctor service) with Head Pharmacist Christopher Pilkington as the pharmacist signatory — and every document, consultation tool and training module goes through a recorded digital sign-off.
+
+Dimension 3 — What's actually included
+
+Make a checklist and tick it against each provider: the PGD documents themselves; structured training with competency assessment for each service; an electronic consultation tool that enforces the inclusion/exclusion criteria; record keeping with an audit trail; a superintendent/owner dashboard; a booking system; marketing support. Then ask what each missing item costs to add.
+
+The commonest hidden cost is the consultation workflow: if the "platform" is a folder of PDFs, your pharmacists carry the compliance burden manually on paper, and your superintendent has no oversight of what was recorded.
+
+Dimension 4 — Technology
+
+An ePGD tool matters more than most owners expect. Enforced criteria mean a pharmacist physically cannot proceed with an out-of-criteria patient — which is what keeps your governance file defensible. Automatic consultation records, printable reports, GP letters, and a live audit trail turn an inspection from a week of panic into a login. Ask for a demo of an actual consultation, not a slide deck.
+
+Dimension 5 — Onboarding speed
+
+The difference between go-live in days versus months is real revenue. Ask: how long from signup to first consultation? Is training online and self-paced? Are competency sign-offs handled in-platform? Can new locums be added same-day?
+
+The scoring shortcut
+
+If you only ask five questions, ask these: (1) What is my all-in cost per pharmacy per year at 50 consultations a month? (2) Who is the named doctor and how do I reach them? (3) Show me a live consultation in your tool. (4) What happens when a PGD needs a clinical update? (5) How fast can a locum start using the service?
+
+Where Get Real Health sits
+
+We built Get Real Health to score well on exactly this framework, because it's the framework we'd use ourselves: 70+ PGD services, £100 per pharmacy per month flat with no per-consultation or per-pharmacist fees, CQC and HIW registered, a named GP medical director who wrote and signed every PGD, built-in training with competency assessments, an ePGD consultation tool that enforces every criterion and records every consultation, and onboarding measured in days. Compare us against anyone — the checklist above is the fairest test we know.`,
+  },
 ];
 
 export function getArticleBySlug(slug: string): Article | undefined {
