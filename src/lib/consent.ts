@@ -21,13 +21,18 @@ export const CONSENT_VERSION = '2026-07'
 /** True when this user must see the consent screen before using the portal. */
 export async function needsConsent(userId: string): Promise<boolean> {
   const [user] = await db
-    .select({ authSource: users.authSource })
+    .select({ authSource: users.authSource, role: users.role })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1)
   // Only SSO-provisioned users (authSource set to a partner tenant) are
-  // gated — direct GRH users accepted terms at signup.
-  if (!user?.authSource) return false
+  // gated — direct GRH users accepted terms at signup. NB the column
+  // defaults to 'direct' (NOT NULL), so a truthiness check wrongly gated
+  // every user including super_admin (bug seen 9 Jul 2026).
+  if (!user) return false
+  if (user.role === 'super_admin') return false
+  if (!user.authSource || user.authSource === 'direct' || user.authSource === 'grh')
+    return false
 
   const [consent] = await db
     .select({ id: userConsents.id })

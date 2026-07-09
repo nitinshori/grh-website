@@ -7,6 +7,7 @@ import { trainingAttempts } from "@/lib/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { modules } from "@/data/training-modules";
 import { pgds as PGD_CATALOGUE, isPgdAccessibleByEmail } from "@/data/pgds";
+import { getPharmacyPgdSlugs } from "@/lib/pgd-queries";
 
 export const metadata: Metadata = {
   title: "Training Modules",
@@ -84,12 +85,26 @@ export default async function TrainingIndexPage() {
   const restrictedPgdsBySlug = new Map(
     PGD_CATALOGUE.filter((p) => p.restrictedToEmails && p.restrictedToEmails.length > 0).map((p) => [p.id, p])
   );
+  // Pharmacy users only see training linked to PGDs their pharmacy is
+  // assigned (admin work order, Jul 2026): an allowed PGD carries the
+  // document, the ePGD tool AND the training together. Modules with no
+  // linked PGD (general/mandatory training) stay visible to everyone;
+  // super_admin and pharmacy-less accounts see everything.
+  const isSuperAdmin = session.user.role === "super_admin";
+  let assignedSlugs: Set<string> | null = null;
+  if (!isSuperAdmin && session.user.pharmacyId) {
+    assignedSlugs = new Set(await getPharmacyPgdSlugs(session.user.pharmacyId));
+  }
+
   const visibleModules = modules.filter((m) => {
     for (const pgdSlug of m.pgdSlugs) {
       const restricted = restrictedPgdsBySlug.get(pgdSlug);
       if (restricted && !isPgdAccessibleByEmail(restricted, userEmail)) {
         return false;
       }
+    }
+    if (assignedSlugs && m.pgdSlugs.length > 0) {
+      return m.pgdSlugs.some((slug) => assignedSlugs.has(slug));
     }
     return true;
   });
