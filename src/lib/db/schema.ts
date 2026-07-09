@@ -211,6 +211,27 @@ export const userConsents = pgTable('user_consents', {
   userAgent: text('user_agent'),
 })
 
+// ── Clinical sign-offs ─────────────────────────────────────────
+// Digital sign-off register (Chris's review area): one row per sign-off
+// of a PGD document, ePGD tool or training module. History retained —
+// re-signing after a version change inserts a new row.
+export const clinicalSignoffs = pgTable('clinical_signoffs', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  itemType: varchar('item_type', { length: 32 }).notNull(),
+  itemSlug: varchar('item_slug', { length: 255 }).notNull(),
+  itemTitle: varchar('item_title', { length: 500 }),
+  itemVersion: varchar('item_version', { length: 100 }),
+  signedByUserId: uuid('signed_by_user_id').references(() => users.id, {
+    onDelete: 'set null',
+  }),
+  signedByName: varchar('signed_by_name', { length: 255 }).notNull(),
+  signedByRole: varchar('signed_by_role', { length: 255 }),
+  declaration: text('declaration').notNull(),
+  ipAddress: varchar('ip_address', { length: 64 }),
+  userAgent: text('user_agent'),
+  signedAt: timestamp('signed_at', { withTimezone: true }).defaultNow().notNull(),
+})
+
 // ── Staff Members ──────────────────────────────────────────────
 // Whole-team list per group ("who booked this appointment") — distinct
 // from clinicians, who deliver the consultations.
