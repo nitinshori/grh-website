@@ -56,6 +56,7 @@ gpEmail: "",
       recurrentInfection: false,
     },
     treatment: {
+      formulation: "tablet" as "tablet" | "suspension",
       dose: "100",
       doseUnit: "mg",
       frequency: "single",
@@ -507,18 +508,59 @@ gpEmail: "",
           <div className="space-y-4">
             <div className="p-4 bg-blue-50 border border-blue-200 rounded">
               <p className="text-sm font-semibold text-blue-900 mb-2">
-                Mebendazole 100mg Tablet
+                Mebendazole 100mg — chewable tablet or oral suspension (5mg/mL)
               </p>
               <p className="text-sm text-blue-800">
-                Single dose for all ages 2+ years
+                Single 100mg dose for all ages 2+ years (not weight-dependent)
               </p>
+            </div>
+
+            <div>
+              <p className="text-sm font-semibold mb-2">Formulation supplied</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {([
+                  { value: "tablet", label: "Chewable tablet", dose: "100mg — one tablet" },
+                  { value: "suspension", label: "Oral suspension (5mg/mL)", dose: "100mg — 20mL" },
+                ] as const).map((opt) => (
+                  <label
+                    key={opt.value}
+                    className={`flex cursor-pointer flex-col gap-1 rounded border p-3 text-sm ${
+                      state.treatment.formulation === opt.value
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-gray-300 bg-white"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2 font-semibold text-gray-900">
+                      <input
+                        type="radio"
+                        name="threadworm-formulation"
+                        value={opt.value}
+                        checked={state.treatment.formulation === opt.value}
+                        onChange={() =>
+                          setState((prev) => ({
+                            ...prev,
+                            treatment: { ...prev.treatment, formulation: opt.value },
+                          }))
+                        }
+                        className="accent-blue-600"
+                      />
+                      {opt.label}
+                    </span>
+                    <span className="text-gray-600">{opt.dose}</span>
+                  </label>
+                ))}
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <p className="text-sm font-semibold mb-2">Standard Dose</p>
                 <div className="p-3 bg-gray-100 border border-gray-300 rounded text-sm">
-                  <p className="text-gray-900">100mg single dose</p>
+                  <p className="text-gray-900">
+                    {state.treatment.formulation === "suspension"
+                      ? "100mg (20mL) single dose"
+                      : "100mg (one tablet) single dose"}
+                  </p>
                 </div>
               </div>
               <div>
