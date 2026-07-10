@@ -2,11 +2,16 @@ import { db } from '@/lib/db'
 import { pharmacies, users, pharmacyPgds } from '@/lib/db/schema'
 import { count, eq } from 'drizzle-orm'
 
-async function getPharmaciesWithCounts() {
+export const dynamic = 'force-dynamic'
+
+async function getPharmaciesWithCounts(includeInactive: boolean) {
   const allPharmacies = await db
     .select()
     .from(pharmacies)
     .orderBy(pharmacies.name)
+    .then((rows) =>
+      includeInactive ? rows : rows.filter((p) => p.isActive)
+    )
 
   // For each pharmacy, fetch count of users and PGDs
   const pharmaciesWithCounts = await Promise.all(
@@ -32,8 +37,21 @@ async function getPharmaciesWithCounts() {
   return pharmaciesWithCounts
 }
 
-export default async function PharmaciesPage() {
-  const pharmaciesData = await getPharmaciesWithCounts()
+export default async function PharmaciesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ show?: string }>
+}) {
+  const { show } = await searchParams
+  const includeInactive = show === 'all'
+  const pharmaciesData = await getPharmaciesWithCounts(includeInactive)
+
+  // Count inactive pharmacies (for the toggle label) without changing the view.
+  const [inactiveCount] = await db
+    .select({ count: count() })
+    .from(pharmacies)
+    .where(eq(pharmacies.isActive, false))
+  const hiddenCount = inactiveCount?.count ?? 0
 
   return (
     <div className="p-6 md:p-8">
@@ -42,7 +60,25 @@ export default async function PharmaciesPage() {
         <div className="mb-8 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Pharmacies</h1>
-            <p className="text-gray-600">Manage all registered pharmacies and their settings</p>
+            <p className="text-gray-600">
+              Manage all registered pharmacies and their settings
+              {!includeInactive && hiddenCount > 0 && (
+                <>
+                  {' · '}
+                  <a href="/admin/pharmacies?show=all" className="text-teal-600 hover:underline">
+                    show {hiddenCount} inactive
+                  </a>
+                </>
+              )}
+              {includeInactive && (
+                <>
+                  {' · '}
+                  <a href="/admin/pharmacies" className="text-teal-600 hover:underline">
+                    hide inactive
+                  </a>
+                </>
+              )}
+            </p>
           </div>
           <a
             href="/admin/pharmacies/new"
