@@ -1,101 +1,101 @@
-// Oral Wegovy (semaglutide 25/50 mg) for weight management — UK LICENSED
+// Wegovy (semaglutide) tablets for weight management — UK LICENSED
 //
-// Oral Wegovy received UK marketing authorisation in June 2026 for chronic
-// weight management. The off-label restricted-pilot framing has been retired.
-// Clinical content below is the existing pilot training, lightly relicensed —
-// Janey + Chris to review and resign the dose-titration ladder and any
-// remaining off-label references before the next training-module audit.
+// Wegovy tablets (1.5 mg / 4 mg / 9 mg / 25 mg) hold UK marketing
+// authorisation for chronic weight management (SmPC on emc, Novo Nordisk,
+// updated Jun 2026). All previous Rybelsus/off-label pilot framing has been
+// removed (Nitin, 10 Jul 2026). Content aligned to the UK SmPC posology:
+// 1.5 mg → 4 mg → 9 mg → 25 mg once daily, minimum 1 month per step.
 
 import type { TrainingModule } from "./types";
 
 export const wegovyOralModule: TrainingModule = {
   slug: "wegovy-oral",
-  title: "Oral Wegovy (Semaglutide 25/50 mg) — Weight Management",
+  title: "Wegovy (Semaglutide) Tablets — Weight Management",
   description:
-    "Training for the UK-licensed use of Oral Wegovy (semaglutide 25 mg and 50 mg) for chronic weight management. Same molecule as injectable Wegovy with strict empty-stomach administration for reliable absorption.",
+    "Training for the UK-licensed use of Wegovy tablets (semaglutide 1.5/4/9/25 mg once daily) for chronic weight management. Same molecule as injectable Wegovy with strict empty-stomach administration for reliable absorption.",
   pgdSlugs: ["wegovy-oral"],
   authoredBy: "Get Real Health Clinical Team",
-  reviewedBy: "Pending Janey + Chris re-sign following UK licensing (June 2026)",
-  version: "0.2.0",
+  reviewedBy: "Dr Nitin Shori & Chris Pilkington (10 Jul 2026)",
+  version: "1.0.0",
   materialClinicalChange: true,
-  publishedAt: "2026-05-13",
+  publishedAt: "2026-07-10",
   estimatedMinutes: 15,
   passMark: 0.8,
   slides: [
-    { id: "intro", type: "intro", title: "Oral Semaglutide — Off-label Pilot", subtitle: "Restricted-access PGD training for clinical-lead pilot use", estimatedMinutes: 15, objectives: [
-      "Understand the off-label status of oral semaglutide for weight management and document informed consent.",
+    { id: "intro", type: "intro", title: "Wegovy Tablets — UK-Licensed Weight Management", subtitle: "PGD training for oral semaglutide (Wegovy tablets)", estimatedMinutes: 15, objectives: [
+      "Know the licensed indication and the four tablet strengths with the monthly titration ladder.",
       "Apply correct empty-stomach administration rules — the critical absorption requirement.",
       "Recognise drug interactions specific to oral semaglutide (gastric-emptying delay).",
-      "Apply contraindications consistent with subcutaneous semaglutide plus oral-route-specific cautions.",
+      "Apply contraindications and PGD exclusions, and counsel on red flags including NAION.",
     ]},
     { id: "background", type: "content", title: "Clinical background", body: [
-      "Oral semaglutide (Rybelsus) is licensed in the UK for type 2 diabetes mellitus only — 3 mg, 7 mg, and 14 mg once daily strengths. Higher doses (25 mg, 50 mg) marketed as Wegovy oral are licensed for weight management in some jurisdictions (e.g. US 2024) but UK MHRA status should be re-checked at the point of supply.",
-      "Where the higher-dose Wegovy oral product is not licensed in the UK, off-label use of Rybelsus 14 mg for weight management can be considered with explicit written informed consent.",
-      "Oral semaglutide is the same molecule as subcutaneous semaglutide (Ozempic/Wegovy). It is formulated with SNAC (sodium N-(8-[2-hydroxybenzoyl]amino) caprylate) which transiently raises gastric pH to allow absorption — but this absorption is fragile and highly dependent on dosing technique.",
-      "This is a pilot PGD restricted to allowlisted clinical leads. Do not roll out to partner pharmacies without explicit clinical-governance sign-off.",
-    ], highlights: ["Take empty-stomach in the morning.", "Up to 120 mL plain water only.", "Wait ≥30 minutes before food / drink / other oral meds.", "OFF-LABEL — written informed consent essential."] },
+      "Wegovy tablets (semaglutide 1.5 mg, 4 mg, 9 mg and 25 mg) are UK-licensed as an adjunct to a reduced-calorie diet and increased physical activity for weight management in adults with BMI ≥ 30 kg/m², or ≥ 27 to < 30 kg/m² with at least one weight-related comorbidity.",
+      "Oral semaglutide is the same molecule as subcutaneous semaglutide (Wegovy injection). It is formulated with SNAC (sodium N-(8-[2-hydroxybenzoyl]amino) caprylate) which transiently raises gastric pH to allow absorption — but this absorption is fragile and highly dependent on dosing technique.",
+      "This is a black-triangle medicine under additional monitoring — report all suspected adverse reactions via the MHRA Yellow Card scheme, and record the batch number for traceability.",
+      "Patients switching from Wegovy 2.4 mg weekly injection can transition to 25 mg tablets once daily, starting one week after their last injection.",
+    ], highlights: ["Take on an empty stomach (≥8 h fast).", "Up to 120 mL plain water only.", "Wait ≥30 minutes before food / drink / other oral meds.", "Maximum ONE tablet per day — never combine tablets."] },
     { id: "administration", type: "callout", title: "Administration — the critical step", tone: "danger", message: "Get this wrong and the drug doesn't work.", detail: [
-      "Take in the morning, fasted (i.e. no food or drink for the preceding period).",
+      "Take on an empty stomach after a fasting period of at least 8 hours.",
       "Take with up to 120 mL of plain water — not coffee, tea, juice, soft drinks.",
       "Wait at least 30 minutes before any food, other drinks, or other oral medications.",
       "Do not split, crush, or chew the tablet.",
       "If a dose is missed, skip it — do not double up; resume the next day.",
-      "Levothyroxine: take at least 4 hours apart from oral semaglutide — significant absorption interaction.",
+      "Levothyroxine: take at least 4 hours apart from oral semaglutide, and recommend thyroid function monitoring.",
     ]},
-    { id: "eligibility", type: "checklist", title: "Eligibility (pilot)", intro: "All criteria must be met. Pilot restricted to selected patients of allowlisted clinical leads.", items: [
-      { label: "Adult aged 18–75", detail: "Outside range: refer specialist." },
-      { label: "BMI ≥30, or BMI ≥27 with weight-related comorbidity", detail: "T2DM, HTN, dyslipidaemia, OSA, CVD." },
-      { label: "Patient understands and consents in writing to off-label use", detail: "Documented written consent on file — non-negotiable." },
+    { id: "eligibility", type: "checklist", title: "Eligibility", intro: "All criteria must be met before supply.", items: [
+      { label: "Adult aged 18 or over", detail: "Not established under 18. Limited experience over 85 — supply per PGD age criteria." },
+      { label: "BMI ≥30, or BMI ≥27 to <30 with weight-related comorbidity", detail: "T2DM, HTN, dyslipidaemia, OSA, CVD." },
+      { label: "Written informed consent to treatment on file", detail: "Documented in the ePGD tool." },
       { label: "Patient is willing/able to follow the strict empty-stomach administration", detail: "If they can't or won't, the drug will fail and they shouldn't start." },
-      { label: "No contraindications to GLP-1 receptor agonists", detail: "MTC/MEN 2, pancreatitis history, severe gastroparesis, type 1 diabetes, etc." },
+      { label: "No contraindications or PGD exclusions", detail: "Hypersensitivity; pregnancy/breastfeeding; T1DM; pancreatitis history; severe gastroparesis; severe renal (eGFR <30) or hepatic impairment; active eating disorder; diabetic retinopathy; MTC/MEN 2." },
       { label: "No concurrent GLP-1 / GIP receptor agonist", detail: "Do not stack." },
     ]},
-    { id: "dose", type: "comparison", title: "Dose options", intro: "Choose the appropriate strength based on titration stage or product availability.", columns: [
-      { label: "Rybelsus titration", rows: [
-        { heading: "Weeks 1–4", body: "3 mg once daily — tolerance step (does not give therapeutic effect)." },
-        { heading: "Weeks 5–8", body: "7 mg once daily — titration to therapeutic dose." },
-        { heading: "Week 9+", body: "14 mg once daily — maintenance (off-label for weight management)." },
+    { id: "dose", type: "comparison", title: "Dosing — UK SmPC titration ladder", intro: "Once daily, minimum one month at each step; hold at the previous step if needed for tolerance.", columns: [
+      { label: "Titration", rows: [
+        { heading: "Month 1", body: "1.5 mg once daily — starting dose." },
+        { heading: "Month 2", body: "4 mg once daily." },
+        { heading: "Month 3", body: "9 mg once daily." },
       ]},
-      { label: "Wegovy oral (where licensed)", rows: [
-        { heading: "Starting", body: "Begin at lowest available step, titrate per SmPC." },
-        { heading: "Maintenance", body: "25 mg or 50 mg once daily as appropriate." },
-        { heading: "UK status", body: "Re-verify MHRA approval at point of supply; treat as off-label unless explicitly licensed." },
+      { label: "Maintenance", rows: [
+        { heading: "Month 4 onward", body: "25 mg once daily — maintenance and maximum dose." },
+        { heading: "One tablet rule", body: "Only ever ONE tablet per day; never combine tablets to approximate a higher dose." },
+        { heading: "Switching from injection", body: "From Wegovy 2.4 mg weekly: 25 mg tablets once daily, starting one week after the last injection." },
       ]},
     ]},
     { id: "interactions", type: "callout", title: "Key drug interactions", tone: "info", message: "Oral semaglutide delays gastric emptying — affects absorption of co-administered drugs.", detail: [
-      "Levothyroxine: significant absorption reduction — separate by ≥4 hours.",
-      "Warfarin: INR monitoring needed.",
-      "Sulfonylurea or insulin (in T2DM patients): hypoglycaemia risk; refer prescribing clinician.",
-      "Oral contraception: GI symptoms may reduce absorption — counsel barrier method for 7 days after vomiting/severe diarrhoea.",
-      "Other oral medications: in general, take at least 30 minutes after the oral semaglutide.",
+      "Levothyroxine: thyroxine exposure increases ~33% — separate by ≥4 hours and monitor thyroid function.",
+      "Warfarin/coumarins: frequent INR monitoring on initiation.",
+      "Sulfonylurea or insulin (in T2DM patients): hypoglycaemia risk; refer prescribing clinician for dose review.",
+      "Multiple tablets taken together reduce semaglutide absorption — take other oral medications at least 30 minutes after.",
+      "Counsel on dizziness during titration (driving), dehydration with GI side effects, and sudden visual loss (NAION) — stop and refer urgently.",
     ]},
     { id: "summary", type: "summary", title: "Key points", keyPoints: [
-      "Off-label for weight management — written informed consent mandatory.",
-      "Take empty-stomach AM, 120 mL water max, wait ≥30 minutes.",
-      "Rybelsus titration: 3 mg → 7 mg → 14 mg (4 weeks each).",
-      "Levothyroxine ≥4 h apart.",
-      "Contraindications and red flags as per subcutaneous semaglutide.",
-      "Pilot restricted to allowlisted clinical leads — do not roll out.",
+      "UK-licensed for weight management: 1.5 → 4 → 9 → 25 mg once daily, one month per step.",
+      "Take on an empty stomach (≥8 h fast), 120 mL water max, wait ≥30 minutes.",
+      "Maximum 25 mg daily; only one tablet per day.",
+      "Levothyroxine ≥4 h apart; INR monitoring with warfarin.",
+      "Black-triangle medicine — Yellow Card any suspected reaction; record batch numbers.",
+      "Red flags: persistent severe abdominal pain (pancreatitis), sudden visual loss (NAION), dehydration.",
     ]},
   ],
   quiz: [
-    { id: "q-offlabel", type: "single-choice", critical: true, question: "Patient asks why this product 'isn't on the leaflet for weight loss'. Best response?", options: [
-      { id: "a", label: "It is licensed for that." }, { id: "b", label: "Explain off-label status — Rybelsus is licensed for type 2 diabetes; its use for weight management is off-label and supported by evidence. Document informed written consent." }, { id: "c", label: "Refuse to discuss." }, { id: "d", label: "Switch to injection." }
-    ], correctOptionIds: ["b"], explanation: "Off-label disclosure and written consent are non-negotiable." },
+    { id: "q-licence", type: "single-choice", critical: true, question: "Patient asks whether this tablet is 'actually approved for weight loss'. Best response?", options: [
+      { id: "a", label: "It's only for diabetes." }, { id: "b", label: "Yes — Wegovy tablets are UK-licensed for weight management in adults meeting BMI criteria, as an adjunct to diet and physical activity." }, { id: "c", label: "Refuse to discuss." }, { id: "d", label: "Only the injection is licensed." }
+    ], correctOptionIds: ["b"], explanation: "Wegovy tablets (1.5/4/9/25 mg) hold UK marketing authorisation for weight management." },
     { id: "q-empty-stomach", type: "single-choice", critical: true, question: "Patient takes the tablet with a cup of tea immediately on waking. Action?", options: [
-      { id: "a", label: "No problem." }, { id: "b", label: "Significant problem — tea materially reduces absorption. Re-counsel: take with up to 120 mL plain water only, on an empty stomach, then wait ≥30 minutes before anything else." }, { id: "c", label: "Switch product." }, { id: "d", label: "Double dose." }
+      { id: "a", label: "No problem." }, { id: "b", label: "Significant problem — tea materially reduces absorption. Re-counsel: take with up to 120 mL plain water only, on an empty stomach after at least 8 hours fasting, then wait ≥30 minutes before anything else." }, { id: "c", label: "Switch product." }, { id: "d", label: "Double dose." }
     ], correctOptionIds: ["b"], explanation: "Liquid other than plain water dramatically reduces absorption." },
     { id: "q-levo", type: "single-choice", critical: true, question: "Patient on levothyroxine asks how to space the doses. Best advice?", options: [
-      { id: "a", label: "Take together." }, { id: "b", label: "Take levothyroxine at least 4 hours apart from oral semaglutide — oral semaglutide significantly delays levothyroxine absorption." }, { id: "c", label: "Stop levothyroxine." }, { id: "d", label: "30 min apart." }
-    ], correctOptionIds: ["b"], explanation: "Oral semaglutide significantly delays levothyroxine absorption — ≥4 h separation is the standard SmPC advice." },
+      { id: "a", label: "Take together." }, { id: "b", label: "Take levothyroxine at least 4 hours apart from oral semaglutide, and expect thyroid function monitoring — oral semaglutide increases thyroxine exposure." }, { id: "c", label: "Stop levothyroxine." }, { id: "d", label: "30 min apart." }
+    ], correctOptionIds: ["b"], explanation: "Thyroxine AUC increases ~33%; ≥4 h separation plus monitoring is the SmPC position." },
     { id: "q-pregnancy", type: "single-choice", critical: true, question: "Pregnant patient asks for oral semaglutide. Action?", options: [
-      { id: "a", label: "Supply 3 mg." }, { id: "b", label: "Contraindicated — discontinue ≥2 months before planned conception. Refer specialist for postpartum review." }, { id: "c", label: "Supply with low dose." }, { id: "d", label: "Switch to injection." }
-    ], correctOptionIds: ["b"], explanation: "Semaglutide is contraindicated in pregnancy and 2-month washout pre-conception is standard." },
-    { id: "q-titration", type: "single-choice", question: "Standard Rybelsus titration to therapeutic dose for weight management?", options: [
-      { id: "a", label: "Straight to 14 mg." }, { id: "b", label: "3 mg × 4 weeks → 7 mg × 4 weeks → 14 mg maintenance." }, { id: "c", label: "1 mg increments weekly." }, { id: "d", label: "PRN dosing." }
-    ], correctOptionIds: ["b"], explanation: "Per Rybelsus SmPC titration schedule — applied off-label for weight management." },
+      { id: "a", label: "Supply 1.5 mg." }, { id: "b", label: "Do not supply — semaglutide should not be used in pregnancy and should be discontinued at least 2 months before a planned pregnancy. Refer." }, { id: "c", label: "Supply with low dose." }, { id: "d", label: "Switch to injection." }
+    ], correctOptionIds: ["b"], explanation: "No use in pregnancy; 2-month washout before planned conception due to the long half-life." },
+    { id: "q-titration", type: "single-choice", question: "Standard titration for Wegovy tablets?", options: [
+      { id: "a", label: "Straight to 25 mg." }, { id: "b", label: "1.5 mg × 1 month → 4 mg × 1 month → 9 mg × 1 month → 25 mg maintenance; hold at the previous step if needed." }, { id: "c", label: "Two 9 mg tablets to make 18 mg." }, { id: "d", label: "PRN dosing." }
+    ], correctOptionIds: ["b"], explanation: "Monthly escalation to the 25 mg maintenance dose; never combine tablets." },
     { id: "q-record", type: "single-choice", question: "Documentation must include?", options: [
-      { id: "a", label: "Label only." }, { id: "b", label: "Eligibility check, BMI, off-label informed written consent, contraindication screen, interaction screen, dose chosen with rationale, counselling on empty-stomach administration, follow-up plan — in the ePGD tool." }, { id: "c", label: "GP letter only." }, { id: "d", label: "Free-text only." }
-    ], correctOptionIds: ["b"], explanation: "Off-label pilot demands robust documentation; ePGD tool captures all of it." },
+      { id: "a", label: "Label only." }, { id: "b", label: "Eligibility check, BMI, written informed consent, contraindication screen, interaction screen, dose chosen with rationale, empty-stomach counselling, batch number, follow-up plan — in the ePGD tool." }, { id: "c", label: "GP letter only." }, { id: "d", label: "Free-text only." }
+    ], correctOptionIds: ["b"], explanation: "The ePGD tool captures the complete auditable record, including batch traceability for this black-triangle medicine." },
   ],
 };

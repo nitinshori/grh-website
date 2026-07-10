@@ -361,14 +361,14 @@ export const pgds: PGD[] = [
   },
   {
     id: "wegovy-oral",
-    title: "Oral Wegovy (Semaglutide 25/50 mg) \u2014 Weight Management",
+    title: "Wegovy Tablets (Oral Semaglutide) \u2014 Weight Management",
     category: "Weight Management",
     priority: 2,
     isNew: true,
     revenueEstimate: "\u00a3180\u2013320 per month",
     consultTime: "30 min initial, 15 min follow-up",
     description:
-      "Oral Wegovy (semaglutide 25 mg and 50 mg tablets) \u2014 now licensed in the UK for chronic weight management in adults with BMI \u226530 (or \u226527 with weight-related comorbidity). Strict empty-stomach administration with at least 30 minutes before food, drink or other medication. Same clinical safeguards as injectable Wegovy.",
+      "Wegovy tablets (semaglutide 1.5, 4, 9 and 25 mg) \u2014 UK-licensed for chronic weight management in adults with BMI \u226530 (or \u226527 with weight-related comorbidity). Once-daily titration 1.5 \u2192 4 \u2192 9 \u2192 25 mg (one month per step). Strict empty-stomach administration: \u22658 h fast, \u2264120 ml water, 30-minute wait before food, drink or other medication. Same clinical safeguards as injectable Wegovy.",
     pharmadoctor: "No",
   },
   {
@@ -416,7 +416,7 @@ export const pgds: PGD[] = [
     revenueEstimate: "\u00a350\u201380 per review",
     consultTime: "15\u201320 min",
     description:
-      "Structured monitoring and dose-titration follow-up for patients on Wegovy, Mounjaro, or Oral Wegovy. NICE 5%-by-12-weeks gate, red-flag screening, dose decisions all built in.",
+      "Structured monitoring and dose-titration follow-up for patients on Wegovy (injection or tablets) or Mounjaro. NICE 5%-by-12-weeks gate, red-flag screening, dose decisions all built in.",
     pharmadoctor: "Partial",
   },
 

@@ -69,7 +69,7 @@ interface WegovyOralState {
     other: string;
   };
   doseSelection: {
-    product: string; // 'rybelsus-3' | 'rybelsus-7' | 'rybelsus-14' | 'wegovy-oral-25' | 'wegovy-oral-50' | ''
+    product: string; // 'wegovy-oral-1.5' | 'wegovy-oral-4' | 'wegovy-oral-9' | 'wegovy-oral-25' | ''
     rationale: string;
   };
   counselling: {
@@ -90,7 +90,7 @@ interface WegovyOralState {
 const STEP_LABELS = [
   "Patient",
   "Consent",
-  "Off-label Consent",
+  "Informed Consent",
   "Eligibility & BMI",
   "Contraindications",
   "Interactions",
@@ -256,9 +256,9 @@ export function WegovyOralClient() {
     if (i.sulfonylureaOrInsulin) out.push({ code: "su", severity: "caution", message: "Sulfonylurea / insulin", detail: "Hypo risk — counsel + refer prescribing GP." });
     if (i.oralContraception) out.push({ code: "oc", severity: "caution", message: "Oral contraception", detail: "GI symptoms may reduce absorption — counsel additional barrier for 7 days after vomiting/diarrhoea." });
 
-    // Off-label consent gate
+    // Written-consent gate
     if (!state.offLabelConsent.writtenConsentObtained) {
-      out.push({ code: "consent", severity: "stop", message: "Off-label written consent not yet obtained", detail: "Cannot proceed until informed written consent for off-label use is documented." });
+      out.push({ code: "consent", severity: "stop", message: "Written informed consent not yet obtained", detail: "Cannot proceed until written informed consent to treatment is documented." });
     }
 
     // Age gate per signed PGD — adults 18+ (consistency review Jul 2026)
@@ -339,20 +339,20 @@ export function WegovyOralClient() {
         );
       case 2:
         return (
-          <StepWrapper title="Off-label Informed Consent" description="Off-label use of oral semaglutide for weight management — mandatory documented consent." currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={null}>
+          <StepWrapper title="Informed Consent to Treatment" description="Wegovy (semaglutide) tablets — UK-licensed for weight management. Documented written consent required." currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={null}>
             <div className="space-y-4">
               <div className="p-4 bg-amber-50 border border-amber-300 rounded-md text-sm text-amber-900">
-                <strong>This consultation supplies oral semaglutide off-label for weight management.</strong>
+                <strong>This consultation supplies Wegovy (semaglutide) tablets — UK-licensed for weight management.</strong>
                 <ul className="list-disc ml-5 mt-2 space-y-1">
-                  <li>Rybelsus 14 mg is licensed only for type 2 diabetes — its use for weight management is off-label.</li>
-                  <li>If Wegovy oral 25/50 mg is being supplied, confirm UK MHRA status; treat as off-label unless explicitly licensed.</li>
-                  <li>Off-label prescribing is legal under PGD where evidence supports the use and there is no licensed alternative the patient can access, with explicit informed consent.</li>
+                  <li>Licensed strengths: 1.5 mg, 4 mg, 9 mg and 25 mg tablets. Maintenance dose 25 mg once daily; maximum ONE tablet per day.</li>
+                  <li>Black-triangle medicine (additional monitoring) — report any suspected adverse reactions via the MHRA Yellow Card scheme.</li>
+                  <li>Counsel on the empty-stomach regimen: at least 8 hours fasting, swallow whole with up to 120 ml water, wait at least 30 minutes before food, drink or other oral medicines.</li>
                 </ul>
               </div>
-              <Checkbox label="Off-label status of the product clearly explained to the patient" checked={state.offLabelConsent.explainedOffLabel} onChange={(v) => dispatch({ type: "UPDATE_OFFLABEL", field: "explainedOffLabel", value: v })} />
+              <Checkbox label="Treatment, dosing schedule and administration requirements clearly explained to the patient" checked={state.offLabelConsent.explainedOffLabel} onChange={(v) => dispatch({ type: "UPDATE_OFFLABEL", field: "explainedOffLabel", value: v })} />
               <Checkbox label="Risk-benefit discussion completed (GI side effects, gallbladder, pancreatitis, hypoglycaemia if diabetic, retinopathy progression)" checked={state.offLabelConsent.riskBenefitDiscussed} onChange={(v) => dispatch({ type: "UPDATE_OFFLABEL", field: "riskBenefitDiscussed", value: v })} />
               <Checkbox label="Alternatives discussed (subcutaneous Wegovy/Mounjaro, lifestyle, bariatric referral)" checked={state.offLabelConsent.alternativesDiscussed} onChange={(v) => dispatch({ type: "UPDATE_OFFLABEL", field: "alternativesDiscussed", value: v })} />
-              <Checkbox label="Written informed consent for off-label use obtained and filed" checked={state.offLabelConsent.writtenConsentObtained} onChange={(v) => dispatch({ type: "UPDATE_OFFLABEL", field: "writtenConsentObtained", value: v })} />
+              <Checkbox label="Written informed consent to treatment obtained and filed" checked={state.offLabelConsent.writtenConsentObtained} onChange={(v) => dispatch({ type: "UPDATE_OFFLABEL", field: "writtenConsentObtained", value: v })} />
             </div>
           </StepWrapper>
         );
@@ -431,11 +431,11 @@ export function WegovyOralClient() {
                 onChange={(v) => dispatch({ type: "UPDATE_DOSE", field: "product", value: v })}
                 options={[
                   { value: "", label: "Select…" },
-                  { value: "rybelsus-3", label: "Rybelsus 3 mg once daily (start dose, 4 weeks)" },
-                  { value: "rybelsus-7", label: "Rybelsus 7 mg once daily (week 5–8 titration)" },
-                  { value: "rybelsus-14", label: "Rybelsus 14 mg once daily (maintenance — off-label for weight)" },
-                  { value: "wegovy-oral-25", label: "Wegovy oral 25 mg once daily (where available)" },
-                  { value: "wegovy-oral-50", label: "Wegovy oral 50 mg once daily (where available)" },
+                  { value: "wegovy-oral-1.5", label: "Wegovy 1.5 mg tablet once daily (start dose, 1 month)" },
+                  { value: "wegovy-oral-4", label: "Wegovy 4 mg tablet once daily (titration, min 1 month)" },
+                  { value: "wegovy-oral-9", label: "Wegovy 9 mg tablet once daily (titration, min 1 month)" },
+                  { value: "wegovy-oral-25", label: "Wegovy 25 mg tablet once daily (maintenance)" },
+                  
                 ]}
                 required
               />
@@ -480,12 +480,12 @@ export function WegovyOralClient() {
               <TextArea label="Additional clinical notes" value={state.summary.clinicalNotes} onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "clinicalNotes", value: v })} />
             </div>
             <div className="border-t border-gray-200 pt-6">
-              <p className="text-sm text-gray-600 mb-4">Off-label pilot consultation. Record will be saved with PGD slug <code>wegovy-oral</code>.</p>
+              <p className="text-sm text-gray-600 mb-4">Record will be saved with PGD slug <code>wegovy-oral</code>.</p>
               <div className="p-4 bg-gray-50 rounded-md text-xs space-y-2">
                 <div><strong>Patient:</strong> {state.patient.firstName} {state.patient.lastName} ({state.patient.dateOfBirth})</div>
                 <div><strong>BMI:</strong> {state.eligibility.bmi ?? "—"}</div>
                 <div><strong>Product:</strong> {state.doseSelection.product || "—"}</div>
-                <div><strong>Off-label written consent:</strong> {state.offLabelConsent.writtenConsentObtained ? "Yes" : "NO — cannot proceed"}</div>
+                <div><strong>Written informed consent:</strong> {state.offLabelConsent.writtenConsentObtained ? "Yes" : "NO — cannot proceed"}</div>
                 <div><strong>Stops present:</strong> {hasStops ? "Yes" : "No"}</div>
               </div>
             </div>
