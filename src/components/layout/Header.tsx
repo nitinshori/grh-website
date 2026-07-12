@@ -194,13 +194,20 @@ export function Header() {
                 >
                   My Dashboard
                 </Link>
-                <button
-                  type="button"
-                  onClick={() => signOut({ callbackUrl: "/" })}
-                  className="px-5 py-2.5 bg-navy-900 hover:bg-navy-800 text-white text-sm font-semibold rounded-lg transition-colors"
-                >
-                  Sign out
-                </button>
+                <div className="flex flex-col items-center">
+                  <button
+                    type="button"
+                    onClick={() => signOut({ callbackUrl: "/" })}
+                    className="px-5 py-2.5 bg-navy-900 hover:bg-navy-800 text-white text-sm font-semibold rounded-lg transition-colors"
+                  >
+                    Sign out
+                  </button>
+                  {session?.user?.name && (
+                    <span className="mt-0.5 text-[11px] leading-tight text-gray-500">
+                      Signed in as {session.user.name}
+                    </span>
+                  )}
+                </div>
               </>
             ) : (
               <>
@@ -328,6 +335,11 @@ export function Header() {
                 >
                   Sign out
                 </button>
+                {session?.user?.name && (
+                  <p className="text-center text-xs text-gray-500">
+                    Signed in as {session.user.name}
+                  </p>
+                )}
               </>
             ) : (
               <>

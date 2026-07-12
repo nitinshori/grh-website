@@ -1,3 +1,4 @@
+import type { Session } from 'next-auth'
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
@@ -33,7 +34,7 @@ type Viewer =
   | null
 
 async function getViewer(): Promise<{
-  session: Awaited<ReturnType<typeof auth>>
+  session: Session | null
   viewer: Viewer
 }> {
   const session = await auth()
