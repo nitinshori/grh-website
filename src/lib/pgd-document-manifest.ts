@@ -1,4 +1,4 @@
-// AUTO-GENERATED from public/pgd-documents (9 Jul 2026).
+// AUTO-GENERATED from public/pgd-documents (updated 11 Jul 2026).
 // Maps PGD slug -> filename of the signed master PDF served from /pgd-documents/.
 // The " 2" variants are the HubRx-branded signed copies.
 export const PGD_MASTER_FILES: Record<string, string> = {
@@ -69,6 +69,7 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   "travel-core": "travel-core.pdf",
   "uti": "uti.pdf",
   "wegovy": "wegovy.pdf",
+  "wegovy-oral": "wegovy-oral.pdf",
   "wound-care": "wound-care.pdf"
 };
 

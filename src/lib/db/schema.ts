@@ -217,6 +217,10 @@ export const userConsents = pgTable('user_consents', {
 // re-signing after a version change inserts a new row.
 export const clinicalSignoffs = pgTable('clinical_signoffs', {
   id: uuid('id').defaultRandom().primaryKey(),
+  scope: varchar('scope', { length: 64 }).default('grh').notNull(),
+  pharmacyId: uuid('pharmacy_id').references(() => pharmacies.id, {
+    onDelete: 'set null',
+  }),
   itemType: varchar('item_type', { length: 32 }).notNull(),
   itemSlug: varchar('item_slug', { length: 255 }).notNull(),
   itemTitle: varchar('item_title', { length: 500 }),
