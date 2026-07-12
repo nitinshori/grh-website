@@ -67,6 +67,13 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   "threadworms": "threadworms.pdf",
   "thrush": "thrush.pdf",
   "travel-core": "travel-core.pdf",
+  // typhoid is covered by the signed Travel Health Core Package PGD (Hep A + Typhoid + Cholera)
+  "typhoid": "travel-core.pdf",
+  // signed 13 Jul 2026 (Nitin Shori + Chris Pilkington)
+  "trt": "trt.pdf",
+  "travellers-diarrhoea": "travellers-diarrhoea.pdf",
+  // testosterone for women (postmenopausal HSDD) is covered by the signed HRT/Menopause PGD
+  "testosterone-women": "hrt.pdf",
   "uti": "uti.pdf",
   "wegovy": "wegovy.pdf",
   "wegovy-oral": "wegovy-oral.pdf",
@@ -137,6 +144,8 @@ export const PGD_HUBRX_FILES: Record<string, string> = {
   "threadworms": "threadworms 2.pdf",
   "thrush": "thrush 2.pdf",
   "travel-core": "travel-core 2.pdf",
+  "typhoid": "travel-core 2.pdf",
+  "testosterone-women": "hrt 2.pdf",
   "uti": "uti 2.pdf",
   "wegovy": "wegovy 2.pdf",
   "wound-care": "wound-care 2.pdf"

@@ -27,7 +27,18 @@ export default async function PharmacyDashboardLayout({
   const session = await auth()
   if (!session?.user) redirect('/login')
 
-  if (session.user.role === 'client') redirect('/login')
+  // Clinical sign-off reviewers (e.g. Chris) hold restricted `client`
+  // accounts but must be able to open training modules and ePGD tools
+  // to review them before signing off.
+  const signoffReviewers = (process.env.SIGNOFF_REVIEWERS ?? '')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean)
+  const isSignoffReviewer = signoffReviewers.includes(
+    session.user.email?.toLowerCase() ?? '',
+  )
+
+  if (session.user.role === 'client' && !isSignoffReviewer) redirect('/login')
 
   // SSO users must accept terms/data-processing on first use (versioned).
   if (session.user.id && (await needsConsent(session.user.id))) {
@@ -41,6 +52,7 @@ export default async function PharmacyDashboardLayout({
   // with no pharmacy assignment, show "Clinical Review".
   let pharmacyName =
     session.user.role === 'super_admin' ? 'Clinical Review' :
+    isSignoffReviewer && session.user.role === 'client' ? 'Clinical Review' :
     session.user.role === 'prospect' ? 'Preview' :
     'Your Pharmacy'
   let pharmacyGroupSlug: string | null = null
