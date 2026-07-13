@@ -66,6 +66,10 @@ export async function GET(req: NextRequest) {
   try {
     await signIn('hubrx-sso', {
       token,
+      // Which tenant's secret verifies this token is decided by the
+      // hostname the request arrived on (live vs sandbox subdomain) —
+      // never by anything inside the token itself.
+      tenantSlug: tenant.slug,
       redirectTo: dashboardRedirect,
     })
   } catch (err) {

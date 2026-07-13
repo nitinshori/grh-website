@@ -19,7 +19,7 @@
  * `getTenant()` to retrieve the active tenant config.
  */
 
-export type TenantSlug = 'grh' | 'hubrx'
+export type TenantSlug = 'grh' | 'hubrx' | 'hubrx-sandbox'
 
 export interface TenantTheme {
   /** Primary brand colour — used for CTAs, links, accent elements */
@@ -172,11 +172,34 @@ const hubrxTenant: TenantConfig = {
   showPoweredBy: true,
 }
 
+// ── HubRx SANDBOX tenant ─────────────────────────────────────────
+// Hosted staging environment for HubRx's integration team, served on
+// hubrx-sandbox.getrealhealthpgd.co.uk. Identical SSO flow to the live
+// hubrx tenant but:
+//   - verified against HUBRX_SSO_SECRET_SANDBOX (a separate dev secret;
+//     the production secret never leaves production)
+//   - users/pharmacies are provisioned with authSource 'hubrx-sandbox',
+//     fully partitioned from live hubrx data
+//   - sandbox pharmacies receive NO PGD assignments, so no PGD documents,
+//     ePGD tools or training content are exposed to the staging side
+const hubrxSandboxTenant: TenantConfig = {
+  ...hubrxTenant,
+  slug: 'hubrx-sandbox',
+  canonicalHost: 'hubrx-sandbox.getrealhealthpgd.co.uk',
+  displayName: 'HubRx PGD Service (Sandbox)',
+  strapline: 'Integration testing environment — not for live clinical use',
+  sso: {
+    ...hubrxTenant.sso,
+    secretEnvVar: 'HUBRX_SSO_SECRET_SANDBOX',
+  },
+}
+
 // ── Tenant lookup ────────────────────────────────────────────────
 
 const TENANTS: Record<TenantSlug, TenantConfig> = {
   grh: grhTenant,
   hubrx: hubrxTenant,
+  'hubrx-sandbox': hubrxSandboxTenant,
 }
 
 /**
@@ -191,6 +214,16 @@ const TENANTS: Record<TenantSlug, TenantConfig> = {
 export function tenantFromHost(host: string | null | undefined): TenantConfig {
   if (!host) return grhTenant
   const cleanHost = host.toLowerCase().split(':')[0].trim()
+
+  // HubRx sandbox — must be checked BEFORE the live hubrx test because
+  // "hubrx-sandbox.localhost" would otherwise never match anything.
+  if (
+    cleanHost === 'hubrx-sandbox.getrealhealthpgd.co.uk' ||
+    cleanHost.startsWith('hubrx-sandbox.localhost') ||
+    cleanHost.startsWith('hubrx-sandbox.lvh.me')
+  ) {
+    return hubrxSandboxTenant
+  }
 
   // HubRx — accept both the live subdomain and local-dev variants
   // ("hubrx.localhost:3000", "hubrx.lvh.me:3000") to make it easy

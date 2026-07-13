@@ -12,6 +12,7 @@ export type AuditAction =
   | 'login_failed'
   | 'logout'
   | 'password_change'
+  | 'sso_user_deactivated'
 
 export interface AuditEntry {
   pharmacyId?: string | null

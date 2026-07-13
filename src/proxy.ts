@@ -18,9 +18,11 @@ const TENANT_ALLOWED_PREFIXES = [
   '/login',
   '/logout',
   '/sso',
+  '/change-password',    // first-login forced password change (PPH bulk-import users)
   '/for-pharmacies/dashboard',
   '/for-pharmacies/epgd',
   '/api/auth',           // NextAuth endpoints (signin/signout/session)
+  '/api/account/change-password', // backs the change-password form
   '/api/voice',          // existing AI receptionist webhooks (unaffected)
   '/_next',              // build assets
   '/favicon',
@@ -143,6 +145,12 @@ export default auth(async (req: NextRequest & { auth: { user: { id?: string; rol
   // isn't on the allow-list. Done BEFORE the is_active and HCP checks
   // so an unauthenticated visitor to the HubRx subdomain just sees the
   // tenant login screen, not the public GRH marketing site.
+  //
+  // Special case: the bare root '/' is the most natural URL someone
+  // types — bounce it to the tenant login rather than 404.
+  if (tenant.hideMarketing && pathname === '/') {
+    return NextResponse.redirect(new URL('/login', req.nextUrl.origin))
+  }
   if (tenant.hideMarketing && !isTenantAllowedPath(pathname)) {
     return new NextResponse('Not found', { status: 404 })
   }
@@ -223,8 +231,21 @@ export default auth(async (req: NextRequest & { auth: { user: { id?: string; rol
 
   // Forward the active tenant slug to server components via a request
   // header. They read it via `getTenant()` in src/lib/tenant-context.ts.
+  //
+  // Session override: if the logged-in user's effective authSource is a
+  // non-default tenant (e.g. 'hubrx'), use that as the tenant slug instead
+  // of the host-derived one. This means a HubRx pharmacist sees HubRx
+  // branding even if they hit the apex domain getrealhealthpgd.co.uk
+  // (which by itself would resolve to the 'grh' tenant). Identity beats
+  // hostname.
+  const userAuthSource = (session?.user as { authSource?: string } | undefined)
+    ?.authSource
+  const effectiveTenantSlug =
+    userAuthSource && userAuthSource !== 'grh'
+      ? userAuthSource
+      : tenant.slug
   const res = NextResponse.next()
-  res.headers.set(TENANT_HEADER, tenant.slug)
+  res.headers.set(TENANT_HEADER, effectiveTenantSlug)
   return res
 })
 

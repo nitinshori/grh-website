@@ -84,13 +84,20 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         // For client users, fetch the pharmacy slug for redirect
         let pharmacySlug: string | null = null
-        if (user.role === 'client' && user.pharmacyId) {
+        // Effective auth source — controls which tenant theme (GRH vs
+        // HubRx) the UI renders. Falls back to user.authSource, then to
+        // the pharmacy's authSource, then 'grh'.
+        let effectiveAuthSource: string = user.authSource ?? 'grh'
+        if (user.pharmacyId) {
           const [pharmacy] = await db
-            .select({ slug: pharmacies.slug })
+            .select({ slug: pharmacies.slug, authSource: pharmacies.authSource })
             .from(pharmacies)
             .where(eq(pharmacies.id, user.pharmacyId))
             .limit(1)
           pharmacySlug = pharmacy?.slug || null
+          if (pharmacy?.authSource && pharmacy.authSource !== 'grh') {
+            effectiveAuthSource = pharmacy.authSource
+          }
         }
 
         await audit({
@@ -109,6 +116,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           pharmacyId: user.pharmacyId,
           pharmacySlug,
           mustChangePassword: user.mustChangePassword,
+          authSource: effectiveAuthSource,
         }
       },
     }),
@@ -123,23 +131,33 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       name: 'HubRx SSO',
       credentials: {
         token: { label: 'SSO token', type: 'text' },
+        tenantSlug: { label: 'Tenant', type: 'text' },
       },
       async authorize(credentials) {
         const token = credentials?.token as string | undefined
         if (!token) return null
+        // The /sso route passes the tenant it resolved from the request
+        // HOSTNAME (live vs sandbox subdomain) — never from anything in
+        // the token. The sandbox slug selects HUBRX_SSO_SECRET_SANDBOX
+        // and partitions all provisioned users/pharmacies under
+        // authSource 'hubrx-sandbox'. Anything unexpected falls back to
+        // the live hubrx tenant.
+        const requestedSlug = credentials?.tenantSlug as string | undefined
+        const tenantSlug: 'hubrx' | 'hubrx-sandbox' =
+          requestedSlug === 'hubrx-sandbox' ? 'hubrx-sandbox' : 'hubrx'
         try {
           // Lazy-loaded — see top-of-file note for why.
           const { resolveSsoUser } = await import(
             '@/lib/sso/resolve-sso-user'
           )
-          const resolved = await resolveSsoUser({ tenantSlug: 'hubrx', token })
+          const resolved = await resolveSsoUser({ tenantSlug, token })
           if (!resolved) return null
           await audit({
             action: 'login',
             userId: resolved.id,
             userEmail: resolved.email,
             pharmacyId: resolved.pharmacyId,
-            details: { via: 'hubrx_sso' },
+            details: { via: 'hubrx_sso', tenant: tenantSlug },
           })
           return {
             id: resolved.id,
@@ -148,6 +166,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             role: resolved.role,
             pharmacyId: resolved.pharmacyId,
             pharmacySlug: resolved.pharmacySlug,
+            authSource: tenantSlug,
           }
         } catch (err) {
           await audit({
@@ -163,7 +182,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const u = user as any
@@ -171,6 +190,40 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.pharmacyId = u.pharmacyId as string | null
         token.pharmacySlug = u.pharmacySlug as string | null
         token.mustChangePassword = !!u.mustChangePassword
+        token.authSource = (u.authSource as string | undefined) ?? 'grh'
+      }
+      // When the client calls `useSession().update()` (e.g. after the
+      // change-password flow completes) re-read the mustChangePassword
+      // flag from the DB so the fresh JWT reflects that they've now set a
+      // real password. Without this the middleware would keep bouncing
+      // them back to /change-password forever.
+      if (trigger === 'update' && token.sub) {
+        try {
+          const [{ users: usersTable }, { db }, { eq }] = await Promise.all([
+            import('@/lib/db/schema'),
+            import('@/lib/db'),
+            import('drizzle-orm'),
+          ])
+          const [freshUser] = await db
+            .select({
+              mustChangePassword: usersTable.mustChangePassword,
+              isActive: usersTable.isActive,
+            })
+            .from(usersTable)
+            .where(eq(usersTable.id, token.sub))
+            .limit(1)
+          if (freshUser) {
+            token.mustChangePassword = !!freshUser.mustChangePassword
+          }
+        } catch (err) {
+          console.warn('[jwt] update-trigger DB re-fetch failed:', err)
+          // Belt-and-suspenders: if the DB re-read failed but the client
+          // explicitly told us the flag is now cleared, honour that so a
+          // transient DB blip can't trap the user in the change-password loop.
+          if (session && (session as { mustChangePassword?: boolean }).mustChangePassword === false) {
+            token.mustChangePassword = false
+          }
+        }
       }
       return token
     },
@@ -181,6 +234,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.pharmacyId = token.pharmacyId as string | null
         session.user.pharmacySlug = token.pharmacySlug as string | null
         session.user.mustChangePassword = !!token.mustChangePassword
+        ;(session.user as { authSource?: string }).authSource =
+          (token.authSource as string | undefined) ?? 'grh'
       }
       return session
     },

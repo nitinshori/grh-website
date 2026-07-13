@@ -405,6 +405,7 @@ export const auditActionEnum = pgEnum('audit_action', [
   'login_failed',
   'logout',
   'password_change',
+  'sso_user_deactivated',
 ])
 
 export const auditLogs = pgTable('audit_logs', {
