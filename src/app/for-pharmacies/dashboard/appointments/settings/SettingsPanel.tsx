@@ -53,7 +53,9 @@ export default function SettingsPanel() {
   const [newClinicianRole, setNewClinicianRole] = useState('Pharmacist')
 
   const [newAvailClinician, setNewAvailClinician] = useState('')
-  const [newAvailDay, setNewAvailDay] = useState(1)
+  // Multiple days can be ticked at once — one availability row is
+  // created per ticked day (bulk set, e.g. Mon–Fri 9–5 in one go).
+  const [newAvailDays, setNewAvailDays] = useState<number[]>([1, 2, 3, 4, 5])
   const [newAvailStart, setNewAvailStart] = useState('09:00')
   const [newAvailEnd, setNewAvailEnd] = useState('17:00')
 
@@ -134,23 +136,34 @@ export default function SettingsPanel() {
 
   async function addAvailability(e: React.FormEvent) {
     e.preventDefault()
-    if (!newAvailClinician) return
+    if (!newAvailClinician || newAvailDays.length === 0) return
     try {
-      const res = await fetch('/api/appointments/availability', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          clinicianId: newAvailClinician,
-          dayOfWeek: newAvailDay,
-          startTime: newAvailStart,
-          endTime: newAvailEnd,
-        }),
-      })
-      if (!res.ok) throw new Error('Failed')
+      // One row per ticked day, so a Mon–Fri 9–5 pattern is one click.
+      const results = await Promise.all(
+        newAvailDays.map((dayOfWeek) =>
+          fetch('/api/appointments/availability', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              clinicianId: newAvailClinician,
+              dayOfWeek,
+              startTime: newAvailStart,
+              endTime: newAvailEnd,
+            }),
+          }),
+        ),
+      )
+      if (results.some((r) => !r.ok)) throw new Error('Failed')
       fetchAll()
     } catch {
       setError('Failed to add availability')
     }
+  }
+
+  function toggleAvailDay(day: number) {
+    setNewAvailDays((days) =>
+      days.includes(day) ? days.filter((d) => d !== day) : [...days, day],
+    )
   }
 
   async function removeAvailability(id: string) {
@@ -167,7 +180,7 @@ export default function SettingsPanel() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
-        <div className="w-8 h-8 border-3 border-teal-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-3 border-[color:var(--tenant-primary)]/30 border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }
@@ -258,7 +271,7 @@ export default function SettingsPanel() {
             <button
               type="submit"
               className="px-5 py-2 text-sm font-semibold text-white rounded-lg"
-              style={{ backgroundColor: '#25b4b4' }}
+              style={{ backgroundColor: 'var(--tenant-primary)' }}
             >
               Add Type
             </button>
@@ -314,7 +327,7 @@ export default function SettingsPanel() {
             <button
               type="submit"
               className="px-5 py-2 text-sm font-semibold text-white rounded-lg"
-              style={{ backgroundColor: '#25b4b4' }}
+              style={{ backgroundColor: 'var(--tenant-primary)' }}
             >
               Add Clinician
             </button>
@@ -358,27 +371,47 @@ export default function SettingsPanel() {
 
           <form onSubmit={addAvailability} className="bg-gray-50 rounded-xl border border-gray-200 p-5 space-y-3">
             <h3 className="text-sm font-semibold text-gray-700">Add availability</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <select
-                value={newAvailClinician}
-                onChange={(e) => setNewAvailClinician(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                required
-              >
-                <option value="">Select clinician...</option>
-                {clinicianList.filter((c) => c.isActive).map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-              <select
-                value={newAvailDay}
-                onChange={(e) => setNewAvailDay(Number(e.target.value))}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-              >
+            {clinicianList.filter((c) => c.isActive).length === 0 && (
+              <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                Add a clinician first (Clinicians tab above) — availability is set
+                per clinician, and the button below stays disabled until one is selected.
+              </p>
+            )}
+            <select
+              value={newAvailClinician}
+              onChange={(e) => setNewAvailClinician(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              required
+            >
+              <option value="">Select clinician...</option>
+              {clinicianList.filter((c) => c.isActive).map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">
+                Days (tick all that share these hours)
+              </label>
+              <div className="flex flex-wrap gap-2">
                 {DAY_NAMES.map((name, i) => (
-                  <option key={i} value={i}>{name}</option>
+                  <label
+                    key={i}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm cursor-pointer select-none ${
+                      newAvailDays.includes(i)
+                        ? 'bg-teal-50 border-teal-300 text-teal-900'
+                        : 'bg-white border-gray-300 text-gray-600'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={newAvailDays.includes(i)}
+                      onChange={() => toggleAvailDay(i)}
+                      className="w-3.5 h-3.5 accent-teal-600"
+                    />
+                    {name.slice(0, 3)}
+                  </label>
                 ))}
-              </select>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -402,11 +435,13 @@ export default function SettingsPanel() {
             </div>
             <button
               type="submit"
-              disabled={!newAvailClinician}
+              disabled={!newAvailClinician || newAvailDays.length === 0}
               className="px-5 py-2 text-sm font-semibold text-white rounded-lg disabled:opacity-50"
-              style={{ backgroundColor: '#25b4b4' }}
+              style={{ backgroundColor: 'var(--tenant-primary)' }}
             >
-              Add Availability
+              {newAvailDays.length > 1
+                ? `Add Availability (${newAvailDays.length} days)`
+                : 'Add Availability'}
             </button>
           </form>
         </div>
