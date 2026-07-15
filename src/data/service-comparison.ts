@@ -238,7 +238,7 @@ export const SERVICE_COMPARISON: ServiceComparisonCategory[] = [
   },
 
   // ── Weight Management ──────────────────────────────────────────
-  // wegovy-oral (Oral Wegovy, semaglutide 25/50 mg) became UK-licensed
+  // wegovy-oral (Wegovy tablets, oral semaglutide 1.5–25 mg) became UK-licensed
   // in June 2026 and can now be advertised externally. The previous
   // restriction (off-label pilot framing) has been removed from the
   // catalogue entry and access registry.

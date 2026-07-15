@@ -37,7 +37,7 @@ const epgds = [
 
   // ── Weight Management ──
   { slug: 'wegovy', title: 'Wegovy (Semaglutide)', subtitle: 'GLP-1 RA with BMI Calculator', category: 'Weight Management', color: 'bg-emerald-500' },
-  { slug: 'wegovy-oral', title: 'Oral Wegovy (Semaglutide 25/50 mg)', subtitle: 'UK-licensed oral GLP-1 — empty-stomach', category: 'Weight Management', color: 'bg-emerald-500' },
+  { slug: 'wegovy-oral', title: 'Oral Wegovy (Oral Semaglutide 1.5–25 mg)', subtitle: 'UK-licensed oral GLP-1 — empty-stomach', category: 'Weight Management', color: 'bg-emerald-500' },
   { slug: 'mounjaro', title: 'Mounjaro (Tirzepatide)', subtitle: 'GLP-1/GIP Dual Agonist', category: 'Weight Management', color: 'bg-emerald-500' },
   { slug: 'saxenda', title: 'Saxenda (Liraglutide)', subtitle: 'GLP-1 RA Daily Injection', category: 'Weight Management', color: 'bg-emerald-500' },
   { slug: 'mysimba', title: 'Mysimba', subtitle: 'Naltrexone / Bupropion Oral', category: 'Weight Management', color: 'bg-emerald-500' },

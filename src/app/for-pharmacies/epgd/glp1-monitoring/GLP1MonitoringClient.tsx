@@ -13,7 +13,7 @@ import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile"
 // GLP-1 Ongoing Monitoring & Dose Titration ePGD
 //
 // For patients already on injectable Wegovy (semaglutide), Mounjaro
-// (tirzepatide), or licensed Oral Wegovy (semaglutide 25/50 mg). Covers
+// (tirzepatide), or licensed Oral Wegovy (oral semaglutide 1.5–25 mg). Covers
 // follow-up review, weight-loss assessment against the 5%-by-12-weeks
 // gate, side-effect screening, and dose-titration decisions (continue
 // same / step up / hold / step down / stop).
@@ -347,7 +347,7 @@ export function GLP1MonitoringClient() {
                 <option value="">— select —</option>
                 <option value="wegovy">Wegovy (semaglutide injection, 0.25–2.4 mg weekly)</option>
                 <option value="mounjaro">Mounjaro (tirzepatide injection, 2.5–15 mg weekly)</option>
-                <option value="wegovy-oral">Oral Wegovy (semaglutide 25/50 mg daily)</option>
+                <option value="wegovy-oral">Oral Wegovy (oral semaglutide 1.5–25 mg daily)</option>
               </select>
             </div>
 

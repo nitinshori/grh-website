@@ -29,7 +29,7 @@ export default function GLP1MonitoringPage() {
               <p className="text-sm text-blue-900">
                 Structured monitoring covering Wegovy (semaglutide
                 0.25&ndash;2.4 mg weekly), Mounjaro (tirzepatide
-                2.5&ndash;15 mg weekly), and Oral Wegovy (semaglutide 25/50 mg
+                2.5&ndash;15 mg weekly), and Oral Wegovy (oral semaglutide 1.5–25 mg
                 daily). Weight-loss assessment against the NICE 5%-by-12-weeks
                 gate, side-effect screening, dose decisions
                 (continue/step-up/hold/step-down/stop/refer), and red-flag

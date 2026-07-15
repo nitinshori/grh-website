@@ -8,7 +8,7 @@ import { ALL_PGDS, PGD_CATEGORIES, COMING_SOON_SLUGS } from '@/lib/pgd-access'
 import { getPharmacyPgdSlugs } from '@/lib/pgd-queries'
 import { pgds as PGD_CATALOGUE, isPgdAccessibleByEmail } from '@/data/pgds'
 import { getPharmacyStats } from '@/lib/analytics'
-import { hasPgdDocument } from '@/lib/pgd-documents'
+import { hasPgdDocument, getPgdDocumentUrl } from '@/lib/pgd-documents'
 import { isAppointmentsOnlyGroup } from '@/lib/access-pharmacies'
 
 // Map slug → friendly title
@@ -679,7 +679,7 @@ export default async function PharmacyDashboard() {
                           </div>
                           {hasDoc ? (
                             <a
-                              href={`/pgd-documents/${pgd.slug}.pdf`}
+                              href={getPgdDocumentUrl(pgd.slug) ?? `/pgd-documents/${pgd.slug}.pdf`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-[color:var(--tenant-primary)]/10 text-[color:var(--tenant-primary)] rounded-md text-xs font-medium hover:bg-[color:var(--tenant-primary)]/20 transition-colors flex-shrink-0"

@@ -1,103 +1,44 @@
 /**
- * PGD Document mapping — maps ePGD slugs to their written PGD PDF files.
- * PDFs are stored in /public/pgd-documents/{slug}.pdf
+ * PGD Document helpers — which ePGD slugs have a signed written PGD
+ * PDF available, and where it lives.
  *
- * 3 PGDs could not be auto-converted due to file size limits:
- *   - trt (Testosterone Replacement)
- *   - testosterone-women (Testosterone for Women)
- *   - travellers-diarrhoea (Traveller's Diarrhoea)
- * These need manual upload to public/pgd-documents/
+ * Derived from PGD_MASTER_FILES (src/lib/pgd-document-manifest.ts) so
+ * there is ONE source of truth. Previously this file kept its own
+ * hardcoded slug list, which silently went stale — e.g. oral Wegovy
+ * was published as a master but never added here, so pharmacists saw
+ * no download (reported by Sarah Passmore, PPH, 13 Jul 2026).
+ *
+ * The manifest also maps slugs covered by combined documents to the
+ * right file (typhoid → travel-core.pdf, testosterone-women → hrt.pdf),
+ * which the old `/pgd-documents/{slug}.pdf` convention couldn't express.
  */
 
+import { PGD_MASTER_FILES } from '@/lib/pgd-document-manifest'
+
+/**
+ * Slugs whose PDF on disk is known to be the WRONG document — download
+ * stays hidden until the correct source PGD is supplied.
+ *   - ear-infection: PDF describes Dexamethasone/Neomycin/Acetic acid ear
+ *     SPRAY for otitis externa; the catalogue + ePGD tool are for Cetraxal
+ *     (ciprofloxacin ear drops).
+ *   - shingles-treatment: PDF describes Shingrix VACCINE (prevention), but
+ *     this PGD is for VALACICLOVIR acute antiviral treatment.
+ */
+const EXCLUDED_SLUGS = new Set(['ear-infection', 'shingles-treatment'])
+
 /** Set of slugs that have a written PGD PDF available */
-export const PGD_DOCUMENT_SLUGS = new Set([
-  'acne',
-  'adhd-monitoring',
-  'alcohol-reduction',
-  'alopecia-minoxidil',
-  'altitude-sickness',
-  'anti-malarials',
-  'anxiety-propranolol',
-  'asthma-rescue',
-  'b12-injection',
-  'bph',
-  'bv',
-  'chest-service',
-  'chickenpox',
-  'cold-sores',
-  'copd',
-  'covid-booster',
-  'dengue',
-  'dental-bridging',
-  'diabetes-monitoring',
-  // 'ear-infection' TEMPORARILY REMOVED. The PDF on disk describes
-  // Dexamethasone/Neomycin/Acetic acid ear SPRAY for otitis externa
-  // — a different product. The catalogue + ePGD tool are for Cetraxal
-  // (ciprofloxacin ear drops). Hiding download until correct
-  // Cetraxal-source PGD is supplied.
-  'eczema',
-  'ed',
-  'emergency-contraception',
-  'eye-infections',
-  'flu',
-  'genital-warts',
-  'glp1-monitoring',
-  'gonorrhoea-treatment',
-  'hair-loss',
-  'hayfever',
-  'hep-b-occupational',
-  'herpes-management',
-  'hpv',
-  'hrt',
-  'hypertension',
-  'impetigo',
-  'japanese-encephalitis',
-  'meningitis-acwy-travel',
-  'meningitis-b',
-  'mmr',
-  'mounjaro',
-  'mysimba',
-  'orlistat',
-  'paediatric-uti',
-  'period-delay',
-  'pneumococcal',
-  'postnatal-contraception',
-  'premature-ejaculation',
-  'prep',
-  'rabies',
-  'recurrent-uti',
-  'rosacea',
-  'rsv',
-  'saxenda',
-  // 'shingles-treatment' TEMPORARILY REMOVED. The PDF on disk
-  // describes Shingrix VACCINE for prevention, but this PGD is for
-  // VALACICLOVIR acute antiviral treatment. Wrong document was
-  // uploaded into this slot. Hiding download until correct
-  // valaciclovir source PGD is supplied.
-  'shingles-vaccine',
-  'sleep-melatonin',
-  'smoking-nrt',
-  'smoking-varenicline',
-  'sore-throat',
-  'statins',
-  'sti-testing',
-  'threadworms',
-  'thrush',
-  'travel-core',
-  'uti',
-  'wegovy',
-  'wound-care',
-]);
+export const PGD_DOCUMENT_SLUGS = new Set(
+  Object.keys(PGD_MASTER_FILES).filter((slug) => !EXCLUDED_SLUGS.has(slug)),
+)
 
 /** Get the download URL for a PGD document, or null if not available */
 export function getPgdDocumentUrl(slug: string): string | null {
-  if (PGD_DOCUMENT_SLUGS.has(slug)) {
-    return `/pgd-documents/${slug}.pdf`;
-  }
-  return null;
+  if (!PGD_DOCUMENT_SLUGS.has(slug)) return null
+  const filename = PGD_MASTER_FILES[slug]
+  return `/pgd-documents/${encodeURIComponent(filename)}`
 }
 
 /** Check if a written PGD document is available for a given slug */
 export function hasPgdDocument(slug: string): boolean {
-  return PGD_DOCUMENT_SLUGS.has(slug);
+  return PGD_DOCUMENT_SLUGS.has(slug)
 }

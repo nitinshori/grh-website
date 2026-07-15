@@ -5,7 +5,7 @@ import { PgdPageActions } from "@/components/PgdPageActions";
 import { WegovyOralClient } from "./WegovyOralClient";
 
 export const metadata = {
-  title: "Oral Wegovy (Semaglutide 25/50 mg) — Weight Management",
+  title: "Oral Wegovy (Oral Semaglutide 1.5–25 mg) — Weight Management",
   description:
     "UK Pharmacy PGD for licensed Oral Wegovy (semaglutide 25 mg and 50 mg) — chronic weight management in adults with BMI ≥30 or BMI ≥27 with weight-related comorbidity.",
 };

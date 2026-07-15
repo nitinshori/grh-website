@@ -439,7 +439,7 @@ export function WegovyOralClient() {
                 ]}
                 required
               />
-              <TextArea label="Clinical rationale for product choice" value={state.doseSelection.rationale} onChange={(v) => dispatch({ type: "UPDATE_DOSE", field: "rationale", value: v })} placeholder="e.g. starting dose; titration step; chosen 14 mg as long-term maintenance after 8-week titration; etc." />
+              <TextArea label="Clinical rationale for product choice" value={state.doseSelection.rationale} onChange={(v) => dispatch({ type: "UPDATE_DOSE", field: "rationale", value: v })} placeholder="e.g. starting dose; titration step; chosen 25 mg as long-term maintenance after completing titration; etc." />
             </div>
           </StepWrapper>
         );
