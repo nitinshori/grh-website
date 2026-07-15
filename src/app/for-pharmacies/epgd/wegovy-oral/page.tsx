@@ -7,7 +7,7 @@ import { WegovyOralClient } from "./WegovyOralClient";
 export const metadata = {
   title: "Oral Wegovy (Oral Semaglutide 1.5–25 mg) — Weight Management",
   description:
-    "UK Pharmacy PGD for licensed Oral Wegovy (semaglutide 25 mg and 50 mg) — chronic weight management in adults with BMI ≥30 or BMI ≥27 with weight-related comorbidity.",
+    "UK Pharmacy PGD for licensed Wegovy tablets (oral semaglutide 1.5, 4, 9 and 25 mg) — chronic weight management in adults with BMI ≥30 or BMI ≥27 with weight-related comorbidity.",
 };
 
 export default async function WegovyOralPage() {
@@ -39,7 +39,7 @@ export default async function WegovyOralPage() {
               Oral Wegovy — Weight Management
             </h1>
             <p className="text-gray-600 mb-4">
-              Semaglutide 25 mg and 50 mg oral tablets. Licensed in the UK for
+              Semaglutide 1.5, 4, 9 and 25 mg oral tablets. Licensed in the UK for
               chronic weight management in adults.
             </p>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
