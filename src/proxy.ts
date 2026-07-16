@@ -19,6 +19,10 @@ const TENANT_ALLOWED_PREFIXES = [
   '/logout',
   '/sso',
   '/change-password',    // first-login forced password change (PPH bulk-import users)
+  '/for-pharmacies/consent', // first-use consent for SSO-provisioned users — the
+                             // /sso flow redirects here before the dashboard, so
+                             // hiding it 404'd every new HubRx user (found by
+                             // HubRx in sandbox testing, 13 Jul 2026)
   '/for-pharmacies/dashboard',
   '/for-pharmacies/epgd',
   '/api/auth',           // NextAuth endpoints (signin/signout/session)
