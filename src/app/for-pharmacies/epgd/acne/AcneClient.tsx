@@ -461,7 +461,7 @@ export default function AcneClient() {
 
               {state.assessment.severity === "moderate" && (
                 <>
-                  <div className="p-3 bg-teal-50 rounded-lg border border-teal-200">
+                  <div className="p-3 bg-[color:var(--tenant-primary)]/10 rounded-lg border border-[color:var(--tenant-primary)]/30">
                     <p className="text-sm font-medium text-navy-900">Recommended: Epiduo</p>
                     <p className="text-xs text-gray-600 mt-1">
                       Adapalene 0.1%/Benzoyl peroxide 2.5% combination gel — apply once daily

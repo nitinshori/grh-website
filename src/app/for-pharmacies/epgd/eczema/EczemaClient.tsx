@@ -397,7 +397,7 @@ export default function EczemaClient() {
               />
 
               {state.assessment.severity === "mild" && (
-                <div className="p-3 bg-teal-50 rounded-lg border border-teal-200">
+                <div className="p-3 bg-[color:var(--tenant-primary)]/10 rounded-lg border border-[color:var(--tenant-primary)]/30">
                   <p className="text-sm font-medium text-navy-900">Hydrocortisone 1% OD–BD</p>
                   <p className="text-xs text-gray-600 mt-1">Recommended for mild eczema flares (max 7 days)</p>
                 </div>

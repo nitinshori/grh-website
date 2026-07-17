@@ -16,11 +16,11 @@ export default function UTIToolPage() {
 
         {/* Breadcrumb */}
         <div className="mb-6 text-sm text-gray-600">
-          <a href="/for-pharmacies" className="text-teal-600 hover:underline">
+          <a href="/for-pharmacies" className="text-[color:var(--tenant-primary)] hover:underline">
             For Pharmacies
           </a>
           {" > "}
-          <a href="/for-pharmacies/epgd" className="text-teal-600 hover:underline">
+          <a href="/for-pharmacies/epgd" className="text-[color:var(--tenant-primary)] hover:underline">
             ePGD Consultations
           </a>
           {" > "}
@@ -29,7 +29,7 @@ export default function UTIToolPage() {
 
         {/* Page Header */}
         <div className="mb-8">
-          <p className="text-xs font-semibold text-teal-700 uppercase tracking-wider mb-2">
+          <p className="text-xs font-semibold text-[color:var(--tenant-primary)] uppercase tracking-wider mb-2">
             For registered pharmacy professionals only
           </p>
           <h1 className="text-4xl font-bold text-navy-900 mb-2">

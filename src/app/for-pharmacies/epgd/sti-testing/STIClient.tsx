@@ -209,7 +209,7 @@ export default function STIClient() {
                     dispatch({ type: "UPDATE_PATIENT", field: "dateOfBirth", value: e.target.value })
                   }
                   max={new Date().toISOString().split("T")[0]}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
                 />
               </div>
               <div>

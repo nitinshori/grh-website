@@ -301,7 +301,7 @@ export function SaxendaClient() {
 
             <div>
               <label className="block text-sm font-medium text-navy-900 mb-1">Dose stage at this consultation <span className="text-red-400">*</span></label>
-              <select value={state.treatment.doseStage} onChange={(e) => updateTreatment("doseStage", e.target.value as typeof state.treatment.doseStage)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400">
+              <select value={state.treatment.doseStage} onChange={(e) => updateTreatment("doseStage", e.target.value as typeof state.treatment.doseStage)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]">
                 <option value="">— select —</option>
                 <option value="init">Initiation (Week 1 — 0.6 mg)</option>
                 <option value="1">Week 2 — 1.2 mg</option>
@@ -314,7 +314,7 @@ export function SaxendaClient() {
 
             <div>
               <label className="block text-sm font-medium text-navy-900 mb-1">Preferred injection site <span className="text-red-400">*</span></label>
-              <select value={state.treatment.injectionSite} onChange={(e) => updateTreatment("injectionSite", e.target.value as typeof state.treatment.injectionSite)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400">
+              <select value={state.treatment.injectionSite} onChange={(e) => updateTreatment("injectionSite", e.target.value as typeof state.treatment.injectionSite)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]">
                 <option value="">— select —</option>
                 <option value="abdomen">Abdomen</option>
                 <option value="thigh">Thigh</option>
@@ -328,13 +328,13 @@ export function SaxendaClient() {
               <TextInput label="Pen batch number" value={state.treatment.batchNumber} onChange={(v) => updateTreatment("batchNumber", v)} required />
               <div>
                 <label className="block text-sm font-medium text-navy-900 mb-1">Pen expiry date <span className="text-red-400">*</span></label>
-                <input type="date" value={state.treatment.expiryDate} onChange={(e) => updateTreatment("expiryDate", e.target.value)} min={new Date().toISOString().split("T")[0]} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400" />
+                <input type="date" value={state.treatment.expiryDate} onChange={(e) => updateTreatment("expiryDate", e.target.value)} min={new Date().toISOString().split("T")[0]} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-navy-900 mb-1">Supply duration</label>
-              <select value={state.treatment.supplyDays} onChange={(e) => updateTreatment("supplyDays", e.target.value as typeof state.treatment.supplyDays)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400">
+              <select value={state.treatment.supplyDays} onChange={(e) => updateTreatment("supplyDays", e.target.value as typeof state.treatment.supplyDays)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]">
                 <option value="">— select —</option>
                 <option value="28">28-day supply (standard)</option>
                 <option value="30">30-day supply</option>
@@ -343,7 +343,7 @@ export function SaxendaClient() {
 
             <div>
               <label className="block text-sm font-medium text-navy-900 mb-1">Next review date</label>
-              <input type="date" value={state.treatment.nextReviewDate} onChange={(e) => updateTreatment("nextReviewDate", e.target.value)} min={new Date().toISOString().split("T")[0]} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400" />
+              <input type="date" value={state.treatment.nextReviewDate} onChange={(e) => updateTreatment("nextReviewDate", e.target.value)} min={new Date().toISOString().split("T")[0]} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
               <p className="mt-1 text-xs text-gray-500">12-week review on the 3.0 mg maintenance dose is mandatory — discontinue if &lt;5% weight loss.</p>
             </div>
           </div>

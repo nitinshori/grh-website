@@ -342,7 +342,7 @@ export function GLP1MonitoringClient() {
                 onChange={(ev) =>
                   updateTreatment("product", ev.target.value as Product)
                 }
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
               >
                 <option value="">— select —</option>
                 <option value="wegovy">Wegovy (semaglutide injection, 0.25–2.4 mg weekly)</option>
@@ -361,7 +361,7 @@ export function GLP1MonitoringClient() {
                   onChange={(ev) =>
                     updateTreatment("currentWegovyDose", ev.target.value as WegovyDose)
                   }
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
                 >
                   <option value="">— select —</option>
                   <option value="0.25">0.25 mg weekly (week 1–4)</option>
@@ -383,7 +383,7 @@ export function GLP1MonitoringClient() {
                   onChange={(ev) =>
                     updateTreatment("currentMounjaroDose", ev.target.value as MounjaroDose)
                   }
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
                 >
                   <option value="">— select —</option>
                   <option value="2.5">2.5 mg weekly (week 1–4, starter)</option>
@@ -406,7 +406,7 @@ export function GLP1MonitoringClient() {
                   onChange={(ev) =>
                     updateTreatment("currentWegovyOralDose", ev.target.value as WegovyOralDose)
                   }
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
                 >
                   <option value="">— select —</option>
                   <option value="25">25 mg daily (initial maintenance)</option>
@@ -526,7 +526,7 @@ export function GLP1MonitoringClient() {
                     ev.target.value as "" | "very-good" | "good" | "partial" | "poor"
                   )
                 }
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
               >
                 <option value="">— select —</option>
                 <option value="very-good">Very good — strong satiety effect</option>
@@ -548,7 +548,7 @@ export function GLP1MonitoringClient() {
                     ev.target.value as "" | "satisfied" | "neutral" | "dissatisfied"
                   )
                 }
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
               >
                 <option value="">— select —</option>
                 <option value="satisfied">Satisfied</option>
@@ -692,7 +692,7 @@ export function GLP1MonitoringClient() {
                 onChange={(ev) =>
                   updateDecision("action", ev.target.value as Decision)
                 }
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
               >
                 <option value="">— select —</option>
                 <option value="continue">
@@ -729,7 +729,7 @@ export function GLP1MonitoringClient() {
                   onChange={(ev) =>
                     updateDecision("newWegovyDose", ev.target.value as WegovyDose)
                   }
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
                 >
                   <option value="">— select —</option>
                   <option value="0.5">0.5 mg weekly</option>
@@ -750,7 +750,7 @@ export function GLP1MonitoringClient() {
                   onChange={(ev) =>
                     updateDecision("newMounjaroDose", ev.target.value as MounjaroDose)
                   }
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
                 >
                   <option value="">— select —</option>
                   <option value="5">5 mg weekly</option>
@@ -776,7 +776,7 @@ export function GLP1MonitoringClient() {
                         ev.target.value as WegovyOralDose
                       )
                     }
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
                   >
                     <option value="">— select —</option>
                     <option value="50">50 mg daily (target maintenance)</option>

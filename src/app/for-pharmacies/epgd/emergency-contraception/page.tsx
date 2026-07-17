@@ -18,7 +18,7 @@ export default function ECToolPage() {
           <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
             <a
               href="/for-pharmacies"
-              className="hover:text-teal-600 transition-colors"
+              className="hover:text-[color:var(--tenant-primary)] transition-colors"
             >
               For Pharmacies
             </a>

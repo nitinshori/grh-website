@@ -15,7 +15,7 @@ export default function MounjaroPage() {
         <PgdPageActions />
 
         <div className="mb-6">
-          <p className="text-xs font-semibold text-teal-700 uppercase tracking-wider mb-2">
+          <p className="text-xs font-semibold text-[color:var(--tenant-primary)] uppercase tracking-wider mb-2">
             For registered pharmacy professionals only
           </p>
           <h1 className="text-3xl font-bold text-navy-900 mb-2">Tirzepatide Consultation</h1>

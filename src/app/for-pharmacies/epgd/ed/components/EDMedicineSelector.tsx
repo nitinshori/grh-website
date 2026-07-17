@@ -39,11 +39,11 @@ export function EDMedicineSelector({
     <div className="space-y-6">
       {/* Auto-recommendation */}
       {recommendation && (
-        <div className="bg-teal-50 border border-teal-200 rounded-lg px-4 py-3">
+        <div className="bg-[color:var(--tenant-primary)]/10 border border-[color:var(--tenant-primary)]/30 rounded-lg px-4 py-3">
           <div className="flex items-start gap-3">
             <span className="text-lg">💊</span>
             <div>
-              <p className="text-sm font-semibold text-teal-800">
+              <p className="text-sm font-semibold text-[color:var(--tenant-primary)]">
                 Recommended:{" "}
                 {recommendation.medicine === "sildenafil"
                   ? "Sildenafil"
@@ -53,7 +53,7 @@ export function EDMedicineSelector({
                   ? " daily"
                   : " on-demand"}
               </p>
-              <p className="text-xs text-teal-700 mt-1">
+              <p className="text-xs text-[color:var(--tenant-primary)] mt-1">
                 {recommendation.reason}
               </p>
             </div>
@@ -74,7 +74,7 @@ export function EDMedicineSelector({
               p-4 rounded-lg border-2 text-left transition-all
               ${
                 selection.medicine === "sildenafil"
-                  ? "border-teal-500 bg-teal-50 ring-1 ring-teal-300"
+                  ? "border-[color:var(--tenant-primary)]/30 bg-[color:var(--tenant-primary)]/10 ring-1 ring-[color:var(--tenant-primary)]/30"
                   : "border-gray-200 hover:border-gray-300"
               }
             `}
@@ -96,7 +96,7 @@ export function EDMedicineSelector({
               p-4 rounded-lg border-2 text-left transition-all
               ${
                 selection.medicine === "tadalafil"
-                  ? "border-teal-500 bg-teal-50 ring-1 ring-teal-300"
+                  ? "border-[color:var(--tenant-primary)]/30 bg-[color:var(--tenant-primary)]/10 ring-1 ring-[color:var(--tenant-primary)]/30"
                   : "border-gray-200 hover:border-gray-300"
               }
             `}
@@ -127,7 +127,7 @@ export function EDMedicineSelector({
                 p-3 rounded-lg border-2 text-left transition-all
                 ${
                   selection.dosingRegimen === "on-demand"
-                    ? "border-teal-500 bg-teal-50"
+                    ? "border-[color:var(--tenant-primary)]/30 bg-[color:var(--tenant-primary)]/10"
                     : "border-gray-200 hover:border-gray-300"
                 }
               `}
@@ -145,7 +145,7 @@ export function EDMedicineSelector({
                 p-3 rounded-lg border-2 text-left transition-all
                 ${
                   selection.dosingRegimen === "daily"
-                    ? "border-teal-500 bg-teal-50"
+                    ? "border-[color:var(--tenant-primary)]/30 bg-[color:var(--tenant-primary)]/10"
                     : "border-gray-200 hover:border-gray-300"
                 }
               `}
@@ -176,7 +176,7 @@ export function EDMedicineSelector({
                   px-5 py-2.5 rounded-lg border-2 text-sm font-medium transition-all
                   ${
                     selection.dose === dose
-                      ? "border-teal-500 bg-teal-50 text-teal-700"
+                      ? "border-[color:var(--tenant-primary)]/30 bg-[color:var(--tenant-primary)]/10 text-[color:var(--tenant-primary)]"
                       : "border-gray-200 text-gray-600 hover:border-gray-300"
                   }
                 `}
@@ -209,7 +209,7 @@ export function EDMedicineSelector({
               const val = parseInt(e.target.value, 10);
               onChange("quantity", isNaN(val) ? 1 : Math.max(1, Math.min(maxQty, val)));
             }}
-            className="w-24 px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent"
+            className="w-24 px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
           />
         </div>
       )}
@@ -227,7 +227,7 @@ export function EDMedicineSelector({
                 onChange={(e) =>
                   onChange("pharmacistOverride", e.target.checked)
                 }
-                className="mt-0.5 rounded border-gray-300 text-teal-500 focus:ring-teal-400"
+                className="mt-0.5 rounded border-gray-300 text-[color:var(--tenant-primary)] focus:ring-[color:var(--tenant-primary)]"
               />
               <div>
                 <p className="text-sm font-medium text-amber-800">
@@ -247,7 +247,7 @@ export function EDMedicineSelector({
                 }
                 placeholder="Reason for override..."
                 rows={2}
-                className="mt-3 w-full px-3 py-2 border border-amber-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent"
+                className="mt-3 w-full px-3 py-2 border border-amber-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
               />
             )}
           </div>

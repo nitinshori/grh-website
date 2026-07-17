@@ -189,7 +189,7 @@ export function ChikungunyaClient() {
                   type="date"
                   value={state.travel.departureDate}
                   onChange={(e) => updateTravel("departureDate", e.target.value)}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
                 />
               </div>
               <TextInput
@@ -206,7 +206,7 @@ export function ChikungunyaClient() {
               <select
                 value={state.travel.timeOfYear}
                 onChange={(e) => updateTravel("timeOfYear", e.target.value as typeof state.travel.timeOfYear)}
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
               >
                 <option value="">— select —</option>
                 <option value="wet-season">Wet / monsoon season (higher Aedes mosquito activity)</option>
@@ -306,7 +306,7 @@ export function ChikungunyaClient() {
               <select
                 value={state.administration.vaccineGiven}
                 onChange={(e) => updateAdmin("vaccineGiven", e.target.value as typeof state.administration.vaccineGiven)}
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
               >
                 <option value="">— select —</option>
                 <option value="vimkunya">VIMKUNYA (Bavarian Nordic)</option>
@@ -325,7 +325,7 @@ export function ChikungunyaClient() {
                   value={state.administration.expiryDate}
                   onChange={(e) => updateAdmin("expiryDate", e.target.value)}
                   min={new Date().toISOString().split("T")[0]}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
                 />
               </div>
             </div>
@@ -337,7 +337,7 @@ export function ChikungunyaClient() {
               <select
                 value={state.administration.injectionSite}
                 onChange={(e) => updateAdmin("injectionSite", e.target.value as typeof state.administration.injectionSite)}
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
               >
                 <option value="">— select —</option>
                 <option value="left-deltoid">Left deltoid</option>
@@ -356,7 +356,7 @@ export function ChikungunyaClient() {
                 <select
                   value={state.administration.postObsMinutes}
                   onChange={(e) => updateAdmin("postObsMinutes", e.target.value as typeof state.administration.postObsMinutes)}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
                 >
                   <option value="">— select —</option>
                   <option value="15">15 minutes (standard)</option>

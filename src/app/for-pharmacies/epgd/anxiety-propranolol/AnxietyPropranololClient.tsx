@@ -428,7 +428,7 @@ export default function AnxietyPropranololClient() {
             isBlocked={hasStops}
           >
             <div className="space-y-4">
-              <div className="p-3 bg-teal-50 rounded-lg border border-teal-200">
+              <div className="p-3 bg-[color:var(--tenant-primary)]/10 rounded-lg border border-[color:var(--tenant-primary)]/30">
                 <p className="text-sm font-medium text-navy-900">Propranolol 10–40mg PRN</p>
                 <p className="text-xs text-gray-600 mt-1">Take 30–60 minutes before anxiety-provoking situation. For situational anxiety only.</p>
               </div>

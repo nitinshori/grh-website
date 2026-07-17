@@ -116,8 +116,8 @@ export default function PricingPage() {
 
       {/* Single pricing card */}
       <section className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="relative rounded-2xl border-2 border-teal-400 shadow-lg ring-2 ring-teal-100 p-8 sm:p-10">
-          <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-teal-500 text-white text-xs font-bold rounded-full">
+        <div className="relative rounded-2xl border-2 border-[color:var(--tenant-primary)]/30 shadow-lg ring-2 ring-[color:var(--tenant-primary)]/30 p-8 sm:p-10">
+          <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-[color:var(--tenant-primary)]/100 text-white text-xs font-bold rounded-full">
             All-inclusive
           </span>
 
@@ -135,7 +135,7 @@ export default function PricingPage() {
             {features.map((f, i) => (
               <li key={i} className="flex items-start gap-2 text-sm">
                 <svg
-                  className="w-4 h-4 text-teal-500 mt-0.5 shrink-0"
+                  className="w-4 h-4 text-[color:var(--tenant-primary)] mt-0.5 shrink-0"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -155,7 +155,7 @@ export default function PricingPage() {
           <div className="text-center">
             <Link
               href="/contact"
-              className="inline-block px-8 py-3 bg-teal-500 hover:bg-teal-600 text-white rounded-lg font-semibold text-sm transition-colors"
+              className="inline-block px-8 py-3 bg-[color:var(--tenant-primary)]/100 hover:bg-[color:var(--tenant-primary)]/15 text-white rounded-lg font-semibold text-sm transition-colors"
             >
               Get started
             </Link>

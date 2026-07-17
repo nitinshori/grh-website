@@ -554,7 +554,7 @@ export default function RabiesClient({
           <div className="mb-4 print:hidden">
             <Link
               href="/for-pharmacies/dashboard"
-              className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-teal-600 transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-[color:var(--tenant-primary)] transition-colors"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -1028,7 +1028,7 @@ export default function RabiesClient({
                 <div className="mt-4 print:hidden">
                   <button
                     onClick={handleNewConsultation}
-                    className="px-5 py-2.5 rounded-lg text-sm font-medium text-teal-600 border border-teal-300 hover:bg-teal-50 transition-colors"
+                    className="px-5 py-2.5 rounded-lg text-sm font-medium text-[color:var(--tenant-primary)] border border-[color:var(--tenant-primary)]/30 hover:bg-[color:var(--tenant-primary)]/10 transition-colors"
                   >
                     New Consultation
                   </button>

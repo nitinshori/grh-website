@@ -17,7 +17,7 @@ export default function AccessDenied({ pgdTitle }: { pgdTitle?: string }) {
         <Link
           href="/for-pharmacies/epgd"
           className="inline-flex items-center px-5 py-2.5 rounded-lg text-white font-medium text-sm transition-colors"
-          style={{ backgroundColor: '#25b4b4' }}
+          style={{ backgroundColor: 'var(--tenant-primary)' }}
         >
           &larr; Back to Your ePGDs
         </Link>

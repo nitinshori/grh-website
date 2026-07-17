@@ -319,8 +319,8 @@ export default function MounjaroClient() {
               </div>
 
               {state.weightAssessment.bmi !== null && (
-                <div className="p-3 bg-teal-50 border border-teal-200 rounded">
-                  <p className="text-sm font-semibold text-teal-900">
+                <div className="p-3 bg-[color:var(--tenant-primary)]/10 border border-[color:var(--tenant-primary)]/30 rounded">
+                  <p className="text-sm font-semibold text-[color:var(--tenant-primary)]">
                     BMI: {state.weightAssessment.bmi} kg/m² ({state.weightAssessment.bmiCategory})
                   </p>
                 </div>

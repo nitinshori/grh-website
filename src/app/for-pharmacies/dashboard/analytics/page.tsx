@@ -197,7 +197,7 @@ export default async function PharmacyAnalyticsPage({
             id="days"
             name="days"
             defaultValue={String(days)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
           >
             {windowOptions.map((w) => (
               <option key={w.days} value={w.days}>
@@ -208,7 +208,7 @@ export default async function PharmacyAnalyticsPage({
           <button
             type="submit"
             className="px-4 py-2 rounded-lg text-sm font-medium text-white"
-            style={{ backgroundColor: "#25b4b4" }}
+            style={{ backgroundColor: "var(--tenant-primary)" }}
           >
             Update
           </button>
@@ -375,7 +375,7 @@ export default async function PharmacyAnalyticsPage({
                           <div className="flex items-center gap-2">
                             <div className="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden">
                               <div
-                                className="h-full bg-teal-500"
+                                className="h-full bg-[color:var(--tenant-primary)]/100"
                                 style={{ width: `${Math.min(100, pct)}%` }}
                               />
                             </div>
@@ -419,7 +419,7 @@ export default async function PharmacyAnalyticsPage({
                     className="w-full rounded-t"
                     style={{
                       height: `${h}%`,
-                      backgroundColor: t.total > 0 ? "#25b4b4" : "#e5e7eb",
+                      backgroundColor: t.total > 0 ? "var(--tenant-primary)" : "#e5e7eb",
                     }}
                   />
                 </div>
@@ -451,7 +451,7 @@ export default async function PharmacyAnalyticsPage({
         Need more detail? You can drill into individual consultations from{" "}
         <Link
           href="/for-pharmacies/dashboard/records"
-          className="text-teal-700 hover:underline"
+          className="text-[color:var(--tenant-primary)] hover:underline"
         >
           Patient Records
         </Link>
@@ -471,7 +471,7 @@ function MetricTile({
   tone: "teal" | "blue" | "emerald" | "violet";
 }) {
   const colors: Record<typeof tone, { bg: string; text: string }> = {
-    teal: { bg: "bg-teal-50", text: "text-teal-700" },
+    teal: { bg: "bg-[color:var(--tenant-primary)]/10", text: "text-[color:var(--tenant-primary)]" },
     blue: { bg: "bg-blue-50", text: "text-blue-700" },
     emerald: { bg: "bg-emerald-50", text: "text-emerald-700" },
     violet: { bg: "bg-violet-50", text: "text-violet-700" },

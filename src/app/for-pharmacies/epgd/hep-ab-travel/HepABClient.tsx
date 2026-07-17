@@ -455,7 +455,7 @@ export function HepABClient() {
                     ev.target.value as VaccineProduct
                   )
                 }
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
               >
                 <option value="">— select —</option>
                 <optgroup label="Combined Hep A + Hep B">
@@ -610,7 +610,7 @@ export function HepABClient() {
                     ev.target.value as VaccineProduct
                   )
                 }
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
               >
                 <option value="">— confirm —</option>
                 <option value="twinrix-adult">Twinrix Adult</option>
@@ -631,7 +631,7 @@ export function HepABClient() {
                 onChange={(ev) =>
                   updateAdmin("schedule", ev.target.value as Schedule)
                 }
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
               >
                 <option value="">— select schedule —</option>
                 <option value="standard-0-1-6">
@@ -658,7 +658,7 @@ export function HepABClient() {
                     ev.target.value as "" | "1" | "2" | "3" | "booster"
                   )
                 }
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
               >
                 <option value="">— select —</option>
                 <option value="1">Dose 1 (primary)</option>
@@ -698,7 +698,7 @@ export function HepABClient() {
                       | "anterolateral-thigh"
                   )
                 }
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
               >
                 <option value="">— select —</option>
                 <option value="left-deltoid">Left deltoid (preferred adults)</option>
@@ -725,7 +725,7 @@ export function HepABClient() {
                     ev.target.value as "" | "15" | "30"
                   )
                 }
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
               >
                 <option value="">— select —</option>
                 <option value="15">15 minutes (routine)</option>

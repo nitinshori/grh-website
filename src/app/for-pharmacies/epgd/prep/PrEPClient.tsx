@@ -230,7 +230,7 @@ export default function PrEPClient() {
                     dispatch({ type: "UPDATE_PATIENT", field: "dateOfBirth", value: e.target.value })
                   }
                   max={new Date().toISOString().split("T")[0]}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
                 />
               </div>
               <div>
@@ -430,7 +430,7 @@ export default function PrEPClient() {
                   })
                 }
                 max={new Date().toISOString().split("T")[0]}
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
               />
               {state.baselineTests.hivTestDate && !hivTestValid && (
                 <p className="text-xs text-red-600 mt-1">Test date is &gt;4 weeks old</p>
@@ -855,9 +855,9 @@ export default function PrEPClient() {
       </StepWrapper>
 
       {doseRecommendation && state.currentStep >= 6 && (
-        <div className="bg-teal-50 border border-teal-200 rounded-lg p-4">
-          <h3 className="font-semibold text-teal-900 mb-2">Medicine Recommendation</h3>
-          <div className="space-y-1 text-sm text-teal-800">
+        <div className="bg-[color:var(--tenant-primary)]/10 border border-[color:var(--tenant-primary)]/30 rounded-lg p-4">
+          <h3 className="font-semibold text-[color:var(--tenant-primary)] mb-2">Medicine Recommendation</h3>
+          <div className="space-y-1 text-sm text-[color:var(--tenant-primary)]">
             <p>
               <span className="font-medium">Medicine:</span> {doseRecommendation.medicine}
             </p>

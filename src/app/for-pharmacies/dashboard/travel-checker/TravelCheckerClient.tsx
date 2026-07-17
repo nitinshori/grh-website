@@ -101,9 +101,9 @@ function ProgressTrail({ step }: { step: Step }) {
               className={
                 'px-2 py-1 rounded-md font-medium ' +
                 (isActive
-                  ? 'bg-teal-600 text-white'
+                  ? 'bg-[color:var(--tenant-primary)] text-white'
                   : isPast
-                    ? 'bg-teal-50 text-teal-700'
+                    ? 'bg-[color:var(--tenant-primary)]/10 text-[color:var(--tenant-primary)]'
                     : 'bg-gray-100 text-gray-500')
               }
             >
@@ -145,7 +145,7 @@ function DestinationPicker({
         placeholder="Start typing a country name — e.g. Pakistan"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-[color:var(--tenant-primary)]"
         autoFocus
       />
       <p className="text-xs text-gray-500 mt-2">
@@ -159,7 +159,7 @@ function DestinationPicker({
             key={d.iso}
             type="button"
             onClick={() => onSelect(d.iso)}
-            className="text-left p-3 rounded-lg border border-gray-200 hover:border-teal-500 hover:bg-teal-50/40 transition-colors"
+            className="text-left p-3 rounded-lg border border-gray-200 hover:border-[color:var(--tenant-primary)] hover:bg-[color:var(--tenant-primary)]/10/40 transition-colors"
           >
             <div className="flex items-baseline justify-between">
               <span className="font-medium text-gray-900">{d.name}</span>
@@ -297,7 +297,7 @@ function QuestionPanel({
               type="checkbox"
               checked={!!answers[q.key]}
               onChange={() => toggle(q.key)}
-              className="mt-1 h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+              className="mt-1 h-4 w-4 rounded border-gray-300 text-[color:var(--tenant-primary)] focus:ring-[color:var(--tenant-primary)]"
             />
             <div className="flex-1">
               <div className="font-medium text-gray-900 text-sm">
@@ -322,7 +322,7 @@ function QuestionPanel({
         <button
           type="button"
           onClick={onContinue}
-          className="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold rounded-lg"
+          className="px-5 py-2 bg-[color:var(--tenant-primary)] hover:bg-[color:var(--tenant-primary)]/15 text-white text-sm font-semibold rounded-lg"
         >
           Show recommendations
         </button>
@@ -389,7 +389,7 @@ function ResultsPanel({
                 <p className="text-sm text-gray-600 mt-0.5">{r.reason}</p>
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {r.whyFired === 'all' ? (
-                    <span className="text-[10px] font-semibold uppercase tracking-wide bg-teal-50 text-teal-800 px-1.5 py-0.5 rounded">
+                    <span className="text-[10px] font-semibold uppercase tracking-wide bg-[color:var(--tenant-primary)]/10 text-[color:var(--tenant-primary)] px-1.5 py-0.5 rounded">
                       Routine
                     </span>
                   ) : (
@@ -406,7 +406,7 @@ function ResultsPanel({
               </div>
               <Link
                 href={`/for-pharmacies/epgd/${r.pgdId}`}
-                className="shrink-0 px-3 py-1.5 text-xs font-semibold bg-teal-600 hover:bg-teal-700 text-white rounded-md"
+                className="shrink-0 px-3 py-1.5 text-xs font-semibold bg-[color:var(--tenant-primary)] hover:bg-[color:var(--tenant-primary)]/15 text-white rounded-md"
               >
                 Start ePGD →
               </Link>
@@ -415,7 +415,7 @@ function ResultsPanel({
         </ul>
 
         {byPgd.has('travel-core') && (byPgd.get('travel-core')?.length ?? 0) > 1 && (
-          <div className="mt-4 rounded-lg bg-teal-50 border border-teal-200 p-3 text-sm text-teal-900">
+          <div className="mt-4 rounded-lg bg-[color:var(--tenant-primary)]/10 border border-[color:var(--tenant-primary)]/30 p-3 text-sm text-[color:var(--tenant-primary)]">
             <strong>Tip:</strong> The Travel Core PGD delivers Hep A,
             Hep B, Typhoid, dT/IPV (and where relevant cholera and
             yellow fever) in a single consultation. Open it once to
@@ -434,7 +434,7 @@ function ResultsPanel({
           {destination.malaria.recommendAntimalarials && (
             <Link
               href="/for-pharmacies/epgd/anti-malarials"
-              className="text-xs font-semibold text-teal-700 hover:text-teal-900 underline"
+              className="text-xs font-semibold text-[color:var(--tenant-primary)] hover:text-[color:var(--tenant-primary)] underline"
             >
               Open anti-malarials ePGD →
             </Link>

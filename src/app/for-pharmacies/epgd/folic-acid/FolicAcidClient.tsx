@@ -151,7 +151,7 @@ export function FolicAcidClient() {
                 <TextInput label="Serum B12 result" value={state.eligibility.b12Result} onChange={(v) => updateEligibility("b12Result", v)} placeholder="e.g. 412 ng/L" />
                 <div>
                   <label className="block text-sm font-medium text-navy-900 mb-1">B12 test date</label>
-                  <input type="date" value={state.eligibility.b12Date} onChange={(e) => updateEligibility("b12Date", e.target.value)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400" />
+                  <input type="date" value={state.eligibility.b12Date} onChange={(e) => updateEligibility("b12Date", e.target.value)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
                 </div>
               </div>
             )}
@@ -168,7 +168,7 @@ export function FolicAcidClient() {
                   <TextInput label="Serum folate result" value={state.eligibility.serumFolateResult} onChange={(v) => updateEligibility("serumFolateResult", v)} placeholder="e.g. 5.2 nmol/L" />
                   <div>
                     <label className="block text-sm font-medium text-navy-900 mb-1">Folate test date</label>
-                    <input type="date" value={state.eligibility.serumFolateDate} onChange={(e) => updateEligibility("serumFolateDate", e.target.value)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400" />
+                    <input type="date" value={state.eligibility.serumFolateDate} onChange={(e) => updateEligibility("serumFolateDate", e.target.value)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
                   </div>
                 </div>
               )}
@@ -179,7 +179,7 @@ export function FolicAcidClient() {
               <select
                 value={state.eligibility.cause}
                 onChange={(e) => updateEligibility("cause", e.target.value as typeof state.eligibility.cause)}
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
               >
                 <option value="">— select —</option>
                 <option value="dietary">Dietary (low intake — vegan / poor diet)</option>
@@ -218,7 +218,7 @@ export function FolicAcidClient() {
 
         {currentStep === 3 && (
           <div className="space-y-5">
-            <div className="rounded-lg bg-teal-50 border border-teal-200 p-3 text-sm text-teal-900">
+            <div className="rounded-lg bg-[color:var(--tenant-primary)]/10 border border-[color:var(--tenant-primary)]/30 p-3 text-sm text-[color:var(--tenant-primary)]">
               <p className="font-semibold">Folic Acid 5 mg — one tablet by mouth, once daily</p>
               <p className="mt-1">Standard course is 4 months. Patient should be referred back to GP for repeat folate testing 8 weeks after starting treatment, and again at end of course.</p>
             </div>
@@ -230,7 +230,7 @@ export function FolicAcidClient() {
               <select
                 value={state.treatment.durationMonths}
                 onChange={(e) => updateTreatment("durationMonths", e.target.value as typeof state.treatment.durationMonths)}
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
               >
                 <option value="">— select —</option>
                 <option value="4">4 months — standard</option>
@@ -256,7 +256,7 @@ export function FolicAcidClient() {
                 value={state.treatment.nextReviewDate}
                 onChange={(e) => updateTreatment("nextReviewDate", e.target.value)}
                 min={new Date().toISOString().split("T")[0]}
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
               />
               <p className="mt-1 text-xs text-gray-500">Recommend follow-up bloods at 8 weeks (early response) and end of course.</p>
             </div>

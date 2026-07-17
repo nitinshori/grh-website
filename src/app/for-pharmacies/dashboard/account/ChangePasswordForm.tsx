@@ -66,7 +66,7 @@ export function ChangePasswordForm() {
 
   const inputType = showPasswords ? 'text' : 'password'
   const baseInputClass =
-    'w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent'
+    'w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent'
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -145,7 +145,7 @@ export function ChangePasswordForm() {
           className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
             status.kind === 'submitting'
               ? 'bg-gray-300 text-gray-500 cursor-wait'
-              : 'bg-teal-500 hover:bg-teal-600 text-white'
+              : 'bg-[color:var(--tenant-primary)]/100 hover:bg-[color:var(--tenant-primary)]/15 text-white'
           }`}
         >
           {status.kind === 'submitting' ? 'Saving...' : 'Update password'}

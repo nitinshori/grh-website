@@ -203,14 +203,14 @@ export function TestogelClient() {
                 <TextInput label="Test 1 result (nmol/L)" value={state.diagnosis.testosterone1Value} onChange={(v) => updateDiagnosis("testosterone1Value", v)} placeholder="e.g. 7.2" />
                 <div>
                   <label className="block text-sm font-medium text-navy-900 mb-1">Test 1 date</label>
-                  <input type="date" value={state.diagnosis.testosterone1Date} onChange={(ev) => updateDiagnosis("testosterone1Date", ev.target.value)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400" />
+                  <input type="date" value={state.diagnosis.testosterone1Date} onChange={(ev) => updateDiagnosis("testosterone1Date", ev.target.value)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
                 </div>
               </div>
               <div className="grid sm:grid-cols-2 gap-4">
                 <TextInput label="Test 2 result (nmol/L)" value={state.diagnosis.testosterone2Value} onChange={(v) => updateDiagnosis("testosterone2Value", v)} placeholder="e.g. 6.8" />
                 <div>
                   <label className="block text-sm font-medium text-navy-900 mb-1">Test 2 date</label>
-                  <input type="date" value={state.diagnosis.testosterone2Date} onChange={(ev) => updateDiagnosis("testosterone2Date", ev.target.value)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400" />
+                  <input type="date" value={state.diagnosis.testosterone2Date} onChange={(ev) => updateDiagnosis("testosterone2Date", ev.target.value)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
                 </div>
               </div>
             </div>
@@ -266,7 +266,7 @@ export function TestogelClient() {
           <div className="space-y-5">
             <div>
               <label className="block text-sm font-medium text-navy-900 mb-1">Product chosen <span className="text-red-400">*</span></label>
-              <select value={state.treatment.product} onChange={(ev) => updateTreatment("product", ev.target.value as typeof state.treatment.product)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400">
+              <select value={state.treatment.product} onChange={(ev) => updateTreatment("product", ev.target.value as typeof state.treatment.product)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]">
                 <option value="">— select —</option>
                 <option value="testogel-pump">Testogel 16.2 mg/g pump (1 actuation = 20.25 mg, 1.25 g gel)</option>
                 <option value="testogel-sachet">Testogel 40.5 mg single-dose sachet</option>
@@ -275,7 +275,7 @@ export function TestogelClient() {
 
             <div>
               <label className="block text-sm font-medium text-navy-900 mb-1">Daily dose (actuations / sachets) <span className="text-red-400">*</span></label>
-              <select value={state.treatment.dailyActuations} onChange={(ev) => updateTreatment("dailyActuations", ev.target.value as typeof state.treatment.dailyActuations)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400">
+              <select value={state.treatment.dailyActuations} onChange={(ev) => updateTreatment("dailyActuations", ev.target.value as typeof state.treatment.dailyActuations)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]">
                 <option value="">— select —</option>
                 <option value="1">1 actuation = 20.25 mg (half-sachet) — minimum dose</option>
                 <option value="2">2 actuations = 40.5 mg (1 sachet) — STARTING DOSE</option>
@@ -289,7 +289,7 @@ export function TestogelClient() {
 
             <div>
               <label className="block text-sm font-medium text-navy-900 mb-1">Application site (counselling) <span className="text-red-400">*</span></label>
-              <select value={state.treatment.applicationSite} onChange={(ev) => updateTreatment("applicationSite", ev.target.value)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400">
+              <select value={state.treatment.applicationSite} onChange={(ev) => updateTreatment("applicationSite", ev.target.value)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]">
                 <option value="">— select —</option>
                 <option value="shoulders">Shoulders (both)</option>
                 <option value="upper-arms">Upper arms (both)</option>
@@ -301,7 +301,7 @@ export function TestogelClient() {
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-navy-900 mb-1">Supply duration <span className="text-red-400">*</span></label>
-                <select value={state.treatment.supplyMonths} onChange={(ev) => updateTreatment("supplyMonths", ev.target.value as typeof state.treatment.supplyMonths)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400">
+                <select value={state.treatment.supplyMonths} onChange={(ev) => updateTreatment("supplyMonths", ev.target.value as typeof state.treatment.supplyMonths)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]">
                   <option value="">— select —</option>
                   <option value="1">1 month — initiation / titration phase</option>
                   <option value="3">3 months — stable maintenance</option>
@@ -309,13 +309,13 @@ export function TestogelClient() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-navy-900 mb-1">Annual review date <span className="text-red-400">*</span></label>
-                <input type="date" value={state.treatment.annualReviewDate} onChange={(ev) => updateTreatment("annualReviewDate", ev.target.value)} min={new Date().toISOString().split("T")[0]} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400" />
+                <input type="date" value={state.treatment.annualReviewDate} onChange={(ev) => updateTreatment("annualReviewDate", ev.target.value)} min={new Date().toISOString().split("T")[0]} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-navy-900 mb-1">Next consultation date</label>
-              <input type="date" value={state.treatment.nextReviewDate} onChange={(ev) => updateTreatment("nextReviewDate", ev.target.value)} min={new Date().toISOString().split("T")[0]} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400" />
+              <input type="date" value={state.treatment.nextReviewDate} onChange={(ev) => updateTreatment("nextReviewDate", ev.target.value)} min={new Date().toISOString().split("T")[0]} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
               <p className="mt-1 text-xs text-gray-500">Recommended: follow-up bloods at 6–12 weeks after initiation; then every 3–6 months in year 1, then annually.</p>
             </div>
 
@@ -323,7 +323,7 @@ export function TestogelClient() {
               <TextInput label="Product batch number" value={state.treatment.productBatch} onChange={(v) => updateTreatment("productBatch", v)} required />
               <div>
                 <label className="block text-sm font-medium text-navy-900 mb-1">Product expiry <span className="text-red-400">*</span></label>
-                <input type="date" value={state.treatment.productExpiry} onChange={(ev) => updateTreatment("productExpiry", ev.target.value)} min={new Date().toISOString().split("T")[0]} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400" />
+                <input type="date" value={state.treatment.productExpiry} onChange={(ev) => updateTreatment("productExpiry", ev.target.value)} min={new Date().toISOString().split("T")[0]} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
               </div>
             </div>
           </div>

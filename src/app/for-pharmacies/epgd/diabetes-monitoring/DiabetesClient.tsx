@@ -258,7 +258,7 @@ export default function DiabetesClient() {
       <StepWrapper currentStep={state.currentStep} totalSteps={TOTAL_STEPS} title={STEP_LABELS[state.currentStep]} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={validationError}>{renderStep()}</StepWrapper>
       <div className="flex gap-3 justify-between">
         <button onClick={handlePrev} disabled={state.currentStep === 0} className="px-4 py-2 text-sm font-medium text-navy-900 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-50 disabled:text-gray-400 rounded-lg">← Back</button>
-        <button onClick={handleNext} disabled={!canProceed} className="px-4 py-2 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 disabled:bg-gray-300 rounded-lg">Next →</button>
+        <button onClick={handleNext} disabled={!canProceed} className="px-4 py-2 text-sm font-medium text-white bg-[color:var(--tenant-primary)] hover:bg-[color:var(--tenant-primary)]/15 disabled:bg-gray-300 rounded-lg">Next →</button>
       </div>
     </div>
   );

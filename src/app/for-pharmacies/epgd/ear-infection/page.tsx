@@ -10,11 +10,11 @@ export default function Page() {
 
         <div className="mb-6">
           <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-            <a href="/for-pharmacies" className="hover:text-teal-600 transition-colors">For Pharmacies</a>
+            <a href="/for-pharmacies" className="hover:text-[color:var(--tenant-primary)] transition-colors">For Pharmacies</a>
             <span>/</span>
             <span className="text-navy-900 font-medium">Ear Infection (Otitis) ePGD</span>
           </div>
-          <p className="text-xs font-semibold text-teal-700 uppercase tracking-wider mb-2">
+          <p className="text-xs font-semibold text-[color:var(--tenant-primary)] uppercase tracking-wider mb-2">
             For registered pharmacy professionals only
           </p>
           <h1 className="text-2xl sm:text-3xl font-bold text-navy-900">Ear Infection (Otitis) — PGD Consultation</h1>

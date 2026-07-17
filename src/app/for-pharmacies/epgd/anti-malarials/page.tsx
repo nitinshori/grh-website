@@ -17,7 +17,7 @@ export default function AntiMalarialsPage() {
         {/* Page Header */}
         <div className="mb-8">
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 sm:p-8">
-            <p className="text-xs font-semibold text-teal-700 uppercase tracking-wider mb-2">
+            <p className="text-xs font-semibold text-[color:var(--tenant-primary)] uppercase tracking-wider mb-2">
               For registered pharmacy professionals only
             </p>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">

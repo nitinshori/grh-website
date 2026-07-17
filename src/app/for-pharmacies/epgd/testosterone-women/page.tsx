@@ -15,7 +15,7 @@ export default function TestosteroneWomenPage() {
         <PgdPageActions />
         <div className="mb-6">
           <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-            <a href="/for-pharmacies" className="hover:text-teal-600 transition-colors">For Pharmacies</a>
+            <a href="/for-pharmacies" className="hover:text-[color:var(--tenant-primary)] transition-colors">For Pharmacies</a>
             <span>/</span>
             <span className="text-navy-900 font-medium">Testosterone for Women Consultation ePGD</span>
           </div>

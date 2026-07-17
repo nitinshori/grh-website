@@ -639,8 +639,8 @@ export function UTIToolClient() {
               </p>
             </div>
             {alerts.length === 0 ? (
-              <div className="bg-teal-50 border border-teal-200 rounded-lg px-4 py-3">
-                <p className="text-sm text-teal-800 font-semibold">
+              <div className="bg-[color:var(--tenant-primary)]/10 border border-[color:var(--tenant-primary)]/30 rounded-lg px-4 py-3">
+                <p className="text-sm text-[color:var(--tenant-primary)] font-semibold">
                   No exclusions or significant cautions identified. Safe to proceed.
                 </p>
               </div>
@@ -660,10 +660,10 @@ export function UTIToolClient() {
                 Based on the clinical assessment, a medicine has been recommended. Confirm the selection or override if clinically appropriate.
               </p>
             </div>
-            <div className="bg-teal-50 border border-teal-200 rounded-lg px-4 py-3 mb-4">
-              <p className="text-xs font-semibold text-teal-900 mb-2">RECOMMENDED DOSING:</p>
-              <p className="text-sm text-teal-900">{doseRecommendation.dosingRegimen}</p>
-              <p className="text-xs text-teal-800 mt-1">{doseRecommendation.reason}</p>
+            <div className="bg-[color:var(--tenant-primary)]/10 border border-[color:var(--tenant-primary)]/30 rounded-lg px-4 py-3 mb-4">
+              <p className="text-xs font-semibold text-[color:var(--tenant-primary)] mb-2">RECOMMENDED DOSING:</p>
+              <p className="text-sm text-[color:var(--tenant-primary)]">{doseRecommendation.dosingRegimen}</p>
+              <p className="text-xs text-[color:var(--tenant-primary)] mt-1">{doseRecommendation.reason}</p>
             </div>
             <SelectInput
               label="Medicine"
@@ -713,7 +713,7 @@ export function UTIToolClient() {
             />
             <div className="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-navy-900">
               <p className="font-medium">
-                Quantity: <span className="text-teal-600">{medicineQuantity} doses</span>
+                Quantity: <span className="text-[color:var(--tenant-primary)]">{medicineQuantity} doses</span>
               </p>
               <p className="text-xs text-gray-600 mt-1">
                 {state.medicineSelection.medicine === "nitrofurantoin"

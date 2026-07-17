@@ -14,7 +14,7 @@ export default function TRTToolPage() {
         <div className="mb-4 print:hidden">
           <a
             href="/for-pharmacies/dashboard"
-            className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-teal-600 transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-[color:var(--tenant-primary)] transition-colors"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -26,7 +26,7 @@ export default function TRTToolPage() {
         {/* Breadcrumb */}
         <div className="mb-6">
           <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-            <a href="/for-pharmacies/dashboard" className="hover:text-teal-600">For Pharmacies</a>
+            <a href="/for-pharmacies/dashboard" className="hover:text-[color:var(--tenant-primary)]">For Pharmacies</a>
             <span>/</span>
             <span className="text-navy-900 font-medium">TRT Consultation ePGD</span>
           </div>
@@ -46,27 +46,27 @@ export default function TRTToolPage() {
           <h2 className="text-lg font-semibold text-navy-900 mb-3">What This Tool Will Include</h2>
           <ul className="space-y-2 text-gray-700 text-sm">
             <li className="flex gap-2">
-              <span className="text-teal-600 font-bold">•</span>
+              <span className="text-[color:var(--tenant-primary)] font-bold">•</span>
               <span>Topical testosterone (Testogel/Tostran) supply for men with confirmed hypogonadism</span>
             </li>
             <li className="flex gap-2">
-              <span className="text-teal-600 font-bold">•</span>
+              <span className="text-[color:var(--tenant-primary)] font-bold">•</span>
               <span>Symptom assessment and clinical indication review</span>
             </li>
             <li className="flex gap-2">
-              <span className="text-teal-600 font-bold">•</span>
+              <span className="text-[color:var(--tenant-primary)] font-bold">•</span>
               <span>Baseline blood work check and documentation review</span>
             </li>
             <li className="flex gap-2">
-              <span className="text-teal-600 font-bold">•</span>
+              <span className="text-[color:var(--tenant-primary)] font-bold">•</span>
               <span>Contraindication screening and safety assessment</span>
             </li>
             <li className="flex gap-2">
-              <span className="text-teal-600 font-bold">•</span>
+              <span className="text-[color:var(--tenant-primary)] font-bold">•</span>
               <span>Monitoring schedule (PSA, haematocrit, lipids, testosterone levels)</span>
             </li>
             <li className="flex gap-2">
-              <span className="text-teal-600 font-bold">•</span>
+              <span className="text-[color:var(--tenant-primary)] font-bold">•</span>
               <span>Application counselling and adherence support</span>
             </li>
           </ul>

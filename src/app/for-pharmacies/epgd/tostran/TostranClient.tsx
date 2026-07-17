@@ -121,11 +121,11 @@ export function TostranClient() {
               <p className="text-sm font-semibold text-navy-900">Early-morning fasting total testosterone</p>
               <div className="grid sm:grid-cols-2 gap-4">
                 <TextInput label="Test 1 (nmol/L)" value={state.diagnosis.testosterone1Value} onChange={(v) => updateDiagnosis("testosterone1Value", v)} />
-                <div><label className="block text-sm font-medium text-navy-900 mb-1">Test 1 date</label><input type="date" value={state.diagnosis.testosterone1Date} onChange={(ev) => updateDiagnosis("testosterone1Date", ev.target.value)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400" /></div>
+                <div><label className="block text-sm font-medium text-navy-900 mb-1">Test 1 date</label><input type="date" value={state.diagnosis.testosterone1Date} onChange={(ev) => updateDiagnosis("testosterone1Date", ev.target.value)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" /></div>
               </div>
               <div className="grid sm:grid-cols-2 gap-4">
                 <TextInput label="Test 2 (nmol/L)" value={state.diagnosis.testosterone2Value} onChange={(v) => updateDiagnosis("testosterone2Value", v)} />
-                <div><label className="block text-sm font-medium text-navy-900 mb-1">Test 2 date</label><input type="date" value={state.diagnosis.testosterone2Date} onChange={(ev) => updateDiagnosis("testosterone2Date", ev.target.value)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400" /></div>
+                <div><label className="block text-sm font-medium text-navy-900 mb-1">Test 2 date</label><input type="date" value={state.diagnosis.testosterone2Date} onChange={(ev) => updateDiagnosis("testosterone2Date", ev.target.value)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" /></div>
               </div>
             </div>
             <div className="border-t border-gray-200 pt-4 space-y-2">
@@ -187,7 +187,7 @@ export function TostranClient() {
 
             <div>
               <label className="block text-sm font-medium text-navy-900 mb-1">Daily dose (actuations) <span className="text-red-400">*</span></label>
-              <select value={state.treatment.dailyActuations} onChange={(ev) => updateTreatment("dailyActuations", ev.target.value as typeof state.treatment.dailyActuations)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400">
+              <select value={state.treatment.dailyActuations} onChange={(ev) => updateTreatment("dailyActuations", ev.target.value as typeof state.treatment.dailyActuations)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]">
                 <option value="">— select —</option>
                 <option value="4">4 actuations / 2 g / 40 mg — reduced (serum &gt;15 µg/L)</option>
                 <option value="5">5 actuations / 2.5 g / 50 mg</option>
@@ -201,7 +201,7 @@ export function TostranClient() {
 
             <div>
               <label className="block text-sm font-medium text-navy-900 mb-1">Application site <span className="text-red-400">*</span></label>
-              <select value={state.treatment.applicationSite} onChange={(ev) => updateTreatment("applicationSite", ev.target.value as typeof state.treatment.applicationSite)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400">
+              <select value={state.treatment.applicationSite} onChange={(ev) => updateTreatment("applicationSite", ev.target.value as typeof state.treatment.applicationSite)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]">
                 <option value="">— select —</option>
                 <option value="abdomen">Abdomen (entire dose over ≥10 × 30 cm area)</option>
                 <option value="inner-thighs">Both inner thighs (half dose each, ≥10 × 15 cm per thigh)</option>
@@ -212,7 +212,7 @@ export function TostranClient() {
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-navy-900 mb-1">Supply duration <span className="text-red-400">*</span></label>
-                <select value={state.treatment.supplyMonths} onChange={(ev) => updateTreatment("supplyMonths", ev.target.value as typeof state.treatment.supplyMonths)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400">
+                <select value={state.treatment.supplyMonths} onChange={(ev) => updateTreatment("supplyMonths", ev.target.value as typeof state.treatment.supplyMonths)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]">
                   <option value="">— select —</option>
                   <option value="1">1 month — initiation / titration</option>
                   <option value="3">3 months — stable maintenance</option>
@@ -220,13 +220,13 @@ export function TostranClient() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-navy-900 mb-1">Annual review date <span className="text-red-400">*</span></label>
-                <input type="date" value={state.treatment.annualReviewDate} onChange={(ev) => updateTreatment("annualReviewDate", ev.target.value)} min={new Date().toISOString().split("T")[0]} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400" />
+                <input type="date" value={state.treatment.annualReviewDate} onChange={(ev) => updateTreatment("annualReviewDate", ev.target.value)} min={new Date().toISOString().split("T")[0]} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-navy-900 mb-1">Next consultation date</label>
-              <input type="date" value={state.treatment.nextReviewDate} onChange={(ev) => updateTreatment("nextReviewDate", ev.target.value)} min={new Date().toISOString().split("T")[0]} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400" />
+              <input type="date" value={state.treatment.nextReviewDate} onChange={(ev) => updateTreatment("nextReviewDate", ev.target.value)} min={new Date().toISOString().split("T")[0]} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
               <p className="mt-1 text-xs text-gray-500">Recommended: bloods at 14 days post-initiation (2 h post-application), then every 3–6 months in year 1, then annually.</p>
             </div>
 
@@ -234,7 +234,7 @@ export function TostranClient() {
               <TextInput label="Canister batch number" value={state.treatment.productBatch} onChange={(v) => updateTreatment("productBatch", v)} required />
               <div>
                 <label className="block text-sm font-medium text-navy-900 mb-1">Expiry <span className="text-red-400">*</span></label>
-                <input type="date" value={state.treatment.productExpiry} onChange={(ev) => updateTreatment("productExpiry", ev.target.value)} min={new Date().toISOString().split("T")[0]} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400" />
+                <input type="date" value={state.treatment.productExpiry} onChange={(ev) => updateTreatment("productExpiry", ev.target.value)} min={new Date().toISOString().split("T")[0]} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
               </div>
             </div>
           </div>

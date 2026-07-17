@@ -28,7 +28,7 @@ export default async function AccountPage() {
       <div className="mb-6">
         <Link
           href="/for-pharmacies/dashboard"
-          className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-teal-600 transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-[color:var(--tenant-primary)] transition-colors"
         >
           <svg
             className="w-3.5 h-3.5"

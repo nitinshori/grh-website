@@ -36,9 +36,9 @@ export function EDProgressBar({
                       isActive
                         ? hasErrors
                           ? "bg-red-50 text-red-700 ring-2 ring-red-300"
-                          : "bg-teal-50 text-teal-700 ring-2 ring-teal-300"
+                          : "bg-[color:var(--tenant-primary)]/10 text-[color:var(--tenant-primary)] ring-2 ring-[color:var(--tenant-primary)]/30"
                         : isCompleted
-                          ? "bg-teal-50 text-teal-600 hover:bg-teal-100 cursor-pointer"
+                          ? "bg-[color:var(--tenant-primary)]/10 text-[color:var(--tenant-primary)] hover:bg-[color:var(--tenant-primary)]/20 cursor-pointer"
                           : "bg-gray-50 text-gray-400"
                     }
                     ${isClickable && !isActive ? "cursor-pointer hover:bg-gray-100" : ""}
@@ -52,9 +52,9 @@ export function EDProgressBar({
                         isActive
                           ? hasErrors
                             ? "bg-red-500 text-white"
-                            : "bg-teal-500 text-white"
+                            : "bg-[color:var(--tenant-primary)]/100 text-white"
                           : isCompleted
-                            ? "bg-teal-500 text-white"
+                            ? "bg-[color:var(--tenant-primary)]/100 text-white"
                             : "bg-gray-300 text-white"
                       }
                     `}
@@ -76,7 +76,7 @@ export function EDProgressBar({
                 {i < STEP_LABELS.length - 1 && (
                   <div
                     className={`w-2 h-0.5 flex-shrink-0 ${
-                      isCompleted ? "bg-teal-300" : "bg-gray-200"
+                      isCompleted ? "bg-[color:var(--tenant-primary)]" : "bg-gray-200"
                     }`}
                   />
                 )}
@@ -99,7 +99,7 @@ export function EDProgressBar({
         <div className="w-full bg-gray-200 rounded-full h-2">
           <div
             className={`h-2 rounded-full transition-all duration-300 ${
-              hasErrors ? "bg-red-500" : "bg-teal-500"
+              hasErrors ? "bg-red-500" : "bg-[color:var(--tenant-primary)]/100"
             }`}
             style={{
               width: `${((currentStep + 1) / STEP_LABELS.length) * 100}%`,

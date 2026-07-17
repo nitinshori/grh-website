@@ -130,11 +130,11 @@ export function SustanonClient() {
             {state.diagnosis.symptomsConfirmed && <TextArea label="Symptom details" value={state.diagnosis.symptomsDetails} onChange={(v) => updateDiagnosis("symptomsDetails", v)} rows={2} />}
             <div className="grid sm:grid-cols-2 gap-4">
               <TextInput label="Test 1 (nmol/L)" value={state.diagnosis.testosterone1Value} onChange={(v) => updateDiagnosis("testosterone1Value", v)} />
-              <div><label className="block text-sm font-medium text-navy-900 mb-1">Test 1 date</label><input type="date" value={state.diagnosis.testosterone1Date} onChange={(ev) => updateDiagnosis("testosterone1Date", ev.target.value)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400" /></div>
+              <div><label className="block text-sm font-medium text-navy-900 mb-1">Test 1 date</label><input type="date" value={state.diagnosis.testosterone1Date} onChange={(ev) => updateDiagnosis("testosterone1Date", ev.target.value)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" /></div>
             </div>
             <div className="grid sm:grid-cols-2 gap-4">
               <TextInput label="Test 2 (nmol/L)" value={state.diagnosis.testosterone2Value} onChange={(v) => updateDiagnosis("testosterone2Value", v)} />
-              <div><label className="block text-sm font-medium text-navy-900 mb-1">Test 2 date</label><input type="date" value={state.diagnosis.testosterone2Date} onChange={(ev) => updateDiagnosis("testosterone2Date", ev.target.value)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400" /></div>
+              <div><label className="block text-sm font-medium text-navy-900 mb-1">Test 2 date</label><input type="date" value={state.diagnosis.testosterone2Date} onChange={(ev) => updateDiagnosis("testosterone2Date", ev.target.value)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" /></div>
             </div>
             <div className="grid sm:grid-cols-3 gap-3">
               <TextInput label="HCT baseline (%)" value={state.diagnosis.hctBaseline} onChange={(v) => updateDiagnosis("hctBaseline", v)} placeholder="<50%" />
@@ -183,7 +183,7 @@ export function SustanonClient() {
 
             <div>
               <label className="block text-sm font-medium text-navy-900 mb-1">Dose number at this consultation <span className="text-red-400">*</span></label>
-              <select value={state.administration.doseNumber} onChange={(ev) => updateAdmin("doseNumber", ev.target.value as typeof state.administration.doseNumber)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400">
+              <select value={state.administration.doseNumber} onChange={(ev) => updateAdmin("doseNumber", ev.target.value as typeof state.administration.doseNumber)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]">
                 <option value="">— select —</option>
                 <option value="1">1st injection (initiation)</option>
                 <option value="2-12">2nd–12th injection (first year)</option>
@@ -193,7 +193,7 @@ export function SustanonClient() {
 
             <div>
               <label className="block text-sm font-medium text-navy-900 mb-1">Injection site (deep IM) <span className="text-red-400">*</span></label>
-              <select value={state.administration.injectionSite} onChange={(ev) => updateAdmin("injectionSite", ev.target.value as typeof state.administration.injectionSite)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400">
+              <select value={state.administration.injectionSite} onChange={(ev) => updateAdmin("injectionSite", ev.target.value as typeof state.administration.injectionSite)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]">
                 <option value="">— select —</option>
                 <option value="left-glute">Left gluteus (ventrogluteal preferred)</option>
                 <option value="right-glute">Right gluteus (ventrogluteal preferred)</option>
@@ -206,7 +206,7 @@ export function SustanonClient() {
               <TextInput label="Ampoule batch number" value={state.administration.batchNumber} onChange={(v) => updateAdmin("batchNumber", v)} required />
               <div>
                 <label className="block text-sm font-medium text-navy-900 mb-1">Expiry <span className="text-red-400">*</span></label>
-                <input type="date" value={state.administration.expiryDate} onChange={(ev) => updateAdmin("expiryDate", ev.target.value)} min={new Date().toISOString().split("T")[0]} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400" />
+                <input type="date" value={state.administration.expiryDate} onChange={(ev) => updateAdmin("expiryDate", ev.target.value)} min={new Date().toISOString().split("T")[0]} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
               </div>
             </div>
 
@@ -217,7 +217,7 @@ export function SustanonClient() {
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-navy-900 mb-1">Ampoules supplied today <span className="text-red-400">*</span></label>
-                <select value={state.administration.ampoulesSupplied} onChange={(ev) => updateAdmin("ampoulesSupplied", ev.target.value as typeof state.administration.ampoulesSupplied)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400">
+                <select value={state.administration.ampoulesSupplied} onChange={(ev) => updateAdmin("ampoulesSupplied", ev.target.value as typeof state.administration.ampoulesSupplied)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]">
                   <option value="">— select —</option>
                   <option value="1">1 — single injection (administered now)</option>
                   <option value="4">4 — 3 months (1 injected, 3 dispensed for return appointments)</option>
@@ -225,13 +225,13 @@ export function SustanonClient() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-navy-900 mb-1">Next injection due <span className="text-red-400">*</span></label>
-                <input type="date" value={state.administration.nextInjectionDate} onChange={(ev) => updateAdmin("nextInjectionDate", ev.target.value)} min={new Date().toISOString().split("T")[0]} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400" />
+                <input type="date" value={state.administration.nextInjectionDate} onChange={(ev) => updateAdmin("nextInjectionDate", ev.target.value)} min={new Date().toISOString().split("T")[0]} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-navy-900 mb-1">Annual review date <span className="text-red-400">*</span></label>
-              <input type="date" value={state.administration.annualReviewDate} onChange={(ev) => updateAdmin("annualReviewDate", ev.target.value)} min={new Date().toISOString().split("T")[0]} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400" />
+              <input type="date" value={state.administration.annualReviewDate} onChange={(ev) => updateAdmin("annualReviewDate", ev.target.value)} min={new Date().toISOString().split("T")[0]} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
             </div>
           </div>
         )}
@@ -245,7 +245,7 @@ export function SustanonClient() {
 
             <div>
               <label className="block text-sm font-medium text-navy-900 mb-1">Observation period <span className="text-red-400">*</span></label>
-              <select value={state.postObs.observationMinutes} onChange={(ev) => updatePostObs("observationMinutes", ev.target.value as typeof state.postObs.observationMinutes)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400">
+              <select value={state.postObs.observationMinutes} onChange={(ev) => updatePostObs("observationMinutes", ev.target.value as typeof state.postObs.observationMinutes)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]">
                 <option value="">— select —</option>
                 <option value="10">10 minutes (minimum)</option>
                 <option value="15">15 minutes (standard)</option>

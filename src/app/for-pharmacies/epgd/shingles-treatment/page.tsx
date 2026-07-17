@@ -217,7 +217,7 @@ export default function ShinglesTreatmentPage() {
           <div className="mb-4 print:hidden">
             <Link
               href="/for-pharmacies/dashboard"
-              className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-teal-600 transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-[color:var(--tenant-primary)] transition-colors"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -264,7 +264,7 @@ export default function ShinglesTreatmentPage() {
                 <button
                   onClick={handleNext}
                   disabled={!canProceedFromCurrentStep()}
-                  className="px-6 py-2 bg-teal-500 text-white rounded-lg font-medium hover:bg-teal-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-6 py-2 bg-[color:var(--tenant-primary)]/100 text-white rounded-lg font-medium hover:bg-[color:var(--tenant-primary)]/15 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Next
                 </button>
@@ -289,7 +289,7 @@ export default function ShinglesTreatmentPage() {
                 <button
                   onClick={handleNext}
                   disabled={!canProceedFromCurrentStep()}
-                  className="px-6 py-2 bg-teal-500 text-white rounded-lg font-medium hover:bg-teal-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-6 py-2 bg-[color:var(--tenant-primary)]/100 text-white rounded-lg font-medium hover:bg-[color:var(--tenant-primary)]/15 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Next
                 </button>

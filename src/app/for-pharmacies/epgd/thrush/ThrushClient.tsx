@@ -213,13 +213,13 @@ export default function ThrushClient({ lockedMedicine }: ThrushClientProps = {})
           <StepWrapper title="Medicine Selection" description={lockedMedicine ? "This consultation is for a fixed combo PGD — medicine pre-selected." : "Choose treatment option."} currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={validationError} isBlocked={hasStops}>
             <div className="space-y-4">
               {lockedMedicine ? (
-                <div className="p-4 bg-teal-50 border border-teal-200 rounded-md">
-                  <p className="text-sm text-teal-900 font-medium">
+                <div className="p-4 bg-[color:var(--tenant-primary)]/10 border border-[color:var(--tenant-primary)]/30 rounded-md">
+                  <p className="text-sm text-[color:var(--tenant-primary)] font-medium">
                     {lockedMedicine === "fluconazole-oral"
                       ? "Supply: Fluconazole 150mg single oral dose + Clotrimazole 1% external cream (Duo pack)"
                       : "Supply: Clotrimazole 500mg pessary + Clotrimazole 1% external cream (Combi pack)"}
                   </p>
-                  <p className="text-xs text-teal-700 mt-1">Medicine choice is fixed by this PGD; both products supplied as the combo pack.</p>
+                  <p className="text-xs text-[color:var(--tenant-primary)] mt-1">Medicine choice is fixed by this PGD; both products supplied as the combo pack.</p>
                 </div>
               ) : (
                 <SelectInput label="Treatment" value={state.medicineSelection.medicineChoice} onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "medicineChoice", value: v })} options={[{ value: "fluconazole-oral", label: "Fluconazole 150mg single oral dose" }, { value: "clotrimazole-pessary", label: "Clotrimazole 500mg pessary + 1% cream" }]} required />

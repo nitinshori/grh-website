@@ -127,12 +127,12 @@ export function DraftsClient({ initialDrafts, pgdOptions }: Props) {
               onClick={() => setTab(t.key)}
               className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
                 tab === t.key
-                  ? "bg-teal-600 text-white"
+                  ? "bg-[color:var(--tenant-primary)] text-white"
                   : "text-gray-700 hover:bg-gray-100"
               }`}
             >
               {t.label}
-              <span className={`ml-1.5 text-xs ${tab === t.key ? "text-teal-100" : "text-gray-500"}`}>
+              <span className={`ml-1.5 text-xs ${tab === t.key ? "text-[color:var(--tenant-primary)]" : "text-gray-500"}`}>
                 {t.count}
               </span>
             </button>
@@ -141,7 +141,7 @@ export function DraftsClient({ initialDrafts, pgdOptions }: Props) {
         <button
           type="button"
           onClick={() => setShowForm(true)}
-          className="inline-flex items-center gap-1.5 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm rounded-md font-medium transition-colors"
+          className="inline-flex items-center gap-1.5 px-4 py-2 bg-[color:var(--tenant-primary)] hover:bg-[color:var(--tenant-primary)]/15 text-white text-sm rounded-md font-medium transition-colors"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -209,7 +209,7 @@ export function DraftsClient({ initialDrafts, pgdOptions }: Props) {
                     days < 0 ? `${Math.abs(days)} day${Math.abs(days) === 1 ? "" : "s"} ago` :
                     `in ${days} days`;
                   return (
-                    <div className={`text-xs mt-1 font-medium ${days < 0 ? "text-red-600" : days <= 1 ? "text-teal-700" : "text-gray-700"}`}>
+                    <div className={`text-xs mt-1 font-medium ${days < 0 ? "text-red-600" : days <= 1 ? "text-[color:var(--tenant-primary)]" : "text-gray-700"}`}>
                       Expected visit: {formatDate(d.expectedVisitDate)} ({label})
                     </div>
                   );
@@ -229,7 +229,7 @@ export function DraftsClient({ initialDrafts, pgdOptions }: Props) {
               <div className="flex items-center gap-2 shrink-0">
                 <Link
                   href={`/for-pharmacies/epgd/${d.pgdSlug}?draftId=${d.id}`}
-                  className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-sm rounded-md font-medium transition-colors"
+                  className="px-3 py-1.5 bg-[color:var(--tenant-primary)] hover:bg-[color:var(--tenant-primary)]/15 text-white text-sm rounded-md font-medium transition-colors"
                 >
                   {isBooking ? "Start consultation" : "Resume"}
                 </Link>
@@ -366,7 +366,7 @@ function PhoneBookingForm({ pgdOptions, onCreated, onCancel }: FormProps) {
               required
               value={pgdSlug}
               onChange={(e) => setPgdSlug(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
             >
               <option value="">Select a service…</option>
               {pgdOptions.map((p) => (
@@ -382,7 +382,7 @@ function PhoneBookingForm({ pgdOptions, onCreated, onCancel }: FormProps) {
                 type="text"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
               />
             </div>
             <div>
@@ -391,7 +391,7 @@ function PhoneBookingForm({ pgdOptions, onCreated, onCancel }: FormProps) {
                 type="text"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
               />
             </div>
           </div>
@@ -403,7 +403,7 @@ function PhoneBookingForm({ pgdOptions, onCreated, onCancel }: FormProps) {
                 type="date"
                 value={dob}
                 onChange={(e) => setDob(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
               />
             </div>
             <div>
@@ -413,7 +413,7 @@ function PhoneBookingForm({ pgdOptions, onCreated, onCancel }: FormProps) {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="0114 …"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
               />
             </div>
           </div>
@@ -424,7 +424,7 @@ function PhoneBookingForm({ pgdOptions, onCreated, onCancel }: FormProps) {
               type="date"
               value={visitDate}
               onChange={(e) => setVisitDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
             />
           </div>
 
@@ -435,7 +435,7 @@ function PhoneBookingForm({ pgdOptions, onCreated, onCancel }: FormProps) {
               onChange={(e) => setNote(e.target.value)}
               rows={2}
               placeholder="e.g. patient asked about Mounjaro, wants morning appointment"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
             />
           </div>
 
@@ -457,7 +457,7 @@ function PhoneBookingForm({ pgdOptions, onCreated, onCancel }: FormProps) {
             <button
               type="submit"
               disabled={saving}
-              className="px-4 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-sm rounded-md font-medium transition-colors disabled:opacity-50"
+              className="px-4 py-1.5 bg-[color:var(--tenant-primary)] hover:bg-[color:var(--tenant-primary)]/15 text-white text-sm rounded-md font-medium transition-colors disabled:opacity-50"
             >
               {saving ? "Saving…" : "Save phone booking"}
             </button>

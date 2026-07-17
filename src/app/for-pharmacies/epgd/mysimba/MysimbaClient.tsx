@@ -311,7 +311,7 @@ export function MysimbaClient() {
 
             <div>
               <label className="block text-sm font-medium text-navy-900 mb-1">Dose stage at this consultation <span className="text-red-400">*</span></label>
-              <select value={state.treatment.doseStage} onChange={(e) => updateTreatment("doseStage", e.target.value as typeof state.treatment.doseStage)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400">
+              <select value={state.treatment.doseStage} onChange={(e) => updateTreatment("doseStage", e.target.value as typeof state.treatment.doseStage)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]">
                 <option value="">— select —</option>
                 <option value="init">Initiation — Week 1 (1 morning)</option>
                 <option value="1">Week 2 (1 morning + 1 evening)</option>
@@ -323,7 +323,7 @@ export function MysimbaClient() {
 
             <div>
               <label className="block text-sm font-medium text-navy-900 mb-1">Supply</label>
-              <select value={state.treatment.supplyWeeks} onChange={(e) => updateTreatment("supplyWeeks", e.target.value as typeof state.treatment.supplyWeeks)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400">
+              <select value={state.treatment.supplyWeeks} onChange={(e) => updateTreatment("supplyWeeks", e.target.value as typeof state.treatment.supplyWeeks)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]">
                 <option value="">— select —</option>
                 <option value="4">4 weeks (titration phase)</option>
                 <option value="8">8 weeks</option>
@@ -336,13 +336,13 @@ export function MysimbaClient() {
               <TextInput label="Batch number" value={state.treatment.productBatch} onChange={(v) => updateTreatment("productBatch", v)} required />
               <div>
                 <label className="block text-sm font-medium text-navy-900 mb-1">Expiry date <span className="text-red-400">*</span></label>
-                <input type="date" value={state.treatment.productExpiry} onChange={(e) => updateTreatment("productExpiry", e.target.value)} min={new Date().toISOString().split("T")[0]} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400" />
+                <input type="date" value={state.treatment.productExpiry} onChange={(e) => updateTreatment("productExpiry", e.target.value)} min={new Date().toISOString().split("T")[0]} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-navy-900 mb-1">16-week review date (mandatory) <span className="text-red-400">*</span></label>
-              <input type="date" value={state.treatment.sixteenWeekReviewDate} onChange={(e) => updateTreatment("sixteenWeekReviewDate", e.target.value)} min={new Date().toISOString().split("T")[0]} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400" />
+              <input type="date" value={state.treatment.sixteenWeekReviewDate} onChange={(e) => updateTreatment("sixteenWeekReviewDate", e.target.value)} min={new Date().toISOString().split("T")[0]} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
               <p className="mt-1 text-xs text-gray-500">Discontinue if patient has not lost ≥5% of initial body weight at 16 weeks.</p>
             </div>
           </div>

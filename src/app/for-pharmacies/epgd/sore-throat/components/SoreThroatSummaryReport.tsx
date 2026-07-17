@@ -165,7 +165,7 @@ export function SoreThroatSummaryReport({
               <span
                 className={`w-3 h-3 rounded border flex items-center justify-center ${
                   feverPainScore.fever
-                    ? "bg-teal-500 border-teal-500 text-white"
+                    ? "bg-[color:var(--tenant-primary)]/100 border-[color:var(--tenant-primary)]/30 text-white"
                     : "border-gray-300"
                 }`}
               >
@@ -185,7 +185,7 @@ export function SoreThroatSummaryReport({
               <span
                 className={`w-3 h-3 rounded border flex items-center justify-center ${
                   feverPainScore.purulence
-                    ? "bg-teal-500 border-teal-500 text-white"
+                    ? "bg-[color:var(--tenant-primary)]/100 border-[color:var(--tenant-primary)]/30 text-white"
                     : "border-gray-300"
                 }`}
               >
@@ -205,7 +205,7 @@ export function SoreThroatSummaryReport({
               <span
                 className={`w-3 h-3 rounded border flex items-center justify-center ${
                   feverPainScore.attendRapidly
-                    ? "bg-teal-500 border-teal-500 text-white"
+                    ? "bg-[color:var(--tenant-primary)]/100 border-[color:var(--tenant-primary)]/30 text-white"
                     : "border-gray-300"
                 }`}
               >
@@ -225,7 +225,7 @@ export function SoreThroatSummaryReport({
               <span
                 className={`w-3 h-3 rounded border flex items-center justify-center ${
                   feverPainScore.inflamedTonsils
-                    ? "bg-teal-500 border-teal-500 text-white"
+                    ? "bg-[color:var(--tenant-primary)]/100 border-[color:var(--tenant-primary)]/30 text-white"
                     : "border-gray-300"
                 }`}
               >
@@ -245,7 +245,7 @@ export function SoreThroatSummaryReport({
               <span
                 className={`w-3 h-3 rounded border flex items-center justify-center ${
                   feverPainScore.noCoughCoryza
-                    ? "bg-teal-500 border-teal-500 text-white"
+                    ? "bg-[color:var(--tenant-primary)]/100 border-[color:var(--tenant-primary)]/30 text-white"
                     : "border-gray-300"
                 }`}
               >
@@ -354,7 +354,7 @@ export function SoreThroatSummaryReport({
             onChange={(e) => onSummaryChange("clinicalNotes", e.target.value)}
             placeholder="Any additional clinical notes..."
             rows={3}
-            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent resize-y"
+            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent resize-y"
           />
         </div>
 

@@ -107,7 +107,7 @@ export function ModulePlayer({ module }: { module: TrainingModule }) {
     <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
       {/* Header */}
       <div className="bg-navy-950 text-white p-5 sm:p-6">
-        <p className="text-xs font-semibold text-teal-300 uppercase tracking-wider mb-1">
+        <p className="text-xs font-semibold text-[color:var(--tenant-primary)] uppercase tracking-wider mb-1">
           Training module · v{module.version}
         </p>
         <h1 className="text-xl sm:text-2xl font-bold leading-tight">{module.title}</h1>
@@ -124,7 +124,7 @@ export function ModulePlayer({ module }: { module: TrainingModule }) {
       {/* Progress bar */}
       <div className="bg-gray-100 h-1.5">
         <div
-          className="bg-teal-500 h-full transition-all duration-300 ease-out"
+          className="bg-[color:var(--tenant-primary)]/100 h-full transition-all duration-300 ease-out"
           style={{ width: `${progress}%` }}
         />
       </div>
@@ -151,7 +151,7 @@ export function ModulePlayer({ module }: { module: TrainingModule }) {
                 <button
                   type="button"
                   onClick={() => setSlideIndex((i) => Math.min(module.slides.length - 1, i + 1))}
-                  className="px-5 py-2 bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold rounded-lg transition-colors"
+                  className="px-5 py-2 bg-[color:var(--tenant-primary)]/100 hover:bg-[color:var(--tenant-primary)]/15 text-white text-sm font-semibold rounded-lg transition-colors"
                 >
                   Next →
                 </button>
@@ -162,7 +162,7 @@ export function ModulePlayer({ module }: { module: TrainingModule }) {
                     setPhase("quiz");
                     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
                   }}
-                  className="px-5 py-2 bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold rounded-lg transition-colors"
+                  className="px-5 py-2 bg-[color:var(--tenant-primary)]/100 hover:bg-[color:var(--tenant-primary)]/15 text-white text-sm font-semibold rounded-lg transition-colors"
                 >
                   Start quiz →
                 </button>
@@ -209,7 +209,7 @@ export function ModulePlayer({ module }: { module: TrainingModule }) {
                           key={opt.id}
                           className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                             selected
-                              ? "border-teal-500 bg-teal-50"
+                              ? "border-[color:var(--tenant-primary)]/30 bg-[color:var(--tenant-primary)]/10"
                               : "border-gray-200 hover:border-gray-300 bg-white"
                           }`}
                         >
@@ -219,7 +219,7 @@ export function ModulePlayer({ module }: { module: TrainingModule }) {
                             value={opt.id}
                             checked={selected}
                             onChange={() => setAnswer(q.id, q.type, opt.id)}
-                            className="mt-0.5 accent-teal-500"
+                            className="mt-0.5 accent-[color:var(--tenant-primary)]"
                           />
                           <span className="text-sm text-gray-800 leading-relaxed">{opt.label}</span>
                         </label>
@@ -251,7 +251,7 @@ export function ModulePlayer({ module }: { module: TrainingModule }) {
                 type="button"
                 onClick={submitQuiz}
                 disabled={!allQuestionsAnswered || submitting}
-                className="px-6 py-2.5 bg-teal-500 hover:bg-teal-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors"
+                className="px-6 py-2.5 bg-[color:var(--tenant-primary)]/100 hover:bg-[color:var(--tenant-primary)]/15 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors"
               >
                 {submitting ? "Submitting…" : "Submit quiz"}
               </button>
@@ -310,8 +310,8 @@ function IntroSlideView({ slide }: { slide: IntroSlide }) {
     <div>
       <h2 className="text-2xl sm:text-3xl font-bold text-navy-900 mb-2">{slide.title}</h2>
       {slide.subtitle && <p className="text-lg text-gray-500 mb-6">{slide.subtitle}</p>}
-      <div className="bg-teal-50 border border-teal-100 rounded-xl p-5">
-        <p className="text-sm font-semibold text-teal-800 mb-3">
+      <div className="bg-[color:var(--tenant-primary)]/10 border border-[color:var(--tenant-primary)]/30 rounded-xl p-5">
+        <p className="text-sm font-semibold text-[color:var(--tenant-primary)] mb-3">
           By the end of this module you will be able to:
         </p>
         <ul className="space-y-2 list-disc list-outside ml-5 text-sm text-gray-800 leading-relaxed">
@@ -319,7 +319,7 @@ function IntroSlideView({ slide }: { slide: IntroSlide }) {
             <li key={i}>{o}</li>
           ))}
         </ul>
-        <p className="text-xs text-teal-700 mt-4">
+        <p className="text-xs text-[color:var(--tenant-primary)] mt-4">
           Estimated time: {slide.estimatedMinutes} minutes.
         </p>
       </div>
@@ -418,7 +418,7 @@ function ChecklistSlideView({ slide }: { slide: ChecklistSlide }) {
       <ul className="space-y-3">
         {slide.items.map((item, i) => (
           <li key={i} className="flex items-start gap-3">
-            <span className="mt-0.5 w-5 h-5 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center text-xs font-bold shrink-0">
+            <span className="mt-0.5 w-5 h-5 rounded-full bg-[color:var(--tenant-primary)]/15 text-[color:var(--tenant-primary)] flex items-center justify-center text-xs font-bold shrink-0">
               ✓
             </span>
             <div>
@@ -436,7 +436,7 @@ function CaseSlideView({ slide }: { slide: CaseSlide }) {
   const [revealed, setRevealed] = useState(false);
   return (
     <div>
-      <p className="text-xs font-semibold text-teal-600 uppercase tracking-wider mb-1">
+      <p className="text-xs font-semibold text-[color:var(--tenant-primary)] uppercase tracking-wider mb-1">
         Clinical case
       </p>
       <h2 className="text-2xl font-bold text-navy-900 mb-4">{slide.title}</h2>
@@ -449,14 +449,14 @@ function CaseSlideView({ slide }: { slide: CaseSlide }) {
           <button
             type="button"
             onClick={() => setRevealed(true)}
-            className="px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold rounded-lg transition-colors"
+            className="px-4 py-2 bg-[color:var(--tenant-primary)]/100 hover:bg-[color:var(--tenant-primary)]/15 text-white text-sm font-semibold rounded-lg transition-colors"
           >
             Reveal answer
           </button>
         ) : (
           <div className="space-y-3">
-            <div className="bg-teal-50 border border-teal-200 rounded-lg p-4">
-              <p className="text-xs font-semibold text-teal-800 uppercase tracking-wider mb-1">
+            <div className="bg-[color:var(--tenant-primary)]/10 border border-[color:var(--tenant-primary)]/30 rounded-lg p-4">
+              <p className="text-xs font-semibold text-[color:var(--tenant-primary)] uppercase tracking-wider mb-1">
                 Answer
               </p>
               <p className="text-sm text-gray-800 leading-relaxed">{slide.answer}</p>
@@ -585,7 +585,7 @@ function ResultsPanel({
             <button
               type="button"
               onClick={onRetake}
-              className="px-5 py-2.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold rounded-lg transition-colors"
+              className="px-5 py-2.5 bg-[color:var(--tenant-primary)]/100 hover:bg-[color:var(--tenant-primary)]/15 text-white text-sm font-semibold rounded-lg transition-colors"
             >
               Retake quiz
             </button>

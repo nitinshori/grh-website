@@ -214,7 +214,7 @@ export function PgdDocumentsClient() {
             <select
               value={selectedSlug}
               onChange={(e) => setSelectedSlug(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
               required
             >
               <option value="">— select a PGD —</option>
@@ -234,7 +234,7 @@ export function PgdDocumentsClient() {
               ref={fileInputRef}
               type="file"
               accept="application/pdf,.pdf"
-              className="w-full text-sm file:mr-3 file:px-3 file:py-2 file:rounded-md file:border-0 file:bg-teal-50 file:text-teal-700 file:font-medium hover:file:bg-teal-100"
+              className="w-full text-sm file:mr-3 file:px-3 file:py-2 file:rounded-md file:border-0 file:bg-[color:var(--tenant-primary)]/10 file:text-[color:var(--tenant-primary)] file:font-medium hover:file:bg-[color:var(--tenant-primary)]/15"
               required
             />
           </div>
@@ -249,7 +249,7 @@ export function PgdDocumentsClient() {
                 value={signedByNames}
                 onChange={(e) => setSignedByNames(e.target.value)}
                 placeholder="e.g. Janey Tipping, Sarah Passmore"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
               />
             </div>
             <div>
@@ -261,7 +261,7 @@ export function PgdDocumentsClient() {
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Optional — e.g. expiry, version note"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
               />
             </div>
           </div>
@@ -270,7 +270,7 @@ export function PgdDocumentsClient() {
             type="submit"
             disabled={uploading}
             className="inline-flex items-center justify-center px-4 py-2 rounded-lg font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ backgroundColor: uploading ? "#999" : "#25b4b4" }}
+            style={{ backgroundColor: uploading ? "#999" : "var(--tenant-primary)" }}
           >
             {uploading ? "Uploading…" : "Upload PGD"}
           </button>
@@ -293,7 +293,7 @@ export function PgdDocumentsClient() {
           <button
             type="button"
             onClick={() => loadDocuments()}
-            className="text-sm text-teal-700 hover:text-teal-800 font-medium"
+            className="text-sm text-[color:var(--tenant-primary)] hover:text-[color:var(--tenant-primary)] font-medium"
           >
             Refresh
           </button>
@@ -339,7 +339,7 @@ export function PgdDocumentsClient() {
                             href={d.documentUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-teal-700 hover:underline"
+                            className="text-[color:var(--tenant-primary)] hover:underline"
                           >
                             {d.filename || "open PDF"}
                           </a>

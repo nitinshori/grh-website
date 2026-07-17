@@ -395,7 +395,7 @@ export default function AlcoholReductionClient() {
             isBlocked={hasStops}
           >
             <div className="space-y-4">
-              <div className="p-3 bg-teal-50 rounded-lg border border-teal-200">
+              <div className="p-3 bg-[color:var(--tenant-primary)]/10 rounded-lg border border-[color:var(--tenant-primary)]/30">
                 <p className="text-sm font-medium text-navy-900">Nalmefene 18mg</p>
                 <p className="text-xs text-gray-600 mt-1">PRN (as needed) — 1–2 hours before anticipated drinking. Maximum 1 tablet per day.</p>
               </div>

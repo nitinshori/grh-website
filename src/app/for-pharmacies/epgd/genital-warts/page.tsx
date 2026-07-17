@@ -14,7 +14,7 @@ export default function GenitalWartsToolPage() {
         <div className="mb-4 print:hidden">
           <a
             href="/for-pharmacies/dashboard"
-            className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-teal-600 transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-[color:var(--tenant-primary)] transition-colors"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -26,7 +26,7 @@ export default function GenitalWartsToolPage() {
         {/* Breadcrumb */}
         <div className="mb-6">
           <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-            <a href="/for-pharmacies/dashboard" className="hover:text-teal-600">For Pharmacies</a>
+            <a href="/for-pharmacies/dashboard" className="hover:text-[color:var(--tenant-primary)]">For Pharmacies</a>
             <span>/</span>
             <span className="text-navy-900 font-medium">Genital Warts Assessment & Treatment ePGD</span>
           </div>
@@ -46,19 +46,19 @@ export default function GenitalWartsToolPage() {
           <h2 className="text-lg font-semibold text-navy-900 mb-3">What This Tool Will Include</h2>
           <ul className="space-y-2 text-gray-700 text-sm">
             <li className="flex gap-2">
-              <span className="text-teal-600 font-bold">•</span>
+              <span className="text-[color:var(--tenant-primary)] font-bold">•</span>
               <span>Clinical assessment of external genital and perianal warts</span>
             </li>
             <li className="flex gap-2">
-              <span className="text-teal-600 font-bold">•</span>
+              <span className="text-[color:var(--tenant-primary)] font-bold">•</span>
               <span>Patient eligibility screening</span>
             </li>
             <li className="flex gap-2">
-              <span className="text-teal-600 font-bold">•</span>
+              <span className="text-[color:var(--tenant-primary)] font-bold">•</span>
               <span>Treatment guidance and counselling</span>
             </li>
             <li className="flex gap-2">
-              <span className="text-teal-600 font-bold">•</span>
+              <span className="text-[color:var(--tenant-primary)] font-bold">•</span>
               <span>HPV vaccination discussion and condom counselling</span>
             </li>
           </ul>

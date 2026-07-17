@@ -56,7 +56,7 @@ export function ShinglesSummaryReport({
       <SectionHeader>Contraindication Check</SectionHeader>
       <div className="space-y-1.5 text-xs">
         <div className="flex items-center gap-2">
-          <span className={`w-3 h-3 rounded border flex items-center justify-center ${!state.assessment.anaphylaxisToComponent ? "bg-teal-500 border-teal-500 text-white" : "border-red-500 bg-red-50"}`}>
+          <span className={`w-3 h-3 rounded border flex items-center justify-center ${!state.assessment.anaphylaxisToComponent ? "bg-[color:var(--tenant-primary)]/100 border-[color:var(--tenant-primary)]/30 text-white" : "border-red-500 bg-red-50"}`}>
             {!state.assessment.anaphylaxisToComponent && (
               <svg className="w-2 h-2" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -66,7 +66,7 @@ export function ShinglesSummaryReport({
           <span>No anaphylaxis to vaccine components documented</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className={`w-3 h-3 rounded border flex items-center justify-center ${!state.assessment.severeAcuteIllness ? "bg-teal-500 border-teal-500 text-white" : "border-red-500 bg-red-50"}`}>
+          <span className={`w-3 h-3 rounded border flex items-center justify-center ${!state.assessment.severeAcuteIllness ? "bg-[color:var(--tenant-primary)]/100 border-[color:var(--tenant-primary)]/30 text-white" : "border-red-500 bg-red-50"}`}>
             {!state.assessment.severeAcuteIllness && (
               <svg className="w-2 h-2" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />

@@ -92,7 +92,7 @@ export function StaffClient({ currentUserId }: { currentUserId: string }) {
         <button
           type="button"
           onClick={() => setShowInvite(true)}
-          className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold rounded-md inline-flex items-center gap-2"
+          className="px-4 py-2 bg-[color:var(--tenant-primary)] hover:bg-[color:var(--tenant-primary)]/15 text-white text-sm font-semibold rounded-md inline-flex items-center gap-2"
         >
           <span className="text-lg leading-none">+</span> Invite staff
         </button>
@@ -129,7 +129,7 @@ export function StaffClient({ currentUserId }: { currentUserId: string }) {
                   <tr key={s.id} className={`hover:bg-gray-50 ${!s.isActive ? "opacity-60" : ""}`}>
                     <td className="px-4 py-3">
                       <div className="font-medium text-gray-900">{s.firstName} {s.lastName}</div>
-                      {isSelf && <div className="text-[11px] text-teal-700">(you)</div>}
+                      {isSelf && <div className="text-[11px] text-[color:var(--tenant-primary)]">(you)</div>}
                     </td>
                     <td className="px-4 py-3 text-gray-700">{s.email}</td>
                     <td className="px-4 py-3">
@@ -155,7 +155,7 @@ export function StaffClient({ currentUserId }: { currentUserId: string }) {
                         <button
                           type="button"
                           onClick={() => resendInvite(s.id)}
-                          className="text-xs text-teal-700 hover:text-teal-900"
+                          className="text-xs text-[color:var(--tenant-primary)] hover:text-[color:var(--tenant-primary)]"
                         >
                           Resend invite
                         </button>
@@ -262,7 +262,7 @@ function InviteModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
               </>
             )}
             <div className="text-right">
-              <button onClick={onClose} className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm rounded-md">Done</button>
+              <button onClick={onClose} className="px-4 py-2 bg-[color:var(--tenant-primary)] hover:bg-[color:var(--tenant-primary)]/15 text-white text-sm rounded-md">Done</button>
             </div>
           </div>
         ) : (
@@ -270,16 +270,16 @@ function InviteModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">First name</label>
-                <input type="text" required value={firstName} onChange={(e) => setFirstName(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-teal-400" />
+                <input type="text" required value={firstName} onChange={(e) => setFirstName(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Last name</label>
-                <input type="text" required value={lastName} onChange={(e) => setLastName(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-teal-400" />
+                <input type="text" required value={lastName} onChange={(e) => setLastName(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
               </div>
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
-              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-teal-400" />
+              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
               <p className="text-[11px] text-gray-500 mt-1">They'll get a set-password link at this address.</p>
             </div>
             <div>
@@ -294,7 +294,7 @@ function InviteModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
             )}
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
               <button type="button" onClick={onClose} disabled={busy} className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900">Cancel</button>
-              <button type="submit" disabled={busy} className="px-4 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold rounded-md disabled:opacity-60">
+              <button type="submit" disabled={busy} className="px-4 py-1.5 bg-[color:var(--tenant-primary)] hover:bg-[color:var(--tenant-primary)]/15 text-white text-sm font-semibold rounded-md disabled:opacity-60">
                 {busy ? "Sending…" : "Send invite"}
               </button>
             </div>

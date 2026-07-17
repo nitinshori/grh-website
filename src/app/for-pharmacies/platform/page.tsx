@@ -21,7 +21,7 @@ const capabilities = [
     ],
     icon: (
       <svg
-        className="w-8 h-8 text-teal-500"
+        className="w-8 h-8 text-[color:var(--tenant-primary)]"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -48,7 +48,7 @@ const capabilities = [
     ],
     icon: (
       <svg
-        className="w-8 h-8 text-teal-500"
+        className="w-8 h-8 text-[color:var(--tenant-primary)]"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -75,7 +75,7 @@ const capabilities = [
     ],
     icon: (
       <svg
-        className="w-8 h-8 text-teal-500"
+        className="w-8 h-8 text-[color:var(--tenant-primary)]"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -190,7 +190,7 @@ export default function PlatformPage() {
                       className="flex items-start gap-2 text-sm text-gray-700"
                     >
                       <svg
-                        className="w-4 h-4 text-teal-500 mt-0.5 shrink-0"
+                        className="w-4 h-4 text-[color:var(--tenant-primary)] mt-0.5 shrink-0"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -217,7 +217,7 @@ export default function PlatformPage() {
                   className="group block bg-gradient-to-br from-navy-900 to-navy-950 hover:from-navy-800 hover:to-navy-900 border border-navy-200 rounded-xl aspect-video flex items-center justify-center transition-colors shadow-md"
                 >
                   <div className="text-center px-6">
-                    <div className="w-14 h-14 mx-auto rounded-full bg-teal-500 group-hover:bg-teal-400 flex items-center justify-center mb-3 transition-colors">
+                    <div className="w-14 h-14 mx-auto rounded-full bg-[color:var(--tenant-primary)]/100 group-hover:bg-[color:var(--tenant-primary)]/15 flex items-center justify-center mb-3 transition-colors">
                       <svg className="w-7 h-7 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M8 5v14l11-7z" />
                       </svg>
@@ -246,7 +246,7 @@ export default function PlatformPage() {
             {/* Header row */}
             <div className="grid grid-cols-3 bg-navy-950 text-white text-sm font-semibold">
               <div className="px-4 sm:px-6 py-3"></div>
-              <div className="px-4 sm:px-6 py-3 text-teal-400">
+              <div className="px-4 sm:px-6 py-3 text-[color:var(--tenant-primary)]">
                 Get Real Health
               </div>
               <div className="px-4 sm:px-6 py-3 text-gray-400">
@@ -269,7 +269,7 @@ export default function PlatformPage() {
                 </div>
                 <div className="px-4 sm:px-6 py-4 text-gray-700 flex items-start gap-2">
                   <svg
-                    className="w-4 h-4 text-teal-500 mt-0.5 shrink-0"
+                    className="w-4 h-4 text-[color:var(--tenant-primary)] mt-0.5 shrink-0"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -361,7 +361,7 @@ export default function PlatformPage() {
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link
             href="/demo"
-            className="px-8 py-3 bg-teal-500 hover:bg-teal-600 text-white font-semibold rounded-lg transition-colors text-sm"
+            className="px-8 py-3 bg-[color:var(--tenant-primary)]/100 hover:bg-[color:var(--tenant-primary)]/15 text-white font-semibold rounded-lg transition-colors text-sm"
           >
             See a demo
           </Link>

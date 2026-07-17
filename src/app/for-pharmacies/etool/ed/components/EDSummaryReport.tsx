@@ -298,7 +298,7 @@ export function EDSummaryReport({ state }: EDSummaryReportProps) {
             <span
               className={`w-3 h-3 rounded border flex items-center justify-center ${
                 checked
-                  ? "bg-teal-500 border-teal-500 text-white"
+                  ? "bg-[color:var(--tenant-primary)]/100 border-[color:var(--tenant-primary)]/30 text-white"
                   : "border-gray-300"
               }`}
             >

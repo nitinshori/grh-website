@@ -147,7 +147,7 @@ export default function MenACWYCertificatePage() {
         <button
           type="button"
           onClick={() => window.print()}
-          className="px-4 py-1.5 rounded bg-teal-500 hover:bg-teal-400 text-sm font-medium"
+          className="px-4 py-1.5 rounded bg-[color:var(--tenant-primary)]/100 hover:bg-[color:var(--tenant-primary)]/15 text-sm font-medium"
         >
           Print / Save as PDF
         </button>
@@ -158,7 +158,7 @@ export default function MenACWYCertificatePage() {
         {/* Header */}
         <div className="flex items-start justify-between border-b-2 border-navy-900 pb-5 mb-6">
           <div>
-            <p className="text-xs uppercase tracking-wider text-teal-700 font-semibold">
+            <p className="text-xs uppercase tracking-wider text-[color:var(--tenant-primary)] font-semibold">
               Get Real Health
             </p>
             <h1 className="text-3xl font-bold text-navy-900 mt-1">
@@ -204,8 +204,8 @@ export default function MenACWYCertificatePage() {
         </section>
 
         {/* Vaccination panel */}
-        <section className="mb-6 bg-teal-50/40 border border-teal-200 rounded-lg p-5">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-teal-800 mb-3">
+        <section className="mb-6 bg-[color:var(--tenant-primary)]/10/40 border border-[color:var(--tenant-primary)]/30 rounded-lg p-5">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-[color:var(--tenant-primary)] mb-3">
             Vaccination administered
           </h2>
           <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
@@ -232,7 +232,7 @@ export default function MenACWYCertificatePage() {
             />
             <Field label="Dose" value="0.5 mL intramuscular, single dose" />
           </div>
-          <p className="text-xs text-teal-900 mt-4 leading-relaxed">
+          <p className="text-xs text-[color:var(--tenant-primary)] mt-4 leading-relaxed">
             The MenACWY vaccine listed above provides protection against
             meningococcal serogroups A, C, W and Y. Protection begins
             approximately 10 days after administration and is considered
