@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { DraftsClient } from './DraftsClient'
 import { pgds } from '@/data/pgds'
+import { isAppointmentsOnlyPharmacy } from '@/lib/access-pharmacies'
 
 export const metadata = { title: 'Drafts & Phone Bookings | Get Real Health' }
 export const dynamic = 'force-dynamic'
@@ -13,6 +14,9 @@ export const dynamic = 'force-dynamic'
 export default async function DraftsPage() {
   const session = await auth()
   if (!session?.user) redirect('/login')
+  if (session.user.pharmacyId && (await isAppointmentsOnlyPharmacy(session.user.pharmacyId))) {
+    redirect('/for-pharmacies/dashboard/appointments')
+  }
   if (!session.user.pharmacyId) {
     return (
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
@@ -56,7 +60,7 @@ export default async function DraftsPage() {
         <div className="mb-4 print:hidden">
           <Link
             href="/for-pharmacies/dashboard"
-            className="inline-flex items-center gap-1.5 text-sm text-gray-600 hover:text-teal-600 transition-colors"
+            className="inline-flex items-center gap-1.5 text-sm text-gray-600 hover:text-[color:var(--tenant-primary)] transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />

@@ -7,7 +7,7 @@ import { trainingAttempts } from "@/lib/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { modules } from "@/data/training-modules";
 import { pgds as PGD_CATALOGUE, isPgdAccessibleByEmail } from "@/data/pgds";
-import { getPharmacyPgdSlugs } from "@/lib/pgd-queries";
+import { isAppointmentsOnlyPharmacy } from "@/lib/access-pharmacies";
 
 export const metadata: Metadata = {
   title: "Training Modules",
@@ -58,6 +58,9 @@ function statusFor(
 export default async function TrainingIndexPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
+  if (session.user.pharmacyId && (await isAppointmentsOnlyPharmacy(session.user.pharmacyId))) {
+    redirect("/for-pharmacies/dashboard/appointments");
+  }
 
   // Pull the latest attempt for each module for this user
   const allAttempts = await db
@@ -85,26 +88,12 @@ export default async function TrainingIndexPage() {
   const restrictedPgdsBySlug = new Map(
     PGD_CATALOGUE.filter((p) => p.restrictedToEmails && p.restrictedToEmails.length > 0).map((p) => [p.id, p])
   );
-  // Pharmacy users only see training linked to PGDs their pharmacy is
-  // assigned (admin work order, Jul 2026): an allowed PGD carries the
-  // document, the ePGD tool AND the training together. Modules with no
-  // linked PGD (general/mandatory training) stay visible to everyone;
-  // super_admin and pharmacy-less accounts see everything.
-  const isSuperAdmin = session.user.role === "super_admin";
-  let assignedSlugs: Set<string> | null = null;
-  if (!isSuperAdmin && session.user.pharmacyId) {
-    assignedSlugs = new Set(await getPharmacyPgdSlugs(session.user.pharmacyId));
-  }
-
   const visibleModules = modules.filter((m) => {
     for (const pgdSlug of m.pgdSlugs) {
       const restricted = restrictedPgdsBySlug.get(pgdSlug);
       if (restricted && !isPgdAccessibleByEmail(restricted, userEmail)) {
         return false;
       }
-    }
-    if (assignedSlugs && m.pgdSlugs.length > 0) {
-      return m.pgdSlugs.some((slug) => assignedSlugs.has(slug));
     }
     return true;
   });
@@ -127,11 +116,11 @@ export default async function TrainingIndexPage() {
               <Link
                 key={m.slug}
                 href={`/for-pharmacies/dashboard/training/${m.slug}`}
-                className="block bg-white border border-gray-200 hover:border-teal-300 rounded-xl p-5 transition-colors group"
+                className="block bg-white border border-gray-200 hover:border-[color:var(--tenant-primary)] rounded-xl p-5 transition-colors group"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
-                    <h2 className="text-lg font-bold text-navy-900 group-hover:text-teal-700 transition-colors">
+                    <h2 className="text-lg font-bold text-navy-900 group-hover:text-[color:var(--tenant-primary)] transition-colors">
                       {m.title}
                     </h2>
                     <p className="text-sm text-gray-600 mt-1 leading-relaxed">

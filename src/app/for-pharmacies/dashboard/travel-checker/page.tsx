@@ -1,5 +1,6 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
+import { isAppointmentsOnlyPharmacy } from '@/lib/access-pharmacies'
 import { listDestinations } from '@/data/travel-destinations'
 import { TravelCheckerClient } from './TravelCheckerClient'
 
@@ -14,6 +15,9 @@ export default async function TravelCheckerPage() {
   const session = await auth()
   if (!session?.user) {
     redirect('/login')
+  }
+  if (session.user.pharmacyId && (await isAppointmentsOnlyPharmacy(session.user.pharmacyId))) {
+    redirect('/for-pharmacies/dashboard/appointments')
   }
 
   const destinations = listDestinations()

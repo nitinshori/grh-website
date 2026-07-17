@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { isAppointmentsOnlyPharmacy } from "@/lib/access-pharmacies";
 import { PgdDocumentsClient } from "./PgdDocumentsClient";
 
 export const metadata = { title: "Signed PGD Documents | Get Real Health" };
@@ -8,6 +9,9 @@ export const dynamic = "force-dynamic";
 export default async function PgdDocumentsPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
+  if (session.user.pharmacyId && (await isAppointmentsOnlyPharmacy(session.user.pharmacyId))) {
+    redirect("/for-pharmacies/dashboard/appointments");
+  }
 
   const role = session.user.role;
   if (role !== "pharmacy_admin" && role !== "super_admin") {
