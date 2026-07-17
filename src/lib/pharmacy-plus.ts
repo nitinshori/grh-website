@@ -104,9 +104,13 @@ export async function addExternalResource(
 // ── File upload ─────────────────────────────────────────────────
 
 export async function uploadFile(file: File): Promise<{ url: string; size: number }> {
-  const blob = await put(`pharmacy-plus/files/${file.name}`, file, {
+  // Sanitise the client-supplied filename to prevent path traversal / odd keys,
+  // and prefix with a random id so uploads can't collide or overwrite.
+  const safeName = `${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`.slice(0, 200)
+  const blob = await put(`pharmacy-plus/files/${safeName}`, file, {
     access: 'private',
     contentType: file.type,
+    addRandomSuffix: true,
   })
 
   // Store the blob URL (not downloadUrl) — we'll generate signed URLs on demand

@@ -1,16 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { uploadFile, addResource } from '@/lib/pharmacy-plus'
+import { verifyAdminKey } from '@/lib/pharmacy-plus-access'
 import type { PharmacyPlusResource, ResourceCategory } from '@/types/pharmacy-plus'
 
 export const dynamic = 'force-dynamic'
 
 const VALID_CATEGORIES: ResourceCategory[] = ['PGD', 'Video', 'Training', 'Compliance', 'SOP']
 
+// File validation: allow-list of content types and a max size.
+const MAX_FILE_BYTES = 200 * 1024 * 1024 // 200 MB (accommodates training videos)
+const ALLOWED_FILE_TYPES = new Set<string>([
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'video/mp4',
+  'video/quicktime',
+  'video/webm',
+  'image/png',
+  'image/jpeg',
+  'image/webp',
+  'text/plain',
+])
+
 export async function POST(request: NextRequest) {
   try {
-    // Auth check
-    const adminKey = request.headers.get('x-admin-key')
-    if (!adminKey || adminKey !== process.env.PHARMACY_PLUS_ADMIN_PASSWORD) {
+    // Auth check (constant-time; fails closed if key unset)
+    if (!verifyAdminKey(request.headers.get('x-admin-key'))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -55,7 +74,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required field: file (or provide externalUrl for links)' }, { status: 400 })
     }
 
-    // Upload file to Vercel Blob
+    // Validate file type and size before uploading.
+    if (!ALLOWED_FILE_TYPES.has(file.type)) {
+      return NextResponse.json(
+        { error: `Unsupported file type: ${file.type || 'unknown'}` },
+        { status: 415 }
+      )
+    }
+    if (file.size <= 0 || file.size > MAX_FILE_BYTES) {
+      return NextResponse.json(
+        { error: `File too large. Maximum size is ${Math.round(MAX_FILE_BYTES / (1024 * 1024))} MB.` },
+        { status: 413 }
+      )
+    }
+
+    // Upload file to Vercel Blob (filename is sanitised inside uploadFile)
     const { url, size } = await uploadFile(file)
 
     // Create resource metadata

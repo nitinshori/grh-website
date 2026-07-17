@@ -83,7 +83,9 @@ function AdminDashboard({ adminKey }: { adminKey: string }) {
 
   const fetchResources = useCallback(async () => {
     try {
-      const res = await fetch('/api/pharmacy-plus/resources')
+      const res = await fetch('/api/pharmacy-plus/resources', {
+        headers: { 'x-admin-key': adminKey },
+      })
       if (!res.ok) throw new Error('Failed')
       const data = await res.json()
       setResources(data.resources || [])
@@ -92,7 +94,7 @@ function AdminDashboard({ adminKey }: { adminKey: string }) {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [adminKey])
 
   useEffect(() => { fetchResources() }, [fetchResources])
 

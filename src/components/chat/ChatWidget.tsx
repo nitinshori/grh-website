@@ -193,7 +193,9 @@ export function ChatWidget() {
         .then(({ ok, data }) => {
           const reply = ok && data?.reply ? data.reply : "";
           if (reply) {
-            const html = autoLink(reply);
+            // autoLink formats the (untrusted) model reply, then sanitizeChatHtml
+            // strips it to a safe allow-list before it reaches dangerouslySetInnerHTML.
+            const html = sanitizeChatHtml(autoLink(reply));
             setMessages((m) => [...m, { role: "assistant", html }]);
             pushHistory("assistant", html);
           } else {
@@ -395,4 +397,81 @@ function autoLink(html: string): string {
     return `<a href="tel:${intl}">${a} ${b} ${c}</a>`;
   });
   return out;
+}
+
+/**
+ * Sanitise untrusted HTML (LLM output) down to a small allow-list before it
+ * is passed to dangerouslySetInnerHTML. Uses the browser's own DOMParser,
+ * which builds an INERT document (no scripts run, no resources load), then
+ * keeps only known-safe tags/attributes and drops everything else — including
+ * <script>, <img onerror>, <iframe>, style, and any on* event handlers.
+ *
+ * Static FAQ/greeting HTML is trusted and does not pass through here; only
+ * the model reply does.
+ */
+const ALLOWED_TAGS = new Set([
+  "P", "BR", "STRONG", "EM", "B", "I", "UL", "OL", "LI", "A", "SPAN",
+]);
+const SAFE_HREF = /^(https?:|tel:|mailto:|\/|#)/i;
+
+function sanitizeChatHtml(dirty: string): string {
+  if (!dirty) return "";
+  // Guard against non-browser environments (SSR); this component is client-only
+  // but stay defensive.
+  if (typeof window === "undefined" || typeof window.DOMParser === "undefined") {
+    // No parser available — fall back to fully escaped text.
+    const d = document.createElement("div");
+    d.textContent = dirty;
+    return d.innerHTML;
+  }
+
+  const doc = new DOMParser().parseFromString(dirty, "text/html");
+
+  const clean = (node: Node): Node | null => {
+    // Text nodes: keep as-is.
+    if (node.nodeType === Node.TEXT_NODE) return node.cloneNode(true);
+    if (node.nodeType !== Node.ELEMENT_NODE) return null;
+
+    const el = node as Element;
+    const tag = el.tagName.toUpperCase();
+
+    // Recursively clean children first.
+    const cleanedChildren: Node[] = [];
+    el.childNodes.forEach((child) => {
+      const c = clean(child);
+      if (c) cleanedChildren.push(c);
+    });
+
+    // Disallowed tag: drop the tag but keep its (already-cleaned) contents.
+    if (!ALLOWED_TAGS.has(tag)) {
+      const frag = document.createDocumentFragment();
+      cleanedChildren.forEach((c) => frag.appendChild(c));
+      return frag;
+    }
+
+    // Allowed tag: rebuild with only safe attributes.
+    const safe = document.createElement(tag.toLowerCase());
+    if (tag === "A") {
+      const href = el.getAttribute("href") || "";
+      safe.setAttribute("href", SAFE_HREF.test(href.trim()) ? href.trim() : "#");
+      if (/^https?:/i.test(href.trim())) {
+        safe.setAttribute("rel", "noopener noreferrer");
+        safe.setAttribute("target", "_blank");
+      }
+    } else if (tag === "SPAN") {
+      // Only allow the chat-chip styling hook.
+      if (el.getAttribute("class")?.split(/\s+/).includes("chat-chip")) {
+        safe.setAttribute("class", "chat-chip");
+      }
+    }
+    cleanedChildren.forEach((c) => safe.appendChild(c));
+    return safe;
+  };
+
+  const container = document.createElement("div");
+  doc.body.childNodes.forEach((child) => {
+    const c = clean(child);
+    if (c) container.appendChild(c);
+  });
+  return container.innerHTML;
 }

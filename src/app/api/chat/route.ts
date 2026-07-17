@@ -56,7 +56,41 @@ interface ChatRequest {
   messages?: ChatMessage[];
 }
 
+// Lightweight IP rate limiter. In-memory + per-instance (edge), so it is a
+// best-effort abuse/cost barrier rather than a hard guarantee — a determined
+// attacker across many instances could still get through. For strong limits,
+// move to Vercel KV / Upstash. Still stops trivial single-source floods of
+// this unauthenticated Anthropic proxy.
+const RATE_LIMIT_MAX = 20; // requests
+const RATE_LIMIT_WINDOW_MS = 60_000; // per minute
+const hits = new Map<string, number[]>();
+
+function rateLimited(ip: string): boolean {
+  const now = Date.now();
+  const recent = (hits.get(ip) ?? []).filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
+  recent.push(now);
+  hits.set(ip, recent);
+  // Opportunistic cleanup to bound memory.
+  if (hits.size > 5000) {
+    for (const [k, v] of hits) {
+      if (v.every((t) => now - t >= RATE_LIMIT_WINDOW_MS)) hits.delete(k);
+    }
+  }
+  return recent.length > RATE_LIMIT_MAX;
+}
+
 export async function POST(req: NextRequest) {
+  const ip =
+    req.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
+    req.headers.get("x-real-ip") ||
+    "unknown";
+  if (rateLimited(ip)) {
+    return NextResponse.json(
+      { error: "Too many requests. Please slow down." },
+      { status: 429 },
+    );
+  }
+
   let body: ChatRequest;
   try {
     body = (await req.json()) as ChatRequest;

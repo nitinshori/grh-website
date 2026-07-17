@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { deleteResource } from '@/lib/pharmacy-plus'
+import { verifyAdminKey } from '@/lib/pharmacy-plus-access'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,9 +9,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Auth check
-    const adminKey = request.headers.get('x-admin-key')
-    if (!adminKey || adminKey !== process.env.PHARMACY_PLUS_ADMIN_PASSWORD) {
+    // Auth check (constant-time; fails closed if key unset)
+    if (!verifyAdminKey(request.headers.get('x-admin-key'))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

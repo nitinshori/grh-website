@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { incrementDownloads, getSignedDownloadUrl } from '@/lib/pharmacy-plus'
+import { isResourceReadAuthorised } from '@/lib/pharmacy-plus-access'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Require a valid HCP access cookie or admin key before minting a signed URL.
+  if (!isResourceReadAuthorised(request)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   try {
     const { id } = await params
 
