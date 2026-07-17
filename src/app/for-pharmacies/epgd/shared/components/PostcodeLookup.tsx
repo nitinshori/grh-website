@@ -4,34 +4,50 @@ import { useState } from "react";
 
 interface PostcodeLookupProps {
   /**
-   * Called when a postcode resolves. Gives the locality + tidy postcode so the
-   * parent can prefill the address field (pharmacist then adds house/street).
+   * Called when a postcode resolves to a locality only (no address list —
+   * free-tier lookup). Parent part-fills the address; pharmacist adds
+   * house/street.
    */
   onResolved: (parts: { town: string; region: string; postcode: string }) => void;
+  /**
+   * Called when the pharmacist picks a specific address from the PAF list
+   * (available when GETADDRESS_API_KEY is configured server-side). The
+   * string is the full address minus postcode.
+   */
+  onAddressSelected?: (parts: { address: string; postcode: string }) => void;
 }
 
 /**
- * Free postcode lookup. Validates a UK postcode via /api/postcode (which
- * proxies postcodes.io) and returns the district/region so the address can be
- * part-filled. Does NOT provide house-level address selection — that needs a
- * paid PAF provider (getAddress.io / Ideal Postcodes / Loqate).
+ * Postcode lookup. With a getAddress.io key configured on the server this
+ * shows a pick-your-address dropdown (full Royal Mail PAF data); without
+ * one it falls back to validating the postcode and filling town/region.
  */
-export function PostcodeLookup({ onResolved }: PostcodeLookupProps) {
+export function PostcodeLookup({ onResolved, onAddressSelected }: PostcodeLookupProps) {
   const [postcode, setPostcode] = useState("");
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [addresses, setAddresses] = useState<string[]>([]);
+  const [resolvedPostcode, setResolvedPostcode] = useState("");
 
   async function lookup() {
     const trimmed = postcode.trim();
     if (!trimmed) return;
     setLoading(true);
     setStatus(null);
+    setAddresses([]);
     try {
       const res = await fetch(`/api/postcode/${encodeURIComponent(trimmed)}`);
       const data = await res.json();
       if (res.ok && data.valid) {
-        onResolved({ town: data.town || "", region: data.region || "", postcode: data.postcode || trimmed });
-        setStatus({ ok: true, msg: `✓ ${[data.town, data.region].filter(Boolean).join(", ") || data.postcode}` });
+        if (Array.isArray(data.addresses) && data.addresses.length > 0) {
+          // PAF tier — let the pharmacist pick the exact address.
+          setAddresses(data.addresses);
+          setResolvedPostcode(data.postcode || trimmed);
+          setStatus({ ok: true, msg: `✓ ${data.addresses.length} addresses found — select below` });
+        } else {
+          onResolved({ town: data.town || "", region: data.region || "", postcode: data.postcode || trimmed });
+          setStatus({ ok: true, msg: `✓ ${[data.town, data.region].filter(Boolean).join(", ") || data.postcode}` });
+        }
       } else {
         setStatus({ ok: false, msg: data.error || "Postcode not found" });
       }
@@ -40,6 +56,19 @@ export function PostcodeLookup({ onResolved }: PostcodeLookupProps) {
     } finally {
       setLoading(false);
     }
+  }
+
+  function pickAddress(value: string) {
+    if (!value) return;
+    if (onAddressSelected) {
+      onAddressSelected({ address: value, postcode: resolvedPostcode });
+    } else {
+      // Parent only understands the locality callback — deliver the chosen
+      // address through `town` so it still lands in the address field.
+      onResolved({ town: value, region: "", postcode: resolvedPostcode });
+    }
+    setStatus({ ok: true, msg: "✓ Address filled" });
+    setAddresses([]);
   }
 
   return (
@@ -51,7 +80,7 @@ export function PostcodeLookup({ onResolved }: PostcodeLookupProps) {
         <input
           type="text"
           value={postcode}
-          onChange={(e) => { setPostcode(e.target.value.toUpperCase()); setStatus(null); }}
+          onChange={(e) => { setPostcode(e.target.value.toUpperCase()); setStatus(null); setAddresses([]); }}
           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); lookup(); } }}
           placeholder="e.g. LE2 7LX"
           className="flex-1 px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
@@ -66,6 +95,18 @@ export function PostcodeLookup({ onResolved }: PostcodeLookupProps) {
           {loading ? "Finding…" : "Find"}
         </button>
       </div>
+      {addresses.length > 0 && (
+        <select
+          defaultValue=""
+          onChange={(e) => pickAddress(e.target.value)}
+          className="mt-2 w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
+        >
+          <option value="" disabled>Select the patient&apos;s address…</option>
+          {addresses.map((a) => (
+            <option key={a} value={a}>{a}</option>
+          ))}
+        </select>
+      )}
       {status && (
         <p className={`text-xs mt-1.5 ${status.ok ? "text-[color:var(--tenant-primary)]" : "text-red-600"}`}>
           {status.msg}

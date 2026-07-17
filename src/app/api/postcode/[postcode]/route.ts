@@ -2,15 +2,21 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 
 /**
- * Free postcode lookup, proxied server-side through postcodes.io.
- *   GET /api/postcode/<POSTCODE>
- *   → { valid, postcode, town, region, country }
+ * Postcode → address lookup, proxied server-side.
  *
- * Note: postcodes.io is free and needs no key, but only resolves a postcode
- * to its locality (district/ward/region) — it does NOT return house-level
- * PAF addresses. So this fills the town + postcode; the pharmacist adds the
- * house number / street. Proxied here (not called from the browser) to keep
- * the site's Content-Security-Policy connect-src allow-list tight.
+ *   GET /api/postcode/<POSTCODE>
+ *   → { valid, postcode, town, region, country, addresses?: string[] }
+ *
+ * Two tiers:
+ *  1. If GETADDRESS_API_KEY is set, we call getAddress.io and return the
+ *     full house-level address list (Royal Mail PAF data) so the pharmacist
+ *     can pick the patient's exact address.
+ *  2. Otherwise we fall back to the free postcodes.io service, which only
+ *     resolves the locality (town/region) — the pharmacist types the house
+ *     number and street themselves.
+ *
+ * Proxied here (not called from the browser) to keep the API key server-side
+ * and the site's Content-Security-Policy connect-src allow-list tight.
  */
 export const dynamic = 'force-dynamic'
 
@@ -25,13 +31,52 @@ export async function GET(
   const clean = decodeURIComponent(postcode).replace(/[^A-Z0-9]/gi, '')
   if (!clean) return NextResponse.json({ valid: false, error: 'Empty postcode' }, { status: 400 })
 
+  // ── Tier 1: full PAF address list via getAddress.io ─────────────
+  const gaKey = process.env.GETADDRESS_API_KEY
+  if (gaKey) {
+    try {
+      const gaRes = await fetch(
+        `https://api.getAddress.io/find/${encodeURIComponent(clean)}?api-key=${encodeURIComponent(gaKey)}&expand=false`,
+        { next: { revalidate: 86400 } },
+      )
+      if (gaRes.ok) {
+        const data = (await gaRes.json()) as { addresses?: string[]; postcode?: string }
+        const addresses = (data.addresses ?? []).map((a) =>
+          a
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
+            .join(', '),
+        )
+        if (addresses.length > 0) {
+          return NextResponse.json({
+            valid: true,
+            postcode: data.postcode ?? formatPostcode(clean),
+            addresses,
+          })
+        }
+      }
+      if (gaRes.status === 404) {
+        return NextResponse.json({ valid: false, error: 'Postcode not found' }, { status: 404 })
+      }
+      // Any other getAddress failure (quota, outage) falls through to the
+      // free locality lookup rather than breaking the form.
+    } catch {
+      // fall through to tier 2
+    }
+  }
+
+  // ── Tier 2: locality only via postcodes.io (free, keyless) ──────
   let res: Response
   try {
     res = await fetch(`https://api.postcodes.io/postcodes/${encodeURIComponent(clean)}`, {
       next: { revalidate: 86400 },
     })
   } catch (err) {
-    return NextResponse.json({ valid: false, error: 'Lookup service unreachable', detail: String(err) }, { status: 502 })
+    return NextResponse.json(
+      { valid: false, error: 'Lookup service unreachable', detail: String(err) },
+      { status: 502 },
+    )
   }
 
   if (res.status === 404) {
@@ -56,9 +101,14 @@ export async function GET(
 
   return NextResponse.json({
     valid: true,
-    postcode: r.postcode ?? clean,
+    postcode: r.postcode ?? formatPostcode(clean),
     town: r.admin_district ?? r.parish ?? r.admin_ward ?? '',
     region: r.region ?? r.country ?? '',
     country: r.country ?? '',
   })
+}
+
+function formatPostcode(clean: string): string {
+  if (clean.length < 5) return clean
+  return `${clean.slice(0, -3)} ${clean.slice(-3)}`
 }

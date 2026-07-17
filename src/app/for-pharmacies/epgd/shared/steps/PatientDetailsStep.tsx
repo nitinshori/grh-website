@@ -70,6 +70,10 @@ export function PatientDetailsStep({ patient, onChange, genderOption, requireAdu
           const locality = [town, postcode].filter(Boolean).join(", ");
           onChange("address", patient.address?.trim() ? `${patient.address.trim()}, ${locality}` : locality);
         }}
+        onAddressSelected={({ address, postcode }) => {
+          // Full PAF address picked from the dropdown — replaces the field.
+          onChange("address", [address, postcode].filter(Boolean).join(", "));
+        }}
       />
       <TextInput
         label="Patient address"
