@@ -103,10 +103,9 @@ export function RSVClient() {
   // Calculate age when DOB changes
   const handlePatientDetailsChange = useCallback(
     (field: keyof RSVPatientDetails, value: any) => {
+      // Functional update — GP-practice autofill sets several fields in one
+      // tick; a closure spread would drop all but the last. See meningitis fix.
       setPatientDetails((prev) => {
-        // Functional update: GP-practice autofill fires several field updates
-        // in the same tick; a closure-captured spread made each call overwrite
-        // the previous one (only the last field survived).
         const updated = { ...prev, [field]: value };
         if (field === 'dateOfBirth') {
           updated.age = calculateAge(value);
@@ -696,7 +695,7 @@ export function RSVClient() {
                 type="date"
                 value={summary.expiryDate}
                 onChange={(e) => setSummary({ ...summary, expiryDate: e.target.value })}
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
               />
             </div>
 
@@ -724,7 +723,7 @@ export function RSVClient() {
                 type="time"
                 value={summary.administrationTime}
                 onChange={(e) => setSummary({ ...summary, administrationTime: e.target.value })}
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
               />
             </div>
           </div>

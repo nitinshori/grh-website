@@ -154,10 +154,11 @@ export function MeningitisACWYClient() {
   // Calculate age when DOB changes
   const handlePatientDetailsChange = useCallback(
     (field: keyof MeningitisACWYPatientDetails, value: any) => {
+      // Functional update: GP-practice autofill fires several field updates in
+      // the same tick. Spreading a closure-captured `patientDetails` made each
+      // call overwrite the previous (only the last survived), so surgery
+      // details didn't populate. Using the updater form keeps every field.
       setPatientDetails((prev) => {
-        // Functional update: GP-practice autofill fires several field updates
-        // in the same tick; a closure-captured spread made each call overwrite
-        // the previous one (only the last field survived).
         const updated = { ...prev, [field]: value };
         if (field === 'dateOfBirth') {
           updated.age = calculateAge(value);
@@ -393,6 +394,23 @@ export function MeningitisACWYClient() {
           validationError={travelValidationError}
         >
           <div className="space-y-4">
+            {/* Quick-fill: the large majority of MenACWY patients are pilgrims,
+                so offer a one-tap fill for destination + reason. */}
+            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[color:var(--tenant-primary)]/30 bg-[color:var(--tenant-primary)]/5 px-3 py-2">
+              <span className="text-xs font-medium text-gray-600">Quick fill:</span>
+              <button
+                type="button"
+                onClick={() => {
+                  handlePatientDetailsChange('travelDestination', 'Saudi Arabia (Hajj/Umrah pilgrimage)');
+                  handlePatientDetailsChange('travelReason', 'hajj-umrah');
+                }}
+                className="text-xs font-semibold px-3 py-1.5 rounded-full text-white transition-colors"
+                style={{ backgroundColor: 'var(--tenant-primary)' }}
+              >
+                Pilgrimage — Hajj/Umrah (Saudi Arabia)
+              </button>
+            </div>
+
             <TextInput
               label="Travel destination"
               value={patientDetails.travelDestination}
@@ -440,7 +458,7 @@ export function MeningitisACWYClient() {
                 type="date"
                 value={patientDetails.departureDate}
                 onChange={(e) => handlePatientDetailsChange('departureDate', e.target.value)}
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
               />
             </div>
 
@@ -666,7 +684,7 @@ export function MeningitisACWYClient() {
                 type="date"
                 value={summary.expiryDate}
                 onChange={(e) => setSummary({ ...summary, expiryDate: e.target.value })}
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
               />
             </div>
 
@@ -703,7 +721,7 @@ export function MeningitisACWYClient() {
                 type="time"
                 value={summary.administrationTime}
                 onChange={(e) => setSummary({ ...summary, administrationTime: e.target.value })}
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
               />
             </div>
           </div>
@@ -894,7 +912,7 @@ export function MeningitisACWYClient() {
                     console.error("Certificate open failed:", err);
                   }
                 }}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-white bg-teal-500 hover:bg-teal-400 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-white bg-[color:var(--tenant-primary)]/100 hover:bg-[color:var(--tenant-primary)]/15 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
               >
                 <svg
                   className="w-4 h-4"
