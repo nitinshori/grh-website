@@ -9,6 +9,9 @@ import { AuthSessionProvider } from "@/components/providers/AuthSessionProvider"
 import { ChatWidget } from "@/components/chat/ChatWidget";
 
 export const metadata: Metadata = {
+  // Resolves all relative URLs (OG/Twitter images, per-page canonicals)
+  // against the production domain instead of the Vercel deploy URL.
+  metadataBase: new URL("https://getrealhealthpgd.co.uk"),
   title: {
     default: "Pharmacy PGD Provider | 60+ ePGDs, Flat Fee | Get Real Health",
     template: "%s | Get Real Health",
@@ -32,9 +35,10 @@ export const metadata: Metadata = {
     "pharmacy clinical governance",
     "UK pharmacy",
   ],
-  alternates: {
-    canonical: "https://getrealhealthpgd.co.uk",
-  },
+  // NOTE: no site-wide `alternates.canonical` here. A canonical set in the
+  // root layout is inherited by every page that doesn't override it, which
+  // previously pointed all pages at the homepage and told Google they were
+  // duplicates. Canonicals are now set per page (relative to metadataBase).
   verification: {
     google: "Rdesn9BmMRZw8GTb5RG5xkFvgcDdkkOqx0xdR4vcdr0",
   },

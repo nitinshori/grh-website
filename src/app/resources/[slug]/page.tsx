@@ -20,11 +20,13 @@ export async function generateMetadata({
     title: article.title,
     description: article.description,
     keywords: [article.primaryKeyword, "PGD", "pharmacy", "UK"],
+    alternates: { canonical: `/resources/${slug}` },
     openGraph: {
       type: "article",
       title: article.title,
       description: article.description,
       publishedTime: article.publishDate,
+      images: ["/og-image.png"],
     },
   };
 }

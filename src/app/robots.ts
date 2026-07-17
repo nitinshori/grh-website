@@ -3,17 +3,20 @@ import type { MetadataRoute } from "next";
 // Disallowed paths — apply identically to every crawler.
 // /api/                       — server APIs, not user-facing content
 // /_next/                     — Next.js build assets
-// /for-pharmacies/epgd/       — pharmacist-facing consultation tools
-//                               (not marketing pages; carry noindex)
 // /for-pharmacies/dashboard   — authenticated partner area
 // /admin/                     — admin console
 // /login                      — auth entry
 // /client/                    — per-client portals (private)
 // /pharmacy-plus-health       — single-client resource hub
+//
+// NOTE: /for-pharmacies/epgd/ is intentionally NOT disallowed here. Those
+// pages must stay out of the index, but blocking them in robots.txt prevents
+// Googlebot from ever fetching them and seeing their `X-Robots-Tag: noindex`
+// header (set in next.config.ts) — which can leave them URL-indexed with no
+// title. Allowing the crawl lets the noindex be honoured properly.
 const DISALLOWED = [
   "/api/",
   "/_next/",
-  "/for-pharmacies/epgd/",
   "/for-pharmacies/dashboard",
   "/admin/",
   "/login",

@@ -23,6 +23,12 @@ export async function generateMetadata({
   return {
     title: cat.seoTitle,
     description: cat.seoDescription,
+    alternates: { canonical: `/for-patients/${category}` },
+    openGraph: {
+      title: cat.seoTitle,
+      description: cat.seoDescription,
+      images: ["/og-image.png"],
+    },
   };
 }
 
