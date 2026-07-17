@@ -59,12 +59,16 @@ export async function GET(
     ? [rawContacts]
     : []
   const phone = contacts.find((c) => c.type?.toLowerCase() === 'tel')?.value ?? ''
+  // NHS ODS also carries email/url contacts for some practices (many have
+  // none). Extract email when present so the consult form can auto-fill it.
+  const email = contacts.find((c) => c.type?.toLowerCase() === 'email')?.value ?? ''
 
   return NextResponse.json({
     odsCode: code,
     name: org.Name,
     address,
     phone,
+    email,
     postcode: loc.PostCode ?? '',
   })
 }

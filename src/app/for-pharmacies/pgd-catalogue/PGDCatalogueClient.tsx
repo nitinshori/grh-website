@@ -10,6 +10,7 @@ import {
   type PGDCategory,
   type PGD,
 } from "@/data/pgds";
+import { getPgdDocumentUrl } from "@/lib/pgd-documents";
 
 // Public catalogue must never advertise restricted (private/pilot) PGDs.
 const pgds = allPgds.filter((p) => !p.restrictedToEmails || p.restrictedToEmails.length === 0);
@@ -68,7 +69,7 @@ export function PGDCatalogueClient() {
       {/* Hero */}
       <section className="bg-navy-950 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-20">
-          <p className="text-xs font-semibold text-teal-400 uppercase tracking-wider mb-3">
+          <p className="text-xs font-semibold text-[color:var(--tenant-primary)] uppercase tracking-wider mb-3">
             {exclusiveCount} PGDs you won&apos;t find on other providers
           </p>
           <h1 className="text-3xl sm:text-4xl font-bold mb-3">PGD Catalogue</h1>
@@ -80,7 +81,7 @@ export function PGDCatalogueClient() {
           <div className="flex flex-col sm:flex-row gap-3">
             <Link
               href="/demo"
-              className="inline-flex items-center justify-center px-6 py-3 bg-teal-500 hover:bg-teal-600 text-white font-semibold rounded-lg transition-colors text-base"
+              className="inline-flex items-center justify-center px-6 py-3 bg-[color:var(--tenant-primary)]/100 hover:bg-[color:var(--tenant-primary)]/15 text-white font-semibold rounded-lg transition-colors text-base"
             >
               See a demo
             </Link>
@@ -113,10 +114,10 @@ export function PGDCatalogueClient() {
                 className={`px-3 py-1.5 text-sm rounded-full font-medium transition-colors ${
                   isActive
                     ? option === "Exclusives"
-                      ? "bg-teal-500 text-white"
+                      ? "bg-[color:var(--tenant-primary)]/100 text-white"
                       : "bg-navy-900 text-white"
                     : option === "Exclusives"
-                      ? "bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200"
+                      ? "bg-[color:var(--tenant-primary)]/10 text-[color:var(--tenant-primary)] hover:bg-[color:var(--tenant-primary)]/20 border border-[color:var(--tenant-primary)]/30"
                       : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
               >
@@ -155,7 +156,7 @@ export function PGDCatalogueClient() {
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link
               href="/demo"
-              className="px-7 py-3.5 bg-teal-500 hover:bg-teal-600 text-white font-semibold rounded-lg transition-colors text-lg"
+              className="px-7 py-3.5 bg-[color:var(--tenant-primary)]/100 hover:bg-[color:var(--tenant-primary)]/15 text-white font-semibold rounded-lg transition-colors text-lg"
             >
               See a demo
             </Link>
@@ -186,7 +187,7 @@ function PGDCard({ pgd }: { pgd: PGD }) {
           {pgd.category}
         </span>
         {pgd.isNew && (
-          <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-700">
+          <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-[color:var(--tenant-primary)]/15 text-[color:var(--tenant-primary)]">
             Exclusive
           </span>
         )}
@@ -216,16 +217,27 @@ function PGDCard({ pgd }: { pgd: PGD }) {
       <div className="mt-auto flex flex-col gap-2">
         <Link
           href={`/for-pharmacies/epgd/${pgd.id}`}
-          className="w-full text-center px-3 py-2 rounded-lg text-sm font-medium bg-teal-500 text-white hover:bg-teal-600 transition-colors"
+          className="w-full text-center px-3 py-2 rounded-lg text-sm font-medium bg-[color:var(--tenant-primary)]/100 text-white hover:bg-[color:var(--tenant-primary)]/15 transition-colors"
         >
           Open ePGD tool
         </Link>
-        <Link
-          href={`/contact?enquiry=pgd-document&service=${encodeURIComponent(pgd.title)}`}
-          className="w-full text-center px-3 py-2 rounded-lg text-sm font-medium bg-gray-50 text-navy-900 hover:bg-gray-100 border border-gray-200 transition-colors"
-        >
-          View PGD document
-        </Link>
+        {getPgdDocumentUrl(pgd.id) ? (
+          // The signed PGD PDF itself — this used to point at the contact
+          // page ("Let's Talk"), which read as a broken link to pharmacists
+          // wanting to review the clinical document (reported by Moin).
+          <a
+            href={getPgdDocumentUrl(pgd.id)!}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full text-center px-3 py-2 rounded-lg text-sm font-medium bg-gray-50 text-navy-900 hover:bg-gray-100 border border-gray-200 transition-colors"
+          >
+            View PGD document
+          </a>
+        ) : (
+          <span className="w-full text-center px-3 py-2 rounded-lg text-sm font-medium bg-gray-50 text-gray-400 border border-gray-200">
+            Document coming soon
+          </span>
+        )}
       </div>
     </div>
   );
