@@ -75,6 +75,19 @@ export default function MenACWYCertificatePage() {
 
   useEffect(() => {
     try {
+      // Primary: localStorage handoff (survives the `noopener` new tab —
+      // sessionStorage does not). Read once, then delete immediately so
+      // patient data doesn't persist; ignore payloads older than 5 minutes.
+      const rawLocal = localStorage.getItem("grh-menacwy-cert");
+      if (rawLocal) {
+        localStorage.removeItem("grh-menacwy-cert");
+        const parsed = JSON.parse(rawLocal) as { ts?: number; data?: CertData };
+        if (parsed?.data && typeof parsed.ts === "number" && Date.now() - parsed.ts < 5 * 60_000) {
+          setData(parsed.data);
+          return;
+        }
+      }
+      // Legacy fallback: sessionStorage (pre-fix payload shape).
       const raw = sessionStorage.getItem("grh-menacwy-cert");
       if (!raw) {
         setMissing(true);

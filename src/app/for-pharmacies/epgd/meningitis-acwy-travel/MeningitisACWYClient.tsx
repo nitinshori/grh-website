@@ -899,9 +899,17 @@ export function MeningitisACWYClient() {
                       pharmacyName: summary.pharmacyName,
                       pharmacyAddress: summary.pharmacyAddress,
                     };
-                    sessionStorage.setItem(
+                    // localStorage, not sessionStorage: the certificate opens
+                    // in a new tab with `noopener`, which severs the browsing
+                    // context — sessionStorage is NOT copied across, so the
+                    // certificate page came up empty ("no certificate is
+                    // produced", Nitin/Moin, 17 Jul 2026). localStorage is
+                    // shared across same-origin tabs; the certificate page
+                    // deletes the key immediately after reading and ignores
+                    // stale payloads, so PHI doesn't linger.
+                    localStorage.setItem(
                       "grh-menacwy-cert",
-                      JSON.stringify(certPayload),
+                      JSON.stringify({ ts: Date.now(), data: certPayload }),
                     );
                     window.open(
                       "/for-pharmacies/epgd/certificate/menacwy",
