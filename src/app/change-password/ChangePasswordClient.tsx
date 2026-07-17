@@ -1,8 +1,10 @@
 'use client'
 
 import { useState } from 'react'
+import { useSession } from 'next-auth/react'
 
 export function ChangePasswordClient() {
+  const { update } = useSession()
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -39,9 +41,28 @@ export function ChangePasswordClient() {
         setLoading(false)
         return
       }
-      // Force a fresh session pull so mustChangePassword flag clears.
-      // Easiest way: full page reload to the dashboard.
-      window.location.href = '/for-pharmacies/dashboard'
+      // Ask NextAuth to refresh the JWT (triggers our jwt callback with
+      // `trigger === 'update'`, which re-reads mustChangePassword from
+      // the DB — now false — so the middleware won't bounce us back here).
+      //
+      // IMPORTANT: pass an explicit payload. In next-auth v5 beta an
+      // argument-less update() often short-circuits without the server
+      // round-trip, leaving the cookie's mustChangePassword=true stale —
+      // which caused an infinite change-password redirect loop.
+      let refreshed = false
+      try {
+        await update({ mustChangePassword: false })
+        refreshed = true
+      } catch {
+        /* fall through to a full re-auth below */
+      }
+      if (refreshed) {
+        window.location.href = '/for-pharmacies/dashboard'
+      } else {
+        // Could not refresh the token in place — send them through a clean
+        // sign-in so a fresh (flag-cleared) cookie is minted. Avoids the loop.
+        window.location.href = '/login?callbackUrl=/for-pharmacies/dashboard'
+      }
     } catch {
       setError('Network error. Please try again.')
       setLoading(false)

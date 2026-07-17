@@ -29,13 +29,18 @@ function getCalendar(): calendar_v3.Calendar {
     )
   }
 
-  const oauth2Client: OAuth2Client = new google.auth.OAuth2(
+  // Cast away the OAuth2Client identity mismatch introduced by transient
+  // version differences between googleapis-common and google-auth-library
+  // (both export their own OAuth2Client class with a private redirectUri).
+  // Functionally identical at runtime — TypeScript just can't unify them.
+  const oauth2Client = new google.auth.OAuth2(
     clientId,
     clientSecret
-  )
+  ) as unknown as OAuth2Client
   oauth2Client.setCredentials({ refresh_token: refreshToken })
 
-  _calendar = google.calendar({ version: 'v3', auth: oauth2Client })
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  _calendar = google.calendar({ version: 'v3', auth: oauth2Client as any })
   return _calendar
 }
 

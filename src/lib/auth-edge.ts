@@ -32,6 +32,7 @@ export const authEdgeConfig = {
         token.pharmacyId = u.pharmacyId as string | null
         token.pharmacySlug = u.pharmacySlug as string | null
         token.mustChangePassword = !!u.mustChangePassword
+        token.authSource = (u.authSource as string | undefined) ?? 'grh'
       }
       return token
     },
@@ -42,6 +43,8 @@ export const authEdgeConfig = {
         session.user.pharmacyId = token.pharmacyId as string | null
         session.user.pharmacySlug = token.pharmacySlug as string | null
         session.user.mustChangePassword = !!token.mustChangePassword
+        ;(session.user as { authSource?: string }).authSource =
+          (token.authSource as string | undefined) ?? 'grh'
       }
       return session
     },
