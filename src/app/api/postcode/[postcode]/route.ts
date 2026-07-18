@@ -31,12 +31,49 @@ export async function GET(
   const clean = decodeURIComponent(postcode).replace(/[^A-Z0-9]/gi, '')
   if (!clean) return NextResponse.json({ valid: false, error: 'Empty postcode' }, { status: 400 })
 
-  // ── Tier 1: full PAF address list via getAddress.io ─────────────
-  // Uses the current Autocomplete API — the legacy /find/{postcode}
-  // endpoint has been retired and now 404s for every request (which
-  // surfaced as "Postcode not found" on valid postcodes, 17 Jul 2026).
-  // A postcode-only term with all=true returns every address at that
-  // postcode and counts as a single look-up.
+  // ── Tier 1a: full PAF address list via Ideal Postcodes ──────────
+  // Preferred provider (pay-as-you-go, no subscription). Set
+  // IDEAL_POSTCODES_API_KEY (starts "ak_") in Vercel to enable.
+  const ipKey = process.env.IDEAL_POSTCODES_API_KEY
+  if (ipKey) {
+    try {
+      const ipRes = await fetch(
+        `https://api.ideal-postcodes.co.uk/v1/postcodes/${encodeURIComponent(clean)}?api_key=${encodeURIComponent(ipKey)}`,
+        { next: { revalidate: 86400 } },
+      )
+      if (ipRes.ok) {
+        const data = (await ipRes.json()) as {
+          result?: Array<{ line_1?: string; line_2?: string; line_3?: string; post_town?: string; postcode?: string }>
+        }
+        const addresses = (data.result ?? [])
+          .map((a) =>
+            [a.line_1, a.line_2, a.line_3, a.post_town]
+              .map((s) => (s ?? '').trim())
+              .filter(Boolean)
+              .join(', '),
+          )
+          .filter(Boolean)
+        if (addresses.length > 0) {
+          return NextResponse.json({
+            valid: true,
+            postcode: data.result?.[0]?.postcode ?? formatPostcode(clean),
+            addresses,
+          })
+        }
+      }
+      if (ipRes.status === 404) {
+        // Ideal Postcodes 404 genuinely means "postcode does not exist".
+        return NextResponse.json({ valid: false, error: 'Postcode not found' }, { status: 404 })
+      }
+      // Bad key / quota / outage → fall through.
+    } catch {
+      // fall through
+    }
+  }
+
+  // ── Tier 1b: getAddress.io (legacy option, kept as fallback) ────
+  // Uses their current Autocomplete API — the old /find/{postcode}
+  // endpoint has been retired and 404s for every request.
   const gaKey = process.env.GETADDRESS_API_KEY
   if (gaKey) {
     try {
