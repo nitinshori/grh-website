@@ -32,35 +32,43 @@ export async function GET(
   if (!clean) return NextResponse.json({ valid: false, error: 'Empty postcode' }, { status: 400 })
 
   // ── Tier 1: full PAF address list via getAddress.io ─────────────
+  // Uses the current Autocomplete API — the legacy /find/{postcode}
+  // endpoint has been retired and now 404s for every request (which
+  // surfaced as "Postcode not found" on valid postcodes, 17 Jul 2026).
+  // A postcode-only term with all=true returns every address at that
+  // postcode and counts as a single look-up.
   const gaKey = process.env.GETADDRESS_API_KEY
   if (gaKey) {
     try {
       const gaRes = await fetch(
-        `https://api.getAddress.io/find/${encodeURIComponent(clean)}?api-key=${encodeURIComponent(gaKey)}&expand=false`,
+        `https://api.getAddress.io/autocomplete/${encodeURIComponent(clean)}?api-key=${encodeURIComponent(gaKey)}&all=true&template=${encodeURIComponent('{formatted_address}')}`,
         { next: { revalidate: 86400 } },
       )
       if (gaRes.ok) {
-        const data = (await gaRes.json()) as { addresses?: string[]; postcode?: string }
-        const addresses = (data.addresses ?? []).map((a) =>
-          a
-            .split(',')
-            .map((s) => s.trim())
-            .filter(Boolean)
-            .join(', '),
-        )
+        const data = (await gaRes.json()) as {
+          suggestions?: Array<{ address?: string; id?: string }>
+        }
+        const addresses = (data.suggestions ?? [])
+          .map((s) =>
+            (s.address ?? '')
+              .split(',')
+              .map((part) => part.trim())
+              .filter(Boolean)
+              .join(', '),
+          )
+          .filter(Boolean)
         if (addresses.length > 0) {
           return NextResponse.json({
             valid: true,
-            postcode: data.postcode ?? formatPostcode(clean),
+            postcode: formatPostcode(clean),
             addresses,
           })
         }
+        // No suggestions (unknown postcode) — fall through so the free
+        // lookup can still validate/fill the locality or say not-found.
       }
-      if (gaRes.status === 404) {
-        return NextResponse.json({ valid: false, error: 'Postcode not found' }, { status: 404 })
-      }
-      // Any other getAddress failure (quota, outage) falls through to the
-      // free locality lookup rather than breaking the form.
+      // Any other getAddress failure (bad key, quota, outage) falls
+      // through to the free locality lookup rather than breaking the form.
     } catch {
       // fall through to tier 2
     }
