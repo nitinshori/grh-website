@@ -22,7 +22,13 @@ export async function hasPharmacyPgdAccess(
     .select()
     .from(pharmacyPgds)
     .where(
-      and(eq(pharmacyPgds.pharmacyId, pharmacyId), eq(pharmacyPgds.pgdSlug, pgdSlug)),
+      and(
+        eq(pharmacyPgds.pharmacyId, pharmacyId),
+        eq(pharmacyPgds.pgdSlug, pgdSlug),
+        // Non-approved assignments exist only for the "Non approved PGDs"
+        // listing — they never grant tool/document access.
+        eq(pharmacyPgds.status, 'approved'),
+      ),
     )
     .limit(1);
 
@@ -33,7 +39,30 @@ export async function getPharmacyPgdSlugs(pharmacyId: string): Promise<string[]>
   const assignments = await db
     .select({ pgdSlug: pharmacyPgds.pgdSlug })
     .from(pharmacyPgds)
-    .where(eq(pharmacyPgds.pharmacyId, pharmacyId));
+    .where(
+      and(
+        eq(pharmacyPgds.pharmacyId, pharmacyId),
+        eq(pharmacyPgds.status, 'approved'),
+      ),
+    );
+
+  return assignments.map((a) => a.pgdSlug);
+}
+
+/** Slugs assigned to the pharmacy but NOT approved by its clinical lead —
+ *  shown on the dashboard's "Non approved PGDs" page only. */
+export async function getPharmacyNonApprovedSlugs(
+  pharmacyId: string,
+): Promise<string[]> {
+  const assignments = await db
+    .select({ pgdSlug: pharmacyPgds.pgdSlug })
+    .from(pharmacyPgds)
+    .where(
+      and(
+        eq(pharmacyPgds.pharmacyId, pharmacyId),
+        eq(pharmacyPgds.status, 'not_approved'),
+      ),
+    );
 
   return assignments.map((a) => a.pgdSlug);
 }

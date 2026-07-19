@@ -703,6 +703,14 @@ export default async function PharmacyDashboard() {
           <p className="text-xs text-gray-400 mt-3 text-center">
             These are the official written PGD documents for your assigned services. Print or save for offline use.
           </p>
+          <p className="text-xs text-center mt-2">
+            <Link
+              href="/for-pharmacies/dashboard/non-approved-pgds"
+              className="text-gray-400 hover:text-[color:var(--tenant-primary)] underline"
+            >
+              Platform PGDs not approved for your pharmacy
+            </Link>
+          </p>
         </div>
       )}
     </div>

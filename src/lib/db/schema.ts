@@ -108,6 +108,12 @@ export const pharmacyPgds = pgTable(
       .references(() => pharmacies.id, { onDelete: 'cascade' })
       .notNull(),
     pgdSlug: varchar('pgd_slug', { length: 255 }).notNull(),
+    // 'approved'      → live for the pharmacy: tool + documents usable.
+    // 'not_approved'  → listed on the pharmacy's "Non approved PGDs" page
+    //                   only; excluded from access checks and the dashboard.
+    //                   Added for PPH, where Jane's clinical lead approves a
+    //                   subset of the catalogue (19 Jul 2026).
+    status: varchar('status', { length: 16 }).default('approved').notNull(),
     assignedAt: timestamp('assigned_at').defaultNow().notNull(),
   },
   (table) => [
