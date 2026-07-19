@@ -4,6 +4,7 @@ import Link from "next/link";
 import { getModuleBySlug } from "@/data/training-modules";
 import { pgds as PGD_CATALOGUE, isPgdAccessibleByEmail } from "@/data/pgds";
 import { auth } from "@/lib/auth";
+import { getPharmacyPgdSlugs } from "@/lib/pgd-queries";
 import { ModulePlayer } from "./ModulePlayer";
 
 export async function generateMetadata({
@@ -38,6 +39,22 @@ export default async function TrainingModulePage({
     if (!session?.user) redirect("/login");
     if (!isPgdAccessibleByEmail(restrictedPgd, session.user.email)) {
       notFound();
+    }
+  }
+
+  // PGD-tied modules are only accessible when at least one of their PGDs is
+  // APPROVED for the viewer's pharmacy (mirrors the training list — deep
+  // links must not bypass a clinical lead's approval scope). General modules
+  // and pharmacy-less viewers (super_admin, reviewers) are unaffected.
+  if (module.pgdSlugs.length > 0) {
+    const session = await auth();
+    if (session?.user?.pharmacyId) {
+      const approved = new Set(
+        await getPharmacyPgdSlugs(session.user.pharmacyId),
+      );
+      if (!module.pgdSlugs.some((s) => approved.has(s))) {
+        notFound();
+      }
     }
   }
 

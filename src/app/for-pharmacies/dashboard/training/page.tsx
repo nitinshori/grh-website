@@ -8,6 +8,7 @@ import { eq, and, desc } from "drizzle-orm";
 import { modules } from "@/data/training-modules";
 import { pgds as PGD_CATALOGUE, isPgdAccessibleByEmail } from "@/data/pgds";
 import { isAppointmentsOnlyPharmacy } from "@/lib/access-pharmacies";
+import { getPharmacyPgdSlugs } from "@/lib/pgd-queries";
 
 export const metadata: Metadata = {
   title: "Training Modules",
@@ -88,12 +89,24 @@ export default async function TrainingIndexPage() {
   const restrictedPgdsBySlug = new Map(
     PGD_CATALOGUE.filter((p) => p.restrictedToEmails && p.restrictedToEmails.length > 0).map((p) => [p.id, p])
   );
+  // Training mirrors the pharmacy's APPROVED PGD list (approval status per
+  // pharmacy — e.g. Jane's signed-off subset at PPH). Modules tied to a PGD
+  // show only if at least one of its PGDs is approved for this pharmacy;
+  // general modules (no pgdSlugs) always show. Users without a pharmacy
+  // (super_admin, clinical reviewers) see everything.
+  const approvedSlugs = session.user.pharmacyId
+    ? new Set(await getPharmacyPgdSlugs(session.user.pharmacyId))
+    : null;
+
   const visibleModules = modules.filter((m) => {
     for (const pgdSlug of m.pgdSlugs) {
       const restricted = restrictedPgdsBySlug.get(pgdSlug);
       if (restricted && !isPgdAccessibleByEmail(restricted, userEmail)) {
         return false;
       }
+    }
+    if (approvedSlugs && m.pgdSlugs.length > 0) {
+      return m.pgdSlugs.some((s) => approvedSlugs.has(s));
     }
     return true;
   });
