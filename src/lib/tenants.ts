@@ -19,7 +19,7 @@
  * `getTenant()` to retrieve the active tenant config.
  */
 
-export type TenantSlug = 'grh' | 'hubrx' | 'hubrx-sandbox'
+export type TenantSlug = 'grh' | 'hubrx' | 'hubrx-sandbox' | 'moins'
 
 export interface TenantTheme {
   /** Primary brand colour — used for CTAs, links, accent elements */
@@ -194,12 +194,53 @@ const hubrxSandboxTenant: TenantConfig = {
   },
 }
 
+// ── Moin's Chemist tenant ────────────────────────────────────────
+// Branded back-end for Moin's Chemist & Wellbeing Centre, delivered the
+// same way as PPH/HubRx: migration 030 sets the pharmacy's auth_source
+// to 'moins', and the session-override in src/proxy.ts ("identity beats
+// hostname") then themes every dashboard/ePGD page for Moin's users —
+// no subdomain needed, though moins.getrealhealthpgd.co.uk is mapped
+// below if one is ever wanted. Direct email/password login (no SSO).
+// Palette sampled from the supplied logo: deep green ground, cream
+// lettering, gold-olive emblem.
+const moinsTenant: TenantConfig = {
+  slug: 'moins',
+  canonicalHost: 'getrealhealthpgd.co.uk',
+  displayName: "Moin's Chemist & Wellbeing Centre",
+  strapline: 'Patient Group Directions & private clinical services',
+  logo: {
+    src: '/logos/moins.png',
+    width: 672,
+    height: 206,
+    alt: "Moin's Chemist & Wellbeing Centre",
+  },
+  theme: {
+    primary: '#1b3c1e',      // deep bottle green (logo ground)
+    primaryHover: '#2a5230', // lighter green for hover states
+    textOnPrimary: '#f9fef1',
+    accent: '#9ca66f',       // gold-olive of the emblem
+    navBg: '#1b3c1e',
+    surface: '#FFFFFF',
+  },
+  sso: {
+    enabled: false,
+    secretEnvVar: '',
+    onboardingRedirect: '/for-pharmacies/dashboard/training',
+    dashboardRedirect: '/for-pharmacies/dashboard',
+  },
+  hideMarketing: true, // only relevant if the subdomain is ever activated
+  footerLegalEntity:
+    'Clinical service delivered by Get Real Health Limited (Company Number 12744898), an Independent Medical Agency registered with the Care Quality Commission and Healthcare Inspectorate Wales.',
+  showPoweredBy: true,
+}
+
 // ── Tenant lookup ────────────────────────────────────────────────
 
 const TENANTS: Record<TenantSlug, TenantConfig> = {
   grh: grhTenant,
   hubrx: hubrxTenant,
   'hubrx-sandbox': hubrxSandboxTenant,
+  moins: moinsTenant,
 }
 
 /**
@@ -214,6 +255,16 @@ const TENANTS: Record<TenantSlug, TenantConfig> = {
 export function tenantFromHost(host: string | null | undefined): TenantConfig {
   if (!host) return grhTenant
   const cleanHost = host.toLowerCase().split(':')[0].trim()
+
+  // Moin's Chemist — subdomain reserved; branding normally arrives via
+  // the session authSource override rather than the hostname.
+  if (
+    cleanHost === 'moins.getrealhealthpgd.co.uk' ||
+    cleanHost.startsWith('moins.localhost') ||
+    cleanHost.startsWith('moins.lvh.me')
+  ) {
+    return moinsTenant
+  }
 
   // HubRx sandbox — must be checked BEFORE the live hubrx test because
   // "hubrx-sandbox.localhost" would otherwise never match anything.
