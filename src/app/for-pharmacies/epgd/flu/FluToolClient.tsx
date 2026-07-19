@@ -30,6 +30,7 @@ import {
   validateAdvice,
 } from './lib/flu-validation';
 import { TextInput, Checkbox, SelectInput, NumberInput, TextArea } from '../shared/components/FormInputs';
+import { PostcodeLookup } from '../shared/components/PostcodeLookup';
 import { ProgressBar } from '../shared/components/ProgressBar';
 import Link from 'next/link';
 import { AlertBanner } from '../shared/components/AlertBanner';
@@ -142,6 +143,13 @@ gpOdsCode: '',
     setState((prev) => ({
       ...prev,
       patient: { ...prev.patient, lastName: value },
+    }));
+  }, []);
+
+  const handleAddressChange = useCallback((value: string): void => {
+    setState((prev) => ({
+      ...prev,
+      patient: { ...prev.patient, address: value },
     }));
   }, []);
 
@@ -747,6 +755,25 @@ gpOdsCode: '',
                 value={state.patient.phone}
                 onChange={handlePhoneChange}
                 placeholder="07700 900000"
+              />
+              <PostcodeLookup
+                onResolved={({ town, postcode }) => {
+                  const locality = [town, postcode].filter(Boolean).join(', ');
+                  handleAddressChange(
+                    state.patient.address?.trim()
+                      ? `${state.patient.address.trim()}, ${locality}`
+                      : locality,
+                  );
+                }}
+                onAddressSelected={({ address, postcode }) => {
+                  handleAddressChange([address, postcode].filter(Boolean).join(', '));
+                }}
+              />
+              <TextInput
+                label="Patient address"
+                value={state.patient.address}
+                onChange={handleAddressChange}
+                placeholder="123 High Street, Leeds"
               />
             </div>
           )}

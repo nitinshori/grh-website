@@ -19,6 +19,7 @@ import { validateStep } from "./lib/sti-validation";
 import { calculateAge } from "../shared/types";
 import { ProgressBar } from "../shared/components/ProgressBar";
 import { StepWrapper } from "../shared/components/StepWrapper";
+import { PostcodeLookup } from "../shared/components/PostcodeLookup";
 import type { ConsultationRecordData } from "../shared/hooks/useConsultationTracking";
 import { AlertBanner } from "../shared/components/AlertBanner";
 import { ConsentStep } from "../shared/steps/ConsentStep";
@@ -284,6 +285,32 @@ export default function STIClient() {
                 placeholder="07..."
               />
             </div>
+            <PostcodeLookup
+              onResolved={({ town, postcode }) => {
+                const locality = [town, postcode].filter(Boolean).join(", ");
+                const current = state.patient.address?.trim();
+                dispatch({
+                  type: "UPDATE_PATIENT",
+                  field: "address",
+                  value: current ? `${current}, ${locality}` : locality,
+                });
+              }}
+              onAddressSelected={({ address, postcode }) => {
+                dispatch({
+                  type: "UPDATE_PATIENT",
+                  field: "address",
+                  value: [address, postcode].filter(Boolean).join(", "),
+                });
+              }}
+            />
+            <TextInput
+              label="Patient address"
+              value={state.patient.address}
+              onChange={(v) =>
+                dispatch({ type: "UPDATE_PATIENT", field: "address", value: v })
+              }
+              placeholder="123 High Street, Leeds"
+            />
           </div>
         );
 

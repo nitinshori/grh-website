@@ -26,6 +26,7 @@ import { StepWrapper } from "../shared/components/StepWrapper";
 import type { ConsultationRecordData } from "../shared/hooks/useConsultationTracking";
 import { AlertBanner } from "../shared/components/AlertBanner";
 import { ConsentStep } from "../shared/steps/ConsentStep";
+import { PostcodeLookup } from "../shared/components/PostcodeLookup";
 import { PrEPSummaryReport } from "./components/PrEPSummaryReport";
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 import {
@@ -290,6 +291,32 @@ export default function PrEPClient() {
                 placeholder="07..."
               />
             </div>
+            <PostcodeLookup
+              onResolved={({ town, postcode }) => {
+                const locality = [town, postcode].filter(Boolean).join(", ");
+                const current = state.patient.address?.trim();
+                dispatch({
+                  type: "UPDATE_PATIENT",
+                  field: "address",
+                  value: current ? `${current}, ${locality}` : locality,
+                });
+              }}
+              onAddressSelected={({ address, postcode }) => {
+                dispatch({
+                  type: "UPDATE_PATIENT",
+                  field: "address",
+                  value: [address, postcode].filter(Boolean).join(", "),
+                });
+              }}
+            />
+            <TextInput
+              label="Patient address"
+              value={state.patient.address}
+              onChange={(v) =>
+                dispatch({ type: "UPDATE_PATIENT", field: "address", value: v })
+              }
+              placeholder="123 High Street, Leeds"
+            />
           </div>
         );
 
