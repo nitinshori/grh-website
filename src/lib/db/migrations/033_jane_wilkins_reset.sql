@@ -1,14 +1,15 @@
--- 033: restore access for Jane Wilkins (Janey), clinical lead at
--- Pharmacy Plus Health. Sets a temporary password (bcrypt, cost 12 —
--- Nitin passes it to her directly), forces a password change at first
--- login, and upgrades her to pharmacy_admin so her scoped clinical
--- sign-off register and the PPH admin views work. Same build-time
--- pattern as migrations 023/028/029. Idempotent by nature (UPDATE).
+-- 033: upgrade Jane Wilkins (Janey), clinical lead at Pharmacy Plus
+-- Health, to pharmacy_admin so her scoped clinical sign-off register
+-- and the PPH admin views work.
+--
+-- NOTE: an earlier version of this migration also reset her password.
+-- That was removed before it ever deployed — Jane recovered her own
+-- password herself (23 Jul 2026), so this migration deliberately does
+-- NOT touch password_hash or must_change_password. Idempotent.
 
 UPDATE users
-   SET password_hash = '$2b$12$sEFGVV6RUX4Xx13u8vATT.s23AY5NwGeIlDo9vQBqlvDrJj7EpIui',
-       must_change_password = true,
-       role = 'pharmacy_admin',
+   SET role = 'pharmacy_admin',
        is_active = true,
        updated_at = now()
- WHERE lower(email) = 'jane.wilkins@pharmacyplushealth.co.uk';
+ WHERE lower(email) = 'jane.wilkins@pharmacyplushealth.co.uk'
+   AND (role <> 'pharmacy_admin' OR is_active = false);
