@@ -114,7 +114,7 @@ export const TOPICS: Topic[] = [
     answer:
       "<p><strong>Dr Nitin Shori</strong> founded GRH — NHS GP partner and previously Medical Director of Pharmacy2U Online Doctor Service for 10+ years. He is the named clinician on every PGD.</p>" +
       "<p><strong>Chris Pilkington</strong> is Head Pharmacist — 30+ years in community pharmacy and independent prescribing; oversees implementation, training, and clinical governance.</p>" +
-      "<p><strong>Janey Tipping</strong> is Clinical Lead — sign-off on all clinical content.</p>",
+      "<p><strong>Jane Wilkins</strong> is Clinical Lead — sign-off on all clinical content.</p>",
   },
 
   // ── Pricing ─────────────────────────────────────────────────

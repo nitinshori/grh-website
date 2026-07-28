@@ -696,7 +696,7 @@ export function PharmacyDetailClient({ pharmacy: initialPharmacy }: PharmacyDeta
                                               onChange={(e) => {
                                                 const f = e.target.files?.[0]
                                                 if (f) {
-                                                  const signed = prompt('Signed by (e.g. "Janey Tipping, Sarah Passmore")', override.signedByNames ?? '') ?? ''
+                                                  const signed = prompt('Signed by (e.g. "Jane Wilkins, Sarah Passmore")', override.signedByNames ?? '') ?? ''
                                                   const notes = prompt('Notes (optional)', override.notes ?? '') ?? ''
                                                   handleOverrideUpload(pgd.slug, f, signed, notes)
                                                 }
@@ -719,7 +719,7 @@ export function PharmacyDetailClient({ pharmacy: initialPharmacy }: PharmacyDeta
                                           onChange={(e) => {
                                             const f = e.target.files?.[0]
                                             if (f) {
-                                              const signed = prompt('Signed by (e.g. "Janey Tipping, Sarah Passmore")') ?? ''
+                                              const signed = prompt('Signed by (e.g. "Jane Wilkins, Sarah Passmore")') ?? ''
                                               const notes = prompt('Notes (optional)') ?? ''
                                               handleOverrideUpload(pgd.slug, f, signed, notes)
                                             }

@@ -15,7 +15,7 @@ const VALID_SLUGS = new Set(ALL_PGDS.map((p) => p.slug))
 //   multipart/form-data:
 //     file:           PDF file
 //     pgdSlug:        slug
-//     signedByNames:  optional "Janey Tipping, Sarah Passmore"
+//     signedByNames:  optional "Jane Wilkins, Sarah Passmore"
 //     notes:          optional free text
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()

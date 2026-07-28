@@ -248,7 +248,7 @@ export function PgdDocumentsClient() {
                 type="text"
                 value={signedByNames}
                 onChange={(e) => setSignedByNames(e.target.value)}
-                placeholder="e.g. Janey Tipping, Sarah Passmore"
+                placeholder="e.g. Jane Wilkins, Sarah Passmore"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
               />
             </div>

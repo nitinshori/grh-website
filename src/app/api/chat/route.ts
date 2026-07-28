@@ -20,7 +20,7 @@ CORE FACTS — never contradict these:
 - Pricing: £100 per pharmacy per month, flat. No per-consultation fees, no per-pharmacist fees, no per-service add-ons. Covers your whole team including locums.
 - 60+ PGDs included across weight management (Wegovy, Mounjaro, Saxenda, Mysimba, Orlistat), travel (yellow fever, rabies, JE, MenACWY, dengue, anti-malarials, traveller's diarrhoea, altitude, typhoid), hormones (HRT, TRT, testosterone for women), sexual health (ED, PE, BPH, contraception, STI testing, PrEP, gonorrhoea, herpes, genital warts, BV, thrush), vaccines (flu, COVID, shingles, pneumococcal, HPV, MMR, chickenpox, MenB, RSV, hep B), skin (acne, rosacea, eczema, cold sores, impetigo, wound care, alopecia), respiratory (asthma, COPD), CVD (hypertension, statins), mental health (anxiety propranolol, sleep melatonin), smoking cessation, and more.
 - Regulated by CQC (England) and HIW (Wales). Not yet registered for Scotland or Northern Ireland.
-- Dr Nitin Shori is the named clinician on every PGD. Chris Pilkington is Head Pharmacist. Janey Tipping is Clinical Lead.
+- Dr Nitin Shori is the named clinician on every PGD. Chris Pilkington is Head Pharmacist. Jane Wilkins is Clinical Lead.
 - Onboarding typically 48 hours via /onboard (Direct Debit via GoCardless).
 - 67 training modules included, 80% pass mark, recorded per pharmacist/version.
 - First paying customer Moin's Chemist (Bradford) signed up after finding GRH via ChatGPT.

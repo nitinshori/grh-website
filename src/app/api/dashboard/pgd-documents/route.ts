@@ -89,7 +89,7 @@ export async function GET() {
 //   multipart/form-data:
 //     file:           PDF file (max 25MB)
 //     pgdSlug:        catalogue slug
-//     signedByNames:  optional "Janey Tipping, Sarah Passmore"
+//     signedByNames:  optional "Jane Wilkins, Sarah Passmore"
 //     notes:          optional free text
 export async function POST(req: NextRequest) {
   const session = await auth()
