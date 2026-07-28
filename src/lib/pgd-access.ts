@@ -64,7 +64,11 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
   { slug: 'ear-infection', title: 'Acute Otitis Media', subtitle: 'Amoxicillin', category: 'Acute & Infection' },
   // eye-infections removed from public catalogue — chloramphenicol OTC (Apr 2026)
   { slug: 'threadworms', title: 'Threadworms', subtitle: 'Mebendazole', category: 'Acute & Infection' },
-  { slug: 'chickenpox', title: 'Chickenpox', subtitle: 'Aciclovir (if indicated)', category: 'Acute & Infection' },
+  // Corrected 28 Jul 2026: this PGD is the Varivax/Varilrix VACCINATION
+  // (matching the signed master document) — an aciclovir label from an
+  // early draft had survived here and mis-listed it under Acute & Infection
+  // (reported by Jane Wilkins, PPH).
+  { slug: 'chickenpox', title: 'Chickenpox (Varicella) Vaccine', subtitle: 'Varivax / Varilrix', category: 'Vaccines' },
 
   // Respiratory
   { slug: 'asthma-rescue', title: 'Asthma Rescue', subtitle: 'Salbutamol', category: 'Respiratory' },
