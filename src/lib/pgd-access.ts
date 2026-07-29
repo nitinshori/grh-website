@@ -81,6 +81,7 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
   { slug: 'asthma-rescue', title: 'Asthma Rescue', subtitle: 'Salbutamol', category: 'Respiratory' },
   { slug: 'copd', title: 'COPD', subtitle: 'Rescue Inhalers & Monitoring', category: 'Respiratory' },
   { slug: 'smoking-nrt', title: 'Smoking Cessation (NRT)', subtitle: 'Patches / Gum / Lozenges', category: 'Respiratory' },
+  { slug: 'chest-service', title: 'Chest Infection Service', subtitle: 'Acute Bacterial Bronchitis (Doxycycline / Amoxicillin / Clarithromycin)', category: 'Respiratory' },
 
   // Cardiovascular
   { slug: 'hypertension', title: 'Hypertension Monitoring', subtitle: 'Ambulatory BP Monitoring', category: 'Cardiovascular' },
@@ -94,6 +95,7 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
   // adhd-monitoring removed from public catalogue — clinical review (Apr 2026)
   { slug: 'anxiety-propranolol', title: 'Situational Anxiety', subtitle: 'Propranolol', category: 'Mental Health & Wellbeing' },
   { slug: 'hayfever', title: 'Hayfever (Severe)', subtitle: 'Fexofenadine / Mometasone', category: 'Mental Health & Wellbeing' },
+  { slug: 'b12-injection', title: 'Vitamin B12 Injection', subtitle: 'Hydroxocobalamin (B12 Deficiency)', category: 'Mental Health & Wellbeing' },
 
   // Vaccines
   { slug: 'flu', title: 'Flu Vaccination', subtitle: 'Seasonal Influenza', category: 'Vaccines' },
