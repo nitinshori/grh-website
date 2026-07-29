@@ -8,6 +8,8 @@ import { db } from '@/lib/db'
 import { clinicalSignoffs, pharmacyPgdDocuments, pharmacies } from '@/lib/db/schema'
 import { ALL_PGDS } from '@/lib/pgd-access'
 import { PGD_MASTER_FILES } from '@/lib/pgd-document-manifest'
+import { getPharmacyPgdSlugs, getPharmacyNonApprovedSlugs } from '@/lib/pgd-queries'
+import { getPgdDocumentUrl } from '@/lib/pgd-documents'
 import { modules } from '@/data/training-modules'
 
 export const metadata = { title: 'Clinical Sign-off | Get Real Health' }
@@ -180,31 +182,61 @@ export default async function ClinicalSignOffPage() {
     if (!latest.has(k)) latest.set(k, { signedByName: r.signedByName, signedAt: r.signedAt })
   }
 
-  // ── Pharmacy clinical lead: simple list of their own uploaded docs ──
+  // ── Pharmacy clinical lead: every approved PGD (pharmacy-specific
+  // document where one exists, otherwise the GRH master) is signable;
+  // non-approved PGDs are listed below for review only, moving up to
+  // the signable list as they are amended and approved over time.
   if (viewer.kind === 'pharmacy') {
     const pgdBySlug = new Map(ALL_PGDS.map((p) => [p.slug, p]))
-    const docs = await db
-      .select({
-        pgdSlug: pharmacyPgdDocuments.pgdSlug,
-        documentUrl: pharmacyPgdDocuments.documentUrl,
-        filename: pharmacyPgdDocuments.filename,
-        version: pharmacyPgdDocuments.version,
-      })
-      .from(pharmacyPgdDocuments)
-      .where(
-        and(
-          eq(pharmacyPgdDocuments.pharmacyId, viewer.pharmacyId),
-          eq(pharmacyPgdDocuments.isCurrent, true),
-        ),
-      )
-      .orderBy(desc(pharmacyPgdDocuments.uploadedAt))
-    const [ph] = await db
-      .select({ name: pharmacies.name })
-      .from(pharmacies)
-      .where(eq(pharmacies.id, viewer.pharmacyId))
-      .limit(1)
-    const pharmacyName = ph?.name ?? 'Your pharmacy'
-    const done = docs.filter((d) => latest.has(`pgd_document:${d.pgdSlug}`)).length
+    const [approvedSlugs, nonApprovedSlugs, docs, phRows] = await Promise.all([
+      getPharmacyPgdSlugs(viewer.pharmacyId),
+      getPharmacyNonApprovedSlugs(viewer.pharmacyId),
+      db
+        .select({
+          pgdSlug: pharmacyPgdDocuments.pgdSlug,
+          documentUrl: pharmacyPgdDocuments.documentUrl,
+          filename: pharmacyPgdDocuments.filename,
+          version: pharmacyPgdDocuments.version,
+        })
+        .from(pharmacyPgdDocuments)
+        .where(
+          and(
+            eq(pharmacyPgdDocuments.pharmacyId, viewer.pharmacyId),
+            eq(pharmacyPgdDocuments.isCurrent, true),
+          ),
+        )
+        .orderBy(desc(pharmacyPgdDocuments.uploadedAt)),
+      db
+        .select({ name: pharmacies.name })
+        .from(pharmacies)
+        .where(eq(pharmacies.id, viewer.pharmacyId))
+        .limit(1),
+    ])
+    const pharmacyName = phRows[0]?.name ?? 'Your pharmacy'
+    const ownDocBySlug = new Map<string, (typeof docs)[number]>()
+    for (const d of docs) if (!ownDocBySlug.has(d.pgdSlug)) ownDocBySlug.set(d.pgdSlug, d)
+
+    const byTitle = (a: string, b: string) =>
+      (pgdBySlug.get(a)?.title ?? a).localeCompare(pgdBySlug.get(b)?.title ?? b)
+
+    const approvedRows = [...approvedSlugs].sort(byTitle).map((slug) => {
+      const own = ownDocBySlug.get(slug)
+      return {
+        slug,
+        title: pgdBySlug.get(slug)?.title ?? slug,
+        subtitle: pgdBySlug.get(slug)?.subtitle ?? '',
+        viewHref: own?.documentUrl ?? getPgdDocumentUrl(slug),
+        version: own ? `v${own.version}` : 'GRH master',
+      }
+    })
+    const nonApprovedRows = [...nonApprovedSlugs].sort(byTitle).map((slug) => ({
+      slug,
+      title: pgdBySlug.get(slug)?.title ?? slug,
+      subtitle: pgdBySlug.get(slug)?.subtitle ?? '',
+      viewHref: ownDocBySlug.get(slug)?.documentUrl ?? getPgdDocumentUrl(slug),
+    }))
+    const signable = approvedRows.filter((r) => r.viewHref)
+    const done = signable.filter((r) => latest.has(`pgd_document:${r.slug}`)).length
 
     return (
       <div className="min-h-screen bg-gray-50">
@@ -215,37 +247,75 @@ export default async function ClinicalSignOffPage() {
             </p>
             <h1 className="text-2xl font-bold text-navy-900">Clinical Sign-off Register</h1>
             <p className="text-sm text-gray-600 mt-2">
-              Review and digitally sign off {pharmacyName}&apos;s PGD documents —{' '}
-              {done} of {docs.length} signed off. Signing as{' '}
+              Review and digitally sign off every PGD approved for {pharmacyName} —{' '}
+              {done} of {signable.length} signed off. Signing as{' '}
               <span className="font-semibold">{session.user.name ?? session.user.email}</span>{' '}
               ({viewer.roleLabel}).
             </p>
           </header>
-          <div className="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100">
-            {docs.length === 0 && (
+
+          <h2 className="text-sm font-bold text-navy-900 mb-2">
+            Approved PGDs ({approvedRows.length})
+          </h2>
+          <div className="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100 mb-10">
+            {approvedRows.length === 0 && (
               <p className="px-4 py-6 text-sm text-gray-500">
-                No PGD documents uploaded for your pharmacy yet.
+                No PGDs approved for your pharmacy yet.
               </p>
             )}
-            {docs.map((d) => {
-              const p = pgdBySlug.get(d.pgdSlug)
-              return (
-                <div key={d.pgdSlug} className="px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-gray-900">{p?.title ?? d.pgdSlug}</p>
-                    <p className="text-xs text-gray-500">{p?.subtitle ?? d.filename ?? ''} · v{d.version}</p>
-                  </div>
+            {approvedRows.map((r) => (
+              <div key={r.slug} className="px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-gray-900">{r.title}</p>
+                  <p className="text-xs text-gray-500">{r.subtitle} · {r.version}</p>
+                </div>
+                {r.viewHref ? (
                   <Cell
                     itemType="pgd_document"
-                    slug={d.pgdSlug}
-                    title={p?.title ?? d.pgdSlug}
-                    version={`v${d.version}`}
-                    viewHref={d.documentUrl}
+                    slug={r.slug}
+                    title={r.title}
+                    version={r.version}
+                    viewHref={r.viewHref}
                     latest={latest}
                   />
+                ) : (
+                  <span className="text-[11px] text-gray-400">Document to follow</span>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <h2 className="text-sm font-bold text-navy-900 mb-1">
+            Non approved PGDs ({nonApprovedRows.length})
+          </h2>
+          <p className="text-xs text-gray-500 mb-2">
+            Review only — not yet approved for {pharmacyName}. These become
+            signable here once amended and approved.
+          </p>
+          <div className="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100">
+            {nonApprovedRows.length === 0 && (
+              <p className="px-4 py-6 text-sm text-gray-500">None.</p>
+            )}
+            {nonApprovedRows.map((r) => (
+              <div key={r.slug} className="px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-gray-700">{r.title}</p>
+                  <p className="text-xs text-gray-500">{r.subtitle}</p>
                 </div>
-              )
-            })}
+                {r.viewHref ? (
+                  <a
+                    href={r.viewHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] font-semibold text-teal-700 hover:underline"
+                  >
+                    Review →
+                  </a>
+                ) : (
+                  <span className="text-[11px] text-gray-400">Document to follow</span>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </div>
