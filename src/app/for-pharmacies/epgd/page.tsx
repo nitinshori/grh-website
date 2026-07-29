@@ -48,6 +48,7 @@ const epgds = [
   { slug: 'acne', title: 'Acne Treatment', subtitle: 'Topical Retinoids / Antibiotics', category: 'Skin', color: 'bg-amber-500' },
   { slug: 'cold-sores', title: 'Cold Sores', subtitle: 'Aciclovir Cream / Oral', category: 'Skin', color: 'bg-amber-500' },
   { slug: 'eczema', title: 'Eczema Management', subtitle: 'Emollients & Topical Steroids', category: 'Skin', color: 'bg-amber-500' },
+  { slug: 'skin-infection', title: 'Skin Infection', subtitle: 'Flucloxacillin / Clarithromycin / Doxycycline', category: 'Skin', color: 'bg-orange-600' },
   { slug: 'impetigo', title: 'Impetigo', subtitle: 'Fusidic Acid & Flucloxacillin', category: 'Skin', color: 'bg-amber-500' },
   { slug: 'rosacea', title: 'Rosacea', subtitle: 'Ivermectin / Metronidazole Topical', category: 'Skin', color: 'bg-amber-500' },
   { slug: 'wound-care', title: 'Wound Care & Closure', subtitle: 'Assessment, Closure & Dressings', category: 'Skin', color: 'bg-amber-500' },
