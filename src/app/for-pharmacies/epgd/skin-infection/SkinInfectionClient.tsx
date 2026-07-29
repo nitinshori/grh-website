@@ -74,16 +74,27 @@ function reducer(
     case "PREV_STEP":
       newState.currentStep = Math.max(newState.currentStep - 1, 0);
       break;
-    case "RESET":
-      return createInitialConsultationState();
+    case "RESET": {
+      const init = createInitialConsultationState();
+      if (state.assessment.infectionType === "cellulitis") init.assessment.infectionType = "cellulitis";
+      return init;
+    }
     default:
       break;
   }
   return newState;
 }
 
-export default function SkinInfectionClient() {
-  const [state, dispatch] = useReducer(reducer, createInitialConsultationState());
+export default function SkinInfectionClient({ variant = "skin-infection" }: { variant?: "skin-infection" | "cellulitis" }) {
+  const [state, dispatch] = useReducer(
+    reducer,
+    variant,
+    (v) => {
+      const init = createInitialConsultationState();
+      if (v === "cellulitis") init.assessment.infectionType = "cellulitis";
+      return init;
+    },
+  );
   const __pharmProfile = usePharmacistProfile();
   useEffect(() => {
     if (!__pharmProfile) return;

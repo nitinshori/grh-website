@@ -54,6 +54,10 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
   // Built from the PPH-signed PGD (J. Wilkins), 29 Jul 2026 — assigned to
   // PPH only via migration 036; no GRH master document yet.
   { slug: 'skin-infection', title: 'Skin Infection', subtitle: 'Flucloxacillin / Clarithromycin / Doxycycline', category: 'Skin' },
+  { slug: 'cellulitis', title: 'Cellulitis', subtitle: 'Flucloxacillin / Clarithromycin / Doxycycline', category: 'Skin' },
+  { slug: 'fungal-infection', title: 'Fungal Skin Infection', subtitle: 'Miconazole / Trimovate', category: 'Skin' },
+  { slug: 'psoriasis', title: 'Psoriasis', subtitle: 'Calcipotriol / Betamethasone', category: 'Skin' },
+  { slug: 'period-pain', title: 'Period Pain', subtitle: "Naproxen / Mefenamic Acid", category: "Women's Health" },
   { slug: 'rosacea', title: 'Rosacea', subtitle: 'Ivermectin / Doxycycline', category: 'Skin' },
   { slug: 'eczema', title: 'Eczema', subtitle: 'Betamethasone / Elidel', category: 'Skin' },
   { slug: 'impetigo', title: 'Impetigo', subtitle: 'Fusidic Acid / Flucloxacillin', category: 'Skin' },
