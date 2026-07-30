@@ -23,23 +23,7 @@ export interface PgdDraft {
   raisedBy: string
 }
 
-export const PGD_DRAFTS: PgdDraft[] = [
-  {
-    slug: 'flu',
-    title: 'Seasonal Influenza, 2026/27 season',
-    version: 'v002 draft',
-    url: '/pgd-documents/drafts/flu-2026-27-draft.pdf',
-    summary:
-      'Multi-vaccine reissue: IIVc from 2 years, aIIV from 50 years, IIVr from 18 years, IIVe 18 to 64 years. Replaces the Fluad-only v001. Adds 2026/27 strains for both egg-based and cell culture vaccines, egg allergy handling, and paediatric provisions including the two dose schedule under 9 years.',
-    raisedBy: 'Jane Wilkins (PPH), 30 Jul 2026',
-  },
-  {
-    slug: 'covid-booster',
-    title: 'COVID-19 Vaccination, 2026/27 season',
-    version: 'v002 draft',
-    url: '/pgd-documents/drafts/covid-2026-27-draft.pdf',
-    summary:
-      'Reissue for autumn 2026: Comirnaty as vaccine of choice with Spikevax and Nuvaxovid as stock alternatives, 12 years and over unchanged. Removes expired KP.2 and LP.8.1 wording, adds the 3 month minimum interval, myocarditis and pericarditis exclusion, and NHS entitlement wording.',
-    raisedBy: 'Jane Wilkins (PPH), 30 Jul 2026',
-  },
-]
+// Empty: the flu and COVID 2026/27 drafts were agreed and signed on
+// 30 Jul 2026 and are now the live masters (flu-2026-27.pdf and
+// covid-2026-27.pdf).
+export const PGD_DRAFTS: PgdDraft[] = []

@@ -94,7 +94,7 @@ async function signOff(formData: FormData) {
   revalidatePath('/clinical-sign-off')
 }
 
-type Latest = Map<string, { signedByName: string; signedAt: Date }>
+type Latest = Map<string, { signedByName: string; signedAt: Date; itemVersion: string | null }>
 
 // One sign-off cell: a Review link + Sign-off button, or a signed tick, or
 // a dash when the aspect doesn't exist for this PGD.
@@ -117,6 +117,11 @@ function Cell({
     return <span className="text-xs text-gray-300">—</span>
   }
   const s = latest.get(`${itemType}:${slug}`)
+  // A sign-off only stands for the version that was signed. Where the item
+  // has since been reissued (new document version), the previous signature
+  // is shown but the item is presented for re-signing.
+  const superseded =
+    !!s && !!version && !!s.itemVersion && s.itemVersion !== version
   return (
     <div className="flex flex-col items-start gap-1">
       <a
@@ -127,7 +132,13 @@ function Cell({
       >
         Review →
       </a>
-      {s ? (
+      {s && superseded && (
+        <span className="text-[10px] text-amber-700 leading-tight">
+          Updated since {s.signedByName.split(' ')[0]} signed{' '}
+          {s.signedAt.toISOString().slice(0, 10)}
+        </span>
+      )}
+      {s && !superseded ? (
         <span className="text-[11px] font-semibold px-2 py-1 rounded-md bg-emerald-50 text-emerald-700 leading-tight">
           ✓ {s.signedByName.split(' ')[0]} · {s.signedAt.toISOString().slice(0, 10)}
         </span>
@@ -172,6 +183,7 @@ export default async function ClinicalSignOffPage() {
       itemSlug: clinicalSignoffs.itemSlug,
       signedByName: clinicalSignoffs.signedByName,
       signedAt: clinicalSignoffs.signedAt,
+      itemVersion: clinicalSignoffs.itemVersion,
     })
     .from(clinicalSignoffs)
     .where(eq(clinicalSignoffs.scope, viewer.scope))
@@ -180,7 +192,8 @@ export default async function ClinicalSignOffPage() {
   const latest: Latest = new Map()
   for (const r of rows) {
     const k = `${r.itemType}:${r.itemSlug}`
-    if (!latest.has(k)) latest.set(k, { signedByName: r.signedByName, signedAt: r.signedAt })
+    if (!latest.has(k))
+      latest.set(k, { signedByName: r.signedByName, signedAt: r.signedAt, itemVersion: r.itemVersion })
   }
 
   // ── Pharmacy clinical lead: every approved PGD (pharmacy-specific

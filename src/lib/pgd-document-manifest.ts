@@ -17,7 +17,8 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   "chickenpox": "chickenpox.pdf",
   "cold-sores": "cold-sores.pdf",
   "copd": "copd.pdf",
-  "covid-booster": "covid-booster.pdf",
+  // 2026/27 season, signed 30 Jul 2026 (supersedes covid-booster.pdf)
+  "covid-booster": "covid-2026-27.pdf",
   "dengue": "dengue.pdf",
   "dental-bridging": "dental-bridging.pdf",
   "diabetes-monitoring": "diabetes-monitoring.pdf",
@@ -26,7 +27,8 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   "ed": "ed.pdf",
   "emergency-contraception": "emergency-contraception.pdf",
   "eye-infections": "eye-infections.pdf",
-  "flu": "flu.pdf",
+  // 2026/27 season, signed 30 Jul 2026 (supersedes flu.pdf)
+  "flu": "flu-2026-27.pdf",
   "genital-warts": "genital-warts.pdf",
   "glp1-monitoring": "glp1-monitoring.pdf",
   "gonorrhoea-treatment": "gonorrhoea-treatment.pdf",
