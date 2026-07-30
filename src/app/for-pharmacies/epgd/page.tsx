@@ -103,6 +103,8 @@ const epgds = [
   { slug: 'travellers-diarrhoea', title: "Travellers' Diarrhoea", subtitle: 'Ciprofloxacin / Loperamide', category: 'Travel Health', color: 'bg-indigo-500' },
   { slug: 'dengue', title: 'Dengue Vaccine', subtitle: 'Qdenga (TAK-003)', category: 'Travel Health', color: 'bg-indigo-500' },
   { slug: 'rabies', title: 'Rabies Vaccine', subtitle: 'Pre-Exposure Prophylaxis', category: 'Travel Health', color: 'bg-indigo-500' },
+  { slug: 'tetanus', title: 'Tetanus, Diphtheria and Polio', subtitle: 'Td/IPV (Revaxis), 10 years and over', category: 'Travel Health', color: 'bg-indigo-600' },
+  { slug: 'junior-travel', title: 'Junior Travel Vaccines', subtitle: 'Paediatric travel vaccines, 12 months to 17 years', category: 'Travel Health', color: 'bg-indigo-700' },
   { slug: 'japanese-encephalitis', title: 'Japanese Encephalitis', subtitle: 'Ixiaro Vaccine', category: 'Travel Health', color: 'bg-indigo-500' },
   { slug: 'meningitis-acwy-travel', title: 'Meningitis ACWY (Travel)', subtitle: 'Nimenrix / MenQuadfi', category: 'Travel Health', color: 'bg-indigo-500' },
   { slug: 'hep-ab-travel', title: 'Hepatitis A/B (Travel)', subtitle: 'Twinrix / Havrix / Engerix-B', category: 'Travel Health', color: 'bg-indigo-500' },
