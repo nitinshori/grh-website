@@ -10,6 +10,7 @@ import { ALL_PGDS } from '@/lib/pgd-access'
 import { PGD_MASTER_FILES } from '@/lib/pgd-document-manifest'
 import { getPharmacyPgdSlugs, getPharmacyNonApprovedSlugs } from '@/lib/pgd-queries'
 import { getPgdDocumentUrl } from '@/lib/pgd-documents'
+import { PGD_DRAFTS } from '@/lib/pgd-drafts'
 import { modules } from '@/data/training-modules'
 
 export const metadata = { title: 'Clinical Sign-off | Get Real Health' }
@@ -437,6 +438,42 @@ export default async function ClinicalSignOffPage() {
             </tbody>
           </table>
         </div>
+
+        {PGD_DRAFTS.length > 0 && (
+          <section className="mt-10">
+            <h2 className="text-lg font-bold text-navy-900 mb-2">
+              Drafts awaiting review ({PGD_DRAFTS.length})
+            </h2>
+            <p className="text-xs text-gray-500 mb-3">
+              Unsigned drafts, for review by Nitin and Chris only. These are not
+              published to any pharmacy and cannot be worked to until signed.
+            </p>
+            <div className="bg-white border border-amber-300 rounded-xl divide-y divide-amber-100">
+              {PGD_DRAFTS.map((d) => (
+                <div key={d.url} className="px-4 py-3 flex flex-wrap items-start gap-x-4 gap-y-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-gray-900">
+                      {d.title}{' '}
+                      <span className="ml-1 text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">
+                        {d.version}
+                      </span>
+                    </p>
+                    <p className="text-xs text-gray-600 mt-1">{d.summary}</p>
+                    <p className="text-[11px] text-gray-400 mt-1">Raised by {d.raisedBy}</p>
+                  </div>
+                  <a
+                    href={d.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] font-semibold text-teal-700 hover:underline whitespace-nowrap"
+                  >
+                    Review draft →
+                  </a>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {generalModules.length > 0 && (
           <section className="mt-10">
