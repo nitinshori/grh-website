@@ -5,6 +5,10 @@ import { ProgressBar } from "../shared/components/ProgressBar"
 import { StepWrapper } from "../shared/components/StepWrapper"
 import type { ConsultationRecordData } from "../shared/hooks/useConsultationTracking"
 import { PatientDetailsStep } from "../shared/steps/PatientDetailsStep"
+import {
+  usePreviousWeightConsultation,
+  describePrevious,
+} from "../shared/hooks/usePreviousWeightConsultation"
 import { ConsentStep } from "../shared/steps/ConsentStep"
 import { TextInput, TextArea, Checkbox } from "../shared/components/FormInputs"
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile"
@@ -42,6 +46,7 @@ type Decision = "" | "continue" | "step-up" | "hold" | "step-down" | "stop" | "r
 
 export function GLP1MonitoringClient() {
   const [currentStep, setCurrentStep] = useState(0)
+  const { previous, lookup: lookupPrevious } = usePreviousWeightConsultation()
 
   const [state, setState] = useState({
     patient: {
@@ -307,16 +312,73 @@ export function GLP1MonitoringClient() {
         getConsultationData={getConsultationData}
       >
         {currentStep === 0 && (
-          <PatientDetailsStep
-            patient={state.patient}
-            onChange={(field, value) =>
-              setState((prev) => ({
-                ...prev,
-                patient: { ...prev.patient, [field]: value },
-              }))
-            }
-            requireAdult={true}
-          />
+          <div className="space-y-4">
+            <PatientDetailsStep
+              patient={state.patient}
+              onChange={(field, value) =>
+                setState((prev) => ({
+                  ...prev,
+                  patient: { ...prev.patient, [field]: value },
+                }))
+              }
+              requireAdult={true}
+              onReturningPatient={(p) =>
+                lookupPrevious(p, (prev) => {
+                  // Carry forward what does not change or is already on
+                  // file. Today's weight is deliberately left blank: it
+                  // must be measured at this visit.
+                  setState((s) => ({
+                    ...s,
+                    treatment: {
+                      ...s.treatment,
+                      product: (prev.product ?? s.treatment.product) as typeof s.treatment.product,
+                      currentMounjaroDose:
+                        prev.pgdSlug === "mounjaro" && prev.dose
+                          ? (prev.dose as typeof s.treatment.currentMounjaroDose)
+                          : s.treatment.currentMounjaroDose,
+                      currentWegovyDose:
+                        prev.pgdSlug === "wegovy" && prev.dose
+                          ? (prev.dose as typeof s.treatment.currentWegovyDose)
+                          : s.treatment.currentWegovyDose,
+                      currentWegovyOralDose:
+                        prev.pgdSlug === "wegovy-oral" && prev.dose
+                          ? (prev.dose as typeof s.treatment.currentWegovyOralDose)
+                          : s.treatment.currentWegovyOralDose,
+                    },
+                    progress: {
+                      ...s.progress,
+                      heightCm:
+                        prev.heightCm !== null
+                          ? String(prev.heightCm)
+                          : s.progress.heightCm,
+                      baselineWeightKg:
+                        prev.baselineWeightKg !== null
+                          ? String(prev.baselineWeightKg)
+                          : s.progress.baselineWeightKg,
+                    },
+                  }))
+                })
+              }
+            />
+            {previous && (
+              <div className="p-4 rounded-lg border border-[color:var(--tenant-primary)]/30 bg-[color:var(--tenant-primary)]/10 text-sm">
+                <p className="font-semibold">
+                  Carried forward from {previous.consultationDate}
+                </p>
+                <p className="mt-1">
+                  {describePrevious(previous)}. Height and baseline weight have
+                  been filled in for you. Record today&apos;s weight on the
+                  progress step.
+                </p>
+                <p className="text-xs text-gray-600 mt-1">
+                  {previous.consultationCount} previous weight management
+                  consultation
+                  {previous.consultationCount === 1 ? "" : "s"} on file. Check
+                  these values with the patient before relying on them.
+                </p>
+              </div>
+            )}
+          </div>
         )}
 
         {currentStep === 1 && (

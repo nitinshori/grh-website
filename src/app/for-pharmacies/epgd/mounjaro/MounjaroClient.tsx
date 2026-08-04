@@ -23,6 +23,10 @@ import { ProgressBar } from "../shared/components/ProgressBar";
 import { StepWrapper } from "../shared/components/StepWrapper";
 import { AlertBanner } from "../shared/components/AlertBanner";
 import { PatientDetailsStep } from "../shared/steps/PatientDetailsStep";
+import {
+  usePreviousWeightConsultation,
+  describePrevious,
+} from "../shared/hooks/usePreviousWeightConsultation";
 import { ConsentStep } from "../shared/steps/ConsentStep";
 import {
   TextInput,
@@ -138,6 +142,7 @@ function reducer(state: MounjaroConsultationState, action: MounjaroAction): Moun
 
 export default function MounjaroClient() {
   const [state, dispatch] = useReducer(reducer, createInitialConsultationState());
+  const { previous, lookup: lookupPrevious } = usePreviousWeightConsultation();
   // Auto-fill pharmacist details from logged-in user. Refires when fields
   // are empty (e.g. after "New Consultation"), so subsequent patients fill too.
   const __pharmProfile = usePharmacistProfile();
@@ -252,12 +257,52 @@ export default function MounjaroClient() {
             canProceed={canProceed}
             validationError={validationError}
           >
-            <PatientDetailsStep
-              patient={state.patient}
-              onChange={(field, value) =>
-                dispatch({ type: "UPDATE_PATIENT", field, value })
-              }
-            />
+            <div className="space-y-4">
+              <PatientDetailsStep
+                patient={state.patient}
+                onChange={(field, value) =>
+                  dispatch({ type: "UPDATE_PATIENT", field, value })
+                }
+                onReturningPatient={(p) =>
+                  lookupPrevious(p, (prev) => {
+                    // Height does not change between visits, so carry it
+                    // forward. Weight is always measured on the day.
+                    if (prev.heightCm !== null) {
+                      dispatch({
+                        type: "UPDATE_WEIGHT_ASSESSMENT",
+                        field: "height",
+                        value: prev.heightCm,
+                      });
+                    }
+                  })
+                }
+              />
+              {previous && (
+                <div className="p-4 rounded-lg border border-amber-300 bg-amber-50 text-sm">
+                  <p className="font-semibold text-amber-900">
+                    This patient already has a weight management record
+                  </p>
+                  <p className="mt-1 text-amber-900">
+                    Last seen {previous.consultationDate}
+                    {previous.pgdSlug ? ` (${previous.pgdSlug})` : ""}:{" "}
+                    {describePrevious(previous)}. Height has been filled in for
+                    you.
+                  </p>
+                  <p className="mt-2 text-amber-900">
+                    For a routine follow-up, use the{" "}
+                    <a
+                      href="/for-pharmacies/epgd/glp1-monitoring"
+                      className="font-semibold underline"
+                    >
+                      GLP-1 Monitoring tool
+                    </a>{" "}
+                    instead. It carries the height, baseline weight and current
+                    dose across, and reviews progress and dose titration rather
+                    than repeating the initiation assessment.
+                  </p>
+                </div>
+              )}
+            </div>
           </StepWrapper>
         );
 

@@ -27,9 +27,16 @@ interface PatientDetailsStepProps {
    * `validatePatientStep`.
    */
   requireAdult?: boolean;
+  /**
+   * Called when a returning patient is picked, in addition to the
+   * demographic fan-out below. Weight management tools use this to carry
+   * forward height, the last recorded weight and the current dose, so a
+   * follow-up does not mean re-entering an initiation consultation.
+   */
+  onReturningPatient?: (patient: Partial<BasePatientDetails>) => void;
 }
 
-export function PatientDetailsStep({ patient, onChange, genderOption, requireAdult = true }: PatientDetailsStepProps) {
+export function PatientDetailsStep({ patient, onChange, genderOption, requireAdult = true, onReturningPatient }: PatientDetailsStepProps) {
   // When pharmacist picks a returning patient from the search dropdown
   // we get back a partial BasePatientDetails. Fan it out to onChange so
   // every consumer's state updates without us caring which fields the
@@ -41,6 +48,7 @@ export function PatientDetailsStep({ patient, onChange, genderOption, requireAdu
         onChange(key, value as BasePatientDetails[keyof BasePatientDetails]);
       }
     });
+    onReturningPatient?.(partial);
   }
 
   return (
