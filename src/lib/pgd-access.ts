@@ -95,7 +95,8 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
   // adhd-monitoring removed from public catalogue — clinical review (Apr 2026)
   { slug: 'anxiety-propranolol', title: 'Situational Anxiety', subtitle: 'Propranolol', category: 'Mental Health & Wellbeing' },
   { slug: 'hayfever', title: 'Hayfever (Severe)', subtitle: 'Fexofenadine / Mometasone', category: 'Mental Health & Wellbeing' },
-  { slug: 'b12-injection', title: 'Vitamin B12 Injection', subtitle: 'Hydroxocobalamin (B12 Deficiency)', category: 'Mental Health & Wellbeing' },
+  { slug: 'b12-injection', title: 'Vitamin B12 Injection', subtitle: 'Hydroxocobalamin injection and cyanocobalamin tablets (B12 deficiency)', category: 'Mental Health & Wellbeing' },
+  { slug: 'folic-acid', title: 'Folate Deficiency', subtitle: 'Folic acid 5mg tablets (B12 status must be checked first)', category: 'Mental Health & Wellbeing' },
 
   // Vaccines
   { slug: 'flu', title: 'Flu Vaccination', subtitle: 'Seasonal Influenza', category: 'Vaccines' },

@@ -10,7 +10,10 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   "anti-malarials": "anti-malarials.pdf",
   "anxiety-propranolol": "anxiety-propranolol.pdf",
   "asthma-rescue": "asthma-rescue.pdf",
-  "b12-injection": "b12-injection.pdf",
+  // v003 signed 30 Jul 2026: one document covering hydroxocobalamin injection,
+  // cyanocobalamin tablets and folic acid, so both slugs point at it
+  "b12-injection": "b12-folate-v003.pdf",
+  "folic-acid": "b12-folate-v003.pdf",
   "bph": "bph.pdf",
   "bv": "bv.pdf",
   "chest-service": "chest-service.pdf",
