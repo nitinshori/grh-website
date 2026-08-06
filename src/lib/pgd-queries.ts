@@ -1,7 +1,31 @@
 import "server-only";
 import { db } from "@/lib/db";
-import { pharmacyPgds } from "@/lib/db/schema";
+import { pharmacyPgds, pharmacies } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
+import { ALL_PGDS } from "@/lib/pgd-access";
+
+/**
+ * Partner tenants whose pharmacies get the whole catalogue automatically.
+ *
+ * Per Jane Wilkins (HubRx, Aug 2026): the HubRx portal should be "exactly
+ * the same as your own portal offering so our HubRx third-party pharmacies
+ * have access to all your PGDs and e-forms, and they can choose which ones
+ * they want to access and use".
+ *
+ * Matching on auth_source means a third party that SSOs in for the first
+ * time next month gets the full catalogue with no admin step, and any PGD
+ * added later appears for them automatically.
+ */
+const FULL_CATALOGUE_AUTH_SOURCES = new Set(["hubrx"]);
+
+async function hasFullCatalogue(pharmacyId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ authSource: pharmacies.authSource })
+    .from(pharmacies)
+    .where(eq(pharmacies.id, pharmacyId))
+    .limit(1);
+  return !!row && FULL_CATALOGUE_AUTH_SOURCES.has(row.authSource);
+}
 
 /**
  * Server-only PGD-access queries.
@@ -18,6 +42,10 @@ export async function hasPharmacyPgdAccess(
   pharmacyId: string,
   pgdSlug: string,
 ): Promise<boolean> {
+  if (await hasFullCatalogue(pharmacyId)) {
+    return ALL_PGDS.some((p) => p.slug === pgdSlug);
+  }
+
   const [assignment] = await db
     .select()
     .from(pharmacyPgds)
@@ -36,6 +64,10 @@ export async function hasPharmacyPgdAccess(
 }
 
 export async function getPharmacyPgdSlugs(pharmacyId: string): Promise<string[]> {
+  if (await hasFullCatalogue(pharmacyId)) {
+    return ALL_PGDS.map((p) => p.slug);
+  }
+
   const assignments = await db
     .select({ pgdSlug: pharmacyPgds.pgdSlug })
     .from(pharmacyPgds)
@@ -54,6 +86,10 @@ export async function getPharmacyPgdSlugs(pharmacyId: string): Promise<string[]>
 export async function getPharmacyNonApprovedSlugs(
   pharmacyId: string,
 ): Promise<string[]> {
+  // Full-catalogue pharmacies have nothing withheld, so there is no
+  // "non approved" list to show them.
+  if (await hasFullCatalogue(pharmacyId)) return [];
+
   const assignments = await db
     .select({ pgdSlug: pharmacyPgds.pgdSlug })
     .from(pharmacyPgds)

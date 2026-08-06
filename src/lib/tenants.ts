@@ -134,7 +134,7 @@ const grhTenant: TenantConfig = {
 const hubrxTenant: TenantConfig = {
   slug: 'hubrx',
   canonicalHost: 'hubrx.getrealhealthpgd.co.uk',
-  displayName: 'HubRx PGD Service',
+  displayName: 'HubRx',
   strapline: 'Patient Group Directions for HubRx member pharmacies',
   logo: {
     // HubRx wordmark + "Transforming Independent Pharmacy" strapline.
@@ -186,7 +186,7 @@ const hubrxSandboxTenant: TenantConfig = {
   ...hubrxTenant,
   slug: 'hubrx-sandbox',
   canonicalHost: 'hubrx-sandbox.getrealhealthpgd.co.uk',
-  displayName: 'HubRx PGD Service (Sandbox)',
+  displayName: 'HubRx (Sandbox)',
   strapline: 'Integration testing environment — not for live clinical use',
   sso: {
     ...hubrxTenant.sso,

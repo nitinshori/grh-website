@@ -61,6 +61,13 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   "rosacea": "rosacea.pdf",
   "rsv": "rsv.pdf",
   "saxenda": "saxenda.pdf",
+  // GRH-signed masters (Nitin Shori + Chris Pilkington). Originally issued
+  // to PPH; promoted to masters Aug 2026 so all pharmacies can use them.
+  "skin-infection": "skin-infection.pdf",
+  "cellulitis": "cellulitis.pdf",
+  "fungal-infection": "fungal-infection.pdf",
+  "psoriasis": "psoriasis.pdf",
+  "period-pain": "period-pain.pdf",
   "shingles-treatment": "shingles-treatment.pdf",
   "shingles-vaccine": "shingles-vaccine.pdf",
   "sleep-melatonin": "sleep-melatonin.pdf",
