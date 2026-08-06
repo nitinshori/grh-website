@@ -47,7 +47,8 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   "meningitis-acwy-travel": "meningitis-acwy-travel.pdf",
   "meningitis-b": "meningitis-b.pdf",
   "mmr": "mmr.pdf",
-  "mounjaro": "mounjaro.pdf",
+  // v002 signed 6 Aug 2026 (PPH clinical review)
+  "mounjaro": "mounjaro-v002.pdf",
   "mysimba": "mysimba.pdf",
   "orlistat": "orlistat.pdf",
   "paediatric-uti": "paediatric-uti.pdf",
@@ -90,8 +91,8 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   // testosterone for women (postmenopausal HSDD) is covered by the signed HRT/Menopause PGD
   "testosterone-women": "hrt.pdf",
   "uti": "uti.pdf",
-  "wegovy": "wegovy.pdf",
-  "wegovy-oral": "wegovy-oral.pdf",
+  "wegovy": "wegovy-v002.pdf",
+  "wegovy-oral": "wegovy-oral-v003.pdf",
   "wound-care": "wound-care.pdf"
 };
 
