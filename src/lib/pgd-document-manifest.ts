@@ -10,10 +10,10 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   "anti-malarials": "anti-malarials.pdf",
   "anxiety-propranolol": "anxiety-propranolol.pdf",
   "asthma-rescue": "asthma-rescue.pdf",
-  // v003 signed 30 Jul 2026: one document covering hydroxocobalamin injection,
+  // v004 signed 6 Aug 2026: one document covering hydroxocobalamin injection,
   // cyanocobalamin tablets and folic acid, so both slugs point at it
-  "b12-injection": "b12-folate-v003.pdf",
-  "folic-acid": "b12-folate-v003.pdf",
+  "b12-injection": "b12-folate-v004.pdf",
+  "folic-acid": "b12-folate-v004.pdf",
   "bph": "bph.pdf",
   "bv": "bv.pdf",
   "chest-service": "chest-service.pdf",
@@ -74,9 +74,9 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   "travel-core": "travel-core.pdf",
   // typhoid is covered by the signed Travel Health Core Package PGD (Hep A + Typhoid + Cholera)
   "typhoid": "travel-core.pdf",
-  // signed 30 Jul 2026 (Nitin Shori + Chris Pilkington)
-  "tetanus": "tetanus.pdf",
-  "junior-travel": "junior-travel.pdf",
+  // v002 signed 6 Aug 2026 (Nitin Shori + Chris Pilkington)
+  "tetanus": "tetanus-v002.pdf",
+  "junior-travel": "junior-travel-v002.pdf",
   // signed 13 Jul 2026 (Nitin Shori + Chris Pilkington)
   "trt": "trt.pdf",
   "travellers-diarrhoea": "travellers-diarrhoea.pdf",
