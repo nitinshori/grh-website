@@ -47,8 +47,25 @@ const STEP_LABELS = [
   'Summary',
 ] as const;
 
+/**
+ * Destinations offered in the dropdown. Saudi Arabia sits at the top
+ * because it is where practically every MenACWY patient is going, and
+ * selecting it sets the travel reason too. Anything else is typed in
+ * under "Other".
+ */
+const DESTINATION_PRESETS: {
+  value: string;
+  reason?: 'hajj-umrah' | 'meningitis-belt' | 'university' | 'other';
+}[] = [
+  { value: 'Saudi Arabia (Hajj/Umrah pilgrimage)', reason: 'hajj-umrah' },
+  { value: 'Saudi Arabia (other travel)' },
+  { value: 'Sub-Saharan Africa (meningitis belt)', reason: 'meningitis-belt' },
+  { value: 'UK university entrant', reason: 'university' },
+];
+
 export function MeningitisACWYClient() {
   const [currentStep, setCurrentStep] = useState(0);
+  const [destinationIsOther, setDestinationIsOther] = useState(false);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
 
   const [patientDetails, setPatientDetails] = useState<MeningitisACWYPatientDetails>(
@@ -394,30 +411,58 @@ export function MeningitisACWYClient() {
           validationError={travelValidationError}
         >
           <div className="space-y-4">
-            {/* Quick-fill: the large majority of MenACWY patients are pilgrims,
-                so offer a one-tap fill for destination + reason. */}
-            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[color:var(--tenant-primary)]/30 bg-[color:var(--tenant-primary)]/5 px-3 py-2">
-              <span className="text-xs font-medium text-gray-600">Quick fill:</span>
-              <button
-                type="button"
-                onClick={() => {
-                  handlePatientDetailsChange('travelDestination', 'Saudi Arabia (Hajj/Umrah pilgrimage)');
-                  handlePatientDetailsChange('travelReason', 'hajj-umrah');
+            {/* Almost every MenACWY patient is travelling to Saudi Arabia for
+                Hajj or Umrah, often as a family group booked one after another
+                (Moin, Aug 2026: "it makes it a little bit difficult to have to
+                type in Saudi Arabia manually each time"). Pick from the list;
+                Other reveals a free-text field for everything else. */}
+            <div>
+              <label className="block text-sm font-medium text-navy-900 mb-1">
+                Travel destination <span className="text-red-400">*</span>
+              </label>
+              <select
+                value={
+                  DESTINATION_PRESETS.some((d) => d.value === patientDetails.travelDestination)
+                    ? patientDetails.travelDestination
+                    : patientDetails.travelDestination
+                    ? 'other'
+                    : ''
+                }
+                onChange={(ev) => {
+                  const v = ev.target.value;
+                  if (v === 'other') {
+                    handlePatientDetailsChange('travelDestination', '');
+                    setDestinationIsOther(true);
+                    return;
+                  }
+                  setDestinationIsOther(false);
+                  handlePatientDetailsChange('travelDestination', v);
+                  const preset = DESTINATION_PRESETS.find((d) => d.value === v);
+                  if (preset?.reason) handlePatientDetailsChange('travelReason', preset.reason);
                 }}
-                className="text-xs font-semibold px-3 py-1.5 rounded-full text-white transition-colors"
-                style={{ backgroundColor: 'var(--tenant-primary)' }}
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
               >
-                Pilgrimage — Hajj/Umrah (Saudi Arabia)
-              </button>
+                <option value="">Select destination</option>
+                {DESTINATION_PRESETS.map((d) => (
+                  <option key={d.value} value={d.value}>
+                    {d.value}
+                  </option>
+                ))}
+                <option value="other">Other (type it in)</option>
+              </select>
             </div>
 
-            <TextInput
-              label="Travel destination"
-              value={patientDetails.travelDestination}
-              onChange={(v) => handlePatientDetailsChange('travelDestination', v)}
-              required
-              placeholder="e.g., Saudi Arabia, Senegal, Sub-Saharan Africa"
-            />
+            {(destinationIsOther ||
+              (!!patientDetails.travelDestination &&
+                !DESTINATION_PRESETS.some((d) => d.value === patientDetails.travelDestination))) && (
+              <TextInput
+                label="Destination"
+                value={patientDetails.travelDestination}
+                onChange={(v) => handlePatientDetailsChange('travelDestination', v)}
+                required
+                placeholder="e.g. Senegal, Sub-Saharan Africa"
+              />
+            )}
 
             <div>
               <TextInput

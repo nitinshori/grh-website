@@ -12,6 +12,7 @@ export function TextInput({
   type = "text",
   className = "",
   disabled,
+  onBlur,
 }: {
   label: string;
   value: string;
@@ -21,6 +22,9 @@ export function TextInput({
   type?: string;
   className?: string;
   disabled?: boolean;
+  /** Fired when the field loses focus. Used where a value is worth
+   *  persisting once the user has finished typing it. */
+  onBlur?: () => void;
 }) {
   return (
     <div className={className}>
@@ -31,6 +35,7 @@ export function TextInput({
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onBlur={onBlur}
         placeholder={placeholder}
         disabled={disabled}
         className={`w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent ${disabled ? "bg-gray-100 text-gray-500" : ""}`}

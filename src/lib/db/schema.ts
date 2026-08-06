@@ -681,3 +681,24 @@ export const bookingAvailability = pgTable('booking_availability', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 })
 export type BookingAvailability = typeof bookingAvailability.$inferSelect
+
+// ── Remembered GP practice contacts ────────────────────────────
+// NHS ODS publishes an email address for only a minority of GP
+// practices, so pharmacists were re-typing the same local surgery
+// addresses on every consultation (reported by Moin, Aug 2026). We
+// remember what was entered, keyed on ODS code, and fill it in next
+// time. Published NHS organisation contacts, shared across pharmacies.
+
+export const gpPracticeContacts = pgTable('gp_practice_contacts', {
+  odsCode: varchar('ods_code', { length: 20 }).primaryKey(),
+  practiceName: varchar('practice_name', { length: 255 }),
+  email: varchar('email', { length: 255 }),
+  phone: varchar('phone', { length: 50 }),
+  source: varchar('source', { length: 16 }).notNull().default('user'),
+  updatedByPharmacyId: uuid('updated_by_pharmacy_id').references(() => pharmacies.id, { onDelete: 'set null' }),
+  timesUsed: integer('times_used').notNull().default(1),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+})
+export type GpPracticeContact = typeof gpPracticeContacts.$inferSelect
+export type NewGpPracticeContact = typeof gpPracticeContacts.$inferInsert

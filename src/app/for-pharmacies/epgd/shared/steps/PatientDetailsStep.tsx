@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { BasePatientDetails } from "../types";
 import { TextInput, Checkbox } from "../components/FormInputs";
 import { GPPracticeSearch } from "../components/GPPracticeSearch";
@@ -37,6 +38,10 @@ interface PatientDetailsStepProps {
 }
 
 export function PatientDetailsStep({ patient, onChange, genderOption, requireAdult = true, onReturningPatient }: PatientDetailsStepProps) {
+  // Set when a practice email was filled from a previous consultation, so
+  // the pharmacist can see it was not typed by them this time.
+  const [remembered, setRemembered] = useState<string | null>(null);
+
   // When pharmacist picks a returning patient from the search dropdown
   // we get back a partial BasePatientDetails. Fan it out to onChange so
   // every consumer's state updates without us caring which fields the
@@ -49,6 +54,24 @@ export function PatientDetailsStep({ patient, onChange, genderOption, requireAdu
       }
     });
     onReturningPatient?.(partial);
+  }
+
+  // Remember the practice email once the pharmacist has finished typing it,
+  // so the next consultation for this surgery fills itself in.
+  function rememberGpEmail() {
+    const email = patient.gpEmail?.trim();
+    const odsCode = patient.gpOdsCode?.trim();
+    if (!email || !odsCode || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return;
+    fetch("/api/gp-contacts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        odsCode,
+        email,
+        phone: patient.gpPhone ?? "",
+        practiceName: patient.gpPractice ?? "",
+      }),
+    }).catch(() => {});
   }
 
   return (
@@ -158,6 +181,24 @@ export function PatientDetailsStep({ patient, onChange, genderOption, requireAdu
             onChange("gpPhone", match.phone);
             if (match.email) onChange("gpEmail", match.email);
             onChange("gpOdsCode", match.odsCode);
+            // NHS ODS publishes an email for only a minority of practices.
+            // Where it does not, fall back to whatever was entered for this
+            // practice before, so the same local surgeries stop needing to
+            // be typed out every time.
+            if (!match.email && match.odsCode) {
+              setRemembered(null);
+              fetch(`/api/gp-contacts?odsCode=${encodeURIComponent(match.odsCode)}`)
+                .then((r) => (r.ok ? r.json() : null))
+                .then((d: { found?: boolean; email?: string; phone?: string } | null) => {
+                  if (!d?.found) return;
+                  if (d.email) {
+                    onChange("gpEmail", d.email);
+                    setRemembered(d.email);
+                  }
+                  if (d.phone && !match.phone) onChange("gpPhone", d.phone);
+                })
+                .catch(() => {});
+            }
           }}
           onClear={() => {
             onChange("gpPractice", "");
@@ -186,13 +227,21 @@ export function PatientDetailsStep({ patient, onChange, genderOption, requireAdu
           placeholder="Auto-fills from search"
         />
       </div>
-      <TextInput
-        label="GP practice email (optional — required to notify GP)"
-        value={patient.gpEmail}
-        onChange={(v) => onChange("gpEmail", v)}
-        type="email"
-        placeholder="practice.admin@nhs.net"
-      />
+      <div>
+        <TextInput
+          label="GP practice email (optional, required to notify GP)"
+          value={patient.gpEmail}
+          onChange={(v) => onChange("gpEmail", v)}
+          onBlur={rememberGpEmail}
+          type="email"
+          placeholder="practice.admin@nhs.net"
+        />
+        {remembered && remembered === patient.gpEmail && (
+          <p className="text-xs text-gray-500 mt-1">
+            Filled in from the last time this practice was used.
+          </p>
+        )}
+      </div>
       <TextInput
         label="NHS number (optional)"
         value={patient.nhsNumber}
