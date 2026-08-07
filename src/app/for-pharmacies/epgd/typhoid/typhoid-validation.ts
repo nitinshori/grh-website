@@ -43,9 +43,9 @@ export function validateTyphoidConsentStep(
   if (!consent.patientAwarePrivateService)
     return 'Patient must be aware this is a private service';
   if (!consent.understands5YearValidity)
-    return 'Patient must confirm understanding that vaccine is valid for 5 years';
+    return 'Patient must confirm understanding that protection lasts 3 years';
   if (!consent.understandsTimingRequirement)
-    return 'Patient must confirm understanding of timing requirement (at least 10 days before travel)';
+    return 'Patient must confirm understanding of timing requirement (at least 2 weeks before travel)';
   return null;
 }
 

@@ -53,7 +53,7 @@ export function getTyphoidClinicalAlerts(
       code: 'DEPARTURE_DATE_MISSING',
       message: 'Departure date not confirmed',
       detail:
-        'Typhoid must be given at least 10 days before travel to high-risk areas and within 3 years for Saudi entry. Confirm timing.',
+        'Typhoid vaccine must be given at least 2 weeks before departure for protection to develop. Confirm timing.',
     });
   } else {
     const departure = new Date(patient.departureDate);

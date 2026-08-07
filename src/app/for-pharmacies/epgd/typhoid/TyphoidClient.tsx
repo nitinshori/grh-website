@@ -358,22 +358,22 @@ export function TyphoidClient() {
           />
           <div className="mt-6 space-y-3 border-t pt-6">
             <Checkbox
-              label="Patient understands vaccine is valid for 5 years"
+              label="Patient understands protection lasts 3 years and revaccination is needed if risk continues"
               checked={consent.understands5YearValidity}
               onChange={(v) => setConsent({ ...consent, understands5YearValidity: v })}
               description="Confirm patient is aware of duration of protection"
             />
             <Checkbox
-              label="Patient understands timing requirement (≥10 days before travel)"
+              label="Patient understands timing requirement (at least 2 weeks before travel)"
               checked={consent.understandsTimingRequirement}
               onChange={(v) => setConsent({ ...consent, understandsTimingRequirement: v })}
-              description="For high-risk destinations, vaccination must be given at least 10 days before departure"
+              description="For high-risk destinations, vaccination must be given at least 2 weeks before departure"
             />
             <Checkbox
               label="Patient aware certificate may be required for travel"
               checked={consent.certificateRequirement}
               onChange={(v) => setConsent({ ...consent, certificateRequirement: v })}
-              description="Particularly important for Hajj/Umrah pilgrims — Saudi Arabia requires proof of vaccination"
+              description="Typhoid risk is highest in South Asia. Vaccination does not replace food and water precautions"
             />
           </div>
         </StepWrapper>
@@ -397,7 +397,7 @@ export function TyphoidClient() {
               value={patientDetails.travelDestination}
               onChange={(v) => handlePatientDetailsChange('travelDestination', v)}
               required
-              placeholder="e.g., Saudi Arabia, Senegal, Sub-Saharan Africa"
+              placeholder="e.g. India, Bangladesh, Peru"
             />
 
             <SelectInput
@@ -450,7 +450,7 @@ export function TyphoidClient() {
               label="Departure timing confirmed"
               checked={travelAssessment.timingConfirmed}
               onChange={(v) => setTravelAssessment({ ...travelAssessment, timingConfirmed: v })}
-              description="Confirm departure date allows at least 10 days for vaccine to take effect"
+              description="Confirm departure date allows at least 2 weeks for the vaccine to take effect"
             />
           </div>
         </StepWrapper>
@@ -721,9 +721,9 @@ export function TyphoidClient() {
               <p className="text-sm font-semibold text-amber-900">Important information to share:</p>
               <ul className="text-xs text-amber-800 mt-2 space-y-1 list-disc list-inside">
                 <li>Most reactions are mild and resolve within 24-48 hours</li>
-                <li>Vaccine is valid for 5 years</li>
-                <li>Booster may be required after 5 years for high-risk groups</li>
-                <li>For Saudi Arabia/Hajj: vaccination certificate is required for entry</li>
+                <li>Protection lasts 3 years</li>
+                <li>Revaccination every 3 years if risk of exposure continues</li>
+                <li>Protection is 70 to 80% and does not cover paratyphoid, so food and water precautions remain essential</li>
                 <li>Paracetamol or ibuprofen can be taken for fever or myalgia</li>
                 <li>Seek GP advice if severe reaction develops</li>
               </ul>
@@ -739,12 +739,12 @@ export function TyphoidClient() {
             />
 
             <Checkbox
-              label="Patient understands vaccine protection is valid for 5 years"
+              label="Patient understands protection lasts 3 years"
               checked={postVaccineAdvice.counselledValidity}
               onChange={(v) =>
                 setPostVaccineAdvice({ ...postVaccineAdvice, counselledValidity: v })
               }
-              description="Discuss need for possible revaccination after 5 years"
+              description="Discuss revaccination every 3 years if risk of exposure continues"
             />
 
             <Checkbox
