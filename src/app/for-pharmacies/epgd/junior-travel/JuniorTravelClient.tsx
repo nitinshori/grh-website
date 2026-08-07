@@ -266,12 +266,16 @@ export default function JuniorTravelClient() {
         message: "Bleeding disorder without a clinician's assessment",
         detail: "Intramuscular injection must be assessed as safe by a clinician familiar with the child's bleeding risk before proceeding.",
       });
-    if (!c.parentPresent && age !== null && age < 16)
+    // Gated on reaching the eligibility step, where the box is ticked.
+    // Otherwise this fired from step 0 for every under-16, which is the whole
+    // point of this PGD, and blocked the consultation before the pharmacist
+    // could reach the tick box.
+    if (step > 4 && !c.parentPresent && age !== null && age < 16)
       a.push({
         code: "no-parent",
         severity: "stop",
         message: "No person with parental responsibility present",
-        detail: "A child under 16 who is not Gillick competent requires consent from a person with parental responsibility, or a suitable adult authorised by them.",
+        detail: "Go back to the Eligibility step and confirm that a person with parental responsibility is present, or that the young person is Gillick competent.",
       });
 
     if (!c.routineUpToDate)

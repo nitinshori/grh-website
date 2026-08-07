@@ -99,6 +99,9 @@ const STEP_LABELS = [
   "Summary",
 ];
 const TOTAL_STEPS = STEP_LABELS.length;
+/** Index of the "Informed Consent" step. The written-consent stop only
+ *  applies once the pharmacist has been past it. */
+const STEP_INFORMED_CONSENT = STEP_LABELS.indexOf("Informed Consent");
 
 function initialState(): WegovyOralState {
   return {
@@ -256,9 +259,13 @@ export function WegovyOralClient() {
     if (i.sulfonylureaOrInsulin) out.push({ code: "su", severity: "caution", message: "Sulfonylurea / insulin", detail: "Hypo risk — counsel + refer prescribing GP." });
     if (i.oralContraception) out.push({ code: "oc", severity: "caution", message: "Oral contraception", detail: "GI symptoms may reduce absorption — counsel additional barrier for 7 days after vomiting/diarrhoea." });
 
-    // Written-consent gate
-    if (!state.offLabelConsent.writtenConsentObtained) {
-      out.push({ code: "consent", severity: "stop", message: "Written informed consent not yet obtained", detail: "Cannot proceed until written informed consent to treatment is documented." });
+    // Written-consent gate.
+    // Only applies once the pharmacist has worked past the Informed Consent
+    // step. Reported by Rachel (Aug 2026): the stop fired from the very first
+    // screen, before any details had been entered, which made canProceed false
+    // and blocked every new consultation outright.
+    if (state.currentStep > STEP_INFORMED_CONSENT && !state.offLabelConsent.writtenConsentObtained) {
+      out.push({ code: "consent", severity: "stop", message: "Written informed consent not yet obtained", detail: "Go back to the Informed Consent step and confirm that written consent has been obtained and filed." });
     }
 
     // Age gate per signed PGD — adults 18+ (consistency review Jul 2026)

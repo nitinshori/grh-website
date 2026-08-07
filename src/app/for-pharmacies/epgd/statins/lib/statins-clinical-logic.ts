@@ -6,7 +6,11 @@ import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
 export function getAllAlerts(state: StatinsConsultationState): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
 
-  if (!state.assessment.hasExistingPrescription) {
+  // Only assert this once the pharmacist has worked past the assessment
+  // step where the box is ticked. Before then the consultation has not
+  // reached the question, and firing a hard stop on step 0 blocked the
+  // tool outright (pattern reported by Rachel on Wegovy tablets, Aug 2026).
+  if (state.currentStep > 2 && !state.assessment.hasExistingPrescription) {
     alerts.push({
       severity: "stop",
       code: "NO_PRESCRIPTION",
