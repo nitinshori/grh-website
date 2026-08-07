@@ -78,7 +78,7 @@ export function getAllAlerts(state: DiabetesConsultationState): ClinicalAlert[] 
 
 export function hasHardStops(state: DiabetesConsultationState): boolean {
   return (
-    !state.assessment.hasExistingT2DM ||
+    (state.currentStep > 2 && !state.assessment.hasExistingT2DM) ||
     state.redFlags.egfrBelow30 ||
     state.medicalHistory.dka ||
     !!state.medicalHistory.otherConditions

@@ -69,7 +69,7 @@ export function getAllAlerts(state: HypertensionConsultationState): ClinicalAler
 
 export function hasHardStops(state: HypertensionConsultationState): boolean {
   return (
-    !state.assessment.hasExistingDiagnosis ||
+    (state.currentStep > 2 && !state.assessment.hasExistingDiagnosis) ||
     state.redFlags.bpGreater180110
   );
 }

@@ -69,7 +69,7 @@ export function getAllAlerts(state: COPDConsultationState): ClinicalAlert[] {
 
 export function hasHardStops(state: COPDConsultationState): boolean {
   return (
-    !state.assessment.hasExistingDiagnosis ||
+    (state.currentStep > 2 && !state.assessment.hasExistingDiagnosis) ||
     state.redFlags.mrcGrade5 ||
     state.redFlags.suspectedExacerbation
   );

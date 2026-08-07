@@ -87,7 +87,7 @@ export function getAllAlerts(state: StatinsConsultationState): ClinicalAlert[] {
 
 export function hasHardStops(state: StatinsConsultationState): boolean {
   return (
-    !state.assessment.hasExistingPrescription ||
+    (state.currentStep > 2 && !state.assessment.hasExistingPrescription) ||
     state.medicalHistory.activeLiverDisease ||
     state.medicalHistory.elevatedTransaminases ||
     state.medicalHistory.pregnant ||
