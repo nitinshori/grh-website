@@ -22,7 +22,7 @@ export default function TyphoidPage() {
             <p className="text-gray-600 mb-4">PGD Consultation for UK Pharmacies</p>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-900">
-                This ePGD guides pharmacists in the supply and administration of Typhoid conjugate vaccines to eligible patients, particularly those travelling to high-risk regions or attending university.
+                This ePGD guides pharmacists in the supply and administration of Typhim Vi typhoid vaccine to adults aged 18 and over travelling to areas where typhoid is endemic, in line with the signed Travel Health PGD.
               </p>
             </div>
           </div>

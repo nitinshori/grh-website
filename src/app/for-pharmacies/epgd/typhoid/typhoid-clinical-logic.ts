@@ -60,12 +60,12 @@ export function getTyphoidClinicalAlerts(
     const today = new Date();
     const daysUntilTravel = Math.floor((departure.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
-    if (daysUntilTravel < 10 && daysUntilTravel >= 0) {
+    if (daysUntilTravel < 14 && daysUntilTravel >= 0) {
       alerts.push({
         severity: 'caution',
         code: 'INSUFFICIENT_TIME_BEFORE_TRAVEL',
-        message: 'Less than 10 days until departure',
-        detail: `Only ${daysUntilTravel} days until travel. Typhoid should ideally be given ≥10 days before departure. Discuss risk/benefit with patient.`,
+        message: 'Less than 2 weeks until departure',
+        detail: `Only ${daysUntilTravel} days until travel. The signed PGD requires vaccination at least 2 weeks before departure for protection to develop. Discuss the risk and benefit with the patient, and reinforce food and water precautions.`,
       });
     }
 
@@ -84,13 +84,21 @@ export function getTyphoidClinicalAlerts(
     const today = new Date();
     const yearsElapsed = (today.getTime() - previousDose.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
 
-    if (yearsElapsed >= 5) {
+    if (yearsElapsed >= 3) {
       alerts.push({
         severity: 'caution',
         code: 'REVACCINATION_DUE',
-        message: '5 years or more since previous Typhoid dose',
+        message: '3 years or more since previous typhoid dose',
         detail:
-          'For Saudi entry and Hajj/Umrah, revaccination is required if >3 years have elapsed. Consider booster for continued protection.',
+          'The signed PGD recommends revaccination every 3 years where exposure continues. A booster dose is due.',
+      });
+    } else {
+      alerts.push({
+        severity: 'caution',
+        code: 'RECENT_DOSE',
+        message: 'Typhoid vaccine given within the last 3 years',
+        detail:
+          'Protection from the previous dose should still be in place. Revaccination is recommended every 3 years, so a further dose is not usually needed yet.',
       });
     }
   }
@@ -123,34 +131,32 @@ export function getTyphoidDoseRecommendation(
 ): string {
   if (patient.age === null) return 'Age required to determine dose';
 
-  if (patient.age < 0.5) {
-    return 'Nimenrix: Not approved below 6 weeks';
+  // Per the signed PGD: Typhim Vi, adults 18 years and over.
+  if (patient.age < 18) {
+    return 'Not eligible under this PGD: adults aged 18 years and over only. Refer for age-appropriate provision.';
   }
 
-  if (patient.age < 2) {
-    return 'Nimenrix: 0.5 mL IM single dose (conjugate vaccine approved from 6 weeks)';
-  }
-
-  return 'Either vaccine: 0.5 mL IM single dose (Nimenrix or Menveo approved from 2 years and above)';
+  return 'Typhim Vi: 0.5 mL (25 micrograms Vi polysaccharide) by intramuscular injection, single dose. Revaccinate every 3 years if risk continues.';
 }
 
 export function determineTravelRiskCategory(
   travelReason: string
 ): { category: string; highRisk: boolean } {
-  const hajiRiskReasons = ['hajj-umrah'];
-  const beltRiskReasons = ['meningitis-belt'];
-  const universityReasons = ['university'];
-
-  if (hajiRiskReasons.includes(travelReason)) {
-    return { category: 'Hajj/Umrah Pilgrim (MANDATORY)', highRisk: true };
+  // Risk areas per the signed PGD: South Asia, Southeast Asia, Africa and
+  // Central/South America. South Asia carries the highest risk.
+  if (travelReason === 'south-asia') {
+    return { category: 'South Asia (highest risk)', highRisk: true };
   }
-  if (beltRiskReasons.includes(travelReason)) {
-    return { category: 'Sub-Saharan Meningitis Belt', highRisk: true };
+  if (travelReason === 'southeast-asia') {
+    return { category: 'Southeast Asia', highRisk: true };
   }
-  if (universityReasons.includes(travelReason)) {
-    return { category: 'University Attendee', highRisk: false };
+  if (travelReason === 'africa') {
+    return { category: 'Africa', highRisk: true };
   }
-  return { category: 'Other Travel', highRisk: false };
+  if (travelReason === 'central-south-america') {
+    return { category: 'Central or South America', highRisk: true };
+  }
+  return { category: 'Other travel', highRisk: false };
 }
 
 export function getAdministrationGuidance(
@@ -165,19 +171,12 @@ export function getAdministrationGuidance(
     string,
     { vaccineName: string; route: string; site: string; guidance: string }
   > = {
-    nimenrix: {
-      vaccineName: 'Nimenrix (GSK)',
+    'typhim-vi': {
+      vaccineName: 'Typhim Vi (Sanofi)',
       route: 'Intramuscular',
-      site: 'Deltoid muscle (preferred), anterolateral thigh (infants)',
+      site: 'Deltoid muscle',
       guidance:
-        'Single 0.5 mL dose. Reconstitute with provided diluent. Use within 1 hour. Mark batch, expiry, site on patient record.',
-    },
-    menveo: {
-      vaccineName: 'Menveo (Sanofi)',
-      route: 'Intramuscular',
-      site: 'Deltoid muscle (adults/older children), anterolateral thigh (young children)',
-      guidance:
-        'Single 0.5 mL dose. Do not mix with other vaccines in same syringe. Use within 1 hour of reconstitution. Record all administration details.',
+        'Single 0.5 mL dose containing 25 micrograms of Vi polysaccharide. Give at least 2 weeks before departure. Protection is 70 to 80% and does not cover paratyphoid A or B, so food and water precautions remain essential. Revaccinate every 3 years if risk continues. Record batch, expiry and site on the patient record.',
     },
   };
 

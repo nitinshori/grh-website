@@ -11,9 +11,9 @@ export function validateTyphoidPatientStep(
   if (!patient.lastName.trim()) return 'Patient last name is required';
   if (!patient.dateOfBirth) return 'Date of birth is required';
   if (patient.age === null) return 'Unable to calculate age';
-  if (patient.age < 0.25) {
-    // Less than 3 months
-    return 'Patient must be at least 6 weeks old (Nimenrix minimum age)';
+  if (patient.age < 18) {
+    // Signed PGD covers adults aged 18 years and over.
+    return 'This PGD is for adults aged 18 years and over';
   }
   return null;
 }

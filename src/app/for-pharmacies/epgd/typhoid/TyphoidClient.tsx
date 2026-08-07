@@ -407,12 +407,10 @@ export function TyphoidClient() {
                 handlePatientDetailsChange('travelReason', v as TyphoidPatientDetails['travelReason'])
               }
               options={[
-                { value: 'hajj-umrah', label: 'Hajj/Umrah pilgrimage (MANDATORY)' },
-                {
-                  value: 'meningitis-belt',
-                  label: 'Sub-Saharan meningitis belt',
-                },
-                { value: 'university', label: 'University attendance' },
+                { value: 'south-asia', label: 'South Asia (highest risk: India, Pakistan, Bangladesh, Nepal)' },
+                { value: 'southeast-asia', label: 'Southeast Asia' },
+                { value: 'africa', label: 'Africa' },
+                { value: 'central-south-america', label: 'Central or South America' },
                 { value: 'other', label: 'Other travel' },
               ]}
               required
@@ -615,12 +613,11 @@ export function TyphoidClient() {
               onChange={(v) =>
                 setSummary({
                   ...summary,
-                  vaccineType: v as 'nimenrix' | 'menveo' | '',
+                  vaccineType: v as 'typhim-vi' | '',
                 })
               }
               options={[
-                { value: 'nimenrix', label: 'Nimenrix (GSK)' },
-                { value: 'menveo', label: 'Menveo (Sanofi)' },
+                { value: 'typhim-vi', label: 'Typhim Vi (Sanofi), Vi polysaccharide 25 micrograms/0.5 mL' },
               ]}
               required
             />

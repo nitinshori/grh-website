@@ -7,7 +7,7 @@ import {
 
 export interface TyphoidPatientDetails extends BasePatientDetails {
   travelDestination: string;
-  travelReason: 'hajj-umrah' | 'meningitis-belt' | 'university' | 'other' | '';
+  travelReason: 'south-asia' | 'southeast-asia' | 'africa' | 'central-south-america' | 'other' | '';
   departureDate: string;
   previousTyphoidDose: boolean;
   previousDoseDate?: string;
@@ -21,7 +21,7 @@ export interface TyphoidConsent extends BaseConsent {
 }
 
 export interface TyphoidSummary extends BaseSummary {
-  vaccineType: 'nimenrix' | 'menveo' | '';
+  vaccineType: 'typhim-vi' | '';
   batchNumber: string;
   expiryDate: string;
   administrationSite: 'left-deltoid' | 'right-deltoid' | '';
