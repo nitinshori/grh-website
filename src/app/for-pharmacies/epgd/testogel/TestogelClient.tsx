@@ -239,7 +239,7 @@ export function TestogelClient() {
               <p className="font-semibold">Hard exclusions</p>
               <p>If any apply, this PGD cannot proceed. Refer to GP or endocrinology.</p>
             </div>
-            <Checkbox label="Age under 25 OR over 65" checked={e.ageUnder25 || e.ageOver65} onChange={(v) => { updateEligibility("ageUnder25", v); updateEligibility("ageOver65", v); }} description="PPH TRT PGD scope is 25–65. Refer outside this range." />
+            <Checkbox label="Age under 25 OR over 65" checked={e.ageUnder25 || e.ageOver65} onChange={(v) => { updateEligibility("ageUnder25", v); updateEligibility("ageOver65", v); }} description="The signed TRT PGD covers ages 25 to 65. Refer outside this range." />
             <Checkbox label="Known or suspected prostate cancer" checked={e.prostateCancer} onChange={(v) => updateEligibility("prostateCancer", v)} description="Includes raised PSA pending workup." />
             <Checkbox label="Known or suspected male breast cancer" checked={e.breastCancer} onChange={(v) => updateEligibility("breastCancer", v)} />
             <Checkbox label="Severe lower urinary tract symptoms (IPSS severe band)" checked={e.severeLuts} onChange={(v) => updateEligibility("severeLuts", v)} />

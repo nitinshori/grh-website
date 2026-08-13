@@ -182,6 +182,31 @@ function ResourcesView() {
 
   return (
     <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      {/* Which documents are these? Jane Wilkins asked (10 Aug 2026) how she
+          and Sarah would tell the PPH versions apart from the standard ones
+          offered to HubRx third-party pharmacies. This states it plainly at
+          the top of the hub, and each document carries a PPH badge below. */}
+      <div className="mb-10 rounded-xl border-2 border-[#14b8a6] bg-[#14b8a6]/5 p-5 sm:p-6">
+        <p className="text-xs font-bold uppercase tracking-wider text-[#0f766e] mb-1">
+          Pharmacy Plus Health versions
+        </p>
+        <h2 className="text-xl font-bold text-gray-900 mb-2">
+          These are your own PGDs, not the standard Get Real Health versions
+        </h2>
+        <p className="text-sm text-gray-700 leading-relaxed">
+          Every document here is the Pharmacy Plus Health version, carrying
+          your amendments and signed by your own signatories, for use across
+          PPH branches and on your intranet. They are held separately from the
+          Get Real Health catalogue and are not visible to, or accessible by,
+          your HubRx third-party pharmacies.
+        </p>
+        <p className="text-sm text-gray-700 leading-relaxed mt-2">
+          Your HubRx third parties see the standard Get Real Health versions on
+          the HubRx portal instead. If a document does not carry the PPH badge
+          below, it is not a PPH version.
+        </p>
+      </div>
+
       {/* Stats strip */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-10">
         <div className="bg-white border border-gray-200 rounded-xl p-5 text-center">
@@ -264,9 +289,16 @@ function ResourcesView() {
                 <div className="flex items-start gap-4">
                   <FileIcon fileType={resource.fileType} isExternal={isExt} />
                   <div className="flex-1 min-w-0">
-                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium mb-2 ${cat.colour}`}>
-                      {cat.icon} {cat.label}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${cat.colour}`}>
+                        {cat.icon} {cat.label}
+                      </span>
+                      {/* Badge so a PPH version is identifiable at a glance,
+                          per Jane Wilkins, 10 Aug 2026. */}
+                      <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#14b8a6] text-white">
+                        PPH version
+                      </span>
+                    </div>
                     <h3 className="font-bold text-gray-900 group-hover:text-[#14b8a6] transition-colors truncate">
                       {resource.name}
                     </h3>
