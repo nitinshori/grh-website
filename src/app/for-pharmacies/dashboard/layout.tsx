@@ -6,7 +6,6 @@ import { pharmacies } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { SignOutButton } from '@/app/admin/SignOutButton'
 import { getTenant } from '@/lib/tenant-context'
-import { needsConsent } from '@/lib/consent'
 import { isAppointmentsOnlyGroup, getGroupBranding } from '@/lib/access-pharmacies'
 import AppBridge from '@/components/AppBridge'
 
@@ -41,9 +40,6 @@ export default async function PharmacyDashboardLayout({
   if (session.user.role === 'client' && !isSignoffReviewer) redirect('/login')
 
   // SSO users must accept terms/data-processing on first use (versioned).
-  if (session.user.id && (await needsConsent(session.user.id))) {
-    redirect('/for-pharmacies/consent?next=/for-pharmacies/dashboard')
-  }
 
   const tenant = await getTenant()
   const isWhiteLabel = tenant.slug !== 'grh'

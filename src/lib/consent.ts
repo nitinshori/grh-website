@@ -18,22 +18,30 @@ import { users, userConsents } from '@/lib/db/schema'
 export const CONSENT_DOCUMENT = 'terms-dpa'
 export const CONSENT_VERSION = '2026-07'
 
-/** True when this user must see the consent screen before using the portal. */
-export async function needsConsent(userId: string): Promise<boolean> {
-  const [user] = await db
-    .select({ authSource: users.authSource, role: users.role })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1)
-  // Only SSO-provisioned users (authSource set to a partner tenant) are
-  // gated — direct GRH users accepted terms at signup. NB the column
-  // defaults to 'direct' (NOT NULL), so a truthiness check wrongly gated
-  // every user including super_admin (bug seen 9 Jul 2026).
-  if (!user) return false
-  if (user.role === 'super_admin') return false
-  if (!user.authSource || user.authSource === 'direct' || user.authSource === 'grh')
-    return false
+/**
+ * WITHDRAWN 14 Aug 2026, per Nitin: the consent screen is removed for
+ * everyone and no longer blocks entry to the portal.
+ *
+ * It had blocked three separate people from using their accounts. Jane
+ * Wilkins in July, and Mark Pedder on 14 Aug, who reported "no option to
+ * get past" the terms screen. The cause was that the accept button was
+ * rendered in white text on a background set from the CSS variable
+ * --tenant-primary, which is not defined on that route, so the button was
+ * invisible: there was genuinely nothing on screen to click.
+ *
+ * Always returns false, so nobody is redirected to the consent screen.
+ * Acceptances already recorded are left in user_consents for the audit
+ * trail, and recordConsent below still works if the gate is ever
+ * reinstated. If it is, fix the button styling first and test it on a
+ * partner tenant, not just on the GRH tenant where the variable happens
+ * to be set.
+ */
+export async function needsConsent(_userId: string): Promise<boolean> {
+  return false
+}
 
+/** Unused while the gate is withdrawn; kept for a future reinstatement. */
+export async function hasRecordedConsent(userId: string): Promise<boolean> {
   const [consent] = await db
     .select({ id: userConsents.id })
     .from(userConsents)
@@ -45,7 +53,7 @@ export async function needsConsent(userId: string): Promise<boolean> {
       ),
     )
     .limit(1)
-  return !consent
+  return !!consent
 }
 
 export async function recordConsent(
