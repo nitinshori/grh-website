@@ -45,7 +45,8 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   "impetigo": "impetigo.pdf",
   "japanese-encephalitis": "japanese-encephalitis.pdf",
   "meningitis-acwy-travel": "meningitis-acwy-travel.pdf",
-  "meningitis-b": "meningitis-b.pdf",
+  // v002 signed 14 Aug 2026: covers Bexsero and Trumenba
+  "meningitis-b": "meningitis-b-v002.pdf",
   "mmr": "mmr.pdf",
   // v002 signed 6 Aug 2026 (PPH clinical review)
   "mounjaro": "mounjaro-v002.pdf",
@@ -93,6 +94,9 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   "uti": "uti.pdf",
   "wegovy": "wegovy-v002.pdf",
   "wegovy-oral": "wegovy-oral-v003.pdf",
+  // signed 14 Aug 2026 (Nitin Shori + Chris Pilkington)
+  "yellow-fever": "yellow-fever.pdf",
+  "foundayo": "foundayo.pdf",
   "wound-care": "wound-care.pdf"
 };
 

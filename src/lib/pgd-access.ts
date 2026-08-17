@@ -47,6 +47,7 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
   { slug: 'saxenda', title: 'Saxenda', subtitle: 'Liraglutide 3.0mg', category: 'Weight Management' },
   { slug: 'mysimba', title: 'Mysimba', subtitle: 'Naltrexone/Bupropion', category: 'Weight Management' },
   { slug: 'orlistat', title: 'Orlistat', subtitle: 'Orlistat 120mg', category: 'Weight Management' },
+  { slug: 'foundayo', title: 'Foundayo (Orforglipron) Tablets', subtitle: 'Once-daily oral GLP-1, no food or timing restrictions', category: 'Weight Management' },
   { slug: 'glp1-monitoring', title: 'GLP-1 Monitoring', subtitle: 'Ongoing Monitoring', category: 'Weight Management' },
 
   // Skin
@@ -105,7 +106,7 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
   { slug: 'pneumococcal', title: 'Pneumococcal Vaccine', subtitle: 'PCV20 (Prevenar 20)', category: 'Vaccines' },
   { slug: 'hpv', title: 'HPV Vaccine', subtitle: 'Gardasil 9', category: 'Vaccines' },
   { slug: 'mmr', title: 'MMR Vaccine', subtitle: 'Measles, Mumps, Rubella', category: 'Vaccines' },
-  { slug: 'meningitis-b', title: 'Meningitis B', subtitle: 'Bexsero', category: 'Vaccines' },
+  { slug: 'meningitis-b', title: 'Meningitis B', subtitle: 'Bexsero (from 2 months) and Trumenba (from 10 years)', category: 'Vaccines' },
   { slug: 'meningitis-acwy-travel', title: 'Meningitis ACWY', subtitle: 'MenQuadfi / Nimenrix', category: 'Vaccines' },
   { slug: 'rsv', title: 'RSV Vaccine', subtitle: 'Abrysvo / Arexvy', category: 'Vaccines' },
   { slug: 'hep-ab-travel', title: 'Hepatitis A/B (Travel)', subtitle: 'Twinrix / Havrix / Engerix-B', category: 'Vaccines' },
