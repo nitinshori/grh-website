@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { incrementDownloads, getSignedDownloadUrl } from '@/lib/pharmacy-plus'
 import { isResourceReadAuthorised } from '@/lib/pharmacy-plus-access'
+import { getStaticResourceById } from '@/lib/pharmacy-plus-static'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,6 +16,12 @@ export async function GET(
 
   try {
     const { id } = await params
+
+    // Repo-held documents are served straight from public/, no blob lookup.
+    const staticResource = getStaticResourceById(id)
+    if (staticResource) {
+      return NextResponse.redirect(new URL(staticResource.blobUrl, request.url), 302)
+    }
 
     const resource = await incrementDownloads(id)
     if (!resource) {
