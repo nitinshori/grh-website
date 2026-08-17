@@ -31,6 +31,11 @@ const TENANT_ALLOWED_PREFIXES = [
   '/_next',              // build assets
   '/favicon',
   '/logos',              // tenant logos under /public/logos
+  '/pgd-documents',      // signed PGD masters, and the redirects that keep
+                         // links to retired versions working. Partner
+                         // pharmacies download these from their dashboard,
+                         // so hiding them would break the documents behind
+                         // every PGD on a partner subdomain.
   '/healthcare-professional', // HCP self-cert gate
 ]
 
