@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+// Entity details come from the single source of truth rather than being
+// retyped here: this certificate goes to Hajj authorities and universities,
+// so a stale registered office on it is worse than on any web page.
+import { legal } from "@/lib/legal";
 
 // ─────────────────────────────────────────────────────────────────────────
 // MenACWY vaccination certificate. Printed by pharmacist after a completed
@@ -297,12 +301,11 @@ export default function MenACWYCertificatePage() {
         {/* Footer */}
         <footer className="mt-12 pt-4 border-t border-gray-200 text-[10px] text-gray-500 leading-relaxed">
           <p>
-            <strong>Get Real Health Limited</strong> — UK pharmacy PGD provider.
-            Company number 12744898. Registered office: Unit 55, First Floor,
-            St. Asaph Business Park, St. Asaph, Denbighshire, LL17 0JG.
-            Registered with the Care Quality Commission as an Independent
-            Medical Agency (CQC provider ID 1-9971460462) and Healthcare
-            Inspectorate Wales.
+            <strong>{legal.companyName}</strong>, UK pharmacy PGD provider.
+            Company number {legal.companyNumber}. Registered office:{" "}
+            {legal.registeredOffice}. Registered with the Care Quality
+            Commission as an Independent Medical Agency (CQC provider ID{" "}
+            {legal.cqcProviderId}) and Healthcare Inspectorate Wales.
           </p>
           <p className="mt-2">
             This certificate confirms that the vaccination listed above was

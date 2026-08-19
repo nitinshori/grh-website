@@ -22,9 +22,19 @@ export const legal = {
   companyHouseUrl:
     "https://find-and-update.company-information.service.gov.uk/company/12744898",
 
-  /** Registered office address — single line, comma-separated */
+  /**
+   * Registered office address, single line, comma-separated.
+   *
+   * Must match Companies House exactly, since that is the authoritative
+   * record and anyone doing due diligence will compare the two. Checked
+   * against the register on 19 Aug 2026. The previous value here (Unit 55,
+   * LL17 0JG) was a stale earlier address.
+   *
+   * Note the ICO register still carries an older Manchester address, which
+   * is worth correcting with the ICO directly at some point.
+   */
   registeredOffice:
-    "Unit 55, First Floor, St. Asaph Business Park, St. Asaph, Denbighshire, LL17 0JG, United Kingdom",
+    "Zenvite Health Unit 23, St. Asaph Business Park, St. Asaph, Denbighshire, LL17 0LJ, United Kingdom",
 
   /** CQC provider ID (the slug after /provider/ in the CQC URL) */
   cqcProviderId: "1-9971460462",
