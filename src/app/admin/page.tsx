@@ -3,7 +3,7 @@ import { pharmacies, users, pharmacyPgds } from '@/lib/db/schema'
 import { count, eq } from 'drizzle-orm'
 import { getSystemStats } from '@/lib/analytics'
 import { ALL_PGDS } from '@/lib/pgd-access'
-import { getPharmacySignupsByWeek, getConsultationsByDay, getOnboardingBreakdown } from './lib/admin-stats'
+import { getPharmacySignupsByWeek, getConsultationsByDay, getOnboardingBreakdown, getNeedsAttention } from './lib/admin-stats'
 import { LineChart, HBarChart, DonutChart, Sparkline } from './components/Charts'
 
 async function getStats() {
@@ -47,11 +47,12 @@ async function getStats() {
 const pgdTitleMap = new Map(ALL_PGDS.map((p) => [p.slug, p.title]))
 
 export default async function AdminDashboard() {
-  const [stats, signupsByWeek, consultsByDay, onboarding] = await Promise.all([
+  const [stats, signupsByWeek, consultsByDay, onboarding, attention] = await Promise.all([
     getStats(),
     getPharmacySignupsByWeek(12),
     getConsultationsByDay(30),
     getOnboardingBreakdown(),
+    getNeedsAttention(),
   ])
 
   const signupSparkline = signupsByWeek.map((b) => b.count)
@@ -66,6 +67,42 @@ export default async function AdminDashboard() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
           <p className="text-gray-600">Welcome to the GRH Admin Panel</p>
+
+        {(attention.awaitingApproval > 0 ||
+          attention.payingWithoutAccount > 0 ||
+          attention.activeWithoutPgds > 0) && (
+          <div className="mb-6 rounded-xl border-2 border-amber-400 bg-amber-50 p-5">
+            <p className="text-sm font-bold text-amber-900 mb-2">Needs attention</p>
+            <ul className="text-sm text-amber-900 space-y-1">
+              {attention.awaitingApproval > 0 && (
+                <li>
+                  <a href="/admin/onboarding" className="font-semibold underline">
+                    {attention.awaitingApproval} signup
+                    {attention.awaitingApproval === 1 ? '' : 's'} awaiting approval
+                  </a>
+                  {' '}— they have signed up but have no account yet.
+                </li>
+              )}
+              {attention.payingWithoutAccount > 0 && (
+                <li>
+                  <a href="/admin/onboarding" className="font-semibold underline">
+                    {attention.payingWithoutAccount} with a direct debit but no pharmacy account
+                  </a>
+                  {' '}— being billed for something they cannot use.
+                </li>
+              )}
+              {attention.activeWithoutPgds > 0 && (
+                <li>
+                  <a href="/admin/pharmacies" className="font-semibold underline">
+                    {attention.activeWithoutPgds} active pharmac
+                    {attention.activeWithoutPgds === 1 ? 'y' : 'ies'} with no PGDs assigned
+                  </a>
+                  {' '}— provisioned but with nothing to use.
+                </li>
+              )}
+            </ul>
+          </div>
+        )}
         </div>
 
         {/* Stats Grid */}

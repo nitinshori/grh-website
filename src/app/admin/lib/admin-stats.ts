@@ -215,3 +215,54 @@ function startOfWeek(d: Date): Date {
   out.setHours(0, 0, 0, 0);
   return out;
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Needs-attention checks.
+//
+// Stag Chemist paid on 18 Aug and sat unnoticed: their request was in the
+// onboarding queue awaiting approval, but a hydration bug blanked that page
+// so nobody saw it. Alwoodley has been active since 16 July with no PGDs
+// assigned. Both are the same failure: a customer stuck between paying and
+// being able to use the service, with nothing telling anyone.
+//
+// These counts surface on the admin dashboard so a stuck customer is
+// visible on the page everyone opens first, not only on the page that has
+// to be sought out.
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface NeedsAttention {
+  /** Signed up and awaiting approval, so not yet provisioned. */
+  awaitingApproval: number
+  /** Mandate set up with GoCardless but no pharmacy record created. */
+  payingWithoutAccount: number
+  /** Active pharmacy with no PGDs assigned, so nothing to use. */
+  activeWithoutPgds: number
+}
+
+export async function getNeedsAttention(): Promise<NeedsAttention> {
+  const [awaiting] = await db
+    .select({ n: sql<number>`COUNT(*)::int` })
+    .from(onboardingRequests)
+    .where(sql`status IN ('submitted', 'pending', 'awaiting_approval', 'started')`)
+
+  const [paying] = await db
+    .select({ n: sql<number>`COUNT(*)::int` })
+    .from(onboardingRequests)
+    .where(sql`gocardless_mandate_id IS NOT NULL AND pharmacy_id IS NULL`)
+
+  const [noPgds] = await db.execute<{ n: number }>(sql`
+    SELECT COUNT(*)::int AS n
+      FROM pharmacies p
+     WHERE p.is_active = true
+       AND NOT EXISTS (
+         SELECT 1 FROM pharmacy_pgds x
+          WHERE x.pharmacy_id = p.id AND x.status = 'approved'
+       )
+  `).then((r) => (Array.isArray(r) ? r : (r as unknown as { rows: { n: number }[] }).rows))
+
+  return {
+    awaitingApproval: awaiting?.n ?? 0,
+    payingWithoutAccount: paying?.n ?? 0,
+    activeWithoutPgds: noPgds?.n ?? 0,
+  }
+}

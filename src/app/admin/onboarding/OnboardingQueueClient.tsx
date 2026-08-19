@@ -20,6 +20,17 @@ interface Row {
 
 const STATUS_FILTERS = ['all', 'awaiting_approval', 'approved', 'completed', 'rejected'] as const;
 
+
+// Formatted with an explicit timezone so the server and the browser produce
+// the same string. Without it the server renders in UTC and the browser in
+// Europe/London, the text differs, React fails hydration (error #418) and
+// discards the whole page: the onboarding queue rendered on the server but
+// showed as blank, which is why Stag Chemist sat unseen for a day after
+// paying. Any date rendered in a client component needs this treatment.
+function formatSubmitted(value: string | Date): string {
+  return new Date(value).toLocaleString('en-GB', { timeZone: 'Europe/London' })
+}
+
 export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
   const [list, setList] = useState<Row[]>(rows);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -126,7 +137,7 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
                 {r.pharmacyAddress && <div className="text-xs text-gray-500 mt-0.5">{r.pharmacyAddress}</div>}
                 {r.pharmacyGphc && <div className="text-xs text-gray-500">Premises GPhC: {r.pharmacyGphc}</div>}
                 {r.mandateId && <div className="text-xs text-gray-500">Mandate: <code className="text-[11px]">{r.mandateId}</code></div>}
-                <div className="text-xs text-gray-400 mt-1">Submitted {new Date(r.createdAt).toLocaleString('en-GB')}</div>
+                <div className="text-xs text-gray-400 mt-1">Submitted {formatSubmitted(r.createdAt)}</div>
                 {r.rejectedReason && <div className="text-xs text-red-600 mt-1">Rejected: {r.rejectedReason}</div>}
               </div>
               {r.status === 'awaiting_approval' && (
