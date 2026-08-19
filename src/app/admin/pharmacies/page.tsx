@@ -1,6 +1,6 @@
 import { db } from '@/lib/db'
 import { pharmacies, users, pharmacyPgds } from '@/lib/db/schema'
-import { count, eq } from 'drizzle-orm'
+import { desc, count, eq } from 'drizzle-orm'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,7 +8,7 @@ async function getPharmaciesWithCounts(includeInactive: boolean) {
   const allPharmacies = await db
     .select()
     .from(pharmacies)
-    .orderBy(pharmacies.name)
+    .orderBy(desc(pharmacies.createdAt))
     .then((rows) =>
       includeInactive ? rows : rows.filter((p) => p.isActive)
     )
@@ -149,6 +149,12 @@ export default async function PharmaciesPage({
                       PGDs
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      Start date
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      Source
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                       Status
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
@@ -179,6 +185,16 @@ export default async function PharmaciesPage({
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-green-100 text-green-800">
                           {pharmacy.pgdCount}
                         </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                        {pharmacy.createdAt
+                          ? new Date(pharmacy.createdAt).toLocaleDateString('en-GB', {
+                              day: '2-digit', month: 'short', year: 'numeric',
+                            })
+                          : '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {pharmacy.authSource === 'hubrx' ? 'HubRx' : 'Direct'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {pharmacy.isActive ? (
