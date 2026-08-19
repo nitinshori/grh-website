@@ -3,12 +3,9 @@
  * Update the placeholders here once and every page (footer, policies, About)
  * will pick them up automatically.
  *
- * TODO before launch:
- *  - Replace COMPANY_NAME with the exact registered name from Companies House
- *  - Replace REGISTERED_OFFICE with the registered office address
- *  - Replace ICO_REGISTRATION with the ICO data protection fee reg number
- *    (or keep null if not yet registered, in which case the policy pages will
- *     show a "registration in progress" notice instead)
+ * Setting icoRegistration to null makes the policy pages and footer fall back
+ * to a "registration in progress" notice, so never leave a stale value here:
+ * publishing a lapsed number is worse than publishing none.
  */
 
 export const legal = {
@@ -35,8 +32,16 @@ export const legal = {
   /** Public CQC profile URL */
   cqcUrl: "https://www.cqc.org.uk/provider/1-9971460462",
 
-  /** ICO data protection fee registration number, or null if not yet registered */
-  icoRegistration: null as string | null,
+  /**
+   * ICO data protection fee registration number, or null if not yet registered.
+   *
+   * Verified against the ICO register on 19 Aug 2026: registered 12 Jan 2023,
+   * expires 11 Jan 2027, Tier 1. Renewal falls due before that expiry, and an
+   * expired registration published on the site is worse than none, so it is
+   * worth a diary note nearer the time.
+   * https://ico.org.uk/ESDWebPages/Entry/ZB498920
+   */
+  icoRegistration: "ZB498920" as string | null,
 
   /** Public-facing email shown on policy pages and footer */
   contactEmail: "hello@getrealhealth.co.uk",
