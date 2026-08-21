@@ -236,13 +236,32 @@ gpEmail: "",
       });
     }
 
-    if (state.assessment.systemic || (state.assessment.symptoms.fever && state.assessment.temperatureC && state.assessment.temperatureC > 38.5)) {
+    // ── Upper UTI and pyelonephritis are outside this PGD ───────────────
+    // v002, 21 Aug 2026. The document previously covered upper UTI in
+    // children aged 3 months to 16 years with a 7 to 10 day course, and the
+    // tool treated systemic illness as a red flag the pharmacist could read
+    // past rather than a stop. Suspected pyelonephritis in a child carries a
+    // sepsis risk and needs imaging and follow-up that a pharmacy cannot
+    // arrange, so it is now same-day referral in both the document and here.
+    //
+    // NICE NG224 treats fever of 38 degrees or above in a child with a UTI
+    // as suggestive of upper tract involvement, so that is the threshold
+    // used, not 38.5.
+    const upperUtiFeatures: string[] = [];
+    if (state.assessment.systemic) upperUtiFeatures.push("systemically unwell");
+    if (state.assessment.symptoms.loinPain) upperUtiFeatures.push("loin or flank pain");
+    if (state.assessment.vomiting) upperUtiFeatures.push("vomiting");
+    if (state.assessment.temperatureC !== null && state.assessment.temperatureC >= 38)
+      upperUtiFeatures.push(`temperature ${state.assessment.temperatureC}°C`);
+    else if (state.assessment.symptoms.fever && state.assessment.temperatureC === null)
+      upperUtiFeatures.push("fever reported, temperature not recorded");
+
+    if (upperUtiFeatures.length > 0) {
       clinicalAlerts.push({
-        severity: "red-flag",
-        code: "SYSTEMIC_ILLNESS",
-        message: "Systemic Illness",
-        detail:
-          "High fever or systemically unwell. May require parenteral antibiotics and medical assessment.",
+        severity: "stop",
+        code: "UPPER_UTI_SUSPECTED",
+        message: "Features of upper urinary tract infection",
+        detail: `Recorded: ${upperUtiFeatures.join(", ")}. Upper UTI and pyelonephritis are not treated under this PGD. Refer the same day for paediatric assessment, and call 999 if the child looks seriously unwell. Do not supply.`,
       });
     }
 

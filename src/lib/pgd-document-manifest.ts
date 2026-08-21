@@ -55,7 +55,9 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   "mounjaro": "mounjaro-v002.pdf",
   "mysimba": "mysimba.pdf",
   "orlistat": "orlistat.pdf",
-  "paediatric-uti": "paediatric-uti.pdf",
+  // v002, 21 Aug 2026: restricted to lower UTI. Upper UTI and pyelonephritis
+  // in children are now same-day referral, not a PGD supply.
+  "paediatric-uti": "paediatric-uti-v002.pdf",
   "period-delay": "period-delay.pdf",
   "pneumococcal": "pneumococcal.pdf",
   "postnatal-contraception": "postnatal-contraception.pdf",
@@ -150,7 +152,7 @@ export const PGD_HUBRX_FILES: Record<string, string> = {
   "mounjaro": "mounjaro 2.pdf",
   "mysimba": "mysimba 2.pdf",
   "orlistat": "orlistat 2.pdf",
-  "paediatric-uti": "paediatric-uti 2.pdf",
+  "paediatric-uti": "paediatric-uti-v002.pdf",
   "period-delay": "period-delay 2.pdf",
   "pneumococcal": "pneumococcal 2.pdf",
   "postnatal-contraception": "postnatal-contraception 2.pdf",

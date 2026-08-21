@@ -46,6 +46,9 @@ const RETIRED_DOCUMENTS: Record<string, string> = {
   'rabies 2.pdf': 'rabies',
   'shingles-treatment.pdf': 'shingles-treatment',
   'shingles-treatment 2.pdf': 'shingles-treatment',
+  // v002 21 Aug 2026: upper UTI removed from scope
+  'paediatric-uti.pdf': 'paediatric-uti',
+  'paediatric-uti 2.pdf': 'paediatric-uti',
 }
 
 export async function GET(
