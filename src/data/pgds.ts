@@ -744,18 +744,6 @@ export const pgds: PGD[] = [
     pharmadoctor: "Partial",
   },
   {
-    id: "alcohol-reduction",
-    title: "Alcohol Reduction (Nalmefene \u2014 Selincro)",
-    category: "Mental Health",
-    priority: 1,
-    isNew: false,
-    revenueEstimate: "\u00a335\u201350 per consultation",
-    consultTime: "15 min",
-    description:
-      "Pharmadoctor offers this free as a foot-in-door service. Match it.",
-    pharmadoctor: "Yes (free)",
-  },
-  {
     id: "anxiety-propranolol",
     title: "Anxiety \u2014 Short-term (Propranolol)",
     category: "Mental Health",

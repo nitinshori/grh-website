@@ -91,7 +91,6 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
 
   // Mental Health & Wellbeing
   { slug: 'smoking-varenicline', title: 'Smoking Cessation (Varenicline)', subtitle: 'Champix', category: 'Mental Health & Wellbeing' },
-  { slug: 'alcohol-reduction', title: 'Alcohol Reduction', subtitle: 'Nalmefene', category: 'Mental Health & Wellbeing' },
   { slug: 'sleep-melatonin', title: 'Sleep (Melatonin)', subtitle: 'Circadin / Melatonin', category: 'Mental Health & Wellbeing' },
   // adhd-monitoring removed from public catalogue — clinical review (Apr 2026)
   { slug: 'anxiety-propranolol', title: 'Situational Anxiety', subtitle: 'Propranolol', category: 'Mental Health & Wellbeing' },

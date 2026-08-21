@@ -4,7 +4,6 @@
 export const PGD_MASTER_FILES: Record<string, string> = {
   "acne": "acne.pdf",
   "adhd-monitoring": "adhd-monitoring.pdf",
-  "alcohol-reduction": "alcohol-reduction.pdf",
   "alopecia-minoxidil": "alopecia-minoxidil.pdf",
   "altitude-sickness": "altitude-sickness.pdf",
   "anti-malarials": "anti-malarials.pdf",
@@ -122,7 +121,6 @@ export const PGD_MASTER_FILES: Record<string, string> = {
 export const PGD_HUBRX_FILES: Record<string, string> = {
   "acne": "acne 2.pdf",
   "adhd-monitoring": "adhd-monitoring 2.pdf",
-  "alcohol-reduction": "alcohol-reduction 2.pdf",
   "alopecia-minoxidil": "alopecia-minoxidil 2.pdf",
   "altitude-sickness": "altitude-sickness 2.pdf",
   "anti-malarials": "anti-malarials 2.pdf",

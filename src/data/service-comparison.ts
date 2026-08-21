@@ -806,10 +806,14 @@ export const SERVICE_COMPARISON: ServiceComparisonCategory[] = [
         wales: YES("NHS Help Me Quit"),
       },
       {
+        // Withdrawn 21 Aug 2026. The service had a naltrexone document behind
+        // a nalmefene tool and no pharmacy was using it. Kept in the
+        // comparison table as not offered, because the table's purpose is to
+        // show honestly what we do and do not cover.
         pgdSlug: "alcohol-reduction",
         condition: "Alcohol reduction / dependence",
-        grhDrugs: "Nalmefene (Selincro), thiamine support pathway",
-        grhOffered: true,
+        grhDrugs: "Not offered",
+        grhOffered: false,
         pfe: NO,
         pfs: NO,
         wales: NO,

@@ -66,7 +66,6 @@ import { anxietyPropranololModule } from "./anxiety-propranolol";
 import { sleepMelatoninModule } from "./sleep-melatonin";
 import { smokingVareniclineModule } from "./smoking-varenicline";
 import { smokingNrtModule } from "./smoking-nrt";
-import { alcoholReductionModule } from "./alcohol-reduction";
 // Tier 6 — travel medicine specifics
 import { antiMalarialsModule } from "./anti-malarials";
 import { yellowFeverModule } from "./yellow-fever";
@@ -147,7 +146,6 @@ export const modules: TrainingModule[] = [
   sleepMelatoninModule,
   smokingVareniclineModule,
   smokingNrtModule,
-  alcoholReductionModule,
   // Tier 6 — travel medicine specifics
   antiMalarialsModule,
   yellowFeverModule,
