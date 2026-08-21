@@ -1,5 +1,7 @@
 import React from 'react'
 import { PgdPageActions } from '@/components/PgdPageActions'
+// Access is decided by the TRT PGD, which covers all four preparations.
+import PgdGate from '../PgdGate'
 import { SustanonClient } from './SustanonClient'
 
 export const metadata = {
@@ -10,6 +12,7 @@ export const metadata = {
 
 export default function SustanonPage(): React.ReactNode {
   return (
+    <PgdGate slug="trt" title="Testosterone Replacement Therapy">
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         <PgdPageActions />
@@ -48,5 +51,6 @@ export default function SustanonPage(): React.ReactNode {
         </div>
       </div>
     </div>
+    </PgdGate>
   )
 }

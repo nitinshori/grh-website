@@ -36,6 +36,10 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   "gonorrhoea-treatment": "gonorrhoea-treatment.pdf",
   "hair-loss": "hair-loss.pdf",
   "hayfever": "hayfever.pdf",
+  // Signed 21 Aug 2026. hep-ab-travel was the only slug in the catalogue
+  // with no document at all: the tool was live and assignable, so every
+  // consultation through it was a supply with nothing authorising it.
+  "hep-ab-travel": "hep-ab-travel-v001.pdf",
   "hep-b-occupational": "hep-b-occupational.pdf",
   "herpes-management": "herpes-management.pdf",
   "hpv": "hpv.pdf",

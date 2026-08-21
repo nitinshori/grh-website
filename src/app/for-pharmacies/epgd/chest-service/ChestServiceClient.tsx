@@ -143,7 +143,6 @@ const STEP_LABELS = [
 ];
 const TOTAL_STEPS = STEP_LABELS.length;
 const STEP_PRESENTATION = STEP_LABELS.indexOf("Presentation");
-const STEP_REDFLAGS = STEP_LABELS.indexOf("Red Flags");
 const STEP_ANTIBIOTIC = STEP_LABELS.indexOf("Antibiotic");
 
 function initialState(): ChestState {
