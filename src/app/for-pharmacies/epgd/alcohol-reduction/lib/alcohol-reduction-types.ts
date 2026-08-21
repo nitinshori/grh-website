@@ -9,6 +9,26 @@ export interface AlcoholAssessment {
   unitPerWeek: number | null;
   bingeDrinking: boolean;
   dependenceLevel: string;
+  // ── Licence gates, added 21 Aug 2026 ───────────────────────────────
+  // Nalmefene's indication is narrow and the tool did not encode it. The
+  // licence requires a HIGH drinking risk level, which is defined per DAY
+  // (over 60 g, i.e. over 7.5 units, for men; over 40 g, i.e. over 5
+  // units, for women), and initiation only in patients who STILL have a
+  // high level two weeks after an initial assessment. The tool captured
+  // units per week only, which cannot express a daily risk level, and
+  // asked nothing about the run-in.
+  /** Units per day at this visit. The licence threshold is per day, not per week. */
+  unitsPerDay: number | null;
+  /** Sex used for the drinking risk level threshold, which differs. */
+  sexForThreshold: "" | "male" | "female";
+  /** Date of the initial assessment. Supply requires at least 14 days since. */
+  initialAssessmentDate: string;
+  /** Confirmed the patient still has a high drinking risk level at this second visit. */
+  stillHighRiskAtReview: boolean;
+  /** The patient kept a record of consumption during the run-in and it has been reviewed. */
+  consumptionRecordReviewed: boolean;
+  /** Treatment goal is reduction, not abstinence. Abstinence is a different medicine. */
+  goalIsReduction: boolean;
 }
 
 export interface AlcoholMedicalHistory {
@@ -119,6 +139,12 @@ gpEmail: "",
       unitPerWeek: null,
       bingeDrinking: false,
       dependenceLevel: "",
+      unitsPerDay: null,
+      sexForThreshold: "",
+      initialAssessmentDate: "",
+      stillHighRiskAtReview: false,
+      consumptionRecordReviewed: false,
+      goalIsReduction: false,
     },
     medicalHistory: {
       recentWithdrawal: false,

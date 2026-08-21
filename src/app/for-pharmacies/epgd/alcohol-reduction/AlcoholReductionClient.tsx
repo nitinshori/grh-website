@@ -248,6 +248,69 @@ export default function AlcoholReductionClient() {
                 unit="units/week"
               />
 
+              {/* ── Licence conditions for nalmefene ─────────────────────
+                  These are conditions of the marketing authorisation, not
+                  house policy, so each one blocks supply until recorded. */}
+              <div className="p-4 rounded-lg border border-amber-300 bg-amber-50 space-y-4">
+                <p className="text-sm font-semibold text-amber-900">
+                  Licence conditions for nalmefene
+                </p>
+                <p className="text-xs text-amber-900">
+                  Nalmefene may only be started in someone who still has a high
+                  drinking risk level two weeks after an initial assessment, whose
+                  goal is to drink less rather than to stop, and who has ongoing
+                  psychosocial support. Each of these blocks supply until recorded.
+                </p>
+
+                <SelectInput
+                  label="Sex used for the drinking risk threshold"
+                  value={state.assessment.sexForThreshold}
+                  onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "sexForThreshold", value: v })}
+                  options={[
+                    { value: "", label: "Select…" },
+                    { value: "male", label: "Male — high risk is over 7.5 units a day" },
+                    { value: "female", label: "Female — high risk is over 5 units a day" },
+                  ]}
+                  required
+                />
+
+                <NumberInput
+                  label="Alcohol consumption (units per DAY) at this review"
+                  value={state.assessment.unitsPerDay}
+                  onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "unitsPerDay", value: v })}
+                  min={0}
+                  placeholder="e.g., 9"
+                  unit="units/day"
+                />
+
+                <TextInput
+                  label="Date of the initial assessment"
+                  type="date"
+                  value={state.assessment.initialAssessmentDate}
+                  onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "initialAssessmentDate", value: v })}
+                />
+
+                <Checkbox
+                  label="Patient still has a high drinking risk level at this review"
+                  checked={state.assessment.stillHighRiskAtReview}
+                  onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "stillHighRiskAtReview", value: v })}
+                  description="If their drinking has already fallen below the threshold they are not eligible, and should be supported without medication"
+                />
+
+                <Checkbox
+                  label="Consumption record from the two week run-in reviewed"
+                  checked={state.assessment.consumptionRecordReviewed}
+                  onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "consumptionRecordReviewed", value: v })}
+                />
+
+                <Checkbox
+                  label="Agreed treatment goal is to REDUCE drinking, not to stop"
+                  checked={state.assessment.goalIsReduction}
+                  onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "goalIsReduction", value: v })}
+                  description="Nalmefene is not an abstinence medicine. A patient who wants to stop needs referral for naltrexone or acamprosate"
+                />
+              </div>
+
               <Checkbox
                 label="Patient reports binge drinking"
                 checked={state.assessment.bingeDrinking}
