@@ -43,8 +43,11 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   "hrt": "hrt.pdf",
   "hypertension": "hypertension.pdf",
   "impetigo": "impetigo.pdf",
-  "japanese-encephalitis": "japanese-encephalitis.pdf",
-  "meningitis-acwy-travel": "meningitis-acwy-travel.pdf",
+  // Split apart 21 Aug 2026. These three slugs previously all resolved to a
+  // single combined Ixiaro / Rabies / MenACWY document, so a pharmacy
+  // adopting one was signing for all three. Raised by PPH.
+  "japanese-encephalitis": "japanese-encephalitis-v001.pdf",
+  "meningitis-acwy-travel": "meningitis-acwy-travel-v001.pdf",
   // v002 signed 14 Aug 2026: covers Bexsero and Trumenba
   "meningitis-b": "meningitis-b-v002.pdf",
   "mmr": "mmr.pdf",
@@ -58,7 +61,7 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   "postnatal-contraception": "postnatal-contraception.pdf",
   "premature-ejaculation": "premature-ejaculation.pdf",
   "prep": "prep.pdf",
-  "rabies": "rabies.pdf",
+  "rabies": "rabies-v001.pdf",
   "recurrent-uti": "recurrent-uti.pdf",
   "rosacea": "rosacea.pdf",
   "rsv": "rsv.pdf",
@@ -70,7 +73,9 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   "fungal-infection": "fungal-infection.pdf",
   "psoriasis": "psoriasis.pdf",
   "period-pain": "period-pain.pdf",
-  "shingles-treatment": "shingles-treatment.pdf",
+  // shingles-treatment previously served the Shingrix VACCINE document, which
+  // contains no antiviral at all. Now a genuine antiviral treatment PGD.
+  "shingles-treatment": "shingles-treatment-v001.pdf",
   "shingles-vaccine": "shingles-vaccine.pdf",
   "sleep-melatonin": "sleep-melatonin.pdf",
   "smoking-nrt": "smoking-nrt.pdf",
@@ -135,8 +140,11 @@ export const PGD_HUBRX_FILES: Record<string, string> = {
   "hrt": "hrt 2.pdf",
   "hypertension": "hypertension 2.pdf",
   "impetigo": "impetigo 2.pdf",
-  "japanese-encephalitis": "japanese-encephalitis 2.pdf",
-  "meningitis-acwy-travel": "meningitis-acwy-travel 2.pdf",
+  // Split 21 Aug 2026: the HubRx copies were duplicates of the same combined
+  // document, so they point at the new standalone masters rather than being
+  // re-branded copies of content that was wrong.
+  "japanese-encephalitis": "japanese-encephalitis-v001.pdf",
+  "meningitis-acwy-travel": "meningitis-acwy-travel-v001.pdf",
   "meningitis-b": "meningitis-b 2.pdf",
   "mmr": "mmr 2.pdf",
   "mounjaro": "mounjaro 2.pdf",
@@ -148,12 +156,12 @@ export const PGD_HUBRX_FILES: Record<string, string> = {
   "postnatal-contraception": "postnatal-contraception 2.pdf",
   "premature-ejaculation": "premature-ejaculation 2.pdf",
   "prep": "prep 2.pdf",
-  "rabies": "rabies 2.pdf",
+  "rabies": "rabies-v001.pdf",
   "recurrent-uti": "recurrent-uti 2.pdf",
   "rosacea": "rosacea 2.pdf",
   "rsv": "rsv 2.pdf",
   "saxenda": "saxenda 2.pdf",
-  "shingles-treatment": "shingles-treatment 2.pdf",
+  "shingles-treatment": "shingles-treatment-v001.pdf",
   "shingles-vaccine": "shingles-vaccine 2.pdf",
   "sleep-melatonin": "sleep-melatonin 2.pdf",
   "smoking-nrt": "smoking-nrt 2.pdf",

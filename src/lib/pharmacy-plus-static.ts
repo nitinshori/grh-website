@@ -103,6 +103,47 @@ const STATIC_RESOURCES: StaticResourceInput[] = [
     fileSize: 200000,
     signedAt: '2026-08-21',
   },
+  // ── The travel split, 21 Aug 2026 ───────────────────────────────────
+  // Janey asked whether a standalone MenACWY PGD existed, having noticed the
+  // one on the portal covered Japanese encephalitis and rabies as well. It
+  // did not. These four replace that combined document, plus a shingles
+  // treatment PGD that was previously serving the Shingrix vaccine document.
+  {
+    id: 'pph-menacwy-v001',
+    name: 'Meningococcal ACWY PGD v001',
+    description: 'Signed 21 Aug 2026. Standalone MenACWY, separated from the combined travel document. Covers Nimenrix, MenQuadfi and Menveo, whose licensed ages differ, and the Saudi certificate requirements for Hajj and Umrah.',
+    category: 'PGD',
+    file: 'PPH-MenACWY-PGD-v001.pdf',
+    fileSize: 174000,
+    signedAt: '2026-08-21',
+  },
+  {
+    id: 'pph-japanese-encephalitis-v001',
+    name: 'Japanese Encephalitis PGD v001',
+    description: 'Signed 21 Aug 2026. Standalone Ixiaro PGD, including the 0.25 mL paediatric dose under 3 years and the age limits on the rapid day 0 and day 7 schedule.',
+    category: 'PGD',
+    file: 'PPH-Japanese-Encephalitis-PGD-v001.pdf',
+    fileSize: 165000,
+    signedAt: '2026-08-21',
+  },
+  {
+    id: 'pph-rabies-v001',
+    name: 'Rabies Pre-Exposure PGD v001',
+    description: 'Signed 21 Aug 2026. Pre-exposure only. Covers Rabipur and Verorab, whose dose volumes differ, and carries full patient counselling on what to do after a potential exposure.',
+    category: 'PGD',
+    file: 'PPH-Rabies-PreExposure-PGD-v001.pdf',
+    fileSize: 176000,
+    signedAt: '2026-08-21',
+  },
+  {
+    id: 'pph-shingles-treatment-v001',
+    name: 'Shingles Treatment PGD v001',
+    description: 'Signed 21 Aug 2026. Antiviral treatment of active shingles with aciclovir, valaciclovir or famciclovir. New document: the shingles treatment entry previously served the Shingrix vaccine PGD.',
+    category: 'PGD',
+    file: 'PPH-Shingles-Treatment-PGD-v001.pdf',
+    fileSize: 192000,
+    signedAt: '2026-08-21',
+  },
 ]
 
 /** Hub entries for the documents held in the repo. */

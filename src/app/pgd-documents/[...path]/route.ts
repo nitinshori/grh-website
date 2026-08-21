@@ -34,6 +34,18 @@ const RETIRED_DOCUMENTS: Record<string, string> = {
   'wegovy-oral.pdf': 'wegovy-oral',
   // Reissued 21 Aug 2026 after the UK SPC published
   'foundayo.pdf': 'foundayo',
+  // Split apart 21 Aug 2026. Each of these filenames previously served the
+  // same combined Ixiaro / Rabies / MenACWY document, and shingles-treatment
+  // served the Shingrix vaccine document. Anyone holding an old link now
+  // lands on the correct standalone PGD for what they asked for.
+  'meningitis-acwy-travel.pdf': 'meningitis-acwy-travel',
+  'meningitis-acwy-travel 2.pdf': 'meningitis-acwy-travel',
+  'japanese-encephalitis.pdf': 'japanese-encephalitis',
+  'japanese-encephalitis 2.pdf': 'japanese-encephalitis',
+  'rabies.pdf': 'rabies',
+  'rabies 2.pdf': 'rabies',
+  'shingles-treatment.pdf': 'shingles-treatment',
+  'shingles-treatment 2.pdf': 'shingles-treatment',
 }
 
 export async function GET(
