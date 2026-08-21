@@ -95,13 +95,13 @@ const STATIC_RESOURCES: StaticResourceInput[] = [
     signedAt: '2026-08-14',
   },
   {
-    id: 'pph-foundayo-v001',
-    name: 'Foundayo (orforglipron) PGD v001',
-    description: 'Signed 14 Aug 2026. Once-daily oral GLP-1, MHRA authorised 10 Aug 2026. Dosing to be reconciled against the UK SPC when it publishes.',
+    id: 'pph-foundayo-v002',
+    name: 'Foundayo (orforglipron) PGD v002',
+    description: 'Signed 21 Aug 2026. Reconciled against the UK SPC: corrected pregnancy interval (3 weeks), oral contraceptive interaction added for initiation and every dose increase, hypotension caution, and simvastatin, rosuvastatin, topotecan and OATP1B interaction handling.',
     category: 'PGD',
-    file: 'PPH-Foundayo-PGD-v001.pdf',
-    fileSize: 195000,
-    signedAt: '2026-08-14',
+    file: 'PPH-Foundayo-PGD-v002.pdf',
+    fileSize: 200000,
+    signedAt: '2026-08-21',
   },
 ]
 

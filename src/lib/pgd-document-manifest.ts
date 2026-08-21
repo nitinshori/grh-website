@@ -96,7 +96,7 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   "wegovy-oral": "wegovy-oral-v003.pdf",
   // signed 14 Aug 2026 (Nitin Shori + Chris Pilkington)
   "yellow-fever": "yellow-fever.pdf",
-  "foundayo": "foundayo.pdf",
+  "foundayo": "foundayo-v002.pdf",
   "wound-care": "wound-care.pdf"
 };
 

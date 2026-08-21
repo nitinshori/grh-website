@@ -32,6 +32,8 @@ const RETIRED_DOCUMENTS: Record<string, string> = {
   'mounjaro.pdf': 'mounjaro',
   'wegovy.pdf': 'wegovy',
   'wegovy-oral.pdf': 'wegovy-oral',
+  // Reissued 21 Aug 2026 after the UK SPC published
+  'foundayo.pdf': 'foundayo',
 }
 
 export async function GET(
