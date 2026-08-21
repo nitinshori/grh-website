@@ -107,6 +107,18 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   "wound-care": "wound-care.pdf"
 };
 
+// HubRx-branded copies. Used ONLY by the admin document listing: pharmacy
+// downloads resolve through PGD_MASTER_FILES via pgd-documents.ts, so
+// nothing in this map has ever been served to a pharmacy. It still matters,
+// because these are the links used when someone sends a document to a HubRx
+// pharmacy by hand.
+//
+// 21 Aug 2026: five entries were stale copies of masters that had since been
+// reissued. The flu one stated no season at all, the COVID one predated the
+// 2026/27 strains, and the MenB one contained no Trumenba. Reissuing a master
+// had never included refreshing its branded copy, so those five now point at
+// the master. A branded copy that goes stale silently is worse than no
+// branding.
 export const PGD_HUBRX_FILES: Record<string, string> = {
   "acne": "acne 2.pdf",
   "adhd-monitoring": "adhd-monitoring 2.pdf",
@@ -121,7 +133,7 @@ export const PGD_HUBRX_FILES: Record<string, string> = {
   "chickenpox": "chickenpox 2.pdf",
   "cold-sores": "cold-sores 2.pdf",
   "copd": "copd 2.pdf",
-  "covid-booster": "covid-booster 2.pdf",
+  "covid-booster": "covid-2026-27-v003.pdf",
   "dengue": "dengue 2.pdf",
   "dental-bridging": "dental-bridging 2.pdf",
   "diabetes-monitoring": "diabetes-monitoring 2.pdf",
@@ -130,7 +142,7 @@ export const PGD_HUBRX_FILES: Record<string, string> = {
   "ed": "ed 2.pdf",
   "emergency-contraception": "emergency-contraception 2.pdf",
   "eye-infections": "eye-infections 2.pdf",
-  "flu": "flu 2.pdf",
+  "flu": "flu-2026-27-v003.pdf",
   "genital-warts": "genital-warts 2.pdf",
   "glp1-monitoring": "glp1-monitoring 2.pdf",
   "gonorrhoea-treatment": "gonorrhoea-treatment 2.pdf",
@@ -147,9 +159,9 @@ export const PGD_HUBRX_FILES: Record<string, string> = {
   // re-branded copies of content that was wrong.
   "japanese-encephalitis": "japanese-encephalitis-v001.pdf",
   "meningitis-acwy-travel": "meningitis-acwy-travel-v001.pdf",
-  "meningitis-b": "meningitis-b 2.pdf",
+  "meningitis-b": "meningitis-b-v002.pdf",
   "mmr": "mmr 2.pdf",
-  "mounjaro": "mounjaro 2.pdf",
+  "mounjaro": "mounjaro-v002.pdf",
   "mysimba": "mysimba 2.pdf",
   "orlistat": "orlistat 2.pdf",
   "paediatric-uti": "paediatric-uti-v002.pdf",
@@ -177,6 +189,6 @@ export const PGD_HUBRX_FILES: Record<string, string> = {
   "typhoid": "travel-core 2.pdf",
   "testosterone-women": "hrt 2.pdf",
   "uti": "uti 2.pdf",
-  "wegovy": "wegovy 2.pdf",
+  "wegovy": "wegovy-v002.pdf",
   "wound-care": "wound-care 2.pdf"
 };

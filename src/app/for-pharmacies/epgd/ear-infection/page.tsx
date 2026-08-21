@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import EarInfectionClient from "./EarInfectionClient";
 import { PgdPageActions } from "@/components/PgdPageActions";
-export const metadata: Metadata = { title: "Ear Infection (Otitis) ePGD Consultation", description: "Digital consultation tool for Ear Infection (Otitis) — Amoxicillin / Ciprofloxacin Drops under Patient Group Direction." };
+export const metadata: Metadata = { title: "Ear Infection (Otitis) ePGD Consultation", description: "Digital consultation tool for otitis externa using Cetraxal (ciprofloxacin) ear drops under Patient Group Direction." };
 export default function Page() {
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -18,7 +18,7 @@ export default function Page() {
             For registered pharmacy professionals only
           </p>
           <h1 className="text-2xl sm:text-3xl font-bold text-navy-900">Ear Infection (Otitis) — PGD Consultation</h1>
-          <p className="text-sm text-gray-500 mt-1">Amoxicillin / Ciprofloxacin Drops</p>
+          <p className="text-sm text-gray-500 mt-1">Cetraxal (ciprofloxacin) ear drops</p>
         </div>
         <EarInfectionClient />
         <div className="mt-8 text-center">
