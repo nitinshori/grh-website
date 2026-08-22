@@ -1,17 +1,13 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { getPharmacyPgdSlugs } from '@/lib/pgd-queries'
-import { getTenant } from '@/lib/tenant-context'
-import { listCustomPgds } from '@/lib/custom-pgd/queries'
 
-export async function generateMetadata() {
-  const tenant = await getTenant()
-  return {
-    title: `ePGD Consultations | ${tenant.displayName}`,
-    description:
-      'Digital consultation tools for pharmacists. Guided PGD workflows with clinical decision support, dose recommendations, counselling checklists, and printable consultation records.',
-  }
+export const metadata: Metadata = {
+  title: 'ePGD Consultations',
+  description:
+    'Digital consultation tools for pharmacists. Guided PGD workflows with clinical decision support, dose recommendations, counselling checklists, and printable consultation records.',
 }
 
 const epgds = [
@@ -82,11 +78,11 @@ const epgds = [
   { slug: 'diabetes-monitoring', title: 'Diabetes Monitoring', subtitle: 'HbA1c Review & Medication Check', category: 'Cardiovascular', color: 'bg-red-500' },
 
   // ── Mental Health ──
-  { slug: 'smoking-varenicline', title: 'Smoking Cessation (Varenicline)', subtitle: 'Champix with Fagerström Score', category: 'Mental Health', color: 'bg-[color:var(--tenant-primary)]/100' },
-  { slug: 'smoking-nrt', title: 'Smoking Cessation (NRT)', subtitle: 'Patches, Gum & Inhalators', category: 'Mental Health', color: 'bg-[color:var(--tenant-primary)]/100' },
-  { slug: 'anxiety-propranolol', title: 'Anxiety (Propranolol)', subtitle: 'Situational Anxiety / Performance', category: 'Mental Health', color: 'bg-[color:var(--tenant-primary)]/100' },
-  { slug: 'sleep-melatonin', title: 'Sleep (Melatonin)', subtitle: 'Short-Term Insomnia Management', category: 'Mental Health', color: 'bg-[color:var(--tenant-primary)]/100' },
-  { slug: 'adhd-monitoring', title: 'ADHD Monitoring', subtitle: 'Shared-Care Medication Review', category: 'Mental Health', color: 'bg-[color:var(--tenant-primary)]/100' },
+  { slug: 'smoking-varenicline', title: 'Smoking Cessation (Varenicline)', subtitle: 'Champix with Fagerström Score', category: 'Mental Health', color: 'bg-teal-500' },
+  { slug: 'smoking-nrt', title: 'Smoking Cessation (NRT)', subtitle: 'Patches, Gum & Inhalators', category: 'Mental Health', color: 'bg-teal-500' },
+  { slug: 'anxiety-propranolol', title: 'Anxiety (Propranolol)', subtitle: 'Situational Anxiety / Performance', category: 'Mental Health', color: 'bg-teal-500' },
+  { slug: 'sleep-melatonin', title: 'Sleep (Melatonin)', subtitle: 'Short-Term Insomnia Management', category: 'Mental Health', color: 'bg-teal-500' },
+  { slug: 'adhd-monitoring', title: 'ADHD Monitoring', subtitle: 'Shared-Care Medication Review', category: 'Mental Health', color: 'bg-teal-500' },
 
   // ── Vaccines ──
   { slug: 'flu', title: 'Flu Vaccination', subtitle: 'Private Flu Vaccine Administration', category: 'Vaccines', color: 'bg-sky-500' },
@@ -139,75 +135,36 @@ const categoryOrder = [
 
 export default async function EPGDIndexPage() {
   const session = await auth()
-  const tenant = await getTenant()
 
   if (!session?.user) {
     redirect('/login')
   }
 
-  const primary = tenant.theme.primary
   const isSuperAdmin = session.user.role === 'super_admin'
-
-  // Custom PGDs from the admin PGD Builder. Live ones behave exactly like
-  // built-in tools; drafts are visible to super_admin only (badged below).
-  const customPgds = await listCustomPgds()
-  const categoryColor = new Map(epgds.map((e) => [e.category, e.color]))
-  const customEntries = customPgds
-    .filter((c) => c.status === 'live' || (isSuperAdmin && c.status === 'draft'))
-    .map((c) => ({
-      slug: c.slug,
-      title: c.title,
-      subtitle: c.subtitle,
-      category: c.category,
-      color: categoryColor.get(c.category) ?? 'bg-teal-500',
-      href: `/for-pharmacies/epgd/custom/${c.slug}`,
-      draft: c.status === 'draft',
-    }))
-
-  const allTools: {
-    slug: string
-    title: string
-    subtitle: string
-    category: string
-    color: string
-    href?: string
-    draft?: boolean
-  }[] = [...epgds, ...customEntries]
 
   // Get the PGD slugs this user's pharmacy can access
   let allowedSlugs: string[] = []
   if (isSuperAdmin) {
-    allowedSlugs = allTools.map((e) => e.slug)
+    allowedSlugs = epgds.map((e) => e.slug)
   } else if (session.user.pharmacyId) {
     allowedSlugs = await getPharmacyPgdSlugs(session.user.pharmacyId)
   }
 
   const allowedSet = new Set(allowedSlugs)
-  const accessibleEpgds = allTools.filter((e) => allowedSet.has(e.slug))
+  const accessibleEpgds = epgds.filter((e) => allowedSet.has(e.slug))
 
-  // Known categories first, then any new custom-PGD categories at the end
-  const extraCategories = Array.from(
-    new Set(
-      accessibleEpgds
-        .map((e) => e.category)
-        .filter((c) => !categoryOrder.includes(c)),
-    ),
-  )
-  const categories = [...categoryOrder, ...extraCategories].filter((cat) =>
+  const categories = categoryOrder.filter((cat) =>
     accessibleEpgds.some((e) => e.category === cat)
   )
 
   return (
-    <div
-      className="bg-gray-50 min-h-screen"
-      style={{ ['--tenant-primary' as never]: primary }}
-    >
+    <div className="bg-gray-50 min-h-screen">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
         {/* Back to Dashboard */}
         <div className="mb-4 print:hidden">
           <Link
             href="/for-pharmacies/dashboard"
-            className="inline-flex items-center gap-1.5 text-sm text-gray-600 hover:text-[color:var(--tenant-primary)] transition-colors"
+            className="inline-flex items-center gap-1.5 text-sm text-gray-600 hover:text-teal-600 transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -219,15 +176,13 @@ export default async function EPGDIndexPage() {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-            <Link href="/for-pharmacies/dashboard" className="hover:text-[color:var(--tenant-primary)] transition-colors">
+            <Link href="/for-pharmacies/dashboard" className="hover:text-teal-600 transition-colors">
               Dashboard
             </Link>
             <span>/</span>
             <span className="text-gray-900 font-medium">ePGD Consultations</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-            {tenant.displayName} · ePGD Consultations
-          </h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">ePGD Consultations</h1>
           <p className="text-sm text-gray-500 mt-2 max-w-2xl">
             Digital clinical decision support tools for pharmacists. Each ePGD guides you through a
             complete PGD consultation — from patient screening to medicine supply — with built-in
@@ -238,12 +193,7 @@ export default async function EPGDIndexPage() {
         {/* Stats bar */}
         <div className="flex flex-wrap gap-4 sm:gap-6 mb-8 text-sm">
           <div className="bg-white rounded-lg border border-gray-200 px-4 py-3">
-            <span
-              className="text-2xl font-bold"
-              style={{ color: primary }}
-            >
-              {accessibleEpgds.length}
-            </span>
+            <span className="text-2xl font-bold text-teal-600">{accessibleEpgds.length}</span>
             <span className="text-gray-500 ml-2">ePGDs available</span>
           </div>
           <div className="bg-white rounded-lg border border-gray-200 px-4 py-3">
@@ -281,22 +231,17 @@ export default async function EPGDIndexPage() {
                   {items.map((tool) => (
                     <Link
                       key={tool.slug}
-                      href={tool.href ?? `/for-pharmacies/epgd/${tool.slug}`}
-                      className="group bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-[color:var(--tenant-primary)] transition-all overflow-hidden"
+                      href={`/for-pharmacies/epgd/${tool.slug}`}
+                      className="group bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-teal-300 transition-all overflow-hidden"
                     >
                       <div className={`h-1.5 ${tool.color}`} />
                       <div className="p-5">
-                        <h3 className="text-base font-bold text-gray-900 group-hover:text-[color:var(--tenant-primary)] transition-colors">
+                        <h3 className="text-base font-bold text-gray-900 group-hover:text-teal-700 transition-colors">
                           {tool.title}
-                          {tool.draft && (
-                            <span className="ml-2 align-middle inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase bg-amber-50 text-amber-700 border border-amber-200">
-                              Draft
-                            </span>
-                          )}
                         </h3>
                         <p className="text-xs text-gray-500 mt-1">{tool.subtitle}</p>
                         <div className="flex items-center justify-end mt-4 pt-3 border-t border-gray-100">
-                          <span className="text-xs font-medium text-[color:var(--tenant-primary)]">
+                          <span className="text-xs font-medium text-teal-600 group-hover:text-teal-700">
                             Open ePGD &rarr;
                           </span>
                         </div>
