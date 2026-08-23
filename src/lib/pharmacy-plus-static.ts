@@ -50,13 +50,13 @@ const STATIC_RESOURCES: StaticResourceInput[] = [
     signedAt: '2026-07-30',
   },
   {
-    id: 'pph-wegovy-tablets-v003',
-    name: 'Wegovy (semaglutide) Tablets PGD v003',
-    description: 'Signed 30 Jul 2026. Aligned with the injection PGD, upper age 85, missed dose and re-titration wording added.',
+    id: 'pph-wegovy-tablets-v004',
+    name: 'Wegovy (semaglutide) Tablets PGD v004',
+    description: 'Signed 21 Aug 2026. Reconciled against the UK SPC: levothyroxine interaction added, missed dose corrected to the licensed instruction, MHRA January 2026 pancreatitis warning, and the tirzepatide clause removed from the pregnancy exclusion.',
     category: 'PGD',
-    file: 'PPH-Wegovy-Tablets-PGD-v003.pdf',
+    file: 'PPH-Wegovy-Tablets-PGD-v004.pdf',
     fileSize: 188000,
-    signedAt: '2026-07-30',
+    signedAt: '2026-08-21',
   },
   {
     id: 'pph-b12-folate-v004',

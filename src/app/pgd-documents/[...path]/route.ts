@@ -32,6 +32,7 @@ const RETIRED_DOCUMENTS: Record<string, string> = {
   'mounjaro.pdf': 'mounjaro',
   'wegovy.pdf': 'wegovy',
   'wegovy-oral.pdf': 'wegovy-oral',
+  'wegovy-oral-v003.pdf': 'wegovy-oral',
   // Reissued 21 Aug 2026 after the UK SPC published
   'foundayo.pdf': 'foundayo',
   // Split apart 21 Aug 2026. Each of these filenames previously served the
