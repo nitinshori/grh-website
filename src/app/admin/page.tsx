@@ -3,7 +3,7 @@ import { pharmacies, users, pharmacyPgds } from '@/lib/db/schema'
 import { count, eq } from 'drizzle-orm'
 import { getSystemStats } from '@/lib/analytics'
 import { ALL_PGDS } from '@/lib/pgd-access'
-import { getPharmacySignupsByWeek, getConsultationsByDay, getOnboardingBreakdown, getNeedsAttention } from './lib/admin-stats'
+import { getPharmacySignupsByWeek, getConsultationsByDay, getOnboardingBreakdown, getNeedsAttentionSafe } from './lib/admin-stats'
 import { LineChart, HBarChart, DonutChart, Sparkline } from './components/Charts'
 
 async function getStats() {
@@ -47,13 +47,43 @@ async function getStats() {
 const pgdTitleMap = new Map(ALL_PGDS.map((p) => [p.slug, p.title]))
 
 export default async function AdminDashboard() {
-  const [stats, signupsByWeek, consultsByDay, onboarding, attention] = await Promise.all([
+  // Every panel is resolved independently and degrades to an empty state on
+  // failure. A dashboard that renders with one missing chart is far better
+  // than a 500 on the page an admin opens first: /admin returned a 500 for
+  // everyone, logged in or not, because one count threw inside a bare
+  // Promise.all and took the whole render down with it.
+  const settled = await Promise.allSettled([
     getStats(),
     getPharmacySignupsByWeek(12),
     getConsultationsByDay(30),
     getOnboardingBreakdown(),
-    getNeedsAttention(),
+    getNeedsAttentionSafe(),
   ])
+  for (const r of settled) {
+    if (r.status === 'rejected') console.error('[admin] dashboard panel failed:', r.reason)
+  }
+  const stats = settled[0].status === 'fulfilled' ? settled[0].value : {
+    totalPharmacies: 0, activeUsers: 0, pgdsAvailable: 71, pgdAssignments: 0,
+    analytics: {
+      activeUsers: 0, totalConsultations: 0, completedConsultations: 0,
+      topPgds: [] as { pgdSlug: string; total: number; completed: number }[],
+      recent: [] as { id: string; pgdSlug: string; startedAt: Date; completedAt: Date | null; userId: string; pharmacyId: string }[],
+    },
+  }
+  const signupsByWeek = settled[1].status === 'fulfilled' ? settled[1].value : []
+  const consultsByDay = settled[2].status === 'fulfilled' ? settled[2].value : []
+  const onboarding = settled[3].status === 'fulfilled' ? settled[3].value : {
+    total: 0,
+    byStatus: [] as { status: string; count: number }[],
+    mandateActive: 0,
+    mandatePending: 0,
+    mandateFailed: 0,
+    noMandate: 0,
+    monthlyRevenuePence: 0,
+  }
+  const attention = settled[4].status === 'fulfilled' ? settled[4].value : {
+    awaitingApproval: 0, payingWithoutAccount: 0, activeWithoutPgds: 0,
+  }
 
   const signupSparkline = signupsByWeek.map((b) => b.count)
   const consultSparkline = consultsByDay.map((b) => b.total)

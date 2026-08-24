@@ -250,7 +250,12 @@ export async function getNeedsAttention(): Promise<NeedsAttention> {
     .from(onboardingRequests)
     .where(sql`gocardless_mandate_id IS NOT NULL AND pharmacy_id IS NULL`)
 
-  const [noPgds] = await db.execute<{ n: number }>(sql`
+  // db.execute returns { rows }, which is how every other query in this file
+  // unwraps it. This one originally guessed at the shape with an
+  // Array.isArray check and a .then(), which is what took /admin down: any
+  // throw in here brought the whole dashboard with it, because the caller
+  // runs these in a bare Promise.all.
+  const noPgdsRaw = (await db.execute(sql`
     SELECT COUNT(*)::int AS n
       FROM pharmacies p
      WHERE p.is_active = true
@@ -258,11 +263,26 @@ export async function getNeedsAttention(): Promise<NeedsAttention> {
          SELECT 1 FROM pharmacy_pgds x
           WHERE x.pharmacy_id = p.id AND x.status = 'approved'
        )
-  `).then((r) => (Array.isArray(r) ? r : (r as unknown as { rows: { n: number }[] }).rows))
+  `)) as unknown as { rows: { n: number }[] }
+  const noPgds = (noPgdsRaw?.rows ?? [])[0]
 
   return {
     awaitingApproval: awaiting?.n ?? 0,
     payingWithoutAccount: paying?.n ?? 0,
     activeWithoutPgds: noPgds?.n ?? 0,
+  }
+}
+
+/**
+ * Never-throwing wrapper. The admin dashboard is the first thing anyone
+ * opens, so a single failing count must not be able to 500 the page. If
+ * this returns zeros the banner simply does not render.
+ */
+export async function getNeedsAttentionSafe(): Promise<NeedsAttention> {
+  try {
+    return await getNeedsAttention()
+  } catch (err) {
+    console.error('[admin] getNeedsAttention failed, returning zeros:', err)
+    return { awaitingApproval: 0, payingWithoutAccount: 0, activeWithoutPgds: 0 }
   }
 }
