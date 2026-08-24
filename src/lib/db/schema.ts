@@ -502,6 +502,12 @@ export const onboardingRequests = pgTable('onboarding_requests', {
   contactPhone: varchar('contact_phone', { length: 50 }),
   contactGphc: varchar('contact_gphc', { length: 50 }),
   contactRole: varchar('contact_role', { length: 50 }),
+
+  // How they heard about us. Optional and never enforced: a forced answer
+  // is a worse answer, and nobody should be blocked from signing up by a
+  // marketing question. Expect NULLs.
+  heardAbout: varchar('heard_about', { length: 60 }),
+  heardAboutDetail: text('heard_about_detail'),
   // Furthest step the customer has completed in the /onboard wizard.
   //   1 = pharmacy details captured
   //   2 = pharmacist details captured

@@ -33,6 +33,8 @@ interface FormState {
   contactPhone: string;
   contactGphc: string;
   contactRole: string;
+  heardAbout: string;
+  heardAboutDetail: string;
 }
 
 const initial: FormState = {
@@ -49,6 +51,8 @@ const initial: FormState = {
   contactPhone: "",
   contactGphc: "",
   contactRole: "owner",
+  heardAbout: "",
+  heardAboutDetail: "",
 };
 
 export default function OnboardClient() {
@@ -305,6 +309,63 @@ export default function OnboardClient() {
                 <li>Protected by the UK Direct Debit Guarantee</li>
                 <li>No charges while we review your application</li>
               </ul>
+              {/* Optional, and genuinely optional: no validation depends on
+                  it and the Continue button ignores it entirely. Placed on
+                  the last step so it can never interrupt someone part-way
+                  through signing up. */}
+              <div className="pt-2 border-t border-gray-200 mt-2">
+                <label htmlFor="heardAbout" className="block text-sm font-medium text-gray-700 mt-4">
+                  How did you hear about us?{" "}
+                  <span className="font-normal text-gray-400">Optional</span>
+                </label>
+                <p className="text-xs text-gray-500 mt-1 mb-2">
+                  Only if you feel like it. It helps us understand what actually
+                  reaches pharmacies, and it makes no difference to your application.
+                </p>
+                <select
+                  id="heardAbout"
+                  value={form.heardAbout}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      heardAbout: e.target.value,
+                      // clear the detail box if they move away from an option
+                      // that uses it, so nothing stale is submitted
+                      heardAboutDetail:
+                        e.target.value === "recommendation" || e.target.value === "other"
+                          ? f.heardAboutDetail
+                          : "",
+                    }))
+                  }
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                >
+                  <option value="">Rather not say</option>
+                  <option value="recommendation">Someone recommended you</option>
+                  <option value="linkedin">LinkedIn</option>
+                  <option value="search">Google or another search engine</option>
+                  <option value="email">An email from Get Real Health</option>
+                  <option value="event">A conference or event</option>
+                  <option value="press">Pharmacy press or a trade publication</option>
+                  <option value="existing">We already work with you elsewhere</option>
+                  <option value="other">Something else</option>
+                </select>
+                {(form.heardAbout === "recommendation" || form.heardAbout === "other") && (
+                  <input
+                    type="text"
+                    value={form.heardAboutDetail}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, heardAboutDetail: e.target.value }))
+                    }
+                    placeholder={
+                      form.heardAbout === "recommendation"
+                        ? "Who, if you don't mind saying?"
+                        : "Where did you come across us?"
+                    }
+                    className="w-full mt-2 px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                  />
+                )}
+              </div>
+
               {siteKey && (
                 <div className="pt-2">
                   <div ref={turnstileRef} />

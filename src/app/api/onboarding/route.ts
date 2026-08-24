@@ -105,6 +105,10 @@ export async function POST(request: NextRequest) {
     contactPhone: (body.contactPhone as string | undefined)?.trim().slice(0, 50) || null,
     contactGphc: (body.contactGphc as string | undefined)?.trim().slice(0, 50) || null,
     contactRole: (body.contactRole as string | undefined)?.trim().slice(0, 50) || null,
+    // Optional. Blank stays blank rather than becoming a placeholder value.
+    heardAbout: (body.heardAbout as string | undefined)?.trim().slice(0, 60) || null,
+    heardAboutDetail:
+      (body.heardAboutDetail as string | undefined)?.trim().slice(0, 500) || null,
     lastStepCompleted: Math.max(existingStep, step),
     status: 'started' as const,
     updatedAt: new Date(),

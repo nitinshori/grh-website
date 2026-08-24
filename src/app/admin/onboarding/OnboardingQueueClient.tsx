@@ -12,6 +12,8 @@ interface Row {
   contactLastName: string;
   contactEmail: string;
   contactGphc: string;
+  heardAbout: string;
+  heardAboutDetail: string;
   mandateId: string;
   mandateStatus: string;
   createdAt: string;
@@ -29,6 +31,19 @@ const STATUS_FILTERS = ['all', 'awaiting_approval', 'approved', 'completed', 're
 // paying. Any date rendered in a client component needs this treatment.
 function formatSubmitted(value: string | Date): string {
   return new Date(value).toLocaleString('en-GB', { timeZone: 'Europe/London' })
+}
+
+// Readable labels for the optional "how did you hear about us" answer.
+// Kept in sync with the options in src/app/onboard/OnboardClient.tsx.
+const HEARD_ABOUT_LABELS: Record<string, string> = {
+  recommendation: 'Recommendation',
+  linkedin: 'LinkedIn',
+  search: 'Search engine',
+  email: 'Email from us',
+  event: 'Conference or event',
+  press: 'Pharmacy press',
+  existing: 'Existing relationship',
+  other: 'Other',
 }
 
 export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
@@ -136,6 +151,12 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
                 </div>
                 {r.pharmacyAddress && <div className="text-xs text-gray-500 mt-0.5">{r.pharmacyAddress}</div>}
                 {r.pharmacyGphc && <div className="text-xs text-gray-500">Premises GPhC: {r.pharmacyGphc}</div>}
+                {r.heardAbout && (
+                  <div className="text-xs text-teal-700 mt-0.5">
+                    Heard about us: {HEARD_ABOUT_LABELS[r.heardAbout] ?? r.heardAbout}
+                    {r.heardAboutDetail && ` — ${r.heardAboutDetail}`}
+                  </div>
+                )}
                 {r.mandateId && <div className="text-xs text-gray-500">Mandate: <code className="text-[11px]">{r.mandateId}</code></div>}
                 <div className="text-xs text-gray-400 mt-1">Submitted {formatSubmitted(r.createdAt)}</div>
                 {r.rejectedReason && <div className="text-xs text-red-600 mt-1">Rejected: {r.rejectedReason}</div>}

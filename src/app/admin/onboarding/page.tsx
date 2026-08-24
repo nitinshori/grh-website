@@ -100,6 +100,8 @@ export default async function OnboardingQueuePage() {
             contactLastName: r.contactLastName ?? '',
             contactEmail: r.contactEmail ?? '',
             contactGphc: r.contactGphc || '',
+            heardAbout: r.heardAbout || '',
+            heardAboutDetail: r.heardAboutDetail || '',
             mandateId: r.gocardlessMandateId || '',
             mandateStatus: r.gocardlessMandateStatus || '',
             createdAt: r.createdAt.toISOString(),
