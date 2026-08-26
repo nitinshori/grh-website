@@ -146,8 +146,16 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
 // unbuilt. Four complete consultation tools already existed, one per
 // preparation, and nothing linked to any of them. /epgd/trt is now the
 // preparation chooser that reaches them.
+// Genital warts came off on 26 Aug 2026, on Nitin's instruction, once the
+// tool was built from the signed PGD. Its clinical logic is covered by an
+// executed test rather than a read-through: a fresh consultation raises no
+// stops, and all nine exclusions each block independently.
+//
+// The two below are still literally placeholder pages: a heading, a badge
+// and a paragraph saying the tool is in development. Taking the badge off
+// either of them would advertise a dead end as a live service, so they stay
+// until each is built.
 export const COMING_SOON_SLUGS = new Set([
-  'genital-warts',
   'herpes-management',
   'gonorrhoea-treatment',
 ])
