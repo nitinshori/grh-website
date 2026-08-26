@@ -85,9 +85,18 @@ async function isUserActive(userId: string): Promise<boolean> {
   if (cached && cached.expiresAt > Date.now()) return cached.isActive
   try {
     const rows = (await sql`
-      SELECT is_active FROM users WHERE id = ${userId} LIMIT 1
-    `) as Array<{ is_active: boolean }>
-    const isActive = rows[0]?.is_active === true
+      SELECT is_active, access_expires_at FROM users WHERE id = ${userId} LIMIT 1
+    `) as Array<{ is_active: boolean; access_expires_at: string | null }>
+    // A time-limited account (e.g. an evaluation login) is treated exactly
+    // like a deactivated one once it expires: the session cookie is cleared
+    // and the next request lands on /login. Checked here rather than at
+    // sign-in so an already-signed-in session stops working at the expiry
+    // time instead of continuing until they happen to log out.
+    const expiry = rows[0]?.access_expires_at
+      ? new Date(rows[0].access_expires_at as string).getTime()
+      : null
+    const notExpired = expiry === null || Number.isNaN(expiry) || expiry > Date.now()
+    const isActive = rows[0]?.is_active === true && notExpired
     activeCache.set(userId, {
       isActive,
       expiresAt: Date.now() + ACTIVE_CACHE_TTL_MS,

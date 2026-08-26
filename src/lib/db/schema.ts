@@ -36,6 +36,14 @@ export const pharmacies = pgTable('pharmacies', {
   brandColor: varchar('brand_color', { length: 7 }),   // hex e.g. "#3d8b37" for white-label booking
   brandName: varchar('brand_name', { length: 255 }),    // display name for public booking page
   isActive: boolean('is_active').default(true).notNull(),
+  // Time-limited accounts (migration 047). NULL means no expiry, which is
+  // every normal account. Checked per-request in middleware next to
+  // is_active, so an expired login is signed out within a minute rather
+  // than lingering until it is noticed.
+  accessExpiresAt: timestamp('access_expires_at'),
+  // Evaluation account: hides download controls. A UI restriction, not a
+  // security boundary, while /pgd-documents is served without auth.
+  viewOnly: boolean('view_only').default(false).notNull(),
   // ── Tenant / partner attribution ─────────────────────────────
   // Which acquisition channel this pharmacy came in via. 'direct' for
   // pharmacies that signed up via /onboard or were manually provisioned.
