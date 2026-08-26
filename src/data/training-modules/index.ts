@@ -22,7 +22,6 @@ import { wegovyOralModule } from "./wegovy-oral";
 import { periodDelayModule } from "./period-delay";
 import { prematureEjaculationModule } from "./premature-ejaculation";
 import { bphModule } from "./bph";
-import { recurrentUtiModule } from "./recurrent-uti";
 // Tier 3 — sexual health, dermatology, common conditions
 import { bvModule } from "./bv";
 import { thrushModule } from "./thrush";
@@ -79,7 +78,6 @@ import { typhoidModule } from "./typhoid";
 // Tier 7 — paediatrics, dental, monitoring, treatment
 import { diabetesMonitoringModule } from "./diabetes-monitoring";
 import { dentalBridgingModule } from "./dental-bridging";
-import { paediatricUtiModule } from "./paediatric-uti";
 import { shinglesTreatmentModule } from "./shingles-treatment";
 
 export const modules: TrainingModule[] = [
@@ -102,7 +100,6 @@ export const modules: TrainingModule[] = [
   periodDelayModule,
   prematureEjaculationModule,
   bphModule,
-  recurrentUtiModule,
   // Tier 3 — sexual health, dermatology, common conditions
   bvModule,
   thrushModule,
@@ -159,7 +156,6 @@ export const modules: TrainingModule[] = [
   // Tier 7 — paediatrics, dental, monitoring, treatment
   diabetesMonitoringModule,
   dentalBridgingModule,
-  paediatricUtiModule,
   shinglesTreatmentModule,
 ];
 

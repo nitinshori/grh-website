@@ -145,10 +145,14 @@ export const SERVICE_COMPARISON: ServiceComparisonCategory[] = [
         wales: YES("Women aged 16+; nitrofurantoin"),
       },
       {
+        // Withdrawn 26 Aug 2026. Assigned to seven pharmacies and never used
+        // once: zero consultation records against the slug. Kept in the
+        // comparison table as not offered, on the same reasoning as
+        // alcohol-reduction.
         pgdSlug: "recurrent-uti",
         condition: "Recurrent UTI prophylaxis",
-        grhDrugs: "Low-dose nitrofurantoin / trimethoprim, methenamine, D-mannose pathway",
-        grhOffered: true,
+        grhDrugs: "Not offered",
+        grhOffered: false,
         pfe: NO,
         pfs: NO,
         wales: NO,
@@ -826,10 +830,14 @@ export const SERVICE_COMPARISON: ServiceComparisonCategory[] = [
     category: "Paediatrics & Specialist",
     rows: [
       {
+        // Withdrawn 26 Aug 2026. Assigned to six pharmacies and never used
+        // once: zero consultation records against the slug. Kept in the
+        // comparison table as not offered, on the same reasoning as
+        // alcohol-reduction above.
         pgdSlug: "paediatric-uti",
         condition: "Paediatric UTI",
-        grhDrugs: "Trimethoprim, nitrofurantoin (age-appropriate)",
-        grhOffered: true,
+        grhDrugs: "Not offered",
+        grhOffered: false,
         pfe: NO,
         pfs: NO,
         wales: NO,

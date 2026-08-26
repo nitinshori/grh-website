@@ -23,7 +23,6 @@ const epgds = [
   { slug: 'hrt', title: 'HRT (Menopause)', subtitle: 'Oestradiol / Combined HRT', category: "Women's Health", color: 'bg-pink-500' },
   { slug: 'thrush', title: 'Thrush (Vaginal Candidiasis)', subtitle: 'Fluconazole / Clotrimazole', category: "Women's Health", color: 'bg-pink-500' },
   { slug: 'bv', title: 'Bacterial Vaginosis', subtitle: 'Metronidazole Oral / Vaginal Gel', category: "Women's Health", color: 'bg-pink-500' },
-  { slug: 'recurrent-uti', title: 'Recurrent UTI Prophylaxis', subtitle: 'Nitrofurantoin Low-Dose Prophylaxis', category: "Women's Health", color: 'bg-pink-500' },
   { slug: 'postnatal-contraception', title: 'Postnatal Contraception', subtitle: 'POP / Desogestrel Initiation', category: "Women's Health", color: 'bg-pink-500' },
   { slug: 'testosterone-women', title: 'Testosterone for Women', subtitle: 'Androfeme Cream for Menopausal Libido', category: "Women's Health", color: 'bg-pink-500' },
   { slug: 'period-delay', title: 'Period Delay', subtitle: 'Norethisterone 5mg', category: "Women's Health", color: 'bg-pink-500' },
@@ -113,8 +112,9 @@ const epgds = [
   // ── Occupational Health ──
   { slug: 'hep-b-occupational', title: 'Hepatitis B (Occupational)', subtitle: 'Engerix-B / HBvaxPRO', category: 'Occupational Health', color: 'bg-violet-500' },
 
-  // ── Paediatrics ──
-  { slug: 'paediatric-uti', title: 'Paediatric UTI', subtitle: 'Trimethoprim / Nitrofurantoin (Paeds)', category: 'Paediatrics', color: 'bg-lime-500' },
+  // Paediatrics category is empty since paediatric-uti was withdrawn on
+  // 26 Aug 2026. The category headings are filtered by what is actually
+  // present, so nothing renders for it.
 ]
 
 const categoryOrder = [

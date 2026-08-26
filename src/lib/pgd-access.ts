@@ -26,7 +26,6 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
   { slug: 'emergency-contraception', title: 'Emergency Contraception', subtitle: 'Levonorgestrel / Ulipristal', category: "Women's Health" },
   { slug: 'postnatal-contraception', title: 'Postnatal Contraception', subtitle: 'Desogestrel', category: "Women's Health" },
   { slug: 'hrt', title: 'HRT', subtitle: 'Estradiol / Utrogestan', category: "Women's Health" },
-  { slug: 'recurrent-uti', title: 'Recurrent UTI Prevention', subtitle: 'Nitrofurantoin Prophylaxis', category: "Women's Health" },
   { slug: 'thrush', title: 'Vaginal Thrush', subtitle: 'Fluconazole', category: "Women's Health" },
   { slug: 'period-delay', title: 'Period Delay', subtitle: 'Norethisterone 5mg', category: "Women's Health" },
   { slug: 'bv', title: 'Bacterial Vaginosis', subtitle: 'Metronidazole', category: "Women's Health" },
@@ -129,7 +128,6 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
   { slug: 'dental-bridging', title: 'Dental Bridging Rx', subtitle: 'Emergency Dental Treatment', category: 'Occupational Health' },
 
   // Paediatrics
-  { slug: 'paediatric-uti', title: 'Paediatric UTI', subtitle: 'Trimethoprim / Nitrofurantoin', category: 'Paediatrics' },
 ]
 
 /**

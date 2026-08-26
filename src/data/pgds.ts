@@ -225,6 +225,31 @@ export const pgds: PGD[] = [
     pharmadoctor: "Partial",
   },
 
+  {
+    id: "cholera",
+    title: "Cholera (Oral Vaccine)",
+    category: "Travel",
+    priority: 2,
+    isNew: true,
+    revenueEstimate: "£40–70 per course",
+    consultTime: "15 min",
+    description:
+      "Oral cholera vaccine (Dukoral / Vaxchora) for travellers to endemic areas and aid/relief workers. Also gives limited protection against ETEC travellers' diarrhoea. DRAFT — pending clinical sign-off.",
+    pharmadoctor: "Yes",
+  },
+  {
+    id: "tick-borne-encephalitis",
+    title: "Tick-borne Encephalitis (TicoVac)",
+    category: "Travel",
+    priority: 2,
+    isNew: true,
+    revenueEstimate: "£65–95 per dose",
+    consultTime: "15 min",
+    description:
+      "TicoVac / TicoVac Junior for travellers to TBE-endemic areas (central/eastern Europe, Scandinavia, Baltics) with outdoor or occupational exposure. 3-dose IM course. DRAFT — pending clinical sign-off.",
+    pharmadoctor: "Yes",
+  },
+
   // ═══ VACCINES ═══
   {
     id: "flu",
@@ -361,14 +386,14 @@ export const pgds: PGD[] = [
   },
   {
     id: "wegovy-oral",
-    title: "Wegovy Tablets (Oral Semaglutide) \u2014 Weight Management",
+    title: "Oral Wegovy (Oral Semaglutide 1.5–25 mg) \u2014 Weight Management",
     category: "Weight Management",
     priority: 2,
     isNew: true,
     revenueEstimate: "\u00a3180\u2013320 per month",
     consultTime: "30 min initial, 15 min follow-up",
     description:
-      "Wegovy tablets (semaglutide 1.5, 4, 9 and 25 mg) \u2014 UK-licensed for chronic weight management in adults with BMI \u226530 (or \u226527 with weight-related comorbidity). Once-daily titration 1.5 \u2192 4 \u2192 9 \u2192 25 mg (one month per step). Strict empty-stomach administration: \u22658 h fast, \u2264120 ml water, 30-minute wait before food, drink or other medication. Same clinical safeguards as injectable Wegovy.",
+      "Wegovy tablets (semaglutide 1.5, 4, 9 and 25 mg) \u2014 UK-licensed for chronic weight management in adults with BMI \u226530 (or \u226527 with weight-related comorbidity). Strict empty-stomach administration with at least 30 minutes before food, drink or other medication. Same clinical safeguards as injectable Wegovy.",
     pharmadoctor: "No",
   },
   {
@@ -416,7 +441,7 @@ export const pgds: PGD[] = [
     revenueEstimate: "\u00a350\u201380 per review",
     consultTime: "15\u201320 min",
     description:
-      "Structured monitoring and dose-titration follow-up for patients on Wegovy (injection or tablets) or Mounjaro. NICE 5%-by-12-weeks gate, red-flag screening, dose decisions all built in.",
+      "Structured monitoring and dose-titration follow-up for patients on Wegovy, Mounjaro, or Oral Wegovy. NICE 5%-by-12-weeks gate, red-flag screening, dose decisions all built in.",
     pharmadoctor: "Partial",
   },
 
@@ -469,18 +494,8 @@ export const pgds: PGD[] = [
       "Nitrofurantoin and trimethoprim. NHS Pharmacy First covers some \u2014 private version gives greater flexibility.",
     pharmadoctor: "Yes",
   },
-  {
-    id: "recurrent-uti",
-    title: "Recurrent UTI Prevention",
-    category: "Women's Health",
-    priority: 2,
-    isNew: false,
-    revenueEstimate: "\u00a330\u201350 per consultation",
-    consultTime: "15 min",
-    description:
-      "Low-dose nitrofurantoin. Large underserved population cycling through GP appointments.",
-    pharmadoctor: "Partial",
-  },
+  // recurrent-uti withdrawn 26 Aug 2026 (Nitin). Assigned to 7 pharmacies
+  // but never once used: zero consultation records against the slug.
   {
     id: "thrush",
     title: "Vaginal Thrush",
@@ -966,18 +981,8 @@ export const pgds: PGD[] = [
   // needlestick-pep removed — not suitable for pharmacy-level PGD supply without specialist oversight
 
   // ═══ PAEDIATRICS ═══
-  {
-    id: "paediatric-uti",
-    title: "Paediatric UTI (Trimethoprim)",
-    category: "Paediatrics",
-    priority: 2,
-    isNew: false,
-    revenueEstimate: "\u00a320\u201335 per consultation",
-    consultTime: "10\u201315 min",
-    description:
-      "Emergency / out-of-hours cover only \u2014 to be used when primary care (the child's GP, NHS 111 and paediatric assessment) is unavailable. Not a routine primary-care alternative.",
-    pharmadoctor: "Partial",
-  },
+  // paediatric-uti withdrawn 26 Aug 2026 (Nitin). Assigned to 6 pharmacies
+  // but never once used: zero consultation records against the slug.
   {
     id: "threadworms",
     title: "Threadworms (Mebendazole \u2014 Prescription Dose)",
