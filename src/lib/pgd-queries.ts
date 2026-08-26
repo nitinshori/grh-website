@@ -1,6 +1,6 @@
 import "server-only";
 import { db } from "@/lib/db";
-import { pharmacyPgds, pharmacies } from "@/lib/db/schema";
+import { pharmacyPgds, pharmacies, users } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { ALL_PGDS } from "@/lib/pgd-access";
 
@@ -101,6 +101,32 @@ export async function getPharmacyNonApprovedSlugs(
     );
 
   return assignments.map((a) => a.pgdSlug);
+}
+
+/**
+ * Is this an evaluation account?
+ *
+ * A view-only user is shown the whole ePGD catalogue on the index so a
+ * prospect can see the range on offer, while only the PGDs their pharmacy
+ * actually holds will open. The rest render as inert cards.
+ *
+ * This is presentation, not access control. Access is enforced per tool by
+ * PgdGate calling hasPharmacyPgdAccess, and that is unchanged by this flag.
+ *
+ * Read from the database on each request rather than carried in the JWT, so
+ * that clearing the flag takes effect immediately instead of at the user's
+ * next sign-in. It is a single primary-key lookup.
+ */
+export async function isViewOnlyUser(userId: string): Promise<boolean> {
+  if (!userId) return false;
+
+  const [row] = await db
+    .select({ viewOnly: users.viewOnly })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  return row?.viewOnly === true;
 }
 
 export async function setPharmacyPgds(

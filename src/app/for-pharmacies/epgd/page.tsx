@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import { getPharmacyPgdSlugs } from '@/lib/pgd-queries'
+import { getPharmacyPgdSlugs, isViewOnlyUser } from '@/lib/pgd-queries'
 
 export const metadata: Metadata = {
   title: 'ePGD Consultations',
@@ -153,8 +153,24 @@ export default async function EPGDIndexPage() {
   const allowedSet = new Set(allowedSlugs)
   const accessibleEpgds = epgds.filter((e) => allowedSet.has(e.slug))
 
+  // Evaluation accounts see the whole catalogue, so a prospect working
+  // through the one service they have been given can still see the range on
+  // offer. Only the ePGDs their pharmacy actually holds will open; the rest
+  // render as inert cards labelled "Not enabled".
+  //
+  // This is presentation only. Access is enforced per tool by PgdGate and is
+  // unchanged by this flag, so an inert card is not a security boundary and
+  // typing the URL directly still gets an access-denied page.
+  //
+  // Normal accounts are unaffected: showFullCatalogue is false for them, so
+  // visibleEpgds is accessibleEpgds and every card below is enabled, exactly
+  // as before.
+  const showFullCatalogue =
+    !isSuperAdmin && (await isViewOnlyUser(session.user.id))
+  const visibleEpgds = showFullCatalogue ? epgds : accessibleEpgds
+
   const categories = categoryOrder.filter((cat) =>
-    accessibleEpgds.some((e) => e.category === cat)
+    visibleEpgds.some((e) => e.category === cat)
   )
 
   return (
@@ -202,8 +218,23 @@ export default async function EPGDIndexPage() {
           </div>
         </div>
 
+        {/* Evaluation accounts: explain why most cards do not open. */}
+        {showFullCatalogue && (
+          <div className="-mt-4 mb-8 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+            <p className="text-xs text-amber-800">
+              This is an evaluation account. You are seeing the full ePGD
+              catalogue so you can judge the range on offer. The{' '}
+              {accessibleEpgds.length === 1
+                ? 'one enabled below opens'
+                : `${accessibleEpgds.length} enabled below open`}{' '}
+              and work exactly as they would in practice; the rest are shown
+              for reference only.
+            </p>
+          </div>
+        )}
+
         {/* Empty state */}
-        {accessibleEpgds.length === 0 && (
+        {visibleEpgds.length === 0 && (
           <div className="text-center py-16">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 text-gray-400 text-3xl mb-4">
               🔒
@@ -219,7 +250,7 @@ export default async function EPGDIndexPage() {
         {/* Category sections */}
         <div className="space-y-10">
           {categories.map((cat) => {
-            const items = accessibleEpgds.filter((e) => e.category === cat)
+            const items = visibleEpgds.filter((e) => e.category === cat)
             return (
               <div key={cat}>
                 <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -228,26 +259,56 @@ export default async function EPGDIndexPage() {
                   <span className="text-xs font-normal text-gray-400 ml-1">({items.length})</span>
                 </h2>
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {items.map((tool) => (
-                    <Link
-                      key={tool.slug}
-                      href={`/for-pharmacies/epgd/${tool.slug}`}
-                      className="group bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-teal-300 transition-all overflow-hidden"
-                    >
-                      <div className={`h-1.5 ${tool.color}`} />
-                      <div className="p-5">
-                        <h3 className="text-base font-bold text-gray-900 group-hover:text-teal-700 transition-colors">
-                          {tool.title}
-                        </h3>
-                        <p className="text-xs text-gray-500 mt-1">{tool.subtitle}</p>
-                        <div className="flex items-center justify-end mt-4 pt-3 border-t border-gray-100">
-                          <span className="text-xs font-medium text-teal-600 group-hover:text-teal-700">
-                            Open ePGD &rarr;
-                          </span>
+                  {items.map((tool) => {
+                    // False only on an evaluation account, where the whole
+                    // catalogue is listed but just the held PGDs open.
+                    const enabled = allowedSet.has(tool.slug)
+
+                    const body = (
+                      <>
+                        <div className={`h-1.5 ${tool.color}`} />
+                        <div className="p-5">
+                          <h3 className="text-base font-bold text-gray-900 group-hover:text-teal-700 transition-colors">
+                            {tool.title}
+                          </h3>
+                          <p className="text-xs text-gray-500 mt-1">{tool.subtitle}</p>
+                          <div className="flex items-center justify-end mt-4 pt-3 border-t border-gray-100">
+                            {enabled ? (
+                              <span className="text-xs font-medium text-teal-600 group-hover:text-teal-700">
+                                Open ePGD &rarr;
+                              </span>
+                            ) : (
+                              <span className="text-xs font-medium text-gray-400">
+                                Not enabled
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </Link>
-                  ))}
+                      </>
+                    )
+
+                    if (!enabled) {
+                      return (
+                        <div
+                          key={tool.slug}
+                          aria-disabled="true"
+                          className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden opacity-60 cursor-not-allowed select-none"
+                        >
+                          {body}
+                        </div>
+                      )
+                    }
+
+                    return (
+                      <Link
+                        key={tool.slug}
+                        href={`/for-pharmacies/epgd/${tool.slug}`}
+                        className="group bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-teal-300 transition-all overflow-hidden"
+                      >
+                        {body}
+                      </Link>
+                    )
+                  })}
                 </div>
               </div>
             )

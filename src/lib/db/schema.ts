@@ -36,14 +36,6 @@ export const pharmacies = pgTable('pharmacies', {
   brandColor: varchar('brand_color', { length: 7 }),   // hex e.g. "#3d8b37" for white-label booking
   brandName: varchar('brand_name', { length: 255 }),    // display name for public booking page
   isActive: boolean('is_active').default(true).notNull(),
-  // Time-limited accounts (migration 047). NULL means no expiry, which is
-  // every normal account. Checked per-request in middleware next to
-  // is_active, so an expired login is signed out within a minute rather
-  // than lingering until it is noticed.
-  accessExpiresAt: timestamp('access_expires_at'),
-  // Evaluation account: hides download controls. A UI restriction, not a
-  // security boundary, while /pgd-documents is served without auth.
-  viewOnly: boolean('view_only').default(false).notNull(),
   // ── Tenant / partner attribution ─────────────────────────────
   // Which acquisition channel this pharmacy came in via. 'direct' for
   // pharmacies that signed up via /onboard or were manually provisioned.
@@ -69,6 +61,18 @@ export const users = pgTable('users', {
   role: userRoleEnum('role').default('pharmacist').notNull(),
   pharmacyId: uuid('pharmacy_id').references(() => pharmacies.id),
   isActive: boolean('is_active').default(true).notNull(),
+  // ── Time-limited and evaluation accounts (migration 047) ──────
+  // accessExpiresAt: the account stops working at this moment. NULL means
+  // no expiry, which is every normal account. Checked per-request in
+  // middleware alongside is_active, so an expired login is signed out
+  // within a minute rather than lingering until somebody notices.
+  accessExpiresAt: timestamp('access_expires_at'),
+  // viewOnly: an evaluation account. Shows the whole ePGD catalogue so a
+  // prospect can see the range on offer, while only the PGDs their
+  // pharmacy actually holds will open. Presentation only — real access is
+  // enforced per tool by PgdGate, and note that /pgd-documents is
+  // currently served without authentication at all.
+  viewOnly: boolean('view_only').default(false).notNull(),
   // Two-factor auth (TOTP / authenticator app). When totpEnabled is true the
   // login flow requires a 6-digit code in addition to email + password.
   totpSecret: varchar('totp_secret', { length: 64 }),

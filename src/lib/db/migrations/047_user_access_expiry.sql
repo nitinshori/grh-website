@@ -14,10 +14,12 @@
 -- within a minute of expiry rather than at next login. NULL means no
 -- expiry, which is every existing account.
 --
--- view_only marks an account as an evaluation account: the interface hides
--- download controls. Note this is a UI restriction, not a security
--- boundary, because /pgd-documents is currently served without
--- authentication. See the note in the commit message.
+-- view_only marks an account as an evaluation account. It shows the whole
+-- ePGD catalogue on the index so a prospect can see the range on offer,
+-- while only the PGDs their pharmacy actually holds will open; the rest
+-- render as inert cards. This is presentation, not a security boundary.
+-- Real access is enforced per tool by PgdGate, and note that
+-- /pgd-documents is currently served without authentication at all.
 --
 -- Idempotent: safe to re-run.
 
@@ -31,4 +33,4 @@ COMMENT ON COLUMN users.access_expires_at IS
   'Account stops working at this time. NULL means never expires. Enforced per-request in middleware alongside is_active.';
 
 COMMENT ON COLUMN users.view_only IS
-  'Evaluation account: hides download controls in the UI. Not a security boundary.';
+  'Evaluation account: shows the full ePGD catalogue with unheld PGDs rendered inert. Presentation only, not a security boundary.';
