@@ -142,8 +142,11 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
 //
 // The four left are genuine placeholders: a static page with a badge and no
 // consultation logic behind it. Each needs building before it can come off.
+// TRT came off on 26 Aug 2026 too, for a different reason: it was never
+// unbuilt. Four complete consultation tools already existed, one per
+// preparation, and nothing linked to any of them. /epgd/trt is now the
+// preparation chooser that reaches them.
 export const COMING_SOON_SLUGS = new Set([
-  'trt',
   'genital-warts',
   'herpes-management',
   'gonorrhoea-treatment',
