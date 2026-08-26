@@ -7,6 +7,11 @@ import {
 import { PrintButton } from "./PrintButton";
 
 export const metadata: Metadata = {
+  // Self-referencing canonical. A site-wide canonical in the root
+  // layout once pointed every page at the homepage, which told Google
+  // they were all duplicates of it. Declaring each page's own URL is
+  // what undoes that.
+  alternates: { canonical: "https://getrealhealthpgd.co.uk/services/comparison" },
   title: "Service Comparison: GRH vs NHS Pharmacy First & Welsh CAS",
   description:
     "Side-by-side comparison of clinical services available to UK pharmacies — Get Real Health PGDs, NHS Pharmacy First (England & Scotland), and the Welsh Common Ailment Service / Choose Pharmacy.",

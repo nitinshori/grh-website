@@ -3,6 +3,11 @@ import Link from "next/link";
 import { articles, ARTICLE_CATEGORIES } from "@/data/articles";
 
 export const metadata: Metadata = {
+  // Self-referencing canonical. A site-wide canonical in the root
+  // layout once pointed every page at the homepage, which told Google
+  // they were all duplicates of it. Declaring each page's own URL is
+  // what undoes that.
+  alternates: { canonical: "https://getrealhealthpgd.co.uk/resources" },
   title: "Resources — Education Hub",
   description:
     "Everything you need to know about PGDs — written for pharmacists. Free guides, articles, and compliance checklists.",

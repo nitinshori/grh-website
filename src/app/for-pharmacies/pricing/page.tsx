@@ -4,6 +4,11 @@ import { SavingsCalculator } from "./SavingsCalculator";
 import { FAQAccordion } from "./FAQAccordion";
 
 export const metadata: Metadata = {
+  // Self-referencing canonical. A site-wide canonical in the root
+  // layout once pointed every page at the homepage, which told Google
+  // they were all duplicates of it. Declaring each page's own URL is
+  // what undoes that.
+  alternates: { canonical: "https://getrealhealthpgd.co.uk/for-pharmacies/pricing" },
   title: "Pricing — £100/month per pharmacy",
   description:
     "£100 per pharmacy per month. All PGDs included. No per-consult charges. No hidden fees.",

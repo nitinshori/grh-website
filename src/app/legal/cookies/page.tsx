@@ -3,6 +3,11 @@ import { LegalPageLayout } from "@/components/legal/LegalPageLayout";
 import { legal } from "@/lib/legal";
 
 export const metadata: Metadata = {
+  // Self-referencing canonical. A site-wide canonical in the root
+  // layout once pointed every page at the homepage, which told Google
+  // they were all duplicates of it. Declaring each page's own URL is
+  // what undoes that.
+  alternates: { canonical: "https://getrealhealthpgd.co.uk/legal/cookies" },
   title: "Cookie Policy",
   description:
     "How Get Real Health uses cookies and similar technologies, and how you can control them.",

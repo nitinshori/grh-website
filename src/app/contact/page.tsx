@@ -2,6 +2,11 @@ import type { Metadata } from "next";
 import { ContactForm } from "./ContactForm";
 
 export const metadata: Metadata = {
+  // Self-referencing canonical. A site-wide canonical in the root
+  // layout once pointed every page at the homepage, which told Google
+  // they were all duplicates of it. Declaring each page's own URL is
+  // what undoes that.
+  alternates: { canonical: "https://getrealhealthpgd.co.uk/contact" },
   title: "Contact Us — Get in Touch",
   description:
     "Get in touch with the Get Real Health team. We typically respond within one working day.",

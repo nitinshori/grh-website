@@ -2,6 +2,11 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
+  // Self-referencing canonical. A site-wide canonical in the root
+  // layout once pointed every page at the homepage, which told Google
+  // they were all duplicates of it. Declaring each page's own URL is
+  // what undoes that.
+  alternates: { canonical: "https://getrealhealthpgd.co.uk/for-pharmacies" },
   title: "For Pharmacies \u2014 Why Partner With Us",
   description:
     "PGDs with no per-consult fees, full data ownership and an integrated consultation tool. See why pharmacies are switching to Get Real Health.",

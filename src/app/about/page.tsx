@@ -3,6 +3,11 @@ import Image from "next/image";
 import { legal } from "@/lib/legal";
 
 export const metadata: Metadata = {
+  // Self-referencing canonical. A site-wide canonical in the root
+  // layout once pointed every page at the homepage, which told Google
+  // they were all duplicates of it. Declaring each page's own URL is
+  // what undoes that.
+  alternates: { canonical: "https://getrealhealthpgd.co.uk/about" },
   title: "About Us",
   description:
     "Founded by clinicians with deep experience of large-scale online prescribing in UK pharmacy. CQC registered. Learn about our story, values, and team.",

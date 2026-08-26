@@ -2,6 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
+  // Self-referencing canonical. A site-wide canonical in the root
+  // layout once pointed every page at the homepage, which told Google
+  // they were all duplicates of it. Declaring each page's own URL is
+  // what undoes that.
+  alternates: { canonical: "https://getrealhealthpgd.co.uk/for-pharmacies/platform" },
   title: "Our Platform — Built for PGD Delivery",
   description:
     "The consultation tool built for PGD delivery — not bolted on from a third party. Guided flows, patient records, superintendent oversight.",
