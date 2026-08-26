@@ -133,7 +133,15 @@ const categoryOrder = [
   'Paediatrics',
 ]
 
-export default async function EPGDIndexPage() {
+export default async function EPGDIndexPage({
+  searchParams,
+}: {
+  // Set by the middleware when it turns someone away from a tool their
+  // pharmacy does not hold. Without this they would land back on the list
+  // with no idea why, which is how a security fix becomes a support call.
+  searchParams: Promise<{ denied?: string }>
+}) {
+  const { denied } = await searchParams
   const session = await auth()
 
   if (!session?.user) {
@@ -217,6 +225,20 @@ export default async function EPGDIndexPage() {
             <span className="text-gray-500 ml-2">clinical categories</span>
           </div>
         </div>
+
+        {/* Turned away from a tool the pharmacy does not hold. */}
+        {denied && (
+          <div className="-mt-4 mb-8 rounded-lg border border-gray-300 bg-white px-4 py-3">
+            <p className="text-sm text-gray-800">
+              That ePGD is not enabled for your pharmacy, so it could not be
+              opened.
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              If you believe it should be, contact Get Real Health and we will
+              add it to your account.
+            </p>
+          </div>
+        )}
 
         {/* Evaluation accounts: explain why most cards do not open. */}
         {showFullCatalogue && (

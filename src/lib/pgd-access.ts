@@ -144,6 +144,56 @@ export const COMING_SOON_SLUGS = new Set([
 ])
 
 /**
+ * ── Route-level access control for ePGD tools ──────────────────────
+ *
+ * Until 26 Aug 2026 only 7 of the 95 tool routes checked whether the
+ * pharmacy actually held that PGD. The middleware checked for a session and
+ * nothing more, so any signed-in pharmacy user could open almost any tool by
+ * typing the URL. The check now lives in src/proxy.ts and covers every tool.
+ *
+ * These two constants are the exceptions to it. They are here, next to
+ * ALL_PGDS, because this file is the client-safe source of truth for what a
+ * PGD is, and because getting either of them wrong locks real pharmacies out
+ * of services they pay for.
+ */
+
+/**
+ * Route segments under /for-pharmacies/epgd/ that are not a PGD and must
+ * never be gated on an assignment.
+ *
+ *   shared       shared step components, no page of its own
+ *   certificate  patient certificate printing, reached from inside a tool
+ *                that has already passed its own check
+ *   custom       custom-built PGDs, which carry their own PgdGate
+ */
+export const EPGD_UNGATED_SEGMENTS = new Set([
+  'shared',
+  'certificate',
+  'custom',
+])
+
+/**
+ * Tools that live at a route which is not the slug they are supplied under.
+ * The four testosterone brands are all dispensed under the 'trt' PGD, and the
+ * two thrush combination packs under 'thrush'.
+ *
+ * The check passes if the pharmacy holds EITHER the route name or the parent
+ * slug. Both are matched rather than just one because the database contains
+ * assignments under both spellings: there are pharmacy_pgds rows for 'trt'
+ * and separate rows for 'tostran', 'testogel', 'sustanon' and 'nebido'.
+ * Matching both means this check cannot take access away from a pharmacy
+ * that has it today, which was the whole risk in adding it.
+ */
+export const EPGD_SEGMENT_ALIASES: Record<string, string[]> = {
+  tostran: ['trt'],
+  testogel: ['trt'],
+  sustanon: ['trt'],
+  nebido: ['trt'],
+  'thrush-combi': ['thrush'],
+  'thrush-duo': ['thrush'],
+}
+
+/**
  * All unique categories in display order.
  */
 export const PGD_CATEGORIES = [

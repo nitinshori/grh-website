@@ -8,6 +8,11 @@ import type { NextRequest } from 'next/server'
 import { neon } from '@neondatabase/serverless'
 import { tenantFromHost } from '@/lib/tenants'
 import { TENANT_HEADER } from '@/lib/tenant-context'
+import {
+  ALL_PGDS,
+  EPGD_UNGATED_SEGMENTS,
+  EPGD_SEGMENT_ALIASES,
+} from '@/lib/pgd-access'
 
 // ── Per-tenant routing ───────────────────────────────────────────────
 // On non-default tenants (e.g. hubrx.getrealhealthpgd.co.uk), the public
@@ -104,6 +109,84 @@ async function isUserActive(userId: string): Promise<boolean> {
     return isActive
   } catch (err) {
     console.error('Middleware is_active check failed (failing open):', err)
+    return true
+  }
+}
+
+// ── Per-PGD authorisation for ePGD tools ────────────────────────────
+// Until 26 Aug 2026 this did not exist. Only 7 of the 95 tool routes wrapped
+// themselves in PgdGate; the other 88 checked nothing, and the middleware
+// checked only that a session existed. Any signed-in pharmacy user could open
+// almost any tool by typing its URL, regardless of what their pharmacy held.
+//
+// The check lives here rather than in the ePGD layout because a layout cannot
+// see the pathname, and because Next reuses layouts across client-side
+// navigations between sibling routes: a gate there could be skipped by
+// navigating from an allowed tool to a forbidden one. Middleware runs on
+// every request, including the RSC requests behind those navigations.
+//
+// One query per pharmacy per minute, cached like the is_active check above,
+// and it fails open for the same reason: a Neon hiccup must not take every
+// pharmacy's tools away mid-consultation.
+const CATALOGUE_SLUGS = new Set(ALL_PGDS.map((p) => p.slug))
+
+const pgdAccessCache = new Map<
+  string,
+  { authSource: string; slugs: Set<string>; expiresAt: number }
+>()
+
+async function pharmacyPgdAccess(
+  pharmacyId: string,
+): Promise<{ authSource: string; slugs: Set<string> }> {
+  const cached = pgdAccessCache.get(pharmacyId)
+  if (cached && cached.expiresAt > Date.now()) return cached
+
+  const rows = (await sql`
+    SELECT p.auth_source,
+           COALESCE(
+             array_agg(pp.pgd_slug) FILTER (WHERE pp.status = 'approved'),
+             ARRAY[]::varchar[]
+           ) AS slugs
+      FROM pharmacies p
+      LEFT JOIN pharmacy_pgds pp ON pp.pharmacy_id = p.id
+     WHERE p.id = ${pharmacyId}
+     GROUP BY p.auth_source
+  `) as Array<{ auth_source: string | null; slugs: string[] | null }>
+
+  const entry = {
+    authSource: rows[0]?.auth_source ?? 'direct',
+    slugs: new Set(rows[0]?.slugs ?? []),
+    expiresAt: Date.now() + ACTIVE_CACHE_TTL_MS,
+  }
+  pgdAccessCache.set(pharmacyId, entry)
+  return entry
+}
+
+async function mayUseEpgdTool(
+  pharmacyId: string,
+  segment: string,
+): Promise<boolean> {
+  const candidates = [segment, ...(EPGD_SEGMENT_ALIASES[segment] ?? [])]
+  try {
+    const { authSource, slugs } = await pharmacyPgdAccess(pharmacyId)
+
+    // HubRx pharmacies hold the entire catalogue by partner agreement and
+    // have no pharmacy_pgds rows at all, so they have to be matched against
+    // the catalogue rather than against assignments. Missing this would have
+    // locked out every HubRx pharmacy the moment this deployed.
+    if (
+      authSource === 'hubrx' &&
+      candidates.some((s) => CATALOGUE_SLUGS.has(s))
+    ) {
+      return true
+    }
+
+    return candidates.some((s) => slugs.has(s))
+  } catch (err) {
+    console.error(
+      '[middleware] PGD access check failed, allowing through:',
+      err,
+    )
     return true
   }
 }
@@ -208,6 +291,36 @@ export default auth(async (req: NextRequest & { auth: { user: { id?: string; rol
     const loginUrl = new URL('/login', req.nextUrl.origin)
     loginUrl.searchParams.set('callbackUrl', pathname)
     return NextResponse.redirect(loginUrl)
+  }
+
+  // A session alone is not enough: check the pharmacy actually holds this
+  // PGD. See the note above pharmacyPgdAccess for why this sits here.
+  if (isEpgdTool && session?.user) {
+    const segment = pathname.split('/')[3] ?? ''
+    const role = (session.user as { role?: string }).role
+    const pharmacyId = (session.user as { pharmacyId?: string | null })
+      .pharmacyId
+
+    if (
+      segment &&
+      !EPGD_UNGATED_SEGMENTS.has(segment) &&
+      role !== 'super_admin'
+    ) {
+      const allowed = pharmacyId
+        ? await mayUseEpgdTool(pharmacyId, segment)
+        : false
+
+      if (!allowed) {
+        // Logged so that a wrongly-denied pharmacy shows up in the Vercel
+        // logs rather than only in a support call.
+        console.warn(
+          `[middleware] ePGD denied: segment=${segment} pharmacy=${pharmacyId ?? 'none'}`,
+        )
+        const denied = new URL('/for-pharmacies/epgd', req.nextUrl.origin)
+        denied.searchParams.set('denied', segment)
+        return NextResponse.redirect(denied)
+      }
+    }
   }
 
   // ── Protect pharmacy dashboard ───────────────────────────────
