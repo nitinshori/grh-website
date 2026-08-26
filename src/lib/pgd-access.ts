@@ -133,14 +133,20 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
 /**
  * PGD slugs where the ePGD tool is still "Coming Soon" (placeholder page only).
  */
+// Saxenda, Mysimba and GLP-1 Monitoring came off this list on 26 Aug 2026.
+// They were never placeholders: all three were fully built and carried the
+// badge only because nobody had removed it. Smoke tested live before the
+// badge came off, and all three ran a consultation from step 1 through to
+// step 8. Saxenda correctly refused to advance at BMI 20.8 and again when
+// pregnancy was ticked; Mysimba refused on a naltrexone hypersensitivity.
+//
+// The four left are genuine placeholders: a static page with a badge and no
+// consultation logic behind it. Each needs building before it can come off.
 export const COMING_SOON_SLUGS = new Set([
   'trt',
   'genital-warts',
   'herpes-management',
   'gonorrhoea-treatment',
-  'saxenda',
-  'mysimba',
-  'glp1-monitoring',
 ])
 
 /**
