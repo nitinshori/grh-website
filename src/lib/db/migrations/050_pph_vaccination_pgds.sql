@@ -27,11 +27,18 @@
 --                   infants referred to the NHS programme. Narrower scope,
 --                   which is exactly why it is PPH only.
 --
--- EXPIRY, and it is short. These carry the dates Chris issued in February,
--- not the 31/7/27 the estate was re-dated to: chickenpox expires 30/9/26 and
--- shingles 31/10/26. Nitin has accepted that in order to get the better
--- clinical content to PPH now, on the basis that they are renewed before
--- October. Whoever picks this up next: those two dates are the reason to.
+-- EXPIRY. As sent, these carried the dates Chris issued in February:
+-- chickenpox 30/9/26 and shingles 31/10/26, against 31/7/27 across the rest
+-- of the estate. Nitin, 27 Aug 2026: "chris and i have already reviewed these
+-- and signed them off", so both were re-dated to 31/7/27 to match. The
+-- valid-from dates are untouched.
+--
+-- Chickenpox carries TWO expiry blocks, on pages 9 and 17, because the
+-- document holds a Varivax PGD and a Varilrix PGD. Both were changed. The
+-- last time this estate was re-dated only the first block of each document
+-- was updated and 40 stale dates survived, so the check here is that every
+-- "Expiry date" cell in the file reads the new date, not that the file
+-- contains it somewhere.
 --
 -- The MenB document arrived as a .docx and was converted to PDF. Its
 -- valid-from and expiry cells are blank in the original, so there is no date
@@ -79,13 +86,13 @@ SELECT
     ('chickenpox',
      '/pgd-documents/pharmacy/chickenpox-pph.pdf',
      'CHICKENPOX Final.pdf',
-     471285,
-     'PPH copy, sent by Janey 27 Aug 2026. Adds occupational indications, breastfeeding exclusion, salicylate/Reye''s warning and the aciclovir interaction. Expires 30/9/26 — renew before then.'),
+     571618,
+     'PPH copy, sent by Janey 27 Aug 2026. Adds occupational indications, breastfeeding exclusion, salicylate/Reye''s warning and the aciclovir interaction. Re-dated to 31/7/27 on 27 Aug 2026 per Nitin and Chris, from the 30/9/26 Chris issued in February.'),
     ('shingles-vaccine',
      '/pgd-documents/pharmacy/shingles-vaccine-pph.pdf',
      'SHINGLES FINAL.pdf',
-     418788,
-     'PPH copy, sent by Janey 27 Aug 2026. Shingrix only, Zostavax removed, JCVI age 60 rollout added. Expires 31/10/26 — renew before then.'),
+     474087,
+     'PPH copy, sent by Janey 27 Aug 2026. Shingrix only, Zostavax removed, JCVI age 60 rollout added. Re-dated to 31/7/27 on 27 Aug 2026 per Nitin and Chris, from the 31/10/26 Chris issued in February.'),
     ('meningitis-b',
      '/pgd-documents/pharmacy/meningitis-b-pph.pdf',
      'MENINGITIS_B_AMENDED_v2 2026-1.docx (converted to PDF)',
