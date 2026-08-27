@@ -40,9 +40,14 @@
 -- "Expiry date" cell in the file reads the new date, not that the file
 -- contains it somewhere.
 --
--- The MenB document arrived as a .docx and was converted to PDF. Its
--- valid-from and expiry cells are blank in the original, so there is no date
--- to lose in conversion, but it is worth knowing that it has none.
+-- MenB arrived as a .docx and was converted to PDF. Its valid-from and
+-- expiry cells were blank, which is a worse position than a short expiry
+-- because nothing would ever have prompted a review. Nitin, 27 Aug 2026:
+-- "match the dates for men b". Valid from is 17/3/26, the document's own
+-- v002 issue date taken from its change history and the GRH signature
+-- block, and expiry is 31/7/27 to match the estate. These were added, not
+-- corrected, so the provenance matters: they come from Nitin and Chris
+-- having already reviewed and signed the document off, not from me.
 --
 -- No signatures from Janey or Sarah appear in any of the five, despite the
 -- covering email describing a password to add them. That matches every other
@@ -96,8 +101,8 @@ SELECT
     ('meningitis-b',
      '/pgd-documents/pharmacy/meningitis-b-pph.pdf',
      'MENINGITIS_B_AMENDED_v2 2026-1.docx (converted to PDF)',
-     359180,
-     'PPH version already live in their branches. Bexsero only, age 2+, private service with infants referred to the NHS programme. Narrower than the GRH master, which also covers Trumenba.')
+     352903,
+     'PPH version already live in their branches. Bexsero only, age 2+, private service with infants referred to the NHS programme. Narrower than the GRH master, which also covers Trumenba. Valid-from 17/3/26 and expiry 31/7/27 added 27 Aug 2026; the original had neither.')
   ) AS d(slug, url, filename, bytes, notes)
  WHERE NOT EXISTS (
    SELECT 1 FROM pharmacy_pgd_documents
