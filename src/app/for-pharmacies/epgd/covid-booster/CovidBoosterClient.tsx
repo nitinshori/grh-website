@@ -13,7 +13,9 @@ import { AlertBanner } from "../shared/components/AlertBanner";
 import { PatientDetailsStep } from "../shared/steps/PatientDetailsStep";
 import { ConsentStep } from "../shared/steps/ConsentStep";
 import { CovidBoosterSummaryReport } from "./components/CovidBoosterSummaryReport";
-import { TextInput, Checkbox, TextArea } from "../shared/components/FormInputs";
+import { TextInput, Checkbox, TextArea, SelectInput } from "../shared/components/FormInputs";
+import { COVID_PRODUCTS } from "./lib/covid-booster-types";
+import type { CovidVaccineProduct, CovidBoosterSupply } from "./lib/covid-booster-types";
 
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 function reducer(state: CovidBoosterConsultationState, action: CovidBoosterAction): CovidBoosterConsultationState {
@@ -43,6 +45,10 @@ function reducer(state: CovidBoosterConsultationState, action: CovidBoosterActio
         ...newState.counselling,
         [action.field]: action.value,
       };
+      break;
+
+    case "UPDATE_SUPPLY":
+      newState.supply = { ...newState.supply, [action.field]: action.value };
       break;
 
     case "UPDATE_SUMMARY":
@@ -151,16 +157,16 @@ export default function CovidBoosterClient() {
         return (
           <div className="space-y-4">
             <Checkbox
-              label="Confirmed adult (18+ years)"
-              checked={state.assessment.adultConfirmed}
+              label="Confirmed aged 12 years or over"
+              checked={state.assessment.ageConfirmed}
               onChange={(v) =>
                 dispatch({
                   type: "UPDATE_ASSESSMENT",
-                  field: "adultConfirmed",
+                  field: "ageConfirmed",
                   value: v,
                 })
               }
-              description="This PGD is for adults aged 18 years and above"
+              description="This PGD covers 12 years and over, with no upper age limit. Under 12s need age-specific presentations and dose volumes and must be referred."
             />
             <Checkbox
               label="Previous COVID-19 vaccination received"
@@ -172,10 +178,22 @@ export default function CovidBoosterClient() {
                   value: v,
                 })
               }
-              description="Patient has received at least one previous COVID-19 vaccine dose"
+              description="A previous dose is not required. Leave unticked for a first dose. The PGD only excludes a primary course where the patient is also immunosuppressed."
             />
             <Checkbox
-              label="Meets timelines for booster (e.g., 6+ months since last dose)"
+              label="Immunosuppressed"
+              checked={state.assessment.immunosuppressed}
+              onChange={(v) =>
+                dispatch({
+                  type: "UPDATE_ASSESSMENT",
+                  field: "immunosuppressed",
+                  value: v,
+                })
+              }
+              description="As defined in the COVID-19 chapter of the Green Book. Determines both NHS eligibility and which Comirnaty formulation must be used."
+            />
+            <Checkbox
+              label="At least 3 months since the last COVID-19 vaccine dose, or this is a first dose"
               checked={state.assessment.timelinessEligible}
               onChange={(v) =>
                 dispatch({
@@ -184,7 +202,7 @@ export default function CovidBoosterClient() {
                   value: v,
                 })
               }
-              description="Check current eligibility criteria based on last vaccine date and risk category"
+              description="The PGD requires a minimum interval of 3 months between COVID-19 vaccine doses, not 6. Defer for 4 weeks after a positive test or symptom onset, and 12 weeks in 5 to 17 year olds who are not in a risk group."
             />
           </div>
         );
@@ -335,17 +353,108 @@ export default function CovidBoosterClient() {
       case 4:
         return (
           <div className="space-y-4">
-            <div className="p-3 bg-[color:var(--tenant-primary)]/10 border border-[color:var(--tenant-primary)]/30 rounded-lg">
-              <p className="text-sm font-medium text-[color:var(--tenant-primary)]">
-                COVID-19 mRNA Booster (XBB.1.5 or current variant-updated)
+            <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg">
+              <p className="text-sm font-medium text-amber-900">
+                Check the variant printed on the syringe label before you inject.
               </p>
-              <p className="text-xs text-[color:var(--tenant-primary)] mt-1">
-                0.3 mL intramuscular injection into deltoid
-              </p>
-              <p className="text-xs text-[color:var(--tenant-primary)] mt-2">
-                Single dose booster. Observe for 15 minutes post-injection.
+              <p className="text-xs text-amber-800 mt-1">
+                Comirnaty XFG and Comirnaty LP.8.1 are both 30 micrograms in 0.3 mL and the
+                packaging is closely similar. The variant designation is the only thing that tells
+                them apart. Record what you actually gave, not what you meant to give.
               </p>
             </div>
+
+            <SelectInput
+              label="Vaccine product given"
+              value={state.supply.vaccineProduct}
+              onChange={(v) =>
+                dispatch({
+                  type: "UPDATE_SUPPLY",
+                  field: "vaccineProduct",
+                  value: v as CovidVaccineProduct,
+                })
+              }
+              options={[
+                { value: "comirnaty-xfg", label: `${COVID_PRODUCTS["comirnaty-xfg"].label}, vaccine of choice` },
+                { value: "comirnaty-lp81", label: `${COVID_PRODUCTS["comirnaty-lp81"].label}, existing stock only` },
+                { value: "spikevax-lp81", label: COVID_PRODUCTS["spikevax-lp81"].label },
+                { value: "nuvaxovid-jn1", label: COVID_PRODUCTS["nuvaxovid-jn1"].label },
+              ]}
+            />
+
+            {state.supply.vaccineProduct && (
+              <div className="p-3 bg-[color:var(--tenant-primary)]/10 border border-[color:var(--tenant-primary)]/30 rounded-lg">
+                <p className="text-sm font-medium text-[color:var(--tenant-primary)]">
+                  {COVID_PRODUCTS[state.supply.vaccineProduct].label}
+                </p>
+                <p className="text-xs text-[color:var(--tenant-primary)] mt-1">
+                  {COVID_PRODUCTS[state.supply.vaccineProduct].volume} intramuscular injection into
+                  the deltoid. Single dose for the 2026/27 season.
+                </p>
+                <p className="text-xs text-[color:var(--tenant-primary)] mt-2">
+                  Observe for 15 minutes where there is a history of allergy or previous vaccine
+                  reaction. Vaccinate seated.
+                </p>
+              </div>
+            )}
+
+            {state.supply.vaccineProduct === "comirnaty-lp81" && (
+              <Checkbox
+                label="Patient told this is the previous seasonal formulation"
+                checked={state.supply.lp81FormulationExplained}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_SUPPLY",
+                    field: "lp81FormulationExplained",
+                    value: v,
+                  })
+                }
+                description="Explained that Comirnaty XFG is the current 2026/27 formulation, that both are licensed in the UK, and that the WHO named LP.8.1 as a preferred antigen for this season. Patient accepted."
+              />
+            )}
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              <TextInput
+                label="Batch number"
+                value={state.supply.batchNumber}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_SUPPLY", field: "batchNumber", value: v })
+                }
+                placeholder="As printed on the syringe or vial"
+              />
+              <TextInput
+                label="Vaccine expiry date"
+                type="date"
+                value={state.supply.expiryDate}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_SUPPLY", field: "expiryDate", value: v })
+                }
+              />
+              <SelectInput
+                label="Administration site"
+                value={state.supply.administrationSite}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_SUPPLY",
+                    field: "administrationSite",
+                    value: v as CovidBoosterSupply["administrationSite"],
+                  })
+                }
+                options={[
+                  { value: "left-deltoid", label: "Left deltoid" },
+                  { value: "right-deltoid", label: "Right deltoid" },
+                ]}
+              />
+              <TextInput
+                label="Time administered"
+                type="time"
+                value={state.supply.administrationTime}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_SUPPLY", field: "administrationTime", value: v })
+                }
+              />
+            </div>
+
             <TextArea
               label="Additional clinical notes"
               value={state.summary.clinicalNotes}

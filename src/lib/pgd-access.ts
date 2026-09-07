@@ -379,4 +379,9 @@ export const REISSUED_PGDS: Record<string, { version: string; date: string }> = 
   'chest-service': { version: 'v002', date: '7 September 2026' },
   'skin-infection': { version: 'v002', date: '7 September 2026' },
   'wound-care': { version: 'v002', date: '7 September 2026' },
+  // COVID: v003 named "Comirnaty JN.1" in its operative vaccines table while
+  // its own summary page said the 2026/27 formulation was XFG. No pharmacy
+  // held JN.1. v004 names Comirnaty XFG as the vaccine of choice and adds
+  // Comirnaty LP.8.1 as an existing-stock-only arm for the changeover.
+  'covid-booster': { version: 'v004', date: '8 September 2026' },
 }

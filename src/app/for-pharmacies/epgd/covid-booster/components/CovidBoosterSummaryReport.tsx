@@ -1,6 +1,7 @@
 "use client";
 
 import type { CovidBoosterConsultationState } from "../lib/covid-booster-types";
+import { COVID_PRODUCTS } from "../lib/covid-booster-types";
 import type { ClinicalAlert } from "../../shared/types";
 import {
   SectionHeader,
@@ -47,9 +48,53 @@ export function CovidBoosterSummaryReport({
 
       <SectionHeader>Vaccine Eligibility</SectionHeader>
       <div className="space-y-0.5">
-        <Row label="Adult (18+)" value={state.assessment.adultConfirmed ? "Yes" : "No"} />
+        <Row label="Aged 12 or over" value={state.assessment.ageConfirmed ? "Yes" : "No"} />
         <Row label="Previous COVID-19 Vaccine" value={state.assessment.previousCovidVaccine ? "Yes" : "No"} />
-        <Row label="Timelines Eligible" value={state.assessment.timelinessEligible ? "Yes" : "No"} />
+        <Row label="Immunosuppressed" value={state.assessment.immunosuppressed ? "Yes" : "No"} />
+        <Row label="3 months since last dose, or first dose" value={state.assessment.timelinessEligible ? "Yes" : "No"} />
+      </div>
+
+      <SectionHeader>Vaccine Administered</SectionHeader>
+      <div className="space-y-0.5">
+        <Row
+          label="Product and variant"
+          value={
+            state.supply.vaccineProduct
+              ? COVID_PRODUCTS[state.supply.vaccineProduct].label
+              : "Not recorded"
+          }
+        />
+        <Row label="Batch number" value={state.supply.batchNumber || "Not recorded"} />
+        <Row label="Vaccine expiry" value={state.supply.expiryDate || "Not recorded"} />
+        <Row
+          label="Dose given"
+          value={
+            state.supply.vaccineProduct
+              ? `${COVID_PRODUCTS[state.supply.vaccineProduct].volume}, intramuscular`
+              : "Not recorded"
+          }
+        />
+        <Row
+          label="Site"
+          value={
+            state.supply.administrationSite === "left-deltoid"
+              ? "Left deltoid"
+              : state.supply.administrationSite === "right-deltoid"
+                ? "Right deltoid"
+                : "Not recorded"
+          }
+        />
+        <Row label="Time administered" value={state.supply.administrationTime || "Not recorded"} />
+        {state.supply.vaccineProduct === "comirnaty-lp81" && (
+          <Row
+            label="Previous formulation explained"
+            value={
+              state.supply.lp81FormulationExplained
+                ? "Yes. Patient told Comirnaty LP.8.1 is the previous seasonal formulation and that XFG is the current one, and accepted."
+                : "NOT RECORDED"
+            }
+          />
+        )}
       </div>
 
       <SectionHeader>Contraindication Check</SectionHeader>

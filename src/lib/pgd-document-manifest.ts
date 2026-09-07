@@ -20,7 +20,7 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   "cold-sores": "cold-sores.pdf",
   "copd": "copd.pdf",
   // 2026/27 season v003, signed 6 Aug 2026 with C. Pilkington's review edits
-  "covid-booster": "covid-2026-27-v003.pdf",
+  "covid-booster": "covid-2026-27-v004.pdf",
   "dengue": "dengue.pdf",
   "dental-bridging": "dental-bridging.pdf",
   "diabetes-monitoring": "diabetes-monitoring.pdf",
@@ -138,7 +138,7 @@ export const PGD_HUBRX_FILES: Record<string, string> = {
   "chickenpox": "chickenpox 2.pdf",
   "cold-sores": "cold-sores 2.pdf",
   "copd": "copd 2.pdf",
-  "covid-booster": "covid-2026-27-v003.pdf",
+  "covid-booster": "covid-2026-27-v004.pdf",
   "dengue": "dengue 2.pdf",
   "dental-bridging": "dental-bridging 2.pdf",
   "diabetes-monitoring": "diabetes-monitoring 2.pdf",
