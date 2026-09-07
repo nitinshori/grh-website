@@ -228,6 +228,26 @@ export const WITHDRAWN_SLUGS = new Set([
   // Medicine), Schedule 2 Controlled Drug", so the fact was on its face
   // throughout.
   'adhd-monitoring',
+  // Withdrawn 7 Sep 2026 on Nitin's instruction, "safety first", while the
+  // legal position is confirmed. REVERSIBLE: if testosterone turns out to be
+  // permitted under a PGD, remove these two lines and re-approve.
+  //
+  // Testosterone is a Schedule 4 Part II controlled drug. Part II is the
+  // anabolic and androgenic steroids part; Part I is the benzodiazepines and
+  // z-drugs.
+  //
+  // NHS Specialist Pharmacy Service, updated 1 July 2026: "Unless listed below
+  // a CD cannot be administered or supplied under a PGD", and for Schedule 4,
+  // "All drugs except anabolic steroids and injectable medications used for
+  // treating addiction." On that reading testosterone is excluded.
+  //
+  // A Claude conversation in May 2026 advised Nitin the opposite, that
+  // Schedule 4 Part I is excluded and Part II permitted. That is inverted
+  // relative to the SPS page. Neither that answer nor this one is a source;
+  // the question is with a human authority. Pending that answer the service is
+  // paused rather than run on a disputed basis.
+  'trt',
+  'testosterone-women',
 ])
 
 /**

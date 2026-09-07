@@ -1,0 +1,64 @@
+-- 055: pause the testosterone PGDs pending confirmation of the legal position.
+--
+-- Nitin's instruction, 7 Sep 2026: "remove it. safety first."
+--
+-- THIS IS A PAUSE, NOT A CONCLUSION. It is deliberately easy to reverse.
+--
+-- THE DISPUTE
+--
+-- Testosterone is a Schedule 4 Part II controlled drug. Part II is the anabolic
+-- and androgenic steroids; Part I is the benzodiazepines and z-drugs.
+--
+-- NHS Specialist Pharmacy Service, "Supply and/or administration of Controlled
+-- Drugs under a PGD", last updated 1 July 2026:
+--   "Unless listed below a CD cannot be administered or supplied under a PGD."
+--   "Schedule 4  All drugs except anabolic steroids and injectable medications
+--    used for treating addiction."
+-- On that reading testosterone cannot be supplied under a PGD by anyone.
+--
+-- A Claude conversation in May 2026 advised the opposite: that Schedule 2, 3
+-- and 4 Part I are excluded while Schedule 4 Part II and Schedule 5 are
+-- permitted, and therefore that testosterone is eligible. That is exactly
+-- inverted relative to the SPS page.
+--
+-- Neither answer is a source. Both are language models. The question has gone
+-- to a human authority (indemnity provider / RPS / a direct read of the Misuse
+-- of Drugs Regulations 2001). Until it comes back, the service is paused rather
+-- than run on a basis nobody has verified.
+--
+-- TO REVERSE, if testosterone turns out to be permitted:
+--   1. remove 'trt' and 'testosterone-women' from WITHDRAWN_SLUGS in
+--      src/lib/pgd-access.ts
+--   2. UPDATE pharmacy_pgds SET status='approved' WHERE pgd_slug IN
+--      ('trt','testosterone-women') AND status='not_approved';
+--      (check against the pre-pause assignment list before doing this, since
+--      some rows may have been not_approved for unrelated reasons)
+--   3. restore the archived PDFs from the 7 Sep archive
+-- Nothing here deletes an assignment, so the history is intact.
+--
+-- SCOPE
+--
+-- trt covers Testogel, Tostran, Sustanon and Nebido.
+-- testosterone-women resolves to hrt.pdf, whose Tostran arm supplies
+-- testosterone gel for HSDD. The other four arms of that document (Evorel
+-- Conti, Evorel Sequi, Evorel, Utrogestan) contain no controlled drug and are
+-- NOT affected; the 'hrt' slug therefore stays live and its document carries a
+-- notice restricted to the Tostran arm.
+--
+-- SEPARATE CLINICAL DEFECTS already found in the TRT document, which need
+-- fixing whatever the legal answer:
+--   - no haematocrit threshold at which treatment stops, in a document whose
+--     principal predictable harm is polycythaemia
+--   - Tostran quantity impossible: 60 g canister at 3 g daily is 20 doses,
+--     issued as a monthly supply
+--   - Testogel dose box authorises 50 mg while the quantity box supplies up to
+--     100 mg daily, with no titration rule and no maximum
+--   - version 003 postdates both signatures
+--
+-- Consultation records are untouched.
+-- Idempotent: safe to re-run.
+
+UPDATE pharmacy_pgds
+   SET status = 'not_approved'
+ WHERE pgd_slug IN ('trt', 'testosterone-women')
+   AND status = 'approved';
