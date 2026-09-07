@@ -50,7 +50,7 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   // single combined Ixiaro / Rabies / MenACWY document, so a pharmacy
   // adopting one was signing for all three. Raised by PPH.
   "japanese-encephalitis": "japanese-encephalitis-v001.pdf",
-  "meningitis-acwy-travel": "meningitis-acwy-travel-v001.pdf",
+  "meningitis-acwy-travel": "meningitis-acwy-travel-v002.pdf",
   // v002 signed 14 Aug 2026: covers Bexsero and Trumenba
   "meningitis-b": "meningitis-b-v002.pdf",
   "mmr": "mmr.pdf",
@@ -163,7 +163,7 @@ export const PGD_HUBRX_FILES: Record<string, string> = {
   // document, so they point at the new standalone masters rather than being
   // re-branded copies of content that was wrong.
   "japanese-encephalitis": "japanese-encephalitis-v001.pdf",
-  "meningitis-acwy-travel": "meningitis-acwy-travel-v001.pdf",
+  "meningitis-acwy-travel": "meningitis-acwy-travel-v002.pdf",
   "meningitis-b": "meningitis-b-v002.pdf",
   "mmr": "mmr 2.pdf",
   "mounjaro": "mounjaro-v002.pdf",

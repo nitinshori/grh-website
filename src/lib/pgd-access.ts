@@ -193,10 +193,12 @@ export const WITHDRAWN_SLUGS = new Set([
   'threadworms',
   // Only the adult Malarone tablet (atovaquone 250mg/proguanil 100mg) is
   // named, and it is authorised from 11kg. An 11-20kg child needs ONE
-  // paediatric 62.5/25mg tablet, so the PGD gives four times the atovaquone
-  // dose to the smallest patients in scope. The ePGD tool repeats it, with no
-  // weight banding at all. Withdrawn 7 Sep 2026.
-  'anti-malarials',
+  // RESTORED 7 Sep 2026 at v002, which carries full weight bands
+  // (11-20kg one paediatric 62.5/25mg tablet, 21-30kg two, 31-40kg three,
+  // adult tablet above 40kg only) and worked quantity examples including the
+  // post-travel tail. The ePGD tool still collects no weight, so it now hard
+  // stops on anyone under 18 and tells the pharmacist to work from Appendix 1
+  // of the PGD instead. Remove that stop when the tool captures weight.
   // Withdrawn on a legal basis rather than a clinical one, 7 Sep 2026.
   // Arm 2 supplies "Melatonin 1mg, 3mg, 5mg tablets (unlicensed preparations)".
   // The Human Medicines Regulations 2012 do not permit an unlicensed medicine
@@ -370,6 +372,8 @@ export const PGD_CATEGORIES = [
  */
 export const REISSUED_PGDS: Record<string, { version: string; date: string }> = {
   'dental-bridging': { version: 'v002', date: '7 September 2026' },
+  'meningitis-acwy-travel': { version: 'v002', date: '7 September 2026' },
+  'anti-malarials': { version: 'v002', date: '7 September 2026' },
   eczema: { version: 'v002', date: '7 September 2026' },
   'chest-service': { version: 'v002', date: '7 September 2026' },
   'skin-infection': { version: 'v002', date: '7 September 2026' },

@@ -38,6 +38,38 @@ export function generateAMAlerts(
 ): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
 
+  // ─── Paediatric hard stop ─────────────────────────────────────
+  //
+  // This tool cannot dose a child. It collects no body weight at any
+  // step, and for atovaquone/proguanil weight determines both the dose
+  // AND the product strength: 11-20kg is ONE paediatric 62.5/25mg
+  // tablet, and the adult 250/100mg tablet is for over 40kg only.
+  //
+  // Until weight capture and banding are built, anyone under 18 is
+  // referred rather than dosed from an adult recommendation. v001 of
+  // this tool returned a flat "Atovaquone/Proguanil (Malarone)
+  // 250/100mg, 1 tablet daily" for every patient, which in an 11kg
+  // child is four times the intended atovaquone dose. That is why the
+  // service was withdrawn on 7 Sep 2026.
+  //
+  // The PGD itself (v002) does cover children, with full weight bands.
+  // A pharmacist can therefore still supply for a child by working from
+  // the document; what they cannot do is have this tool tell them the
+  // dose. Remove this stop only when the tool captures weight and
+  // implements Appendix 1 of the PGD.
+  if (patient.age !== null && patient.age < 18) {
+    alerts.push({
+      severity: 'stop',
+      code: 'PAEDIATRIC_NOT_SUPPORTED_BY_TOOL',
+      message: 'This tool cannot calculate a paediatric dose',
+      detail:
+        'Malaria chemoprophylaxis in anyone under 18 is dosed by body weight, and this tool does not capture weight. ' +
+        'Do not use the recommendation below for a child. Work from the weight bands in Appendix 1 of the Malaria ' +
+        'Chemoprophylaxis PGD (v002), which give one paediatric 62.5mg/25mg tablet for 11-20kg, two for 21-30kg, ' +
+        'three for 31-40kg, and one adult tablet only above 40kg. Weigh the child; do not estimate from age.',
+    })
+  }
+
   // ─── Pregnancy checks ───
 
   if (travel.currentlyPregnant) {
