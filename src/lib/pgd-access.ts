@@ -197,6 +197,17 @@ export const WITHDRAWN_SLUGS = new Set([
   // dose to the smallest patients in scope. The ePGD tool repeats it, with no
   // weight banding at all. Withdrawn 7 Sep 2026.
   'anti-malarials',
+  // Withdrawn on a legal basis rather than a clinical one, 7 Sep 2026.
+  // Arm 2 supplies "Melatonin 1mg, 3mg, 5mg tablets (unlicensed preparations)".
+  // The Human Medicines Regulations 2012 do not permit an unlicensed medicine
+  // to be supplied under a PGD at all, so that arm has never had a lawful
+  // basis and cannot be fixed by editing: it needs a licensed product.
+  // Arm 1 supplies Circadin and states it is indicated "in patients aged 18
+  // years and over". Circadin is licensed for patients aged 55 or over.
+  // Off-label supply under a PGD is permitted where clearly stated and
+  // justified; this arm instead asserts a licence it does not have, so every
+  // patient aged 18 to 54 was supplied off-label without being told.
+  'sleep-melatonin',
 ])
 
 /**

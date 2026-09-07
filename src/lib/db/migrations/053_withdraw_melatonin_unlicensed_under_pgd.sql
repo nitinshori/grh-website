@@ -1,0 +1,62 @@
+-- 053: withdraw sleep-melatonin. Legal defect, not a clinical one.
+--
+-- Found 7 Sep 2026 in the estate review. Nitin's instruction the same day:
+-- withdraw both arms today.
+--
+-- ARM 2 HAS NEVER HAD A LAWFUL BASIS
+--
+-- Its medicine box reads "Melatonin 1mg, 3mg, 5mg tablets (unlicensed
+-- preparations)" and its legal category reads "POM (Prescription Only
+-- Medicine) - unlicensed melatonin is POM in the UK".
+--
+-- The Human Medicines Regulations 2012 do not permit an unlicensed medicine
+-- to be supplied or administered under a Patient Group Direction. Off-label
+-- use of a LICENSED medicine is permitted under a PGD where it is clearly
+-- stated and justified, but that is a different thing, and the document uses
+-- "unlicensed" and "off-label" interchangeably across five separate lines as
+-- though they were the same category.
+--
+-- This arm therefore cannot be corrected by editing. It needs a licensed
+-- product, which means a new arm, not an amended one.
+--
+-- ARM 1 ASSERTS A LICENCE IT DOES NOT HAVE
+--
+-- It supplies Circadin 2mg prolonged-release and states the medicine is
+-- "indicated for short-term management of insomnia in patients aged 18 years
+-- and over", with an inclusion criterion of "Adults aged 18 years and over."
+--
+-- The Circadin licence is monotherapy for short-term treatment of primary
+-- insomnia in patients aged 55 or over. So every patient aged 18 to 54 was
+-- supplied off-label, and because the document asserts the opposite, none of
+-- them was told and no justification was recorded. The document's own summary
+-- section contradicts its operative text on this ("Melatonin for short-term
+-- use in adults aged 55 and over"), and Arm 2 requires patients to be
+-- "counselled regarding unlicensed status" while Arm 1 has no equivalent.
+--
+-- Arm 1's dose box also authorises "Immediate-release melatonin tablets:
+-- 1-5mg once daily", a product the arm does not hold and which is
+-- pharmacokinetically different from the prolonged-release tablet it does.
+--
+-- SEPARATELY, AND FOR THE REWRITE
+--
+-- Neither arm excludes suspected obstructive sleep apnoea, depression, shift
+-- work, parasomnia or narcolepsy. All five sit in the non-binding summary
+-- under "Red flags requiring onward referral" and none reaches the exclusion
+-- criteria. There is also no cap on repeat supply and no referral trigger in
+-- either arm's operative text.
+--
+-- Withdrawal is in three parts, as established by migration 052:
+--   1. WITHDRAWN_SLUGS in src/lib/pgd-access.ts, checked first in proxy.ts
+--      above the HubRx branch and above the allow-on-error catch
+--   2. this migration, so GRH dashboards stop listing it
+--   3. both served PDFs replaced with a withdrawal notice, because
+--      /pgd-documents has no authentication
+--
+-- Consultation records are untouched. They are the clinical audit trail.
+--
+-- Idempotent: safe to re-run. Re-running does not re-approve anything.
+
+UPDATE pharmacy_pgds
+   SET status = 'not_approved'
+ WHERE pgd_slug = 'sleep-melatonin'
+   AND status = 'approved';
