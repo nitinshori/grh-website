@@ -349,3 +349,29 @@ export const PGD_CATEGORIES = [
   'Occupational Health',
   'Paediatrics',
 ] as const
+
+/**
+ * PGDs reissued at a new version, with the date the new version took effect.
+ *
+ * Surfaced as a notice on the pharmacy dashboard so that a pharmacist opening
+ * one of these sees that the document has changed since they last read it,
+ * rather than discovering it mid-consultation. Nitin's decision on 7 Sep 2026
+ * was to replace the files silently and notify at next login rather than
+ * emailing every holder.
+ *
+ * The practical reason this matters: several of these changed their INCLUSION
+ * criteria, not just their wording. A pharmacist working from memory of v001
+ * would supply patients v002 excludes. Dental no longer covers ibuprofen at
+ * all, and any facial swelling now refers; bronchitis now requires purulent
+ * sputum plus a risk factor or duration; betamethasone is off the face and
+ * flexures; the second-line skin antibiotics are gated on penicillin allergy.
+ *
+ * Remove an entry once it is no longer newsworthy, roughly 3 months.
+ */
+export const REISSUED_PGDS: Record<string, { version: string; date: string }> = {
+  'dental-bridging': { version: 'v002', date: '7 September 2026' },
+  eczema: { version: 'v002', date: '7 September 2026' },
+  'chest-service': { version: 'v002', date: '7 September 2026' },
+  'skin-infection': { version: 'v002', date: '7 September 2026' },
+  'wound-care': { version: 'v002', date: '7 September 2026' },
+}

@@ -4,7 +4,7 @@ import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { pharmacies, consultationRecords } from '@/lib/db/schema'
 import { eq, desc } from 'drizzle-orm'
-import { ALL_PGDS, PGD_CATEGORIES, COMING_SOON_SLUGS, WITHDRAWN_SLUGS } from '@/lib/pgd-access'
+import { ALL_PGDS, PGD_CATEGORIES, COMING_SOON_SLUGS, WITHDRAWN_SLUGS, REISSUED_PGDS } from '@/lib/pgd-access'
 import { getPharmacyPgdSlugs } from '@/lib/pgd-queries'
 import { pgds as PGD_CATALOGUE, isPgdAccessibleByEmail } from '@/data/pgds'
 import { getPharmacyStats } from '@/lib/analytics'
@@ -624,6 +624,11 @@ export default async function PharmacyDashboard() {
                           <p className="text-xs text-gray-500 mt-0.5 truncate">
                             {pgd.subtitle}
                           </p>
+                          {REISSUED_PGDS[pgd.slug] && !WITHDRAWN_SLUGS.has(pgd.slug) && (
+                            <span className="inline-block mt-1.5 mr-1.5 text-[10px] font-semibold text-blue-800 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded-full">
+                              Updated {REISSUED_PGDS[pgd.slug].version} — re-read before use
+                            </span>
+                          )}
                           {WITHDRAWN_SLUGS.has(pgd.slug) ? (
                             <span className="inline-block mt-1.5 text-[10px] font-semibold text-red-700 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded-full">
                               Withdrawn — do not use
