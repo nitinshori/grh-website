@@ -161,6 +161,45 @@ export const COMING_SOON_SLUGS = new Set([
 ])
 
 /**
+ * PGDs withdrawn from service because the signed document contains a clinical
+ * error. Nothing here may be supplied by anyone, under any tenant, until a
+ * corrected version has been signed.
+ *
+ * WHY THIS EXISTS SEPARATELY FROM pharmacy_pgds.status
+ *
+ * Setting every assignment to 'not_approved' looks like a withdrawal and is
+ * not one. mayUseEpgdTool() in src/proxy.ts grants HubRx pharmacies the whole
+ * catalogue by partner agreement, matching against ALL_PGDS instead of against
+ * their assignments, because they hold no pharmacy_pgds rows at all. So a
+ * status change withdraws a tool from GRH pharmacies and leaves it fully open
+ * to every HubRx one.
+ *
+ * That is exactly what happened to threadworms on 7 Sep 2026. Migration 051
+ * set it to not_approved for a four-fold mebendazole overdose, the tool went
+ * dark for GRH pharmacies, and it stayed reachable for HubRx the whole time.
+ * Found on 7 Sep 2026 while withdrawing anti-malarials for the same class of
+ * error, which is the only reason it was found at all.
+ *
+ * This set is checked FIRST in mayUseEpgdTool, before the HubRx branch, so a
+ * withdrawal cannot be routed around by tenant. Withdrawing a PGD needs all
+ * three of: an entry here, the assignment status, and the served PDF replaced
+ * with a withdrawal notice. The document is not withdrawn until the file is,
+ * because /pgd-documents is served without authentication.
+ */
+export const WITHDRAWN_SLUGS = new Set([
+  // Mebendazole suspension stated as 5mg/mL. UK product is 100mg/5mL, i.e.
+  // 20mg/mL, so the stated 20mL dose is 400mg, four times intended, in a
+  // predominantly paediatric service. Withdrawn 7 Sep 2026.
+  'threadworms',
+  // Only the adult Malarone tablet (atovaquone 250mg/proguanil 100mg) is
+  // named, and it is authorised from 11kg. An 11-20kg child needs ONE
+  // paediatric 62.5/25mg tablet, so the PGD gives four times the atovaquone
+  // dose to the smallest patients in scope. The ePGD tool repeats it, with no
+  // weight banding at all. Withdrawn 7 Sep 2026.
+  'anti-malarials',
+])
+
+/**
  * ── Route-level access control for ePGD tools ──────────────────────
  *
  * Until 26 Aug 2026 only 7 of the 95 tool routes checked whether the

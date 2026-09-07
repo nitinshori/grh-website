@@ -4,7 +4,7 @@ import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { pharmacies, consultationRecords } from '@/lib/db/schema'
 import { eq, desc } from 'drizzle-orm'
-import { ALL_PGDS, PGD_CATEGORIES, COMING_SOON_SLUGS } from '@/lib/pgd-access'
+import { ALL_PGDS, PGD_CATEGORIES, COMING_SOON_SLUGS, WITHDRAWN_SLUGS } from '@/lib/pgd-access'
 import { getPharmacyPgdSlugs } from '@/lib/pgd-queries'
 import { pgds as PGD_CATALOGUE, isPgdAccessibleByEmail } from '@/data/pgds'
 import { getPharmacyStats } from '@/lib/analytics'
@@ -591,13 +591,29 @@ export default async function PharmacyDashboard() {
                 {/* PGD Cards Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {pgdsByCategory[category].map((pgd) => (
+                    // A withdrawn PGD renders as an inert div, not a Link. The
+                    // middleware already refuses the route, but a card that
+                    // still looks and behaves like a live service invites the
+                    // pharmacist to try, and a bounce to /epgd?denied= reads
+                    // like a billing problem rather than a safety withdrawal.
                     <Link
                       key={pgd.slug}
-                      href={`/for-pharmacies/epgd/${pgd.slug}`}
+                      href={
+                        WITHDRAWN_SLUGS.has(pgd.slug)
+                          ? '#'
+                          : `/for-pharmacies/epgd/${pgd.slug}`
+                      }
+                      aria-disabled={WITHDRAWN_SLUGS.has(pgd.slug)}
+                      tabIndex={WITHDRAWN_SLUGS.has(pgd.slug) ? -1 : undefined}
+                      // pointer-events-none rather than an onClick handler:
+                      // this page is an async server component, so it cannot
+                      // pass an event handler to a client component.
                       className={`group bg-white rounded-lg border p-4 transition-all ${
-                        COMING_SOON_SLUGS.has(pgd.slug)
-                          ? 'border-gray-200 opacity-70 hover:opacity-100 hover:border-amber-300'
-                          : 'border-gray-200 hover:border-[color:var(--tenant-primary)] hover:shadow-md'
+                        WITHDRAWN_SLUGS.has(pgd.slug)
+                          ? 'border-red-200 bg-red-50/40 opacity-80 cursor-not-allowed pointer-events-none'
+                          : COMING_SOON_SLUGS.has(pgd.slug)
+                            ? 'border-gray-200 opacity-70 hover:opacity-100 hover:border-amber-300'
+                            : 'border-gray-200 hover:border-[color:var(--tenant-primary)] hover:shadow-md'
                       }`}
                     >
                       <div className="flex items-start justify-between">
@@ -608,10 +624,16 @@ export default async function PharmacyDashboard() {
                           <p className="text-xs text-gray-500 mt-0.5 truncate">
                             {pgd.subtitle}
                           </p>
-                          {COMING_SOON_SLUGS.has(pgd.slug) && (
-                            <span className="inline-block mt-1.5 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">
-                              Coming Soon
+                          {WITHDRAWN_SLUGS.has(pgd.slug) ? (
+                            <span className="inline-block mt-1.5 text-[10px] font-semibold text-red-700 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded-full">
+                              Withdrawn — do not use
                             </span>
+                          ) : (
+                            COMING_SOON_SLUGS.has(pgd.slug) && (
+                              <span className="inline-block mt-1.5 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">
+                                Coming Soon
+                              </span>
+                            )
                           )}
                         </div>
                         <svg

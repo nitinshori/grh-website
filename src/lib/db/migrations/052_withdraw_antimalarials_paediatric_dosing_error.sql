@@ -1,0 +1,59 @@
+-- 052: withdraw anti-malarials immediately. Paediatric dosing error, live.
+--
+-- Found 7 Sep 2026 on a close read of the PGD, part of the estate review.
+-- Nitin's instruction the same day: withdraw today, same as threadworms.
+--
+-- THE ERROR
+--
+-- The PGD names one product only, "Atovaquone 250 mg and Proguanil 100 mg
+-- tablets", and doses it "Adults and children >=11 kg: 1 tablet once daily".
+--
+-- UK prophylaxis dosing is by weight, using a separate paediatric strength:
+--
+--     11-20 kg   ONE Malarone Paediatric tablet   (atovaquone 62.5mg / proguanil 25mg)
+--     21-30 kg   TWO paediatric tablets
+--     31-40 kg   THREE paediatric tablets
+--     over 40 kg ONE adult tablet                 (atovaquone 250mg / proguanil 100mg)
+--
+-- The paediatric strength is named nowhere in the document, and there is no
+-- weight band anywhere in the atovaquone arm. An 11 kg child given the adult
+-- tablet the PGD authorises receives four times the intended atovaquone dose.
+--
+-- The mefloquine arm has the mirror defect: it admits "children >5 kg (dosing
+-- varies by weight)" and then gives an adult dose only, with no bands at all.
+--
+-- The ePGD tool repeats it. recommendMedicine() in
+-- anti-malarials-clinical-logic.ts returns a flat
+-- "Atovaquone/Proguanil (Malarone) 250/100mg, 1 tablet daily" and the tool
+-- collects no weight at any step, so it cannot band even if it wanted to.
+--
+-- WHY THIS IS NOT A STATUS CHANGE ALONE
+--
+-- Migration 051 withdrew threadworms by setting every assignment to
+-- 'not_approved'. That was incomplete, and this migration is the reason we
+-- know. mayUseEpgdTool() in src/proxy.ts grants HubRx pharmacies the whole
+-- catalogue on authSource alone, matching ALL_PGDS rather than assignments,
+-- because they hold no pharmacy_pgds rows. So a status change withdraws a
+-- tool from GRH pharmacies and leaves it open to every HubRx one. Threadworms
+-- was reachable by HubRx for the entire period it was believed withdrawn.
+--
+-- Withdrawal now takes three things, all in this commit:
+--   1. WITHDRAWN_SLUGS in src/lib/pgd-access.ts, checked first in proxy.ts,
+--      before the HubRx branch and before the allow-on-error catch
+--   2. this migration, so GRH dashboards stop listing it
+--   3. both served PDFs replaced with a withdrawal notice, because
+--      /pgd-documents has no authentication and the file is reachable
+--      by URL regardless of what the database says
+-- threadworms was added to WITHDRAWN_SLUGS in the same commit, which closes
+-- the hole retrospectively.
+--
+-- Consultation records are untouched. They are the clinical audit trail, and
+-- any consultation recorded against this slug needs to be findable so that
+-- supplies to children under 40 kg can be checked against weight.
+--
+-- Idempotent: safe to re-run. Re-running does not re-approve anything.
+
+UPDATE pharmacy_pgds
+   SET status = 'not_approved'
+ WHERE pgd_slug = 'anti-malarials'
+   AND status = 'approved';

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { resolvePgdDocumentUrl } from '@/lib/pgd-document-overrides'
+import { WITHDRAWN_SLUGS } from '@/lib/pgd-access'
 
 export const dynamic = 'force-dynamic'
 
@@ -32,6 +33,24 @@ export async function GET(
 
   const { slug } = await params
   if (!slug) return NextResponse.json({ error: 'Missing slug' }, { status: 400 })
+
+  // Withdrawn PGDs are refused before the override lookup below. Replacing the
+  // master PDF in /public/pgd-documents is not enough on its own: a pharmacy
+  // that uploaded its own signed copy has a Vercel Blob override, and
+  // resolvePgdDocumentUrl prefers that override over the master. Without this
+  // check, every pharmacy holding its own copy of a withdrawn document would
+  // still be served the uncorrected original from Blob storage, which is the
+  // one case where the withdrawal would silently fail for exactly the
+  // pharmacies most actively using the service.
+  if (WITHDRAWN_SLUGS.has(slug)) {
+    return NextResponse.json(
+      {
+        error:
+          'This PGD has been withdrawn and must not be used. A corrected version will be reissued once it has been reviewed and signed.',
+      },
+      { status: 410 },
+    )
+  }
 
   const pharmacyId = session.user.pharmacyId ?? null
   const resolved = await resolvePgdDocumentUrl(pharmacyId, slug)

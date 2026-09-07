@@ -12,6 +12,7 @@ import {
   ALL_PGDS,
   EPGD_UNGATED_SEGMENTS,
   EPGD_SEGMENT_ALIASES,
+  WITHDRAWN_SLUGS,
 } from '@/lib/pgd-access'
 
 // ── Per-tenant routing ───────────────────────────────────────────────
@@ -167,6 +168,21 @@ async function mayUseEpgdTool(
   segment: string,
 ): Promise<boolean> {
   const candidates = [segment, ...(EPGD_SEGMENT_ALIASES[segment] ?? [])]
+
+  // Withdrawn PGDs are refused to everyone, before any tenant or assignment
+  // logic runs, and before the try/catch below whose failure mode is to allow
+  // through. A withdrawal exists because the signed document contains a
+  // clinical error, so "allow on error" is the wrong default for these and
+  // the right one for everything else.
+  //
+  // This has to sit above the HubRx branch. That branch grants the whole
+  // catalogue on authSource alone, so a check placed after it would leave
+  // every withdrawn tool open to HubRx pharmacies — which is precisely how
+  // threadworms stayed reachable for them after migration 051.
+  if (candidates.some((s) => WITHDRAWN_SLUGS.has(s))) {
+    return false
+  }
+
   try {
     const { authSource, slugs } = await pharmacyPgdAccess(pharmacyId)
 
