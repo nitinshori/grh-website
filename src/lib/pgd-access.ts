@@ -248,6 +248,37 @@ export const WITHDRAWN_SLUGS = new Set([
   // paused rather than run on a disputed basis.
   'trt',
   'testosterone-women',
+  // Withdrawn 7 Sep 2026 on Chris Pilkington's ruling, with Nitin present.
+  // Not because of the medicine, but because of the model.
+  //
+  // A PGD supplies a defined product to a defined group without individual
+  // prescriber assessment. Each of these authorises indefinite supply with
+  // individual titration and the interpretation of laboratory results, which
+  // is ongoing management of a long-term condition and not what the
+  // instrument is for.
+  //
+  //   statins              atorvastatin 20/40/80mg, indefinite, lipid-driven
+  //   hypertension         amlodipine with a dose-escalation rule
+  //   diabetes-monitoring  titled monitoring; actually initiates and titrates
+  //                        metformin
+  //   prep                 3-monthly testing, ongoing renal monitoring
+  //   glp1-monitoring      titled monitoring; contains a full supply
+  //                        authorisation duplicating the Wegovy PGD with
+  //                        weaker exclusions and a fourfold pen-count error
+  //
+  // REVERSIBLE if these services are rebuilt on a prescriber model (a
+  // prescription or Patient Specific Direction), which keeps the consultation
+  // tooling and changes only the legal mechanism at the point of supply.
+  //
+  // PrEP carries continuity language in its notice. Stopping HIV pre-exposure
+  // prophylaxis abruptly leaves people exposed, so pharmacies are told to
+  // arrange onward supply through a sexual health service rather than simply
+  // stopping.
+  'statins',
+  'hypertension',
+  'diabetes-monitoring',
+  'prep',
+  'glp1-monitoring',
 ])
 
 /**

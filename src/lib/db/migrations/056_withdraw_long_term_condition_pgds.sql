@@ -1,0 +1,52 @@
+-- 056: withdraw five PGDs where a PGD is the wrong legal instrument.
+--
+-- Chris Pilkington's ruling, 7 Sep 2026, with Nitin Shori present.
+--
+-- NOT a defect in the medicines. A defect in the model.
+--
+-- A Patient Group Direction supplies a defined product to a defined group
+-- without individual prescriber assessment. Each of these authorises
+-- indefinite supply with individual titration and the interpretation of
+-- laboratory results, which is the ongoing management of a long-term
+-- condition. NICE MPG2 frames PGDs as being for situations that offer an
+-- advantage without compromising safety, not for continuing care.
+--
+--   statins              atorvastatin 20/40/80mg. Indefinite supply driven by
+--                        lipid results. Also had no CK requirement anywhere,
+--                        no LFT schedule despite a transaminase exclusion, and
+--                        named azithromycin as the interaction to warn about
+--                        rather than clarithromycin.
+--   hypertension         amlodipine with a dose-escalation rule at 4 weeks.
+--                        Also had no blood pressure figure in any operative
+--                        criterion and no severe-hypertension referral
+--                        threshold.
+--   diabetes-monitoring  titled "Monitoring and Management"; in fact initiates
+--                        and titrates metformin. No numeric HbA1c referral
+--                        trigger. Maximum dose exceeded its own quantity cap.
+--   prep                 3-monthly HIV and renal testing, ongoing supply.
+--                        Also had contradictory renal criteria and no
+--                        repeat-supply route against a 30-day quantity.
+--   glp1-monitoring      titled monitoring; contains a full supply
+--                        authorisation duplicating the Wegovy PGD with weaker
+--                        exclusions, no eating-disorder or gastroparesis
+--                        exclusion, and 4 pens described as a 4-week supply
+--                        when each pen is 4 weekly doses.
+--
+-- REVERSIBLE. If these services are rebuilt on a prescriber model, a
+-- prescription or a Patient Specific Direction, the consultation tooling and
+-- records are unaffected and only the legal mechanism at the point of supply
+-- changes. To restore: remove the slugs from WITHDRAWN_SLUGS and re-approve
+-- the assignments, checking the pre-withdrawal list first.
+--
+-- PREP CONTINUITY. Stopping HIV pre-exposure prophylaxis abruptly leaves
+-- people exposed. The PrEP notice tells pharmacies to arrange onward supply
+-- through a sexual health service rather than simply stopping, and not to let
+-- a patient run out. This was raised at the time of the decision.
+--
+-- Consultation records untouched.
+-- Idempotent: safe to re-run.
+
+UPDATE pharmacy_pgds
+   SET status = 'not_approved'
+ WHERE pgd_slug IN ('statins','hypertension','diabetes-monitoring','prep','glp1-monitoring')
+   AND status = 'approved';
