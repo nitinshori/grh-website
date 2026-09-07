@@ -508,7 +508,7 @@ gpEmail: "",
           <div className="space-y-4">
             <div className="p-4 bg-blue-50 border border-blue-200 rounded">
               <p className="text-sm font-semibold text-blue-900 mb-2">
-                Mebendazole 100mg — chewable tablet or oral suspension (5mg/mL)
+                Mebendazole 100mg — chewable tablet or oral suspension (100mg/5mL)
               </p>
               <p className="text-sm text-blue-800">
                 Single 100mg dose for all ages 2+ years (not weight-dependent)
@@ -520,7 +520,7 @@ gpEmail: "",
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {([
                   { value: "tablet", label: "Chewable tablet", dose: "100mg — one tablet" },
-                  { value: "suspension", label: "Oral suspension (5mg/mL)", dose: "100mg — 20mL" },
+                  { value: "suspension", label: "Oral suspension (100mg/5mL)", dose: "100mg — 5mL" },
                 ] as const).map((opt) => (
                   <label
                     key={opt.value}
@@ -558,7 +558,7 @@ gpEmail: "",
                 <div className="p-3 bg-gray-100 border border-gray-300 rounded text-sm">
                   <p className="text-gray-900">
                     {state.treatment.formulation === "suspension"
-                      ? "100mg (20mL) single dose"
+                      ? "100mg (5mL) single dose"
                       : "100mg (one tablet) single dose"}
                   </p>
                 </div>
