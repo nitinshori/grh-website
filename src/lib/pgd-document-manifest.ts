@@ -191,7 +191,7 @@ export const PGD_HUBRX_FILES: Record<string, string> = {
   "threadworms": "threadworms 2.pdf",
   "thrush": "thrush 2.pdf",
   "travel-core": "travel-core 2.pdf",
-  "typhoid": "travel-core 2.pdf",
+  "typhoid": "typhoid-v002.pdf",
   "testosterone-women": "hrt 2.pdf",
   "uti": "uti 2.pdf",
   "wegovy": "wegovy-v002.pdf",
