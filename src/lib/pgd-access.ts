@@ -208,6 +208,26 @@ export const WITHDRAWN_SLUGS = new Set([
   // justified; this arm instead asserts a licence it does not have, so every
   // patient aged 18 to 54 was supplied off-label without being told.
   'sleep-melatonin',
+  // Withdrawn 7 Sep 2026 on legal grounds. Methylphenidate (Concerta XL /
+  // Equasym XL) is a Schedule 2 controlled drug.
+  //
+  // NHS Specialist Pharmacy Service, "Supply and/or administration of
+  // Controlled Drugs under a PGD", updated 1 July 2026: "Unless listed below a
+  // CD cannot be administered or supplied under a PGD." The Schedule 2 list is
+  // morphine and diamorphine (registered nurses and pharmacists only, for the
+  // immediate necessary treatment of a sick or injured person, not for
+  // addiction) and ketamine. Methylphenidate is not on it.
+  //
+  // So no PGD can lawfully supply methylphenidate, by any staff group. This is
+  // not the pharmacy-technician point raised earlier the same day; that was a
+  // narrower defect and the correction notice issued for it wrongly implied
+  // the rest of the document remained in force. It did not. The instrument
+  // itself cannot carry this medicine.
+  //
+  // The document also states its own legal category as "POM (Prescription Only
+  // Medicine), Schedule 2 Controlled Drug", so the fact was on its face
+  // throughout.
+  'adhd-monitoring',
 ])
 
 /**

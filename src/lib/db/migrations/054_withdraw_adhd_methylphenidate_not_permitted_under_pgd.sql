@@ -1,0 +1,57 @@
+-- 054: withdraw adhd-monitoring. Legal defect. Methylphenidate cannot be
+-- supplied under a Patient Group Direction by anyone.
+--
+-- Found 7 Sep 2026 in the estate review. Nitin's instruction the same day.
+--
+-- THE POSITION
+--
+-- NHS Specialist Pharmacy Service, "Supply and/or administration of Controlled
+-- Drugs under a PGD", last updated 1 July 2026:
+--
+--   "Unless listed below a CD cannot be administered or supplied under a PGD."
+--     Schedule 2  Morphine and diamorphine, only by registered nurses and
+--                 pharmacists for the immediate necessary treatment of a sick
+--                 or injured person, not for treating addiction. Ketamine.
+--     Schedule 3  Midazolam
+--     Schedule 4  All drugs except anabolic steroids and injectable
+--                 medications used for treating addiction
+--     Schedule 5  All drugs
+--
+-- Methylphenidate (Concerta XL / Equasym XL) is Schedule 2 and is not on that
+-- list. No PGD can lawfully supply it, by any staff group.
+--
+-- WHY THIS IS NOT THE TECHNICIAN POINT FROM EARLIER TODAY
+--
+-- Commit be28067 added a correction notice to this document removing pharmacy
+-- technicians as authorised users, on the narrower ground that the 26 June 2024
+-- amendment excludes controlled drugs. That notice also stated "Every other
+-- clinical provision of the document is unchanged and remains in force."
+--
+-- That was wrong, and it is my error rather than the document's. The problem is
+-- not who operates the PGD. It is that the PGD is not a lawful mechanism for
+-- this medicine at all. The notice is replaced by a withdrawal notice in this
+-- commit so that the live document no longer asserts the opposite.
+--
+-- The document states its own legal category as "POM (Prescription Only
+-- Medicine), Schedule 2 Controlled Drug". The fact was on its face throughout.
+--
+-- CLINICAL DEFECTS FOUND ALONGSIDE, recorded for the file rather than acted on,
+-- since the service is going rather than being rebuilt:
+--   - the second arm dropped the age criterion entirely, so a child satisfied
+--     every stated criterion
+--   - no baseline blood pressure, pulse or ECG requirement anywhere, and no
+--     threshold at which supply must be withheld, in a document whose own
+--     adverse-effects box names sudden cardiac death
+--   - no diversion check, no CD register requirement, no reconciliation of
+--     quantity against the previous supply
+--   - a 54 mg daily dose cannot be made from the listed strengths within the
+--     stated 28-tablet maximum
+--
+-- Consultation records are untouched. They are the clinical audit trail.
+--
+-- Idempotent: safe to re-run.
+
+UPDATE pharmacy_pgds
+   SET status = 'not_approved'
+ WHERE pgd_slug = 'adhd-monitoring'
+   AND status = 'approved';
