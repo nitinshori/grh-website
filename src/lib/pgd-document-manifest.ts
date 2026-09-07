@@ -92,7 +92,7 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   "thrush": "thrush.pdf",
   "travel-core": "travel-core.pdf",
   // typhoid is covered by the signed Travel Health Core Package PGD (Hep A + Typhoid + Cholera)
-  "typhoid": "travel-core.pdf",
+  "typhoid": "typhoid-v002.pdf",
   // v002 signed 6 Aug 2026 (Nitin Shori + Chris Pilkington)
   "tetanus": "tetanus-v002.pdf",
   "junior-travel": "junior-travel-v002.pdf",

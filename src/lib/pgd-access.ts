@@ -374,6 +374,7 @@ export const REISSUED_PGDS: Record<string, { version: string; date: string }> = 
   'dental-bridging': { version: 'v002', date: '7 September 2026' },
   'meningitis-acwy-travel': { version: 'v002', date: '7 September 2026' },
   'anti-malarials': { version: 'v002', date: '7 September 2026' },
+  typhoid: { version: 'v002', date: '7 September 2026' },
   eczema: { version: 'v002', date: '7 September 2026' },
   'chest-service': { version: 'v002', date: '7 September 2026' },
   'skin-infection': { version: 'v002', date: '7 September 2026' },
