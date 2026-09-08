@@ -78,7 +78,7 @@ export function getUTIClinicalAlerts(
     alerts.push({
       severity: "stop",
       code: "RECURRENT_UTI",
-      message: "Patient has recurrent UTI (3+ in 12 months)",
+      message: "Recurrent UTI (2 or more in 6 months, or 3 or more in 12 months)",
       detail: "Recurrent UTI requires specialist investigation and management. Refer to GP.",
     });
   }
@@ -130,12 +130,16 @@ export function getUTIClinicalAlerts(
 
   // ─── CAUTIONS ───
 
+  // Breastfeeding is an EXCLUSION in PGD v002, in both arms. The tool
+  // previously raised it as a caution and steered the pharmacist towards
+  // trimethoprim, which is a supply the PGD does not authorise.
   if (medicalHistory.breastfeeding) {
     alerts.push({
-      severity: "caution",
+      severity: "stop",
       code: "BREASTFEEDING",
       message: "Patient is breastfeeding",
-      detail: "Trimethoprim preferred over nitrofurantoin. Small amounts pass into breast milk.",
+      detail:
+        "Excluded from both arms of this PGD. Refer. Do not substitute trimethoprim for nitrofurantoin on the basis of breastfeeding.",
     });
   }
 
@@ -148,30 +152,50 @@ export function getUTIClinicalAlerts(
     });
   }
 
+  // Renal function under PGD v002.
+  //
+  // v001 excluded on "creatinine clearance below 45 mL/min" for nitrofurantoin
+  // and "significant renal impairment" for trimethoprim. A pharmacy cannot
+  // obtain either, so in practice renal function went unassessed. v002 asks a
+  // question that can be answered at the counter, and known kidney disease is
+  // an exclusion from BOTH arms: trimethoprim accumulates in renal impairment
+  // and causes hyperkalaemia, so it is not the safe fallback the tool used to
+  // present it as.
   if (medicalHistory.kidneyDisease) {
     alerts.push({
-      severity: "caution",
+      severity: "stop",
       code: "KIDNEY_DISEASE",
       message: "Known kidney disease",
-      detail: "Renal function should be considered in dosing decisions.",
+      detail:
+        "Excluded from both arms of this PGD. Refer. Trimethoprim is not an alternative here: it accumulates in renal impairment and causes hyperkalaemia.",
     });
   }
 
-  if (medicalHistory.renalImpairment === "moderate") {
-    alerts.push({
-      severity: "caution",
-      code: "MODERATE_RENAL_IMPAIRMENT",
-      message: "Moderate renal impairment (eGFR 30-44)",
-      detail: "Avoid nitrofurantoin. Use trimethoprim if appropriate. Monitor renal function.",
-    });
-  }
-
-  if (medicalHistory.renalImpairment === "severe") {
+  if (medicalHistory.renalImpairment === "moderate" || medicalHistory.renalImpairment === "severe") {
     alerts.push({
       severity: "stop",
-      code: "SEVERE_RENAL_IMPAIRMENT",
-      message: "Severe renal impairment (eGFR <30)",
-      detail: "This PGD is unsuitable. Refer to GP for specialist management.",
+      code: "RENAL_IMPAIRMENT",
+      message:
+        medicalHistory.renalImpairment === "severe"
+          ? "Severe renal impairment (eGFR under 30)"
+          : "Moderate renal impairment (eGFR 30 to 44)",
+      detail: "This PGD is unsuitable in either arm. Refer to the GP.",
+    });
+  }
+
+  // Renal function unknown in a patient aged 60 to 64: refer for a check
+  // first. Below 60, an unknown answer with no history is not a bar.
+  if (
+    medicalHistory.renalImpairment === "unknown" &&
+    patient.age !== null &&
+    patient.age >= 60
+  ) {
+    alerts.push({
+      severity: "stop",
+      code: "RENAL_UNKNOWN_OLDER",
+      message: "Renal function unknown, patient aged 60 or over",
+      detail:
+        "PGD v002 excludes supply where the patient does not know their kidney function and is aged 60 to 64. Refer for a renal function check first.",
     });
   }
 
@@ -179,10 +203,11 @@ export function getUTIClinicalAlerts(
 
   if (symptoms.vaginalDischarge && (symptoms.dysuria || symptoms.frequency)) {
     alerts.push({
-      severity: "red-flag",
+      severity: "stop",
       code: "VAGINAL_DISCHARGE",
-      message: "Significant vaginal discharge present",
-      detail: "May suggest STI rather than simple UTI. Consider need for STI testing before treatment.",
+      message: "Vaginal discharge present",
+      detail:
+        "PGD v002 excludes supply where discharge is present. Chlamydia, gonorrhoea and trichomonas are alternative diagnoses. Refer for testing rather than treating empirically for UTI.",
     });
   }
 
@@ -220,14 +245,19 @@ export function getDoseRecommendation(
     }
   }
 
-  // Trimethoprim (if nitrofurantoin contraindicated)
+  // Trimethoprim is SECOND LINE under PGD v002 and is gated: it may be used
+  // only where nitrofurantoin is contraindicated, not tolerated, or
+  // unavailable, and the reason must be recorded. It is not the fallback for
+  // renal impairment or breastfeeding, both of which now exclude the patient
+  // from this PGD altogether.
   return {
     medicine: "Trimethoprim 200mg",
     dose: "200mg",
     frequency: "Twice daily",
     duration: "3 days",
     dosingRegimen: "Trimethoprim 200mg, twice daily for 3 days (6 tablets total)",
-    reason: "Alternative for renal impairment, allergy, or breastfeeding",
+    reason:
+      "Second line. Use only where nitrofurantoin is contraindicated, not tolerated, or unavailable. Record which applies. Patient preference is not a reason.",
   };
 }
 
@@ -251,8 +281,12 @@ export function validateMedicineSelection(
     return "Please select a medicine";
   }
 
-  if (medicine === "nitrofurantoin" && medicalHistory.renalImpairment === "moderate") {
-    return "Nitrofurantoin should not be used in moderate renal impairment (eGFR <45). Use trimethoprim instead.";
+  if (
+    medicalHistory.renalImpairment === "moderate" ||
+    medicalHistory.renalImpairment === "severe" ||
+    medicalHistory.kidneyDisease
+  ) {
+    return "PGD v002 excludes both arms where there is known kidney disease or measured renal impairment. Refer; do not substitute trimethoprim.";
   }
 
   if (!dose) {
@@ -270,7 +304,12 @@ export function getCounsellingRequired(medicalHistory: UTIMedicalHistory): {
     { label: "Complete the full course (6 doses over 3 days)", required: true },
     { label: "Drink plenty of water and other fluids", required: true },
     {
-      label: "Return to GP if symptoms not improving within 48 hours",
+      label: "Return to GP or NHS 111 the same day if not improving within 48 hours, or worse at any point",
+      required: true,
+    },
+    {
+      label:
+        "Seek help IMMEDIATELY for: fever or shivering, pain in the back or side, feeling or being sick, visible blood in urine, confusion or feeling very unwell",
       required: true,
     },
     {

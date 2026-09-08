@@ -468,7 +468,7 @@ export function UTIToolClient() {
                 }
               />
               <Checkbox
-                label="Recurrent UTI (3 or more within 12 months)"
+                label="Recurrent UTI (2 or more in 6 months, or 3 or more in 12 months)"
                 checked={state.medicalHistory.recurrentUTI}
                 onChange={(v) =>
                   dispatch({
@@ -500,9 +500,10 @@ export function UTIToolClient() {
                   })
                 }
                 options={[
-                  { value: "none", label: "None" },
-                  { value: "moderate", label: "Moderate (eGFR 30-44)" },
-                  { value: "severe", label: "Severe (eGFR <30)" },
+                  { value: "none", label: "None known, patient says kidneys are fine" },
+                  { value: "unknown", label: "Patient does not know" },
+                  { value: "moderate", label: "Moderate (eGFR 30 to 44)" },
+                  { value: "severe", label: "Severe (eGFR under 30)" },
                 ]}
               />
               <Checkbox

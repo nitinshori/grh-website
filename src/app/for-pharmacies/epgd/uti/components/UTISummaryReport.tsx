@@ -93,7 +93,7 @@ export function UTISummaryReport({ state, alerts }: UTISummaryReportProps) {
           label="Previous UTI Within 4 Weeks"
           value={state.medicalHistory.previousUTIWithin4Weeks ? "Yes" : "No"}
         />
-        <Row label="Recurrent UTI (3+ in 12m)" value={state.medicalHistory.recurrentUTI ? "Yes" : "No"} />
+        <Row label="Recurrent UTI (2+ in 6m or 3+ in 12m)" value={state.medicalHistory.recurrentUTI ? "Yes" : "No"} />
         <Row label="Kidney Disease" value={state.medicalHistory.kidneyDisease ? "Yes" : "No"} />
         <Row label="Renal Impairment" value={state.medicalHistory.renalImpairment || "None"} />
         <Row label="Abnormal Urinary Tract" value={state.medicalHistory.knownAbnormalUrinaryTract ? "Yes" : "No"} />

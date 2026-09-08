@@ -101,7 +101,7 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   "travellers-diarrhoea": "travellers-diarrhoea.pdf",
   // testosterone for women (postmenopausal HSDD) is covered by the signed HRT/Menopause PGD
   "testosterone-women": "hrt.pdf",
-  "uti": "uti.pdf",
+  "uti": "uti-v002.pdf",
   "wegovy": "wegovy-v002.pdf",
   // v004 signed 21 Aug 2026: reconciled against the UK SPC, which published
   // after v003 was signed. Levothyroxine interaction added, missed-dose rule
@@ -193,7 +193,7 @@ export const PGD_HUBRX_FILES: Record<string, string> = {
   "travel-core": "travel-core 2.pdf",
   "typhoid": "typhoid-v002.pdf",
   "testosterone-women": "hrt 2.pdf",
-  "uti": "uti 2.pdf",
+  "uti": "uti-v002.pdf",
   "wegovy": "wegovy-v002.pdf",
   "wound-care": "wound-care 2.pdf"
 };

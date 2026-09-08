@@ -384,6 +384,7 @@ export const REISSUED_PGDS: Record<string, { version: string; date: string }> = 
   // held JN.1. v004 names Comirnaty XFG as the vaccine of choice and adds
   // Comirnaty LP.8.1 as an existing-stock-only arm for the changeover.
   'covid-booster': { version: 'v004', date: '8 September 2026' },
+  uti: { version: 'v002', date: '8 September 2026' },
 }
 
 /**

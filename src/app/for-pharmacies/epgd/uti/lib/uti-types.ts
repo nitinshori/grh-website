@@ -21,7 +21,8 @@ export interface UTIMedicalHistory {
   previousUTIWithin4Weeks: boolean;
   recurrentUTI: boolean; // 3+ in 12 months
   kidneyDisease: boolean;
-  renalImpairment: "none" | "moderate" | "severe";
+  /** "unknown" is a real answer at a pharmacy counter and PGD v002 acts on it. */
+  renalImpairment: "none" | "moderate" | "severe" | "unknown";
   diabetesUncontrolled: boolean;
   immunosuppressed: boolean;
   knownAbnormalUrinaryTract: boolean;
