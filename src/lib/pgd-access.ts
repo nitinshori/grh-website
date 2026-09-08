@@ -68,7 +68,7 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
   // Acute & Infection
   { slug: 'uti', title: 'Uncomplicated UTI', subtitle: 'Nitrofurantoin / Trimethoprim', category: 'Acute & Infection' },
   { slug: 'sore-throat', title: 'Acute Sore Throat', subtitle: 'Phenoxymethylpenicillin', category: 'Acute & Infection' },
-  { slug: 'ear-infection', title: 'Acute Otitis Media', subtitle: 'Amoxicillin', category: 'Acute & Infection' },
+  { slug: 'ear-infection', title: 'Acute Otitis Externa', subtitle: 'Ciprofloxacin ear drops / Dexamethasone-neomycin spray', category: 'Acute & Infection' },
   // eye-infections removed from public catalogue — chloramphenicol OTC (Apr 2026)
   { slug: 'threadworms', title: 'Threadworms', subtitle: 'Mebendazole', category: 'Acute & Infection' },
   // Corrected 28 Jul 2026: this PGD is the Varivax/Varilrix VACCINATION
@@ -387,6 +387,7 @@ export const REISSUED_PGDS: Record<string, { version: string; date: string }> = 
   uti: { version: 'v002', date: '8 September 2026' },
   'period-delay': { version: 'v002', date: '8 September 2026' },
   'wegovy-oral': { version: 'v005', date: '8 September 2026' },
+  'ear-infection': { version: 'v002', date: '8 September 2026' },
 }
 
 /**

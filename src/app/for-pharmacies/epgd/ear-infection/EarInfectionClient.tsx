@@ -52,12 +52,23 @@ gpEmail: "",
       immunosuppressed: false,
       highTemperature: false,
       pregnancy: false,
+      // ── PGD v002 additions ────────────────────────────────────────────
+      // Otoscopy is a required step in v002. The drum must be seen and
+      // recorded as intact before either product is supplied.
+      tympanicMembrane: "" as "" | "intact" | "perforated" | "not-seen",
+      diabetes: false,
+      severeUnremittingPain: false,
+      facialPalsy: false,
+      mastoidSigns: false,
+      fungalDebris: false,
+      previousEpisodes12m: "" as "" | "0" | "1-2" | "3+",
+      alreadyTreatedThisEpisode: false,
     },
     treatment: {
       dose: "0.25ml (one single-dose container)",
       frequency: "Twice daily",
       duration: 7,
-      quantity: "1 box (10 single-dose containers)",
+      quantity: "1 pack of 15 single-dose ampoules (7 day course uses 14)",
       batchNumber: "",
       expiryDate: "",
     },
@@ -95,6 +106,94 @@ gpEmail: "",
 
   const alerts: ClinicalAlert[] = useMemo(() => {
     const issues: ClinicalAlert[] = [];
+
+    // ── PGD v002 gates ──────────────────────────────────────────────────
+
+    // Otoscopy is a required step. v001 of this tool did not ask.
+    if (state.assessment.tympanicMembrane !== "intact") {
+      issues.push({
+        severity: "stop",
+        code: "OTOSCOPY_REQUIRED",
+        message:
+          state.assessment.tympanicMembrane === ""
+            ? "Otoscopy not recorded"
+            : state.assessment.tympanicMembrane === "perforated"
+              ? "Tympanic membrane perforated"
+              : "Tympanic membrane could not be visualised",
+        detail:
+          "PGD v002 requires the tympanic membrane to be visualised and recorded as intact before either product is supplied. If you cannot see the drum, you cannot use this PGD. Refer.",
+      });
+    }
+
+    // Necrotising (malignant) otitis externa. This is the one that kills.
+    if (
+      state.assessment.severeUnremittingPain &&
+      (state.assessment.diabetes || state.assessment.immunosuppressed)
+    ) {
+      issues.push({
+        severity: "stop",
+        code: "NECROTISING_OE",
+        message: "Suspect necrotising (malignant) otitis externa",
+        detail:
+          "Severe unremitting pain in a patient with diabetes or immunosuppression. This is an EMERGENCY ENT referral today, not a treatment failure and not a PGD supply. It needs imaging and intravenous antibiotics. Pain out of proportion to the appearance of the canal is the clue.",
+      });
+    }
+
+    if (state.assessment.facialPalsy) {
+      issues.push({
+        severity: "stop",
+        code: "FACIAL_PALSY",
+        message: "Facial nerve palsy",
+        detail: "Emergency ENT referral the same day.",
+      });
+    }
+
+    if (state.assessment.mastoidSigns) {
+      issues.push({
+        severity: "stop",
+        code: "MASTOIDITIS",
+        message: "Mastoid tenderness, swelling or a protruding pinna",
+        detail: "Suspect mastoiditis. Emergency referral the same day.",
+      });
+    }
+
+    if (state.assessment.fungalDebris) {
+      issues.push({
+        severity: "stop",
+        code: "FUNGAL",
+        message: "White or black fuzzy debris in the canal",
+        detail:
+          "Suggests fungal otitis externa. Antibacterial treatment will not help and may make it worse. Refer.",
+      });
+    }
+
+    if (state.assessment.previousEpisodes12m === "3+") {
+      issues.push({
+        severity: "stop",
+        code: "RECURRENT_OE",
+        message: "3 or more episodes in the last 12 months",
+        detail: "Recurrent otitis externa. Refer to ENT for investigation rather than treating again.",
+      });
+    }
+
+    if (state.assessment.alreadyTreatedThisEpisode) {
+      issues.push({
+        severity: "stop",
+        code: "TREATMENT_FAILURE",
+        message: "Already treated for this episode",
+        detail:
+          "One course per episode under PGD v002. A patient who has not improved after a full course is referred, not re-supplied.",
+      });
+    }
+
+    if (state.assessment.symptomDuration === ">14d") {
+      issues.push({
+        severity: "stop",
+        code: "PROLONGED",
+        message: "Symptoms for more than 14 days",
+        detail: "Failed or chronic otitis externa. Refer to ENT.",
+      });
+    }
 
     // HARD STOP: Ear surgery history
     if (state.assessment.earSurgeryHistory) {
@@ -270,12 +369,20 @@ gpEmail: "",
         immunosuppressed: false,
         highTemperature: false,
         pregnancy: false,
+        tympanicMembrane: "" as "" | "intact" | "perforated" | "not-seen",
+        diabetes: false,
+        severeUnremittingPain: false,
+        facialPalsy: false,
+        mastoidSigns: false,
+        fungalDebris: false,
+        previousEpisodes12m: "" as "" | "0" | "1-2" | "3+",
+        alreadyTreatedThisEpisode: false,
       },
       treatment: {
         dose: "0.25ml (one single-dose container)",
         frequency: "Twice daily",
         duration: 7,
-        quantity: "1 box (10 single-dose containers)",
+        quantity: "1 pack of 15 single-dose ampoules (7 day course uses 14)",
         batchNumber: "",
         expiryDate: "",
       },
@@ -543,6 +650,66 @@ gpEmail: "",
                     }))
                   }
                 />
+                <div className="mb-4 rounded-lg border border-red-300 bg-red-50 px-3 py-3 space-y-3">
+                  <div>
+                    <p className="text-sm font-semibold text-red-900">Otoscopy and red flags (PGD v002)</p>
+                    <p className="text-xs text-red-800 mt-1">Otoscopy is a required step. The drum must be seen and recorded as intact before anything is supplied. v001 of this tool did not ask.</p>
+                  </div>
+                  <SelectInput
+                    label="Tympanic membrane on otoscopy"
+                    value={state.assessment.tympanicMembrane}
+                    onChange={(v) => setState((prev: any) => ({ ...prev, assessment: { ...prev.assessment, tympanicMembrane: v } }))}
+                    options={[
+                      { value: "intact", label: "Seen, and intact" },
+                      { value: "perforated", label: "Perforated" },
+                      { value: "not-seen", label: "Could not be visualised" },
+                    ]}
+                  />
+                  <Checkbox
+                    label="Patient has diabetes"
+                    checked={state.assessment.diabetes}
+                    onChange={(v) => setState((prev: any) => ({ ...prev, assessment: { ...prev.assessment, diabetes: v } }))}
+                  />
+                  <Checkbox
+                    label="Severe pain that does not let up"
+                    checked={state.assessment.severeUnremittingPain}
+                    onChange={(v) => setState((prev: any) => ({ ...prev, assessment: { ...prev.assessment, severeUnremittingPain: v } }))}
+                    description="With diabetes or immunosuppression this is necrotising otitis externa until proven otherwise. Emergency ENT referral, not a PGD supply."
+                  />
+                  <Checkbox
+                    label="Facial weakness or drooping"
+                    checked={state.assessment.facialPalsy}
+                    onChange={(v) => setState((prev: any) => ({ ...prev, assessment: { ...prev.assessment, facialPalsy: v } }))}
+                  />
+                  <Checkbox
+                    label="Tenderness, swelling or redness behind the ear, or a protruding pinna"
+                    checked={state.assessment.mastoidSigns}
+                    onChange={(v) => setState((prev: any) => ({ ...prev, assessment: { ...prev.assessment, mastoidSigns: v } }))}
+                    description="Suspect mastoiditis."
+                  />
+                  <Checkbox
+                    label="White or black fuzzy debris in the canal"
+                    checked={state.assessment.fungalDebris}
+                    onChange={(v) => setState((prev: any) => ({ ...prev, assessment: { ...prev.assessment, fungalDebris: v } }))}
+                    description="Suggests fungal infection. Antibacterial drops will not help and may worsen it."
+                  />
+                  <SelectInput
+                    label="Episodes of this in the last 12 months"
+                    value={state.assessment.previousEpisodes12m}
+                    onChange={(v) => setState((prev: any) => ({ ...prev, assessment: { ...prev.assessment, previousEpisodes12m: v } }))}
+                    options={[
+                      { value: "0", label: "None" },
+                      { value: "1-2", label: "1 or 2" },
+                      { value: "3+", label: "3 or more" },
+                    ]}
+                  />
+                  <Checkbox
+                    label="Already treated for this episode"
+                    checked={state.assessment.alreadyTreatedThisEpisode}
+                    onChange={(v) => setState((prev: any) => ({ ...prev, assessment: { ...prev.assessment, alreadyTreatedThisEpisode: v } }))}
+                    description="One course per episode. Refer rather than re-supply."
+                  />
+                </div>
                 <Checkbox
                   label="Patient is immunosuppressed"
                   checked={state.assessment.immunosuppressed}
