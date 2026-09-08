@@ -82,7 +82,7 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   // contains no antiviral at all. Now a genuine antiviral treatment PGD.
   "shingles-treatment": "shingles-treatment-v001.pdf",
   "shingles-vaccine": "shingles-vaccine.pdf",
-  "sleep-melatonin": "sleep-melatonin.pdf",
+  "sleep-melatonin": "sleep-melatonin-v002.pdf",
   "smoking-nrt": "smoking-nrt.pdf",
   "smoking-varenicline": "smoking-varenicline.pdf",
   "sore-throat": "sore-throat.pdf",
@@ -182,7 +182,7 @@ export const PGD_HUBRX_FILES: Record<string, string> = {
   "saxenda": "saxenda 2.pdf",
   "shingles-treatment": "shingles-treatment-v001.pdf",
   "shingles-vaccine": "shingles-vaccine 2.pdf",
-  "sleep-melatonin": "sleep-melatonin 2.pdf",
+  "sleep-melatonin": "sleep-melatonin-v002.pdf",
   "smoking-nrt": "smoking-nrt 2.pdf",
   "smoking-varenicline": "smoking-varenicline 2.pdf",
   "sore-throat": "sore-throat 2.pdf",

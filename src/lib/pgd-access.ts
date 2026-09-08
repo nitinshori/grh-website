@@ -90,7 +90,7 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
 
   // Mental Health & Wellbeing
   { slug: 'smoking-varenicline', title: 'Smoking Cessation (Varenicline)', subtitle: 'Champix', category: 'Mental Health & Wellbeing' },
-  { slug: 'sleep-melatonin', title: 'Sleep (Melatonin)', subtitle: 'Circadin / Melatonin', category: 'Mental Health & Wellbeing' },
+  { slug: 'sleep-melatonin', title: 'Insomnia (Circadin)', subtitle: 'Melatonin 2mg prolonged-release, primary insomnia, 55 and over', category: 'Mental Health & Wellbeing' },
   // adhd-monitoring removed from public catalogue — clinical review (Apr 2026)
   { slug: 'anxiety-propranolol', title: 'Situational Anxiety', subtitle: 'Propranolol', category: 'Mental Health & Wellbeing' },
   { slug: 'hayfever', title: 'Hayfever (Severe)', subtitle: 'Fexofenadine / Mometasone', category: 'Mental Health & Wellbeing' },
@@ -300,23 +300,15 @@ export const PAUSED_SLUGS = new Set([
 /**
  * BEING REBUILT. Off now, expected back in a different form.
  */
-export const REBUILDING_SLUGS = new Set([
-  // Withdrawn 7 Sep 2026 on a legal basis rather than a clinical one.
+export const REBUILDING_SLUGS = new Set<string>([
+  // Empty as at 8 September 2026.
   //
-  // Arm 2 supplied "Melatonin 1mg, 3mg, 5mg tablets (unlicensed
-  // preparations)". The Human Medicines Regulations 2012 do not permit an
-  // unlicensed medicine to be supplied under a PGD at all, so that arm never
-  // had a lawful basis and cannot be fixed by editing. It is being removed
-  // rather than corrected.
-  //
-  // Arm 1 supplied Circadin and stated it is indicated "in patients aged 18
-  // years and over". Circadin is licensed from 55. Off-label supply under a
-  // PGD is permitted where it is clearly stated and justified; this arm
-  // instead asserted a licence it does not have, so every patient aged 18 to
-  // 54 was supplied off-label without being told.
-  //
-  // Being rebuilt around Circadin only, on Nitin's ruling of 8 Sep 2026.
-  'sleep-melatonin',
+  // sleep-melatonin was here. Restored the same day at v002, rebuilt around
+  // Circadin only. The unlicensed melatonin arm was removed rather than
+  // corrected, because the Human Medicines Regulations 2012 do not permit an
+  // unlicensed medicine to be supplied under a PGD at all, and the age floor
+  // was set to 55, which is the licensed indication, rather than the 18 that
+  // v001 asserted. See REISSUED_PGDS.
 ])
 
 /**
@@ -437,6 +429,7 @@ export const REISSUED_PGDS: Record<string, { version: string; date: string }> = 
   ed: { version: 'v002', date: '8 September 2026' },
   rabies: { version: 'v002', date: '8 September 2026' },
   tetanus: { version: 'v003', date: '8 September 2026' },
+  'sleep-melatonin': { version: 'v002', date: '8 September 2026' },
 }
 
 /**
