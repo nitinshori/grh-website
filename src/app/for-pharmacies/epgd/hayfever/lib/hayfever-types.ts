@@ -31,10 +31,9 @@ export interface HayfeverContraindications {
 }
 
 export interface HayfeverMedicineSupply {
-  medicineSelected: string; // "fexofenadine" | "fluticasone" | "montelukast" | "combination"
+  medicineSelected: string; // "fexofenadine" | "fluticasone" | "combination"
   fexofenadin180: boolean;
   fluticasonNasalSpray: boolean;
-  montelukast10: boolean;
   dosageConfirmed: boolean;
 }
 
@@ -133,7 +132,6 @@ gpEmail: "",
       medicineSelected: "",
       fexofenadin180: false,
       fluticasonNasalSpray: false,
-      montelukast10: false,
       dosageConfirmed: false,
     },
     counselling: {

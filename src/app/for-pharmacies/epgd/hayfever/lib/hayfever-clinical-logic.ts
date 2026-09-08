@@ -82,22 +82,20 @@ export function calculateDoseRecommendation(
       duration: "As needed during hay fever season",
       reason: "Intranasal corticosteroid for nasal symptoms",
     },
-    // Montelukast is NOT in the hayfever PGD, which authorises fexofenadine,
-    // fluticasone and cetirizine only. It is a POM, and it carries an MHRA
-    // warning about neuropsychiatric reactions including sleep disturbance,
-    // agitation and, rarely, suicidal thinking. A tool must not offer it while
-    // no document authorises it.
+    // Montelukast is deliberately absent. Nitin's decision, 8 September 2026:
+    // do not offer it at all.
     //
-    // Restore this only if a montelukast arm is written into the PGD and
-    // signed. Co-existing asthma is a good reason to refer, not to supply.
-    montelukast: {
-      medicine: "NOT AVAILABLE UNDER THIS PGD. Refer.",
-      dose: "",
-      frequency: "",
-      duration: "",
-      reason:
-        "Montelukast is not authorised by the hayfever PGD, which covers fexofenadine, fluticasone and cetirizine only. Where hayfever coexists with asthma, refer to the GP rather than supplying here.",
-    },
+    // It is not in the hayfever PGD, which authorises fexofenadine,
+    // fluticasone and cetirizine. Montelukast for allergic rhinitis is for
+    // patients who also have asthma, so supplying it from a pharmacy means
+    // treating asthma without anyone reviewing the asthma. That is the model
+    // ruled out for statins, hypertension and the rest. It also carries an
+    // MHRA warning about neuropsychiatric reactions including sleep
+    // disturbance, agitation and, rarely, suicidal thinking, which needs
+    // counselling and follow-up a single supply does not provide.
+    //
+    // Co-existing asthma is a reason to REFER. Do not reinstate this without a
+    // signed document arm and a decision from the clinical leads.
     combination: {
       medicine: "Fexofenadine 180mg + Fluticasone nasal spray",
       dose: "Fexofenadine 180mg once daily + Fluticasone 2 sprays each nostril once daily",

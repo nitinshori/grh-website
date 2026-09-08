@@ -195,7 +195,7 @@ export default function HayfeverClient() {
               onChange={(v) =>
                 dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "asthmaOrLrti", value: v })
               }
-              description="May indicate need for montelukast (leukotriene antagonist)"
+              description="Hayfever with asthma is a reason to refer, not to treat here. This PGD does not authorise montelukast or any asthma treatment; the asthma needs reviewing by the GP."
             />
             <Checkbox
               label="Severe hepatic impairment"
@@ -288,8 +288,7 @@ export default function HayfeverClient() {
               options={[
                 { value: "fexofenadine", label: "Fexofenadine 180mg OD (oral antihistamine)" },
                 { value: "fluticasone", label: "Fluticasone propionate nasal spray 50mcg" },
-                // Montelukast removed 8 Sep 2026: not authorised by the PGD, and a POM
-                  // carrying an MHRA neuropsychiatric warning. Co-existing asthma is a referral.
+                // Montelukast is not offered. See hayfever-clinical-logic.ts.
                 { value: "combination", label: "Combination (antihistamine + nasal spray)" },
               ]}
               required
