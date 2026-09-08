@@ -130,7 +130,7 @@ export const PGD_HUBRX_FILES: Record<string, string> = {
   "adhd-monitoring": "adhd-monitoring 2.pdf",
   "alopecia-minoxidil": "alopecia-minoxidil 2.pdf",
   "altitude-sickness": "altitude-sickness 2.pdf",
-  "anti-malarials": "anti-malarials 2.pdf",
+  "anti-malarials": "anti-malarials.pdf",
   "anxiety-propranolol": "anxiety-propranolol 2.pdf",
   "asthma-rescue": "asthma-rescue 2.pdf",
   "bph": "bph 2.pdf",
@@ -140,10 +140,10 @@ export const PGD_HUBRX_FILES: Record<string, string> = {
   "copd": "copd 2.pdf",
   "covid-booster": "covid-2026-27-v004.pdf",
   "dengue": "dengue 2.pdf",
-  "dental-bridging": "dental-bridging 2.pdf",
+  "dental-bridging": "dental-bridging.pdf",
   "diabetes-monitoring": "diabetes-monitoring 2.pdf",
   "ear-infection": "ear-infection-v002.pdf",
-  "eczema": "eczema 2.pdf",
+  "eczema": "eczema.pdf",
   "ed": "ed-v002.pdf",
   "emergency-contraception": "emergency-contraception 2.pdf",
   "eye-infections": "eye-infections 2.pdf",
@@ -195,5 +195,5 @@ export const PGD_HUBRX_FILES: Record<string, string> = {
   "testosterone-women": "hrt 2.pdf",
   "uti": "uti-v002.pdf",
   "wegovy": "wegovy-v002.pdf",
-  "wound-care": "wound-care 2.pdf"
+  "wound-care": "wound-care.pdf"
 };
