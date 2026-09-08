@@ -315,7 +315,7 @@ export default function EczemaClient() {
                 label="Previous eczema treatments"
                 value={state.medicalHistory.previousTreatments}
                 onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "previousTreatments", value: v })}
-                placeholder="e.g., Hydrocortisone 1% cream (previous month), emollients"
+                placeholder="e.g. clobetasone 0.05% last month, emollients"
               />
 
               <TextArea
@@ -393,13 +393,13 @@ export default function EczemaClient() {
                 label="Emollient confirmed as base of treatment"
                 checked={state.medicineSelection.emollientFirst}
                 onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "emollientFirst", value: v })}
-                description="Emollients are most important; apply frequently (every 2–3 hours)"
+                description="Emollients are most important; apply frequently, every 2 to 3 hours"
               />
 
               {state.assessment.severity === "mild" && (
                 <div className="p-3 bg-[color:var(--tenant-primary)]/10 rounded-lg border border-[color:var(--tenant-primary)]/30">
-                  <p className="text-sm font-medium text-navy-900">Hydrocortisone 1% OD–BD</p>
-                  <p className="text-xs text-gray-600 mt-1">Recommended for mild eczema flares (max 7 days)</p>
+                  <p className="text-sm font-medium text-navy-900">Clobetasone butyrate 0.05% cream or ointment, once or twice daily</p>
+                  <p className="text-xs text-gray-600 mt-1">PGD Arm 1, the first-line potency for mild disease. Up to 7 days initially, then review. Maximum 4 weeks continuous, and no more than three courses in 12 months before GP review.</p>
                 </div>
               )}
 

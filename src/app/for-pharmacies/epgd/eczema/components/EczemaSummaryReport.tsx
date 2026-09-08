@@ -87,8 +87,14 @@ export function EczemaSummaryReport({ state }: EczemaSummaryReportProps) {
         <div className="space-y-2 text-xs print:space-y-1">
           <Row label="Emollient First" value={medicineSelection.emollientFirst ? "Yes" : "Not confirmed"} />
           <Row label="Steroid" value={medicineSelection.steroidChoice || "Not specified"} />
+          {/* Fusidic acid removed 8 Sep 2026: not authorised by the eczema PGD.
+              Mild localised secondary infection is co-supplied under the Skin and
+              Soft Tissue Infection PGD and recorded in the same consultation. */}
           {medicineSelection.addFusicidAcid && (
-            <Row label="Fusidic Acid 2%" value="Yes (if secondary bacterial infection)" />
+            <Row
+              label="Secondary infection"
+              value="Mild and localised: oral antibiotic supplied under the Skin and Soft Tissue Infection PGD and recorded in this consultation. No antibacterial is supplied under the eczema PGD."
+            />
           )}
         </div>
       </div>

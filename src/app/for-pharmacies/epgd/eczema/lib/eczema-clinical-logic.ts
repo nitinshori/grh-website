@@ -23,21 +23,29 @@ export function getAllAlerts(state: EczemaConsultationState): ClinicalAlert[] {
     });
   }
 
+  // Face, eyelids, flexures and genital skin. PGD v002 does not stop the
+  // consultation here: it restricts ARM 2 only. "Betamethasone valerate 0.1%
+  // is not authorised on the face, eyelids, flexures or genital skin. Use
+  // clobetasone on those sites, or refer."
   if (state.contraindications.faceOrGroin) {
     alerts.push({
-      severity: "stop",
+      severity: "caution",
       code: "ECZ_SITE",
-      message: "Potent steroid inappropriate for face/groin",
-      detail: "Use only mild potency steroids (hydrocortisone 1%) on face/groin due to atrophy risk.",
+      message: "Face, eyelids, flexures or genital skin: Arm 2 not authorised here",
+      detail:
+        "Betamethasone valerate 0.1% is not authorised on these sites. Use clobetasone butyrate 0.05% (Arm 1) instead, or refer. Do not substitute hydrocortisone: it is not in this PGD.",
     });
   }
 
-  if (state.contraindications.childUnder1) {
+  // PGD v002 covers 12 years and over. Anyone below that is out of scope
+  // entirely, not just unsuitable for a moderate-potency steroid.
+  if (state.contraindications.childUnder1 || (state.patient.age !== null && state.patient.age < 12)) {
     alerts.push({
       severity: "stop",
       code: "ECZ_AGE",
-      message: "Child under 1 year — moderate+ steroids contraindicated",
-      detail: "Only mild steroids (hydrocortisone 1%) safe in infants. Emollients are first-line.",
+      message: "Under 12 years: outside this PGD",
+      detail:
+        "This PGD covers 12 years and over. Refer to the GP. Emollients remain first-line at any age and can be advised.",
     });
   }
 
