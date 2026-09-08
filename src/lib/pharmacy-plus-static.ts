@@ -127,13 +127,13 @@ const STATIC_RESOURCES: StaticResourceInput[] = [
     signedAt: '2026-08-21',
   },
   {
-    id: 'pph-rabies-v001',
-    name: 'Rabies Pre-Exposure PGD v001',
-    description: 'Signed 21 Aug 2026. Pre-exposure only. Covers Rabipur and Verorab, whose dose volumes differ, and carries full patient counselling on what to do after a potential exposure.',
+    id: 'pph-rabies-v002',
+    name: 'Rabies Pre-Exposure PGD v002',
+    description: 'Signed 8 Sep 2026. The accelerated day 0, 3 and 7 course is now restricted to 18 and over and identified as off-label, with documented consent required. A 15 minute observation period, a cold chain excursion procedure and a disposal provision added, and the differing dose volumes (Rabipur 1.0 mL, Verorab 0.5 mL) called out as a pre-draw check.',
     category: 'PGD',
-    file: 'PPH-Rabies-PreExposure-PGD-v001.pdf',
+    file: 'PPH-Rabies-PreExposure-PGD-v002.pdf',
     fileSize: 176000,
-    signedAt: '2026-08-21',
+    signedAt: '2026-09-08',
   },
   {
     id: 'pph-shingles-treatment-v001',

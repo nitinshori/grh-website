@@ -389,6 +389,7 @@ export const REISSUED_PGDS: Record<string, { version: string; date: string }> = 
   'wegovy-oral': { version: 'v005', date: '8 September 2026' },
   'ear-infection': { version: 'v002', date: '8 September 2026' },
   ed: { version: 'v002', date: '8 September 2026' },
+  rabies: { version: 'v002', date: '8 September 2026' },
 }
 
 /**
