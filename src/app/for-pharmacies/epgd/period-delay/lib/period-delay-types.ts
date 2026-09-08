@@ -24,6 +24,27 @@ export interface PeriodDelayMedicalHistory {
   hormonalContraception: boolean;
   hormonalContraceptionType: string;
   ageUnder16: boolean;
+  // ── PGD v002 venous thromboembolism gate ──────────────────────────────
+  // v001 listed these as risk factors and then asked only that the supplier
+  // "assess individual risk factors", which gates nothing and is not
+  // auditable. At 5mg three times daily a clinically significant proportion
+  // of norethisterone is metabolised to ethinylestradiol, so the VTE risk
+  // sits closer to a combined oral contraceptive than to a POP. They are
+  // exclusions in v002.
+  familyVteUnder45: boolean;
+  currentSmoker: boolean;
+  heightCm: number | null;
+  weightKg: number | null;
+  /** Journey of 4+ hours seated, during the course or within 2 weeks after. */
+  longJourney: boolean;
+  recentOrPlannedSurgery: boolean;
+  immobility: boolean;
+  activeOrRecentCancer: boolean;
+  migraineWithAura: boolean;
+  enzymeInducer: boolean;
+  /** 16 or 17: competence and safeguarding assessed and satisfied. */
+  under18AssessmentDone: boolean;
+  safeguardingConcern: boolean;
 }
 
 export interface PeriodDelayMedications {
@@ -87,7 +108,7 @@ export function createInitialConsultationState(): PeriodDelayConsultationState {
     patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", gpAddress: "", gpPhone: "", gpEmail: "", gpOdsCode: "", nhsNumber: "", address: "", phone: "", email: "" },
     consent: { informedConsentGiven: false, idVerified: false, idType: "", patientAwarePrivateService: false },
     assessment: { reasonForDelay: "", reasonDetails: "", lastPeriodDate: "", cycleRegular: false, daysUntilExpected: null, previousUse: false, previousIssues: "" },
-    medicalHistory: { pregnancy: false, breastfeeding: false, liverDisease: false, historyOfDVT: false, historyOfPE: false, historyOfStroke: false, activeBreastCancer: false, severeArterialDisease: false, porphyria: false, abnormalVaginalBleeding: false, hormonalContraception: false, hormonalContraceptionType: "", ageUnder16: false },
+    medicalHistory: { pregnancy: false, breastfeeding: false, liverDisease: false, historyOfDVT: false, historyOfPE: false, historyOfStroke: false, activeBreastCancer: false, severeArterialDisease: false, porphyria: false, abnormalVaginalBleeding: false, hormonalContraception: false, hormonalContraceptionType: "", ageUnder16: false, familyVteUnder45: false, currentSmoker: false, heightCm: null, weightKg: null, longJourney: false, recentOrPlannedSurgery: false, immobility: false, activeOrRecentCancer: false, migraineWithAura: false, enzymeInducer: false, under18AssessmentDone: false, safeguardingConcern: false },
     medications: { anticoagulants: false, antiepileptics: false, ciclosporin: false, otherMedications: "", allergies: "" },
     medicineSelection: { confirmed: false, daysToDelay: null, startDate: "" },
     counselling: { howToTake: false, startThreeDaysBefore: false, maxDuration: false, periodReturnsAfter: false, sideEffects: false, notContraceptive: false, seekHelpIfUnwell: false },

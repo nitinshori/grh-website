@@ -182,6 +182,30 @@ export default function PeriodDelayClient() {
               <Checkbox label="Pregnant or possibility of pregnancy" checked={state.medicalHistory.pregnancy} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "pregnancy", value: v })} description="Norethisterone is contraindicated in pregnancy" />
               <Checkbox label="Active or recent breast cancer" checked={state.medicalHistory.activeBreastCancer} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "activeBreastCancer", value: v })} />
               <Checkbox label="History of deep vein thrombosis (DVT)" checked={state.medicalHistory.historyOfDVT} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "historyOfDVT", value: v })} />
+              <div className="mt-4 mb-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2">
+                <p className="text-sm font-semibold text-amber-900">Venous thromboembolism gate (PGD v002)</p>
+                <p className="text-xs text-amber-800 mt-1">At 5mg three times daily a significant proportion of norethisterone is metabolised to ethinylestradiol, so the clot risk is closer to a combined pill than to a progestogen-only pill. Any single YES below excludes. These were cautions in v001.</p>
+              </div>
+              <Checkbox label="First degree relative with a blood clot before age 45, or a known clotting disorder" checked={state.medicalHistory.familyVteUnder45} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "familyVteUnder45", value: v })} />
+              <Checkbox label="Current smoker (any amount, any age)" checked={state.medicalHistory.currentSmoker} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "currentSmoker", value: v })} />
+              <div className="grid sm:grid-cols-2 gap-4">
+                <TextInput label="Height (cm)" type="number" value={state.medicalHistory.heightCm === null ? "" : String(state.medicalHistory.heightCm)} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "heightCm", value: v === "" ? null : Number(v) })} placeholder="Measure or ask. Do not estimate." />
+                <TextInput label="Weight (kg)" type="number" value={state.medicalHistory.weightKg === null ? "" : String(state.medicalHistory.weightKg)} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "weightKg", value: v === "" ? null : Number(v) })} placeholder="BMI 30 or above excludes" />
+              </div>
+              <Checkbox label="Flight, coach, train or car journey of 4 hours or more, during the course or within 2 weeks after" checked={state.medicalHistory.longJourney} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "longJourney", value: v })} description="Ask this of every holiday request. It is the commonest reason for the request and one of the risk factors." />
+              <Checkbox label="Surgery under general anaesthetic in the last 6 weeks, or planned" checked={state.medicalHistory.recentOrPlannedSurgery} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "recentOrPlannedSurgery", value: v })} />
+              <Checkbox label="Current or expected immobility (leg in plaster, bed rest)" checked={state.medicalHistory.immobility} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "immobility", value: v })} />
+              <Checkbox label="Cancer now, or treated for cancer in the last 12 months" checked={state.medicalHistory.activeOrRecentCancer} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "activeOrRecentCancer", value: v })} />
+              <Checkbox label="Migraine with aura, or migraine with focal neurological symptoms (current or past)" checked={state.medicalHistory.migraineWithAura} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "migraineWithAura", value: v })} />
+              <Checkbox label="Taking an enzyme inducing medicine" checked={state.medicalHistory.enzymeInducer} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "enzymeInducer", value: v })} description="Rifampicin, rifabutin, carbamazepine, phenytoin, phenobarbital, primidone, topiramate, efavirenz, ritonavir, St John's wort. The delay is likely to fail." />
+              {state.patient.age !== null && state.patient.age >= 16 && state.patient.age < 18 && (
+                <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-3 space-y-2">
+                  <p className="text-sm font-semibold text-amber-900">Patient is under 18</p>
+                  <p className="text-xs text-amber-800">The age criterion was lowered from 18 to 16 without any competence or safeguarding content being added. Both are now required and recorded for every supply under 18. Ask why the delay is wanted and who suggested it.</p>
+                  <Checkbox label="Competence assessed, and reason for the request explored with the patient alone" checked={state.medicalHistory.under18AssessmentDone} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "under18AssessmentDone", value: v })} />
+                  <Checkbox label="Safeguarding concern (coercion, exploitation, inconsistent account)" checked={state.medicalHistory.safeguardingConcern} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "safeguardingConcern", value: v })} description="Tick to stop the consultation and follow the local safeguarding route today." />
+                </div>
+              )}
               <Checkbox label="History of pulmonary embolism (PE)" checked={state.medicalHistory.historyOfPE} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "historyOfPE", value: v })} />
               <Checkbox label="History of stroke or TIA" checked={state.medicalHistory.historyOfStroke} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "historyOfStroke", value: v })} />
               <Checkbox label="Severe arterial disease" checked={state.medicalHistory.severeArterialDisease} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "severeArterialDisease", value: v })} />
@@ -217,7 +241,7 @@ export default function PeriodDelayClient() {
             <div className="space-y-4">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <p className="text-sm font-semibold text-blue-900 mb-1">Standard regimen</p>
-                <p className="text-sm text-blue-800">Norethisterone 5mg, three times daily, starting 3 days before the expected period. Continue for the desired duration of delay (maximum 10–14 days recommended).</p>
+                <p className="text-sm text-blue-800">Norethisterone 5mg, three times daily, starting 3 days before the expected period. MAXIMUM 14 DAYS and MAXIMUM 42 TABLETS under PGD v002. Supply only the days actually needed; do not round up to a pack.</p>
                 <p className="text-xs text-blue-600 mt-2">Period typically returns 2–3 days after stopping.</p>
               </div>
               <NumberInput label="Number of days to delay period" value={state.medicineSelection.daysToDelay} onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "daysToDelay", value: v })} min={1} max={17} />
@@ -232,7 +256,7 @@ export default function PeriodDelayClient() {
             <div className="space-y-3">
               <Checkbox label="How to take: 5mg three times daily with or after food" checked={state.counselling.howToTake} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "howToTake", value: v })} />
               <Checkbox label="Must start 3 days before expected period" checked={state.counselling.startThreeDaysBefore} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "startThreeDaysBefore", value: v })} />
-              <Checkbox label="Maximum recommended duration: 10–14 days (up to 20 days absolute max)" checked={state.counselling.maxDuration} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "maxDuration", value: v })} />
+              <Checkbox label="Maximum duration is 14 days and maximum quantity is 42 tablets. There is no extension under this PGD." checked={state.counselling.maxDuration} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "maxDuration", value: v })} />
               <Checkbox label="Period will return 2–3 days after stopping tablets" checked={state.counselling.periodReturnsAfter} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "periodReturnsAfter", value: v })} />
               <Checkbox label="Possible side effects: nausea, headache, bloating, breast tenderness, mood changes, breakthrough bleeding" checked={state.counselling.sideEffects} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "sideEffects", value: v })} />
               <Checkbox label="Norethisterone at this dose is NOT a contraceptive — continue usual contraception" checked={state.counselling.notContraceptive} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "notContraceptive", value: v })} />

@@ -385,6 +385,7 @@ export const REISSUED_PGDS: Record<string, { version: string; date: string }> = 
   // Comirnaty LP.8.1 as an existing-stock-only arm for the changeover.
   'covid-booster': { version: 'v004', date: '8 September 2026' },
   uti: { version: 'v002', date: '8 September 2026' },
+  'period-delay': { version: 'v002', date: '8 September 2026' },
 }
 
 /**

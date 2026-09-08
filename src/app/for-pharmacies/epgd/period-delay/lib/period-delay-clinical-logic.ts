@@ -37,13 +37,96 @@ export function getAllAlerts(state: PeriodDelayConsultationState): ClinicalAlert
     alerts.push({ severity: "stop", code: "VAGINAL_BLEEDING", message: "Undiagnosed vaginal bleeding", detail: "Must be investigated before progestogen use. Refer to GP." });
   }
 
+  // ── PGD v002 venous thromboembolism gate ────────────────────────────
+  // Any single YES excludes. v001 treated all of these as cautions.
+  const mh = state.medicalHistory;
+
+  if (mh.familyVteUnder45) {
+    alerts.push({ severity: "stop", code: "FAMILY_VTE", message: "First degree relative with VTE under 45", detail: "Suggests inherited thrombophilia. Excluded under PGD v002. Refer." });
+  }
+
+  if (mh.currentSmoker) {
+    alerts.push({ severity: "stop", code: "SMOKER", message: "Current smoker", detail: "Excluded under PGD v002, at any amount and any age. Refer." });
+  }
+
+  const bmi =
+    mh.heightCm && mh.weightKg && mh.heightCm > 0
+      ? mh.weightKg / Math.pow(mh.heightCm / 100, 2)
+      : null;
+  if (bmi !== null && bmi >= 30) {
+    alerts.push({
+      severity: "stop",
+      code: "BMI_30_PLUS",
+      message: `BMI ${bmi.toFixed(1)}, which is 30 or above`,
+      detail: "Excluded under PGD v002. Refer.",
+    });
+  }
+
+  if (mh.longJourney) {
+    alerts.push({
+      severity: "stop",
+      code: "LONG_JOURNEY",
+      message: "Seated journey of 4 hours or more during, or within 2 weeks of, the course",
+      detail:
+        "Excluded under PGD v002. This will exclude many holiday requests, which is the intended effect. Offer the alternatives in Appendix 2 of the PGD rather than a flat refusal: a woman on a monophasic combined pill can run packs back to back, and her GP can assess her individually.",
+    });
+  }
+
+  if (mh.recentOrPlannedSurgery) {
+    alerts.push({ severity: "stop", code: "SURGERY", message: "Surgery under general anaesthetic within 6 weeks, or planned", detail: "Excluded under PGD v002. Refer." });
+  }
+
+  if (mh.immobility) {
+    alerts.push({ severity: "stop", code: "IMMOBILITY", message: "Current or expected immobility", detail: "Excluded under PGD v002. Refer." });
+  }
+
+  if (mh.activeOrRecentCancer) {
+    alerts.push({ severity: "stop", code: "CANCER", message: "Active cancer, or cancer treated within 12 months", detail: "Excluded under PGD v002. Refer." });
+  }
+
+  if (mh.migraineWithAura) {
+    alerts.push({ severity: "stop", code: "MIGRAINE_AURA", message: "Migraine with aura or focal neurological symptoms", detail: "Excluded under PGD v002, current or past. Refer." });
+  }
+
+  if (mh.enzymeInducer) {
+    alerts.push({
+      severity: "stop",
+      code: "ENZYME_INDUCER",
+      message: "Taking an enzyme inducing medicine",
+      detail:
+        "Rifampicin, rifabutin, carbamazepine, phenytoin, phenobarbital, primidone, topiramate, efavirenz, ritonavir or St John's wort. These reduce norethisterone efficacy and the delay is likely to fail. Excluded under PGD v002.",
+    });
+  }
+
+  // 16 and 17 year olds: v001 lowered the age from 18 to 16 and added no
+  // competence or safeguarding content at all.
+  const age = state.patient.age;
+  if (age !== null && age >= 16 && age < 18) {
+    if (mh.safeguardingConcern) {
+      alerts.push({
+        severity: "stop",
+        code: "SAFEGUARDING_CONCERN",
+        message: "Safeguarding concern recorded in a patient under 18",
+        detail: "Do not supply. Follow the local safeguarding route today and record what was done.",
+      });
+    } else if (!mh.under18AssessmentDone) {
+      alerts.push({
+        severity: "stop",
+        code: "UNDER18_ASSESSMENT_REQUIRED",
+        message: "Competence and safeguarding assessment required",
+        detail:
+          "Every supply to a patient aged 16 or 17 requires a recorded competence assessment and a recorded safeguarding consideration, including who suggested the delay and why. Complete it before proceeding.",
+      });
+    }
+  }
+
   if (state.medicalHistory.ageUnder16) {
     alerts.push({ severity: "stop", code: "AGE", message: "Patient under 16 years", detail: "Outside the scope of this PGD. Refer to GP." });
   }
 
   // Cautions
   if (state.medicalHistory.breastfeeding) {
-    alerts.push({ severity: "caution", code: "BREASTFEEDING", message: "Currently breastfeeding", detail: "Norethisterone passes into breast milk in small amounts. Discuss risks and benefits." });
+    alerts.push({ severity: "stop", code: "BREASTFEEDING", message: "Currently breastfeeding", detail: "Excluded under PGD v002. Refer." });
   }
 
   if (state.medicalHistory.hormonalContraception) {

@@ -61,7 +61,7 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   // v002, 21 Aug 2026: restricted to lower UTI. Upper UTI and pyelonephritis
   // in children are now same-day referral, not a PGD supply.
   "paediatric-uti": "paediatric-uti-v002.pdf",
-  "period-delay": "period-delay.pdf",
+  "period-delay": "period-delay-v002.pdf",
   "pneumococcal": "pneumococcal.pdf",
   "postnatal-contraception": "postnatal-contraception.pdf",
   "premature-ejaculation": "premature-ejaculation.pdf",
@@ -170,7 +170,7 @@ export const PGD_HUBRX_FILES: Record<string, string> = {
   "mysimba": "mysimba 2.pdf",
   "orlistat": "orlistat 2.pdf",
   "paediatric-uti": "paediatric-uti-v002.pdf",
-  "period-delay": "period-delay 2.pdf",
+  "period-delay": "period-delay-v002.pdf",
   "pneumococcal": "pneumococcal 2.pdf",
   "postnatal-contraception": "postnatal-contraception 2.pdf",
   "premature-ejaculation": "premature-ejaculation 2.pdf",
