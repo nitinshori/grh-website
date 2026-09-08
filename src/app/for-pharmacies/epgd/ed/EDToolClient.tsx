@@ -95,6 +95,8 @@ gpEmail: "",
   medications: {
     takesNitrates: false,
     nitrateDetails: "",
+    takesNicorandil: false,
+    usesPoppers: false,
     takesRiociguat: false,
     takesAlphaBlockers: false,
     alphaBlockerStable: false,
@@ -109,6 +111,8 @@ gpEmail: "",
     diastolicBP: null,
     heartRate: null,
     bpTakenToday: false,
+    exerciseTolerance: "" as "" | "yes" | "no" | "unknown",
+    symptomsOnExertionOrSex: false,
   },
   redFlags: {
     pelvicPerinealTrauma: false,
@@ -279,7 +283,7 @@ function TextInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent"
+        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
       />
     </div>
   );
@@ -302,7 +306,7 @@ function Checkbox({
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="mt-0.5 rounded border-gray-300 text-teal-500 focus:ring-teal-400"
+        className="mt-0.5 rounded border-gray-300 text-[color:var(--tenant-primary)] focus:ring-[color:var(--tenant-primary)]"
       />
       <div>
         <span className="text-sm text-navy-900">{label}</span>
@@ -335,7 +339,7 @@ function SelectInput({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent bg-white"
+        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent bg-white"
       >
         <option value="" disabled>
           Select...
@@ -385,7 +389,7 @@ function NumberInput({
           min={min}
           max={max}
           placeholder={placeholder}
-          className="w-24 px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent"
+          className="w-24 px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
         />
         {unit && <span className="text-xs text-gray-500">{unit}</span>}
       </div>
@@ -505,13 +509,13 @@ export function EDToolClient() {
     // Show medication-related stops on step 4 (medications)
     if (state.currentStep === 4) {
       return currentAlerts.filter((a) =>
-        ["NITRATE", "RIOCIGUAT"].includes(a.code)
+        ["NITRATE", "NICORANDIL", "POPPERS", "RIOCIGUAT"].includes(a.code)
       );
     }
     // Show BP stops on step 5 (observations)
     if (state.currentStep === 5) {
       return currentAlerts.filter((a) =>
-        ["HYPOTENSION", "HYPERTENSION"].includes(a.code)
+        ["HYPOTENSION", "HYPERTENSION", "CV_FITNESS", "CV_SYMPTOMS"].includes(a.code)
       );
     }
     // Show medical history stops/cautions on step 3
@@ -602,7 +606,7 @@ export function EDToolClient() {
               value={state.patient.dateOfBirth}
               onChange={(e) => updatePatient("dateOfBirth", e.target.value)}
               max={new Date().toISOString().split("T")[0]}
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent"
+              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
             />
           </div>
           <div>
@@ -771,7 +775,7 @@ export function EDToolClient() {
             onChange={(e) => updateComplaint("description", e.target.value)}
             rows={3}
             placeholder="Any additional details about the presenting complaint..."
-            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent resize-y"
+            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent resize-y"
           />
         </div>
         <Checkbox
@@ -789,7 +793,28 @@ export function EDToolClient() {
             placeholder="e.g. Sildenafil 50mg, tried 4 times, partially effective"
           />
         )}
-        <Checkbox
+        <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-3 space-y-3">
+            <div>
+              <p className="text-sm font-semibold text-amber-900">Cardiovascular fitness (PGD v002, Appendix 1)</p>
+              <p className="text-xs text-amber-800 mt-1">v001 required an assessment &quot;deemed low risk for sexual activity&quot; with no content and no threshold. Sexual activity carries a cardiac workload comparable to brisk walking or two flights of stairs.</p>
+            </div>
+            <SelectInput
+              label="Can he walk a mile on the flat in about 20 minutes, or climb two flights of stairs briskly, without chest pain and without stopping for breath?"
+              value={state.observations.exerciseTolerance}
+              onChange={(v) => updateObs("exerciseTolerance", v as "" | "yes" | "no" | "unknown")}
+              options={[
+                { value: "yes", label: "Yes, comfortably" },
+                { value: "no", label: "No" },
+                { value: "unknown", label: "Does not know, never exerts himself that much" },
+              ]}
+            />
+            <Checkbox
+              label="Chest pain, breathlessness or palpitations on exertion, or during previous sexual activity"
+              checked={state.observations.symptomsOnExertionOrSex}
+              onChange={(v) => updateObs("symptomsOnExertionOrSex", v)}
+            />
+          </div>
+          <Checkbox
           label="Psychosexual factors present"
           checked={state.complaint.psychosexualFactors}
           onChange={(v) => updateComplaint("psychosexualFactors", v)}
@@ -971,20 +996,31 @@ export function EDToolClient() {
             Critical medication checks
           </p>
           <Checkbox
-            label="🔴 Patient takes NITRATES (GTN, isosorbide mononitrate/dinitrate, amyl nitrite)"
+            label="🔴 Patient takes a prescribed NITRATE (GTN spray, tablets, patch or ointment; isosorbide mononitrate or dinitrate; sodium nitroprusside)"
             checked={state.medications.takesNitrates}
             onChange={(v) => updateMeds("takesNitrates", v)}
-            description="ABSOLUTE CONTRAINDICATION — risk of severe, potentially fatal hypotension"
+            description="ABSOLUTE CONTRAINDICATION. Risk of severe, potentially fatal hypotension."
           />
           {state.medications.takesNitrates && (
             <TextInput
               label="Nitrate details"
               value={state.medications.nitrateDetails}
               onChange={(v) => updateMeds("nitrateDetails", v)}
-              placeholder="Which nitrate(s)?"
-              className="ml-7"
+              placeholder="Which nitrate, and in what form"
             />
           )}
+          <Checkbox
+            label="🔴 Patient takes NICORANDIL"
+            checked={state.medications.takesNicorandil}
+            onChange={(v) => updateMeds("takesNicorandil", v)}
+            description="An angina medicine with no 'nitrate' in its name. It is a nitric oxide donor and the interaction is the same. It appeared in neither arm of v001."
+          />
+          <Checkbox
+            label="🔴 Patient uses POPPERS (amyl, butyl or isobutyl nitrite)"
+            checked={state.medications.usesPoppers}
+            onChange={(v) => updateMeds("usesPoppers", v)}
+            description="Ask directly and without judgement: 'Some men use poppers at the same time as these tablets. Together they can drop your blood pressure to a dangerous level. Do you ever use them, or think you might?' It is bought, not prescribed, so it will never appear on a medication list."
+          />
           <Checkbox
             label="🔴 Patient takes RIOCIGUAT (guanylate cyclase stimulator)"
             checked={state.medications.takesRiociguat}
@@ -1047,7 +1083,7 @@ export function EDToolClient() {
             }
             rows={3}
             placeholder="List all other medications the patient is currently taking..."
-            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent resize-y"
+            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent resize-y"
           />
         </div>
 
@@ -1289,7 +1325,7 @@ export function EDToolClient() {
               }
               rows={3}
               placeholder="Any additional notes for the consultation record..."
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent resize-y"
+              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent resize-y"
             />
           </div>
         </div>

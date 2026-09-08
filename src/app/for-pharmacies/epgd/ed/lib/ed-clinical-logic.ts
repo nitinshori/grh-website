@@ -12,14 +12,53 @@ export function checkExclusions(state: EDConsultationState): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
   const { medications, observations, medicalHistory } = state;
 
-  // Nitrates — absolute contraindication
+  // Nitrates: absolute contraindication
   if (medications.takesNitrates) {
     alerts.push({
       severity: "stop",
       code: "NITRATE",
-      message: "Patient takes nitrates — CANNOT supply PDE5 inhibitor",
+      message: "Patient takes a prescribed nitrate. CANNOT supply a PDE5 inhibitor",
       detail:
         "Concurrent use of organic nitrates in any form (e.g. GTN, isosorbide mononitrate/dinitrate) or nitric oxide donors (e.g. amyl nitrite) is an absolute contraindication due to risk of severe, potentially fatal hypotension.",
+    });
+  }
+
+  if (medications.takesNicorandil) {
+    alerts.push({
+      severity: "stop",
+      code: "NICORANDIL",
+      message: "Patient takes nicorandil",
+      detail:
+        "Nicorandil is a nitric oxide donor. Combined with a PDE5 inhibitor it causes profound, prolonged and potentially fatal hypotension, exactly as an organic nitrate does. Absolute contraindication. It appeared in neither arm of PGD v001.",
+    });
+  }
+
+  if (medications.usesPoppers) {
+    alerts.push({
+      severity: "stop",
+      code: "POPPERS",
+      message: "Patient uses poppers (amyl or alkyl nitrite)",
+      detail:
+        "Absolute contraindication. Explain that it is the combination that is dangerous, not either one alone, and that the risk persists for as long as the tablet is in his system: up to 36 hours for tadalafil. Do not supply while he is unwilling to stop.",
+    });
+  }
+
+  if (observations.exerciseTolerance === "no" || observations.exerciseTolerance === "unknown") {
+    alerts.push({
+      severity: "stop",
+      code: "CV_FITNESS",
+      message: "Fails, or cannot answer, the cardiovascular fitness question",
+      detail:
+        "PGD v002 Appendix 1: the patient must be able to walk a mile on the flat in about 20 minutes, or climb two flights of stairs briskly, without chest pain and without stopping for breath. Sexual activity carries a comparable cardiac workload. Refer to the GP for assessment.",
+    });
+  }
+
+  if (observations.symptomsOnExertionOrSex) {
+    alerts.push({
+      severity: "stop",
+      code: "CV_SYMPTOMS",
+      message: "Chest pain, breathlessness or palpitations on exertion or during sex",
+      detail: "Do not supply. Refer for cardiovascular assessment. This is the presentation the fitness question exists to catch.",
     });
   }
 

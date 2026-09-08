@@ -26,7 +26,7 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   "diabetes-monitoring": "diabetes-monitoring.pdf",
   "ear-infection": "ear-infection-v002.pdf",
   "eczema": "eczema.pdf",
-  "ed": "ed.pdf",
+  "ed": "ed-v002.pdf",
   "emergency-contraception": "emergency-contraception.pdf",
   "eye-infections": "eye-infections.pdf",
   // 2026/27 season v003, signed 6 Aug 2026 with C. Pilkington's review edits
@@ -144,7 +144,7 @@ export const PGD_HUBRX_FILES: Record<string, string> = {
   "diabetes-monitoring": "diabetes-monitoring 2.pdf",
   "ear-infection": "ear-infection-v002.pdf",
   "eczema": "eczema 2.pdf",
-  "ed": "ed 2.pdf",
+  "ed": "ed-v002.pdf",
   "emergency-contraception": "emergency-contraception 2.pdf",
   "eye-infections": "eye-infections 2.pdf",
   "flu": "flu-2026-27-v003.pdf",

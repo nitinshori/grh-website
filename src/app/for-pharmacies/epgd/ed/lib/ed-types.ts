@@ -61,7 +61,16 @@ export interface MedicalHistory {
 }
 
 export interface CurrentMedications {
-  takesNitrates: boolean; // HARD STOP - absolute contraindication
+  takesNitrates: boolean;
+  /**
+   * PGD v002 splits these out. A single "nitrates" tick relies on the
+   * pharmacist classifying the drug. Nicorandil has no "nitrate" in its name
+   * and appeared in neither arm of v001. Amyl nitrite is bought, not
+   * prescribed, and will never be on a medication list, so it needs its own
+   * direct question rather than being buried in a list.
+   */
+  takesNicorandil: boolean;
+  usesPoppers: boolean; // HARD STOP - absolute contraindication
   nitrateDetails: string;
   takesRiociguat: boolean; // HARD STOP
   takesAlphaBlockers: boolean; // caution - start 25mg
@@ -78,6 +87,9 @@ export interface Observations {
   diastolicBP: number | null;
   heartRate: number | null;
   bpTakenToday: boolean;
+  /** PGD v002 Appendix 1 functional test. */
+  exerciseTolerance: '' | 'yes' | 'no' | 'unknown';
+  symptomsOnExertionOrSex: boolean;
 }
 
 export interface RedFlagsChecklist {
