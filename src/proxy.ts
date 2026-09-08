@@ -14,6 +14,7 @@ import {
   EPGD_SEGMENT_ALIASES,
   WITHDRAWN_SLUGS,
 } from '@/lib/pgd-access'
+import { PGD_MASTER_FILES } from '@/lib/pgd-document-manifest'
 
 // ── Per-tenant routing ───────────────────────────────────────────────
 // On non-default tenants (e.g. hubrx.getrealhealthpgd.co.uk), the public
@@ -131,6 +132,9 @@ async function isUserActive(userId: string): Promise<boolean> {
 // pharmacy's tools away mid-consultation.
 const CATALOGUE_SLUGS = new Set(ALL_PGDS.map((p) => p.slug))
 
+/** Slugs that resolve to a signed master PDF. See the guard in mayUseEpgdTool. */
+const DOCUMENTED_SLUGS = new Set(Object.keys(PGD_MASTER_FILES))
+
 const pgdAccessCache = new Map<
   string,
   { authSource: string; slugs: Set<string>; expiresAt: number }
@@ -180,6 +184,25 @@ async function mayUseEpgdTool(
   // every withdrawn tool open to HubRx pharmacies — which is precisely how
   // threadworms stayed reachable for them after migration 051.
   if (candidates.some((s) => WITHDRAWN_SLUGS.has(s))) {
+    return false
+  }
+
+  // A tool with no signed document behind it is a supply with nothing
+  // authorising it. That is not a theoretical worry: hep-ab-travel was live
+  // and assignable in August 2026 with no master PDF at all, and every
+  // consultation run through it was exactly that.
+  //
+  // Rather than maintain another hand-written list that can go stale, this
+  // derives the answer from the manifest. If no candidate segment resolves to
+  // a master document, the tool is refused. A new tool therefore cannot go
+  // live before its document does, which is the order those two things have
+  // repeatedly happened in.
+  //
+  // Verified safe when added on 8 Sep 2026: all 73 catalogue slugs resolve to
+  // a master document, so this refuses nothing that previously worked. The
+  // only route it closes is chikungunya, which had a complete 447 line tool
+  // deployed and no PGD behind it.
+  if (!candidates.some((s) => DOCUMENTED_SLUGS.has(s))) {
     return false
   }
 
