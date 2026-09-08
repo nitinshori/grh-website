@@ -1,6 +1,7 @@
-import os,re,json,sys
+import os,re,sys
 import pymupdf
-ROOT='grh-website'
+# Run from anywhere: resolve the repo root from this file's location.
+ROOT=os.path.abspath(os.path.join(os.path.dirname(__file__),'..'))
 EPGD=f'{ROOT}/src/app/for-pharmacies/epgd'
 DOCS=f'{ROOT}/public/pgd-documents'
 
