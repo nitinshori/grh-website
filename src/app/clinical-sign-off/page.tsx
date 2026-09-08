@@ -6,7 +6,7 @@ import { and, desc, eq } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { clinicalSignoffs, pharmacyPgdDocuments, pharmacies } from '@/lib/db/schema'
-import { ALL_PGDS } from '@/lib/pgd-access'
+import { ALL_PGDS, withReissueVersion } from '@/lib/pgd-access'
 import { PGD_MASTER_FILES } from '@/lib/pgd-document-manifest'
 import { getPharmacyPgdSlugs, getPharmacyNonApprovedSlugs } from '@/lib/pgd-queries'
 import { getPgdDocumentUrl } from '@/lib/pgd-documents'
@@ -240,7 +240,10 @@ export default async function ClinicalSignOffPage() {
         title: pgdBySlug.get(slug)?.title ?? slug,
         subtitle: pgdBySlug.get(slug)?.subtitle ?? '',
         viewHref: own?.documentUrl ?? getPgdDocumentUrl(slug),
-        version: own ? `v${own.version}` : 'GRH master',
+        // Own uploads already carry a version number that changes on reissue.
+        // Master documents did not, so a v001 signature kept reading as
+        // current after v002 went live. See withReissueVersion.
+        version: own ? `v${own.version}` : withReissueVersion(slug, 'GRH master'),
       }
     })
     const nonApprovedRows = [...nonApprovedSlugs].sort(byTitle).map((slug) => ({
@@ -250,7 +253,20 @@ export default async function ClinicalSignOffPage() {
       viewHref: ownDocBySlug.get(slug)?.documentUrl ?? getPgdDocumentUrl(slug),
     }))
     const signable = approvedRows.filter((r) => r.viewHref)
-    const done = signable.filter((r) => latest.has(`pgd_document:${r.slug}`)).length
+    // A signature against a superseded version is not a signature. The counter
+    // previously treated any sign-off as done, so a register could read
+    // "18 of 18 signed off" while several of those documents had been reissued
+    // with changed inclusion criteria since anyone read them.
+    const isCurrentlySigned = (r: { slug: string; version: string | null }) => {
+      const s = latest.get(`pgd_document:${r.slug}`)
+      if (!s) return false
+      if (!r.version || !s.itemVersion) return true
+      return s.itemVersion === r.version
+    }
+    const done = signable.filter(isCurrentlySigned).length
+    const needsResigning = signable.filter(
+      (r) => latest.has(`pgd_document:${r.slug}`) && !isCurrentlySigned(r),
+    )
 
     return (
       <div className="min-h-screen bg-gray-50">
@@ -261,12 +277,36 @@ export default async function ClinicalSignOffPage() {
             </p>
             <h1 className="text-2xl font-bold text-navy-900">Clinical Sign-off Register</h1>
             <p className="text-sm text-gray-600 mt-2">
-              Review and digitally sign off every PGD approved for {pharmacyName} —{' '}
-              {done} of {signable.length} signed off. Signing as{' '}
+              Review and digitally sign off every PGD approved for {pharmacyName}.{' '}
+              {done} of {signable.length} signed off against the current version. Signing as{' '}
               <span className="font-semibold">{session.user.name ?? session.user.email}</span>{' '}
               ({viewer.roleLabel}).
             </p>
           </header>
+
+          {needsResigning.length > 0 && (
+            <div className="mb-8 rounded-xl border border-amber-300 bg-amber-50 px-4 py-4">
+              <p className="text-sm font-semibold text-amber-900">
+                {needsResigning.length} {needsResigning.length === 1 ? 'PGD has' : 'PGDs have'} been
+                reissued since {pharmacyName} last signed
+              </p>
+              <p className="text-xs text-amber-800 mt-1.5 leading-relaxed">
+                These are signed, but against an earlier version. Several of the September
+                reissues changed inclusion criteria rather than wording, so a pharmacist working
+                from memory of the previous version may supply a patient the current one excludes.
+                Re-read each document and sign again. The previous signature is kept in the audit
+                trail.
+              </p>
+              <ul className="mt-3 space-y-1">
+                {needsResigning.map((r) => (
+                  <li key={r.slug} className="text-xs text-amber-900">
+                    <span className="font-semibold">{r.title}</span>{' '}
+                    <span className="text-amber-700">({r.version})</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           <h2 className="text-sm font-bold text-navy-900 mb-2">
             Approved PGDs ({approvedRows.length})
@@ -370,7 +410,15 @@ export default async function ClinicalSignOffPage() {
     return {
       pgd: p,
       docHref,
-      docVersion: master ? master : docHref ? 'uploaded document' : null,
+      // The filename was standing in as the version. That works where a
+      // reissue renames the file (covid-2026-27-v004.pdf), but the five
+      // Heron Cross reissues were published over the same filename, so the
+      // string never changed and the sign-off never lapsed.
+      docVersion: master
+        ? withReissueVersion(p.slug, master)
+        : docHref
+          ? 'uploaded document'
+          : null,
       mod,
     }
   })
@@ -378,8 +426,14 @@ export default async function ClinicalSignOffPage() {
   // counts (unique items)
   const docCount = pgdRows.filter((r) => r.docHref).length
   const total = docCount + ALL_PGDS.length + modules.length
-  let done = 0
-  for (const k of latest.keys()) done++ // every recorded latest item counts once
+  // Documents signed against a version that has since been reissued do not
+  // count as signed. Previously every recorded sign-off counted once,
+  // whatever version it was given against.
+  const supersededDocs = pgdRows.filter((r) => {
+    const s = latest.get(`pgd_document:${r.pgd.slug}`)
+    return !!s && !!r.docVersion && !!s.itemVersion && s.itemVersion !== r.docVersion
+  })
+  const done = latest.size - supersededDocs.length
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -390,14 +444,35 @@ export default async function ClinicalSignOffPage() {
           </p>
           <h1 className="text-2xl font-bold text-navy-900">Clinical Sign-off Register</h1>
           <p className="text-sm text-gray-600 mt-2">
-            One row per PGD — review and sign off its document, ePGD tool and
+            One row per PGD, review and sign off its document, ePGD tool and
             training in place. Each sign-off is recorded with your name, a
-            declaration and a timestamp — {done} of {total} items signed off.
-            Signing as{' '}
+            declaration and a timestamp. {done} of {total} items signed off
+            against the current version. Signing as{' '}
             <span className="font-semibold">{session.user.name ?? session.user.email}</span>{' '}
             ({viewer.roleLabel}).
           </p>
         </header>
+
+        {supersededDocs.length > 0 && (
+          <div className="mb-8 rounded-xl border border-amber-300 bg-amber-50 px-4 py-4">
+            <p className="text-sm font-semibold text-amber-900">
+              {supersededDocs.length} document{supersededDocs.length === 1 ? '' : 's'} reissued
+              since last signed
+            </p>
+            <p className="text-xs text-amber-800 mt-1.5 leading-relaxed">
+              Signed, but against an earlier version. Adopting pharmacies must re-read and
+              re-sign these before working to them, because several of the September reissues
+              changed inclusion criteria rather than wording.
+            </p>
+            <ul className="mt-3 grid sm:grid-cols-2 gap-x-6 gap-y-1">
+              {supersededDocs.map((r) => (
+                <li key={r.pgd.slug} className="text-xs text-amber-900 font-semibold">
+                  {r.pgd.title}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <div className="overflow-x-auto bg-white border border-gray-200 rounded-xl">
           <table className="w-full text-sm">

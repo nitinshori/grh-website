@@ -385,3 +385,35 @@ export const REISSUED_PGDS: Record<string, { version: string; date: string }> = 
   // Comirnaty LP.8.1 as an existing-stock-only arm for the changeover.
   'covid-booster': { version: 'v004', date: '8 September 2026' },
 }
+
+/**
+ * Version string for a signed-off master document.
+ *
+ * A clinical sign-off only stands for the version that was actually read and
+ * signed. The register already compares the stored itemVersion against the
+ * current one and re-presents the item when they differ, but it was comparing
+ * strings that never changed on reissue:
+ *
+ *   - the pharmacy view used the constant 'GRH master' for every master PGD;
+ *   - the GRH clinician view used the PDF filename, and five of the September
+ *     reissues (dental-bridging, eczema, chest-service, skin-infection,
+ *     wound-care) were published over the same filename.
+ *
+ * So a signature given against v001 kept showing as current after v002 went
+ * live. That matters because several of those reissues changed INCLUSION
+ * criteria rather than wording: dental no longer covers ibuprofen at all,
+ * bronchitis needs purulent sputum plus a risk factor or duration, and
+ * betamethasone came off the face and flexures. A pharmacist working from
+ * memory of v001 will supply patients v002 excludes.
+ *
+ * Appending the reissue version makes those signatures differ, which puts the
+ * item back in front of the pharmacy to be re-signed. Slugs that have not been
+ * reissued keep their existing string untouched, so signatures already held
+ * across the rest of the estate are not disturbed.
+ */
+export function withReissueVersion(slug: string, base: string): string {
+  const reissued = REISSUED_PGDS[slug]
+  if (!reissued) return base
+  if (base.includes(reissued.version)) return base
+  return `${base} ${reissued.version}`
+}
