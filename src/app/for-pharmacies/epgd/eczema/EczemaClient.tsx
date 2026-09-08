@@ -409,8 +409,13 @@ export default function EczemaClient() {
                   value={state.medicineSelection.steroidChoice}
                   onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "steroidChoice", value: v })}
                   options={[
-                    { value: "betamethasone", label: "Betamethasone valerate 0.025%" },
-                    { value: "clobetasone", label: "Clobetasone butyrate 0.05% (Eumovate)" },
+                    // Strengths corrected 8 Sep 2026 to match PGD v002:
+                    // Arm 1 clobetasone 0.05% for mild, Arm 2 betamethasone
+                    // valerate 0.1% for moderate. The tool previously offered
+                    // betamethasone 0.025%, a different strength from the one
+                    // the document authorises.
+                    { value: "betamethasone", label: "Betamethasone valerate 0.1% (Arm 2, moderate; not face/flexures)" },
+                    { value: "clobetasone", label: "Clobetasone butyrate 0.05% (Arm 1; use on face, eyelids, flexures, genital skin)" },
                   ]}
                   required
                 />
@@ -424,7 +429,7 @@ export default function EczemaClient() {
 
               {state.medicineSelection.hasFungalInfection && (
                 <Checkbox
-                  label="Suspected secondary infection (this PGD authorises no antibacterial: refer, or use the impetigo or skin infection PGD)"
+                  label="Suspected secondary bacterial infection"
                   checked={state.medicineSelection.addFusicidAcid}
                   onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "addFusicidAcid", value: v })}
                 />
