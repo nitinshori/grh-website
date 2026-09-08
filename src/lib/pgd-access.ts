@@ -64,7 +64,7 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
   // no fusidic acid, so the catalogue was advertising a product the PGD does not
   // cover, in the same way the ear service advertised amoxicillin.
   { slug: 'eczema', title: 'Eczema', subtitle: 'Betamethasone / Clobetasone (Eumovate)', category: 'Skin' },
-  { slug: 'impetigo', title: 'Impetigo', subtitle: 'Fusidic Acid / Flucloxacillin', category: 'Skin' },
+  { slug: 'impetigo', title: 'Impetigo', subtitle: 'Fusidic acid / Flucloxacillin / Clarithromycin (penicillin allergy)', category: 'Skin' },
   { slug: 'cold-sores', title: 'Cold Sores', subtitle: 'Valaciclovir', category: 'Skin' },
   { slug: 'shingles-treatment', title: 'Shingles Treatment', subtitle: 'Valaciclovir', category: 'Skin' },
   { slug: 'wound-care', title: 'Wound Care', subtitle: 'Assessment & Dressing', category: 'Skin' },
@@ -413,7 +413,7 @@ export const PGD_CATEGORIES = [
  * Remove an entry once it is no longer newsworthy, roughly 3 months.
  */
 export const REISSUED_PGDS: Record<string, { version: string; date: string }> = {
-  'dental-bridging': { version: 'v002', date: '7 September 2026' },
+  'dental-bridging': { version: 'v003', date: '8 September 2026' },
   'meningitis-acwy-travel': { version: 'v002', date: '7 September 2026' },
   'anti-malarials': { version: 'v002', date: '7 September 2026' },
   typhoid: { version: 'v002', date: '7 September 2026' },
@@ -434,6 +434,7 @@ export const REISSUED_PGDS: Record<string, { version: string; date: string }> = 
   rabies: { version: 'v002', date: '8 September 2026' },
   tetanus: { version: 'v003', date: '8 September 2026' },
   'sleep-melatonin': { version: 'v002', date: '8 September 2026' },
+  impetigo: { version: 'v002', date: '8 September 2026' },
 }
 
 /**

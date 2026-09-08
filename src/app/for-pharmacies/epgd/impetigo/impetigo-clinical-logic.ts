@@ -143,13 +143,14 @@ export function determineTreatmentRecommendation(
   //
   // Referred instead until a macrolide arm is written into the PGD and signed.
   if (extent === 'widespread' && lesionType === 'non-bullous' && medicalHistory.penicillinAllergy) {
+    const isChild = age >= 1 && age < 18;
     return {
-      treatment: 'REFER. Not covered by this PGD',
-      dose: '',
-      frequency: '',
-      duration: '',
-      quantity: 0,
-      rationale: 'Penicillin allergy with widespread impetigo. The impetigo PGD authorises fusidic acid and flucloxacillin only; it contains no macrolide, so clarithromycin cannot be supplied under it. Refer to the GP the same day for an alternative oral antibiotic.',
+      treatment: 'Clarithromycin',
+      dose: isChild ? '7.5 mg/kg (under 8kg); otherwise by weight band, see PGD Appendix' : '250 mg',
+      frequency: 'Twice daily (BD)',
+      duration: '5 days',
+      quantity: 10,
+      rationale: 'Penicillin allergy. Clarithromycin is authorised by PGD v002 per NICE NG153. FIVE days, not seven. Children are dosed BY WEIGHT, not age: weigh the child. Check the contraindications first: simvastatin, lovastatin, colchicine, ergot alkaloids, ticagrelor, and any history of QT prolongation. In pregnancy use erythromycin instead.',
     };
   }
 

@@ -22,7 +22,7 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   // 2026/27 season v003, signed 6 Aug 2026 with C. Pilkington's review edits
   "covid-booster": "covid-2026-27-v004.pdf",
   "dengue": "dengue.pdf",
-  "dental-bridging": "dental-bridging.pdf",
+  "dental-bridging": "dental-bridging-v003.pdf",
   "diabetes-monitoring": "diabetes-monitoring.pdf",
   "ear-infection": "ear-infection-v002.pdf",
   "eczema": "eczema.pdf",
@@ -45,7 +45,7 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   "hpv": "hpv.pdf",
   "hrt": "hrt.pdf",
   "hypertension": "hypertension.pdf",
-  "impetigo": "impetigo.pdf",
+  "impetigo": "impetigo-v002.pdf",
   // Split apart 21 Aug 2026. These three slugs previously all resolved to a
   // single combined Ixiaro / Rabies / MenACWY document, so a pharmacy
   // adopting one was signing for all three. Raised by PPH.
@@ -140,7 +140,7 @@ export const PGD_HUBRX_FILES: Record<string, string> = {
   "copd": "copd 2.pdf",
   "covid-booster": "covid-2026-27-v004.pdf",
   "dengue": "dengue 2.pdf",
-  "dental-bridging": "dental-bridging.pdf",
+  "dental-bridging": "dental-bridging-v003.pdf",
   "diabetes-monitoring": "diabetes-monitoring 2.pdf",
   "ear-infection": "ear-infection-v002.pdf",
   "eczema": "eczema.pdf",
@@ -158,7 +158,7 @@ export const PGD_HUBRX_FILES: Record<string, string> = {
   "hpv": "hpv 2.pdf",
   "hrt": "hrt 2.pdf",
   "hypertension": "hypertension 2.pdf",
-  "impetigo": "impetigo 2.pdf",
+  "impetigo": "impetigo-v002.pdf",
   // Split 21 Aug 2026: the HubRx copies were duplicates of the same combined
   // document, so they point at the new standalone masters rather than being
   // re-branded copies of content that was wrong.

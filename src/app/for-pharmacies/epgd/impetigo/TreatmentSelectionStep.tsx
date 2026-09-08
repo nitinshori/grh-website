@@ -27,8 +27,8 @@ export function TreatmentSelectionStep({
     { value: 'fusidic-acid', label: 'Fusidic Acid 2% Cream (Localised non-bullous)' },
     { value: 'hydrogen-peroxide', label: 'Hydrogen Peroxide 1% Cream (Alternative topical)' },
     { value: 'flucloxacillin', label: 'Flucloxacillin Capsules (Widespread non-bullous)' },
-    // Clarithromycin removed 8 Sep 2026: not in the impetigo PGD.
-    // Penicillin-allergic widespread impetigo is a referral.
+    // Authorised by PGD v002, 8 Sep 2026. FIVE days per NICE NG153.
+    { value: 'clarithromycin', label: 'Clarithromycin (penicillin allergy) - 5 days' },
   ];
 
   return (

@@ -79,25 +79,21 @@ export default function DentalBridgingClient() {
       });
     }
 
-    // Penicillin allergy is a STOP, not a switch to metronidazole.
+    // Penicillin allergy now routes to metronidazole, authorised by PGD v003.
     //
-    // This tool recommended "Metronidazole 400mg TDS" for every
-    // penicillin-allergic patient. Metronidazole appears nowhere in the dental
-    // PGD, in v001 or v002: the document authorises amoxicillin and nothing
-    // else. So every penicillin-allergic patient run through this tool was
-    // recommended a medicine with nothing authorising its supply.
-    //
-    // Remove this stop only when a metronidazole arm has been written into the
-    // PGD and signed. Adding one is clinically reasonable, penicillin allergy
-    // being common and dental infection needing cover, but that is a decision
-    // for the clinical leads and a change to the document, not to this file.
+    // Note the dose. This tool previously returned "Metronidazole 400mg TDS",
+    // which was wrong twice over: metronidazole was in no version of the
+    // document, and 400mg is above the dose the SPC carries for acute dental
+    // infection. v003 authorises the LICENSED dose, 200mg three times daily
+    // for 5 days. SDCEP suggests 400mg 8-hourly; that is off-label for this
+    // indication and this PGD deliberately does not use it.
     if (state.assessment.penicillinAllergy) {
       alerts.push({
-        severity: "stop",
-        code: "PENICILLIN_ALLERGY_NOT_COVERED",
-        message: "Penicillin allergy: this PGD authorises amoxicillin only",
+        severity: "caution",
+        code: "PENICILLIN_ALLERGY_METRONIDAZOLE",
+        message: "Penicillin allergy: metronidazole arm applies",
         detail:
-          "The dental bridging PGD covers amoxicillin and no alternative antibiotic. Do not supply metronidazole or any other antibiotic under it. Refer to the dentist, or to an urgent dental service, for same-day assessment and treatment. Give the pain relief and safety-netting advice regardless.",
+          "Supply metronidazole 200mg three times daily for 5 days under PGD v003. NOT 400mg. Confirm the patient can avoid alcohol completely during the course and for 48 hours afterwards, and check for warfarin, lithium, disulfiram and QT-prolonging medicines, all of which exclude.",
       });
     }
 
@@ -184,7 +180,7 @@ export default function DentalBridgingClient() {
     // penicillin-allergic patient is stopped above and referred; the tool must
     // not offer a substitute the document does not cover.
     if (state.assessment.penicillinAllergy) {
-      return "";
+      return "Metronidazole 200mg TDS";
     }
     return "Amoxicillin 500mg TDS";
   }, [state.assessment.penicillinAllergy]);
@@ -430,9 +426,11 @@ export default function DentalBridgingClient() {
                 value={state.treatment.antibiotic}
                 onChange={v => setState(prev => ({ ...prev, treatment: { ...prev.treatment, antibiotic: v } }))}
                 options={[
-                  // Amoxicillin only. The metronidazole option was removed on
-                  // 8 Sep 2026: it is not in the PGD, in any version.
                   { value: "Amoxicillin 500mg TDS", label: "Amoxicillin 500mg TDS (5 days)" },
+                  // 200mg, the licensed dose for acute dental infection. The
+                  // 400mg option this tool used to carry is off-label for this
+                  // indication and is deliberately not offered.
+                  { value: "Metronidazole 200mg TDS", label: "Metronidazole 200mg TDS (5 days), penicillin allergy" },
                 ]}
                 required
                 disabled
