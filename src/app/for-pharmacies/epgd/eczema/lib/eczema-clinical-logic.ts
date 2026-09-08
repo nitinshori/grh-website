@@ -74,12 +74,17 @@ export function calculateDoseRecommendation(state: EczemaConsultationState): Dos
 
   if (state.assessment.severity === "mild") {
     recommendation = {
-      medicine: "Hydrocortisone 1% cream/ointment",
+      // Hydrocortisone is NOT in the eczema PGD, which authorises
+      // betamethasone and clobetasone. It does not need to be: hydrocortisone
+      // 1% is a P medicine and mild eczema can be handled as a pharmacy sale.
+      // Say so, rather than implying this PGD authorises it.
+      medicine: "Hydrocortisone 1% cream (PHARMACY SALE, not under this PGD)",
       dose: "Apply thinly",
       frequency: "Once or twice daily",
       duration: "Up to 7 days (body areas)",
       dosingRegimen: "Fingertip unit per hand-sized area. Apply thinly to affected skin. Use emollient as base first.",
-      reason: "Mild potency steroid suitable for mild eczema flares",
+      reason:
+        "Mild eczema. Hydrocortisone 1% is a P medicine: sell it under pharmacy protocol with a consultation record. This PGD authorises betamethasone and clobetasone, and neither is needed for a mild flare.",
     };
   } else if (state.assessment.severity === "moderate") {
     recommendation = {
@@ -91,8 +96,21 @@ export function calculateDoseRecommendation(state: EczemaConsultationState): Dos
       reason: "Moderate potency steroid for moderate inflammatory eczema",
     };
 
-    if (state.medicineSelection.hasFungalInfection && state.medicineSelection.addFusicidAcid) {
-      recommendation.reason += "; add Fusidic acid 2% if secondary bacterial infection suspected";
+    // Fusidic acid removed 8 Sep 2026. Two problems, either of which was
+    // enough on its own:
+    //
+    // 1. Fusidic acid appears nowhere in the eczema PGD, so the tool was
+    //    suggesting an antibacterial the document does not authorise.
+    // 2. The condition gated it on hasFungalInfection while the text it added
+    //    said "if secondary bacterial infection suspected". Fusidic acid does
+    //    not treat fungal infection. The check and the advice were for
+    //    different organisms.
+    //
+    // Infected eczema is now a referral, or a supply under the impetigo or
+    // skin infection PGD if the presentation fits one of those.
+    if (state.medicineSelection.hasFungalInfection) {
+      recommendation.reason +=
+        ". SUSPECTED INFECTION: this PGD does not authorise any antibacterial or antifungal. Do not add fusidic acid. Refer, or treat under the impetigo or skin infection PGD if the presentation fits.";
     }
   }
 

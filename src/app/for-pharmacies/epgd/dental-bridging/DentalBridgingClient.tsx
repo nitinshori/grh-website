@@ -79,6 +79,28 @@ export default function DentalBridgingClient() {
       });
     }
 
+    // Penicillin allergy is a STOP, not a switch to metronidazole.
+    //
+    // This tool recommended "Metronidazole 400mg TDS" for every
+    // penicillin-allergic patient. Metronidazole appears nowhere in the dental
+    // PGD, in v001 or v002: the document authorises amoxicillin and nothing
+    // else. So every penicillin-allergic patient run through this tool was
+    // recommended a medicine with nothing authorising its supply.
+    //
+    // Remove this stop only when a metronidazole arm has been written into the
+    // PGD and signed. Adding one is clinically reasonable, penicillin allergy
+    // being common and dental infection needing cover, but that is a decision
+    // for the clinical leads and a change to the document, not to this file.
+    if (state.assessment.penicillinAllergy) {
+      alerts.push({
+        severity: "stop",
+        code: "PENICILLIN_ALLERGY_NOT_COVERED",
+        message: "Penicillin allergy: this PGD authorises amoxicillin only",
+        detail:
+          "The dental bridging PGD covers amoxicillin and no alternative antibiotic. Do not supply metronidazole or any other antibiotic under it. Refer to the dentist, or to an urgent dental service, for same-day assessment and treatment. Give the pain relief and safety-netting advice regardless.",
+      });
+    }
+
     if (state.assessment.penicillinAllergy && state.assessment.metronidazoleAllergy) {
       alerts.push({
         severity: "stop",
@@ -158,8 +180,11 @@ export default function DentalBridgingClient() {
   }, []);
 
   const selectedAntibiotic = useMemo(() => {
+    // Amoxicillin is the only antibiotic this PGD authorises. A
+    // penicillin-allergic patient is stopped above and referred; the tool must
+    // not offer a substitute the document does not cover.
     if (state.assessment.penicillinAllergy) {
-      return "Metronidazole 400mg TDS";
+      return "";
     }
     return "Amoxicillin 500mg TDS";
   }, [state.assessment.penicillinAllergy]);
@@ -405,8 +430,9 @@ export default function DentalBridgingClient() {
                 value={state.treatment.antibiotic}
                 onChange={v => setState(prev => ({ ...prev, treatment: { ...prev.treatment, antibiotic: v } }))}
                 options={[
+                  // Amoxicillin only. The metronidazole option was removed on
+                  // 8 Sep 2026: it is not in the PGD, in any version.
                   { value: "Amoxicillin 500mg TDS", label: "Amoxicillin 500mg TDS (5 days)" },
-                  { value: "Metronidazole 400mg TDS", label: "Metronidazole 400mg TDS (5 days)" },
                 ]}
                 required
                 disabled

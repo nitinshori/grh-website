@@ -134,16 +134,22 @@ export function determineTreatmentRecommendation(
     };
   }
 
-  // Widespread non-bullous (penicillin allergic)
+  // Widespread non-bullous, penicillin allergic.
+  //
+  // This branch returned clarithromycin. Clarithromycin appears nowhere in the
+  // impetigo PGD, which authorises fusidic acid and flucloxacillin. So every
+  // penicillin-allergic patient with widespread impetigo was recommended a
+  // medicine with nothing authorising its supply.
+  //
+  // Referred instead until a macrolide arm is written into the PGD and signed.
   if (extent === 'widespread' && lesionType === 'non-bullous' && medicalHistory.penicillinAllergy) {
-    const isChild = age >= 1 && age < 18;
     return {
-      treatment: 'Clarithromycin Tablets',
-      dose: isChild ? '7.5 mg/kg' : '250 mg',
-      frequency: 'Twice daily (BD)',
-      duration: '7 days',
-      quantity: isChild ? 14 : 14,
-      rationale: `Penicillin allergy confirmed. Clarithromycin is appropriate alternative. Dosing: ${isChild ? '7.5mg/kg BD (children)' : '250mg BD (adults)'}. Patient should complete full course.`,
+      treatment: 'REFER. Not covered by this PGD',
+      dose: '',
+      frequency: '',
+      duration: '',
+      quantity: 0,
+      rationale: 'Penicillin allergy with widespread impetigo. The impetigo PGD authorises fusidic acid and flucloxacillin only; it contains no macrolide, so clarithromycin cannot be supplied under it. Refer to the GP the same day for an alternative oral antibiotic.',
     };
   }
 

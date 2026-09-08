@@ -82,12 +82,21 @@ export function calculateDoseRecommendation(
       duration: "As needed during hay fever season",
       reason: "Intranasal corticosteroid for nasal symptoms",
     },
+    // Montelukast is NOT in the hayfever PGD, which authorises fexofenadine,
+    // fluticasone and cetirizine only. It is a POM, and it carries an MHRA
+    // warning about neuropsychiatric reactions including sleep disturbance,
+    // agitation and, rarely, suicidal thinking. A tool must not offer it while
+    // no document authorises it.
+    //
+    // Restore this only if a montelukast arm is written into the PGD and
+    // signed. Co-existing asthma is a good reason to refer, not to supply.
     montelukast: {
-      medicine: "Montelukast 10mg tablets",
-      dose: "10mg",
-      frequency: "Once daily in evening",
-      duration: "As needed during hay fever season",
-      reason: "Leukotriene receptor antagonist (especially if co-existing asthma)",
+      medicine: "NOT AVAILABLE UNDER THIS PGD. Refer.",
+      dose: "",
+      frequency: "",
+      duration: "",
+      reason:
+        "Montelukast is not authorised by the hayfever PGD, which covers fexofenadine, fluticasone and cetirizine only. Where hayfever coexists with asthma, refer to the GP rather than supplying here.",
     },
     combination: {
       medicine: "Fexofenadine 180mg + Fluticasone nasal spray",

@@ -59,7 +59,11 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
   { slug: 'psoriasis', title: 'Psoriasis', subtitle: 'Calcipotriol / Betamethasone', category: 'Skin' },
   { slug: 'period-pain', title: 'Period Pain', subtitle: "Naproxen / Mefenamic Acid", category: "Women's Health" },
   { slug: 'rosacea', title: 'Rosacea', subtitle: 'Ivermectin / Doxycycline', category: 'Skin' },
-  { slug: 'eczema', title: 'Eczema', subtitle: 'Betamethasone / Elidel', category: 'Skin' },
+  // Subtitle corrected 8 Sep 2026: the v002 document authorises betamethasone
+  // and clobetasone. It contains no pimecrolimus (Elidel), no hydrocortisone and
+  // no fusidic acid, so the catalogue was advertising a product the PGD does not
+  // cover, in the same way the ear service advertised amoxicillin.
+  { slug: 'eczema', title: 'Eczema', subtitle: 'Betamethasone / Clobetasone (Eumovate)', category: 'Skin' },
   { slug: 'impetigo', title: 'Impetigo', subtitle: 'Fusidic Acid / Flucloxacillin', category: 'Skin' },
   { slug: 'cold-sores', title: 'Cold Sores', subtitle: 'Valaciclovir', category: 'Skin' },
   { slug: 'shingles-treatment', title: 'Shingles Treatment', subtitle: 'Valaciclovir', category: 'Skin' },

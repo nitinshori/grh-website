@@ -424,7 +424,7 @@ export default function EczemaClient() {
 
               {state.medicineSelection.hasFungalInfection && (
                 <Checkbox
-                  label="Add Fusidic acid 2% cream TDS for 7 days"
+                  label="Suspected secondary infection (this PGD authorises no antibacterial: refer, or use the impetigo or skin infection PGD)"
                   checked={state.medicineSelection.addFusicidAcid}
                   onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "addFusicidAcid", value: v })}
                 />

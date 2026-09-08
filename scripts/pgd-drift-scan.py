@@ -48,6 +48,23 @@ def words(text):
     t=text.lower()
     return {d for d in DRUGS if re.search(r'\b'+re.escape(d), t)}
 
+# A drug named in a tool is only interesting if the tool is OFFERING it. Named
+# in an allergy question, an interaction check or a "does the patient take
+# this" list, it is a safety check and not a supply. Without this the scan
+# flagged metformin, paracetamol and atorvastatin across a dozen tools.
+SUPPLY_CUE = re.compile(
+    r'(medicine|dose|dosing|regimen|recommend|supply|suppl|treatment:|selectedAntibiotic|'
+    r'label:\s*"[^"]*\b(mg|ml|tablet|capsule|sachet)|value:\s*"[^"]*\b(mg|ml))',
+    re.I)
+
+def supplied(text, drug):
+    """True where the drug name appears near language about giving it."""
+    for m in re.finditer(r'\b'+re.escape(drug), text, re.I):
+        window = text[max(0, m.start()-160): m.start()+160]
+        if SUPPLY_CUE.search(window):
+            return True
+    return False
+
 def read_tool(slug):
     d=os.path.join(EPGD,slug)
     out=[]
@@ -69,12 +86,23 @@ def read_doc(slug):
         return ''.join(x.get_text() for x in d)
     except Exception: return None
 
+# Records-retention boilerplate appears in every PGD and always says "adults
+# aged 18 years and over" and "children aged under 18". Read naively it makes
+# every document look like it has an 18 year floor, which produced three false
+# positives on the first run (emergency contraception among them). Strip it.
+RECORDS_NOISE = re.compile(
+    r'(keep records|audit purposes|25th birthday|26th birthday|records for 8 years)',
+    re.I)
+
 def ages(text):
     a=set()
-    for m in re.finditer(r'\b(\d{1,2})\s*(?:years?|yrs?)\s*(?:of age\s*)?(?:and\s*(?:over|above)|or\s*(?:over|older|above)|\+)', text, re.I):
-        a.add(int(m.group(1)))
-    for m in re.finditer(r'aged?\s*(\d{1,2})\s*(?:and|or)\s*(?:over|above|older)', text, re.I):
-        a.add(int(m.group(1)))
+    for line in re.split(r'(?<=[.\n])', text):
+        if RECORDS_NOISE.search(line):
+            continue
+        for m in re.finditer(r'\b(\d{1,2})\s*(?:years?|yrs?)\s*(?:of age\s*)?(?:and\s*(?:over|above)|or\s*(?:over|older|above)|\+)', line, re.I):
+            a.add(int(m.group(1)))
+        for m in re.finditer(r'aged?\s*(\d{1,2})\s*(?:and|or)\s*(?:over|above|older)', line, re.I):
+            a.add(int(m.group(1)))
     return a
 
 rows=[]
@@ -87,15 +115,18 @@ for slug in slugs:
     if doc is None:
         rows.append((slug,'NO DOCUMENT','tool exists, no master PDF resolves for this slug',status)); continue
     dt, tt = words(doc), words(tool)
-    only_tool = sorted(tt-dt)
+    only_tool = sorted(d for d in (tt-dt) if supplied(tool, d))
     if only_tool:
-        rows.append((slug,'MEDICINE IN TOOL NOT IN DOCUMENT', ', '.join(only_tool), status))
+        rows.append((slug,'MEDICINE OFFERED BY TOOL, NOT IN DOCUMENT', ', '.join(only_tool), status))
+    mentioned = sorted(d for d in (tt-dt) if d not in only_tool)
+    if mentioned:
+        rows.append((slug,'medicine named but not offered (probably a safety check)', ', '.join(mentioned), status))
     da, ta = ages(doc), ages(tool)
     if da and ta and min(ta) < min(da):
         rows.append((slug,'TOOL AGE FLOOR BELOW DOCUMENT', f'tool {min(ta)} vs document {min(da)}', status))
 
 print(f"{len(slugs)} tools scanned against the master manifest\n")
-sev={'NO DOCUMENT':0,'MEDICINE IN TOOL NOT IN DOCUMENT':1,'TOOL AGE FLOOR BELOW DOCUMENT':2}
+sev={'NO DOCUMENT':0,'MEDICINE OFFERED BY TOOL, NOT IN DOCUMENT':1,'TOOL AGE FLOOR BELOW DOCUMENT':2,'medicine named but not offered (probably a safety check)':3}
 rows.sort(key=lambda r:(sev[r[1]], r[0]))
 for slug,kind,detail,status in rows:
     print(f"  [{kind}] {slug} {('('+status+')') if status else ''}\n      {detail}")

@@ -288,7 +288,8 @@ export default function HayfeverClient() {
               options={[
                 { value: "fexofenadine", label: "Fexofenadine 180mg OD (oral antihistamine)" },
                 { value: "fluticasone", label: "Fluticasone propionate nasal spray 50mcg" },
-                { value: "montelukast", label: "Montelukast 10mg OD (if co-existing asthma)" },
+                // Montelukast removed 8 Sep 2026: not authorised by the PGD, and a POM
+                  // carrying an MHRA neuropsychiatric warning. Co-existing asthma is a referral.
                 { value: "combination", label: "Combination (antihistamine + nasal spray)" },
               ]}
               required
