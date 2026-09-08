@@ -56,7 +56,7 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
   { slug: 'skin-infection', title: 'Skin Infection', subtitle: 'Flucloxacillin / Clarithromycin / Doxycycline', category: 'Skin' },
   { slug: 'cellulitis', title: 'Cellulitis', subtitle: 'Flucloxacillin / Clarithromycin / Doxycycline', category: 'Skin' },
   { slug: 'fungal-infection', title: 'Fungal Skin Infection', subtitle: 'Miconazole / Trimovate', category: 'Skin' },
-  { slug: 'psoriasis', title: 'Psoriasis', subtitle: 'Calcipotriol / Betamethasone', category: 'Skin' },
+  { slug: 'psoriasis', title: 'Psoriasis', subtitle: 'Calcipotriol 50 micrograms/g with betamethasone 0.5 mg/g, stable plaque psoriasis', category: 'Skin' },
   { slug: 'period-pain', title: 'Period Pain', subtitle: "Naproxen / Mefenamic Acid", category: "Women's Health" },
   { slug: 'rosacea', title: 'Rosacea', subtitle: 'Ivermectin / Doxycycline', category: 'Skin' },
   // Subtitle corrected 8 Sep 2026: the v002 document authorises betamethasone
@@ -435,6 +435,7 @@ export const REISSUED_PGDS: Record<string, { version: string; date: string }> = 
   tetanus: { version: 'v003', date: '8 September 2026' },
   'sleep-melatonin': { version: 'v002', date: '8 September 2026' },
   impetigo: { version: 'v002', date: '8 September 2026' },
+  psoriasis: { version: 'v002', date: '8 September 2026' },
 }
 
 /**

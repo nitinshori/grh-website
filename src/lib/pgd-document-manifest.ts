@@ -76,7 +76,7 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   "skin-infection": "skin-infection.pdf",
   "cellulitis": "cellulitis.pdf",
   "fungal-infection": "fungal-infection.pdf",
-  "psoriasis": "psoriasis.pdf",
+  "psoriasis": "psoriasis-v002.pdf",
   "period-pain": "period-pain.pdf",
   // shingles-treatment previously served the Shingrix VACCINE document, which
   // contains no antiviral at all. Now a genuine antiviral treatment PGD.
