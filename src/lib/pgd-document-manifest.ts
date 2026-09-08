@@ -106,7 +106,7 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   // v004 signed 21 Aug 2026: reconciled against the UK SPC, which published
   // after v003 was signed. Levothyroxine interaction added, missed-dose rule
   // corrected, MHRA Jan 2026 pancreatitis warning, tirzepatide clause removed.
-  "wegovy-oral": "wegovy-oral-v004.pdf",
+  "wegovy-oral": "wegovy-oral-v005.pdf",
   // signed 14 Aug 2026 (Nitin Shori + Chris Pilkington)
   "yellow-fever": "yellow-fever.pdf",
   "foundayo": "foundayo-v002.pdf",

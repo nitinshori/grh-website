@@ -42,7 +42,7 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
   // Weight Management
   { slug: 'wegovy', title: 'Wegovy', subtitle: 'Semaglutide 2.4mg', category: 'Weight Management' },
   { slug: 'mounjaro', title: 'Mounjaro', subtitle: 'Tirzepatide', category: 'Weight Management' },
-  { slug: 'wegovy-oral', title: 'Wegovy Tablets (Oral Semaglutide)', subtitle: 'UK-licensed weight management — 1.5/4/9/25 mg once daily, empty-stomach dosing', category: 'Weight Management' },
+  { slug: 'wegovy-oral', title: 'Wegovy Tablets (Oral Semaglutide)', subtitle: 'UK-licensed weight management, 1.5/4/9/25 mg once daily, empty-stomach dosing', category: 'Weight Management' },
   { slug: 'saxenda', title: 'Saxenda', subtitle: 'Liraglutide 3.0mg', category: 'Weight Management' },
   { slug: 'mysimba', title: 'Mysimba', subtitle: 'Naltrexone/Bupropion', category: 'Weight Management' },
   { slug: 'orlistat', title: 'Orlistat', subtitle: 'Orlistat 120mg', category: 'Weight Management' },
@@ -386,6 +386,7 @@ export const REISSUED_PGDS: Record<string, { version: string; date: string }> = 
   'covid-booster': { version: 'v004', date: '8 September 2026' },
   uti: { version: 'v002', date: '8 September 2026' },
   'period-delay': { version: 'v002', date: '8 September 2026' },
+  'wegovy-oral': { version: 'v005', date: '8 September 2026' },
 }
 
 /**

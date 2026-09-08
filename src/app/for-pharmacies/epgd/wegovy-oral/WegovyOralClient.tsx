@@ -43,9 +43,17 @@ interface WegovyOralState {
     bmi: number | null;
     hasComorbidity: boolean;
     comorbidities: string;
-    age18To75: boolean;
+    age18To85: boolean;
     willingLifestyleChange: boolean;
     tried6MonthLifestyle: boolean;
+    // ── PGD v005: switching from semaglutide injection ──────────────────
+    // v004 said only "Switching from semaglutide 2.4 mg injection: 25 mg once
+    // daily, starting one week after the last injection". It required no
+    // evidence of the current injection dose and said nothing at all about
+    // patients on 0.25, 0.5, 1 or 1.7 mg, for whom 25 mg is a large jump.
+    switchingFromInjection: boolean;
+    injectionDose: '' | '0.25' | '0.5' | '1.0' | '1.7' | '2.4';
+    injectionDoseEvidence: '' | 'label' | 'clinic-record' | 'pen-seen' | 'prescriber' | 'none';
   };
   contraindications: {
     pregnancyOrTryingConceive: boolean;
@@ -120,9 +128,12 @@ function initialState(): WegovyOralState {
       bmi: null,
       hasComorbidity: false,
       comorbidities: "",
-      age18To75: false,
+      age18To85: false,
       willingLifestyleChange: false,
       tried6MonthLifestyle: false,
+      switchingFromInjection: false,
+      injectionDose: "",
+      injectionDoseEvidence: "",
     },
     contraindications: {
       pregnancyOrTryingConceive: false,
@@ -251,7 +262,32 @@ export function WegovyOralClient() {
     if (c.severeRenalImpairment) out.push({ code: "renal", severity: "stop", message: "Severe renal impairment (eGFR <30)", detail: "Avoid." });
     if (c.severeHepaticImpairment) out.push({ code: "hep", severity: "stop", message: "Severe hepatic impairment", detail: "Avoid." });
     if (c.hypersensitivity) out.push({ code: "allergy", severity: "stop", message: "Hypersensitivity", detail: "Contraindicated." });
-    if (c.concurrentGlp1) out.push({ code: "glp1", severity: "stop", message: "Concurrent GLP-1 / GIP RA", detail: "Do not double up." });
+    if (c.concurrentGlp1) out.push({ code: "glp1", severity: "stop", message: "Concurrent GLP-1 / GIP RA, for any indication", detail: "Do not double up. Ask specifically about medicines taken for diabetes and name the products: a patient does not always think of a diabetes medicine as the same kind of drug." });
+
+    // PGD v005: switching requires documented evidence of the injection dose.
+    if (state.eligibility.switchingFromInjection) {
+      if (!state.eligibility.injectionDose) {
+        out.push({ code: "switch-dose", severity: "stop", message: "Injection dose not recorded", detail: "Record the current injection dose before switching." });
+      }
+      if (!state.eligibility.injectionDoseEvidence || state.eligibility.injectionDoseEvidence === "none") {
+        out.push({
+          code: "switch-evidence",
+          severity: "stop",
+          message: "No documented evidence of the current injection dose",
+          detail:
+            "PGD v005 does not permit a switch on patient self-report. Ask for a dispensing label, prescription or repeat slip, a clinic record, the pen or carton itself, or confirmation from the prescriber. Tell the patient exactly what to bring so the appointment can be rebooked rather than abandoned.",
+        });
+      }
+      if (state.eligibility.injectionDose && state.eligibility.injectionDose !== "2.4") {
+        out.push({
+          code: "switch-low-dose",
+          severity: "caution",
+          message: `Switching from ${state.eligibility.injectionDose} mg, which is below 2.4 mg`,
+          detail:
+            "Do not start at 25 mg. Either continue the injection under the original prescriber to 2.4 mg, or start the tablets as a new initiation at 1.5 mg one week after the last injection and titrate monthly. This lower-dose pathway is a Get Real Health practice decision, not a licensed instruction; record it as such.",
+        });
+      }
+    }
 
     const i = state.interactions;
     if (i.warfarin) out.push({ code: "warf", severity: "caution", message: "Warfarin", detail: "Monitor INR closely; gastric emptying delay alters absorption." });
@@ -367,7 +403,7 @@ export function WegovyOralClient() {
         return (
           <StepWrapper title="Eligibility & BMI" currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={null}>
             <div className="space-y-4">
-              <Checkbox label="Adult aged 18–75 years (inclusive)" checked={state.eligibility.age18To75} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "age18To75", value: v })} />
+              <Checkbox label="Adult aged 18 to 85 years (inclusive)" checked={state.eligibility.age18To85} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "age18To85", value: v })} />
               <div className="grid grid-cols-2 gap-3">
                 <NumberInput label="Height (cm)" value={state.eligibility.heightCm} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "heightCm", value: v })} min={100} max={220} />
                 <NumberInput label="Weight (kg)" value={state.eligibility.weightKg} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "weightKg", value: v })} min={30} max={250} />
@@ -385,6 +421,27 @@ export function WegovyOralClient() {
                 </div>
               )}
               <Checkbox label="Has at least one weight-related comorbidity (HTN, T2DM, dyslipidaemia, OSA, CVD)" checked={state.eligibility.hasComorbidity} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "hasComorbidity", value: v })} />
+              <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-3 space-y-3">
+                <div>
+                  <p className="text-sm font-semibold text-amber-900">Switching from semaglutide injection</p>
+                  <p className="text-xs text-amber-800 mt-1">PGD v005 requires documented evidence of the current injection dose. Patient self-report is not sufficient. Version 004 required no evidence and covered only the 2.4 mg dose.</p>
+                </div>
+                <Checkbox label="Patient is switching from semaglutide injection" checked={state.eligibility.switchingFromInjection} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "switchingFromInjection", value: v })} />
+                {state.eligibility.switchingFromInjection && (
+                  <div className="space-y-3">
+                    <SelectInput label="Current injection dose, as documented" value={state.eligibility.injectionDose} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "injectionDose", value: v })} options={[{ value: "0.25", label: "0.25 mg weekly" }, { value: "0.5", label: "0.5 mg weekly" }, { value: "1.0", label: "1 mg weekly" }, { value: "1.7", label: "1.7 mg weekly" }, { value: "2.4", label: "2.4 mg weekly" }]} />
+                    <SelectInput label="Evidence seen for that dose" value={state.eligibility.injectionDoseEvidence} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "injectionDoseEvidence", value: v })} options={[{ value: "label", label: "Dispensing label, prescription or repeat slip" }, { value: "clinic-record", label: "Record from the supplying clinic or pharmacy" }, { value: "pen-seen", label: "Patient's own pen or carton, strength legible" }, { value: "prescriber", label: "Confirmation from the prescriber (record name and date)" }, { value: "none", label: "None. Patient self-report only" }]} />
+                    {state.eligibility.injectionDose && state.eligibility.injectionDose !== "2.4" && (
+                      <p className="text-xs font-semibold text-amber-900">
+                        Below 2.4 mg. Do NOT start at 25 mg. Either continue the injection under the original prescriber until 2.4 mg is reached, or start the tablets as a new initiation at 1.5 mg one week after the last injection and titrate monthly. Explain to the patient that this is the only safe route, not a step backwards.
+                      </p>
+                    )}
+                    {state.eligibility.injectionDose === "2.4" && (
+                      <p className="text-xs font-semibold text-amber-900">2.4 mg documented. Start 25 mg once daily, one week after the last injection.</p>
+                    )}
+                  </div>
+                )}
+              </div>
               <TextInput label="List comorbidities" value={state.eligibility.comorbidities} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "comorbidities", value: v })} />
               <Checkbox label="Patient willing to follow diet + exercise plan alongside the medication" checked={state.eligibility.willingLifestyleChange} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "willingLifestyleChange", value: v })} />
               <Checkbox label="Patient has tried ≥6 months of lifestyle changes alone without adequate result" checked={state.eligibility.tried6MonthLifestyle} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "tried6MonthLifestyle", value: v })} />
