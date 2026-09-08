@@ -36,7 +36,7 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
   { slug: 'sti-testing', title: 'STI Testing', subtitle: 'Chlamydia / Gonorrhoea / Syphilis / HIV', category: 'Sexual Health' },
   { slug: 'genital-warts', title: 'Genital Warts', subtitle: 'Imiquimod / Podophyllotoxin', category: 'Sexual Health' },
   { slug: 'herpes-management', title: 'Genital Herpes', subtitle: 'Valaciclovir', category: 'Sexual Health' },
-  { slug: 'prep', title: 'PrEP', subtitle: 'Emtricitabine/Tenofovir', category: 'Sexual Health' },
+  // prep: Retired 8 Sep 2026. See RETIRED_SLUGS.
   { slug: 'gonorrhoea-treatment', title: 'Gonorrhoea Treatment', subtitle: 'Ceftriaxone IM', category: 'Sexual Health' },
 
   // Weight Management
@@ -47,7 +47,7 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
   { slug: 'mysimba', title: 'Mysimba', subtitle: 'Naltrexone/Bupropion', category: 'Weight Management' },
   { slug: 'orlistat', title: 'Orlistat', subtitle: 'Orlistat 120mg', category: 'Weight Management' },
   { slug: 'foundayo', title: 'Foundayo (Orforglipron) Tablets', subtitle: 'Once-daily oral GLP-1, no food or timing restrictions', category: 'Weight Management' },
-  { slug: 'glp1-monitoring', title: 'GLP-1 Monitoring', subtitle: 'Ongoing Monitoring', category: 'Weight Management' },
+  // glp1-monitoring: Retired 8 Sep 2026. See RETIRED_SLUGS.
 
   // Skin
   { slug: 'acne', title: 'Acne', subtitle: 'Adapalene / Lymecycline', category: 'Skin' },
@@ -70,7 +70,7 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
   { slug: 'sore-throat', title: 'Acute Sore Throat', subtitle: 'Phenoxymethylpenicillin', category: 'Acute & Infection' },
   { slug: 'ear-infection', title: 'Acute Otitis Externa', subtitle: 'Ciprofloxacin ear drops / Dexamethasone-neomycin spray', category: 'Acute & Infection' },
   // eye-infections removed from public catalogue — chloramphenicol OTC (Apr 2026)
-  { slug: 'threadworms', title: 'Threadworms', subtitle: 'Mebendazole', category: 'Acute & Infection' },
+  // threadworms: Retired 8 Sep 2026 as a PGD. Mebendazole for threadworm at 2 years and over is a P medicine (Ovex), and a PGD is only required for a POM. Handled as a P sale under pharmacy protocol, following the same ruling made on the ibuprofen arm of the dental PGD. See RETIRED_SLUGS.
   // Corrected 28 Jul 2026: this PGD is the Varivax/Varilrix VACCINATION
   // (matching the signed master document) — an aciclovir label from an
   // early draft had survived here and mis-listed it under Acute & Infection
@@ -84,9 +84,9 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
   { slug: 'chest-service', title: 'Chest Infection Service', subtitle: 'Acute Bacterial Bronchitis (Doxycycline / Amoxicillin / Clarithromycin)', category: 'Respiratory' },
 
   // Cardiovascular
-  { slug: 'hypertension', title: 'Hypertension Monitoring', subtitle: 'Ambulatory BP Monitoring', category: 'Cardiovascular' },
-  { slug: 'statins', title: 'Statins', subtitle: 'Atorvastatin', category: 'Cardiovascular' },
-  { slug: 'diabetes-monitoring', title: 'Diabetes Monitoring', subtitle: 'HbA1c & Review', category: 'Cardiovascular' },
+  // hypertension: Retired 8 Sep 2026. See RETIRED_SLUGS.
+  // statins: Retired 8 Sep 2026. See RETIRED_SLUGS.
+  // diabetes-monitoring: Retired 8 Sep 2026. See RETIRED_SLUGS.
 
   // Mental Health & Wellbeing
   { slug: 'smoking-varenicline', title: 'Smoking Cessation (Varenicline)', subtitle: 'Champix', category: 'Mental Health & Wellbeing' },
@@ -186,33 +186,24 @@ export const COMING_SOON_SLUGS = new Set([
  * with a withdrawal notice. The document is not withdrawn until the file is,
  * because /pgd-documents is served without authentication.
  */
-export const WITHDRAWN_SLUGS = new Set([
-  // Mebendazole suspension stated as 5mg/mL. UK product is 100mg/5mL, i.e.
-  // 20mg/mL, so the stated 20mL dose is 400mg, four times intended, in a
-  // predominantly paediatric service. Withdrawn 7 Sep 2026.
-  'threadworms',
-  // Only the adult Malarone tablet (atovaquone 250mg/proguanil 100mg) is
-  // named, and it is authorised from 11kg. An 11-20kg child needs ONE
-  // RESTORED 7 Sep 2026 at v002, which carries full weight bands
-  // (11-20kg one paediatric 62.5/25mg tablet, 21-30kg two, 31-40kg three,
-  // adult tablet above 40kg only) and worked quantity examples including the
-  // post-travel tail. The ePGD tool still collects no weight, so it now hard
-  // stops on anyone under 18 and tells the pharmacist to work from Appendix 1
-  // of the PGD instead. Remove that stop when the tool captures weight.
-  // Withdrawn on a legal basis rather than a clinical one, 7 Sep 2026.
-  // Arm 2 supplies "Melatonin 1mg, 3mg, 5mg tablets (unlicensed preparations)".
-  // The Human Medicines Regulations 2012 do not permit an unlicensed medicine
-  // to be supplied under a PGD at all, so that arm has never had a lawful
-  // basis and cannot be fixed by editing: it needs a licensed product.
-  // Arm 1 supplies Circadin and states it is indicated "in patients aged 18
-  // years and over". Circadin is licensed for patients aged 55 or over.
-  // Off-label supply under a PGD is permitted where clearly stated and
-  // justified; this arm instead asserts a licence it does not have, so every
-  // patient aged 18 to 54 was supplied off-label without being told.
-  'sleep-melatonin',
-  // Withdrawn 7 Sep 2026 on legal grounds. Methylphenidate (Concerta XL /
-  // Equasym XL) is a Schedule 2 controlled drug.
-  //
+/**
+ * ── Services that are not available, and why ───────────────────────────
+ *
+ * Split into three sets on 8 September 2026 because they are not the same
+ * kind of thing, and the difference matters. A single flat list invited
+ * someone to "restore" an instrument that can never lawfully exist.
+ *
+ * WITHDRAWN_SLUGS is the union of all three and remains the enforcement set:
+ * it is what src/proxy.ts and the document route check. Adding a slug to any
+ * of the three sets below switches the service off; there is no way to put a
+ * slug in one of them and forget to enforce it.
+ */
+
+/**
+ * RETIRED. Not coming back as a PGD. Do not restore these.
+ */
+export const RETIRED_SLUGS = new Set([
+  // Methylphenidate (Concerta XL / Equasym XL) is a Schedule 2 controlled drug.
   // NHS Specialist Pharmacy Service, "Supply and/or administration of
   // Controlled Drugs under a PGD", updated 1 July 2026: "Unless listed below a
   // CD cannot be administered or supplied under a PGD." The Schedule 2 list is
@@ -220,19 +211,69 @@ export const WITHDRAWN_SLUGS = new Set([
   // immediate necessary treatment of a sick or injured person, not for
   // addiction) and ketamine. Methylphenidate is not on it.
   //
-  // So no PGD can lawfully supply methylphenidate, by any staff group. This is
-  // not the pharmacy-technician point raised earlier the same day; that was a
-  // narrower defect and the correction notice issued for it wrongly implied
-  // the rest of the document remained in force. It did not. The instrument
-  // itself cannot carry this medicine.
-  //
-  // The document also states its own legal category as "POM (Prescription Only
-  // Medicine), Schedule 2 Controlled Drug", so the fact was on its face
-  // throughout.
+  // So no PGD can lawfully supply methylphenidate, by any staff group. The
+  // instrument is void rather than defective: there is nothing to rewrite.
+  // The document stated its own legal category as "POM, Schedule 2 Controlled
+  // Drug", so the fact was on its face throughout.
+  // Confirmed permanently retired by Nitin, 8 Sep 2026.
   'adhd-monitoring',
-  // Withdrawn 7 Sep 2026 on Nitin's instruction, "safety first", while the
-  // legal position is confirmed. REVERSIBLE: if testosterone turns out to be
-  // permitted under a PGD, remove these two lines and re-approve.
+
+  // Mebendazole for threadworm at 2 years and over is a P medicine (Ovex
+  // Suspension, Ovex tablets), and a PGD is only required for a POM. Retired
+  // on Nitin's ruling, 8 Sep 2026, following the same reasoning Chris applied
+  // to the ibuprofen arm of the dental PGD: handled instead as a P sale under
+  // pharmacy protocol with a consultation record.
+  //
+  // The withdrawn PGD also carried two defects beyond the dosing error that
+  // caused the withdrawal. It permitted supply in pregnancy in the second and
+  // third trimesters, where the SPC contraindicates mebendazole in pregnancy
+  // outright; and it named cimetidine as the only interaction, omitting
+  // metronidazole, which the SPC says should be avoided with mebendazole
+  // following a Stevens-Johnson syndrome and toxic epidermal necrolysis
+  // outbreak. Both are carried into the pharmacy protocol that replaces it.
+  'threadworms',
+
+  // The five long-term-condition services, retired on Nitin's ruling,
+  // 8 Sep 2026. Withdrawn on 7 Sep on Chris Pilkington's ruling, not because
+  // of the medicines but because of the model: a PGD supplies a defined
+  // product to a defined group without individual prescriber assessment, and
+  // each of these authorised indefinite supply with individual titration and
+  // the interpretation of laboratory results, which is ongoing management of
+  // a long-term condition and not what the instrument is for.
+  //
+  //   statins              atorvastatin 20/40/80mg, indefinite, lipid-driven
+  //   hypertension         amlodipine with a dose-escalation rule
+  //   diabetes-monitoring  titled monitoring; actually initiates and titrates
+  //                        metformin
+  //   prep                 3-monthly testing, ongoing renal monitoring
+  //   glp1-monitoring      titled monitoring; contains a full supply
+  //                        authorisation duplicating the Wegovy PGD with
+  //                        weaker exclusions and a fourfold pen-count error
+  //
+  // The option to rebuild them on a prescriber model (a prescription or
+  // Patient Specific Direction), which would have kept the consultation
+  // tooling and changed only the legal mechanism at the point of supply, was
+  // put to Nitin and declined. They are retired.
+  //
+  // PrEP note retained for the record: stopping HIV pre-exposure prophylaxis
+  // abruptly leaves people exposed, so any pharmacy with a patient on it must
+  // arrange onward supply through a sexual health service rather than simply
+  // stopping. Nitin confirmed on 7 Sep that nobody is currently on PrEP.
+  'statins',
+  'hypertension',
+  'diabetes-monitoring',
+  'prep',
+  'glp1-monitoring',
+])
+
+/**
+ * PAUSED pending an answer from outside this organisation. Do not restore on
+ * anyone's reading of the guidance, including mine.
+ */
+export const PAUSED_SLUGS = new Set([
+  // Paused 7 Sep 2026 on Nitin's instruction, "safety first", while the legal
+  // position is confirmed. REVERSIBLE: if testosterone turns out to be
+  // permitted under a PGD, move these two out and re-approve.
   //
   // Testosterone is a Schedule 4 Part II controlled drug. Part II is the
   // anabolic and androgenic steroids part; Part I is the benzodiazepines and
@@ -246,41 +287,46 @@ export const WITHDRAWN_SLUGS = new Set([
   // A Claude conversation in May 2026 advised Nitin the opposite, that
   // Schedule 4 Part I is excluded and Part II permitted. That is inverted
   // relative to the SPS page. Neither that answer nor this one is a source;
-  // the question is with a human authority. Pending that answer the service is
-  // paused rather than run on a disputed basis.
+  // the question is with a human authority, meaning the indemnity provider or
+  // the RPS. Pending that answer the service stays paused rather than running
+  // on a disputed basis.
+  //
+  // Left paused on 8 Sep 2026: it was put to Nitin alongside the other
+  // withdrawn services and he did not move it.
   'trt',
   'testosterone-women',
-  // Withdrawn 7 Sep 2026 on Chris Pilkington's ruling, with Nitin present.
-  // Not because of the medicine, but because of the model.
+])
+
+/**
+ * BEING REBUILT. Off now, expected back in a different form.
+ */
+export const REBUILDING_SLUGS = new Set([
+  // Withdrawn 7 Sep 2026 on a legal basis rather than a clinical one.
   //
-  // A PGD supplies a defined product to a defined group without individual
-  // prescriber assessment. Each of these authorises indefinite supply with
-  // individual titration and the interpretation of laboratory results, which
-  // is ongoing management of a long-term condition and not what the
-  // instrument is for.
+  // Arm 2 supplied "Melatonin 1mg, 3mg, 5mg tablets (unlicensed
+  // preparations)". The Human Medicines Regulations 2012 do not permit an
+  // unlicensed medicine to be supplied under a PGD at all, so that arm never
+  // had a lawful basis and cannot be fixed by editing. It is being removed
+  // rather than corrected.
   //
-  //   statins              atorvastatin 20/40/80mg, indefinite, lipid-driven
-  //   hypertension         amlodipine with a dose-escalation rule
-  //   diabetes-monitoring  titled monitoring; actually initiates and titrates
-  //                        metformin
-  //   prep                 3-monthly testing, ongoing renal monitoring
-  //   glp1-monitoring      titled monitoring; contains a full supply
-  //                        authorisation duplicating the Wegovy PGD with
-  //                        weaker exclusions and a fourfold pen-count error
+  // Arm 1 supplied Circadin and stated it is indicated "in patients aged 18
+  // years and over". Circadin is licensed from 55. Off-label supply under a
+  // PGD is permitted where it is clearly stated and justified; this arm
+  // instead asserted a licence it does not have, so every patient aged 18 to
+  // 54 was supplied off-label without being told.
   //
-  // REVERSIBLE if these services are rebuilt on a prescriber model (a
-  // prescription or Patient Specific Direction), which keeps the consultation
-  // tooling and changes only the legal mechanism at the point of supply.
-  //
-  // PrEP carries continuity language in its notice. Stopping HIV pre-exposure
-  // prophylaxis abruptly leaves people exposed, so pharmacies are told to
-  // arrange onward supply through a sexual health service rather than simply
-  // stopping.
-  'statins',
-  'hypertension',
-  'diabetes-monitoring',
-  'prep',
-  'glp1-monitoring',
+  // Being rebuilt around Circadin only, on Nitin's ruling of 8 Sep 2026.
+  'sleep-melatonin',
+])
+
+/**
+ * The enforcement set. Union of the three above; do not add slugs here
+ * directly, add them to whichever set describes the reason.
+ */
+export const WITHDRAWN_SLUGS = new Set([
+  ...RETIRED_SLUGS,
+  ...PAUSED_SLUGS,
+  ...REBUILDING_SLUGS,
 ])
 
 /**
