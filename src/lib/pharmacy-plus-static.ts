@@ -109,13 +109,13 @@ const STATIC_RESOURCES: StaticResourceInput[] = [
   // did not. These four replace that combined document, plus a shingles
   // treatment PGD that was previously serving the Shingrix vaccine document.
   {
-    id: 'pph-menacwy-v001',
-    name: 'Meningococcal ACWY PGD v001',
-    description: 'Signed 21 Aug 2026. Standalone MenACWY, separated from the combined travel document. Covers Nimenrix, MenQuadfi and Menveo, whose licensed ages differ, and the Saudi certificate requirements for Hajj and Umrah.',
+    id: 'pph-menacwy-v002',
+    name: 'Meningococcal ACWY PGD v002 (Nimenrix, MenQuadfi and Menveo)',
+    description: 'Signed 7 Sep 2026. Full clinical review. Adds a 15 minute observation period for every patient, the Menveo CRM197 hypersensitivity exclusion, per-product age floors (Nimenrix 6 weeks, MenQuadfi 12 months, Menveo 2 years) and the Saudi certificate requirement that the vaccine be recorded as a conjugate.',
     category: 'PGD',
-    file: 'PPH-MenACWY-PGD-v001.pdf',
-    fileSize: 174000,
-    signedAt: '2026-08-21',
+    file: 'PPH-MenACWY-PGD-v002.pdf',
+    fileSize: 149521,
+    signedAt: '2026-09-07',
   },
   {
     id: 'pph-japanese-encephalitis-v001',
