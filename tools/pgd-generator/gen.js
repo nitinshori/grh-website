@@ -144,6 +144,15 @@ function assertPublishable(d){
   if(d.version!=='v001'&&!d.supersedes) errs.push('supersedes: every version after the first must name what it replaces.');
   if(d.version!=='v001'&&!d.prior) errs.push('prior: every version after the first must carry the previous versions table.');
 
+  // Part 2 of the house format. Twenty documents lost it in the September
+  // rewrites because nothing required it.
+  const g=d.guidelines;
+  if(!g||!g.title||!Array.isArray(g.sections)||!g.sections.length){
+    errs.push('guidelines: every PGD must carry a summary of the governing guidance, part 2 of the house format. Give {title, source, sections:[{h, body:[...]}]}. Name the body that actually governs the condition: NICE, NICE CKS, the Green Book, UKMEC, SDCEP.');
+  } else if(!g.source){
+    errs.push('guidelines.source: name and date the guidance being summarised, so a reader can tell when it goes out of date.');
+  }
+
   // Em dashes, anywhere in the data object.
   const seen=[];
   (function walk(x){
@@ -161,12 +170,43 @@ function assertPublishable(d){
   }
 }
 
+// ── The house format ──────────────────────────────────────────────────────
+//
+// Every Get Real Health PGD has three parts, in this order:
+//
+//   1. WHAT THIS PGD IS FOR, and which medicines it authorises.
+//   2. A SUMMARY OF THE GOVERNING GUIDANCE: NICE, NICE CKS, the Green Book,
+//      UKMEC, SDCEP, or whichever body actually governs the condition.
+//   3. THE PGD ITSELF: the arms, the medicines, the patient information, the
+//      authorisation and the change history.
+//
+// Part 2 is not decoration. It is what lets a pharmacist check the PGD
+// against the guidance it claims to follow, and it is where the reader finds
+// out that a document is out of step with national practice.
+//
+// Twenty documents lost part 2 in the September 2026 rewrites, because the
+// generator did not emit it and nothing checked for it. That is the same
+// mechanism that lost the practitioner page from fifteen. It is now a
+// REQUIRED field: build() refuses without it.
+function guidelineBlock(d){
+  const g=d.guidelines;
+  const out=[new Paragraph({children:[new PageBreak()]}),
+    h(g.title,HeadingLevel.HEADING_1)];
+  if(g.source) out.push(p(g.source,{i:true,color:GREY}));
+  g.sections.forEach(sec=>{
+    out.push(h(sec.h,HeadingLevel.HEADING_2));
+    (sec.body||[]).forEach(x=>out.push(typeof x==='string'?p(x):(x.bullet?bl(x.bullet,x):p(x.text,x))));
+  });
+  return out;
+}
+
 function build(d){
   assertPublishable(d);
   const kids=[p(d.banner,{b:true,color:RED,size:22,align:AlignmentType.CENTER}),p(''),
     h(d.title,HeadingLevel.HEADING_1),
     p(d.strap,{color:GREY})];
   d.intro.forEach(x=>kids.push(typeof x==='string'?p(x):(x.h?h(x.h,HeadingLevel.HEADING_2):(x.bullet?bl(x.bullet,x):p(x.text,x)))));
+  guidelineBlock(d).forEach(k=>kids.push(k));
   d.arms.forEach(a=>armBlock(a).forEach(k=>kids.push(k)));
   if(d.appendix){kids.push(new Paragraph({children:[new PageBreak()]}));d.appendix.forEach(x=>kids.push(typeof x==='string'?p(x):(x.h?h(x.h,HeadingLevel.HEADING_1):(x.bullet?bl(x.bullet,x):(x.tbl?tbl(x.tbl.map(r=>row(r[0],r[1]))):p(x.text,x))))));}
   sig(d).forEach(k=>kids.push(k));

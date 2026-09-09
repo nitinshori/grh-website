@@ -428,14 +428,14 @@ export const REISSUED_PGDS: Record<string, { version: string; date: string }> = 
   'travel-core': { version: 'v002', date: '9 September 2026' },
   'japanese-encephalitis': { version: 'v002', date: '9 September 2026' },
   'hep-ab-travel': { version: 'v003', date: '9 September 2026' },
-  'dental-bridging': { version: 'v004', date: '9 September 2026' },
-  'skin-infection': { version: 'v003', date: '9 September 2026' },
+  'dental-bridging': { version: 'v005', date: '9 September 2026' },
+  'skin-infection': { version: 'v004', date: '9 September 2026' },
   hpv: { version: 'v003', date: '9 September 2026' },
   'meningitis-acwy-travel': { version: 'v003', date: '9 September 2026' },
   'anti-malarials': { version: 'v004', date: '9 September 2026' },
   typhoid: { version: 'v003', date: '9 September 2026' },
-  eczema: { version: 'v003', date: '9 September 2026' },
-  'chest-service': { version: 'v003', date: '9 September 2026' },
+  eczema: { version: 'v004', date: '9 September 2026' },
+  'chest-service': { version: 'v004', date: '9 September 2026' },
   'wound-care': { version: 'v004', date: '9 September 2026' },
   // COVID: v003 named "Comirnaty JN.1" in its operative vaccines table while
   // its own summary page said the 2026/27 formulation was XFG. No pharmacy

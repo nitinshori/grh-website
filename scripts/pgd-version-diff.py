@@ -286,6 +286,14 @@ STRUCTURE = {
         r"name of healthcare professional",
     "organisation adoption block":
         r"adoption (by|and authorisation)|superintendent\s*/\s*clinical lead",
+    # Part 2 of the house format: a summary of the guidance the PGD claims to
+    # follow. Twenty reissued documents lost it, because the generator did not
+    # emit it and no check looked for it. It is what lets a pharmacist see that
+    # a document has drifted from national practice.
+    "guideline summary section":
+        r"summary of (nice|ukmec|the green book|green book|national|sdcep|guidance)"
+        r"|nice\s*/\s*nice cks"
+        r"|guideline summary",
 }
 
 

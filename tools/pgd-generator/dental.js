@@ -120,6 +120,42 @@ const d={
   'This PGD uses metronidazole for penicillin-allergic patients, following SDCEP, which gives it as an alternative in dental infection. NICE CKS and several NHS antimicrobial formularies instead give clarithromycin as the penicillin-allergy alternative for dental abscess, with metronidazole used as an adjunct. Both positions exist in current UK guidance. This document follows SDCEP and states the divergence here rather than leaving a pharmacist to discover it. It should be revisited at the next review.',
  ],
 
+ guidelines:{
+  title:'Summary of SDCEP and NICE CKS guidance for acute dental infection',
+  source:'Scottish Dental Clinical Effectiveness Programme, Drug Prescribing for Dentistry, dental abscess; NICE Clinical Knowledge Summaries, Dental abscess; NHS primary care antimicrobial prescribing guidance. Summarised 9 September 2026.',
+  sections:[
+   {h:'Overview',body:[
+     'An acute dental infection begins in the pulp or the periodontal tissues and is contained, at first, by the immune response and by the anatomy of the tooth.',
+     'The treatment is DRAINAGE and removal of the cause: opening the tooth, extraction, or drainage of a swelling. That is dental treatment, and a pharmacy cannot provide it.',
+     {bullet:'An antibiotic does not drain an abscess and does not remove the cause.'},
+     {bullet:'A walled-off abscess has a poor blood supply, so very little antibiotic reaches the infection.'},
+   ]},
+   {h:'When an antibiotic IS indicated',body:[
+     'SDCEP: antibiotics are required only in cases of SPREADING INFECTION or SYSTEMIC INVOLVEMENT.',
+     'NHS and NICE CKS guidance is to the same effect: antibiotics are not generally indicated for otherwise healthy people with no signs of spreading infection.',
+     {bullet:'Spreading: facial swelling, cellulitis, lymph node involvement.'},
+     {bullet:'Systemic: fever, malaise, rigors. SDCEP takes a temperature above 38C as indicating systemic involvement.'},
+     {bullet:'CKS also supports treating high-risk individuals, such as the immunocompromised or those with poorly controlled diabetes, to reduce the risk of complications.'},
+   ]},
+   {h:'When an antibiotic is NOT indicated',body:[
+     'A localised infection in an otherwise healthy person: pain and tenderness at one tooth, with or without a small amount of adjacent gum swelling, and no fever, no lymphadenopathy and no facial swelling.',
+     'For these patients the mainstay is DENTAL TREATMENT plus ANALGESIA. CKS advises ibuprofen first line, paracetamol where ibuprofen is unsuitable.',
+     'Supplying an antibiotic here does not help the patient and contributes to antimicrobial resistance.',
+   ]},
+   {h:'What is an emergency',body:[
+     'Airway compromise, difficulty swallowing or breathing, drooling, or a change in the voice.',
+     'Swelling of the floor of the mouth or a raised tongue, suggesting Ludwig angina.',
+     'Trismus, periorbital or orbital involvement, rapidly spreading swelling, or signs of sepsis.',
+     'These need 999 or same-day emergency care, not an antibiotic and not a dental appointment.',
+   ]},
+   {h:'How this PGD applies that guidance',body:[
+     'This PGD supplies a BRIDGING antibiotic to the spreading or systemic group only, while they wait for urgent dental assessment, and refers the emergency group immediately.',
+     'It deliberately does NOT supply to the localised group, and says so in terms, because that is what the guidance requires.',
+     'Version 003 of this document had that the wrong way round, which is why version 004 exists.',
+   ]},
+  ]
+ },
+
  arms:[
   arm({
    title:'Amoxicillin, first line',
@@ -246,13 +282,14 @@ const d={
   {bullet:'NICE Medicines Practice Guideline 2 (MPG2): Patient Group Directions, https://www.nice.org.uk/guidance/mpg2'},
  ],
 
- version:'v004',
- supersedes:'Version 003, 8 September 2026',
+ version:'v005',
+ supersedes:'Version 004, 9 September 2026',
  validFrom:'9 September 2026',
  expiry:'31 July 2027',
  sigDate:'9 September 2026',
  chDate:'9 September 2026',
  changes:[
+  'The summary of the governing guidance is restored as part 2 of the document, which is the house format for every Get Real Health PGD: what the PGD is for and which medicines it authorises, then a summary of the guidance that governs the condition, then the PGD itself. Twenty documents lost that section in the September 2026 rewrites, because the generator did not emit it and no check looked for it. It is the section that lets a pharmacist hold the PGD against the guidance it claims to follow, which is exactly how the inverted dental indication should have been caught. It is now a required field: the generator refuses to build a document without it.',
   'THE INDICATION IS RESTORED THE RIGHT WAY ROUND. Version 003 required the ABSENCE of facial swelling, fever, malaise and systemic features, and referred any patient who had them. It therefore authorised an antibiotic for the group SDCEP and NICE CKS say should not receive one, and referred the group that guidance identifies as the indication. Version 004 requires at least one sign of spreading infection or systemic involvement, as version 001 did.',
   'The error came from applying a correct instruction too widely. An adopting pharmacy asked that facial swelling must refer, which is right for swelling that threatens the airway, closes the eye, limits mouth opening or is spreading. Version 003 collapsed that into a rule referring all swelling, and lost the distinction between an emergency and a sign of spread. Version 004 keeps both: Appendix 1 sends emergency swelling to 999 or same-day care, and localised facial swelling without those features is one of the reasons to supply.',
   'The three possible outcomes are now stated once, at the front and in both arms, and the pharmacist must record which one applied and the finding that decided it. Version 003 stated its eligibility rule in four places in three different forms.',
@@ -269,10 +306,11 @@ const d={
   'The amoxicillin course is 5 days. Version 001 supplied 3 days. The change was made in version 002 or 003 and appeared in no change log, so it is recorded here: 5 days is the duration in NICE CKS and NHS antimicrobial guidance for dental infection. Found by comparing this document against the archived version 001 rather than by anyone noticing.',
  ],
  prior:[
+  ['004, 9 September 2026','See the change history of that version. Superseded the same day by v005, which restores the guidance summary section.'],
   ['003, 8 September 2026','Metronidazole arm added for penicillin-allergic adults at the licensed 200mg dose; alcohol handled as an inclusion criterion; interaction exclusions and Cockayne syndrome added; red flags collected into an appendix. The indication was inverted in this version and is corrected in 004.'],
   ['002, 7 September 2026','Full clinical review following feedback from an adopting pharmacy. The ibuprofen arm was removed, ibuprofen being a P medicine for which a PGD is not required. Amoxicillin only, adults 18 and over.'],
   ['001, earlier 2026','Development and issue of new PGD. Amoxicillin and ibuprofen arms.'],
  ],
 };
 
-Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('dental-v004-SIGNED.docx',b);console.log('dental v004 docx bytes',b.length);});
+Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('dental-v005-SIGNED.docx',b);console.log('dental v004 docx bytes',b.length);});

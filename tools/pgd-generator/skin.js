@@ -92,6 +92,37 @@ const d={
   'Where eczema is complicated by MILD, LOCALISED secondary bacterial infection, a patient may receive an oral antibiotic under this PGD and a topical corticosteroid under the Eczema and Dermatitis PGD at the same consultation, both recorded in one consultation record. Where the infection is not mild and localised, or any exclusion here applies, refer and supply neither.',
  ],
 
+ guidelines:{
+  title:'Summary of NICE guidance for skin and soft tissue infection',
+  source:'NICE NG141, Cellulitis and erysipelas: antimicrobial prescribing; NICE NG153, Impetigo: antimicrobial prescribing; NICE Clinical Knowledge Summaries, Cellulitis, Impetigo and Eczema (infected). Summarised 9 September 2026.',
+  sections:[
+   {h:'Overview',body:[
+     'Skin and soft tissue infections in this PGD are impetigo, folliculitis, infected eczema, infected wounds and cellulitis.',
+     'Most are caused by Staphylococcus aureus or Streptococcus pyogenes, which is why flucloxacillin is first line.',
+     'Severity, site and the age of the patient decide whether a pharmacy supply is appropriate at all.',
+   ]},
+   {h:'Cellulitis',body:[
+     {bullet:'NICE NG141: offer flucloxacillin first line. Clarithromycin, erythromycin in pregnancy, or doxycycline where penicillin is unsuitable.'},
+     {bullet:'Mark the extent of the erythema and review, so that spread is recognised rather than guessed at.'},
+     {bullet:'Refer for same-day assessment where the person is systemically unwell, where infection is near the eyes or nose, or where lymphangitis or sepsis is suspected.'},
+     {bullet:'Facial, periorbital and hand cellulitis are outside this PGD entirely.'},
+   ]},
+   {h:'Impetigo',body:[
+     {bullet:'NICE NG153: localised non-bullous impetigo is treated topically. Hydrogen peroxide 1% first line where it is not around the eyes; topical fusidic acid where hydrogen peroxide is unsuitable or ineffective.'},
+     {bullet:'Widespread or bullous impetigo, or impetigo in someone systemically unwell or at high risk of complications, needs an oral antibiotic.'},
+     {bullet:'Topical treatment requires intact or only minimally broken skin: extensively broken skin needs an oral agent.'},
+   ]},
+   {h:'Necrotising fasciitis: the thing not to miss',body:[
+     'Pain out of proportion to the appearance of the skin, rapidly advancing erythema over hours rather than days, crepitus, skin necrosis, bullae or dusky discolouration.',
+     'This is a surgical emergency. It needs emergency assessment now, not a routine referral and not an antibiotic from a pharmacy.',
+   ]},
+   {h:'Children',body:[
+     'Observations in children must be read against paediatric ranges, not adult ones. Appendix 1 of this PGD is age banded for that reason, using NICE NG143 and APLS reference ranges.',
+     'Cellulitis under this PGD is restricted to 12 years and over: it is the highest-acuity condition here and the one most likely to deteriorate.',
+   ]},
+  ]
+ },
+
  arms:[
   {
    title:'Arm 1. Flucloxacillin, first line',
@@ -369,13 +400,14 @@ const d={
   {bullet:'NICE Medicines Practice Guideline 2 (MPG2): Patient Group Directions, https://www.nice.org.uk/guidance/mpg2'},
  ],
 
- version:'v003',
- supersedes:'Version 002, 7 September 2026',
+ version:'v004',
+ supersedes:'Version 003, 9 September 2026',
  validFrom:'9 September 2026',
  expiry:'31 July 2027',
  sigDate:'9 September 2026',
  chDate:'9 September 2026',
  changes:[
+  'The summary of the governing guidance is restored as part 2 of the document, which is the house format for every Get Real Health PGD: what the PGD is for and which medicines it authorises, then a summary of the guidance that governs the condition, then the PGD itself. Twenty documents lost that section in the September 2026 rewrites, because the generator did not emit it and no check looked for it. It is the section that lets a pharmacist hold the PGD against the guidance it claims to follow, which is exactly how the inverted dental indication should have been caught. It is now a required field: the generator refuses to build a document without it.',
   'PAEDIATRIC FLUCLOXACILLIN VOLUME CORRECTED. Version 002 stated "Children 2 to 9 years: 250mg four times daily (10mL of the 250mg/5mL suspension)". 250mg of that suspension is 5 mL. A pharmacy following the bracket would have given a two-year-old 2 grams a day and run out of suspension halfway through. The quantity box was calculated correctly for 5 mL, which is how the error was found. Raised by an adopting pharmacy.',
   'OBSERVATIONS ARE NOW AGE-BANDED. Version 002 applied one set of adult thresholds, copied from the Acute Bacterial Bronchitis PGD so the two would agree, without noticing that that PGD starts at 12 and this one at 2. Pulse above 110 and respiratory rate 22 or above are normal for a well three-year-old, and systolic below 100 would refer almost every pre-schooler. Appendix 1 now has three bands, sourced to NICE NG143 and APLS reference ranges, and says plainly not to apply an adult blood pressure threshold to a small child.',
   'CELLULITIS IS RESTRICTED TO 12 YEARS AND OVER. It is the highest-acuity condition in this document and the one most likely to deteriorate; in a younger child it needs assessment rather than a pharmacy supply. Impetigo, folliculitis, infected eczema and infected wounds remain available from 2 years.',
@@ -395,9 +427,10 @@ const d={
   'This change history is itemised. Version 002 recorded only "Full clinical review and reissue", which is why an adopting pharmacy had to compare the two versions line by line to find the errors above.',
  ],
  prior:[
+  ['003, 9 September 2026','See the change history of that version. Superseded the same day by v004, which restores the guidance summary section.'],
   ['002, 7 September 2026','Full clinical review and reissue. Three arms restructured, observation thresholds and necrotising fasciitis features introduced, paediatric dosing moved to fixed doses and weight bands. Introduced the errors corrected in 003.'],
   ['001, 4 January 2026','Development and issue of new PGD.'],
  ],
 };
 
-Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('skin-v003-SIGNED.docx',b);console.log('skin v003 docx bytes',b.length);});
+Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('skin-v004-SIGNED.docx',b);console.log('skin v003 docx bytes',b.length);});

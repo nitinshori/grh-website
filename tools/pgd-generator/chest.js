@@ -119,6 +119,34 @@ const d={
   {bullet:'One course per episode. A second course is not authorised under this PGD.'},
  ],
 
+ guidelines:{
+  title:'Summary of NICE guidance for acute cough and acute bronchitis',
+  source:'NICE NG120, Cough (acute): antimicrobial prescribing; NICE Clinical Knowledge Summaries, Chest infections in adults. Summarised 9 September 2026.',
+  sections:[
+   {h:'Overview',body:[
+     'Acute cough is usually caused by a viral upper respiratory tract infection or by acute bronchitis, and is usually SELF LIMITING.',
+     'A cough from acute bronchitis commonly lasts around three weeks, and that duration alone is not a reason to treat.',
+     'Purulent sputum on its own does not indicate a bacterial infection needing an antibiotic.',
+   ]},
+   {h:'What NICE advises',body:[
+     {bullet:'DO NOT routinely offer an antibiotic for acute cough in an otherwise healthy adult. Give advice on the expected duration and on self care.'},
+     {bullet:'CONSIDER an antibiotic where the person is systemically very unwell, or has symptoms and signs suggesting a serious illness or complication such as pneumonia.'},
+     {bullet:'CONSIDER an antibiotic where the person is at higher risk of complications: significant comorbidity, immunosuppression, or being older and frail.'},
+     {bullet:'DOXYCYCLINE is first choice in adults. Amoxicillin is a first-choice alternative. Clarithromycin or erythromycin are alternatives where the first choice is unsuitable, erythromycin being the option used in pregnancy.'},
+   ]},
+   {h:'Recognising pneumonia rather than bronchitis',body:[
+     'Focal chest signs, such as a dull percussion note, bronchial breathing, or coarse crackles that do not clear on coughing, together with any systemic feature, suggest pneumonia.',
+     'Pneumonia is not covered by this PGD and needs assessment the same day.',
+     'CRB-65 is a severity score for community acquired pneumonia. This PGD uses it as a safety net, deliberately WITHOUT the age point, and Appendix 1 explains why.',
+   ]},
+   {h:'How this PGD applies that guidance',body:[
+     'The inclusion criteria are deliberately narrow: purulent sputum PLUS either a higher-risk comorbidity or symptoms beyond 14 days.',
+     'Most people presenting with an acute cough will not meet them, and that is the guidance working rather than the service failing.',
+     'Every observation in Appendix 1 must be measured before any supply, and anything outside them refers.',
+   ]},
+  ]
+ },
+
  arms:[
   {
    title:'Arm 1. Doxycycline, first line, adults',
@@ -297,13 +325,14 @@ const d={
   {bullet:'NICE Medicines Practice Guideline 2 (MPG2): Patient Group Directions, https://www.nice.org.uk/guidance/mpg2'},
  ],
 
- version:'v003',
- supersedes:'Version 002, 7 September 2026',
+ version:'v004',
+ supersedes:'Version 003, 9 September 2026',
  validFrom:'9 September 2026',
  expiry:'31 July 2027',
  sigDate:'9 September 2026',
  chDate:'9 September 2026',
  changes:[
+  'The summary of the governing guidance is restored as part 2 of the document, which is the house format for every Get Real Health PGD: what the PGD is for and which medicines it authorises, then a summary of the guidance that governs the condition, then the PGD itself. Twenty documents lost that section in the September 2026 rewrites, because the generator did not emit it and no check looked for it. It is the section that lets a pharmacist hold the PGD against the guidance it claims to follow, which is exactly how the inverted dental indication should have been caught. It is now a required field: the generator refuses to build a document without it.',
   'THE AGE 65 CONTRADICTION IS RESOLVED. Version 002 listed age 65 and over as a qualifying comorbidity in the inclusion criteria and required a CRB-65 score of 0 in the next bullet. CRB-65 scores 1 point for being 65 or over and a score of 1 was an exclusion, so every patient in that group was included and excluded by consecutive bullets, and was directed to same-day referral for what might be a well patient with a productive cough. The score used in this service is now confusion, respiratory rate and blood pressure only, with the age point deliberately not applied, and the reason stated in Appendix 1. Raised by an adopting pharmacy.',
   'Dropping the age point is paired with an explicit instruction: in any patient 65 or over, have a lower threshold for referral, take the whole picture rather than the numbers, and record that you considered it. The safety net is not simply removed.',
   'ARM 3 NOW STATES ONE RULE. Version 002 stated its eligibility four different ways: the heading said penicillin allergy OR doxycycline unsuitable; the subtitle said doxycycline AND amoxicillin both unsuitable; the scope bullet and the inclusion criteria said doxycycline unsuitable AND penicillin allergy. Two OR-rules, two AND-rules, three different drug pairs. The rule is now written once at the front of the document and repeated verbatim in each arm.',
@@ -321,9 +350,10 @@ const d={
   'This change history is itemised. Version 002 recorded only "Full clinical review and reissue", which is why an adopting pharmacy had to compare the two versions line by line to find the contradictions above.',
  ],
  prior:[
+  ['003, 9 September 2026','See the change history of that version. Superseded the same day by v004, which restores the guidance summary section.'],
   ['002, 7 September 2026','Full clinical review and reissue. Restructured into three arms with observation thresholds and a CRB-65 gate. Introduced the contradictions corrected in 003.'],
   ['001, earlier 2026','Development and issue of new PGD.'],
  ],
 };
 
-Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('chest-v003-SIGNED.docx',b);console.log('chest v003 docx bytes',b.length);});
+Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('chest-v004-SIGNED.docx',b);console.log('chest v003 docx bytes',b.length);});

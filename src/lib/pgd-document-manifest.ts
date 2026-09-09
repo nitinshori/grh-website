@@ -18,7 +18,7 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   // v003 signed 9 Sep 2026. v002 listed age 65 and over as a qualifying
   // comorbidity and required a CRB-65 of 0 in the next bullet, and CRB-65
   // scores a point for being 65, so the whole group was refused.
-  "chest-service": "chest-service-v003.pdf",
+  "chest-service": "chest-service-v004.pdf",
   "chickenpox": "chickenpox.pdf",
   "cold-sores": "cold-sores.pdf",
   "copd": "copd.pdf",
@@ -29,13 +29,13 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   // ABSENCE of swelling, fever and systemic features, so it authorised an
   // antibiotic for the cohort guidance says should not have one and referred
   // the cohort that is the indication. Raised by an adopting pharmacy.
-  "dental-bridging": "dental-bridging-v004.pdf",
+  "dental-bridging": "dental-bridging-v005.pdf",
   "diabetes-monitoring": "diabetes-monitoring.pdf",
   "ear-infection": "ear-infection-v003.pdf",
   // v003 signed 9 Sep 2026. v002 left moderate eczema on the face or flexures
   // with no supply route, capped facial use at 7 days in an exclusion bullet
   // while its duration box allowed 4 weeks, and dropped the fungal exclusion.
-  "eczema": "eczema-v003.pdf",
+  "eczema": "eczema-v004.pdf",
   "ed": "ed-v003.pdf",
   "emergency-contraception": "emergency-contraception.pdf",
   "eye-infections": "eye-infections.pdf",
@@ -89,7 +89,7 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   // v003 signed 9 Sep 2026. v002 told staff to give a 2 year old 10 mL of a
   // 250mg/5mL suspension against a 250mg dose, which is double, and applied
   // adult observation thresholds to a service starting at age 2.
-  "skin-infection": "skin-infection-v003.pdf",
+  "skin-infection": "skin-infection-v004.pdf",
   "cellulitis": "cellulitis.pdf",
   "fungal-infection": "fungal-infection.pdf",
   "psoriasis": "psoriasis-v003.pdf",
@@ -163,10 +163,10 @@ export const PGD_HUBRX_FILES: Record<string, string> = {
   // ABSENCE of swelling, fever and systemic features, so it authorised an
   // antibiotic for the cohort guidance says should not have one and referred
   // the cohort that is the indication. Raised by an adopting pharmacy.
-  "dental-bridging": "dental-bridging-v004.pdf",
+  "dental-bridging": "dental-bridging-v005.pdf",
   "diabetes-monitoring": "diabetes-monitoring 2.pdf",
   "ear-infection": "ear-infection-v003.pdf",
-  "eczema": "eczema-v003.pdf",
+  "eczema": "eczema-v004.pdf",
   "ed": "ed-v003.pdf",
   "emergency-contraception": "emergency-contraception 2.pdf",
   "eye-infections": "eye-infections 2.pdf",

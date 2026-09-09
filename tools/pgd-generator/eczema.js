@@ -112,6 +112,39 @@ const d={
   'Where eczema is complicated by MILD, LOCALISED secondary bacterial infection, a patient may receive a topical corticosteroid under this PGD and an oral antibiotic under the Skin and Soft Tissue Infection PGD at the same consultation, both recorded in one consultation record. Where the infection is not mild and localised, or any red flag from the infection PGD is present, refer and supply neither.',
  ],
 
+ guidelines:{
+  title:'Summary of NICE and NICE CKS guidance for eczema and dermatitis',
+  source:'NICE CG57, Atopic eczema in under 12s; NICE Clinical Knowledge Summaries, Eczema atopic; MHRA Drug Safety Update on the fire risk with emollients. Summarised 9 September 2026.',
+  sections:[
+   {h:'Overview',body:[
+     'Eczema, or dermatitis, is a chronic relapsing inflammatory skin condition characterised by itch, dryness and inflammation.',
+     'Common types include atopic eczema, contact dermatitis (irritant or allergic), seborrhoeic dermatitis, and discoid and varicose eczema.',
+     'Assess severity, distribution, triggers and the effect on sleep and daily life. Look for signs of infection: weeping, crusting, or sudden worsening.',
+   ]},
+   {h:'Emollients are the foundation',body:[
+     'Emollients are first line for everyone, used liberally and frequently, and continued even when the skin is clear.',
+     'Ointments for dry skin, creams and lotions where a greasy product is not tolerated.',
+     {bullet:'FIRE RISK: emollients, including paraffin-free products, soak into clothing and bedding and make them burn faster. This is an MHRA safety issue and must be counselled on every time.',b:true},
+   ]},
+   {h:'Topical corticosteroids',body:[
+     'Used for flares, at the lowest potency that will control the flare and for the shortest time.',
+     {bullet:'Mild: hydrocortisone 1%. Moderate: clobetasone butyrate 0.05%. Potent: betamethasone valerate 0.1%.'},
+     {bullet:'Potency is chosen by SEVERITY and by SITE. Thin skin, meaning the face, eyelids, flexures and genital skin, needs a lower potency and a shorter course.'},
+     {bullet:'Step up and down according to response. Measure the amount in fingertip units.'},
+   ]},
+   {h:'What must be excluded before a steroid is supplied',body:[
+     'Untreated fungal infection. A topical steroid on tinea produces tinea incognito: the rash spreads, loses its defined edge and becomes much harder to diagnose.',
+     'Eczema herpeticum: rapidly worsening, painful, punched-out or clustered vesicular lesions, or a systemically unwell patient. This is an emergency.',
+     'Rosacea, perioral dermatitis and acne, all of which a topical steroid makes worse.',
+   ]},
+   {h:'Infected eczema',body:[
+     'Signs are weeping, crusting, sudden worsening or fever.',
+     'Mild localised infection may be treated alongside the corticosteroid; this PGD provides for that jointly with the Skin and Soft Tissue Infection PGD.',
+     'Widespread or systemic infection needs an oral antibiotic and assessment, not a topical steroid alone.',
+   ]},
+  ]
+ },
+
  arms:[
   {
    title:'Arm 1. Clobetasone butyrate 0.05%, moderate potency',
@@ -256,13 +289,14 @@ const d={
   {bullet:'NICE Medicines Practice Guideline 2 (MPG2): Patient Group Directions, https://www.nice.org.uk/guidance/mpg2'},
  ],
 
- version:'v003',
- supersedes:'Version 002, 7 September 2026',
+ version:'v004',
+ supersedes:'Version 003, 9 September 2026',
  validFrom:'9 September 2026',
  expiry:'31 July 2027',
  sigDate:'9 September 2026',
  chDate:'9 September 2026',
  changes:[
+  'The summary of the governing guidance is restored as part 2 of the document, which is the house format for every Get Real Health PGD: what the PGD is for and which medicines it authorises, then a summary of the guidance that governs the condition, then the PGD itself. Twenty documents lost that section in the September 2026 rewrites, because the generator did not emit it and no check looked for it. It is the section that lets a pharmacist hold the PGD against the guidance it claims to follow, which is exactly how the inverted dental indication should have been caught. It is now a required field: the generator refuses to build a document without it.',
   'MODERATE ECZEMA ON THE FACE, FLEXURES OR GENITAL SKIN NOW HAS A SUPPLY ROUTE. Version 002 told staff, on the scope page and again in Arm 2, to supply clobetasone under Arm 1 for that patient, while Arm 1 admitted only MILD disease. The patient therefore had no route. Arm 1 now covers mild disease at any permitted site and moderate disease at those sites, capped at 7 days. Raised by an adopting pharmacy.',
   'THE FACIAL DURATION CONTRADICTION IS RESOLVED. The 7 day cap for clobetasone on the face, flexures and genital skin appeared only inside an exclusion bullet, while the maximum treatment period box for the same arm permitted 4 weeks of continuous daily treatment. The cap is now in the duration box, the counselling and the records.',
   'QUANTITIES ARE SIZED TO THE TREATED AREA, with the arithmetic shown in Appendix 1. Version 002 offered 15g and 30g against a maximum treatable area of 10% of body surface; at 2.5g per application twice daily the 30g maximum lasts six days, against a document permitting four weeks. Supplies are now 15g, 30g and 60g by area.',
@@ -280,9 +314,10 @@ const d={
   'This change history is itemised. Version 002 recorded only "Full clinical review and reissue", which is why an adopting pharmacy had to compare the two versions line by line to find the contradictions above.',
  ],
  prior:[
+  ['003, 9 September 2026','See the change history of that version. Superseded the same day by v004, which restores the guidance summary section.'],
   ['002, 7 September 2026','Full clinical review and reissue. Restructured into a clobetasone arm and a betamethasone valerate 0.1% arm, concurrent supply for infected eczema introduced, pimecrolimus, hydrocortisone and fusidic acid removed. Introduced the contradictions corrected in 003.'],
   ['001, 1 November 2025','Development and issue of new PGD.'],
  ],
 };
 
-Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('eczema-v003-SIGNED.docx',b);console.log('eczema v003 docx bytes',b.length);});
+Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('eczema-v004-SIGNED.docx',b);console.log('eczema v003 docx bytes',b.length);});
