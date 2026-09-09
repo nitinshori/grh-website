@@ -52,6 +52,11 @@ type VaccineProduct =
   | "twinrix-paediatric"
   | "havrix-monodose"
   | "havrix-junior"
+  // Avaxim added 9 Sep 2026 with document v003. v002 authorised Havrix only,
+  // so a pharmacy holding Avaxim, a widely stocked UK-licensed hepatitis A
+  // vaccine, could not use it. Raised twice by an adopting pharmacy.
+  | "avaxim-adult"
+  | "avaxim-junior"
   | "engerix-b-adult"
   | "engerix-b-paediatric"
 
@@ -228,7 +233,8 @@ export function HepABClient() {
       )) ||
     // Neomycin anaphylaxis blocks Hep A-containing vaccines
     (state.eligibility.neomycinAllergy &&
-      ["twinrix-adult", "twinrix-paediatric", "havrix-monodose", "havrix-junior"].includes(
+      ["twinrix-adult", "twinrix-paediatric", "havrix-monodose", "havrix-junior",
+       "avaxim-adult", "avaxim-junior"].includes(
         state.eligibility.vaccineChoice
       ))
 
@@ -238,9 +244,13 @@ export function HepABClient() {
     switch (state.eligibility.vaccineChoice) {
       case "twinrix-adult":
       case "havrix-monodose":
+      // Avaxim adult is 16 and over; its SPC says it is not recommended at
+      // 15 or under for want of safety and efficacy data.
+      case "avaxim-adult":
         return age >= 16
       case "twinrix-paediatric":
       case "havrix-junior":
+      case "avaxim-junior":
         return age >= 1 && age <= 15
       case "engerix-b-adult":
         return age >= 16
@@ -473,6 +483,12 @@ export function HepABClient() {
                   <option value="havrix-junior">
                     Havrix Junior (0.5 mL IM, 1&ndash;15y)
                   </option>
+                  <option value="avaxim-adult">
+                    Avaxim 160 EU (0.5 mL IM, &ge;16y)
+                  </option>
+                  <option value="avaxim-junior">
+                    Avaxim Junior 80 EU (0.5 mL IM, 1&ndash;15y)
+                  </option>
                 </optgroup>
                 <optgroup label="Hepatitis B only">
                   <option value="engerix-b-adult">
@@ -617,6 +633,8 @@ export function HepABClient() {
                 <option value="twinrix-paediatric">Twinrix Paediatric</option>
                 <option value="havrix-monodose">Havrix Monodose</option>
                 <option value="havrix-junior">Havrix Junior</option>
+                <option value="avaxim-adult">Avaxim 160 EU</option>
+                <option value="avaxim-junior">Avaxim Junior 80 EU</option>
                 <option value="engerix-b-adult">Engerix-B Adult</option>
                 <option value="engerix-b-paediatric">Engerix-B Paediatric</option>
               </select>

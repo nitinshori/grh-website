@@ -416,6 +416,18 @@ export const PGD_CATEGORIES = [
  * Remove an entry once it is no longer newsworthy, roughly 3 months.
  */
 export const REISSUED_PGDS: Record<string, { version: string; date: string }> = {
+  'meningitis-b': { version: 'v003', date: '9 September 2026' },
+  'yellow-fever': { version: 'v002', date: '9 September 2026' },
+  'junior-travel': { version: 'v003', date: '9 September 2026' },
+  'mmr': { version: 'v002', date: '9 September 2026' },
+  'shingles-vaccine': { version: 'v002', date: '9 September 2026' },
+  'pneumococcal': { version: 'v002', date: '9 September 2026' },
+  'hep-b-occupational': { version: 'v002', date: '9 September 2026' },
+  'dengue': { version: 'v002', date: '9 September 2026' },
+  'rsv': { version: 'v002', date: '9 September 2026' },
+  'travel-core': { version: 'v002', date: '9 September 2026' },
+  'japanese-encephalitis': { version: 'v002', date: '9 September 2026' },
+  'hep-ab-travel': { version: 'v003', date: '9 September 2026' },
   'dental-bridging': { version: 'v004', date: '9 September 2026' },
   'skin-infection': { version: 'v003', date: '9 September 2026' },
   hpv: { version: 'v003', date: '9 September 2026' },

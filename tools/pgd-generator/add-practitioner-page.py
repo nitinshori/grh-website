@@ -215,6 +215,24 @@ def prepend_change_entry(d, text=CHANGE_ENTRY):
     return False
 
 
+def append_section(d, heading, bullets):
+    """
+    Append a headed section of bullets to the end of the document.
+
+    Used for the vaccine safety requirements that a document is missing:
+    the observation period, the cold chain excursion procedure, sharps
+    disposal, and consent in children and young people. Appending is the
+    honest option where there is no generator source: it adds what is
+    missing without touching, and without risking, anything already there.
+    """
+    p = d.add_paragraph()
+    p.add_run().add_break(WD_BREAK.PAGE)
+    h = d.add_paragraph()
+    h.add_run(heading).bold = True
+    for b in bullets:
+        d.add_paragraph(b)
+
+
 def append_sections(d, table_style):
     p = d.add_paragraph()
     p.add_run().add_break(WD_BREAK.PAGE)
@@ -287,6 +305,10 @@ def main():
                     help='restore a clause: "Row label::text to append"')
     ap.add_argument("--extra-change", action="append", default=[],
                     help="an additional itemised change history entry")
+    ap.add_argument("--section", action="append", default=[],
+                    help='append a section: "Heading::bullet||bullet||bullet"')
+    ap.add_argument("--no-practitioner-page", action="store_true",
+                    help="for documents that already carry one")
     a = ap.parse_args()
 
     d = docx.Document(a.docx)
@@ -301,12 +323,17 @@ def main():
             nth = int(nth_s)
         restored += add_to_row(d, label.strip(), rest.strip(), nth)
 
+    for spec in a.section:
+        heading, _, body = spec.partition("::")
+        append_section(d, heading.strip(), [b.strip() for b in body.split("||") if b.strip()])
+
     dashes = strip_em_dashes(d)
     changed = bump_version(d, a.version, a.supersedes, a.date, a.old_date)
     for extra in reversed(a.extra_change):
         prepend_change_entry(d, extra)
     entry = prepend_change_entry(d)
-    append_sections(d, style)
+    if not a.no_practitioner_page:
+        append_sections(d, style)
     d.save(a.out)
 
     print(f"{a.out}: em dashes fixed {dashes}, clauses restored {restored}, "

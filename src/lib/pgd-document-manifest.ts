@@ -24,7 +24,7 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   "copd": "copd.pdf",
   // 2026/27 season v003, signed 6 Aug 2026 with C. Pilkington's review edits
   "covid-booster": "covid-2026-27-v005.pdf",
-  "dengue": "dengue.pdf",
+  "dengue": "dengue-v002.pdf",
   // v004 signed 9 Sep 2026. v003 had the indication inverted: it required the
   // ABSENCE of swelling, fever and systemic features, so it authorised an
   // antibiotic for the cohort guidance says should not have one and referred
@@ -49,8 +49,8 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   // Signed 21 Aug 2026. hep-ab-travel was the only slug in the catalogue
   // with no document at all: the tool was live and assignable, so every
   // consultation through it was a supply with nothing authorising it.
-  "hep-ab-travel": "hep-ab-travel-v001.pdf",
-  "hep-b-occupational": "hep-b-occupational.pdf",
+  "hep-ab-travel": "hep-ab-travel-v003.pdf",
+  "hep-b-occupational": "hep-b-occupational-v002.pdf",
   "herpes-management": "herpes-management.pdf",
   // v002 signed 8 Sep 2026. v001 covered all sexes in its eligibility text
   // but the consultation tool required a "patient is female" tick, so the
@@ -62,11 +62,11 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   // Split apart 21 Aug 2026. These three slugs previously all resolved to a
   // single combined Ixiaro / Rabies / MenACWY document, so a pharmacy
   // adopting one was signing for all three. Raised by PPH.
-  "japanese-encephalitis": "japanese-encephalitis-v001.pdf",
+  "japanese-encephalitis": "japanese-encephalitis-v002.pdf",
   "meningitis-acwy-travel": "meningitis-acwy-travel-v003.pdf",
   // v002 signed 14 Aug 2026: covers Bexsero and Trumenba
-  "meningitis-b": "meningitis-b-v002.pdf",
-  "mmr": "mmr.pdf",
+  "meningitis-b": "meningitis-b-v003.pdf",
+  "mmr": "mmr-v002.pdf",
   // v002 signed 6 Aug 2026 (PPH clinical review)
   "mounjaro": "mounjaro-v002.pdf",
   "mysimba": "mysimba.pdf",
@@ -75,14 +75,14 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   // in children are now same-day referral, not a PGD supply.
   "paediatric-uti": "paediatric-uti-v002.pdf",
   "period-delay": "period-delay-v003.pdf",
-  "pneumococcal": "pneumococcal.pdf",
+  "pneumococcal": "pneumococcal-v002.pdf",
   "postnatal-contraception": "postnatal-contraception.pdf",
   "premature-ejaculation": "premature-ejaculation.pdf",
   "prep": "prep.pdf",
   "rabies": "rabies-v004.pdf",
   "recurrent-uti": "recurrent-uti.pdf",
   "rosacea": "rosacea.pdf",
-  "rsv": "rsv.pdf",
+  "rsv": "rsv-v002.pdf",
   "saxenda": "saxenda.pdf",
   // GRH-signed masters (Nitin Shori + Chris Pilkington). Originally issued
   // to PPH; promoted to masters Aug 2026 so all pharmacies can use them.
@@ -97,7 +97,7 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   // shingles-treatment previously served the Shingrix VACCINE document, which
   // contains no antiviral at all. Now a genuine antiviral treatment PGD.
   "shingles-treatment": "shingles-treatment-v001.pdf",
-  "shingles-vaccine": "shingles-vaccine.pdf",
+  "shingles-vaccine": "shingles-vaccine-v002.pdf",
   "sleep-melatonin": "sleep-melatonin-v003.pdf",
   "smoking-nrt": "smoking-nrt.pdf",
   "smoking-varenicline": "smoking-varenicline.pdf",
@@ -106,12 +106,12 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   "sti-testing": "sti-testing.pdf",
   "threadworms": "threadworms.pdf",
   "thrush": "thrush.pdf",
-  "travel-core": "travel-core.pdf",
+  "travel-core": "travel-core-v002.pdf",
   // typhoid is covered by the signed Travel Health Core Package PGD (Hep A + Typhoid + Cholera)
   "typhoid": "typhoid-v003.pdf",
   // v002 signed 6 Aug 2026 (Nitin Shori + Chris Pilkington)
   "tetanus": "tetanus-v004.pdf",
-  "junior-travel": "junior-travel-v002.pdf",
+  "junior-travel": "junior-travel-v003.pdf",
   // signed 13 Jul 2026 (Nitin Shori + Chris Pilkington)
   "trt": "trt.pdf",
   "travellers-diarrhoea": "travellers-diarrhoea.pdf",
@@ -124,7 +124,7 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   // corrected, MHRA Jan 2026 pancreatitis warning, tirzepatide clause removed.
   "wegovy-oral": "wegovy-oral-v006.pdf",
   // signed 14 Aug 2026 (Nitin Shori + Chris Pilkington)
-  "yellow-fever": "yellow-fever.pdf",
+  "yellow-fever": "yellow-fever-v002.pdf",
   "foundayo": "foundayo-v002.pdf",
   // v003 signed 9 Sep 2026: targeted correction of a doubled paediatric
   // flucloxacillin volume, the same error as the skin infection PGD, copied
@@ -185,9 +185,9 @@ export const PGD_HUBRX_FILES: Record<string, string> = {
   // Split 21 Aug 2026: the HubRx copies were duplicates of the same combined
   // document, so they point at the new standalone masters rather than being
   // re-branded copies of content that was wrong.
-  "japanese-encephalitis": "japanese-encephalitis-v001.pdf",
+  "japanese-encephalitis": "japanese-encephalitis-v002.pdf",
   "meningitis-acwy-travel": "meningitis-acwy-travel-v003.pdf",
-  "meningitis-b": "meningitis-b-v002.pdf",
+  "meningitis-b": "meningitis-b-v003.pdf",
   "mmr": "mmr 2.pdf",
   "mounjaro": "mounjaro-v002.pdf",
   "mysimba": "mysimba 2.pdf",
