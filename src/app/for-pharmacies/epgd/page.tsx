@@ -29,7 +29,6 @@ const epgds = [
 
   // ── Sexual Health ──
   { slug: 'sti-testing', title: 'STI Testing & Treatment', subtitle: 'Chlamydia / Gonorrhoea / Syphilis', category: 'Sexual Health', color: 'bg-fuchsia-500' },
-  { slug: 'prep', title: 'HIV PrEP', subtitle: 'Tenofovir / Emtricitabine Monitoring', category: 'Sexual Health', color: 'bg-fuchsia-500' },
   { slug: 'gonorrhoea-treatment', title: 'Gonorrhoea Treatment', subtitle: 'IM Ceftriaxone Protocol', category: 'Sexual Health', color: 'bg-fuchsia-500' },
   { slug: 'herpes-management', title: 'Genital Herpes Management', subtitle: 'Aciclovir / Valaciclovir', category: 'Sexual Health', color: 'bg-fuchsia-500' },
   { slug: 'genital-warts', title: 'Genital Warts', subtitle: 'Podophyllotoxin / Imiquimod', category: 'Sexual Health', color: 'bg-fuchsia-500' },
@@ -41,7 +40,6 @@ const epgds = [
   { slug: 'saxenda', title: 'Saxenda (Liraglutide)', subtitle: 'GLP-1 RA Daily Injection', category: 'Weight Management', color: 'bg-emerald-500' },
   { slug: 'mysimba', title: 'Mysimba', subtitle: 'Naltrexone / Bupropion Oral', category: 'Weight Management', color: 'bg-emerald-500' },
   { slug: 'orlistat', title: 'Orlistat', subtitle: 'Lipase Inhibitor with BMI Check', category: 'Weight Management', color: 'bg-emerald-500' },
-  { slug: 'glp1-monitoring', title: 'GLP-1 Monitoring Follow-Up', subtitle: 'Weight, Side Effects & Dose Titration', category: 'Weight Management', color: 'bg-emerald-500' },
 
   // ── Skin ──
   { slug: 'acne', title: 'Acne Treatment', subtitle: 'Topical Retinoids / Antibiotics', category: 'Skin', color: 'bg-amber-500' },
@@ -71,16 +69,12 @@ const epgds = [
   { slug: 'hayfever', title: 'Hayfever & Allergic Rhinitis', subtitle: 'Fexofenadine / Nasal Steroids', category: 'Respiratory', color: 'bg-cyan-500' },
 
   // ── Cardiovascular ──
-  { slug: 'hypertension', title: 'Hypertension Monitoring', subtitle: 'ABPM & Lifestyle with Referral', category: 'Cardiovascular', color: 'bg-red-500' },
-  { slug: 'statins', title: 'Statins & Lipid Management', subtitle: 'Atorvastatin / Rosuvastatin', category: 'Cardiovascular', color: 'bg-red-500' },
-  { slug: 'diabetes-monitoring', title: 'Diabetes Monitoring', subtitle: 'HbA1c Review & Medication Check', category: 'Cardiovascular', color: 'bg-red-500' },
 
   // ── Mental Health ──
   { slug: 'smoking-varenicline', title: 'Smoking Cessation (Varenicline)', subtitle: 'Champix with Fagerström Score', category: 'Mental Health', color: 'bg-teal-500' },
   { slug: 'smoking-nrt', title: 'Smoking Cessation (NRT)', subtitle: 'Patches, Gum & Inhalators', category: 'Mental Health', color: 'bg-teal-500' },
   { slug: 'anxiety-propranolol', title: 'Anxiety (Propranolol)', subtitle: 'Situational Anxiety / Performance', category: 'Mental Health', color: 'bg-teal-500' },
   { slug: 'sleep-melatonin', title: 'Sleep (Melatonin)', subtitle: 'Short-Term Insomnia Management', category: 'Mental Health', color: 'bg-teal-500' },
-  { slug: 'adhd-monitoring', title: 'ADHD Monitoring', subtitle: 'Shared-Care Medication Review', category: 'Mental Health', color: 'bg-teal-500' },
 
   // ── Vaccines ──
   { slug: 'flu', title: 'Flu Vaccination', subtitle: 'Private Flu Vaccine Administration', category: 'Vaccines', color: 'bg-sky-500' },

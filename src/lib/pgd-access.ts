@@ -245,6 +245,11 @@ export const RETIRED_SLUGS = new Set([
   // pharmacy's record can never resolve to anything.
   'threadworms',
 
+  // 9 Sep 2026: ADHD, diabetes, GLP-1 monitoring, hypertension, PrEP and
+  // statins removed from the platform entirely on Nitin's instruction, the
+  // same as threadworms: routes, documents, catalogue entries, training
+  // modules, comparison rows. Slugs stay here as tombstones only.
+  //
   // The five long-term-condition services, retired on Nitin's ruling,
   // 8 Sep 2026. Withdrawn on 7 Sep on Chris Pilkington's ruling, not because
   // of the medicines but because of the model: a PGD supplies a defined

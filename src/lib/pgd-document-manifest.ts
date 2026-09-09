@@ -3,7 +3,6 @@
 // The " 2" variants are the HubRx-branded signed copies.
 export const PGD_MASTER_FILES: Record<string, string> = {
   "acne": "acne.pdf",
-  "adhd-monitoring": "adhd-monitoring.pdf",
   "alopecia-minoxidil": "alopecia-minoxidil.pdf",
   "altitude-sickness": "altitude-sickness.pdf",
   "anti-malarials": "anti-malarials-v004.pdf",
@@ -41,7 +40,6 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   // antibiotic for the cohort guidance says should not have one and referred
   // the cohort that is the indication. Raised by an adopting pharmacy.
   "dental-bridging": "dental-bridging-v005.pdf",
-  "diabetes-monitoring": "diabetes-monitoring.pdf",
   "ear-infection": "ear-infection-v003.pdf",
   // v003 signed 9 Sep 2026. v002 left moderate eczema on the face or flexures
   // with no supply route, capped facial use at 7 days in an exclusion bullet
@@ -53,7 +51,6 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   // 2026/27 season v003, signed 6 Aug 2026 with C. Pilkington's review edits
   "flu": "flu-2026-27-v003.pdf",
   "genital-warts": "genital-warts.pdf",
-  "glp1-monitoring": "glp1-monitoring.pdf",
   "gonorrhoea-treatment": "gonorrhoea-treatment.pdf",
   "hair-loss": "hair-loss.pdf",
   "hayfever": "hayfever.pdf",
@@ -68,7 +65,6 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   // GBMSM cohort the document names could not be vaccinated through it.
   "hpv": "hpv-v003.pdf",
   "hrt": "hrt.pdf",
-  "hypertension": "hypertension.pdf",
   "impetigo": "impetigo-v004.pdf",
   // Split apart 21 Aug 2026. These three slugs previously all resolved to a
   // single combined Ixiaro / Rabies / MenACWY document, so a pharmacy
@@ -90,7 +86,6 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   "pneumococcal": "pneumococcal-v002.pdf",
   "postnatal-contraception": "postnatal-contraception.pdf",
   "premature-ejaculation": "premature-ejaculation.pdf",
-  "prep": "prep.pdf",
   "rabies": "rabies-v004.pdf",
   "recurrent-uti": "recurrent-uti.pdf",
   "rosacea": "rosacea.pdf",
@@ -114,7 +109,6 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   "smoking-nrt": "smoking-nrt.pdf",
   "smoking-varenicline": "smoking-varenicline.pdf",
   "sore-throat": "sore-throat.pdf",
-  "statins": "statins.pdf",
   "sti-testing": "sti-testing.pdf",
   "thrush": "thrush.pdf",
   "travel-core": "travel-core-v002.pdf",
@@ -161,7 +155,6 @@ export const PGD_MASTER_FILES: Record<string, string> = {
 // branding.
 export const PGD_HUBRX_FILES: Record<string, string> = {
   "acne": "acne 2.pdf",
-  "adhd-monitoring": "adhd-monitoring 2.pdf",
   "alopecia-minoxidil": "alopecia-minoxidil 2.pdf",
   "altitude-sickness": "altitude-sickness 2.pdf",
   "anti-malarials": "anti-malarials-v004.pdf",
@@ -179,7 +172,6 @@ export const PGD_HUBRX_FILES: Record<string, string> = {
   // antibiotic for the cohort guidance says should not have one and referred
   // the cohort that is the indication. Raised by an adopting pharmacy.
   "dental-bridging": "dental-bridging-v005.pdf",
-  "diabetes-monitoring": "diabetes-monitoring 2.pdf",
   "ear-infection": "ear-infection-v003.pdf",
   "eczema": "eczema-v004.pdf",
   "ed": "ed-v003.pdf",
@@ -187,7 +179,6 @@ export const PGD_HUBRX_FILES: Record<string, string> = {
   "eye-infections": "eye-infections 2.pdf",
   "flu": "flu-2026-27-v003.pdf",
   "genital-warts": "genital-warts 2.pdf",
-  "glp1-monitoring": "glp1-monitoring 2.pdf",
   "gonorrhoea-treatment": "gonorrhoea-treatment 2.pdf",
   "hair-loss": "hair-loss 2.pdf",
   "hayfever": "hayfever 2.pdf",
@@ -195,7 +186,6 @@ export const PGD_HUBRX_FILES: Record<string, string> = {
   "herpes-management": "herpes-management 2.pdf",
   "hpv": "hpv-v003.pdf",
   "hrt": "hrt 2.pdf",
-  "hypertension": "hypertension 2.pdf",
   "impetigo": "impetigo-v004.pdf",
   // Split 21 Aug 2026: the HubRx copies were duplicates of the same combined
   // document, so they point at the new standalone masters rather than being
@@ -213,7 +203,6 @@ export const PGD_HUBRX_FILES: Record<string, string> = {
   "pneumococcal": "pneumococcal 2.pdf",
   "postnatal-contraception": "postnatal-contraception 2.pdf",
   "premature-ejaculation": "premature-ejaculation 2.pdf",
-  "prep": "prep 2.pdf",
   "rabies": "rabies-v004.pdf",
   "recurrent-uti": "recurrent-uti 2.pdf",
   "rosacea": "rosacea 2.pdf",
@@ -225,7 +214,6 @@ export const PGD_HUBRX_FILES: Record<string, string> = {
   "smoking-nrt": "smoking-nrt 2.pdf",
   "smoking-varenicline": "smoking-varenicline 2.pdf",
   "sore-throat": "sore-throat 2.pdf",
-  "statins": "statins 2.pdf",
   "sti-testing": "sti-testing 2.pdf",
   "thrush": "thrush 2.pdf",
   // 9 Sep 2026: the branded copy still carried the 7 Sep correction notice

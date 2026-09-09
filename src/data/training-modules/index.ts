@@ -17,7 +17,6 @@ import { travelCoreModule } from "./travel-core";
 import { saxendaModule } from "./saxenda";
 import { orlistatModule } from "./orlistat";
 import { mysimbaModule } from "./mysimba";
-import { glp1MonitoringModule } from "./glp1-monitoring";
 import { wegovyOralModule } from "./wegovy-oral";
 import { periodDelayModule } from "./period-delay";
 import { prematureEjaculationModule } from "./premature-ejaculation";
@@ -40,7 +39,6 @@ import { gonorrhoeaTreatmentModule } from "./gonorrhoea-treatment";
 import { herpesManagementModule } from "./herpes-management";
 import { genitalWartsModule } from "./genital-warts";
 import { stiTestingModule } from "./sti-testing";
-import { prepModule } from "./prep";
 import { postnatalContraceptionModule } from "./postnatal-contraception";
 import { testosteroneWomenModule } from "./testosterone-women";
 import { alopeciaMinoxidilModule } from "./alopecia-minoxidil";
@@ -58,8 +56,6 @@ import { hepBOccupationalModule } from "./hep-b-occupational";
 // Tier 5 — respiratory, CVD, mental health, smoking, sleep, alcohol
 import { asthmaRescueModule } from "./asthma-rescue";
 import { copdModule } from "./copd";
-import { hypertensionModule } from "./hypertension";
-import { statinsModule } from "./statins";
 import { anxietyPropranololModule } from "./anxiety-propranolol";
 import { sleepMelatoninModule } from "./sleep-melatonin";
 import { smokingVareniclineModule } from "./smoking-varenicline";
@@ -75,7 +71,6 @@ import { altitudeSicknessModule } from "./altitude-sickness";
 import { travellersDiarrhoeaModule } from "./travellers-diarrhoea";
 import { typhoidModule } from "./typhoid";
 // Tier 7 — paediatrics, dental, monitoring, treatment
-import { diabetesMonitoringModule } from "./diabetes-monitoring";
 import { dentalBridgingModule } from "./dental-bridging";
 import { shinglesTreatmentModule } from "./shingles-treatment";
 
@@ -94,7 +89,6 @@ export const modules: TrainingModule[] = [
   saxendaModule,
   orlistatModule,
   mysimbaModule,
-  glp1MonitoringModule,
   wegovyOralModule,
   periodDelayModule,
   prematureEjaculationModule,
@@ -117,7 +111,6 @@ export const modules: TrainingModule[] = [
   herpesManagementModule,
   genitalWartsModule,
   stiTestingModule,
-  prepModule,
   postnatalContraceptionModule,
   testosteroneWomenModule,
   alopeciaMinoxidilModule,
@@ -135,8 +128,6 @@ export const modules: TrainingModule[] = [
   // Tier 5 — respiratory, CVD, mental health, smoking, sleep, alcohol
   asthmaRescueModule,
   copdModule,
-  hypertensionModule,
-  statinsModule,
   anxietyPropranololModule,
   sleepMelatoninModule,
   smokingVareniclineModule,
@@ -152,7 +143,6 @@ export const modules: TrainingModule[] = [
   travellersDiarrhoeaModule,
   typhoidModule,
   // Tier 7 — paediatrics, dental, monitoring, treatment
-  diabetesMonitoringModule,
   dentalBridgingModule,
   shinglesTreatmentModule,
 ];

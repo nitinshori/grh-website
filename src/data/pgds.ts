@@ -432,18 +432,6 @@ export const pgds: PGD[] = [
     description: "Older GLP-1 but still prescribed. Include for completeness.",
     pharmadoctor: "Yes",
   },
-  {
-    id: "glp1-monitoring",
-    title: "Ongoing GLP-1 Monitoring & Dose Titration",
-    category: "Weight Management",
-    priority: 1,
-    isNew: true,
-    revenueEstimate: "\u00a350\u201380 per review",
-    consultTime: "15\u201320 min",
-    description:
-      "Structured monitoring and dose-titration follow-up for patients on Wegovy, Mounjaro, or Oral Wegovy. NICE 5%-by-12-weeks gate, red-flag screening, dose decisions all built in.",
-    pharmadoctor: "Partial",
-  },
 
   // ═══ WOMEN'S HEALTH ═══
   {
@@ -681,19 +669,6 @@ export const pgds: PGD[] = [
     pharmadoctor: "Yes",
   },
   {
-    id: "prep",
-    title: "PrEP (HIV Pre-exposure Prophylaxis)",
-    category: "Sexual Health",
-    priority: 1,
-    isNew: true,
-    comingSoon: true,
-    revenueEstimate: "\u00a350\u201380 per month",
-    consultTime: "20\u201330 min",
-    description:
-      "COMING SOON. NHS PrEP only through sexual health clinics with long waits. Private pharmacy PrEP is completely unaddressed. Thousands paying \u00a350+/month at online clinics. Currently in development — not yet available for supply.",
-    pharmadoctor: "No \u2014 not offered",
-  },
-  {
     id: "gonorrhoea-treatment",
     title: "Gonorrhoea Treatment (Ceftriaxone IM)",
     category: "Sexual Health",
@@ -928,42 +903,6 @@ export const pgds: PGD[] = [
   },
 
   // ═══ CVD ═══
-  {
-    id: "hypertension",
-    title: "Hypertension Monitoring + Supply (Amlodipine)",
-    category: "CVD",
-    priority: 2,
-    isNew: false,
-    revenueEstimate: "\u00a330\u201350 per consultation",
-    consultTime: "15\u201320 min",
-    description:
-      "NHS Hypertension Case Finding service \u2014 private version extends reach.",
-    pharmadoctor: "Partial",
-  },
-  {
-    id: "statins",
-    title: "Cholesterol (Statin Continuation)",
-    category: "CVD",
-    priority: 2,
-    isNew: true,
-    revenueEstimate: "\u00a320\u201335 per consultation",
-    consultTime: "10\u201315 min",
-    description:
-      "DIFFERENTIATION. Huge gap. Thousands of patients struggling to get statin repeat prescriptions. Pharmacy-led continuation is clinically safe and commercially strong.",
-    pharmadoctor: "No",
-  },
-  {
-    id: "diabetes-monitoring",
-    title: "Diabetes Type 2 Monitoring + Metformin Continuation",
-    category: "CVD",
-    priority: 2,
-    isNew: false,
-    revenueEstimate: "\u00a325\u201345 per consultation",
-    consultTime: "15 min",
-    description:
-      "Large patient population. Continuation supply for stable T2DM avoids unnecessary GP appointments.",
-    pharmadoctor: "Partial",
-  },
 
   // ═══ OCCUPATIONAL ═══
   {

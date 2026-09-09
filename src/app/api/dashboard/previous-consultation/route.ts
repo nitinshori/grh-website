@@ -35,6 +35,8 @@ const WEIGHT_SLUGS = [
   'saxenda',
   'orlistat',
   'mysimba',
+  // glp1-monitoring removed from the platform 9 Sep 2026. Old records
+  // under that slug are still readable here; nothing new is written.
   'glp1-monitoring',
 ]
 

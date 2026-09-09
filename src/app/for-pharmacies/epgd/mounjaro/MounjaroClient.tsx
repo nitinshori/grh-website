@@ -288,18 +288,6 @@ export default function MounjaroClient() {
                     {describePrevious(previous)}. Height has been filled in for
                     you.
                   </p>
-                  <p className="mt-2 text-amber-900">
-                    For a routine follow-up, use the{" "}
-                    <a
-                      href="/for-pharmacies/epgd/glp1-monitoring"
-                      className="font-semibold underline"
-                    >
-                      GLP-1 Monitoring tool
-                    </a>{" "}
-                    instead. It carries the height, baseline weight and current
-                    dose across, and reviews progress and dose titration rather
-                    than repeating the initiation assessment.
-                  </p>
                 </div>
               )}
             </div>
