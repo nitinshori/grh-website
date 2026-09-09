@@ -100,6 +100,7 @@ const d={
  banner:'ISSUED, VALID FROM 9 SEPTEMBER 2026',
  title:'Dental Bridging Antibiotic',
  strap:'Patient Group Direction, version 005, issued 9 September 2026. Amoxicillin and metronidazole, adults 18 and over, spreading or systemic dental infection only.',
+ cover:{action:'supply',drugs:'Amoxicillin or Metronidazole',condition:'Acute Dental Infection, as a bridging antibiotic',age:'Adults aged 18 years and over.'},
  purpose:{
    for:'The supply of a short course of antibiotic to an adult with an acute dental infection that is spreading or causing systemic upset, to bridge the time until they can be seen by a dentist, by a registered pharmacist or registered pharmacy technician in a community pharmacy, without a prescription.',
    authorises:[

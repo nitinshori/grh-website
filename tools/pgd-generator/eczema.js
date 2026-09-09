@@ -93,6 +93,7 @@ const d={
  banner:'ISSUED, VALID FROM 9 SEPTEMBER 2026',
  title:'Eczema and Dermatitis',
  strap:'Patient Group Direction, version 004, issued 9 September 2026. Clobetasone butyrate 0.05% and betamethasone valerate 0.1%, 12 years and over.',
+ cover:{action:'supply',drugs:'Clobetasone Butyrate 0.05% or Betamethasone Valerate 0.1%',condition:'Eczema and Dermatitis',age:'From age 12 years onwards.'},
  purpose:{
    for:'The supply of a topical corticosteroid to a patient aged 12 years or over with a flare of eczema or dermatitis, by a registered pharmacist or registered pharmacy technician in a community pharmacy, without a prescription.',
    authorises:[

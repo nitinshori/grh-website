@@ -82,15 +82,16 @@ function sig(d){
   // C. Pilkington" with no heading in sight, and Nitin asked where the
   // signatures were. They were there. They were not findable.
   return [new Paragraph({children:[new PageBreak()]}),
-   h('Authorisation of this Patient Group Direction',HeadingLevel.HEADING_1),
-   p('Authorised on behalf of Get Real Health by the Medical Director and the Head Pharmacist named below. This version is not valid without both signatures.',{color:GREY}),
+   h('Signed on behalf of Get Real Health',HeadingLevel.HEADING_1),
+   p('Authorised by the Medical Director and the Head Pharmacist named below. This version is not valid without both signatures.',{color:GREY}),
    tbl([row('Version',d.version),row('Supersedes',d.supersedes),row('Valid from date',d.validFrom||'7 September 2026'),row('Expiry date',d.expiry||'31 July 2027')]),
    p(''),
    tbl([row('Doctor',[{text:'Name: Nitin Shori'},{text:'Job title: Medical Director, Get Real Health'},{text:'GMC: 6047293'},{text:'Signed: N. Shori',b:true},{text:'Date: '+(d.sigDate||'7 September 2026')}]),
         row('Pharmacist',[{text:'Name: Chris Pilkington'},{text:'Job title: Head Pharmacist, Get Real Health'},{text:'GPhC: 2046322'},{text:'Signed: C. Pilkington',b:true},{text:'Date: '+(d.sigDate||'7 September 2026')}])]),
    p(''),
    p('Both authorising signatories reviewed this version together on '+(d.sigDate||'7 September 2026')+' and gave their authorisation for it to be issued. Signatures were applied digitally on their joint instruction, which is the established process for Get Real Health PGDs.',{i:true,color:GREY}),
-   p(''),p('Adoption by the employing organisation',{b:true}),
+   p(''),h('PGD adoption and authorisation by the employer or clinical lead',HeadingLevel.HEADING_2),
+   p('The employer has ensured that the person using this PGD has the knowledge and skills to safely provide the service, and that appropriate governance is in place. This section must be signed by the superintendent or clinical lead responsible for this service.'),
    p('To be completed by the adopting pharmacy. These signatories are the adopting organisation own signatories and must not be pre-filled by Get Real Health.',{i:true,color:GREY}),
    tbl([row('Superintendent / clinical lead',[{text:'Name: ................................................'},{text:'Job title and organisation: ................................'},{text:'Signature: ................................................'},{text:'Date: ......................'}]),
         row('Professional group signatory',[{text:'Name: ................................................'},{text:'Job title and organisation: ................................'},{text:'Signature: ................................................'},{text:'Date: ......................'}])]),
@@ -119,7 +120,8 @@ function sig(d){
    // so pgd-version-diff can see the table is present. A restored clause that
    // the check cannot recognise is only half restored.
    tbl([row('Name of healthcare professional','Job title  |  Registration number  |  Signature  |  Date'),
-        ...Array.from({length:6},()=>row('................................','................................  |  ..................  |  ................................  |  ................'))]),
+        ...Array.from({length:6},()=>row('................................','................................  |  ..................  |  ................................  |  ................')),
+        row('Valid from date',d.validFrom||'7 September 2026'),row('Expiry date',d.expiry||'31 July 2027')]),
    new Paragraph({children:[new PageBreak()]}),
    h('Change history',HeadingLevel.HEADING_2),
    tbl([row('Version',d.version),row('Date',d.chDate),row('Changes',d.changes.map(c=>({bullet:c})))]),
@@ -185,7 +187,13 @@ function assertPublishable(d){
     errs.push('purpose: every PGD opens with what it is for and what it authorises, part 1 of the house format. Give purpose:{for:"...", authorises:["...", ...], staff?, notFor?:[...]} in plain sentences.');
   }
 
-  const bodyFields=['purpose','intro','arms','appendix','guidelines','strap','banner'];
+  // ── 6. THE COVER IS REQUIRED ─────────────────────────────────────────
+  const c=d.cover;
+  if(!c||!c.drugs||!c.condition||!c.age){
+    errs.push('cover: every PGD opens "Patient Group Direction for the supply of <drugs> for the treatment of <condition>", then the condition and the age range. Give cover:{action:"supply"|"administration", drugs:"A, B or C", condition:"...", age:"From age 12 years onwards."}.');
+  }
+
+  const bodyFields=['cover','purpose','intro','arms','appendix','guidelines','strap','banner'];
   const found=[];
   bodyFields.forEach(f=>{
     (function walk(x){
@@ -296,17 +304,82 @@ function preambleBlock(d){
   return out;
 }
 
+// ── THE HOUSE TEMPLATE ───────────────────────────────────────────────────
+//
+// Nitin, 9 September 2026, with the original acute bronchitis PGD in hand:
+// "this is the right way things should be structured. every pgd should be
+// like this. clear front page title with condition and drug names, then
+// guidelines from nice/cks etc, then the drugs and instructions, exclusions,
+// inclusions, then places for signing for people at the pharmacy and the
+// signed bits from chris and i. otherwise it's not valid!"
+//
+// So the order is fixed, and it is this:
+//
+//   COVER      the professional-use notice, "Patient Group Direction for the
+//              supply of A, B or C for the treatment of X", the condition,
+//              the age range, then part 1: what it is for, what it authorises
+//   PART 2     the guidance summary
+//   PART 3     one complete PGD per medicine, each with its own cover line,
+//              staff and training, the PGD table, the medicine table, patient
+//              information, key references, and then ITS OWN signing pages:
+//              agreement to practise for the pharmacy's staff, adoption by the
+//              employer, the GRH signatures, and the change history
+//   APPENDIX   anything after that
+//
+// Every arm carries its own signing pages because that is how the originals
+// are built: each medicine is a self-contained PGD that a pharmacy signs
+// for. One signature block at the end of a three-arm document, which is
+// what this generator did until today, is not the template.
+const PRO_NOTICE='This Patient Group Direction (PGD) is intended only for registered healthcare professionals who have been named and authorised by their organisation to practise under it.';
+const COMPETENCE='Healthcare professionals must work within their own competence. This PGD does not remove professional obligations or accountability.';
+
+function coverBlock(d){
+  const c=d.cover;
+  return [p(PRO_NOTICE,{i:true,color:GREY}),p(COMPETENCE,{i:true,color:GREY}),p(''),
+    p(d.banner,{b:true,color:RED,size:22,align:AlignmentType.CENTER}),p(''),
+    h('Patient Group Direction',HeadingLevel.HEADING_1),
+    p('for the '+(c.action||'supply')+' of '+c.drugs+' for the treatment of '+c.condition,{b:true,size:24}),
+    p(''),
+    h(c.condition,HeadingLevel.HEADING_1),
+    p(c.age,{b:true}),
+    p(d.strap,{color:GREY})];
+}
+
+function armCover(d,a){
+  const c=d.cover;
+  return [new Paragraph({children:[new PageBreak()]}),
+    p(PRO_NOTICE,{i:true,color:GREY}),p(COMPETENCE,{i:true,color:GREY}),p(''),
+    h('Patient Group Direction',HeadingLevel.HEADING_1),
+    p('for the '+(a.action||c.action||'supply')+', for the treatment of '+c.condition+', of:',{b:true}),
+    h(a.drug||a.title,HeadingLevel.HEADING_1)];
+}
+
+function referencesBlock(d,a){
+  const refs=(a.refs||[]).concat([
+    'NICE Medicines Practice Guideline 2 (MPG2): Patient Group Directions.',
+    (d.guidelines&&d.guidelines.source)?d.guidelines.source:null,
+    'The current Summary of Product Characteristics for each product named in this PGD, medicines.org.uk.',
+    'British National Formulary, current edition.',
+  ].filter(Boolean));
+  const out=[h('Key references',HeadingLevel.HEADING_2)];
+  refs.forEach(r=>out.push(bl(r)));
+  return out;
+}
+
 function build(d){
   assertPublishable(d);
-  const kids=[p(d.banner,{b:true,color:RED,size:22,align:AlignmentType.CENTER}),p(''),
-    h(d.title,HeadingLevel.HEADING_1),
-    p(d.strap,{color:GREY})];
+  const kids=[];
+  coverBlock(d).forEach(k=>kids.push(k));
   purposeBlock(d).forEach(k=>kids.push(k));
   guidelineBlock(d).forEach(k=>kids.push(k));
   preambleBlock(d).forEach(k=>kids.push(k));
-  d.arms.forEach(a=>armBlock(a).forEach(k=>kids.push(k)));
+  d.arms.forEach(a=>{
+    armCover(d,a).forEach(k=>kids.push(k));
+    armBlock(a).slice(2).forEach(k=>kids.push(k));   // skip the arm's own page break and H1: the cover replaces them; the subtitle stays
+    referencesBlock(d,a).forEach(k=>kids.push(k));
+    sig(d).forEach(k=>kids.push(k));
+  });
   if(d.appendix){kids.push(new Paragraph({children:[new PageBreak()]}));d.appendix.forEach(x=>kids.push(typeof x==='string'?p(x):(x.h?h(x.h,HeadingLevel.HEADING_1):(x.bullet?bl(x.bullet,x):(x.tbl?tbl(x.tbl.map(r=>row(r[0],r[1]))):p(x.text,x))))));}
-  sig(d).forEach(k=>kids.push(k));
   return new Document({creator:'Get Real Health',title:d.title,
     sections:[{properties:{page:{margin:{top:900,right:900,bottom:900,left:900}}},children:kids}]});
 }

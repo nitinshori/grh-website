@@ -100,6 +100,7 @@ const d={
  banner:'ISSUED, VALID FROM 9 SEPTEMBER 2026',
  title:'Acute Bacterial Bronchitis (chest service)',
  strap:'Patient Group Direction, version 004, issued 9 September 2026. Three arms: doxycycline, amoxicillin, clarithromycin.',
+ cover:{action:'supply',drugs:'Doxycycline, Amoxicillin or Clarithromycin',condition:'Acute Bacterial Bronchitis',age:'From age 12 years onwards.'},
  purpose:{
    for:'The supply of an oral antibiotic for acute bacterial bronchitis in a patient aged 12 years or over who has been assessed as needing one, by a registered pharmacist or registered pharmacy technician in a community pharmacy, without a prescription.',
    authorises:[

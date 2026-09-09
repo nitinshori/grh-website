@@ -4,6 +4,7 @@ const d={
  banner:'ISSUED, VALID FROM 8 SEPTEMBER 2026',
  title:'Rabies Pre-Exposure Prophylaxis',
  strap:'Patient Group Direction, version 004, issued 8 September 2026. Rabipur and Verorab, intramuscular route only, pre-exposure only.',
+ cover:{action:'administration',drugs:'Rabipur or Verorab (Rabies Vaccine)',condition:'Pre-exposure Prophylaxis against Rabies',age:'From age 2 years onwards.'},
  purpose:{
    for:'The administration of rabies vaccine, before any exposure, to a traveller or worker aged 2 years or over who is at risk of contact with rabies, by a registered pharmacist or registered pharmacy technician in a community pharmacy, without a prescription.',
    authorises:[
