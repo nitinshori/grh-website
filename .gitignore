@@ -44,3 +44,6 @@ next-env.d.ts
 *.bak*
 *.bak[0-9X]
 scripts/__pycache__/
+
+# throwaway trees built by the pre-push build check
+.buildcheck*
