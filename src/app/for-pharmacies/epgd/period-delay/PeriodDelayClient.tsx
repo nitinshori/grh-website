@@ -15,6 +15,42 @@ import { TextInput, Checkbox, SelectInput, NumberInput, TextArea } from "../shar
 import { PeriodDelaySummaryReport } from "./components/PeriodDelaySummaryReport";
 
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
+
+/**
+ * Parse DD/MM/YYYY. Returns null on anything else, including 31/02/2026,
+ * because Date() would silently roll that forward to 3 March and the whole
+ * point of this field is that the date is right.
+ */
+function parseUkDate(v: string): Date | null {
+  const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec((v || "").trim());
+  if (!m) return null;
+  const [dd, mm, yyyy] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const d = new Date(yyyy, mm - 1, dd);
+  if (d.getFullYear() !== yyyy || d.getMonth() !== mm - 1 || d.getDate() !== dd) return null;
+  return d;
+}
+
+function formatUkDate(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`;
+}
+
+/** Whole days from today to `d`, negative if it is in the past. */
+function daysFromToday(d: Date): number {
+  const t = new Date();
+  t.setHours(0, 0, 0, 0);
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return Math.round((x.getTime() - t.getTime()) / 86400000);
+}
+
+/** Norethisterone is started 3 days before the period is due. */
+function startDateFor(expected: Date): Date {
+  const s = new Date(expected);
+  s.setDate(s.getDate() - 3);
+  return s;
+}
+
 function reducer(state: PeriodDelayConsultationState, action: PeriodDelayAction): PeriodDelayConsultationState {
   const newState = { ...state };
   switch (action.type) {
@@ -27,6 +63,18 @@ function reducer(state: PeriodDelayConsultationState, action: PeriodDelayAction)
       break;
     case "UPDATE_ASSESSMENT":
       newState.assessment = { ...newState.assessment, [action.field]: action.value };
+      // The date the period is due drives two other fields. Deriving them
+      // here rather than asking for them separately means they cannot
+      // disagree with each other, which is what happened when the days and
+      // the planned start date were both typed in by hand.
+      if (action.field === "expectedPeriodDate") {
+        const due = parseUkDate(action.value as string);
+        newState.assessment.daysUntilExpected = due ? daysFromToday(due) : null;
+        newState.medicineSelection = {
+          ...newState.medicineSelection,
+          startDate: due ? formatUkDate(startDateFor(due)) : "",
+        };
+      }
       break;
     case "UPDATE_MEDICAL_HISTORY":
       newState.medicalHistory = { ...newState.medicalHistory, [action.field]: action.value };
@@ -166,7 +214,26 @@ export default function PeriodDelayClient() {
               )}
               <TextInput label="Date of last menstrual period (first day)" value={state.assessment.lastPeriodDate} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "lastPeriodDate", value: v })} placeholder="DD/MM/YYYY" required />
               <Checkbox label="Patient has a regular menstrual cycle" checked={state.assessment.cycleRegular} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "cycleRegular", value: v })} />
-              <NumberInput label="Estimated days until next expected period" value={state.assessment.daysUntilExpected} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "daysUntilExpected", value: v })} min={0} max={60} />
+              <TextInput label="When is the next period due? (first day)" value={state.assessment.expectedPeriodDate} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "expectedPeriodDate", value: v })} placeholder="DD/MM/YYYY" required />
+              {state.assessment.expectedPeriodDate !== "" && state.assessment.daysUntilExpected === null && (
+                <p className="text-sm text-red-700">Enter the date as DD/MM/YYYY.</p>
+              )}
+              {state.assessment.daysUntilExpected !== null && (
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-800">
+                  <p>
+                    That is <strong>{state.assessment.daysUntilExpected} day{state.assessment.daysUntilExpected === 1 ? "" : "s"}</strong> from today.
+                  </p>
+                  <p className="mt-1">
+                    Norethisterone must be started <strong>3 days before</strong> the period is due, so the start date is{" "}
+                    <strong>{state.medicineSelection.startDate || "not calculable"}</strong>.
+                  </p>
+                  {state.assessment.daysUntilExpected < 3 && (
+                    <p className="mt-1 font-semibold text-red-700">
+                      That start date has passed or is today. Starting late may not delay the period. Counsel the patient before supplying.
+                    </p>
+                  )}
+                </div>
+              )}
               <Checkbox label="Patient has used norethisterone for period delay before" checked={state.assessment.previousUse} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "previousUse", value: v })} />
               {state.assessment.previousUse && (
                 <TextArea label="Any previous issues or side effects?" value={state.assessment.previousIssues} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "previousIssues", value: v })} placeholder="e.g., breakthrough bleeding, nausea, headaches" />

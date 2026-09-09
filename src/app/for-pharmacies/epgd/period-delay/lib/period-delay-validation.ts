@@ -12,6 +12,10 @@ export function validateStep(step: number, state: PeriodDelayConsultationState):
     case 2:
       if (!state.assessment.reasonForDelay) return "Reason for period delay must be selected";
       if (!state.assessment.lastPeriodDate) return "Date of last period is required";
+      // The date the next period is due sets the start date, which is the
+      // one thing that decides whether the course will work at all.
+      if (!state.assessment.expectedPeriodDate) return "The date the next period is due is required";
+      if (state.assessment.daysUntilExpected === null) return "Enter the date the next period is due as DD/MM/YYYY";
       return null;
     case 3:
       return null;

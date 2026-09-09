@@ -20,6 +20,7 @@ export function PeriodDelaySummaryReport({ state }: { state: PeriodDelayConsulta
         <Row label="Reason for delay" value={state.assessment.reasonForDelay || "—"} />
         <Row label="Last period date" value={state.assessment.lastPeriodDate || "—"} />
         <Row label="Regular cycle" value={state.assessment.cycleRegular ? "Yes" : "No"} />
+        <Row label="Next period due" value={state.assessment.expectedPeriodDate || "—"} />
         <Row label="Days until expected period" value={state.assessment.daysUntilExpected?.toString() || "—"} />
         <Row label="Previous use of norethisterone" value={state.assessment.previousUse ? "Yes" : "No"} />
       </div>

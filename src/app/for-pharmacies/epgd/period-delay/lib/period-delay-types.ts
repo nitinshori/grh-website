@@ -5,6 +5,18 @@ export interface PeriodDelayAssessment {
   reasonDetails: string;
   lastPeriodDate: string;
   cycleRegular: boolean;
+  /**
+   * The date the next period is due, DD/MM/YYYY, as the patient gives it.
+   *
+   * Asked because norethisterone has to START 3 DAYS BEFORE the period is
+   * due, so the date is the number the consultation actually turns on. The
+   * tool used to ask only for "estimated days until next expected period"
+   * and then ask the pharmacist to type a planned start date separately,
+   * which is the same arithmetic done twice, by hand, with nothing checking
+   * that the two agreed. Raised by an adopting pharmacy.
+   */
+  expectedPeriodDate: string;
+  /** Derived from expectedPeriodDate. Kept because the alerts read it. */
   daysUntilExpected: number | null;
   previousUse: boolean;
   previousIssues: string;
@@ -113,7 +125,7 @@ export function createInitialConsultationState(): PeriodDelayConsultationState {
     currentStep: 0,
     patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", gpAddress: "", gpPhone: "", gpEmail: "", gpOdsCode: "", nhsNumber: "", address: "", phone: "", email: "" },
     consent: { informedConsentGiven: false, idVerified: false, idType: "", patientAwarePrivateService: false },
-    assessment: { reasonForDelay: "", reasonDetails: "", lastPeriodDate: "", cycleRegular: false, daysUntilExpected: null, previousUse: false, previousIssues: "" },
+    assessment: { reasonForDelay: "", reasonDetails: "", lastPeriodDate: "", cycleRegular: false, expectedPeriodDate: "", daysUntilExpected: null, previousUse: false, previousIssues: "" },
     medicalHistory: { pregnancy: false, breastfeeding: false, liverDisease: false, historyOfDVT: false, historyOfPE: false, historyOfStroke: false, activeBreastCancer: false, severeArterialDisease: false, porphyria: false, abnormalVaginalBleeding: false, hormonalContraception: false, hormonalContraceptionType: "", ageUnder16: false, familyVteUnder45: false, currentSmoker: false, stoppedSmokingUnderOneYear: false, stoppedSmokingOverOneYear: false, cigarettesPerDay: null, heightCm: null, weightKg: null, longJourney: false, recentOrPlannedSurgery: false, immobility: false, activeOrRecentCancer: false, migraineWithAura: false, enzymeInducer: false, under18AssessmentDone: false, safeguardingConcern: false },
     medications: { anticoagulants: false, antiepileptics: false, ciclosporin: false, otherMedications: "", allergies: "" },
     medicineSelection: { confirmed: false, daysToDelay: null, startDate: "" },
