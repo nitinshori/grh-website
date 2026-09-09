@@ -27,9 +27,9 @@ export function validateStep(stepIndex: number, state: AnxietyPropranololConsult
     case 6: {
       const q = state.medicineSupply.quantity;
       if (q === null) return "Please enter quantity to supply";
-      // PGD v002: the same total of propranolol whichever strength, 560mg.
-      const cap = state.medicineSupply.strength === "40mg" ? 14 : 56;
-      if (q > cap) return `Maximum ${cap} tablets of ${state.medicineSupply.strength} under this PGD (560mg in total)`;
+      // PGD v002: 10mg tablets only, and the whole supply must stay below
+      // 320mg. 28 x 10mg is 280mg.
+      if (q > 28) return "Maximum 28 tablets of 10mg under this PGD (280mg in total)";
       return null;
     }
 

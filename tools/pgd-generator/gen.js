@@ -172,7 +172,13 @@ function assertPublishable(d){
   // So: this text is permitted in `changes` and `prior`, and refused
   // anywhere else.
   const NARRATION=/(got wrong|(version|v)\s*0?0?\d\s+(stated|said|carried|had|listed|offered|gave|left|lost|dropped|permitted|delegated|authorised|treated|pointed|required|made|excluded)|was lost in|this was wrong|which was wrong|nobody noticed|is why version|earlier versions of this (tool|document))/i;
-  const bodyFields=['intro','arms','appendix','guidelines','strap','banner'];
+  // ── 5. PART 1 IS REQUIRED ────────────────────────────────────────────
+  const u=d.purpose;
+  if(!u||typeof u.for!=='string'||!u.for.trim()||!Array.isArray(u.authorises)||!u.authorises.length){
+    errs.push('purpose: every PGD opens with what it is for and what it authorises, part 1 of the house format. Give purpose:{for:"...", authorises:["...", ...], staff?, notFor?:[...]} in plain sentences.');
+  }
+
+  const bodyFields=['purpose','intro','arms','appendix','guidelines','strap','banner'];
   const found=[];
   bodyFields.forEach(f=>{
     (function walk(x){
@@ -246,13 +252,51 @@ function guidelineBlock(d){
   return out;
 }
 
+// ── PART 1: what this PGD is for, and what it authorises ─────────────────
+//
+// The first thing a pharmacist reads. Plain sentences, normal weight, no
+// operational detail. Before this existed the generated documents opened with
+// "Which arm, decided by severity AND site" and a page of bold capitals, and
+// a reader had to work out for themselves what the document was and what it
+// let them supply. Nitin, 9 September 2026: "this is not remotely clear, how
+// is anyone going to understand this".
+//
+// REQUIRED: {for, authorises:[...], staff?, notFor?:[...]}. build() refuses
+// without `for` and a non-empty `authorises`.
+function purposeBlock(d){
+  const u=d.purpose;
+  const out=[h('What this PGD is for',HeadingLevel.HEADING_2),p(u.for)];
+  out.push(h('What it authorises',HeadingLevel.HEADING_2));
+  u.authorises.forEach(t=>out.push(bl(t)));
+  if(u.staff){out.push(h('Who may work under it',HeadingLevel.HEADING_2));out.push(p(u.staff));}
+  if(u.notFor&&u.notFor.length){out.push(h('What it does not cover',HeadingLevel.HEADING_2));u.notFor.forEach(t=>out.push(bl(t)));}
+  return out;
+}
+
+// The operational preamble that used to be page one. Now part 3's opening,
+// after the guidance summary, under its own heading, and in NORMAL weight:
+// `b:true` on intro items is ignored here. Bold on every line is no emphasis
+// at all. Capitals in the text are left alone; they are the author's.
+function preambleBlock(d){
+  if(!d.intro||!d.intro.length) return [];
+  const out=[new Paragraph({children:[new PageBreak()]}),h('The Patient Group Direction',HeadingLevel.HEADING_1),h('How to use this PGD',HeadingLevel.HEADING_2)];
+  d.intro.forEach(x=>{
+    if(typeof x==='string'){out.push(p(x));return;}
+    if(x.h){out.push(h(x.h,HeadingLevel.HEADING_2));return;}
+    const o=Object.assign({},x,{b:false});
+    out.push(x.bullet?bl(x.bullet,o):p(x.text,o));
+  });
+  return out;
+}
+
 function build(d){
   assertPublishable(d);
   const kids=[p(d.banner,{b:true,color:RED,size:22,align:AlignmentType.CENTER}),p(''),
     h(d.title,HeadingLevel.HEADING_1),
     p(d.strap,{color:GREY})];
-  d.intro.forEach(x=>kids.push(typeof x==='string'?p(x):(x.h?h(x.h,HeadingLevel.HEADING_2):(x.bullet?bl(x.bullet,x):p(x.text,x)))));
+  purposeBlock(d).forEach(k=>kids.push(k));
   guidelineBlock(d).forEach(k=>kids.push(k));
+  preambleBlock(d).forEach(k=>kids.push(k));
   d.arms.forEach(a=>armBlock(a).forEach(k=>kids.push(k)));
   if(d.appendix){kids.push(new Paragraph({children:[new PageBreak()]}));d.appendix.forEach(x=>kids.push(typeof x==='string'?p(x):(x.h?h(x.h,HeadingLevel.HEADING_1):(x.bullet?bl(x.bullet,x):(x.tbl?tbl(x.tbl.map(r=>row(r[0],r[1]))):p(x.text,x))))));}
   sig(d).forEach(k=>kids.push(k));

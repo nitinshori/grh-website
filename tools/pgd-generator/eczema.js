@@ -93,6 +93,19 @@ const d={
  banner:'ISSUED, VALID FROM 9 SEPTEMBER 2026',
  title:'Eczema and Dermatitis',
  strap:'Patient Group Direction, version 004, issued 9 September 2026. Clobetasone butyrate 0.05% and betamethasone valerate 0.1%, 12 years and over.',
+ purpose:{
+   for:'The supply of a topical corticosteroid to a patient aged 12 years or over with a flare of eczema or dermatitis, by a registered pharmacist or registered pharmacy technician in a community pharmacy, without a prescription.',
+   authorises:[
+    'Clobetasone butyrate 0.05% cream or ointment, a moderately potent corticosteroid, for mild eczema anywhere on the body, and for mild or moderate eczema on the face, flexures or genital skin for up to 7 days.',
+    'Betamethasone valerate 0.1% cream or ointment, a potent corticosteroid, for moderate eczema on the trunk and limbs only.',
+   ],
+   notFor:[
+    'The eyelids. Refer.',
+    'Betamethasone valerate on the face, flexures or genital skin, where a potent steroid causes skin thinning quickly.',
+    'Infected, weeping or crusted eczema, unless the infection is mild and localised and is treated at the same visit under the Skin and Soft Tissue Infection PGD. Otherwise refer.',
+    'Children under 12.',
+   ],
+  },
 
  intro:[
   {h:'Which arm, decided by severity AND site'},

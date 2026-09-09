@@ -458,31 +458,21 @@ export default function AnxietyPropranololClient() {
           >
             <div className="space-y-4">
               <div className="p-3 bg-[color:var(--tenant-primary)]/10 rounded-lg border border-[color:var(--tenant-primary)]/30">
-                <p className="text-sm font-medium text-navy-900">Propranolol 10–40mg PRN</p>
+                <p className="text-sm font-medium text-navy-900">Propranolol 10mg tablets, 10 to 40mg per dose PRN</p>
                 <p className="text-xs text-gray-600 mt-1">Take 30–60 minutes before anxiety-provoking situation. For situational anxiety only.</p>
               </div>
 
-              <SelectInput
-                label="Strength"
-                value={state.medicineSupply.strength}
-                onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "strength", value: v })}
-                options={[
-                  { value: "10mg", label: "10mg tablets (covers the whole 10 to 40mg dose range)" },
-                  { value: "40mg", label: "40mg tablets (only where a 40mg single dose is established by previous response)" },
-                ]}
-                required
-              />
               <NumberInput
                 label="Quantity to Supply"
                 value={state.medicineSupply.quantity}
                 onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "quantity", value: v })}
                 min={1}
-                max={state.medicineSupply.strength === "40mg" ? 14 : 56}
-                placeholder={state.medicineSupply.strength === "40mg" ? "up to 14 tablets" : "up to 56 tablets"}
+                max={28}
+                placeholder="up to 28 tablets"
                 unit="tablets"
               />
-              <p className="text-xs text-gray-600">
-                Maximum {state.medicineSupply.strength === "40mg" ? "14 tablets of 40mg" : "56 tablets of 10mg"}, which is 560mg of propranolol in total under either strength. One supply per situational event or course; review before any repeat.
+              <p className="text-xs font-medium text-red-800">
+                Propranolol 10mg tablets only. Maximum 28 tablets, 280mg in total: the whole supply taken at once must stay below 320mg, because propranolol is cardiotoxic in overdose. The 40mg strength is not authorised. One supply per situational event or course; review before any repeat.
               </p>
             </div>
           </StepWrapper>

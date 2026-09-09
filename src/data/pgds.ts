@@ -984,18 +984,6 @@ export const pgds: PGD[] = [
   // paediatric-uti withdrawn 26 Aug 2026 (Nitin). Assigned to 6 pharmacies
   // but never once used: zero consultation records against the slug.
   {
-    id: "threadworms",
-    title: "Threadworms (Mebendazole \u2014 Prescription Dose)",
-    category: "Paediatrics",
-    priority: 2,
-    isNew: false,
-    revenueEstimate: "\u00a315\u201325 per consultation",
-    consultTime: "5\u201310 min",
-    description:
-      "Extremely common. Short consultation. Prescription-strength preferred over OTC.",
-    pharmadoctor: "Partial",
-  },
-  {
     id: "impetigo",
     title: "Impetigo",
     category: "Paediatrics",

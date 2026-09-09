@@ -4,6 +4,17 @@ const d={
  banner:'ISSUED, VALID FROM 8 SEPTEMBER 2026',
  title:'Human Papillomavirus (HPV) Vaccination',
  strap:'Patient Group Direction, version 003, issued 8 September 2026. Gardasil 9, intramuscular, from 9 years of age, all sexes.',
+ purpose:{
+   for:'The administration of the HPV vaccine to a patient aged 9 years or over, of any sex, who wants protection against the cancers and genital warts caused by human papillomavirus, by a registered pharmacist or registered pharmacy technician in a community pharmacy, without a prescription.',
+   authorises:[
+    'Gardasil 9 suspension for injection, 0.5 mL by the intramuscular route: one dose under 25 years of age, two doses from 25, and three doses where the patient is immunosuppressed or living with HIV.',
+   ],
+   notFor:[
+    'A patient who has had a confirmed anaphylactic reaction to a previous dose or to any component of the vaccine.',
+    'A patient who is acutely unwell with a fever. Postpone.',
+    'Children under 9.',
+   ],
+  },
 
  intro:[
   {h:'Read this first: three points that are easy to get wrong'},

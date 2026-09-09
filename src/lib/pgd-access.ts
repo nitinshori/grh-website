@@ -238,6 +238,11 @@ export const RETIRED_SLUGS = new Set([
   // metronidazole, which the SPC says should be avoided with mebendazole
   // following a Stevens-Johnson syndrome and toxic epidermal necrolysis
   // outbreak. Both are carried into the pharmacy protocol that replaces it.
+  //
+  // 9 Sep 2026: removed from the platform entirely on Nitin's instruction.
+  // Route, documents, catalogue entry, training module and marketing copy
+  // all deleted. The slug stays here only so that any stale assignment in a
+  // pharmacy's record can never resolve to anything.
   'threadworms',
 
   // The five long-term-condition services, retired on Nitin's ruling,

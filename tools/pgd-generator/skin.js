@@ -72,6 +72,20 @@ const d={
  banner:'ISSUED, VALID FROM 9 SEPTEMBER 2026',
  title:'Skin and Soft Tissue Infection',
  strap:'Patient Group Direction, version 004, issued 9 September 2026. Three arms: flucloxacillin, clarithromycin, doxycycline.',
+ purpose:{
+   for:'The supply of an oral antibiotic for a bacterial skin or soft tissue infection, impetigo, folliculitis, infected eczema, an infected wound, or uncomplicated cellulitis, by a registered pharmacist or registered pharmacy technician in a community pharmacy, without a prescription.',
+   authorises:[
+    'Flucloxacillin, first line, from 2 years of age, and for cellulitis from 12 years of age.',
+    'Clarithromycin, where flucloxacillin is unsuitable, including penicillin allergy, from 2 years of age.',
+    'Doxycycline 100mg capsules, where flucloxacillin is unsuitable, in patients aged 12 years and over.',
+   ],
+   notFor:[
+    'Any patient who is systemically unwell, or with rapidly spreading infection, or with signs of necrotising fasciitis. Refer as an emergency.',
+    'Facial or periorbital cellulitis, or cellulitis in a child under 12. Refer.',
+    'Fungal or viral skin infection. An antibiotic will not treat it.',
+    'Children under 2.',
+   ],
+  },
 
  intro:[
   {h:'Age, and what this PGD now covers'},

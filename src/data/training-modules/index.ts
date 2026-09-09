@@ -36,7 +36,6 @@ import { impetigoModule } from "./impetigo";
 import { soreThroatModule } from "./sore-throat";
 import { earInfectionModule } from "./ear-infection";
 import { woundCareModule } from "./wound-care";
-import { threadwormsModule } from "./threadworms";
 import { gonorrhoeaTreatmentModule } from "./gonorrhoea-treatment";
 import { herpesManagementModule } from "./herpes-management";
 import { genitalWartsModule } from "./genital-warts";
@@ -114,7 +113,6 @@ export const modules: TrainingModule[] = [
   soreThroatModule,
   earInfectionModule,
   woundCareModule,
-  threadwormsModule,
   gonorrhoeaTreatmentModule,
   herpesManagementModule,
   genitalWartsModule,

@@ -100,6 +100,19 @@ const d={
  banner:'ISSUED, VALID FROM 9 SEPTEMBER 2026',
  title:'Acute Bacterial Bronchitis (chest service)',
  strap:'Patient Group Direction, version 004, issued 9 September 2026. Three arms: doxycycline, amoxicillin, clarithromycin.',
+ purpose:{
+   for:'The supply of an oral antibiotic for acute bacterial bronchitis in a patient aged 12 years or over who has been assessed as needing one, by a registered pharmacist or registered pharmacy technician in a community pharmacy, without a prescription.',
+   authorises:[
+    'Doxycycline 100mg capsules, first line, in adults aged 18 years and over.',
+    'Amoxicillin 500mg capsules, in patients aged 12 to 17, in pregnancy, and in adults where doxycycline is unsuitable.',
+    'Clarithromycin 250mg tablets, in patients aged 12 years and over who are penicillin-allergic and cannot take doxycycline.',
+   ],
+   notFor:[
+    'Any patient who may have pneumonia, or who scores on the CRB-65 for confusion, respiratory rate or blood pressure. Refer the same day.',
+    'Acute cough without signs of bacterial infection. Most acute cough is viral and needs no antibiotic.',
+    'Children under 12.',
+   ],
+  },
 
  intro:[
   {h:'Which arm applies'},

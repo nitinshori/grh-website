@@ -470,15 +470,6 @@ export const SERVICE_COMPARISON: ServiceComparisonCategory[] = [
         wales: YES("Free OTC supply"),
       },
       {
-        pgdSlug: "threadworms",
-        condition: "Threadworms",
-        grhDrugs: "Mebendazole",
-        grhOffered: true,
-        pfe: NO,
-        pfs: NO,
-        wales: YES("Free OTC supply"),
-      },
-      {
         condition: "Conjunctivitis (bacterial)",
         grhOffered: false,
         pfe: NO,

@@ -4,6 +4,17 @@ const d={
  banner:'ISSUED, VALID FROM 8 SEPTEMBER 2026',
  title:'Rabies Pre-Exposure Prophylaxis',
  strap:'Patient Group Direction, version 004, issued 8 September 2026. Rabipur and Verorab, intramuscular route only, pre-exposure only.',
+ purpose:{
+   for:'The administration of rabies vaccine, before any exposure, to a traveller or worker aged 2 years or over who is at risk of contact with rabies, by a registered pharmacist or registered pharmacy technician in a community pharmacy, without a prescription.',
+   authorises:[
+    'Rabipur or Verorab by the intramuscular route: three doses on days 0, 7 and 21 to 28, or, where there is not time before travel, three doses on days 0, 3 and 7 with a further dose at one year.',
+   ],
+   notFor:[
+    'Treatment after a bite, scratch or lick. That is post-exposure treatment, which this PGD does not cover. Send the patient to urgent care the same day.',
+    'A patient who has had a confirmed anaphylactic reaction to a previous dose or to any component of the vaccine.',
+    'Children under 2.',
+   ],
+  },
 
  intro:[
   {h:'Two schedules, and which one you may use'},

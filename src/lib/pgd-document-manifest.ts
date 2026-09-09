@@ -116,7 +116,6 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   "sore-throat": "sore-throat.pdf",
   "statins": "statins.pdf",
   "sti-testing": "sti-testing.pdf",
-  "threadworms": "threadworms.pdf",
   "thrush": "thrush.pdf",
   "travel-core": "travel-core-v002.pdf",
   // typhoid is covered by the signed Travel Health Core Package PGD (Hep A + Typhoid + Cholera)
@@ -228,7 +227,6 @@ export const PGD_HUBRX_FILES: Record<string, string> = {
   "sore-throat": "sore-throat 2.pdf",
   "statins": "statins 2.pdf",
   "sti-testing": "sti-testing 2.pdf",
-  "threadworms": "threadworms 2.pdf",
   "thrush": "thrush 2.pdf",
   // 9 Sep 2026: the branded copy still carried the 7 Sep correction notice
   // over the unaltered original, a week after the master was reissued as

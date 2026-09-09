@@ -4,6 +4,18 @@ const d={
  banner:'ISSUED, VALID FROM 8 SEPTEMBER 2026',
  title:'Plaque Psoriasis (Calcipotriol with Betamethasone)',
  strap:'Patient Group Direction, version 003, issued 8 September 2026. Calcipotriol 50 micrograms/g with betamethasone 0.5 mg/g, as ointment, gel, cream or cutaneous foam. Adults 18 and over, stable plaque psoriasis.',
+ purpose:{
+   for:'The supply of a combined topical treatment to an adult with a flare of stable plaque psoriasis on the trunk, limbs or scalp, by a registered pharmacist or registered pharmacy technician in a community pharmacy, without a prescription.',
+   authorises:[
+    'Calcipotriol 50 micrograms/g with betamethasone (as dipropionate) 0.5 mg/g, as ointment, gel, cream or cutaneous foam, once daily for up to 4 weeks, in adults aged 18 years and over.',
+   ],
+   notFor:[
+    'The face, flexures or genital skin, where a potent steroid is not used.',
+    'Generalised pustular psoriasis or erythroderma. Refer as an emergency.',
+    'Psoriasis affecting more than 30% of the body surface, or needing more than 15g of product in a day. Refer.',
+    'Anyone under 18.',
+   ],
+  },
 
  intro:[
   {h:'The three things this version adds'},

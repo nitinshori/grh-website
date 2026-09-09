@@ -249,20 +249,19 @@ export const patientCategories: PatientCategory[] = [
     name: "Children's Health",
     tagline: "Fast treatment for common childhood illnesses",
     description:
-      "When your child is unwell, you want a quick clinical assessment from someone you trust. Your pharmacy can assess and treat a range of common childhood conditions &mdash; impetigo, urinary tract infections (UTIs), threadworms, and more.",
+      "When your child is unwell, you want a quick clinical assessment from someone you trust. Your pharmacy can assess and treat a range of common childhood conditions &mdash; impetigo, urinary tract infections (UTIs), and more.",
     icon: "👶",
     color: "bg-rose-50",
     textColor: "text-rose-700",
     popularServices: [
       "Impetigo treatment",
       "Paediatric UTI treatment",
-      "Threadworm treatment (prescription strength)",
     ],
     whyPharmacy:
       "Parents know how stressful it is when your child is unwell. Your pharmacy can often see and treat children the same day.",
     seoTitle: "Children's Health Services at Your Local Pharmacy",
     seoDescription:
-      "Quick treatment for childhood impetigo, urinary tract infections (UTIs), and threadworms at a pharmacy near you. Same-day access for parents.",
+      "Quick treatment for childhood impetigo, urinary tract infections (UTIs) at a pharmacy near you. Same-day access for parents.",
   },
   {
     slug: "minor-ailments",

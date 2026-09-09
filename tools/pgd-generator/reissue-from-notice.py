@@ -95,6 +95,13 @@ DOCS = {
         src=f"{HUB}/ANXIETY PROPRANOLOL FINAL V.docx",
         version="v002", old="anxiety-propranolol.pdf", new="anxiety-propranolol-v002.pdf",
         edits=[
+            # The 40mg arm is withdrawn entirely. It is the second complete
+            # PGD in the file, from its title page to its change history, and
+            # comes out as a block of top-level elements. The rule set by the
+            # Medical Director on 9 September 2026: the whole supply taken at
+            # once must stay BELOW 320mg, so 28 x 10mg (280mg) is the only
+            # supply this PGD offers. 14 x 40mg would have been 560mg.
+            ("truncate_from_toplevel", "Propranolol 40mg tablets", None, 2),
             ("replace", "Concurrent intravenous verapamil or diltiazem",
              "Concurrent verapamil or diltiazem, oral or intravenous. With a "
              "beta-blocker the combination risks severe bradycardia, heart block "
@@ -111,39 +118,25 @@ DOCS = {
              "Depression that is not severe and without any suicidal ideation. "
              "Supply may proceed with counselling. Severe depression or any "
              "suicidal ideation is an exclusion, above.", None),
-            # One anchor, two different replacements, in document order:
-            # the 10mg arm first, then the 40mg arm. Done as one edit because
-            # replacing the first occurrence makes the second become the first.
-            ("replace_each", "Up to 56 tablets (28-day supply at twice daily dosing)", [
-                "Up to 56 tablets of 10mg (560mg of propranolol in total). One "
-                "supply per situational event or course. Review before any repeat.",
-                "Up to 14 tablets of 40mg (560mg of propranolol in total, the same "
-                "as the 10mg arm). One supply per situational event or course. "
-                "Review before any repeat.",
-            ], None),
-            ("insert_after",
-             "Physical symptoms of situational anxiety (palpitations, tremor, sweating)", [
-                "For the 40mg strength: the patient's required single dose is "
-                "established at 40mg by previous response to propranolol. "
-                "Otherwise supply the 10mg strength, which covers the whole "
-                "10 to 40mg dose range.",
-             ], 2),
+            ("replace", "Up to 56 tablets (28-day supply at twice daily dosing)",
+             "Up to 28 tablets of 10mg, 280mg of propranolol in total, and no "
+             "more. Propranolol is cardiotoxic in overdose and the whole supply "
+             "taken at once must remain below 320mg. One supply per situational "
+             "event or course. Review before any repeat. The 40mg strength is "
+             "not authorised under this PGD.", None),
         ],
         change=(
-            "Both arms printed the same quantity line, up to 56 tablets, which is "
-            "a 28 day supply at 10mg and four times that quantity of propranolol "
-            "at 40mg, and nothing said when 40mg was indicated rather than 10mg. "
-            "The quantity is now strength-specific and the two arms authorise "
-            "the same total, 560mg: 56 tablets of 10mg, or 14 tablets of 40mg "
-            "where a 40mg single dose is established. The document's own "
-            "guidance named suicidal ideation, severe depression, PTSD and "
-            "substance misuse as red flags and none of them was an exclusion. "
-            "They are now, with another beta-blocker, and the verapamil and "
-            "diltiazem exclusion now covers the oral forms as well as "
+            "Version 001 authorised a 40mg arm and printed the same quantity line "
+            "for both strengths, up to 56 tablets, which at 40mg is 2,240mg of "
+            "propranolol. Propranolol is cardiotoxic in overdose. The 40mg arm is "
+            "withdrawn, and the supply is capped at 28 tablets of 10mg, 280mg in "
+            "total, so that the entire supply taken at once remains below 320mg. "
+            "The document's own guidance named suicidal ideation, severe "
+            "depression, PTSD and substance misuse as red flags and none of them "
+            "was an exclusion. They are now, with another beta-blocker, and the "
+            "verapamil and diltiazem exclusion covers the oral forms as well as "
             "intravenous. This incorporates and withdraws the correction notice "
-            "of 7 September 2026. The 40mg cap of 14 tablets is a clinical "
-            "judgement made at reissue and is flagged for Chris Pilkington to "
-            "confirm."
+            "of 7 September 2026."
         ),
     ),
     "asthma-rescue": dict(
@@ -287,8 +280,38 @@ def insert_after(p, texts):
         ref = new
 
 
+def truncate_from_toplevel(doc, anchor, back):
+    """
+    Delete every top-level body element from `back` elements before the
+    top-level paragraph whose text is `anchor`, to the end of the body, keeping
+    the final sectPr. Used to remove a whole arm: its title page sits `back`
+    elements before the strength line that identifies it.
+    """
+    body = doc.element.body
+    kids = list(body.iterchildren())
+    idx = None
+    for i, c in enumerate(kids):
+        if c.tag.endswith("}p") and Paragraph(c, doc).text.strip() == anchor:
+            idx = i
+            break
+    if idx is None:
+        raise SystemExit(f"truncate: top-level anchor not found: {anchor!r}")
+    start = max(0, idx - back)
+    removed = 0
+    for c in kids[start:]:
+        if c.tag.endswith("}sectPr"):
+            continue
+        body.remove(c)
+        removed += 1
+    return removed
+
+
 def apply(doc, edits, slug):
     for kind, anchor, new, nth in edits:
+        if kind == "truncate_from_toplevel":
+            n = truncate_from_toplevel(doc, anchor, nth or 0)
+            print(f"  {kind:13} removed {n} top-level elements from {anchor[:50]!r}")
+            continue
         paras = list(walk(doc, doc.element.body))
         if kind == "delete_prefix":
             hits = [p for p in paras if (p.text or "").strip().startswith(anchor)]

@@ -100,6 +100,19 @@ const d={
  banner:'ISSUED, VALID FROM 9 SEPTEMBER 2026',
  title:'Dental Bridging Antibiotic',
  strap:'Patient Group Direction, version 005, issued 9 September 2026. Amoxicillin and metronidazole, adults 18 and over, spreading or systemic dental infection only.',
+ purpose:{
+   for:'The supply of a short course of antibiotic to an adult with an acute dental infection that is spreading or causing systemic upset, to bridge the time until they can be seen by a dentist, by a registered pharmacist or registered pharmacy technician in a community pharmacy, without a prescription.',
+   authorises:[
+    'Amoxicillin 500mg capsules, first line, in adults aged 18 years and over.',
+    'Metronidazole 200mg tablets, in adults aged 18 years and over who are penicillin-allergic.',
+   ],
+   notFor:[
+    'Toothache or a localised dental abscess without spreading infection or systemic features. National guidance is that these do not need an antibiotic; they need a dentist.',
+    'Facial swelling that is closing the eye, affecting swallowing or breathing, or spreading to the neck, or a patient who is systemically very unwell. Refer as an emergency.',
+    'Pain relief. This PGD supplies no analgesia.',
+    'Anyone under 18.',
+   ],
+  },
 
  intro:[
   {h:'The three outcomes'},
