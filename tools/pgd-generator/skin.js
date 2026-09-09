@@ -15,7 +15,7 @@ const COMMON_EXCLUSIONS=[
  {bullet:'Facial or periorbital cellulitis, or cellulitis of the hand.'},
  {bullet:'Animal or human bite. Refer; these need co-amoxiclav, which is not covered here.'},
  {bullet:'Suspected osteomyelitis or septic arthritis, or infection over a joint or tendon.'},
- {bullet:'UNTREATED FUNGAL INFECTION, or a rash that may be tinea rather than bacterial infection. Version 001 excluded untreated fungal, bacterial and viral infection and version 002 lost it. Tinea misdiagnosed as bacterial infection is a common error, and an antibiotic will not treat it.',b:true},
+ {bullet:'UNTREATED FUNGAL INFECTION, or a rash that may be tinea rather than bacterial infection. Tinea misdiagnosed as bacterial infection is a common error, and an antibiotic will not treat it.',b:true},
  {bullet:'Suspected viral infection, including eczema herpeticum: rapidly worsening, painful, punched-out or clustered vesicular lesions. Refer.',b:true},
  {bullet:'Immunosuppression of any kind. NOTE: immunosuppression is a QUALIFYING COMORBIDITY under the Acute Bacterial Bronchitis PGD and an ABSOLUTE EXCLUSION here. That difference is deliberate: a chest infection in an immunosuppressed patient is treated early, whereas a skin infection in the same patient can progress to necrotising infection and needs assessment rather than an antibiotic from a pharmacy. Staff move between these two services in a shift, so the difference is stated rather than left to be discovered.',b:true},
  {bullet:'Diabetic foot infection.'},
@@ -31,12 +31,12 @@ const CELLULITIS_ROW=['Cellulitis: marking, review and who does it',[
  {bullet:'THE REVIEW AT 48 HOURS IS PERFORMED BY A PHARMACIST AT THE SUPPLYING PHARMACY, IN PERSON. Book it as an appointment before the patient leaves. A phone call is not sufficient: the point is to see whether the erythema has passed the mark.',b:true},
  {bullet:'Record at the review: whether the erythema is inside or beyond the mark, the patient temperature, whether pain has improved, and the decision reached.',b:true},
  {bullet:'Spread beyond the mark means same-day referral, not a change of antibiotic.',b:true},
- {bullet:'If the patient does not attend the review, contact them the same day. If you cannot reach them, record the attempt and inform the GP. Version 002 required a review but named nobody to do it, nowhere to do it, and nothing to record.',b:true},
+ {bullet:'If the patient does not attend the review, contact them the same day. If you cannot reach them, record the attempt and inform the GP.',b:true},
 ]];
 
 const ANAPHYLAXIS_ROW=['Anaphylaxis and serious reactions',[
  {text:'This PGD supplies an oral medicine which the patient takes at home, so it does not carry the requirement for adrenaline to be immediately available that the vaccination PGDs in this estate carry.',b:true},
- {text:'It does require that staff supplying can recognise anaphylaxis and an evolving severe reaction, can call 999, and counsel the patient on what to do. Version 001 carried an anaphylaxis provision and version 002 lost it entirely.',b:true},
+ {text:'It does require that staff supplying can recognise anaphylaxis and an evolving severe reaction, can call 999, and counsel the patient on what to do.',b:true},
  {text:'Tell every patient to stop the medicine and seek urgent help for rash, wheeze, or swelling of the lips or tongue, and to call 999 for any difficulty breathing.'},
 ]];
 
@@ -71,17 +71,9 @@ const TRAINING=[
 const d={
  banner:'ISSUED, VALID FROM 9 SEPTEMBER 2026',
  title:'Skin and Soft Tissue Infection',
- strap:'Patient Group Direction, version 003, issued 9 September 2026. Three arms: flucloxacillin, clarithromycin, doxycycline.',
+ strap:'Patient Group Direction, version 004, issued 9 September 2026. Three arms: flucloxacillin, clarithromycin, doxycycline.',
 
  intro:[
-  {h:'What version 002 got wrong'},
-  {bullet:'A PAEDIATRIC DOSE ERROR. The dose box read "Children 2 to 9 years: 250mg four times daily (10mL of the 250mg/5mL suspension)". 250mg of a 250mg/5mL suspension is 5mL, not 10mL. A pharmacy following the bracket would have given a two-year-old 2 grams of flucloxacillin a day, double the intended dose, and run out of suspension halfway through the course. The quantity box was calculated correctly for 5mL, which is how the error was found.',b:true},
-  {bullet:'ADULT OBSERVATION THRESHOLDS ON A SERVICE STARTING AT AGE 2. Appendix 1 referred at pulse above 110 and respiratory rate 22 or above, which are normal resting values for a healthy three-year-old, and at systolic below 100, which would refer almost every healthy pre-schooler and needs a paediatric cuff most pharmacies do not stock. The thresholds had been copied from the Acute Bacterial Bronchitis PGD so the two documents would agree, without noticing that that PGD starts at 12.',b:true},
-  {bullet:'CLARITHROMYCIN RENAL DOSING DROPPED. Version 001 halved the dose below a creatinine clearance of 30 mL/min. Version 002 said nothing about renal function in that arm at all, so a patient with significant impairment received twice the appropriate dose.',b:true},
-  {bullet:'UNDEFINED DOSE TRIGGER. "More extensive infection" increased the dose in two arms and was defined nowhere.',b:true},
-  {bullet:'A REVIEW WITH NO OWNER. Cellulitis required a 48-hour review; the document did not say who does it, where, or what is recorded.',b:true},
-  {bullet:'FUNGAL INFECTION NO LONGER EXCLUDED. Version 001 excluded untreated fungal, bacterial and viral infection; version 002 kept only the bacterial part.',b:true},
-
   {h:'Age, and what this PGD now covers'},
   {bullet:'IMPETIGO, FOLLICULITIS, INFECTED ECZEMA and INFECTED WOUNDS: from 2 years of age.',b:true},
   {bullet:'CELLULITIS: 12 YEARS AND OVER ONLY. Cellulitis is the highest-acuity condition in this document and the one most likely to deteriorate. In a younger child it needs assessment rather than a pharmacy supply.',b:true},
@@ -168,7 +160,7 @@ const d={
     ['Dose and frequency',[
       {text:'Adults and children 10 years and over: 500mg four times daily, which is 10 mL four times daily if the suspension is used.',b:true},
       {text:'Children 2 to 9 years: 250mg four times daily, which is 5 mL of the 250mg/5mL suspension four times daily.',b:true},
-      {text:'CHECK THE VOLUME AGAINST THE STRENGTH BEFORE SUPPLY. The 250mg/5mL suspension delivers 50mg per mL. Version 002 stated 10 mL against a 250mg dose, which is double.',b:true},
+      {text:'CHECK THE VOLUME AGAINST THE STRENGTH BEFORE SUPPLY. The 250mg/5mL suspension delivers 50mg per mL.',b:true},
       {text:'Duration 5 days for uncomplicated infection; 7 days for cellulitis.'},
     ]],
     ['Quantity to be supplied',[
@@ -206,7 +198,7 @@ const d={
     ['Inclusion criteria',[
       {bullet:'PENICILLIN ALLERGY, OR FLUCLOXACILLIN OTHERWISE UNSUITABLE, with the reason recorded.',b:true},
       {bullet:'Aged 2 years and over, and 12 years and over where the condition is cellulitis.',b:true},
-      {bullet:'Weighing 12 kg or more. Version 002 carried a weight band starting at 8 kg, which no child of 2 reaches, implying that under-twos were in scope.',b:true},
+      {bullet:'Weighing 12 kg or more.',b:true},
       {bullet:'Localised skin or soft tissue infection with signs of bacterial infection.'},
       {bullet:'All observations within the thresholds for the patient AGE BAND in Appendix 1.'},
       {bullet:'Where cellulitis is being treated, margins marked and the 48-hour review booked at this pharmacy.'},
@@ -216,7 +208,7 @@ const d={
     ['Exclusion criteria',[
       {text:'Refer, do not supply, where any of the following is present.',b:true},
       ...COMMON_EXCLUSIONS,
-      {bullet:'UNDER 2 YEARS OF AGE, or weighing under 12 kg. Version 002 gave this arm no age exclusion at all, so a pharmacist reading Arm 2 alone found nothing barring an 18-month-old.',b:true},
+      {bullet:'UNDER 2 YEARS OF AGE, or weighing under 12 kg.',b:true},
       {bullet:'Under 12 years of age where the condition is cellulitis.',b:true},
       {bullet:'KNOWN RENAL IMPAIRMENT with a creatinine clearance below 30 mL/min, or renal impairment of unknown severity where there is reason to suspect it is significant. Refer. Version 001 halved the dose in this group; a bridging supply from a pharmacy is not the place to make a renal dose adjustment on an unverified estimate, so this PGD excludes and refers instead.',b:true},
       {bullet:'Hypersensitivity to macrolides.'},
@@ -351,7 +343,6 @@ const d={
  appendix:[
   {h:'Appendix 1: Observations, by age band'},
   {text:'Measure and record every observation before any supply. Use the row for the patient in front of you. If ANY threshold for that band is breached, do not supply: refer.',b:true},
-  {text:'Version 002 carried a single adult row and applied it from age 2. A well three-year-old breathes about 25 times a minute with a pulse around 110, and would have breached it.',i:true,color:'595959'},
   {tbl:[
    ['AGE 2 TO 4 YEARS',[
      {bullet:'Respiratory rate: REFER if 40 or above. (NICE NG143 defines tachypnoea over 12 months as more than 40.)'},
@@ -433,4 +424,4 @@ const d={
  ],
 };
 
-Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('skin-v004-SIGNED.docx',b);console.log('skin v003 docx bytes',b.length);});
+Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('skin-v004-SIGNED.docx',b);console.log('skin '+d.version+' docx bytes',b.length);});

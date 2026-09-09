@@ -153,6 +153,37 @@ function assertPublishable(d){
     errs.push('guidelines.source: name and date the guidance being summarised, so a reader can tell when it goes out of date.');
   }
 
+  // ── 3. NO ERROR NARRATION IN THE BODY ────────────────────────────────
+  //
+  // The reissued documents carried passages like "What version 002 got
+  // wrong", and inline asides such as "Version 001 delegated this to the
+  // pharmacy SOP", through the SCOPE PAGES, the CLINICAL ROWS and the
+  // COUNSELLING. That is our own error log, printed on page one of a signed
+  // document that goes to adopting pharmacies and is visible to customers.
+  //
+  // It does not belong there. It clutters the clinical content a pharmacist
+  // needs at the point of care, and it advertises our mistakes to the
+  // reader instead of telling them what to do.
+  //
+  // The change history at the back is where a version records what changed
+  // and why. That is what an adopting pharmacy reads to verify a reissue,
+  // and it is where all of this belongs.
+  //
+  // So: this text is permitted in `changes` and `prior`, and refused
+  // anywhere else.
+  const NARRATION=/(got wrong|(version|v)\s*0?0?\d\s+(stated|said|carried|had|listed|offered|gave|left|lost|dropped|permitted|delegated|authorised|treated|pointed|required|made|excluded)|was lost in|this was wrong|which was wrong|nobody noticed|is why version|earlier versions of this (tool|document))/i;
+  const bodyFields=['intro','arms','appendix','guidelines','strap','banner'];
+  const found=[];
+  bodyFields.forEach(f=>{
+    (function walk(x){
+      if(typeof x==='string'){ if(NARRATION.test(x)) found.push(x.slice(0,90)); return; }
+      if(Array.isArray(x)){ x.forEach(walk); return; }
+      if(x&&typeof x==='object'){ Object.values(x).forEach(walk); }
+    })(d[f]);
+  });
+  found.slice(0,6).forEach(t=>errs.push('error narration in the document body, move it to `changes`: "'+t+'"'));
+  if(found.length>6) errs.push('...and '+(found.length-6)+' more passages of error narration in the body.');
+
   // Em dashes, anywhere in the data object.
   const seen=[];
   (function walk(x){

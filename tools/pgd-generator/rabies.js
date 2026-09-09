@@ -26,6 +26,8 @@ const d={
   'Green Book chapter 27 states that Rabipur is the only rabies vaccine licensed for intramuscular use in the UK. That chapter was published on 19 May 2023. Verorab received its UK marketing authorisation, PLGB 23228/0001, on 1 November 2023, and its SPC was last revised on 29 January 2026. Both products in this PGD are UK-licensed. The chapter is simply out of date on this point, and a pharmacist who reads it should not conclude that Verorab is an unlicensed import.',
  ],
 
+ guidelines:require('./guidelines/rabies.js'),
+
  arms:[{
   title:'Rabies vaccine, pre-exposure prophylaxis',
   subtitle:'Patient Group Direction for the administration of Rabipur or Verorab by the intramuscular route for pre-exposure prophylaxis against rabies.',
@@ -94,7 +96,7 @@ const d={
    ['Anaphylaxis and observation',[
      {text:'Adrenaline (epinephrine) 1 in 1,000 injection must be immediately available whenever a vaccine is administered under this PGD, together with a written anaphylaxis protocol consistent with current Resuscitation Council UK guidance, and a telephone.',b:true},
      {text:'All staff administering vaccines must be trained in the recognition and immediate management of anaphylaxis and must hold current basic life support training.'},
-     {text:'OBSERVE EVERY PATIENT FOR 15 MINUTES AFTER VACCINATION. Vaccinate seated. Version 001 delegated the observation period to the pharmacy SOP without stating a figure; it is now 15 minutes, consistently with every other vaccination PGD in this estate.',b:true},
+     {text:'OBSERVE EVERY PATIENT FOR 15 MINUTES AFTER VACCINATION. Vaccinate seated.',b:true},
      {text:'Anxiety-related reactions including vasovagal syncope, hyperventilation and transient visual disturbance or paraesthesia can occur before or after any injection. Procedures must be in place to prevent injury from a faint, which is common particularly in adolescents.'},
    ]],
 
@@ -145,9 +147,9 @@ const d={
    ['Route and method of administration','Intramuscular, into the deltoid in older children and adults, or the anterolateral thigh in infants and young children. Never into the buttock. For a patient with a bleeding disorder, give by deep subcutaneous injection instead. Reconstitute immediately before use. Rabipur must be used within one hour of reconstitution; Verorab for intramuscular use must be used immediately. Where given with other vaccines, use separate sites, preferably different limbs, or at least 2.5 cm apart, and record the site of each.'],
    ['Storage and cold chain',[
      {text:'Store at +2C to +8C in the original packaging to protect from light. Do not freeze; discard if frozen.'},
-     {text:'COLD CHAIN EXCURSION: vaccine exposed to conditions outside the stated range must be quarantined and risk assessed in accordance with UKHSA Vaccine Incident Guidance before any further use. Do not administer excursion stock until that assessment is complete. Version 001 carried no cold chain excursion procedure at all.',b:true},
+     {text:'COLD CHAIN EXCURSION: vaccine exposed to conditions outside the stated range must be quarantined and risk assessed in accordance with UKHSA Vaccine Incident Guidance before any further use. Do not administer excursion stock until that assessment is complete.',b:true},
    ]],
-   ['Disposal','Dispose of used syringes, needles, vials and any reconstituted vaccine in a UN-approved puncture-resistant sharps container in accordance with local arrangements and HTM 07-01. Version 001 carried no disposal provision.'],
+   ['Disposal','Dispose of used syringes, needles, vials and any reconstituted vaccine in a UN-approved puncture-resistant sharps container in accordance with local arrangements and HTM 07-01.'],
    ['Adverse effects','Very common: headache, malaise, myalgia, injection site pain, fatigue and fever. Common: lymphadenopathy, reduced appetite, injection site erythema and swelling, influenza-like symptoms. Uncommon or rare: hypersensitivity reactions including rash and urticaria, dizziness, nausea, abdominal pain, chills, dyspnoea. Very rare or reported post-marketing: anaphylaxis and angioedema, encephalitis, Guillain-Barre syndrome, and for Verorab sudden hearing loss which may persist. Causality is not established for the neurological events. Consult the current SPC for the product used.'],
   ],
   pat:[
@@ -200,4 +202,4 @@ const d={
  ],
 };
 
-Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('rabies-v004-SIGNED.docx',b);console.log('rabies v004 docx bytes',b.length);});
+Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('rabies-v004-SIGNED.docx',b);console.log('rabies '+d.version+' docx bytes',b.length);});

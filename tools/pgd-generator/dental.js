@@ -99,15 +99,9 @@ function arm(o){return{
 const d={
  banner:'ISSUED, VALID FROM 9 SEPTEMBER 2026',
  title:'Dental Bridging Antibiotic',
- strap:'Patient Group Direction, version 004, issued 9 September 2026. Amoxicillin and metronidazole, adults 18 and over, spreading or systemic dental infection only.',
+ strap:'Patient Group Direction, version 005, issued 9 September 2026. Amoxicillin and metronidazole, adults 18 and over, spreading or systemic dental infection only.',
 
  intro:[
-  {h:'What version 003 got wrong, and why this version exists'},
-  {bullet:'VERSION 003 HAD THE INDICATION THE WRONG WAY ROUND. It required the ABSENCE of facial swelling, fever and systemic features, and referred any patient who had them. That authorised an antibiotic for exactly the group national guidance says should not receive one, and referred exactly the group guidance says is the indication for one.',b:true},
-  {bullet:'SDCEP states that antibiotics are required only in cases of spreading infection or systemic involvement, and that they are not appropriate for an infection localised to the peri-radicular tissues, because that infection is being contained by the immune system and the abscess is largely isolated from the circulation so very little antibiotic reaches it.',b:true},
-  {bullet:'NHS and NICE CKS primary care guidance is to the same effect: antibiotics are not generally indicated for otherwise healthy people with no signs of spreading infection, and the mainstay of treatment is dental treatment plus analgesia.',b:true},
-  {bullet:'Version 004 restores the indication that version 001 had, and keeps the emergency red flags that version 003 added, which were an improvement.',b:true},
-
   {h:'The three outcomes'},
   'Work out which of these applies before you think about a medicine at all.',
   ...THREE_OUTCOMES,
@@ -151,7 +145,6 @@ const d={
    {h:'How this PGD applies that guidance',body:[
      'This PGD supplies a BRIDGING antibiotic to the spreading or systemic group only, while they wait for urgent dental assessment, and refers the emergency group immediately.',
      'It deliberately does NOT supply to the localised group, and says so in terms, because that is what the guidance requires.',
-     'Version 003 of this document had that the wrong way round, which is why version 004 exists.',
    ]},
   ]
  },
@@ -174,7 +167,7 @@ const d={
     {text:'Advise the patient to complete the course even if the pain settles, and that finishing it does not remove the need for the dental appointment.'},
     {text:'Diarrhoea is common. Advise the patient to seek advice for severe or bloody diarrhoea, which may indicate Clostridioides difficile infection.'},
     {text:'Oral thrush can follow a course of amoxicillin. Mention it, and say it is treatable.'},
-    {text:'This PGD supplies no analgesia. Where the patient needs pain relief, sell it as a pharmacy medicine under the pharmacy own protocol and record that you did. Version 003 carried a caution telling the pharmacist to "supply paracetamol per the OTC pathway", which was a leftover from the version 001 ibuprofen arm: it named a pathway that does not exist in this document and used supply language for a medicine this PGD does not authorise.',b:true},
+    {text:'This PGD supplies no analgesia. Where the patient needs pain relief, sell it as a pharmacy medicine under the pharmacy own protocol and record that you did.',b:true},
    ],
    med:[
     ['Name, form and strength','Amoxicillin 500mg capsules.'],
@@ -313,4 +306,4 @@ const d={
  ],
 };
 
-Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('dental-v005-SIGNED.docx',b);console.log('dental v004 docx bytes',b.length);});
+Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('dental-v005-SIGNED.docx',b);console.log('dental '+d.version+' docx bytes',b.length);});

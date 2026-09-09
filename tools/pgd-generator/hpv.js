@@ -6,9 +6,9 @@ const d={
  strap:'Patient Group Direction, version 002, issued 8 September 2026. Gardasil 9, intramuscular, from 9 years of age, all sexes.',
 
  intro:[
-  {h:'Read this first: three things version 001 got wrong'},
+  {h:'Read this first: three points that are easy to get wrong'},
   {bullet:'THIS PGD COVERS ALL SEXES. HPV vaccination is for boys and men as much as for girls and women. The GBMSM cohort, which national policy singles out for protection up to 45 years of age, is male by definition. Any suggestion that this is a service for females only is wrong.',b:true},
-  {bullet:'YEAST ALLERGY IS NOT A CONTRAINDICATION. Green Book chapter 18a states this in terms: Gardasil 9 is grown in yeast cells but the finished vaccine contains no yeast as an ingredient, at most trace protein below 0.007 micrograms. Version 001 listed yeast protein as a contraindication and the consultation tool refused to vaccinate anyone who reported a yeast allergy. Both were wrong and both are corrected.',b:true},
+  {bullet:'YEAST ALLERGY IS NOT A CONTRAINDICATION. Green Book chapter 18a states this in terms: Gardasil 9 is grown in yeast cells but the finished vaccine contains no yeast as an ingredient, at most trace protein below 0.007 micrograms. Both were wrong and both are corrected.',b:true},
   {bullet:'PREGNANCY: DO NOT ASK ABOUT PERIODS AND DO NOT PREGNANCY TEST. Green Book chapter 18a states that routine questioning about last menstrual period and pregnancy testing is not required before offering HPV vaccine. Vaccination is postponed in a woman known to be pregnant because the SPC says the data are insufficient, not because harm has been shown. If a patient turns out to have been pregnant when vaccinated, that is not a cause for alarm and termination must not be recommended.',b:true},
 
   {h:'The schedule depends on age and immune status, and most of it is off-label'},
@@ -23,6 +23,8 @@ const d={
   {h:'On charging for doses the patient does not need'},
   'This matters commercially as well as clinically. Under the schedule that version 001 and the consultation tool applied, a healthy 19 year old was told to return twice more and would have been charged for two doses that national policy says are unnecessary. Getting the schedule right is not only a safety point. Where a patient has already been given and charged for surplus doses under the old schedule, that is a matter for the pharmacy to put right with them directly.',
  ],
+
+ guidelines:require('./guidelines/hpv.js'),
 
  arms:[{
   title:'Gardasil 9 for vaccination against human papillomavirus',
@@ -148,9 +150,9 @@ const d={
    ['Route and method of administration','Intramuscular. Preferred site the deltoid area of the upper arm, or the higher anterolateral thigh. Never intravascularly, subcutaneously or intradermally, and never mixed in a syringe with another vaccine. Shake well before use: the suspension is a clear liquid with a white precipitate before agitation and a white cloudy liquid after. Inspect for particles and discolouration and discard if either is present. Administer as soon as possible after removal from the refrigerator. Gardasil 9 may be given at the same visit as other vaccines including Td/IPV, MMR, influenza, MenACWY and hepatitis B, at a separate site, preferably a different limb, or at least 2.5 cm apart, recording the site of each.'],
    ['Storage and cold chain',[
      {text:'Store at +2C to +8C in the original outer carton to protect from light. Do not freeze. Discard if frozen.'},
-     {text:'COLD CHAIN EXCURSION: the SPC states that the vaccine components are stable for 96 hours at 8C to 40C, or for 72 hours at 0C to 2C, after which the vaccine must be used or discarded. That figure guides a temporary excursion only. Any stock exposed outside +2C to +8C must be quarantined and risk assessed in accordance with UKHSA Vaccine Incident Guidance before further use. Do not administer excursion stock until that assessment is complete. Version 001 carried no cold chain excursion procedure at all.',b:true},
+     {text:'COLD CHAIN EXCURSION: the SPC states that the vaccine components are stable for 96 hours at 8C to 40C, or for 72 hours at 0C to 2C, after which the vaccine must be used or discarded. That figure guides a temporary excursion only. Any stock exposed outside +2C to +8C must be quarantined and risk assessed in accordance with UKHSA Vaccine Incident Guidance before further use. Do not administer excursion stock until that assessment is complete.',b:true},
    ]],
-   ['Disposal','Dispose of used syringes, needles, vials and any unused vaccine in a UN-approved puncture-resistant sharps container in accordance with local authority requirements and HTM 07-01, Safe management of healthcare waste. Version 001 carried no disposal provision.'],
+   ['Disposal','Dispose of used syringes, needles, vials and any unused vaccine in a UN-approved puncture-resistant sharps container in accordance with local authority requirements and HTM 07-01, Safe management of healthcare waste.'],
    ['Adverse effects','Very common: injection site pain, swelling and erythema; headache. Common: pyrexia, fatigue, dizziness, nausea, injection site pruritus and bruising. Uncommon: lymphadenopathy, syncope sometimes with tonic-clonic movements, vomiting, urticaria, arthralgia, myalgia, asthenia, chills, malaise, injection site nodule. Rare: hypersensitivity. Not known: anaphylactic reactions. Reported after the related quadrivalent vaccine: injection site cellulitis, idiopathic thrombocytopenic purpura, anaphylactoid reactions, bronchospasm, acute disseminated encephalomyelitis and Guillain-Barre syndrome, with causality not established. Consult the current SPC.'],
   ],
   pat:[
@@ -220,4 +222,4 @@ const d={
  ],
 };
 
-Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('hpv-v003-SIGNED.docx',b);console.log('hpv v002 docx bytes',b.length);});
+Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('hpv-v003-SIGNED.docx',b);console.log('hpv '+d.version+' docx bytes',b.length);});

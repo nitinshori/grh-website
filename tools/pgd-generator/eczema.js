@@ -10,18 +10,18 @@ const SITE_RULE=[
  {text:'BETAMETHASONE VALERATE 0.1% (Arm 2) IS NOT AUTHORISED on the face, eyelids, flexures or genital skin. A potent steroid on thin skin causes atrophy quickly.',b:true},
  {text:'CLOBETASONE BUTYRATE 0.05% (Arm 1) MAY BE USED ON THOSE SITES, for MILD OR MODERATE disease, FOR UP TO 7 DAYS ONLY at those sites.',b:true},
  {text:'THE EYELIDS ARE EXCLUDED FROM BOTH ARMS. Refer.',b:true},
- {text:'So: moderate eczema on the face, flexures or genital skin is treated with clobetasone under Arm 1, capped at 7 days. Version 002 pointed staff to Arm 1 for exactly this patient while Arm 1 admitted only mild disease.',b:true},
+ {text:'So: moderate eczema on the face, flexures or genital skin is treated with clobetasone under Arm 1, capped at 7 days.',b:true},
 ];
 
 const DURATION_ROW=['Maximum treatment period',[
- {text:'ON THE FACE, FLEXURES OR GENITAL SKIN: 7 DAYS MAXIMUM, whichever arm and whichever severity. Not 4 weeks. Version 002 stated this limit only inside an exclusion bullet, while the duration box for the same arm permitted four weeks of continuous daily treatment, so a member of staff reading the duration box for a facial supply got the wrong answer.',b:true},
+ {text:'ON THE FACE, FLEXURES OR GENITAL SKIN: 7 DAYS MAXIMUM, whichever arm and whichever severity. Not 4 weeks.',b:true},
  {text:'ON THE TRUNK AND LIMBS: up to 7 days initially, then review. Maximum 4 weeks of continuous daily treatment in total. Longer than that requires GP review.'},
  {text:'Maximum three courses in any 12 months before GP review.'},
  {text:'One supply per consultation. A second supply may be made after review, within the 4 week ceiling.'},
 ]];
 
 const QUANTITY_ROW=['Quantity to be supplied',[
- {text:'Sized to the treated area for the initial 7 days, with margin. Version 002 offered a maximum of 30g against a maximum treatable area of 10% of body surface, which at twice-daily application lasts six days and covers less than a quarter of the four weeks the same document permitted.',b:true},
+ {text:'Sized to the treated area for the initial 7 days, with margin.',b:true},
  {text:'Working, using the conversion in Appendix 1: one fingertip unit is about 0.5g and covers about two adult palms.'},
  {bullet:'UP TO 2 ADULT PALMS, about 2% of body surface. 1 fingertip unit, 0.5g per application, 1g a day. SUPPLY 15g.'},
  {bullet:'2 TO 5 ADULT PALMS. Up to 2.5 fingertip units, 1.25g per application, 2.5g a day. SUPPLY 30g.'},
@@ -32,17 +32,17 @@ const QUANTITY_ROW=['Quantity to be supplied',[
 const BROKEN_SKIN=[
  {text:'ULCERATED SKIN AND OPEN WOUNDS ARE EXCLUDED. Refer.',b:true},
  {text:'EXCORIATION FROM SCRATCHING IS NOT AN EXCLUSION. It is expected in eczema, and version 002 both listed it as a marker of MODERATE disease qualifying a patient for Arm 2 and excluded "broken or ulcerated skin" three bullets below, so the same finding included and excluded the same patient.',b:true},
- {text:'WEEPING OR CRUSTED SKIN suggests secondary bacterial infection. Handle it under the concurrent supply route below, or refer. Version 001 excluded weeping skin outright; version 002 dropped the word without saying so.',b:true},
+ {text:'WEEPING OR CRUSTED SKIN suggests secondary bacterial infection. Handle it under the concurrent supply route below, or refer.',b:true},
 ];
 
-const FLAMMABILITY={text:'FIRE RISK FROM EMOLLIENTS. All emollients, including paraffin-free ones, soak into clothing, bedding and dressings and make them catch fire more easily and burn faster. Tell every patient not to smoke, use a naked flame, or go near anything burning, and to wash clothing and bedding often, knowing that washing may not remove the residue completely. Version 001 carried this warning and version 002 lost it.',b:true};
+const FLAMMABILITY={text:'FIRE RISK FROM EMOLLIENTS. All emollients, including paraffin-free ones, soak into clothing, bedding and dressings and make them catch fire more easily and burn faster. Tell every patient not to smoke, use a naked flame, or go near anything burning, and to wash clothing and bedding often, knowing that washing may not remove the residue completely.',b:true};
 
 const TRAINING=[
  'Pharmacist registered and practising with the GPhC.',
  'Pharmacy technician registered and practising with the GPhC.',
  'Must have completed training relevant to this condition, documented and overseen by the Get Real Health team.',
  'Must be able to grade eczema severity as mild or moderate against the definitions in this document, since severity and site together decide which arm applies.',
- 'Must be able to distinguish eczema and dermatitis from the conditions excluded below, in particular ROSACEA, PERIORAL DERMATITIS, ACNE, TINEA (fungal infection) and ECZEMA HERPETICUM. Tinea treated with a topical steroid becomes tinea incognito and worsens; version 002 omitted fungal infection from both the exclusions and this list.',
+ 'Must be able to distinguish eczema and dermatitis from the conditions excluded below, in particular ROSACEA, PERIORAL DERMATITIS, ACNE, TINEA (fungal infection) and ECZEMA HERPETICUM.',
  'Must be able to apply the fingertip unit conversion in Appendix 1 to size a supply to the treated area.',
  'Must previously have used PGDs to supply medication.',
  'Must work in compliance with the SOPs of their own employer and practise only within the bounds of their own competence.',
@@ -51,7 +51,7 @@ const TRAINING=[
 const COMMON_EXCLUSIONS=[
  {bullet:'Under 12 years of age.'},
  {bullet:'Application to the EYELIDS. Refer.',b:true},
- {bullet:'UNTREATED FUNGAL INFECTION, or any rash that might be tinea. A topical steroid on tinea produces tinea incognito: the rash spreads, loses its edge and becomes much harder to diagnose. Version 001 excluded untreated fungal, bacterial and viral infection; version 002 kept only part of it.',b:true},
+ {bullet:'UNTREATED FUNGAL INFECTION, or any rash that might be tinea. A topical steroid on tinea produces tinea incognito: the rash spreads, loses its edge and becomes much harder to diagnose.',b:true},
  {bullet:'SUSPECTED ECZEMA HERPETICUM: rapidly worsening, painful, punched-out or clustered vesicular lesions, or the patient is systemically unwell. This is an emergency, not a routine referral.',b:true},
  {bullet:'Signs of secondary bacterial infection, unless being treated concurrently under the Skin and Soft Tissue Infection PGD. See the note on concurrent supply.'},
  {bullet:'Ulcerated skin, or an open wound.'},
@@ -92,18 +92,9 @@ function records(){return ['Records to be kept',[
 const d={
  banner:'ISSUED, VALID FROM 9 SEPTEMBER 2026',
  title:'Eczema and Dermatitis',
- strap:'Patient Group Direction, version 003, issued 9 September 2026. Clobetasone butyrate 0.05% and betamethasone valerate 0.1%, 12 years and over.',
+ strap:'Patient Group Direction, version 004, issued 9 September 2026. Clobetasone butyrate 0.05% and betamethasone valerate 0.1%, 12 years and over.',
 
  intro:[
-  {h:'What version 002 got wrong'},
-  {bullet:'MODERATE ECZEMA ON THE FACE OR FLEXURES HAD NO SUPPLY ROUTE. The scope page and Arm 2 both sent that patient to Arm 1 for clobetasone, and Arm 1 admitted only MILD disease. Arm 1 now covers mild disease anywhere and moderate disease on those sites, capped at 7 days.',b:true},
-  {bullet:'THE FACIAL DURATION RULE CONTRADICTED ITSELF. The 7 day cap for clobetasone on the face, flexures and genital skin appeared only inside an exclusion bullet, while the duration box for the same arm permitted 4 weeks of continuous daily treatment. It is now in the duration box, the counselling and the records.',b:true},
-  {bullet:'THE QUANTITY DID NOT COVER THE AREA. 30g was the largest supply against a maximum treatable area of 10% of body surface. At 2.5g per application twice daily that is six days, against a document that permitted four weeks. Quantities are now sized to the area, with the arithmetic shown.',b:true},
-  {bullet:'EXCORIATION WAS BOTH AN INCLUSION AND AN EXCLUSION. Arm 2 listed excoriation as a marker of moderate disease qualifying a patient, and excluded "broken or ulcerated skin" three bullets below. Excoriation is broken skin.',b:true},
-  {bullet:'FUNGAL INFECTION WAS NO LONGER EXCLUDED. Version 001 excluded untreated fungal, bacterial and viral infection; version 002 covered bacterial infection and eczema herpeticum only, and left tinea out of the differential a technician is trained on, while authorising them to supply a potent corticosteroid.',b:true},
-  {bullet:'THE FIRE WARNING WAS LOST. Emollients soak into clothing and bedding and make them burn faster. Version 001 carried the warning; version 002 dropped it.',b:true},
-  {bullet:'NO INTERVAL BETWEEN STEROID AND EMOLLIENT. Version 002 said only "wait for it to absorb". It is now at least 30 minutes.',b:true},
-
   {h:'Which arm, decided by severity AND site'},
   ...SITE_RULE,
   {text:'MILD means limited erythema and scaling, not markedly affecting sleep or daily activity. MODERATE means marked erythema or lichenification, or disease disturbing sleep or daily activity. Excoriation from scratching may be present in either and does not by itself make disease moderate.',b:true},
@@ -264,14 +255,13 @@ const d={
   {bullet:'Up to 2 palms: 1 fingertip unit, 0.5g per application, 1g a day, 7g a week. Supply 15g.'},
   {bullet:'2 to 5 palms: up to 2.5 fingertip units, 1.25g per application, 2.5g a day, 17.5g a week. Supply 30g.'},
   {bullet:'5 to 10 palms: up to 5 fingertip units, 2.5g per application, 5g a day, 35g a week. Supply 60g.'},
-  {text:'Version 002 offered 15g and 30g only, against a treatable area of up to 10% of body surface, so the largest supply ran out in six days.',i:true,color:'595959'},
 
   {h:'Appendix 2: Steroid and emollient, order and interval'},
   {bullet:'Apply the STEROID FIRST, thinly, to affected skin only.'},
   {bullet:'WAIT AT LEAST 30 MINUTES.',b:true},
   {bullet:'Then apply the emollient, generously, to the whole area including unaffected skin.'},
   {bullet:'Applying emollient straight over a freshly applied steroid dilutes it and carries it onto skin that does not need it.'},
-  {text:'A note on the order: version 001 said to apply the steroid AFTER emollients, leaving 20 to 30 minutes. Version 002 reversed the order to steroid first without recording that it had done so. Version 003 keeps steroid first, which avoids spreading steroid onto unaffected skin, and states the interval, which version 002 omitted. What matters most in practice is that the two are separated and that the patient does the same thing each time.',i:true,color:'595959'},
+  {text:'What matters most in practice is that the two are separated and that the patient does the same thing each time.',i:true,color:'595959'},
 
   {h:'Appendix 3: Fire risk from emollients'},
   {text:'This warning applies to every patient using an emollient, which is every patient under this PGD.',b:true},
@@ -320,4 +310,4 @@ const d={
  ],
 };
 
-Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('eczema-v004-SIGNED.docx',b);console.log('eczema v003 docx bytes',b.length);});
+Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('eczema-v004-SIGNED.docx',b);console.log('eczema '+d.version+' docx bytes',b.length);});

@@ -8,8 +8,8 @@ const d={
  intro:[
   {h:'The three things this version adds'},
   {bullet:'ERYTHRODERMIC, EXFOLIATIVE AND PUSTULAR PSORIASIS ARE ABSOLUTE CONTRAINDICATIONS and were not mentioned anywhere in version 001. They are also dermatological emergencies. See Appendix 1.',b:true},
-  {bullet:'REBOUND ON STOPPING. Discontinuing a potent topical steroid in psoriasis can precipitate generalised pustular psoriasis. Version 001 said nothing about this at all, in the document or to the patient.',b:true},
-  {bullet:'REPEAT SUPPLY IS NOW CAPPED. Version 001 permitted repeat supply "where previous response was appropriate" with no limit, which is indefinite supply of a potent steroid without review. One 4 week course, then GP review.',b:true},
+  {bullet:'REBOUND ON STOPPING. Discontinuing a potent topical steroid in psoriasis can precipitate generalised pustular psoriasis.',b:true},
+  {bullet:'REPEAT SUPPLY IS NOW CAPPED. One 4 week course, then GP review.',b:true},
   {bullet:'The product and strength were already correct in version 001 and are unchanged: calcipotriol 50 micrograms/g with betamethasone 0.5 mg/g as dipropionate.'},
 
   {h:'This is stable plaque psoriasis only'},
@@ -25,6 +25,8 @@ const d={
   {bullet:'Up to 100g supplied per week, within the 15g daily limit.'},
   {bullet:'FOUR WEEKS, then stop and review. Continuing or restarting beyond 4 weeks requires medical review and ongoing medical supervision, which is a GP decision and not a PGD one.',b:true},
  ],
+
+ guidelines:require('./guidelines/psoriasis.js'),
 
  arms:[{
   title:'Calcipotriol 50 micrograms/g with betamethasone 0.5 mg/g',
@@ -85,7 +87,7 @@ const d={
    ]],
 
    ['Repeat supply, and why it is capped',[
-     {text:'Version 001 permitted repeat supply "where previous response was appropriate and no new contraindications apply", with no limit on how many times. That is indefinite supply of a potent topical corticosteroid with no review, which is not what a PGD is for.',b:true},
+     {text:'Repeat supply with no limit on how many times is indefinite supply of a potent topical corticosteroid with no review, which is not what a PGD is for.',b:true},
      {text:'Under this version:',b:true},
      {bullet:'ONE 4 week course may be supplied under this PGD.'},
      {bullet:'A further course requires that the GP has reviewed the patient since the last course and agreed continuation. Ask, and record the answer and the date.',b:true},
@@ -95,7 +97,6 @@ const d={
    ]],
 
    ['Stopping the treatment: rebound',[
-     {text:'This is the counselling point version 001 omitted entirely, and it is the one that can do harm.',b:true},
      {bullet:'Stopping a potent topical corticosteroid abruptly in psoriasis can precipitate GENERALISED PUSTULAR PSORIASIS, or a rebound flare worse than the original.',b:true},
      {bullet:'The SPC records a case of a patient who used far above the maximum dose for 5 months, developed Cushing syndrome, and then developed pustular psoriasis after abruptly stopping.'},
      {text:'What to tell every patient:',b:true},
@@ -165,7 +166,7 @@ const d={
      {bullet:'Do not cover the treated area with a dressing or wrap.'},
      {bullet:'Do not shower or bathe straight after putting it on.'},
      {bullet:'Keep using your emollients. They are the foundation and you should not stop them.'},
-     {bullet:'FIRE RISK FROM EMOLLIENTS AND OINTMENTS. Emollients and paraffin-based ointments, including paraffin-free products, soak into clothing, bedding and dressings and make them catch fire more easily and burn faster. Tell the patient not to smoke, use a naked flame, or go near anything burning, and to wash clothing and bedding often, knowing that washing may not remove the residue completely. Version 001 carried this warning and version 002 lost it.',b:true},
+     {bullet:'FIRE RISK FROM EMOLLIENTS AND OINTMENTS. Emollients and paraffin-based ointments, including paraffin-free products, soak into clothing, bedding and dressings and make them catch fire more easily and burn faster. Tell the patient not to smoke, use a naked flame, or go near anything burning, and to wash clothing and bedding often, knowing that washing may not remove the residue completely.',b:true},
      {bullet:'Avoid a lot of sun or sunbeds while you are using this.'},
      {bullet:'THIS IS A 4 WEEK COURSE. Do not keep using it beyond that without seeing your GP.',b:true},
    ]],
@@ -232,4 +233,4 @@ const d={
  ],
 };
 
-Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('psoriasis-v003-SIGNED.docx',b);console.log('psoriasis v002 docx bytes',b.length);});
+Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('psoriasis-v003-SIGNED.docx',b);console.log('psoriasis '+d.version+' docx bytes',b.length);});

@@ -11,12 +11,11 @@ const ARM_RULE=[
  {text:'ARM 2, AMOXICILLIN: patients aged 12 to 17; pregnant patients of any age; AND adults 18 and over for whom doxycycline is unsuitable and who are NOT penicillin-allergic.',b:true},
  {text:'ARM 3, CLARITHROMYCIN: patients aged 12 and over who are PENICILLIN-ALLERGIC and for whom the first-line agent for their circumstances is unsuitable or unavailable.',b:true},
  {text:'The first-line agent means doxycycline in adults, and amoxicillin at 12 to 17 and in pregnancy. A penicillin allergy makes amoxicillin unsuitable by itself, so a penicillin-allergic 12 to 17 year old goes straight to Arm 3.',b:true},
- {text:'Version 002 left a group of adults with no arm at all: a non-pregnant adult for whom doxycycline was unsuitable but who was not penicillin-allergic met the criteria for none of the three, although amoxicillin is a NICE first-choice alternative and was already held on site for the 12 to 17 arm. Arm 2 now covers them.',b:true},
 ];
 
 const CRB_NOTE=[
  {text:'THE AGE POINT IS NOT APPLIED IN THIS SERVICE. The score used here is confusion, respiratory rate and blood pressure only.',b:true},
- {text:'Why: CRB-65 scores 1 point for being 65 or over, and version 002 required a score of 0 while listing age 65 and over as a qualifying comorbidity in the inclusion criteria. Every patient aged 65 and over was therefore included by one bullet and excluded by the next, and the document directed a same-day referral for what might be a well patient with a productive cough. Raised by an adopting pharmacy.',b:true},
+     {text:'Why: CRB-65 scores 1 point for being 65 or over. Age 65 and over also qualifies a patient for treatment under this service. A rule requiring a total score of 0 would therefore include every patient in that age group by one criterion and exclude them by the next, and would direct a same-day referral for what may be a well patient with a productive cough, on arithmetic alone.',b:true},
  {text:'Dropping the age point does not mean treating a 65 year old as a 30 year old. In any patient 65 or over, have a LOWER threshold for referral, take the whole picture into account rather than the numbers alone, and refer if anything about the presentation is not straightforward. Record that you considered it.',b:true},
 ];
 
@@ -100,16 +99,9 @@ const ACTIONS=['Actions if excluded or declines','Explain why an antibiotic cann
 const d={
  banner:'ISSUED, VALID FROM 9 SEPTEMBER 2026',
  title:'Acute Bacterial Bronchitis (chest service)',
- strap:'Patient Group Direction, version 003, issued 9 September 2026. Three arms: doxycycline, amoxicillin, clarithromycin.',
+ strap:'Patient Group Direction, version 004, issued 9 September 2026. Three arms: doxycycline, amoxicillin, clarithromycin.',
 
  intro:[
-  {h:'What version 002 got wrong'},
-  {bullet:'EVERY PATIENT AGED 65 AND OVER WAS BOTH INCLUDED AND EXCLUDED. The inclusion criteria listed age 65 and over as a qualifying comorbidity, and the next bullet required a CRB-65 score of 0. CRB-65 scores 1 point for being 65 or over, and a score of 1 was an exclusion, so the whole group was refused and directed to same-day referral, which for a well patient with a productive cough is both wrong and alarming.',b:true},
-  {bullet:'ARM 3 STATED ITS ELIGIBILITY RULE FOUR DIFFERENT WAYS: two of them OR-rules, two AND-rules, naming three different pairs of drugs.',b:true},
-  {bullet:'CLARITHROMYCIN RENAL DOSING WAS DROPPED. Version 001 halved the dose below a creatinine clearance of 30 mL/min. Version 002 did not mention renal function in that arm, so a patient with significant impairment received twice the recommended dose.',b:true},
-  {bullet:'A GROUP OF ADULTS HAD NO ARM. A non-pregnant adult for whom doxycycline was unsuitable but who was not penicillin-allergic fell through all three arms, although amoxicillin is a NICE first-choice alternative and was already stocked for the 12 to 17 arm.',b:true},
-  {bullet:'THE SPC AND BNF FAMILIARITY REQUIREMENT WAS REMOVED FROM ALL THREE ARMS. It had been flagged as missing from one arm and was resolved by deleting it from the other two.',b:true},
-
   {h:'Which arm applies'},
   ...ARM_RULE,
 
@@ -163,7 +155,7 @@ const d={
       {bullet:'Pregnancy or breastfeeding. Doxycycline is contraindicated; use the amoxicillin arm.'},
       {bullet:'Hypersensitivity to doxycycline or other tetracyclines.'},
       {bullet:'Known severe hepatic impairment.'},
-      {bullet:'CONCURRENT ISOTRETINOIN. Doxycycline with a retinoid risks benign intracranial hypertension. Refer. This was an interaction in version 001, was lost in the version 002 rewrite, and is an exclusion in the doxycycline arm of the Skin and Soft Tissue Infection PGD; the two documents now agree.',b:true},
+      {bullet:'CONCURRENT ISOTRETINOIN. Doxycycline with a retinoid risks benign intracranial hypertension. Refer.',b:true},
     ]],
     ['Cautions',[
       {text:'Photosensitivity: advise sun protection.'},
@@ -253,7 +245,7 @@ const d={
   {
    title:'Arm 3. Clarithromycin, penicillin allergy',
    subtitle:'Patient Group Direction for the supply of clarithromycin 250mg tablets for acute bacterial bronchitis in patients aged 12 years and over who are penicillin-allergic and for whom the first-line agent for their circumstances is unsuitable or unavailable.',
-   note:'One rule, stated the same way in the heading, the indication and the inclusion criteria. Version 002 stated it four different ways.',
+   note:'One rule, stated the same way in the heading, the indication and the inclusion criteria.',
    training:TRAINING,
    pgd:[
     ['Indication','Acute bacterial bronchitis in patients aged 12 years and over who are PENICILLIN-ALLERGIC and for whom the first-line agent for their circumstances is unsuitable or unavailable. The first-line agent means doxycycline in adults, and amoxicillin at 12 to 17 and in pregnancy; a penicillin allergy makes amoxicillin unsuitable by itself.'],
@@ -270,7 +262,7 @@ const d={
       {bullet:'Under 12 years of age.'},
       {bullet:'Pregnancy or breastfeeding. Refer.'},
       {bullet:'Hypersensitivity to macrolides.'},
-      {bullet:'KNOWN RENAL IMPAIRMENT with a creatinine clearance below 30 mL/min, or renal impairment of unknown severity where there is reason to suspect it is significant. Refer. Version 001 halved the dose in this group and version 002 said nothing about renal function at all; a pharmacy supply is not the place to adjust a dose on an unverified estimate, so this PGD excludes and refers.',b:true},
+      {bullet:'KNOWN RENAL IMPAIRMENT with a creatinine clearance below 30 mL/min, or renal impairment of unknown severity where there is reason to suspect it is significant. Refer.',b:true},
       {bullet:'Concurrent ergot alkaloids, oral midazolam, lomitapide, astemizole, cisapride, domperidone, pimozide, terfenadine, ticagrelor, ivabradine, ranolazine, simvastatin or lovastatin.'},
       {bullet:'Known QT prolongation, or concurrent QT-prolonging medicines.'},
       {bullet:'Known electrolyte disturbance, or severe hepatic impairment.'},
@@ -356,4 +348,4 @@ const d={
  ],
 };
 
-Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('chest-v004-SIGNED.docx',b);console.log('chest v003 docx bytes',b.length);});
+Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('chest-v004-SIGNED.docx',b);console.log('chest '+d.version+' docx bytes',b.length);});
