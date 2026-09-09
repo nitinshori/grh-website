@@ -7,6 +7,13 @@ import {
   useConsultationTracking,
   type ConsultationRecordData,
 } from "../hooks/useConsultationTracking";
+import {
+  VaccineSafetyChecks,
+  VACCINE_SLUGS,
+  getVaccineSafety,
+  clearVaccineSafety,
+  vaccineSafetySatisfied,
+} from "./VaccineSafetyChecks";
 
 interface StepWrapperProps {
   title: string;
@@ -69,6 +76,14 @@ export function StepWrapper({
       setSaveStatus("saving");
       const data = getConsultationData();
       if (data) {
+        // Attach the pre-vaccination safety checks to the clinical record.
+        // Every vaccination PGD requires adrenaline, a 15 minute observation
+        // and a batch number; before this the tools recorded almost none of
+        // it, so the documents required something the records could not show.
+        if (VACCINE_SLUGS.has(pgdSlug)) {
+          const vs = getVaccineSafety(pgdSlug);
+          (data.clinicalData as Record<string, unknown>).vaccineSafetyChecks = vs;
+        }
         const success = await saveRecord(data);
         setSaveStatus(success ? "saved" : "error");
       } else {
@@ -87,9 +102,10 @@ export function StepWrapper({
       )
     ) {
       setSaveStatus("idle");
+      clearVaccineSafety(pgdSlug);
       onNewConsultation?.();
     }
-  }, [onNewConsultation]);
+  }, [onNewConsultation, pgdSlug]);
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
@@ -130,6 +146,15 @@ export function StepWrapper({
       <div className="px-6 py-6">{children}</div>
 
       {/* Validation error — only shown after user has attempted to proceed */}
+      <VaccineSafetyChecks slug={pgdSlug} />
+
+      {hasAttemptedNext && !vaccineSafetySatisfied(pgdSlug) && (
+        <div className="mx-6 mb-3 rounded-lg border border-red-400 bg-red-100 px-4 py-2 text-sm text-red-900 print:hidden">
+          Confirm that adrenaline 1 in 1,000 is immediately available before
+          continuing.
+        </div>
+      )}
+
       {hasAttemptedNext && validationError && (
         <div className="mx-6 mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg">
           <p className="text-sm text-red-700">{validationError}</p>
@@ -191,7 +216,7 @@ export function StepWrapper({
           {!isLastStep ? (
             <button
               onClick={() => {
-                if (!canProceed || isBlocked) {
+                if (!canProceed || isBlocked || !vaccineSafetySatisfied(pgdSlug)) {
                   setHasAttemptedNext(true);
                 } else {
                   onNext();
@@ -200,7 +225,7 @@ export function StepWrapper({
               className={`
                 px-6 py-2.5 rounded-lg text-sm font-semibold transition-colors
                 ${
-                  canProceed && !isBlocked
+                  canProceed && !isBlocked && vaccineSafetySatisfied(pgdSlug)
                     ? "bg-[color:var(--tenant-primary)]/100 hover:bg-[color:var(--tenant-primary)]/15 text-white"
                     : "bg-gray-200 text-gray-400 cursor-not-allowed"
                 }

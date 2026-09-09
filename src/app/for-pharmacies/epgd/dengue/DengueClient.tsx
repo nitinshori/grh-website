@@ -1,6 +1,9 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
+// Mounted directly: this tool does not use the shared StepWrapper,
+// which is where the other fifteen vaccination tools pick this up.
+import { VaccineSafetyChecks } from "../shared/components/VaccineSafetyChecks";
 import {
   DengueConsultationState,
   DengueScreening,
@@ -521,6 +524,7 @@ export default function DengueClient({
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+      <VaccineSafetyChecks slug="dengue" />
       <div className="max-w-4xl mx-auto">
         {state.step === 0 && (
           <div className="mb-4 print:hidden">

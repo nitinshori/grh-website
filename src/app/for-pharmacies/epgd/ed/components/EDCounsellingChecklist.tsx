@@ -97,7 +97,7 @@ export function EDCounsellingChecklist({
         <span
           className={`text-xs font-medium px-2 py-1 rounded-full ${
             allChecked
-              ? "bg-teal-100 text-teal-700"
+              ? "bg-[color:var(--tenant-primary)]/15 text-[color:var(--tenant-primary)]"
               : "bg-gray-100 text-gray-500"
           }`}
         >
@@ -113,7 +113,7 @@ export function EDCounsellingChecklist({
               flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all
               ${
                 checklist[item.field]
-                  ? "border-teal-200 bg-teal-50/50"
+                  ? "border-[color:var(--tenant-primary)]/30 bg-[color:var(--tenant-primary)]/10/50"
                   : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
               }
             `}
@@ -122,12 +122,12 @@ export function EDCounsellingChecklist({
               type="checkbox"
               checked={checklist[item.field]}
               onChange={(e) => onChange(item.field, e.target.checked)}
-              className="mt-1 rounded border-gray-300 text-teal-500 focus:ring-teal-400"
+              className="mt-1 rounded border-gray-300 text-[color:var(--tenant-primary)] focus:ring-[color:var(--tenant-primary)]"
             />
             <div className="flex-1">
               <p
                 className={`text-sm font-medium ${
-                  checklist[item.field] ? "text-teal-800" : "text-navy-900"
+                  checklist[item.field] ? "text-[color:var(--tenant-primary)]" : "text-navy-900"
                 }`}
               >
                 {item.label}
@@ -136,7 +136,7 @@ export function EDCounsellingChecklist({
             </div>
             {checklist[item.field] && (
               <svg
-                className="w-4 h-4 text-teal-500 flex-shrink-0 mt-1"
+                className="w-4 h-4 text-[color:var(--tenant-primary)] flex-shrink-0 mt-1"
                 viewBox="0 0 20 20"
                 fill="currentColor"
               >
@@ -160,7 +160,7 @@ export function EDCounsellingChecklist({
             onChange={(e) =>
               onChange("gpReviewRecommended", e.target.checked)
             }
-            className="mt-1 rounded border-gray-300 text-teal-500 focus:ring-teal-400"
+            className="mt-1 rounded border-gray-300 text-[color:var(--tenant-primary)] focus:ring-[color:var(--tenant-primary)]"
           />
           <div>
             <p className="text-sm font-medium text-navy-900">

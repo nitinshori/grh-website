@@ -35,6 +35,9 @@ import { TextInput, Checkbox, SelectInput, NumberInput, TextArea } from '../shar
 import { ProgressBar } from '../shared/components/ProgressBar';
 import Link from 'next/link';
 import { AlertBanner } from '../shared/components/AlertBanner';
+// Mounted directly: this tool does not use the shared StepWrapper, which is
+// where the other vaccination tools pick this up.
+import { VaccineSafetyChecks } from '../shared/components/VaccineSafetyChecks';
 import { PatientDetailsStep } from '../shared/steps/PatientDetailsStep';
 import { ConsentStep } from '../shared/steps/ConsentStep';
 import RabiesSummaryReport from './components/RabiesSummaryReport';
@@ -549,6 +552,7 @@ export default function RabiesClient({
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+      <VaccineSafetyChecks slug="rabies" />
       <div className="max-w-4xl mx-auto">
         {state.step === 0 && (
           <div className="mb-4 print:hidden">
