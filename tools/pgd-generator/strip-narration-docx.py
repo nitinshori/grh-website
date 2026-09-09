@@ -51,7 +51,9 @@ NARRATION = re.compile(
     r"left|lost|dropped|permitted|delegated|authorised|treated|pointed|"
     r"required|made|excluded|reversed|covered|kept|omitted|gave)"
     r"|was (?:an exclusion|lost) in version|was lost in the version"
-    r"|new in version \d|this was wrong|nobody noticed)",
+    r"|(?:this arm is |)new in version \d"
+    r"|(?:added|introduced|changed|revised) (?:at|in) version\s*0?0?\d"
+    r"|this was wrong|nobody noticed)",
     re.I,
 )
 
@@ -75,6 +77,11 @@ DOCS = [
     ("anti-malarials", "antimalarials-v004-SIGNED.docx", "anti-malarials-v004.pdf"),
     ("sleep-melatonin", "sleep-melatonin-v003-SIGNED.docx", "sleep-melatonin-v003.pdf"),
     ("wound-care", "wound-care-v004-SIGNED.docx", "wound-care-v004.pdf"),
+    # Added after pgd-format-audit.py found a passage this script's first run
+    # missed: the earlier scan stopped at the FIRST change history heading,
+    # and ear infection carries a "changes in this version" summary near the
+    # front, so everything after it went unchecked.
+    ("ear-infection", "ear-infection-v003-SIGNED.docx", "ear-infection-v003.pdf"),
 ]
 
 

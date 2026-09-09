@@ -3,7 +3,7 @@ const {build,Packer,fs}=require('./gen.js');
 const d={
  banner:'ISSUED, VALID FROM 8 SEPTEMBER 2026',
  title:'Human Papillomavirus (HPV) Vaccination',
- strap:'Patient Group Direction, version 002, issued 8 September 2026. Gardasil 9, intramuscular, from 9 years of age, all sexes.',
+ strap:'Patient Group Direction, version 003, issued 8 September 2026. Gardasil 9, intramuscular, from 9 years of age, all sexes.',
 
  intro:[
   {h:'Read this first: three points that are easy to get wrong'},

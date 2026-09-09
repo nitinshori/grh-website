@@ -184,6 +184,21 @@ function assertPublishable(d){
   found.slice(0,6).forEach(t=>errs.push('error narration in the document body, move it to `changes`: "'+t+'"'));
   if(found.length>6) errs.push('...and '+(found.length-6)+' more passages of error narration in the body.');
 
+  // ── 4. THE STRAPLINE MUST AGREE WITH THE VERSION BLOCK ───────────────
+  //
+  // Four documents went out reading "Patient Group Direction, version 003"
+  // on page one while their version and change record said v004, because
+  // the strap is written by hand and the version is a separate field. The
+  // strap is the first thing a pharmacy reads and the thing they will quote
+  // back when asking which version they hold.
+  if (d.strap && d.version) {
+    const m = /version\s*0*(\d{1,3})/i.exec(d.strap);
+    const v = parseInt(String(d.version).replace(/\D/g, ''), 10);
+    if (m && parseInt(m[1], 10) !== v) {
+      errs.push('the strapline says version ' + m[1] + ' but the version block says ' + d.version + '. They must agree.');
+    }
+  }
+
   // Em dashes, anywhere in the data object.
   const seen=[];
   (function walk(x){

@@ -3,7 +3,7 @@ const {build,Packer,fs}=require('./gen.js');
 const d={
  banner:'ISSUED, VALID FROM 8 SEPTEMBER 2026',
  title:'Rabies Pre-Exposure Prophylaxis',
- strap:'Patient Group Direction, version 002, issued 8 September 2026. Rabipur and Verorab, intramuscular route only, pre-exposure only.',
+ strap:'Patient Group Direction, version 004, issued 8 September 2026. Rabipur and Verorab, intramuscular route only, pre-exposure only.',
 
  intro:[
   {h:'Two schedules, and which one you may use'},
