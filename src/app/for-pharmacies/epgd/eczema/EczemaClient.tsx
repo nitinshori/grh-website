@@ -399,7 +399,7 @@ export default function EczemaClient() {
               {state.assessment.severity === "mild" && (
                 <div className="p-3 bg-[color:var(--tenant-primary)]/10 rounded-lg border border-[color:var(--tenant-primary)]/30">
                   <p className="text-sm font-medium text-navy-900">Clobetasone butyrate 0.05% cream or ointment, once or twice daily</p>
-                  <p className="text-xs text-gray-600 mt-1">PGD Arm 1, the first-line potency for mild disease. Up to 7 days initially, then review. Maximum 4 weeks continuous, and no more than three courses in 12 months before GP review.</p>
+                  <p className="text-xs text-gray-600 mt-1">PGD Arm 1. Mild disease at any permitted site, and MODERATE disease on the face, flexures or genital skin where Arm 2 is not authorised. On the trunk and limbs: up to 7 days initially, then review, maximum 4 weeks continuous. ON THE FACE, FLEXURES OR GENITAL SKIN: 7 DAYS MAXIMUM, not 4 weeks. No more than three courses in 12 months before GP review.</p>
                 </div>
               )}
 
@@ -415,7 +415,7 @@ export default function EczemaClient() {
                     // betamethasone 0.025%, a different strength from the one
                     // the document authorises.
                     { value: "betamethasone", label: "Betamethasone valerate 0.1% (Arm 2, moderate; not face/flexures)" },
-                    { value: "clobetasone", label: "Clobetasone butyrate 0.05% (Arm 1; use on face, eyelids, flexures, genital skin)" },
+                    { value: "clobetasone", label: "Clobetasone butyrate 0.05% (Arm 1; mild anywhere, and moderate on face/flexures/genital skin, 7 days max there. NOT eyelids)" },
                   ]}
                   required
                 />

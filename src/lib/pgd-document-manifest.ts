@@ -29,7 +29,10 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   "dental-bridging": "dental-bridging-v004.pdf",
   "diabetes-monitoring": "diabetes-monitoring.pdf",
   "ear-infection": "ear-infection-v002.pdf",
-  "eczema": "eczema.pdf",
+  // v003 signed 9 Sep 2026. v002 left moderate eczema on the face or flexures
+  // with no supply route, capped facial use at 7 days in an exclusion bullet
+  // while its duration box allowed 4 weeks, and dropped the fungal exclusion.
+  "eczema": "eczema-v003.pdf",
   "ed": "ed-v002.pdf",
   "emergency-contraception": "emergency-contraception.pdf",
   "eye-infections": "eye-infections.pdf",
@@ -157,7 +160,7 @@ export const PGD_HUBRX_FILES: Record<string, string> = {
   "dental-bridging": "dental-bridging-v004.pdf",
   "diabetes-monitoring": "diabetes-monitoring 2.pdf",
   "ear-infection": "ear-infection-v002.pdf",
-  "eczema": "eczema.pdf",
+  "eczema": "eczema-v003.pdf",
   "ed": "ed-v002.pdf",
   "emergency-contraception": "emergency-contraception 2.pdf",
   "eye-infections": "eye-infections 2.pdf",

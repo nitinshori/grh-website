@@ -157,7 +157,24 @@ NOTICE = re.compile(
 # Records-retention boilerplate is identical in every PGD and carries numbers
 # ("8 years", "25th birthday") that are not clinical doses.
 RETENTION = re.compile(
-    r"(records? (should be|must be) kept|keep records|retention).{0,400}", re.I | re.S
+    r"(records? (should be|must be) kept|keep records|retention|for audit purposes)"
+    r".{0,500}",
+    re.I | re.S,
+)
+
+# The retention paragraph is worded slightly differently in each document and
+# the block match above does not always cover it. These are its constituent
+# phrases, which carry "18 years", "25th birthday" and "8 years" and are not
+# clinical content. Left in, they reported an age-floor change in eczema that
+# had not happened. A finding that is not real costs as much trust as a real
+# one that is missed.
+RETENTION_PHRASES = re.compile(
+    r"(adults? aged 18 years and over[^.]*"
+    r"|children aged under 18 years[^.]*"
+    r"|until the 2[56]th birthday[^.]*"
+    r"|keep records for 8 years"
+    r"|records signed, dated, legible and contemporaneous[^.]*)",
+    re.I,
 )
 
 UNIT = r"(?:mg|milligrams?|g|grams?|mcg|micrograms?|ml|mL|litres?|%|kg|IU|units?)"
@@ -269,6 +286,7 @@ STRUCTURE = {
 def clean(text):
     text = NOTICE.sub(" ", text)
     text = RETENTION.sub(" ", text)
+    text = RETENTION_PHRASES.sub(" ", text)
     return re.sub(r"\s+", " ", text)
 
 

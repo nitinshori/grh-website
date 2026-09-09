@@ -31,9 +31,9 @@ export function getAllAlerts(state: EczemaConsultationState): ClinicalAlert[] {
     alerts.push({
       severity: "caution",
       code: "ECZ_SITE",
-      message: "Face, eyelids, flexures or genital skin: Arm 2 not authorised here",
+      message: "Face, flexures or genital skin: clobetasone only, and 7 days maximum",
       detail:
-        "Betamethasone valerate 0.1% is not authorised on these sites. Use clobetasone butyrate 0.05% (Arm 1) instead, or refer. Do not substitute hydrocortisone: it is not in this PGD.",
+        "Betamethasone valerate 0.1% (Arm 2) is not authorised on these sites. Use clobetasone butyrate 0.05% (Arm 1), which v003 authorises here for MILD OR MODERATE disease, capped at 7 DAYS at these sites, not the 4 weeks that applies on the trunk and limbs. v002 left moderate disease on these sites with no supply route at all, because it sent the patient to Arm 1 while Arm 1 admitted only mild disease. Do not substitute hydrocortisone: it is not in this PGD. THE EYELIDS ARE EXCLUDED FROM BOTH ARMS: refer.",
     });
   }
 
