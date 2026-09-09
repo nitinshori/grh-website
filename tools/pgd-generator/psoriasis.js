@@ -246,4 +246,4 @@ const d={
  ],
 };
 
-Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('psoriasis-v003-SIGNED.docx',b);console.log('psoriasis '+d.version+' docx bytes',b.length);});
+Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('psoriasis-'+d.version+'-SIGNED.docx',b);console.log('psoriasis '+d.version+' docx bytes',b.length);});

@@ -26,7 +26,7 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   // v003 signed 9 Sep 2026. v002 listed age 65 and over as a qualifying
   // comorbidity and required a CRB-65 of 0 in the next bullet, and CRB-65
   // scores a point for being 65, so the whole group was refused.
-  "chest-service": "chest-service-v004.pdf",
+  "chest-service": "chest-service-v005.pdf",
   // v002 signed 9 Sep 2026: the vaccine safety block written in, adrenaline,
   // observation, cold chain, sharps, batch, parental responsibility. Was
   // missed by the 9 Sep vaccine sweep and still carried its correction notice.

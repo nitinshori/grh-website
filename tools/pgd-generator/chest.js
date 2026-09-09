@@ -99,7 +99,7 @@ const ACTIONS=['Actions if excluded or declines','Explain why an antibiotic cann
 const d={
  banner:'ISSUED, VALID FROM 9 SEPTEMBER 2026',
  title:'Acute Bacterial Bronchitis (chest service)',
- strap:'Patient Group Direction, version 004, issued 9 September 2026. Three arms: doxycycline, amoxicillin, clarithromycin.',
+ strap:'Patient Group Direction, version 005, issued 9 September 2026. Three arms: doxycycline, amoxicillin, clarithromycin.',
  cover:{action:'supply',drugs:'Doxycycline, Amoxicillin or Clarithromycin',condition:'Acute Bacterial Bronchitis',age:'From age 12 years onwards.'},
  purpose:{
    for:'The supply of an oral antibiotic for acute bacterial bronchitis in a patient aged 12 years or over who has been assessed as needing one, by a registered pharmacist or registered pharmacy technician in a community pharmacy, without a prescription.',
@@ -298,8 +298,12 @@ const d={
     ['Name, form and strength','Clarithromycin 250mg tablets.'],
     ['Legal category','POM.'],
     ['Route and method','Oral, with or without food.'],
-    ['Dose and frequency','250mg twice daily for 5 days.'],
-    ['Quantity to be supplied','10 tablets.'],
+    ['Dose and frequency',[
+      {text:'250mg twice daily for 5 days.'},
+      {text:'500mg twice daily for 5 days where the infection is more severe: marked systemic upset in a patient who nonetheless has no CRB point and no feature of pneumonia. Those patients are referred, not treated at the higher dose.'},
+      {text:'NICE NG120 gives clarithromycin 250mg to 500mg twice a day for 5 days. The product SPC gives 250mg twice daily, increased to 500mg twice daily in severe infection.'},
+    ]],
+    ['Quantity to be supplied','10 tablets at 250mg twice daily, or 20 tablets at 500mg twice daily. Record which.'],
     ['Maximum treatment period','5 days. One course per episode; a second course is not authorised.'],
     ['Adverse effects','Common: abdominal pain, nausea, diarrhoea, taste disturbance, headache. Uncommon: QT prolongation, hepatic dysfunction, dizziness, vertigo. Rare: Clostridioides difficile infection, Stevens-Johnson syndrome.'],
     ['Storage','Store below 25C.'],
@@ -331,35 +335,22 @@ const d={
   {bullet:'NICE Medicines Practice Guideline 2 (MPG2): Patient Group Directions, https://www.nice.org.uk/guidance/mpg2'},
  ],
 
- version:'v004',
- supersedes:'Version 003, 9 September 2026',
+ version:'v005',
+ supersedes:'Version 004, 9 September 2026',
  validFrom:'9 September 2026',
  expiry:'31 July 2027',
  sigDate:'9 September 2026',
  chDate:'9 September 2026',
  changes:[
-  'The summary of the governing guidance is restored as part 2 of the document, which is the house format for every Get Real Health PGD: what the PGD is for and which medicines it authorises, then a summary of the guidance that governs the condition, then the PGD itself. Twenty documents lost that section in the September 2026 rewrites, because the generator did not emit it and no check looked for it. It is the section that lets a pharmacist hold the PGD against the guidance it claims to follow, which is exactly how the inverted dental indication should have been caught. It is now a required field: the generator refuses to build a document without it.',
-  'THE AGE 65 CONTRADICTION IS RESOLVED. Version 002 listed age 65 and over as a qualifying comorbidity in the inclusion criteria and required a CRB-65 score of 0 in the next bullet. CRB-65 scores 1 point for being 65 or over and a score of 1 was an exclusion, so every patient in that group was included and excluded by consecutive bullets, and was directed to same-day referral for what might be a well patient with a productive cough. The score used in this service is now confusion, respiratory rate and blood pressure only, with the age point deliberately not applied, and the reason stated in Appendix 1. Raised by an adopting pharmacy.',
-  'Dropping the age point is paired with an explicit instruction: in any patient 65 or over, have a lower threshold for referral, take the whole picture rather than the numbers, and record that you considered it. The safety net is not simply removed.',
-  'ARM 3 NOW STATES ONE RULE. Version 002 stated its eligibility four different ways: the heading said penicillin allergy OR doxycycline unsuitable; the subtitle said doxycycline AND amoxicillin both unsuitable; the scope bullet and the inclusion criteria said doxycycline unsuitable AND penicillin allergy. Two OR-rules, two AND-rules, three different drug pairs. The rule is now written once at the front of the document and repeated verbatim in each arm.',
-  '"Doxycycline unsuitable" is reworded as "the first-line agent for this patient is unsuitable", because doxycycline is not first line at 12 to 17 or in pregnancy, so the old wording did not describe those patients.',
-  'THE GAP IN ADULT COVER IS CLOSED. A non-pregnant adult for whom doxycycline was unsuitable but who was not penicillin-allergic met the criteria for none of the three arms, although amoxicillin is a NICE first-choice alternative and was already stocked for the 12 to 17 arm. Arm 2 now covers that patient, with the reason doxycycline was unsuitable recorded.',
-  'CLARITHROMYCIN AND RENAL FUNCTION. Version 001 halved the dose below a creatinine clearance of 30 mL/min; version 002 did not mention renal function in that arm, so a patient with significant impairment received twice the recommended dose. Version 003 excludes and refers rather than adjusting, consistently with the Skin and Soft Tissue Infection PGD, and requires renal function to be asked about and the answer recorded.',
-  'THE SPC AND BNF FAMILIARITY REQUIREMENT IS REINSTATED in all three arms, together with the other standard governance requirements: MHRA safety alerts, CPD and appraisal, indemnity, and capacity and consent. It had been flagged as missing from the doxycycline arm and was resolved by deleting it from the other two.',
-  'Consent in children and young people added: parental responsibility, or Gillick competence with the basis recorded. This PGD covers patients from 12 years.',
-  'The practitioner Agreement to practise page, the premises block and the practitioner signature table are restored. Every version 001 document carried them; no document produced by the current generator did.',
-  'The difference from the Skin and Soft Tissue Infection PGD is now stated in the document. Warfarin with doxycycline is a caution here and an exclusion there, with the same practical outcome, and immunosuppression qualifies a patient here while excluding them there. Staff move between these services within a shift and were left to discover the differences.',
-  'Records must now carry which arm was used and why, the reason the first-line agent was not used, the CRB score, and where the qualifying comorbidity was age 65 and over, that the lower referral threshold was considered.',
-  'Concurrent isotretinoin restored as an exclusion in the doxycycline arm. It was an interaction in version 001, was lost in the version 002 rewrite, and is an exclusion in the doxycycline arm of the Skin and Soft Tissue Infection PGD, so the two documents had diverged on the same drug. Found by comparing against the archived version 001, not by anyone noticing.',
-  'Symptomatic relief content is recorded as a deliberate removal. Version 001 carried paracetamol, ibuprofen, codeine linctus and salbutamol advice alongside the antibiotic arms; version 002 made this an antibiotic-only PGD and no change log said so. Analgesia and cough preparations are sold under the pharmacy own protocol, not supplied under this PGD. Erythromycin as an alternative macrolide was dropped at the same time in favour of clarithromycin alone.',
-  'Em dashes removed. The document carried five, against a standing house rule, because the generator did not check for them. It now refuses to build a document containing any.',
-  'This change history is itemised. Version 002 recorded only "Full clinical review and reissue", which is why an adopting pharmacy had to compare the two versions line by line to find the contradictions above.',
+  'THE CLARITHROMYCIN 500MG TWICE DAILY DOSE IS RESTORED. Version 001 gave 250mg twice daily, increased to 500mg twice daily in severe infection, which is the SPC dose and within the NICE NG120 range of 250mg to 500mg twice a day. The September rewrites carried 250mg only, and the consultation tool was then cut down to match the document. Both now offer 250mg or 500mg twice daily for 5 days, with the quantity stated for each. Raised by the Medical Director.',
+  'The document is rebuilt in the house template: cover page, guidance summary, then one complete PGD per medicine each with its own staff and training, PGD table, medicine table, patient information, key references, agreement to practise, employer adoption, and the signatures of the Medical Director and Head Pharmacist as images.',
  ],
  prior:[
+  ['004, 9 September 2026','Restored the guidance summary as part 2. Resolved the age 65 contradiction: the CRB-65 age point is not applied and an explicit lower referral threshold over 65 is stated instead. Arm 2 extended to adults for whom doxycycline is unsuitable. Isotretinoin interaction and renal referral restored to the doxycycline arm.'],
   ['003, 9 September 2026','See the change history of that version. Superseded the same day by v004, which restores the guidance summary section.'],
   ['002, 7 September 2026','Full clinical review and reissue. Restructured into three arms with observation thresholds and a CRB-65 gate. Introduced the contradictions corrected in 003.'],
   ['001, earlier 2026','Development and issue of new PGD.'],
  ],
 };
 
-Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('chest-v004-SIGNED.docx',b);console.log('chest '+d.version+' docx bytes',b.length);});
+Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('chest-'+d.version+'-SIGNED.docx',b);console.log('chest '+d.version+' docx bytes',b.length);});

@@ -214,4 +214,4 @@ const d={
  ],
 };
 
-Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('rabies-v004-SIGNED.docx',b);console.log('rabies '+d.version+' docx bytes',b.length);});
+Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('rabies-'+d.version+'-SIGNED.docx',b);console.log('rabies '+d.version+' docx bytes',b.length);});

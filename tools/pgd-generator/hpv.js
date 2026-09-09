@@ -234,4 +234,4 @@ const d={
  ],
 };
 
-Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('hpv-v003-SIGNED.docx',b);console.log('hpv '+d.version+' docx bytes',b.length);});
+Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('hpv-'+d.version+'-SIGNED.docx',b);console.log('hpv '+d.version+' docx bytes',b.length);});

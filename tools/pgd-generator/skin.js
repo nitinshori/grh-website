@@ -439,4 +439,4 @@ const d={
  ],
 };
 
-Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('skin-v004-SIGNED.docx',b);console.log('skin '+d.version+' docx bytes',b.length);});
+Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('skin-'+d.version+'-SIGNED.docx',b);console.log('skin '+d.version+' docx bytes',b.length);});

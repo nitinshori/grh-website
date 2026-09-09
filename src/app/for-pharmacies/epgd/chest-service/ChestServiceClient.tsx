@@ -55,7 +55,7 @@ import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 // it in a summary as an alternative macrolide, v002 and v003 authorise
 // clarithromycin only. Same defect class as the ear service supplying an
 // unauthorised medicine.
-type Antibiotic = "" | "amoxicillin" | "doxycycline" | "clarithromycin";
+type Antibiotic = "" | "amoxicillin" | "doxycycline" | "clarithromycin" | "clarithromycin-500";
 
 const ANTIBIOTIC_REGIMENS: Record<Exclude<Antibiotic, "">, { label: string; dose: string }> = {
   amoxicillin: {
@@ -67,10 +67,17 @@ const ANTIBIOTIC_REGIMENS: Record<Exclude<Antibiotic, "">, { label: string; dose
     dose: "200 mg day 1 then 100 mg OD, 5 days total",
   },
   clarithromycin: {
-    // v003 authorises 250 mg twice daily. The "250 to 500 mg" range this
-    // tool used to offer included a dose the document does not carry.
-    label: "Clarithromycin 250 mg twice a day for 5 days",
+    label: "Clarithromycin 250 mg twice a day for 5 days (10 tablets)",
     dose: "250 mg BD, 5 days",
+  },
+  // PGD v005, 9 September 2026: the 500 mg dose is back. Version 001 had it
+  // (SPC: 250 mg BD, increased to 500 mg BD in severe infection; NICE NG120:
+  // 250 to 500 mg BD). The September rewrites dropped it and this tool was
+  // then cut down to match. For more severe infection in a patient who still
+  // has no CRB point and no pneumonia feature; those are referred.
+  "clarithromycin-500": {
+    label: "Clarithromycin 500 mg twice a day for 5 days (20 tablets), more severe infection",
+    dose: "500 mg BD, 5 days",
   },
 };
 
@@ -298,6 +305,7 @@ export function ChestServiceClient() {
     if (m.tetracyclineAllergy) out.add("doxycycline");
     if (m.macrolideAllergy) {
       out.add("clarithromycin");
+      out.add("clarithromycin-500");
     }
     return out;
   }, [state.medicines]);
@@ -341,7 +349,7 @@ export function ChestServiceClient() {
     // patient and told the pharmacist to refer for a drug the PGD does not
     // authorise, so it was refusing people the document covers.
     if (exclusions.pregnancy) {
-      if (treatment.antibiotic === "doxycycline" || treatment.antibiotic === "clarithromycin") {
+      if (treatment.antibiotic === "doxycycline" || treatment.antibiotic === "clarithromycin" || treatment.antibiotic === "clarithromycin-500") {
         out.push({
           code: "preg-arm",
           severity: "stop",
@@ -424,7 +432,7 @@ export function ChestServiceClient() {
     }
 
     // ── Interactions. ───────────────────────────────────────────────
-    if (medicines.onSimvastatin && treatment.antibiotic === "clarithromycin") {
+    if (medicines.onSimvastatin && (treatment.antibiotic === "clarithromycin" || treatment.antibiotic === "clarithromycin-500")) {
       out.push({
         code: "simva-clarithro",
         severity: "stop",

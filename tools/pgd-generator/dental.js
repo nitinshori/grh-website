@@ -320,4 +320,4 @@ const d={
  ],
 };
 
-Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('dental-v005-SIGNED.docx',b);console.log('dental '+d.version+' docx bytes',b.length);});
+Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('dental-'+d.version+'-SIGNED.docx',b);console.log('dental '+d.version+' docx bytes',b.length);});

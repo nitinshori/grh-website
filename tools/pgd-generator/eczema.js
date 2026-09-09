@@ -324,4 +324,4 @@ const d={
  ],
 };
 
-Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('eczema-v004-SIGNED.docx',b);console.log('eczema '+d.version+' docx bytes',b.length);});
+Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('eczema-'+d.version+'-SIGNED.docx',b);console.log('eczema '+d.version+' docx bytes',b.length);});
