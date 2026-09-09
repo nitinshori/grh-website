@@ -20,6 +20,8 @@ WHAT IT CHECKS, per document in the manifest:
   HISTORY     is there a change history, and is it in the back third
   VERSION     does the version the document states match the version the
               manifest is serving
+  SIGNATURES  are BOTH signatures present as images on the authorisation
+              page. Text saying it was signed is not a signature.
 
 A NOTE ON THE DETECTION, because a previous run of this check was wrong.
 An earlier scan looked for "summary of ... guidance" and reported 74
@@ -223,6 +225,21 @@ def audit(slug, fn):
     if bad:
         r["fail"].append(f"{len(bad)} passage(s) of version narration in the body")
         r["narration"] = bad
+
+    # SIGNATURES. Both, as images, on the page that names the signatories.
+    # "Signed: N. Shori" in text is not a signature. Nitin: "otherwise it's
+    # not valid". On 9 September 20 live documents had none and 10 had only
+    # Chris's, and every one was a reissue whose patch had appended a sentence
+    # saying the signatures had been applied.
+    sigs = 0
+    for pg in doc:
+        t = pg.get_text()
+        if re.search(r"Signed on behalf of Get Real Health|Nitin Shori", t):
+            n = sum(1 for im in pg.get_images(full=True)
+                    if pymupdf.Pixmap(doc, im[0]).width > 15)
+            sigs = max(sigs, n)
+    if sigs < 2:
+        r["fail"].append(f"NOT SIGNED: {sigs} signature image(s), needs both")
 
     # Version consistency.
     fv, tv = version_in_filename(fn), version_in_text(front)

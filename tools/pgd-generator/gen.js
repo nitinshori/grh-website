@@ -22,7 +22,8 @@
 // the joint instruction of both authorising signatories, and the adopting
 // pharmacy's own signature blocks left blank for them to complete.
 
-const {Document,Packer,Paragraph,TextRun,HeadingLevel,AlignmentType,Table,TableRow,TableCell,WidthType,BorderStyle,ShadingType,PageBreak}=require('docx');
+const {Document,Packer,Paragraph,TextRun,HeadingLevel,AlignmentType,Table,TableRow,TableCell,WidthType,BorderStyle,ShadingType,PageBreak,ImageRun}=require('docx');
+const path=require('path');
 const fs=require('fs');
 const NAVY='1F3864',GREY='595959',RED='9C0006',AMB='BF6000';
 const W=9360,L=2500,R=6860;
@@ -31,9 +32,10 @@ const bl=(t,o={})=>new Paragraph({bullet:{level:o.lvl??0},spacing:{after:50},chi
 const h=(t,l)=>new Paragraph({heading:l,spacing:{before:240,after:110},children:[new TextRun({text:t,bold:true,size:l===HeadingLevel.HEADING_1?27:22,color:NAVY,font:'Arial'})]});
 const B={style:BorderStyle.SINGLE,size:4,color:'BFBFBF'};
 const cell=(ch,w,o={})=>new TableCell({width:{size:w,type:WidthType.DXA},shading:o.shade?{type:ShadingType.CLEAR,fill:o.shade}:undefined,margins:{top:70,bottom:70,left:110,right:110},children:ch});
+const img=(file,w,h)=>new Paragraph({spacing:{after:60},children:[new ImageRun({data:fs.readFileSync(path.join(__dirname,'signatures',file)),transformation:{width:w,height:h},type:'png'})]});
 const conv=(c)=>{
   if(typeof c==='string')return [p(c)];
-  if(Array.isArray(c))return c.map(x=>typeof x==='string'?p(x):(x.bullet?bl(x.bullet,x):p(x.text,x)));
+  if(Array.isArray(c))return c.map(x=>typeof x==='string'?p(x):(x.image?img(x.image,x.w,x.h):(x.bullet?bl(x.bullet,x):p(x.text,x))));
   return [p(String(c))];
 };
 const row=(label,c)=>new TableRow({children:[cell([p(label,{b:true})],L,{shade:'F2F2F2'}),cell(conv(c),R)]});
@@ -86,8 +88,13 @@ function sig(d){
    p('Authorised by the Medical Director and the Head Pharmacist named below. This version is not valid without both signatures.',{color:GREY}),
    tbl([row('Version',d.version),row('Supersedes',d.supersedes),row('Valid from date',d.validFrom||'7 September 2026'),row('Expiry date',d.expiry||'31 July 2027')]),
    p(''),
-   tbl([row('Doctor',[{text:'Name: Nitin Shori'},{text:'Job title: Medical Director, Get Real Health'},{text:'GMC: 6047293'},{text:'Signed: N. Shori',b:true},{text:'Date: '+(d.sigDate||'7 September 2026')}]),
-        row('Pharmacist',[{text:'Name: Chris Pilkington'},{text:'Job title: Head Pharmacist, Get Real Health'},{text:'GPhC: 2046322'},{text:'Signed: C. Pilkington',b:true},{text:'Date: '+(d.sigDate||'7 September 2026')}])]),
+   // The signatures themselves. "Signed: N. Shori" in text is not a
+   // signature, and Nitin said so: "my and chris signatures are not on the
+   // chest service document". These are the images from the signed originals
+   // (TRT v2, 13 July 2026), applied digitally on their joint standing
+   // instruction, which is the established process for Get Real Health PGDs.
+   tbl([row('Doctor',[{text:'Name: Nitin Shori'},{text:'Job title: Medical Director, Get Real Health'},{text:'GMC: 6047293'},{text:'Signature:'},{image:'nitin-shori.png',w:138,h:80},{text:'Date: '+(d.sigDate||'7 September 2026')}]),
+        row('Pharmacist',[{text:'Name: Chris Pilkington'},{text:'Job title: Head Pharmacist, Get Real Health'},{text:'GPhC: 2046322'},{text:'Signature:'},{image:'chris-pilkington.png',w:150,h:62},{text:'Date: '+(d.sigDate||'7 September 2026')}])]),
    p(''),
    p('Both authorising signatories reviewed this version together on '+(d.sigDate||'7 September 2026')+' and gave their authorisation for it to be issued. Signatures were applied digitally on their joint instruction, which is the established process for Get Real Health PGDs.',{i:true,color:GREY}),
    p(''),h('PGD adoption and authorisation by the employer or clinical lead',HeadingLevel.HEADING_2),
