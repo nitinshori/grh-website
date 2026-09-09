@@ -80,7 +80,10 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   "saxenda": "saxenda.pdf",
   // GRH-signed masters (Nitin Shori + Chris Pilkington). Originally issued
   // to PPH; promoted to masters Aug 2026 so all pharmacies can use them.
-  "skin-infection": "skin-infection.pdf",
+  // v003 signed 9 Sep 2026. v002 told staff to give a 2 year old 10 mL of a
+  // 250mg/5mL suspension against a 250mg dose, which is double, and applied
+  // adult observation thresholds to a service starting at age 2.
+  "skin-infection": "skin-infection-v003.pdf",
   "cellulitis": "cellulitis.pdf",
   "fungal-infection": "fungal-infection.pdf",
   "psoriasis": "psoriasis-v002.pdf",

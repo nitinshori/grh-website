@@ -2,11 +2,19 @@ import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
 import type { SkinInfectionConsultationState } from "./skin-infection-types";
 
 /**
- * Clinical decision logic for the Skin Infection ePGD, faithful to the
- * PPH-signed PGD (flucloxacillin / clarithromycin / doxycycline).
- * Hard stops mirror the PGD's exclusion criteria; cautions mirror its
- * cautions section (C. difficile risk, HAGMA with paracetamol,
- * renal/hepatic caution, clarithromycin-statin interaction).
+ * Clinical decision logic for the Skin Infection ePGD, aligned to signed
+ * document v003 (9 September 2026).
+ *
+ * Four things were wrong against v002/v003 and are corrected here:
+ *   1. flucloxacillin doses were given as ranges ("125-250 mg", "250-500 mg")
+ *      that the document does not authorise. v003 states 250mg four times
+ *      daily for ages 2 to 9 and 500mg four times daily from 10.
+ *   2. the clarithromycin weight bands still carried "under 8 kg 7.5 mg/kg"
+ *      and "8-11 kg 62.5 mg". v003 removes both and sets a 12 kg floor.
+ *   3. no cellulitis age gate. v003 restricts cellulitis to 12 and over.
+ *   4. pregnancy was an absolute stop, while the document says flucloxacillin
+ *      may be supplied in pregnancy where clinically indicated. The tool was
+ *      refusing patients the PGD permits.
  */
 
 export function getAllAlerts(state: SkinInfectionConsultationState): ClinicalAlert[] {
@@ -50,12 +58,50 @@ export function getAllAlerts(state: SkinInfectionConsultationState): ClinicalAle
       detail: "Refer to the GP; skin infection in immunosuppression needs medical assessment.",
     });
   }
+  // Pregnancy is arm-specific under v003, not a blanket exclusion.
+  // Flucloxacillin MAY be supplied; clarithromycin and doxycycline may not.
   if (mh.pregnant) {
+    if (choice === "clarithromycin" || choice === "doxycycline") {
+      alerts.push({
+        code: "pregnancy-arm",
+        severity: "stop",
+        message: "Pregnancy excludes this arm",
+        detail:
+          "Clarithromycin and doxycycline are excluded in pregnancy under v003. Flucloxacillin may be supplied in pregnancy where clinically indicated. If the patient is penicillin allergic, refer.",
+      });
+    } else {
+      alerts.push({
+        code: "pregnancy-fluclox-ok",
+        severity: "caution",
+        message: "Pregnant: flucloxacillin may be supplied",
+        detail:
+          "v003 permits flucloxacillin in pregnancy and breastfeeding where clinically indicated, in line with the Wound Care PGD. Earlier versions of this tool stopped every pregnant patient, which refused people the PGD allows.",
+      });
+    }
+  }
+
+  // Cellulitis is restricted to 12 and over under v003. It is the
+  // highest-acuity condition in the document and the one most likely to
+  // deteriorate; in a younger child it needs assessment, not a supply.
+  if (a.infectionType === "cellulitis" && age !== null && age < 12) {
     alerts.push({
-      code: "pregnancy",
+      code: "cellulitis-under-12",
       severity: "stop",
-      message: "Pregnancy — excluded from this PGD",
-      detail: "Refer to the GP or midwife for assessment and treatment.",
+      message: "Cellulitis under 12: refer, do not supply",
+      detail:
+        "v003 restricts cellulitis to patients aged 12 and over. Impetigo, folliculitis, infected eczema and infected wounds remain in scope from 2 years. Say plainly that the child needs to be seen rather than treated here, and help arrange it.",
+    });
+  }
+
+  // Cellulitis needs margins marked and an in-person 48-hour review booked
+  // at the supplying pharmacy. v002 required a review and named nobody.
+  if (a.infectionType === "cellulitis" && age !== null && age >= 12) {
+    alerts.push({
+      code: "cellulitis-review",
+      severity: "caution",
+      message: "Mark the margins and book the 48-hour review before the patient leaves",
+      detail:
+        "Mark the edge of the erythema with a skin-safe pen and record that you did. The review at 48 hours is in person, by a pharmacist at this pharmacy: a phone call is not sufficient, because the point is to see whether the erythema has passed the mark. Spread beyond the mark is a same-day referral, not a change of antibiotic. If the patient does not attend, contact them the same day, and if you cannot reach them record the attempt and inform the GP.",
     });
   }
   if (mh.interactingMedicines) {
@@ -194,45 +240,57 @@ export function calculateDoseRecommendation(
   if (!choice || age === null) return null;
 
   if (choice === "flucloxacillin") {
+    // v003 states single doses, not ranges. The ranges this tool used to
+    // carry ("125-250 mg", "250-500 mg") included doses the document does
+    // not authorise, and gave no volume for the suspension. The document's
+    // own v002 carried the volume error that prompted this: 250mg of a
+    // 250mg/5mL suspension is 5 mL, not 10 mL.
     if (age >= 2 && age <= 9)
       return {
-        medicine: "Flucloxacillin 250mg/5ml suspension",
-        dose: "125–250 mg four times a day",
-        duration: "5–7 days",
+        medicine: "Flucloxacillin 250mg/5mL oral suspension",
+        dose: "250 mg four times a day, which is 5 mL of the 250mg/5mL suspension",
+        duration: "5 days, or 7 days for cellulitis (12 and over only)",
         reason:
-          "Take on an empty stomach (1 hour before or 2 hours after food) with a full glass of water; do not lie down immediately after. Suspension stored in the fridge (2–8°C).",
+          "100 mL for 5 days, 140 mL for 7 days. Take on an empty stomach, 1 hour before or 2 hours after food. Write the volume in millilitres on the label as well as the milligram dose, and show the parent the mark on the oral syringe. Reconstituted suspension: refrigerate and discard after 7 days.",
       };
     if (age >= 10 && age <= 17)
       return {
-        medicine: "Flucloxacillin 250mg or 500mg capsules (or suspension)",
-        dose: "250–500 mg four times a day",
-        duration: "5–7 days",
+        medicine: "Flucloxacillin 500mg capsules, or 250mg/5mL suspension if unable to swallow capsules",
+        dose: "500 mg four times a day, which is 10 mL of the 250mg/5mL suspension",
+        duration: "5 days, or 7 days for cellulitis",
         reason:
-          "Take on an empty stomach (1 hour before or 2 hours after food) with a full glass of water (250 ml); do not lie down immediately after.",
+          "Capsules: 20 for 5 days, 28 for 7 days. Suspension: 200 mL for 5 days, 280 mL for 7 days. Take on an empty stomach, 1 hour before or 2 hours after food.",
       };
     return {
-      medicine: "Flucloxacillin 500mg capsules",
-      dose: "500 mg four times a day",
-      duration: "5–7 days (20 or 28 capsules per clinical judgement)",
+      medicine: "Flucloxacillin 500mg capsules, or 250mg/5mL suspension if unable to swallow capsules",
+      dose: "500 mg four times a day, which is 10 mL of the 250mg/5mL suspension",
+      duration: "5 days, or 7 days for cellulitis",
       reason:
-        "Take on an empty stomach (1 hour before or 2 hours after food) with a full glass of water (250 ml); do not lie down immediately after.",
+        "Capsules: 20 for 5 days, 28 for 7 days. Suspension: 200 mL for 5 days, 280 mL for 7 days. Take on an empty stomach, 1 hour before or 2 hours after food.",
     };
   }
 
   if (choice === "clarithromycin") {
+    // v003 removed the "under 8 kg" and "8 to 11 kg" bands and set a 12 kg
+    // floor. No child of 2 weighs 8 to 11 kg, so those bands were
+    // unreachable in a service starting at 2 and implied a scope this PGD
+    // does not have.
     if (age >= 2 && age <= 11)
       return {
-        medicine: "Clarithromycin suspension",
+        medicine: "Clarithromycin oral suspension",
         dose:
-          "By body weight, twice daily: under 8 kg — 7.5 mg/kg; 8–11 kg — 62.5 mg; 12–19 kg — 125 mg; 20–29 kg — 187.5 mg; 30–40 kg — 250 mg",
-        duration: "5–7 days",
-        reason: "Confirm current weight before supply.",
+          "By body weight, twice daily: 12 to 19 kg, 125 mg (5 mL of 125mg/5mL); 20 to 29 kg, 187.5 mg (3.75 mL of 250mg/5mL); 30 to 40 kg, 250 mg (5 mL of 250mg/5mL). Under 12 kg is outside this PGD: refer.",
+        duration: "5 days, or 7 days for cellulitis (12 and over only)",
+        reason:
+          "Confirm current weight before supply. A child under 12 weighing more than 40 kg receives the adult dose of 250 mg twice daily.",
       };
     return {
-      medicine: "Clarithromycin 250mg or 500mg tablets",
-      dose: "250–500 mg twice a day",
-      duration: "5–7 days",
-      reason: "Check interactions (statins, warfarin, QT-prolonging medicines) before supply.",
+      medicine: "Clarithromycin 250mg tablets",
+      dose:
+        "250 mg twice a day. 500 mg twice a day only for MORE EXTENSIVE INFECTION, meaning erythema larger than about 10 cm across, more than one body region involved, or cellulitis rather than a superficial infection. v002 used that phrase and defined it nowhere.",
+      duration: "5 days, or 7 days for cellulitis",
+      reason:
+        "Ask about renal function and record the answer: known creatinine clearance below 30 mL/min excludes this arm under v003 and the patient is referred. Check interactions (statins, warfarin and DOACs, QT-prolonging medicines) before supply.",
     };
   }
 

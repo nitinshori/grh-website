@@ -417,13 +417,13 @@ export const PGD_CATEGORIES = [
  */
 export const REISSUED_PGDS: Record<string, { version: string; date: string }> = {
   'dental-bridging': { version: 'v004', date: '9 September 2026' },
+  'skin-infection': { version: 'v003', date: '9 September 2026' },
   hpv: { version: 'v002', date: '8 September 2026' },
   'meningitis-acwy-travel': { version: 'v002', date: '7 September 2026' },
   'anti-malarials': { version: 'v002', date: '7 September 2026' },
   typhoid: { version: 'v002', date: '7 September 2026' },
   eczema: { version: 'v002', date: '7 September 2026' },
   'chest-service': { version: 'v002', date: '7 September 2026' },
-  'skin-infection': { version: 'v002', date: '7 September 2026' },
   'wound-care': { version: 'v002', date: '7 September 2026' },
   // COVID: v003 named "Comirnaty JN.1" in its operative vaccines table while
   // its own summary page said the 2026/27 formulation was XFG. No pharmacy
