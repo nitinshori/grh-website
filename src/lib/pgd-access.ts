@@ -416,7 +416,7 @@ export const PGD_CATEGORIES = [
  * Remove an entry once it is no longer newsworthy, roughly 3 months.
  */
 export const REISSUED_PGDS: Record<string, { version: string; date: string }> = {
-  'dental-bridging': { version: 'v003', date: '8 September 2026' },
+  'dental-bridging': { version: 'v004', date: '9 September 2026' },
   hpv: { version: 'v002', date: '8 September 2026' },
   'meningitis-acwy-travel': { version: 'v002', date: '7 September 2026' },
   'anti-malarials': { version: 'v002', date: '7 September 2026' },

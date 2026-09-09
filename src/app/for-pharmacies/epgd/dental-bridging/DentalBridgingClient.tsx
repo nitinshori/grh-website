@@ -22,10 +22,24 @@ export default function DentalBridgingClient() {
       painSeverity: "",
       localisedSwelling: false,
       pusDischarge: false,
+      // ── Signs of SPREADING or SYSTEMIC infection ──────────────────────
+      // Under v004 these are what makes an antibiotic indicated. Under v003
+      // they were exclusions, which is why the indication was inverted.
       facialSwelling: false,
-      difficultSwallowingBreathing: false,
-      trismus: false,
+      lymphadenopathy: false,
+      malaise: false,
+      cellulitis: false,
       temperature38: false,
+      // ── Higher risk of complications even if localised (CKS) ──────────
+      immunosuppressed: false,
+      poorlyControlledDiabetes: false,
+      // ── EMERGENCY red flags: 999 or same-day, never a supply ──────────
+      difficultSwallowingBreathing: false,
+      floorOfMouthSwelling: false,
+      trismus: false,
+      periorbital: false,
+      rapidlySpreading: false,
+      sepsisSigns: false,
       penicillinAllergy: false,
       metronidazoleAllergy: false,
       warfarin: false,
@@ -40,8 +54,13 @@ export default function DentalBridgingClient() {
       quantity: 15 as number | null,
       batchNumber: "",
       expiryDate: "",
-      paracetamol: false,
-      ibuprofen: false,
+      // v004 supplies no analgesia. v003 offered ibuprofen and paracetamol
+      // as "OTC Analgesics (Recommended)" while the document said ibuprofen
+      // is not supplied under this PGD. Recorded now as advice given and a
+      // pharmacy sale under the pharmacy's own protocol, which is what the
+      // document actually authorises.
+      analgesiaAdviceGiven: false,
+      analgesiaSoldUnderProtocol: "",
     },
     counselling: {
       counsellingAcknowledged: false,
@@ -67,101 +86,192 @@ export default function DentalBridgingClient() {
   }, [__pharmProfile, (state as any).summary?.pharmacistName, (state as any).summary?.pharmacistGPhC]);
 
 
+  // ── Which of the three outcomes applies ───────────────────────────────
+  //
+  // Aligned to signed document v004 (9 Sep 2026). v003 had the indication
+  // inverted: it required the ABSENCE of swelling, fever and systemic
+  // features, so it authorised an antibiotic for the cohort SDCEP and NICE
+  // CKS say should not receive one, and referred the cohort that is the
+  // actual indication. This tool followed the same shape: fever was an
+  // advisory "red flag" rather than anything that changed the outcome.
+  //
+  // v004: decide the outcome FIRST, then consider a medicine.
+  const emergency = useMemo(() => {
+    const a = state.assessment;
+    return (
+      a.difficultSwallowingBreathing ||
+      a.floorOfMouthSwelling ||
+      a.trismus ||
+      a.periorbital ||
+      a.rapidlySpreading ||
+      a.sepsisSigns
+    );
+  }, [state.assessment]);
+
+  const spreadingOrSystemic = useMemo(() => {
+    const a = state.assessment;
+    return a.facialSwelling || a.lymphadenopathy || a.malaise || a.cellulitis || a.temperature38;
+  }, [state.assessment]);
+
+  const higherRisk = useMemo(
+    () => state.assessment.immunosuppressed || state.assessment.poorlyControlledDiabetes,
+    [state.assessment]
+  );
+
+  const outcome = useMemo<"emergency" | "no-antibiotic" | "bridge">(() => {
+    if (emergency) return "emergency";
+    if (spreadingOrSystemic || higherRisk) return "bridge";
+    return "no-antibiotic";
+  }, [emergency, spreadingOrSystemic, higherRisk]);
+
   const clinicalAlerts = useMemo<ClinicalAlert[]>(() => {
     const alerts: ClinicalAlert[] = [];
+    const a = state.assessment;
 
-    if (state.assessment.difficultSwallowingBreathing) {
+    // ── Outcome 3: emergency ────────────────────────────────────────────
+    if (a.difficultSwallowingBreathing) {
       alerts.push({
         severity: "stop",
-        code: "EMERGENCY_REFERRAL",
-        message: "Emergency Referral Required",
-        detail: "Facial swelling with difficulty swallowing or breathing suggests Ludwig's angina. Refer immediately to emergency services (999).",
+        code: "EMERGENCY_AIRWAY",
+        message: "EMERGENCY: call 999 now",
+        detail:
+          "Difficulty swallowing or breathing, or a change in the voice, suggests airway involvement or Ludwig's angina. Call 999. Do not supply an antibiotic and do not let arranging one delay the call.",
+      });
+    }
+    if (a.floorOfMouthSwelling) {
+      alerts.push({
+        severity: "stop",
+        code: "EMERGENCY_LUDWIG",
+        message: "EMERGENCY: call 999 now",
+        detail:
+          "Swelling of the floor of the mouth, or a raised or displaced tongue, suggests Ludwig's angina. Call 999.",
+      });
+    }
+    if (a.trismus) {
+      alerts.push({
+        severity: "stop",
+        code: "EMERGENCY_TRISMUS",
+        message: "Emergency: same-day assessment, do not supply",
+        detail:
+          "The patient cannot open their mouth more than about two finger widths. This suggests deep space infection. Same-day emergency assessment, not a dental appointment and not an antibiotic. v003 treated this as an advisory note only.",
+      });
+    }
+    if (a.periorbital) {
+      alerts.push({
+        severity: "stop",
+        code: "EMERGENCY_PERIORBITAL",
+        message: "Emergency: same-day assessment, do not supply",
+        detail:
+          "Swelling closing the eye, eye pain, double vision or reduced vision indicates periorbital or orbital involvement. Same-day emergency assessment.",
+      });
+    }
+    if (a.rapidlySpreading) {
+      alerts.push({
+        severity: "stop",
+        code: "EMERGENCY_SPREADING",
+        message: "Emergency: same-day assessment, do not supply",
+        detail: "Rapidly spreading swelling, or swelling extending down the neck. Same-day emergency assessment.",
+      });
+    }
+    if (a.sepsisSigns) {
+      alerts.push({
+        severity: "stop",
+        code: "EMERGENCY_SEPSIS",
+        message: "EMERGENCY: possible sepsis",
+        detail:
+          "Rigors, confusion, very rapid breathing or heart rate, mottled or ashen skin, or not passing urine. Treat as sepsis and escalate immediately.",
       });
     }
 
-    // Penicillin allergy now routes to metronidazole, authorised by PGD v003.
-    //
-    // Note the dose. This tool previously returned "Metronidazole 400mg TDS",
-    // which was wrong twice over: metronidazole was in no version of the
-    // document, and 400mg is above the dose the SPC carries for acute dental
-    // infection. v003 authorises the LICENSED dose, 200mg three times daily
-    // for 5 days. SDCEP suggests 400mg 8-hourly; that is off-label for this
-    // indication and this PGD deliberately does not use it.
-    if (state.assessment.penicillinAllergy) {
+    // ── Outcome 1: localised, no antibiotic indicated ───────────────────
+    if (outcome === "no-antibiotic") {
+      alerts.push({
+        severity: "stop",
+        code: "LOCALISED_NO_ANTIBIOTIC",
+        message: "Localised infection: an antibiotic is NOT indicated",
+        detail:
+          "No sign of spreading or systemic infection, and no higher-risk factor. SDCEP and NICE CKS are consistent that antibiotics are not indicated for a localised dental infection in an otherwise healthy patient: the infection is being contained, and the abscess is largely walled off from the circulation so very little antibiotic reaches it. Give analgesia advice, sell analgesia under the pharmacy's own protocol if needed, and arrange urgent dental care. This is the service working correctly, not a refusal.",
+      });
+    }
+
+    // ── Outcome 2: the bridging cohort ──────────────────────────────────
+    if (outcome === "bridge") {
+      alerts.push({
+        severity: "caution",
+        code: "BRIDGE_INDICATED",
+        message: higherRisk && !spreadingOrSystemic
+          ? "Higher-risk patient: bridging antibiotic may be supplied"
+          : "Spreading or systemic infection: bridging antibiotic indicated",
+        detail:
+          "Supply under this PGD AND arrange an urgent dental appointment within 24 to 48 hours. The antibiotic is a bridge: it does not drain the infection or remove the cause. Record which sign of spread, or which higher-risk factor, justified the supply.",
+      });
+    }
+
+    // ── Arm selection and arm-specific exclusions ───────────────────────
+    if (a.penicillinAllergy && a.metronidazoleAllergy) {
+      alerts.push({
+        severity: "stop",
+        code: "UNSUITABLE_BOTH_ALLERGIES",
+        message: "No arm available: refer",
+        detail: "Allergic to both penicillin and metronidazole. Refer for dental assessment and alternative management.",
+      });
+    } else if (a.penicillinAllergy) {
       alerts.push({
         severity: "caution",
         code: "PENICILLIN_ALLERGY_METRONIDAZOLE",
         message: "Penicillin allergy: metronidazole arm applies",
         detail:
-          "Supply metronidazole 200mg three times daily for 5 days under PGD v003. NOT 400mg. Confirm the patient can avoid alcohol completely during the course and for 48 hours afterwards, and check for warfarin, lithium, disulfiram and QT-prolonging medicines, all of which exclude.",
+          "Metronidazole 200mg three times daily for 5 days. NOT 400mg: 200mg is the licensed dose for acute dental infection and this PGD stays within the licence. Confirm the patient can avoid alcohol completely during the course and for 48 hours afterwards.",
       });
     }
 
-    if (state.assessment.penicillinAllergy && state.assessment.metronidazoleAllergy) {
+    // Metronidazole arm exclusions. These are exclusions in v004, not
+    // cautions: v003's tool listed warfarin as a caution to "inform the GP".
+    if (a.penicillinAllergy && a.warfarin) {
       alerts.push({
         severity: "stop",
-        code: "UNSUITABLE_BOTH_ALLERGIES",
-        message: "Unsuitable for Bridging Treatment",
-        detail: "Patient is allergic to both penicillin and metronidazole. Refer to dentist immediately for alternative management.",
+        code: "METRONIDAZOLE_WARFARIN",
+        message: "Warfarin excludes the metronidazole arm",
+        detail:
+          "Metronidazole potentiates warfarin and other coumarins. This is an exclusion under v004, not a caution. Refer. The same applies to lithium, disulfiram, busulfan, 5-fluorouracil, ciclosporin, phenytoin, phenobarbital and QT-prolonging medicines.",
       });
     }
-
-    if (state.assessment.trismus) {
+    if (a.penicillinAllergy && (a.pregnancy || a.breastfeeding)) {
       alerts.push({
-        severity: "red-flag",
-        code: "TRISMUS_LIMITED_OPENING",
-        message: "Red Flag: Limited Mouth Opening",
-        detail: "Trismus (difficulty opening mouth) may indicate deeper infection. Ensure urgent dental assessment is arranged.",
+        severity: "stop",
+        code: "METRONIDAZOLE_PREGNANCY",
+        message: "Pregnancy or breastfeeding excludes the metronidazole arm",
+        detail:
+          "The SPC advises metronidazole should not be given in pregnancy or lactation unless considered essential, which is a prescriber judgement and not a PGD one. Refer. Say plainly that the issue is the antibiotic and not the dental problem.",
       });
     }
 
-    if (state.assessment.temperature38) {
-      alerts.push({
-        severity: "red-flag",
-        code: "ELEVATED_TEMPERATURE",
-        message: "Red Flag: Elevated Temperature",
-        detail: "Temperature >38°C indicates systemic infection. Urgent dental assessment required. Advise patient to monitor temperature.",
-      });
-    }
-
-    if (state.assessment.warfarin) {
+    // Amoxicillin arm: pregnancy and breastfeeding PERMIT supply. v003
+    // deleted these statements from the document altogether, and the tool
+    // said metronidazole "should be avoided in first trimester", which is
+    // not the position either the SPC or this PGD takes.
+    if (!a.penicillinAllergy && (a.pregnancy || a.breastfeeding)) {
       alerts.push({
         severity: "caution",
-        code: "WARFARIN_INTERACTION",
-        message: "Drug Interaction: Warfarin",
-        detail: "Metronidazole may increase warfarin effect. Ensure GP is informed and INR monitoring arranged if prescribed.",
+        code: "AMOXICILLIN_PREGNANCY_OK",
+        message: "Amoxicillin may be supplied in pregnancy and breastfeeding",
+        detail:
+          "Amoxicillin is well established in pregnancy and is the usual choice where an antibiotic is indicated. Small amounts appear in breast milk; that is not a reason to withhold it or to interrupt feeding.",
       });
     }
 
-    if (state.assessment.pregnancy) {
+    if (a.otherAntibiotics) {
       alerts.push({
-        severity: "caution",
-        code: "PREGNANCY_CONSIDERATION",
-        message: "Pregnancy Consideration",
-        detail: "Amoxicillin is safe. Metronidazole should be avoided in first trimester. Confirm treatment appropriately.",
-      });
-    }
-
-    if (state.assessment.breastfeeding) {
-      alerts.push({
-        severity: "caution",
-        code: "BREASTFEEDING_COMPAT",
-        message: "Breastfeeding",
-        detail: "Both amoxicillin and metronidazole are compatible with breastfeeding but present in breast milk.",
-      });
-    }
-
-    if (state.assessment.otherAntibiotics) {
-      alerts.push({
-        severity: "caution",
+        severity: "stop",
         code: "CONCURRENT_ANTIBIOTICS",
-        message: "Concurrent Antibiotic Use",
-        detail: "Patient already taking other antibiotics. Verify compatibility and avoid duplication of therapy.",
+        message: "Already taking an antibiotic: do not supply",
+        detail:
+          "An antibiotic already taken for this or any other indication is an exclusion under this PGD. One supply per episode. Refer.",
       });
     }
 
     return alerts;
-  }, [state.assessment]);
+  }, [state.assessment, outcome, higherRisk, spreadingOrSystemic]);
 
   const hasStopAlerts = clinicalAlerts.some(a => a.severity === "stop");
   const canProceedFromAssessment = !hasStopAlerts && !!state.assessment.painType && !!state.assessment.painDuration && !!state.assessment.painSeverity;
@@ -176,9 +286,10 @@ export default function DentalBridgingClient() {
   }, []);
 
   const selectedAntibiotic = useMemo(() => {
-    // Amoxicillin is the only antibiotic this PGD authorises. A
-    // penicillin-allergic patient is stopped above and referred; the tool must
-    // not offer a substitute the document does not cover.
+    // v004 authorises two arms: amoxicillin first line, metronidazole for
+    // penicillin allergy. The comment that used to sit here said amoxicillin
+    // was the only authorised antibiotic, directly above code selecting
+    // metronidazole. It was left behind when the second arm was added.
     if (state.assessment.penicillinAllergy) {
       return "Metronidazole 200mg TDS";
     }
@@ -273,8 +384,123 @@ export default function DentalBridgingClient() {
 
         {currentStep === 2 && (
           <div className="space-y-6">
+            {/* ──────────────────────────────────────────────────────────
+                Order matters here, and it is the order of signed document
+                v004: emergency red flags, then spread, then higher risk.
+                v003 asked about swelling and fever as things that STOPPED a
+                supply, which inverted the indication. Under v004 they are
+                what makes an antibiotic indicated at all.
+               ────────────────────────────────────────────────────────── */}
+            <div className="p-4 bg-red-50 border border-red-300 rounded-lg space-y-3">
+              <h3 className="text-base font-semibold text-red-900">
+                Step 1. Emergency red flags. Any one of these is 999 or same-day care, never a supply.
+              </h3>
+              <Checkbox
+                label="Difficulty breathing or swallowing, drooling, or any change in the voice"
+                checked={state.assessment.difficultSwallowingBreathing}
+                onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, difficultSwallowingBreathing: v } }))}
+                description="Call 999."
+              />
+              <Checkbox
+                label="Swelling of the floor of the mouth, or a raised or displaced tongue"
+                checked={state.assessment.floorOfMouthSwelling}
+                onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, floorOfMouthSwelling: v } }))}
+                description="Suggests Ludwig's angina. Call 999."
+              />
+              <Checkbox
+                label="Trismus: cannot open the mouth more than about two finger widths"
+                checked={state.assessment.trismus}
+                onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, trismus: v } }))}
+                description="Same-day emergency assessment. Earlier versions treated this as an advisory note only."
+              />
+              <Checkbox
+                label="Periorbital or orbital involvement: swelling closing the eye, eye pain, double or reduced vision"
+                checked={state.assessment.periorbital}
+                onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, periorbital: v } }))}
+                description="Same-day emergency assessment."
+              />
+              <Checkbox
+                label="Rapidly spreading swelling, or swelling extending down the neck"
+                checked={state.assessment.rapidlySpreading}
+                onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, rapidlySpreading: v } }))}
+              />
+              <Checkbox
+                label="Signs of sepsis: rigors, confusion, very rapid breathing or heart rate, mottled skin, not passing urine"
+                checked={state.assessment.sepsisSigns}
+                onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, sepsisSigns: v } }))}
+              />
+            </div>
+
+            <div className="p-4 bg-amber-50 border border-amber-300 rounded-lg space-y-3">
+              <h3 className="text-base font-semibold text-amber-900">
+                Step 2. Is the infection spreading, or is the patient systemically involved?
+              </h3>
+              <p className="text-xs text-amber-900">
+                This is the question that decides whether an antibiotic is indicated at all. If none of
+                these is present and the patient is not at higher risk, an antibiotic is NOT indicated:
+                analgesia advice and urgent dental care are the correct answer.
+              </p>
+              <Checkbox
+                label="Temperature 38C or above"
+                checked={state.assessment.temperature38}
+                onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, temperature38: v } }))}
+              />
+              <Checkbox
+                label="Facial swelling, or swelling beyond the tooth and its immediate gum"
+                checked={state.assessment.facialSwelling}
+                onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, facialSwelling: v } }))}
+                description="Tick this only where no emergency red flag above applies."
+              />
+              <Checkbox
+                label="Regional lymphadenopathy: tender, enlarged nodes in the neck or under the jaw"
+                checked={state.assessment.lymphadenopathy}
+                onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, lymphadenopathy: v } }))}
+              />
+              <Checkbox
+                label="Cellulitis: diffuse redness and swelling spreading into the soft tissues"
+                checked={state.assessment.cellulitis}
+                onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, cellulitis: v } }))}
+              />
+              <Checkbox
+                label="Malaise, rigors, or feeling generally unwell"
+                checked={state.assessment.malaise}
+                onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, malaise: v } }))}
+              />
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Step 3. Higher risk of complications, even if the infection looks localised
+              </h3>
+              <Checkbox
+                label="Significant immunosuppression"
+                checked={state.assessment.immunosuppressed}
+                onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, immunosuppressed: v } }))}
+                description="A bridging antibiotic may be supplied for an apparently localised infection. Record the reason."
+              />
+              <Checkbox
+                label="Poorly controlled diabetes"
+                checked={state.assessment.poorlyControlledDiabetes}
+                onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, poorlyControlledDiabetes: v } }))}
+              />
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold text-gray-900">Local findings, for the record</h3>
+              <Checkbox
+                label="Localised swelling of the gum next to the tooth"
+                checked={state.assessment.localisedSwelling}
+                onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, localisedSwelling: v } }))}
+              />
+              <Checkbox
+                label="Purulent discharge from the gum"
+                checked={state.assessment.pusDischarge}
+                onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, pusDischarge: v } }))}
+              />
+            </div>
+
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">Pain Assessment</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Pain assessment, for the record</h3>
               <SelectInput
                 label="Type of dental pain"
                 value={state.assessment.painType}
@@ -283,7 +509,7 @@ export default function DentalBridgingClient() {
                   { value: "", label: "Select..." },
                   { value: "toothache", label: "Toothache" },
                   { value: "abscess", label: "Abscess" },
-                  { value: "swelling", label: "Swelling of gum/face" },
+                  { value: "swelling", label: "Swelling of gum or face" },
                   { value: "post-extraction", label: "Post-extraction pain" },
                   { value: "other", label: "Other" },
                 ]}
@@ -296,8 +522,8 @@ export default function DentalBridgingClient() {
                 options={[
                   { value: "", label: "Select..." },
                   { value: "<24h", label: "Less than 24 hours" },
-                  { value: "1-3d", label: "1-3 days" },
-                  { value: "3-7d", label: "3-7 days" },
+                  { value: "1-3d", label: "1 to 3 days" },
+                  { value: "3-7d", label: "3 to 7 days" },
                   { value: ">7d", label: "More than 7 days" },
                 ]}
                 required
@@ -317,83 +543,46 @@ export default function DentalBridgingClient() {
             </div>
 
             <div className="space-y-3">
-              <h3 className="text-lg font-semibold text-gray-900">Signs of Dental Abscess</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Allergies, medicines and pregnancy</h3>
               <Checkbox
-                label="Localised swelling"
-                checked={state.assessment.localisedSwelling}
-                onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, localisedSwelling: v } }))}
-              />
-              <Checkbox
-                label="Pus discharge"
-                checked={state.assessment.pusDischarge}
-                onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, pusDischarge: v } }))}
-              />
-              <Checkbox
-                label="Facial swelling"
-                checked={state.assessment.facialSwelling}
-                onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, facialSwelling: v } }))}
-              />
-            </div>
-
-            <div className="space-y-3">
-              <h3 className="text-lg font-semibold text-gray-900">Red Flags</h3>
-              <Checkbox
-                label="Facial swelling with difficulty swallowing or breathing"
-                checked={state.assessment.difficultSwallowingBreathing}
-                onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, difficultSwallowingBreathing: v } }))}
-              />
-              <Checkbox
-                label="Trismus (difficulty opening mouth)"
-                checked={state.assessment.trismus}
-                onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, trismus: v } }))}
-              />
-              <Checkbox
-                label="Temperature >38°C"
-                checked={state.assessment.temperature38}
-                onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, temperature38: v } }))}
-              />
-            </div>
-
-            <div className="space-y-3">
-              <h3 className="text-lg font-semibold text-gray-900">Allergies</h3>
-              <Checkbox
-                label="Known allergy to penicillin"
+                label="Penicillin or beta-lactam allergy"
                 checked={state.assessment.penicillinAllergy}
                 onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, penicillinAllergy: v } }))}
+                description="Routes to the metronidazole arm. Record the allergy history in the patient's own words."
               />
               <Checkbox
-                label="Known allergy to metronidazole"
+                label="Metronidazole or nitroimidazole allergy"
                 checked={state.assessment.metronidazoleAllergy}
                 onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, metronidazoleAllergy: v } }))}
               />
-            </div>
-
-            <div className="space-y-3">
-              <h3 className="text-lg font-semibold text-gray-900">Other Medical Factors</h3>
               <Checkbox
-                label="Currently taking warfarin or other anticoagulants"
+                label="Taking warfarin or another coumarin, lithium, disulfiram, phenytoin or a QT-prolonging medicine"
                 checked={state.assessment.warfarin}
                 onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, warfarin: v } }))}
+                description="Excludes the metronidazole arm under v004. Not relevant to amoxicillin."
               />
               <Checkbox
                 label="Pregnant"
                 checked={state.assessment.pregnancy}
                 onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, pregnancy: v } }))}
+                description="Amoxicillin may be supplied. Metronidazole is excluded."
               />
               <Checkbox
                 label="Breastfeeding"
                 checked={state.assessment.breastfeeding}
                 onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, breastfeeding: v } }))}
+                description="Amoxicillin may be supplied. Metronidazole is excluded."
               />
               <Checkbox
-                label="Currently taking any other antibiotics"
+                label="Already taking an antibiotic, for this or any other indication"
                 checked={state.assessment.otherAntibiotics}
                 onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, otherAntibiotics: v } }))}
+                description="Exclusion. One supply per episode."
               />
             </div>
 
-            <div className="space-y-3">
-              <h3 className="text-lg font-semibold text-gray-900">Dental Care</h3>
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Dental care</h3>
               <Checkbox
                 label="Patient already has a dental appointment booked"
                 checked={state.assessment.dentalAppointmentBooked}
@@ -456,16 +645,24 @@ export default function DentalBridgingClient() {
             </div>
 
             <div className="space-y-3">
-              <h3 className="text-lg font-semibold text-gray-900">OTC Analgesics (Recommended)</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Analgesia</h3>
+              <p className="text-xs text-gray-600">
+                This PGD supplies no analgesia. Where the patient needs pain relief, sell it as a
+                pharmacy medicine under the pharmacy&apos;s own protocol and record that you did.
+                Earlier versions of this tool offered ibuprofen and paracetamol here as
+                &quot;recommended&quot;, while the signed document said ibuprofen is not supplied
+                under this PGD.
+              </p>
               <Checkbox
-                label="Paracetamol 1g QDS"
-                checked={state.treatment.paracetamol}
-                onChange={v => setState(prev => ({ ...prev, treatment: { ...prev.treatment, paracetamol: v } }))}
+                label="Analgesia advice given"
+                checked={state.treatment.analgesiaAdviceGiven}
+                onChange={v => setState(prev => ({ ...prev, treatment: { ...prev.treatment, analgesiaAdviceGiven: v } }))}
               />
-              <Checkbox
-                label="Ibuprofen 400mg TDS"
-                checked={state.treatment.ibuprofen}
-                onChange={v => setState(prev => ({ ...prev, treatment: { ...prev.treatment, ibuprofen: v } }))}
+              <TextInput
+                label="Analgesia sold under the pharmacy's own protocol (if any)"
+                value={state.treatment.analgesiaSoldUnderProtocol}
+                onChange={v => setState(prev => ({ ...prev, treatment: { ...prev.treatment, analgesiaSoldUnderProtocol: v } }))}
+                placeholder="e.g. paracetamol 500mg, 32 tablets"
               />
             </div>
           </div>
@@ -491,9 +688,9 @@ export default function DentalBridgingClient() {
                     <li>• Do not drive if feeling dizzy</li>
                   </>
                 )}
-                <li>• Use OTC paracetamol or ibuprofen regularly for pain relief</li>
-                <li>• Arrange urgent dental appointment — antibiotics do not fix the underlying problem</li>
-                <li>• Return immediately if facial swelling worsens, difficulty swallowing/breathing develops, or fever returns</li>
+                <li>• For pain relief, ask us: we can sell you something suitable over the counter</li>
+                <li>• THIS IS A BRIDGE, NOT A CURE. You still need an urgent dental appointment within 24 to 48 hours. The antibiotic cannot drain the abscess or fix the tooth</li>
+                <li>• Seek urgent help the same day if the swelling spreads, your eye starts to close, you cannot open your mouth properly, or you feel much worse. Call 999 for any difficulty swallowing or breathing</li>
                 <li>• Register with NHS dentist if not already registered</li>
               </ul>
             </div>

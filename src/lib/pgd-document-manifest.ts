@@ -22,7 +22,11 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   // 2026/27 season v003, signed 6 Aug 2026 with C. Pilkington's review edits
   "covid-booster": "covid-2026-27-v004.pdf",
   "dengue": "dengue.pdf",
-  "dental-bridging": "dental-bridging-v003.pdf",
+  // v004 signed 9 Sep 2026. v003 had the indication inverted: it required the
+  // ABSENCE of swelling, fever and systemic features, so it authorised an
+  // antibiotic for the cohort guidance says should not have one and referred
+  // the cohort that is the indication. Raised by an adopting pharmacy.
+  "dental-bridging": "dental-bridging-v004.pdf",
   "diabetes-monitoring": "diabetes-monitoring.pdf",
   "ear-infection": "ear-infection-v002.pdf",
   "eczema": "eczema.pdf",
@@ -143,7 +147,11 @@ export const PGD_HUBRX_FILES: Record<string, string> = {
   "copd": "copd 2.pdf",
   "covid-booster": "covid-2026-27-v004.pdf",
   "dengue": "dengue 2.pdf",
-  "dental-bridging": "dental-bridging-v003.pdf",
+  // v004 signed 9 Sep 2026. v003 had the indication inverted: it required the
+  // ABSENCE of swelling, fever and systemic features, so it authorised an
+  // antibiotic for the cohort guidance says should not have one and referred
+  // the cohort that is the indication. Raised by an adopting pharmacy.
+  "dental-bridging": "dental-bridging-v004.pdf",
   "diabetes-monitoring": "diabetes-monitoring 2.pdf",
   "ear-infection": "ear-infection-v002.pdf",
   "eczema": "eczema.pdf",
