@@ -174,13 +174,14 @@ const d={
   {bullet:'NICE Medicines Practice Guideline 2 (MPG2): Patient Group Directions, https://www.nice.org.uk/guidance/mpg2'},
  ],
 
- version:'v003',
- supersedes:'Version 002, 8 September 2026',
- validFrom:'8 September 2026',
+ version:'v004',
+ supersedes:'Version 003, 8 September 2026',
+ validFrom:'9 September 2026',
  expiry:'31 July 2027',
- sigDate:'8 September 2026',
- chDate:'8 September 2026',
+ sigDate:'9 September 2026',
+ chDate:'9 September 2026',
  changes:[
+  'The practitioner Agreement to practise page, the premises block and the practitioner signature table are restored, together with the standard governance requirements: SPC and BNF familiarity, MHRA safety alerts, CPD and appraisal, indemnity, and capacity and consent. Every version 001 document carried them; no document produced by the current generator did, through one omission in one function that affected 15 live documents. Raised as blocking by an adopting pharmacy: NICE MPG2 expects a record of the individuals authorised to work under a PGD. This version changes no clinical content.',
   'Consent in children and young people added. Version 002 required only "valid informed consent obtained" while the conventional course has no lower age limit, so a child could be vaccinated with nothing in the document about parental responsibility or Gillick competence. Found by an estate-wide sweep of every vaccination PGD on 8 September 2026, which flagged the same gap in nine others.',
   'The accelerated day 0, 3 and 7 course is restricted to patients aged 18 and over. The document states plainly that this is a Get Real Health service restriction and not a guideline one, because Green Book chapter 27 sets no age limit and the Verorab evidence covers children from 2 years. The conventional course remains available at any age.',
   'The accelerated course is now identified as off-label, with a stated consent script and a requirement to record consent to off-label use naming the schedule. Neither product SPC contains a three dose day 0, 3 and 7 pre-exposure regimen; that schedule comes from the Green Book. This mirrors the handling of the accelerated Japanese encephalitis schedule.',
@@ -199,4 +200,4 @@ const d={
  ],
 };
 
-Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('rabies-v003-SIGNED.docx',b);console.log('rabies v002 docx bytes',b.length);});
+Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('rabies-v004-SIGNED.docx',b);console.log('rabies v004 docx bytes',b.length);});

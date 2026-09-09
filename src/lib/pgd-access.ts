@@ -418,28 +418,28 @@ export const PGD_CATEGORIES = [
 export const REISSUED_PGDS: Record<string, { version: string; date: string }> = {
   'dental-bridging': { version: 'v004', date: '9 September 2026' },
   'skin-infection': { version: 'v003', date: '9 September 2026' },
-  hpv: { version: 'v002', date: '8 September 2026' },
-  'meningitis-acwy-travel': { version: 'v002', date: '7 September 2026' },
-  'anti-malarials': { version: 'v002', date: '7 September 2026' },
-  typhoid: { version: 'v002', date: '7 September 2026' },
+  hpv: { version: 'v003', date: '9 September 2026' },
+  'meningitis-acwy-travel': { version: 'v003', date: '9 September 2026' },
+  'anti-malarials': { version: 'v004', date: '9 September 2026' },
+  typhoid: { version: 'v003', date: '9 September 2026' },
   eczema: { version: 'v003', date: '9 September 2026' },
   'chest-service': { version: 'v003', date: '9 September 2026' },
-  'wound-care': { version: 'v003', date: '9 September 2026' },
+  'wound-care': { version: 'v004', date: '9 September 2026' },
   // COVID: v003 named "Comirnaty JN.1" in its operative vaccines table while
   // its own summary page said the 2026/27 formulation was XFG. No pharmacy
   // held JN.1. v004 names Comirnaty XFG as the vaccine of choice and adds
   // Comirnaty LP.8.1 as an existing-stock-only arm for the changeover.
-  'covid-booster': { version: 'v004', date: '8 September 2026' },
-  uti: { version: 'v002', date: '8 September 2026' },
-  'period-delay': { version: 'v002', date: '8 September 2026' },
-  'wegovy-oral': { version: 'v005', date: '8 September 2026' },
-  'ear-infection': { version: 'v002', date: '8 September 2026' },
-  ed: { version: 'v002', date: '8 September 2026' },
-  rabies: { version: 'v003', date: '8 September 2026' },
-  tetanus: { version: 'v003', date: '8 September 2026' },
-  'sleep-melatonin': { version: 'v002', date: '8 September 2026' },
-  impetigo: { version: 'v002', date: '8 September 2026' },
-  psoriasis: { version: 'v002', date: '8 September 2026' },
+  'covid-booster': { version: 'v005', date: '9 September 2026' },
+  uti: { version: 'v003', date: '9 September 2026' },
+  'period-delay': { version: 'v003', date: '9 September 2026' },
+  'wegovy-oral': { version: 'v006', date: '9 September 2026' },
+  'ear-infection': { version: 'v003', date: '9 September 2026' },
+  ed: { version: 'v003', date: '9 September 2026' },
+  rabies: { version: 'v004', date: '9 September 2026' },
+  tetanus: { version: 'v004', date: '9 September 2026' },
+  'sleep-melatonin': { version: 'v003', date: '9 September 2026' },
+  impetigo: { version: 'v004', date: '9 September 2026' },
+  psoriasis: { version: 'v003', date: '9 September 2026' },
 }
 
 /**

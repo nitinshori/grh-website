@@ -165,6 +165,7 @@ const d={
      {bullet:'Do not cover the treated area with a dressing or wrap.'},
      {bullet:'Do not shower or bathe straight after putting it on.'},
      {bullet:'Keep using your emollients. They are the foundation and you should not stop them.'},
+     {bullet:'FIRE RISK FROM EMOLLIENTS AND OINTMENTS. Emollients and paraffin-based ointments, including paraffin-free products, soak into clothing, bedding and dressings and make them catch fire more easily and burn faster. Tell the patient not to smoke, use a naked flame, or go near anything burning, and to wash clothing and bedding often, knowing that washing may not remove the residue completely. Version 001 carried this warning and version 002 lost it.',b:true},
      {bullet:'Avoid a lot of sun or sunbeds while you are using this.'},
      {bullet:'THIS IS A 4 WEEK COURSE. Do not keep using it beyond that without seeing your GP.',b:true},
    ]],
@@ -203,13 +204,15 @@ const d={
   {bullet:'NICE Medicines Practice Guideline 2 (MPG2): Patient Group Directions, https://www.nice.org.uk/guidance/mpg2'},
  ],
 
- version:'v002',
- supersedes:'Version 001',
- validFrom:'8 September 2026',
+ version:'v003',
+ supersedes:'Version 002, 8 September 2026',
+ validFrom:'9 September 2026',
  expiry:'31 July 2027',
- sigDate:'8 September 2026',
- chDate:'8 September 2026',
+ sigDate:'9 September 2026',
+ chDate:'9 September 2026',
  changes:[
+  'The practitioner Agreement to practise page, the premises block and the practitioner signature table are restored, together with the standard governance requirements: SPC and BNF familiarity, MHRA safety alerts, CPD and appraisal, indemnity, and capacity and consent. Every version 001 document carried them; no document produced by the current generator did, through one omission in one function that affected 15 live documents. Raised as blocking by an adopting pharmacy.',
+  'The fire risk warning for emollients and paraffin-based ointments is restored to the counselling. Emollients, including paraffin-free ones, soak into fabric and make it burn faster. Version 001 carried the warning and version 002 lost it. Found by comparing this document against the archived version 001, not by anyone noticing.',
   'Erythrodermic, exfoliative and pustular psoriasis added as absolute exclusions and identified as same-day emergencies, with Appendix 1 describing how to recognise each. All three are SPC contraindications and none was mentioned anywhere in version 001.',
   'Guttate psoriasis excluded, there being no experience with this product in that form.',
   'Rebound on discontinuation addressed for the first time. Stopping a potent topical corticosteroid in psoriasis can precipitate generalised pustular psoriasis, and version 001 said nothing about it to the pharmacist or the patient. Counselling and a same-day referral trigger are now required.',
@@ -229,4 +232,4 @@ const d={
  ],
 };
 
-Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('psoriasis-v002-SIGNED.docx',b);console.log('psoriasis v002 docx bytes',b.length);});
+Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('psoriasis-v003-SIGNED.docx',b);console.log('psoriasis v002 docx bytes',b.length);});

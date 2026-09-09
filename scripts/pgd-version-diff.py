@@ -219,8 +219,12 @@ MEDICINES = [
 CONCEPTS = {
     "renal impairment / dose adjustment":
         r"renal impair|creatinine clearance|crcl|renal function|kidney (disease|impair)",
+    # "hepatic dysfunction" is the wording several documents actually use.
+    # Matching only "impairment" reported wound-care as having LOST its
+    # hepatic exclusions when both arms still carried them, which would have
+    # sent someone to restore something already there.
     "hepatic impairment":
-        r"hepatic impair|liver (disease|failure|impair)",
+        r"hepatic (impair|dysfunction|reaction)|liver (disease|failure|impair)",
     "pregnancy":
         r"pregnan",
     "breastfeeding":
@@ -243,8 +247,10 @@ CONCEPTS = {
         r"immunosuppress|immunocompromis|immune deficien",
     "diabetes":
         r"diabet",
+    # A bare "65" matches a quantity, a page number or a dose. Require the
+    # word to be doing clinical work.
     "elderly / age 65":
-        r"\b65\b|elderly|older (adult|people)",
+        r"\b(aged?\s+65|65\s+years?|elderly|older (adult|people))\b",
     "SPC / BNF familiarity requirement":
         r"(spc|summary of product characteristics|bnf)\b",
     "indemnity requirement":

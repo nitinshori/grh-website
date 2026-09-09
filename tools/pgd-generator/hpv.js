@@ -191,13 +191,14 @@ const d={
   {bullet:'NICE Medicines Practice Guideline 2 (MPG2): Patient Group Directions, https://www.nice.org.uk/guidance/mpg2'},
  ],
 
- version:'v002',
- supersedes:'Version 001, 16 February 2026',
- validFrom:'8 September 2026',
+ version:'v003',
+ supersedes:'Version 002, 8 September 2026',
+ validFrom:'9 September 2026',
  expiry:'31 July 2027',
- sigDate:'8 September 2026',
- chDate:'8 September 2026',
+ sigDate:'9 September 2026',
+ chDate:'9 September 2026',
  changes:[
+  'The practitioner Agreement to practise page, the premises block and the practitioner signature table are restored, together with the standard governance requirements: SPC and BNF familiarity, MHRA safety alerts, CPD and appraisal, indemnity, and capacity and consent. Every version 001 document carried them; no document produced by the current generator did, through one omission in one function that affected 15 live documents. Raised as blocking by an adopting pharmacy. This version changes no clinical content.',
   'The document and the consultation tool are corrected to cover all sexes. Version 001 described the national cohorts correctly, including GBMSM up to 45 years of age, but the consultation tool required a "female confirmed" tick before it would proceed and would not produce a dose recommendation for a male patient at all. A PGD that names the GBMSM cohort while its tool refuses to vaccinate men is not a service; the tool has been rebuilt alongside this version.',
   'Yeast allergy removed as a contraindication. Green Book chapter 18a states that yeast allergy does not contraindicate HPV vaccine because the finished product contains no yeast as an ingredient. Version 001 listed yeast protein among its contraindications and the tool applied a hard stop to it, so patients were being refused a vaccine they could safely have.',
   'The schedule is now selected from age and immune status, and is stated once instead of twice. Version 001 gave the JCVI schedules under "dose and frequency" and the SPC schedules under "maximum or minimum treatment period", so the document set out two incompatible courses and never said which to follow. The tool, meanwhile, recommended three doses at 0, 2 and 6 months to every patient regardless of age, which meant an immunocompetent person under 25 was being asked to return, and to pay, for two doses that national policy says they do not need.',
@@ -214,8 +215,9 @@ const d={
   'The requirement to tell every patient whether they could have the vaccine free on the NHS is moved from a passing clause in the inclusion criteria into an explicit recorded step, with the eligibility cohorts set out in an appendix.',
  ],
  prior:[
+  ['002, 8 September 2026','All sexes covered and the tool rebuilt; yeast allergy removed as a contraindication; schedule selected from age and immune status; the one dose and two dose schedules identified as off-label.'],
   ['001, 16 February 2026','Development and issue of new PGD. Gardasil 9 from 9 years of age.'],
  ],
 };
 
-Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('hpv-v002-SIGNED.docx',b);console.log('hpv v002 docx bytes',b.length);});
+Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('hpv-v003-SIGNED.docx',b);console.log('hpv v002 docx bytes',b.length);});
