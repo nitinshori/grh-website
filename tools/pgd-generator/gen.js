@@ -76,7 +76,14 @@ function armBlock(a){
 }
 
 function sig(d){
-  return [h('Authorisation',HeadingLevel.HEADING_2),
+  // On its own page, under a heading that says what it is. Before this the
+  // block followed the appendices with a small H2 and split wherever the page
+  // happened to end: eczema v004 turned a page onto "GPhC: 2046322 / Signed:
+  // C. Pilkington" with no heading in sight, and Nitin asked where the
+  // signatures were. They were there. They were not findable.
+  return [new Paragraph({children:[new PageBreak()]}),
+   h('Authorisation of this Patient Group Direction',HeadingLevel.HEADING_1),
+   p('Authorised on behalf of Get Real Health by the Medical Director and the Head Pharmacist named below. This version is not valid without both signatures.',{color:GREY}),
    tbl([row('Version',d.version),row('Supersedes',d.supersedes),row('Valid from date',d.validFrom||'7 September 2026'),row('Expiry date',d.expiry||'31 July 2027')]),
    p(''),
    tbl([row('Doctor',[{text:'Name: Nitin Shori'},{text:'Job title: Medical Director, Get Real Health'},{text:'GMC: 6047293'},{text:'Signed: N. Shori',b:true},{text:'Date: '+(d.sigDate||'7 September 2026')}]),
