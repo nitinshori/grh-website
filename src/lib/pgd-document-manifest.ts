@@ -126,7 +126,10 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   // signed 14 Aug 2026 (Nitin Shori + Chris Pilkington)
   "yellow-fever": "yellow-fever.pdf",
   "foundayo": "foundayo-v002.pdf",
-  "wound-care": "wound-care.pdf"
+  // v003 signed 9 Sep 2026: targeted correction of a doubled paediatric
+  // flucloxacillin volume, the same error as the skin infection PGD, copied
+  // between the two. Found by pgd-consistency-scan, not by a reader.
+  "wound-care": "wound-care-v003.pdf"
 };
 
 // HubRx-branded copies. Used ONLY by the admin document listing: pharmacy
@@ -215,5 +218,8 @@ export const PGD_HUBRX_FILES: Record<string, string> = {
   "testosterone-women": "hrt 2.pdf",
   "uti": "uti-v002.pdf",
   "wegovy": "wegovy-v002.pdf",
-  "wound-care": "wound-care.pdf"
+  // v003 signed 9 Sep 2026: targeted correction of a doubled paediatric
+  // flucloxacillin volume, the same error as the skin infection PGD, copied
+  // between the two. Found by pgd-consistency-scan, not by a reader.
+  "wound-care": "wound-care-v003.pdf"
 };

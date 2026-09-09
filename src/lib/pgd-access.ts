@@ -424,7 +424,7 @@ export const REISSUED_PGDS: Record<string, { version: string; date: string }> = 
   typhoid: { version: 'v002', date: '7 September 2026' },
   eczema: { version: 'v003', date: '9 September 2026' },
   'chest-service': { version: 'v003', date: '9 September 2026' },
-  'wound-care': { version: 'v002', date: '7 September 2026' },
+  'wound-care': { version: 'v003', date: '9 September 2026' },
   // COVID: v003 named "Comirnaty JN.1" in its operative vaccines table while
   // its own summary page said the 2026/27 formulation was XFG. No pharmacy
   // held JN.1. v004 names Comirnaty XFG as the vaccine of choice and adds
