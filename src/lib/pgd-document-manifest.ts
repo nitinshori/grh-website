@@ -7,8 +7,16 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   "alopecia-minoxidil": "alopecia-minoxidil.pdf",
   "altitude-sickness": "altitude-sickness.pdf",
   "anti-malarials": "anti-malarials-v004.pdf",
-  "anxiety-propranolol": "anxiety-propranolol.pdf",
-  "asthma-rescue": "asthma-rescue.pdf",
+  // v002 signed 9 Sep 2026: quantity made strength-specific (56 x 10mg or
+  // 14 x 40mg, both 560mg), and the red flags the document itself named,
+  // suicidal ideation, severe depression, PTSD, substance misuse, made
+  // exclusions. Replaces the correction notice of 7 Sep.
+  "anxiety-propranolol": "anxiety-propranolol-v002.pdf",
+  // v002 signed 9 Sep 2026: prednisolone quantity stated from the dose (40
+  // tablets for 40mg x 5 days; "8-10 tablets" was one day), and the emergency
+  // red flags carried into the prednisolone arm. Replaces the correction
+  // notice of 7 Sep.
+  "asthma-rescue": "asthma-rescue-v002.pdf",
   // v004 signed 6 Aug 2026: one document covering hydroxocobalamin injection,
   // cyanocobalamin tablets and folic acid, so both slugs point at it
   "b12-injection": "b12-folate-v004.pdf",
@@ -19,7 +27,10 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   // comorbidity and required a CRB-65 of 0 in the next bullet, and CRB-65
   // scores a point for being 65, so the whole group was refused.
   "chest-service": "chest-service-v004.pdf",
-  "chickenpox": "chickenpox.pdf",
+  // v002 signed 9 Sep 2026: the vaccine safety block written in, adrenaline,
+  // observation, cold chain, sharps, batch, parental responsibility. Was
+  // missed by the 9 Sep vaccine sweep and still carried its correction notice.
+  "chickenpox": "chickenpox-v002.pdf",
   "cold-sores": "cold-sores.pdf",
   "copd": "copd.pdf",
   // 2026/27 season v003, signed 6 Aug 2026 with C. Pilkington's review edits
@@ -68,13 +79,14 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   "meningitis-b": "meningitis-b-v003.pdf",
   "mmr": "mmr-v002.pdf",
   // v002 signed 6 Aug 2026 (PPH clinical review)
-  "mounjaro": "mounjaro-v002.pdf",
+  // v003 signed 9 Sep 2026: GLP-1 exclusion reads "for any indication".
+  "mounjaro": "mounjaro-v003.pdf",
   "mysimba": "mysimba.pdf",
   "orlistat": "orlistat.pdf",
   // v002, 21 Aug 2026: restricted to lower UTI. Upper UTI and pyelonephritis
   // in children are now same-day referral, not a PGD supply.
   "paediatric-uti": "paediatric-uti-v002.pdf",
-  "period-delay": "period-delay-v004.pdf",
+  "period-delay": "period-delay-v005.pdf",
   "pneumococcal": "pneumococcal-v002.pdf",
   "postnatal-contraception": "postnatal-contraception.pdf",
   "premature-ejaculation": "premature-ejaculation.pdf",
@@ -118,14 +130,18 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   // testosterone for women (postmenopausal HSDD) is covered by the signed HRT/Menopause PGD
   "testosterone-women": "hrt.pdf",
   "uti": "uti-v003.pdf",
-  "wegovy": "wegovy-v002.pdf",
+  // v003 signed 9 Sep 2026: GLP-1 exclusion reads "for any indication".
+  "wegovy": "wegovy-v003.pdf",
   // v004 signed 21 Aug 2026: reconciled against the UK SPC, which published
   // after v003 was signed. Levothyroxine interaction added, missed-dose rule
   // corrected, MHRA Jan 2026 pancreatitis warning, tirzepatide clause removed.
-  "wegovy-oral": "wegovy-oral-v006.pdf",
+  // v007 signed 9 Sep 2026: the "three things changed" block removed from
+  // page one. No clinical change.
+  "wegovy-oral": "wegovy-oral-v007.pdf",
   // signed 14 Aug 2026 (Nitin Shori + Chris Pilkington)
   "yellow-fever": "yellow-fever-v002.pdf",
-  "foundayo": "foundayo-v002.pdf",
+  // v003 signed 9 Sep 2026: GLP-1 exclusion reads "for any indication".
+  "foundayo": "foundayo-v003.pdf",
   // v003 signed 9 Sep 2026: targeted correction of a doubled paediatric
   // flucloxacillin volume, the same error as the skin infection PGD, copied
   // between the two. Found by pgd-consistency-scan, not by a reader.
@@ -150,11 +166,11 @@ export const PGD_HUBRX_FILES: Record<string, string> = {
   "alopecia-minoxidil": "alopecia-minoxidil 2.pdf",
   "altitude-sickness": "altitude-sickness 2.pdf",
   "anti-malarials": "anti-malarials-v004.pdf",
-  "anxiety-propranolol": "anxiety-propranolol 2.pdf",
-  "asthma-rescue": "asthma-rescue 2.pdf",
+  "anxiety-propranolol": "anxiety-propranolol-v002.pdf",
+  "asthma-rescue": "asthma-rescue-v002.pdf",
   "bph": "bph 2.pdf",
   "bv": "bv 2.pdf",
-  "chickenpox": "chickenpox 2.pdf",
+  "chickenpox": "chickenpox-v002.pdf",
   "cold-sores": "cold-sores 2.pdf",
   "copd": "copd 2.pdf",
   "covid-booster": "covid-2026-27-v005.pdf",
@@ -189,11 +205,12 @@ export const PGD_HUBRX_FILES: Record<string, string> = {
   "meningitis-acwy-travel": "meningitis-acwy-travel-v003.pdf",
   "meningitis-b": "meningitis-b-v003.pdf",
   "mmr": "mmr 2.pdf",
-  "mounjaro": "mounjaro-v002.pdf",
+  // v003 signed 9 Sep 2026: GLP-1 exclusion reads "for any indication".
+  "mounjaro": "mounjaro-v003.pdf",
   "mysimba": "mysimba 2.pdf",
   "orlistat": "orlistat 2.pdf",
   "paediatric-uti": "paediatric-uti-v002.pdf",
-  "period-delay": "period-delay-v004.pdf",
+  "period-delay": "period-delay-v005.pdf",
   "pneumococcal": "pneumococcal 2.pdf",
   "postnatal-contraception": "postnatal-contraception 2.pdf",
   "premature-ejaculation": "premature-ejaculation 2.pdf",
@@ -213,11 +230,16 @@ export const PGD_HUBRX_FILES: Record<string, string> = {
   "sti-testing": "sti-testing 2.pdf",
   "threadworms": "threadworms 2.pdf",
   "thrush": "thrush 2.pdf",
-  "travel-core": "travel-core 2.pdf",
+  // 9 Sep 2026: the branded copy still carried the 7 Sep correction notice
+  // over the unaltered original, a week after the master was reissued as
+  // v002 with the vaccine safety block written in. Same rule as 21 Aug: a
+  // branded copy that goes stale silently is worse than no branding.
+  "travel-core": "travel-core-v002.pdf",
   "typhoid": "typhoid-v003.pdf",
   "testosterone-women": "hrt 2.pdf",
   "uti": "uti-v003.pdf",
-  "wegovy": "wegovy-v002.pdf",
+  // v003 signed 9 Sep 2026: GLP-1 exclusion reads "for any indication".
+  "wegovy": "wegovy-v003.pdf",
   // v003 signed 9 Sep 2026: targeted correction of a doubled paediatric
   // flucloxacillin volume, the same error as the skin infection PGD, copied
   // between the two. Found by pgd-consistency-scan, not by a reader.

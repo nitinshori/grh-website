@@ -336,7 +336,7 @@ const EXCLUSION_LABELS: [keyof FoundayoState["exclusions"], string][] = [
   ["severeGiDiseaseOrGastroparesis", "Severe gastrointestinal disease, including gastroparesis"],
   ["gallstonesOrRecentCholecystectomy", "Current gallstones or cholecystitis, or cholecystectomy in the last 3 months"],
   ["endocrineCauseOfObesity", "Obesity caused by an endocrinological disorder"],
-  ["concurrentGlp1OrSecretagogue", "Already taking another GLP-1 agonist or an insulin secretagogue for weight"],
+  ["concurrentGlp1OrSecretagogue", "Already taking another GLP-1 agonist or an insulin secretagogue, FOR ANY INDICATION. Ask about diabetes medicines by name: semaglutide (oral or injection), tirzepatide, liraglutide, dulaglutide, exenatide, sulfonylureas, meglitinides"],
   ["type1Diabetes", "Type 1 diabetes mellitus"],
   ["diabeticRetinopathy", "Diabetic retinopathy"],
   ["insulinOrSuWithoutGpMonitoring", "On insulin or a sulphonylurea, and the GP will not monitor and adjust it"],

@@ -443,8 +443,16 @@ export const REISSUED_PGDS: Record<string, { version: string; date: string }> = 
   // Comirnaty LP.8.1 as an existing-stock-only arm for the changeover.
   'covid-booster': { version: 'v005', date: '9 September 2026' },
   uti: { version: 'v003', date: '9 September 2026' },
-  'period-delay': { version: 'v004', date: '9 September 2026' },
-  'wegovy-oral': { version: 'v006', date: '9 September 2026' },
+  'period-delay': { version: 'v005', date: '9 September 2026' },
+  'wegovy-oral': { version: 'v007', date: '9 September 2026' },
+  // 9 Sep 2026: the last six correction notices replaced by reissues that
+  // carry the correction in the document itself.
+  'anxiety-propranolol': { version: 'v002', date: '9 September 2026' },
+  'asthma-rescue': { version: 'v002', date: '9 September 2026' },
+  chickenpox: { version: 'v002', date: '9 September 2026' },
+  foundayo: { version: 'v003', date: '9 September 2026' },
+  mounjaro: { version: 'v003', date: '9 September 2026' },
+  wegovy: { version: 'v003', date: '9 September 2026' },
   'ear-infection': { version: 'v003', date: '9 September 2026' },
   ed: { version: 'v003', date: '9 September 2026' },
   rabies: { version: 'v004', date: '9 September 2026' },

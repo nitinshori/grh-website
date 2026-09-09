@@ -719,7 +719,7 @@ export function WegovyToolClient() {
               />
 
               <Checkbox
-                label="Already taking another GLP-1 agonist"
+                label="Already taking another GLP-1 agonist or insulin secretagogue, for ANY indication (ask about diabetes medicines by name)"
                 checked={state.medications.currentGLP1}
                 onChange={(v) =>
                   dispatch({
@@ -728,7 +728,7 @@ export function WegovyToolClient() {
                     value: v,
                   })
                 }
-                description="Cannot combine with another GLP-1; clarify current therapy"
+                description="Cannot combine with another GLP-1 for any indication, including one taken for diabetes: semaglutide, tirzepatide, liraglutide, dulaglutide, exenatide, orforglipron, or a sulfonylurea or meglitinide"
               />
 
               <TextArea

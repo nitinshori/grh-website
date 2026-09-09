@@ -140,7 +140,7 @@ export function getAllAlerts(state: MounjaroConsultationState): ClinicalAlert[] 
     alerts.push({
       severity: "stop",
       code: "GLP1",
-      message: "Already taking another GLP-1 agonist",
+      message: "Already taking another GLP-1 agonist or insulin secretagogue, for any indication",
       detail: "Cannot combine with another GLP-1. Clarify current therapy. Do not supply.",
     });
   }

@@ -687,7 +687,7 @@ export default function MounjaroClient() {
               )}
 
               <Checkbox
-                label="Currently taking another GLP-1 agonist"
+                label="Currently taking another GLP-1 agonist or insulin secretagogue, for ANY indication (ask about diabetes medicines by name)"
                 checked={state.medications.currentGLP1}
                 onChange={(v) =>
                   dispatch({
@@ -696,7 +696,7 @@ export default function MounjaroClient() {
                     value: v,
                   })
                 }
-                description="Cannot combine with another GLP-1; must clarify current therapy"
+                description="Cannot combine with another GLP-1 for any indication, including one taken for diabetes: semaglutide, tirzepatide, liraglutide, dulaglutide, exenatide, orforglipron, or a sulfonylurea or meglitinide"
               />
 
               {state.medications.currentGLP1 && (

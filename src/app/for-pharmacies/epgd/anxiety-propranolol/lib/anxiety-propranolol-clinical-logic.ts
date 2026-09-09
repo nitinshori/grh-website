@@ -63,8 +63,50 @@ export function getAllAlerts(state: AnxietyPropranololConsultationState): Clinic
     alerts.push({
       severity: "stop",
       code: "ANX_AGE",
-      message: "Patient under 12 years old",
-      detail: "Propranolol via PGD is for adults and older children. Refer to GP.",
+      message: "Patient under 18 years old",
+      detail: "This PGD is for adults aged 18 and over. Refer to GP.",
+    });
+  }
+
+  // PGD v002 exclusions, 9 September 2026.
+  if (state.contraindications.suicidalOrSevereDepression) {
+    alerts.push({
+      severity: "stop",
+      code: "ANX_SUICIDE",
+      message: "Suicidal ideation, self-harm or severe depression",
+      detail: "Propranolol is cardiotoxic in overdose. Do not supply. Refer, and follow local safeguarding and crisis pathways where there is immediate risk.",
+    });
+  }
+  if (state.contraindications.ptsdPanicOrAgoraphobia) {
+    alerts.push({
+      severity: "stop",
+      code: "ANX_PTSD",
+      message: "PTSD, severe panic disorder or agoraphobia",
+      detail: "This PGD is for the physical symptoms of situational anxiety only. Refer to GP.",
+    });
+  }
+  if (state.contraindications.substanceOrAlcoholMisuse) {
+    alerts.push({
+      severity: "stop",
+      code: "ANX_SUBSTANCE",
+      message: "Comorbid substance or alcohol misuse",
+      detail: "Do not supply. Refer to GP.",
+    });
+  }
+  if (state.contraindications.otherBetaBlocker) {
+    alerts.push({
+      severity: "stop",
+      code: "ANX_BB",
+      message: "Already taking another beta-blocker",
+      detail: "Do not add propranolol to an existing beta-blocker. Refer to GP.",
+    });
+  }
+  if (state.contraindications.verapamilOrDiltiazem) {
+    alerts.push({
+      severity: "stop",
+      code: "ANX_CCB",
+      message: "Taking verapamil or diltiazem, oral or intravenous",
+      detail: "With a beta-blocker the combination risks severe bradycardia, heart block and hypotension. Do not supply.",
     });
   }
 

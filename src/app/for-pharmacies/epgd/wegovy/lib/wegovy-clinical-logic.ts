@@ -179,7 +179,7 @@ function getHardStopAlerts(state: WegovyConsultationState): ClinicalAlert[] {
     alerts.push({
       severity: "stop",
       code: "ALREADY_ON_GLP1",
-      message: "Patient already taking another GLP-1 agonist",
+      message: "Patient already taking another GLP-1 agonist or insulin secretagogue, for any indication",
       detail: "Concurrent GLP-1 agonists are not recommended. Clarify current therapy.",
     });
   }

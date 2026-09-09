@@ -24,9 +24,14 @@ export function validateStep(stepIndex: number, state: AnxietyPropranololConsult
     case 5:
       return null;
 
-    case 6:
-      if (state.medicineSupply.quantity === null) return "Please enter quantity to supply";
+    case 6: {
+      const q = state.medicineSupply.quantity;
+      if (q === null) return "Please enter quantity to supply";
+      // PGD v002: the same total of propranolol whichever strength, 560mg.
+      const cap = state.medicineSupply.strength === "40mg" ? 14 : 56;
+      if (q > cap) return `Maximum ${cap} tablets of ${state.medicineSupply.strength} under this PGD (560mg in total)`;
       return null;
+    }
 
     case 7:
       if (

@@ -151,6 +151,15 @@ def audit(slug, fn):
 
     r = {"slug": slug, "file": fn, "pages": n, "fail": [], "note": []}
 
+    # A withdrawal notice is a one page statement that the PGD must not be
+    # used, and why. It is not a PGD, so the house format does not apply to
+    # it. Reported separately rather than as seven documents "missing a
+    # guidance summary", which is what the first run of this audit said.
+    if re.match(r"\s*PGD WITHDRAWN\b", pages[0]):
+        r["withdrawn"] = True
+        r["note"].append("WITHDRAWN notice, not a PGD")
+        return r
+
     # Where does the change history start?
     #
     # Not the first match: several documents open with a "changes in this
@@ -192,10 +201,22 @@ def audit(slug, fn):
         elif not DATED.search(window):
             r["note"].append("guidance summary carries no date")
 
-    # Narration, anywhere before the change history.
+    # Narration on any page that is not a change history page.
+    #
+    # Not "before the last change history": the docx-patched reissues append a
+    # version and change record AFTER the original change history table, so
+    # the original table, which is allowed to narrate, sat in "the body" and
+    # oral Wegovy reported a false finding. A change history section is taken
+    # as the page carrying its heading and the page after it, which covers
+    # every change history in the estate without reaching into the next arm.
+    skip = set()
+    for i in hits:
+        skip.add(i)
+        skip.add(i + 1)
     bad = [
         (i + 1, l.strip())
-        for i, t in enumerate(pages[:hist])
+        for i, t in enumerate(pages)
+        if i not in skip
         for l in t.split("\n")
         if NARRATION.search(l)
     ]
@@ -222,12 +243,17 @@ def main():
     entries = manifest_entries()
     results = [audit(s, f) for s, f in sorted(entries.items())]
 
-    clean = [r for r in results if not r["fail"]]
-    broken = [r for r in results if r["fail"]]
+    withdrawn = [r for r in results if r.get("withdrawn")]
+    live = [r for r in results if not r.get("withdrawn")]
+    clean = [r for r in live if not r["fail"]]
+    broken = [r for r in live if r["fail"]]
 
-    print(f"{len(results)} live PGDs audited\n")
+    print(f"{len(results)} manifested documents: {len(live)} live PGDs, "
+          f"{len(withdrawn)} withdrawal notices\n")
     print(f"  in the house format, no findings : {len(clean)}")
-    print(f"  with at least one finding        : {len(broken)}\n")
+    print(f"  with at least one finding        : {len(broken)}")
+    print(f"  withdrawn (not audited)          : "
+          + ", ".join(r["slug"] for r in withdrawn) + "\n")
 
     counts = {}
     for r in broken:

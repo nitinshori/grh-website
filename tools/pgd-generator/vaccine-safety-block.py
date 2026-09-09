@@ -156,9 +156,17 @@ DOCS = [
      "HUB RX LATEST PRESENTATIONS /2026 PGD/MMR FINAL V.docx",
      "mmr.pdf", "mmr-v002.pdf", "v002",
      ["adrenaline", "coldchain", "sharps", "parental"]),
+    # Missed by the first sweep. Chickenpox had a CORRECTION NOTICE stapled to
+    # its PDF listing every one of these as absent, and was not in this list,
+    # so the notice stayed and the document underneath stayed wrong. Found by
+    # pgd-format-audit.py on 9 September.
+    ("chickenpox",
+     "HUB RX LATEST PRESENTATIONS /2026 PGD/CHICKENPOX FINAL V.docx",
+     "chickenpox.pdf", "chickenpox-v002.pdf", "v002",
+     ["adrenaline", "observation", "coldchain", "sharps", "batch", "parental"]),
 ]
 
-NOTICE_SLUGS = {"mmr", "pneumococcal"}
+NOTICE_SLUGS = {"mmr", "pneumococcal", "chickenpox"}
 
 
 def build(slug, source, version, missing, out_docx):

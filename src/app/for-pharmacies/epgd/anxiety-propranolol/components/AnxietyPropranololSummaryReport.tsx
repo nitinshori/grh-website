@@ -67,7 +67,8 @@ export function AnxietyPropranololSummaryReport({ state }: AnxietyPropranololSum
           <Row label="Medicine" value="Propranolol tablet" />
           <Row label="Dose" value="10–40mg PRN" />
           <Row label="Timing" value="30–60 minutes before anxiety-provoking situation" />
-          <Row label="Quantity" value={medicineSupply.quantity ? `${medicineSupply.quantity} tablets` : "Not specified"} />
+          <Row label="Strength" value={medicineSupply.strength} />
+          <Row label="Quantity" value={medicineSupply.quantity ? `${medicineSupply.quantity} tablets of ${medicineSupply.strength}` : "Not specified"} />
         </div>
       </div>
 

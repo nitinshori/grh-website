@@ -31,10 +31,24 @@ export interface AnxietyContraindications {
   prinzmetalsAngina: boolean;
   pheochromocytoma: boolean;
   childUnder12: boolean;
+  // Added at PGD v002, 9 September 2026. The document named these as red
+  // flags in its guidance and none of them was an exclusion, and the tool
+  // did not ask. Propranolol is cardiotoxic in overdose.
+  suicidalOrSevereDepression: boolean;
+  ptsdPanicOrAgoraphobia: boolean;
+  substanceOrAlcoholMisuse: boolean;
+  otherBetaBlocker: boolean;
+  verapamilOrDiltiazem: boolean;
 }
 
 export interface AnxietyMedicineSupply {
   propranololDose: string;
+  /**
+   * 10mg or 40mg. The PGD authorises the SAME total propranolol either way,
+   * 560mg: up to 56 x 10mg or up to 14 x 40mg. The 40mg strength is for a
+   * patient whose single dose is established at 40mg by previous response.
+   */
+  strength: "10mg" | "40mg";
   quantity: number | null;
   timing: string;
 }
@@ -143,9 +157,15 @@ gpEmail: "",
       prinzmetalsAngina: false,
       pheochromocytoma: false,
       childUnder12: false,
+      suicidalOrSevereDepression: false,
+      ptsdPanicOrAgoraphobia: false,
+      substanceOrAlcoholMisuse: false,
+      otherBetaBlocker: false,
+      verapamilOrDiltiazem: false,
     },
     medicineSupply: {
       propranololDose: "10-40mg",
+      strength: "10mg",
       quantity: null,
       timing: "PRN 30-60 minutes before anxiety-provoking situation",
     },

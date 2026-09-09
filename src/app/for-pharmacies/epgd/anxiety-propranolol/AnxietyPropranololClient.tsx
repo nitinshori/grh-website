@@ -407,9 +407,38 @@ export default function AnxietyPropranololClient() {
               />
 
               <Checkbox
-                label="Patient under 12 years old"
+                label="Patient under 18 years old"
                 checked={state.contraindications.childUnder12}
                 onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "childUnder12", value: v })}
+              />
+
+              <p className="pt-2 text-xs font-semibold uppercase tracking-wide text-red-800">
+                Ask about each of these. Propranolol is cardiotoxic in overdose.
+              </p>
+              <Checkbox
+                label="Any suicidal ideation, self-harm, or severe depression"
+                checked={state.contraindications.suicidalOrSevereDepression}
+                onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "suicidalOrSevereDepression", value: v })}
+              />
+              <Checkbox
+                label="PTSD, severe panic disorder or agoraphobia"
+                checked={state.contraindications.ptsdPanicOrAgoraphobia}
+                onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "ptsdPanicOrAgoraphobia", value: v })}
+              />
+              <Checkbox
+                label="Comorbid substance or alcohol misuse"
+                checked={state.contraindications.substanceOrAlcoholMisuse}
+                onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "substanceOrAlcoholMisuse", value: v })}
+              />
+              <Checkbox
+                label="Already taking another beta-blocker"
+                checked={state.contraindications.otherBetaBlocker}
+                onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "otherBetaBlocker", value: v })}
+              />
+              <Checkbox
+                label="Taking verapamil or diltiazem (oral or intravenous)"
+                checked={state.contraindications.verapamilOrDiltiazem}
+                onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "verapamilOrDiltiazem", value: v })}
               />
             </div>
           </StepWrapper>
@@ -433,15 +462,28 @@ export default function AnxietyPropranololClient() {
                 <p className="text-xs text-gray-600 mt-1">Take 30–60 minutes before anxiety-provoking situation. For situational anxiety only.</p>
               </div>
 
+              <SelectInput
+                label="Strength"
+                value={state.medicineSupply.strength}
+                onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "strength", value: v })}
+                options={[
+                  { value: "10mg", label: "10mg tablets (covers the whole 10 to 40mg dose range)" },
+                  { value: "40mg", label: "40mg tablets (only where a 40mg single dose is established by previous response)" },
+                ]}
+                required
+              />
               <NumberInput
                 label="Quantity to Supply"
                 value={state.medicineSupply.quantity}
                 onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "quantity", value: v })}
                 min={1}
-                max={100}
-                placeholder="e.g., 10 tablets"
+                max={state.medicineSupply.strength === "40mg" ? 14 : 56}
+                placeholder={state.medicineSupply.strength === "40mg" ? "up to 14 tablets" : "up to 56 tablets"}
                 unit="tablets"
               />
+              <p className="text-xs text-gray-600">
+                Maximum {state.medicineSupply.strength === "40mg" ? "14 tablets of 40mg" : "56 tablets of 10mg"}, which is 560mg of propranolol in total under either strength. One supply per situational event or course; review before any repeat.
+              </p>
             </div>
           </StepWrapper>
         );
