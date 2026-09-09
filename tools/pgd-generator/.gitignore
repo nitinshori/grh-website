@@ -1,0 +1,6 @@
+# Build artefacts. The generator writes the .docx next to the script and
+# soffice writes the .pdf beside it; the published copies live in
+# public/pgd-documents and the signed masters in "PGD Rewrite 2026/02 Approved".
+*.docx
+*.pdf
+node_modules
