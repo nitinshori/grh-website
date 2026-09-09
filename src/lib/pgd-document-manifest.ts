@@ -42,7 +42,10 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   "hep-ab-travel": "hep-ab-travel-v001.pdf",
   "hep-b-occupational": "hep-b-occupational.pdf",
   "herpes-management": "herpes-management.pdf",
-  "hpv": "hpv.pdf",
+  // v002 signed 8 Sep 2026. v001 covered all sexes in its eligibility text
+  // but the consultation tool required a "patient is female" tick, so the
+  // GBMSM cohort the document names could not be vaccinated through it.
+  "hpv": "hpv-v002.pdf",
   "hrt": "hrt.pdf",
   "hypertension": "hypertension.pdf",
   "impetigo": "impetigo-v002.pdf",
@@ -155,7 +158,7 @@ export const PGD_HUBRX_FILES: Record<string, string> = {
   "hayfever": "hayfever 2.pdf",
   "hep-b-occupational": "hep-b-occupational 2.pdf",
   "herpes-management": "herpes-management 2.pdf",
-  "hpv": "hpv 2.pdf",
+  "hpv": "hpv-v002.pdf",
   "hrt": "hrt 2.pdf",
   "hypertension": "hypertension 2.pdf",
   "impetigo": "impetigo-v002.pdf",

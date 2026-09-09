@@ -51,45 +51,79 @@ export function HPVSummaryReport({
       {/* Vaccine Assessment */}
       <SectionHeader>Vaccine Assessment</SectionHeader>
       <div className="space-y-0.5">
-        <Row label="Age Criteria Met" value={state.assessment.ageCriteriaMet ? "Yes" : "No"} />
-        <Row label="Pregnancy Status" value={state.assessment.pregnancyStatus} />
-        <Row label="Current Febrile Illness" value={state.assessment.currentFebrileIllness ? "Yes" : "No"} />
-        <Row label="Previous Gardasil Dose" value={state.assessment.previousGardasilDose ? "Yes" : "No"} />
+        <Row label="Sex (record only, all sexes eligible)" value={state.patient.sex || "Not recorded"} />
+        <Row label="Immunosuppressed or HIV positive" value={state.assessment.immunosuppressedOrHIV ? "Yes: three-dose schedule" : "No"} />
+        <Row label="Previous HPV vaccine doses" value={state.assessment.priorDoses || "Not recorded"} />
+        <Row label="Dose received before 25th birthday" value={state.assessment.doseBefore25 ? "Yes: course complete, no further dose" : "No"} />
+        <Row label="Pregnancy status" value={state.assessment.pregnancyStatus || "Not recorded"} />
+        <Row label="Acute febrile illness" value={state.assessment.currentFebrileIllness ? "Yes" : "No"} />
+        <Row label="Bleeding disorder or anticoagulated" value={state.assessment.bleedingDisorderOrAnticoagulated ? "Yes: technique adjusted" : "No"} />
+        <Row label="NHS eligibility discussed" value={state.assessment.nhsEligibilityDiscussed ? "Yes" : "Not recorded"} />
       </div>
 
       {/* Exclusions Check */}
       <SectionHeader>Exclusions Check</SectionHeader>
       <div className="space-y-1.5 text-xs">
-        <div className="flex items-center gap-2">
-          <span className={`w-3 h-3 rounded border flex items-center justify-center ${!state.assessment.anaphylaxisToYeast ? "bg-[color:var(--tenant-primary)]/100 border-[color:var(--tenant-primary)]/30 text-white" : "border-red-500 bg-red-50"}`}>
-            {!state.assessment.anaphylaxisToYeast && (
-              <svg className="w-2 h-2" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-              </svg>
+        {([
+          ["No confirmed anaphylaxis to a previous HPV vaccine dose", !state.assessment.anaphylaxisToPreviousDose],
+          ["No confirmed anaphylaxis to a component of Gardasil 9", !state.assessment.anaphylaxisToComponent],
+        ] as [string, boolean][]).map(([label, ok]) => (
+          <div key={label} className="flex items-center gap-2">
+            <span className={`w-3 h-3 rounded border flex items-center justify-center ${ok ? "bg-[color:var(--tenant-primary)]/100 border-[color:var(--tenant-primary)]/30 text-white" : "border-red-500 bg-red-50"}`}>
+              {ok && (
+                <svg className="w-2 h-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              )}
+            </span>
+            <span>{label}</span>
+          </div>
+        ))}
+        <p className="text-[11px] text-gray-500 pt-1">
+          Yeast allergy is not a contraindication to HPV vaccine (Green Book chapter 18a) and is therefore not checked here.
+        </p>
+      </div>
+
+      {/* Consent */}
+      <SectionHeader>Consent</SectionHeader>
+      <div className="space-y-0.5">
+        <Row label="Informed consent" value={state.consent.informedConsentGiven ? "Obtained" : "Not recorded"} />
+        {state.patient.age !== null && state.patient.age < 16 && (
+          <>
+            <Row
+              label="Basis of consent (under 16)"
+              value={
+                state.consent16.basis === "parental"
+                  ? `Person with parental responsibility: ${state.consent16.parentName}${state.consent16.parentRelationship ? ` (${state.consent16.parentRelationship})` : ""}`
+                  : state.consent16.basis === "gillick"
+                    ? "Young person, assessed as Gillick competent"
+                    : "Not recorded"
+              }
+            />
+            {state.consent16.basis === "gillick" && (
+              <Row label="Gillick assessment basis" value={state.consent16.gillickBasis || "Not recorded"} />
             )}
-          </span>
-          <span>No anaphylaxis to yeast documented</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className={`w-3 h-3 rounded border flex items-center justify-center ${!state.assessment.anaphylaxisToPreviousDose ? "bg-[color:var(--tenant-primary)]/100 border-[color:var(--tenant-primary)]/30 text-white" : "border-red-500 bg-red-50"}`}>
-            {!state.assessment.anaphylaxisToPreviousDose && (
-              <svg className="w-2 h-2" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-              </svg>
-            )}
-          </span>
-          <span>No anaphylaxis to previous HPV dose</span>
-        </div>
+          </>
+        )}
+        <Row
+          label="Off-label schedule consent"
+          value={
+            state.consent16.offLabelConsentGiven
+              ? "Explained and consented, naming the schedule"
+              : "Not applicable or not recorded"
+          }
+        />
       </div>
 
       {/* Counselling Provided */}
       <SectionHeader>Counselling Provided</SectionHeader>
       <CounsellingGrid
         items={[
-          ["Explained 3-dose schedule (0, 2, 6 months)", state.counselling.explainedDoseSchedule],
+          ["Explained the schedule that applies to this patient", state.counselling.explainedDoseSchedule],
           ["Discussed HPV types protected (6, 11, 16, 18, 31, 33, 45, 52, 58)", state.counselling.explainedProtection],
           ["Counselled on common reactions (arm soreness, mild fever)", state.counselling.discussedCommonReactions],
           ["Clarified vaccine not treatment for existing infection", state.counselling.explainedNotTreatment],
+          ["Explained cervical screening still needed and barrier protection still matters", state.counselling.explainedScreeningStillNeeded],
           ["Offered written information leaflet", state.counselling.offeredWrittenInfo],
         ]}
       />
@@ -106,6 +140,28 @@ export function HPVSummaryReport({
       ) : (
         <p className="text-xs text-gray-500">No vaccine recommendation (check alerts)</p>
       )}
+
+      {/* Administration */}
+      <SectionHeader>Administration and Safety</SectionHeader>
+      <div className="space-y-0.5">
+        <Row label="Product" value={state.administration.productName} />
+        <Row label="Batch number" value={state.administration.batchNumber || "Not recorded"} />
+        <Row label="Expiry date" value={state.administration.expiryDate || "Not recorded"} />
+        <Row label="Anatomical site" value={state.administration.site || "Not recorded"} />
+        <Row label="Dose number in course" value={state.administration.doseNumber || "Not recorded"} />
+        <Row
+          label="Next dose due"
+          value={state.administration.nextDoseDue || "No further dose required"}
+        />
+        <Row
+          label="Adrenaline 1 in 1,000 immediately available"
+          value={state.administration.adrenalineAvailable ? "Confirmed" : "NOT CONFIRMED"}
+        />
+        <Row
+          label="15 minute observation completed"
+          value={state.administration.observedFifteenMinutes ? "Yes, patient observed seated" : "NOT RECORDED"}
+        />
+      </div>
 
       {/* Clinical Notes */}
       <SectionHeader>Clinical Notes</SectionHeader>

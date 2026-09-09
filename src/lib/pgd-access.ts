@@ -106,7 +106,10 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
   { slug: 'covid-booster', title: 'COVID-19 Booster', subtitle: 'mRNA / Protein Subunit', category: 'Vaccines' },
   { slug: 'shingles-vaccine', title: 'Shingles Vaccine', subtitle: 'Shingrix', category: 'Vaccines' },
   { slug: 'pneumococcal', title: 'Pneumococcal Vaccine', subtitle: 'PCV20 (Prevenar 20)', category: 'Vaccines' },
-  { slug: 'hpv', title: 'HPV Vaccine', subtitle: 'Gardasil 9', category: 'Vaccines' },
+  // Subtitle corrected 8 Sep 2026: 'Gardasil 9' alone told a pharmacist
+  // nothing about who the service is for, and the tool had quietly become
+  // female-only. The v002 document covers all sexes from 9 years.
+  { slug: 'hpv', title: 'HPV Vaccine', subtitle: 'Gardasil 9, all sexes from 9 years, schedule set by age and immune status', category: 'Vaccines' },
   { slug: 'mmr', title: 'MMR Vaccine', subtitle: 'Measles, Mumps, Rubella', category: 'Vaccines' },
   { slug: 'meningitis-b', title: 'Meningitis B', subtitle: 'Bexsero (from 2 months) and Trumenba (from 10 years)', category: 'Vaccines' },
   { slug: 'meningitis-acwy-travel', title: 'Meningitis ACWY', subtitle: 'MenQuadfi / Nimenrix', category: 'Vaccines' },
@@ -414,6 +417,7 @@ export const PGD_CATEGORIES = [
  */
 export const REISSUED_PGDS: Record<string, { version: string; date: string }> = {
   'dental-bridging': { version: 'v003', date: '8 September 2026' },
+  hpv: { version: 'v002', date: '8 September 2026' },
   'meningitis-acwy-travel': { version: 'v002', date: '7 September 2026' },
   'anti-malarials': { version: 'v002', date: '7 September 2026' },
   typhoid: { version: 'v002', date: '7 September 2026' },

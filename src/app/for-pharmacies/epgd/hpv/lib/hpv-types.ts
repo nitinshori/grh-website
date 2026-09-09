@@ -1,16 +1,57 @@
 import { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/types";
 
+// ─────────────────────────────────────────────────────────────────────────
+// HPV consultation state.
+//
+// Rebuilt 8 Sep 2026 alongside PGD v002. Version 001 of this tool:
+//   - required a "patient is female" tick before it would proceed, and
+//     returned no dose recommendation at all for a male patient, in a
+//     service whose signed PGD names the GBMSM cohort up to 45 years;
+//   - hard-stopped on yeast allergy, which Green Book chapter 18a states
+//     is NOT a contraindication;
+//   - recommended three doses at 0, 2 and 6 months to every patient
+//     regardless of age or immune status, when national policy is a
+//     single dose under 25;
+//   - never asked about immunosuppression or HIV, which is the one
+//     question that determines the schedule;
+//   - captured no batch number, expiry, site, observation period or
+//     off-label consent.
+// ─────────────────────────────────────────────────────────────────────────
+
+/** Sex recorded for the clinical record. Does not gate eligibility. */
+export type HPVSex = "" | "female" | "male" | "other";
+
 export interface HPVPatientDetails extends BasePatientDetails {
-  femaleConfirmed: boolean;
+  /** Recorded for the clinical record only. Every sex is eligible. */
+  sex: HPVSex;
 }
 
 export interface HPVVaccineAssessment {
-  ageCriteriaMet: boolean;
   pregnancyStatus: string;
   currentFebrileIllness: boolean;
-  previousGardasilDose: boolean;
-  anaphylaxisToYeast: boolean;
+  /** Determines the schedule: three doses at 0, 1 and 4 to 6 months. */
+  immunosuppressedOrHIV: boolean;
+  /** Prior HPV vaccine history. */
+  priorDoses: string;
+  /** A single dose before the 25th birthday completes the course. */
+  doseBefore25: boolean;
   anaphylaxisToPreviousDose: boolean;
+  anaphylaxisToComponent: boolean;
+  /** Bleeding disorder / anticoagulation: technique caution, not a stop. */
+  bleedingDisorderOrAnticoagulated: boolean;
+  /** Told whether they could have this free on the NHS. */
+  nhsEligibilityDiscussed: boolean;
+}
+
+export interface HPVConsent16 {
+  /** Under 16 only: who gave consent. */
+  basis: string;
+  parentName: string;
+  parentRelationship: string;
+  gillickBasis: string;
+  /** Off-label schedule consent, required for the 1-dose and 2-dose courses. */
+  offLabelExplained: boolean;
+  offLabelConsentGiven: boolean;
 }
 
 export interface HPVCounselling {
@@ -18,14 +59,28 @@ export interface HPVCounselling {
   explainedProtection: boolean;
   discussedCommonReactions: boolean;
   explainedNotTreatment: boolean;
+  explainedScreeningStillNeeded: boolean;
   offeredWrittenInfo: boolean;
+}
+
+export interface HPVAdministration {
+  productName: string;
+  batchNumber: string;
+  expiryDate: string;
+  site: string;
+  doseNumber: string;
+  nextDoseDue: string;
+  adrenalineAvailable: boolean;
+  observedFifteenMinutes: boolean;
 }
 
 export interface HPVConsultationState {
   patient: HPVPatientDetails;
   consent: BaseConsent;
+  consent16: HPVConsent16;
   assessment: HPVVaccineAssessment;
   counselling: HPVCounselling;
+  administration: HPVAdministration;
   summary: BaseSummary;
   currentStep: number;
 }
@@ -33,8 +88,10 @@ export interface HPVConsultationState {
 export type HPVAction =
   | { type: "UPDATE_PATIENT"; field: keyof HPVPatientDetails; value: string | number | boolean | null }
   | { type: "UPDATE_CONSENT"; field: keyof BaseConsent; value: string | boolean | undefined }
+  | { type: "UPDATE_CONSENT16"; field: keyof HPVConsent16; value: string | boolean }
   | { type: "UPDATE_ASSESSMENT"; field: keyof HPVVaccineAssessment; value: string | boolean }
   | { type: "UPDATE_COUNSELLING"; field: keyof HPVCounselling; value: boolean }
+  | { type: "UPDATE_ADMINISTRATION"; field: keyof HPVAdministration; value: string | boolean }
   | { type: "UPDATE_SUMMARY"; field: keyof BaseSummary; value: string }
   | { type: "SET_STEP"; step: number };
 
@@ -42,8 +99,9 @@ export const STEP_LABELS = [
   "Patient Details",
   "Vaccine Assessment",
   "Red Flags & Exclusions",
+  "Schedule & Consent",
   "Counselling",
-  "Vaccine Supply",
+  "Administration",
   "Summary & Declaration",
   "Consultation Complete",
   "Review",
@@ -62,13 +120,13 @@ export function createInitialConsultationState(): HPVConsultationState {
       gpPractice: "",
       gpAddress: "",
       gpPhone: "",
-gpEmail: "",
+      gpEmail: "",
       gpOdsCode: "",
       nhsNumber: "",
       address: "",
       phone: "",
       email: "",
-      femaleConfirmed: false,
+      sex: "",
     },
     consent: {
       informedConsentGiven: false,
@@ -76,20 +134,42 @@ gpEmail: "",
       idType: "",
       patientAwarePrivateService: false,
     },
+    consent16: {
+      basis: "",
+      parentName: "",
+      parentRelationship: "",
+      gillickBasis: "",
+      offLabelExplained: false,
+      offLabelConsentGiven: false,
+    },
     assessment: {
-      ageCriteriaMet: false,
       pregnancyStatus: "",
       currentFebrileIllness: false,
-      previousGardasilDose: false,
-      anaphylaxisToYeast: false,
+      immunosuppressedOrHIV: false,
+      priorDoses: "",
+      doseBefore25: false,
       anaphylaxisToPreviousDose: false,
+      anaphylaxisToComponent: false,
+      bleedingDisorderOrAnticoagulated: false,
+      nhsEligibilityDiscussed: false,
     },
     counselling: {
       explainedDoseSchedule: false,
       explainedProtection: false,
       discussedCommonReactions: false,
       explainedNotTreatment: false,
+      explainedScreeningStillNeeded: false,
       offeredWrittenInfo: false,
+    },
+    administration: {
+      productName: "Gardasil 9",
+      batchNumber: "",
+      expiryDate: "",
+      site: "",
+      doseNumber: "",
+      nextDoseDue: "",
+      adrenalineAvailable: false,
+      observedFifteenMinutes: false,
     },
     summary: {
       pharmacistName: "",
