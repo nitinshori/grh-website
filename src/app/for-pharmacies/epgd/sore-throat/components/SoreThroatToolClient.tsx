@@ -708,8 +708,8 @@ export function SoreThroatToolClient({
 
               {medicineRecommendation.shouldPrescribe ? (
                 <div className="space-y-4">
-                  <div className="bg-[color:var(--tenant-primary)]/10 border border-[color:var(--tenant-primary)]/30 rounded-lg p-3">
-                    <p className="text-xs text-[color:var(--tenant-primary)]">
+                  <div className="bg-teal-50 border border-teal-200 rounded-lg p-3">
+                    <p className="text-xs text-teal-700">
                       <span className="font-semibold">Recommendation:</span>{" "}
                       {medicineRecommendation.recommendation}
                     </p>
