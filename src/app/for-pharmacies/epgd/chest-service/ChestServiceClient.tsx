@@ -50,7 +50,12 @@ import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 //   Erythromycin 250 to 500 mg four times a day, 5 days
 // ─────────────────────────────────────────────────────────────────────────
 
-type Antibiotic = "" | "amoxicillin" | "doxycycline" | "clarithromycin" | "erythromycin";
+// Erythromycin removed 9 Sep 2026. It was offered here as a supply option
+// and NO version of the signed document has ever authorised it: v001 named
+// it in a summary as an alternative macrolide, v002 and v003 authorise
+// clarithromycin only. Same defect class as the ear service supplying an
+// unauthorised medicine.
+type Antibiotic = "" | "amoxicillin" | "doxycycline" | "clarithromycin";
 
 const ANTIBIOTIC_REGIMENS: Record<Exclude<Antibiotic, "">, { label: string; dose: string }> = {
   amoxicillin: {
@@ -62,12 +67,10 @@ const ANTIBIOTIC_REGIMENS: Record<Exclude<Antibiotic, "">, { label: string; dose
     dose: "200 mg day 1 then 100 mg OD, 5 days total",
   },
   clarithromycin: {
-    label: "Clarithromycin 250 to 500 mg twice a day for 5 days",
-    dose: "250 to 500 mg BD, 5 days",
-  },
-  erythromycin: {
-    label: "Erythromycin 250 to 500 mg four times a day for 5 days",
-    dose: "250 to 500 mg QDS, 5 days",
+    // v003 authorises 250 mg twice daily. The "250 to 500 mg" range this
+    // tool used to offer included a dose the document does not carry.
+    label: "Clarithromycin 250 mg twice a day for 5 days",
+    dose: "250 mg BD, 5 days",
   },
 };
 
@@ -295,7 +298,6 @@ export function ChestServiceClient() {
     if (m.tetracyclineAllergy) out.add("doxycycline");
     if (m.macrolideAllergy) {
       out.add("clarithromycin");
-      out.add("erythromycin");
     }
     return out;
   }, [state.medicines]);
@@ -333,13 +335,29 @@ export function ChestServiceClient() {
     }
 
     // ── Exclusions from the signed document. ────────────────────────
+    // Pregnancy is NOT an exclusion from this service. The amoxicillin arm
+    // exists for it: v002 and v003 both read "Amoxicillin is used in patients
+    // aged 12 to 17 and IN PREGNANCY". This tool stopped every pregnant
+    // patient and told the pharmacist to refer for a drug the PGD does not
+    // authorise, so it was refusing people the document covers.
     if (exclusions.pregnancy) {
-      out.push({
-        code: "preg",
-        severity: "stop",
-        message: "Pregnant",
-        detail: "Pregnancy is an exclusion under this PGD. Refer to the GP, who can consider erythromycin.",
-      });
+      if (treatment.antibiotic === "doxycycline" || treatment.antibiotic === "clarithromycin") {
+        out.push({
+          code: "preg-arm",
+          severity: "stop",
+          message: "Pregnancy excludes this arm",
+          detail:
+            "Doxycycline is contraindicated in pregnancy and clarithromycin is excluded under v003. Use the AMOXICILLIN arm, which exists for pregnancy. If the patient is also penicillin-allergic, refer.",
+        });
+      } else {
+        out.push({
+          code: "preg-amox",
+          severity: "caution",
+          message: "Pregnant: use the amoxicillin arm",
+          detail:
+            "Amoxicillin may be supplied in pregnancy and is the usual choice where an antibiotic is indicated for this condition. Select amoxicillin.",
+        });
+      }
     }
     if (exclusions.breastfeeding) {
       out.push({
@@ -611,7 +629,7 @@ export function ChestServiceClient() {
             <div className="space-y-2">
               <Checkbox label="Penicillin allergy" checked={state.medicines.penicillinAllergy} onChange={(v) => dispatch({ type: "UPDATE_MEDICINE", field: "penicillinAllergy", value: v })} description="Rules out amoxicillin" />
               <Checkbox label="Tetracycline allergy" checked={state.medicines.tetracyclineAllergy} onChange={(v) => dispatch({ type: "UPDATE_MEDICINE", field: "tetracyclineAllergy", value: v })} description="Rules out doxycycline" />
-              <Checkbox label="Macrolide allergy" checked={state.medicines.macrolideAllergy} onChange={(v) => dispatch({ type: "UPDATE_MEDICINE", field: "macrolideAllergy", value: v })} description="Rules out clarithromycin and erythromycin" />
+              <Checkbox label="Macrolide allergy" checked={state.medicines.macrolideAllergy} onChange={(v) => dispatch({ type: "UPDATE_MEDICINE", field: "macrolideAllergy", value: v })} description="Rules out clarithromycin, which is the only macrolide this PGD authorises" />
               <Checkbox label="Taking simvastatin" checked={state.medicines.onSimvastatin} onChange={(v) => dispatch({ type: "UPDATE_MEDICINE", field: "onSimvastatin", value: v })} description="Must not be combined with clarithromycin" />
               <Checkbox label="Taking warfarin" checked={state.medicines.onWarfarin} onChange={(v) => dispatch({ type: "UPDATE_MEDICINE", field: "onWarfarin", value: v })} />
               <TextArea label="Other current medicines" value={state.medicines.other} onChange={(v) => dispatch({ type: "UPDATE_MEDICINE", field: "other", value: v })} />

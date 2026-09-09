@@ -15,7 +15,10 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   "folic-acid": "b12-folate-v004.pdf",
   "bph": "bph.pdf",
   "bv": "bv.pdf",
-  "chest-service": "chest-service.pdf",
+  // v003 signed 9 Sep 2026. v002 listed age 65 and over as a qualifying
+  // comorbidity and required a CRB-65 of 0 in the next bullet, and CRB-65
+  // scores a point for being 65, so the whole group was refused.
+  "chest-service": "chest-service-v003.pdf",
   "chickenpox": "chickenpox.pdf",
   "cold-sores": "cold-sores.pdf",
   "copd": "copd.pdf",
