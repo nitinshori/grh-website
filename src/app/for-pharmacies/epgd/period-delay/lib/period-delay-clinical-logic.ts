@@ -45,30 +45,83 @@ export function getAllAlerts(state: PeriodDelayConsultationState): ClinicalAlert
     alerts.push({ severity: "stop", code: "FAMILY_VTE", message: "First degree relative with VTE under 45", detail: "Suggests inherited thrombophilia. Excluded under PGD v002. Refer." });
   }
 
-  if (mh.currentSmoker) {
-    alerts.push({ severity: "stop", code: "SMOKER", message: "Current smoker", detail: "Excluded under PGD v002, at any amount and any age. Refer." });
+  // ── v004: mirror UKMEC 2025 for combined hormonal contraception ──────
+  //
+  // v002 and v003 excluded on smoking at any age, BMI 30 or above, and any
+  // seated journey of 4 hours or more. That was disproportionate: it excluded
+  // the majority of women who ask for this service, and was stricter than the
+  // criteria applied to the combined pill taken continuously, for a course of
+  // up to 14 days. No guidance makes long-haul travel a contraindication to
+  // norethisterone. Raised by an adopting pharmacist.
+  //
+  // UKMEC 2025 category 3 and 4 exclude. Category 2 does not exclude on its
+  // own, but UKMEC's own rule is that multiple category 2 conditions relating
+  // to the SAME risk require judgement, so two or more here exclude.
+  //
+  // UKMEC applies to contraception, not to period delay. It is used by
+  // analogy, justified by the Primolut N SPC statement that norethisterone is
+  // partly metabolised to ethinylestradiol.
+  const patientAge = state.patient.age;
+
+  if (patientAge !== null && patientAge >= 35 && mh.currentSmoker) {
+    alerts.push({
+      severity: "stop",
+      code: "SMOKER_35_PLUS",
+      message: "Aged 35 or over and currently smokes",
+      detail:
+        "UKMEC 3 below 15 a day, UKMEC 4 at 15 or more. Excluded. Refer. A smoker UNDER 35 is UKMEC 2 and is not excluded on that ground alone.",
+    });
+  }
+
+  if (patientAge !== null && patientAge >= 35 && mh.stoppedSmokingUnderOneYear) {
+    alerts.push({
+      severity: "stop",
+      code: "QUIT_UNDER_1YR_35_PLUS",
+      message: "Aged 35 or over and stopped smoking less than a year ago",
+      detail:
+        "UKMEC 3. Excluded. Refer. Ask this separately: a question that only asks whether she smokes misclassifies a recent quitter.",
+    });
   }
 
   const bmi =
     mh.heightCm && mh.weightKg && mh.heightCm > 0
       ? mh.weightKg / Math.pow(mh.heightCm / 100, 2)
       : null;
-  if (bmi !== null && bmi >= 30) {
+  if (bmi !== null && bmi >= 35) {
     alerts.push({
       severity: "stop",
-      code: "BMI_30_PLUS",
-      message: `BMI ${bmi.toFixed(1)}, which is 30 or above`,
-      detail: "Excluded under PGD v002. Refer.",
+      code: "BMI_35_PLUS",
+      message: `BMI ${bmi.toFixed(1)}, which is 35 or above`,
+      detail: "UKMEC 3. Excluded. Refer. BMI 30 to 34.9 is UKMEC 2 and is a risk factor, not an exclusion.",
     });
   }
 
-  if (mh.longJourney) {
+  // ── UKMEC 2 risk factors: one is allowed, two or more exclude ────────
+  const riskFactors: string[] = [];
+  if (mh.longJourney) riskFactors.push("seated journey of 4 hours or more");
+  if (patientAge !== null && patientAge < 35 && mh.currentSmoker) riskFactors.push("smoker under 35");
+  if (bmi !== null && bmi >= 30 && bmi < 35) riskFactors.push(`BMI ${bmi.toFixed(1)}`);
+  if (patientAge !== null && patientAge >= 40) riskFactors.push("aged 40 or over");
+  // UKMEC 2 as well: 35 or over having stopped a year or more ago. Missed on
+  // the first pass through the table, which is why the mapping is now tested.
+  if (patientAge !== null && patientAge >= 35 && mh.stoppedSmokingOverOneYear)
+    riskFactors.push("aged 35 or over, stopped smoking a year or more ago");
+
+  if (riskFactors.length === 1) {
+    alerts.push({
+      severity: "caution",
+      code: "UKMEC2_SINGLE",
+      message: `One UKMEC 2 risk factor: ${riskFactors[0]}`,
+      detail:
+        "The advantages generally outweigh the risks, so this does not exclude on its own. Supply, and counsel on the precautions: move around at least hourly on any long journey, keep well hydrated, avoid alcohol and sedatives on the journey, and consider graduated compression stockings. Tell her to seek urgent help for a painful swollen calf, sudden breathlessness or chest pain. Record the risk factor.",
+    });
+  } else if (riskFactors.length >= 2) {
     alerts.push({
       severity: "stop",
-      code: "LONG_JOURNEY",
-      message: "Seated journey of 4 hours or more during, or within 2 weeks of, the course",
+      code: "UKMEC2_CUMULATIVE",
+      message: `${riskFactors.length} UKMEC 2 risk factors together: ${riskFactors.join(", ")}`,
       detail:
-        "Excluded under PGD v002. This will exclude many holiday requests, which is the intended effect. Offer the alternatives in Appendix 2 of the PGD rather than a flat refusal: a woman on a monophasic combined pill can run packs back to back, and her GP can assess her individually.",
+        "UKMEC 2025 states that where multiple category 2 conditions relate to the same risk, clinical judgement must decide whether the risks outweigh the benefits. All of these point at the same vascular risk, so they accumulate. Exclude and refer. Record which factors were present and the count.",
     });
   }
 

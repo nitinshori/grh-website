@@ -33,6 +33,12 @@ export interface PeriodDelayMedicalHistory {
   // exclusions in v002.
   familyVteUnder45: boolean;
   currentSmoker: boolean;
+  /** UKMEC 2025 distinguishes a recent quitter at 35+: category 3. */
+  stoppedSmokingUnderOneYear: boolean;
+  /** 35+ having stopped a year or more ago is UKMEC 2, not 3. */
+  stoppedSmokingOverOneYear: boolean;
+  /** Recorded for the notes. Both <15 and 15+ exclude at 35 or over. */
+  cigarettesPerDay: number | null;
   heightCm: number | null;
   weightKg: number | null;
   /** Journey of 4+ hours seated, during the course or within 2 weeks after. */
@@ -108,7 +114,7 @@ export function createInitialConsultationState(): PeriodDelayConsultationState {
     patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", gpAddress: "", gpPhone: "", gpEmail: "", gpOdsCode: "", nhsNumber: "", address: "", phone: "", email: "" },
     consent: { informedConsentGiven: false, idVerified: false, idType: "", patientAwarePrivateService: false },
     assessment: { reasonForDelay: "", reasonDetails: "", lastPeriodDate: "", cycleRegular: false, daysUntilExpected: null, previousUse: false, previousIssues: "" },
-    medicalHistory: { pregnancy: false, breastfeeding: false, liverDisease: false, historyOfDVT: false, historyOfPE: false, historyOfStroke: false, activeBreastCancer: false, severeArterialDisease: false, porphyria: false, abnormalVaginalBleeding: false, hormonalContraception: false, hormonalContraceptionType: "", ageUnder16: false, familyVteUnder45: false, currentSmoker: false, heightCm: null, weightKg: null, longJourney: false, recentOrPlannedSurgery: false, immobility: false, activeOrRecentCancer: false, migraineWithAura: false, enzymeInducer: false, under18AssessmentDone: false, safeguardingConcern: false },
+    medicalHistory: { pregnancy: false, breastfeeding: false, liverDisease: false, historyOfDVT: false, historyOfPE: false, historyOfStroke: false, activeBreastCancer: false, severeArterialDisease: false, porphyria: false, abnormalVaginalBleeding: false, hormonalContraception: false, hormonalContraceptionType: "", ageUnder16: false, familyVteUnder45: false, currentSmoker: false, stoppedSmokingUnderOneYear: false, stoppedSmokingOverOneYear: false, cigarettesPerDay: null, heightCm: null, weightKg: null, longJourney: false, recentOrPlannedSurgery: false, immobility: false, activeOrRecentCancer: false, migraineWithAura: false, enzymeInducer: false, under18AssessmentDone: false, safeguardingConcern: false },
     medications: { anticoagulants: false, antiepileptics: false, ciclosporin: false, otherMedications: "", allergies: "" },
     medicineSelection: { confirmed: false, daysToDelay: null, startDate: "" },
     counselling: { howToTake: false, startThreeDaysBefore: false, maxDuration: false, periodReturnsAfter: false, sideEffects: false, notContraceptive: false, seekHelpIfUnwell: false },
