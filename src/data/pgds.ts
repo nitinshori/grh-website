@@ -447,30 +447,6 @@ export const pgds: PGD[] = [
     pharmadoctor: "Yes",
   },
   {
-    id: "hrt",
-    title: "HRT Initiation",
-    category: "Women's Health",
-    priority: 1,
-    isNew: true,
-    revenueEstimate: "\u00a380\u2013150 per consultation",
-    consultTime: "30\u201345 min",
-    description:
-      "MAJOR GAP. 1 in 3 women in menopause receive no treatment. Pharmacy-based, clinically governed, massive unmet demand. First mover wins.",
-    pharmadoctor: "No \u2014 not offered",
-  },
-  {
-    id: "testosterone-women",
-    title: "Testosterone for Women (Menopausal Libido)",
-    category: "Women's Health",
-    priority: 2,
-    isNew: true,
-    revenueEstimate: "\u00a360\u2013100 per consultation",
-    consultTime: "20 min",
-    description:
-      "DIFFERENTIATION. Growing clinical recognition, supported by British Menopause Society guidelines. Completely unaddressed by competitors.",
-    pharmadoctor: "No",
-  },
-  {
     id: "uti",
     title: "UTI Treatment",
     category: "Women's Health",

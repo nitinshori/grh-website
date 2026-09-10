@@ -16,15 +16,12 @@ const epgds = [
   { slug: 'hair-loss', title: 'Hair Loss (Male Pattern)', subtitle: 'Finasteride / Dutasteride', category: "Men's Health", color: 'bg-blue-500' },
   { slug: 'premature-ejaculation', title: 'Premature Ejaculation', subtitle: 'Dapoxetine / Priligy', category: "Men's Health", color: 'bg-blue-500' },
   { slug: 'bph', title: 'Benign Prostatic Hyperplasia', subtitle: 'Tamsulosin with IPSS Assessment', category: "Men's Health", color: 'bg-blue-500' },
-  { slug: 'trt', title: 'Testosterone Replacement', subtitle: 'Testosterone Undecanoate / Gel', category: "Men's Health", color: 'bg-blue-500' },
 
   // ── Women's Health ──
   { slug: 'emergency-contraception', title: 'Emergency Contraception', subtitle: 'Levonorgestrel & Ulipristal', category: "Women's Health", color: 'bg-pink-500' },
-  { slug: 'hrt', title: 'HRT (Menopause)', subtitle: 'Oestradiol / Combined HRT', category: "Women's Health", color: 'bg-pink-500' },
   { slug: 'thrush', title: 'Thrush (Vaginal Candidiasis)', subtitle: 'Fluconazole / Clotrimazole', category: "Women's Health", color: 'bg-pink-500' },
   { slug: 'bv', title: 'Bacterial Vaginosis', subtitle: 'Metronidazole Oral / Vaginal Gel', category: "Women's Health", color: 'bg-pink-500' },
   { slug: 'postnatal-contraception', title: 'Postnatal Contraception', subtitle: 'POP / Desogestrel Initiation', category: "Women's Health", color: 'bg-pink-500' },
-  { slug: 'testosterone-women', title: 'Testosterone for Women', subtitle: 'Androfeme Cream for Menopausal Libido', category: "Women's Health", color: 'bg-pink-500' },
   { slug: 'period-delay', title: 'Period Delay', subtitle: 'Norethisterone 5mg', category: "Women's Health", color: 'bg-pink-500' },
 
   // ── Sexual Health ──

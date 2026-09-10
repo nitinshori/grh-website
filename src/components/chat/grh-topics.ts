@@ -186,7 +186,7 @@ export const TOPICS: Topic[] = [
       "testosterone for women", "androfeme",
     ],
     answer:
-      "<p>HRT (oestradiol + combined HRT), TRT (testosterone undecanoate / gel), and testosterone for women are all included. Dr Nitin Shori is the named clinician on every PGD and previously ran large-scale online TRT prescribing at Pharmacy2U.</p>",
+      "<p>Get Real Health does not currently offer HRT, testosterone replacement or testosterone for women under a PGD. Testosterone is a Schedule 4 Part II controlled drug and these services were withdrawn on 10 September 2026. Our women's health PGDs cover emergency contraception, period delay, urinary tract infection, bacterial vaginosis, thrush and more.</p>",
   },
 
   // ── How does it work / onboarding ───────────────────────────

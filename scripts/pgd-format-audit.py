@@ -81,11 +81,14 @@ def change_history_pages(pages):
     return out
 
 # Where the clinical body starts. Part 2 must come before this.
+# Matched at the START of a line, so that a cover page sentence mentioning
+# "the exclusion criteria" does not count as the clinical criteria beginning.
+# The real thing is a table row label or a heading, and starts its line.
 CLINICAL = re.compile(
-    r"(inclusion criteria|criteria for inclusion|exclusion criteria|"
+    r"^\s*(inclusion criteria|criteria for inclusion|exclusion criteria|"
     r"characteristics of staff|description of treatment|"
     r"who can (?:operate|work) under this)",
-    re.I,
+    re.I | re.M,
 )
 
 NARRATION = re.compile(

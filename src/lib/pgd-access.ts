@@ -17,7 +17,6 @@
 export const ALL_PGDS: { slug: string; title: string; subtitle: string; category: string }[] = [
   // Men's Health
   { slug: 'ed', title: 'Erectile Dysfunction', subtitle: 'Sildenafil / Tadalafil', category: "Men's Health" },
-  { slug: 'trt', title: 'Testosterone Replacement', subtitle: 'Testosterone Undecanoate', category: "Men's Health" },
   { slug: 'hair-loss', title: 'Male Pattern Hair Loss', subtitle: 'Finasteride', category: "Men's Health" },
   { slug: 'premature-ejaculation', title: 'Premature Ejaculation', subtitle: 'Dapoxetine / Priligy', category: "Men's Health" },
   { slug: 'bph', title: 'Benign Prostatic Hyperplasia', subtitle: 'Tamsulosin', category: "Men's Health" },
@@ -25,11 +24,9 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
   // Women's Health
   { slug: 'emergency-contraception', title: 'Emergency Contraception', subtitle: 'Levonorgestrel / Ulipristal', category: "Women's Health" },
   { slug: 'postnatal-contraception', title: 'Postnatal Contraception', subtitle: 'Desogestrel', category: "Women's Health" },
-  { slug: 'hrt', title: 'HRT', subtitle: 'Estradiol / Utrogestan', category: "Women's Health" },
   { slug: 'thrush', title: 'Vaginal Thrush', subtitle: 'Fluconazole', category: "Women's Health" },
   { slug: 'period-delay', title: 'Period Delay', subtitle: 'Norethisterone 5mg', category: "Women's Health" },
   { slug: 'bv', title: 'Bacterial Vaginosis', subtitle: 'Metronidazole', category: "Women's Health" },
-  { slug: 'testosterone-women', title: 'Testosterone for Women', subtitle: 'Androfeme / Testogel (off-label)', category: "Women's Health" },
   { slug: 'alopecia-minoxidil', title: 'Female Pattern Hair Loss', subtitle: 'Minoxidil', category: "Women's Health" },
 
   // Sexual Health
@@ -245,6 +242,14 @@ export const RETIRED_SLUGS = new Set([
   // pharmacy's record can never resolve to anything.
   'threadworms',
 
+  // 10 Sep 2026: HRT, TRT and testosterone for women removed from the platform
+  // entirely on Nitin's instruction, with the four testosterone brand tools.
+  // The controlled drug question is no longer being waited on: the services
+  // are gone. Slugs kept as tombstones only.
+  'hrt',
+  'trt',
+  'testosterone-women',
+
   // 9 Sep 2026: ADHD, diabetes, GLP-1 monitoring, hypertension, PrEP and
   // statins removed from the platform entirely on Nitin's instruction, the
   // same as threadworms: routes, documents, catalogue entries, training
@@ -310,8 +315,6 @@ export const PAUSED_SLUGS = new Set([
   //
   // Left paused on 8 Sep 2026: it was put to Nitin alongside the other
   // withdrawn services and he did not move it.
-  'trt',
-  'testosterone-women',
 ])
 
 /**
@@ -380,10 +383,6 @@ export const EPGD_UNGATED_SEGMENTS = new Set([
  * that has it today, which was the whole risk in adding it.
  */
 export const EPGD_SEGMENT_ALIASES: Record<string, string[]> = {
-  tostran: ['trt'],
-  testogel: ['trt'],
-  sustanon: ['trt'],
-  nebido: ['trt'],
   'thrush-combi': ['thrush'],
   'thrush-duo': ['thrush'],
 }
@@ -426,6 +425,9 @@ export const PGD_CATEGORIES = [
  * Remove an entry once it is no longer newsworthy, roughly 3 months.
  */
 export const REISSUED_PGDS: Record<string, { version: string; date: string }> = {
+  'b12-injection': { version: 'v005', date: '10 September 2026' },
+  'folic-acid': { version: 'v005', date: '10 September 2026' },
+  'shingles-treatment': { version: 'v002', date: '10 September 2026' },
   'meningitis-b': { version: 'v003', date: '9 September 2026' },
   'yellow-fever': { version: 'v002', date: '9 September 2026' },
   'junior-travel': { version: 'v003', date: '9 September 2026' },
@@ -436,39 +438,39 @@ export const REISSUED_PGDS: Record<string, { version: string; date: string }> = 
   'dengue': { version: 'v002', date: '9 September 2026' },
   'rsv': { version: 'v002', date: '9 September 2026' },
   'travel-core': { version: 'v002', date: '9 September 2026' },
-  'japanese-encephalitis': { version: 'v002', date: '9 September 2026' },
-  'hep-ab-travel': { version: 'v003', date: '9 September 2026' },
+  'japanese-encephalitis': { version: 'v003', date: '10 September 2026' },
+  'hep-ab-travel': { version: 'v004', date: '10 September 2026' },
   'dental-bridging': { version: 'v005', date: '9 September 2026' },
   'skin-infection': { version: 'v004', date: '9 September 2026' },
   hpv: { version: 'v003', date: '9 September 2026' },
-  'meningitis-acwy-travel': { version: 'v003', date: '9 September 2026' },
-  'anti-malarials': { version: 'v004', date: '9 September 2026' },
-  typhoid: { version: 'v003', date: '9 September 2026' },
+  'meningitis-acwy-travel': { version: 'v004', date: '10 September 2026' },
+  'anti-malarials': { version: 'v005', date: '10 September 2026' },
+  typhoid: { version: 'v004', date: '10 September 2026' },
   eczema: { version: 'v004', date: '9 September 2026' },
   'chest-service': { version: 'v005', date: '9 September 2026' },
-  'wound-care': { version: 'v004', date: '9 September 2026' },
+  'wound-care': { version: 'v005', date: '10 September 2026' },
   // COVID: v003 named "Comirnaty JN.1" in its operative vaccines table while
   // its own summary page said the 2026/27 formulation was XFG. No pharmacy
   // held JN.1. v004 names Comirnaty XFG as the vaccine of choice and adds
   // Comirnaty LP.8.1 as an existing-stock-only arm for the changeover.
   'covid-booster': { version: 'v005', date: '9 September 2026' },
-  uti: { version: 'v003', date: '9 September 2026' },
-  'period-delay': { version: 'v005', date: '9 September 2026' },
-  'wegovy-oral': { version: 'v007', date: '9 September 2026' },
+  uti: { version: 'v004', date: '10 September 2026' },
+  'period-delay': { version: 'v006', date: '10 September 2026' },
+  'wegovy-oral': { version: 'v008', date: '10 September 2026' },
   // 9 Sep 2026: the last six correction notices replaced by reissues that
   // carry the correction in the document itself.
   'anxiety-propranolol': { version: 'v002', date: '9 September 2026' },
   'asthma-rescue': { version: 'v002', date: '9 September 2026' },
   chickenpox: { version: 'v002', date: '9 September 2026' },
-  foundayo: { version: 'v003', date: '9 September 2026' },
-  mounjaro: { version: 'v003', date: '9 September 2026' },
-  wegovy: { version: 'v003', date: '9 September 2026' },
-  'ear-infection': { version: 'v003', date: '9 September 2026' },
-  ed: { version: 'v003', date: '9 September 2026' },
+  foundayo: { version: 'v004', date: '10 September 2026' },
+  mounjaro: { version: 'v004', date: '10 September 2026' },
+  wegovy: { version: 'v004', date: '10 September 2026' },
+  'ear-infection': { version: 'v004', date: '10 September 2026' },
+  ed: { version: 'v004', date: '10 September 2026' },
   rabies: { version: 'v004', date: '9 September 2026' },
-  tetanus: { version: 'v004', date: '9 September 2026' },
-  'sleep-melatonin': { version: 'v003', date: '9 September 2026' },
-  impetigo: { version: 'v004', date: '9 September 2026' },
+  tetanus: { version: 'v005', date: '10 September 2026' },
+  'sleep-melatonin': { version: 'v004', date: '10 September 2026' },
+  impetigo: { version: 'v005', date: '10 September 2026' },
   psoriasis: { version: 'v003', date: '9 September 2026' },
 }
 

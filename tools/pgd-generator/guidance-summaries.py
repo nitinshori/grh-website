@@ -46,7 +46,7 @@ from docx.enum.text import WD_BREAK
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 PARENT = os.path.dirname(ROOT)
 APPROVED = os.path.join(PARENT, "PGD Rewrite 2026", "02 Approved")
-DATE = "9 September 2026"
+DATE = "10 September 2026"
 
 SAFETY_NOTE = (
     "A NOTE ON WHERE THE SAFETY REQUIREMENTS IN THIS PGD COME FROM. This Green "
@@ -259,75 +259,216 @@ SUMMARIES = {
 }
 
 
-def build_sections(entry):
-    """Flatten a summary into the --section format used by the patcher."""
-    out = []
-    for heading, bullets in entry["sections"]:
-        out.append((heading, bullets))
-    return out
+
+# The sixteen summaries researched on 10 September 2026 live in summaries/,
+# one file per research batch, each exporting SUMMARIES_PART. Merged here so
+# every summary is reachable by slug. Any slug that is not in SUMMARIES is not
+# built: the script refuses rather than publishes a document without part 2.
+import glob
+import importlib.util
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+for _f in sorted(glob.glob(os.path.join(HERE, "summaries", "part_*.py"))):
+    _spec = importlib.util.spec_from_file_location(os.path.basename(_f)[:-3], _f)
+    _mod = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_mod)
+    SUMMARIES.update(_mod.SUMMARIES_PART)
+
+import sys
+sys.path.insert(0, HERE)
+import grh_sign  # noqa: E402
+
+from docx.table import Table  # noqa: E402
+from docx.text.paragraph import Paragraph  # noqa: E402
+
+PUBLIC = os.path.join(ROOT, "public", "pgd-documents")
+
+
+def _set(paragraph, text):
+    runs = paragraph.runs
+    if not runs:
+        paragraph.add_run(text); return
+    runs[0].text = text
+    for r in runs[1:]:
+        r.text = ""
+
+
+def _anchor(doc):
+    """
+    The top-level element where the PGD proper begins, so part 2 can go in
+    front of it. Part 2 belongs BETWEEN the cover and the PGD, not at the back
+    where the first version of this script put it: pgd-format-audit.py flags a
+    guidance summary that sits after the clinical criteria, and it is right to.
+
+    The earliest of: the second top-level "Patient Group Direction" title
+    (the originals repeat the title at the head of each arm), the first
+    "Healthcare professionals covered" heading, or the first table.
+    """
+    body = doc.element.body
+    kids = list(body.iterchildren())
+    pgd_titles = 0
+    for i, c in enumerate(kids):
+        tag = c.tag.split("}")[1]
+        if tag == "p":
+            t = (Paragraph(c, doc).text or "").strip()
+            if t.startswith("Patient Group Direction"):
+                pgd_titles += 1
+                if pgd_titles == 2:
+                    return i
+            if t.lower().startswith("healthcare professionals covered"):
+                return i
+        elif tag == "tbl":
+            return i
+    raise SystemExit("no anchor found for part 2")
 
 
 def apply(slug, src_docx, out_docx, version, supersedes):
+    if slug not in SUMMARIES:
+        raise SystemExit(f"{slug}: no summary written, refusing to build")
     entry = SUMMARIES[slug]
     d = docx.Document(src_docx)
+    body = d.element.body
 
-    p = d.add_paragraph()
-    p.add_run().add_break(WD_BREAK.PAGE)
-    h = d.add_paragraph()
-    h.add_run(entry["title"]).bold = True
-    d.add_paragraph(entry["source"])
-    d.add_paragraph(
-        "This summary is part 2 of the house format for a Get Real Health PGD: "
-        "what the PGD is for, then the guidance that governs the condition, then "
-        "the PGD itself. It is here so that a pharmacist can hold this document "
-        "against the guidance it claims to follow. It summarises the source named "
-        "above and adds nothing to it."
-    )
-    for heading, bullets in build_sections(entry):
-        hh = d.add_paragraph()
-        hh.add_run(heading).bold = True
+    # 1. The version the document states about itself. The strapline on page
+    #    one and the version block both say the OLD version until told
+    #    otherwise, and the audit fails a document whose strapline disagrees
+    #    with the manifest.
+    import re as _re
+    prev = supersedes.split(",")[0].replace("Version ", "v")   # "Version 003, ..." -> "v003"
+    seen_block = False
+    for c in body.iterchildren():
+        if not c.tag.endswith("}p"):
+            continue
+        para_ = Paragraph(c, d)
+        t = (para_.text or "").strip()
+        m = _re.match(r"^(Patient Group Direction, version )\d{3}(, issued )[^.]+\.(.*)$", t)
+        if m:
+            _set(para_, m.group(1) + version[1:] + m.group(2) + DATE + "." + m.group(3))
+        elif t == prev and not seen_block:
+            _set(para_, version); seen_block = True
+    # Table cells too (the generated documents keep the version in a table).
+    for tbl in d.tables:
+        for row in tbl.rows:
+            for cell in row.cells:
+                for para_ in cell.paragraphs:
+                    t = (para_.text or "").strip()
+                    if t == prev and not seen_block:
+                        _set(para_, version); seen_block = True
+
+    # 2. Any "Signed on behalf of Get Real Health" block that sign-sweep.py
+    #    appended for the PREVIOUS version comes out, so the document carries
+    #    one signature block, for this version. The originals' own signature
+    #    tables are a different shape and are left alone.
+    kids = list(body.iterchildren())
+    i = 0
+    while i < len(kids):
+        c = kids[i]
+        if c.tag.endswith("}p") and (Paragraph(c, d).text or "").strip() == "Signed on behalf of Get Real Health":
+            nxt = kids[i + 1] if i + 1 < len(kids) else None
+            if nxt is not None and nxt.tag.endswith("}p") and _re.match(r"^Version v\d{3}, ", (Paragraph(nxt, d).text or "").strip()):
+                # remove from the page break before the heading (if any) to the statement paragraph
+                start = i - 1 if i > 0 and kids[i-1].tag.endswith("}p") and "w:br" in kids[i-1].xml else i
+                j = i + 1
+                while j < len(kids):
+                    cj = kids[j]
+                    if cj.tag.endswith("}p") and "Both authorising signatories reviewed" in (Paragraph(cj, d).text or ""):
+                        break
+                    j += 1
+                for k in range(start, min(j + 1, len(kids))):
+                    body.remove(kids[k])
+                kids = list(body.iterchildren())
+                i = start
+                continue
+        i += 1
+
+    at = list(body.iterchildren())[_anchor(d)]
+
+    # Build part 2 at the end, then move each element in front of the anchor.
+    made = []
+    def para(text, bold=False):
+        p = d.add_paragraph()
+        r = p.add_run(text)
+        r.bold = bold
+        made.append(p._p)
+        return p
+    pb = d.add_paragraph(); pb.add_run().add_break(WD_BREAK.PAGE); made.append(pb._p)
+    para(entry["title"], bold=True)
+    para(entry["source"])
+    para("This summary is part 2 of the house format for a Get Real Health PGD: "
+         "what the PGD is for, then the guidance that governs the condition, then "
+         "the PGD itself. It is here so that a pharmacist can hold this document "
+         "against the guidance it claims to follow. It summarises the source named "
+         "above and adds nothing to it.")
+    if slug in ("tetanus", "typhoid", "meningitis-acwy-travel", "hep-ab-travel",
+                "japanese-encephalitis"):
+        para(SAFETY_NOTE)
+    for heading, bullets in entry["sections"]:
+        para(heading, bold=True)
         for b in bullets:
-            d.add_paragraph(b)
+            para(b)
+    pb2 = d.add_paragraph(); pb2.add_run().add_break(WD_BREAK.PAGE); made.append(pb2._p)
+    for el in made:
+        at.addprevious(el)
 
-    p = d.add_paragraph()
-    p.add_run().add_break(WD_BREAK.PAGE)
-    hh = d.add_paragraph()
-    hh.add_run("Version and change record").bold = True
+    # Change record, then the signatures, at the back.
+    p = d.add_paragraph(); p.add_run().add_break(WD_BREAK.PAGE)
+    h = d.add_paragraph(); h.add_run("Version and change record").bold = True
     for line in [
         "Version: " + version,
         "Issued: " + DATE,
         "Supersedes: " + supersedes,
-        "Change: the summary of the governing guidance is restored as part 2 of "
-        "the document. Twenty documents lost that section in the September 2026 "
-        "rewrites, because the generator did not emit it and no check looked for "
-        "it. Nothing else in this document is altered, and this is not a clinical "
-        "review of the remainder.",
-        "Authorised by Nitin Shori, Medical Director (GMC 6047293) and Chris "
-        "Pilkington, Head Pharmacist (GPhC 2046322), on " + DATE + ". Signatures "
-        "applied digitally on their joint instruction.",
+        "Change: the summary of the governing guidance is added as part 2 of the "
+        "document, between the cover and the PGD, which is the house format for "
+        "every Get Real Health PGD. It is summarised from the source it names and "
+        "adds nothing to it. Nothing else in this document is altered, and this is "
+        "not a clinical review of the remainder.",
     ]:
         d.add_paragraph(line)
-
     d.save(out_docx)
+    grh_sign.append_to_docx(out_docx, version, DATE)
     subprocess.run(["soffice", "--headless", "--convert-to", "pdf", out_docx],
-                   cwd=APPROVED, capture_output=True)
-    print(f"{slug:24} {version}  guidance summary written")
+                   cwd=os.path.dirname(out_docx), capture_output=True)
+    pdf = out_docx[:-5] + ".pdf"
+    if not os.path.exists(pdf):
+        raise SystemExit(f"{slug}: PDF not produced")
+    print(f"{slug:24} {version}  guidance summary written, signed, converted")
+    return pdf
+
+
+# slug, source docx (02 Approved), output docx, new version, supersedes,
+# old published file, new published file
+JOBS = [
+    ("anti-malarials", "antimalarials-v004-SIGNED.docx", "antimalarials-v005-SIGNED.docx", "v005", "Version 004, 9 September 2026", "anti-malarials-v004.pdf", "anti-malarials-v005.pdf"),
+    ("b12-injection", "B12_FOLATE_PGD_V004_SIGNED_06Aug2026.docx", "b12-folate-v005-SIGNED.docx", "v005", "Version 004, 6 August 2026", "b12-folate-v004.pdf", "b12-folate-v005.pdf"),
+    ("ear-infection", "ear-infection-v003-SIGNED.docx", "ear-infection-v004-SIGNED.docx", "v004", "Version 003, 9 September 2026", "ear-infection-v003.pdf", "ear-infection-v004.pdf"),
+    ("ed", "ed-v003-SIGNED.docx", "ed-v004-SIGNED.docx", "v004", "Version 003, 9 September 2026", "ed-v003.pdf", "ed-v004.pdf"),
+    ("foundayo", "foundayo-v003-SIGNED.docx", "foundayo-v004-SIGNED.docx", "v004", "Version 003, 9 September 2026", "foundayo-v003.pdf", "foundayo-v004.pdf"),
+    ("hep-ab-travel", "hep-ab-travel-v003-SIGNED.docx", "hep-ab-travel-v004-SIGNED.docx", "v004", "Version 003, 9 September 2026", "hep-ab-travel-v003.pdf", "hep-ab-travel-v004.pdf"),
+    ("impetigo", "impetigo-v004-SIGNED.docx", "impetigo-v005-SIGNED.docx", "v005", "Version 004, 9 September 2026", "impetigo-v004.pdf", "impetigo-v005.pdf"),
+    ("japanese-encephalitis", "japanese-encephalitis-v002-SIGNED.docx", "japanese-encephalitis-v003-SIGNED.docx", "v003", "Version 002, 9 September 2026", "japanese-encephalitis-v002.pdf", "japanese-encephalitis-v003.pdf"),
+    ("meningitis-acwy-travel", "menacwy-v003-SIGNED.docx", "menacwy-v004-SIGNED.docx", "v004", "Version 003, 9 September 2026", "meningitis-acwy-travel-v003.pdf", "meningitis-acwy-travel-v004.pdf"),
+    ("mounjaro", "mounjaro-v003-SIGNED.docx", "mounjaro-v004-SIGNED.docx", "v004", "Version 003, 9 September 2026", "mounjaro-v003.pdf", "mounjaro-v004.pdf"),
+    ("period-delay", "period-delay-v005-SIGNED.docx", "period-delay-v006-SIGNED.docx", "v006", "Version 005, 9 September 2026", "period-delay-v005.pdf", "period-delay-v006.pdf"),
+    ("shingles-treatment", "SHINGLES_TREATMENT_PGD_V001_SIGNED_21Aug2026.docx", "shingles-treatment-v002-SIGNED.docx", "v002", "Version 001, 21 August 2026", "shingles-treatment-v001.pdf", "shingles-treatment-v002.pdf"),
+    ("sleep-melatonin", "sleep-melatonin-v003-SIGNED.docx", "sleep-melatonin-v004-SIGNED.docx", "v004", "Version 003, 9 September 2026", "sleep-melatonin-v003.pdf", "sleep-melatonin-v004.pdf"),
+    ("tetanus", "tetanus-v004-SIGNED.docx", "tetanus-v005-SIGNED.docx", "v005", "Version 004, 9 September 2026", "tetanus-v004.pdf", "tetanus-v005.pdf"),
+    ("typhoid", "typhoid-v003-SIGNED.docx", "typhoid-v004-SIGNED.docx", "v004", "Version 003, 9 September 2026", "typhoid-v003.pdf", "typhoid-v004.pdf"),
+    ("uti", "uti-v003-SIGNED.docx", "uti-v004-SIGNED.docx", "v004", "Version 003, 9 September 2026", "uti-v003.pdf", "uti-v004.pdf"),
+    ("wegovy", "wegovy-v003-SIGNED.docx", "wegovy-v004-SIGNED.docx", "v004", "Version 003, 9 September 2026", "wegovy-v003.pdf", "wegovy-v004.pdf"),
+    ("wegovy-oral", "wegovy-oral-v007-SIGNED.docx", "wegovy-oral-v008-SIGNED.docx", "v008", "Version 007, 9 September 2026", "wegovy-oral-v007.pdf", "wegovy-oral-v008.pdf"),
+    ("wound-care", "wound-care-v004-SIGNED.docx", "wound-care-v005-SIGNED.docx", "v005", "Version 004, 9 September 2026", "wound-care-v004.pdf", "wound-care-v005.pdf"),
+]
 
 
 if __name__ == "__main__":
-    JOBS = [
-        # slug, source docx, output docx, new version, supersedes
-        ("tetanus", "tetanus-v004-SIGNED.docx", "tetanus-v005-SIGNED.docx",
-         "v005", "Version 004, 9 September 2026"),
-        ("typhoid", "typhoid-v003-SIGNED.docx", "typhoid-v004-SIGNED.docx",
-         "v004", "Version 003, 9 September 2026"),
-        ("meningitis-acwy-travel", "menacwy-v003-SIGNED.docx",
-         "menacwy-v004-SIGNED.docx", "v004", "Version 003, 9 September 2026"),
-        ("hep-ab-travel", "hep-ab-travel-v003-SIGNED.docx",
-         "hep-ab-travel-v004-SIGNED.docx", "v004", "Version 003, 9 September 2026"),
-    ]
-    for slug, src, out, ver, sup in JOBS:
-        apply(slug,
-              os.path.join(APPROVED, src),
-              os.path.join(APPROVED, out),
-              ver, sup)
+    only = sys.argv[1:]
+    for slug, src, out, ver, sup, old_pub, new_pub in JOBS:
+        if only and slug not in only:
+            continue
+        pdf = apply(slug, os.path.join(APPROVED, src), os.path.join(APPROVED, out), ver, sup)
+        with open(pdf, "rb") as a, open(os.path.join(PUBLIC, new_pub), "wb") as b:
+            b.write(a.read())
+        old = os.path.join(PUBLIC, old_pub)
+        if os.path.exists(old):
+            os.remove(old)
+        print(f"{'':24}        published {new_pub}, removed {old_pub}")

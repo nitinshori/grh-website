@@ -94,15 +94,14 @@ export const patientCategories: PatientCategory[] = [
   {
     slug: "womens-health",
     name: "Women's Health",
-    tagline: "From contraception to menopause — on your terms",
+    tagline: "Contraception, infections and more, on your terms",
     description:
-      "Access women's health services at your local pharmacy without the long GP wait. Emergency contraception, HRT, urinary tract infection (UTI) treatment, and more — private, convenient, and clinician-led.",
+      "Access women's health services at your local pharmacy without the long GP wait. Emergency contraception, urinary tract infection (UTI) treatment, and more — private, convenient, and clinician-led.",
     icon: "🌸",
     color: "bg-pink-50",
     textColor: "text-pink-700",
     popularServices: [
       "Emergency contraception (morning after pill)",
-      "HRT initiation for menopause",
       "UTI treatment (same-day antibiotics)",
       "Recurrent UTI prevention",
       "Thrush treatment",
@@ -113,7 +112,7 @@ export const patientCategories: PatientCategory[] = [
     pomDisclaimer: true,
     seoTitle: "Women's Health Services at Your Local Pharmacy",
     seoDescription:
-      "Emergency contraception, HRT, urinary tract infection (UTI) treatment, and more at a pharmacy near you. Private, convenient, no GP referral needed.",
+      "Emergency contraception, urinary tract infection (UTI) treatment, and more at a pharmacy near you. Private, convenient, no GP referral needed.",
   },
   {
     slug: "mens-health",
@@ -128,7 +127,6 @@ export const patientCategories: PatientCategory[] = [
       "Erectile dysfunction assessment and treatment",
       "Male pattern hair loss treatment",
       "Premature ejaculation treatment",
-      "Testosterone replacement therapy (TRT)",
     ],
     whyPharmacy:
       "Many men avoid their GP for these conversations. Your pharmacist is trained, professional, and discreet — and you can often be seen the same day.",

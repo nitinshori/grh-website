@@ -7,8 +7,6 @@ import type { TrainingModule } from "./types";
 import { edModule } from "./ed";
 import { wegovyModule } from "./wegovy";
 import { mounjaroModule } from "./mounjaro";
-import { trtModule } from "./trt";
-import { hrtModule } from "./hrt";
 import { utiModule } from "./uti";
 import { emergencyContraceptionModule } from "./emergency-contraception";
 import { hairLossModule } from "./hair-loss";
@@ -40,7 +38,6 @@ import { herpesManagementModule } from "./herpes-management";
 import { genitalWartsModule } from "./genital-warts";
 import { stiTestingModule } from "./sti-testing";
 import { postnatalContraceptionModule } from "./postnatal-contraception";
-import { testosteroneWomenModule } from "./testosterone-women";
 import { alopeciaMinoxidilModule } from "./alopecia-minoxidil";
 // Tier 4 — vaccines
 import { fluModule } from "./flu";
@@ -79,8 +76,6 @@ export const modules: TrainingModule[] = [
   edModule,
   wegovyModule,
   mounjaroModule,
-  trtModule,
-  hrtModule,
   utiModule,
   emergencyContraceptionModule,
   hairLossModule,
@@ -112,7 +107,6 @@ export const modules: TrainingModule[] = [
   genitalWartsModule,
   stiTestingModule,
   postnatalContraceptionModule,
-  testosteroneWomenModule,
   alopeciaMinoxidilModule,
   // Tier 4 — vaccines
   fluModule,
