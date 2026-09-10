@@ -112,7 +112,7 @@ export default function MeningitisACWYSummaryReport({
         <div>
           <SectionHeader>Vaccine Administration</SectionHeader>
           <div className="space-y-1.5">
-            <Row label="Vaccine type" value={summary.vaccineType === 'nimenrix' ? 'Nimenrix' : 'Menveo'} />
+            <Row label="Vaccine type" value={summary.vaccineType === 'nimenrix' ? 'Nimenrix' : summary.vaccineType === 'menquadfi' ? 'MenQuadfi' : 'Menveo'} />
             <Row label="Batch number" value={summary.batchNumber} />
             <Row label="Expiry date" value={summary.expiryDate} />
             <Row

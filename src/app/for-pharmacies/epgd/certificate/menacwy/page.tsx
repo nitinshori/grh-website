@@ -33,7 +33,7 @@ interface CertData {
   patientLastName: string;
   patientDob: string;
   patientNhsNumber?: string;
-  vaccineType: "nimenrix" | "menveo" | "";
+  vaccineType: "nimenrix" | "menquadfi" | "menveo" | "";
   batchNumber: string;
   expiryDate: string;
   administrationSite: string;
@@ -46,8 +46,9 @@ interface CertData {
 }
 
 const VACCINE_LABEL: Record<string, string> = {
-  nimenrix: "Nimenrix (GlaxoSmithKline)",
-  menveo: "Menveo (Sanofi)",
+  nimenrix: "Nimenrix (Pfizer)",
+  menquadfi: "MenQuadfi (Sanofi)",
+  menveo: "Menveo (GlaxoSmithKline)",
 };
 
 const SITE_LABEL: Record<string, string> = {

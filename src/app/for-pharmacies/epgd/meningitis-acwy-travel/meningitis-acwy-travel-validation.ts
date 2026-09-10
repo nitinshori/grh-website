@@ -11,9 +11,8 @@ export function validateMeningitisACWYPatientStep(
   if (!patient.lastName.trim()) return 'Patient last name is required';
   if (!patient.dateOfBirth) return 'Date of birth is required';
   if (patient.age === null) return 'Unable to calculate age';
-  if (patient.age < 0.25) {
-    // Less than 3 months
-    return 'Patient must be at least 6 weeks old (Nimenrix minimum age)';
+  if (patient.age < 6 / 52) {
+    return 'Patient must be at least 6 weeks old (Nimenrix minimum age; MenQuadfi from 12 months, Menveo from 2 years)';
   }
   return null;
 }
@@ -66,10 +65,27 @@ export function validateMeningitisACWYContraindicationsStep(data: {
   return null;
 }
 
+/**
+ * Licensed minimum age per product, in years. PGD v004: Nimenrix from 6
+ * weeks, MenQuadfi from 12 months, Menveo from 2 years. Age below the licensed
+ * minimum for the product held is an exclusion, so the tool refuses the
+ * product rather than letting the pharmacist pick whatever is in the fridge.
+ */
+export const MENACWY_MIN_AGE_YEARS: Record<string, { years: number; label: string }> = {
+  nimenrix: { years: 6 / 52, label: '6 weeks' },
+  menquadfi: { years: 1, label: '12 months' },
+  menveo: { years: 2, label: '2 years' },
+};
+
 export function validateMeningitisACWYAdministrationStep(
-  summary: Partial<MeningitisACWYSummary>
+  summary: Partial<MeningitisACWYSummary>,
+  ageYears: number | null = null
 ): string | null {
   if (!summary.vaccineType) return 'Vaccine type must be selected';
+  const min = MENACWY_MIN_AGE_YEARS[summary.vaccineType];
+  if (min && ageYears !== null && ageYears < min.years) {
+    return `${summary.vaccineType === 'menquadfi' ? 'MenQuadfi' : summary.vaccineType === 'menveo' ? 'Menveo' : 'Nimenrix'} is licensed from ${min.label}; this patient is younger. Choose a product licensed for this age (Nimenrix from 6 weeks) or do not vaccinate under this PGD.`;
+  }
   if (!summary.batchNumber?.trim()) return 'Batch number is required';
   if (!summary.expiryDate) return 'Expiry date is required';
   if (!summary.administrationSite) return 'Administration site must be selected';

@@ -37,7 +37,7 @@ export function getMeningitisACWYClinicalAlerts(
     });
   }
 
-  if (medicalHistory.severeFebrilleIllness && patient.age !== null && patient.age >= 18) {
+  if (medicalHistory.severeFebrilleIllness) {
     alerts.push({
       severity: 'stop',
       code: 'SEVERE_FEBRILE_ILLNESS',
@@ -123,15 +123,23 @@ export function getMeningitisACWYDoseRecommendation(
 ): string {
   if (patient.age === null) return 'Age required to determine dose';
 
+  if (patient.age < 6 / 52) {
+    return 'Below 6 weeks: no MenACWY product is licensed. Do not vaccinate under this PGD.';
+  }
+
   if (patient.age < 0.5) {
-    return 'Nimenrix: Not approved below 6 weeks';
+    return 'Nimenrix only (6 weeks to under 6 months): two 0.5 mL doses at least 2 months apart, with a booster at 12 months of age if the course was completed before 12 months.';
+  }
+
+  if (patient.age < 1) {
+    return 'Nimenrix only (6 to 11 months): two 0.5 mL doses at least 2 months apart, the second given in the second year of life.';
   }
 
   if (patient.age < 2) {
-    return 'Nimenrix: 0.5 mL IM single dose (conjugate vaccine approved from 6 weeks)';
+    return 'Nimenrix or MenQuadfi (12 months to under 2 years): a single 0.5 mL dose. Menveo is not licensed below 2 years.';
   }
 
-  return 'Either vaccine: 0.5 mL IM single dose (Nimenrix or Menveo approved from 2 years and above)';
+  return 'Nimenrix, MenQuadfi or Menveo (2 years and over, including adults): a single 0.5 mL dose.';
 }
 
 export function determineTravelRiskCategory(
@@ -166,14 +174,21 @@ export function getAdministrationGuidance(
     { vaccineName: string; route: string; site: string; guidance: string }
   > = {
     nimenrix: {
-      vaccineName: 'Nimenrix (GSK)',
+      vaccineName: 'Nimenrix (Pfizer), licensed from 6 weeks',
       route: 'Intramuscular',
       site: 'Deltoid muscle (preferred), anterolateral thigh (infants)',
       guidance:
         'Single 0.5 mL dose. Reconstitute with provided diluent. Use within 1 hour. Mark batch, expiry, site on patient record.',
     },
+    menquadfi: {
+      vaccineName: 'MenQuadfi (Sanofi), licensed from 12 months',
+      route: 'Intramuscular',
+      site: 'Deltoid muscle (adults and children), anterolateral thigh (young children)',
+      guidance:
+        'Single 0.5 mL dose from a single-dose vial or pre-filled syringe. No reconstitution. Record batch, expiry and site.',
+    },
     menveo: {
-      vaccineName: 'Menveo (Sanofi)',
+      vaccineName: 'Menveo (GSK), licensed from 2 years',
       route: 'Intramuscular',
       site: 'Deltoid muscle (adults/older children), anterolateral thigh (young children)',
       guidance:

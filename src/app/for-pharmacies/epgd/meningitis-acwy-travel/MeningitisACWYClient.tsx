@@ -205,8 +205,8 @@ export function MeningitisACWYClient() {
   }, [consent]);
 
   const administrationValidationError = useMemo(() => {
-    return validateMeningitisACWYAdministrationStep(summary);
-  }, [summary]);
+    return validateMeningitisACWYAdministrationStep(summary, patientDetails.age);
+  }, [summary, patientDetails.age]);
 
   const summaryValidationError = useMemo(() => {
     return validateMeningitisACWYSummaryStep(summary);
@@ -692,12 +692,13 @@ export function MeningitisACWYClient() {
               onChange={(v) =>
                 setSummary({
                   ...summary,
-                  vaccineType: v as 'nimenrix' | 'menveo' | '',
+                  vaccineType: v as 'nimenrix' | 'menquadfi' | 'menveo' | '',
                 })
               }
               options={[
-                { value: 'nimenrix', label: 'Nimenrix (GSK)' },
-                { value: 'menveo', label: 'Menveo (Sanofi)' },
+                { value: 'nimenrix', label: 'Nimenrix (Pfizer), licensed from 6 weeks' },
+                { value: 'menquadfi', label: 'MenQuadfi (Sanofi), licensed from 12 months' },
+                { value: 'menveo', label: 'Menveo (GSK), licensed from 2 years' },
               ]}
               required
             />

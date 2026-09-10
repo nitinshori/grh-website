@@ -116,20 +116,21 @@ export function VaccineSafetyChecks({ slug }: { slug: string }) {
         Pre-vaccination safety checks
       </p>
       <p className="mt-1 text-xs text-red-900">
-        Required by every vaccination PGD in this estate. You cannot proceed
-        until adrenaline is confirmed available.
+        Required by every vaccination PGD in this estate. Tick the box below to
+        confirm adrenaline is on site: the Next button stays locked until you do.
       </p>
 
-      <label className="mt-3 flex items-start gap-2 text-sm text-red-900">
+      <label className="mt-3 flex items-start gap-3 rounded-md border-2 border-red-500 bg-white p-3 text-sm text-red-900 print:border-gray-400">
         <input
           type="checkbox"
-          className="mt-0.5"
+          className="mt-0.5 h-5 w-5 shrink-0 accent-red-600"
           checked={state.adrenalineAvailable}
           onChange={(e) => set("adrenalineAvailable", e.target.checked)}
         />
         <span>
+          <strong className="uppercase">Tick to confirm: </strong>
           <strong>
-            Adrenaline (epinephrine) 1 in 1,000 is immediately available in this
+            adrenaline (epinephrine) 1 in 1,000 is immediately available in this
             room, in date
           </strong>
           , with a written anaphylaxis protocol and a telephone, and I am

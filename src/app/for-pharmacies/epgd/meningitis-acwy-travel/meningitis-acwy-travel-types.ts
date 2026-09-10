@@ -28,7 +28,7 @@ export interface MeningitisACWYConsent extends BaseConsent {
 }
 
 export interface MeningitisACWYSummary extends BaseSummary {
-  vaccineType: 'nimenrix' | 'menveo' | '';
+  vaccineType: 'nimenrix' | 'menquadfi' | 'menveo' | '';
   batchNumber: string;
   expiryDate: string;
   administrationSite: 'left-deltoid' | 'right-deltoid' | '';
