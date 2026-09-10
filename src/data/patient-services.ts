@@ -253,7 +253,6 @@ export const patientCategories: PatientCategory[] = [
     textColor: "text-rose-700",
     popularServices: [
       "Impetigo treatment",
-      "Paediatric UTI treatment",
     ],
     whyPharmacy:
       "Parents know how stressful it is when your child is unwell. Your pharmacy can often see and treat children the same day.",

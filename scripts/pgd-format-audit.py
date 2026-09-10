@@ -117,6 +117,23 @@ BACK_MATTER = re.compile(
     r"change history|version and change record|previous versions)", re.I
 )
 
+def has_validity(text):
+    """Three shapes state a period of validity in this estate: the generator
+    and reissue blocks ("Valid from date / 9 September 2026 / Expiry date /
+    31 July 2027"), the round-1 change record sentence, and the original
+    HubRx tables where the cells extract as bare dd/mm/yy dates. Empty column
+    headings are none of these."""
+    if re.search(r"Valid from date\s*\n\s*\d{1,2} \w+ \d{4}\s*\n\s*Expiry date\s*\n\s*\d{1,2} \w+ \d{4}", text):
+        return True
+    if re.search(r"Valid from:?\s*\d{1,2} \w+ \d{4}\.?\s*Expiry:?\s*\d{1,2} \w+ \d{4}", text):
+        return True
+    short = set(re.findall(r"\b\d{1,2}/\d{1,2}/\d{2}\b", text))
+    expiry = {d for d in short if d.startswith("31/")}
+    return bool(expiry) and len(short - expiry) >= 1
+
+
+LAPSING = re.compile(r"31/10/26|31 October 2026")
+
 STATUS_BANNER = re.compile(
     r"^\s*(SUPPLY PAUSED|PARTIAL SUSPENSION|WITHDRAWN|SUSPENDED|"
     r"NOT IN USE|REBUILDING)\b", re.I | re.M
@@ -243,6 +260,17 @@ def audit(slug, fn):
             sigs = max(sigs, n)
     if sigs < 2:
         r["fail"].append(f"NOT SIGNED: {sigs} signature image(s), needs both")
+
+    # VALIDITY. A PGD must state the period for which it has effect (Human
+    # Medicines Regulations 2012, Schedule 16). The review of 10 September
+    # found thirteen live documents with no valid-from or expiry date anywhere
+    # and thirteen more that would lapse on 31 October 2026. Accept either the
+    # reissue sentence or a dated pair of cells; empty column headings are not
+    # dates.
+    if not has_validity(whole):
+        r["fail"].append("NO VALIDITY PERIOD stated")
+    elif LAPSING.search(whole) and "31 July 2027" not in whole and "31/7/27" not in whole:
+        r["fail"].append("expires 31 October 2026")
 
     # Version consistency.
     fv, tv = version_in_filename(fn), version_in_text(front)

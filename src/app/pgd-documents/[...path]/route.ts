@@ -47,9 +47,18 @@ const RETIRED_DOCUMENTS: Record<string, string> = {
   'rabies 2.pdf': 'rabies',
   'shingles-treatment.pdf': 'shingles-treatment',
   'shingles-treatment 2.pdf': 'shingles-treatment',
-  // v002 21 Aug 2026: upper UTI removed from scope
-  'paediatric-uti.pdf': 'paediatric-uti',
-  'paediatric-uti 2.pdf': 'paediatric-uti',
+}
+
+// A retired filename that is not in the table above is resolved by shape.
+// Every published filename is <slug>.pdf, <slug> 2.pdf (the branded copy),
+// <slug>-vNNN.pdf, or <slug>-vNNN-superseded.pdf, and this month alone
+// retired forty of them. A bookmarked eczema-v003.pdf should land on the
+// current eczema, not on a 404, without anyone remembering to add a line
+// here. A slug that no longer exists in the manifest still returns 404,
+// which is right: the service is gone, not renamed.
+function slugFromFilename(name: string): string | undefined {
+  const m = /^([a-z0-9]+(?:-[a-z0-9]+)*?)(?: 2)?(?:-v\d{3})?(?:-superseded)?\.pdf$/.exec(name)
+  return m ? m[1] : undefined
 }
 
 export async function GET(
@@ -59,7 +68,7 @@ export async function GET(
   const { path } = await params
   const requested = decodeURIComponent(path.join('/'))
 
-  const slug = RETIRED_DOCUMENTS[requested]
+  const slug = RETIRED_DOCUMENTS[requested] ?? slugFromFilename(requested)
   if (slug) {
     const current = PGD_MASTER_FILES[slug]
     if (current) {
