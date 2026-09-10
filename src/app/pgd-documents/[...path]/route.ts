@@ -56,9 +56,21 @@ const RETIRED_DOCUMENTS: Record<string, string> = {
 // current eczema, not on a 404, without anyone remembering to add a line
 // here. A slug that no longer exists in the manifest still returns 404,
 // which is right: the service is gone, not renamed.
+//
+// Three filename stems are not the slug they serve: the season-stamped flu
+// and COVID files, and the B12 document that serves two slugs. Without this
+// table every retired b12-folate-vNNN.pdf, covid-2026-27-vNNN.pdf and
+// flu-2026-27-vNNN.pdf link was a 404 (found 11 Sep 2026).
+const STEM_TO_SLUG: Record<string, string> = {
+  'flu-2026-27': 'flu',
+  'covid-2026-27': 'covid-booster',
+  'b12-folate': 'b12-injection',
+}
+
 function slugFromFilename(name: string): string | undefined {
   const m = /^([a-z0-9]+(?:-[a-z0-9]+)*?)(?: 2)?(?:-v\d{3})?(?:-superseded)?\.pdf$/.exec(name)
-  return m ? m[1] : undefined
+  if (!m) return undefined
+  return STEM_TO_SLUG[m[1]] ?? m[1]
 }
 
 export async function GET(
