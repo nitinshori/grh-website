@@ -7,7 +7,7 @@ const BASE_URL = "https://getrealhealthpgd.co.uk";
 export const metadata: Metadata = {
   title: "PGD Catalogue — 60+ Services for UK Pharmacies",
   description:
-    "60+ PGDs for UK community pharmacies: weight management (Wegovy, Mounjaro, Saxenda), travel vaccines, HRT, TRT, ED, hair loss, contraception, UTIs and more. All included in the £100/month flat fee.",
+    "60+ PGDs for UK community pharmacies: weight management (Wegovy, Mounjaro, Saxenda), travel vaccines, ED, hair loss, contraception, UTI and more. All included in the £100/month flat fee.",
   alternates: { canonical: `${BASE_URL}/for-pharmacies/pgd-catalogue` },
 };
 
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 const faqs = [
   {
     q: "What PGD services does Get Real Health provide?",
-    a: "60+ PGDs across weight management (Wegovy, Mounjaro, Saxenda, Mysimba, Orlistat), hormone therapy (HRT, TRT), travel vaccines (yellow fever, rabies, Japanese encephalitis, anti-malarials), sexual health (ED, contraception, emergency contraception, STI testing, BV, thrush, gonorrhoea, herpes management), respiratory (asthma rescue, COPD, hayfever), dermatology (acne, eczema, rosacea, impetigo, cold sores), CVD (statins, hypertension), paediatric UTI, smoking cessation, dental bridging, alopecia treatment, and many more.",
+    a: "60+ PGDs across weight management (Wegovy, Mounjaro, Saxenda, Mysimba, Orlistat), travel vaccines (yellow fever, rabies, Japanese encephalitis, anti-malarials), sexual health (ED, contraception, emergency contraception, STI testing, BV, thrush, gonorrhoea, herpes management), respiratory (asthma rescue, COPD, hayfever), dermatology (acne, eczema, rosacea, impetigo, cold sores), smoking cessation, dental bridging, alopecia treatment, and many more.",
   },
   {
     q: "Are weight-loss PGDs like Wegovy and Mounjaro included?",
@@ -31,8 +31,8 @@ const faqs = [
     a: "ED treatment, contraception (including emergency and postnatal), STI testing, gonorrhoea treatment, herpes management, premature ejaculation, BV, thrush, and HPV vaccination. PrEP for HIV prevention is on the roadmap.",
   },
   {
-    q: "Are HRT and TRT included?",
-    a: "Yes. HRT (including testosterone for women), TRT (testosterone replacement for men), and BPH (benign prostatic hyperplasia) are included PGDs. Dr Nitin Shori is the named clinician on every one — he helped build large-scale online TRT prescribing at Pharmacy2U.",
+    q: "Is BPH included?",
+    a: "Yes. Benign prostatic hyperplasia (tamsulosin) is an included PGD. Dr Nitin Shori is the named clinician on every PGD.",
   },
   {
     q: "Who authors the PGDs?",

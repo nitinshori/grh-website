@@ -5,15 +5,13 @@ import { SERVICE_PAGES } from "@/data/service-pages";
 const BASE_URL = "https://getrealhealthpgd.co.uk";
 
 export const metadata: Metadata = {
-  title: "Pharmacy PGD Services | Wegovy, Mounjaro, TRT, HRT, Travel — Get Real Health",
+  title: "Pharmacy PGD Services | Wegovy, Mounjaro, ED, Travel — Get Real Health",
   description:
-    "Headline PGD services for UK community pharmacies — Wegovy, Mounjaro, TRT, HRT, and Travel Vaccinations. PGD, training, electronic consultation tool and clinical governance — all for £100 per pharmacy per month.",
+    "Headline PGD services for UK community pharmacies — Wegovy, Mounjaro, ED, and Travel Vaccinations. PGD, training, electronic consultation tool and clinical governance — all for £100 per pharmacy per month.",
   keywords: [
     "pharmacy PGD services",
     "Wegovy PGD",
     "Mounjaro PGD",
-    "TRT PGD",
-    "HRT PGD",
     "travel vaccination PGD",
     "UK pharmacy private services",
   ],

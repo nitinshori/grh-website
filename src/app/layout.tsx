@@ -28,8 +28,6 @@ export const metadata: Metadata = {
     "Wegovy PGD",
     "Mounjaro PGD",
     "weight management PGD",
-    "TRT PGD",
-    "HRT PGD",
     "travel vaccination PGD",
     "pharmacy private services",
     "pharmacy clinical governance",

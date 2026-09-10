@@ -22,13 +22,11 @@ type FilterOption = "All" | "Exclusives" | PGDCategory;
 // Anything not matched falls through to a popularity sort by the PGD's `priority`
 // field (1 = most popular, 3 = niche).
 //
-// Ordering updated 18 Apr 2026 per Nitin: testosterone, weight, ED and
-// menopause/HRT are the headline services; travel alongside them.
+// Ordering updated 10 Sep 2026: weight, ED and travel are the headline
+// services (HRT and TRT were withdrawn from the platform on 10 Sep 2026).
 const PRIORITY_GROUPS: Array<(p: PGD) => boolean> = [
-  (p) => /Testosterone|\bTRT\b/i.test(p.title),
   (p) => p.category === "Weight Management",
   (p) => /Erectile Dysfunction/i.test(p.title),
-  (p) => /\bHRT\b|Menopaus|Testosterone for Women/i.test(p.title),
   (p) => p.category === "Travel",
   (p) => /Premature Ejaculation/i.test(p.title),
   (p) => /Anxiety/i.test(p.title),

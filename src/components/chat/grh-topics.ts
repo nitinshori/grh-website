@@ -162,8 +162,7 @@ export const TOPICS: Topic[] = [
       "<ul>" +
       "<li><strong>Weight management</strong> — Wegovy, Mounjaro, Saxenda, Mysimba, Orlistat, GLP-1 monitoring</li>" +
       "<li><strong>Travel</strong> — yellow fever, rabies, JE, MenACWY, dengue, anti-malarials, traveller's diarrhoea, altitude, typhoid</li>" +
-      "<li><strong>Hormones</strong> — HRT, TRT, testosterone for women</li>" +
-      "<li><strong>Sexual health</strong> — ED, PE, BPH, contraception, STI testing, PrEP, gonorrhoea, herpes, genital warts</li>" +
+      "<li><strong>Sexual health</strong> — ED, PE, BPH, contraception, STI testing, gonorrhoea, herpes, genital warts</li>" +
       "<li><strong>Vaccines</strong> — flu, COVID, shingles, pneumococcal, HPV, MMR, chickenpox, MenB, RSV, occupational hep B</li>" +
       "<li><strong>Skin</strong> — acne, rosacea, eczema, cold sores, impetigo, wound care, alopecia</li>" +
       "<li><strong>Respiratory / CVD / mental health / paediatric / dental</strong> — full list at <a href=\"/for-pharmacies/pgd-catalogue\">the catalogue</a></li>" +
@@ -235,7 +234,7 @@ export const TOPICS: Topic[] = [
     ],
     answer:
       "<p>Pharmacy First (England) covers <strong>7 conditions</strong>: sore throat, otitis media, sinusitis, infected insect bites, impetigo, shingles, uncomplicated UTI in women. Scotland's is a bit broader. The Welsh Common Ailments Service covers ~26 conditions free-OTC.</p>" +
-      "<p>GRH adds 60+ <strong>private</strong> PGDs on top — Wegovy, Mounjaro, HRT, TRT, ED, travel vaccines, STI testing, and many more. Patients pay for the consultation; you keep all the revenue (no per-consultation fee from us).</p>" +
+      "<p>GRH adds 60+ <strong>private</strong> PGDs on top — Wegovy, Mounjaro, ED, travel vaccines, STI testing, and many more. Patients pay for the consultation; you keep all the revenue (no per-consultation fee from us).</p>" +
       "<p>Side-by-side comparison at <a href=\"/services/comparison\">/services/comparison</a>.</p>",
   },
   {

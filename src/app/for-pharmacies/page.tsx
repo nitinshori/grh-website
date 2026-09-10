@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 
 const features = [
   "A wide and growing PGD catalogue across travel, vaccines, weight management, sexual health and more",
-  "Less common services included \u2014 such as HRT initiation, private PrEP and short-term anxiety symptom support",
+  "Less common services included \u2014 such as period delay, sleep support and short-term anxiety symptom support",
   "Integrated consultation tool \u2014 built in-house, not licensed from a third party",
   "Audit-ready digital consultation records \u2014 exportable, kept indefinitely",
   "PMR-ready architecture \u2014 designed to complement your PMR, not compete with it",

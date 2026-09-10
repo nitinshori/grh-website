@@ -12,7 +12,6 @@ export const metadata: Metadata = {
     "HIW registered pharmacy PGD",
     "private pharmacy services Wales",
     "Wegovy pharmacy Wales",
-    "HRT pharmacy Wales",
     "NHS Wales Common Ailment Service private",
     "Wales pharmacy private services",
   ],
@@ -36,7 +35,7 @@ const faqs = [
   },
   {
     q: "Does private PGD work clash with the NHS Wales Common Ailment Service?",
-    a: "No. They sit alongside each other. Common Ailment Service (or 'Choose Pharmacy') covers a defined list of minor ailments under NHS funding. GRH's 60+ private PGDs cover the services that fall outside CAS — Wegovy, Mounjaro, HRT, TRT, travel vaccines, advanced sexual health, dermatology and more. Our PGDs are explicit about not duplicating NHS-funded work; they pick up where CAS leaves off.",
+    a: "No. They sit alongside each other. Common Ailment Service (or 'Choose Pharmacy') covers a defined list of minor ailments under NHS funding. GRH's 60+ private PGDs cover the services that fall outside CAS — Wegovy, Mounjaro, travel vaccines, advanced sexual health, dermatology and more. Our PGDs are explicit about not duplicating NHS-funded work; they pick up where CAS leaves off.",
   },
   {
     q: "Can I run the service in both Welsh and English?",
@@ -102,7 +101,7 @@ export default function WelshPharmaciesPage() {
           </h1>
           <p className="text-lg md:text-xl text-blue-100 max-w-3xl">
             Get Real Health is registered with Healthcare Inspectorate Wales
-            and the Care Quality Commission. Run a Wegovy clinic, an HRT clinic,
+            and the Care Quality Commission. Run a Wegovy clinic, an ED clinic,
             a travel clinic in Aberystwyth or Aberdare with the same governance
             you&apos;d expect in central London &mdash; and the same flat fee.
           </p>
@@ -182,7 +181,7 @@ export default function WelshPharmaciesPage() {
           </p>
           <p className="text-gray-700 leading-relaxed mb-4">
             GRH&apos;s 60+ private PGDs pick up where CAS leaves off &mdash;
-            Wegovy, Mounjaro, HRT, TRT, travel vaccines, advanced sexual health,
+            Wegovy, Mounjaro, travel vaccines, advanced sexual health,
             dermatology, vaccines that aren&apos;t on Welsh NHS rotas. Our PGDs
             are explicit about not duplicating NHS-funded work. Your CAS revenue
             stays NHS, your private revenue stays yours.
