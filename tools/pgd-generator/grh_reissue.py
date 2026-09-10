@@ -123,7 +123,10 @@ def bump_version(doc, version, prev, date, supersedes):
         t = (p.text or "").strip()
         m = re.match(r"^(Patient Group Direction, version )\d{3}(, issued )[^.]+\.(.*)$", t)
         if m:
-            set_text(p, m.group(1) + version[1:] + m.group(2) + date + "." + m.group(3))
+            tail = m.group(3)
+            if re.match(r"\s*Supersedes ", tail):
+                tail = " Supersedes " + supersedes + "."
+            set_text(p, m.group(1) + version[1:] + m.group(2) + date + "." + tail)
             strap = True
         elif t == prev and not seen:
             set_text(p, version)

@@ -132,7 +132,7 @@ export function getMeningitisACWYDoseRecommendation(
   }
 
   if (patient.age < 1) {
-    return 'Nimenrix only (6 to 11 months): two 0.5 mL doses at least 2 months apart, the second given in the second year of life.';
+    return 'Nimenrix only (6 to 11 months): a single 0.5 mL dose, with a booster at 12 months of age at least 2 months after it (SmPC; PGD v005).';
   }
 
   if (patient.age < 2) {

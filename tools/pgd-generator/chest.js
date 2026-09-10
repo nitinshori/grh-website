@@ -9,8 +9,9 @@ const {build,Packer,fs}=require('./gen.js');
 const ARM_RULE=[
  {text:'ARM 1, DOXYCYCLINE: adults 18 and over. First line.',b:true},
  {text:'ARM 2, AMOXICILLIN: patients aged 12 to 17; pregnant patients of any age; AND adults 18 and over for whom doxycycline is unsuitable and who are NOT penicillin-allergic.',b:true},
- {text:'ARM 3, CLARITHROMYCIN: patients aged 12 and over who are PENICILLIN-ALLERGIC and for whom the first-line agent for their circumstances is unsuitable or unavailable.',b:true},
- {text:'The first-line agent means doxycycline in adults, and amoxicillin at 12 to 17 and in pregnancy. A penicillin allergy makes amoxicillin unsuitable by itself, so a penicillin-allergic 12 to 17 year old goes straight to Arm 3.',b:true},
+ {text:'ARM 3, CLARITHROMYCIN: patients aged 12 and over who are PENICILLIN-ALLERGIC and for whom the first-line agent for their circumstances is unsuitable or unavailable. NOT in pregnancy or breastfeeding.',b:true},
+ {text:'A PREGNANT OR BREASTFEEDING PATIENT WHO IS PENICILLIN-ALLERGIC HAS NO ARM UNDER THIS PGD. Refer the same day: the guidance names erythromycin for that patient, which this PGD does not authorise.',b:true},
+ {text:'The first-line agent means doxycycline in adults, and amoxicillin at 12 to 17 and in pregnancy. A penicillin allergy makes amoxicillin unsuitable by itself, so a penicillin-allergic 12 to 17 year old who is not pregnant goes straight to Arm 3.',b:true},
 ];
 
 const CRB_NOTE=[
@@ -99,19 +100,20 @@ const ACTIONS=['Actions if excluded or declines','Explain why an antibiotic cann
 const d={
  banner:'ISSUED, VALID FROM 9 SEPTEMBER 2026',
  title:'Acute Bacterial Bronchitis (chest service)',
- strap:'Patient Group Direction, version 005, issued 9 September 2026. Three arms: doxycycline, amoxicillin, clarithromycin.',
+ strap:'Patient Group Direction, version 006, issued 10 September 2026. Three arms: doxycycline, amoxicillin, clarithromycin.',
  cover:{action:'supply',drugs:'Doxycycline, Amoxicillin or Clarithromycin',condition:'Acute Bacterial Bronchitis',age:'From age 12 years onwards.'},
  purpose:{
    for:'The supply of an oral antibiotic for acute bacterial bronchitis in a patient aged 12 years or over who has been assessed as needing one, by a registered pharmacist or registered pharmacy technician in a community pharmacy, without a prescription.',
    authorises:[
     'Doxycycline 100mg capsules, first line, in adults aged 18 years and over.',
     'Amoxicillin 500mg capsules, in patients aged 12 to 17, in pregnancy, and in adults where doxycycline is unsuitable.',
-    'Clarithromycin 250mg tablets, in patients aged 12 years and over who are penicillin-allergic and cannot take doxycycline.',
+    'Clarithromycin 250mg or 500mg tablets, in patients aged 12 years and over who are penicillin-allergic and cannot take doxycycline, and who are not pregnant or breastfeeding.',
    ],
    notFor:[
     'Any patient who may have pneumonia, or who scores on the CRB-65 for confusion, respiratory rate or blood pressure. Refer the same day.',
     'Acute cough without signs of bacterial infection. Most acute cough is viral and needs no antibiotic.',
     'Children under 12.',
+    'A pregnant or breastfeeding patient who is penicillin-allergic. No arm of this PGD covers her; refer the same day.',
    ],
   },
 
@@ -262,19 +264,20 @@ const d={
    note:'One rule, stated the same way in the heading, the indication and the inclusion criteria.',
    training:TRAINING,
    pgd:[
-    ['Indication','Acute bacterial bronchitis in patients aged 12 years and over who are PENICILLIN-ALLERGIC and for whom the first-line agent for their circumstances is unsuitable or unavailable. The first-line agent means doxycycline in adults, and amoxicillin at 12 to 17 and in pregnancy; a penicillin allergy makes amoxicillin unsuitable by itself.'],
+    ['Indication','Acute bacterial bronchitis in patients aged 12 years and over who are PENICILLIN-ALLERGIC and for whom the first-line agent for their circumstances is unsuitable or unavailable, and who are not pregnant or breastfeeding. The first-line agent means doxycycline in adults and amoxicillin at 12 to 17; a penicillin allergy makes amoxicillin unsuitable by itself.'],
     ['Which arm applies',ARM_RULE],
     ['Inclusion criteria',[
       {bullet:'Aged 12 years and over.'},
       {bullet:'PENICILLIN-ALLERGIC.',b:true},
-      {bullet:'AND the first-line agent for this patient is unsuitable or unavailable, with the reason recorded. For a patient aged 12 to 17, or a pregnant patient, the penicillin allergy alone satisfies this, because amoxicillin is their first-line agent.',b:true},
+      {bullet:'AND the first-line agent for this patient is unsuitable or unavailable, with the reason recorded. For a patient aged 12 to 17 the penicillin allergy alone satisfies this, because amoxicillin is their first-line agent.',b:true},
+      {bullet:'NOT pregnant and NOT breastfeeding. A pregnant or breastfeeding penicillin-allergic patient is referred; see the exclusion criteria.',b:true},
       ...COMMON_INCLUSION,
     ]],
     ['Exclusion criteria',[
       {text:'Refer, do not supply, where any of the following is present.',b:true},
       ...COMMON_EXCLUSION,
       {bullet:'Under 12 years of age.'},
-      {bullet:'Pregnancy or breastfeeding. Refer.'},
+      {bullet:'Pregnancy or breastfeeding. Refer the same day. Clarithromycin is not supplied in pregnancy under this PGD (SmPC: use only after weighing benefit against risk), and no other arm covers a penicillin-allergic pregnant patient.'},
       {bullet:'Hypersensitivity to macrolides.'},
       {bullet:'KNOWN RENAL IMPAIRMENT with a creatinine clearance below 30 mL/min, or renal impairment of unknown severity where there is reason to suspect it is significant. Refer.',b:true},
       {bullet:'Concurrent ergot alkaloids, oral midazolam, lomitapide, astemizole, cisapride, domperidone, pimozide, terfenadine, ticagrelor, ivabradine, ranolazine, simvastatin or lovastatin.'},
@@ -335,22 +338,24 @@ const d={
   {bullet:'NICE Medicines Practice Guideline 2 (MPG2): Patient Group Directions, https://www.nice.org.uk/guidance/mpg2'},
  ],
 
- version:'v005',
- supersedes:'Version 004, 9 September 2026',
- validFrom:'9 September 2026',
+ version:'v006',
+ supersedes:'Version 005, 9 September 2026',
+ validFrom:'10 September 2026',
  expiry:'31 July 2027',
- sigDate:'9 September 2026',
- chDate:'9 September 2026',
+ sigDate:'10 September 2026',
+ chDate:'10 September 2026',
  changes:[
-  'THE CLARITHROMYCIN 500MG TWICE DAILY DOSE IS RESTORED. Version 001 gave 250mg twice daily, increased to 500mg twice daily in severe infection, which is the SPC dose and within the NICE NG120 range of 250mg to 500mg twice a day. The September rewrites carried 250mg only, and the consultation tool was then cut down to match the document. Both now offer 250mg or 500mg twice daily for 5 days, with the quantity stated for each. Raised by the Medical Director.',
-  'The document is rebuilt in the house template: cover page, guidance summary, then one complete PGD per medicine each with its own staff and training, PGD table, medicine table, patient information, key references, agreement to practise, employer adoption, and the signatures of the Medical Director and Head Pharmacist as images.',
+  'ARM 3 (CLARITHROMYCIN) NO LONGER ADMITS A PREGNANT PATIENT. Version 005 said in its inclusion criteria that for a pregnant penicillin-allergic patient the allergy alone qualified her for clarithromycin, while its exclusion criteria referred her. Read inclusion-first that supplied clarithromycin in pregnancy, which the SmPC says should only be done after weighing benefit against risk. The inclusion now requires not pregnant and not breastfeeding, the cover states that a pregnant penicillin-allergic patient has no arm under this PGD and is referred the same day, and the exclusion says why. Found by the clinical review of 10 September 2026.',
+  'Cover: the clarithromycin line now states both strengths, 250mg and 500mg, matching the arm.',
  ],
  prior:[
+  ['005, 9 September 2026','Clarithromycin 500mg twice daily restored alongside 250mg; document rebuilt in the house template with both signatures as images.'],
   ['004, 9 September 2026','Restored the guidance summary as part 2. Resolved the age 65 contradiction: the CRB-65 age point is not applied and an explicit lower referral threshold over 65 is stated instead. Arm 2 extended to adults for whom doxycycline is unsuitable. Isotretinoin interaction and renal referral restored to the doxycycline arm.'],
   ['003, 9 September 2026','See the change history of that version. Superseded the same day by v004, which restores the guidance summary section.'],
   ['002, 7 September 2026','Full clinical review and reissue. Restructured into three arms with observation thresholds and a CRB-65 gate. Introduced the contradictions corrected in 003.'],
   ['001, earlier 2026','Development and issue of new PGD.'],
  ],
 };
+
 
 Packer.toBuffer(build(d)).then(b=>{fs.writeFileSync('chest-'+d.version+'-SIGNED.docx',b);console.log('chest '+d.version+' docx bytes',b.length);});
