@@ -13,6 +13,7 @@ export interface ThrushAssessment {
   vulvalUlcers: boolean; // vulval ulcers, sores or blisters
   systemicUpset: boolean;
   recurrentEpisodes: number | null;
+  exclusionsAsked: boolean; // pharmacist attests every symptom exclusion above was asked
 }
 
 export interface ThrushMedicalHistory {
@@ -35,6 +36,7 @@ export interface ThrushMedicalHistory {
   mildModerateRenal: boolean; // fluconazole caution
   qtHistory: boolean; // QT prolongation or cardiac arrhythmias: fluconazole exclusion
   cannotRetainPessary: boolean; // abnormal anatomy, severe prolapse: pessary caution
+  exclusionsAsked: boolean; // pharmacist attests every exclusion and caution above was asked and recorded
 }
 
 export interface ThrushMedications {
@@ -53,7 +55,7 @@ export interface ThrushMedicineSelection {
   medicineChoice: ThrushMedicineChoice;
   dose: string;
   frequency: string;
-  combiPack: boolean; // set by the combi/duo wrapper pages: pack also contains clotrimazole 1% cream
+  brand: string; // records row: name and brand of medication
   abilityConfirmed: boolean; // pessary arm inclusion: able to insert pessary intravaginally
 }
 
@@ -63,11 +65,11 @@ export interface ThrushCounselling {
   cottonUnderwear: boolean;
   completesTreatment: boolean;
   timelineToRelief: boolean;
-  sexualContacts: boolean;
   recurrenceAdvice: boolean;
   avoidIntercourse: boolean; // at least 5 days after treatment; pessary may damage condoms and diaphragms
   insertWithFingers: boolean; // pessary: fingers rather than applicator
   yellowCardAdvice: boolean;
+  pilSupplied: boolean; // written information row: PIL supplied with the medication
 }
 
 export const PGD_VERSION_LABEL =
@@ -109,11 +111,11 @@ export function createInitialConsultationState(): ThrushConsultationState {
     currentStep: 0,
     patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", gpAddress: "", gpPhone: "", gpEmail: "", gpOdsCode: "", nhsNumber: "", address: "", phone: "", email: "" },
     consent: { informedConsentGiven: false, idVerified: false, idType: "", patientAwarePrivateService: false },
-    assessment: { vulvalItching: false, vulvalSoreness: false, thickWhiteDischarge: false, dysuria: false, dyspareunia: false, bloodStainedDischarge: false, offensiveSmell: false, fever: false, pelvicPain: false, vulvalUlcers: false, systemicUpset: false, recurrentEpisodes: null },
-    medicalHistory: { femaleConfirmed: false, diabetes: false, diabetesPoorlyControlled: false, pregnancy: false, breastfeeding: false, immunocompromised: false, ageUnder16: false, ageOver60: false, firstEpisode: false, recurrentThrush: false, stiExposure: false, azoleHypersensitivity: false, imidazoleHypersensitivity: false, severeHepatic: false, severeRenal: false, mildModerateHepatic: false, mildModerateRenal: false, qtHistory: false, cannotRetainPessary: false },
+    assessment: { vulvalItching: false, vulvalSoreness: false, thickWhiteDischarge: false, dysuria: false, dyspareunia: false, bloodStainedDischarge: false, offensiveSmell: false, fever: false, pelvicPain: false, vulvalUlcers: false, systemicUpset: false, recurrentEpisodes: null, exclusionsAsked: false },
+    medicalHistory: { femaleConfirmed: false, diabetes: false, diabetesPoorlyControlled: false, pregnancy: false, breastfeeding: false, immunocompromised: false, ageUnder16: false, ageOver60: false, firstEpisode: false, recurrentThrush: false, stiExposure: false, azoleHypersensitivity: false, imidazoleHypersensitivity: false, severeHepatic: false, severeRenal: false, mildModerateHepatic: false, mildModerateRenal: false, qtHistory: false, cannotRetainPessary: false, exclusionsAsked: false },
     medications: { warfarin: false, qtDrugs: false, statins: false, phenytoin: false, rifampicin: false, otherMedications: "", allergies: "" },
-    medicineSelection: { medicineChoice: "", dose: "", frequency: "", combiPack: false, abilityConfirmed: false },
-    counselling: { typicalSymptoms: false, avoidPerfumedProducts: false, cottonUnderwear: false, completesTreatment: false, timelineToRelief: false, sexualContacts: false, recurrenceAdvice: false, avoidIntercourse: false, insertWithFingers: false, yellowCardAdvice: false },
+    medicineSelection: { medicineChoice: "", dose: "", frequency: "", brand: "", abilityConfirmed: false },
+    counselling: { typicalSymptoms: false, avoidPerfumedProducts: false, cottonUnderwear: false, completesTreatment: false, timelineToRelief: false, recurrenceAdvice: false, avoidIntercourse: false, insertWithFingers: false, yellowCardAdvice: false, pilSupplied: false },
     summary: { pharmacistName: "", pharmacistGPhC: "", pharmacyName: "", pharmacyAddress: "", consultationDate: new Date().toISOString().split("T")[0], consultationTime: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }), clinicalNotes: "" },
     alerts: [],
     doseRecommendation: null,

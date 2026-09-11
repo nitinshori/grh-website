@@ -24,6 +24,30 @@ export interface EczemaConsent extends BaseConsent {
 
 export type TreatedArea = "" | "up-to-2-palms" | "2-to-5-palms" | "5-to-10-palms" | "over-10-palms";
 
+/** Structured site list. The thin-skin gate and the eyelid exclusion are
+ *  derived from it, not from a free-text box and a separate tick. */
+export const SITE_OPTIONS: { value: string; label: string; thinSkin?: boolean; eyelids?: boolean }[] = [
+  { value: "face", label: "Face (thin skin)", thinSkin: true },
+  { value: "eyelids", label: "Eyelids (excluded from both arms)", eyelids: true },
+  { value: "neck", label: "Neck" },
+  { value: "flexures", label: "Flexures: elbow creases, behind the knees, armpits, groin folds (thin skin)", thinSkin: true },
+  { value: "genital", label: "Genital skin (thin skin)", thinSkin: true },
+  { value: "trunk", label: "Trunk" },
+  { value: "arms", label: "Arms" },
+  { value: "legs", label: "Legs" },
+  { value: "hands", label: "Hands" },
+  { value: "feet", label: "Feet" },
+  { value: "scalp", label: "Scalp" },
+  { value: "other", label: "Other (describe below)" },
+];
+
+export function isThinSkinSite(sites: string[]): boolean {
+  return sites.some((s) => SITE_OPTIONS.find((o) => o.value === s)?.thinSkin);
+}
+export function isEyelidSite(sites: string[]): boolean {
+  return sites.some((s) => SITE_OPTIONS.find((o) => o.value === s)?.eyelids);
+}
+
 export interface EczemaAssessment {
   severity: "mild" | "moderate" | "severe" | "";
   isDry: boolean;
@@ -31,10 +55,13 @@ export interface EczemaAssessment {
   isThickened: boolean;
   isCracked: boolean;
   isOozing: boolean;
+  /** Sites treated, from SITE_OPTIONS. */
+  sites: string[];
+  /** Free-text detail of the site (optional). */
   affectedSite: string;
-  /** Face, flexures or genital skin involved (thin skin: Arm 1 only, 7 day cap). */
+  /** Face, flexures or genital skin involved (thin skin: Arm 1 only, 7 day cap). Derived from sites. */
   thinSkinSite: boolean;
-  /** Eyelid involvement: excluded from both arms. */
+  /** Eyelid involvement: excluded from both arms. Derived from sites. */
   eyelids: boolean;
   /** Treated area in adult palms (one fingertip unit covers about two palms). */
   treatedArea: TreatedArea;
@@ -45,6 +72,10 @@ export interface EczemaMedicalHistory {
   allergies: string;
   /** Courses of topical corticosteroid supplied in the last 12 months. */
   coursesLast12Months: "" | "0" | "1" | "2" | "3-or-more";
+  /** Three or more courses: has the GP reviewed the patient since the last course? */
+  gpReviewSinceLastCourse: boolean;
+  /** When the last course ended (optional; used for the 4 week continuous ceiling). */
+  lastCourseEndDate: string;
   currentlyUsingTopicalSteroid: boolean;
   productHypersensitivity: boolean;
   pregnantOrBreastfeeding: boolean;
@@ -54,11 +85,18 @@ export interface EczemaMedicalHistory {
 export interface EczemaContraindications {
   bacterialInfection: boolean; // signs of secondary bacterial infection (weeping, crusting, sudden worsening)
   concurrentAntibioticSupplied: boolean; // mild, localised, treated at this visit under the Skin and Soft Tissue Infection PGD
+  /** Separate confirmation that the infection is MILD and LOCALISED (not widespread, no infection PGD red flag). */
+  concurrentInfectionMildLocalised: boolean;
+  /** The concurrent antibiotic, recorded here so that both supplies are in this one record. */
+  concurrentAntibioticName: string;
+  concurrentAntibioticDose: string;
+  concurrentAntibioticQuantity: string;
+  concurrentAntibioticBatch: string;
+  concurrentAntibioticExpiry: string;
+  concurrentConsultationRef: string;
   viralInfection: boolean; // suspected eczema herpeticum: emergency
   fungalInfection: boolean; // untreated fungal infection or a rash that might be tinea
   ulceratedOrOpenWound: boolean;
-  faceOrGroin: boolean; // retained: mirrors assessment.thinSkinSite for older records
-  childUnder1: boolean; // retained for older records; the PGD starts at 12
   rosaceaOrAcne: boolean; // rosacea, perioral dermatitis or acne
 }
 
@@ -85,9 +123,10 @@ export interface EczemaCounselling {
 }
 
 export interface EczemaConsultationSummary extends BaseSummary {
-  severity: string;
-  medicineRecommended: string;
-  counsellingPoints: string[];
+  /** Advice given where the patient is excluded or declines (document record item). */
+  exclusionAdvice: string;
+  /** Details of any adverse drug reactions and the actions taken (Yellow Card). */
+  adverseReactions: string;
 }
 
 export interface EczemaConsultationState {
@@ -178,6 +217,7 @@ export function createInitialConsultationState(): EczemaConsultationState {
       isThickened: false,
       isCracked: false,
       isOozing: false,
+      sites: [],
       affectedSite: "",
       thinSkinSite: false,
       eyelids: false,
@@ -187,6 +227,8 @@ export function createInitialConsultationState(): EczemaConsultationState {
       previousTreatments: "",
       allergies: "",
       coursesLast12Months: "",
+      gpReviewSinceLastCourse: false,
+      lastCourseEndDate: "",
       currentlyUsingTopicalSteroid: false,
       productHypersensitivity: false,
       pregnantOrBreastfeeding: false,
@@ -195,11 +237,16 @@ export function createInitialConsultationState(): EczemaConsultationState {
     contraindications: {
       bacterialInfection: false,
       concurrentAntibioticSupplied: false,
+      concurrentInfectionMildLocalised: false,
+      concurrentAntibioticName: "",
+      concurrentAntibioticDose: "",
+      concurrentAntibioticQuantity: "",
+      concurrentAntibioticBatch: "",
+      concurrentAntibioticExpiry: "",
+      concurrentConsultationRef: "",
       viralInfection: false,
       fungalInfection: false,
       ulceratedOrOpenWound: false,
-      faceOrGroin: false,
-      childUnder1: false,
       rosaceaOrAcne: false,
     },
     medicineSelection: {
@@ -233,9 +280,8 @@ export function createInitialConsultationState(): EczemaConsultationState {
         minute: "2-digit",
       }),
       clinicalNotes: "",
-      severity: "",
-      medicineRecommended: "",
-      counsellingPoints: [],
+      exclusionAdvice: "",
+      adverseReactions: "",
     },
     currentStep: 0,
     alerts: [],

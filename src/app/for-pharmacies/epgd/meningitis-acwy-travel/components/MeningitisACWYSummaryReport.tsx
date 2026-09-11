@@ -41,7 +41,10 @@ interface MeningitisACWYSummaryReportProps {
   clinicalAlerts: ClinicalAlert[];
   postVaccineAdvice: MeningitisACWYPostVaccineAdvice;
   pgdVersion?: string;
-  onBack: () => void;
+  /** Standalone use: back button and print footer. */
+  onBack?: () => void;
+  /** Rendered inside the summary step, where StepWrapper owns Save & Print. */
+  embedded?: boolean;
 }
 
 export default function MeningitisACWYSummaryReport({
@@ -53,8 +56,10 @@ export default function MeningitisACWYSummaryReport({
   postVaccineAdvice,
   pgdVersion,
   onBack,
+  embedded = false,
 }: MeningitisACWYSummaryReportProps) {
   const underSixteen = patientDetails.age !== null && patientDetails.age < 16;
+  const stopped = clinicalAlerts.some((a) => a.severity === 'stop');
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
       {/* Header with print styles */}
@@ -73,8 +78,9 @@ export default function MeningitisACWYSummaryReport({
             <Row label="Date of Birth" value={patientDetails.dateOfBirth} />
             <Row label="Age" value={patientDetails.age !== null ? `${patientDetails.age} years` : 'N/A'} />
             <Row label="NHS Number" value={patientDetails.nhsNumber || 'Not provided'} />
+            <Row label="Address" value={patientDetails.address || 'Not provided'} />
             <Row label="GP Name" value={patientDetails.gpName || 'Not provided'} />
-            <Row label="GP Practice" value={patientDetails.gpPractice || 'Not provided'} />
+            <Row label="GP Practice" value={[patientDetails.gpPractice, patientDetails.gpAddress].filter(Boolean).join(', ') || 'Not provided'} />
             {underSixteen && (
               <Row
                 label="Under 16 consent basis"
@@ -135,10 +141,21 @@ export default function MeningitisACWYSummaryReport({
         </div>
 
         {/* Vaccine Administration */}
+        {stopped ? (
+          <div>
+            <SectionHeader>Vaccine Administration</SectionHeader>
+            <div className="p-3 rounded-lg border border-red-300 bg-red-50 text-sm">
+              <p className="font-semibold text-red-900">Outcome: NOT SUPPLIED. Exclusion criteria met; no vaccine administered.</p>
+              <p className="text-red-800 text-xs mt-1">
+                {clinicalAlerts.filter((a) => a.severity === 'stop').map((a) => a.message).join('; ')}
+              </p>
+            </div>
+          </div>
+        ) : (
         <div>
           <SectionHeader>Vaccine Administration</SectionHeader>
           <div className="space-y-1.5">
-            <Row label="Vaccine type" value={summary.vaccineType === 'nimenrix' ? 'Nimenrix' : summary.vaccineType === 'menquadfi' ? 'MenQuadfi' : 'Menveo'} />
+            <Row label="Vaccine type" value={summary.vaccineType === 'nimenrix' ? 'Nimenrix' : summary.vaccineType === 'menquadfi' ? 'MenQuadfi' : summary.vaccineType === 'menveo' ? 'Menveo' : 'Not recorded'} />
             <Row label="Batch number" value={summary.batchNumber} />
             <Row label="Expiry date" value={summary.expiryDate} />
             <Row label="Dose and route" value="0.5 mL intramuscular" />
@@ -153,6 +170,7 @@ export default function MeningitisACWYSummaryReport({
             <Row label="Administered under PGD" value={pgdVersion ? `Yes, ${pgdVersion}` : 'Yes'} />
           </div>
         </div>
+        )}
 
         {/* Patient Counselling */}
         <div>
@@ -205,7 +223,8 @@ export default function MeningitisACWYSummaryReport({
         <ReportFooter pgdName="Meningitis ACWY Travel" />
       </div>
 
-      {/* Back button */}
+      {/* Back button (standalone use only) */}
+      {!embedded && (
       <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/30 flex items-center justify-between print:hidden">
         <button
           onClick={onBack}
@@ -220,6 +239,7 @@ export default function MeningitisACWYSummaryReport({
           Print Consultation Record
         </button>
       </div>
+      )}
     </div>
   );
 }

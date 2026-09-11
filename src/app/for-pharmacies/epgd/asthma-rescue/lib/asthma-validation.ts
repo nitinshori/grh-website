@@ -33,11 +33,14 @@ export function validateStep(state: AsthmaConsultationState, step: number): stri
       if (a.diagnosisEvidence === "none") {
         return "Previous inhaler use on its own is not confirmation of diagnosis: refer for assessment";
       }
-      if (!a.normallyUsesSABA) {
-        return "Please confirm patient normally uses SABA";
+      if (!a.onPreventer) {
+        return "Current preventer therapy must be asked about and recorded: a patient with no preventer is referred to the GP, do not supply";
       }
       if (a.rescueCoursesLast12Months === null) {
-        return "Record the number of rescue courses in the last 12 months";
+        return "Record the number of rescue courses in the last 12 months (any source)";
+      }
+      if (a.pgdRescueCoursesLast12Months === null) {
+        return "Record the number of rescue courses supplied under this PGD in the last 12 months";
       }
       if (!a.acuteExacerbation) {
         return "This PGD is for an acute exacerbation with symptoms of bronchospasm (wheezing, breathlessness, chest tightness); record it or do not supply";
@@ -49,13 +52,18 @@ export function validateStep(state: AsthmaConsultationState, step: number): stri
     }
 
     case 3: // Medical History
-      // Optional step - always valid
+      if (!state.medicalHistory.exclusionsAskedAndAnswered) {
+        return "Confirm that the prednisolone exclusions and every caution on this step were asked and answered by the patient";
+      }
       return null;
 
     case 4: { // Observations and exclusions
       const missing = missingObservations(state);
       if (missing.length > 0) {
         return "Measure and record before any supply: " + missing.join(", ") + ". If any observation is missing, do not supply.";
+      }
+      if (!state.redFlags.allergyStatusConfirmed) {
+        return "Confirm the patient's allergy status (salbutamol and other beta-2 agonists; prednisolone and other corticosteroids) was asked and confirmed";
       }
       return null;
     }
@@ -74,6 +82,9 @@ export function validateStep(state: AsthmaConsultationState, step: number): stri
         if (!ms.maxEightPuffsDailyUnderstood) {
           return "Patient understanding of when to seek emergency care must be confirmed";
         }
+        if (!ms.salbutamolPilSupplied) {
+          return "Confirm the patient information leaflet was supplied with the salbutamol inhaler";
+        }
       }
       if (ms.prednisolone5mg) {
         const blockers = prednisoloneArmBlockers(state);
@@ -87,6 +98,12 @@ export function validateStep(state: AsthmaConsultationState, step: number): stri
         if (expected > MAX_PREDNISOLONE_TABLETS) {
           return `Maximum ${MAX_PREDNISOLONE_TABLETS} tablets (50mg daily for 7 days)`;
         }
+        if (!ms.tabletCountChecked) {
+          return "Confirm the tablet count was checked against the dose before supply";
+        }
+        if (!ms.prednisolonePilSupplied) {
+          return "Confirm the patient information leaflet was supplied with the prednisolone tablets";
+        }
       }
       return null;
     }
@@ -94,22 +111,28 @@ export function validateStep(state: AsthmaConsultationState, step: number): stri
     case 6: { // Counselling
       const c = state.counselling;
       const ms = state.medicineSupply;
-      if (
-        !c.relieverNotPreventer ||
-        !c.inhalerTechniqueDemonstration ||
-        !c.rinseMouthAfterUse
-      ) {
-        return "Key counselling points must be confirmed";
+      // The document's follow-up advice, required for the arm supplied
+      // (PGD v005, Follow-up advice to be given to patient or carer).
+      if (ms.salbutamol100mcgPMDI) {
+        if (!c.relieverNotPreventer) return "Confirm the patient was told salbutamol is a reliever, not a preventer";
+        if (!c.inhalerTechniqueDemonstration) return "Confirm inhaler technique was demonstrated and the technique sheet given (coordinate inhalation with actuation if no spacer)";
+        if (!c.spacerUse) return "Confirm spacer use was discussed";
+        if (!c.emergencyIfNoImprovement) {
+          return "Confirm the patient was told to seek emergency medical attention if symptoms do not improve within 15 to 30 minutes of salbutamol use";
+        }
       }
-      if (!c.emergencyIfNoImprovement) {
-        return "Confirm the patient was told to seek emergency medical attention if symptoms do not improve within 15 to 30 minutes of salbutamol use";
-      }
-      if (ms.prednisolone5mg && (!c.prednisoloneFullCourse || !c.prednisoloneWithFood)) {
-        return "Confirm the prednisolone counselling: take the full course, do not stop abruptly, take with food if stomach upset";
+      if (ms.prednisolone5mg) {
+        if (!c.prednisoloneFullCourse || !c.prednisoloneWithFood) {
+          return "Confirm the prednisolone counselling: take the full course, do not stop abruptly, take with food if stomach upset";
+        }
+        if (!c.prednisoloneDiabetes) return "Confirm the blood glucose advice was given (if diabetic, monitor more frequently and inform the GP)";
+        if (!c.prednisoloneOtherMedicines) return "Confirm the patient was told to inform their healthcare providers of steroid use";
       }
       if (!c.seekImmediateAttention) {
         return "Confirm the patient was told to seek immediate medical attention for severe breathlessness, chest pain, confusion or exhaustion";
       }
+      if (!c.reviewActionPlan) return "Confirm the patient was advised to review their asthma action plan and triggers with their GP after recovery";
+      if (!c.maintenanceOptimised) return "Confirm the patient was advised to have their maintenance therapy optimised to prevent future exacerbations";
       return null;
     }
 

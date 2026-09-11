@@ -9,9 +9,7 @@ export const PGD_STRAPLINE = "Asthma Rescue PGD version 005, issued 11 September
 
 // ─── Extended types for Asthma Rescue PGD ───
 
-export interface AsthmaPatientDetails extends BasePatientDetails {
-  femaleConfirmed: boolean;
-}
+export type AsthmaPatientDetails = BasePatientDetails;
 
 export type DiagnosisEvidence = "" | "gp-record" | "repeat-prescription" | "action-plan" | "none";
 
@@ -21,7 +19,8 @@ export interface AsthmaAssessment {
   normallyUsesSABA: boolean;
   onPreventer: boolean; // current inhaled corticosteroid therapy asked about and recorded
   preventerDetails: string;
-  rescueCoursesLast12Months: number | null; // more than one: refer to GP; max one rescue course in 12 months
+  rescueCoursesLast12Months: number | null; // any source; more than one (2 or more): refer to GP
+  pgdRescueCoursesLast12Months: number | null; // under this PGD; no more than one in 12 months is supplied (1 or more: stop)
   acuteExacerbation: boolean; // wheezing, breathlessness, chest tightness
   canUseInhalerOrSpacer: boolean;
   ableToTakeOralMedication: boolean;
@@ -48,7 +47,7 @@ export interface AsthmaObservations {
 }
 
 export interface AsthmaMedicalHistory {
-  hasAsthmaRecord: boolean;
+  exclusionsAskedAndAnswered: boolean; // attestation: prednisolone exclusions and all cautions asked and answered
   otherRespiratoryConditions: string;
   allergies: string;
   otherConditions: string;
@@ -74,6 +73,7 @@ export interface AsthmaMedicalHistory {
 }
 
 export interface AsthmaRedFlags {
+  allergyStatusConfirmed: boolean; // attestation: salbutamol and prednisolone allergy status asked and confirmed
   increasingUse: boolean;
   nocturnalWakenings: boolean;
   activityLimitation: boolean;
@@ -97,12 +97,14 @@ export interface AsthmaMedicineSupply {
   prednisoloneDoseMg: PrednisoloneDose;
   prednisoloneDays: PrednisoloneDays;
   prednisoloneTablets: number | null; // computed from dose and days, max 70
+  tabletCountChecked: boolean; // pharmacist checked the arithmetic against the dose before supply
+  salbutamolPilSupplied: boolean;
+  prednisolonePilSupplied: boolean;
 }
 
 export interface AsthmaCounselling {
   relieverNotPreventer: boolean;
   inhalerTechniqueDemonstration: boolean;
-  rinseMouthAfterUse: boolean;
   spacerUse: boolean;
   seekUrgentCareIfNotResolving: boolean;
   // PGD v005 follow-up advice
@@ -113,6 +115,12 @@ export interface AsthmaCounselling {
   prednisoloneOtherMedicines: boolean;
   seekImmediateAttention: boolean; // severe breathlessness, chest pain, confusion, exhaustion
   reviewActionPlan: boolean;
+  maintenanceOptimised: boolean; // ensure maintenance therapy is optimised to prevent future exacerbations
+}
+
+export interface AsthmaExclusionOutcome {
+  adviceGiven: string; // advice given and decision reached when excluded or declines
+  referredTo: string; // "" | "999" | "urgent-care" | "gp" | "other"
 }
 
 export interface AsthmaConsultationState {
@@ -124,6 +132,7 @@ export interface AsthmaConsultationState {
   redFlags: AsthmaRedFlags;
   medicineSupply: AsthmaMedicineSupply;
   counselling: AsthmaCounselling;
+  exclusionOutcome: AsthmaExclusionOutcome;
   summary: BaseSummary;
   currentStep: number;
 }
@@ -138,7 +147,9 @@ export type AsthmaAction =
   | { type: "UPDATE_MEDICINE_SUPPLY"; field: keyof AsthmaMedicineSupply; value: any }
   | { type: "UPDATE_COUNSELLING"; field: keyof AsthmaCounselling; value: any }
   | { type: "UPDATE_SUMMARY"; field: keyof BaseSummary; value: any }
-  | { type: "SET_STEP"; step: number };
+  | { type: "UPDATE_EXCLUSION_OUTCOME"; field: keyof AsthmaExclusionOutcome; value: any }
+  | { type: "SET_STEP"; step: number }
+  | { type: "RESET" };
 
 // ─── Step labels ───
 
@@ -174,7 +185,8 @@ export function createInitialConsultationState(): AsthmaConsultationState {
       address: "",
       phone: "",
       email: "",
-      femaleConfirmed: false,
+      deliveryDetails: "",
+      consultationNotes: "",
     },
     consent: {
       informedConsentGiven: false,
@@ -189,6 +201,7 @@ export function createInitialConsultationState(): AsthmaConsultationState {
       onPreventer: false,
       preventerDetails: "",
       rescueCoursesLast12Months: null,
+      pgdRescueCoursesLast12Months: null,
       acuteExacerbation: false,
       canUseInhalerOrSpacer: false,
       ableToTakeOralMedication: false,
@@ -213,7 +226,7 @@ export function createInitialConsultationState(): AsthmaConsultationState {
       poorRespiratoryEffort: false,
     },
     medicalHistory: {
-      hasAsthmaRecord: false,
+      exclusionsAskedAndAnswered: false,
       otherRespiratoryConditions: "",
       allergies: "",
       otherConditions: "",
@@ -235,6 +248,7 @@ export function createInitialConsultationState(): AsthmaConsultationState {
       infection: false,
     },
     redFlags: {
+      allergyStatusConfirmed: false,
       increasingUse: false,
       nocturnalWakenings: false,
       activityLimitation: false,
@@ -254,11 +268,13 @@ export function createInitialConsultationState(): AsthmaConsultationState {
       prednisoloneDoseMg: "",
       prednisoloneDays: "",
       prednisoloneTablets: null,
+      tabletCountChecked: false,
+      salbutamolPilSupplied: false,
+      prednisolonePilSupplied: false,
     },
     counselling: {
       relieverNotPreventer: false,
       inhalerTechniqueDemonstration: false,
-      rinseMouthAfterUse: false,
       spacerUse: false,
       seekUrgentCareIfNotResolving: false,
       emergencyIfNoImprovement: false,
@@ -268,6 +284,11 @@ export function createInitialConsultationState(): AsthmaConsultationState {
       prednisoloneOtherMedicines: false,
       seekImmediateAttention: false,
       reviewActionPlan: false,
+      maintenanceOptimised: false,
+    },
+    exclusionOutcome: {
+      adviceGiven: "",
+      referredTo: "",
     },
     summary: {
       pharmacistName: "",

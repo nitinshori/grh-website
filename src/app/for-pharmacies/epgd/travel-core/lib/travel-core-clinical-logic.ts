@@ -5,11 +5,102 @@ import type {
   TravelCoreVaccineAdministration,
 } from "./travel-core-types";
 
+// ─── Date helpers: calendar days, local midnight to local midnight ───
+
+export function parseLocalDate(iso: string): Date | null {
+  if (!iso) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) return null;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return isNaN(d.getTime()) ? null : d;
+}
+
+export function formatLocalDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function todayLocal(): Date {
+  const n = new Date();
+  return new Date(n.getFullYear(), n.getMonth(), n.getDate());
+}
+
+export function daysBetween(from: Date, to: Date): number {
+  return Math.round((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24));
+}
+
 export function daysUntilDeparture(departureDate: string): number | null {
-  if (!departureDate) return null;
-  const d = new Date(departureDate);
-  if (isNaN(d.getTime())) return null;
-  return Math.floor((d.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  const d = parseLocalDate(departureDate);
+  if (!d) return null;
+  return daysBetween(todayLocal(), d);
+}
+
+/** Days from the given date to today, or null when the date is missing or invalid. */
+export function daysSince(iso: string): number | null {
+  const d = parseLocalDate(iso);
+  if (!d) return null;
+  return daysBetween(d, todayLocal());
+}
+
+export function isExpired(expiry: string): boolean {
+  const d = daysUntilDeparture(expiry);
+  return d !== null && d < 0;
+}
+
+export function addDays(n: number, from: Date = todayLocal()): string {
+  const d = new Date(from.getFullYear(), from.getMonth(), from.getDate() + n);
+  return formatLocalDate(d);
+}
+
+export function addMonths(n: number, from: Date = todayLocal()): string {
+  const d = new Date(from.getFullYear(), from.getMonth() + n, from.getDate());
+  return formatLocalDate(d);
+}
+
+export function addYears(n: number, from: Date = todayLocal()): string {
+  const d = new Date(from.getFullYear() + n, from.getMonth(), from.getDate());
+  return formatLocalDate(d);
+}
+
+// ─── Schedule intervals from the signed PGD (v004) ───
+
+/** Hepatitis A booster: 6 to 12 months after the primary dose (Avaxim SPC allows up to 36 months). */
+export const HEPA_BOOSTER_MIN_DAYS = 6 * 30;
+export const HEPA_BOOSTER_MAX_DAYS_HAVRIX = 12 * 30;
+export const HEPA_BOOSTER_MAX_DAYS_AVAXIM = 36 * 30;
+/** Dukoral primary course: 2 doses 1 to 6 weeks apart; booster every 2 years. */
+export const CHOLERA_DOSE2_MIN_DAYS = 7;
+export const CHOLERA_DOSE2_MAX_DAYS = 42;
+export const CHOLERA_BOOSTER_MAX_DAYS = 2 * 365;
+/** Typhim Vi: revaccination every 3 years. */
+export const TYPHOID_REVACCINATION_DAYS = 3 * 365;
+
+export interface BoosterDue {
+  vaccine: string;
+  due: string;
+  note: string;
+}
+
+/** Next dose or booster due for each vaccine given today. */
+export function getBoosterDueDates(v: TravelCoreVaccineAdministration): BoosterDue[] {
+  const out: BoosterDue[] = [];
+  if (v.hepAGiven) {
+    if (v.hepADose === "primary") {
+      out.push({ vaccine: "Hepatitis A", due: addMonths(6), note: "Booster due 6 to 12 months after today's primary dose for long-term protection" });
+    } else if (v.hepADose === "booster") {
+      out.push({ vaccine: "Hepatitis A", due: "", note: "Course complete: long-term protection (10 years or more); no further routine booster" });
+    }
+  }
+  if (v.typhoidGiven) {
+    out.push({ vaccine: "Typhoid", due: addYears(3), note: "Revaccination every 3 years if continuing risk" });
+  }
+  if (v.choleraGiven) {
+    if (v.choleraDose === "1") {
+      out.push({ vaccine: "Cholera", due: addDays(7), note: "Dose 2 due 1 to 6 weeks after today (from the date shown, and no later than 6 weeks); complete at least 1 week before exposure" });
+    } else if (v.choleraDose === "2" || v.choleraDose === "booster") {
+      out.push({ vaccine: "Cholera", due: addYears(2), note: "Booster every 2 years if continuing risk; after 2 years the primary course is repeated" });
+    }
+  }
+  return out;
 }
 
 /** Dose text per the signed PGD (v004). */
@@ -96,12 +187,24 @@ export function getVaccineAlerts(
       detail: "Severe immunocompromise is an exclusion for Dukoral under this PGD (though the vaccine is inactivated). Seek specialist advice.",
     });
   }
-  if (v.hepAGiven && v.hepADose === "primary" && v.hepAPreviousCompleteCourse) {
+
+  // Hepatitis A inclusion and schedule
+  if (v.hepAGiven && !v.hepAInclusionMet) {
+    alerts.push({
+      severity: "stop",
+      code: "HEPA_NO_INDICATION",
+      message: "Hepatitis A inclusion criteria not confirmed",
+      detail: "Inclusion requires travel to an area of high or intermediate hepatitis A prevalence on current TravelHealthPro guidance. Confirm the criterion or do not give.",
+    });
+  }
+  if (v.hepAGiven && v.hepAPreviousCompleteCourse) {
+    // The document's inclusion ("no previous complete course") has no
+    // exception for a booster: a completed course is primary plus booster.
     alerts.push({
       severity: "stop",
       code: "HEPA_COMPLETE_COURSE",
-      message: "Previous complete Hepatitis A course",
-      detail: "Inclusion requires no previous complete Hepatitis A vaccination course. A primary dose is not indicated; if a 6 to 12 month booster is due, record the dose as a booster.",
+      message: "Previous complete Hepatitis A course (primary plus booster)",
+      detail: "Inclusion requires no previous complete Hepatitis A vaccination course. A completed course gives long-term protection and no further dose is indicated under this PGD. If only the primary dose was given, untick this and record the dose as a booster with the primary dose date.",
     });
   }
   if (v.hepAGiven && v.hepAImmunityDocumented) {
@@ -112,6 +215,52 @@ export function getVaccineAlerts(
       detail: "Inclusion requires no documented evidence of Hepatitis A immunity. Vaccination is not indicated.",
     });
   }
+  if (v.hepAGiven && v.hepADose === "booster") {
+    const gap = daysSince(v.hepAPrimaryDoseDate);
+    if (gap !== null) {
+      const maxGap = v.hepAPrimaryProduct === "avaxim" ? HEPA_BOOSTER_MAX_DAYS_AVAXIM : HEPA_BOOSTER_MAX_DAYS_HAVRIX;
+      if (gap < 0) {
+        alerts.push({ severity: "stop", code: "HEPA_PRIMARY_FUTURE", message: "Hepatitis A primary dose date is in the future", detail: "Check the date of the primary dose." });
+      } else if (gap < HEPA_BOOSTER_MIN_DAYS) {
+        alerts.push({
+          severity: "stop",
+          code: "HEPA_BOOSTER_EARLY",
+          message: `Hepatitis A booster not due: primary dose was ${gap} days ago`,
+          detail: "The booster is given 6 to 12 months after the primary dose. Rebook from the due date; a booster given early is outside the schedule in this PGD.",
+        });
+      } else if (gap > maxGap) {
+        alerts.push({
+          severity: "caution",
+          code: "HEPA_BOOSTER_LATE",
+          message: `Hepatitis A booster is late: primary dose was ${Math.round(gap / 30)} months ago`,
+          detail: `The schedule is 6 to 12 months (Avaxim: up to 36 months). The Green Book advises the second dose may be given without restarting the course; record the interval and the decision.`,
+        });
+      }
+    }
+  }
+
+  // Typhoid inclusion and revaccination interval
+  if (v.typhoidGiven && !v.typhoidInclusionMet) {
+    alerts.push({
+      severity: "stop",
+      code: "TYPHOID_NO_INDICATION",
+      message: "Typhoid inclusion criteria not confirmed",
+      detail: "Inclusion requires travel to an area of high or intermediate typhoid prevalence (South Asia, Southeast Asia, Africa, Central or South America) on current TravelHealthPro guidance. Confirm the criterion or do not give.",
+    });
+  }
+  if (v.typhoidGiven && v.typhoidPreviousDose) {
+    const gap = daysSince(v.typhoidPreviousDoseDate);
+    if (gap !== null && gap >= 0 && gap < TYPHOID_REVACCINATION_DAYS) {
+      alerts.push({
+        severity: "stop",
+        code: "TYPHOID_RECENT_DOSE",
+        message: `Typhim Vi given ${Math.round(gap / 30)} months ago: revaccination is every 3 years`,
+        detail: "Protection from the previous dose should still be in place and additional doses do not boost antibody levels further. Not indicated under this PGD.",
+      });
+    }
+  }
+
+  // Cholera inclusion and schedule
   if (v.choleraGiven && !v.choleraRiskCriteriaMet) {
     alerts.push({
       severity: "stop",
@@ -120,6 +269,47 @@ export function getVaccineAlerts(
       detail: "Dukoral is for travel to areas with active cholera transmission or at high risk, humanitarian, healthcare or occupational exposure, or planned extended stays in endemic areas with poor sanitation. Confirm the criterion or do not give.",
     });
   }
+  if (v.choleraGiven && v.choleraDose === "2") {
+    const gap = daysSince(v.choleraDose1Date);
+    if (gap !== null) {
+      if (gap < 0) {
+        alerts.push({ severity: "stop", code: "CHOLERA_DOSE1_FUTURE", message: "Dukoral dose 1 date is in the future", detail: "Check the date of dose 1." });
+      } else if (gap < CHOLERA_DOSE2_MIN_DAYS) {
+        alerts.push({
+          severity: "stop",
+          code: "CHOLERA_DOSE2_EARLY",
+          message: `Dukoral dose 2 not due: dose 1 was ${gap} days ago`,
+          detail: "The primary course is 2 doses at least 1 week apart. Rebook from day 7.",
+        });
+      } else if (gap > CHOLERA_DOSE2_MAX_DAYS) {
+        alerts.push({
+          severity: "caution",
+          code: "CHOLERA_RESTART",
+          message: `More than 6 weeks since Dukoral dose 1 (${gap} days): restart the primary course`,
+          detail: "The SPC requires the primary course to be restarted when more than 6 weeks have elapsed between doses. Record today's dose as dose 1 of a new course.",
+        });
+      }
+    }
+  }
+  if (v.choleraGiven && v.choleraDose === "booster") {
+    const gap = daysSince(v.choleraLastCourseDate);
+    if (gap !== null && gap > CHOLERA_BOOSTER_MAX_DAYS) {
+      alerts.push({
+        severity: "caution",
+        code: "CHOLERA_BOOSTER_LATE",
+        message: `More than 2 years since the last Dukoral course (${Math.round(gap / 30)} months): repeat the primary course`,
+        detail: "The SPC: if more than 2 years have elapsed since the last vaccination, the primary course (2 doses) should be repeated. Record today's dose as dose 1 of a new course.",
+      });
+    }
+  }
+
+  // Expired stock
+  if (v.hepAGiven && isExpired(v.hepAExpiry))
+    alerts.push({ severity: "stop", code: "HEPA_EXPIRED", message: "Hepatitis A vaccine batch has expired", detail: "Do not administer. Quarantine the stock and select an in-date batch." });
+  if (v.typhoidGiven && isExpired(v.typhoidExpiry))
+    alerts.push({ severity: "stop", code: "TYPHOID_EXPIRED", message: "Typhim Vi batch has expired", detail: "Do not administer. Quarantine the stock and select an in-date batch." });
+  if (v.choleraGiven && isExpired(v.choleraExpiry))
+    alerts.push({ severity: "stop", code: "CHOLERA_EXPIRED", message: "Dukoral batch has expired", detail: "Do not administer. Quarantine the stock and select an in-date batch." });
 
   if (anyGiven && v.immunocompromised) {
     alerts.push({
@@ -146,7 +336,15 @@ export function getVaccineAlerts(
     });
   }
   const days = daysUntilDeparture(departureDate);
-  if (injectable && days !== null && days < 14) {
+  if (anyGiven && days !== null && days < 0) {
+    alerts.push({
+      severity: "caution",
+      code: "DEPARTURE_PAST",
+      message: "The departure date is in the past",
+      detail: "Check the travel dates. If the traveller has already departed, record why vaccination is being given now (for example completing a course).",
+    });
+  }
+  if (injectable && days !== null && days >= 0 && days < 14) {
     alerts.push({
       severity: "caution",
       code: "VACC_TIMING",
@@ -154,7 +352,7 @@ export function getVaccineAlerts(
       detail: "Hepatitis A and typhoid vaccines should be given at least 2 weeks before departure. Explain that protection may be incomplete and record the advice.",
     });
   }
-  if (v.choleraGiven && v.choleraDose !== "booster" && days !== null && days < (v.choleraDose === "2" ? 7 : 14)) {
+  if (v.choleraGiven && v.choleraDose !== "booster" && days !== null && days >= 0 && days < (v.choleraDose === "2" ? 7 : 14)) {
     alerts.push({
       severity: "caution",
       code: "CHOLERA_TIMING",
@@ -180,7 +378,7 @@ export function getDestinationAlerts(
     });
   }
 
-  if (destination.foodWaterRiskLevel === "high" && !destination.duration) {
+  if (destination.foodWaterRiskLevel === "high") {
     alerts.push({
       severity: "caution",
       code: "FOOD_WATER_HIGH",
@@ -206,21 +404,12 @@ export function getMalariaRiskAlerts(
 ): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
 
-  if (malariaRisk.malariaZone && !malariaRisk.chemoprophylaxisAdvised) {
+  if (malariaRisk.malariaZone && !malariaRisk.chemoprophylaxisPlan) {
     alerts.push({
       severity: "red-flag",
-      code: "MALARIA_CHEMO_MISSING",
-      message: "Malaria zone identified but chemoprophylaxis not advised",
-      detail: "Patient travelling to malaria zone. Chemoprophylaxis assessment required.",
-    });
-  }
-
-  if (malariaRisk.malariaZone && malariaRisk.resistanceProfile && !malariaRisk.recommendedDrug) {
-    alerts.push({
-      severity: "caution",
-      code: "MALARIA_DRUG_UNCLEAR",
-      message: "Resistance profile noted but drug selection unclear",
-      detail: "Ensure appropriate drug selected based on resistance pattern.",
+      code: "MALARIA_PLAN_MISSING",
+      message: "Malaria zone identified: record the chemoprophylaxis plan",
+      detail: "Chemoprophylaxis is outside this PGD. Record whether it was supplied under the anti-malarials PGD, referred, not required per TravelHealthPro, or declined.",
     });
   }
 
@@ -244,13 +433,10 @@ export function calculateTravelDuration(
   departureDate: string,
   returnDate: string
 ): number | null {
-  if (!departureDate || !returnDate) return null;
-  const departure = new Date(departureDate);
-  const returnD = new Date(returnDate);
-  if (isNaN(departure.getTime()) || isNaN(returnD.getTime())) return null;
-  return Math.ceil(
-    (returnD.getTime() - departure.getTime()) / (1000 * 60 * 60 * 24)
-  );
+  const departure = parseLocalDate(departureDate);
+  const returnD = parseLocalDate(returnDate);
+  if (!departure || !returnD) return null;
+  return daysBetween(departure, returnD);
 }
 
 export function assessMalariaRisk(destination: string, zone: boolean): string {
@@ -259,12 +445,4 @@ export function assessMalariaRisk(destination: string, zone: boolean): string {
   if (destination.toLowerCase().includes("asia")) return "Moderate risk - Southeast Asia";
   if (destination.toLowerCase().includes("caribbean")) return "Low-moderate risk - Caribbean";
   return "Moderate risk";
-}
-
-export function getChemoprophylaxisRecommendation(
-  resistanceProfile: string
-): string {
-  if (resistanceProfile.includes("MDR")) return "Artemether-lumefantrine or quinine";
-  if (resistanceProfile.includes("CQ")) return "Atovaquone-proguanil, doxycycline, or mefloquine";
-  return "Atovaquone-proguanil or doxycycline";
 }

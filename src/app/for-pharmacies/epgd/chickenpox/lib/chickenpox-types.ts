@@ -23,8 +23,10 @@ export interface ChickenpoxEligibility {
   historyOfChickenpox: boolean;
   /** Exclusion: completed two-dose varicella course. */
   completedTwoDoseCourse: boolean;
-  /** Dose 1 given elsewhere: dose 2 may be given under this PGD; record the date and brand of dose 1. */
+  /** Dose 1 already given (here or elsewhere): attending for dose 2. Record the date and brand of dose 1. */
   dose1GivenElsewhere: boolean;
+  /** Where dose 1 was given. */
+  dose1Where: "this-pharmacy" | "elsewhere" | "";
   dose1ElsewhereDate: string;
   dose1ElsewhereBrand: string;
 }
@@ -58,6 +60,8 @@ export interface ChickenpoxVaccineAdmin {
   dose1Lot: string;
   expiryDate: string;
   dose2Scheduled: string;
+  /** Varilrix dose 2 given between 4 and 6 weeks after dose 1: the reason (PGD caution). */
+  intervalReason: string;
   administeredBy: string;
 }
 
@@ -146,6 +150,7 @@ export function createInitialChickenpoxState(): ChickenpoxConsultationState {
       historyOfChickenpox: false,
       completedTwoDoseCourse: false,
       dose1GivenElsewhere: false,
+      dose1Where: "",
       dose1ElsewhereDate: "",
       dose1ElsewhereBrand: "",
     },
@@ -172,6 +177,7 @@ export function createInitialChickenpoxState(): ChickenpoxConsultationState {
       dose1Lot: "",
       expiryDate: "",
       dose2Scheduled: "",
+      intervalReason: "",
       administeredBy: "",
     },
     postVaccine: {

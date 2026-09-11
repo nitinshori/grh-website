@@ -31,6 +31,12 @@ export interface PresentingComplaint {
   severity: "mild" | "moderate" | "severe" | "";
   previousTreatment: boolean;
   previousTreatmentDetails: string;
+  /** Structured record of any previous PDE5 inhibitor. Only a previous
+   *  supply of the SAME medicine, at a stated dose, that was tolerated lifts
+   *  the document's starting-dose rule (adversarial review, 11 Sep 2026). */
+  previousPDE5Inhibitor: "" | "none" | "sildenafil" | "tadalafil-on-demand" | "tadalafil-daily";
+  previousPDE5Dose: string;
+  previousPDE5Tolerated: boolean;
   psychosexualFactors: boolean;
   psychosexualDetails: string;
 }
@@ -95,6 +101,9 @@ export interface CurrentMedications {
   cyp3a4Details: string; // e.g. erythromycin, ketoconazole, itraconazole, ritonavir
   otherMedications: string;
   allergies: string;
+  /** First exclusion in both arms: known hypersensitivity to sildenafil,
+   *  tadalafil or any excipient. A stop, not a free-text note. */
+  hypersensitivityPDE5: boolean;
 }
 
 export interface Observations {
@@ -150,6 +159,10 @@ export interface CounsellingChecklist {
   alcoholModeration: boolean;
   sideEffectsExplained: boolean;
   reviewAdvice: boolean; // trial 6-8 occasions before concluding failure
+  /** Written information row: the product PIL was supplied. */
+  pilSupplied: boolean;
+  /** Disposal row: return unused tablets to a pharmacy. */
+  disposalAdvice: boolean;
   gpReviewRecommended: boolean; // if not under regular CV review
 }
 

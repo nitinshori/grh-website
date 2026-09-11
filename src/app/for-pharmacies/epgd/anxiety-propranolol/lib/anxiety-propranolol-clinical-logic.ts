@@ -23,11 +23,18 @@ export function getAllAlerts(state: AnxietyPropranololConsultationState): Clinic
       detail: "Do not supply. Urgent medical assessment.",
     });
   }
-  if (state.contraindications.hypotension) {
+  // Measured thresholds: the document excludes on a systolic BP under
+  // 90 mmHg and a resting heart rate under 50 bpm. Derived from the readings
+  // taken today as well as from the tick boxes.
+  const sbp = state.contraindications.systolicBP;
+  const hr = state.contraindications.restingHeartRate;
+  if (state.contraindications.hypotension || (sbp !== null && sbp < 90)) {
     alerts.push({
       severity: "stop",
       code: "ANX_HYPOTENSION",
-      message: "Hypotension (systolic BP below 90 mmHg): propranolol excluded",
+      message: sbp !== null && sbp < 90
+        ? `Hypotension: systolic BP measured ${sbp} mmHg (below 90 mmHg), propranolol excluded`
+        : "Hypotension (systolic BP below 90 mmHg): propranolol excluded",
       detail: "Do not supply. Refer to GP.",
     });
   }
@@ -92,16 +99,18 @@ export function getAllAlerts(state: AnxietyPropranololConsultationState): Clinic
     alerts.push({
       severity: "stop",
       code: "ANX_BLOCK",
-      message: "2nd or 3rd degree heart block — propranolol contraindicated",
+      message: "2nd or 3rd degree heart block: propranolol contraindicated",
       detail: "Beta-blockers worsen conduction delay. Refer to cardiology.",
     });
   }
 
-  if (state.contraindications.severeBradycardia) {
+  if (state.contraindications.severeBradycardia || (hr !== null && hr < 50)) {
     alerts.push({
       severity: "stop",
       code: "ANX_BRADY",
-      message: "Bradycardia (HR &lt;50 bpm) — propranolol contraindicated",
+      message: hr !== null && hr < 50
+        ? `Severe bradycardia: resting heart rate measured ${hr} bpm (below 50 bpm), propranolol contraindicated`
+        : "Severe bradycardia (resting heart rate below 50 bpm), propranolol contraindicated",
       detail: "Further heart rate reduction may be dangerous. Refer to GP.",
     });
   }
@@ -110,7 +119,7 @@ export function getAllAlerts(state: AnxietyPropranololConsultationState): Clinic
     alerts.push({
       severity: "stop",
       code: "ANX_HF",
-      message: "Uncontrolled heart failure — propranolol contraindicated",
+      message: "Uncontrolled heart failure: propranolol contraindicated",
       detail: "May decompensate heart failure. Specialist assessment needed.",
     });
   }
@@ -119,7 +128,7 @@ export function getAllAlerts(state: AnxietyPropranololConsultationState): Clinic
     alerts.push({
       severity: "stop",
       code: "ANX_PRINZ",
-      message: "Prinzmetal's angina — propranolol contraindicated",
+      message: "Prinzmetal's angina: propranolol contraindicated",
       detail: "Non-selective beta-blocker can worsen coronary vasospasm. Refer to cardiology.",
     });
   }
@@ -128,7 +137,7 @@ export function getAllAlerts(state: AnxietyPropranololConsultationState): Clinic
     alerts.push({
       severity: "stop",
       code: "ANX_PHEO",
-      message: "Pheochromocytoma (unless alpha-blocked) — propranolol contraindicated",
+      message: "Pheochromocytoma (unless alpha-blocked): propranolol contraindicated",
       detail: "Risk of hypertensive crisis. Refer to endocrinology.",
     });
   }
@@ -195,6 +204,18 @@ export function getAllAlerts(state: AnxietyPropranololConsultationState): Clinic
       code: "ANX_GAD",
       message: "Generalised anxiety disorder: outside this PGD, refer to GP",
       detail: "This PGD is for the physical symptoms of situational anxiety only. Propranolol is not first-line for generalised anxiety disorder; CBT is first-line psychological treatment. Refer to primary care.",
+    });
+  }
+  // Social anxiety disorder is a distinct diagnosis that the document's
+  // NICE CKS summary asks the pharmacist to differentiate from situational
+  // anxiety. It used to be a third selectable type with no alert (adversarial
+  // review, 11 Sep 2026). A discrete performance trigger is "situational".
+  if (state.assessment.anxietyType === "social") {
+    alerts.push({
+      severity: "stop",
+      code: "ANX_SOCIAL",
+      message: "Social anxiety disorder: outside this PGD, refer to GP",
+      detail: "This PGD is for the physical symptoms of situational or performance anxiety only. If the anxiety is tied to a discrete performance situation (exam, presentation, interview), record it as situational and describe the trigger. Otherwise refer to primary care; CBT is first-line for social anxiety disorder.",
     });
   }
 
@@ -314,23 +335,48 @@ export function hasHardStops(alerts: ClinicalAlert[]): boolean {
   return alerts.some((a) => a.severity === "stop");
 }
 
+/** Dose advised in mg, or null if not yet chosen. */
+export function doseAdvisedMg(state: AnxietyPropranololConsultationState): number | null {
+  const d = parseInt(state.medicineSupply.propranololDose, 10);
+  return [10, 20, 30, 40].includes(d) ? d : null;
+}
+
+/**
+ * Regular regimen only: how many days the supply lasts at the advised dose
+ * and frequency. The document asks for review at 4 weeks on a supply that is
+ * capped at 28 x 10mg, which at 10mg three times daily is 9 days; the tool
+ * shows the pharmacist the number rather than reproducing the contradiction
+ * silently (adversarial review, 11 Sep 2026).
+ */
+export function daysCovered(state: AnxietyPropranololConsultationState): number | null {
+  const dose = doseAdvisedMg(state);
+  const q = state.medicineSupply.quantity;
+  const times = parseInt(state.medicineSupply.timesDaily, 10);
+  if (state.medicineSupply.regimen !== "regular" || dose === null || !q || !times) return null;
+  return Math.floor((q * 10) / (dose * times));
+}
+
 export function calculateDoseRecommendation(state: AnxietyPropranololConsultationState): DoseRecommendation | null {
+  if (!state.medicineSupply.regimen) return null;
+  const dose = doseAdvisedMg(state);
+  const doseText = dose !== null ? `${dose}mg (${dose / 10} x 10mg tablet${dose > 10 ? "s" : ""})` : "Dose not yet chosen";
   if (state.medicineSupply.regimen === "regular") {
+    const times = state.medicineSupply.timesDaily === "3" ? "three times daily" : state.medicineSupply.timesDaily === "2" ? "twice daily" : "two to three times daily";
     return {
       medicine: "Propranolol 10mg tablets",
-      dose: "10 to 40mg",
-      frequency: "Two to three times daily",
+      dose: doseText,
+      frequency: times.charAt(0).toUpperCase() + times.slice(1),
       duration: "Ongoing situational anxiety; review at 4 weeks",
-      dosingRegimen: "10 to 40mg two to three times daily for ongoing situational anxiety. Maximum 120mg daily. Review at 4 weeks; consider gradual dose reduction if discontinuing. Do not stop abruptly.",
+      dosingRegimen: `${doseText} ${times} for ongoing situational anxiety. Maximum 120mg daily. Review at 4 weeks; consider gradual dose reduction if discontinuing. Do not stop abruptly.`,
       reason: "Beta-blocker reduces physical anxiety symptoms (tremor, palpitations, sweating) in situational anxiety",
     };
   }
   return {
     medicine: "Propranolol 10mg tablets",
-    dose: "10 to 40mg",
+    dose: doseText,
     frequency: "PRN (as needed)",
     duration: "Single dose before anxiety-provoking situation",
-    dosingRegimen: "Take 10 to 40mg 30 to 60 minutes before the anticipated anxiety-provoking situation (exam, presentation, public speaking). Maximum 120mg daily.",
+    dosingRegimen: `Take ${doseText} 30 to 60 minutes before the anticipated anxiety-provoking situation (exam, presentation, public speaking). Maximum 120mg daily.`,
     reason: "Beta-blocker reduces physical anxiety symptoms (tremor, palpitations, sweating) in situational anxiety",
   };
 }

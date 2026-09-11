@@ -49,7 +49,12 @@ export function ProgressBar(props: ProgressBarProps) {
           {stepLabels.map((label, i) => {
             const isActive = i === currentStep;
             const isCompleted = completedSteps.has(i);
-            const isClickable = isCompleted || i <= currentStep;
+            // Backwards only. A completed step used to be clickable from any
+            // earlier step, so a pharmacist could go back, tick an exclusion,
+            // and jump forward past the steps that enforce it straight to
+            // Save & Print (adversarial review, 11 Sep 2026). Going forward
+            // now always means pressing Next, where the gates are.
+            const isClickable = i < currentStep;
 
             return (
               <div key={label} className="flex items-center flex-1">

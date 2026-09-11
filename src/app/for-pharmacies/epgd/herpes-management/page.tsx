@@ -88,7 +88,7 @@ export default function HerpesToolPage() {
 
         {/* Disclaimer */}
         <div className="mt-8 text-center">
-          <p className="text-[11px] text-gray-400 max-w-2xl mx-auto">This ePGD provides treatment regimens for HSV-1 and HSV-2, with counselling on viral shedding and prevention strategies.</p>
+          <p className="text-[11px] text-gray-400 max-w-2xl mx-auto">No electronic consultation tool exists yet for this PGD. Any supply of aciclovir or valaciclovir for genital herpes must be made on paper under the signed Genital Herpes Management PGD (version 003).</p>
         </div>
       </div>
     </div>

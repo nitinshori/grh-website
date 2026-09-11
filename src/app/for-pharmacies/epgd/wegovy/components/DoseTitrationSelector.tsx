@@ -39,6 +39,8 @@ export function DoseTitrationSelector({
   onWeeksChange,
   onPreviousDoseChange,
   onInjectionSiteChange,
+  visitType = "",
+  allowedDoses,
 }: {
   currentStage: string;
   dose: string;
@@ -50,8 +52,22 @@ export function DoseTitrationSelector({
   onWeeksChange: (v: number | null) => void;
   onPreviousDoseChange: (v: string) => void;
   onInjectionSiteChange: (v: string) => void;
+  /** From the Weight Assessment step: new, continuing or restart. */
+  visitType?: string;
+  /** The doses the document allows at this visit; only these are offered. */
+  allowedDoses?: string[];
 }) {
-  const doseOptions = [
+  void onStageChange;
+  const continuing = visitType === "continuing";
+  const stageLabel =
+    currentStage === "initiation"
+      ? "Initiation (0.25 mg, weeks 1 to 4)"
+      : currentStage === "escalation"
+        ? "Escalation (0.5 mg to 1.7 mg, weeks 5 to 16)"
+        : currentStage === "maintenance"
+          ? "Maintenance (2.4 mg, or 7.2 mg if needed)"
+          : "Set by the dose selected";
+  const allDoseOptions = [
     { value: "0.25mg", label: "0.25 mg (FlexTouch pen, 4 doses)" },
     { value: "0.5mg", label: "0.5 mg (FlexTouch pen, 4 doses)" },
     { value: "1mg", label: "1.0 mg (FlexTouch pen, 4 doses)" },
@@ -62,6 +78,12 @@ export function DoseTitrationSelector({
       label: "7.2 mg (four single use pens; starting BMI 30 or above only, after 4 weeks on 2.4 mg)",
     },
   ];
+  // Only the document's schedule is offered: 0.25 mg for a new patient or a
+  // restart; for a continuing patient the same dose, one step up after 4
+  // weeks, or a lower step (adversarial review, 11 Sep 2026).
+  const doseOptions = allowedDoses
+    ? allDoseOptions.filter((o) => allowedDoses.includes(o.value))
+    : allDoseOptions;
 
   const injectionSiteOptions = [
     { value: "abdomen", label: "Abdomen" },
@@ -101,18 +123,49 @@ export function DoseTitrationSelector({
         </p>
       </div>
 
-      {/* Current Stage Selection */}
-      <SelectInput
-        label="Current dose stage"
-        value={currentStage}
-        onChange={onStageChange}
-        options={[
-          { value: "initiation", label: "Initiation (0.25 mg)" },
-          { value: "escalation", label: "Escalation (0.5 mg to 1.7 mg)" },
-          { value: "maintenance", label: "Maintenance (2.4 mg, or 7.2 mg if needed)" },
-        ]}
-        required
-      />
+      {/* Previous dose first, for a continuing patient: it decides what may be supplied */}
+      {continuing && (
+        <>
+          <SelectInput
+            label="Dose the patient has been on"
+            value={previousDose === "none" ? "" : previousDose}
+            onChange={onPreviousDoseChange}
+            options={[
+              { value: "0.25mg", label: "0.25 mg" },
+              { value: "0.5mg", label: "0.5 mg" },
+              { value: "1mg", label: "1.0 mg" },
+              { value: "1.7mg", label: "1.7 mg" },
+              { value: "2.4mg", label: "2.4 mg" },
+              { value: "7.2mg", label: "7.2 mg" },
+            ]}
+            required
+          />
+          <NumberInput
+            label="Weeks on that dose"
+            value={weeksAtCurrentDose}
+            onChange={onWeeksChange}
+            min={0}
+            max={104}
+            unit="weeks"
+            required
+          />
+          {previousDose && previousDose !== "none" && weeksAtCurrentDose !== null && weeksAtCurrentDose < 4 && (
+            <p className="text-xs text-amber-800 -mt-3">
+              Fewer than 4 weeks on the current dose: the next step up is not yet available.
+            </p>
+          )}
+        </>
+      )}
+
+      {!continuing && (
+        <div className="p-3 bg-gray-50 border border-gray-200 rounded text-xs text-gray-700">
+          {visitType === "restart"
+            ? "Restart after a break: titrate again from 0.25 mg."
+            : visitType === "new"
+              ? "New patient: 0.25 mg once weekly for weeks 1 to 4."
+              : "Select the visit type on the Weight Assessment step."}
+        </div>
+      )}
 
       {/* Specific Dose */}
       <SelectInput
@@ -122,6 +175,10 @@ export function DoseTitrationSelector({
         options={doseOptions}
         required
       />
+
+      <div className="text-xs text-gray-600 -mt-3">
+        Dose stage: <span className="font-medium text-navy-900">{stageLabel}</span>
+      </div>
 
       {dose === "7.2mg" && (
         <div className="p-3 bg-amber-50 border border-amber-200 rounded text-xs text-gray-700">
@@ -135,32 +192,6 @@ export function DoseTitrationSelector({
           </p>
         </div>
       )}
-
-      {/* Previous Dose (for tracking) */}
-      <SelectInput
-        label="Previous dose (dose the patient has been on, if continuing)"
-        value={previousDose}
-        onChange={onPreviousDoseChange}
-        options={[
-          { value: "", label: "None (new patient)" },
-          { value: "0.25mg", label: "0.25 mg" },
-          { value: "0.5mg", label: "0.5 mg" },
-          { value: "1mg", label: "1.0 mg" },
-          { value: "1.7mg", label: "1.7 mg" },
-          { value: "2.4mg", label: "2.4 mg" },
-          { value: "7.2mg", label: "7.2 mg" },
-        ]}
-      />
-
-      {/* Weeks on the previous dose */}
-      <NumberInput
-        label="Weeks on the previous dose (if continuing)"
-        value={weeksAtCurrentDose}
-        onChange={onWeeksChange}
-        min={0}
-        max={104}
-        unit="weeks"
-      />
 
       {/* Injection Site */}
       <SelectInput

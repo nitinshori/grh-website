@@ -29,7 +29,7 @@ export interface HPVSchedule {
 }
 
 /** Number of previous HPV vaccine doses recorded, 0 where none or unknown. */
-function priorDoseCount(state: HPVConsultationState): number {
+export function priorDoseCount(state: HPVConsultationState): number {
   switch (state.assessment.priorDoses) {
     case "one":
       return 1;
@@ -119,6 +119,40 @@ function selectCourse(state: HPVConsultationState, age: number): HPVSchedule {
   };
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Days between two ISO dates, or null when either is missing or invalid. */
+export function daysBetween(from: string, to: string): number | null {
+  if (!from || !to) return null;
+  const a = new Date(from);
+  const b = new Date(to);
+  if (isNaN(a.getTime()) || isNaN(b.getTime())) return null;
+  return Math.floor((b.getTime() - a.getTime()) / DAY_MS);
+}
+
+/**
+ * Minimum interval in days before the given dose number under the schedule
+ * (PGD v004 guidance summary): two-dose course, dose 2 at least 5 months
+ * after dose 1; three-dose course, dose 2 at least 1 month after dose 1 and
+ * dose 3 at least 3 months after dose 2. Returns null where no interval applies.
+ */
+export function minimumIntervalDays(schedule: HPVSchedule | null, doseNumber: string): number | null {
+  if (!schedule) return null;
+  if (schedule.key === "two-dose" && doseNumber === "2") return 152;
+  if (schedule.key === "three-dose" && doseNumber === "2") return 28;
+  if (schedule.key === "three-dose" && doseNumber === "3") return 90;
+  return null;
+}
+
+/** Plain-English label for a minimum interval. */
+export function minimumIntervalLabel(schedule: HPVSchedule | null, doseNumber: string): string {
+  const d = minimumIntervalDays(schedule, doseNumber);
+  if (d === 152) return "5 months";
+  if (d === 28) return "1 month";
+  if (d === 90) return "3 months";
+  return "";
+}
+
 export function getAllAlerts(state: HPVConsultationState): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
   const age = state.patient.age;
@@ -155,7 +189,7 @@ export function getAllAlerts(state: HPVConsultationState): ClinicalAlert[] {
     });
   }
 
-  if (state.assessment.anaphylaxisToPreviousDose) {
+  if (state.assessment.anaphylaxisToPreviousDose === "yes") {
     alerts.push({
       severity: "stop",
       code: "HPV_PREVIOUS_ANAPHYLAXIS",
@@ -165,7 +199,7 @@ export function getAllAlerts(state: HPVConsultationState): ClinicalAlert[] {
     });
   }
 
-  if (state.assessment.anaphylaxisToComponent) {
+  if (state.assessment.anaphylaxisToComponent === "yes") {
     alerts.push({
       severity: "stop",
       code: "HPV_COMPONENT_ANAPHYLAXIS",

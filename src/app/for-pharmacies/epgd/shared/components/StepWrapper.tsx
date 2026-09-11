@@ -62,12 +62,30 @@ export function StepWrapper({
   // Extract pgdSlug from URL: /for-pharmacies/epgd/{slug}
   const pathname = usePathname();
   const pgdSlug = pathname.split("/").pop() || "";
-  const { markComplete, saveRecord } = useConsultationTracking(
+  const { markComplete, saveRecord, reset } = useConsultationTracking(
     pgdSlug,
     currentStep
   );
 
+  // A saved consultation that goes back to the first step is a new patient
+  // in tools that have no "New Consultation" button: forget the save so the
+  // next record is written, not silently skipped.
+  useEffect(() => {
+    if (currentStep === 0 && saveStatus === "saved") {
+      setSaveStatus("idle");
+      reset();
+    }
+  }, [currentStep, saveStatus, reset]);
+
   const handleCompleteAndSave = useCallback(async () => {
+    // The final step's validation was never enforced here: the last step
+    // could be saved and printed with the pharmacist's name blank, an
+    // observation period unticked, or an exclusion on screen (adversarial
+    // review, 11 Sep 2026). Same rules as Next.
+    if (!canProceed || isBlocked || validationError || !vaccineSafetySatisfied(pgdSlug)) {
+      setHasAttemptedNext(true);
+      return;
+    }
     // Mark analytics complete
     markComplete();
 
@@ -93,7 +111,26 @@ export function StepWrapper({
 
     // Print
     window.print();
-  }, [markComplete, getConsultationData, saveRecord]);
+  }, [markComplete, getConsultationData, saveRecord, canProceed, isBlocked, validationError, pgdSlug]);
+
+  // Every PGD requires the advice given to an excluded patient to be
+  // recorded, and until now no tool could save a consultation once a stop
+  // was on screen: Next was disabled and Save only existed on the last step.
+  // Any step with a stop can now be saved as "not supplied", without a print.
+  const handleSaveNotSupplied = useCallback(async () => {
+    if (!getConsultationData) return;
+    setSaveStatus("saving");
+    const data = getConsultationData();
+    if (!data) {
+      setSaveStatus("error");
+      return;
+    }
+    data.outcome = "not_supplied";
+    (data.clinicalData as Record<string, unknown>).stoppedAtStep = currentStep;
+    (data.clinicalData as Record<string, unknown>).stopReason = validationError ?? "Exclusion criteria met";
+    const success = await saveRecord(data);
+    setSaveStatus(success ? "saved" : "error");
+  }, [getConsultationData, saveRecord, currentStep, validationError]);
 
   const handleNewConsultation = useCallback(() => {
     if (
@@ -102,10 +139,11 @@ export function StepWrapper({
       )
     ) {
       setSaveStatus("idle");
+      reset();
       clearVaccineSafety(pgdSlug);
       onNewConsultation?.();
     }
-  }, [onNewConsultation, pgdSlug]);
+  }, [onNewConsultation, pgdSlug, reset]);
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
@@ -161,8 +199,8 @@ export function StepWrapper({
         </div>
       )}
 
-      {/* Save status banner on final step */}
-      {isLastStep && saveStatus !== "idle" && (
+      {/* Save status banner on final step, or after a not-supplied save */}
+      {(isLastStep || isBlocked) && saveStatus !== "idle" && (
         <div
           className={`mx-6 mb-4 px-4 py-3 rounded-lg print:hidden ${
             saveStatus === "saving"
@@ -210,8 +248,17 @@ export function StepWrapper({
         <div className="flex items-center gap-3">
           {isBlocked && (
             <span className="text-xs text-red-500 font-medium">
-              Cannot proceed — exclusion criteria met
+              Cannot proceed: exclusion criteria met
             </span>
+          )}
+          {isBlocked && getConsultationData && saveStatus !== "saved" && (
+            <button
+              onClick={handleSaveNotSupplied}
+              disabled={saveStatus === "saving"}
+              className="px-4 py-2.5 rounded-lg text-sm font-semibold border border-red-300 text-red-700 hover:bg-red-50 transition-colors"
+            >
+              {saveStatus === "saving" ? "Saving..." : "Save as not supplied"}
+            </button>
           )}
           {!isLastStep ? (
             <button

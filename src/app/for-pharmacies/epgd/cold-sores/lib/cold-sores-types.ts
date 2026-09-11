@@ -2,13 +2,20 @@ import { BasePatientDetails, BaseConsent, BaseSummary, ClinicalAlert, DoseRecomm
 
 export interface ColdSoresPatientDetails extends BasePatientDetails {}
 
-export interface ColdSoresConsent extends BaseConsent {}
+export interface ColdSoresConsent extends BaseConsent {
+  /** Under 16 only: who gave consent (the PGD covers patients from 12). */
+  consentBasis: "" | "parental-responsibility" | "gillick-competent";
+  /** Under 16 only: who consented, and for Gillick competence the assessment made. */
+  consentBasisNotes: string;
+}
 
 export interface ColdSoresSymptomAssessment {
   isRecurrent: boolean;
   isFirstEpisode: boolean;
   prodromeSigns: boolean;
   hoursFromProdrome: number | null;
+  /** How long this episode's lesion has been present. The PGD: consult a doctor if still present after 10 days. */
+  daysSinceOnset: number | null;
   currentSymptoms: string;
 }
 
@@ -68,11 +75,17 @@ export interface ColdSoresCounselling {
   hygieneMeasures: boolean;
   /** Patient information leaflet supplied. */
   providedPIL: boolean;
+  /** Report suspected adverse effects via Yellow Card and inform the GP as appropriate. */
+  yellowCard: boolean;
 }
 
 export interface ColdSoresConsultationSummary extends BaseSummary {
   medicineRecommended: string;
   counsellingPoints: string[];
+  /** Records requirement: advice given if excluded or declining treatment, and the decision reached. */
+  referralAdvice: string;
+  /** Records requirement: details of any adverse drug reactions and actions taken. */
+  adverseDrugReactions: string;
 }
 
 export interface ColdSoresConsultationState {
@@ -142,12 +155,15 @@ gpEmail: "",
       idVerified: false,
       idType: "",
       patientAwarePrivateService: false,
+      consentBasis: "",
+      consentBasisNotes: "",
     },
     symptomAssessment: {
       isRecurrent: false,
       isFirstEpisode: false,
       prodromeSigns: false,
       hoursFromProdrome: null,
+      daysSinceOnset: null,
       currentSymptoms: "",
     },
     medicalHistory: {
@@ -185,6 +201,7 @@ gpEmail: "",
       symptomRelief: false,
       hygieneMeasures: false,
       providedPIL: false,
+      yellowCard: false,
     },
     summary: {
       pharmacistName: "",
@@ -199,6 +216,8 @@ gpEmail: "",
       clinicalNotes: "",
       medicineRecommended: "",
       counsellingPoints: [],
+      referralAdvice: "",
+      adverseDrugReactions: "",
     },
     currentStep: 0,
     alerts: [],

@@ -9,6 +9,8 @@ import { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/types
 
 export type HerpesEpisodeType = "first" | "recurrent" | "suppressive" | "";
 export type HerpesMedicine = "aciclovir" | "valaciclovir" | "";
+/** "initial" is the day 0 supply (5 days); "day5Extension" is the second contact where new lesions are still forming. */
+export type HerpesFirstEpisodeSupply = "initial" | "day5Extension" | "";
 
 export interface HerpesAssessment {
   /** Inclusion: confirmed or highly suspected genital herpes (HSV-1 or HSV-2 positive or clinical diagnosis). */
@@ -46,10 +48,14 @@ export interface HerpesAssessment {
   neurologicalDisease: boolean;
   lesionCount: number | null;
   symptomsPresent: boolean;
-  /** Recurrent episode treatment must start within 48 hours of symptom onset. */
-  daysFromOnset: number | null;
-  /** First episode extension to 10 days only where new lesions are still forming at day 5. */
+  /** Recurrent episode treatment must start within 48 hours of symptom onset (recorded in hours, not days). */
+  hoursFromOnset: number | null;
+  /** First episode: which supply this is. The extension to 10 days is a separate, second contact at day 5. */
+  firstEpisodeSupply: HerpesFirstEpisodeSupply;
+  /** Day 5 review only: new lesions are still forming (the sole ground for the extension). */
   newLesionsAtDay5: boolean;
+  /** Valaciclovir recurrent episode: the document authorises 3, 4 or 5 days (6 to 10 tablets). */
+  recurrentCourseDays: 3 | 4 | 5 | null;
   medicine: HerpesMedicine;
 }
 
@@ -72,6 +78,8 @@ export interface HerpesCounselling {
   safetyNetting: boolean;
   /** Discuss suppressive therapy if recurrences reach 6 or more a year. */
   discussedSuppressiveOption: boolean;
+  /** Report any adverse effects via Yellow Card. */
+  yellowCardExplained: boolean;
 }
 
 export interface HerpesConsultationState {
@@ -113,8 +121,10 @@ export function createInitialConsultationState(): HerpesConsultationState {
       neurologicalDisease: false,
       lesionCount: null,
       symptomsPresent: false,
-      daysFromOnset: null,
+      hoursFromOnset: null,
+      firstEpisodeSupply: "",
       newLesionsAtDay5: false,
+      recurrentCourseDays: null,
       medicine: "",
     },
     counselling: {
@@ -130,6 +140,7 @@ export function createInitialConsultationState(): HerpesConsultationState {
       completeCourse: false,
       safetyNetting: false,
       discussedSuppressiveOption: false,
+      yellowCardExplained: false,
     },
     summary: { pharmacistName: "", pharmacistGPhC: "", pharmacyName: "", pharmacyAddress: "", consultationDate: new Date().toISOString().split("T")[0], consultationTime: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }), clinicalNotes: "" },
     currentStep: 0,

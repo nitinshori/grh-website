@@ -24,7 +24,9 @@ import {
   shouldBlockConsultation,
   getAdministrationGuidance,
   daysUntilDeparture,
+  yearsSincePreviousDose,
   nextBoosterDueDate,
+  RENEWAL_WINDOW_YEARS,
   TYPHOID_PGD_VERSION,
 } from './typhoid-clinical-logic';
 import {
@@ -35,6 +37,7 @@ import {
   validateTyphoidAdministrationStep,
   validateTyphoidPostVaccineStep,
   validateTyphoidSummaryStep,
+  GILLICK_MIN_AGE,
 } from './typhoid-validation';
 import { calculateAge } from '../shared/types';
 import { usePharmacistProfile } from '../shared/hooks/usePharmacistProfile';
@@ -96,16 +99,25 @@ export function TyphoidClient() {
     counselledFoodWater: false,
     counselledFeverWarning: false,
     observationCompleted: false,
+    adverseReaction: false,
+    adverseReactionDetails: '',
   });
 
-  const [showSummaryReport, setShowSummaryReport] = useState(false);
+  // Recorded when an exclusion applies: the document requires the advice
+  // given (food and water hygiene in every case) and the decision to be
+  // documented, and a febrile returning traveller to be referred the same day.
+  const [exclusionOutcome, setExclusionOutcome] = useState({
+    adviceGiven: '',
+    foodWaterAdviceGiven: false,
+    referral: '' as '' | 'gp' | 'travel-clinic' | 'urgent-same-day' | 'declined',
+  });
 
   // Persist form data to sessionStorage so it survives accidental navigation
   const formState = useMemo(() => ({
     currentStep, patientDetails, consent, travelAssessment, medicalHistory,
-    contraIndicationsReviewed, summary, postVaccineAdvice,
+    contraIndicationsReviewed, summary, postVaccineAdvice, exclusionOutcome,
   }), [currentStep, patientDetails, consent, travelAssessment, medicalHistory,
-    contraIndicationsReviewed, summary, postVaccineAdvice]);
+    contraIndicationsReviewed, summary, postVaccineAdvice, exclusionOutcome]);
 
   const { clearSaved } = useFormPersistence(
     'epgd-typhoid',
@@ -119,6 +131,7 @@ export function TyphoidClient() {
       setContraIndicationsReviewed(saved.contraIndicationsReviewed);
       setSummary(saved.summary);
       setPostVaccineAdvice(saved.postVaccineAdvice);
+      if (saved.exclusionOutcome) setExclusionOutcome(saved.exclusionOutcome);
     }, [])
   );
 
@@ -157,7 +170,8 @@ export function TyphoidClient() {
         if (s.medicalHistory) setMedicalHistory(s.medicalHistory);
         if (s.contraIndicationsReviewed) setContraIndicationsReviewed(s.contraIndicationsReviewed);
         if (s.summary) setSummary(s.summary);
-        if (s.postVaccineAdvice) setPostVaccineAdvice(s.postVaccineAdvice);
+        if (s.postVaccineAdvice) setPostVaccineAdvice({ ...postVaccineAdvice, ...s.postVaccineAdvice });
+        if (s.exclusionOutcome) setExclusionOutcome(s.exclusionOutcome);
       })
       .catch(() => { /* draft missing or expired — ignore */ });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -221,14 +235,19 @@ export function TyphoidClient() {
   const isUnder16 = patientDetails.age !== null && patientDetails.age < 16;
 
   // Step can proceed checks
-  const canProceedStep0 = patientValidationError === null;
-  const canProceedStep1 = consentValidationError === null;
-  const canProceedStep2 = travelValidationError === null;
-  const canProceedStep3 = medicalHistoryValidationError === null;
+  // A stop anywhere disables Next on every step (and Save & Print on the
+  // last). The progress bar is backwards-only, so there is no forward route
+  // that skips these gates (adversarial review, 11 Sep 2026).
+  const canProceedStep0 = patientValidationError === null && !isBlocked;
+  const canProceedStep1 = consentValidationError === null && !isBlocked;
+  const canProceedStep2 = travelValidationError === null && !isBlocked;
+  const canProceedStep3 = medicalHistoryValidationError === null && !isBlocked;
   const canProceedStep4 = contraIndicationsReviewed.confirmedNoAbsoluteContraindications && !isBlocked;
-  const canProceedStep5 = administrationValidationError === null;
-  const canProceedStep6 = postVaccineValidationError === null;
-  const canProceedStep7 = summaryValidationError === null;
+  const canProceedStep5 = administrationValidationError === null && !isBlocked;
+  const canProceedStep6 = postVaccineValidationError === null && !isBlocked;
+  const canProceedStep7 = summaryValidationError === null && !isBlocked;
+  const yearsSincePrevious = useMemo(() => yearsSincePreviousDose(patientDetails.previousDoseDate), [patientDetails.previousDoseDate]);
+  const renewalWindow = yearsSincePrevious !== null && yearsSincePrevious >= RENEWAL_WINDOW_YEARS && yearsSincePrevious < 3;
 
   const canProceedByStep = [
     canProceedStep0,
@@ -258,6 +277,16 @@ export function TyphoidClient() {
 
   // ─── Consultation Record Data (for saving to database) ───
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    // The record is being written: forget the sessionStorage copy so that
+    // reopening the tool in this tab does not resume a saved consultation and
+    // write a duplicate (adversarial review, 11 Sep 2026).
+    clearSaved();
+    const vaccineName =
+      summary.vaccineType === 'typhim-vi'
+        ? 'Typhim Vi, typhoid Vi polysaccharide vaccine 25 micrograms in 0.5 mL'
+        : summary.vaccineType === 'other-vi'
+        ? `${summary.vaccineBrand || 'Vi polysaccharide typhoid vaccine'}, 25 micrograms in 0.5 mL`
+        : '';
     return {
       patient: {
         firstName: patientDetails.firstName,
@@ -280,24 +309,38 @@ export function TyphoidClient() {
         summary,
         clinicalAlerts,
         pgdVersion: TYPHOID_PGD_VERSION,
-        dose: '0.5 mL, 25 micrograms Vi polysaccharide, solution for injection in a pre-filled syringe',
-        route: 'Intramuscular',
+        dose: isBlocked ? null : '0.5 mL, 25 micrograms Vi polysaccharide, solution for injection in a pre-filled syringe',
+        route: isBlocked ? null : 'Intramuscular',
+        exclusion: isBlocked
+          ? { reasons: clinicalAlerts.filter((a) => a.severity === 'stop').map((a) => a.message), ...exclusionOutcome }
+          : null,
+        adverseReaction: postVaccineAdvice.adverseReaction ? postVaccineAdvice.adverseReactionDetails : null,
       } as unknown as Record<string, unknown>,
-      outcome: clinicalAlerts.some((a) => a.severity === 'stop') ? "not_supplied" : "completed",
+      outcome: isBlocked
+        ? (exclusionOutcome.referral && exclusionOutcome.referral !== 'declined' ? 'referred' : 'not_supplied')
+        : 'completed',
+      ...(isBlocked || !vaccineName
+        ? {}
+        : { medicine: { name: vaccineName, dose: '0.5 mL intramuscular, single dose', duration: 'Single dose', quantity: 1 } }),
       summary: {
         pharmacistName: summary.pharmacistName,
         pharmacistGPhC: summary.pharmacistGPhC,
+        pharmacyName: summary.pharmacyName,
+        pharmacyAddress: summary.pharmacyAddress,
         consultationDate: summary.consultationDate,
         consultationTime: summary.consultationTime,
+        clinicalNotes: summary.clinicalNotes,
       },
+      consent: { notifyGp: !!consent.notifyGp },
     };
-  }, [patientDetails, consent, travelAssessment, medicalHistory, contraIndicationsReviewed, postVaccineAdvice, summary, clinicalAlerts]);
+  }, [patientDetails, consent, travelAssessment, medicalHistory, contraIndicationsReviewed, postVaccineAdvice, summary, clinicalAlerts, isBlocked, exclusionOutcome, clearSaved]);
 
   const handleNewConsultation = useCallback(() => {
+    clearSaved();
     setCurrentStep(0);
     setCompletedSteps(new Set());
-    setPatientDetails(initialTyphoidPatientDetails);
-    setConsent(initialTyphoidConsent);
+    setPatientDetails({ ...initialTyphoidPatientDetails });
+    setConsent({ ...initialTyphoidConsent });
     setTravelAssessment({ travelDestinationConfirmed: false, travelReasonConfirmed: false, timingConfirmed: false, shortNoticeAdvised: false });
     setMedicalHistory({
       anaphylaxisToVaccine: false, anaphylaxisToVaccineComponent: false, severeFebrilleIllness: false,
@@ -307,26 +350,49 @@ export function TyphoidClient() {
     setPostVaccineAdvice({
       patientAdvised: false, counselledReactions: false, counselledValidity: false, counselledCertificate: false,
       counselledFoodWater: false, counselledFeverWarning: false, observationCompleted: false,
+      adverseReaction: false, adverseReactionDetails: '',
     });
+    setExclusionOutcome({ adviceGiven: '', foodWaterAdviceGiven: false, referral: '' });
     setSummary(initialTyphoidSummary());
-    setShowSummaryReport(false);
-  }, []);
+  }, [clearSaved]);
 
-  if (showSummaryReport) {
-    return (
-      <div>
-        <TyphoidSummaryReport
-          patientDetails={patientDetails}
-          consent={consent}
-          summary={summary}
-          medicalHistory={medicalHistory}
-          clinicalAlerts={clinicalAlerts}
-          postVaccineAdvice={postVaccineAdvice}
-          onBack={() => setShowSummaryReport(false)}
-        />
-      </div>
-    );
-  }
+  // Passed to every StepWrapper so that a stop on any step offers "Save as
+  // not supplied" and the record carries the exclusion outcome.
+  const wrapperShared = { isBlocked, getConsultationData, onNewConsultation: handleNewConsultation };
+
+  const exclusionOutcomeBlock = isBlocked ? (
+    <div className="mb-6 space-y-3 rounded-lg border border-red-300 bg-red-50 p-4 print:hidden">
+      <p className="text-sm font-semibold text-red-800">Exclusion: record the advice given and the decision</p>
+      <p className="text-xs text-red-800">
+        Explain why vaccination cannot be given and what the alternative is. In every case give food and water hygiene advice. Where there is fever after travel to a risk area, refer for urgent same-day assessment and say plainly that typhoid must be excluded. Then use &quot;Save as not supplied&quot; in the step footer.
+      </p>
+      <Checkbox
+        label="Food and water hygiene advice given and the Get Real Health sheet supplied (required in every case)"
+        checked={exclusionOutcome.foodWaterAdviceGiven}
+        onChange={(v) => setExclusionOutcome({ ...exclusionOutcome, foodWaterAdviceGiven: v })}
+      />
+      <TextArea
+        label="Advice given and decision reached"
+        value={exclusionOutcome.adviceGiven}
+        onChange={(v) => setExclusionOutcome({ ...exclusionOutcome, adviceGiven: v })}
+        placeholder="e.g. Fever after travel to India: advised to attend urgent care today, typhoid to be excluded; food and water advice given"
+        rows={3}
+        required
+      />
+      <SelectInput
+        label="Referral"
+        value={exclusionOutcome.referral}
+        onChange={(v) => setExclusionOutcome({ ...exclusionOutcome, referral: v as typeof exclusionOutcome.referral })}
+        options={[
+          { value: 'gp', label: 'Referred to GP' },
+          { value: 'travel-clinic', label: 'Referred to a travel clinic' },
+          { value: 'urgent-same-day', label: 'Urgent same-day assessment (fever after travel)' },
+          { value: 'declined', label: 'Patient declined referral; advice given' },
+        ]}
+        required
+      />
+    </div>
+  ) : null;
 
   return (
     <>
@@ -345,16 +411,15 @@ export function TyphoidClient() {
           stepLabels={STEP_LABELS}
           currentStep={currentStep}
           onStepClick={(step) => {
-            if (completedSteps.has(step) || step <= currentStep) {
-              setCurrentStep(step);
-            }
+            if (step < currentStep) setCurrentStep(step);
           }}
           completedSteps={completedSteps}
           hasErrors={completedSteps.size > 0 && (patientValidationError !== null || consentValidationError !== null)}
         />
       </div>
 
-      {currentStep >= 2 && clinicalAlerts.length > 0 && <AlertBanner alerts={clinicalAlerts} />}
+      {(currentStep >= 2 || isBlocked) && clinicalAlerts.length > 0 && <AlertBanner alerts={clinicalAlerts} />}
+      {exclusionOutcomeBlock}
 
       {/* Step 0: Patient Details */}
       {currentStep === 0 && (
@@ -367,6 +432,7 @@ export function TyphoidClient() {
           onPrev={handlePrev}
           canProceed={canProceedStep0}
           validationError={patientValidationError}
+          {...wrapperShared}
         >
           <PatientDetailsStep
             patient={patientDetails}
@@ -387,6 +453,7 @@ export function TyphoidClient() {
           onPrev={handlePrev}
           canProceed={canProceedStep1}
           validationError={consentValidationError}
+          {...wrapperShared}
         >
           <ConsentStep
             consent={consent}
@@ -399,8 +466,10 @@ export function TyphoidClient() {
               onChange={(v) => handlePatientDetailsChange('consentBasis', v as TyphoidPatientDetails['consentBasis'])}
               options={[
                 ...(isUnder16 ? [] : [{ value: 'self', label: 'The patient (aged 16 and over)' }]),
-                { value: 'parental', label: 'A person with parental responsibility (patient under 16)' },
-                { value: 'gillick', label: 'The young person, assessed as Gillick competent (under 16)' },
+                ...(isUnder16 ? [{ value: 'parental', label: 'A person with parental responsibility (patient under 16)' }] : []),
+                ...(isUnder16 && patientDetails.age !== null && patientDetails.age >= GILLICK_MIN_AGE
+                  ? [{ value: 'gillick', label: `The young person, assessed as Gillick competent (${GILLICK_MIN_AGE} to 15 years)` }]
+                  : []),
               ]}
               required
             />
@@ -455,6 +524,7 @@ export function TyphoidClient() {
           onPrev={handlePrev}
           canProceed={canProceedStep2}
           validationError={travelValidationError}
+          {...wrapperShared}
         >
           <div className="space-y-4">
             <TextInput
@@ -563,12 +633,17 @@ export function TyphoidClient() {
                       className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
                     />
                   </div>
-                  <TextInput
-                    label="If within the last 3 years: reason the previous dose is due for renewal (returning to a risk area)"
-                    value={patientDetails.previousDoseRenewalReason}
-                    onChange={(v) => handlePatientDetailsChange('previousDoseRenewalReason', v)}
-                    placeholder="Leave blank to exclude and refer"
-                  />
+                  {renewalWindow && (
+                    <TextInput
+                      label="Previous dose is within 6 months of its 3 year renewal date: record that the traveller is returning to a risk area and why the dose is due for renewal"
+                      value={patientDetails.previousDoseRenewalReason}
+                      onChange={(v) => handlePatientDetailsChange('previousDoseRenewalReason', v)}
+                      placeholder="e.g. returning to rural Bangladesh for 3 months, previous dose 2 years 8 months ago, renewal due before return"
+                    />
+                  )}
+                  {yearsSincePrevious !== null && yearsSincePrevious >= 0 && yearsSincePrevious < RENEWAL_WINDOW_YEARS && (
+                    <p className="text-xs text-red-700">Previous dose {yearsSincePrevious.toFixed(1)} years ago: not yet due for renewal, so the document&apos;s exception does not apply. Excluded.</p>
+                  )}
                 </>
               )}
             </div>
@@ -587,6 +662,7 @@ export function TyphoidClient() {
           onPrev={handlePrev}
           canProceed={canProceedStep3}
           validationError={medicalHistoryValidationError}
+          {...wrapperShared}
         >
           <div className="space-y-4">
             <Checkbox
@@ -681,11 +757,13 @@ export function TyphoidClient() {
           onPrev={handlePrev}
           canProceed={canProceedStep4}
           validationError={
-            !contraIndicationsReviewed.confirmedNoAbsoluteContraindications
+            isBlocked
+              ? 'Exclusion criteria met: record the advice given and save as not supplied'
+              : !contraIndicationsReviewed.confirmedNoAbsoluteContraindications
               ? 'You must confirm review before proceeding'
               : null
           }
-          isBlocked={isBlocked}
+          {...wrapperShared}
         >
           <div className="space-y-4">
             {isBlocked && (
@@ -752,6 +830,7 @@ export function TyphoidClient() {
           onPrev={handlePrev}
           canProceed={canProceedStep5}
           validationError={administrationValidationError}
+          {...wrapperShared}
         >
           <div className="space-y-4">
             <Checkbox
@@ -883,6 +962,7 @@ export function TyphoidClient() {
           onPrev={handlePrev}
           canProceed={canProceedStep6}
           validationError={postVaccineValidationError}
+          {...wrapperShared}
         >
           <div className="space-y-4">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -964,6 +1044,24 @@ export function TyphoidClient() {
             />
 
             <Checkbox
+              label="Adverse reaction observed during or after vaccination"
+              checked={postVaccineAdvice.adverseReaction}
+              onChange={(v) =>
+                setPostVaccineAdvice({ ...postVaccineAdvice, adverseReaction: v, ...(v ? {} : { adverseReactionDetails: '' }) })
+              }
+              description="The record must carry details of any adverse drug reaction and the action taken"
+            />
+            {postVaccineAdvice.adverseReaction && (
+              <TextArea
+                label="Adverse reaction and action taken (report via Yellow Card and inform the GP)"
+                value={postVaccineAdvice.adverseReactionDetails}
+                onChange={(v) => setPostVaccineAdvice({ ...postVaccineAdvice, adverseReactionDetails: v })}
+                rows={2}
+                required
+              />
+            )}
+
+            <Checkbox
               label="All counselling completed and documented"
               checked={postVaccineAdvice.patientAdvised}
               onChange={(v) =>
@@ -982,14 +1080,13 @@ export function TyphoidClient() {
           description="Complete pharmacist declaration and generate consultation record"
           currentStep={currentStep}
           totalSteps={STEP_LABELS.length}
-          onNext={() => { clearSaved(); setShowSummaryReport(true); }}
+          onNext={handleNext}
           onPrev={handlePrev}
           canProceed={canProceedStep7}
           validationError={summaryValidationError}
-          getConsultationData={getConsultationData}
-          onNewConsultation={handleNewConsultation}
+          {...wrapperShared}
         >
-          <div className="space-y-4">
+          <div className="space-y-4 print:hidden">
             <TextInput
               label="Pharmacist name"
               value={summary.pharmacistName}
@@ -1028,6 +1125,21 @@ export function TyphoidClient() {
               rows={4}
             />
             <p className="text-xs text-gray-500">Administered under {TYPHOID_PGD_VERSION}.</p>
+          </div>
+          {/* The printed record. Save & Print prints this page, so the report
+              is the content of the last step, not a separate view reached
+              through a Next button that the last step never shows. */}
+          <div className="mt-6">
+            <TyphoidSummaryReport
+              patientDetails={patientDetails}
+              consent={consent}
+              summary={summary}
+              medicalHistory={medicalHistory}
+              clinicalAlerts={clinicalAlerts}
+              postVaccineAdvice={postVaccineAdvice}
+              isBlocked={isBlocked}
+              exclusionOutcome={exclusionOutcome}
+            />
           </div>
         </StepWrapper>
       )}

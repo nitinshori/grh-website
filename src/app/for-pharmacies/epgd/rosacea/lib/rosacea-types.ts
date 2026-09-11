@@ -6,6 +6,9 @@ export interface RosaceaAssessment {
   flushing: boolean;
   erythema: boolean;
   papulesPostules: boolean;
+  /** Ocular symptoms (dry, sore, gritty eyes, blepharitis): neither arm treats
+   *  ocular rosacea; refer for the eyes. */
+  ocularSymptoms: boolean;
   triggersIdentified: string;
 }
 
@@ -21,6 +24,8 @@ export interface RosaceaContraindications {
   hypersensitivityAzelaicAcid: boolean;
   /** Asthma: worsening of asthma has been reported with azelaic acid (caution). */
   asthma: boolean;
+  /** Attestation that every exclusion question was put to the patient. */
+  questionsAsked: boolean;
   /** Derived: any arm-independent exclusion is met. */
   contraindicated: boolean;
 }
@@ -34,6 +39,12 @@ export interface RosaceaTreatment {
   /** Which supply of the course this is ("1", "2", "3"); each supply is one 30 g tube. */
   supplyNumber: string;
   quantity: string;
+  /** Brand dispensed (the PGD record requires name and brand). */
+  brand: string;
+  /** Date the current course started (required for supply 2 onwards). */
+  courseStartDate: string;
+  /** Date of the previous supply in this course (required for supply 2 onwards). */
+  previousSupplyDate: string;
 }
 
 export interface RosaceaCounselling {
@@ -60,8 +71,12 @@ export interface RosaceaConsultationState {
   contraindications: RosaceaContraindications;
   treatment: RosaceaTreatment;
   counselling: RosaceaCounselling;
-  summary: BaseSummary;
-  completedSteps: Set<number>;
+  summary: RosaceaSummary;
+}
+
+export interface RosaceaSummary extends BaseSummary {
+  /** Advice given and referral made when the patient is excluded. */
+  exclusionAdvice: string;
 }
 
 export type RosaceaAction =
@@ -71,10 +86,11 @@ export type RosaceaAction =
   | { type: "UPDATE_CONTRAINDICATIONS"; field: keyof RosaceaContraindications; value: unknown }
   | { type: "UPDATE_TREATMENT"; field: keyof RosaceaTreatment; value: unknown }
   | { type: "UPDATE_COUNSELLING"; field: keyof RosaceaCounselling; value: unknown }
-  | { type: "UPDATE_SUMMARY"; field: keyof BaseSummary; value: unknown }
-  | { type: "SET_STEP"; step: number };
+  | { type: "UPDATE_SUMMARY"; field: keyof RosaceaSummary; value: unknown }
+  | { type: "SET_STEP"; step: number }
+  | { type: "RESET" };
 
-export const STEP_LABELS = ["Patient Details", "Consent", "Rosacea Assessment", "Contraindications", "Treatment Selection", "Counselling", "Summary & Record", "Consultation Complete"];
+export const STEP_LABELS = ["Patient Details", "Consent", "Rosacea Assessment", "Contraindications", "Treatment Selection", "Counselling", "Summary & Record"];
 export const TOTAL_STEPS = STEP_LABELS.length;
 
 export function createInitialRosaceaState(): RosaceaConsultationState {
@@ -82,11 +98,10 @@ export function createInitialRosaceaState(): RosaceaConsultationState {
     currentStep: 0,
     patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", gpAddress: "", gpPhone: "", gpEmail: "", gpOdsCode: "", nhsNumber: "", address: "", phone: "", email: "" },
     consent: { informedConsentGiven: false, idVerified: false, idType: "", patientAwarePrivateService: false },
-    assessment: { subtype: "", severity: "", flushing: false, erythema: false, papulesPostules: false, triggersIdentified: "" },
-    contraindications: { pregnancy: false, breastfeeding: false, underEighteen: false, brokenOrEczematousSkin: false, hypersensitivityMetronidazole: false, hypersensitivityAzelaicAcid: false, asthma: false, contraindicated: false },
-    treatment: { product: "", strength: "", frequency: "", duration: "", supplyNumber: "", quantity: "" },
+    assessment: { subtype: "", severity: "", flushing: false, erythema: false, papulesPostules: false, ocularSymptoms: false, triggersIdentified: "" },
+    contraindications: { pregnancy: false, breastfeeding: false, underEighteen: false, brokenOrEczematousSkin: false, hypersensitivityMetronidazole: false, hypersensitivityAzelaicAcid: false, asthma: false, questionsAsked: false, contraindicated: false },
+    treatment: { product: "", strength: "", frequency: "", duration: "", supplyNumber: "", quantity: "", brand: "", courseStartDate: "", previousSupplyDate: "" },
     counselling: { sunProtectionAdvised: false, triggerAvoidanceAdvised: false, diaryAdvised: false, skinCareAdvised: false, applicationAdvised: false, reviewAdvised: false, followUpAdvised: false, pilSupplied: false },
-    summary: { pharmacistName: "", pharmacistGPhC: "", pharmacyName: "", pharmacyAddress: "", consultationDate: new Date().toISOString().split("T")[0], consultationTime: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }), clinicalNotes: "" },
-    completedSteps: new Set(),
+    summary: { pharmacistName: "", pharmacistGPhC: "", pharmacyName: "", pharmacyAddress: "", consultationDate: new Date().toISOString().split("T")[0], consultationTime: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }), clinicalNotes: "", exclusionAdvice: "" },
   };
 }

@@ -5,9 +5,11 @@ export interface SmokingNRTPatientDetails extends BasePatientDetails {}
 export interface SmokingNRTConsent extends BaseConsent {}
 
 export interface SmokingAssessment {
+  /** 0 is a non-smoker (exclusion, derived); under 5 a day is flagged as
+   *  possibly occasional. */
   cigarettesPerDay: number | null;
+  /** "under-5min" | "5-30min" | "31-60min" | "over-60min" */
   timeToFirstCigarette: string;
-  currentlySmokes: boolean;
   quitDate: string;
   /** PGD inclusion: motivated to quit smoking and set a quit date. */
   motivated: boolean;
@@ -26,12 +28,15 @@ export interface SmokingMedicalHistory {
   oralUlcerationOrDentalWork: boolean;
   pregnant: boolean;
   breastfeeding: boolean;
+  /** Current medicines and doses ("none" if nothing). Required record. */
+  currentMedications: string;
 }
 
 export interface SmokingContraindications {
   childUnder12: boolean;
-  recentCardiacEvent: boolean;
-  pheochromocytoma: boolean;
+  // Recent cardiac event and phaeochromocytoma were stops here and cautions
+  // on the Medical History step; the document lists both as cautions
+  // (adversarial review, 11 Sep 2026). They are asked once, as cautions.
   // PGD v002 exclusions
   hypersensitivity: boolean;
   nonSmokerOrOccasional: boolean;
@@ -41,8 +46,16 @@ export interface SmokingContraindications {
 
 export interface SmokingNRTSelection {
   usePatches: boolean;
+  /** start: first supply, strength set by consumption (21mg for more than
+   *  10 a day, 14mg for 10 or fewer); stepdown: 14mg or 7mg later in the
+   *  course. */
+  patchStage: "" | "start" | "stepdown";
   patchStrength: string;
+  /** Brand of 24-hour patch handed over (document: name and brand). */
+  patchBrand: string;
   useOralForm: boolean;
+  /** Brand of gum or lozenge handed over. */
+  oralBrand: string;
   /** PGD 2: nicotine lozenges or gum, 2mg and 4mg only. */
   oralFormType: string;
   oralStrength: "" | "2mg" | "4mg";
@@ -146,7 +159,6 @@ gpEmail: "",
     assessment: {
       cigarettesPerDay: null,
       timeToFirstCigarette: "",
-      currentlySmokes: true,
       quitDate: "",
       motivated: false,
     },
@@ -162,19 +174,21 @@ gpEmail: "",
       oralUlcerationOrDentalWork: false,
       pregnant: false,
       breastfeeding: false,
+      currentMedications: "",
     },
     contraindications: {
       childUnder12: false,
-      recentCardiacEvent: false,
-      pheochromocytoma: false,
       hypersensitivity: false,
       nonSmokerOrOccasional: false,
       generalisedSkinDisorder: false,
     },
     nrtSelection: {
       usePatches: false,
+      patchStage: "",
       patchStrength: "",
+      patchBrand: "",
       useOralForm: false,
+      oralBrand: "",
       oralFormType: "",
       oralStrength: "",
       patchQuantity: null,

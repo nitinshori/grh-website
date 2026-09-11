@@ -18,6 +18,7 @@ import {
   hasHardStops,
   calculateDoseRecommendation,
   getMedicineOptions,
+  getQuantityOptions,
   MEDICINE_OPTIONS,
   PGD_STRAPLINE,
   isDuac,
@@ -37,7 +38,6 @@ import {
   TextInput,
   Checkbox,
   SelectInput,
-  NumberInput,
   TextArea,
 } from "../shared/components/FormInputs";
 
@@ -141,7 +141,17 @@ export default function AcneClient() {
   const alerts = useMemo(() => getAllAlerts(state), [state]);
   const doseRecommendation = useMemo(() => calculateDoseRecommendation(state), [state]);
   const hasStops = useMemo(() => hasHardStops(alerts), [alerts]);
-  const medicineOptions = useMemo(() => getMedicineOptions(state.assessment.severity), [state.assessment.severity]);
+  const medicineOptions = useMemo(() => getMedicineOptions(state), [state]);
+
+  // If a product the pharmacist had chosen is no longer offered (an
+  // arm-specific exclusion was ticked after the choice), clear it.
+  useEffect(() => {
+    const choice = state.medicineSelection.medicineChoice;
+    if (choice && !medicineOptions.includes(choice)) {
+      dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "medicineChoice", value: "" });
+      dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "quantitySupplied", value: "" });
+    }
+  }, [medicineOptions, state.medicineSelection.medicineChoice]);
 
   // Update alerts in state
   const updatedState = useMemo(() => {
@@ -154,8 +164,10 @@ export default function AcneClient() {
   // Validation for current step
   const validationError = useMemo(() => validateStep(state.currentStep, state), [state.currentStep, state]);
 
-  // Can proceed to next step?
-  const canProceed = !validationError && (!hasStops || state.currentStep >= 5);
+  // Can proceed to next step? A stop anywhere disables Next everywhere
+  // (the old "currentStep >= 5" carve-out let a stop ticked after the fact
+  // sail through Counselling to Save & Print).
+  const canProceed = !validationError && !hasStops;
 
   // Mark step as completed
   const markStepComplete = useCallback(() => {
@@ -166,6 +178,16 @@ export default function AcneClient() {
   const handleNextStep = () => {
     if (canProceed) {
       markStepComplete();
+      if (state.currentStep === 0) {
+        // Contemporaneous record: stamp the date and time when the
+        // consultation actually starts, not when the tab was opened.
+        dispatch({ type: "UPDATE_SUMMARY", field: "consultationDate", value: new Date().toISOString().split("T")[0] });
+        dispatch({
+          type: "UPDATE_SUMMARY",
+          field: "consultationTime",
+          value: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
+        });
+      }
       dispatch({ type: "NEXT_STEP" });
     }
   };
@@ -174,14 +196,20 @@ export default function AcneClient() {
     dispatch({ type: "PREV_STEP" });
   };
 
+  // Backwards only: going forward always means pressing Next, where the
+  // gates are.
   const handleSetStep = (step: number) => {
-    if (completedSteps.has(step) || step <= state.currentStep) {
+    if (step <= state.currentStep) {
       dispatch({ type: "SET_STEP", step });
     }
   };
 
   // ─── Consultation Record Data (for saving to database) ───
+  // Returns a record on every step, including when no medicine has been
+  // chosen, so an excluded patient can be saved as "not supplied" from the
+  // step the stop was raised on.
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    const supplied = !hasStops && !!doseRecommendation;
     return {
       patient: {
         firstName: state.patient.firstName,
@@ -193,20 +221,37 @@ export default function AcneClient() {
         address: state.patient.address,
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
+        gpAddress: state.patient.gpAddress,
+        gpPhone: state.patient.gpPhone,
+        gpEmail: state.patient.gpEmail,
+        gpOdsCode: state.patient.gpOdsCode,
       },
-      clinicalData: state as unknown as Record<string, unknown>,
+      clinicalData: { ...state, alerts, doseRecommendation } as unknown as Record<string, unknown>,
       outcome: hasStops ? "not_supplied" : "completed",
-      medicine: {
-        name: state.medicineSelection?.medicineChoice,
-      },
+      medicine: supplied
+        ? {
+            name: doseRecommendation.medicine,
+            dose: `${doseRecommendation.frequency ?? "Once daily in the evening"}: ${doseRecommendation.dose}`,
+            duration: state.medicineSelection.repeatCourse
+              ? "Repeat course, maximum 12 weeks continuous use"
+              : "Up to 12 weeks (one treatment course)",
+            quantity: state.medicineSelection.quantitySupplied,
+          }
+        : undefined,
       summary: {
-        pharmacistName: state.summary.pharmacistName,
-        pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacistName: state.summary.pharmacistName || __pharmProfile?.name || "",
+        pharmacistGPhC: state.summary.pharmacistGPhC || __pharmProfile?.gphcNumber || "",
+        pharmacyName: state.summary.pharmacyName || __pharmProfile?.pharmacyName || "",
+        pharmacyAddress: state.summary.pharmacyAddress || __pharmProfile?.pharmacyAddress || "",
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: [state.summary.clinicalNotes, hasStops && state.summary.exclusionAdvice ? `Advice given (excluded): ${state.summary.exclusionAdvice}` : ""]
+          .filter(Boolean)
+          .join("\n"),
       },
+      consent: { notifyGp: state.consent.notifyGp },
     };
-  }, [state, hasStops]);
+  }, [state, hasStops, alerts, doseRecommendation, __pharmProfile]);
 
   const handleNewConsultation = useCallback(() => {
     dispatch({ type: "RESET" });
@@ -266,8 +311,16 @@ export default function AcneClient() {
             onPrev={handlePrevStep}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
-            <PatientDetailsStep patient={state.patient} onChange={handlePatientChange} />
+            <div className="space-y-4">
+              <AlertBanner alerts={alerts} />
+              <PatientDetailsStep patient={state.patient} onChange={handlePatientChange} requireAdult={false} />
+              <p className="text-xs text-gray-500">
+                This PGD is for individuals aged 12 years and over. Address and GP practice are required for the PGD record.
+              </p>
+            </div>
           </StepWrapper>
         );
 
@@ -281,15 +334,45 @@ export default function AcneClient() {
             onPrev={handlePrevStep}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
               <ConsentStep consent={state.consent} onChange={handleConsentChange} />
-              <Checkbox
-                label="Patient is female (or able to become pregnant)"
-                checked={state.consent.femaleConfirmed}
-                onChange={(v) => handleConsentChange("femaleConfirmed", v)}
-                description="Pregnancy and planning pregnancy are exclusions for adapalene / benzoyl peroxide; pregnancy and breastfeeding are referred to the GP under both arms."
-              />
+              {state.patient.age !== null && state.patient.age < 16 && (
+                <div className="space-y-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                  <p className="text-sm font-medium text-navy-900">
+                    Patient is under 16: record who gave consent
+                  </p>
+                  <SelectInput
+                    label="Consent basis"
+                    value={state.consent.consentBasis}
+                    onChange={(v) => handleConsentChange("consentBasis", v)}
+                    options={[
+                      { value: "gillick", label: "Child assessed as Gillick competent and consented" },
+                      { value: "parental", label: "Person with parental responsibility consented" },
+                    ]}
+                    required
+                  />
+                  {state.consent.consentBasis === "parental" && (
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <TextInput
+                        label="Name of person with parental responsibility"
+                        value={state.consent.consentGivenByName}
+                        onChange={(v) => handleConsentChange("consentGivenByName", v)}
+                        required
+                      />
+                      <TextInput
+                        label="Relationship to patient"
+                        value={state.consent.consentGivenByRelationship}
+                        onChange={(v) => handleConsentChange("consentGivenByRelationship", v)}
+                        placeholder="e.g. Mother"
+                        required
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </StepWrapper>
         );
@@ -304,6 +387,8 @@ export default function AcneClient() {
             onPrev={handlePrevStep}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
               <AlertBanner alerts={alerts} />
@@ -366,6 +451,8 @@ export default function AcneClient() {
             onPrev={handlePrevStep}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
               <AlertBanner alerts={alerts} />
@@ -429,6 +516,7 @@ export default function AcneClient() {
             canProceed={canProceed}
             validationError={validationError}
             isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <AlertBanner alerts={alerts} />
             <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
@@ -502,6 +590,14 @@ export default function AcneClient() {
                 description="Exclusion for adapalene / benzoyl peroxide gel."
               />
             </div>
+            <div className="mt-4">
+              <Checkbox
+                label="I have asked the patient each of the questions above and recorded the answers"
+                checked={state.contraindications.questionsAsked}
+                onChange={(v) => handleContraindicationsChange("questionsAsked", v)}
+                required
+              />
+            </div>
           </StepWrapper>
         );
 
@@ -516,6 +612,7 @@ export default function AcneClient() {
             canProceed={canProceed}
             validationError={validationError}
             isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
               <AlertBanner alerts={alerts} />
@@ -560,10 +657,37 @@ export default function AcneClient() {
                     description="Maximum of 12 weeks continuous use; review required for repeat courses."
                   />
                   {state.medicineSelection.repeatCourse && (
-                    <Checkbox
-                      label="Review completed before this repeat course"
-                      checked={state.medicineSelection.repeatCourseReviewed}
-                      onChange={(v) => handleMedicineSelectionChange("repeatCourseReviewed", v)}
+                    <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
+                      <div className="grid sm:grid-cols-2 gap-4">
+                        <TextInput
+                          label="Previous course started"
+                          type="date"
+                          value={state.medicineSelection.previousCourseStartDate}
+                          onChange={(v) => handleMedicineSelectionChange("previousCourseStartDate", v)}
+                          required
+                        />
+                        <TextInput
+                          label="Previous course ended / last supply"
+                          type="date"
+                          value={state.medicineSelection.previousCourseEndDate}
+                          onChange={(v) => handleMedicineSelectionChange("previousCourseEndDate", v)}
+                          required
+                        />
+                      </div>
+                      <Checkbox
+                        label="Review completed before this repeat course"
+                        checked={state.medicineSelection.repeatCourseReviewed}
+                        onChange={(v) => handleMedicineSelectionChange("repeatCourseReviewed", v)}
+                        required
+                      />
+                    </div>
+                  )}
+                  {state.medicineSelection.medicineChoice && (
+                    <SelectInput
+                      label="Quantity supplied"
+                      value={state.medicineSelection.quantitySupplied}
+                      onChange={(v) => handleMedicineSelectionChange("quantitySupplied", v)}
+                      options={getQuantityOptions(state.medicineSelection.medicineChoice)}
                       required
                     />
                   )}
@@ -583,6 +707,8 @@ export default function AcneClient() {
             onPrev={handlePrevStep}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
               <p className="text-sm font-medium text-navy-900 mb-3">Confirm counselling points covered:</p>
@@ -668,6 +794,7 @@ export default function AcneClient() {
             onPrev={handlePrevStep}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
             getConsultationData={getConsultationData}
             onNewConsultation={handleNewConsultation}
           >
@@ -694,6 +821,21 @@ export default function AcneClient() {
                 value={state.summary.pharmacyAddress}
                 onChange={(v) => handleSummaryChange("pharmacyAddress", v)}
               />
+              <div className="grid sm:grid-cols-2 gap-4">
+                <TextInput
+                  label="Consultation date"
+                  type="date"
+                  value={state.summary.consultationDate}
+                  onChange={(v) => handleSummaryChange("consultationDate", v)}
+                  required
+                />
+                <TextInput
+                  label="Consultation time"
+                  type="time"
+                  value={state.summary.consultationTime}
+                  onChange={(v) => handleSummaryChange("consultationTime", v)}
+                />
+              </div>
               <TextArea
                 label="Clinical notes (optional)"
                 value={state.summary.clinicalNotes}
@@ -722,6 +864,17 @@ export default function AcneClient() {
             completedSteps={completedSteps}
             hasErrors={!!validationError}
           />
+          {hasStops && (
+            <div className="bg-white rounded-xl border border-red-200 shadow-sm p-4">
+              <TextArea
+                label="Advice given to the excluded patient and referral made (recorded with the not-supplied record)"
+                value={state.summary.exclusionAdvice}
+                onChange={(v) => handleSummaryChange("exclusionAdvice", v)}
+                placeholder="e.g. Advised that this treatment cannot be supplied during pregnancy; referred to GP; written information given"
+                rows={2}
+              />
+            </div>
+          )}
           {renderCurrentStep()}
         </div>
 

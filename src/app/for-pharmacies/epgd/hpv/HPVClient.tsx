@@ -11,6 +11,8 @@ import {
   hasHardStops,
   calculateDoseRecommendation,
   selectSchedule,
+  priorDoseCount,
+  minimumIntervalLabel,
 } from "./lib/hpv-clinical-logic";
 import { validateStep } from "./lib/hpv-validation";
 import { calculateAge } from "../shared/types";
@@ -76,6 +78,9 @@ function reducer(state: HPVConsultationState, action: HPVAction): HPVConsultatio
     case "SET_STEP":
       newState.currentStep = action.step;
       break;
+
+    case "RESET":
+      return createInitialConsultationState();
   }
 
   return newState;
@@ -106,20 +111,22 @@ export default function HPVClient() {
     return validateStep(state, state.currentStep);
   }, [state]);
 
+  // A stop anywhere blocks Next on every step and the final Save & Print
+  // (adversarial review, 11 Sep 2026). The progress bar only moves backwards.
   const canProceed = useMemo(() => {
-    if (state.currentStep >= TOTAL_STEPS - 1) return true;
-    if (state.currentStep <= 5 && hardStops) return false;
+    if (hardStops) return false;
     return !validationError;
-  }, [state, validationError, hardStops]);
+  }, [validationError, hardStops]);
 
   const handleNext = useCallback(() => {
+    if (hardStops) return;
     if (!validationError && state.currentStep < TOTAL_STEPS - 1) {
       const newCompleted = new Set(completedSteps);
       newCompleted.add(state.currentStep);
       setCompletedSteps(newCompleted);
       dispatch({ type: "SET_STEP", step: state.currentStep + 1 });
     }
-  }, [state.currentStep, validationError, completedSteps]);
+  }, [state.currentStep, validationError, completedSteps, hardStops]);
 
   const handlePrev = useCallback(() => {
     if (state.currentStep > 0) {
@@ -128,10 +135,36 @@ export default function HPVClient() {
   }, [state.currentStep]);
 
   const handleStepClick = useCallback((step: number) => {
-    if (completedSteps.has(step) || step <= state.currentStep) {
+    if (step < state.currentStep) {
       dispatch({ type: "SET_STEP", step });
     }
-  }, [completedSteps, state.currentStep]);
+  }, [state.currentStep]);
+
+  // When a stop appears, forget every step after the one being edited.
+  useEffect(() => {
+    if (!hardStops) return;
+    setCompletedSteps((prev) => {
+      const next = new Set<number>();
+      prev.forEach((s) => {
+        if (s < state.currentStep) next.add(s);
+      });
+      return next.size === prev.size ? prev : next;
+    });
+  }, [hardStops, state.currentStep]);
+
+  // Dose number in the course is prior doses + 1, not a free choice
+  // (adversarial review, 11 Sep 2026: three prior doses plus "Dose 1" was accepted).
+  useEffect(() => {
+    const derived = state.assessment.priorDoses ? String(priorDoseCount(state) + 1) : "";
+    if (state.administration.doseNumber !== derived) {
+      dispatch({ type: "UPDATE_ADMINISTRATION", field: "doseNumber", value: derived });
+    }
+  }, [state.assessment.priorDoses, state.administration.doseNumber, state]);
+
+  const handleNewConsultation = useCallback(() => {
+    dispatch({ type: "RESET" });
+    setCompletedSteps(new Set());
+  }, []);
 
 
   // ─── Consultation Record Data (for saving to database) ───
@@ -150,14 +183,26 @@ export default function HPVClient() {
       },
       clinicalData: state as unknown as Record<string, unknown>,
       outcome: hardStops ? "not_supplied" : "completed",
+      medicine:
+        !hardStops && state.administration.doseNumber
+          ? {
+              name: "Gardasil 9",
+              dose: "0.5 mL intramuscular",
+              quantity: `dose ${state.administration.doseNumber}${schedule ? ` of ${schedule.doses}` : ""}`,
+            }
+          : undefined,
       summary: {
-        pharmacistName: state.summary.pharmacistName,
-        pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacistName: state.summary.pharmacistName || __pharmProfile?.name || "",
+        pharmacistGPhC: state.summary.pharmacistGPhC || __pharmProfile?.gphcNumber || "",
+        pharmacyName: state.summary.pharmacyName || __pharmProfile?.pharmacyName,
+        pharmacyAddress: state.summary.pharmacyAddress || __pharmProfile?.pharmacyAddress,
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: state.consent.notifyGp },
     };
-  }, [state, hardStops]);
+  }, [state, hardStops, schedule, __pharmProfile]);
 
   const renderStep = () => {
     switch (state.currentStep) {
@@ -336,36 +381,46 @@ export default function HPVClient() {
                 was wrong. Vaccinate.
               </p>
             </div>
-            <Checkbox
-              label="Confirmed anaphylaxis to a previous HPV vaccine dose: NOT documented"
-              checked={!state.assessment.anaphylaxisToPreviousDose}
+            <SelectInput
+              label="Confirmed anaphylactic reaction to a previous dose of any HPV vaccine?"
+              value={state.assessment.anaphylaxisToPreviousDose}
               onChange={(v) =>
-                dispatch({
-                  type: "UPDATE_ASSESSMENT",
-                  field: "anaphylaxisToPreviousDose",
-                  value: !v,
-                })
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "anaphylaxisToPreviousDose", value: v })
               }
-              description="Contraindicated if a confirmed anaphylactic reaction to any HPV vaccine is documented."
+              options={[
+                { value: "no", label: "No: not documented" },
+                { value: "yes", label: "Yes: confirmed anaphylaxis documented (contraindicated, refer)" },
+              ]}
+              required
             />
-            <Checkbox
-              label="Confirmed anaphylaxis to a component of Gardasil 9, or hypersensitivity following previous administration of Gardasil 9 or Gardasil / Silgard: NOT documented"
-              checked={!state.assessment.anaphylaxisToComponent}
+            <SelectInput
+              label="Confirmed anaphylaxis to a component of Gardasil 9, or hypersensitivity following previous Gardasil 9, Gardasil or Silgard?"
+              value={state.assessment.anaphylaxisToComponent}
               onChange={(v) =>
-                dispatch({
-                  type: "UPDATE_ASSESSMENT",
-                  field: "anaphylaxisToComponent",
-                  value: !v,
-                })
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "anaphylaxisToComponent", value: v })
               }
-              description="Excipients: sodium chloride, histidine, polysorbate 80, borax, water for injections, with amorphous aluminium hydroxyphosphate sulfate adjuvant. Untick if either applies: refer, do not vaccinate."
+              options={[
+                { value: "no", label: "No: not documented" },
+                { value: "yes", label: "Yes: documented (contraindicated, refer)" },
+              ]}
+              required
             />
+            <p className="text-xs text-gray-600">
+              Excipients: sodium chloride, histidine, polysorbate 80, borax, water for injections, with amorphous aluminium hydroxyphosphate sulfate adjuvant.
+            </p>
           </div>
         );
 
       case 3:
         return (
           <div className="space-y-4">
+            <ConsentStep
+              consent={state.consent}
+              onChange={(field, value) =>
+                dispatch({ type: "UPDATE_CONSENT", field, value })
+              }
+            />
+
             {schedule ? (
               <div className="p-4 bg-[color:var(--tenant-primary)]/10 border border-[color:var(--tenant-primary)]/30 rounded-lg">
                 <p className="text-sm font-semibold text-[color:var(--tenant-primary)]">
@@ -474,6 +529,7 @@ export default function HPVClient() {
                         })
                       }
                       placeholder="Mother, father, guardian"
+                      required
                     />
                   </div>
                 )}
@@ -631,6 +687,7 @@ export default function HPVClient() {
               />
               <TextInput
                 label="Vaccine expiry date"
+                type="date"
                 value={state.administration.expiryDate}
                 onChange={(v) =>
                   dispatch({
@@ -639,7 +696,6 @@ export default function HPVClient() {
                     value: v,
                   })
                 }
-                placeholder="MM/YYYY"
                 required
               />
             </div>
@@ -669,45 +725,51 @@ export default function HPVClient() {
                 ]}
                 required
               />
-              <SelectInput
-                label="Dose number in the course"
-                value={state.administration.doseNumber}
+              <div>
+                <label className="block text-sm font-medium text-navy-900 mb-1">Dose number in the course</label>
+                <p className="px-3 py-2.5 border border-gray-200 bg-gray-50 rounded-lg text-sm text-navy-900">
+                  {state.administration.doseNumber
+                    ? `Dose ${state.administration.doseNumber}${schedule ? ` of ${schedule.doses}` : ""} (from the prior dose history: ${state.assessment.priorDoses})`
+                    : "Record the prior dose history on the assessment step"}
+                </p>
+              </div>
+            </div>
+
+            {schedule && parseInt(state.administration.doseNumber || "0", 10) > 1 && (
+              <TextInput
+                label={`Date of the previous dose (dose ${state.administration.doseNumber} must be at least ${minimumIntervalLabel(schedule, state.administration.doseNumber) || "the scheduled interval"} after it)`}
+                type="date"
+                value={state.administration.previousDoseDate}
                 onChange={(v) =>
                   dispatch({
                     type: "UPDATE_ADMINISTRATION",
-                    field: "doseNumber",
+                    field: "previousDoseDate",
                     value: v,
                   })
                 }
-                options={[
-                  { value: "1", label: "Dose 1" },
-                  { value: "2", label: "Dose 2" },
-                  { value: "3", label: "Dose 3" },
-                ]}
                 required
               />
-            </div>
+            )}
 
-            <TextInput
-              label={
-                schedule && schedule.doses === 1
-                  ? "Next dose due (leave blank: this single dose completes the course)"
-                  : "Next dose due"
-              }
-              value={state.administration.nextDoseDue}
-              onChange={(v) =>
-                dispatch({
-                  type: "UPDATE_ADMINISTRATION",
-                  field: "nextDoseDue",
-                  value: v,
-                })
-              }
-              placeholder={
-                schedule && schedule.doses === 1
-                  ? "No further dose required"
-                  : "DD/MM/YYYY"
-              }
-            />
+            {schedule && schedule.doses > parseInt(state.administration.doseNumber || "0", 10) ? (
+              <TextInput
+                label="Next dose due (book it at this appointment and give the date in writing)"
+                type="date"
+                value={state.administration.nextDoseDue}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_ADMINISTRATION",
+                    field: "nextDoseDue",
+                    value: v,
+                  })
+                }
+                required
+              />
+            ) : (
+              <p className="text-xs text-gray-600">
+                No further dose required: this dose completes the course. The record will say so.
+              </p>
+            )}
 
             <TextInput
               label="Other vaccine given at this visit, and its site (leave blank if none)"
@@ -820,56 +882,20 @@ export default function HPVClient() {
                 />
               </div>
             </div>
-            <ConsentStep
-              consent={state.consent}
-              onChange={(field, value) =>
-                dispatch({ type: "UPDATE_CONSENT", field, value })
-              }
+            <p className="text-xs text-gray-600 print:hidden">
+              Check the record below, then press Save &amp; Print Record. The record is saved when that button is pressed, not before.
+              {schedule && schedule.doses === 1
+                ? " This single dose completes the course: the patient does not need to return and should not be charged for a further dose."
+                : state.administration.nextDoseDue
+                  ? ` Next dose due ${state.administration.nextDoseDue}: make sure the patient has this in writing.`
+                  : ""}
+            </p>
+            <HPVSummaryReport
+              state={state}
+              alerts={alerts}
+              doseRecommendation={doseRecommendation}
             />
           </div>
-        );
-
-      case 7:
-        return (
-          <div className="text-center py-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-[color:var(--tenant-primary)]/10 rounded-full mb-4">
-              <svg
-                className="w-8 h-8 text-[color:var(--tenant-primary)]"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-            </div>
-            <h3 className="text-lg font-semibold text-navy-900 mb-2">
-              Consultation Complete
-            </h3>
-            <p className="text-sm text-gray-600">
-              The HPV vaccination ePGD consultation has been recorded successfully.
-            </p>
-            <p className="text-xs text-gray-500 mt-4">
-              {schedule && schedule.doses === 1
-                ? "This single dose completes the course. The patient does not need to return for a further dose and should not be charged for one."
-                : state.administration.nextDoseDue
-                  ? `Next dose due ${state.administration.nextDoseDue}. Make sure the patient has this in writing.`
-                  : "Where a further dose is due, book it now and give the date in writing."}
-            </p>
-          </div>
-        );
-
-      case 8:
-        return (
-          <HPVSummaryReport
-            state={state}
-            alerts={alerts}
-            doseRecommendation={doseRecommendation}
-          />
         );
 
       default:
@@ -898,7 +924,10 @@ export default function HPVClient() {
         onPrev={handlePrev}
         canProceed={canProceed}
         validationError={validationError}
-       getConsultationData={getConsultationData}>
+        isBlocked={hardStops}
+        getConsultationData={getConsultationData}
+        onNewConsultation={handleNewConsultation}
+      >
         {renderStep()}
       </StepWrapper>
     </div>

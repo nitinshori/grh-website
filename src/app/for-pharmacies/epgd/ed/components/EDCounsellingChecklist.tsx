@@ -6,6 +6,9 @@ interface EDCounsellingChecklistProps {
   checklist: CounsellingChecklist;
   medicineName: string;
   onChange: (field: keyof CounsellingChecklist, value: boolean) => void;
+  /** Tadalafil on-demand with a potent CYP3A4 inhibitor: 10mg in 72 hours,
+   *  not one dose in 24 hours. */
+  tadalafil72Hour?: boolean;
 }
 
 const counsellingItems: {
@@ -90,17 +93,38 @@ const counsellingItems: {
     detail:
       "Reassess where there has been no improvement after 6 to 8 attempts at the maximum tolerated dose. Review effectiveness, blood pressure and cardiovascular fitness at least annually; for tadalafil once daily, reassess periodically whether continued daily use remains appropriate.",
   },
+  {
+    field: "pilSupplied",
+    label: "Patient information leaflet supplied",
+    detail: "The PIL provided with the product was supplied (Written information row).",
+  },
+  {
+    field: "disposalAdvice",
+    label: "Disposal advice given",
+    detail: "Return any unused tablets to a pharmacy (Disposal row).",
+  },
 ];
+
+const item72Hour = {
+  field: "maxOneDoseIn24Hours" as const,
+  label: "Not more than 10mg in any 72 hours. No more",
+  detail:
+    "With a potent CYP3A4 inhibitor (ritonavir, cobicistat, ketoconazole, itraconazole, clarithromycin) tadalafil on-demand must not exceed 10mg in any 72 hour period: one tablet, then at least three days before the next. Not once a day.",
+};
 
 export function EDCounsellingChecklist({
   checklist,
   medicineName,
   onChange,
+  tadalafil72Hour = false,
 }: EDCounsellingChecklistProps) {
-  const allChecked = counsellingItems.every(
+  const items = tadalafil72Hour
+    ? counsellingItems.map((i) => (i.field === "maxOneDoseIn24Hours" ? item72Hour : i))
+    : counsellingItems;
+  const allChecked = items.every(
     (item) => checklist[item.field]
   );
-  const checkedCount = counsellingItems.filter(
+  const checkedCount = items.filter(
     (item) => checklist[item.field]
   ).length;
 
@@ -118,12 +142,12 @@ export function EDCounsellingChecklist({
               : "bg-gray-100 text-gray-500"
           }`}
         >
-          {checkedCount}/{counsellingItems.length}
+          {checkedCount}/{items.length}
         </span>
       </div>
 
       <div className="space-y-3">
-        {counsellingItems.map((item) => (
+        {items.map((item) => (
           <label
             key={item.field}
             className={`

@@ -9,7 +9,13 @@ export interface STIPatientDetails extends BasePatientDetails {
   // PGD v002 (11 September 2026): aged 13 to 15 only with recorded Fraser
   // competence and a safeguarding assessment with no concern. Under 13 is
   // never supplied.
-  fraserCompetent: boolean;
+  fraserCompetent: boolean; // derived: all five Fraser limbs recorded
+  // The five Fraser limbs, recorded individually
+  fraserUnderstandsAdvice: boolean;
+  fraserCannotBePersuaded: boolean; // to inform, or allow the pharmacist to inform, a parent
+  fraserLikelyToContinue: boolean; // likely to have sex with or without treatment
+  fraserHealthWouldSuffer: boolean; // physical or mental health likely to suffer without it
+  fraserBestInterests: boolean;
   safeguardingAssessed: boolean; // partner age, coercion, exploitation indicators asked
   safeguardingConcern: boolean; // partner 18 or over, coercion, exploitation, learning disability
   safeguardingNotes: string;
@@ -23,6 +29,9 @@ export type STITreatmentMedicine = "" | "doxycycline" | "azithromycin";
 export interface STITreatment {
   treatUnderPgd: boolean; // supply chlamydia treatment under this PGD
   chlamydiaDiagnosis: STIChlamydiaDiagnosis;
+  currentMedicines: string; // what the patient takes, asked before any supply ("none" is an answer)
+  knownAllergies: string; // asked before any supply ("none known" is an answer)
+  brand: string; // brand or manufacturer of the pack supplied
   // Exclusions common to both arms
   pregnant: boolean;
   breastfeeding: boolean;
@@ -38,6 +47,12 @@ export interface STITreatment {
   qtProlongation: boolean; // history of QT prolongation or interacting QT-prolonging drugs
   ergotDerivatives: boolean;
   medicine: STITreatmentMedicine;
+}
+
+export interface STIExclusionOutcome {
+  adviceGiven: string; // advice given and decision reached when excluded or declines
+  referredTo: string; // "" | "sexual-health" | "gp" | "safeguarding" | "other"
+  safeguardingReferralMade: boolean;
 }
 
 export interface STIRiskAssessment {
@@ -88,6 +103,7 @@ export interface STICounselling {
   contraceptionAdvice: boolean; // doxycycline: effective contraception during and for 7 days after
   testOfCureAdvice: boolean; // azithromycin: test of cure if symptoms persist or in pregnancy
   worseningAdvice: boolean; // seek medical advice if worsening, no improvement in 3 to 4 weeks, systemically unwell
+  retestAdvice: boolean; // retest at 3 months to detect reinfection; test of cure at least 3 weeks after treatment where required
   pilSupplied: boolean;
 }
 
@@ -99,6 +115,7 @@ export interface STIConsultationState {
   testSelection: STITestSelection;
   treatment: STITreatment;
   counselling: STICounselling;
+  exclusionOutcome: STIExclusionOutcome;
   summary: BaseSummary & { testsOrdered: string[] };
   currentStep: number;
 }
@@ -112,7 +129,9 @@ export type STIAction =
   | { type: "UPDATE_TREATMENT"; field: keyof STITreatment; value: STITreatment[keyof STITreatment] }
   | { type: "UPDATE_COUNSELLING"; field: keyof STICounselling; value: any }
   | { type: "UPDATE_SUMMARY"; field: string; value: any }
-  | { type: "SET_STEP"; step: number };
+  | { type: "UPDATE_EXCLUSION_OUTCOME"; field: keyof STIExclusionOutcome; value: any }
+  | { type: "SET_STEP"; step: number }
+  | { type: "RESET" };
 
 // ─── Step labels ───
 
@@ -154,6 +173,11 @@ gpEmail: "",
       email: "",
       genderIdentity: "",
       fraserCompetent: false,
+      fraserUnderstandsAdvice: false,
+      fraserCannotBePersuaded: false,
+      fraserLikelyToContinue: false,
+      fraserHealthWouldSuffer: false,
+      fraserBestInterests: false,
       safeguardingAssessed: false,
       safeguardingConcern: false,
       safeguardingNotes: "",
@@ -198,6 +222,9 @@ gpEmail: "",
     treatment: {
       treatUnderPgd: false,
       chlamydiaDiagnosis: "",
+      currentMedicines: "",
+      knownAllergies: "",
+      brand: "",
       pregnant: false,
       breastfeeding: false,
       severeHepaticImpairment: false,
@@ -223,7 +250,13 @@ gpEmail: "",
       contraceptionAdvice: false,
       testOfCureAdvice: false,
       worseningAdvice: false,
+      retestAdvice: false,
       pilSupplied: false,
+    },
+    exclusionOutcome: {
+      adviceGiven: "",
+      referredTo: "",
+      safeguardingReferralMade: false,
     },
     summary: {
       pharmacistName: "",

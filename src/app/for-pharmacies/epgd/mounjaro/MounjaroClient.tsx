@@ -18,6 +18,11 @@ import {
   getAllAlerts,
   hasHardStops,
   calculateDoseRecommendation,
+  bmiGateAppliesToday,
+  isContinuingSupply,
+  getAllowedStages,
+  fivePercentRuleApplies,
+  getPercentWeightLost,
 } from "./lib/mounjaro-clinical-logic";
 import { validateStep, calculateBMI } from "./lib/mounjaro-validation";
 import { calculateAge } from "../shared/types";
@@ -68,6 +73,9 @@ function reducer(state: MounjaroConsultationState, action: MounjaroAction): Moun
           newState.weightAssessment.height,
           newState.weightAssessment.weight
         );
+        if (bmiGateAppliesToday(newState)) {
+          newState.weightAssessment.startingBMI = newState.weightAssessment.bmi;
+        }
         // Determine BMI category
         const bmi = newState.weightAssessment.bmi;
         if (bmi !== null) {
@@ -109,6 +117,29 @@ function reducer(state: MounjaroConsultationState, action: MounjaroAction): Moun
       // recorded dose stayed at 2.5 mg whatever stage was chosen).
       if (action.field === "currentDoseStage") {
         newState.doseSelection.dose = DOSE_BY_STAGE[action.value as string] ?? "";
+      }
+      // The dose follows the supply type and the previous dose: a new start
+      // or restart is 2.5 mg; anything else is chosen against the previous
+      // dose, so changing either clears a dose chosen against the old one.
+      if (action.field === "supplyType" || action.field === "previousDose" || action.field === "weeksAtCurrentDose" || action.field === "breakOverTwoMonths") {
+        const t = newState.doseSelection.supplyType;
+        if (t === "new-start" || t === "restart") {
+          newState.doseSelection.currentDoseStage = "init";
+          newState.doseSelection.dose = DOSE_BY_STAGE.init;
+          newState.doseSelection.previousDose = "";
+        } else if (action.field !== "weeksAtCurrentDose") {
+          newState.doseSelection.currentDoseStage = "";
+          newState.doseSelection.dose = "";
+        }
+        if (action.field === "supplyType" && t !== "restart") {
+          newState.doseSelection.breakOverTwoMonths = false;
+        }
+        // Starting BMI is today's BMI when the inclusion is applied today
+        if (bmiGateAppliesToday(newState)) {
+          newState.weightAssessment = { ...newState.weightAssessment, startingBMI: newState.weightAssessment.bmi };
+        } else if (action.field === "supplyType") {
+          newState.weightAssessment = { ...newState.weightAssessment, startingBMI: null };
+        }
       }
       break;
 
@@ -184,8 +215,9 @@ export default function MounjaroClient() {
   );
 
   // Can proceed to next step?
-  const canProceed =
-    !validationError && (!hasStops || state.currentStep >= 5);
+  // A stop anywhere blocks Next and Save & Print on every step
+  // (adversarial review, 11 Sep 2026).
+  const canProceed = !validationError && !hasStops;
 
   // Mark step as completed
   const markStepComplete = useCallback(() => {
@@ -226,22 +258,30 @@ export default function MounjaroClient() {
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
       },
-      clinicalData: state as unknown as Record<string, unknown>,
+      clinicalData: { ...(state as unknown as Record<string, unknown>), alerts, percentWeightLost: getPercentWeightLost(state) },
       outcome: hasStops ? "not_supplied" : "completed",
-      medicine: {
-        name: `Mounjaro (tirzepatide) KwikPen ${state.doseSelection.dose}${state.doseSelection.batchNumber ? `, batch ${state.doseSelection.batchNumber}` : ""}`,
-        dose: `${state.doseSelection.dose} once weekly by subcutaneous injection`,
-        duration: "4 weeks",
-        quantity: "1 KwikPen (4 x 0.6 mL doses)",
-      },
+      medicine:
+        !hasStops && state.doseSelection.dose
+          ? {
+              name: "Mounjaro (tirzepatide) KwikPen",
+              medicine: `Mounjaro (tirzepatide) KwikPen ${state.doseSelection.dose}${state.doseSelection.batchNumber ? `, batch ${state.doseSelection.batchNumber}` : ""}`,
+              dose: `${state.doseSelection.dose} once weekly by subcutaneous injection`,
+              duration: "4 weeks",
+              quantity: "1 KwikPen (4 x 0.6 mL doses)",
+            }
+          : undefined,
       summary: {
         pharmacistName: state.summary.pharmacistName,
         pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacyName: state.summary.pharmacyName,
+        pharmacyAddress: state.summary.pharmacyAddress,
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: state.consent.notifyGp },
     };
-  }, [state, hasStops]);
+  }, [state, hasStops, alerts]);
 
   const handleNewConsultation = useCallback(() => {
     dispatch({ type: "RESET" });
@@ -263,6 +303,8 @@ export default function MounjaroClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
               <PatientDetailsStep
@@ -312,6 +354,8 @@ export default function MounjaroClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <ConsentStep
               consent={state.consent}
@@ -333,8 +377,53 @@ export default function MounjaroClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
+              <SelectInput
+                label="Nature of today's supply"
+                value={state.doseSelection.supplyType}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_DOSE_SELECTION", field: "supplyType", value: v })
+                }
+                options={[
+                  { value: "new-start", label: "New start (2.5 mg titration dose)" },
+                  { value: "continue", label: "Continuing the same dose" },
+                  { value: "escalate", label: "Escalating to the next dose (minimum 4 weeks on current dose)" },
+                  { value: "reduce", label: "Reducing to a lower dose (significant GI symptoms, or more than 2 doses missed)" },
+                  { value: "restart", label: "Restarting after a break (re-titrate from 2.5 mg)" },
+                ]}
+                required
+              />
+              {state.doseSelection.supplyType === "restart" && (
+                <Checkbox
+                  label="More than 2 months have passed since discontinuing treatment"
+                  checked={state.doseSelection.breakOverTwoMonths}
+                  onChange={(v) =>
+                    dispatch({ type: "UPDATE_DOSE_SELECTION", field: "breakOverTwoMonths", value: v })
+                  }
+                  description="If so, the BMI inclusion criteria are reapplied to today's BMI. Within 2 months, eligibility rests on the starting BMI."
+                />
+              )}
+              {!bmiGateAppliesToday(state) && (
+                <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 space-y-3">
+                  <p className="text-xs text-amber-900">
+                    The document's inclusion is an INITIAL BMI. Today's height and weight are recorded below, but eligibility for a continuing patient is judged on the BMI at the start of treatment; losing weight is not an exclusion.
+                  </p>
+                  <NumberInput
+                    label="BMI at the start of treatment"
+                    value={state.weightAssessment.startingBMI}
+                    onChange={(v) =>
+                      dispatch({ type: "UPDATE_WEIGHT_ASSESSMENT", field: "startingBMI", value: v })
+                    }
+                    min={10}
+                    max={100}
+                    unit="kg/m²"
+                    required
+                  />
+                </div>
+              )}
               <div className="grid sm:grid-cols-2 gap-4">
                 <NumberInput
                   label="Height"
@@ -361,7 +450,7 @@ export default function MounjaroClient() {
               {state.weightAssessment.bmi !== null && (
                 <div className="p-3 bg-[color:var(--tenant-primary)]/10 border border-[color:var(--tenant-primary)]/30 rounded">
                   <p className="text-sm font-semibold text-[color:var(--tenant-primary)]">
-                    BMI: {state.weightAssessment.bmi} kg/m² ({state.weightAssessment.bmiCategory})
+                    BMI today: {state.weightAssessment.bmi.toFixed(1)} kg/m² ({state.weightAssessment.bmiCategory})
                   </p>
                 </div>
               )}
@@ -453,6 +542,8 @@ export default function MounjaroClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
               <div className="p-3 bg-red-50 border border-red-200 rounded">
@@ -626,7 +717,7 @@ export default function MounjaroClient() {
               />
 
               <Checkbox
-                label="Known diagnosis of heart failure with reduced ejection fraction (HFrEF, LVEF 40% or below)"
+                label="Known diagnosis of heart failure with reduced ejection fraction (HFrEF, LVEF below 40%)"
                 checked={state.medicalHistory.heartFailureReducedEF}
                 onChange={(v) =>
                   dispatch({
@@ -806,6 +897,8 @@ export default function MounjaroClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
               <Checkbox
@@ -956,13 +1049,14 @@ export default function MounjaroClient() {
             totalSteps={TOTAL_STEPS}
             onNext={handleNext}
             onPrev={handlePrev}
-            canProceed={!hasStops}
+            canProceed={canProceed}
             validationError={
               hasStops
                 ? "Exclusion criteria present: cannot proceed to dose selection."
                 : null
             }
             isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             {alerts.length > 0 ? (
               <AlertBanner alerts={alerts} />
@@ -1000,6 +1094,7 @@ export default function MounjaroClient() {
             canProceed={canProceed}
             validationError={validationError}
             isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
               <div className="p-3 bg-blue-50 border border-blue-200 rounded">
@@ -1011,39 +1106,113 @@ export default function MounjaroClient() {
                 </p>
               </div>
 
-              <SelectInput
-                label="Nature of today's supply"
-                value={state.doseSelection.supplyType}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_DOSE_SELECTION",
-                    field: "supplyType",
-                    value: v,
-                  })
-                }
-                options={[
-                  { value: "new-start", label: "New start (2.5 mg titration dose)" },
-                  { value: "continue", label: "Continuing the same dose" },
-                  { value: "escalate", label: "Escalating to the next dose (minimum 4 weeks on current dose)" },
-                  { value: "reduce", label: "Reducing to the previous dose (significant GI symptoms)" },
-                  { value: "restart", label: "Restarting after a break (re-titrate from 2.5 mg)" },
-                ]}
-                required
-              />
+              <div className="p-3 bg-gray-50 border border-gray-200 rounded text-xs text-gray-700">
+                Nature of today's supply (set on the Weight Assessment step):{" "}
+                <span className="font-medium text-navy-900">
+                  {({
+                    "new-start": "New start (2.5 mg titration dose)",
+                    continue: "Continuing the same dose",
+                    escalate: "Escalating to the next dose",
+                    reduce: "Reducing to a lower dose",
+                    restart: `Restarting after a break (${state.doseSelection.breakOverTwoMonths ? "more than" : "within"} 2 months)`,
+                  } as Record<string, string>)[state.doseSelection.supplyType] ?? "Not selected"}
+                </span>
+              </div>
 
-              {state.doseSelection.supplyType === "restart" && (
-                <Checkbox
-                  label="More than 2 months have passed since discontinuing treatment"
-                  checked={state.doseSelection.breakOverTwoMonths}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_DOSE_SELECTION",
-                      field: "breakOverTwoMonths",
-                      value: v,
-                    })
-                  }
-                  description="The BMI inclusion criteria for initiation must be reapplied (confirm the Weight Assessment step reflects today's BMI)."
-                />
+              {isContinuingSupply(state) && (
+                <>
+                  <SelectInput
+                    label="Dose the patient has been on"
+                    value={state.doseSelection.previousDose}
+                    onChange={(v) =>
+                      dispatch({ type: "UPDATE_DOSE_SELECTION", field: "previousDose", value: v })
+                    }
+                    options={[
+                      { value: "init", label: "2.5 mg once weekly" },
+                      { value: "1", label: "5 mg once weekly" },
+                      { value: "2", label: "7.5 mg once weekly" },
+                      { value: "3", label: "10 mg once weekly" },
+                      { value: "4", label: "12.5 mg once weekly" },
+                      { value: "5", label: "15 mg once weekly" },
+                    ]}
+                    required
+                  />
+                  <NumberInput
+                    label="Weeks on that dose"
+                    value={state.doseSelection.weeksAtCurrentDose}
+                    onChange={(v) =>
+                      dispatch({ type: "UPDATE_DOSE_SELECTION", field: "weeksAtCurrentDose", value: v })
+                    }
+                    min={0}
+                    max={104}
+                    unit="weeks"
+                    required
+                  />
+                  {state.doseSelection.supplyType === "escalate" &&
+                    state.doseSelection.weeksAtCurrentDose !== null &&
+                    state.doseSelection.weeksAtCurrentDose < 4 && (
+                      <p className="text-xs text-amber-800 -mt-2">
+                        Fewer than 4 weeks on the current dose: escalation is not yet permitted.
+                      </p>
+                    )}
+                  <div className="grid sm:grid-cols-3 gap-4">
+                    <NumberInput
+                      label="Weight at initiation"
+                      value={state.doseSelection.initialWeight}
+                      onChange={(v) =>
+                        dispatch({ type: "UPDATE_DOSE_SELECTION", field: "initialWeight", value: v })
+                      }
+                      min={30}
+                      max={300}
+                      unit="kg"
+                      required
+                    />
+                    <TextInput
+                      label="Treatment start date"
+                      type="date"
+                      value={state.doseSelection.treatmentStartDate}
+                      onChange={(v) =>
+                        dispatch({ type: "UPDATE_DOSE_SELECTION", field: "treatmentStartDate", value: v })
+                      }
+                      required
+                    />
+                    <NumberInput
+                      label="Months on the maximum tolerated dose (0 if still titrating)"
+                      value={state.doseSelection.monthsOnMaxToleratedDose}
+                      onChange={(v) =>
+                        dispatch({ type: "UPDATE_DOSE_SELECTION", field: "monthsOnMaxToleratedDose", value: v })
+                      }
+                      min={0}
+                      max={36}
+                      unit="months"
+                      required
+                    />
+                  </div>
+                  {getPercentWeightLost(state) !== null && (
+                    <p className="text-xs font-semibold text-gray-700">
+                      Change from initial weight: {getPercentWeightLost(state)! >= 0 ? "" : "+"}{Math.abs(getPercentWeightLost(state)!).toFixed(1)}% {getPercentWeightLost(state)! >= 0 ? "lost" : "gained"}
+                    </p>
+                  )}
+                  {fivePercentRuleApplies(state) && (
+                    <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 space-y-2">
+                      <p className="text-sm font-semibold text-red-800">
+                        Less than 5% of initial body weight lost after 6 months on the maximum tolerated dose
+                      </p>
+                      <p className="text-xs text-red-800">
+                        PGD v007: a decision is required on whether to continue treatment, taking into account the benefit-risk profile in this patient. Record it before any further supply.
+                      </p>
+                      <TextArea
+                        label="Decision on continuation and reasoning"
+                        value={state.doseSelection.continuationDecision}
+                        onChange={(v) =>
+                          dispatch({ type: "UPDATE_DOSE_SELECTION", field: "continuationDecision", value: v })
+                        }
+                        required
+                        placeholder="For example: stopped and referred to GP; or continued because ... (document the clinical reasoning)"
+                      />
+                    </div>
+                  )}
+                </>
               )}
 
               <SelectInput
@@ -1063,24 +1232,14 @@ export default function MounjaroClient() {
                   { value: "3", label: "10 mg once weekly (maintenance dose)" },
                   { value: "4", label: "12.5 mg once weekly (titration step)" },
                   { value: "5", label: "15 mg once weekly (maintenance dose, maximum)" },
-                ]}
+                ].filter((o) => getAllowedStages(state).includes(o.value))}
                 required
               />
-
-              <NumberInput
-                label="Weeks on the current or previous dose"
-                value={state.doseSelection.weeksAtCurrentDose}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_DOSE_SELECTION",
-                    field: "weeksAtCurrentDose",
-                    value: v,
-                  })
-                }
-                min={0}
-                max={104}
-                unit="weeks"
-              />
+              {getAllowedStages(state).length === 0 && (
+                <p className="text-xs text-amber-800 -mt-2">
+                  No dose is available yet: complete the supply type and the previous dose (and 4 weeks on it for an escalation).
+                </p>
+              )}
 
               <Checkbox
                 label="More than 2 doses missed since the last supply"
@@ -1136,34 +1295,6 @@ export default function MounjaroClient() {
                 />
               </div>
 
-              <Checkbox
-                label="Pharmacist override"
-                checked={state.doseSelection.pharmacistOverride}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_DOSE_SELECTION",
-                    field: "pharmacistOverride",
-                    value: v,
-                  })
-                }
-                description="Tick if deviating from standard dose recommendation"
-              />
-
-              {state.doseSelection.pharmacistOverride && (
-                <TextArea
-                  label="Reason for override"
-                  value={state.doseSelection.overrideReason}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_DOSE_SELECTION",
-                      field: "overrideReason",
-                      value: v,
-                    })
-                  }
-                  required
-                  placeholder="Document clinical reasoning for deviation from standard dosing."
-                />
-              )}
             </div>
           </StepWrapper>
         );
@@ -1179,6 +1310,8 @@ export default function MounjaroClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-3">
               <Checkbox
@@ -1405,9 +1538,9 @@ export default function MounjaroClient() {
             totalSteps={TOTAL_STEPS}
             onNext={handleNext}
             onPrev={handlePrev}
-            canProceed={true}
-            validationError={null}
-            isBlocked={false}
+            canProceed={canProceed}
+            validationError={validationError}
+            isBlocked={hasStops}
             getConsultationData={getConsultationData}
             onNewConsultation={handleNewConsultation}
           >
@@ -1498,7 +1631,9 @@ export default function MounjaroClient() {
       />
 
       {/* Alert Banner */}
-      {alerts.length > 0 && state.currentStep < 5 && (
+      {/* Every step except the Contraindications review (which renders its
+          own banner) and the Summary (which prints the alerts) */}
+      {alerts.length > 0 && state.currentStep !== 5 && state.currentStep !== TOTAL_STEPS - 1 && (
         <AlertBanner alerts={alerts} />
       )}
 

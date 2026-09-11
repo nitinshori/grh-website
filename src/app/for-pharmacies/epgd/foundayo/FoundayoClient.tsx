@@ -6,6 +6,9 @@ import {
   initialConsent,
   initialSummary,
   calculateAge,
+  validatePatientStep,
+  validateConsentStep,
+  validateSummaryStep,
   type BasePatientDetails,
   type BaseConsent,
   type BaseSummary,
@@ -64,6 +67,10 @@ type Dose = (typeof DOSE_LADDER)[number] | "";
 /** Doses that exceed the 9 mg ceiling imposed by certain interactions. */
 const ABOVE_CEILING: string[] = ["14.5", "17.2"];
 
+/** Document: one month of treatment at the current strength per appointment. */
+const MAX_TABLETS_PER_SUPPLY = 30;
+const PGD_VERSION_LINE = "Foundayo PGD v007, issued 11 September 2026";
+
 interface FoundayoState {
   currentStep: number;
   patient: BasePatientDetails;
@@ -77,11 +84,17 @@ interface FoundayoState {
   };
   visit: {
     type: VisitType;
+    /** Restart only: more than 2 months since discontinuing, so the BMI
+     *  inclusion criteria apply again (PGD dose row). */
+    restartGapOver2Months: boolean;
   };
   eligibility: {
     heightCm: number | null;
     weightKg: number | null;
     bmi: number | null;
+    /** Weight at initiation, carried forward from the first record or
+     *  entered by the pharmacist, so the 5% at 6 months figure exists. */
+    initialWeightKg: number | null;
     hasComorbidity: boolean;
     comorbidities: string;
     targetWeightKg: number | null;
@@ -118,6 +131,8 @@ interface FoundayoState {
     gpInformed: boolean;
   };
   interactions: {
+    /** Document: check the full medication list at every visit. */
+    medicationListReviewed: boolean;
     strongCyp3a4AndOatp1bInhibitor: boolean; // ritonavir, telaprevir
     strongCyp3a4Inducer: boolean; // rifampicin, carbamazepine, phenytoin, St John's wort
     moderateCyp3a4Inducer: boolean; // bosentan, efavirenz
@@ -144,8 +159,10 @@ interface FoundayoState {
   record: {
     productName: string;
     batchNumber: string;
-    quantitySupplied: string;
+    quantitySupplied: number | null;
     adverseReactions: string;
+    /** Advice given if excluded or declines treatment (records row). */
+    adviceIfExcluded: string;
   };
   contraception: {
     notApplicable: boolean;
@@ -188,6 +205,8 @@ const STEP_LABELS = [
 const TOTAL_STEPS = STEP_LABELS.length;
 const STEP_INFORMED_CONSENT = STEP_LABELS.indexOf("Informed Consent");
 const STEP_ELIGIBILITY = STEP_LABELS.indexOf("Eligibility & BMI");
+const STEP_MEDICINES = STEP_LABELS.indexOf("Medicines");
+const STEP_SUMMARY = STEP_LABELS.indexOf("Summary");
 const STEP_DOSE = STEP_LABELS.indexOf("Dose");
 const STEP_CONTRACEPTION = STEP_LABELS.indexOf("Contraception");
 const STEP_COUNSELLING = STEP_LABELS.indexOf("Counselling");
@@ -204,11 +223,12 @@ function initialState(): FoundayoState {
       privateSupplyExplained: false,
       writtenConsentObtained: false,
     },
-    visit: { type: "" },
+    visit: { type: "", restartGapOver2Months: false },
     eligibility: {
       heightCm: null,
       weightKg: null,
       bmi: null,
+      initialWeightKg: null,
       hasComorbidity: false,
       comorbidities: "",
       targetWeightKg: null,
@@ -245,6 +265,7 @@ function initialState(): FoundayoState {
       gpInformed: false,
     },
     interactions: {
+      medicationListReviewed: false,
       strongCyp3a4AndOatp1bInhibitor: false,
       strongCyp3a4Inducer: false,
       moderateCyp3a4Inducer: false,
@@ -271,8 +292,9 @@ function initialState(): FoundayoState {
     record: {
       productName: "Foundayo (orforglipron) film-coated tablets",
       batchNumber: "",
-      quantitySupplied: "",
+      quantitySupplied: null,
       adverseReactions: "",
+      adviceIfExcluded: "",
     },
     contraception: {
       notApplicable: false,
@@ -305,13 +327,13 @@ type Action =
   | { type: "UPDATE_PATIENT"; field: keyof BasePatientDetails; value: unknown }
   | { type: "UPDATE_CONSENT"; field: keyof BaseConsent; value: unknown }
   | { type: "UPDATE_INFORMED"; field: keyof FoundayoState["informedConsent"]; value: boolean }
-  | { type: "UPDATE_VISIT"; field: keyof FoundayoState["visit"]; value: VisitType }
+  | { type: "UPDATE_VISIT"; field: keyof FoundayoState["visit"]; value: unknown }
   | { type: "UPDATE_ELIGIBILITY"; field: keyof FoundayoState["eligibility"]; value: unknown }
   | { type: "UPDATE_EXCLUSION"; field: keyof FoundayoState["exclusions"]; value: boolean }
   | { type: "UPDATE_CAUTION"; field: keyof FoundayoState["cautions"]; value: boolean }
   | { type: "UPDATE_INTERACTION"; field: keyof FoundayoState["interactions"]; value: unknown }
   | { type: "UPDATE_DOSE"; field: keyof FoundayoState["dose"]; value: unknown }
-  | { type: "UPDATE_RECORD"; field: keyof FoundayoState["record"]; value: string }
+  | { type: "UPDATE_RECORD"; field: keyof FoundayoState["record"]; value: unknown }
   | { type: "UPDATE_CONTRACEPTION"; field: keyof FoundayoState["contraception"]; value: boolean }
   | { type: "UPDATE_COUNSELLING"; field: keyof FoundayoState["counselling"]; value: boolean }
   | { type: "UPDATE_SUMMARY"; field: keyof BaseSummary; value: unknown }
@@ -480,8 +502,15 @@ export function FoundayoClient() {
       });
     }
 
-    // ── BMI thresholds, per the marketing authorisation. ────────────
-    if (eligibility.bmi !== null && eligibility.bmi < 27) {
+    // ── BMI thresholds, per the marketing authorisation. The document
+    // applies them at initiation, and on a restart only where more than 2
+    // months have passed since discontinuing. A patient who responds and
+    // drops below the threshold is not refused the next supply.
+    const bmiGateApplies =
+      visit.type === "" ||
+      visit.type === "initiation" ||
+      (visit.type === "restart" && visit.restartGapOver2Months);
+    if (bmiGateApplies && eligibility.bmi !== null && eligibility.bmi < 27) {
       out.push({
         code: "bmi",
         severity: "stop",
@@ -490,6 +519,7 @@ export function FoundayoClient() {
       });
     }
     if (
+      bmiGateApplies &&
       eligibility.bmi !== null &&
       eligibility.bmi >= 27 &&
       eligibility.bmi < 30 &&
@@ -646,6 +676,14 @@ export function FoundayoClient() {
           severity: "stop",
           message: "Dose increase skips a step",
           detail: `The ladder is 0.8, 2.5, 5.5, 9, 14.5 then 17.2 mg, one step at a time. Going from ${dose.currentDose} mg to ${dose.newDose} mg skips a step.`,
+        });
+      }
+      if (from >= 0 && to >= 0 && to < from - 1) {
+        out.push({
+          code: "skip-down",
+          severity: "stop",
+          message: "Dose reduction skips a step",
+          detail: `The document allows lowering to the previous dose for gastrointestinal symptoms, one step. Going from ${dose.currentDose} mg to ${dose.newDose} mg drops more than one step; select ${DOSE_LADDER[from - 1]} mg, or refer.`,
         });
       }
       if (visit.type === "escalation" && to <= from) {
@@ -813,12 +851,34 @@ export function FoundayoClient() {
   // record fields the PGD requires; a step cannot be left until they are
   // met. Shown by StepWrapper once Next has been attempted.
   const stepValidationError = useMemo<string | null>(() => {
-    const { visit, eligibility, dose, record, contraception, counselling, cautions } = state;
+    const { visit, eligibility, dose, record, contraception, counselling, cautions, interactions, informedConsent } = state;
     switch (state.currentStep) {
+      case 0:
+        return validatePatientStep(state.patient, { minAge: 18, maxAge: 85 });
+      case 1:
+        return validateConsentStep(state.consent);
+      case STEP_INFORMED_CONSENT: {
+        const missing: string[] = [];
+        if (!informedConsent.treatmentExplained) missing.push("treatment, titration and administration explained");
+        if (!informedConsent.riskBenefitDiscussed) missing.push("risk and benefit discussed, including the side-effect profile");
+        if (!informedConsent.alternativesDiscussed) missing.push("alternatives discussed");
+        if (!informedConsent.privateSupplyExplained) missing.push("private supply, cost and the NHS position explained");
+        if (!informedConsent.writtenConsentObtained) missing.push("written informed consent obtained and filed");
+        return missing.length ? `Informed consent is an inclusion criterion: ${missing.join("; ")}.` : null;
+      }
       case STEP_ELIGIBILITY: {
         const missing: string[] = [];
         if (!visit.type) missing.push("type of visit");
         if (eligibility.bmi === null) missing.push("height and weight (BMI must be calculated at this visit)");
+        if (
+          eligibility.bmi !== null &&
+          eligibility.bmi < 30 &&
+          eligibility.hasComorbidity &&
+          !eligibility.comorbidities.trim()
+        )
+          missing.push("the weight-related comorbidity relied on, named");
+        if (visit.type !== "initiation" && visit.type !== "" && eligibility.initialWeightKg === null)
+          missing.push("weight at initiation (for the 5% of initial body weight review)");
         if (eligibility.targetWeightKg === null) missing.push("target weight agreed");
         if (!eligibility.willingLifestyleChange) missing.push("willing to follow the reduced-calorie diet and increased physical activity");
         if (!eligibility.initialAssessmentDone) missing.push("initial assessment completed and documented");
@@ -832,10 +892,18 @@ export function FoundayoClient() {
         if (visit.type !== "initiation" && visit.type !== "restart" && !dose.reassessedAtVisit)
           missing.push("clinical benefit, tolerability and target weight reassessed at this visit");
         if (!record.batchNumber.trim()) missing.push("batch number");
-        if (!record.quantitySupplied.trim()) missing.push("quantity supplied");
+        if (record.quantitySupplied === null || record.quantitySupplied < 1) missing.push("quantity supplied (tablets)");
+        if (record.quantitySupplied !== null && record.quantitySupplied > MAX_TABLETS_PER_SUPPLY)
+          missing.push(`no more than ${MAX_TABLETS_PER_SUPPLY} tablets (one month at the current strength; the PGD does not allow stocking up)`);
         if (cautions.t2dmOnMetforminSglt2Dpp4 && !cautions.gpInformed) missing.push("GP informed (type 2 diabetes on metformin, SGLT2 or DPP-4 inhibitor)");
         return missing.length ? `Before continuing, record: ${missing.join("; ")}.` : null;
       }
+      case STEP_MEDICINES:
+        return interactions.medicationListReviewed
+          ? null
+          : "Confirm the full medication list was reviewed at this visit, including over the counter products and St John's wort.";
+      case STEP_SUMMARY:
+        return validateSummaryStep(state.summary);
       case STEP_CONTRACEPTION: {
         if (!contraception.notApplicable && !contraception.usesOralHormonal)
           return "Record either that oral hormonal contraception is in use, or that it is not applicable for this patient.";
@@ -858,12 +926,15 @@ export function FoundayoClient() {
     }
   }, [state]);
 
-  // Stops block every step except the summary, which is reached only once
-  // no stop remains. Previously the last two steps were exempt, which left
-  // the contraception gate (evaluated after the Contraception step) with
-  // nothing to block.
-  const canProceed =
-    (!hasStops || state.currentStep >= TOTAL_STEPS - 1) && stepValidationError === null;
+  // A stop anywhere blocks Next on that step and on every later step, and
+  // blocks Save & Print on the summary. An excluded patient is saved with
+  // the "Save as not supplied" path instead.
+  const canProceed = !hasStops && stepValidationError === null;
+
+  const weightLossPercent =
+    state.eligibility.initialWeightKg && state.eligibility.weightKg && state.eligibility.initialWeightKg > 0
+      ? Math.round(((state.eligibility.initialWeightKg - state.eligibility.weightKg) / state.eligibility.initialWeightKg) * 1000) / 10
+      : null;
 
   const markComplete = useCallback(() => {
     setCompletedSteps((prev) => new Set(prev).add(state.currentStep));
@@ -891,16 +962,33 @@ export function FoundayoClient() {
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
       },
-      clinicalData: state as unknown as Record<string, unknown>,
+      clinicalData: {
+        ...state,
+        pgdVersion: PGD_VERSION_LINE,
+        stops: alerts.filter((a) => a.severity === "stop").map((a) => a.message),
+        weightLossPercent,
+      } as unknown as Record<string, unknown>,
       outcome: hasStops ? "not_supplied" : "completed",
+      medicine: hasStops || !state.dose.newDose
+        ? undefined
+        : {
+            name: state.record.productName,
+            dose: `${state.dose.newDose} mg once daily, film-coated tablet, oral`,
+            duration: "One month at this strength",
+            quantity: state.record.quantitySupplied ?? undefined,
+          },
       summary: {
         pharmacistName: state.summary.pharmacistName,
         pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacyName: state.summary.pharmacyName,
+        pharmacyAddress: state.summary.pharmacyAddress,
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: state.consent.notifyGp },
     };
-  }, [state, hasStops]);
+  }, [state, hasStops, alerts, weightLossPercent]);
 
   const handleNewConsultation = useCallback(() => {
     dispatch({ type: "RESET" });
@@ -914,6 +1002,8 @@ export function FoundayoClient() {
     onPrev: handlePrev,
     canProceed,
     validationError: stepValidationError,
+    isBlocked: hasStops,
+    getConsultationData,
   };
 
   const renderStep = () => {
@@ -933,6 +1023,9 @@ export function FoundayoClient() {
                     if (prev.heightCm !== null) {
                       dispatch({ type: "UPDATE_ELIGIBILITY", field: "heightCm", value: prev.heightCm });
                     }
+                    if (prev.baselineWeightKg !== null) {
+                      dispatch({ type: "UPDATE_ELIGIBILITY", field: "initialWeightKg", value: prev.baselineWeightKg });
+                    }
                   })
                 }
               />
@@ -944,7 +1037,7 @@ export function FoundayoClient() {
                   <p className="mt-1 text-amber-900">
                     Last seen {previous.consultationDate}
                     {previous.pgdSlug ? ` (${previous.pgdSlug})` : ""}:{" "}
-                    {describePrevious(previous)}. Height has been filled in for you.
+                    {describePrevious(previous)}. Height{previous.baselineWeightKg !== null ? " and the weight at initiation have" : " has"} been filled in for you.
                   </p>
                 </div>
               )}
@@ -1039,11 +1132,17 @@ export function FoundayoClient() {
                 required
               />
               {state.visit.type === "restart" && (
-                <div className="p-3 rounded-md bg-amber-50 border border-amber-300 text-xs text-amber-900">
-                  Recommencing after a break: the dose is titrated again starting at
-                  0.8 mg. The BMI inclusion criteria for initiation must be applied if
-                  more than 2 months have passed since discontinuing treatment; this
-                  tool applies them at every visit.
+                <div className="p-3 rounded-md bg-amber-50 border border-amber-300 text-xs text-amber-900 space-y-2">
+                  <p>
+                    Recommencing after a break: the dose is titrated again starting at
+                    0.8 mg. The BMI inclusion criteria for initiation must be applied if
+                    more than 2 months have passed since discontinuing treatment.
+                  </p>
+                  <Checkbox
+                    label="More than 2 months since treatment was discontinued (BMI inclusion criteria apply again)"
+                    checked={state.visit.restartGapOver2Months}
+                    onChange={(v) => dispatch({ type: "UPDATE_VISIT", field: "restartGapOver2Months", value: v })}
+                  />
                 </div>
               )}
               <div className="grid grid-cols-2 gap-3">
@@ -1062,10 +1161,31 @@ export function FoundayoClient() {
                   max={300}
                 />
               </div>
+              {state.visit.type !== "" && state.visit.type !== "initiation" && (
+                <div className="p-3 rounded-md bg-gray-50 border border-gray-200 space-y-2">
+                  <NumberInput
+                    label="Weight at initiation (kg)"
+                    value={state.eligibility.initialWeightKg}
+                    onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "initialWeightKg", value: v })}
+                    min={30}
+                    max={300}
+                    unit="kg"
+                    required
+                  />
+                  <p className="text-xs text-gray-600">
+                    {weightLossPercent !== null
+                      ? `${weightLossPercent}% of initial body weight lost. If less than 5% has been lost after 6 months on the maximum tolerated dose, a decision is required on whether to continue.`
+                      : "Carried forward from the first record where available. Needed for the 5% of initial body weight review at 6 months."}
+                  </p>
+                </div>
+              )}
               {state.eligibility.bmi !== null && (
                 <div className="p-3 bg-[color:var(--tenant-primary)]/10 border border-[color:var(--tenant-primary)]/30 rounded-md">
                   <p className="text-sm text-[color:var(--tenant-primary)]">
                     <strong>BMI: {state.eligibility.bmi}</strong>
+                    {state.visit.type === "escalation" || state.visit.type === "continuation" || (state.visit.type === "restart" && !state.visit.restartGapOver2Months)
+                      ? " (recorded; the inclusion threshold applied at initiation)"
+                      : ""}
                   </p>
                   <p className="text-xs text-[color:var(--tenant-primary)] mt-1">
                     {state.eligibility.bmi >= 30
@@ -1085,6 +1205,7 @@ export function FoundayoClient() {
                 label="List comorbidities"
                 value={state.eligibility.comorbidities}
                 onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "comorbidities", value: v })}
+                required={state.eligibility.hasComorbidity && state.eligibility.bmi !== null && state.eligibility.bmi < 30}
               />
               <NumberInput
                 label="Target weight agreed (kg)"
@@ -1222,6 +1343,12 @@ export function FoundayoClient() {
           >
             <div className="space-y-2">
               <Checkbox
+                label="Full medication list reviewed at this visit, including over the counter products and St John's wort"
+                checked={state.interactions.medicationListReviewed}
+                onChange={(v) => dispatch({ type: "UPDATE_INTERACTION", field: "medicationListReviewed", value: v })}
+                required
+              />
+              <Checkbox
                 label="Ritonavir or telaprevir (strong CYP3A4 inhibitor that also inhibits OATP1B)"
                 checked={state.interactions.strongCyp3a4AndOatp1bInhibitor}
                 onChange={(v) => dispatch({ type: "UPDATE_INTERACTION", field: "strongCyp3a4AndOatp1bInhibitor", value: v })}
@@ -1327,7 +1454,7 @@ export function FoundayoClient() {
       case 6: {
         const ceiling = nineMgCeilingApplies(state.interactions);
         return (
-          <StepWrapper title="Dose & Titration" {...stepProps} isBlocked={hasStops}>
+          <StepWrapper title="Dose & Titration" {...stepProps}>
             <div className="space-y-4">
               {ceiling && (
                 <div className="p-3 rounded-md bg-amber-50 border border-amber-300 text-sm text-amber-900">
@@ -1403,11 +1530,13 @@ export function FoundayoClient() {
                   placeholder="From the pack"
                   required
                 />
-                <TextInput
-                  label="Quantity supplied"
+                <NumberInput
+                  label="Quantity supplied (tablets)"
                   value={state.record.quantitySupplied}
                   onChange={(v) => dispatch({ type: "UPDATE_RECORD", field: "quantitySupplied", value: v })}
-                  placeholder="One month at this strength, e.g. number of tablets"
+                  min={1}
+                  max={MAX_TABLETS_PER_SUPPLY}
+                  unit={`tablets (max ${MAX_TABLETS_PER_SUPPLY})`}
                   required
                 />
               </div>
@@ -1511,13 +1640,7 @@ export function FoundayoClient() {
         return (
           <StepWrapper
             title="Summary & Record"
-            currentStep={state.currentStep}
-            totalSteps={TOTAL_STEPS}
-            onNext={handleNext}
-            onPrev={handlePrev}
-            canProceed={true}
-            validationError={null}
-            getConsultationData={getConsultationData}
+            {...stepProps}
             onNewConsultation={handleNewConsultation}
           >
             <div className="space-y-4 mb-6">
@@ -1545,9 +1668,12 @@ export function FoundayoClient() {
                   {state.eligibility.heightCm ?? "not recorded"} cm, {state.eligibility.weightKg ?? "not recorded"} kg, BMI {state.eligibility.bmi ?? "not recorded"}
                 </div>
                 <div><strong>Target weight agreed:</strong> {state.eligibility.targetWeightKg !== null ? `${state.eligibility.targetWeightKg} kg` : "not recorded"}</div>
-                <div><strong>Medicine:</strong> {state.record.productName || "not recorded"}, batch {state.record.batchNumber || "not recorded"}</div>
-                <div><strong>Dose, form and route:</strong> {state.dose.newDose ? `${state.dose.newDose} mg film-coated tablet, oral, once daily` : "not recorded"}</div>
-                <div><strong>Quantity supplied:</strong> {state.record.quantitySupplied || "not recorded"}</div>
+                <div><strong>Outcome:</strong> {hasStops ? "NOT SUPPLIED (stop present)" : "Supplied via PGD"}</div>
+                <div><strong>Medicine:</strong> {hasStops ? "Not supplied" : `${state.record.productName || "not recorded"}, batch ${state.record.batchNumber || "not recorded"}`}</div>
+                <div><strong>Dose, form and route:</strong> {hasStops ? "Not supplied" : state.dose.newDose ? `${state.dose.newDose} mg film-coated tablet, oral, once daily` : "not recorded"}</div>
+                <div><strong>Quantity supplied:</strong> {hasStops ? "Not supplied" : state.record.quantitySupplied !== null ? `${state.record.quantitySupplied} tablets` : "not recorded"}</div>
+                {weightLossPercent !== null && <div><strong>Weight change since initiation:</strong> {weightLossPercent}% of initial body weight lost</div>}
+                {hasStops && <div><strong>Advice given:</strong> {state.record.adviceIfExcluded || "not recorded"}</div>}
                 <div>
                   <strong>Contraception:</strong>{" "}
                   {state.contraception.notApplicable
@@ -1578,9 +1704,22 @@ export function FoundayoClient() {
         currentStep={state.currentStep}
         onStepClick={handleStepClick}
         completedSteps={completedSteps}
-        hasErrors={false}
+        hasErrors={hasStops || stepValidationError !== null}
       />
       {alerts.length > 0 && <AlertBanner alerts={alerts} />}
+      {hasStops && (
+        <div className="rounded-lg bg-red-50 border border-red-300 p-4 space-y-2 print:hidden">
+          <p className="text-sm font-semibold text-red-900">A stop is present: do not supply under this PGD.</p>
+          <TextArea
+            label="Advice given (excluded or declines treatment): reason discussed, alternatives (GP, specialist weight management service, lifestyle programmes), decision reached, GP informed or referred"
+            value={state.record.adviceIfExcluded}
+            onChange={(v) => dispatch({ type: "UPDATE_RECORD", field: "adviceIfExcluded", value: v })}
+            rows={3}
+            required
+          />
+          <p className="text-xs text-red-800">Record the advice, then use &quot;Save as not supplied&quot; on the step below. The PGD requires advice given to an excluded patient to be recorded.</p>
+        </div>
+      )}
       {renderStep()}
     </div>
   );

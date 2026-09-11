@@ -1,8 +1,56 @@
 import type { ClinicalAlert } from "../../shared/types";
 import type { SleepMelatoninAssessment, SleepMelatoninContraindications, SleepMelatoninSecondaryCauses } from "./sleep-melatonin-types";
 
+/** Weeks of Circadin treatment to date as a number, or null if not given. */
+export function weeksTreated(assessment: SleepMelatoninAssessment): number | null {
+  if (!assessment.previousCircadin) return 0;
+  const t = assessment.weeksTreatedToDate.trim();
+  if (!t) return null;
+  const n = parseFloat(t);
+  return isNaN(n) || n < 0 ? null : n;
+}
+
+/** Days since the last Circadin supply, or null if no date recorded. */
+export function daysSinceLastSupply(assessment: SleepMelatoninAssessment): number | null {
+  if (!assessment.previousCircadin || !assessment.lastSupplyDate) return null;
+  const d = new Date(assessment.lastSupplyDate);
+  if (isNaN(d.getTime())) return null;
+  return Math.floor((Date.now() - d.getTime()) / 86400000);
+}
+
+/**
+ * Maximum tablets this supply: 21 (three weeks), reduced so that the course
+ * cannot exceed 13 weeks in total. With 12 weeks already taken, 7 tablets.
+ */
+export function maxTabletsThisSupply(assessment: SleepMelatoninAssessment): number {
+  const w = weeksTreated(assessment);
+  if (w === null) return 21;
+  return Math.max(0, Math.min(21, Math.floor((13 - w) * 7)));
+}
+
 export function getAssessmentAlerts(assessment: SleepMelatoninAssessment): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
+  // Treatment limits derived from the recorded history, not only from the
+  // manual tick on the next step. "12 weeks already taken" used to allow
+  // another 21 tablets (adversarial review, 11 Sep 2026).
+  const w = weeksTreated(assessment);
+  if (w !== null && w >= 13) {
+    alerts.push({
+      severity: "stop",
+      code: "REPEAT_CI",
+      message: `STOP: ${w} weeks of Circadin treatment already completed (maximum 13 weeks in total)`,
+      detail: "There is no extension under this PGD. A patient still not sleeping at 13 weeks needs review, not a repeat. Refer, do not supply.",
+    });
+  }
+  const days = daysSinceLastSupply(assessment);
+  if (assessment.previousCourseStatus === "completed" && days !== null && days < 183) {
+    alerts.push({
+      severity: "stop",
+      code: "REPEAT_6M_CI",
+      message: `STOP: Previous course of Circadin completed, last supplied ${days} days ago (within 6 months)`,
+      detail: "No further supply under this PGD within 6 months of completing a course. Refer for review, do not supply.",
+    });
+  }
   if (!assessment.sleepHygieneAdviceGiven) {
     alerts.push({
       severity: "caution",
@@ -93,6 +141,11 @@ export function getAllAlerts(assessment: SleepMelatoninAssessment, secondaryCaus
 
 export function hasSecondaryCause(secondaryCauses: SleepMelatoninSecondaryCauses): boolean {
   return SECONDARY_CAUSE_ALERTS.some((a) => secondaryCauses[a.field]);
+}
+
+/** Stops raised on the assessment step (duration, treatment limits). */
+export function hasAssessmentStops(assessment: SleepMelatoninAssessment): boolean {
+  return getAssessmentAlerts(assessment).some((a) => a.severity === "stop");
 }
 
 export function hasHardStops(contraindications: SleepMelatoninContraindications): boolean {

@@ -2,7 +2,7 @@ import SmokingNRTClient from "./SmokingNRTClient";
 import { PgdPageActions } from "@/components/PgdPageActions";
 
 export const metadata = {
-  title: "Smoking Cessation — NRT ePGD | GRH Pharmacy",
+  title: "Smoking Cessation: NRT ePGD | GRH Pharmacy",
   description: "Patient Group Direction for smoking cessation with nicotine replacement therapy",
 };
 

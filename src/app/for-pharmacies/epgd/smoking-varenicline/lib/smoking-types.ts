@@ -15,6 +15,10 @@ export interface ClinicalAlert {
 }
 
 export interface SmokingAssessment {
+  /** new: first supply (quit date must be 0 to 14 days ahead);
+   *  continuation: a later supply in the same course (quit date is the
+   *  original one, and weeks completed is required on the dose plan). */
+  consultationType: "" | "new" | "continuation";
   // Smoking history
   cigarettesPerDay: number | null;
   yearsSmoked: number | null;
@@ -52,7 +56,11 @@ export interface SmokingMedicalHistory {
   cardiovascularDisease: boolean;
   eatingDisorder: boolean;
   currentDepression: boolean;
+  /** History of suicidal ideation or self-harm: a PGD caution (monitor
+   *  mental health throughout treatment). */
   suicidalIdeation: boolean;
+  /** Current (active) suicidal ideation: stop and refer urgently. */
+  currentSuicidalIdeation: boolean;
 }
 
 export interface SmokingMedications {
@@ -75,7 +83,14 @@ export interface SmokingDosePlan {
   treatmentDuration: "12-weeks" | "24-weeks-extended" | "";
   /** starter: starter pack; continuation: up to 56 x 1mg tablets (4-week supply). */
   supplyType: "starter" | "continuation" | "";
+  /** Total tablets supplied (0.5mg plus 1mg). */
   quantity: number;
+  /** 0.5mg tablets supplied: starter pack only, maximum 11 (days 1 to 7). */
+  quantityHalfMg: number;
+  /** 1mg tablets supplied: starter pack up to 42 (days 8 to 28), continuation up to 56. */
+  quantityOneMg: number;
+  /** Product and brand actually handed over (document: "name and brand of medication"). */
+  brand: string;
 }
 
 export interface SmokingCounselling {
@@ -106,11 +121,18 @@ export interface SmokingToolFormData {
   gender: string;
   contactNumber: string;
   email: string;
+  /** Document records row: name, address, date of birth and GP. */
+  address: string;
+  nhsNumber: string;
+  gpName: string;
+  gpPractice: string;
 
   // Step 1: Consent & ID
   consentToTreatment: boolean;
   consentToRecord: boolean;
   identityVerified: boolean;
+  idType: string;
+  patientAwarePrivateService: boolean;
 
   // Step 2: Smoking Assessment
   assessment: SmokingAssessment;
@@ -133,7 +155,7 @@ export interface SmokingToolFormData {
 
   // Step 8: Summary
   pharmacistName: string;
-  pharmacistGMCNumber: string;
+  pharmacistGPhC: string;
   consultationDate: string;
   pharmacyName: string;
   pharmacyAddressLine1: string;
@@ -153,7 +175,14 @@ export const STEP_LABELS: string[] = [
   "Summary",
 ];
 
-export const DEFAULT_FORM_DATA: SmokingToolFormData = {
+/**
+ * Fresh form state. A factory, not a shared constant: the tool used to
+ * write nested answers into a module-level default object, so "New
+ * Consultation" started the next patient with the previous patient's
+ * history and counselling ticks (adversarial review, 11 Sep 2026).
+ */
+export function createDefaultFormData(): SmokingToolFormData {
+  return {
   firstName: "",
   lastName: "",
   dateOfBirth: "",
@@ -161,12 +190,19 @@ export const DEFAULT_FORM_DATA: SmokingToolFormData = {
   gender: "",
   contactNumber: "",
   email: "",
+  address: "",
+  nhsNumber: "",
+  gpName: "",
+  gpPractice: "",
 
   consentToTreatment: false,
   consentToRecord: false,
   identityVerified: false,
+  idType: "",
+  patientAwarePrivateService: false,
 
   assessment: {
+    consultationType: "",
     cigarettesPerDay: null,
     yearsSmoked: null,
     previousQuitAttempts: null,
@@ -200,6 +236,7 @@ export const DEFAULT_FORM_DATA: SmokingToolFormData = {
     eatingDisorder: false,
     currentDepression: false,
     suicidalIdeation: false,
+    currentSuicidalIdeation: false,
   },
 
   medications: {
@@ -225,6 +262,9 @@ export const DEFAULT_FORM_DATA: SmokingToolFormData = {
     treatmentDuration: "",
     supplyType: "",
     quantity: 0,
+    quantityHalfMg: 0,
+    quantityOneMg: 0,
+    brand: "",
   },
 
   counselling: {
@@ -246,10 +286,14 @@ export const DEFAULT_FORM_DATA: SmokingToolFormData = {
   },
 
   pharmacistName: "",
-  pharmacistGMCNumber: "",
+  pharmacistGPhC: "",
   consultationDate: "",
   pharmacyName: "",
   pharmacyAddressLine1: "",
   pharmacyAddressLine2: "",
   pharmacyPostcode: "",
-};
+  };
+}
+
+/** @deprecated Use createDefaultFormData(); kept for older imports. Never mutate. */
+export const DEFAULT_FORM_DATA: SmokingToolFormData = createDefaultFormData();

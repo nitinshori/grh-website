@@ -9,7 +9,9 @@ import { PatientDetailsStep } from "../shared/steps/PatientDetailsStep";
 import { ConsentStep } from "../shared/steps/ConsentStep";
 import { TextInput, Checkbox, SelectInput, TextArea } from "../shared/components/FormInputs";
 import type { ClinicalAlert } from "../shared/types";
+import { calculateAge } from "../shared/types";
 import { validatePatient, validateConsent, validateSummary } from "./lib/wound-validation";
+import { WoundCareSummaryReport } from "./components/WoundCareSummaryReport";
 
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 
@@ -26,8 +28,8 @@ import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
  */
 export const WOUND_CARE_PGD_VERSION = "Minor Wound Care PGD, version 007, issued 11 September 2026";
 
-type AgeBand = "2-4" | "5-11" | "12+" | null;
-function getAgeBand(age: number | null): AgeBand {
+export type AgeBand = "2-4" | "5-11" | "12+" | null;
+export function getAgeBand(age: number | null): AgeBand {
   if (age === null || age < 2) return null;
   if (age <= 4) return "2-4";
   if (age <= 11) return "5-11";
@@ -39,9 +41,37 @@ function num(v: string): number | null {
   return isNaN(n) ? null : n;
 }
 
-interface WoundState {
+/** Hours since the time of injury, unfloored; null when not recorded. */
+export function hoursSinceInjury(timeOfInjury: string): number | null {
+  if (!timeOfInjury) return null;
+  const t = new Date(timeOfInjury).getTime();
+  if (isNaN(t)) return null;
+  return (Date.now() - t) / (1000 * 60 * 60);
+}
+
+export type WoundFormulation = "" | "tablets" | "capsules" | "suspension";
+
+/** The formulations the document names for this arm and age. */
+export function allowedFormulations(antibiotic: WoundState["treatment"]["antibiotic"], age: number | null): { value: WoundFormulation; label: string }[] {
+  if (antibiotic === "co-amoxiclav") return [{ value: "tablets", label: "Co-amoxiclav 500/125mg tablets" }];
+  if (antibiotic === "flucloxacillin") {
+    if (age !== null && age >= 2 && age <= 9) return [{ value: "suspension", label: "Flucloxacillin 250mg/5mL oral suspension (2 to 9 years: 5 mL four times daily)" }];
+    return [{ value: "capsules", label: "Flucloxacillin 500mg capsules (10 years and over)" }];
+  }
+  return [];
+}
+
+/** Quantity from the document's quantity row: nothing else can be recorded. */
+export function documentQuantity(formulation: WoundFormulation, courseDays: "" | "5" | "7"): string {
+  if (!formulation || !courseDays) return "";
+  if (formulation === "tablets") return courseDays === "5" ? "15 tablets" : "21 tablets";
+  if (formulation === "capsules") return courseDays === "5" ? "20 capsules" : "28 capsules";
+  return courseDays === "5" ? "100 mL" : "140 mL";
+}
+
+export interface WoundState {
   patient: { firstName: string; lastName: string; dateOfBirth: string; age: number | null; gpName: string; gpPractice: string; gpAddress: string; gpPhone: string; gpEmail: string; gpOdsCode: string; nhsNumber: string; address: string; phone: string; email: string };
-  consent: { informedConsentGiven: boolean; idVerified: boolean; idType: string; patientAwarePrivateService: boolean };
+  consent: { informedConsentGiven: boolean; idVerified: boolean; idType: string; patientAwarePrivateService: boolean; notifyGp?: boolean };
   consentDetails: { parentName: string; parentRelationship: string };
   assessment: {
     woundType: string;
@@ -82,14 +112,23 @@ interface WoundState {
     respiratoryRate: string;
     systolicBP: string;
     oxygenSaturation: string;
-    capillaryRefillOver2s: boolean;
+    /** Under 12 only: a measured value, never a default (Appendix 1: "REFER if more than 2 seconds"). */
+    capillaryRefill: "" | "2s-or-less" | "over-2s";
     alteredConsciousness: boolean;
+    /** Why human tetanus immunoglobulin is NOT indicated where the document
+     *  lists the finding (heavy contamination, more than 6 hours) under the
+     *  HTIG exclusion. Required before supply in either case. */
+    htigNotIndicatedReason: string;
+    /** Advice given where the patient is excluded (document record item). */
+    exclusionAdvice: string;
   };
   treatment: {
     antibiotic: "" | "co-amoxiclav" | "flucloxacillin";
-    formulation: string;
+    formulation: WoundFormulation;
     courseDays: "" | "5" | "7";
-    quantitySupplied: string;
+    /** Patient declined the antibiotic: record the advice given, save as not supplied. */
+    patientDeclined: boolean;
+    declinedAdvice: string;
     antibioticRationale: string;
     irrigationMethod: string;
     closureMethod: string;
@@ -117,6 +156,8 @@ interface WoundState {
     consultationDate: string;
     consultationTime: string;
     clinicalNotes: string;
+    /** Details of any adverse drug reactions and the actions taken (Yellow Card). */
+    adverseReactions: string;
   };
 }
 
@@ -165,14 +206,17 @@ function createInitialState(): WoundState {
       respiratoryRate: "",
       systolicBP: "",
       oxygenSaturation: "",
-      capillaryRefillOver2s: false,
+      capillaryRefill: "",
       alteredConsciousness: false,
+      htigNotIndicatedReason: "",
+      exclusionAdvice: "",
     },
     treatment: {
       antibiotic: "",
       formulation: "",
       courseDays: "",
-      quantitySupplied: "",
+      patientDeclined: false,
+      declinedAdvice: "",
       antibioticRationale: "",
       irrigationMethod: "",
       closureMethod: "",
@@ -200,6 +244,7 @@ function createInitialState(): WoundState {
       consultationDate: new Date().toISOString().split("T")[0],
       consultationTime: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
       clinicalNotes: "",
+      adverseReactions: "",
     },
   };
 }
@@ -224,11 +269,11 @@ function observationBreaches(a: WoundState["assessment"], band: AgeBand): string
   if (band === "2-4") {
     if (hr !== null && hr > 140) b.push("pulse above 140");
     if (rr !== null && rr >= 40) b.push("respiratory rate 40 or above");
-    if (a.capillaryRefillOver2s) b.push("capillary refill more than 2 seconds");
+    if (a.capillaryRefill === "over-2s") b.push("capillary refill more than 2 seconds");
   } else if (band === "5-11") {
     if (hr !== null && hr > 120) b.push("pulse above 120");
     if (rr !== null && rr >= 25) b.push("respiratory rate 25 or above");
-    if (a.capillaryRefillOver2s) b.push("capillary refill more than 2 seconds");
+    if (a.capillaryRefill === "over-2s") b.push("capillary refill more than 2 seconds");
   } else {
     if (hr !== null && hr > 110) b.push("pulse above 110 at rest");
     if (rr !== null && rr >= 22) b.push("respiratory rate 22 or above");
@@ -362,17 +407,41 @@ function computeAlerts(state: WoundState): ClinicalAlert[] {
     if (a.crclBelow10) {
       newAlerts.push({ severity: "stop", code: "FLUCLOX_RENAL", message: "Severe renal impairment (creatinine clearance below 10 mL/min)", detail: "Excluded from the flucloxacillin arm. Refer." });
     }
-    if (a.takingAnticoagulants) {
-      newAlerts.push({ severity: "caution", code: "ANTICOAGULANT", message: "Anticoagulant use", detail: "Increased bleeding risk. Monitor the wound carefully." });
-    }
     if (a.pregnant || a.breastfeeding) {
       newAlerts.push({ severity: "caution", code: "FLUCLOX_PREGNANCY", message: "Pregnancy or breastfeeding: flucloxacillin may be supplied where clinically indicated", detail: "Document caution, aligned with the Skin and Soft Tissue Infection PGD. Hepatic reactions may occur up to two months after treatment." });
     }
   }
 
-  const hoursOld = a.timeOfInjury ? Math.floor((Date.now() - new Date(a.timeOfInjury).getTime()) / (1000 * 60 * 60)) : 0;
-  if (hoursOld > 6) {
-    newAlerts.push({ severity: "caution", code: "WOUND_AGE", message: "More than 6 hours since injury: tetanus-prone wound", detail: "Wounds presenting after 6 hours are tetanus-prone. Establish the tetanus history and record the action. Where immunoglobulin may be indicated (high-risk wound), refer the same day." });
+  // Heavy contamination is the indication for Arm 1 AND a listed feature of a
+  // high-risk tetanus-prone wound where HTIG may be indicated (an exclusion
+  // in both arms). The document contradicts itself; the tool says so on
+  // screen and requires the pharmacist to record why immunoglobulin is not
+  // indicated before any supply (adversarial review, 11 Sep 2026).
+  if (a.heavilyContaminated && !a.highRiskTetanusWound) {
+    newAlerts.push({
+      severity: "caution",
+      code: "HEAVY_CONTAMINATION_HTIG",
+      message: "Heavily contaminated wound: the document lists heavy contamination under the HTIG exclusion as well as under the co-amoxiclav indication",
+      detail: "Exclusion (both arms): \"High-risk tetanus-prone wound where human tetanus immunoglobulin may be indicated (heavy contamination, devitalised tissue, burns, sepsis, or more than 6 hours to treatment). Refer the same day.\" Before supplying, assess whether immunoglobulin is indicated and record why it is not. If it may be, tick the high-risk tetanus-prone wound box and refer the same day.",
+    });
+  }
+
+  const hoursOld = hoursSinceInjury(a.timeOfInjury);
+  if (hoursOld !== null && hoursOld > 6 && !a.highRiskTetanusWound) {
+    newAlerts.push({
+      severity: "caution",
+      code: "WOUND_AGE",
+      message: "More than 6 hours since injury: tetanus-prone wound, and a finding the document lists under the HTIG exclusion",
+      detail: "Appendix 1 lists wounds presenting after 6 hours as tetanus-prone (vaccine dose where indicated) AND lists \"more than 6 hours to treatment\" among the high-risk features where immunoglobulin may be indicated, which is a same-day referral in both arms. Establish the tetanus history, record the action, and record why immunoglobulin is not indicated before any supply. If it may be, tick the high-risk tetanus-prone wound box and refer the same day.",
+    });
+  }
+  if (hoursOld !== null && hoursOld > 14 * 24) {
+    newAlerts.push({
+      severity: "caution",
+      code: "WOUND_CHRONIC",
+      message: "Injury more than 14 days ago: check this is an acute minor wound and not a chronic wound",
+      detail: "This PGD covers infected minor wounds. A wound that has been present for weeks needs assessment of why it has not healed; consider referral.",
+    });
   }
   if (a.tetanusStatus === "over-10-years" || a.tetanusStatus === "incomplete-or-unknown") {
     newAlerts.push({
@@ -423,7 +492,7 @@ export default function WoundCareClient() {
           quantity: "Suspension: 100mL for 5 days, 140mL for 7 days",
         };
       return {
-        medicine: "Flucloxacillin 500mg capsules (250mg/5mL suspension for children unable to swallow capsules)",
+        medicine: "Flucloxacillin 500mg capsules",
         dose: "500mg four times daily, on an empty stomach, one hour before or two hours after food",
         quantity: "Capsules: 20 for a 5 day course, 28 for a 7 day course",
       };
@@ -431,35 +500,56 @@ export default function WoundCareClient() {
     return null;
   }, [t.antibiotic, age]);
 
+  const formulationOptions = useMemo(() => allowedFormulations(t.antibiotic, age), [t.antibiotic, age]);
+  const quantitySupplied = documentQuantity(t.formulation, t.courseDays);
+  const hoursOld = hoursSinceInjury(a.timeOfInjury);
+  const htigReasonRequired = (a.heavilyContaminated || (hoursOld !== null && hoursOld > 6)) && !a.highRiskTetanusWound;
+
   const assessmentError = useCallback((): string | null => {
+    // Never assess against a missing age: every threshold in Appendix 1 is
+    // banded, and a null band used to switch every observation check off.
+    if (age === null) return "The patient's age is not known: enter the date of birth on the Patient Details step";
+    if (!band) return "This PGD is for patients aged 2 years and over";
     if (!a.woundType) return "Select the wound type (mechanism)";
     if (!a.woundLocation) return "Select the wound location";
     if (!a.woundSize) return "Select the wound size (extent)";
     if (!a.woundDepth) return "Select the wound depth";
     if (!a.timeOfInjury) return "Record the time of injury";
+    if (hoursOld === null) return "The time of injury is not a valid date and time";
+    if (hoursOld < 0) return "The time of injury is in the future";
     if (!a.temperature.trim()) return "Record the temperature";
     if (!a.pulse.trim()) return "Record the pulse";
     if (!a.respiratoryRate.trim()) return "Record the respiratory rate";
     if (!a.oxygenSaturation.trim()) return "Record the oxygen saturation on air at rest";
     if (band === "12+" && !a.systolicBP.trim()) return "Record the systolic blood pressure (required from age 12)";
+    if (band !== "12+" && !a.capillaryRefill) return "Under 12: measure and record the capillary refill time";
     if (!a.tetanusStatus) return "Establish and record the tetanus immunisation status";
     if (!a.tetanusAction.trim()) return "Record the tetanus action taken";
+    if (htigReasonRequired && !a.htigNotIndicatedReason.trim())
+      return "The document lists this finding under the HTIG exclusion: record why immunoglobulin is not indicated, or tick the high-risk tetanus-prone wound box and refer";
     return null;
-  }, [a, band]);
+  }, [a, band, age, hoursOld, htigReasonRequired]);
 
   const treatmentError = useCallback((): string | null => {
+    if (t.patientDeclined) {
+      if (!t.declinedAdvice.trim()) return "Record the advice given to the patient who declined treatment";
+      return null;
+    }
     if (!t.antibiotic) return "Select the antibiotic arm";
     if (arm && t.antibiotic !== arm)
       return arm === "co-amoxiclav"
         ? "A bite or heavily contaminated wound is treated with co-amoxiclav (Arm 1), not flucloxacillin"
         : "A non-bite wound is treated with flucloxacillin (Arm 2); co-amoxiclav is for bites and heavily contaminated wounds";
+    if (!t.formulation) return "Select the formulation supplied";
+    if (!formulationOptions.some((f) => f.value === t.formulation))
+      return "That formulation is not the one the document names for this arm and age";
     if (!t.courseDays) return "Select the course length (5 or 7 days)";
-    if (!t.quantitySupplied.trim()) return "Record the quantity supplied";
+    if (!quantitySupplied) return "The quantity could not be derived from the formulation and course length";
     if (!t.antibioticRationale.trim()) return "Record which antibiotic was chosen and why";
     if (!t.suppliedItemBatch.trim()) return "Record the batch number";
     if (!t.suppliedItemExpiry) return "Record the expiry date";
     return null;
-  }, [t, arm]);
+  }, [t, arm, formulationOptions, quantitySupplied]);
 
   const counsellingError = useCallback((): string | null => {
     const c = state.counselling;
@@ -490,13 +580,26 @@ export default function WoundCareClient() {
     if (currentStep === 3) return treatmentError();
     if (currentStep === 4) return counsellingError();
     if (currentStep === 5) return validateSummary(state.summary);
+    // Last step: Save & Print applies every rule again, so nothing changed
+    // on an earlier step can be printed without the checks running.
+    if (currentStep === 6)
+      return (
+        validatePatient(state.patient) ||
+        consentError() ||
+        assessmentError() ||
+        treatmentError() ||
+        counsellingError() ||
+        validateSummary(state.summary)
+      );
     return null;
   }, [currentStep, state.patient, state.summary, consentError, assessmentError, treatmentError, counsellingError]);
 
   const validationError = getValidationError();
-  // Stops block progression from the assessment step; the record can still be
-  // completed as "not supplied" once the treatment step has been reached.
-  const canProceed = !validationError && !(hasStopAlerts && currentStep === 2);
+  // A stop raised on the assessment step blocks Next on that step and every
+  // later one; a patient who declines is blocked from the treatment step on.
+  // Either can be saved from the blocked step with "Save as not supplied".
+  const isBlocked = (hasStopAlerts && currentStep >= 2) || (t.patientDeclined && currentStep >= 3);
+  const canProceed = !validationError && !isBlocked;
 
   const handleNext = useCallback(() => {
     if (canProceed) setCurrentStep((prev) => Math.min(prev + 1, 6));
@@ -525,16 +628,35 @@ export default function WoundCareClient() {
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
       },
-      clinicalData: { ...state, alerts, pgdVersion: WOUND_CARE_PGD_VERSION } as unknown as Record<string, unknown>,
-      outcome: hasStopAlerts ? "not_supplied" : "completed",
+      clinicalData: {
+        ...state,
+        alerts,
+        quantitySupplied,
+        ageBand: band,
+        pgdVersion: WOUND_CARE_PGD_VERSION,
+      } as unknown as Record<string, unknown>,
+      outcome: hasStopAlerts ? "referred" : t.patientDeclined ? "not_supplied" : "completed",
+      medicine:
+        !hasStopAlerts && !t.patientDeclined && t.antibiotic && doseText
+          ? {
+              name: doseText.medicine,
+              dose: doseText.dose,
+              duration: t.courseDays ? `${t.courseDays} days` : undefined,
+              quantity: quantitySupplied || undefined,
+            }
+          : undefined,
       summary: {
-        pharmacistName: state.summary.pharmacistName,
-        pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacistName: state.summary.pharmacistName || __pharmProfile?.name || "",
+        pharmacistGPhC: state.summary.pharmacistGPhC || __pharmProfile?.gphcNumber || "",
+        pharmacyName: state.summary.pharmacyName || __pharmProfile?.pharmacyName,
+        pharmacyAddress: state.summary.pharmacyAddress || __pharmProfile?.pharmacyAddress,
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: !!state.consent.notifyGp },
     };
-  }, [state, alerts, hasStopAlerts]);
+  }, [state, alerts, hasStopAlerts, t.patientDeclined, t.antibiotic, t.courseDays, doseText, quantitySupplied, band, __pharmProfile]);
 
   const setA = (patch: Partial<WoundState["assessment"]>) => setState((prev) => ({ ...prev, assessment: { ...prev.assessment, ...patch } }));
   const setT = (patch: Partial<WoundState["treatment"]>) => setState((prev) => ({ ...prev, treatment: { ...prev.treatment, ...patch } }));
@@ -543,7 +665,8 @@ export default function WoundCareClient() {
   const isBite = BITE_TYPES.has(a.woundType);
 
   return (
-    <div className="space-y-6">
+    <>
+    <div className="space-y-6 print:hidden">
       <p className="text-xs text-gray-600">{WOUND_CARE_PGD_VERSION}</p>
       <ProgressBar current={currentStep + 1} total={7} />
       <StepWrapper
@@ -554,14 +677,25 @@ export default function WoundCareClient() {
         onPrev={handlePrev}
         canProceed={canProceed}
         validationError={validationError}
-        isBlocked={hasStopAlerts && currentStep === 3}
+        isBlocked={isBlocked}
         getConsultationData={getConsultationData}
         onNewConsultation={handleNewConsultation}
       >
         {currentStep === 0 && (
           <PatientDetailsStep
             patient={state.patient}
-            onChange={(field, value) => setState(prev => ({ ...prev, patient: { ...prev.patient, [field]: value } }))}
+            onChange={(field, value) =>
+              setState((prev) => ({
+                ...prev,
+                patient: {
+                  ...prev.patient,
+                  [field]: value,
+                  // Every threshold in this PGD is age-banded: the age is
+                  // recalculated on every change of date of birth.
+                  ...(field === "dateOfBirth" ? { age: calculateAge(String(value ?? "")) } : {}),
+                },
+              }))
+            }
             requireAdult={false}
           />
         )}
@@ -587,6 +721,13 @@ export default function WoundCareClient() {
         {currentStep === 2 && (
           <div className="space-y-6">
             {alerts.length > 0 && <AlertBanner alerts={alerts} />}
+            {hasStopAlerts && (
+              <div className="p-4 bg-red-50 rounded-lg border border-red-200 space-y-2">
+                <p className="text-sm font-medium text-navy-900">Excluded: record the advice given and the decision, then use Save as not supplied</p>
+                <p className="text-xs text-gray-700">Explain why treatment cannot be supplied and arrange the appropriate assessment. Inform the GP where the reason for exclusion is a new clinical finding. For penicillin allergy, name the likely alternative in the referral.</p>
+                <TextArea label="Advice given and decision reached" value={a.exclusionAdvice} onChange={(v) => setA({ exclusionAdvice: v })} rows={3} placeholder="e.g. referred same day to urgent care for HTIG assessment; GP informed" />
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <SelectInput
@@ -650,12 +791,25 @@ export default function WoundCareClient() {
             </div>
 
             <TextInput label="Time of injury" type="datetime-local" value={a.timeOfInjury} onChange={(v) => setA({ timeOfInjury: v })} required />
+            {hoursOld !== null && hoursOld >= 0 && (
+              <p className="text-xs text-gray-600">{hoursOld < 48 ? `${hoursOld.toFixed(1)} hours` : `${(hoursOld / 24).toFixed(1)} days`} since injury.</p>
+            )}
 
             <Checkbox
               label="Heavily contaminated with soil or organic material (co-amoxiclav arm, 12 and over)"
               checked={a.heavilyContaminated}
               onChange={(v) => setA({ heavilyContaminated: v })}
+              description="The document also lists heavy contamination among the high-risk tetanus-prone features where immunoglobulin may be indicated (same-day referral). Assess and record below."
             />
+            {htigReasonRequired && (
+              <div className="p-4 bg-amber-50 rounded-lg border border-amber-200 space-y-2">
+                <p className="text-sm font-medium text-navy-900">Tetanus immunoglobulin assessment (required before supply)</p>
+                <p className="text-xs text-gray-700">
+                  {a.heavilyContaminated ? "Heavy contamination" : "More than 6 hours since injury"} appears in the document's HTIG exclusion: "High-risk tetanus-prone wound where human tetanus immunoglobulin may be indicated (heavy contamination, devitalised tissue, burns, sepsis, or more than 6 hours to treatment). Refer the same day." Record why immunoglobulin is not indicated for this wound. If it may be, tick the high-risk box below and refer the same day.
+                </p>
+                <TextArea label="Why human tetanus immunoglobulin is not indicated" value={a.htigNotIndicatedReason} onChange={(v) => setA({ htigNotIndicatedReason: v })} rows={2} required placeholder="e.g. superficial graze, thoroughly irrigated, no devitalised tissue, immunisation up to date" />
+              </div>
+            )}
 
             <Checkbox label="Active bleeding controlled by pressure" checked={a.activeBleedingControlled} onChange={(v) => setA({ activeBleedingControlled: v })} />
 
@@ -698,7 +852,17 @@ export default function WoundCareClient() {
                 )}
               </div>
               {(band === "2-4" || band === "5-11") && (
-                <Checkbox label="Capillary refill more than 2 seconds" checked={a.capillaryRefillOver2s} onChange={(v) => setA({ capillaryRefillOver2s: v })} />
+                <SelectInput
+                  label="Capillary refill time (measured)"
+                  value={a.capillaryRefill}
+                  onChange={(v) => setA({ capillaryRefill: v as WoundState["assessment"]["capillaryRefill"] })}
+                  options={[
+                    { value: "", label: "Not yet measured" },
+                    { value: "2s-or-less", label: "2 seconds or less" },
+                    { value: "over-2s", label: "More than 2 seconds (refer)" },
+                  ]}
+                  required
+                />
               )}
               <Checkbox
                 label={band === "12+" ? "New confusion or drowsiness" : "Any drowsiness, floppiness, or not responding normally to social cues"}
@@ -776,10 +940,22 @@ export default function WoundCareClient() {
           <div className="space-y-6">
             {alerts.length > 0 && <AlertBanner alerts={alerts} />}
 
+            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200 space-y-2">
+              <Checkbox
+                label="Patient declined the antibiotic"
+                checked={t.patientDeclined}
+                onChange={(v) => setT({ patientDeclined: v })}
+                description="Record the advice given, then use Save as not supplied. The document requires advice given to a patient who declines to be recorded."
+              />
+              {t.patientDeclined && (
+                <TextArea label="Advice given to the patient who declined" value={t.declinedAdvice} onChange={(v) => setT({ declinedAdvice: v })} rows={2} required />
+              )}
+            </div>
+
             <SelectInput
               label="Antibiotic arm (chosen on the mechanism of the wound)"
               value={t.antibiotic}
-              onChange={(v) => setT({ antibiotic: v as WoundState["treatment"]["antibiotic"] })}
+              onChange={(v) => setT({ antibiotic: v as WoundState["treatment"]["antibiotic"], formulation: "" })}
               options={[
                 { value: "", label: "Select antibiotic" },
                 { value: "co-amoxiclav", label: "Arm 1: Co-amoxiclav 500/125mg tablets (bites and heavily contaminated wounds, 12 and over)" },
@@ -802,7 +978,13 @@ export default function WoundCareClient() {
               </div>
             )}
             <div className="grid grid-cols-2 gap-4">
-              <TextInput label="Formulation supplied" value={t.formulation} onChange={(v) => setT({ formulation: v })} placeholder={t.antibiotic === "flucloxacillin" ? "e.g. 500mg capsules / 250mg/5mL suspension" : "e.g. 500/125mg tablets"} />
+              <SelectInput
+                label="Formulation supplied (document formulation for this arm and age)"
+                value={t.formulation}
+                onChange={(v) => setT({ formulation: v as WoundFormulation })}
+                options={[{ value: "", label: t.antibiotic ? "Select formulation" : "Select the antibiotic arm first" }, ...formulationOptions]}
+                required
+              />
               <SelectInput
                 label="Course length"
                 value={t.courseDays}
@@ -815,7 +997,13 @@ export default function WoundCareClient() {
                 required
               />
             </div>
-            <TextInput label="Quantity supplied" value={t.quantitySupplied} onChange={(v) => setT({ quantitySupplied: v })} placeholder="e.g. 21 tablets / 28 capsules / 100 mL" required />
+            {t.antibiotic === "flucloxacillin" && age !== null && age >= 10 && age < 18 && (
+              <p className="text-xs text-gray-600">The document states suspension quantities (100 mL, 140 mL) for the 2 to 9 year dose only. A patient of 10 or over who cannot swallow capsules has no stated quantity under this PGD: refer.</p>
+            )}
+            <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+              <p className="text-xs font-medium text-gray-500">Quantity supplied (from the document's quantity row; nothing else can be recorded)</p>
+              <p className="text-sm font-semibold text-navy-900">{quantitySupplied || "Select the formulation and course length"}</p>
+            </div>
             <TextArea label="Which antibiotic was chosen and why" value={t.antibioticRationale} onChange={(v) => setT({ antibioticRationale: v })} rows={2} required placeholder="e.g. dog bite to forearm, infected, no penicillin allergy: co-amoxiclav" />
 
             <div className="grid grid-cols-2 gap-4">
@@ -890,10 +1078,10 @@ export default function WoundCareClient() {
             {alerts.length > 0 && <AlertBanner alerts={alerts} />}
             <div className="p-4 bg-gray-50 rounded-lg border border-gray-200 text-sm text-gray-800 space-y-1">
               <p className="font-semibold text-navy-900">Record ({WOUND_CARE_PGD_VERSION})</p>
-              <p>Outcome: {hasStopAlerts ? "NOT SUPPLIED, exclusion criteria met; patient referred" : `Supplied ${doseText?.medicine || t.antibiotic}, ${t.formulation || ""} ${t.courseDays ? `${t.courseDays} days` : ""}, quantity ${t.quantitySupplied || "not recorded"}, oral. Batch ${t.suppliedItemBatch || "not recorded"}, expiry ${t.suppliedItemExpiry || "not recorded"}.`}</p>
+              <p>Outcome: {hasStopAlerts ? "NOT SUPPLIED, exclusion criteria met; patient referred" : t.patientDeclined ? "NOT SUPPLIED, patient declined" : `Supplied ${doseText?.medicine || t.antibiotic}, ${t.formulation || ""} ${t.courseDays ? `${t.courseDays} days` : ""}, quantity ${quantitySupplied || "not recorded"}, oral. Batch ${t.suppliedItemBatch || "not recorded"}, expiry ${t.suppliedItemExpiry || "not recorded"}.`}</p>
               <p>Wound: {a.woundType || "not recorded"}{isBite ? " (bite)" : ""}{a.heavilyContaminated ? ", heavily contaminated" : ""}; site {a.woundLocation || "not recorded"}; extent {a.woundSize || "not recorded"}; depth {a.woundDepth || "not recorded"}; injury {a.timeOfInjury || "not recorded"}. Signs of infection: {a.signsOfInfection.join(", ") || "none"}.</p>
-              <p>Observations: temperature {a.temperature || "?"} C, pulse {a.pulse || "?"}, RR {a.respiratoryRate || "?"}, SpO2 {a.oxygenSaturation || "?"}%{band === "12+" ? `, systolic ${a.systolicBP || "?"}` : `, capillary refill ${a.capillaryRefillOver2s ? "over 2 s" : "2 s or less"}`}, {a.alteredConsciousness ? "altered consciousness" : "alert"}.</p>
-              <p>Tetanus: {a.tetanusStatus || "not recorded"}; action: {a.tetanusAction || "not recorded"}.</p>
+              <p>Observations: temperature {a.temperature || "?"} C, pulse {a.pulse || "?"}, RR {a.respiratoryRate || "?"}, SpO2 {a.oxygenSaturation || "?"}%{band === "12+" ? `, systolic ${a.systolicBP || "?"}` : `, capillary refill ${a.capillaryRefill === "over-2s" ? "over 2 s" : a.capillaryRefill === "2s-or-less" ? "2 s or less" : "not measured"}`}, {a.alteredConsciousness ? "altered consciousness" : "alert"}.</p>
+              <p>Tetanus: {a.tetanusStatus || "not recorded"}; action: {a.tetanusAction || "not recorded"}.{a.htigNotIndicatedReason ? ` HTIG not indicated: ${a.htigNotIndicatedReason}.` : ""}</p>
               <p>Antibiotic chosen and why: {t.antibioticRationale || "not recorded"}</p>
               {age !== null && age < 16 && (
                 <p>Consent from person with parental responsibility: {state.consentDetails.parentName || "not recorded"} ({state.consentDetails.parentRelationship || "not recorded"}).</p>
@@ -904,16 +1092,33 @@ export default function WoundCareClient() {
             <TextInput label="Pharmacy Name" value={state.summary.pharmacyName} onChange={(v) => setState((prev) => ({ ...prev, summary: { ...prev.summary, pharmacyName: v } }))} />
             <TextInput label="Pharmacy Address" value={state.summary.pharmacyAddress} onChange={(v) => setState((prev) => ({ ...prev, summary: { ...prev.summary, pharmacyAddress: v } }))} />
             <TextArea label="Clinical Notes" value={state.summary.clinicalNotes} onChange={(v) => setState((prev) => ({ ...prev, summary: { ...prev.summary, clinicalNotes: v } }))} rows={3} />
+            <TextArea
+              label="Adverse drug reactions and actions taken (report via Yellow Card, https://yellowcard.mhra.gov.uk, and inform the GP)"
+              value={state.summary.adverseReactions}
+              onChange={(v) => setState((prev) => ({ ...prev, summary: { ...prev.summary, adverseReactions: v } }))}
+              rows={2}
+              placeholder="None known at the time of supply"
+            />
           </div>
         )}
 
         {currentStep === 6 && (
           <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
             <p className="text-sm font-semibold text-green-900">Wound Care Consultation Complete</p>
-            <p className="text-xs text-green-700 mt-1">Supplied under the {WOUND_CARE_PGD_VERSION}. Click Print Consultation Record to generate and save the PDF report.</p>
+            <p className="text-xs text-green-700 mt-1">Supplied under the {WOUND_CARE_PGD_VERSION}. Save & Print Record saves the consultation and prints the record below.</p>
           </div>
         )}
       </StepWrapper>
     </div>
+    <div className="hidden print:block">
+      <WoundCareSummaryReport
+        state={state}
+        alerts={alerts}
+        band={band}
+        doseText={doseText}
+        quantitySupplied={quantitySupplied}
+      />
+    </div>
+    </>
   );
 }

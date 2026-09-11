@@ -98,14 +98,28 @@ export function generateExclusionAlerts(
     });
   }
 
-  // Symptoms >7 days without improvement (tool threshold; PGD excludes symptoms over 2 weeks)
-  if (symptoms.duration === ">7 days") {
+  // Document exclusion: symptoms for more than 2 weeks (possible malignancy pathway)
+  if (symptoms.duration === ">14 days") {
     alerts.push({
       severity: "stop",
       code: "SYMPTOMS_PROLONGED",
-      message: "Symptoms persisting for over 7 days",
+      message: "Symptoms for more than 2 weeks",
       detail:
-        "Long-standing sore throat requires investigation. Refer to GP for assessment.",
+        "Excluded: symptoms for more than 2 weeks. Refer to the GP (possible malignancy pathway).",
+    });
+  }
+
+  // Mononucleosis: the document says "avoid due to risk of rash (if uncertain
+  // of diagnosis, clarify before prescribing)". For a patient who is not
+  // penicillin-allergic the only PGD medicine is phenoxymethylpenicillin, so
+  // "avoid" means no supply under this PGD until the diagnosis is clarified.
+  if (history.suspectedMononucleosis && !history.penicillinAllergy) {
+    alerts.push({
+      severity: "stop",
+      code: "MONONUCLEOSIS_PEN_V",
+      message: "Possible mononucleosis (glandular fever): avoid phenoxymethylpenicillin",
+      detail:
+        "The document says avoid phenoxymethylpenicillin due to the risk of rash and, if uncertain of the diagnosis, clarify before prescribing. Clarithromycin under this PGD requires a penicillin allergy, so no PGD antibiotic is available. Clarify the diagnosis or refer to the GP; do not supply.",
     });
   }
 
@@ -223,14 +237,26 @@ export function generateCautionAlerts(
     });
   }
 
-  // Mononucleosis (glandular fever)
-  if (history.suspectedMononucleosis) {
+  // Mononucleosis (glandular fever) on the clarithromycin arm: caution only
+  // (the phenoxymethylpenicillin arm is a stop, see generateExclusionAlerts)
+  if (history.suspectedMononucleosis && history.penicillinAllergy) {
     alerts.push({
       severity: "caution",
       code: "MONONUCLEOSIS",
       message: "Possible mononucleosis (glandular fever)",
       detail:
-        "Avoid phenoxymethylpenicillin due to risk of rash. If uncertain of diagnosis, clarify before supply.",
+        "Phenoxymethylpenicillin is avoided (risk of rash); clarithromycin is the arm in use. If uncertain of the diagnosis, clarify before supply.",
+    });
+  }
+
+  // Clarithromycin arm: QT baseline risk must be assessed and recorded
+  if (history.penicillinAllergy && !history.qtProlongationRisk && !history.qtBaselineRiskAssessed) {
+    alerts.push({
+      severity: "caution",
+      code: "CLARI_QT_ASSESS",
+      message: "Clarithromycin: assess and record the baseline QT risk before supply",
+      detail:
+        "Document caution: QT interval risk, assess baseline risk; avoid in high-risk patients. Confirm on the Medical History step that the baseline risk (cardiac history, electrolyte disturbance, other QT-prolonging medicines) has been assessed.",
     });
   }
 
@@ -335,11 +361,25 @@ export function interpretFeverPAINScore(
     };
   }
 
-  // If Rapid Strep A negative: self-care regardless of score
+  // Document inclusion: FeverPAIN 4 or more OR positive RAST. A negative RAST
+  // does not override a FeverPAIN score of 4 or more (adversarial review,
+  // 11 Sep 2026: the tool used to refuse what the document allows).
+  if (score >= 4) {
+    return {
+      riskLevel: "high",
+      label: rapidStrepAResult === "negative" ? "FeverPAIN 4-5 (RAST negative)" : "FeverPAIN 4-5",
+      recommendation:
+        rapidStrepAResult === "negative"
+          ? "Antibiotic indicated under this PGD on the FeverPAIN score of 4 or more (the document inclusion is FeverPAIN 4 or more OR positive RAST). Use clinical judgement and record the reasoning where the RAST is negative."
+          : "Likely strep throat. Antibiotic indicated under this PGD (FeverPAIN 4 or more).",
+    };
+  }
+
+  // If Rapid Strep A negative with FeverPAIN 0-3: self-care
   if (rapidStrepAResult === "negative") {
     return {
       riskLevel: "very-low",
-      label: "Rapid Strep A Negative",
+      label: "Rapid Strep A Negative, FeverPAIN 0-3",
       recommendation:
         "Antibiotics not indicated. Recommend self-care advice only.",
     };
@@ -395,13 +435,8 @@ export function recommendMedicine(
   // rheumatic fever does not lower the threshold under this PGD.
   void rheumaticFeverHistory;
   void age;
-  if (rapidStrepAResult === "positive") {
-    shouldPrescribe = true;
-  } else if (rapidStrepAResult === "negative") {
-    shouldPrescribe = false;
-  } else {
-    shouldPrescribe = feverPainScore >= 4;
-  }
+  // Document inclusion: FeverPAIN 4 or more OR positive RAST.
+  shouldPrescribe = rapidStrepAResult === "positive" || feverPainScore >= 4;
 
   if (!shouldPrescribe) {
     return {
@@ -468,8 +503,8 @@ export function validateSymptomStep(symptoms: SoreThroatSymptoms): string | null
 export function validateFeverPAINStep(
   feverPain: FeverPAINScore
 ): string | null {
-  // At least one field should be checked for FeverPAIN to be valid
-  // No specific validation - it auto-calculates
+  // The score is five booleans and auto-calculates; nothing to require.
+  void feverPain;
   return null;
 }
 
@@ -480,14 +515,27 @@ export function validateExaminationStep(
     return "Rapid Strep A test result is required";
   if (!examination.tonsillarAppearance)
     return "Tonsillar appearance assessment is required";
+  // The sepsis exclusion is temperature 38 or above TOGETHER WITH heart
+  // rate, respiratory rate, systolic BP, new confusion or looking unwell.
+  // Every measured element is required, so a blank never passes the screen.
   if (examination.temperature === null)
     return "Temperature is required for the sepsis screen";
+  if (examination.heartRate === null)
+    return "Heart rate is required for the sepsis screen";
+  if (examination.respiratoryRate === null)
+    return "Respiratory rate is required for the sepsis screen";
+  if (examination.systolicBP === null)
+    return "Systolic blood pressure is required for the sepsis screen";
   return null;
 }
 
 export function validateHistoryStep(history: SoreThroatHistory): string | null {
   if (!history.ableToTakeOralMedication)
     return "Confirm the patient is able to take oral medication";
+  if (!history.allergies.trim())
+    return "Record allergy status (or NKDA)";
+  if (history.penicillinAllergy && !history.qtProlongationRisk && !history.qtBaselineRiskAssessed)
+    return "Clarithromycin arm: confirm the baseline QT risk has been assessed";
   return null;
 }
 
@@ -515,8 +563,25 @@ export function validateMedicineStep(
 }
 
 export function validateCounsellingStep(
-  counselling: SoreThroatCounselling
+  counselling: SoreThroatCounselling,
+  opts?: { medicine: SoreThroatMedicine["medicine"]; oralContraceptive: boolean }
 ): string | null {
-  // All counselling points are checkboxes - validation can be custom
+  // The document's follow-up advice row is a list of required items, not a
+  // set of optional ticks (adversarial review, 11 Sep 2026).
+  const supplied = !!opts && opts.medicine !== "" && opts.medicine !== "none";
+  if (supplied) {
+    if (!counselling.completeCourse) return "Confirm the advice to complete the full course, even if symptoms improve within 2-3 days";
+    if (!counselling.howToTake) return "Confirm the advice on how to take the antibiotic";
+    if (opts?.oralContraceptive && !counselling.contraceptionAdvice)
+      return "Oral contraception: confirm the additional contraception advice (during the course and for 7 days afterwards)";
+    if (!counselling.allergicReactionAdvice) return "Confirm the advice to report any allergic reaction (rash, facial swelling, breathing difficulties) immediately";
+    if (opts?.medicine === "clarithromycin" && !counselling.clarithromycinAdvice)
+      return "Clarithromycin: confirm the persistent diarrhoea (C. difficile) and metallic taste advice";
+    if (!counselling.avoidAntibioticSharing) return "Confirm the advice not to share antibiotics";
+    if (!counselling.pilSupplied) return "Confirm the patient information leaflet provided with the medication was supplied";
+  }
+  if (!counselling.painRelief) return "Confirm the pain relief advice (paracetamol or ibuprofen; improvement expected within 3-5 days)";
+  if (!counselling.fluidIntake) return "Confirm the hydration advice";
+  if (!counselling.returnIfWorsening) return "Confirm the advice to seek medical advice if symptoms worsen or do not improve after 3-5 days";
   return null;
 }

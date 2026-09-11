@@ -7,7 +7,7 @@ import type {
   TravelCoreMedicinesSupplied,
   TravelCoreVaccineAdministration,
 } from "./travel-core-types";
-import { getVaccineAlerts } from "./travel-core-clinical-logic";
+import { getVaccineAlerts, parseLocalDate } from "./travel-core-clinical-logic";
 
 export function validateVaccines(
   v: TravelCoreVaccineAdministration,
@@ -20,26 +20,32 @@ export function validateVaccines(
     return null;
   }
   const stops = getVaccineAlerts(v, age, departureDate).filter((a) => a.severity === "stop");
-  if (stops.length > 0) return `Exclusion present: ${stops[0].message}. Deselect the vaccine or resolve the exclusion.`;
+  if (stops.length > 0) return `Exclusion present: ${stops[0].message}. Record the advice given and save as not supplied, or resolve the exclusion.`;
   if (!v.adrenalineAvailable) return "Confirm adrenaline 1 in 1,000 is immediately available, in date, with a telephone and a written anaphylaxis protocol";
   if (v.hepAGiven) {
     if (!v.hepAProduct) return "Select the hepatitis A product (Havrix or Avaxim)";
     if (!v.hepADose) return "Record whether this is the hepatitis A primary dose or the 6 to 12 month booster";
+    if (v.hepADose === "booster" && !parseLocalDate(v.hepAPrimaryDoseDate)) return "Record the date of the hepatitis A primary dose";
+    if (v.hepADose === "booster" && !v.hepAPrimaryProduct) return "Record the product used for the hepatitis A primary dose";
     if (!v.hepABatch.trim()) return "Record the hepatitis A vaccine batch number";
-    if (!v.hepAExpiry.trim()) return "Record the hepatitis A vaccine expiry date";
+    if (!parseLocalDate(v.hepAExpiry)) return "Record the hepatitis A vaccine expiry date";
     if (!v.hepASite) return "Record the hepatitis A injection site";
   }
   if (v.typhoidGiven) {
+    if (v.typhoidPreviousDose && !parseLocalDate(v.typhoidPreviousDoseDate)) return "Record the date of the previous typhoid dose";
     if (!v.typhoidBatch.trim()) return "Record the Typhim Vi batch number";
-    if (!v.typhoidExpiry.trim()) return "Record the Typhim Vi expiry date";
+    if (!parseLocalDate(v.typhoidExpiry)) return "Record the Typhim Vi expiry date";
     if (!v.typhoidSite) return "Record the Typhim Vi injection site";
   }
   if (v.choleraGiven) {
     if (!v.choleraDose) return "Record the Dukoral dose number (1, 2 or booster)";
+    if (v.choleraDose === "2" && !parseLocalDate(v.choleraDose1Date)) return "Record the date of Dukoral dose 1";
+    if (v.choleraDose === "booster" && !parseLocalDate(v.choleraLastCourseDate)) return "Record the date the last Dukoral course or booster was completed";
     if (!v.choleraBatch.trim()) return "Record the Dukoral batch number";
-    if (!v.choleraExpiry.trim()) return "Record the Dukoral expiry date";
+    if (!parseLocalDate(v.choleraExpiry)) return "Record the Dukoral expiry date";
   }
   if (!v.observationCompleted) return "Confirm the 15 minute seated observation period was completed";
+  if (v.adverseReaction && !v.adverseReactionDetails.trim()) return "Record the adverse reaction and the action taken";
   if (!v.pilSupplied) return "Confirm the patient information leaflet was supplied and the booster schedule explained";
   if (!v.followUpAdviceGiven) return "Confirm the follow-up advice was given";
   return null;
@@ -59,46 +65,41 @@ export function validateDestination(
   if (!destination.destination.trim()) return "Destination country/region is required";
   if (!destination.departureDate) return "Departure date is required";
   if (!destination.returnDate) return "Return date is required";
-  if (new Date(destination.departureDate) >= new Date(destination.returnDate)) {
+  const dep = parseLocalDate(destination.departureDate);
+  const ret = parseLocalDate(destination.returnDate);
+  if (!dep || !ret) return "Enter the departure and return dates";
+  if (dep >= ret) {
     return "Return date must be after departure date";
   }
   return null;
 }
 
+/**
+ * Malaria chemoprophylaxis is outside this PGD (three vaccines). The step is
+ * a risk assessment: where the destination is a malaria zone the traveller
+ * must be sent somewhere (anti-malarials PGD, GP, travel clinic) or the
+ * decision recorded. No drug is suggested here.
+ */
 export function validateMalariaRisk(
-  malariaRisk: TravelCoreMalariaRisk,
-  isEndemicZone: boolean
+  malariaRisk: TravelCoreMalariaRisk
 ): string | null {
-  if (isEndemicZone && !malariaRisk.resistanceProfile.trim()) {
-    return "Resistance profile must be specified for malaria-endemic zones";
-  }
-  if (malariaRisk.malariaZone && !malariaRisk.chemoprophylaxisAdvised) {
-    return "Chemoprophylaxis recommendation must be documented";
+  if (malariaRisk.malariaZone && !malariaRisk.chemoprophylaxisPlan) {
+    return "Malaria zone: record the chemoprophylaxis plan (supplied under the anti-malarials PGD, referred, not required, or declined)";
   }
   return null;
 }
 
+/** Advice is recorded, never forced: an advice-only tick list must not block a vaccine consultation. */
 export function validatePreventiveMeasures(
-  measures: TravelCorePreventiveMeasures
+  _measures: TravelCorePreventiveMeasures
 ): string | null {
-  const anyMeasureTaken = Object.values(measures).some(
-    (v) => typeof v === "boolean" && v
-  );
-  if (!anyMeasureTaken && !measures.travellersVaccineNotes.trim()) {
-    return "At least one preventive measure must be advised";
-  }
   return null;
 }
 
+/** Non-PGD supplies are optional and never required to proceed. */
 export function validateMedicinesSupplied(
-  medicines: TravelCoreMedicinesSupplied
+  _medicines: TravelCoreMedicinesSupplied
 ): string | null {
-  const anyMedicineSupplied = Object.values(medicines).some(
-    (v) => typeof v === "boolean" && v
-  );
-  if (!anyMedicineSupplied && !medicines.otherMedicinesNotes.trim()) {
-    return "At least one medicine or supply must be documented";
-  }
   return null;
 }
 
@@ -127,7 +128,7 @@ export function validateStep(
     case 2:
       return validateDestination(state.destination);
     case 3:
-      return validateMalariaRisk(state.malariaRisk, state.destination.isEndemicMalariaZone);
+      return validateMalariaRisk(state.malariaRisk);
     case 4:
       return validatePreventiveMeasures(state.preventiveMeasures);
     case 5:

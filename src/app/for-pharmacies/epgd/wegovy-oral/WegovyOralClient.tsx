@@ -6,10 +6,14 @@ import {
   initialConsent,
   initialSummary,
   calculateAge,
+  validatePatientStep,
+  validateConsentStep,
+  validateSummaryStep,
   type BasePatientDetails,
   type BaseConsent,
   type BaseSummary,
 } from "../shared/types";
+import { WegovyOralSummaryReport } from "./components/WegovyOralSummaryReport";
 import { ProgressBar } from "../shared/components/ProgressBar";
 import { StepWrapper } from "../shared/components/StepWrapper";
 import { AlertBanner } from "../shared/components/AlertBanner";
@@ -26,19 +30,19 @@ import type { ConsultationRecordData } from "../shared/hooks/useConsultationTrac
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 
 /** Strapline of the document this tool follows. */
-const PGD_VERSION_LABEL = "Wegovy (semaglutide) Tablets PGD version 010, issued 11 September 2026";
+export const PGD_VERSION_LABEL = "Wegovy (semaglutide) Tablets PGD version 010, issued 11 September 2026";
 
 // ── State shape ────────────────────────────────────────────────
 
-type VisitType = "" | "initiation" | "continuation" | "restart";
-type TabletStrength = "" | "1.5" | "4" | "9" | "25";
+export type VisitType = "" | "initiation" | "continuation" | "restart";
+export type TabletStrength = "" | "1.5" | "4" | "9" | "25";
 
-interface WegovyOralState {
+export interface WegovyOralState {
   currentStep: number;
   patient: BasePatientDetails;
   consent: BaseConsent;
-  offLabelConsent: {
-    explainedOffLabel: boolean;
+  treatmentConsent: {
+    treatmentExplained: boolean;
     riskBenefitDiscussed: boolean;
     alternativesDiscussed: boolean;
     writtenConsentObtained: boolean;
@@ -55,6 +59,9 @@ interface WegovyOralState {
     // PGD v010: visit type, baseline weight and target weight. The 5% review
     // rule is calculated from the recorded baseline, not the last visit.
     visitType: VisitType;
+    /** Restart only: more than 2 months since stopping, so the BMI inclusion
+     *  criteria are reapplied to today's BMI. */
+    restartOver2Months: boolean;
     baselineWeightKg: number | null;
     targetWeightKg: number | null;
     initialAssessmentDone: boolean;
@@ -91,6 +98,9 @@ interface WegovyOralState {
   cautions: {
     mentalHealthHistory: boolean;
     psychiatricOversight: boolean;
+    /** The document's second limb: do not supply where oversight is absent
+     *  AND concern exists. */
+    mentalHealthConcern: boolean;
     mildModerateRenal: boolean;
     raisedHeartRate: boolean;
     sodiumRestrictedDiet: boolean;
@@ -160,7 +170,7 @@ const PRODUCT_STRENGTH: Record<string, TabletStrength> = {
   "wegovy-oral-9": "9",
   "wegovy-oral-25": "25",
 };
-const PRODUCT_LABEL: Record<string, string> = {
+export const PRODUCT_LABEL: Record<string, string> = {
   "wegovy-oral-1.5": "Wegovy (semaglutide) 1.5 mg tablets",
   "wegovy-oral-4": "Wegovy (semaglutide) 4 mg tablets",
   "wegovy-oral-9": "Wegovy (semaglutide) 9 mg tablets",
@@ -172,8 +182,8 @@ function initialState(): WegovyOralState {
     currentStep: 0,
     patient: { ...initialPatientDetails },
     consent: { ...initialConsent },
-    offLabelConsent: {
-      explainedOffLabel: false,
+    treatmentConsent: {
+      treatmentExplained: false,
       riskBenefitDiscussed: false,
       alternativesDiscussed: false,
       writtenConsentObtained: false,
@@ -188,6 +198,7 @@ function initialState(): WegovyOralState {
       willingLifestyleChange: false,
       tried6MonthLifestyle: false,
       visitType: "",
+      restartOver2Months: false,
       baselineWeightKg: null,
       targetWeightKg: null,
       initialAssessmentDone: false,
@@ -222,6 +233,7 @@ function initialState(): WegovyOralState {
     cautions: {
       mentalHealthHistory: false,
       psychiatricOversight: false,
+      mentalHealthConcern: false,
       mildModerateRenal: false,
       raisedHeartRate: false,
       sodiumRestrictedDiet: false,
@@ -268,7 +280,7 @@ function initialState(): WegovyOralState {
 type Action =
   | { type: "UPDATE_PATIENT"; field: keyof BasePatientDetails; value: BasePatientDetails[keyof BasePatientDetails] }
   | { type: "UPDATE_CONSENT"; field: keyof BaseConsent; value: BaseConsent[keyof BaseConsent] }
-  | { type: "UPDATE_OFFLABEL"; field: keyof WegovyOralState["offLabelConsent"]; value: boolean }
+  | { type: "UPDATE_TREATMENT_CONSENT"; field: keyof WegovyOralState["treatmentConsent"]; value: boolean }
   | { type: "UPDATE_ELIGIBILITY"; field: keyof WegovyOralState["eligibility"]; value: WegovyOralState["eligibility"][keyof WegovyOralState["eligibility"]] }
   | { type: "UPDATE_CONTRAINDICATION"; field: keyof WegovyOralState["contraindications"]; value: boolean }
   | { type: "UPDATE_CAUTION"; field: keyof WegovyOralState["cautions"]; value: boolean }
@@ -290,13 +302,15 @@ function reducer(state: WegovyOralState, action: Action): WegovyOralState {
     }
     case "UPDATE_CONSENT":
       return { ...state, consent: { ...state.consent, [action.field]: action.value } };
-    case "UPDATE_OFFLABEL":
-      return { ...state, offLabelConsent: { ...state.offLabelConsent, [action.field]: action.value } };
+    case "UPDATE_TREATMENT_CONSENT":
+      return { ...state, treatmentConsent: { ...state.treatmentConsent, [action.field]: action.value } };
     case "UPDATE_ELIGIBILITY": {
       const eligibility = { ...state.eligibility, [action.field]: action.value };
       if ((action.field === "heightCm" || action.field === "weightKg") && eligibility.heightCm && eligibility.weightKg) {
         const m = eligibility.heightCm / 100;
-        eligibility.bmi = parseFloat((eligibility.weightKg / (m * m)).toFixed(1));
+        // Unrounded: 26.99 must not pass a 27 gate by rounding
+        // (adversarial review, 11 Sep 2026). Round for display only.
+        eligibility.bmi = eligibility.weightKg / (m * m);
       }
       return { ...state, eligibility };
     }
@@ -329,6 +343,23 @@ function reducer(state: WegovyOralState, action: Action): WegovyOralState {
 function percentChangeFromBaseline(baseline: number | null, weight: number | null): number | null {
   if (!baseline || !weight) return null;
   return parseFloat((((weight - baseline) / baseline) * 100).toFixed(1));
+}
+
+/** The BMI the inclusion criteria are applied to. The document's inclusion is
+ *  an INITIAL BMI, reapplied only after a break of more than 2 months, so a
+ *  continuing patient is judged on the baseline weight, not today's. */
+export function gatingBmi(e: WegovyOralState["eligibility"]): { bmi: number | null; basis: "today" | "baseline" } {
+  const reapplyToday =
+    e.visitType === "initiation" ||
+    (e.visitType === "restart" && e.restartOver2Months) ||
+    (e.switchingFromInjection && e.injectionStoppedOver2Months) ||
+    e.visitType === "";
+  if (reapplyToday) return { bmi: e.bmi, basis: "today" };
+  if (e.heightCm && e.baselineWeightKg) {
+    const m = e.heightCm / 100;
+    return { bmi: e.baselineWeightKg / (m * m), basis: "baseline" };
+  }
+  return { bmi: null, basis: "baseline" };
 }
 
 export function WegovyOralClient() {
@@ -373,10 +404,10 @@ export function WegovyOralClient() {
     // Cautions from the document. Mental health: do not supply where oversight
     // is absent and concern exists.
     const ca = state.cautions;
-    if (ca.mentalHealthHistory && !ca.psychiatricOversight) {
-      out.push({ code: "mh-oversight", severity: "stop", message: "History of suicidal ideation or active severe mental illness without psychiatric oversight", detail: "Do not supply where oversight is absent and concern exists. Ensure appropriate psychiatric oversight is in place, monitor mood at review, and refer if there is any concern." });
+    if (ca.mentalHealthHistory && !ca.psychiatricOversight && ca.mentalHealthConcern) {
+      out.push({ code: "mh-oversight", severity: "stop", message: "History of suicidal ideation or active severe mental illness: no psychiatric oversight and concern about the current mental state", detail: "Do not supply where oversight is absent and concern exists. Refer." });
     } else if (ca.mentalHealthHistory) {
-      out.push({ code: "mh", severity: "caution", message: "History of suicidal ideation, or active severe mental illness", detail: "Psychiatric oversight confirmed. Monitor mood at review and refer if there is any concern." });
+      out.push({ code: "mh", severity: "caution", message: "History of suicidal ideation, or active severe mental illness", detail: ca.psychiatricOversight ? "Psychiatric oversight confirmed. Monitor mood at review and refer if there is any concern." : "No psychiatric oversight, but no current concern recorded. Monitor mood at review and refer if any concern arises." });
     }
     if (ca.mildModerateRenal) out.push({ code: "renal-mild", severity: "caution", message: "Mild to moderate renal impairment", detail: "Monitor for dehydration secondary to gastrointestinal side effects. Patients with eGFR 30 to below 60 may experience more gastrointestinal effects." });
     if (ca.raisedHeartRate) out.push({ code: "hr", severity: "caution", message: "Pre-existing raised heart rate", detail: "Tachycardia has been reported. Use with caution and seek specialist advice first. Discontinue and seek advice for a clinically relevant sustained rise in resting heart rate." });
@@ -419,7 +450,7 @@ export function WegovyOralClient() {
     if (i.warfarin) out.push({ code: "warf", severity: "caution", message: "Warfarin or other coumarin", detail: "Frequent INR monitoring is recommended on starting semaglutide. Decreased INR has been reported with acenocoumarol, so the same applies to other coumarins." });
     if (i.levothyroxine) out.push({ code: "levo", severity: "caution", message: "Levothyroxine", detail: "Oral semaglutide increases levothyroxine exposure by about a third (AUC increased 33%). Monitor thyroid function when the two are taken together, and make sure the patient keeps the 30 minute separation, which matters more here than with most co-medicines." });
     if (i.sulfonylureaOrInsulin) out.push({ code: "su", severity: "stop", message: "Sulfonylurea, meglitinide or insulin", detail: "Any sulfonylurea, meglitinide or insulin EXCLUDES under this PGD; there is no GP-monitored route for those patients. Refer." });
-    if (i.oralContraception) out.push({ code: "oc", severity: "caution", message: "Oral contraception", detail: "Exposure to ethinylestradiol and levonorgestrel is not changed to a clinically relevant degree. Counsel an additional barrier method for 7 days after vomiting or diarrhoea, and keep the 30 minute separation." });
+    if (i.oralContraception) out.push({ code: "oc", severity: "caution", message: "Oral contraception", detail: "Exposure to ethinylestradiol and levonorgestrel is not changed to a clinically relevant degree. Keep the 30 minute separation." });
     if (i.metforminSglt2Dpp4) out.push({ code: "t2dm", severity: "caution", message: "Type 2 diabetes on metformin, an SGLT2 inhibitor or a DPP-4 inhibitor only", detail: "No dose adjustment is needed, but inform the GP. Record that the GP has been informed on the counselling step." });
     if (i.oralHrt) out.push({ code: "hrt", severity: "caution", message: "Oral HRT", detail: "Given the lack of absorption data, non-oral products such as a patch, gel or levonorgestrel intrauterine device may be considered." });
 
@@ -428,7 +459,7 @@ export function WegovyOralClient() {
     // step. Reported by Rachel (Aug 2026): the stop fired from the very first
     // screen, before any details had been entered, which made canProceed false
     // and blocked every new consultation outright.
-    if (state.currentStep > STEP_INFORMED_CONSENT && !state.offLabelConsent.writtenConsentObtained) {
+    if (state.currentStep > STEP_INFORMED_CONSENT && !state.treatmentConsent.writtenConsentObtained) {
       out.push({ code: "consent", severity: "stop", message: "Written informed consent not yet obtained", detail: "Go back to the Informed Consent step and confirm that written consent has been obtained and filed." });
     }
 
@@ -440,12 +471,16 @@ export function WegovyOralClient() {
       out.push({ code: "age-over", severity: "stop", message: "Patient over 85 years of age", detail: "Excluded. This is a Get Real Health position, not a licence restriction; the SPC sets no upper age limit and records only that experience above 85 is limited. Refer to a specialist if treatment is being considered." });
     }
 
-    // Eligibility
-    if (state.eligibility.bmi !== null && state.eligibility.bmi < 27) {
-      out.push({ code: "bmi", severity: "stop", message: "BMI below threshold", detail: `BMI ${state.eligibility.bmi}. Must be 30 or above, or 27 or above with at least one weight-related comorbidity.` });
+    // Eligibility: the initial BMI. A continuing patient is judged on the
+    // baseline, so losing weight is not an exclusion (adversarial review,
+    // 11 Sep 2026).
+    const g = gatingBmi(state.eligibility);
+    const which = g.basis === "baseline" ? "Baseline BMI" : "BMI";
+    if (g.bmi !== null && g.bmi < 27) {
+      out.push({ code: "bmi", severity: "stop", message: `${which} below threshold`, detail: `${which} ${g.bmi.toFixed(1)}. Must be 30 or above, or 27 or above with at least one weight-related comorbidity.` });
     }
-    if (state.eligibility.bmi !== null && state.eligibility.bmi >= 27 && state.eligibility.bmi < 30 && !state.eligibility.hasComorbidity) {
-      out.push({ code: "bmi-comorb", severity: "stop", message: "BMI 27 to below 30 requires a weight-related comorbidity", detail: "Patient must have at least one weight-related comorbidity (for example hypertension, dyslipidaemia, obstructive sleep apnoea, cardiovascular disease or type 2 diabetes)." });
+    if (g.bmi !== null && g.bmi >= 27 && g.bmi < 30 && !state.eligibility.hasComorbidity) {
+      out.push({ code: "bmi-comorb", severity: "stop", message: `${which} 27 to below 30 requires a weight-related comorbidity`, detail: "Patient must have at least one weight-related comorbidity (for example hypertension, dyslipidaemia, obstructive sleep apnoea, cardiovascular disease or type 2 diabetes)." });
     }
 
     // Review and the stopping rule: reassess where less than 5% of BASELINE
@@ -498,6 +533,27 @@ export function WegovyOralClient() {
   // requires. Returns null when the step is complete.
   const stepError = useMemo((): string | null => {
     const e = state.eligibility;
+    if (state.currentStep === 0) {
+      const base = validatePatientStep(state.patient, { minAge: 18, maxAge: 85 });
+      if (base) return base;
+      if (!state.patient.address.trim()) return "Patient address is required (PGD records row)";
+      if (!state.patient.gpName.trim() && !state.patient.gpPractice.trim()) return "Record the GP or practice with whom the patient is registered";
+      return null;
+    }
+    if (state.currentStep === 1) {
+      return validateConsentStep(state.consent);
+    }
+    if (state.currentStep === STEP_INFORMED_CONSENT) {
+      const t = state.treatmentConsent;
+      if (!t.treatmentExplained) return "Confirm the treatment, dosing schedule and administration requirements were explained.";
+      if (!t.riskBenefitDiscussed) return "Confirm the risk-benefit discussion was completed.";
+      if (!t.alternativesDiscussed) return "Confirm alternatives were discussed.";
+      if (!t.writtenConsentObtained) return "Confirm written informed consent has been obtained and filed.";
+      return null;
+    }
+    if (state.currentStep === TOTAL_STEPS - 1) {
+      return validateSummaryStep(state.summary);
+    }
     if (state.currentStep === STEP_ELIGIBILITY) {
       if (!e.visitType) return "Select the visit type.";
       if (!e.age18To85) return "Confirm the patient is an adult aged 18 to 85 years inclusive.";
@@ -514,6 +570,9 @@ export function WegovyOralClient() {
     if (state.currentStep === STEP_DOSE) {
       if (!state.doseSelection.product) return "Select the product and strength to supply.";
       if (!state.doseSelection.batchNumber.trim()) return "Record the batch number of the pack supplied (traceability requirement).";
+      // The 5% review: the decision the document requires must be on the record
+      if (alerts.some((a) => a.code === "review-5pc") && !state.doseSelection.rationale.trim())
+        return "Less than 5% of baseline weight lost after 6 months: record the decision on continuation and the reasoning in the clinical rationale.";
       return null;
     }
     if (state.currentStep === STEP_COUNSELLING) {
@@ -543,9 +602,10 @@ export function WegovyOralClient() {
       return null;
     }
     return null;
-  }, [state]);
+  }, [state, alerts]);
 
-  const canProceed = (!hasStops || state.currentStep >= TOTAL_STEPS - 2) && stepError === null;
+  // A stop anywhere blocks Next and Save & Print on every step.
+  const canProceed = !hasStops && stepError === null;
 
   const markComplete = useCallback(() => {
     setCompletedSteps((prev) => new Set(prev).add(state.currentStep));
@@ -576,19 +636,34 @@ export function WegovyOralClient() {
       clinicalData: {
         ...(state as unknown as Record<string, unknown>),
         pgdVersion: PGD_VERSION_LABEL,
+        alerts,
         percentChangeFromBaseline: pctChange,
         quantitySupplied: "1 calendar pack of 30 tablets (one month)",
         productSupplied: PRODUCT_LABEL[state.doseSelection.product] ?? "",
       },
       outcome: hasStops ? "not_supplied" : "completed",
+      medicine:
+        !hasStops && state.doseSelection.product
+          ? {
+              name: "Wegovy (semaglutide) tablets",
+              medicine: `${PRODUCT_LABEL[state.doseSelection.product]}${state.doseSelection.batchNumber ? ` (batch ${state.doseSelection.batchNumber})` : ""}`,
+              dose: `${PRODUCT_STRENGTH[state.doseSelection.product]} mg once daily, oral, on an empty stomach`,
+              duration: "30 days (one month)",
+              quantity: "1 calendar pack of 30 tablets",
+            }
+          : undefined,
       summary: {
         pharmacistName: state.summary.pharmacistName,
         pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacyName: state.summary.pharmacyName,
+        pharmacyAddress: state.summary.pharmacyAddress,
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: state.consent.notifyGp },
     };
-  }, [state, hasStops, pctChange]);
+  }, [state, hasStops, pctChange, alerts]);
 
   const handleNewConsultation = useCallback(() => {
     dispatch({ type: "RESET" });
@@ -599,19 +674,19 @@ export function WegovyOralClient() {
     switch (state.currentStep) {
       case 0:
         return (
-          <StepWrapper title="Patient Details" currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={null}>
+          <StepWrapper title="Patient Details" currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={stepError} isBlocked={hasStops} getConsultationData={getConsultationData}>
             <PatientDetailsStep patient={state.patient} onChange={(field, value) => dispatch({ type: "UPDATE_PATIENT", field, value })} />
           </StepWrapper>
         );
       case 1:
         return (
-          <StepWrapper title="Consent & ID Verification" currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={null}>
+          <StepWrapper title="Consent & ID Verification" currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={stepError} isBlocked={hasStops} getConsultationData={getConsultationData}>
             <ConsentStep consent={state.consent} onChange={(field, value) => dispatch({ type: "UPDATE_CONSENT", field, value })} />
           </StepWrapper>
         );
       case 2:
         return (
-          <StepWrapper title="Informed Consent to Treatment" description="Wegovy (semaglutide) tablets, UK-licensed for weight management. Documented written consent required, including the side-effect profile and treatment expectations." currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={null}>
+          <StepWrapper title="Informed Consent to Treatment" description="Wegovy (semaglutide) tablets, UK-licensed for weight management. Documented written consent required, including the side-effect profile and treatment expectations." currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={stepError} isBlocked={hasStops} getConsultationData={getConsultationData}>
             <div className="space-y-4">
               <div className="p-4 bg-amber-50 border border-amber-300 rounded-md text-sm text-amber-900">
                 <strong>This consultation supplies Wegovy (semaglutide) tablets under {PGD_VERSION_LABEL}.</strong>
@@ -621,16 +696,16 @@ export function WegovyOralClient() {
                   <li>Counsel on the empty-stomach regimen: at least 8 hours fasting, swallow whole with up to half a glass of water (120 mL), wait at least 30 minutes before food, drink or other oral medicines.</li>
                 </ul>
               </div>
-              <Checkbox label="Treatment, dosing schedule and administration requirements clearly explained to the patient" checked={state.offLabelConsent.explainedOffLabel} onChange={(v) => dispatch({ type: "UPDATE_OFFLABEL", field: "explainedOffLabel", value: v })} />
-              <Checkbox label="Risk-benefit discussion completed: side-effect profile (GI effects, gallstones, acute pancreatitis, NAION, hypoglycaemia if diabetic, retinopathy progression) and realistic treatment expectations" checked={state.offLabelConsent.riskBenefitDiscussed} onChange={(v) => dispatch({ type: "UPDATE_OFFLABEL", field: "riskBenefitDiscussed", value: v })} />
-              <Checkbox label="Alternatives discussed (GP, specialist weight management service, lifestyle programme)" checked={state.offLabelConsent.alternativesDiscussed} onChange={(v) => dispatch({ type: "UPDATE_OFFLABEL", field: "alternativesDiscussed", value: v })} />
-              <Checkbox label="Written informed consent to treatment obtained and filed" checked={state.offLabelConsent.writtenConsentObtained} onChange={(v) => dispatch({ type: "UPDATE_OFFLABEL", field: "writtenConsentObtained", value: v })} />
+              <Checkbox label="Treatment, dosing schedule and administration requirements clearly explained to the patient" checked={state.treatmentConsent.treatmentExplained} onChange={(v) => dispatch({ type: "UPDATE_TREATMENT_CONSENT", field: "treatmentExplained", value: v })} />
+              <Checkbox label="Risk-benefit discussion completed: side-effect profile (GI effects, gallstones, acute pancreatitis, NAION, hypoglycaemia if diabetic, retinopathy progression) and realistic treatment expectations" checked={state.treatmentConsent.riskBenefitDiscussed} onChange={(v) => dispatch({ type: "UPDATE_TREATMENT_CONSENT", field: "riskBenefitDiscussed", value: v })} />
+              <Checkbox label="Alternatives discussed (GP, specialist weight management service, lifestyle programme)" checked={state.treatmentConsent.alternativesDiscussed} onChange={(v) => dispatch({ type: "UPDATE_TREATMENT_CONSENT", field: "alternativesDiscussed", value: v })} />
+              <Checkbox label="Written informed consent to treatment obtained and filed" checked={state.treatmentConsent.writtenConsentObtained} onChange={(v) => dispatch({ type: "UPDATE_TREATMENT_CONSENT", field: "writtenConsentObtained", value: v })} />
             </div>
           </StepWrapper>
         );
       case 3:
         return (
-          <StepWrapper title="Eligibility & BMI" currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={stepError}>
+          <StepWrapper title="Eligibility & BMI" currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={stepError} isBlocked={hasStops} getConsultationData={getConsultationData}>
             <div className="space-y-4">
               <SelectInput
                 label="Visit type"
@@ -645,7 +720,10 @@ export function WegovyOralClient() {
                 required
               />
               {state.eligibility.visitType === "restart" && (
-                <p className="text-xs text-amber-800">To recommence after stopping, titrate again from the lowest dose. Apply the BMI inclusion criteria afresh if more than 2 months have passed since discontinuing.</p>
+                <>
+                  <p className="text-xs text-amber-800">To recommence after stopping, titrate again from the lowest dose. Apply the BMI inclusion criteria afresh if more than 2 months have passed since discontinuing.</p>
+                  <Checkbox label="More than 2 months have passed since the last dose (BMI inclusion criteria reapplied to today's BMI)" checked={state.eligibility.restartOver2Months} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "restartOver2Months", value: v })} />
+                </>
               )}
               <Checkbox label="Adult aged 18 to 85 years (inclusive)" checked={state.eligibility.age18To85} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "age18To85", value: v })} required />
               <div className="grid grid-cols-2 gap-3">
@@ -654,13 +732,18 @@ export function WegovyOralClient() {
               </div>
               {state.eligibility.bmi !== null && (
                 <div className="p-3 bg-[color:var(--tenant-primary)]/10 border border-[color:var(--tenant-primary)]/30 rounded-md">
-                  <p className="text-sm text-[color:var(--tenant-primary)]"><strong>BMI: {state.eligibility.bmi}</strong></p>
+                  <p className="text-sm text-[color:var(--tenant-primary)]"><strong>BMI today: {state.eligibility.bmi.toFixed(1)}</strong>{gatingBmi(state.eligibility).basis === "baseline" && gatingBmi(state.eligibility).bmi !== null ? ` (eligibility judged on the baseline BMI of ${gatingBmi(state.eligibility).bmi!.toFixed(1)})` : ""}</p>
                   <p className="text-xs text-[color:var(--tenant-primary)] mt-1">
-                    {state.eligibility.bmi >= 30
-                      ? "BMI 30 or above: eligible (no comorbidity required)."
-                      : state.eligibility.bmi >= 27
-                      ? "BMI 27 to below 30: eligible only with at least one weight-related comorbidity."
-                      : "BMI below 27: not eligible under this PGD."}
+                    {(() => {
+                      const g = gatingBmi(state.eligibility);
+                      const w = g.basis === "baseline" ? "Baseline BMI" : "BMI";
+                      if (g.bmi === null) return "Record the baseline weight to judge eligibility.";
+                      return g.bmi >= 30
+                        ? `${w} 30 or above: eligible (no comorbidity required).`
+                        : g.bmi >= 27
+                          ? `${w} 27 to below 30: eligible only with at least one weight-related comorbidity.`
+                          : `${w} below 27: not eligible under this PGD.`;
+                    })()}
                   </p>
                 </div>
               )}
@@ -723,7 +806,7 @@ export function WegovyOralClient() {
         );
       case 4:
         return (
-          <StepWrapper title="Contraindications" description="Any ticked exclusion prevents supply. Ask specifically whether the patient takes anything for diabetes, and name the products." currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={null}>
+          <StepWrapper title="Contraindications" description="Any ticked exclusion prevents supply. Ask specifically whether the patient takes anything for diabetes, and name the products." currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={stepError} isBlocked={hasStops} getConsultationData={getConsultationData}>
             <div className="space-y-2">
               {(
                 [
@@ -754,8 +837,9 @@ export function WegovyOralClient() {
               <p className="text-sm font-semibold text-navy-900">Cautions</p>
               <Checkbox label="History of suicidal ideation, or active severe mental illness" description="Ensure appropriate psychiatric oversight is in place, monitor mood at review, and refer if there is any concern. Do not supply where oversight is absent and concern exists." checked={state.cautions.mentalHealthHistory} onChange={(v) => dispatch({ type: "UPDATE_CAUTION", field: "mentalHealthHistory", value: v })} />
               {state.cautions.mentalHealthHistory && (
-                <div className="ml-6">
-                  <Checkbox label="Appropriate psychiatric oversight is in place; mood will be monitored at review" checked={state.cautions.psychiatricOversight} onChange={(v) => dispatch({ type: "UPDATE_CAUTION", field: "psychiatricOversight", value: v })} required />
+                <div className="ml-6 space-y-2">
+                  <Checkbox label="Appropriate psychiatric oversight is in place; mood will be monitored at review" checked={state.cautions.psychiatricOversight} onChange={(v) => dispatch({ type: "UPDATE_CAUTION", field: "psychiatricOversight", value: v })} />
+                  <Checkbox label="There is concern about the patient's current mental state" description="The document excludes only where oversight is absent AND concern exists." checked={state.cautions.mentalHealthConcern} onChange={(v) => dispatch({ type: "UPDATE_CAUTION", field: "mentalHealthConcern", value: v })} />
                 </div>
               )}
               <Checkbox label="Mild to moderate renal impairment (monitor for dehydration secondary to gastrointestinal side effects)" checked={state.cautions.mildModerateRenal} onChange={(v) => dispatch({ type: "UPDATE_CAUTION", field: "mildModerateRenal", value: v })} />
@@ -766,13 +850,13 @@ export function WegovyOralClient() {
         );
       case 5:
         return (
-          <StepWrapper title="Drug Interactions" description="Semaglutide delays gastric emptying and may reduce the absorption of other oral medicines, especially those with a narrow therapeutic index. Other oral medicines must be taken at least 30 minutes after the tablet." currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={null}>
+          <StepWrapper title="Drug Interactions" description="Semaglutide delays gastric emptying and may reduce the absorption of other oral medicines, especially those with a narrow therapeutic index. Other oral medicines must be taken at least 30 minutes after the tablet." currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={stepError} isBlocked={hasStops} getConsultationData={getConsultationData}>
             <div className="space-y-2">
               <Checkbox label="Levothyroxine (exposure increased by about a third; monitor thyroid function and keep the 30 minute separation)" checked={state.interactions.levothyroxine} onChange={(v) => dispatch({ type: "UPDATE_INTERACTION", field: "levothyroxine", value: v })} />
               <Checkbox label="Warfarin or other coumarin (frequent INR monitoring recommended on initiation)" checked={state.interactions.warfarin} onChange={(v) => dispatch({ type: "UPDATE_INTERACTION", field: "warfarin", value: v })} />
               <Checkbox label="Sulfonylurea, meglitinide or insulin, for any indication (EXCLUDES under this PGD)" checked={state.interactions.sulfonylureaOrInsulin} onChange={(v) => dispatch({ type: "UPDATE_INTERACTION", field: "sulfonylureaOrInsulin", value: v })} />
               <Checkbox label="Type 2 diabetes on metformin, an SGLT2 inhibitor or a DPP-4 inhibitor only (no dose adjustment; inform the GP)" checked={state.interactions.metforminSglt2Dpp4} onChange={(v) => dispatch({ type: "UPDATE_INTERACTION", field: "metforminSglt2Dpp4", value: v })} />
-              <Checkbox label="Combined oral contraception (counsel barrier method if GI symptoms)" checked={state.interactions.oralContraception} onChange={(v) => dispatch({ type: "UPDATE_INTERACTION", field: "oralContraception", value: v })} />
+              <Checkbox label="Oral contraception (no clinically relevant change in exposure; keep the 30 minute separation)" checked={state.interactions.oralContraception} onChange={(v) => dispatch({ type: "UPDATE_INTERACTION", field: "oralContraception", value: v })} />
               <Checkbox label="Oral HRT (non-oral products such as a patch, gel or levonorgestrel intrauterine device may be considered)" checked={state.interactions.oralHrt} onChange={(v) => dispatch({ type: "UPDATE_INTERACTION", field: "oralHrt", value: v })} />
               <TextArea label="Other relevant medications" value={state.interactions.other} onChange={(v) => dispatch({ type: "UPDATE_INTERACTION", field: "other", value: v })} />
             </div>
@@ -780,7 +864,7 @@ export function WegovyOralClient() {
         );
       case 6:
         return (
-          <StepWrapper title="Dose Selection" currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={stepError} isBlocked={hasStops}>
+          <StepWrapper title="Dose Selection" currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={stepError} isBlocked={hasStops} getConsultationData={getConsultationData}>
             <div className="space-y-4">
               <div className="p-3 bg-gray-50 border border-gray-200 rounded-md text-xs text-gray-700 space-y-1">
                 <p>Start at 1.5 mg once daily for one month. Escalate monthly through 4 mg and 9 mg to the maintenance dose of 25 mg once daily, with a minimum of one month at each step. The dose may be held at the previous level if needed. Maximum dose 25 mg once daily.</p>
@@ -807,7 +891,7 @@ export function WegovyOralClient() {
         );
       case 7:
         return (
-          <StepWrapper title="Counselling Checklist" description="Confirm each item discussed with the patient." currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={stepError}>
+          <StepWrapper title="Counselling Checklist" description="Confirm each item discussed with the patient." currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={stepError} isBlocked={hasStops} getConsultationData={getConsultationData}>
             <div className="space-y-2">
               <Checkbox label="Take one tablet a day on an empty stomach, after at least 8 hours without food" checked={state.counselling.emptyStomachExplained} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "emptyStomachExplained", value: v })} required />
               <Checkbox label="Take with no more than half a glass of water (about 120 mL)" checked={state.counselling.waterLimit120ml} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "waterLimit120ml", value: v })} required />
@@ -839,8 +923,8 @@ export function WegovyOralClient() {
             totalSteps={TOTAL_STEPS}
             onNext={handleNext}
             onPrev={handlePrev}
-            canProceed={true}
-            validationError={null}
+            canProceed={canProceed}
+            validationError={stepError} isBlocked={hasStops}
             getConsultationData={getConsultationData}
             onNewConsultation={handleNewConsultation}
           >
@@ -848,29 +932,12 @@ export function WegovyOralClient() {
               <TextInput label="Pharmacist name" value={state.summary.pharmacistName} onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "pharmacistName", value: v })} required />
               <TextInput label="GPhC registration number" value={state.summary.pharmacistGPhC} onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "pharmacistGPhC", value: v })} required />
               <TextInput label="Pharmacy name" value={state.summary.pharmacyName} onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "pharmacyName", value: v })} />
+              <TextInput label="Pharmacy address" value={state.summary.pharmacyAddress} onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "pharmacyAddress", value: v })} />
               <TextArea label="Additional clinical notes" value={state.summary.clinicalNotes} onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "clinicalNotes", value: v })} />
             </div>
             <div className="border-t border-gray-200 pt-6">
-              <p className="text-sm text-gray-600 mb-4">Record will be saved with PGD slug <code>wegovy-oral</code>. Supplied under {PGD_VERSION_LABEL}.</p>
-              <div className="p-4 bg-gray-50 rounded-md text-xs space-y-2">
-                <div><strong>Patient:</strong> {state.patient.firstName} {state.patient.lastName} ({state.patient.dateOfBirth})</div>
-                <div><strong>Visit type:</strong> {state.eligibility.visitType || "not recorded"}</div>
-                <div><strong>Height / weight / BMI:</strong> {state.eligibility.heightCm ?? "?"} cm / {state.eligibility.weightKg ?? "?"} kg / {state.eligibility.bmi ?? "not recorded"}</div>
-                <div><strong>Baseline weight:</strong> {state.eligibility.baselineWeightKg ?? "not recorded"} kg{pctChange !== null ? ` (change from baseline ${pctChange > 0 ? "+" : ""}${pctChange}%)` : ""}</div>
-                <div><strong>Target weight agreed:</strong> {state.eligibility.targetWeightKg ?? "not recorded"} kg</div>
-                {state.eligibility.visitType === "continuation" && (
-                  <div><strong>Current established dose:</strong> {state.eligibility.currentDose ? `${state.eligibility.currentDose} mg once daily` : "not recorded"}{state.eligibility.monthsAtCurrentDose !== null ? `, ${state.eligibility.monthsAtCurrentDose} months on this dose` : ""}</div>
-                )}
-                {state.eligibility.switchingFromInjection && (
-                  <div><strong>Switch from injection:</strong> {state.eligibility.injectionDose ? `${state.eligibility.injectionDose} mg weekly` : "dose not recorded"}; evidence: {state.eligibility.injectionDoseEvidence || "none recorded"}</div>
-                )}
-                <div><strong>Product:</strong> {PRODUCT_LABEL[state.doseSelection.product] ?? "not selected"}, once daily, oral</div>
-                <div><strong>Quantity:</strong> 1 calendar pack of 30 tablets (one month)</div>
-                <div><strong>Batch number:</strong> {state.doseSelection.batchNumber || "not recorded"}</div>
-                <div><strong>Empty-stomach requirements confirmed:</strong> {state.eligibility.ableEmptyStomach ? "Yes" : "No"}</div>
-                <div><strong>Written informed consent:</strong> {state.offLabelConsent.writtenConsentObtained ? "Yes" : "NO. Cannot proceed"}</div>
-                <div><strong>Stops present:</strong> {hasStops ? "Yes" : "No"}</div>
-              </div>
+              <p className="text-sm text-gray-600 mb-4 print:hidden">Review the record below before saving and printing. Supplied under {PGD_VERSION_LABEL}.</p>
+              <WegovyOralSummaryReport state={state} alerts={alerts} pctChange={pctChange} />
             </div>
           </StepWrapper>
         );

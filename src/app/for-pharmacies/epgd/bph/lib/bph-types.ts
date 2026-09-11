@@ -30,6 +30,9 @@ export interface BPHMedicalHistory {
   plannedCataractSurgery: boolean;
   hypersensitivity: boolean;
   uncontrolledHypertension: boolean;
+  /** Blood pressure reading, record only (the document sets no threshold),
+   *  so the "uncontrolled hypertension" answer has a basis on the record. */
+  bloodPressure: string;
   /** Exclusion: MS, Parkinson's, spinal cord disease, diabetic neuropathy. */
   neurologicalBladderDisease: boolean;
   /** Caution: history of syncope or fainting. */
@@ -95,6 +98,8 @@ export interface BPHCounselling {
   urgentSymptoms: boolean;
   rashAllergy: boolean;
   reviewAt4To6Weeks: boolean;
+  /** Written information row: PIL supplied. */
+  pilSupplied: boolean;
 }
 
 export interface BPHConsultationState {
@@ -120,7 +125,8 @@ export type BPHAction =
   | { type: "UPDATE_MEDICINE_SUPPLY"; field: keyof BPHMedicineSupply; value: any }
   | { type: "UPDATE_COUNSELLING"; field: keyof BPHCounselling; value: any }
   | { type: "UPDATE_SUMMARY"; field: keyof BaseSummary; value: any }
-  | { type: "SET_STEP"; step: number };
+  | { type: "SET_STEP"; step: number }
+  | { type: "RESET" };
 
 // ─── Step labels ───
 
@@ -181,6 +187,7 @@ gpEmail: "",
       plannedCataractSurgery: false,
       hypersensitivity: false,
       uncontrolledHypertension: false,
+      bloodPressure: "",
       neurologicalBladderDisease: false,
       syncopeHistory: false,
       severeRenalImpairment: false,
@@ -229,6 +236,7 @@ gpEmail: "",
       urgentSymptoms: false,
       rashAllergy: false,
       reviewAt4To6Weeks: false,
+      pilSupplied: false,
     },
     summary: {
       pharmacistName: "",

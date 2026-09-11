@@ -4,6 +4,7 @@ import type {
   RSVConsent,
   RSVSummary,
   RSVMedicalHistory,
+  RSVPostVaccineAdvice,
 } from './rsv-types';
 
 export function validateRSVPatientStep(
@@ -80,23 +81,6 @@ export function validateRSVEligibilityAssessmentStep(data: {
   return null;
 }
 
-export function validateRSVMedicalHistoryStep(data: {
-  anaphylaxisToVaccine: boolean;
-  anaphylaxisToVaccineComponent: boolean;
-  severeFebrilleIllness: boolean;
-}): string | null {
-  // Medical history step should always proceed to next
-  return null;
-}
-
-export function validateRSVContraindicationsStep(data: {
-  confirmedNoAbsoluteContraindications: boolean;
-}): string | null {
-  if (!data.confirmedNoAbsoluteContraindications)
-    return 'Please confirm there are no absolute contraindications';
-  return null;
-}
-
 export function validateRSVAdministrationStep(
   summary: Partial<RSVSummary>,
   patient?: RSVPatientDetails,
@@ -116,11 +100,18 @@ export function validateRSVAdministrationStep(
   return null;
 }
 
-export function validateRSVPostVaccineStep(data: {
-  patientAdvised: boolean;
-}): string | null {
-  if (!data.patientAdvised)
-    return 'Patient must be advised of common reactions and safety information';
+export function validateRSVPostVaccineStep(
+  advice: RSVPostVaccineAdvice
+): string | null {
+  if (!advice.counselledReactions)
+    return 'Confirm the patient was advised on possible side effects and when to seek medical attention';
+  if (!advice.followUpAdviceGiven) return 'Confirm the follow-up advice was given';
+  if (!advice.pilSupplied) return 'Confirm the patient information leaflet was supplied';
+  if (!advice.observedFifteenMinutes)
+    return 'Confirm the 15 minute post-vaccination observation period has been completed (PGD cautions row)';
+  if (advice.adverseReaction.trim() && !advice.adverseReactionAction.trim())
+    return 'Record the action taken for the adverse reaction (PGD records row)';
+  if (!advice.patientAdvised) return 'Confirm all counselling has been completed and documented';
   return null;
 }
 

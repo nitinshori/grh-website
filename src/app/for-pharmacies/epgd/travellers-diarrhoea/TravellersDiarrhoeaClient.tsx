@@ -21,6 +21,7 @@ import {
   generateTDAlerts,
   recommendApproach,
   canProceedWithConsultation,
+  azithromycinDoseText,
   TD_PGD_VERSION,
 } from './travellers-diarrhoea-clinical-logic';
 import { validateStep } from './travellers-diarrhoea-validation';
@@ -37,14 +38,29 @@ import {
   TextInput,
   Checkbox,
   SelectInput,
-  NumberInput,
   TextArea,
 } from '../shared/components/FormInputs';
 
 // ─── Reducer ───
 
+// Any change to the travel, medical-history or medication answers clears the
+// supply decision, because it was made against the old answers.
+function clearMedicineSelection(state: TDConsultationState): TDConsultationState {
+  if (!state.medicineSelection.selectedApproach) return state;
+  return {
+    ...state,
+    medicineSelection: {
+      ...state.medicineSelection,
+      selectedApproach: '',
+      azithromycinDays: null,
+      azithromycinDose: '',
+      azithromycinQuantity: null,
+    },
+  };
+}
+
 function reducer(state: TDConsultationState, action: TDAction): TDConsultationState {
-  const newState = { ...state };
+  let newState = { ...state };
 
   switch (action.type) {
     case 'UPDATE_PATIENT':
@@ -63,6 +79,7 @@ function reducer(state: TDConsultationState, action: TDAction): TDConsultationSt
         ...newState.travelAssessment,
         [action.field]: action.value,
       };
+      newState = clearMedicineSelection(newState);
       break;
 
     case 'UPDATE_MEDICAL_HISTORY':
@@ -70,10 +87,13 @@ function reducer(state: TDConsultationState, action: TDAction): TDConsultationSt
         ...newState.medicalHistory,
         [action.field]: action.value,
       };
+      if (action.field !== 'allQuestionsAsked') newState = clearMedicineSelection(newState);
       break;
 
     case 'UPDATE_MEDICATIONS':
       newState.medications = { ...newState.medications, [action.field]: action.value };
+      if (action.field !== 'allQuestionsAsked' && action.field !== 'otherDrugsDetails')
+        newState = clearMedicineSelection(newState);
       break;
 
     case 'UPDATE_MEDICINE_SELECTION':
@@ -81,6 +101,24 @@ function reducer(state: TDConsultationState, action: TDAction): TDConsultationSt
         ...newState.medicineSelection,
         [action.field]: action.value,
       };
+      // The dose is the document's; only the course length (1 to 3 days) is
+      // chosen, and the quantity is one tablet per day.
+      if (action.field === 'azithromycinDays') {
+        const days = action.value as TDMedicineSelection['azithromycinDays'];
+        newState.medicineSelection = {
+          ...newState.medicineSelection,
+          azithromycinDose: days ? azithromycinDoseText(days) : '',
+          azithromycinQuantity: days ?? null,
+        };
+      }
+      if (action.field === 'selectedApproach' && action.value !== 'standby') {
+        newState.medicineSelection = {
+          ...newState.medicineSelection,
+          azithromycinDays: null,
+          azithromycinDose: '',
+          azithromycinQuantity: null,
+        };
+      }
       break;
 
     case 'UPDATE_COUNSELLING':
@@ -134,7 +172,6 @@ export function TravellersDiarrhoeaClient() {
   }, [__pharmProfile, state.summary.pharmacistName, state.summary.pharmacistGPhC]);
 
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
-  const [showReport, setShowReport] = useState(false);
 
   // ─── Compute alerts and validation ───
 
@@ -146,17 +183,21 @@ export function TravellersDiarrhoeaClient() {
     );
   }, [state.medicalHistory, state.medications, state.travelAssessment]);
 
-  const validationError = useMemo(() => {
-    return validateStep(state.currentStep, state);
-  }, [state, state.currentStep]);
-
   const isBlocked = !canProceedWithConsultation(alerts);
+
+  // A stop anywhere disables Next on every step, not only the review step.
+  const validationError = useMemo(() => {
+    if (isBlocked) return 'Exclusion criteria met: azithromycin cannot be supplied under the PGD. Record the advice given and save as not supplied.';
+    return validateStep(state.currentStep, state);
+  }, [state, isBlocked]);
 
   // ─── Recommendation ───
 
   const recommendation = useMemo(() => {
     return recommendApproach(state.medicalHistory, state.medications);
   }, [state.medicalHistory, state.medications]);
+
+  const supplied = state.medicineSelection.selectedApproach === 'standby';
 
   // ─── Navigation handlers ───
 
@@ -175,11 +216,12 @@ export function TravellersDiarrhoeaClient() {
     dispatch({ type: 'PREV_STEP' });
   }, []);
 
+  // Backwards only; going forward always means pressing Next.
   const handleStepClick = useCallback((step: number) => {
-    if (completedSteps.has(step) || step <= state.currentStep) {
+    if (step < state.currentStep) {
       dispatch({ type: 'SET_STEP', step });
     }
-  }, [completedSteps, state.currentStep]);
+  }, [state.currentStep]);
 
   // ─── Handlers by step ───
 
@@ -216,7 +258,17 @@ export function TravellersDiarrhoeaClient() {
   };
 
   // ─── Consultation Record Data (for saving to database) ───
+  // Returns a record on every step, so an excluded or refused patient can be
+  // saved from any step. A refusal ("Not supplied (refer patient)") used to
+  // save as "completed" (adversarial review, 11 Sep 2026).
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    const ms = state.medicineSelection;
+    const supplied = !isBlocked && ms.selectedApproach === 'standby';
+    const outcome: ConsultationRecordData['outcome'] = isBlocked
+      ? 'not_supplied'
+      : ms.selectedApproach === 'not-supplied'
+        ? 'referred'
+        : 'completed';
     return {
       patient: {
         firstName: state.patient.firstName,
@@ -228,17 +280,37 @@ export function TravellersDiarrhoeaClient() {
         address: state.patient.address,
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
+        gpAddress: state.patient.gpAddress,
+        gpPhone: state.patient.gpPhone,
+        gpEmail: state.patient.gpEmail,
+        gpOdsCode: state.patient.gpOdsCode,
       },
-      clinicalData: state as unknown as Record<string, unknown>,
-      outcome: isBlocked ? "not_supplied" : "completed",
+      clinicalData: {
+        ...(state as unknown as Record<string, unknown>),
+        alerts,
+        pgdVersion: TD_PGD_VERSION,
+      },
+      outcome,
+      medicine: supplied
+        ? {
+            name: `Azithromycin 500 mg tablets${ms.brand ? `, ${ms.brand}` : ''}`,
+            dose: ms.azithromycinDose,
+            duration: ms.azithromycinDays ? `${ms.azithromycinDays} day${ms.azithromycinDays > 1 ? 's' : ''} (standby, self-start)` : undefined,
+            quantity: ms.azithromycinQuantity ?? undefined,
+          }
+        : undefined,
       summary: {
-        pharmacistName: state.summary.pharmacistName,
-        pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacistName: state.summary.pharmacistName || __pharmProfile?.name || '',
+        pharmacistGPhC: state.summary.pharmacistGPhC || __pharmProfile?.gphcNumber || '',
+        pharmacyName: state.summary.pharmacyName || __pharmProfile?.pharmacyName,
+        pharmacyAddress: state.summary.pharmacyAddress || __pharmProfile?.pharmacyAddress,
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: state.consent.notifyGp },
     };
-  }, [state, isBlocked]);
+  }, [state, isBlocked, alerts, __pharmProfile]);
 
   const handleNewConsultation = useCallback(() => {
     dispatch({ type: "RESET" });
@@ -248,43 +320,21 @@ export function TravellersDiarrhoeaClient() {
 
   // ─── Render ───
 
-  if (showReport) {
-    return (
-      <div className="space-y-4">
-        <button
-          onClick={() => setShowReport(false)}
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-        >
-          ← Back to Consultation
-        </button>
-        <TravellersDiarrhoeaSummaryReport state={state} />
-        <div className="flex gap-4 justify-center mt-6">
-          <button
-            onClick={() => window.print()}
-            className="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
-          >
-            Print Report
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-8">
-      {/* Progress Bar */}
-      <ProgressBar
-        stepLabels={STEP_LABELS}
-        currentStep={state.currentStep}
-        onStepClick={handleStepClick}
-        completedSteps={completedSteps}
-        hasErrors={!!validationError}
-      />
-
-      {/* Alerts Banner */}
-      {alerts.length > 0 && (
-        <AlertBanner alerts={alerts} />
-      )}
+      {/* Progress Bar and live alerts: screen only; the printed record is the summary report on the last step */}
+      <div className="space-y-8 print:hidden">
+        <ProgressBar
+          stepLabels={STEP_LABELS}
+          currentStep={state.currentStep}
+          onStepClick={handleStepClick}
+          completedSteps={completedSteps}
+          hasErrors={!!validationError}
+        />
+        {alerts.length > 0 && (
+          <AlertBanner alerts={alerts} />
+        )}
+      </div>
 
       {/* Step 0: Patient Details */}
       {state.currentStep === 0 && (
@@ -296,6 +346,8 @@ export function TravellersDiarrhoeaClient() {
           onPrev={handlePrev}
           canProceed={!validationError}
           validationError={validationError}
+          isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
         >
           <PatientDetailsStep
             patient={state.patient}
@@ -315,6 +367,8 @@ export function TravellersDiarrhoeaClient() {
           onPrev={handlePrev}
           canProceed={!validationError}
           validationError={validationError}
+          isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
         >
           <ConsentStep
             consent={state.consent}
@@ -333,6 +387,8 @@ export function TravellersDiarrhoeaClient() {
           onPrev={handlePrev}
           canProceed={!validationError}
           validationError={validationError}
+          isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
         >
           <div className="space-y-6">
             <TextInput
@@ -340,6 +396,14 @@ export function TravellersDiarrhoeaClient() {
               value={state.travelAssessment.destinationCountry}
               onChange={(v) => handleTravelChange('destinationCountry', v)}
               placeholder="e.g. India, Mexico, Morocco"
+              required
+            />
+            <Checkbox
+              label="High-risk region confirmed on TravelHealthPro"
+              checked={state.travelAssessment.highRiskRegionConfirmed}
+              onChange={(v) => handleTravelChange('highRiskRegionConfirmed', v)}
+              description="PGD inclusion: recent or planned travel to a high-risk region for traveller's diarrhoea (for example South Asia, Sub-Saharan Africa, Latin America). Check the TravelHealthPro country page; do not work from memory. If the destination is not high risk, do not supply."
+              required
             />
             <TextInput
               label="Departure Date"
@@ -408,6 +472,8 @@ export function TravellersDiarrhoeaClient() {
           onPrev={handlePrev}
           canProceed={!validationError}
           validationError={validationError}
+          isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
         >
           <div className="space-y-4">
             <Checkbox
@@ -498,6 +564,16 @@ export function TravellersDiarrhoeaClient() {
               onChange={(v) => handleMedicalChange('immunocompromised', v)}
               description="HIV, chemotherapy, immunosuppressants"
             />
+
+            <div className="pt-3 border-t border-gray-200">
+              <Checkbox
+                label="I have asked the patient every question on this page, and none applies unless ticked above"
+                checked={state.medicalHistory.allQuestionsAsked}
+                onChange={(v) => handleMedicalChange('allQuestionsAsked', v)}
+                description="Every exclusion on this page defaults to absent. This confirmation is what makes the record's negative answers true."
+                required
+              />
+            </div>
           </div>
         </StepWrapper>
       )}
@@ -512,6 +588,8 @@ export function TravellersDiarrhoeaClient() {
           onPrev={handlePrev}
           canProceed={!validationError}
           validationError={validationError}
+          isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
         >
           <div className="space-y-4">
             <Checkbox
@@ -557,6 +635,16 @@ export function TravellersDiarrhoeaClient() {
                 placeholder="e.g. metformin, levothyroxine"
               />
             )}
+
+            <div className="pt-3 border-t border-gray-200">
+              <Checkbox
+                label="I have asked about every medicine on this page, and none applies unless ticked above"
+                checked={state.medications.allQuestionsAsked}
+                onChange={(v) => handleMedicationsChange('allQuestionsAsked', v)}
+                description="Every interaction on this page defaults to absent. This confirmation is what makes the record's negative answers true."
+                required
+              />
+            </div>
           </div>
         </StepWrapper>
       )}
@@ -610,7 +698,7 @@ export function TravellersDiarrhoeaClient() {
       )}
 
       {/* Step 6: Medicine Selection */}
-      {state.currentStep === 6 && !isBlocked && (
+      {state.currentStep === 6 && (
         <StepWrapper
           title="Medicine Selection"
           currentStep={state.currentStep}
@@ -619,9 +707,14 @@ export function TravellersDiarrhoeaClient() {
           onPrev={handlePrev}
           canProceed={!validationError}
           validationError={validationError}
+          isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
         >
+          {isBlocked ? (
+            <BlockedPanel />
+          ) : (
           <div className="space-y-6">
-            {recommendation ? (
+            {recommendation && (
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="font-medium text-sm text-blue-900 mb-2">
                   Regimen per the PGD ({TD_PGD_VERSION})
@@ -630,12 +723,6 @@ export function TravellersDiarrhoeaClient() {
                   <strong>{recommendation.approach}</strong>
                 </p>
                 <p className="text-xs text-blue-700 mb-2">{recommendation.treatment}</p>
-              </div>
-            ) : (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm text-red-800">
-                  Cannot supply standby treatment due to contraindications. Refer patient to GP/travel clinic.
-                </p>
               </div>
             )}
 
@@ -648,39 +735,44 @@ export function TravellersDiarrhoeaClient() {
                 { value: 'standby', label: 'Supply standby treatment' },
                 { value: 'not-supplied', label: 'Not supplied (refer patient)' },
               ]}
+              required
             />
 
             {state.medicineSelection.selectedApproach === 'standby' && (
               <>
-                <TextInput
-                  label="Azithromycin dose (PGD: 500 mg once daily for 1 to 3 days)"
-                  value={state.medicineSelection.azithromycinDose}
-                  onChange={(v) =>
-                    handleMedicineChange('azithromycinDose', v)
-                  }
-                  placeholder="e.g. 500 mg once daily for up to 3 days, with food"
+                <SelectInput
+                  label="Course length (PGD: 500 mg once daily for 1 to 3 days, depending on clinical severity)"
+                  value={state.medicineSelection.azithromycinDays === null ? '' : String(state.medicineSelection.azithromycinDays)}
+                  onChange={(v) => handleMedicineChange('azithromycinDays', v === '' ? null : (Number(v) as 1 | 2 | 3))}
+                  options={[
+                    { value: '1', label: '1 day: one 500 mg tablet' },
+                    { value: '2', label: '2 days: two 500 mg tablets' },
+                    { value: '3', label: '3 days: three 500 mg tablets (maximum course)' },
+                  ]}
                   required
                 />
-
-                <NumberInput
-                  label="Azithromycin quantity (500 mg tablets)"
-                  value={state.medicineSelection.azithromycinQuantity}
-                  onChange={(v) => handleMedicineChange('azithromycinQuantity', v)}
-                  min={1}
-                  max={3}
-                  unit="tablets"
-                  placeholder="1 to 3"
-                  required
-                />
-                <p className="text-xs text-gray-600">
-                  PGD: one to three 500 mg tablets depending on symptom severity. Maximum treatment course 3 days.
-                </p>
+                {state.medicineSelection.azithromycinDays !== null && (
+                  <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-700 space-y-1">
+                    <p>
+                      <strong>Dose:</strong> {state.medicineSelection.azithromycinDose}
+                    </p>
+                    <p>
+                      <strong>Quantity:</strong> {state.medicineSelection.azithromycinQuantity} x azithromycin 500 mg tablet
+                      {(state.medicineSelection.azithromycinQuantity ?? 0) > 1 ? 's' : ''}
+                    </p>
+                    <p className="text-[11px] text-gray-500">
+                      The dose is the document&apos;s and is recorded as shown. Loperamide is not supplied under this
+                      PGD; OTC advice is covered on the counselling step.
+                    </p>
+                  </div>
+                )}
 
                 <TextInput
                   label="Brand supplied"
                   value={state.medicineSelection.brand}
                   onChange={(v) => handleMedicineChange('brand', v)}
                   placeholder="Name and brand of the azithromycin product supplied"
+                  required
                 />
 
                 <SelectInput
@@ -695,15 +787,6 @@ export function TravellersDiarrhoeaClient() {
                   ]}
                   required
                 />
-
-                <TextInput
-                  label="Loperamide (OTC sale alongside, not supplied under this PGD; optional)"
-                  value={state.medicineSelection.loperamideDose}
-                  onChange={(v) =>
-                    handleMedicineChange('loperamideDose', v)
-                  }
-                  placeholder="Guidance: 4 mg initially, then 2 mg after each loose stool, max 16 mg/day; not with blood in stool or fever"
-                />
               </>
             )}
 
@@ -713,13 +796,15 @@ export function TravellersDiarrhoeaClient() {
               onChange={(v) => handleMedicineChange('reason', v)}
               placeholder="Explain approach and why supplies are/are not suitable for this patient..."
               rows={4}
+              required
             />
           </div>
+          )}
         </StepWrapper>
       )}
 
       {/* Step 7: Counselling */}
-      {state.currentStep === 7 && !isBlocked && (
+      {state.currentStep === 7 && (
         <StepWrapper
           title="Counselling & Follow-up"
           description="Confirm that all counselling points have been discussed:"
@@ -729,42 +814,70 @@ export function TravellersDiarrhoeaClient() {
           onPrev={handlePrev}
           canProceed={!validationError}
           validationError={validationError}
+          isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
         >
+          {isBlocked ? (
+            <BlockedPanel />
+          ) : (
           <div className="space-y-3">
+            {!supplied && (
+              <p className="text-xs text-gray-600 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                No azithromycin was supplied. Only the general advice items apply; the medicine items are not shown.
+              </p>
+            )}
             <Checkbox
               label="Oral rehydration is first-line"
               checked={state.counselling.orCrsAdvice}
               onChange={(v) => handleCounsellingChange('orCrsAdvice', v)}
               description="Oral rehydration is the key priority; maintain hydration"
             />
-            <Checkbox
-              label="When to start treatment"
-              checked={state.counselling.whenToStartTreatment}
-              onChange={(v) =>
-                handleCounsellingChange('whenToStartTreatment', v)
-              }
-              description="Self-start azithromycin only for moderate to severe symptoms (3 or more loose stools in 24 hours with cramps, nausea or vomiting, or essential plans disrupted); take with food to reduce GI upset"
-            />
-            <Checkbox
-              label="Loperamide use"
-              checked={state.counselling.loperamideAdvice}
-              onChange={(v) => handleCounsellingChange('loperamideAdvice', v)}
-              description="If bought OTC: 4 mg initially then 2 mg after each loose stool, max 16 mg/day; not with blood in stool or fever. Not supplied under this PGD."
-            />
-            <Checkbox
-              label="Azithromycin use"
-              checked={state.counselling.azithromycinAdvice}
-              onChange={(v) =>
-                handleCounsellingChange('azithromycinAdvice', v)
-              }
-              description="500 mg once daily for 1 to 3 days depending on severity; maximum 3 days. Do not use for bloody diarrhoea or high fever: seek medical help instead"
-            />
-            <Checkbox
-              label="Pregnancy implications"
-              checked={state.counselling.pregnancyAdvice}
-              onChange={(v) => handleCounsellingChange('pregnancyAdvice', v)}
-              description="If patient becomes pregnant during travel"
-            />
+            {supplied && (
+              <>
+                <Checkbox
+                  label="When to start treatment"
+                  checked={state.counselling.whenToStartTreatment}
+                  onChange={(v) =>
+                    handleCounsellingChange('whenToStartTreatment', v)
+                  }
+                  description="Self-start azithromycin only for moderate to severe symptoms (3 or more loose stools in 24 hours with cramps, nausea or vomiting, or essential plans disrupted); take with food to reduce GI upset"
+                />
+                <Checkbox
+                  label="Loperamide use"
+                  checked={state.counselling.loperamideAdvice}
+                  onChange={(v) => handleCounsellingChange('loperamideAdvice', v)}
+                  description="If bought OTC: 4 mg initially then 2 mg after each loose stool, max 16 mg/day; not with blood in stool or fever. Not supplied under this PGD."
+                />
+                <Checkbox
+                  label="Azithromycin use"
+                  checked={state.counselling.azithromycinAdvice}
+                  onChange={(v) =>
+                    handleCounsellingChange('azithromycinAdvice', v)
+                  }
+                  description="500 mg once daily for 1 to 3 days depending on severity; maximum 3 days. Do not use for bloody diarrhoea or high fever: seek medical help instead"
+                />
+              </>
+            )}
+            <div className="rounded-lg border border-gray-200 p-3 space-y-1">
+              <Checkbox
+                label="Pregnancy implications discussed"
+                checked={state.counselling.pregnancyAdvice}
+                onChange={(v) => {
+                  handleCounsellingChange('pregnancyAdvice', v);
+                  if (v) handleCounsellingChange('pregnancyAdviceNotApplicable', false);
+                }}
+                description="If the patient becomes pregnant during travel: azithromycin with caution, seek advice before self-starting"
+              />
+              <Checkbox
+                label="Not applicable to this patient"
+                checked={state.counselling.pregnancyAdviceNotApplicable}
+                onChange={(v) => {
+                  handleCounsellingChange('pregnancyAdviceNotApplicable', v);
+                  if (v) handleCounsellingChange('pregnancyAdvice', false);
+                }}
+                description="For example a male patient. One of the two boxes must be ticked."
+              />
+            </div>
             <Checkbox
               label="Food & water hygiene"
               checked={state.counselling.foodHygiene}
@@ -783,81 +896,108 @@ export function TravellersDiarrhoeaClient() {
               onChange={(v) => handleCounsellingChange('whenToSeekHelp', v)}
               description="Seek local medical attention if symptoms worsen or persist: fever, bloody diarrhoea, severe abdominal pain, persistent vomiting or inability to stay hydrated, diarrhoea lasting more than 14 days, or becoming systemically very unwell"
             />
-            <Checkbox
-              label="Stop treatment if hypersensitivity or serious side effects occur"
-              checked={state.counselling.childrenUnderWarning}
-              onChange={(v) =>
-                handleCounsellingChange('childrenUnderWarning', v)
-              }
-              description="Nausea, abdominal pain, diarrhoea and headache are common; stop and seek advice for rash, allergic reaction or palpitations. Report via Yellow Card."
-            />
-            <Checkbox
-              label="Patient information leaflet supplied"
-              checked={state.counselling.medicineCardProvided}
-              onChange={(v) =>
-                handleCounsellingChange('medicineCardProvided', v)
-              }
-              description="Patient information leaflet (PIL) provided with the medication"
-            />
+            {supplied && (
+              <>
+                <Checkbox
+                  label="Stop treatment if hypersensitivity or serious side effects occur"
+                  checked={state.counselling.childrenUnderWarning}
+                  onChange={(v) =>
+                    handleCounsellingChange('childrenUnderWarning', v)
+                  }
+                  description="Nausea, abdominal pain, diarrhoea and headache are common; stop and seek advice for rash, allergic reaction or palpitations. Report via Yellow Card."
+                />
+                <Checkbox
+                  label="Patient information leaflet supplied"
+                  checked={state.counselling.medicineCardProvided}
+                  onChange={(v) =>
+                    handleCounsellingChange('medicineCardProvided', v)
+                  }
+                  description="Patient information leaflet (PIL) provided with the medication"
+                />
+              </>
+            )}
           </div>
+          )}
         </StepWrapper>
       )}
 
       {/* Step 8: Summary */}
-      {state.currentStep === 8 && !isBlocked && (
+      {state.currentStep === 8 && (
         <StepWrapper
           title="Summary & Print"
           currentStep={state.currentStep}
           totalSteps={TOTAL_STEPS}
-          onNext={() => {
-            setCompletedSteps((prev) => {
-              const updated = new Set(prev);
-              updated.add(state.currentStep);
-              return updated;
-            });
-            setShowReport(true);
-          }}
+          onNext={handleNext}
           onPrev={handlePrev}
           canProceed={!validationError}
           validationError={validationError}
-        getConsultationData={getConsultationData}
-        onNewConsultation={handleNewConsultation}
+          isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
+          onNewConsultation={handleNewConsultation}
         >
+          {isBlocked ? (
+            <BlockedPanel />
+          ) : (
           <div className="space-y-6">
-            <TextInput
-              label="Pharmacist Name"
-              value={state.summary.pharmacistName}
-              onChange={(v) => handleSummaryChange('pharmacistName', v)}
-              placeholder="Full name"
-            />
-            <TextInput
-              label="GPhC Registration Number"
-              value={state.summary.pharmacistGPhC}
-              onChange={(v) => handleSummaryChange('pharmacistGPhC', v)}
-              placeholder="e.g. 2123456"
-            />
-            <TextInput
-              label="Pharmacy Name"
-              value={state.summary.pharmacyName}
-              onChange={(v) => handleSummaryChange('pharmacyName', v)}
-              placeholder="Pharmacy name"
-            />
-            <TextInput
-              label="Pharmacy Address"
-              value={state.summary.pharmacyAddress}
-              onChange={(v) => handleSummaryChange('pharmacyAddress', v)}
-              placeholder="Full address"
-            />
-            <TextArea
-              label="Clinical Notes"
-              value={state.summary.clinicalNotes}
-              onChange={(v) => handleSummaryChange('clinicalNotes', v)}
-              placeholder="Any additional clinical notes or observations..."
-              rows={4}
-            />
+            <div className="space-y-6 print:hidden">
+              <TextInput
+                label="Pharmacist Name"
+                value={state.summary.pharmacistName}
+                onChange={(v) => handleSummaryChange('pharmacistName', v)}
+                placeholder="Full name"
+                required
+              />
+              <TextInput
+                label="GPhC Registration Number"
+                value={state.summary.pharmacistGPhC}
+                onChange={(v) => handleSummaryChange('pharmacistGPhC', v)}
+                placeholder="e.g. 2123456"
+                required
+              />
+              <TextInput
+                label="Pharmacy Name"
+                value={state.summary.pharmacyName}
+                onChange={(v) => handleSummaryChange('pharmacyName', v)}
+                placeholder="Pharmacy name"
+                required
+              />
+              <TextInput
+                label="Pharmacy Address"
+                value={state.summary.pharmacyAddress}
+                onChange={(v) => handleSummaryChange('pharmacyAddress', v)}
+                placeholder="Full address"
+              />
+              <TextArea
+                label="Clinical Notes"
+                value={state.summary.clinicalNotes}
+                onChange={(v) => handleSummaryChange('clinicalNotes', v)}
+                placeholder="Any additional clinical notes or observations..."
+                rows={4}
+              />
+            </div>
+
+            {/* The printed record. This is what Save & Print prints; the form above is print:hidden. */}
+            <TravellersDiarrhoeaSummaryReport state={state} alerts={alerts} />
           </div>
+          )}
         </StepWrapper>
       )}
+    </div>
+  );
+}
+
+// Shown in place of the form on any step reached with a stop on screen.
+function BlockedPanel() {
+  return (
+    <div className="p-4 bg-red-50 border border-red-200 rounded-lg space-y-2">
+      <p className="text-sm font-semibold text-red-800">
+        Exclusion criteria met: azithromycin cannot be supplied under this PGD.
+      </p>
+      <p className="text-xs text-red-700">
+        Go back to the Contraindications Review to see the reason. Give hydration, food and water advice
+        regardless, refer as the alert directs, and use &quot;Save as not supplied&quot; to record the consultation
+        and the advice given.
+      </p>
     </div>
   );
 }

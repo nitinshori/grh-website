@@ -15,6 +15,7 @@ import type {
   RSVConsent,
   RSVSummary,
   RSVMedicalHistory,
+  RSVPostVaccineAdvice,
 } from '../rsv-types';
 
 interface RSVSummaryReportProps {
@@ -23,18 +24,14 @@ interface RSVSummaryReportProps {
   summary: RSVSummary;
   medicalHistory: RSVMedicalHistory;
   clinicalAlerts: ClinicalAlert[];
-  postVaccineAdvice: {
-    patientAdvised: boolean;
-    counselledReactions: boolean;
-    counselledNoBooster: boolean;
-    counselledSeason: boolean;
-    followUpAdviceGiven?: boolean;
-    pilSupplied?: boolean;
-  };
+  postVaccineAdvice: RSVPostVaccineAdvice;
   nhsStatus?: '' | 'not-eligible' | 'eligible-prefers-private';
-  onBack: () => void;
 }
 
+/**
+ * The printed consultation record. Rendered inside the final step so that
+ * StepWrapper's Save & Print prints it (it used to be unreachable).
+ */
 export default function RSVSummaryReport({
   patientDetails,
   consent,
@@ -43,14 +40,20 @@ export default function RSVSummaryReport({
   clinicalAlerts,
   postVaccineAdvice,
   nhsStatus,
-  onBack,
 }: RSVSummaryReportProps) {
+  const hasStop = clinicalAlerts.some((a) => a.severity === 'stop');
+  const vaccineLabel =
+    summary.vaccineType === 'abrysvo'
+      ? 'Abrysvo powder and solvent for solution for injection (Pfizer)'
+      : summary.vaccineType === 'arexvy'
+        ? 'Arexvy powder and suspension for suspension for injection (GSK)'
+        : 'Not specified';
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
       {/* Header with print styles */}
       <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50 print:bg-white print:border-0 print:pb-4">
         <h2 className="text-lg font-bold text-navy-900">Consultation Summary Report</h2>
-        <p className="text-sm text-gray-500 mt-1">RSV Vaccination ePGD</p>
+        <p className="text-sm text-gray-500 mt-1">RSV Vaccination ePGD (Abrysvo or Arexvy PGD v005)</p>
       </div>
 
       {/* Report content */}
@@ -62,6 +65,7 @@ export default function RSVSummaryReport({
             <Row label="Name" value={`${patientDetails.firstName} ${patientDetails.lastName}`} />
             <Row label="Date of Birth" value={patientDetails.dateOfBirth} />
             <Row label="Age" value={patientDetails.age !== null ? `${patientDetails.age} years` : 'N/A'} />
+            <Row label="Address" value={patientDetails.address || 'Not provided'} />
             <Row label="NHS Number" value={patientDetails.nhsNumber || 'Not provided'} />
             <Row label="GP Name" value={patientDetails.gpName || 'Not provided'} />
             <Row label="GP Practice" value={patientDetails.gpPractice || 'Not provided'} />
@@ -154,29 +158,53 @@ export default function RSVSummaryReport({
         {/* Vaccine Administration */}
         <div>
           <SectionHeader>Vaccine Administration</SectionHeader>
+          {hasStop ? (
+            <div className="space-y-1.5">
+              <Row label="Outcome" value="NOT SUPPLIED: exclusion criteria met (see clinical alerts above)" />
+              <Row
+                label="Advice given"
+                value={summary.clinicalNotes || 'Advised on alternative options and how to access them; informed or referred to the GP as appropriate'}
+              />
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              <Row label="Vaccine type" value={vaccineLabel} />
+              <Row label="Dose and route" value="0.5 mL intramuscular injection" />
+              <Row label="Batch number" value={summary.batchNumber} />
+              <Row label="Expiry date" value={summary.expiryDate} />
+              <Row
+                label="Administration site"
+                value={
+                  summary.administrationSite === 'left-deltoid'
+                    ? 'Left deltoid (IM)'
+                    : summary.administrationSite === 'right-deltoid'
+                      ? 'Right deltoid (IM)'
+                      : 'Not recorded'
+                }
+              />
+              <Row label="Administration time" value={summary.administrationTime} />
+              <Row
+                label="15 minute observation"
+                value={postVaccineAdvice.observedFifteenMinutes ? 'Completed' : 'NOT recorded'}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Adverse reactions (PGD records row) */}
+        <div>
+          <SectionHeader>Adverse Reactions</SectionHeader>
           <div className="space-y-1.5">
-            <Row
-              label="Vaccine type"
-              value={
-                summary.vaccineType === 'abrysvo'
-                  ? 'Abrysvo powder and solvent for solution for injection (Pfizer)'
-                  : summary.vaccineType === 'arexvy'
-                  ? 'Arexvy powder and suspension for suspension for injection (GSK)'
-                  : 'Not specified'
-              }
-            />
-            <Row label="Dose and route" value="0.5 mL intramuscular injection" />
-            <Row label="Batch number" value={summary.batchNumber} />
-            <Row label="Expiry date" value={summary.expiryDate} />
-            <Row
-              label="Administration site"
-              value={
-                summary.administrationSite === 'left-deltoid'
-                  ? 'Left deltoid (IM)'
-                  : 'Right deltoid (IM)'
-              }
-            />
-            <Row label="Administration time" value={summary.administrationTime} />
+            <Row label="Adverse reaction" value={postVaccineAdvice.adverseReaction.trim() || 'None observed'} />
+            {postVaccineAdvice.adverseReaction.trim() && (
+              <>
+                <Row label="Action taken" value={postVaccineAdvice.adverseReactionAction || 'Not recorded'} />
+                <Row
+                  label="Yellow Card"
+                  value={postVaccineAdvice.yellowCardSubmitted ? 'Reported via yellowcard.mhra.gov.uk' : 'Not yet reported'}
+                />
+              </>
+            )}
           </div>
         </div>
 
@@ -223,31 +251,50 @@ export default function RSVSummaryReport({
           </div>
         </div>
 
-        {/* Pharmacist Declaration */}
-        <PharmacistDeclaration
-          pgdName="RSV Vaccination"
-          pharmacistName={summary.pharmacistName}
-          pharmacistGPhC={summary.pharmacistGPhC}
-          pharmacyName={summary.pharmacyName}
-        />
+        {/* Practitioner Declaration */}
+        {hasStop ? (
+          <>
+            <SectionHeader>Practitioner Declaration</SectionHeader>
+            <p className="text-xs text-gray-600 mb-4">
+              I confirm that this consultation was conducted in accordance with the Patient Group
+              Direction for Abrysvo or Arexvy (RSV), that an exclusion criterion applied, that the
+              vaccine was NOT administered, and that the patient was advised as recorded above.
+            </p>
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-1">Practitioner name</p>
+                <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">
+                  {summary.pharmacistName || ''}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-1">GPhC number</p>
+                <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">
+                  {summary.pharmacistGPhC || ''}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-1">Pharmacy</p>
+                <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">
+                  {summary.pharmacyName || ''}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-1">Signature</p>
+                <div className="border-b border-gray-300 min-h-[2rem]" />
+              </div>
+            </div>
+          </>
+        ) : (
+          <PharmacistDeclaration
+            pgdName="Abrysvo or Arexvy (RSV) vaccination"
+            pharmacistName={summary.pharmacistName}
+            pharmacistGPhC={summary.pharmacistGPhC}
+            pharmacyName={summary.pharmacyName}
+          />
+        )}
 
         <ReportFooter pgdName="RSV Vaccination" />
-      </div>
-
-      {/* Back button */}
-      <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/30 flex items-center justify-between print:hidden">
-        <button
-          onClick={onBack}
-          className="px-5 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-navy-900 transition-colors"
-        >
-          &larr; Back to Consultation
-        </button>
-        <button
-          onClick={() => window.print()}
-          className="px-6 py-2.5 rounded-lg text-sm font-semibold bg-navy-900 hover:bg-navy-950 text-white transition-colors"
-        >
-          Print Consultation Record
-        </button>
       </div>
     </div>
   );

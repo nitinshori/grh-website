@@ -7,6 +7,31 @@ import {
 /** PGD strapline shown wherever the tool cites its authority. */
 export const JE_PGD_VERSION = 'Japanese Encephalitis Vaccine (Ixiaro) PGD v005, issued 11 September 2026';
 
+/** Parse yyyy-mm-dd as local midnight. */
+export function parseLocalDate(iso: string): Date | null {
+  if (!iso) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) return null;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return isNaN(d.getTime()) ? null : d;
+}
+
+export function todayLocal(): Date {
+  const n = new Date();
+  return new Date(n.getFullYear(), n.getMonth(), n.getDate());
+}
+
+export function formatLocalDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** Calendar days from today to the date (local midnight to local midnight). */
+export function daysUntil(iso: string): number | null {
+  const d = parseLocalDate(iso);
+  if (!d) return null;
+  return Math.round((d.getTime() - todayLocal().getTime()) / 86400000);
+}
+
 /** Whole months between the date of birth and today. Null when the date is missing or invalid. */
 export function calculateAgeInMonths(dob: string): number | null {
   if (!dob) return null;
@@ -55,14 +80,16 @@ export function evaluateJapaneseEncephalitisContraindications(
     });
   }
 
-  // Exclusion: acute severe febrile illness (postpone until recovered)
-  if (screening.severeFebrileIllness || (screening.temperature !== null && screening.temperature >= 39)) {
+  // Exclusion: acute severe febrile illness (postpone until recovered). The
+  // document sets no temperature threshold and does not require one to be
+  // measured; the pharmacist's assessment is the gate.
+  if (screening.severeFebrileIllness) {
     contraindications.severeFebrileIllness = true;
     alerts.push({
       severity: 'stop',
       code: 'SEVERE_FEBRILE_ILLNESS_JE',
       message: 'Acute severe febrile illness',
-      detail: `Temperature recorded ${screening.temperature ?? 'not recorded'} C. Postpone vaccination until recovered.`,
+      detail: `${screening.temperature !== null ? `Temperature recorded ${screening.temperature} C. ` : ''}Postpone vaccination until recovered.`,
     });
   }
 
@@ -144,24 +171,31 @@ export function evaluateJapaneseEncephalitisContraindications(
     });
   }
 
-  // Caution: age over 65
-  if (ageYears !== null && ageYears > 65) {
+  // Caution: aged 65 and over (the Green Book text the document summarises
+  // says "65 years and older", and the rapid-schedule licence stops at 64).
+  if (ageYears !== null && ageYears >= 65) {
     alerts.push({
       severity: 'caution',
       code: 'AGE_OVER_65_JE',
-      message: 'Age over 65',
+      message: 'Aged 65 or over',
       detail:
         'Seroconversion is lower, around 65% compared with over 96% in adults under 50, and titres are lower. Counsel that protection may be less reliable and consider the booster at 12 months.',
     });
   }
 
-  // Caution: time before travel
+  // Caution: time before travel (calendar days, so exactly 14 or 35 days away
+  // does not fire a day early)
   if (screening.departureDate) {
-    const departure = new Date(screening.departureDate);
-    const today = new Date();
-    if (!isNaN(departure.getTime())) {
-      const daysToDeparture = Math.floor((departure.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-      if (daysToDeparture < 14) {
+    const daysToDeparture = daysUntil(screening.departureDate);
+    if (daysToDeparture !== null) {
+      if (daysToDeparture < 0) {
+        alerts.push({
+          severity: 'caution',
+          code: 'DEPARTURE_PAST_JE',
+          message: 'The departure date is in the past',
+          detail: 'Check the travel dates. If the traveller has already departed, record why vaccination is being given now (for example completing a course).',
+        });
+      } else if (daysToDeparture < 14) {
         alerts.push({
           severity: 'caution',
           code: 'INSUFFICIENT_TIME_JE',
@@ -229,27 +263,46 @@ export function hasHardStopContraindications(
   );
 }
 
-export function getObservationPeriodRecommendation(
-  screening: JapaneseEncephalitisScreening
-): '15-min' | '30-min' {
-  // The PGD minimum is 15 minutes seated; the tool keeps its stricter 30 minute default.
-  if (screening.immunosuppressed) {
-    return '30-min';
+export type JeSchedule = 'standard' | 'accelerated' | '';
+export type JeDoseNumber = '1st' | '2nd' | 'booster' | 'second-booster' | '';
+
+/**
+ * Next dose from the schedule AND the dose number (the document's schedule
+ * table): after the 1st dose, day 28 (or day 7 on the rapid course); after
+ * the 2nd, the first booster at 12 months (12 to 24 months, 12 at continuous
+ * risk); after the first booster, the second booster at 10 years for adults
+ * aged 18 to 64 only; after the second booster, nothing. Returns "" where no
+ * further dose is scheduled, with a note for the record.
+ */
+export function calculateNextDose(
+  schedule: JeSchedule,
+  doseNumber: JeDoseNumber,
+  ageYears: number | null
+): { date: string; note: string } {
+  const t = todayLocal();
+  const plusDays = (n: number) => formatLocalDate(new Date(t.getFullYear(), t.getMonth(), t.getDate() + n));
+  const plusMonths = (n: number) => formatLocalDate(new Date(t.getFullYear(), t.getMonth() + n, t.getDate()));
+  const plusYears = (n: number) => formatLocalDate(new Date(t.getFullYear() + n, t.getMonth(), t.getDate()));
+  if (!doseNumber) return { date: '', note: '' };
+  if (doseNumber === '1st') {
+    if (!schedule) return { date: '', note: 'Select the schedule' };
+    return schedule === 'accelerated'
+      ? { date: plusDays(7), note: 'Second dose on day 7 (rapid course); complete at least one week before exposure' }
+      : { date: plusDays(28), note: 'Second dose on day 28; complete at least one week before exposure' };
   }
-  return '30-min';
+  if (doseNumber === '2nd') {
+    return { date: plusMonths(12), note: 'First booster 12 to 24 months after the primary course and before re-exposure; at 12 months for those at continuous risk or aged 65 and over' };
+  }
+  if (doseNumber === 'booster') {
+    if (ageYears !== null && ageYears >= 18 && ageYears <= 64) {
+      return { date: plusYears(10), note: 'Second booster at 10 years for adults aged 18 to 64 at continued risk' };
+    }
+    return { date: '', note: 'No further booster scheduled under this PGD (second booster is for adults aged 18 to 64; long-term data are lacking in children and from 65)' };
+  }
+  return { date: '', note: 'No further dose scheduled' };
 }
 
-export function calculateNextDoseDate(currentDate: string, schedule: 'standard' | 'accelerated'): string {
-  const current = new Date(currentDate);
-  if (schedule === 'standard') {
-    // Day 28
-    const day28 = new Date(current);
-    day28.setDate(day28.getDate() + 28);
-    return day28.toISOString().split('T')[0];
-  } else {
-    // Day 7
-    const day7 = new Date(current);
-    day7.setDate(day7.getDate() + 7);
-    return day7.toISOString().split('T')[0];
-  }
+/** Second booster is authorised for adults aged 18 to 64 only. */
+export function secondBoosterAllowed(ageYears: number | null): boolean {
+  return ageYears !== null && ageYears >= 18 && ageYears <= 64;
 }

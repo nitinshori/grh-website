@@ -3,9 +3,9 @@ import TravelCoreClient from "./TravelCoreClient";
 import { PgdPageActions } from "@/components/PgdPageActions";
 
 export const metadata: Metadata = {
-  title: "Travel Health Core Package Consultation ePGD",
+  title: "Hepatitis A, Typhoid and Cholera Travel Health ePGD",
   description:
-    "Digital consultation tool for travel health risk assessment and supply of preventive measures including anti-malarials advice, bite avoidance kit, and travellers' first aid guidance.",
+    "Digital consultation tool for administration of Hepatitis A (Havrix/Avaxim), Typhoid (Typhim Vi) and Cholera (Dukoral) vaccines to adults aged 18 and over, with pre-travel risk assessment.",
 };
 
 export default function TravelCorePage() {
@@ -24,14 +24,14 @@ export default function TravelCorePage() {
             </a>
             <span>/</span>
             <span className="text-navy-900 font-medium">
-              Travel Health Core Package Consultation ePGD
+              Hepatitis A, Typhoid and Cholera Travel Health ePGD
             </span>
           </div>
           <p className="text-xs font-semibold text-[color:var(--tenant-primary)] uppercase tracking-wider mb-2">
             For registered pharmacy professionals only
           </p>
           <h1 className="text-2xl sm:text-3xl font-bold text-navy-900">
-            Travel Health Core Package, PGD Consultation
+            Hepatitis A, Typhoid and Cholera Travel Health, PGD Consultation
           </h1>
           <p className="text-sm text-gray-500 mt-1">
             Pre-travel risk assessment and administration of Hepatitis A (Havrix/Avaxim), Typhoid (Typhim Vi) and Cholera (Dukoral) vaccines to adults aged 18 and over, with malaria, bite avoidance and food and water advice

@@ -26,12 +26,44 @@ export function getAdditionalVteRiskFactors(state: PostnatalContraceptionState):
   return factors;
 }
 
+/** Whole days between two YYYY-MM-DD dates (b minus a), or null. */
+export function daysBetween(a: string, b: string): number | null {
+  if (!a || !b) return null;
+  const da = new Date(a);
+  const db = new Date(b);
+  if (isNaN(da.getTime()) || isNaN(db.getTime())) return null;
+  return Math.floor((db.getTime() - da.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+export function addDays(iso: string, days: number): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  d.setDate(d.getDate() + days);
+  return d.toISOString().split("T")[0];
+}
+
+/** Days postpartum today, derived from the delivery date. */
+export function daysSinceDelivery(deliveryDate: string): number | null {
+  return daysBetween(deliveryDate, new Date().toISOString().split("T")[0]);
+}
+
 // From day 21 pregnancy must be reasonably excluded: no unprotected
 // intercourse since day 21, or a negative test 21 days after the last episode.
-export function isPregnancyReasonablyExcluded(state: PostnatalContraceptionState): boolean {
+// The question is asked as yes/no with no default; "unanswered" is neither
+// excluded nor a stop (validation refuses Next until it is answered).
+export function isPregnancyReasonablyExcluded(state: PostnatalContraceptionState): boolean | "unanswered" {
   const a = state.assessment;
   if (a.daysPostpartum === null || a.daysPostpartum <= 21) return true;
+  if (a.unprotectedSexSinceDay21 === null) return "unanswered";
   return !a.unprotectedSexSinceDay21 || a.negativeTest21DaysAfterLastUpsi;
+}
+
+/** Depo-Provera repeat: days since the last injection, or null for a first injection. */
+export function daysSinceLastInjection(state: PostnatalContraceptionState): number | null {
+  const m = state.medicineSupply;
+  if (m.injectionType !== "repeat") return null;
+  return daysBetween(m.lastInjectionDate, m.startDate);
 }
 
 // Depo-Provera timing rule: from 6 weeks if breastfeeding; from 21 days if
@@ -55,7 +87,7 @@ export function getAllAlerts(state: PostnatalContraceptionState): ClinicalAlert[
   const h = state.medicalHistory;
 
   // Exclusions common to both arms
-  if (h.knownOrSuspectedPregnancy || !isPregnancyReasonablyExcluded(state)) {
+  if (h.knownOrSuspectedPregnancy || isPregnancyReasonablyExcluded(state) === false) {
     alerts.push({
       severity: "stop",
       code: "PREGNANCY",
@@ -111,13 +143,24 @@ export function getAllAlerts(state: PostnatalContraceptionState): ClinicalAlert[
     });
   }
 
-  // Stricter than the PGD, which does not list porphyria: retained.
+  // Porphyria is not an exclusion in either arm of the PGD: caution only.
   if (h.porphyria) {
     alerts.push({
-      severity: "stop",
+      severity: "caution",
       code: "PORPHYRIA",
       message: "Porphyria",
-      detail: "Progestogen-only contraception is not supplied under this tool; refer.",
+      detail: "Not an exclusion in the PGD. Check the SmPC and BNF for the chosen product; seek specialist advice if in doubt.",
+    });
+  }
+
+  // Breast cancer treated within the last 5 years is UKMEC 3 for
+  // progestogen-only methods: outside the "UKMEC 1 or 2" inclusion. Refer.
+  if (h.breastCancerWithin5Years) {
+    alerts.push({
+      severity: "stop",
+      code: "BREAST_CANCER_UNDER_5_YEARS",
+      message: "History of breast cancer within the last 5 years",
+      detail: "UKMEC 3 for progestogen-only methods, so the inclusion criterion (UKMEC 1 or 2) is not met. Refer for specialist advice.",
     });
   }
 
@@ -242,12 +285,27 @@ export function getMedicineSupplyError(state: PostnatalContraceptionState): stri
     if (h.meningioma) return "Meningioma, current or previous: Depo-Provera cannot be given";
     const timing = getDepoTimingError(state);
     if (timing) return timing;
+    if (!m.injectionType) return "Record whether this is the first Depo-Provera injection or a repeat";
+    if (!m.startDate) return "Date of injection is required";
+    if (m.injectionType === "repeat") {
+      if (!m.lastInjectionDate) return "Repeat injection: the date of the last injection is required";
+      const since = daysSinceLastInjection(state);
+      if (since === null || since < 0) return "The last injection date must be before the date of this injection";
+      if (since > 89) {
+        // The dose row is every 12 weeks plus or minus 5 days (79 to 89 days).
+        if (!m.lateRepeatPregnancyExcluded)
+          return `Repeat injection is ${since} days after the last (beyond 12 weeks plus 5 days): pregnancy must be reasonably excluded before giving it, or refer`;
+        if (!m.lateRepeatBarrierAdvised)
+          return "Late repeat: record that a barrier method for the next 7 days was advised";
+      }
+    }
     if (!m.injectionSite) return "Injection site (gluteal or deltoid, deep intramuscular) is required";
     if (!m.batchNumber.trim()) return "Batch number is required";
     if (!m.expiryDate) return "Expiry date is required";
-    if (!m.startDate) return "Date of injection is required";
-    if (!m.nextInjectionDue) return "Next injection due date (12 weeks, plus or minus 5 days) is required";
+    if (m.expiryDate < new Date().toISOString().split("T")[0]) return "The expiry date has passed: this stock cannot be used";
+    if (!m.nextInjectionDue) return "Next injection due date could not be derived from the date of injection";
   }
+  if (!m.ukmecConfirmed) return "Confirm UKMEC 2025 category 1 or 2 for the chosen method (inclusion criterion)";
   if (!m.administeredBy.trim()) return "Supplied by (name/credentials) is required";
   return null;
 }

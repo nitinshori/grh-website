@@ -144,7 +144,9 @@ export default function ColdSoresClient() {
   }, [state, alerts, doseRecommendation]);
 
   const validationError = useMemo(() => validateStep(state.currentStep, state), [state.currentStep, state]);
-  const canProceed = !validationError && (!hasStops || state.currentStep >= 5);
+  // A stop anywhere disables Next everywhere: the progress bar only goes
+  // backwards, so this is the only forward path (adversarial review, 11 Sep 2026).
+  const canProceed = !validationError && !hasStops;
 
   const markStepComplete = useCallback(() => {
     setCompletedSteps((prev) => new Set([...prev, state.currentStep]));
@@ -181,16 +183,60 @@ export default function ColdSoresClient() {
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
       },
-      clinicalData: state as unknown as Record<string, unknown>,
+      clinicalData: { ...state, alerts, doseRecommendation } as unknown as Record<string, unknown>,
       outcome: hasStops ? "not_supplied" : "completed",
+      medicine:
+        !hasStops && doseRecommendation
+          ? {
+              name: doseRecommendation.medicine,
+              dose: `${doseRecommendation.dose}, ${doseRecommendation.frequency}`,
+              duration: doseRecommendation.duration,
+              quantity:
+                state.medicineSupply.product === "cream"
+                  ? `1 x ${state.medicineSupply.tubeSize || ""} tube`
+                  : "25 tablets",
+            }
+          : undefined,
       summary: {
-        pharmacistName: state.summary.pharmacistName,
-        pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacistName: state.summary.pharmacistName || __pharmProfile?.name || "",
+        pharmacistGPhC: state.summary.pharmacistGPhC || __pharmProfile?.gphcNumber || "",
+        pharmacyName: state.summary.pharmacyName || __pharmProfile?.pharmacyName || "",
+        pharmacyAddress: state.summary.pharmacyAddress || __pharmProfile?.pharmacyAddress || "",
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: [
+          hasStops && state.summary.referralAdvice ? `Advice given on referral: ${state.summary.referralAdvice}` : "",
+          state.summary.adverseDrugReactions ? `Adverse drug reactions: ${state.summary.adverseDrugReactions}` : "",
+          state.summary.clinicalNotes,
+        ]
+          .filter(Boolean)
+          .join("\n"),
       },
+      consent: { notifyGp: state.consent.notifyGp },
     };
-  }, [state, hasStops]);
+  }, [state, hasStops, alerts, doseRecommendation, __pharmProfile]);
+
+  // Shown at the top of every step: the alerts, and when a stop exists the
+  // advice-given box the PGD's records row requires for excluded patients.
+  const stopPanel = (
+    <>
+      {alerts.length > 0 && <AlertBanner alerts={alerts} />}
+      {hasStops && (
+        <div className="p-4 bg-red-50 rounded-lg border border-red-200 space-y-2">
+          <p className="text-sm font-medium text-red-800">
+            Not supplied under this PGD. Record the advice given and the referral made, then use "Save as not supplied".
+          </p>
+          <TextArea
+            label="Advice given and decision reached (PGD records requirement)"
+            value={state.summary.referralAdvice}
+            onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "referralAdvice", value: v })}
+            placeholder="e.g. Advised to see GP this week for assessment of first episode; symptom relief advice given"
+            required
+          />
+        </div>
+      )}
+    </>
+  );
 
   const handleNewConsultation = useCallback(() => {
     dispatch({ type: "RESET" });
@@ -210,12 +256,15 @@ export default function ColdSoresClient() {
             onPrev={handlePrevStep}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
+            {stopPanel}
             <PatientDetailsStep
               patient={state.patient}
               onChange={(field, value) => dispatch({ type: "UPDATE_PATIENT", field, value })}
               requireAdult={false}
-          />
+            />
           </StepWrapper>
         );
 
@@ -229,11 +278,35 @@ export default function ColdSoresClient() {
             onPrev={handlePrevStep}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
+            {stopPanel}
             <ConsentStep
               consent={state.consent}
               onChange={(field, value) => dispatch({ type: "UPDATE_CONSENT", field, value })}
             />
+            {state.patient.age !== null && state.patient.age < 16 && (
+              <div className="mt-4 space-y-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                <p className="text-sm font-medium text-navy-900">Patient under 16: basis of consent</p>
+                <SelectInput
+                  label="Consent given by"
+                  value={state.consent.consentBasis}
+                  onChange={(v) => dispatch({ type: "UPDATE_CONSENT", field: "consentBasis", value: v })}
+                  options={[
+                    { value: "parental-responsibility", label: "A person with parental responsibility" },
+                    { value: "gillick-competent", label: "The young person, assessed as Gillick competent" },
+                  ]}
+                  required
+                />
+                <TextArea
+                  label="Basis recorded (who consented; for Gillick competence, the assessment made)"
+                  value={state.consent.consentBasisNotes}
+                  onChange={(v) => dispatch({ type: "UPDATE_CONSENT", field: "consentBasisNotes", value: v })}
+                  required
+                />
+              </div>
+            )}
           </StepWrapper>
         );
 
@@ -247,25 +320,40 @@ export default function ColdSoresClient() {
             onPrev={handlePrevStep}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
+              {stopPanel}
               <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <Checkbox
-                  label="Clinical diagnosis of recurrent herpes labialis (cold sores) of the lips or face"
-                  checked={state.symptomAssessment.isRecurrent}
-                  onChange={(v) => dispatch({ type: "UPDATE_SYMPTOM_ASSESSMENT", field: "isRecurrent", value: v })}
-                  description="PGD inclusion criterion. Lesions on mucous membranes (eyes, inside the mouth, genitals) are excluded."
+                <SelectInput
+                  label="Episode type"
+                  value={state.symptomAssessment.isRecurrent ? "recurrent" : state.symptomAssessment.isFirstEpisode ? "first" : ""}
+                  onChange={(v) => {
+                    dispatch({ type: "UPDATE_SYMPTOM_ASSESSMENT", field: "isRecurrent", value: v === "recurrent" });
+                    dispatch({ type: "UPDATE_SYMPTOM_ASSESSMENT", field: "isFirstEpisode", value: v === "first" });
+                  }}
+                  options={[
+                    { value: "recurrent", label: "Recurrent herpes labialis (cold sores) of the lips or face: clinical diagnosis (PGD inclusion)" },
+                    { value: "first", label: "First suspected episode of herpes labialis (not covered: refer to the GP)" },
+                  ]}
+                  required
                 />
+                <p className="text-xs text-gray-600 mt-2">
+                  PGD inclusion criterion: a clinical diagnosis of recurrent herpes labialis. Lesions on mucous membranes (eyes, inside the mouth, genitals) are excluded.
+                </p>
               </div>
 
-              <div className="p-4 bg-orange-50 rounded-lg border border-orange-200">
-                <Checkbox
-                  label="This is the first suspected episode of herpes labialis"
-                  checked={state.symptomAssessment.isFirstEpisode}
-                  onChange={(v) => dispatch({ type: "UPDATE_SYMPTOM_ASSESSMENT", field: "isFirstEpisode", value: v })}
-                  description="Not covered by this PGD (recurrent herpes labialis only). Refer to the GP for diagnosis."
-                />
-              </div>
+              <NumberInput
+                label="Days this episode has been present"
+                value={state.symptomAssessment.daysSinceOnset}
+                onChange={(v) => dispatch({ type: "UPDATE_SYMPTOM_ASSESSMENT", field: "daysSinceOnset", value: v })}
+                min={0}
+                max={365}
+                placeholder="e.g. 1"
+                unit="days"
+                required
+              />
 
               <TextArea
                 label="Current Symptoms"
@@ -309,8 +397,11 @@ export default function ColdSoresClient() {
             onPrev={handlePrevStep}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
+              {stopPanel}
               <Checkbox
                 label="Patient is currently immunocompromised"
                 checked={state.medicalHistory.immunosuppressed}
@@ -356,21 +447,18 @@ export default function ColdSoresClient() {
             canProceed={canProceed}
             validationError={validationError}
             isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
-            <AlertBanner alerts={alerts} />
+            {stopPanel}
             <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
               <p className="text-sm font-medium text-navy-900">PGD exclusion criteria: any ticked box means refer, do not supply.</p>
+              {(state.medicalHistory.immunosuppressed || state.medicalHistory.recentlyImmunosuppressed) && (
+                <p className="text-xs text-red-700">Immunocompromised (recorded on the Medical History step): excluded from this PGD.</p>
+              )}
               <Checkbox
                 label="Known hypersensitivity to aciclovir, valaciclovir or any excipient"
                 checked={state.contraindications.hypersensitivity}
                 onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "hypersensitivity", value: v })}
-              />
-
-              <Checkbox
-                label="Patient is immunocompromised"
-                checked={state.contraindications.immunosuppressed}
-                onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "immunosuppressed", value: v })}
-                description="Risk of severe or systemic HSV. Refer to GP or specialist."
               />
 
               <Checkbox
@@ -407,10 +495,14 @@ export default function ColdSoresClient() {
                 onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "childUnder12", value: v })}
               />
 
+            </div>
+            <div className="mt-4 space-y-2 p-4 bg-amber-50 rounded-lg border border-amber-200">
+              <p className="text-sm font-medium text-navy-900">Pharmacy safety threshold (not a PGD exclusion criterion)</p>
               <Checkbox
                 label="Patient has severe renal impairment (eGFR below 10 mL/min)"
                 checked={state.contraindications.renalImpairmentSevere}
                 onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "renalImpairmentSevere", value: v })}
+                description="The PGD lists renal impairment as a caution (maintain hydration). At this level aciclovir needs prescriber dose adjustment, so this pharmacy refers rather than supplies."
               />
             </div>
           </StepWrapper>
@@ -427,8 +519,10 @@ export default function ColdSoresClient() {
             canProceed={canProceed}
             validationError={validationError}
             isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
+              {stopPanel}
               <SelectInput
                 label="Product"
                 value={state.medicineSupply.product}
@@ -503,7 +597,10 @@ export default function ColdSoresClient() {
             onPrev={handlePrevStep}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
+            {stopPanel}
             <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
               <p className="text-sm font-medium text-navy-900 mb-3">Confirm counselling points covered:</p>
               <Checkbox
@@ -556,6 +653,11 @@ export default function ColdSoresClient() {
                 checked={state.counselling.providedPIL}
                 onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "providedPIL", value: v })}
               />
+              <Checkbox
+                label="Report suspected adverse effects via Yellow Card (yellowcard.mhra.gov.uk) and inform the GP as appropriate"
+                checked={state.counselling.yellowCard}
+                onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "yellowCard", value: v })}
+              />
             </div>
           </StepWrapper>
         );
@@ -570,10 +672,12 @@ export default function ColdSoresClient() {
             onPrev={handlePrevStep}
             canProceed={canProceed}
             validationError={validationError}
-          getConsultationData={getConsultationData}
-          onNewConsultation={handleNewConsultation}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
+            onNewConsultation={handleNewConsultation}
           >
             <div className="space-y-4">
+              {stopPanel}
               <TextInput
                 label="Pharmacist name"
                 value={state.summary.pharmacistName}
@@ -595,6 +699,12 @@ export default function ColdSoresClient() {
                 label="Pharmacy address"
                 value={state.summary.pharmacyAddress}
                 onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "pharmacyAddress", value: v })}
+              />
+              <TextArea
+                label="Adverse drug reactions reported and actions taken (leave blank if none)"
+                value={state.summary.adverseDrugReactions}
+                onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "adverseDrugReactions", value: v })}
+                placeholder="e.g. None reported. Any reaction: Yellow Card submitted, GP informed"
               />
               <TextArea
                 label="Clinical notes (optional)"

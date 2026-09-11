@@ -4,10 +4,7 @@ import type { BasePatientDetails, BaseConsent, BaseSummary } from '../shared/typ
 
 // ─── Patient Details (extends base) ───
 
-export interface TDPatientDetails extends BasePatientDetails {
-  maleConfirmed: boolean;
-  femaleConfirmed: boolean;
-}
+export type TDPatientDetails = BasePatientDetails;
 
 // ─── Travel Assessment ───
 
@@ -16,6 +13,8 @@ export interface TDTravelAssessment {
   departureDate: string; // YYYY-MM-DD
   returnDate: string; // YYYY-MM-DD
   tripDuration: number | null; // calculated days
+  /** PGD v003 inclusion: recent or planned travel to a high-risk region, confirmed against a risk source (TravelHealthPro), not from memory. */
+  highRiskRegionConfirmed: boolean;
   travelType: string; // 'backpacking', 'business', 'cruise', 'resort', 'other'
   dietaryHabits: string; // street food, local markets, etc.
   previousDiarrhoeaEpisodes: boolean;
@@ -25,6 +24,8 @@ export interface TDTravelAssessment {
 // ─── Medical History (Travellers' Diarrhoea specific) ───
 
 export interface TDMedicalHistory {
+  /** The pharmacist confirms every question on the page was asked. Every exclusion defaults to absent. */
+  allQuestionsAsked: boolean;
   currentlyPregnant: boolean;
   breastfeeding: boolean;
   severeHepaticImpairment: boolean; // PGD v003 exclusion: severe liver disease
@@ -44,6 +45,8 @@ export interface TDMedicalHistory {
 // ─── Current Medications ───
 
 export interface TDMedications {
+  /** The pharmacist confirms every medicine on the page was asked about. */
+  allQuestionsAsked: boolean;
   takesQTprolongingDrugs: boolean; // PGD v003 exclusion: concomitant QT-prolonging medicines
   takesWarfarin: boolean;
   takesMethadone: boolean;
@@ -56,9 +59,11 @@ export interface TDMedications {
 
 export interface TDMedicineSelection {
   selectedApproach: 'standby' | 'not-supplied' | '';
-  loperamideDose: string; // optional: loperamide is NOT supplied under this PGD (OTC sale alongside, guidance dose 4 mg then 2 mg, max 16 mg/day)
-  azithromycinDose: string; // PGD v003: 500 mg once daily for 1 to 3 days depending on clinical severity
-  /** PGD v003: one to three 500 mg tablets; maximum course 3 days. */
+  /** PGD v003: 500 mg once daily for 1 to 3 days depending on clinical severity. The course length is the only choice; the dose is the document's. */
+  azithromycinDays: 1 | 2 | 3 | null;
+  /** Set by the reducer from azithromycinDays; not typed. */
+  azithromycinDose: string;
+  /** PGD v003: one to three 500 mg tablets; equals the course length in days. Set by the reducer. */
   azithromycinQuantity: number | null;
   /** PGD v003 records: name and brand of medication. */
   brand: string;
@@ -74,6 +79,8 @@ export interface TDCounselling {
   loperamideAdvice: boolean; // use only if no fever/blood
   azithromycinAdvice: boolean; // for moderate-severe
   pregnancyAdvice: boolean;
+  /** Pregnancy implications do not apply (for example a male patient). One of pregnancyAdvice or this must be ticked. */
+  pregnancyAdviceNotApplicable: boolean;
   foodHygiene: boolean;
   waterSafety: boolean;
   whenToSeekHelp: boolean; // red flags
@@ -83,9 +90,7 @@ export interface TDCounselling {
 
 // ─── Full Consultation Summary ───
 
-export interface TDConsultationSummary extends BaseSummary {
-  // Additional TD-specific fields if needed
-}
+export type TDConsultationSummary = BaseSummary;
 
 // ─── Full Consultation State ───
 
@@ -99,10 +104,6 @@ export interface TDConsultationState {
   medicineSelection: TDMedicineSelection;
   counselling: TDCounselling;
   summary: TDConsultationSummary;
-  // Computed
-  alerts: any[];
-  canProceed: boolean;
-  isComplete: boolean;
 }
 
 // ─── Reducer Actions ───
@@ -157,8 +158,6 @@ gpOdsCode: '',
       address: '',
       phone: '',
       email: '',
-      maleConfirmed: false,
-      femaleConfirmed: false,
     },
     consent: {
       informedConsentGiven: false,
@@ -171,12 +170,14 @@ gpOdsCode: '',
       departureDate: '',
       returnDate: '',
       tripDuration: null,
+      highRiskRegionConfirmed: false,
       travelType: '',
       dietaryHabits: '',
       previousDiarrhoeaEpisodes: false,
       previousEpisodeDetails: '',
     },
     medicalHistory: {
+      allQuestionsAsked: false,
       currentlyPregnant: false,
       breastfeeding: false,
       severeHepaticImpairment: false,
@@ -193,6 +194,7 @@ gpOdsCode: '',
       macrolideAllergy: false,
     },
     medications: {
+      allQuestionsAsked: false,
       takesQTprolongingDrugs: false,
       takesWarfarin: false,
       takesMethadone: false,
@@ -202,7 +204,7 @@ gpOdsCode: '',
     },
     medicineSelection: {
       selectedApproach: '',
-      loperamideDose: '',
+      azithromycinDays: null,
       azithromycinDose: '',
       azithromycinQuantity: null,
       brand: '',
@@ -215,6 +217,7 @@ gpOdsCode: '',
       loperamideAdvice: false,
       azithromycinAdvice: false,
       pregnancyAdvice: false,
+      pregnancyAdviceNotApplicable: false,
       foodHygiene: false,
       waterSafety: false,
       whenToSeekHelp: false,
@@ -233,8 +236,5 @@ gpOdsCode: '',
       }),
       clinicalNotes: '',
     },
-    alerts: [],
-    canProceed: false,
-    isComplete: false,
   };
 }

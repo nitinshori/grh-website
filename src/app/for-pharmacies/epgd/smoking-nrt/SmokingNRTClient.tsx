@@ -125,7 +125,8 @@ export default function SmokingNRTClient() {
   }, [state, alerts, doseRecommendation]);
 
   const validationError = useMemo(() => validateStep(state.currentStep, state), [state.currentStep, state]);
-  const canProceed = !validationError && (!hasStops || state.currentStep >= 6);
+  // A stop anywhere disables Next on every step (adversarial review, 11 Sep 2026).
+  const canProceed = !validationError && !hasStops;
 
   const markStepComplete = useCallback(() => {
     setCompletedSteps((prev) => new Set([...prev, state.currentStep]));
@@ -149,7 +150,14 @@ export default function SmokingNRTClient() {
   };
 
   // ─── Consultation Record Data (for saving to database) ───
+  // Returns a record on every step so an exclusion can be saved as "not
+  // supplied" from the step it is raised on.
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    const sel = state.nrtSelection;
+    const supplied = !hasStops && !!doseRecommendation && (sel.usePatches || sel.useOralForm);
+    const quantityParts: string[] = [];
+    if (sel.usePatches && sel.patchQuantity) quantityParts.push(`${sel.patchQuantity} patches`);
+    if (sel.useOralForm && sel.oralQuantity) quantityParts.push(`${sel.oralQuantity} pieces`);
     return {
       patient: {
         firstName: state.patient.firstName,
@@ -161,22 +169,52 @@ export default function SmokingNRTClient() {
         address: state.patient.address,
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
+        gpAddress: state.patient.gpAddress,
+        gpPhone: state.patient.gpPhone,
+        gpEmail: state.patient.gpEmail,
+        gpOdsCode: state.patient.gpOdsCode,
       },
-      clinicalData: state as unknown as Record<string, unknown>,
+      clinicalData: { ...updatedState, hasStops } as unknown as Record<string, unknown>,
       outcome: hasStops ? "not_supplied" : "completed",
+      ...(supplied
+        ? {
+            medicine: {
+              name: doseRecommendation.medicine,
+              dose: `${doseRecommendation.dose}; ${doseRecommendation.dosingRegimen ?? ""}`.trim(),
+              duration: doseRecommendation.duration,
+              quantity: quantityParts.join(" + "),
+            },
+          }
+        : {}),
       summary: {
-        pharmacistName: state.summary.pharmacistName,
-        pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacistName: state.summary.pharmacistName || __pharmProfile?.name || "",
+        pharmacistGPhC: state.summary.pharmacistGPhC || __pharmProfile?.gphcNumber || "",
+        pharmacyName: state.summary.pharmacyName || __pharmProfile?.pharmacyName,
+        pharmacyAddress: state.summary.pharmacyAddress || __pharmProfile?.pharmacyAddress,
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: state.consent.notifyGp },
     };
-  }, [state, hasStops]);
+  }, [state, updatedState, hasStops, doseRecommendation, __pharmProfile]);
 
   const handleNewConsultation = useCallback(() => {
     dispatch({ type: "RESET" });
     setCompletedSteps(new Set());
   }, []);
+
+  // Every StepWrapper gets the same gating and can save as not supplied.
+  const wrapperProps = {
+    currentStep: state.currentStep,
+    totalSteps: TOTAL_STEPS,
+    onNext: handleNextStep,
+    onPrev: handlePrevStep,
+    canProceed,
+    validationError,
+    isBlocked: hasStops,
+    getConsultationData,
+  };
 
 
   const renderCurrentStep = () => {
@@ -185,12 +223,7 @@ export default function SmokingNRTClient() {
         return (
           <StepWrapper
             title="Patient Details"
-            currentStep={state.currentStep}
-            totalSteps={TOTAL_STEPS}
-            onNext={handleNextStep}
-            onPrev={handlePrevStep}
-            canProceed={canProceed}
-            validationError={validationError}
+            {...wrapperProps}
           >
             <PatientDetailsStep
               patient={state.patient}
@@ -203,12 +236,7 @@ export default function SmokingNRTClient() {
         return (
           <StepWrapper
             title="Consent"
-            currentStep={state.currentStep}
-            totalSteps={TOTAL_STEPS}
-            onNext={handleNextStep}
-            onPrev={handlePrevStep}
-            canProceed={canProceed}
-            validationError={validationError}
+            {...wrapperProps}
           >
             <ConsentStep
               consent={state.consent}
@@ -221,12 +249,7 @@ export default function SmokingNRTClient() {
         return (
           <StepWrapper
             title="Smoking Assessment (Fagerström)"
-            currentStep={state.currentStep}
-            totalSteps={TOTAL_STEPS}
-            onNext={handleNextStep}
-            onPrev={handlePrevStep}
-            canProceed={canProceed}
-            validationError={validationError}
+            {...wrapperProps}
           >
             <div className="space-y-4">
               <NumberInput
@@ -237,17 +260,19 @@ export default function SmokingNRTClient() {
                 max={100}
                 placeholder="e.g., 20"
                 unit="cigarettes"
+                required
               />
+              <AlertBanner alerts={alerts.filter((a) => a.code === "SMOKING_NONSMOKER" || a.code === "SMOKING_OCCASIONAL")} />
 
               <SelectInput
                 label="Time to first cigarette after waking"
                 value={state.assessment.timeToFirstCigarette}
                 onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "timeToFirstCigarette", value: v })}
                 options={[
-                  { value: "&lt;5min", label: "Within 5 minutes" },
-                  { value: "5-30min", label: "5–30 minutes" },
-                  { value: "31-60min", label: "31–60 minutes" },
-                  { value: "&gt;60min", label: "More than 60 minutes" },
+                  { value: "under-5min", label: "Within 5 minutes" },
+                  { value: "5-30min", label: "5 to 30 minutes" },
+                  { value: "31-60min", label: "31 to 60 minutes" },
+                  { value: "over-60min", label: "More than 60 minutes" },
                 ]}
                 required
               />
@@ -262,6 +287,9 @@ export default function SmokingNRTClient() {
                   className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
                   required
                 />
+                {state.assessment.quitDate && (new Date(state.assessment.quitDate).getTime() - Date.now()) / 86400000 > 14 && (
+                  <p className="text-xs text-amber-700 mt-2">The quit date is more than 2 weeks away. The PGD guidance is a quit date 1 to 2 weeks from assessment; consider whether supply now is appropriate.</p>
+                )}
               </div>
 
               <Checkbox
@@ -278,19 +306,14 @@ export default function SmokingNRTClient() {
         return (
           <StepWrapper
             title="Medical History"
-            currentStep={state.currentStep}
-            totalSteps={TOTAL_STEPS}
-            onNext={handleNextStep}
-            onPrev={handlePrevStep}
-            canProceed={canProceed}
-            validationError={validationError}
+            {...wrapperProps}
           >
             <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
               <Checkbox
                 label="Recent MI (myocardial infarction), within 4 weeks"
                 checked={state.medicalHistory.recentMI}
                 onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "recentMI", value: v })}
-                description="PGD caution: assess benefit vs risk. Within 2 weeks: tick the contraindication on the next step."
+                description="PGD caution: assess benefit vs risk and document the assessment."
               />
 
               <Checkbox
@@ -323,7 +346,7 @@ export default function SmokingNRTClient() {
                 label="Phaeochromocytoma"
                 checked={state.medicalHistory.pheochromocytoma}
                 onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "pheochromocytoma", value: v })}
-                description="Nicotine may cause catecholamine release."
+                description="PGD caution: nicotine may cause catecholamine release. Assess benefit vs risk."
               />
 
               <Checkbox
@@ -369,19 +392,18 @@ export default function SmokingNRTClient() {
           <StepWrapper
             title="Current Medications"
             description="Document any medications that may interact with NRT or be affected by smoking cessation"
-            currentStep={state.currentStep}
-            totalSteps={TOTAL_STEPS}
-            onNext={handleNextStep}
-            onPrev={handlePrevStep}
-            canProceed={canProceed}
-            validationError={validationError}
+            {...wrapperProps}
           >
             <TextArea
               label="Current medications and doses"
-              value={""}
-              onChange={() => {}}
-              placeholder="e.g., Aspirin 75mg daily, Lisinopril 10mg daily, Atorvastatin 20mg at night"
+              value={state.medicalHistory.currentMedications}
+              onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "currentMedications", value: v })}
+              placeholder="e.g., Aspirin 75mg daily, Lisinopril 10mg daily, Atorvastatin 20mg at night; or 'none'"
+              required
             />
+            <p className="mt-2 text-xs text-gray-600">
+              Stopping smoking can raise the levels of some medicines (for example theophylline, clozapine, olanzapine, warfarin) and change insulin requirements. Note any that need monitoring.
+            </p>
           </StepWrapper>
         );
 
@@ -389,13 +411,7 @@ export default function SmokingNRTClient() {
         return (
           <StepWrapper
             title="Contraindications Check"
-            currentStep={state.currentStep}
-            totalSteps={TOTAL_STEPS}
-            onNext={handleNextStep}
-            onPrev={handlePrevStep}
-            canProceed={canProceed}
-            validationError={validationError}
-            isBlocked={hasStops}
+            {...wrapperProps}
           >
             <AlertBanner alerts={alerts} />
             <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
@@ -415,6 +431,7 @@ export default function SmokingNRTClient() {
                 label="Non-smoker or occasional smoker"
                 checked={state.contraindications.nonSmokerOrOccasional}
                 onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "nonSmokerOrOccasional", value: v })}
+                description="Also raised automatically when 0 cigarettes a day is recorded. Tick for a patient who does not smoke every day."
               />
 
               <Checkbox
@@ -423,17 +440,9 @@ export default function SmokingNRTClient() {
                 onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "generalisedSkinDisorder", value: v })}
               />
 
-              <Checkbox
-                label="Recent cardiac event (MI/stroke/unstable angina within 2 weeks)"
-                checked={state.contraindications.recentCardiacEvent}
-                onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "recentCardiacEvent", value: v })}
-              />
-
-              <Checkbox
-                label="Phaeochromocytoma"
-                checked={state.contraindications.pheochromocytoma}
-                onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "pheochromocytoma", value: v })}
-              />
+              <p className="pt-2 text-xs text-gray-600">
+                Recent cardiac events and phaeochromocytoma are PGD cautions (assess benefit against risk), recorded on the Medical History step. They do not exclude supply under the signed document.
+              </p>
             </div>
           </StepWrapper>
         );
@@ -442,13 +451,7 @@ export default function SmokingNRTClient() {
         return (
           <StepWrapper
             title="NRT Selection"
-            currentStep={state.currentStep}
-            totalSteps={TOTAL_STEPS}
-            onNext={handleNextStep}
-            onPrev={handlePrevStep}
-            canProceed={canProceed}
-            validationError={validationError}
-            isBlocked={hasStops}
+            {...wrapperProps}
           >
             <div className="space-y-4">
               <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-900 space-y-1">
@@ -471,6 +474,16 @@ export default function SmokingNRTClient() {
               {state.nrtSelection.usePatches && (
                 <>
                   <SelectInput
+                    label="Stage of the patch course"
+                    value={state.nrtSelection.patchStage}
+                    onChange={(v) => dispatch({ type: "UPDATE_NRT_SELECTION", field: "patchStage", value: v })}
+                    options={[
+                      { value: "start", label: `Starting patch (${state.assessment.cigarettesPerDay !== null ? (state.assessment.cigarettesPerDay > 10 ? "21mg for more than 10 a day" : "14mg for 10 or fewer a day") : "strength set by cigarettes a day"})` },
+                      { value: "stepdown", label: "Step-down supply later in the course (14mg for 2 weeks, then 7mg for 2 weeks)" },
+                    ]}
+                    required
+                  />
+                  <SelectInput
                     label="Patch strength (24-hour patch)"
                     value={state.nrtSelection.patchStrength}
                     onChange={(v) => dispatch({ type: "UPDATE_NRT_SELECTION", field: "patchStrength", value: v })}
@@ -481,8 +494,15 @@ export default function SmokingNRTClient() {
                     ]}
                     required
                   />
-                  {state.assessment.cigarettesPerDay !== null && state.assessment.cigarettesPerDay <= 10 && state.nrtSelection.patchStrength === "21mg" && (
-                    <p className="text-xs text-amber-700">Patient smokes 10 or fewer a day: the PGD starts lighter smokers on the 14mg patch.</p>
+                  <TextInput
+                    label="Brand of 24-hour patch supplied"
+                    value={state.nrtSelection.patchBrand}
+                    onChange={(v) => dispatch({ type: "UPDATE_NRT_SELECTION", field: "patchBrand", value: v })}
+                    placeholder="e.g. NiQuitin Clear"
+                    required
+                  />
+                  {/nicorette/i.test(state.nrtSelection.patchBrand) && (
+                    <p className="text-xs text-red-700">Nicorette Invisi patches are 16-hour patches (10mg, 15mg, 25mg) and are not the product described in this PGD. Only a 24-hour patch (7mg, 14mg, 21mg) may be supplied.</p>
                   )}
                   <NumberInput
                     label="Number of patches supplied"
@@ -525,12 +545,13 @@ export default function SmokingNRTClient() {
                     ]}
                     required
                   />
-                  {state.assessment.cigarettesPerDay !== null && (
-                    (state.assessment.cigarettesPerDay > 20 && state.nrtSelection.oralStrength === "2mg") ||
-                    (state.assessment.cigarettesPerDay <= 20 && state.nrtSelection.oralStrength === "4mg")
-                  ) && (
-                    <p className="text-xs text-amber-700">Strength does not match the PGD dose row for {state.assessment.cigarettesPerDay} cigarettes a day (2mg for 20 or fewer; 4mg for more than 20).</p>
-                  )}
+                  <TextInput
+                    label="Brand of gum or lozenge supplied"
+                    value={state.nrtSelection.oralBrand}
+                    onChange={(v) => dispatch({ type: "UPDATE_NRT_SELECTION", field: "oralBrand", value: v })}
+                    placeholder="e.g. Nicorette gum, NiQuitin lozenge, or generic nicotine gum"
+                    required
+                  />
                   <NumberInput
                     label="Number of pieces supplied"
                     value={state.nrtSelection.oralQuantity}
@@ -565,12 +586,7 @@ export default function SmokingNRTClient() {
         return (
           <StepWrapper
             title="Counselling"
-            currentStep={state.currentStep}
-            totalSteps={TOTAL_STEPS}
-            onNext={handleNextStep}
-            onPrev={handlePrevStep}
-            canProceed={canProceed}
-            validationError={validationError}
+            {...wrapperProps}
           >
             <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
               <p className="text-sm font-medium text-navy-900 mb-3">Confirm counselling covered:</p>
@@ -652,14 +668,8 @@ export default function SmokingNRTClient() {
         return (
           <StepWrapper
             title="Summary"
-            currentStep={state.currentStep}
-            totalSteps={TOTAL_STEPS}
-            onNext={handleNextStep}
-            onPrev={handlePrevStep}
-            canProceed={canProceed}
-            validationError={validationError}
-          getConsultationData={getConsultationData}
-          onNewConsultation={handleNewConsultation}
+            {...wrapperProps}
+            onNewConsultation={handleNewConsultation}
           >
             <div className="space-y-4">
               <TextInput

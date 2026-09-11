@@ -55,6 +55,12 @@ export function validateStep(step: number, state: MMRConsultationState): string 
     }
 
     case 2: // Eligibility
+      if (!state.eligibility.documentedDoses) {
+        return "Record the number of documented MMR doses the patient has already received (the inclusion criterion is: without two documented doses)";
+      }
+      if (state.eligibility.documentedDoses === "2") {
+        return "Two documented doses already received: not eligible under this PGD";
+      }
       if (
         !state.eligibility.bornAfter1970 &&
         !state.eligibility.noPriorTwoDoses &&
@@ -85,6 +91,18 @@ export function validateStep(step: number, state: MMRConsultationState): string 
       }
       if (!state.vaccineAdmin.doseNumber) {
         return "Dose number (1 or 2) is required";
+      }
+      if (state.eligibility.documentedDoses === "0" && state.vaccineAdmin.doseNumber !== "1") {
+        return "No documented doses recorded on the eligibility step: this administration is dose 1";
+      }
+      if (state.eligibility.documentedDoses === "1" && state.vaccineAdmin.doseNumber !== "2") {
+        return "One documented dose recorded on the eligibility step: this administration is dose 2";
+      }
+      if (!state.vaccineAdmin.route) {
+        return "Record the route";
+      }
+      if (state.vaccineAdmin.route !== "subcutaneous") {
+        return "This PGD authorises the subcutaneous route only (preferably the upper arm or thigh)";
       }
       if (!state.vaccineAdmin.vaccinationDate) {
         return "Vaccination date is required";
@@ -127,6 +145,16 @@ export function validateStep(step: number, state: MMRConsultationState): string 
       if (!state.vaccineAdmin.lotNumber.trim()) {
         return "Batch number is required";
       }
+      if (!state.vaccineAdmin.expiryDate) {
+        return "Expiry date is required";
+      }
+      {
+        const today = new Date().toISOString().split("T")[0];
+        const untilExpiry = daysBetween(today, state.vaccineAdmin.expiryDate);
+        if (untilExpiry !== null && untilExpiry < 0) {
+          return "This batch has expired. Do not use it.";
+        }
+      }
       if (!state.vaccineAdmin.administeredBy.trim()) {
         return "Administered by (name/credentials) is required";
       }
@@ -134,6 +162,12 @@ export function validateStep(step: number, state: MMRConsultationState): string 
     }
 
     case 6: // Post-Vaccine and counselling
+      if (!state.postVaccine.observationCompleted) {
+        return "Record that the 15 minute seated observation period was completed";
+      }
+      if (age !== null && age >= 12 && (!state.postVaccine.pregnancyAdviceGiven || !state.counselling.pregnancyAvoidanceAdvice)) {
+        return "Advise that pregnancy must be avoided for one month after vaccination and record that this was done";
+      }
       if (!state.counselling.sideEffectsExplained) {
         return "Confirm information on common side effects and when to seek further medical advice was provided";
       }

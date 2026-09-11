@@ -12,13 +12,18 @@ export interface AnxietyAssessment {
 }
 
 export interface AnxietyMedicalHistory {
-  asthmaOrCOPD: boolean;
-  cardiacConduction: boolean;
-  bradycardia: boolean;
-  heartFailure: boolean;
-  prinzmetalsAngina: boolean;
-  pheochromocytoma: boolean;
+  // The six exclusion-grade questions that used to sit here (asthma or
+  // COPD, cardiac conduction disorder, bradycardia, heart failure,
+  // Prinzmetal's angina, phaeochromocytoma) were never read by the clinical
+  // logic: a tick produced no alert and no block, and the same question had
+  // to be answered again on the Contraindications step to stop supply
+  // (adversarial review, 11 Sep 2026). They are removed; the Contraindications
+  // step asks each exclusion once, in the document's words, and enforces it.
   diabetes: boolean;
+  /** Current medicines and doses ("none" if nothing). Required: the
+   *  interaction exclusions (another beta-blocker, verapamil, diltiazem)
+   *  rest on this list, and the document requires it in the record. */
+  currentMedications: string;
   raynauds: boolean;
   hepaticImpairment: boolean;
   // PGD v004 cautions (11 September 2026)
@@ -59,9 +64,20 @@ export interface AnxietyContraindications {
   fastingOrHypoglycaemiaRisk: boolean;
   pregnancyOrPlanning: boolean;
   breastfeeding: boolean;
+  /**
+   * Measured today. The document excludes on a resting heart rate under
+   * 50 bpm and a systolic BP under 90 mmHg; before these were captured the
+   * record could not show either was measured before a beta-blocker was
+   * supplied (adversarial review, 11 Sep 2026). The stops are derived from
+   * the readings as well as from the tick boxes.
+   */
+  restingHeartRate: number | null;
+  systolicBP: number | null;
 }
 
 export interface AnxietyMedicineSupply {
+  /** Dose advised per administration, in mg: "10", "20", "30" or "40"
+   *  (whole 10mg tablets). Required; the record used to print the range. */
   propranololDose: string;
   /**
    * 10mg tablets only, maximum 28 (280mg). PGD v002, 9 September 2026: the
@@ -76,6 +92,8 @@ export interface AnxietyMedicineSupply {
    * anxiety, maximum 120mg daily.
    */
   regimen: "" | "prn" | "regular";
+  /** Regular regimen only: two or three times daily (document wording). */
+  timesDaily: "" | "2" | "3";
 }
 
 export interface AnxietyCounselling {
@@ -169,13 +187,8 @@ gpEmail: "",
       frequencyOfEvents: "",
     },
     medicalHistory: {
-      asthmaOrCOPD: false,
-      cardiacConduction: false,
-      bradycardia: false,
-      heartFailure: false,
-      prinzmetalsAngina: false,
-      pheochromocytoma: false,
       diabetes: false,
+      currentMedications: "",
       raynauds: false,
       hepaticImpairment: false,
       firstDegreeHeartBlock: false,
@@ -209,12 +222,15 @@ gpEmail: "",
       fastingOrHypoglycaemiaRisk: false,
       pregnancyOrPlanning: false,
       breastfeeding: false,
+      restingHeartRate: null,
+      systolicBP: null,
     },
     medicineSupply: {
-      propranololDose: "10-40mg",
+      propranololDose: "",
       quantity: null,
       timing: "PRN 30-60 minutes before anxiety-provoking situation",
       regimen: "",
+      timesDaily: "",
     },
     counselling: {
       prnUseOnly: false,

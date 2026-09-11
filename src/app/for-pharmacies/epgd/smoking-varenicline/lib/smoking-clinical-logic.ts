@@ -160,14 +160,16 @@ export function checkHardContraindications(
     });
   }
 
-  // Current suicidal ideation
-  if (formData.medicalHistory.suicidalIdeation) {
+  // Current (active) suicidal ideation. A history of suicidal ideation or
+  // self-harm is a PGD caution, handled in checkCautions; it used to fire
+  // this stop with the word "active" (adversarial review, 11 Sep 2026).
+  if (formData.medicalHistory.currentSuicidalIdeation) {
     alerts.push({
       severity: "stop",
       code: "SUICIDAL_IDEATION",
-      message: "Active suicidal ideation is an absolute contraindication",
+      message: "Current suicidal ideation: do not supply",
       detail:
-        "Patient requires immediate psychological support. DO NOT prescribe varenicline. Refer urgently to mental health services.",
+        "Patient requires immediate psychological support. Do not supply varenicline. Refer urgently to mental health services and follow local crisis pathways.",
     });
   }
 
@@ -204,6 +206,18 @@ export function checkCautions(
   }
 
   // Current depression
+  // PGD caution: history of suicidal ideation or self-harm (monitor mental
+  // health throughout treatment).
+  if (formData.medicalHistory.suicidalIdeation) {
+    alerts.push({
+      severity: "caution",
+      code: "SUICIDAL_HISTORY",
+      message: "History of suicidal ideation or self-harm: monitor mental health throughout treatment",
+      detail:
+        "PGD caution. Supply may proceed with counselling on neuropsychiatric effects; agree how mood will be monitored at each follow-up and advise the patient to report any mood change immediately. Current suicidal ideation is an exclusion.",
+    });
+  }
+
   if (formData.medicalHistory.currentDepression) {
     alerts.push({
       severity: "caution",
@@ -341,11 +355,11 @@ export function checkRedFlags(
 
   // These are signs that would develop during treatment
   // But we check baseline risk factors here
-  if (formData.medicalHistory.suicidalIdeation) {
+  if (formData.medicalHistory.currentSuicidalIdeation) {
     alerts.push({
       severity: "red-flag",
       code: "BASELINE_SUICIDAL_RISK",
-      message: "Baseline suicidal ideation present",
+      message: "Current suicidal ideation present",
       detail:
         "This is a hard contraindication. Patient requires psychological assessment before any pharmacological intervention.",
     });

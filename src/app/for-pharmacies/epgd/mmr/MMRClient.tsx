@@ -134,7 +134,9 @@ export default function MMRClient() {
   const validationError = useMemo(() => validateStep(state.currentStep, state), [state.currentStep, state]);
 
   // Can proceed?
-  const canProceed = !validationError && (!hasStops || state.currentStep >= 4);
+  // A stop anywhere disables Next on every step; the progress bar only goes
+  // backwards, so there is no way round it.
+  const canProceed = !validationError && !hasStops;
 
   // Mark step as completed
   const markStepComplete = useCallback(() => {
@@ -162,6 +164,7 @@ export default function MMRClient() {
 
   // ─── Consultation Record Data (for saving to database) ───
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    const a = state.vaccineAdmin;
     return {
       patient: {
         firstName: state.patient.firstName,
@@ -173,17 +176,34 @@ export default function MMRClient() {
         address: state.patient.address,
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
+        gpAddress: state.patient.gpAddress,
+        gpPhone: state.patient.gpPhone,
+        gpEmail: state.patient.gpEmail,
+        gpOdsCode: state.patient.gpOdsCode,
       },
-      clinicalData: state as unknown as Record<string, unknown>,
+      clinicalData: { ...state, alerts } as unknown as Record<string, unknown>,
       outcome: hasStops ? "not_supplied" : "completed",
+      medicine:
+        !hasStops && a.vaccine
+          ? {
+              name: `${a.vaccine} (MMR vaccine, live)`,
+              dose: `0.5 mL ${a.route || "subcutaneous"}, dose ${a.doseNumber || "1"} of 2`,
+              duration: "Single dose this attendance",
+              quantity: 1,
+            }
+          : undefined,
       summary: {
-        pharmacistName: state.summary.pharmacistName,
-        pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacistName: state.summary.pharmacistName || __pharmProfile?.name || "",
+        pharmacistGPhC: state.summary.pharmacistGPhC || __pharmProfile?.gphcNumber || "",
+        pharmacyName: state.summary.pharmacyName || __pharmProfile?.pharmacyName,
+        pharmacyAddress: state.summary.pharmacyAddress || __pharmProfile?.pharmacyAddress,
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: state.consent.notifyGp },
     };
-  }, [state, hasStops]);
+  }, [state, hasStops, alerts, __pharmProfile]);
 
   const handleNewConsultation = useCallback(() => {
     dispatch({ type: "RESET" });
@@ -206,6 +226,8 @@ export default function MMRClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <PatientDetailsStep
               patient={state.patient}
@@ -228,6 +250,8 @@ export default function MMRClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <ConsentStep
               consent={state.consent}
@@ -306,8 +330,28 @@ export default function MMRClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
+              <SelectInput
+                label="Number of documented MMR doses already received"
+                value={state.eligibility.documentedDoses}
+                onChange={(v) => {
+                  dispatch({ type: "UPDATE_ELIGIBILITY", field: "documentedDoses", value: v });
+                  dispatch({ type: "UPDATE_ELIGIBILITY", field: "noPriorTwoDoses", value: v === "0" || v === "1" });
+                  // The dose number for this administration follows from the record.
+                  dispatch({ type: "UPDATE_VACCINE_ADMIN", field: "doseNumber", value: v === "0" ? "1" : v === "1" ? "2" : "" });
+                }}
+                options={[
+                  { value: "0", label: "None documented (this will be dose 1)" },
+                  { value: "1", label: "One documented dose (this will be dose 2)" },
+                  { value: "2", label: "Two or more documented doses (course complete: not eligible under this PGD)" },
+                ]}
+                required
+              />
+              <p className="text-xs text-gray-600">Inclusion criterion: individuals aged 12 months and over without two documented doses. Doses given before the first birthday do not count.</p>
+
               <Checkbox
                 label="Born after 1970 without documented 2 doses"
                 checked={state.eligibility.bornAfter1970}
@@ -397,6 +441,8 @@ export default function MMRClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
               <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Exclusion criteria (any ticked item excludes)</p>
@@ -623,6 +669,7 @@ export default function MMRClient() {
                 : null
             }
             isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             {alerts.length > 0 ? (
               <AlertBanner alerts={alerts} />
@@ -638,8 +685,17 @@ export default function MMRClient() {
                 <p className="text-sm text-red-600">
                   Based on the identified contraindications, MMR vaccination cannot be
                   administered. Refer the patient to their GP or specialist clinic for further
-                  advice.
+                  advice. Document the advice given and the decision reached.
                 </p>
+                <div className="mt-3">
+                  <TextArea
+                    label="Advice given and decision reached (saved with the exclusion record)"
+                    value={state.summary.clinicalNotes}
+                    onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "clinicalNotes", value: v })}
+                    placeholder="e.g., Pregnant: advised to attend the GP after delivery; no supply made."
+                  />
+                  <p className="text-xs text-red-700 mt-1">Then use "Save as not supplied" below to record the consultation.</p>
+                </div>
               </div>
             )}
           </StepWrapper>
@@ -657,6 +713,7 @@ export default function MMRClient() {
             canProceed={canProceed}
             validationError={validationError}
             isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
               <SelectInput
@@ -670,7 +727,7 @@ export default function MMRClient() {
                   })
                 }
                 options={[
-                  { value: "Priorix", label: "Priorix (live attenuated, egg-free)" },
+                  { value: "Priorix", label: "Priorix (live attenuated)" },
                   { value: "MMRVaxPro", label: "MMRVaxPro (live attenuated)" },
                 ]}
                 required
@@ -775,6 +832,25 @@ export default function MMRClient() {
               />
 
               <TextInput
+                label="Expiry date"
+                value={state.vaccineAdmin.expiryDate}
+                onChange={(v) => dispatch({ type: "UPDATE_VACCINE_ADMIN", field: "expiryDate", value: v })}
+                type="date"
+                required
+              />
+
+              <SelectInput
+                label="Route"
+                value={state.vaccineAdmin.route}
+                onChange={(v) => dispatch({ type: "UPDATE_VACCINE_ADMIN", field: "route", value: v })}
+                options={[
+                  { value: "subcutaneous", label: "Subcutaneous (PGD route; preferably the upper arm or thigh)" },
+                  { value: "intramuscular", label: "Intramuscular (not authorised under this PGD)" },
+                ]}
+                required
+              />
+
+              <TextInput
                 label="Administered by (name and credentials)"
                 value={state.vaccineAdmin.administeredBy}
                 onChange={(v) =>
@@ -802,10 +878,18 @@ export default function MMRClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
-          getConsultationData={getConsultationData}
-          onNewConsultation={handleNewConsultation}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
+              <Checkbox
+                label="Observed for 15 minutes after vaccination, seated, and the observation period completed"
+                checked={state.postVaccine.observationCompleted}
+                onChange={(v) => dispatch({ type: "UPDATE_POST_VACCINE", field: "observationCompleted", value: v })}
+                description="PGD caution: observe the patient for 15 minutes post-vaccination. Have procedures in place to prevent injury from a faint."
+                required
+              />
+
               <Checkbox
                 label="Any immediate reactions observed"
                 checked={state.postVaccine.reactionsObserved}
@@ -819,45 +903,8 @@ export default function MMRClient() {
                 description="e.g. redness, swelling at injection site"
               />
 
-              <Checkbox
-                label="Fever developed (7-12 days post-vaccine)"
-                checked={state.postVaccine.feverDeveloped}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_POST_VACCINE",
-                    field: "feverDeveloped",
-                    value: v,
-                  })
-                }
-              />
-
-              {state.postVaccine.feverDeveloped && (
-                <TextInput
-                  label="Date fever onset"
-                  value={state.postVaccine.feverOnset}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_POST_VACCINE",
-                      field: "feverOnset",
-                      value: v,
-                    })
-                  }
-                  type="date"
-                />
-              )}
-
-              <Checkbox
-                label="Rash observed (7-12 days post-vaccine)"
-                checked={state.postVaccine.rashObserved}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_POST_VACCINE",
-                    field: "rashObserved",
-                    value: v,
-                  })
-                }
-              />
-
+              {/* Fever and rash at 7 to 12 days cannot be observed at the
+                  consultation and are counselled below, not recorded here. */}
               <Checkbox
                 label="Joint pain reported"
                 checked={state.postVaccine.jointPainReported}
@@ -886,7 +933,8 @@ export default function MMRClient() {
                     value: v,
                   });
                 }}
-                description="Avoid pregnancy for 1 month after vaccination."
+                description="Avoid pregnancy for 1 month after vaccination. Required for every patient aged 12 and over."
+                required={state.patient.age !== null && state.patient.age >= 12}
               />
 
               <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide pt-2">Counselling and follow-up (PGD v004)</p>
@@ -977,99 +1025,87 @@ export default function MMRClient() {
 
       case 7: // Summary & Print
         return (
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
-              <h2 className="text-lg font-bold text-navy-900">
-                Summary &amp; Consultation Record
-              </h2>
+          <StepWrapper
+            title="Summary &amp; Consultation Record"
+            description="Complete the pharmacist declaration, then Save & Print. The record is saved to Patient Records when printed."
+            currentStep={state.currentStep}
+            totalSteps={TOTAL_STEPS}
+            onNext={handleNext}
+            onPrev={handlePrev}
+            canProceed={canProceed}
+            validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
+            onNewConsultation={handleNewConsultation}
+          >
+            <div className="space-y-4 mb-6 print:hidden">
+              <TextInput
+                label="Pharmacist name"
+                value={state.summary.pharmacistName}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_SUMMARY",
+                    field: "pharmacistName",
+                    value: v,
+                  })
+                }
+                required
+              />
+              <TextInput
+                label="GPhC registration number"
+                value={state.summary.pharmacistGPhC}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_SUMMARY",
+                    field: "pharmacistGPhC",
+                    value: v,
+                  })
+                }
+                required
+              />
+              <TextInput
+                label="Pharmacy name"
+                value={state.summary.pharmacyName}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_SUMMARY",
+                    field: "pharmacyName",
+                    value: v,
+                  })
+                }
+              />
+              <TextInput
+                label="Pharmacy address"
+                value={state.summary.pharmacyAddress}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_SUMMARY",
+                    field: "pharmacyAddress",
+                    value: v,
+                  })
+                }
+              />
+              <TextArea
+                label="Additional clinical notes"
+                value={state.summary.clinicalNotes}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_SUMMARY",
+                    field: "clinicalNotes",
+                    value: v,
+                  })
+                }
+                placeholder="Any additional information to record..."
+              />
             </div>
 
-            <div className="px-6 py-6">
-              <div className="space-y-4 mb-6">
-                <TextInput
-                  label="Pharmacist name"
-                  value={state.summary.pharmacistName}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_SUMMARY",
-                      field: "pharmacistName",
-                      value: v,
-                    })
-                  }
-                  required
-                />
-                <TextInput
-                  label="GPhC registration number"
-                  value={state.summary.pharmacistGPhC}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_SUMMARY",
-                      field: "pharmacistGPhC",
-                      value: v,
-                    })
-                  }
-                  required
-                />
-                <TextInput
-                  label="Pharmacy name"
-                  value={state.summary.pharmacyName}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_SUMMARY",
-                      field: "pharmacyName",
-                      value: v,
-                    })
-                  }
-                />
-                <TextInput
-                  label="Pharmacy address"
-                  value={state.summary.pharmacyAddress}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_SUMMARY",
-                      field: "pharmacyAddress",
-                      value: v,
-                    })
-                  }
-                />
-                <TextArea
-                  label="Additional clinical notes"
-                  value={state.summary.clinicalNotes}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_SUMMARY",
-                      field: "clinicalNotes",
-                      value: v,
-                    })
-                  }
-                  placeholder="Any additional information to record..."
-                />
-              </div>
-
-              <div className="border-t border-gray-200 pt-6">
-                <p className="text-sm text-gray-600 mb-4">
-                  Review the summary below before printing the consultation record.
-                </p>
-                <MMRSummaryReport state={updatedState} />
-              </div>
+            <div className="border-t border-gray-200 pt-6">
+              <p className="text-sm text-gray-600 mb-4 print:hidden">
+                Review the summary below before saving and printing the consultation record.
+              </p>
+              <MMRSummaryReport state={updatedState} />
             </div>
-
-            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/30 flex items-center justify-between">
-              <button
-                onClick={() => dispatch({ type: "PREV_STEP" })}
-                className="px-5 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-navy-900 transition-colors"
-              >
-                &larr; Previous
-              </button>
-
-              <button
-                onClick={() => window.print()}
-                className="px-6 py-2.5 rounded-lg text-sm font-semibold bg-navy-900 hover:bg-navy-950 text-white transition-colors"
-              >
-                Print Consultation Record
-              </button>
-            </div>
-          </div>
+          </StepWrapper>
         );
 
       default:
@@ -1113,7 +1149,8 @@ function MMRSummaryReport({
       <Row label="Date of Birth" value={state.patient.dateOfBirth} />
       <Row label="Age" value={`${state.patient.age} years`} />
       <Row label="NHS Number" value={state.patient.nhsNumber} />
-      <Row label="GP" value={state.patient.gpName} />
+      <Row label="Address" value={state.patient.address || "Not recorded"} />
+      <Row label="GP" value={[state.patient.gpName, state.patient.gpPractice, state.patient.gpAddress].filter(Boolean).join(", ") || "Not recorded"} />
 
       {state.patient.age !== null && state.patient.age < 16 && (
         <>
@@ -1135,6 +1172,10 @@ function MMRSummaryReport({
       )}
 
       <SectionHeader>Eligibility</SectionHeader>
+      <Row
+        label="Documented MMR doses already received"
+        value={state.eligibility.documentedDoses === "2" ? "Two or more (not eligible)" : state.eligibility.documentedDoses || "Not recorded"}
+      />
       <Row
         label="Born after 1970"
         value={state.eligibility.bornAfter1970 ? "Yes" : "No"}
@@ -1221,8 +1262,12 @@ function MMRSummaryReport({
       />
 
       <SectionHeader>Vaccine Administration</SectionHeader>
+      {hasHardStops(state.alerts) ? (
+        <p className="text-xs font-semibold text-red-800">Outcome: NOT SUPPLIED. Exclusion criteria met; no vaccine administered.</p>
+      ) : (
+      <>
       <Row label="Vaccine" value={state.vaccineAdmin.vaccine} />
-      <Row label="Dose and route" value="0.5 mL subcutaneous injection" />
+      <Row label="Dose and route" value={`0.5 mL ${state.vaccineAdmin.route || "subcutaneous"} injection`} />
       <Row label="Dose number" value={state.vaccineAdmin.doseNumber ? `${state.vaccineAdmin.doseNumber} of 2` : ""} />
       <Row label="Date" value={state.vaccineAdmin.vaccinationDate} />
       {state.vaccineAdmin.doseNumber === "2" && (
@@ -1233,7 +1278,11 @@ function MMRSummaryReport({
       )}
       <Row label="Injection site" value={state.vaccineAdmin.injectionSite} />
       <Row label="Batch number" value={state.vaccineAdmin.lotNumber} />
+      <Row label="Expiry date" value={state.vaccineAdmin.expiryDate} />
       <Row label="Administered by" value={state.vaccineAdmin.administeredBy} />
+      <Row label="15 minute observation completed" value={state.postVaccine.observationCompleted ? "Yes" : "No"} />
+      </>
+      )}
 
       <SectionHeader>Clinical Alerts</SectionHeader>
       <AlertSummary alerts={state.alerts} />

@@ -35,8 +35,13 @@ export interface HPVVaccineAssessment {
   priorDoses: string;
   /** A single dose before the 25th birthday completes the course. */
   doseBefore25: boolean;
-  anaphylaxisToPreviousDose: boolean;
-  anaphylaxisToComponent: boolean;
+  /**
+   * Exclusions asked as explicit yes/no answers. They were booleans
+   * defaulting to false, rendered as pre-ticked "NOT documented" boxes, so
+   * the step could be passed without reading it (adversarial review, 11 Sep 2026).
+   */
+  anaphylaxisToPreviousDose: "" | "yes" | "no";
+  anaphylaxisToComponent: "" | "yes" | "no";
   /** Bleeding disorder / anticoagulation: technique caution, not a stop. */
   bleedingDisorderOrAnticoagulated: boolean;
   /** Immunoglobulin or blood products in the previous three months: not a contraindication, record it (PGD v004 cautions). */
@@ -70,7 +75,10 @@ export interface HPVAdministration {
   batchNumber: string;
   expiryDate: string;
   site: string;
+  /** Derived from the prior dose count (prior doses + 1), not a free choice. */
   doseNumber: string;
+  /** Date of the previous dose in this course; required for dose 2 or 3 so the minimum interval can be checked. */
+  previousDoseDate: string;
   nextDoseDue: string;
   /** Where another vaccine was given at the same visit, its name and site (PGD v004 records row). */
   otherVaccineSameVisit: string;
@@ -97,8 +105,11 @@ export type HPVAction =
   | { type: "UPDATE_COUNSELLING"; field: keyof HPVCounselling; value: boolean }
   | { type: "UPDATE_ADMINISTRATION"; field: keyof HPVAdministration; value: string | boolean }
   | { type: "UPDATE_SUMMARY"; field: keyof BaseSummary; value: string }
-  | { type: "SET_STEP"; step: number };
+  | { type: "SET_STEP"; step: number }
+  | { type: "RESET" };
 
+// General informed consent is taken on the Schedule & Consent step, before
+// administration (adversarial review, 11 Sep 2026).
 export const STEP_LABELS = [
   "Patient Details",
   "Vaccine Assessment",
@@ -107,8 +118,6 @@ export const STEP_LABELS = [
   "Counselling",
   "Administration",
   "Summary & Declaration",
-  "Consultation Complete",
-  "Review",
 ];
 
 export const TOTAL_STEPS = STEP_LABELS.length;
@@ -152,8 +161,8 @@ export function createInitialConsultationState(): HPVConsultationState {
       immunosuppressedOrHIV: false,
       priorDoses: "",
       doseBefore25: false,
-      anaphylaxisToPreviousDose: false,
-      anaphylaxisToComponent: false,
+      anaphylaxisToPreviousDose: "",
+      anaphylaxisToComponent: "",
       bleedingDisorderOrAnticoagulated: false,
       bloodProductsLast3Months: false,
       nhsEligibilityDiscussed: false,
@@ -172,6 +181,7 @@ export function createInitialConsultationState(): HPVConsultationState {
       expiryDate: "",
       site: "",
       doseNumber: "",
+      previousDoseDate: "",
       nextDoseDue: "",
       otherVaccineSameVisit: "",
       adrenalineAvailable: false,

@@ -69,6 +69,12 @@ export function validateStep(state: STIConsultationState, stepIndex: number): st
       if (!t.chlamydiaDiagnosis) {
         return "Confirm the diagnosis of genital chlamydia (confirmed or strongly suspected)";
       }
+      if (!t.currentMedicines.trim()) {
+        return "Record the patient's current medicines (write 'none' if none): needed to check for QT-prolonging drugs and ergot derivatives";
+      }
+      if (!t.knownAllergies.trim()) {
+        return "Record the patient's known allergies (write 'none known' if none): needed to check for tetracycline and macrolide hypersensitivity";
+      }
       if (t.doxycyclineUnsuitable && !t.doxycyclineUnsuitableReason.trim()) {
         return "Record why doxycycline is unsuitable or contraindicated";
       }
@@ -96,6 +102,9 @@ export function validateStep(state: STIConsultationState, stepIndex: number): st
         const c = state.counselling;
         if (!c.medicineAdvice || !c.abstinenceAdvice || !c.worseningAdvice || !c.pilSupplied) {
           return "All treatment counselling points must be covered and the PIL supplied";
+        }
+        if (!c.retestAdvice) {
+          return "Advise retesting at 3 months to detect reinfection (and a test of cure at least 3 weeks after treatment where required)";
         }
         if (state.treatment.medicine === "doxycycline" && !c.contraceptionAdvice) {
           return "Advise effective contraception during and for 7 days after the doxycycline course";

@@ -27,14 +27,30 @@ export function acuteSevereFeatures(state: AsthmaConsultationState): string[] {
   return out;
 }
 
-/** Observations that must be measured and recorded before any supply. */
+/** Plausible ranges: a value outside these is a typo, not a measurement. */
+export const OBSERVATION_RANGES = {
+  spo2: { min: 50, max: 100 },
+  respiratoryRate: { min: 4, max: 60 },
+  heartRate: { min: 30, max: 220 },
+  pefPercentBest: { min: 5, max: 150 },
+} as const;
+
+function outOfRange(v: number | null, r: { min: number; max: number }): boolean {
+  return v !== null && (!Number.isInteger(v) || v < r.min || v > r.max);
+}
+
+/** Observations that must be measured and recorded (within plausible range) before any supply. */
 export function missingObservations(state: AsthmaConsultationState): string[] {
   const o = state.observations;
   const out: string[] = [];
   if (o.spo2 === null) out.push("pulse oximetry (SpO2)");
+  else if (outOfRange(o.spo2, OBSERVATION_RANGES.spo2)) out.push("SpO2 as a whole number between 50 and 100");
   if (o.respiratoryRate === null) out.push("respiratory rate");
+  else if (outOfRange(o.respiratoryRate, OBSERVATION_RANGES.respiratoryRate)) out.push("respiratory rate as a whole number between 4 and 60");
   if (o.heartRate === null) out.push("pulse");
+  else if (outOfRange(o.heartRate, OBSERVATION_RANGES.heartRate)) out.push("pulse as a whole number between 30 and 220");
   if (o.pefMeasured && o.pefPercentBest === null) out.push("PEF as % of best or predicted");
+  else if (o.pefMeasured && outOfRange(o.pefPercentBest, OBSERVATION_RANGES.pefPercentBest)) out.push("PEF as a whole number between 5 and 150%");
   return out;
 }
 
@@ -49,9 +65,13 @@ export function salbutamolArmBlockers(state: AsthmaConsultationState): string[] 
     out.push("not capable of using an inhaler device or willing to use a spacer");
   if (!a.onPreventer)
     out.push("no current preventer (inhaled corticosteroid) therapy: refer to the GP for review");
-  if (a.rescueCoursesLast12Months !== null && a.rescueCoursesLast12Months >= 1)
+  if (a.pgdRescueCoursesLast12Months !== null && a.pgdRescueCoursesLast12Months >= 1)
     out.push(
-      "a rescue course has already been supplied in the last 12 months: no more than one rescue course in 12 months is supplied under this PGD; refer to the GP for review"
+      "a rescue course has already been supplied under this PGD in the last 12 months: no more than one rescue course in 12 months is supplied under this PGD; refer to the GP for review"
+    );
+  if (a.rescueCoursesLast12Months !== null && a.rescueCoursesLast12Months >= 2)
+    out.push(
+      "more than one rescue course needed in the last 12 months: refer to the GP for review"
     );
   return out;
 }
@@ -95,13 +115,16 @@ export function getAllAlerts(state: AsthmaConsultationState): ClinicalAlert[] {
     });
   }
 
+  // Caution, not a stop: the document's inclusion is a documented diagnosis
+  // plus current preventer therapy. It does not require SABA use, and many
+  // patients with a documented diagnosis are on ICS/formoterol with no SABA.
   if (state.redFlags.neverUsedSalbutamolBefore) {
     alerts.push({
-      severity: "stop",
+      severity: "caution",
       code: "NEVER_USED_SABA",
-      message: "Patient has never used salbutamol before",
+      message: "Patient has not used salbutamol before",
       detail:
-        "Patient must normally use SABA for asthma. Refer to GP for initial diagnosis and treatment.",
+        "Not an exclusion under this PGD. Confirm the documented diagnosis and current preventer therapy, demonstrate inhaler technique and recommend a spacer.",
     });
   }
 
@@ -125,13 +148,22 @@ export function getAllAlerts(state: AsthmaConsultationState): ClinicalAlert[] {
         "A patient with no preventer is referred to the GP for review. Do not supply under this PGD.",
     });
   }
-  if (a.rescueCoursesLast12Months !== null && a.rescueCoursesLast12Months >= 1) {
+  if (a.pgdRescueCoursesLast12Months !== null && a.pgdRescueCoursesLast12Months >= 1) {
     alerts.push({
       severity: "stop",
       code: "RESCUE_COURSE_LIMIT",
-      message: "Rescue course already supplied in the last 12 months",
+      message: "Rescue course already supplied under this PGD in the last 12 months",
       detail:
-        "No more than one rescue course in 12 months is supplied under this PGD. A patient who has needed more than one rescue course in the last 12 months is referred to the GP for review.",
+        "No more than one rescue course in 12 months is supplied under this PGD. Refer to the GP for review.",
+    });
+  }
+  if (a.rescueCoursesLast12Months !== null && a.rescueCoursesLast12Months >= 2) {
+    alerts.push({
+      severity: "stop",
+      code: "RESCUE_COURSES_ANY_SOURCE",
+      message: "More than one rescue course needed in the last 12 months",
+      detail:
+        "A patient who has needed more than one rescue course in the last 12 months is referred to the GP for review. Do not supply.",
     });
   }
 
@@ -287,13 +319,16 @@ export const SALBUTAMOL_RECOMMENDATION: DoseRecommendation = {
   reason: "Acute symptom relief in an acute exacerbation of diagnosed asthma",
 };
 
-export function calculateDoseRecommendation(
+/** Every regimen chosen, in document order. */
+export function calculateDoseRecommendations(
   state: AsthmaConsultationState
-): DoseRecommendation | null {
+): DoseRecommendation[] {
   const ms = state.medicineSupply;
-  if (ms.salbutamol100mcgPMDI) return SALBUTAMOL_RECOMMENDATION;
-  if (ms.prednisolone5mg) return prednisoloneRecommendation(state);
-  return null;
+  const out: DoseRecommendation[] = [];
+  if (ms.salbutamol100mcgPMDI) out.push(SALBUTAMOL_RECOMMENDATION);
+  const pred = prednisoloneRecommendation(state);
+  if (ms.prednisolone5mg && pred) out.push(pred);
+  return out;
 }
 
 export function prednisoloneRecommendation(state: AsthmaConsultationState): DoseRecommendation | null {

@@ -22,33 +22,58 @@ const DOSE_NUMBER_LABELS: Record<string, string> = {
   'second-booster': 'Second booster',
 };
 
+const REFERRAL_LABELS: Record<string, string> = {
+  '': 'Not recorded',
+  gp: 'GP informed or referred',
+  'travel-clinic': 'Referred to a travel clinic',
+  specialist: 'Referred to a specialist service',
+  urgent: 'Urgent referral, urgency made explicit',
+  declined: 'No referral needed or declined; advice given',
+};
+
 interface JapaneseEncephalitisSummaryReportProps {
   state: JapaneseEncephalitisConsultationState;
   onPrint: () => void;
+  /** A stop exists: print "not supplied" and the exclusion outcome, no vaccine. */
+  blocked?: boolean;
+  nextDoseNote?: string;
 }
 
 export default function JapaneseEncephalitisSummaryReport({
   state,
   onPrint,
+  blocked = false,
+  nextDoseNote = '',
 }: JapaneseEncephalitisSummaryReportProps): React.ReactNode {
   const patientAge = calculateAge(state.patient.dateOfBirth);
   const patientAgeMonths = calculateAgeInMonths(state.patient.dateOfBirth);
   const doseVolume = getDoseVolume(patientAgeMonths);
+  const stopMessages = state.alerts.filter((a) => a.severity === 'stop').map((a) => a.message);
 
   return (
     <div className="space-y-8">
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-gray-900">
-            Japanese Encephalitis Vaccination Consultation Summary
+            Japanese Encephalitis Vaccination Consultation Record
           </h2>
           <button
             onClick={onPrint}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition print:hidden"
           >
-            Print Report
+            {blocked ? 'Print Exclusion Record' : 'Save & Print Record'}
           </button>
         </div>
+        {blocked && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-300 rounded-lg">
+            <p className="text-sm font-semibold text-red-800">NOT SUPPLIED: exclusion criteria met. No vaccine was administered under this PGD.</p>
+            <div className="mt-2 space-y-1 text-sm text-red-900">
+              <p><span className="text-gray-600">Reason: </span>{stopMessages.join('; ') || 'Not recorded'}</p>
+              <p><span className="text-gray-600">Advice given and decision reached: </span>{state.screening.exclusionAdvice || 'Not recorded'}</p>
+              <p><span className="text-gray-600">GP informed or referral: </span>{REFERRAL_LABELS[state.screening.exclusionReferral] ?? state.screening.exclusionReferral}</p>
+            </div>
+          </div>
+        )}
 
         {/* Patient Details Section */}
         <section className="mb-8 pb-8 border-b border-gray-200">
@@ -224,7 +249,8 @@ export default function JapaneseEncephalitisSummaryReport({
           </div>
         </section>
 
-        {/* Administration Summary */}
+        {/* Administration Summary (not printed when the patient was excluded) */}
+        {!blocked && (
         <section className="mb-8 pb-8 border-b border-gray-200">
           <h3 className="text-xl font-semibold text-gray-800 mb-4">
             Vaccine Administration
@@ -245,7 +271,7 @@ export default function JapaneseEncephalitisSummaryReport({
             <div className="flex justify-between">
               <span className="text-gray-600">Expiry date:</span>
               <span className="font-medium text-gray-900">
-                {new Date(state.administration.expiryDate).toLocaleDateString()}
+                {state.administration.expiryDate ? new Date(state.administration.expiryDate).toLocaleDateString() : 'Not recorded'}
               </span>
             </div>
             <div className="flex justify-between">
@@ -290,8 +316,15 @@ export default function JapaneseEncephalitisSummaryReport({
             )}
             <div className="flex justify-between">
               <span className="text-gray-600">Next dose due:</span>
+              <span className="font-medium text-gray-900 text-right">
+                {state.administration.nextDueDate ? new Date(state.administration.nextDueDate).toLocaleDateString() : 'No further dose scheduled'}
+                {nextDoseNote ? <span className="block text-xs font-normal text-gray-600">{nextDoseNote}</span> : null}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Adrenaline 1:1000 and anaphylaxis protocol confirmed before administration:</span>
               <span className="font-medium text-gray-900">
-                {new Date(state.administration.nextDueDate).toLocaleDateString()}
+                {state.administration.anaphylaxisKitChecked ? 'Yes' : 'No'}
               </span>
             </div>
             <div className="flex justify-between">
@@ -308,8 +341,10 @@ export default function JapaneseEncephalitisSummaryReport({
             </div>
           </div>
         </section>
+        )}
 
         {/* Post-Vaccine Observations */}
+        {!blocked && (
         <section className="mb-8 pb-8 border-b border-gray-200">
           <h3 className="text-xl font-semibold text-gray-800 mb-4">
             Post-Vaccine Observations
@@ -320,19 +355,15 @@ export default function JapaneseEncephalitisSummaryReport({
               <span className="font-medium text-gray-900">
                 {state.postVaccineObs.observationPeriod === '15-min'
                   ? '15 minutes'
-                  : '30 minutes'}
+                  : state.postVaccineObs.observationPeriod === '30-min'
+                  ? '30 minutes'
+                  : 'Not recorded'}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Observation period completed, seated:</span>
               <span className="font-medium text-gray-900">
                 {state.postVaccineObs.observationCompleted ? 'Yes' : 'No'}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Adrenaline 1:1000 and anaphylaxis protocol available:</span>
-              <span className="font-medium text-gray-900">
-                {state.postVaccineObs.anaphylaxisKitChecked ? 'Yes' : 'No'}
               </span>
             </div>
             <div className="flex justify-between">
@@ -369,6 +400,7 @@ export default function JapaneseEncephalitisSummaryReport({
             )}
           </div>
         </section>
+        )}
 
         {/* Pharmacist Declaration */}
         <section className="mb-8 pb-8 border-b border-gray-200">

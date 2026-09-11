@@ -39,9 +39,26 @@ interface TyphoidSummaryReportProps {
     counselledFoodWater: boolean;
     counselledFeverWarning: boolean;
     observationCompleted: boolean;
+    adverseReaction: boolean;
+    adverseReactionDetails: string;
   };
-  onBack: () => void;
+  /** A stop exists: print "not supplied", no vaccine, and a declaration that
+   *  does not say "no exclusion criteria applied". */
+  isBlocked: boolean;
+  exclusionOutcome: {
+    adviceGiven: string;
+    foodWaterAdviceGiven: boolean;
+    referral: string;
+  };
 }
+
+const REFERRAL_LABEL: Record<string, string> = {
+  '': 'Not recorded',
+  gp: 'Referred to GP',
+  'travel-clinic': 'Referred to a travel clinic',
+  'urgent-same-day': 'Urgent same-day assessment (fever after travel)',
+  declined: 'Patient declined referral; advice given',
+};
 
 const CONSENT_BASIS_LABEL: Record<string, string> = {
   self: 'Patient (aged 16 and over)',
@@ -56,14 +73,18 @@ export default function TyphoidSummaryReport({
   medicalHistory,
   clinicalAlerts,
   postVaccineAdvice,
-  onBack,
+  isBlocked,
+  exclusionOutcome,
 }: TyphoidSummaryReportProps) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+    <div className="bg-white rounded-xl border border-gray-200 print:border-0">
       {/* Header with print styles */}
       <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50 print:bg-white print:border-0 print:pb-4">
-        <h2 className="text-lg font-bold text-navy-900">Consultation Summary Report</h2>
+        <h2 className="text-lg font-bold text-navy-900">Consultation Record</h2>
         <p className="text-sm text-gray-500 mt-1">Typhoid ePGD. Typhoid (Vi Polysaccharide Vaccine) PGD v005, issued 11 September 2026</p>
+        {isBlocked && (
+          <p className="mt-2 text-sm font-semibold text-red-700">NOT SUPPLIED: exclusion criteria met. No vaccine was administered under this PGD.</p>
+        )}
       </div>
 
       {/* Report content */}
@@ -128,7 +149,19 @@ export default function TyphoidSummaryReport({
           <AlertSummary alerts={clinicalAlerts} />
         </div>
 
-        {/* Vaccine Administration */}
+        {/* Exclusion outcome, or vaccine administration */}
+        {isBlocked ? (
+        <div>
+          <SectionHeader>Exclusion Outcome</SectionHeader>
+          <div className="space-y-1.5">
+            <Row label="Reason" value={clinicalAlerts.filter((a) => a.severity === 'stop').map((a) => a.message).join('; ')} />
+            <Row label="Food and water hygiene advice given" value={exclusionOutcome.foodWaterAdviceGiven ? 'Yes' : 'No'} />
+            <Row label="Advice given and decision" value={exclusionOutcome.adviceGiven || 'Not recorded'} />
+            <Row label="Referral" value={REFERRAL_LABEL[exclusionOutcome.referral] ?? exclusionOutcome.referral} />
+            <Row label="Vaccine" value="Not supplied" />
+          </div>
+        </div>
+        ) : (
         <div>
           <SectionHeader>Vaccine Administration</SectionHeader>
           <div className="space-y-1.5">
@@ -159,8 +192,11 @@ export default function TyphoidSummaryReport({
             <Row label="Next booster due" value={summary.nextBoosterDue || 'Not recorded'} />
             <Row label="Adrenaline 1 in 1,000, anaphylaxis protocol and telephone available" value={summary.adrenalineAvailable ? 'Confirmed' : 'Not confirmed'} />
             <Row label="15 minute observation completed" value={postVaccineAdvice.observationCompleted ? 'Yes' : 'No'} />
+            <Row label="Adverse reaction" value={postVaccineAdvice.adverseReaction ? postVaccineAdvice.adverseReactionDetails || 'Yes, details not recorded' : 'None observed'} />
+            <Row label="Administered via PGD" value="Yes" />
           </div>
         </div>
+        )}
 
         {/* Patient Counselling */}
         <div>
@@ -209,30 +245,41 @@ export default function TyphoidSummaryReport({
         </div>
 
         {/* Pharmacist Declaration */}
-        <PharmacistDeclaration
-          pgdName="Typhoid"
-          pharmacistName={summary.pharmacistName}
-          pharmacistGPhC={summary.pharmacistGPhC}
-          pharmacyName={summary.pharmacyName}
-        />
+        {isBlocked ? (
+          <div>
+            <SectionHeader>Pharmacist Declaration</SectionHeader>
+            <p className="text-xs text-gray-600 mb-4">
+              I confirm that this patient was assessed under the Patient Group Direction for Typhoid, that exclusion criteria applied, that no vaccine was administered under the PGD, and that the advice given and the decision reached are recorded above.
+            </p>
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-1">Pharmacist name</p>
+                <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{summary.pharmacistName}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-1">GPhC number</p>
+                <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{summary.pharmacistGPhC}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-1">Pharmacy</p>
+                <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{summary.pharmacyName}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-1">Signature</p>
+                <div className="border-b border-gray-300 min-h-[2rem]" />
+              </div>
+            </div>
+          </div>
+        ) : (
+          <PharmacistDeclaration
+            pgdName="Typhoid"
+            pharmacistName={summary.pharmacistName}
+            pharmacistGPhC={summary.pharmacistGPhC}
+            pharmacyName={summary.pharmacyName}
+          />
+        )}
 
         <ReportFooter pgdName="Typhoid" />
-      </div>
-
-      {/* Back button */}
-      <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/30 flex items-center justify-between print:hidden">
-        <button
-          onClick={onBack}
-          className="px-5 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-navy-900 transition-colors"
-        >
-          &larr; Back to Consultation
-        </button>
-        <button
-          onClick={() => window.print()}
-          className="px-6 py-2.5 rounded-lg text-sm font-semibold bg-navy-900 hover:bg-navy-950 text-white transition-colors"
-        >
-          Print Consultation Record
-        </button>
       </div>
     </div>
   );

@@ -6,6 +6,8 @@ export interface CovidBoosterAssessment {
   previousCovidVaccine: boolean;
   /** Date of the previous COVID-19 vaccine dose, where known (PGD v006 records row). */
   previousDoseDate: string;
+  /** Date not known: the individual states the last dose was more than 3 months ago. Printed on the record. */
+  previousDoseDateUnknown: boolean;
   timelinessEligible: boolean;
   /** Under 3 months since the last dose but a shorter interval is specifically advised in national guidance for this individual. */
   shorterIntervalNationalGuidance: boolean;
@@ -13,10 +15,15 @@ export interface CovidBoosterAssessment {
   nhsStatus: '' | 'not-eligible' | 'eligible-prefers-private';
   /** Resident in a care home for older adults (NHS-eligible cohort). */
   careHomeResident: boolean;
-  anaphylaxisToPreviousDose: boolean;
-  anaphylaxisToPEG: boolean;
-  anaphylaxisToPolysorbate: boolean;
-  severeFebrilIllness: boolean;
+  /**
+   * Exclusions asked as explicit yes/no answers. They used to be booleans
+   * defaulting to false, rendered as pre-ticked "NOT documented" boxes, so
+   * the step could be passed without reading it (adversarial review, 11 Sep 2026).
+   */
+  anaphylaxisToPreviousDose: "" | "yes" | "no";
+  anaphylaxisToPEG: "" | "yes" | "no";
+  anaphylaxisToPolysorbate: "" | "yes" | "no";
+  severeFebrilIllness: "" | "yes" | "no";
   /** Exclusion: confirmed current COVID-19 infection, defer until recovered. */
   currentCovidInfection: boolean;
   onAnticoagulants: boolean;
@@ -59,6 +66,12 @@ export interface CovidBoosterSupply {
   lp81FormulationExplained: boolean;
   /** Other vaccine given at the same visit and its site (PGD v006: record the site of each). */
   coAdministeredVaccine: string;
+  /** Observed for 15 minutes after vaccination (required by the PGD where there is a history of allergy or previous vaccine reaction). */
+  observedFifteenMinutes: boolean;
+  /** Records row: details of any adverse reaction and the action taken. */
+  adverseReaction: string;
+  adverseReactionAction: string;
+  yellowCardSubmitted: boolean;
   /** PGD v006 consent block, under 16 only. */
   consentBasis: '' | 'parental' | 'gillick';
   parentName: string;
@@ -120,17 +133,19 @@ export type CovidBoosterAction =
   | { type: "UPDATE_COUNSELLING"; field: keyof CovidBoosterCounselling; value: boolean }
   | { type: "UPDATE_SUPPLY"; field: keyof CovidBoosterSupply; value: string | boolean }
   | { type: "UPDATE_SUMMARY"; field: keyof BaseSummary; value: string }
-  | { type: "SET_STEP"; step: number };
+  | { type: "SET_STEP"; step: number }
+  | { type: "RESET" };
 
+// Consent is taken before the vaccine is drawn up: the PGD lists valid
+// informed consent as an inclusion criterion (adversarial review, 11 Sep 2026).
 export const STEP_LABELS = [
   "Patient Details",
+  "Consent",
   "Vaccine Eligibility",
   "Allergy & Red Flags",
   "Counselling",
   "Vaccine Supply",
   "Summary & Declaration",
-  "Consultation Complete",
-  "Review",
 ];
 
 export const TOTAL_STEPS = STEP_LABELS.length;
@@ -163,14 +178,15 @@ gpEmail: "",
       ageConfirmed: false,
       previousCovidVaccine: false,
       previousDoseDate: "",
+      previousDoseDateUnknown: false,
       timelinessEligible: false,
       shorterIntervalNationalGuidance: false,
       nhsStatus: "",
       careHomeResident: false,
-      anaphylaxisToPreviousDose: false,
-      anaphylaxisToPEG: false,
-      anaphylaxisToPolysorbate: false,
-      severeFebrilIllness: false,
+      anaphylaxisToPreviousDose: "",
+      anaphylaxisToPEG: "",
+      anaphylaxisToPolysorbate: "",
+      severeFebrilIllness: "",
       currentCovidInfection: false,
       onAnticoagulants: false,
       bleedingDisorder: false,
@@ -188,6 +204,10 @@ gpEmail: "",
       administrationTime: "",
       lp81FormulationExplained: false,
       coAdministeredVaccine: "",
+      observedFifteenMinutes: false,
+      adverseReaction: "",
+      adverseReactionAction: "",
+      yellowCardSubmitted: false,
       consentBasis: "",
       parentName: "",
       parentRelationship: "",

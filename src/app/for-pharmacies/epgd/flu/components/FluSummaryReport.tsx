@@ -2,19 +2,8 @@
 
 import React from 'react';
 import { FluConsultationState, FLU_VACCINES, FLU_SEASON } from '../lib/flu-types';
-
-// Inline date utility function
-const calculateAge = (dateOfBirth: string): number => {
-  if (!dateOfBirth) return 0;
-  const today = new Date();
-  const birthDate = new Date(dateOfBirth);
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-    age--;
-  }
-  return age;
-};
+import { calculateAge } from '../../shared/types';
+import { hasHardStopContraindications } from '../lib/flu-clinical-logic';
 
 interface FluSummaryReportProps {
   state: FluConsultationState;
@@ -26,6 +15,7 @@ export default function FluSummaryReport({
   onPrint,
 }: FluSummaryReportProps): React.ReactNode {
   const patientAge = calculateAge(state.patient.dateOfBirth);
+  const hasStop = hasHardStopContraindications(state.contraindications);
 
   return (
     <div className="space-y-8">
@@ -56,8 +46,8 @@ export default function FluSummaryReport({
             <div>
               <p className="text-sm font-medium text-gray-600">Date of Birth</p>
               <p className="text-gray-900">
-                {new Date(state.patient.dateOfBirth).toLocaleDateString()} (Age:{' '}
-                {patientAge})
+                {state.patient.dateOfBirth ? new Date(state.patient.dateOfBirth).toLocaleDateString() : 'Not recorded'} (Age:{' '}
+                {patientAge !== null ? patientAge : 'unknown'})
               </p>
             </div>
             <div>
@@ -72,7 +62,7 @@ export default function FluSummaryReport({
               <p className="text-sm font-medium text-gray-600">Consent</p>
               <p className="text-gray-900">
                 {state.consent.informedConsentGiven ? 'Informed consent given' : 'Not recorded'}
-                {patientAge < 16 &&
+                {patientAge !== null && patientAge < 16 &&
                   (state.childConsent.basis === 'parental'
                     ? `, by person with parental responsibility: ${state.childConsent.parentName} (${state.childConsent.parentRelationship})`
                     : state.childConsent.basis === 'gillick'
@@ -249,6 +239,20 @@ export default function FluSummaryReport({
           <h3 className="text-xl font-semibold text-gray-800 mb-4">
             Vaccine Administration Details
           </h3>
+          {hasStop ? (
+          <div className="space-y-3">
+            <div className="flex justify-between">
+              <span className="text-gray-600">Outcome:</span>
+              <span className="font-medium text-red-700">NOT SUPPLIED: exclusion criteria met (see clinical alerts)</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Advice given:</span>
+              <span className="font-medium text-gray-900">
+                {state.summary.clinicalNotes || 'Advised on alternative options and how to access them; informed or referred to the GP as appropriate'}
+              </span>
+            </div>
+          </div>
+          ) : (
           <div className="space-y-3">
             <div className="flex justify-between">
               <span className="text-gray-600">Vaccine type:</span>
@@ -343,6 +347,7 @@ export default function FluSummaryReport({
               </div>
             )}
           </div>
+          )}
         </section>
 
         {/* Advice given */}
@@ -448,14 +453,45 @@ export default function FluSummaryReport({
           </section>
         )}
 
+        {/* Immuniser declaration (PGD records row: name and registration number of the healthcare professional administering) */}
+        <section className="mb-8 pb-8 border-b border-gray-200">
+          <h3 className="text-xl font-semibold text-gray-800 mb-4">
+            Immuniser Declaration
+          </h3>
+          <p className="text-sm text-gray-700 mb-4">
+            {hasStop
+              ? `I confirm that this consultation was conducted in accordance with the Patient Group Direction for seasonal influenza vaccines (${FLU_SEASON}), version 004, that an exclusion criterion applied, that no vaccine was administered, and that the patient was advised as recorded above.`
+              : `I confirm that this vaccine was administered in accordance with the Patient Group Direction for seasonal influenza vaccines (${FLU_SEASON}), version 004, that the patient met the inclusion criteria and that no exclusion criterion applied.`}
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Name of immuniser</p>
+              <p className="text-gray-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{state.summary.pharmacistName || ''}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-600">GPhC number</p>
+              <p className="text-gray-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{state.summary.pharmacistGPhC || ''}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-600">Signature and date</p>
+              <div className="border-b border-gray-300 min-h-[2rem]" />
+            </div>
+          </div>
+          {state.summary.clinicalNotes && (
+            <div className="mt-4">
+              <p className="text-sm font-medium text-gray-600">Clinical notes</p>
+              <p className="text-gray-900 whitespace-pre-wrap">{state.summary.clinicalNotes}</p>
+            </div>
+          )}
+        </section>
+
         {/* Print Button */}
         <div className="flex justify-end gap-4 pt-6">
           <button
             onClick={onPrint}
             className="inline-flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
           >
-            <span>🖨️</span>
-            Print Summary
+            {hasStop ? 'Save as not supplied' : 'Save & Print Record'}
           </button>
         </div>
       </div>

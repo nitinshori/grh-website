@@ -17,6 +17,7 @@ import {
   getAllAlerts,
   hasHardStops,
   calculateDoseRecommendation,
+  daysCovered,
 } from "./lib/anxiety-propranolol-clinical-logic";
 import { validateStep } from "./lib/anxiety-propranolol-validation";
 import { calculateAge } from "../shared/types";
@@ -125,7 +126,10 @@ export default function AnxietyPropranololClient() {
   }, [state, alerts, doseRecommendation]);
 
   const validationError = useMemo(() => validateStep(state.currentStep, state), [state.currentStep, state]);
-  const canProceed = !validationError && (!hasStops || state.currentStep >= 6);
+  // A stop anywhere disables Next on every step. Stops used to gate steps 0
+  // to 5 only, so an exclusion ticked after the Contraindications step had
+  // been passed was never enforced (adversarial review, 11 Sep 2026).
+  const canProceed = !validationError && !hasStops;
 
   const markStepComplete = useCallback(() => {
     setCompletedSteps((prev) => new Set([...prev, state.currentStep]));
@@ -149,7 +153,12 @@ export default function AnxietyPropranololClient() {
   };
 
   // ─── Consultation Record Data (for saving to database) ───
+  // Returns a record on every step, including before a medicine is chosen,
+  // so an exclusion can be saved as "not supplied" from the step it is
+  // raised on. Falls back to the pharmacist profile if the Summary step has
+  // not been reached.
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    const medicineChosen = !hasStops && !!state.medicineSupply.regimen && !!doseRecommendation;
     return {
       patient: {
         firstName: state.patient.firstName,
@@ -161,22 +170,54 @@ export default function AnxietyPropranololClient() {
         address: state.patient.address,
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
+        gpAddress: state.patient.gpAddress,
+        gpPhone: state.patient.gpPhone,
+        gpEmail: state.patient.gpEmail,
+        gpOdsCode: state.patient.gpOdsCode,
       },
-      clinicalData: state as unknown as Record<string, unknown>,
+      clinicalData: { ...updatedState, hasStops } as unknown as Record<string, unknown>,
       outcome: hasStops ? "not_supplied" : "completed",
+      ...(medicineChosen
+        ? {
+            medicine: {
+              name: "Propranolol 10mg tablets",
+              dose: `${doseRecommendation.dose}, ${doseRecommendation.frequency ?? ""}, oral`.trim(),
+              duration: doseRecommendation.duration,
+              quantity: state.medicineSupply.quantity ?? undefined,
+            },
+          }
+        : {}),
       summary: {
-        pharmacistName: state.summary.pharmacistName,
-        pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacistName: state.summary.pharmacistName || __pharmProfile?.name || "",
+        pharmacistGPhC: state.summary.pharmacistGPhC || __pharmProfile?.gphcNumber || "",
+        pharmacyName: state.summary.pharmacyName || __pharmProfile?.pharmacyName,
+        pharmacyAddress: state.summary.pharmacyAddress || __pharmProfile?.pharmacyAddress,
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: state.consent.notifyGp },
     };
-  }, [state, hasStops]);
+  }, [state, updatedState, hasStops, doseRecommendation, __pharmProfile]);
 
   const handleNewConsultation = useCallback(() => {
     dispatch({ type: "RESET" });
     setCompletedSteps(new Set());
   }, []);
+
+  // Every StepWrapper gets the same gating: a stop blocks Next everywhere
+  // (not just on the step it was raised on), and every step can save the
+  // consultation as "not supplied".
+  const wrapperProps = {
+    currentStep: state.currentStep,
+    totalSteps: TOTAL_STEPS,
+    onNext: handleNextStep,
+    onPrev: handlePrevStep,
+    canProceed,
+    validationError,
+    isBlocked: hasStops,
+    getConsultationData,
+  };
 
 
   const renderCurrentStep = () => {
@@ -185,12 +226,7 @@ export default function AnxietyPropranololClient() {
         return (
           <StepWrapper
             title="Patient Details"
-            currentStep={state.currentStep}
-            totalSteps={TOTAL_STEPS}
-            onNext={handleNextStep}
-            onPrev={handlePrevStep}
-            canProceed={canProceed}
-            validationError={validationError}
+            {...wrapperProps}
           >
             <PatientDetailsStep
               patient={state.patient}
@@ -203,12 +239,7 @@ export default function AnxietyPropranololClient() {
         return (
           <StepWrapper
             title="Consent"
-            currentStep={state.currentStep}
-            totalSteps={TOTAL_STEPS}
-            onNext={handleNextStep}
-            onPrev={handlePrevStep}
-            canProceed={canProceed}
-            validationError={validationError}
+            {...wrapperProps}
           >
             <ConsentStep
               consent={state.consent}
@@ -221,12 +252,7 @@ export default function AnxietyPropranololClient() {
         return (
           <StepWrapper
             title="Anxiety Assessment"
-            currentStep={state.currentStep}
-            totalSteps={TOTAL_STEPS}
-            onNext={handleNextStep}
-            onPrev={handlePrevStep}
-            canProceed={canProceed}
-            validationError={validationError}
+            {...wrapperProps}
           >
             <div className="space-y-4">
               <SelectInput
@@ -235,11 +261,12 @@ export default function AnxietyPropranololClient() {
                 onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "anxietyType", value: v })}
                 options={[
                   { value: "situational", label: "Situational (exam, public speaking, performance)" },
-                  { value: "generalized", label: "Generalised anxiety disorder" },
-                  { value: "social", label: "Social anxiety" },
+                  { value: "generalized", label: "Generalised anxiety disorder (outside this PGD: refer)" },
+                  { value: "social", label: "Social anxiety disorder, not tied to a discrete performance situation (outside this PGD: refer)" },
                 ]}
                 required
               />
+              <AlertBanner alerts={alerts.filter((a) => a.code === "ANX_GAD" || a.code === "ANX_SOCIAL")} />
 
               <TextArea
                 label="Trigger Situation"
@@ -271,49 +298,15 @@ export default function AnxietyPropranololClient() {
         return (
           <StepWrapper
             title="Medical History"
-            currentStep={state.currentStep}
-            totalSteps={TOTAL_STEPS}
-            onNext={handleNextStep}
-            onPrev={handlePrevStep}
-            canProceed={canProceed}
-            validationError={validationError}
+            {...wrapperProps}
           >
             <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
-              <Checkbox
-                label="Asthma or COPD with bronchospasm"
-                checked={state.medicalHistory.asthmaOrCOPD}
-                onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "asthmaOrCOPD", value: v })}
-              />
-
-              <Checkbox
-                label="Cardiac conduction disorder"
-                checked={state.medicalHistory.cardiacConduction}
-                onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "cardiacConduction", value: v })}
-              />
-
-              <Checkbox
-                label="Bradycardia (resting HR &lt;50 bpm)"
-                checked={state.medicalHistory.bradycardia}
-                onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "bradycardia", value: v })}
-              />
-
-              <Checkbox
-                label="Heart failure (any grade)"
-                checked={state.medicalHistory.heartFailure}
-                onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "heartFailure", value: v })}
-              />
-
-              <Checkbox
-                label="Prinzmetal's angina (vasospastic angina)"
-                checked={state.medicalHistory.prinzmetalsAngina}
-                onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "prinzmetalsAngina", value: v })}
-              />
-
-              <Checkbox
-                label="Pheochromocytoma"
-                checked={state.medicalHistory.pheochromocytoma}
-                onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "pheochromocytoma", value: v })}
-              />
+              <p className="text-xs text-gray-600">
+                The exclusions (asthma or bronchospasm, heart block, bradycardia, hypotension, heart failure, Prinzmetal&apos;s angina, phaeochromocytoma and the rest) are asked once, on the Contraindications step, where each one stops supply. This step records the PGD cautions.
+              </p>
+              <p className="pt-2 text-xs font-semibold uppercase tracking-wide text-amber-800">
+                PGD cautions (supply may proceed with counselling)
+              </p>
 
               <Checkbox
                 label="Diabetes mellitus"
@@ -338,10 +331,6 @@ export default function AnxietyPropranololClient() {
                 checked={state.medicalHistory.renalImpairment}
                 onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "renalImpairment", value: v })}
               />
-
-              <p className="pt-2 text-xs font-semibold uppercase tracking-wide text-amber-800">
-                PGD cautions (supply may proceed with counselling)
-              </p>
 
               <Checkbox
                 label="First-degree heart block"
@@ -393,19 +382,18 @@ export default function AnxietyPropranololClient() {
         return (
           <StepWrapper
             title="Current Medications"
-            currentStep={state.currentStep}
-            totalSteps={TOTAL_STEPS}
-            onNext={handleNextStep}
-            onPrev={handlePrevStep}
-            canProceed={canProceed}
-            validationError={validationError}
+            {...wrapperProps}
           >
             <TextArea
               label="Current medications and doses"
-              value={""}
-              onChange={() => {}}
-              placeholder="e.g., Sertraline 50mg daily, Venlafaxine 150mg daily, Metformin 1g BD"
+              value={state.medicalHistory.currentMedications}
+              onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "currentMedications", value: v })}
+              placeholder="e.g., Sertraline 50mg daily, Metformin 1g BD; or 'none'"
+              required
             />
+            <p className="mt-2 text-xs text-gray-600">
+              Check the list for another beta-blocker, verapamil or diltiazem (exclusions, asked on the next step) and for insulin or other hypoglycaemia risk.
+            </p>
           </StepWrapper>
         );
 
@@ -413,15 +401,35 @@ export default function AnxietyPropranololClient() {
         return (
           <StepWrapper
             title="Contraindications Check"
-            currentStep={state.currentStep}
-            totalSteps={TOTAL_STEPS}
-            onNext={handleNextStep}
-            onPrev={handlePrevStep}
-            canProceed={canProceed}
-            validationError={validationError}
-            isBlocked={hasStops}
+            {...wrapperProps}
           >
             <AlertBanner alerts={alerts} />
+            <div className="mb-4 p-4 bg-white border border-gray-200 rounded-lg">
+              <p className="text-sm font-medium text-navy-900 mb-1">Measurements taken today</p>
+              <p className="text-xs text-gray-600 mb-3">
+                The PGD excludes on a resting heart rate below 50 bpm and a systolic blood pressure below 90 mmHg. Both readings are required and are printed on the record.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <NumberInput
+                  label="Resting heart rate"
+                  value={state.contraindications.restingHeartRate}
+                  onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "restingHeartRate", value: v })}
+                  min={20}
+                  max={250}
+                  unit="bpm"
+                  required
+                />
+                <NumberInput
+                  label="Systolic blood pressure"
+                  value={state.contraindications.systolicBP}
+                  onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "systolicBP", value: v })}
+                  min={50}
+                  max={300}
+                  unit="mmHg"
+                  required
+                />
+              </div>
+            </div>
             <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
               <Checkbox
                 label="Asthma, or history of bronchospasm"
@@ -439,12 +447,14 @@ export default function AnxietyPropranololClient() {
                 label="Severe bradycardia (heart rate below 50 bpm at rest)"
                 checked={state.contraindications.severeBradycardia}
                 onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "severeBradycardia", value: v })}
+                description="Also raised automatically from the measured heart rate above."
               />
 
               <Checkbox
                 label="Hypotension (systolic BP below 90 mmHg)"
                 checked={state.contraindications.hypotension}
                 onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "hypotension", value: v })}
+                description="Also raised automatically from the measured systolic BP above."
               />
 
               <Checkbox
@@ -555,13 +565,7 @@ export default function AnxietyPropranololClient() {
         return (
           <StepWrapper
             title="Medicine Supply"
-            currentStep={state.currentStep}
-            totalSteps={TOTAL_STEPS}
-            onNext={handleNextStep}
-            onPrev={handlePrevStep}
-            canProceed={canProceed}
-            validationError={validationError}
-            isBlocked={hasStops}
+            {...wrapperProps}
           >
             <div className="space-y-4">
               <div className="p-3 bg-[color:var(--tenant-primary)]/10 rounded-lg border border-[color:var(--tenant-primary)]/30">
@@ -580,6 +584,32 @@ export default function AnxietyPropranololClient() {
                 required
               />
 
+              <SelectInput
+                label="Dose advised (per administration)"
+                value={state.medicineSupply.propranololDose}
+                onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "propranololDose", value: v })}
+                options={[
+                  { value: "10", label: "10mg (one 10mg tablet)" },
+                  { value: "20", label: "20mg (two 10mg tablets)" },
+                  { value: "30", label: "30mg (three 10mg tablets)" },
+                  { value: "40", label: "40mg (four 10mg tablets)" },
+                ]}
+                required
+              />
+
+              {state.medicineSupply.regimen === "regular" && (
+                <SelectInput
+                  label="Frequency"
+                  value={state.medicineSupply.timesDaily}
+                  onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "timesDaily", value: v })}
+                  options={[
+                    { value: "2", label: "Twice daily" },
+                    { value: "3", label: "Three times daily" },
+                  ]}
+                  required
+                />
+              )}
+
               <NumberInput
                 label="Quantity to Supply"
                 value={state.medicineSupply.quantity}
@@ -588,10 +618,16 @@ export default function AnxietyPropranololClient() {
                 max={28}
                 placeholder="up to 28 tablets"
                 unit="tablets"
+                required
               />
               <p className="text-xs font-medium text-red-800">
                 Propranolol 10mg tablets only. Maximum 28 tablets, 280mg in total: the whole supply taken at once must stay below 320mg, because propranolol is cardiotoxic in overdose. The 40mg strength is not authorised. One supply per situational event or course; review before any repeat.
               </p>
+              {daysCovered(state) !== null && (
+                <div className="p-3 rounded-lg border border-amber-300 bg-amber-50 text-xs text-amber-900">
+                  At this dose and frequency the {state.medicineSupply.quantity} tablets cover {daysCovered(state)} day{daysCovered(state) === 1 ? "" : "s"}. The PGD authorises one supply of up to 28 tablets per course and asks for review at 4 weeks: any further supply needs a review first, and the patient should be told how long this supply lasts.
+                </div>
+              )}
             </div>
           </StepWrapper>
         );
@@ -600,20 +636,15 @@ export default function AnxietyPropranololClient() {
         return (
           <StepWrapper
             title="Counselling"
-            currentStep={state.currentStep}
-            totalSteps={TOTAL_STEPS}
-            onNext={handleNextStep}
-            onPrev={handlePrevStep}
-            canProceed={canProceed}
-            validationError={validationError}
+            {...wrapperProps}
           >
             <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
               <p className="text-sm font-medium text-navy-900 mb-3">Confirm counselling covered:</p>
               <Checkbox
                 label={
                   state.medicineSupply.regimen === "regular"
-                    ? "Take as directed, two to three times daily, maximum 120mg daily; review at 4 weeks, one supply per course"
-                    : "PRN use only: 30 to 60 minutes before the situation, maximum 120mg daily, one supply per situational event"
+                    ? `Take ${state.medicineSupply.propranololDose}mg ${state.medicineSupply.timesDaily === "3" ? "three times" : "twice"} daily, maximum 120mg daily; this supply lasts ${daysCovered(state) ?? "?"} days and a review is needed before any further supply`
+                    : `PRN use only: ${state.medicineSupply.propranololDose}mg 30 to 60 minutes before the situation, maximum 120mg daily, one supply per situational event`
                 }
                 checked={state.counselling.prnUseOnly}
                 onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "prnUseOnly", value: v })}
@@ -658,7 +689,7 @@ export default function AnxietyPropranololClient() {
                 checked={state.counselling.avoidVerapamil}
                 onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "avoidVerapamil", value: v })}
               />
-              <p className="text-xs text-gray-600">Supply the patient information leaflet (PIL) provided with the medication.</p>
+              <p className="text-xs text-gray-600">Supply the patient information leaflet (PIL) provided with the medication. Report suspected adverse effects via the Yellow Card scheme (yellowcard.mhra.gov.uk) and inform the GP as appropriate.</p>
             </div>
           </StepWrapper>
         );
@@ -667,13 +698,7 @@ export default function AnxietyPropranololClient() {
         return (
           <StepWrapper
             title="Summary"
-            currentStep={state.currentStep}
-            totalSteps={TOTAL_STEPS}
-            onNext={handleNextStep}
-            onPrev={handlePrevStep}
-            canProceed={canProceed}
-            validationError={validationError}
-          getConsultationData={getConsultationData}
+            {...wrapperProps}
           onNewConsultation={handleNewConsultation}
           >
             <div className="space-y-4">

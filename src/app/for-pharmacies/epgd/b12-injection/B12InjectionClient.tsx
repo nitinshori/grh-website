@@ -6,9 +6,42 @@ import { StepWrapper } from "../shared/components/StepWrapper"
 import type { ConsultationRecordData } from "../shared/hooks/useConsultationTracking"
 import { PatientDetailsStep } from "../shared/steps/PatientDetailsStep"
 import { ConsentStep } from "../shared/steps/ConsentStep"
-import { TextInput, TextArea, Checkbox } from "../shared/components/FormInputs"
+import { TextInput, TextArea, Checkbox, NumberInput, SelectInput } from "../shared/components/FormInputs"
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile"
-import { calculateAge } from "../shared/types"
+import { calculateAge, validatePatientStep, validateConsentStep, validateSummaryStep } from "../shared/types"
+import { PrintedRecord } from "./components/PrintedRecord"
+
+// Aligned to: Vitamin B12 and folate PGD v008 (PGD 1 of 3 hydroxocobalamin
+// injection; PGD 2 of 3 cyanocobalamin tablets), issued 11 September 2026.
+const PGD_VERSION_LINE = "Vitamin B12 and folate PGD v008 (PGD 1 of 3 and 2 of 3), issued 11 September 2026"
+const INJECTION_NAME = "Hydroxocobalamin 1 mg/ml solution for injection"
+const TABLET_NAME = "Cyanocobalamin 50 microgram tablets"
+
+// Document thresholds (NICE NG239): confirmed deficiency is total B12 below
+// 180 ng/L (133 pmol/L) or active B12 below 25 pmol/L; 180 to 350 ng/L (133
+// to 258 pmol/L) or active 25 to 70 pmol/L is indeterminate; above that
+// deficiency is unlikely.
+type B12Classification = "deficient" | "indeterminate" | "unlikely" | null
+function classifyB12(testType: string, value: number | null, unit: string): B12Classification {
+  if (value === null || !testType) return null
+  if (testType === "active") {
+    if (value < 25) return "deficient"
+    if (value <= 70) return "indeterminate"
+    return "unlikely"
+  }
+  const ngL = unit === "pmol/L" ? value / 0.738 : value
+  if (ngL < 180) return "deficient"
+  if (ngL <= 350) return "indeterminate"
+  return "unlikely"
+}
+
+function daysBetween(fromIso: string, toIso: string): number | null {
+  if (!fromIso || !toIso) return null
+  const from = new Date(fromIso)
+  const to = new Date(toIso)
+  if (isNaN(from.getTime()) || isNaN(to.getTime())) return null
+  return Math.floor((to.getTime() - from.getTime()) / (24 * 60 * 60 * 1000))
+}
 
 const STEP_TITLES = [
   "Patient Details",
@@ -25,13 +58,31 @@ export function B12InjectionClient() {
 
   const [state, setState] = useState({
     patient: { firstName: "", lastName: "", dateOfBirth: "", age: null as number | null, gpName: "", gpPractice: "", gpAddress: "", gpPhone: "", gpEmail: "", gpOdsCode: "", nhsNumber: "", address: "", phone: "", email: "" },
-    consent: { informedConsentGiven: false, idVerified: false, idType: "", patientAwarePrivateService: false },
+    consent: { informedConsentGiven: false, idVerified: false, idType: "", patientAwarePrivateService: false, notifyGp: false } as { informedConsentGiven: boolean; idVerified: boolean; idType: string; patientAwarePrivateService: boolean; notifyGp?: boolean },
     eligibility: {
       // Indication
       confirmedDeficiency: false,
       deficiencySource: "" as "" | "labs" | "established" | "post-bariatric" | "dietary",
-      labB12Result: "",
+      // The result is structured so the tool can compare it with the
+      // document's thresholds rather than accept "normal" as confirmation.
+      b12TestType: "" as "" | "total" | "active",
+      b12Value: null as number | null,
+      b12Unit: "ng/L" as "ng/L" | "pmol/L",
+      // Indeterminate result: only confirmed with a raised MMA or a
+      // documented clinical picture (document guidance summary).
+      indeterminateJustified: false,
+      indeterminateJustification: "",
       labDate: "",
+      // Established maintenance patients: the original result or its
+      // source, and the established cause, are still required record items.
+      establishedResultSource: "",
+      establishedCause: "",
+      // Severe deficiency on a loading course: plasma potassium must be
+      // monitored during initial correction (document caution).
+      severeDeficiency: false,
+      potassiumMonitoringPlan: "",
+      // Record: advice given if excluded or declines treatment
+      referralAdvice: "",
       // PGD v008: FBC, blood film and serum folate must have been obtained
       // and reviewed alongside the B12 result (a B12-only point of care
       // device does not satisfy the PGD).
@@ -72,6 +123,11 @@ export function B12InjectionClient() {
     treatment: {
       regime: "" as "" | "loading" | "maintenance" | "oral-tablets",
       doseNumber: "" as "" | "1" | "2" | "3" | "4" | "5" | "6",
+      // Date of the previous injection, for the interval check (loading:
+      // three times a week for two weeks; maintenance: every 2 to 3 months
+      // or twice yearly).
+      previousInjectionDate: "",
+      loadingForEstablishedReason: "",
       nextDueDate: "",
       // Diet-related maintenance: cyanocobalamin tablets 50 to 150 mcg daily
       // OR 6-monthly hydroxocobalamin 1 mg IM.
@@ -114,20 +170,41 @@ export function B12InjectionClient() {
   // Eligibility logic (PGD v008, 11 September 2026): blocks if any
   // exclusion shared by all three arms is ticked, requires a documented
   // deficiency basis and the full blood work-up (FBC, film, folate).
-  const isEstablishedPatient = state.eligibility.deficiencySource === "established"
-  const bloodRecordComplete =
-    isEstablishedPatient ||
-    (!!state.eligibility.labB12Result && !!state.eligibility.labDate && !!state.eligibility.labDevice)
-  const eligibilityValid =
-    state.eligibility.confirmedDeficiency &&
-    !!state.eligibility.deficiencySource &&
-    state.eligibility.bloodsReviewed &&
-    bloodRecordComplete &&
-    !state.eligibility.anyHypersensitivity &&
-    !state.eligibility.hereditaryCobalaminDisorder &&
-    !state.eligibility.pregnant &&
-    !state.eligibility.neuroSymptoms &&
-    !state.eligibility.abnormalBloodPicture
+  const el = state.eligibility
+  const today = new Date().toISOString().split("T")[0]
+  const isEstablishedPatient = el.deficiencySource === "established"
+  const b12Class = classifyB12(el.b12TestType, el.b12Value, el.b12Unit)
+  // Deficiency is confirmed by the result: below threshold, or an
+  // indeterminate result with a documented MMA or clinical justification.
+  const resultConfirmsDeficiency =
+    b12Class === "deficient" ||
+    (b12Class === "indeterminate" && el.indeterminateJustified && !!el.indeterminateJustification.trim())
+  const resultRefutesDeficiency = b12Class === "unlikely"
+  const bloodRecordComplete = isEstablishedPatient
+    ? !!el.establishedResultSource.trim() && !!el.establishedCause.trim()
+    : !!el.b12TestType && el.b12Value !== null && !!el.labDate && !!el.labDevice
+  const stopReason: string | null =
+    state.patient.age !== null && state.patient.age < 18 ? "Patient is under 18"
+    : el.neuroSymptoms ? "New or progressive neurological symptoms or signs: refer for same-week medical assessment"
+    : el.abnormalBloodPicture ? "Abnormal full blood count or blood film beyond macrocytic anaemia: refer"
+    : el.pregnant ? "Pregnancy: refer to the GP or midwife"
+    : el.anyHypersensitivity ? "Known hypersensitivity: do not administer or supply"
+    : el.hereditaryCobalaminDisorder ? "Hereditary problem of cobalamin metabolism: refer"
+    : !isEstablishedPatient && resultRefutesDeficiency ? "B12 result above the deficiency thresholds (deficiency unlikely): deficiency not confirmed on testing"
+    : !isEstablishedPatient && b12Class === "indeterminate" && !resultConfirmsDeficiency ? "Indeterminate B12 result without a raised MMA or documented clinical justification: deficiency not confirmed on testing"
+    : null
+  const hasStop = stopReason !== null
+  const eligibilityError: string | null =
+    hasStop ? `${stopReason}. Do not treat under this PGD; document the advice given.`
+    : !el.confirmedDeficiency ? "Confirm that B12 deficiency has been documented on blood testing"
+    : !el.deficiencySource ? "Select the basis for the diagnosis"
+    : !el.bloodsReviewed ? "Confirm the full blood count, blood film and serum folate were obtained and reviewed"
+    : !bloodRecordComplete
+      ? (isEstablishedPatient
+          ? "Record the original result relied on (or its source, for example GP record dated ...) and the established cause"
+          : "Record the B12 result relied on: test type, value, date sampled and laboratory")
+    : !isEstablishedPatient && !resultConfirmsDeficiency ? "The B12 result does not confirm deficiency under this PGD"
+    : null
 
   // Treatment plan needs a regime + dose-number choice, and the arm-specific
   // inclusion / exclusion checks for that regime.
@@ -147,32 +224,60 @@ export function B12InjectionClient() {
     state.eligibility.deficiencySource === "dietary" &&
     state.eligibility.malabsorptionExcluded &&
     !state.eligibility.lhonHistory
-  const treatmentValid =
-    !!state.treatment.regime &&
-    (state.treatment.regime === "loading"
-      ? !!state.treatment.doseNumber && injectionSuitable
-      : state.treatment.regime === "maintenance"
-        ? maintenanceIntervalMatchesPathway && injectionSuitable
-        : tabletEligible && !!state.treatment.tabletDose && !!state.treatment.tabletSupplyDays) &&
-    !!state.treatment.nextDueDate
+  const tr = state.treatment
+  const daysSincePrevious = daysBetween(tr.previousInjectionDate, today)
+  const isFirstLoadingDose = tr.regime === "loading" && tr.doseNumber === "1"
+  const previousDateNeeded = (tr.regime === "loading" && !!tr.doseNumber && !isFirstLoadingDose) || tr.regime === "maintenance"
+  const tabletCount = tr.tabletDose && tr.tabletSupplyDays ? (Number(tr.tabletDose) / 50) * Number(tr.tabletSupplyDays) : null
+  const treatmentError: string | null =
+    !tr.regime ? "Select the treatment regime"
+    : isInjection && !injectionSuitable ? "Patient is excluded from the injection pathway (site infection, bleeding risk not assessed, or not suitable for IM injection). Refer."
+    : isOralTablets && !tabletEligible ? "Cyanocobalamin tablets are only for diet related deficiency with malabsorption and pernicious anaemia thought unlikely, and are excluded in Leber's hereditary optic neuropathy. Use the injection pathway or refer."
+    : tr.regime === "loading" && isEstablishedPatient && !tr.loadingForEstablishedReason.trim() ? "A loading course for a patient on established maintenance needs a documented reason (for example a lapse in treatment); otherwise select maintenance"
+    : tr.regime === "loading" && !tr.doseNumber ? "Select which loading dose this is"
+    : tr.regime === "loading" && el.severeDeficiency && !el.potassiumMonitoringPlan.trim() ? "Severe deficiency on a loading course: record the arrangement for monitoring plasma potassium during initial correction"
+    : tr.regime === "maintenance" && !maintenanceIntervalMatchesPathway ? "Select the maintenance pathway and a matching interval"
+    : previousDateNeeded && !tr.previousInjectionDate ? "Date of the previous injection is required"
+    : previousDateNeeded && daysSincePrevious !== null && daysSincePrevious < 0 ? "Previous injection date cannot be in the future"
+    : tr.regime === "loading" && !isFirstLoadingDose && daysSincePrevious !== null && daysSincePrevious < 1 ? "Loading doses are given on alternate days (three times a week): the previous dose was today"
+    : tr.regime === "loading" && !isFirstLoadingDose && daysSincePrevious !== null && daysSincePrevious > 7 ? `More than 7 days since the previous loading dose (${daysSincePrevious} days): the 2 week course is broken. Review with the GP before continuing.`
+    : tr.regime === "maintenance" && daysSincePrevious !== null && daysSincePrevious < 42 ? `Only ${daysSincePrevious} days since the previous injection: maintenance is every 2 to 3 months (twice yearly if diet related). Do not give early under this PGD.`
+    : isOralTablets && (!tr.tabletDose || !tr.tabletSupplyDays) ? "Select the daily dose and the supply"
+    : !tr.nextDueDate ? (isOralTablets ? "Review date is required" : "Next injection due date is required")
+    : null
 
   // Administration needs batch/expiry (all arms); injections also need site,
-  // adrenaline available and the post-injection observation.
-  const adminValid =
-    !!state.administration.batchNumber &&
-    !!state.administration.expiryDate &&
-    (isOralTablets ||
-      (!!state.administration.injectionSite &&
-        state.administration.adrenalineAvailable &&
-        !!state.administration.postObsMinutes &&
-        state.administration.patientWell))
+  // adrenaline available and the post-injection observation. An adverse
+  // reaction must be described.
+  const ad = state.administration
+  const adminError: string | null =
+    !ad.batchNumber ? "Batch number is required"
+    : !ad.expiryDate ? "Expiry date is required"
+    : ad.expiryDate < today ? "Expiry date is in the past: do not use this ampoule or pack"
+    : isOralTablets ? null
+    : !ad.injectionSite ? "Injection site is required"
+    : !ad.adrenalineAvailable ? "Confirm adrenaline 1 in 1,000 and anaphylaxis facilities are available"
+    : !ad.postObsMinutes ? "Record the post-injection observation period"
+    : ad.adverseReaction && !ad.adverseReactionDetails.trim() ? "Describe the adverse reaction, the action taken and whether a Yellow Card was submitted"
+    : !ad.adverseReaction && !ad.patientWell ? "Confirm the patient was well at the end of the observation period, or record an adverse reaction"
+    : null
 
-  // Age gate per signed PGD — adults 18+ (consistency review Jul 2026)
-  const patientAge = calculateAge(state.patient.dateOfBirth)
-  const patientValid = !state.patient.dateOfBirth || patientAge === null || patientAge >= 18
+  // Step 0: adults aged 18 years and over; names and DOB required; age is
+  // stored on every DOB change.
+  const patientError = validatePatientStep(state.patient, { minAge: 18 })
+  const consentError = validateConsentStep(state.consent)
+  const summaryError = validateSummaryStep(state.summary) ?? (state.summary.gpInformed ? null : "Confirm the GP has been informed (or a referral made)")
 
-  const canProceedByStep = [patientValid, true, eligibilityValid, treatmentValid, adminValid, true, true]
-  const canProceed = canProceedByStep[currentStep]
+  const stepErrors: (string | null)[] = [patientError, consentError, eligibilityError, treatmentError, adminError, summaryError, null]
+  // A stop anywhere blocks Next on that step and on every later step.
+  const validationError = stepErrors[currentStep] ?? (hasStop ? `${stopReason}: do not treat under this PGD.` : null)
+  const canProceed = validationError === null
+
+  const b12ResultText = isEstablishedPatient
+    ? `Established patient: ${el.establishedResultSource || "source not recorded"}; cause ${el.establishedCause || "not recorded"}`
+    : el.b12Value !== null
+      ? `${el.b12TestType === "active" ? "Active B12" : "Total B12"} ${el.b12Value} ${el.b12TestType === "active" ? "pmol/L" : el.b12Unit}${b12Class ? ` (${b12Class})` : ""}${b12Class === "indeterminate" && el.indeterminateJustified ? `; confirmed on: ${el.indeterminateJustification}` : ""}`
+      : "Not recorded"
 
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
     return {
@@ -187,16 +292,43 @@ export function B12InjectionClient() {
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
       },
-      clinicalData: state as unknown as Record<string, unknown>,
-      outcome: "completed",
+      clinicalData: {
+        ...state,
+        // Nothing is administered on the oral arm: no time of administration.
+        administration: { ...state.administration, administeredAt: isOralTablets ? "" : state.administration.administeredAt },
+        pgdVersion: PGD_VERSION_LINE,
+        stopReason,
+        b12Classification: b12Class,
+        b12ResultText,
+        tabletCount,
+      } as unknown as Record<string, unknown>,
+      outcome: hasStop ? "referred" : "completed",
+      medicine: hasStop || !state.treatment.regime
+        ? undefined
+        : isOralTablets
+          ? {
+              name: TABLET_NAME,
+              dose: `${state.treatment.tabletDose || "-"} micrograms daily by mouth between meals`,
+              duration: state.treatment.tabletSupplyDays ? `${state.treatment.tabletSupplyDays} days` : undefined,
+              quantity: tabletCount ?? undefined,
+            }
+          : {
+              name: INJECTION_NAME,
+              dose: `1 mg intramuscular (${state.treatment.regime === "loading" ? `loading dose ${state.treatment.doseNumber || "-"} of 6` : `maintenance, ${state.treatment.maintenanceInterval || "-"}`})`,
+              quantity: "1 x 1 mg ampoule",
+            },
       summary: {
         pharmacistName: state.summary.pharmacistName,
         pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacyName: state.summary.pharmacyName,
+        pharmacyAddress: state.summary.pharmacyAddress,
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: state.consent.notifyGp },
     }
-  }, [state])
+  }, [state, isOralTablets, hasStop, stopReason, b12Class, b12ResultText, tabletCount])
 
   function updateEligibility<K extends keyof typeof state.eligibility>(field: K, value: typeof state.eligibility[K]) {
     setState((prev) => ({ ...prev, eligibility: { ...prev.eligibility, [field]: value } }))
@@ -219,30 +351,32 @@ export function B12InjectionClient() {
         onNext={handleNext}
         onPrev={handlePrev}
         canProceed={canProceed}
-        validationError={
-          !canProceed
-            ? currentStep === 0 && !patientValid
-              ? "This PGD applies to adults aged 18 years and over"
-              : currentStep === 2 &&
-                  (state.eligibility.anyHypersensitivity ||
-                    state.eligibility.hereditaryCobalaminDisorder ||
-                    state.eligibility.pregnant ||
-                    state.eligibility.neuroSymptoms ||
-                    state.eligibility.abnormalBloodPicture)
-                ? "An exclusion criterion applies. Do not treat under this PGD; refer as stated and document the advice given."
-                : currentStep === 3 && isInjection && !injectionSuitable
-                  ? "Patient is excluded from the injection pathway (site infection, bleeding risk not assessed, or not suitable for IM injection). Refer."
-                  : currentStep === 3 && isOralTablets && !tabletEligible
-                    ? "Cyanocobalamin tablets are only for diet related deficiency with malabsorption and pernicious anaemia thought unlikely, and are excluded in Leber's hereditary optic neuropathy. Use the injection pathway or refer."
-                    : "Please complete all required fields"
-            : null
-        }
+        validationError={validationError}
+        isBlocked={hasStop}
         getConsultationData={getConsultationData}
       >
+        {hasStop && (
+          <div className="mb-5 rounded-lg bg-red-50 border border-red-300 p-3 space-y-2 print:hidden">
+            <p className="text-sm font-semibold text-red-900">{stopReason}. Do not treat under this PGD.</p>
+            <TextArea
+              label="Advice given and referral made: alternative options including the GP practice, decision reached, who was informed"
+              value={el.referralAdvice}
+              onChange={(v) => updateEligibility("referralAdvice", v)}
+              rows={3}
+              required
+            />
+            <p className="text-xs text-red-800">Make the referral clear and timely and do not delay it by starting treatment. Record the advice, then use &quot;Save as not supplied&quot; below.</p>
+          </div>
+        )}
+
         {currentStep === 0 && (
           <PatientDetailsStep
             patient={state.patient}
-            onChange={(field, value) => setState((prev) => ({ ...prev, patient: { ...prev.patient, [field]: value } }))}
+            onChange={(field, value) => setState((prev) => {
+              const patient = { ...prev.patient, [field]: value }
+              if (field === "dateOfBirth") patient.age = calculateAge(value as string)
+              return { ...prev, patient }
+            })}
           />
         )}
 
@@ -306,41 +440,91 @@ export function B12InjectionClient() {
                   required
                   description="Required by the PGD. A B12-only point of care or finger prick result is not sufficient to start treatment."
                 />
-                <div className="grid sm:grid-cols-3 gap-4">
-                  <TextInput
-                    label="B12 result relied on (ng/L or pmol/L)"
-                    value={state.eligibility.labB12Result}
-                    onChange={(v) => updateEligibility("labB12Result", v)}
-                    placeholder="e.g. 142 ng/L"
-                    required={!isEstablishedPatient}
-                  />
-                  <div>
-                    <label className="block text-sm font-medium text-navy-900 mb-1">
-                      Date sample taken {!isEstablishedPatient && <span className="text-red-400">*</span>}
-                    </label>
-                    <input
-                      type="date"
-                      value={state.eligibility.labDate}
-                      onChange={(e) => updateEligibility("labDate", e.target.value)}
-                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
-                    />
-                  </div>
-                  <TextInput
-                    label="Laboratory or device used"
-                    value={state.eligibility.labDevice}
-                    onChange={(v) => updateEligibility("labDevice", v)}
-                    placeholder="e.g. NHS lab via GP"
-                    required={!isEstablishedPatient}
-                  />
-                </div>
+                {!isEstablishedPatient && (
+                  <>
+                    <div className="grid sm:grid-cols-3 gap-4">
+                      <SelectInput
+                        label="B12 test"
+                        value={el.b12TestType}
+                        onChange={(v) => updateEligibility("b12TestType", v as typeof el.b12TestType)}
+                        options={[
+                          { value: "total", label: "Total B12 (serum cobalamin)" },
+                          { value: "active", label: "Active B12 (holotranscobalamin), pmol/L" },
+                        ]}
+                        required
+                      />
+                      <NumberInput label="Result" value={el.b12Value} onChange={(v) => updateEligibility("b12Value", v)} min={0} max={5000} unit={el.b12TestType === "active" ? "pmol/L" : el.b12Unit} required />
+                      {el.b12TestType !== "active" && (
+                        <SelectInput
+                          label="Unit"
+                          value={el.b12Unit}
+                          onChange={(v) => updateEligibility("b12Unit", v as typeof el.b12Unit)}
+                          options={[
+                            { value: "ng/L", label: "ng/L" },
+                            { value: "pmol/L", label: "pmol/L" },
+                          ]}
+                        />
+                      )}
+                    </div>
+                    {b12Class !== null && (
+                      <p className={`text-xs ${b12Class === "deficient" ? "text-green-800" : "text-red-700"}`}>
+                        {b12Class === "deficient"
+                          ? "Confirmed deficiency (total B12 below 180 ng/L or active B12 below 25 pmol/L)."
+                          : b12Class === "indeterminate"
+                            ? "Indeterminate result (total B12 180 to 350 ng/L or active B12 25 to 70 pmol/L): possible deficiency. Under this PGD deficiency is confirmed only with a raised serum MMA or a documented clinical picture; otherwise refer."
+                            : "Deficiency unlikely (total B12 above 350 ng/L or active B12 above 70 pmol/L): deficiency is not confirmed on testing. Do not treat under this PGD; refer for further assessment."}
+                      </p>
+                    )}
+                    {b12Class === "indeterminate" && (
+                      <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 space-y-2">
+                        <Checkbox
+                          label="Indeterminate result confirmed as deficiency: raised serum methylmalonic acid (MMA), or symptoms and signs and blood picture consistent with deficiency, documented"
+                          checked={el.indeterminateJustified}
+                          onChange={(v) => updateEligibility("indeterminateJustified", v)}
+                        />
+                        {el.indeterminateJustified && (
+                          <TextInput label="MMA result or clinical justification" value={el.indeterminateJustification} onChange={(v) => updateEligibility("indeterminateJustification", v)} placeholder="e.g. MMA 620 nmol/L on 2026-08-30" required />
+                        )}
+                      </div>
+                    )}
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-navy-900 mb-1">
+                          Date sample taken <span className="text-red-400">*</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={el.labDate}
+                          onChange={(e) => updateEligibility("labDate", e.target.value)}
+                          max={today}
+                          className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
+                        />
+                      </div>
+                      <TextInput
+                        label="Laboratory used"
+                        value={el.labDevice}
+                        onChange={(v) => updateEligibility("labDevice", v)}
+                        placeholder="e.g. NHS lab via GP"
+                        required
+                      />
+                    </div>
+                  </>
+                )}
                 {isEstablishedPatient && (
-                  <p className="text-xs text-gray-500">
-                    Repeat blood testing is not required before each maintenance
-                    injection once the diagnosis and cause are established. Do
-                    not repeat serum B12 in a patient on intramuscular
-                    maintenance (NICE NG239: the result is uninformative).
-                    Record the results originally relied on where known.
-                  </p>
+                  <div className="space-y-3">
+                    <p className="text-xs text-gray-500">
+                      Repeat blood testing is not required before each maintenance
+                      injection once the diagnosis and cause are established. Do
+                      not repeat serum B12 in a patient on intramuscular
+                      maintenance (NICE NG239: the result is uninformative). The
+                      results originally relied on, their date and source, and
+                      the established cause are still required record items.
+                    </p>
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <TextInput label="Original result relied on, with date and source" value={el.establishedResultSource} onChange={(v) => updateEligibility("establishedResultSource", v)} placeholder="e.g. total B12 121 ng/L, 2024-03-12, GP record" required />
+                      <TextInput label="Established cause of deficiency" value={el.establishedCause} onChange={(v) => updateEligibility("establishedCause", v)} placeholder="e.g. pernicious anaemia (anti-IF positive)" required />
+                    </div>
+                  </div>
                 )}
               </div>
             )}
@@ -454,12 +638,17 @@ export function B12InjectionClient() {
                   description="Can raise measured levels without correcting deficiency. Interpret the result with caution."
                 />
               </div>
-              <p className="mt-3 text-xs text-gray-600">
-                Severe deficiency: monitor plasma potassium during the initial
-                correction phase, as rapid haematological response can cause
-                hypokalaemia. Refer any patient who becomes unwell or develops
-                palpitations or muscle weakness during initiation.
-              </p>
+              <div className="mt-3 space-y-2">
+                <Checkbox
+                  label="Severe deficiency (marked anaemia, low haemoglobin, or significant symptoms)"
+                  checked={el.severeDeficiency}
+                  onChange={(v) => updateEligibility("severeDeficiency", v)}
+                  description="Document caution: monitor plasma potassium during the initial correction phase, as rapid haematological response can cause hypokalaemia. Refer any patient who becomes unwell or develops palpitations or muscle weakness during initiation."
+                />
+                {el.severeDeficiency && (
+                  <TextInput label="Potassium monitoring arrangement during the loading course" value={el.potassiumMonitoringPlan} onChange={(v) => updateEligibility("potassiumMonitoringPlan", v)} placeholder="e.g. U&E requested via GP for day 7 of the course" required />
+                )}
+              </div>
             </div>
 
             <div className="border-t border-gray-200 pt-4">
@@ -646,6 +835,10 @@ export function B12InjectionClient() {
               </div>
             )}
 
+            {state.treatment.regime === "loading" && isEstablishedPatient && (
+              <TextInput label="Reason for a loading course in a patient on established maintenance" value={tr.loadingForEstablishedReason} onChange={(v) => updateTreatment("loadingForEstablishedReason", v)} placeholder="e.g. no injection for 9 months, symptomatic; GP agrees to reload" required />
+            )}
+
             {state.treatment.regime === "loading" && (
               <div>
                 <label className="block text-sm font-medium text-navy-900 mb-1">
@@ -737,6 +930,24 @@ export function B12InjectionClient() {
               </>
             )}
 
+            {previousDateNeeded && (
+              <div>
+                <label className="block text-sm font-medium text-navy-900 mb-1">
+                  Date of previous injection <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={tr.previousInjectionDate}
+                  onChange={(e) => updateTreatment("previousInjectionDate", e.target.value)}
+                  max={today}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
+                />
+                {daysSincePrevious !== null && (
+                  <p className="mt-1 text-xs text-gray-600">{daysSincePrevious} day(s) since the previous injection. Loading: alternate days, three a week for 2 weeks. Maintenance: every 2 to 3 months, or twice yearly if diet related.</p>
+                )}
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium text-navy-900 mb-1">
                 {isOralTablets ? "Review date (before further supply)" : "Next injection due"} <span className="text-red-400">*</span>
@@ -757,7 +968,7 @@ export function B12InjectionClient() {
             <div className="rounded-lg bg-[color:var(--tenant-primary)]/10 border border-[color:var(--tenant-primary)]/30 p-3 text-sm text-[color:var(--tenant-primary)]">
               <p className="font-semibold">
                 {isOralTablets
-                  ? `Cyanocobalamin 50 microgram tablets, ${state.treatment.tabletDose || "50 to 150"} micrograms daily by mouth between meals, ${state.treatment.tabletSupplyDays || "up to 84"} days supply (P medicine)`
+                  ? `Cyanocobalamin 50 microgram tablets, ${state.treatment.tabletDose || "50 to 150"} micrograms daily by mouth between meals, ${state.treatment.tabletSupplyDays || "up to 84"} days supply${tabletCount ? ` (${tabletCount} tablets)` : ""} (P medicine)`
                   : "Hydroxocobalamin 1mg/ml Solution for Injection, one 1 mg ampoule intramuscularly (POM)"}
               </p>
               <p className="mt-1 text-xs">
@@ -867,15 +1078,16 @@ export function B12InjectionClient() {
                 <Checkbox
                   label="Any adverse reaction (mild or otherwise)"
                   checked={state.administration.adverseReaction}
-                  onChange={(v) => updateAdmin("adverseReaction", v)}
+                  onChange={(v) => setState((prev) => ({ ...prev, administration: { ...prev.administration, adverseReaction: v, patientWell: v ? false : prev.administration.patientWell } }))}
                 />
                 {state.administration.adverseReaction && (
                   <TextArea
-                    label="Adverse reaction details"
+                    label="Adverse reaction details, action taken, Yellow Card reference"
                     value={state.administration.adverseReactionDetails}
                     onChange={(v) => updateAdmin("adverseReactionDetails", v)}
                     rows={2}
                     placeholder="Describe reaction, action taken, Yellow Card reported (https://yellowcard.mhra.gov.uk), GP informed"
+                    required
                   />
                 )}
               </div>
@@ -911,19 +1123,46 @@ export function B12InjectionClient() {
               checked={state.summary.gpInformed}
               onChange={(v) => setState((p) => ({ ...p, summary: { ...p.summary, gpInformed: v } }))}
               description="The PGD requires the individual's GP to be informed."
+              required
             />
           </div>
         )}
 
         {currentStep === 6 && (
-          <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-            <p className="text-sm font-semibold text-green-900">Consultation record complete</p>
-            <p className="text-sm text-green-800 mt-1">
-              Save the consultation to lock the record. Patient should return on
-              {state.treatment.nextDueDate ? ` ${state.treatment.nextDueDate}` : " the date you noted"}
-              {isOralTablets ? " for review before further supply." : " for the next dose."}
-              {" "}Review at 3 months after the loading course (1 month if breastfeeding), then at least annually with a full blood count.
-            </p>
+          <div className="space-y-4">
+            <div className="p-4 bg-green-50 border border-green-200 rounded-lg print:hidden">
+              <p className="text-sm font-semibold text-green-900">Consultation record complete</p>
+              <p className="text-sm text-green-800 mt-1">
+                Save the consultation to lock the record. Patient should return on
+                {state.treatment.nextDueDate ? ` ${state.treatment.nextDueDate}` : " the date you noted"}
+                {isOralTablets ? " for review before further supply." : " for the next dose."}
+                {" "}Review at 3 months after the loading course (1 month if breastfeeding), then at least annually with a full blood count.
+              </p>
+            </div>
+            <PrintedRecord
+              title="Vitamin B12 ePGD Consultation Record"
+              pgdLine={`${PGD_VERSION_LINE}: ${isOralTablets ? "PGD 2 of 3, cyanocobalamin tablets" : "PGD 1 of 3, hydroxocobalamin injection"}`}
+              rows={[
+                ["Patient", `${state.patient.firstName} ${state.patient.lastName}, born ${state.patient.dateOfBirth || "not recorded"}${state.patient.age !== null ? ` (${state.patient.age} years)` : ""}`],
+                ["Address", state.patient.address || "Not recorded"],
+                ["GP", [state.patient.gpName, state.patient.gpPractice].filter(Boolean).join(", ") || "Not recorded"],
+                ["Consent", state.consent.informedConsentGiven ? "Valid informed consent obtained; private service explained" : "Not recorded"],
+                ["Blood results relied on", `${b12ResultText}${!isEstablishedPatient ? `; sampled ${el.labDate || "-"}; ${el.labDevice || "-"}` : ""}; FBC, film and folate ${el.bloodsReviewed ? "reviewed" : "not reviewed"}`],
+                ["Basis", el.deficiencySource || "Not recorded"],
+                ["Outcome", hasStop ? `NOT TREATED, REFERRED: ${stopReason}` : (isOralTablets ? "Supplied via PGD" : "Administered via PGD")],
+                ["Medicine", hasStop ? "Not supplied" : isOralTablets ? `${TABLET_NAME}, oral` : `${INJECTION_NAME}, intramuscular`],
+                ["Dose", hasStop ? "Not supplied" : isOralTablets ? `${tr.tabletDose || "-"} micrograms daily between meals` : `1 mg IM, ${tr.regime === "loading" ? `loading dose ${tr.doseNumber || "-"} of 6` : `maintenance ${tr.maintenanceInterval || "-"}`}`],
+                ["Quantity", hasStop ? "Not supplied" : isOralTablets ? `${tabletCount ?? "-"} tablets (${tr.tabletSupplyDays || "-"} days)` : "1 x 1 mg ampoule"],
+                ["Batch, expiry, site", hasStop ? "Not applicable" : `${ad.batchNumber || "-"}, ${ad.expiryDate || "-"}${isOralTablets ? "" : `, ${ad.injectionSite || "-"} at ${ad.administeredAt || "-"}`}`],
+                ["Observation", hasStop || isOralTablets ? "Not applicable" : `${ad.postObsMinutes || "-"} minutes; adrenaline available: ${ad.adrenalineAvailable ? "yes" : "no"}; ${ad.adverseReaction ? `adverse reaction: ${ad.adverseReactionDetails}` : "patient well"}`],
+                ["Previous and next", `${tr.previousInjectionDate ? `previous injection ${tr.previousInjectionDate}; ` : ""}next due or review ${tr.nextDueDate || "-"}`],
+                ["Advice given", hasStop ? (el.referralAdvice || "Not recorded") : isOralTablets ? "PIL and written dietary advice on B12 sources supplied; take daily between meals; annual review; seek advice for new numbness, tingling, unsteadiness, memory or mood change" : "PIL and written record of the dose and next due date supplied; injection site effects, reddish urine, when to seek advice, review at 3 months then annually"],
+                ["GP informed", state.summary.gpInformed ? "Yes" : "No"],
+                ["Clinical notes", state.summary.clinicalNotes || "None"],
+                ["Practitioner", `${state.summary.pharmacistName || "-"}, GPhC ${state.summary.pharmacistGPhC || "-"}${state.summary.pharmacyName ? `, ${state.summary.pharmacyName}` : ""}`],
+                ["Date and time", `${state.summary.consultationDate} ${state.summary.consultationTime}`],
+              ]}
+            />
           </div>
         )}
       </StepWrapper>

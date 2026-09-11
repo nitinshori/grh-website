@@ -1,4 +1,4 @@
-import { BasePatientDetails, BaseConsent, BaseSummary, ClinicalAlert } from '../shared/types';
+import { BasePatientDetails, BaseConsent, BaseSummary } from '../shared/types';
 
 export interface DengueScreening {
   destinationCountry: string;
@@ -39,10 +39,14 @@ export interface DengueContraindications {
 
 export interface DengueVaccineAdministration {
   vaccineName: string;
+  /** Adrenaline must be in place BEFORE the vaccine is given, so it is confirmed here, ahead of the administration fields. */
+  adrenalineConfirmed: boolean;
   batchNumber: string;
   expiryDate: string;
   injectionSite: 'left-deltoid' | 'right-deltoid' | 'left-thigh' | 'right-thigh' | '';
   doseNumber: '1st' | '2nd' | '';
+  /** Required for a 2nd dose: the schedule is 3 months after the first, and the tool checks the interval. */
+  firstDoseDate: string;
   administeredBy: string;
   timeAdministered: string;
   nextDueDate: string;
@@ -55,7 +59,6 @@ export interface DenguePostVaccineObs {
   patientWell: boolean;
   adverseReaction: boolean;
   reactionDetails: string;
-  anaphylaxisKitChecked: boolean;
 }
 
 export interface DengueAdvice {
@@ -72,16 +75,17 @@ export interface DengueAdvice {
   keepVaccinationRecord: boolean;
 }
 
+/** Contraindications and alerts are derived live from the screening answers
+ *  in the client (evaluateDengueContraindications), not stored, so a stop
+ *  raised by going back and changing an answer is enforced immediately. */
 export interface DengueConsultationState {
   patient: BasePatientDetails;
   consent: BaseConsent;
   screening: DengueScreening;
-  contraindications: DengueContraindications;
   administration: DengueVaccineAdministration;
   postVaccineObs: DenguePostVaccineObs;
   advice: DengueAdvice;
   summary: BaseSummary;
-  alerts: ClinicalAlert[];
   step: number;
 }
 
@@ -119,10 +123,12 @@ export const initialDengueContraindications = (): DengueContraindications => ({
 
 export const initialDengueVaccineAdministration = (): DengueVaccineAdministration => ({
   vaccineName: 'Qdenga (TAK-003)',
+  adrenalineConfirmed: false,
   batchNumber: '',
   expiryDate: '',
   injectionSite: '',
   doseNumber: '',
+  firstDoseDate: '',
   administeredBy: '',
   timeAdministered: '',
   nextDueDate: '',
@@ -134,7 +140,6 @@ export const initialDenguePostVaccineObs = (): DenguePostVaccineObs => ({
   patientWell: false,
   adverseReaction: false,
   reactionDetails: '',
-  anaphylaxisKitChecked: false,
 });
 
 export const initialDengueAdvice = (): DengueAdvice => ({

@@ -215,7 +215,7 @@ export function generateASAlerts(
 
   // ─── Rapid ascent warnings ───
 
-  if (travel.ascentRate === 'rapid' && !medical.adrenalInsufficiency) {
+  if (travel.ascentRate === 'rapid') {
     alerts.push({
       severity: 'red-flag',
       code: 'RAPID_ASCENT',
@@ -293,6 +293,69 @@ export function recommendMedicine(
     continuationTiming: 'Continue for 2 days after reaching the highest altitude, or until descent begins. Maximum 14 tablets (28 doses, 14 days) per supply without review. Treatment course of 6 tablets (250 mg twice daily for 3 days) may be added where the itinerary makes descent difficult; maximum total 20 tablets.',
     reason:
       'Prevention of AMS under the PGD. Quantity: half a tablet twice daily for (1 to 2 lead-in days + days ascending + 2 days), rounded up to whole tablets. Off-label use: tell the patient and record it.',
+  };
+}
+
+// ─── Calculated quantity for the chosen regimen (PGD v003) ───
+//
+// Prevention: half a tablet twice daily for (1 to 2 lead-in days + days
+// ascending + 2 days), rounded up to whole tablets, maximum 14. Treatment: 6
+// tablets. Prevention plus treatment: maximum 20. Before this the tool only
+// capped the quantity and never asked for the itinerary that determines it
+// (adversarial review, 11 Sep 2026).
+
+export interface ASQuantityCalculation {
+  /** Days of prevention dosing: lead-in + days ascending + 2. */
+  preventionDays: number | null;
+  /** Prevention tablets: ceil(preventionDays / 2). */
+  preventionTablets: number | null;
+  treatmentTablets: number;
+  total: number | null;
+  /** Readable calculation for the screen and the record. */
+  text: string;
+  /** True when the prevention course would exceed 14 days per supply. */
+  exceedsMaximumPeriod: boolean;
+}
+
+export function calculateASQuantity(
+  travel: ASTravelAssessment,
+  includeTreatmentCourse: boolean
+): ASQuantityCalculation {
+  if (travel.purpose === 'treatment') {
+    return {
+      preventionDays: null,
+      preventionTablets: null,
+      treatmentTablets: AS_TREATMENT_TABLETS,
+      total: AS_TREATMENT_TABLETS,
+      text: `Treatment: 250 mg twice daily for up to 3 days = ${AS_TREATMENT_TABLETS} tablets`,
+      exceedsMaximumPeriod: false,
+    };
+  }
+  const leadIn = travel.leadInDays;
+  const days = travel.daysAscending;
+  if (travel.purpose !== 'prevention' || leadIn === null || days === null || days <= 0) {
+    return {
+      preventionDays: null,
+      preventionTablets: null,
+      treatmentTablets: includeTreatmentCourse ? AS_TREATMENT_TABLETS : 0,
+      total: null,
+      text: 'Enter the lead-in days and the days ascending to calculate the prevention course',
+      exceedsMaximumPeriod: false,
+    };
+  }
+  const preventionDays = leadIn + days + 2;
+  const preventionTablets = Math.ceil(preventionDays / 2);
+  const treatmentTablets = includeTreatmentCourse ? AS_TREATMENT_TABLETS : 0;
+  const exceeds = preventionDays > 14;
+  return {
+    preventionDays,
+    preventionTablets,
+    treatmentTablets,
+    total: preventionTablets + treatmentTablets,
+    text:
+      `Prevention: (${leadIn} lead-in + ${days} ascending + 2) = ${preventionDays} days, half a tablet twice daily = ${preventionTablets} tablets` +
+      (treatmentTablets ? ` + treatment course ${treatmentTablets} = ${preventionTablets + treatmentTablets} tablets` : ''),
+    exceedsMaximumPeriod: exceeds,
   };
 }
 

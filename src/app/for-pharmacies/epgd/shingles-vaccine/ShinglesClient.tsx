@@ -44,6 +44,8 @@ function reducer(state: ShinglesConsultationState, action: ShinglesAction): Shin
     case "SET_STEP":
       newState.currentStep = action.step;
       break;
+    case "RESET":
+      return createInitialConsultationState();
   }
   return newState;
 }
@@ -70,14 +72,15 @@ export default function ShinglesClient() {
 
   const validationError = useMemo(() => validateStep(state, state.currentStep), [state]);
 
+  // A stop anywhere blocks Next on every step and the final Save & Print
+  // (adversarial review, 11 Sep 2026). The progress bar only moves backwards.
   const canProceed = useMemo(() => {
-    if (state.currentStep >= TOTAL_STEPS - 1) return true;
-    if (state.currentStep <= 3 && hardStops) return false;
+    if (hardStops) return false;
     return !validationError;
-  }, [state, validationError, hardStops]);
+  }, [validationError, hardStops]);
 
   const handleNext = useCallback(() => {
-    if (state.currentStep <= 3 && hardStops) return;
+    if (hardStops) return;
     if (!validationError && state.currentStep < TOTAL_STEPS - 1) {
       const newCompleted = new Set(completedSteps);
       newCompleted.add(state.currentStep);
@@ -93,10 +96,27 @@ export default function ShinglesClient() {
   }, [state.currentStep]);
 
   const handleStepClick = useCallback((step: number) => {
-    if (completedSteps.has(step) || step <= state.currentStep) {
+    if (step < state.currentStep) {
       dispatch({ type: "SET_STEP", step });
     }
-  }, [completedSteps, state.currentStep]);
+  }, [state.currentStep]);
+
+  // When a stop appears, forget every step after the one being edited.
+  useEffect(() => {
+    if (!hardStops) return;
+    setCompletedSteps((prev) => {
+      const next = new Set<number>();
+      prev.forEach((s) => {
+        if (s < state.currentStep) next.add(s);
+      });
+      return next.size === prev.size ? prev : next;
+    });
+  }, [hardStops, state.currentStep]);
+
+  const handleNewConsultation = useCallback(() => {
+    dispatch({ type: "RESET" });
+    setCompletedSteps(new Set());
+  }, []);
 
 
   // ─── Consultation Record Data (for saving to database) ───
@@ -115,14 +135,26 @@ export default function ShinglesClient() {
       },
       clinicalData: state as unknown as Record<string, unknown>,
       outcome: hardStops ? "not_supplied" : "completed",
+      medicine:
+        !hardStops && state.supply.doseNumber
+          ? {
+              name: "Shingrix",
+              dose: "0.5 mL intramuscular",
+              quantity: `dose ${state.supply.doseNumber} of 2`,
+            }
+          : undefined,
       summary: {
-        pharmacistName: state.summary.pharmacistName,
-        pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacistName: state.summary.pharmacistName || __pharmProfile?.name || "",
+        pharmacistGPhC: state.summary.pharmacistGPhC || __pharmProfile?.gphcNumber || "",
+        pharmacyName: state.summary.pharmacyName || __pharmProfile?.pharmacyName,
+        pharmacyAddress: state.summary.pharmacyAddress || __pharmProfile?.pharmacyAddress,
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: state.consent.notifyGp },
     };
-  }, [state, hardStops]);
+  }, [state, hardStops, __pharmProfile]);
 
   const renderStep = () => {
     switch (state.currentStep) {
@@ -135,6 +167,16 @@ export default function ShinglesClient() {
         );
 
       case 1:
+        return (
+          <ConsentStep
+            consent={state.consent}
+            onChange={(field, value) =>
+              dispatch({ type: "UPDATE_CONSENT", field, value })
+            }
+          />
+        );
+
+      case 2:
         return (
           <div className="space-y-4">
             <Checkbox
@@ -259,40 +301,48 @@ export default function ShinglesClient() {
           </div>
         );
 
-      case 2:
+      case 3:
         return (
           <div className="space-y-4">
             <p className="text-sm text-gray-700 font-medium">
-              Check contraindications:
+              Check contraindications. Each question needs an explicit answer.
             </p>
-            <Checkbox
-              label="No hypersensitivity to any component of the vaccine"
-              checked={!state.assessment.anaphylaxisToComponent}
+            <SelectInput
+              label="Hypersensitivity to any component of Shingrix?"
+              value={state.assessment.anaphylaxisToComponent}
               onChange={(v) =>
                 dispatch({
                   type: "UPDATE_ASSESSMENT",
                   field: "anaphylaxisToComponent",
-                  value: !v,
+                  value: v,
                 })
               }
-              description="Exclusion: hypersensitivity to any component of Shingrix (untick to record)"
+              options={[
+                { value: "no", label: "No: no known hypersensitivity to any component of the vaccine" },
+                { value: "yes", label: "Yes: hypersensitivity documented (excluded)" },
+              ]}
+              required
             />
-            <Checkbox
-              label="No acute illness with fever"
-              checked={!state.assessment.severeAcuteIllness}
+            <SelectInput
+              label="Acute illness with fever today?"
+              value={state.assessment.severeAcuteIllness}
               onChange={(v) =>
                 dispatch({
                   type: "UPDATE_ASSESSMENT",
                   field: "severeAcuteIllness",
-                  value: !v,
+                  value: v,
                 })
               }
-              description="Delay vaccination in cases of acute illness with fever (untick to record)"
+              options={[
+                { value: "no", label: "No: well enough to be vaccinated today" },
+                { value: "yes", label: "Yes: acute illness with fever (delay until recovered)" },
+              ]}
+              required
             />
           </div>
         );
 
-      case 3:
+      case 4:
         return (
           <div className="space-y-4">
             <p className="text-sm text-gray-700 font-medium">
@@ -385,7 +435,7 @@ export default function ShinglesClient() {
           </div>
         );
 
-      case 4:
+      case 5:
         return (
           <div className="space-y-4">
             <div className="p-3 bg-[color:var(--tenant-primary)]/10 border border-[color:var(--tenant-primary)]/30 rounded-lg">
@@ -451,6 +501,44 @@ export default function ShinglesClient() {
               ]}
               required
             />
+            <div className="border-t pt-4 space-y-4">
+              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Observation and adverse reactions (PGD v005 safety block)</p>
+              <Checkbox
+                label="Patient observed, seated, for 15 minutes after vaccination and the observation period has been completed"
+                checked={state.supply.observedFifteenMinutes}
+                onChange={(v) => dispatch({ type: "UPDATE_SUPPLY", field: "observedFifteenMinutes", value: v })}
+                description="Tick only once the period has actually been completed. The PGD requires the completed observation to be recorded."
+                required
+              />
+              <TextArea
+                label="Adverse reaction observed (leave blank if none)"
+                value={state.supply.adverseReaction}
+                onChange={(v) => dispatch({ type: "UPDATE_SUPPLY", field: "adverseReaction", value: v })}
+                placeholder="Describe any adverse reaction, including the time it started"
+                rows={2}
+              />
+              {state.supply.adverseReaction.trim() && (
+                <>
+                  <TextArea
+                    label="Action taken"
+                    value={state.supply.adverseReactionAction}
+                    onChange={(v) => dispatch({ type: "UPDATE_SUPPLY", field: "adverseReactionAction", value: v })}
+                    placeholder="Treatment given, referral made, GP informed"
+                    rows={2}
+                    required
+                  />
+                  <Checkbox
+                    label="Reported to the MHRA Yellow Card scheme (https://yellowcard.mhra.gov.uk) and the GP informed as appropriate"
+                    checked={state.supply.yellowCardSubmitted}
+                    onChange={(v) => dispatch({ type: "UPDATE_SUPPLY", field: "yellowCardSubmitted", value: v })}
+                    description="Report suspected anaphylaxis even where the diagnosis is uncertain"
+                  />
+                </>
+              )}
+              <p className="text-xs text-gray-600">
+                Report any suspected adverse reaction via the Yellow Card scheme: https://yellowcard.mhra.gov.uk
+              </p>
+            </div>
             <TextArea
               label="Additional clinical notes"
               value={state.summary.clinicalNotes}
@@ -467,7 +555,7 @@ export default function ShinglesClient() {
           </div>
         );
 
-      case 5:
+      case 6:
         return (
           <div className="space-y-6">
             <div>
@@ -534,44 +622,20 @@ export default function ShinglesClient() {
                 />
               </div>
             </div>
-            <ConsentStep
-              consent={state.consent}
-              onChange={(field, value) =>
-                dispatch({ type: "UPDATE_CONSENT", field, value })
-              }
+            <p className="text-xs text-gray-600 print:hidden">
+              Check the record below, then press Save &amp; Print Record. The record is saved when that button is pressed, not before.
+              {state.supply.doseNumber === "2"
+                ? " Two-dose course complete."
+                : state.supply.nextDoseDue
+                  ? ` Second dose due ${state.supply.nextDoseDue}: book it now and give the date in writing.`
+                  : ""}
+            </p>
+            <ShinglesSummaryReport
+              state={state}
+              alerts={alerts}
+              doseRecommendation={doseRecommendation}
             />
           </div>
-        );
-
-      case 6:
-        return (
-          <div className="text-center py-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-[color:var(--tenant-primary)]/10 rounded-full mb-4">
-              <svg className="w-8 h-8 text-[color:var(--tenant-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-semibold text-navy-900 mb-2">
-              Consultation Complete
-            </h3>
-            <p className="text-sm text-gray-600">
-              The shingles vaccination ePGD consultation has been recorded successfully.
-            </p>
-            <p className="text-xs text-gray-500 mt-4">
-              {state.supply.doseNumber === "2"
-                ? "Two-dose course complete."
-                : `Patient should return for their second dose 2 to 6 months after today${state.supply.nextDoseDue ? ` (due ${state.supply.nextDoseDue})` : ""}.`}
-            </p>
-          </div>
-        );
-
-      case 7:
-        return (
-          <ShinglesSummaryReport
-            state={state}
-            alerts={alerts}
-            doseRecommendation={doseRecommendation}
-          />
         );
 
       default:
@@ -600,7 +664,10 @@ export default function ShinglesClient() {
         onPrev={handlePrev}
         canProceed={canProceed}
         validationError={validationError}
-       getConsultationData={getConsultationData}>
+        isBlocked={hardStops}
+        getConsultationData={getConsultationData}
+        onNewConsultation={handleNewConsultation}
+      >
         {renderStep()}
       </StepWrapper>
     </div>

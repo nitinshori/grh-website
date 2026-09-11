@@ -9,7 +9,8 @@ export function validateStep(stepIndex: number, state: EczemaConsultationState):
   const mh = state.medicalHistory;
   const ms = state.medicineSelection;
   const c = state.counselling;
-  const thinSkin = a.thinSkinSite || state.contraindications.faceOrGroin;
+  const ci = state.contraindications;
+  const thinSkin = a.thinSkinSite;
 
   switch (stepIndex) {
     case 0:
@@ -38,16 +39,26 @@ export function validateStep(stepIndex: number, state: EczemaConsultationState):
       ) {
         return "Please select at least one eczema manifestation";
       }
-      if (!a.affectedSite.trim()) return "Please describe the site treated";
+      if (a.sites.length === 0) return "Select the site or sites treated (severity and site together decide the arm)";
+      if (a.sites.includes("other") && !a.affectedSite.trim()) return "Describe the site treated";
       if (!a.treatedArea) return "Please record the treated area in adult palms (it decides the quantity)";
       return null;
 
     case 3:
       if (!mh.allergies.trim()) return "Please record allergy status";
       if (!mh.coursesLast12Months) return "Record how many courses the patient has had in the last 12 months";
+      if (mh.lastCourseEndDate && new Date(mh.lastCourseEndDate).getTime() > Date.now()) return "The last course end date is in the future";
       return null;
 
     case 4:
+      if (ci.concurrentAntibioticSupplied) {
+        if (!ci.concurrentInfectionMildLocalised) return "Confirm the secondary infection is MILD and LOCALISED, with no red flag from the Skin and Soft Tissue Infection PGD";
+        if (!ci.concurrentAntibioticName.trim()) return "Record the antibiotic supplied under the Skin and Soft Tissue Infection PGD";
+        if (!ci.concurrentAntibioticDose.trim()) return "Record the dose and duration of the concurrent antibiotic";
+        if (!ci.concurrentAntibioticQuantity.trim()) return "Record the quantity of the concurrent antibiotic";
+        if (!ci.concurrentAntibioticBatch.trim()) return "Record the batch number of the concurrent antibiotic";
+        if (!ci.concurrentAntibioticExpiry.trim()) return "Record the expiry date of the concurrent antibiotic";
+      }
       return null;
 
     case 5: {

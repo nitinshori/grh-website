@@ -148,24 +148,7 @@ export const SERVICE_COMPARISON: ServiceComparisonCategory[] = [
         pfs: NO,
         wales: YES("Free OTC supply"),
       },
-      {
-        pgdSlug: "thrush-combi",
-        condition: "Vaginal thrush — combo (pessary + cream)",
-        grhDrugs: "Generic clotrimazole 500mg pessary + clotrimazole 1% external cream",
-        grhOffered: true,
-        pfe: NO,
-        pfs: NO,
-        wales: NO,
-      },
-      {
-        pgdSlug: "thrush-duo",
-        condition: "Vaginal thrush — duo (oral + cream)",
-        grhDrugs: "Generic fluconazole 150mg + clotrimazole 1% external cream",
-        grhOffered: true,
-        pfe: NO,
-        pfs: NO,
-        wales: NO,
-      },
+      // thrush-combi and thrush-duo rows removed 11 Sep 2026: the signed PGD has no cream.
       {
         pgdSlug: "bv",
         condition: "Bacterial vaginosis",

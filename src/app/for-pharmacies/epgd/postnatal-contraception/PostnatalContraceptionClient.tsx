@@ -6,7 +6,7 @@ import type {
   PostnatalContraceptionAction,
 } from "./lib/postnatal-contraception-types";
 import { STEP_LABELS, TOTAL_STEPS, createInitialPostnatalContraceptionState } from "./lib/postnatal-contraception-types";
-import { getAllAlerts, hasHardStops, getAdditionalVteRiskFactors, getDepoTimingError, isBreastfeeding } from "./lib/postnatal-contraception-clinical-logic";
+import { getAllAlerts, hasHardStops, getAdditionalVteRiskFactors, getDepoTimingError, isBreastfeeding, daysSinceDelivery, addDays, daysSinceLastInjection } from "./lib/postnatal-contraception-clinical-logic";
 import { PGD_VERSION_LABEL } from "./lib/postnatal-contraception-types";
 import { validateStep } from "./lib/postnatal-contraception-validation";
 import { calculateAge } from "../shared/types";
@@ -55,9 +55,14 @@ function reducer(
 
     case "UPDATE_ASSESSMENT":
       newState.assessment = { ...newState.assessment, [action.field]: action.value };
-      if (action.field === "daysPostpartum") {
-        const days = action.value as number | null;
+      // Days postpartum is derived from the delivery date, never typed.
+      if (action.field === "deliveryDate") {
+        const days = daysSinceDelivery(action.value as string);
+        newState.assessment.daysPostpartum = days;
         newState.assessment.weeksPostpartum = days === null ? 0 : Math.floor(days / 7);
+      }
+      if (action.field === "unprotectedSexSinceDay21" && action.value !== true) {
+        newState.assessment.negativeTest21DaysAfterLastUpsi = false;
       }
       break;
 
@@ -67,6 +72,18 @@ function reducer(
 
     case "UPDATE_MEDICINE_SUPPLY":
       newState.medicineSupply = { ...newState.medicineSupply, [action.field]: action.value };
+      // Next Depo-Provera injection is due 12 weeks (84 days) after this one.
+      if (action.field === "startDate" || action.field === "medicineChoice") {
+        newState.medicineSupply.nextInjectionDue =
+          newState.medicineSupply.medicineChoice === "depo-provera"
+            ? addDays(newState.medicineSupply.startDate, 84)
+            : "";
+      }
+      if (action.field === "injectionType" && action.value !== "repeat") {
+        newState.medicineSupply.lastInjectionDate = "";
+        newState.medicineSupply.lateRepeatPregnancyExcluded = false;
+        newState.medicineSupply.lateRepeatBarrierAdvised = false;
+      }
       break;
 
     case "UPDATE_COUNSELLING":
@@ -131,8 +148,9 @@ export default function PostnatalContraceptionClient() {
   // Validation
   const validationError = useMemo(() => validateStep(state.currentStep, state), [state.currentStep, state]);
 
-  // Can proceed?
-  const canProceed = !validationError && (!hasStops || state.currentStep >= 4);
+  // A stop anywhere disables Next on every step. The progress bar only moves
+  // backwards, so the only route past a stop is "Save as not supplied".
+  const canProceed = !validationError && !hasStops;
 
   // Mark step as completed
   const markStepComplete = useCallback(() => {
@@ -159,7 +177,28 @@ export default function PostnatalContraceptionClient() {
   };
 
   // ─── Consultation Record Data (for saving to database) ───
+  // Returns a record on every step, with or without a medicine, so an
+  // excluded patient can be saved as not supplied from the step the stop was
+  // raised. Saves updatedState so the alerts are stored with the record.
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    const m = state.medicineSupply;
+    const medicine = !hasStops && m.medicineChoice
+      ? m.medicineChoice === "desogestrel"
+        ? {
+            name: "Desogestrel 75 microgram tablets",
+            medicine: "desogestrel",
+            dose: "75 micrograms once daily, continuously",
+            duration: `${m.quantity} days`,
+            quantity: `${m.quantity} tablets`,
+          }
+        : {
+            name: "Medroxyprogesterone acetate 150 mg/mL injection (Depo-Provera)",
+            medicine: "depo-provera",
+            dose: `150 mg deep intramuscular injection (${m.injectionSite || "site not recorded"})`,
+            duration: "Single injection; repeat every 12 weeks",
+            quantity: "1 injection (1 mL)",
+          }
+      : undefined;
     return {
       patient: {
         firstName: state.patient.firstName,
@@ -171,17 +210,26 @@ export default function PostnatalContraceptionClient() {
         address: state.patient.address,
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
+        gpAddress: state.patient.gpAddress,
+        gpPhone: state.patient.gpPhone,
+        gpEmail: state.patient.gpEmail,
+        gpOdsCode: state.patient.gpOdsCode,
       },
-      clinicalData: state as unknown as Record<string, unknown>,
+      clinicalData: updatedState as unknown as Record<string, unknown>,
       outcome: hasStops ? "not_supplied" : "completed",
+      medicine,
       summary: {
-        pharmacistName: state.summary.pharmacistName,
-        pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacistName: state.summary.pharmacistName || __pharmProfile?.name || "",
+        pharmacistGPhC: state.summary.pharmacistGPhC || __pharmProfile?.gphcNumber || "",
+        pharmacyName: state.summary.pharmacyName || __pharmProfile?.pharmacyName || "",
+        pharmacyAddress: state.summary.pharmacyAddress || __pharmProfile?.pharmacyAddress || "",
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: state.consent.notifyGp },
     };
-  }, [state, hasStops]);
+  }, [state, updatedState, hasStops, __pharmProfile]);
 
   const handleNewConsultation = useCallback(() => {
     dispatch({ type: "RESET" });
@@ -204,6 +252,8 @@ export default function PostnatalContraceptionClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <PatientDetailsStep
               patient={state.patient}
@@ -232,6 +282,8 @@ export default function PostnatalContraceptionClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <ConsentStep
               consent={state.consent}
@@ -253,25 +305,26 @@ export default function PostnatalContraceptionClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
-              <NumberInput
-                label="Days postpartum"
-                value={state.assessment.daysPostpartum}
+              <TextInput
+                label="Date of delivery"
+                value={state.assessment.deliveryDate}
                 onChange={(v) =>
                   dispatch({
                     type: "UPDATE_ASSESSMENT",
-                    field: "daysPostpartum",
+                    field: "deliveryDate",
                     value: v,
                   })
                 }
-                min={0}
-                unit="days"
+                type="date"
                 required
               />
               {state.assessment.daysPostpartum !== null && (
                 <p className="text-xs text-gray-600">
-                  {state.assessment.weeksPostpartum} weeks. Desogestrel: any time postpartum (before day 21 no additional contraception needed). Depo-Provera: from 6 weeks if breastfeeding; from 21 days if not breastfeeding and no additional VTE risk factor; otherwise refer.
+                  {state.assessment.daysPostpartum} days postpartum ({state.assessment.weeksPostpartum} weeks), derived from the delivery date. Desogestrel: any time postpartum (before day 21 no additional contraception needed). Depo-Provera: from 6 weeks if breastfeeding; from 21 days if not breastfeeding and no additional VTE risk factor; otherwise refer.
                 </p>
               )}
 
@@ -324,8 +377,17 @@ export default function PostnatalContraceptionClient() {
               {state.assessment.daysPostpartum !== null && state.assessment.daysPostpartum > 21 && (
                 <>
                   <p className="text-sm font-semibold text-navy-900 mt-2">From day 21 pregnancy must be reasonably excluded</p>
-                  <Checkbox label="Unprotected intercourse since day 21" checked={state.assessment.unprotectedSexSinceDay21} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "unprotectedSexSinceDay21", value: v })} />
-                  {state.assessment.unprotectedSexSinceDay21 && (
+                  <SelectInput
+                    label="Has there been unprotected intercourse since day 21?"
+                    value={state.assessment.unprotectedSexSinceDay21 === null ? "" : state.assessment.unprotectedSexSinceDay21 ? "yes" : "no"}
+                    onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "unprotectedSexSinceDay21", value: v === "" ? null : v === "yes" })}
+                    options={[
+                      { value: "no", label: "No: pregnancy reasonably excluded on history" },
+                      { value: "yes", label: "Yes: a negative test 21 days after the last episode is needed" },
+                    ]}
+                    required
+                  />
+                  {state.assessment.unprotectedSexSinceDay21 === true && (
                     <Checkbox label="Negative pregnancy test 21 days after the last episode" checked={state.assessment.negativeTest21DaysAfterLastUpsi} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "negativeTest21DaysAfterLastUpsi", value: v })} description="Without this, pregnancy is not reasonably excluded and supply is refused." />
                   )}
                 </>
@@ -345,6 +407,8 @@ export default function PostnatalContraceptionClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
               <Checkbox
@@ -450,7 +514,20 @@ export default function PostnatalContraceptionClient() {
                     value: v,
                   })
                 }
-                description="Not listed in the PGD; this tool refers (stricter)."
+                description="Not listed in the PGD; caution only. Check the SmPC and BNF."
+              />
+
+              <Checkbox
+                label="History of breast cancer treated within the last 5 years (not current)"
+                checked={state.medicalHistory.breastCancerWithin5Years}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "breastCancerWithin5Years",
+                    value: v,
+                  })
+                }
+                description="UKMEC 3 for progestogen-only methods: the inclusion criterion (UKMEC 1 or 2) is not met. Refer."
               />
 
               <Checkbox
@@ -498,6 +575,15 @@ export default function PostnatalContraceptionClient() {
                 }
                 description="Caution due to thrombotic risk."
               />
+
+              <div className="border-t pt-4">
+                <Checkbox
+                  label="I have asked the patient about every exclusion and caution listed above and recorded the answers"
+                  checked={state.medicalHistory.exclusionsAsked}
+                  onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "exclusionsAsked", value: v })}
+                  required
+                />
+              </div>
             </div>
           </StepWrapper>
         );
@@ -514,10 +600,11 @@ export default function PostnatalContraceptionClient() {
             canProceed={!hasStops}
             validationError={
               hasStops
-                ? "Hard stop contraindications present — cannot proceed to medicine supply."
+                ? "Exclusion present: cannot proceed to medicine supply. Give the advice, refer as appropriate, and save as not supplied."
                 : null
             }
             isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             {alerts.length > 0 ? (
               <AlertBanner alerts={alerts} />
@@ -550,6 +637,7 @@ export default function PostnatalContraceptionClient() {
             canProceed={canProceed}
             validationError={validationError}
             isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
               <SelectInput
@@ -655,6 +743,16 @@ export default function PostnatalContraceptionClient() {
                       required
                     />
                   </div>
+                  <SelectInput
+                    label="Injection"
+                    value={state.medicineSupply.injectionType}
+                    onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "injectionType", value: v })}
+                    options={[
+                      { value: "first", label: "First Depo-Provera injection" },
+                      { value: "repeat", label: "Repeat injection (every 12 weeks, plus or minus 5 days)" },
+                    ]}
+                    required
+                  />
                   <div className="grid sm:grid-cols-2 gap-4">
                     <TextInput
                       label="Date of injection"
@@ -663,15 +761,60 @@ export default function PostnatalContraceptionClient() {
                       type="date"
                       required
                     />
-                    <TextInput
-                      label="Next injection due (12 weeks, plus or minus 5 days)"
-                      value={state.medicineSupply.nextInjectionDue}
-                      onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "nextInjectionDue", value: v })}
-                      type="date"
-                      required
-                    />
+                    {state.medicineSupply.injectionType === "repeat" && (
+                      <TextInput
+                        label="Date of last injection"
+                        value={state.medicineSupply.lastInjectionDate}
+                        onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "lastInjectionDate", value: v })}
+                        type="date"
+                        required
+                      />
+                    )}
+                  </div>
+                  {(() => {
+                    const since = daysSinceLastInjection(state);
+                    if (since === null) return null;
+                    return since > 89 ? (
+                      <div className="p-3 bg-amber-50 border border-amber-200 rounded space-y-2">
+                        <p className="text-xs font-semibold text-amber-900">
+                          {since} days since the last injection: beyond 12 weeks plus 5 days. The repeat can only be given if pregnancy is reasonably excluded; otherwise refer.
+                        </p>
+                        <Checkbox
+                          label="Pregnancy reasonably excluded (no UPSI since day 21 after the last injection was due, or a negative test 21 days after the last episode)"
+                          checked={state.medicineSupply.lateRepeatPregnancyExcluded}
+                          onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "lateRepeatPregnancyExcluded", value: v })}
+                          required
+                        />
+                        <Checkbox
+                          label="Advised a barrier method for the next 7 days"
+                          checked={state.medicineSupply.lateRepeatBarrierAdvised}
+                          onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "lateRepeatBarrierAdvised", value: v })}
+                          required
+                        />
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-600">{since} days since the last injection: within the 12 week (plus or minus 5 days) window.</p>
+                    );
+                  })()}
+                  <div className="p-3 bg-gray-50 border border-gray-200 rounded">
+                    <p className="text-sm font-medium text-navy-900">Next injection due (derived: date of injection plus 12 weeks)</p>
+                    <p className="text-sm text-gray-700 mt-1">
+                      {state.medicineSupply.nextInjectionDue
+                        ? `${state.medicineSupply.nextInjectionDue} (window ${addDays(state.medicineSupply.startDate, 79)} to ${addDays(state.medicineSupply.startDate, 89)})`
+                        : "Enter the date of injection"}
+                    </p>
                   </div>
                 </>
+              )}
+
+              {state.medicineSupply.medicineChoice && (
+                <Checkbox
+                  label="UKMEC 2025 category 1 or 2 for the chosen method confirmed"
+                  checked={state.medicineSupply.ukmecConfirmed}
+                  onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "ukmecConfirmed", value: v })}
+                  description="Inclusion criterion in both arms of the PGD."
+                  required
+                />
               )}
 
               <TextInput
@@ -702,8 +845,8 @@ export default function PostnatalContraceptionClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
-          getConsultationData={getConsultationData}
-          onNewConsultation={handleNewConsultation}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
               {state.medicineSupply.medicineChoice === "desogestrel" && (
@@ -856,99 +999,57 @@ export default function PostnatalContraceptionClient() {
 
       case 7: // Summary & Print
         return (
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
-              <h2 className="text-lg font-bold text-navy-900">
-                Summary &amp; Consultation Record
-              </h2>
+          <StepWrapper
+            title="Summary & Consultation Record"
+            description="Confirm the practitioner details, review the record, then save and print."
+            currentStep={state.currentStep}
+            totalSteps={TOTAL_STEPS}
+            onNext={handleNext}
+            onPrev={handlePrev}
+            canProceed={canProceed}
+            validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
+            onNewConsultation={handleNewConsultation}
+          >
+            <div className="space-y-4 mb-6">
+              <TextInput
+                label="Pharmacist name"
+                value={state.summary.pharmacistName}
+                onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "pharmacistName", value: v })}
+                required
+              />
+              <TextInput
+                label="GPhC registration number"
+                value={state.summary.pharmacistGPhC}
+                onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "pharmacistGPhC", value: v })}
+                required
+              />
+              <TextInput
+                label="Pharmacy name"
+                value={state.summary.pharmacyName}
+                onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "pharmacyName", value: v })}
+              />
+              <TextInput
+                label="Pharmacy address"
+                value={state.summary.pharmacyAddress}
+                onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "pharmacyAddress", value: v })}
+              />
+              <TextArea
+                label="Additional clinical notes"
+                value={state.summary.clinicalNotes}
+                onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "clinicalNotes", value: v })}
+                placeholder="Any additional information to record..."
+              />
             </div>
 
-            <div className="px-6 py-6">
-              <div className="space-y-4 mb-6">
-                <TextInput
-                  label="Pharmacist name"
-                  value={state.summary.pharmacistName}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_SUMMARY",
-                      field: "pharmacistName",
-                      value: v,
-                    })
-                  }
-                  required
-                />
-                <TextInput
-                  label="GPhC registration number"
-                  value={state.summary.pharmacistGPhC}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_SUMMARY",
-                      field: "pharmacistGPhC",
-                      value: v,
-                    })
-                  }
-                  required
-                />
-                <TextInput
-                  label="Pharmacy name"
-                  value={state.summary.pharmacyName}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_SUMMARY",
-                      field: "pharmacyName",
-                      value: v,
-                    })
-                  }
-                />
-                <TextInput
-                  label="Pharmacy address"
-                  value={state.summary.pharmacyAddress}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_SUMMARY",
-                      field: "pharmacyAddress",
-                      value: v,
-                    })
-                  }
-                />
-                <TextArea
-                  label="Additional clinical notes"
-                  value={state.summary.clinicalNotes}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_SUMMARY",
-                      field: "clinicalNotes",
-                      value: v,
-                    })
-                  }
-                  placeholder="Any additional information to record..."
-                />
-              </div>
-
-              <div className="border-t border-gray-200 pt-6">
-                <p className="text-sm text-gray-600 mb-4">
-                  Review the summary below before printing the consultation record.
-                </p>
-                <PostnatalContraceptionSummaryReport state={updatedState} />
-              </div>
+            <div className="border-t border-gray-200 pt-6">
+              <p className="text-sm text-gray-600 mb-4">
+                Review the summary below before saving and printing the consultation record.
+              </p>
+              <PostnatalContraceptionSummaryReport state={updatedState} />
             </div>
-
-            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/30 flex items-center justify-between">
-              <button
-                onClick={() => dispatch({ type: "PREV_STEP" })}
-                className="px-5 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-navy-900 transition-colors"
-              >
-                &larr; Previous
-              </button>
-
-              <button
-                onClick={() => window.print()}
-                className="px-6 py-2.5 rounded-lg text-sm font-semibold bg-navy-900 hover:bg-navy-950 text-white transition-colors"
-              >
-                Print Consultation Record
-              </button>
-            </div>
-          </div>
+          </StepWrapper>
         );
 
       default:
@@ -982,6 +1083,8 @@ function PostnatalContraceptionSummaryReport({
 }: {
   state: PostnatalContraceptionState;
 }) {
+  const stopped = state.alerts.some((a) => a.severity === "stop");
+  const supplied = !stopped && Boolean(state.medicineSupply.medicineChoice);
   return (
     <div className="space-y-4 text-xs print:text-[10px]">
       <p className="text-[10px] text-gray-400">{PGD_VERSION_LABEL}</p>
@@ -992,13 +1095,17 @@ function PostnatalContraceptionSummaryReport({
       />
       <Row label="Date of Birth" value={state.patient.dateOfBirth} />
       <Row label="Age" value={`${state.patient.age} years`} />
-      <Row label="NHS Number" value={state.patient.nhsNumber} />
-      <Row label="GP" value={state.patient.gpName} />
+      <Row label="Address" value={state.patient.address || "Not recorded"} />
+      <Row label="NHS Number" value={state.patient.nhsNumber || "Not recorded"} />
+      <Row label="GP" value={[state.patient.gpName, state.patient.gpPractice].filter(Boolean).join(", ") || "Not recorded"} />
+      <Row label="Valid informed consent given" value={state.consent.informedConsentGiven ? "Yes" : "No"} />
+      <Row label="Date and time of consultation" value={`${state.summary.consultationDate} ${state.summary.consultationTime}`.trim()} />
 
       <SectionHeader>Postnatal Assessment</SectionHeader>
+      <Row label="Date of delivery" value={state.assessment.deliveryDate || "Not recorded"} />
       <Row
         label="Days postpartum"
-        value={state.assessment.daysPostpartum !== null ? `${state.assessment.daysPostpartum} days (${state.assessment.weeksPostpartum} weeks)` : "Not recorded"}
+        value={state.assessment.daysPostpartum !== null ? `${state.assessment.daysPostpartum} days (${state.assessment.weeksPostpartum} weeks), derived from the delivery date` : "Not recorded"}
       />
       <Row label="Delivery type" value={state.assessment.deliveryType} />
       <Row
@@ -1010,11 +1117,13 @@ function PostnatalContraceptionSummaryReport({
         <Row
           label="Pregnancy reasonably excluded"
           value={
-            !state.assessment.unprotectedSexSinceDay21
-              ? "Yes: no unprotected intercourse since day 21"
-              : state.assessment.negativeTest21DaysAfterLastUpsi
-                ? "Yes: negative test 21 days after the last episode"
-                : "No"
+            state.assessment.unprotectedSexSinceDay21 === null
+              ? "Not answered"
+              : state.assessment.unprotectedSexSinceDay21 === false
+                ? "Yes: no unprotected intercourse since day 21"
+                : state.assessment.negativeTest21DaysAfterLastUpsi
+                  ? "Yes: negative test 21 days after the last episode"
+                  : "No"
           }
         />
       )}
@@ -1037,6 +1146,8 @@ function PostnatalContraceptionSummaryReport({
         value={state.medicalHistory.porphyria ? "Yes" : "No"}
       />
       <Row label="Known or suspected pregnancy" value={state.medicalHistory.knownOrSuspectedPregnancy ? "Yes" : "No"} />
+      <Row label="Breast cancer within the last 5 years" value={state.medicalHistory.breastCancerWithin5Years ? "Yes (UKMEC 3, referred)" : "No"} />
+      <Row label="Exclusions and cautions asked" value={state.medicalHistory.exclusionsAsked ? "Yes, all asked and recorded" : "Not confirmed"} />
       <Row label="Active thromboembolic disorder" value={state.medicalHistory.activeThromboembolicDisorder ? "Yes" : "No"} />
       <Row label="Liver tumours" value={state.medicalHistory.liverTumours ? "Yes" : "No"} />
       <Row label="Hypersensitivity (desogestrel / MPA)" value={`${state.medicalHistory.desogestrelHypersensitivity ? "Yes" : "No"} / ${state.medicalHistory.mpaHypersensitivity ? "Yes" : "No"}`} />
@@ -1057,20 +1168,33 @@ function PostnatalContraceptionSummaryReport({
       />
 
       <SectionHeader>Medicine Supply</SectionHeader>
-      <Row label="Medicine" value={state.medicineSupply.medicine || "None supplied"} />
-      {state.medicineSupply.medicineChoice === "desogestrel" && (
+      {!supplied ? (
+        <Row label="Outcome" value={stopped ? "NOT SUPPLIED: exclusion criteria met. Patient advised and referred as recorded." : "No medicine selected"} />
+      ) : (
         <>
-          <Row label="Dose" value="One tablet daily at the same time each day, continuously" />
-          <Row label="Quantity" value={`${state.medicineSupply.quantity} tablets (maximum 84)`} />
-          <Row label="Start date" value={state.medicineSupply.startDate} />
-        </>
-      )}
-      {state.medicineSupply.medicineChoice === "depo-provera" && (
-        <>
-          <Row label="Dose and route" value={`150 mg deep intramuscular injection, ${state.medicineSupply.injectionSite || "site not recorded"}`} />
-          <Row label="Batch / expiry" value={`${state.medicineSupply.batchNumber || "not recorded"} / ${state.medicineSupply.expiryDate || "not recorded"}`} />
-          <Row label="Date of injection" value={state.medicineSupply.startDate} />
-          <Row label="Next injection due" value={state.medicineSupply.nextInjectionDue || "Not recorded"} />
+          <Row label="Medicine" value={state.medicineSupply.medicine || "None supplied"} />
+          <Row label="UKMEC 1 or 2 confirmed" value={state.medicineSupply.ukmecConfirmed ? "Yes" : "No"} />
+          {state.medicineSupply.medicineChoice === "desogestrel" && (
+            <>
+              <Row label="Dose, form and route" value="75 micrograms, one tablet orally daily at the same time each day, continuously" />
+              <Row label="Quantity" value={`${state.medicineSupply.quantity} tablets (maximum 84)`} />
+              <Row label="Start date" value={state.medicineSupply.startDate} />
+            </>
+          )}
+          {state.medicineSupply.medicineChoice === "depo-provera" && (
+            <>
+              <Row label="Dose and route" value={`150 mg deep intramuscular injection, ${state.medicineSupply.injectionSite || "site not recorded"}`} />
+              <Row label="Quantity" value="Single injection (1 mL)" />
+              <Row label="Injection" value={state.medicineSupply.injectionType === "repeat" ? `Repeat (last injection ${state.medicineSupply.lastInjectionDate || "not recorded"}${daysSinceLastInjection(state) !== null ? `, ${daysSinceLastInjection(state)} days ago` : ""})` : "First injection"} />
+              {daysSinceLastInjection(state) !== null && (daysSinceLastInjection(state) as number) > 89 && (
+                <Row label="Late repeat" value={`Pregnancy reasonably excluded: ${state.medicineSupply.lateRepeatPregnancyExcluded ? "Yes" : "No"}; barrier method for 7 days advised: ${state.medicineSupply.lateRepeatBarrierAdvised ? "Yes" : "No"}`} />
+              )}
+              <Row label="Batch / expiry" value={`${state.medicineSupply.batchNumber || "not recorded"} / ${state.medicineSupply.expiryDate || "not recorded"}`} />
+              <Row label="Date of injection" value={state.medicineSupply.startDate} />
+              <Row label="Next injection due" value={state.medicineSupply.nextInjectionDue ? `${state.medicineSupply.nextInjectionDue} (window ${addDays(state.medicineSupply.startDate, 79)} to ${addDays(state.medicineSupply.startDate, 89)})` : "Not recorded"} />
+            </>
+          )}
+          <Row label="Supplied by" value={state.medicineSupply.administeredBy || "Not recorded"} />
         </>
       )}
 
@@ -1096,12 +1220,22 @@ function PostnatalContraceptionSummaryReport({
         ]}
       />
 
-      <PharmacistDeclaration
-        pgdName="Postnatal Contraception"
-        pharmacistName={state.summary.pharmacistName}
-        pharmacistGPhC={state.summary.pharmacistGPhC}
-        pharmacyName={state.summary.pharmacyName}
-      />
+      {supplied ? (
+        <PharmacistDeclaration
+          pgdName="Postnatal Contraception"
+          pharmacistName={state.summary.pharmacistName}
+          pharmacistGPhC={state.summary.pharmacistGPhC}
+          pharmacyName={state.summary.pharmacyName}
+        />
+      ) : (
+        <>
+          <SectionHeader>Practitioner</SectionHeader>
+          <p className="text-xs text-gray-600 mb-2">No medicine was supplied under this PGD. Advice given and the decision reached are recorded above.</p>
+          <Row label="Name" value={state.summary.pharmacistName || "Not recorded"} />
+          <Row label="GPhC number" value={state.summary.pharmacistGPhC || "Not recorded"} />
+          <Row label="Pharmacy" value={state.summary.pharmacyName || "Not recorded"} />
+        </>
+      )}
 
       {state.summary.clinicalNotes && (
         <>

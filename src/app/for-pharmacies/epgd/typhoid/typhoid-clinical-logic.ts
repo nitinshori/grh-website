@@ -19,13 +19,45 @@ export interface TyphoidMedicalHistory {
   immunosuppressed: boolean;
 }
 
-export function daysUntilDeparture(departureDate: string): number | null {
-  if (!departureDate) return null;
-  const departure = new Date(departureDate);
-  if (Number.isNaN(departure.getTime())) return null;
-  const today = new Date();
-  return Math.floor((departure.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+/** Parse a yyyy-mm-dd string as local midnight (never UTC). */
+export function parseLocalDate(iso: string): Date | null {
+  if (!iso) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) return null;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return Number.isNaN(d.getTime()) ? null : d;
 }
+
+/** yyyy-mm-dd from local date parts (toISOString shifts a day between
+ *  midnight and 01:00 BST). */
+export function formatLocalDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/** Calendar days from today to the departure date, local midnight to local
+ *  midnight, so a departure exactly 14 days away is 14, not 13. */
+export function daysUntilDeparture(departureDate: string): number | null {
+  const departure = parseLocalDate(departureDate);
+  if (!departure) return null;
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.round((departure.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+/** True when the expiry date (yyyy-mm-dd) is before today. */
+export function isExpired(expiryDate: string): boolean {
+  const d = daysUntilDeparture(expiryDate);
+  return d !== null && d < 0;
+}
+
+/** The document's exception to the 3 year exclusion is for a previous dose
+ *  that is "due for renewal". A dose is treated as due for renewal only in
+ *  the last 6 months of its 3 year validity; earlier than that the exclusion
+ *  stands and the route is exclusion and referral. */
+export const RENEWAL_WINDOW_YEARS = 2.5;
 
 export function yearsSincePreviousDose(previousDoseDate?: string): number | null {
   if (!previousDoseDate) return null;
@@ -37,9 +69,8 @@ export function yearsSincePreviousDose(previousDoseDate?: string): number | null
 
 /** Booster every 3 years: the date the next booster is due, ISO yyyy-mm-dd. */
 export function nextBoosterDueDate(from: Date = new Date()): string {
-  const d = new Date(from.getTime());
-  d.setFullYear(d.getFullYear() + 3);
-  return d.toISOString().split('T')[0];
+  const d = new Date(from.getFullYear() + 3, from.getMonth(), from.getDate());
+  return formatLocalDate(d);
 }
 
 export function getTyphoidClinicalAlerts(
@@ -145,13 +176,22 @@ export function getTyphoidClinicalAlerts(
         detail:
           'A booster dose every 3 years for those with continued or repeated exposure. A booster is due; record the date the next booster is due.',
       });
+    } else if (yearsElapsed < RENEWAL_WINDOW_YEARS) {
+      // Not due for renewal: the document's exception cannot apply.
+      alerts.push({
+        severity: 'stop',
+        code: 'RECENT_DOSE',
+        message: 'Typhoid Vi vaccine given within the last 3 years and not yet due for renewal',
+        detail:
+          `Excluded. The previous dose was ${yearsElapsed.toFixed(1)} years ago; protection should still be in place and additional doses do not boost levels further. The document's exception applies only where the previous dose is due for renewal (within 6 months of its 3 year renewal date). Record the advice given and the decision, and refer.`,
+      });
     } else if (patient.previousDoseRenewalReason.trim()) {
       alerts.push({
         severity: 'caution',
         code: 'RECENT_DOSE_RENEWAL',
-        message: 'Typhoid Vi dose within the last 3 years: document exception applied',
+        message: 'Previous dose within 6 months of its 3 year renewal date: document exception applied',
         detail:
-          `Recorded reason: ${patient.previousDoseRenewalReason.trim()}. Additional doses do not boost antibody levels further; confirm the previous dose is genuinely due for renewal.`,
+          `Recorded reason: ${patient.previousDoseRenewalReason.trim()}. Returning to a risk area and the previous dose is due for renewal.`,
       });
     } else {
       alerts.push({
@@ -159,7 +199,7 @@ export function getTyphoidClinicalAlerts(
         code: 'RECENT_DOSE',
         message: 'Typhoid Vi vaccine given within the last 3 years',
         detail:
-          'Excluded, unless the traveller is returning to a risk area and the previous dose is due for renewal (record the reason). Protection from the previous dose should still be in place; additional doses do not boost levels further.',
+          'Excluded, unless the traveller is returning to a risk area and the previous dose is due for renewal (it is within 6 months of its renewal date: record the reason). Otherwise record the advice given and refer.',
       });
     }
   }
@@ -195,38 +235,6 @@ export function getTyphoidClinicalAlerts(
   }
 
   return alerts;
-}
-
-export function getTyphoidDoseRecommendation(
-  patient: TyphoidPatientDetails
-): string {
-  if (patient.age === null) return 'Age required to determine dose';
-
-  if (patient.age < 2) {
-    return 'Not eligible under this PGD: aged 2 years and over only. Refer to a travel clinic or the GP.';
-  }
-
-  return 'Typhoid Vi polysaccharide vaccine (Typhim Vi or equivalent): a single 0.5 mL dose (25 micrograms Vi antigen) by intramuscular injection into the deltoid, given at least 2 weeks before travel. Booster every 3 years for continued or repeated exposure.';
-}
-
-export function determineTravelRiskCategory(
-  travelReason: string
-): { category: string; highRisk: boolean } {
-  // Risk areas per the signed PGD: South Asia, Southeast Asia, Africa and
-  // Central/South America. South Asia carries the highest risk.
-  if (travelReason === 'south-asia') {
-    return { category: 'South Asia (highest risk)', highRisk: true };
-  }
-  if (travelReason === 'southeast-asia') {
-    return { category: 'Southeast Asia', highRisk: true };
-  }
-  if (travelReason === 'africa') {
-    return { category: 'Africa', highRisk: true };
-  }
-  if (travelReason === 'central-south-america') {
-    return { category: 'Central or South America', highRisk: true };
-  }
-  return { category: 'Other travel', highRisk: false };
 }
 
 export function getAdministrationGuidance(

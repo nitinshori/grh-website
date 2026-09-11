@@ -11,6 +11,8 @@ import type {
   ECMedicineSelection,
   ECCounselling,
   ECConsultationSummary,
+  ECPreviousECType,
+  ECMedicineChoice,
 } from "./lib/ec-types";
 import { STEP_LABELS, TOTAL_STEPS, createInitialConsultationState } from "./lib/ec-types";
 import {
@@ -21,6 +23,8 @@ import {
   getMedicineAvailability,
   calculateBmi,
   isHighWeightOrBmi,
+  getRequiredLngDose,
+  daysSinceLmp,
 } from "./lib/ec-clinical-logic";
 import { validateStep } from "./lib/ec-validation";
 import { calculateAge } from "../shared/types";
@@ -69,6 +73,15 @@ function reducer(state: ECConsultationState, action: ECAction): ECConsultationSt
           newState.clinicalAssessment.upsiTime
         );
       }
+      // Previous EC this cycle is asked once, here. takesUPA is derived so
+      // the levonorgestrel-after-ulipristal gate cannot be missed.
+      if (action.field === "previousECType" || action.field === "previousEC") {
+        const type: ECPreviousECType = newState.clinicalAssessment.previousEC
+          ? newState.clinicalAssessment.previousECType
+          : "";
+        newState.clinicalAssessment.previousECType = type;
+        newState.medications = { ...newState.medications, takesUPA: type === "ulipristal" };
+      }
       break;
 
     case "UPDATE_MEDICAL_HISTORY":
@@ -106,6 +119,13 @@ function reducer(state: ECConsultationState, action: ECAction): ECConsultationSt
 
     case "NEXT_STEP":
       newState.currentStep = Math.min(newState.currentStep + 1, TOTAL_STEPS - 1);
+      // Hours since UPSI is recomputed on every step change so a
+      // consultation that crosses the 72 hour line while in progress is
+      // judged on the current time, not the time the date was typed.
+      newState.clinicalAssessment = {
+        ...newState.clinicalAssessment,
+        hoursSinceUPSI: calculateHoursSinceUPSI(newState.clinicalAssessment.upsiDate, newState.clinicalAssessment.upsiTime),
+      };
       break;
 
     case "PREV_STEP":
@@ -159,8 +179,33 @@ export function ECToolClient() {
   // Validation for current step
   const validationError = useMemo(() => validateStep(state.currentStep, state), [state.currentStep, state]);
 
-  // Can proceed to next step?
-  const canProceed = !validationError && (!hasStops || state.currentStep >= 6);
+  // A stop anywhere disables Next on every step. The progress bar only moves
+  // backwards, so the only route past a stop is "Save as not supplied".
+  const canProceed = !validationError && !hasStops;
+
+  // The levonorgestrel dose is fixed by the document (3 mg with enzyme
+  // inducers or at 70 kg or over / BMI 26 or over, otherwise 1.5 mg). It is
+  // derived, not chosen, so there is nothing to override.
+  const requiredLng = useMemo(() => getRequiredLngDose(state), [state]);
+  useEffect(() => {
+    const sel = state.medicineSelection;
+    if (sel.medicine === "levonorgestrel") {
+      if (sel.dose !== requiredLng.dose)
+        dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "dose", value: requiredLng.dose });
+      if (sel.doubleDosingRequired !== (requiredLng.dose === "3mg"))
+        dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "doubleDosingRequired", value: requiredLng.dose === "3mg" });
+      if (sel.doubleDoseReason !== requiredLng.reason)
+        dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "doubleDoseReason", value: requiredLng.reason });
+    } else if (sel.medicine === "ulipristal") {
+      if (sel.dose !== "30mg") dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "dose", value: "30mg" });
+      if (sel.doubleDosingRequired) dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "doubleDosingRequired", value: false });
+      if (sel.doubleDoseReason) dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "doubleDoseReason", value: "" });
+    } else if (sel.dose || sel.doubleDoseReason || sel.doubleDosingRequired) {
+      dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "dose", value: "" });
+      dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "doubleDosingRequired", value: false });
+      dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "doubleDoseReason", value: "" });
+    }
+  }, [state.medicineSelection, requiredLng]);
 
   // Mark step as completed
   const markStepComplete = useCallback(() => {
@@ -187,7 +232,30 @@ export function ECToolClient() {
   };
 
   // ─── Consultation Record Data (for saving to database) ───
+  // Returns a record on every step, with or without a medicine, so an
+  // excluded patient can be saved as not supplied from the step the stop was
+  // raised. Saves updatedState so alerts and the recommendation are stored.
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    const sel = state.medicineSelection;
+    const supplied = !hasStops && (sel.medicine === "levonorgestrel" || sel.medicine === "ulipristal");
+    const medicine = supplied
+      ? sel.medicine === "levonorgestrel"
+        ? {
+            name: "Levonorgestrel 1.5mg tablet (Levonelle)",
+            medicine: "levonorgestrel",
+            dose: sel.dose === "3mg" ? "3 mg (two tablets) single dose" : "1.5 mg (one tablet) single dose",
+            duration: "Single dose",
+            quantity: sel.dose === "3mg" ? "2 tablets" : "1 tablet",
+          }
+        : {
+            name: "Ulipristal acetate 30mg tablet (ellaOne)",
+            medicine: "ulipristal",
+            dose: "30 mg (one tablet) single dose",
+            duration: "Single dose",
+            quantity: "1 tablet",
+          }
+      : undefined;
+    const hoursAtSave = calculateHoursSinceUPSI(state.clinicalAssessment.upsiDate, state.clinicalAssessment.upsiTime);
     return {
       patient: {
         firstName: state.patient.firstName,
@@ -199,17 +267,26 @@ export function ECToolClient() {
         address: state.patient.address,
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
+        gpAddress: state.patient.gpAddress,
+        gpPhone: state.patient.gpPhone,
+        gpEmail: state.patient.gpEmail,
+        gpOdsCode: state.patient.gpOdsCode,
       },
-      clinicalData: state as unknown as Record<string, unknown>,
-      outcome: hasStops ? "not_supplied" : "completed",
+      clinicalData: { ...updatedState, hoursSinceUPSIAtSave: hoursAtSave } as unknown as Record<string, unknown>,
+      outcome: hasStops ? "not_supplied" : sel.medicine === "not-supplied" ? "referred" : "completed",
+      medicine,
       summary: {
-        pharmacistName: state.summary.pharmacistName,
-        pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacistName: state.summary.pharmacistName || __pharmProfile?.name || "",
+        pharmacistGPhC: state.summary.pharmacistGPhC || __pharmProfile?.gphcNumber || "",
+        pharmacyName: state.summary.pharmacyName || __pharmProfile?.pharmacyName || "",
+        pharmacyAddress: state.summary.pharmacyAddress || __pharmProfile?.pharmacyAddress || "",
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: state.consent.notifyGp },
     };
-  }, [state, hasStops]);
+  }, [state, updatedState, hasStops, __pharmProfile]);
 
   const handleNewConsultation = useCallback(() => {
     dispatch({ type: "RESET" });
@@ -232,6 +309,8 @@ export function ECToolClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <PatientDetailsStep
               patient={state.patient}
@@ -251,8 +330,10 @@ export function ECToolClient() {
               <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded space-y-3">
                 <p className="text-sm font-semibold text-red-800">
                   Aged under 13: any sexual activity is a safeguarding concern. This ePGD does not
-                  supply emergency contraception to a child under 13. Refer the same day to the GP or
-                  sexual health service, make a safeguarding referral, and record both below.
+                  supply emergency contraception to a child under 13 (Get Real Health service decision).
+                  Refer the same day to the GP or sexual health service, make a safeguarding referral
+                  (mandatory), record both below, then use &quot;Save as not supplied&quot; so the
+                  safeguarding record is kept.
                 </p>
                 <Checkbox
                   label="Safeguarding referral made"
@@ -332,6 +413,8 @@ export function ECToolClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <ConsentStep
               consent={state.consent}
@@ -353,6 +436,8 @@ export function ECToolClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
               <div className="mb-6">
@@ -362,9 +447,6 @@ export function ECToolClient() {
                 <TimeCalculator
                   upsiDate={state.clinicalAssessment.upsiDate}
                   upsiTime={state.clinicalAssessment.upsiTime}
-                  onHoursUpdate={(hours) => {
-                    // Hours are auto-updated through reducer
-                  }}
                 />
               </div>
 
@@ -424,6 +506,15 @@ export function ECToolClient() {
                 />
               </div>
 
+              {(() => {
+                const d = daysSinceLmp(state.clinicalAssessment.lastMenstrualPeriod);
+                return d !== null && d > 35 ? (
+                  <p className="text-xs text-amber-700">
+                    Last period {d} days ago (more than 5 weeks): pregnancy is suspected unless a pregnancy test is negative.
+                  </p>
+                ) : null;
+              })()}
+
               <Checkbox
                 label="Menstrual cycle is regular"
                 checked={state.clinicalAssessment.cycleRegular}
@@ -450,6 +541,7 @@ export function ECToolClient() {
                   min={21}
                   max={35}
                   unit="days"
+                  required
                 />
               )}
 
@@ -463,7 +555,38 @@ export function ECToolClient() {
                     value: v,
                   })
                 }
-                description="e.g. nausea, breast tenderness"
+                description="e.g. nausea, breast tenderness. Pregnancy is then suspected unless a pregnancy test is negative."
+              />
+
+              <SelectInput
+                label="Pregnancy test result"
+                value={state.medicalHistory.pregnancyTestResult}
+                onChange={(v: string) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "pregnancyTestResult",
+                    value: v as "positive" | "negative" | "not-done" | "",
+                  })
+                }
+                options={[
+                  { value: "negative", label: "Negative" },
+                  { value: "positive", label: "Positive (exclusion)" },
+                  { value: "not-done", label: "Not done (does not lift a suspicion of pregnancy)" },
+                ]}
+                required
+              />
+
+              <Checkbox
+                label="Known or suspected pregnancy"
+                checked={state.medicalHistory.currentlyPregnant}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "currentlyPregnant",
+                    value: v,
+                  })
+                }
+                description="Exclusion for both medicines (also raised by a positive test, or by symptoms or a period more than 5 weeks ago without a negative test)."
               />
 
               <Checkbox
@@ -520,18 +643,37 @@ export function ECToolClient() {
               />
 
               {state.clinicalAssessment.previousEC && (
-                <TextArea
-                  label="Details of previous EC use"
-                  value={state.clinicalAssessment.previousECDetails}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_CLINICAL_ASSESSMENT",
-                      field: "previousECDetails",
-                      value: v,
-                    })
-                  }
-                  placeholder="What was used, when, etc."
-                />
+                <div className="space-y-4">
+                  <SelectInput
+                    label="Which emergency contraceptive was used this cycle"
+                    value={state.clinicalAssessment.previousECType}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_CLINICAL_ASSESSMENT",
+                        field: "previousECType",
+                        value: v as ECPreviousECType,
+                      })
+                    }
+                    options={[
+                      { value: "levonorgestrel", label: "Levonorgestrel (Levonelle or generic)" },
+                      { value: "ulipristal", label: "Ulipristal acetate (ellaOne): levonorgestrel cannot then be given this cycle" },
+                      { value: "unknown", label: "Not known" },
+                    ]}
+                    required
+                  />
+                  <TextArea
+                    label="Date taken and any other detail"
+                    value={state.clinicalAssessment.previousECDetails}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_CLINICAL_ASSESSMENT",
+                        field: "previousECDetails",
+                        value: v,
+                      })
+                    }
+                    placeholder="e.g. ellaOne taken on 3 September"
+                  />
+                </div>
               )}
 
               <Checkbox
@@ -561,39 +703,15 @@ export function ECToolClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
-              <SelectInput
-                label="Pregnancy test result"
-                value={state.medicalHistory.pregnancyTestResult}
-                onChange={(v: string) =>
-                  dispatch({
-                    type: "UPDATE_MEDICAL_HISTORY",
-                    field: "pregnancyTestResult",
-                    value: v as "positive" | "negative" | "not-done" | "",
-                  })
-                }
-                options={[
-                  { value: "negative", label: "Negative" },
-                  { value: "positive", label: "Positive" },
-                  { value: "not-done", label: "Not done" },
-                ]}
-                required
-              />
-
-              <Checkbox
-                label="Known or suspected pregnancy"
-                checked={state.medicalHistory.currentlyPregnant}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_MEDICAL_HISTORY",
-                    field: "currentlyPregnant",
-                    value: v,
-                  })
-                }
-                description="Exclusion for both medicines (also triggered by a positive pregnancy test)."
-              />
-
+              <p className="text-xs text-gray-500">
+                Pregnancy test result and known or suspected pregnancy were recorded on the Clinical Assessment step
+                ({state.medicalHistory.pregnancyTestResult ? `test ${state.medicalHistory.pregnancyTestResult.replace("-", " ")}` : "test result not recorded"}
+                {state.medicalHistory.currentlyPregnant ? "; known or suspected pregnancy recorded" : ""}).
+              </p>
               <div className="grid sm:grid-cols-3 gap-4">
                 <NumberInput
                   label="Weight"
@@ -615,6 +733,7 @@ export function ECToolClient() {
                   min={100}
                   max={250}
                   unit="cm"
+                  required
                 />
                 <div>
                   <label className="block text-sm font-medium text-navy-900 mb-1">BMI</label>
@@ -747,6 +866,8 @@ export function ECToolClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
               <Checkbox
@@ -777,18 +898,12 @@ export function ECToolClient() {
                 />
               )}
 
-              <Checkbox
-                label="Already taken ulipristal (ellaOne) this cycle"
-                checked={state.medications.takesUPA}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_MEDICATIONS",
-                    field: "takesUPA",
-                    value: v,
-                  })
-                }
-                description="Repeated use in the same cycle is not recommended; levonorgestrel is not given after ulipristal."
-              />
+              <p className="text-xs text-gray-500">
+                Previous emergency contraception this cycle:{" "}
+                {state.clinicalAssessment.previousEC
+                  ? `${state.clinicalAssessment.previousECType || "type not recorded"}${state.medications.takesUPA ? " (levonorgestrel cannot be given after ulipristal this cycle)" : ""}`
+                  : "none recorded on the Clinical Assessment step"}.
+              </p>
 
               <Checkbox
                 label="Progestogen-containing contraceptive taken in the previous 7 days"
@@ -842,10 +957,11 @@ export function ECToolClient() {
             canProceed={!hasStops}
             validationError={
               hasStops
-                ? "Hard stop contraindications present — cannot proceed to medicine selection."
+                ? "Exclusion present: cannot proceed to medicine selection. Give the advice, refer as appropriate, and save as not supplied."
                 : null
             }
             isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             {alerts.length > 0 ? (
               <AlertBanner alerts={alerts} />
@@ -881,6 +997,7 @@ export function ECToolClient() {
             canProceed={canProceed}
             validationError={validationError}
             isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
               {doseRecommendation && doseRecommendation.medicine !== "none" && (
@@ -907,7 +1024,7 @@ export function ECToolClient() {
                   dispatch({
                     type: "UPDATE_MEDICINE_SELECTION",
                     field: "medicine",
-                    value: v as "levonorgestrel" | "ulipristal" | "",
+                    value: v as ECMedicineChoice,
                   })
                 }
                 options={[
@@ -919,62 +1036,45 @@ export function ECToolClient() {
                     value: "ulipristal",
                     label: `Ulipristal acetate 30mg tablet (ellaOne), within 120 hours (${medicineAvailability.canUseUPA ? "Available" : "Not available: " + medicineAvailability.upaReasons.join(", ")})`,
                   },
+                  {
+                    value: "not-supplied",
+                    label: "Not supplied: patient declined, or referred (for example for a copper IUD)",
+                  },
                 ]}
                 required
               />
 
-              {state.medicineSelection.medicine === "levonorgestrel" && (
-                <SelectInput
-                  label="Dose"
-                  value={state.medicineSelection.dose}
-                  onChange={(v) => {
-                    dispatch({
-                      type: "UPDATE_MEDICINE_SELECTION",
-                      field: "dose",
-                      value: v,
-                    });
-                    dispatch({
-                      type: "UPDATE_MEDICINE_SELECTION",
-                      field: "doubleDosingRequired",
-                      value: v === "3mg",
-                    });
-                    if (v !== "3mg") {
-                      dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "doubleDoseReason", value: "" });
-                    }
-                  }}
-                  options={[
-                    { value: "1.5mg", label: "1.5 mg single dose (1 tablet), as soon as possible, ideally within 12 hours" },
-                    {
-                      value: "3mg",
-                      label: "3 mg double dose (2 tablets): enzyme inducers (licensed) or weight 70 kg or over / BMI 26 or over (off-label, FSRH)",
-                    },
-                  ]}
+              {state.medicineSelection.medicine === "not-supplied" && (
+                <TextArea
+                  label="Advice given and decision reached"
+                  value={state.medicineSelection.notSuppliedReason}
+                  onChange={(v) =>
+                    dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "notSuppliedReason", value: v })
+                  }
+                  placeholder="e.g. Referred to sexual health clinic for copper IUD today; or patient declined oral EC after discussion"
                   required
                 />
               )}
 
-              {state.medicineSelection.medicine === "levonorgestrel" &&
-                state.medicineSelection.dose === "3mg" && (
-                  <SelectInput
-                    label="Reason for 3 mg dose (recorded)"
-                    value={state.medicineSelection.doubleDoseReason}
-                    onChange={(v) =>
-                      dispatch({
-                        type: "UPDATE_MEDICINE_SELECTION",
-                        field: "doubleDoseReason",
-                        value: v as ECConsultationState["medicineSelection"]["doubleDoseReason"],
-                      })
-                    }
-                    options={[
-                      { value: "enzyme-inducers", label: "Enzyme-inducing drugs in the last 4 weeks (licensed)" },
-                      { value: "weight-bmi", label: "Weight 70 kg or over, or BMI 26 or over (off-label per FSRH)" },
-                    ]}
-                    required
-                  />
-                )}
+              {state.medicineSelection.medicine === "levonorgestrel" && (
+                <div className="p-3 bg-gray-50 border border-gray-200 rounded">
+                  <p className="text-sm font-medium text-navy-900">Dose (fixed by the PGD)</p>
+                  <p className="text-sm text-gray-700 mt-1">
+                    {requiredLng.dose === "3mg"
+                      ? "3 mg double dose (2 tablets) as a single dose, as soon as possible"
+                      : "1.5 mg (1 tablet) as a single dose, as soon as possible, ideally within 12 hours"}
+                  </p>
+                  {requiredLng.reason === "enzyme-inducers" && (
+                    <p className="text-xs text-gray-600 mt-1">Reason: enzyme-inducing drugs in the last 4 weeks (licensed double dose).</p>
+                  )}
+                  {requiredLng.reason === "weight-bmi" && (
+                    <p className="text-xs text-gray-600 mt-1">Reason: weight 70 kg or over, or BMI 26 or over (off-label per FSRH). Ulipristal is preferred unless unsuitable; 1.5 mg is not an option for this patient.</p>
+                  )}
+                </div>
+              )}
 
               {state.medicineSelection.medicine === "levonorgestrel" &&
-                state.medicineSelection.doubleDoseReason === "weight-bmi" && (
+                requiredLng.reason === "weight-bmi" && (
                   <Checkbox
                     label="Off-label use explained to the patient and recorded"
                     checked={state.medicineSelection.offLabelExplained}
@@ -1005,35 +1105,6 @@ export function ECToolClient() {
                   <p className="text-sm text-gray-700 mt-1">30 mg as a single dose (1 tablet), as soon as possible after UPSI, effective up to 120 hours</p>
                 </div>
               )}
-
-              <Checkbox
-                label="Override automatic recommendation"
-                checked={state.medicineSelection.pharmacistOverride}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_MEDICINE_SELECTION",
-                    field: "pharmacistOverride",
-                    value: v,
-                  })
-                }
-                description="Tick if deviating from recommended dose/medicine."
-              />
-
-              {state.medicineSelection.pharmacistOverride && (
-                <TextArea
-                  label="Reason for override"
-                  value={state.medicineSelection.overrideReason}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_MEDICINE_SELECTION",
-                      field: "overrideReason",
-                      value: v,
-                    })
-                  }
-                  required
-                  placeholder="Document clinical reasoning for deviation from guidance."
-                />
-              )}
             </div>
           </StepWrapper>
         );
@@ -1049,8 +1120,8 @@ export function ECToolClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
-          getConsultationData={getConsultationData}
-          onNewConsultation={handleNewConsultation}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-3">
               <Checkbox
@@ -1168,105 +1239,94 @@ export function ECToolClient() {
                 }
                 description="After levonorgestrel: start or continue regular contraception. After ulipristal: wait 5 days before starting hormonal contraception, with condoms until it is reliable again."
               />
+
+              {state.medicalHistory.breastfeeding && (
+                <Checkbox
+                  label="Breastfeeding advice given"
+                  checked={state.counselling.breastfeedingAdvice}
+                  onChange={(v) =>
+                    dispatch({ type: "UPDATE_COUNSELLING", field: "breastfeedingAdvice", value: v })
+                  }
+                  description="Avoid breastfeeding for 8 hours after levonorgestrel, or 7 days after ulipristal."
+                  required
+                />
+              )}
+
+              <Checkbox
+                label="Patient information leaflet (PIL) supplied with the medication"
+                checked={state.counselling.pilSupplied}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_COUNSELLING", field: "pilSupplied", value: v })
+                }
+                required
+              />
             </div>
           </StepWrapper>
         );
 
       case 8: // Summary & Print
         return (
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
-              <h2 className="text-lg font-bold text-navy-900">
-                Summary & Consultation Record
-              </h2>
+          <StepWrapper
+            title="Summary & Consultation Record"
+            description="Confirm the practitioner details, review the record, then save and print."
+            currentStep={state.currentStep}
+            totalSteps={TOTAL_STEPS}
+            onNext={handleNext}
+            onPrev={handlePrev}
+            canProceed={canProceed}
+            validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
+            onNewConsultation={handleNewConsultation}
+          >
+            <div className="space-y-4 mb-6">
+              <TextInput
+                label="Pharmacist name"
+                value={state.summary.pharmacistName}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_SUMMARY", field: "pharmacistName", value: v })
+                }
+                required
+              />
+              <TextInput
+                label="GPhC registration number"
+                value={state.summary.pharmacistGPhC}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_SUMMARY", field: "pharmacistGPhC", value: v })
+                }
+                required
+              />
+              <TextInput
+                label="Pharmacy name"
+                value={state.summary.pharmacyName}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_SUMMARY", field: "pharmacyName", value: v })
+                }
+              />
+              <TextInput
+                label="Pharmacy address"
+                value={state.summary.pharmacyAddress}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_SUMMARY", field: "pharmacyAddress", value: v })
+                }
+              />
+              <TextArea
+                label="Additional clinical notes"
+                value={state.summary.clinicalNotes}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_SUMMARY", field: "clinicalNotes", value: v })
+                }
+                placeholder="Any additional information to record..."
+              />
             </div>
 
-            <div className="px-6 py-6">
-              <div className="space-y-4 mb-6">
-                <TextInput
-                  label="Pharmacist name"
-                  value={state.summary.pharmacistName}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_SUMMARY",
-                      field: "pharmacistName",
-                      value: v,
-                    })
-                  }
-                  required
-                />
-                <TextInput
-                  label="GPhC registration number"
-                  value={state.summary.pharmacistGPhC}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_SUMMARY",
-                      field: "pharmacistGPhC",
-                      value: v,
-                    })
-                  }
-                  required
-                />
-                <TextInput
-                  label="Pharmacy name"
-                  value={state.summary.pharmacyName}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_SUMMARY",
-                      field: "pharmacyName",
-                      value: v,
-                    })
-                  }
-                />
-                <TextInput
-                  label="Pharmacy address"
-                  value={state.summary.pharmacyAddress}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_SUMMARY",
-                      field: "pharmacyAddress",
-                      value: v,
-                    })
-                  }
-                />
-                <TextArea
-                  label="Additional clinical notes"
-                  value={state.summary.clinicalNotes}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_SUMMARY",
-                      field: "clinicalNotes",
-                      value: v,
-                    })
-                  }
-                  placeholder="Any additional information to record..."
-                />
-              </div>
-
-              <div className="border-t border-gray-200 pt-6">
-                <p className="text-sm text-gray-600 mb-4">
-                  Review the summary below before printing the consultation record.
-                </p>
-                <ECSummaryReport state={updatedState} />
-              </div>
+            <div className="border-t border-gray-200 pt-6">
+              <p className="text-sm text-gray-600 mb-4">
+                Review the summary below before saving and printing the consultation record.
+              </p>
+              <ECSummaryReport state={updatedState} />
             </div>
-
-            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/30 flex items-center justify-between">
-              <button
-                onClick={() => dispatch({ type: "PREV_STEP" })}
-                className="px-5 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-navy-900 transition-colors"
-              >
-                &larr; Previous
-              </button>
-
-              <button
-                onClick={() => window.print()}
-                className="px-6 py-2.5 rounded-lg text-sm font-semibold bg-navy-900 hover:bg-navy-950 text-white transition-colors"
-              >
-                Print Consultation Record
-              </button>
-            </div>
-          </div>
+          </StepWrapper>
         );
 
       default:

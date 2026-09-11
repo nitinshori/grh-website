@@ -6,7 +6,7 @@ import {
   validateConsentStep,
   validateSummaryStep,
 } from "../../shared/types";
-import { getMedicineSupplyError } from "./postnatal-contraception-clinical-logic";
+import { getMedicineSupplyError, isBreastfeeding } from "./postnatal-contraception-clinical-logic";
 
 export function validateStep(step: number, state: PostnatalContraceptionState): string | null {
   switch (step) {
@@ -17,8 +17,11 @@ export function validateStep(step: number, state: PostnatalContraceptionState): 
       return validateConsentStep(state.consent);
 
     case 2: // Postnatal Assessment
+      if (!state.assessment.deliveryDate) {
+        return "Delivery date is required";
+      }
       if (state.assessment.daysPostpartum === null || state.assessment.daysPostpartum < 0) {
-        return "Days postpartum must be specified";
+        return "The delivery date is in the future; check and correct it";
       }
       if (!state.assessment.deliveryType) {
         return "Delivery type must be specified";
@@ -26,9 +29,15 @@ export function validateStep(step: number, state: PostnatalContraceptionState): 
       if (!state.assessment.breastfeedingStatus) {
         return "Breastfeeding status must be specified";
       }
+      if (state.assessment.daysPostpartum > 21 && state.assessment.unprotectedSexSinceDay21 === null) {
+        return "Answer whether there has been unprotected intercourse since day 21 (required from day 21)";
+      }
       return null;
 
     case 3: // Medical History
+      if (!state.medicalHistory.exclusionsAsked) {
+        return "Confirm that every exclusion and caution above was asked and the answers recorded";
+      }
       return null;
 
     case 4: // Contraindications Review
@@ -42,7 +51,7 @@ export function validateStep(step: number, state: PostnatalContraceptionState): 
       const c = state.counselling;
       const choice = state.medicineSupply.medicineChoice;
       if (!c.breakThroughBleedingAdvice) return "Explain that irregular bleeding is common, particularly in the first few months";
-      if (!c.breastfeedingCompatibilityAdvice) return "Confirm the method is safe during breastfeeding";
+      if (isBreastfeeding(state) && !c.breastfeedingCompatibilityAdvice) return "Confirm the method is safe during breastfeeding";
       if (!c.dvtPeAdvice) return "Advise immediate medical attention for DVT/PE symptoms (calf pain, swelling, breathlessness)";
       if (!c.unexpectedBleedingAdvice) return "Advise the patient to report any unexpected vaginal bleeding";
       if (!c.sideEffectsExplained) return "Explain side effects and when to seek medical advice";

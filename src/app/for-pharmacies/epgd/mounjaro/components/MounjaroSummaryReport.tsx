@@ -1,7 +1,8 @@
 "use client";
 
 import type { MounjaroConsultationState } from "../lib/mounjaro-types";
-import { COMORBIDITY_OPTIONS, PGD_VERSION_LABEL } from "../lib/mounjaro-types";
+import { COMORBIDITY_OPTIONS, PGD_VERSION_LABEL, DOSE_BY_STAGE } from "../lib/mounjaro-types";
+import { getPercentWeightLost } from "../lib/mounjaro-clinical-logic";
 import {
   SectionHeader,
   Row,
@@ -17,7 +18,7 @@ const SUPPLY_TYPE_LABELS: Record<string, string> = {
   "new-start": "New start (2.5 mg titration dose)",
   continue: "Continuing the same dose",
   escalate: "Escalating to the next dose",
-  reduce: "Reducing to the previous dose",
+  reduce: "Reducing to a lower dose",
   restart: "Restarting after a break (re-titrated from 2.5 mg)",
 };
 
@@ -25,6 +26,8 @@ export function MounjaroSummaryReport({ state }: { state: MounjaroConsultationSt
   const comorbidityLabels = state.weightAssessment.comorbidities.map(
     (id) => COMORBIDITY_OPTIONS.find((c) => c.id === id)?.label ?? id
   );
+  const stopsExist = state.alerts.some((a) => a.severity === "stop");
+  const percentLost = getPercentWeightLost(state);
 
   return (
     <div className="space-y-4 print:text-xs print:space-y-2">
@@ -54,7 +57,8 @@ export function MounjaroSummaryReport({ state }: { state: MounjaroConsultationSt
       <div className="space-y-1.5">
         <Row label="Height" value={state.weightAssessment.height ? `${state.weightAssessment.height} cm` : NOT_RECORDED} />
         <Row label="Weight" value={state.weightAssessment.weight ? `${state.weightAssessment.weight} kg` : NOT_RECORDED} />
-        <Row label="BMI" value={state.weightAssessment.bmi ? `${state.weightAssessment.bmi} kg/m²` : NOT_RECORDED} />
+        <Row label="BMI" value={state.weightAssessment.bmi ? `${state.weightAssessment.bmi.toFixed(1)} kg/m²` : NOT_RECORDED} />
+        <Row label="BMI at start of treatment" value={state.weightAssessment.startingBMI !== null ? `${state.weightAssessment.startingBMI.toFixed(1)} kg/m²` : NOT_RECORDED} />
         <Row label="BMI Category" value={state.weightAssessment.bmiCategory || NOT_RECORDED} />
         <Row
           label="Weight-Related Comorbidities"
@@ -143,8 +147,21 @@ export function MounjaroSummaryReport({ state }: { state: MounjaroConsultationSt
       <SectionHeader>Clinical Alerts</SectionHeader>
       <AlertSummary alerts={state.alerts} />
 
-      {/* Medicine supplied */}
-      {state.doseRecommendation && (
+      {/* Medicine supplied, or the outcome when a stop exists (never print a
+          supply over a STOP: adversarial review, 11 Sep 2026) */}
+      {(stopsExist || !state.doseRecommendation || !state.doseSelection.dose) && (
+        <>
+          <SectionHeader>Outcome</SectionHeader>
+          <div className="space-y-1.5">
+            <Row
+              label="Medicine"
+              value={stopsExist ? "NOT SUPPLIED: exclusion criteria met (see clinical alerts above)" : "No medicine supplied"}
+            />
+            <Row label="Nature of supply" value={SUPPLY_TYPE_LABELS[state.doseSelection.supplyType] ?? NOT_RECORDED} />
+          </div>
+        </>
+      )}
+      {!stopsExist && state.doseRecommendation && state.doseSelection.dose && (
         <>
           <SectionHeader>Medicine Supplied</SectionHeader>
           <div className="space-y-1.5">
@@ -167,14 +184,30 @@ export function MounjaroSummaryReport({ state }: { state: MounjaroConsultationSt
                   : NOT_RECORDED
               }
             />
+            <Row
+              label="Dose the patient has been on"
+              value={state.doseSelection.previousDose ? DOSE_BY_STAGE[state.doseSelection.previousDose] ?? NOT_RECORDED : "Not applicable (new start or restart)"}
+            />
+            {state.doseSelection.initialWeight !== null && (
+              <Row
+                label="Weight at initiation"
+                value={`${state.doseSelection.initialWeight} kg${percentLost !== null ? ` (${percentLost.toFixed(1)}% lost)` : ""}`}
+              />
+            )}
+            {state.doseSelection.treatmentStartDate && (
+              <Row label="Treatment start date" value={state.doseSelection.treatmentStartDate} />
+            )}
+            {state.doseSelection.monthsOnMaxToleratedDose !== null && (
+              <Row label="Months on maximum tolerated dose" value={`${state.doseSelection.monthsOnMaxToleratedDose} months`} />
+            )}
+            {state.doseSelection.continuationDecision.trim() && (
+              <Row label="Decision on continuation (5% rule)" value={state.doseSelection.continuationDecision} />
+            )}
             <Row label="More than 2 doses missed" value={state.doseSelection.missedMoreThanTwoDoses ? "Yes (reduce and re-escalate)" : "No"} />
             <Row label="Batch number" value={state.doseSelection.batchNumber || NOT_RECORDED} />
             <Row label="Expiry date" value={state.doseSelection.expiryDate || NOT_RECORDED} />
             <Row label="Injection site advised" value={state.doseSelection.injectionSite || NOT_RECORDED} />
             <Row label="Date of supply" value={state.summary.consultationDate} />
-            {state.doseSelection.pharmacistOverride && (
-              <Row label="Pharmacist override" value={state.doseSelection.overrideReason || "Reason not recorded"} />
-            )}
           </div>
         </>
       )}
@@ -202,28 +235,43 @@ export function MounjaroSummaryReport({ state }: { state: MounjaroConsultationSt
         ]}
       />
 
-      {/* Observations */}
-      <SectionHeader>Clinical Observations</SectionHeader>
-      <div className="space-y-1.5">
-        <Row
-          label="Blood Pressure"
-          value={
-            state.observations.systolicBP && state.observations.diastolicBP
-              ? `${state.observations.systolicBP}/${state.observations.diastolicBP} mmHg`
-              : NOT_RECORDED
-          }
-        />
-        <Row label="Heart Rate" value={state.observations.heartRate ? `${state.observations.heartRate} bpm` : NOT_RECORDED} />
-        <Row label="Weight (at consultation)" value={state.observations.weight ? `${state.observations.weight} kg` : NOT_RECORDED} />
-      </div>
-
       {/* Pharmacist Declaration */}
-      <PharmacistDeclaration
-        pgdName="Mounjaro (Tirzepatide)"
-        pharmacistName={state.summary.pharmacistName}
-        pharmacistGPhC={state.summary.pharmacistGPhC}
-        pharmacyName={state.summary.pharmacyName}
-      />
+      {stopsExist ? (
+        <>
+          <SectionHeader>Pharmacist Declaration</SectionHeader>
+          <p className="text-xs text-gray-600 mb-4">
+            I confirm that this consultation was conducted in accordance with the
+            Patient Group Direction for Mounjaro (Tirzepatide), that exclusion
+            criteria applied, that no medicine was supplied, and that the patient
+            was given the advice recorded above.
+          </p>
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">Pharmacist name</p>
+              <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{state.summary.pharmacistName || ""}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">GPhC number</p>
+              <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{state.summary.pharmacistGPhC || ""}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">Pharmacy</p>
+              <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{state.summary.pharmacyName || ""}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">Signature</p>
+              <div className="border-b border-gray-300 min-h-[2rem]" />
+            </div>
+          </div>
+        </>
+      ) : (
+        <PharmacistDeclaration
+          pgdName="Mounjaro (Tirzepatide)"
+          pharmacistName={state.summary.pharmacistName}
+          pharmacistGPhC={state.summary.pharmacistGPhC}
+          pharmacyName={state.summary.pharmacyName}
+        />
+      )}
 
       {/* Clinical Notes */}
       {state.summary.clinicalNotes && (

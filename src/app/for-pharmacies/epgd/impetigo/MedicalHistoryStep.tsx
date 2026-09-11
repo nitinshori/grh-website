@@ -99,6 +99,12 @@ export function MedicalHistoryStep({ medicalHistory, onChange, age, oralRoute }:
           onChange={(checked) => handleChange('fusidicAcidAllergy', checked)}
         />
         <Checkbox
+          label="Fusidic acid resistance suspected or confirmed (for example previous fusidic acid courses this year with no response)"
+          description="Topical arm exclusion. Mupirocin is not authorised by this PGD: refer."
+          checked={medicalHistory.fusidicAcidResistanceSuspected}
+          onChange={(checked) => handleChange('fusidicAcidResistanceSuspected', checked)}
+        />
+        <Checkbox
           label="Known hypersensitivity to clarithromycin or to any macrolide"
           checked={medicalHistory.macrolideAllergy}
           onChange={(checked) => handleChange('macrolideAllergy', checked)}

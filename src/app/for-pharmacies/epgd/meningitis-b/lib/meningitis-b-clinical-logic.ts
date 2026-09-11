@@ -14,6 +14,47 @@ export function calculateAgeInMonths(dob: string): number | null {
   return months;
 }
 
+/** Whole days since an ISO date. Null when blank or invalid. */
+export function daysSince(iso: string): number | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  const today = new Date();
+  const a = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  const b = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  return Math.round((b - a) / 86400000);
+}
+
+/** True where the patient is in one of the PGD's increased-risk groups (Trumenba 3 dose schedule). */
+export function isIncreasedRisk(state: MeningitiBConsultationState): boolean {
+  const r = state.riskAssessment;
+  return r.asplenia || r.complementDeficiency || r.complementInhibitor || r.laboratoryStaff;
+}
+
+/**
+ * Minimum days between the previous dose and this one, per product and
+ * schedule. Every MenB schedule in the PGD is interval-defined; the tool used
+ * to validate only which label was allowed.
+ */
+export function minimumIntervalDays(
+  product: "bexsero" | "trumenba" | "",
+  trumenbaSchedule: "routine" | "increased-risk" | "",
+  doseNumber: "1st" | "2nd" | "3rd" | "booster-12-months" | ""
+): { days: number; label: string } | null {
+  if (product === "bexsero") {
+    if (doseNumber === "2nd") return { days: 28, label: "at least 4 weeks (1 month) after the 1st dose" };
+    if (doseNumber === "booster-12-months") return { days: 61, label: "at least 2 months after the last primary dose, at 12 months of age" };
+    return null;
+  }
+  if (product === "trumenba") {
+    if (trumenbaSchedule === "routine" && doseNumber === "2nd") return { days: 168, label: "6 months after the 1st dose" };
+    if (trumenbaSchedule === "increased-risk" && doseNumber === "2nd") return { days: 28, label: "1 to 2 months after the 1st dose" };
+    if (trumenbaSchedule === "increased-risk" && doseNumber === "3rd") return { days: 120, label: "at 6 months from the 1st dose (about 4 months after the 2nd)" };
+    return null;
+  }
+  return null;
+}
+
 /** True when any PGD indication has been recorded. */
 export function hasIndication(state: MeningitiBConsultationState): boolean {
   const r = state.riskAssessment;
@@ -31,7 +72,7 @@ export function hasIndication(state: MeningitiBConsultationState): boolean {
 /** Schedule text for the product and age, per the PGD schedule table. */
 export function getScheduleText(product: "bexsero" | "trumenba" | "", ageMonths: number | null): string {
   if (product === "trumenba") {
-    return "Trumenba (MenB-fHbp), from 10 years: 0.5 mL intramuscular, deltoid. Routine use: 2 doses at 0 and 6 months. Individuals at increased risk, or in an outbreak setting where advised: 3 doses at 0, 1 to 2 months, and 6 months.";
+    return "Trumenba (MenB-fHbp), from 10 years: 0.5 mL intramuscular, deltoid. Routine use: 2 doses at 0 and 6 months. Individuals at increased risk (asplenia, complement disorder, complement inhibitor, laboratory staff): 3 doses at 0, 1 to 2 months, and 6 months. Outbreak management is a Health Protection Team matter and an exclusion under this PGD.";
   }
   if (product === "bexsero") {
     if (ageMonths === null) return "Bexsero (4CMenB), from 2 months: 0.5 mL intramuscular. Enter the date of birth for the schedule.";

@@ -2,19 +2,26 @@
 
 import React from 'react';
 import { DengueConsultationState } from '../dengue-types';
-import { calculateAge } from '../../shared/types';
+import { calculateAge, type ClinicalAlert } from '../../shared/types';
 import { DENGUE_PGD_VERSION } from '../dengue-clinical-logic';
+import { CounsellingGrid } from '../../shared/components/SummaryReportShell';
 
 interface DengueSummaryReportProps {
   state: DengueConsultationState;
+  /** Live alerts from the client; a stop means the record prints as NOT VACCINATED. */
+  alerts: ClinicalAlert[];
   onPrint: () => void;
 }
 
+const fmtDate = (d: string): string => (d ? new Date(d).toLocaleDateString('en-GB') : 'Not recorded');
+
 export default function DengueSummaryReport({
   state,
+  alerts,
   onPrint,
 }: DengueSummaryReportProps): React.ReactNode {
   const patientAge = calculateAge(state.patient.dateOfBirth);
+  const hasStops = alerts.some((a) => a.severity === 'stop');
 
   return (
     <div className="space-y-8">
@@ -28,9 +35,9 @@ export default function DengueSummaryReport({
           </div>
           <button
             onClick={onPrint}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition print:hidden"
           >
-            Print Report
+            Save &amp; Print Record
           </button>
         </div>
 
@@ -53,13 +60,33 @@ export default function DengueSummaryReport({
             <div>
               <p className="text-sm font-medium text-gray-600">Date of Birth</p>
               <p className="text-gray-900">
-                {new Date(state.patient.dateOfBirth).toLocaleDateString()} (Age:{' '}
-                {patientAge})
+                {fmtDate(state.patient.dateOfBirth)} (Age:{' '}
+                {patientAge ?? '?'})
               </p>
             </div>
             <div>
               <p className="text-sm font-medium text-gray-600">Phone</p>
               <p className="text-gray-900">{state.patient.phone}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-600">Address</p>
+              <p className="text-gray-900">{state.patient.address || 'Not recorded'}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-600">GP</p>
+              <p className="text-gray-900">
+                {state.patient.gpPractice || state.patient.gpName || 'Not recorded'}
+                {state.patient.gpPractice && state.patient.gpName ? ` (${state.patient.gpName})` : ''}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-600">Consent</p>
+              <p className="text-gray-900">
+                {state.consent.informedConsentGiven
+                  ? 'Valid informed consent given by the patient (adult, 18 years and over)'
+                  : 'Not recorded'}
+                {state.consent.idVerified ? '; identity verified' : ''}
+              </p>
             </div>
           </div>
         </section>
@@ -85,7 +112,7 @@ export default function DengueSummaryReport({
             <div className="flex justify-between">
               <span className="text-gray-600">Departure date:</span>
               <span className="font-medium text-gray-900">
-                {new Date(state.screening.departureDate).toLocaleDateString()}
+                {fmtDate(state.screening.departureDate)}
               </span>
             </div>
             <div className="flex justify-between">
@@ -147,9 +174,31 @@ export default function DengueSummaryReport({
         {/* Administration Summary */}
         <section className="mb-8 pb-8 border-b border-gray-200">
           <h3 className="text-xl font-semibold text-gray-800 mb-4">
-            Vaccine Administration
+            {hasStops ? 'Outcome' : 'Vaccine Administration'}
           </h3>
+          {hasStops ? (
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Outcome:</span>
+                <span className="font-medium text-red-700">NOT VACCINATED: exclusion criteria met</span>
+              </div>
+              {alerts.filter((a) => a.severity === 'stop').map((a) => (
+                <div key={a.code} className="flex justify-between">
+                  <span className="text-gray-600">Exclusion:</span>
+                  <span className="font-medium text-gray-900">{a.message}</span>
+                </div>
+              ))}
+              <div className="flex justify-between">
+                <span className="text-gray-600">Action:</span>
+                <span className="font-medium text-gray-900">Advised and referred to the GP as appropriate; advice given recorded below</span>
+              </div>
+            </div>
+          ) : (
           <div className="space-y-3">
+            <div className="flex justify-between">
+              <span className="text-gray-600">Given under:</span>
+              <span className="font-medium text-gray-900">{DENGUE_PGD_VERSION}</span>
+            </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Vaccine:</span>
               <span className="font-medium text-gray-900">
@@ -165,7 +214,7 @@ export default function DengueSummaryReport({
             <div className="flex justify-between">
               <span className="text-gray-600">Expiry date:</span>
               <span className="font-medium text-gray-900">
-                {new Date(state.administration.expiryDate).toLocaleDateString()}
+                {fmtDate(state.administration.expiryDate)}
               </span>
             </div>
             <div className="flex justify-between">
@@ -188,10 +237,24 @@ export default function DengueSummaryReport({
               <div className="flex justify-between">
                 <span className="text-gray-600">Next dose due:</span>
                 <span className="font-medium text-gray-900">
-                  {new Date(state.administration.nextDueDate).toLocaleDateString()}
+                  {fmtDate(state.administration.nextDueDate)}
                 </span>
               </div>
             )}
+            {state.administration.doseNumber === '2nd' && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">First dose given on:</span>
+                <span className="font-medium text-gray-900">
+                  {fmtDate(state.administration.firstDoseDate)}
+                </span>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <span className="text-gray-600">Adrenaline confirmed before vaccination:</span>
+              <span className="font-medium text-gray-900">
+                {state.administration.adrenalineConfirmed ? 'Yes' : 'No'}
+              </span>
+            </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Time administered:</span>
               <span className="font-medium text-gray-900">
@@ -205,9 +268,11 @@ export default function DengueSummaryReport({
               </span>
             </div>
           </div>
+          )}
         </section>
 
         {/* Post-Vaccine Observations */}
+        {!hasStops && (
         <section className="mb-8 pb-8 border-b border-gray-200">
           <h3 className="text-xl font-semibold text-gray-800 mb-4">
             Post-Vaccine Observations
@@ -219,12 +284,6 @@ export default function DengueSummaryReport({
                 {state.postVaccineObs.observationPeriod === '15-min'
                   ? '15 minutes'
                   : '30 minutes'}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Anaphylaxis kit checked:</span>
-              <span className="font-medium text-gray-900">
-                {state.postVaccineObs.anaphylaxisKitChecked ? 'Yes' : 'No'}
               </span>
             </div>
             <div className="flex justify-between">
@@ -255,12 +314,44 @@ export default function DengueSummaryReport({
             )}
           </div>
         </section>
+        )}
+
+        {/* Advice given (PGD records list: advice given, including if excluded) */}
+        <section className="mb-8 pb-8 border-b border-gray-200">
+          <h3 className="text-xl font-semibold text-gray-800 mb-4">Advice Given</h3>
+          {hasStops ? (
+            <p className="text-sm text-gray-900">
+              Patient advised that vaccination is contraindicated under this PGD and why, advised on alternative
+              protection (mosquito bite prevention: repellent, protective clothing, screened or air-conditioned
+              accommodation), and referred to the GP or a travel clinic as appropriate.
+            </p>
+          ) : (
+            <CounsellingGrid
+              items={[
+                ['Two-dose schedule explained; second dose in 3 months; PIL supplied', state.advice.twoDozeSchedule],
+                ['Common side effects; seek advice if fever persists beyond 7 days', state.advice.commonReactions],
+                ['Serious side effects: rash, breathing difficulty, anaphylaxis; Yellow Card', state.advice.seriousReactions],
+                ['Continue mosquito bite prevention after vaccination', state.advice.mosquitoPrevention],
+                ['Dengue warning signs while travelling: seek medical attention', state.advice.dengueSymptomsWarning],
+                ['No other live vaccines within 4 weeks', state.advice.noOtherLiveVaccines],
+                ['When to seek help (pharmacy, GP, NHS 111)', state.advice.returnIfConcerned],
+                ['Avoid pregnancy for at least 4 weeks after each dose', state.advice.avoidPregnancy4Weeks],
+                ['Keep a record of vaccination dates; bring documentation when travelling', state.advice.keepVaccinationRecord],
+              ]}
+            />
+          )}
+        </section>
 
         {/* Pharmacist Declaration */}
         <section className="mb-8 pb-8 border-b border-gray-200">
           <h3 className="text-xl font-semibold text-gray-800 mb-4">
             Pharmacist Declaration
           </h3>
+          <p className="text-sm text-gray-700 mb-3">
+            {hasStops
+              ? 'I confirm that this consultation was conducted in accordance with the Patient Group Direction for Qdenga (TAK-003) dengue vaccination, that the patient met an exclusion criterion, that NO vaccine was administered, and that the advice recorded above was given.'
+              : 'I confirm that this vaccine was administered under the Patient Group Direction for Qdenga (TAK-003) dengue vaccination, that the patient met the inclusion criteria and no exclusion criteria applied, that adrenaline was available before vaccination, and that the advice recorded above was given.'}
+          </p>
           <div className="bg-gray-50 p-4 rounded-lg space-y-3">
             <div className="flex justify-between">
               <span className="text-gray-600">Pharmacist name:</span>
@@ -283,7 +374,7 @@ export default function DengueSummaryReport({
             <div className="flex justify-between">
               <span className="text-gray-600">Date:</span>
               <span className="font-medium text-gray-900">
-                {new Date(state.summary.consultationDate).toLocaleDateString()}
+                {fmtDate(state.summary.consultationDate)}
               </span>
             </div>
             <div className="flex justify-between">

@@ -3,7 +3,7 @@
 import { useReducer, useMemo, useState, useCallback, useEffect } from "react";
 import type { SleepMelatoninConsultationState, SleepMelatoninAction } from "./lib/sleep-melatonin-types";
 import { STEP_LABELS, TOTAL_STEPS, createInitialSleepMelatoninState } from "./lib/sleep-melatonin-types";
-import { getAllAlerts, hasHardStops, hasSecondaryCause } from "./lib/sleep-melatonin-clinical-logic";
+import { getAllAlerts, hasHardStops, hasSecondaryCause, hasAssessmentStops, maxTabletsThisSupply, weeksTreated } from "./lib/sleep-melatonin-clinical-logic";
 import { validateStep } from "./lib/sleep-melatonin-validation";
 import { calculateAge } from "../shared/types";
 import { ProgressBar } from "../shared/components/ProgressBar";
@@ -12,7 +12,7 @@ import type { ConsultationRecordData } from "../shared/hooks/useConsultationTrac
 import { AlertBanner } from "../shared/components/AlertBanner";
 import { PatientDetailsStep } from "../shared/steps/PatientDetailsStep";
 import { ConsentStep } from "../shared/steps/ConsentStep";
-import { SleepMelatoninSummaryReport } from "./components/SleepMelatoninSummaryReport";
+import { SleepMelatoninSummaryReport, SleepHygieneAppendix } from "./components/SleepMelatoninSummaryReport";
 import { TextInput, Checkbox, SelectInput, TextArea, NumberInput } from "../shared/components/FormInputs";
 
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
@@ -50,6 +50,8 @@ function reducer(state: SleepMelatoninConsultationState, action: SleepMelatoninA
     case "SET_STEP":
       newState.currentStep = action.step;
       break;
+    case "RESET":
+      return createInitialSleepMelatoninState();
   }
   return newState;
 }
@@ -71,15 +73,17 @@ export default function SleepMelatoninClient() {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const alerts = useMemo(() => getAllAlerts(state.assessment, state.secondaryCauses, state.contraindications), [state.assessment, state.secondaryCauses, state.contraindications]);
-  const secondaryBlocked = hasSecondaryCause(state.secondaryCauses) || state.assessment.durationOfInsomnia === "less4w";
+  const secondaryBlocked = hasSecondaryCause(state.secondaryCauses) || state.assessment.durationOfInsomnia === "less4w" || hasAssessmentStops(state.assessment);
+  // A stop anywhere blocks Next on every step, not only on the step it was
+  // raised on (adversarial review, 11 Sep 2026).
   const isBlocked = hasHardStops(state.contraindications) || secondaryBlocked;
 
   const handleNext = useCallback(() => {
     if (state.currentStep === 2 && secondaryBlocked) {
-      setValidationError("Cannot proceed: a secondary cause is apparent or the insomnia has lasted less than 4 weeks. Refer, do not supply");
+      setValidationError("Cannot proceed: a secondary cause is apparent, the insomnia has lasted less than 4 weeks, or the treatment limit is reached. Refer, do not supply");
       return;
     }
-    if (state.currentStep === 3 && isBlocked) {
+    if (isBlocked) {
       setValidationError("Cannot proceed: patient meets exclusion criteria");
       return;
     }
@@ -105,11 +109,19 @@ export default function SleepMelatoninClient() {
     }
   }, [completedSteps, state.currentStep]);
 
-  const canProceed = validateStep(state.currentStep, state) === null;
+  const canProceed = validateStep(state.currentStep, state) === null && !isBlocked;
 
+  const handleNewConsultation = useCallback(() => {
+    dispatch({ type: "RESET" });
+    setCompletedSteps(new Set());
+    setValidationError(null);
+  }, []);
 
   // ─── Consultation Record Data (for saving to database) ───
+  // Returns a record on every step so an exclusion can be saved as "not
+  // supplied" from the step it is raised on.
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    const supplied = !isBlocked && !!state.prescription.quantityTablets;
     return {
       patient: {
         firstName: state.patient.firstName,
@@ -121,17 +133,35 @@ export default function SleepMelatoninClient() {
         address: state.patient.address,
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
+        gpAddress: state.patient.gpAddress,
+        gpPhone: state.patient.gpPhone,
+        gpEmail: state.patient.gpEmail,
+        gpOdsCode: state.patient.gpOdsCode,
       },
-      clinicalData: state as unknown as Record<string, unknown>,
+      clinicalData: { ...state, completedSteps: [...state.completedSteps], alerts, isBlocked } as unknown as Record<string, unknown>,
       outcome: isBlocked ? "not_supplied" : "completed",
+      ...(supplied
+        ? {
+            medicine: {
+              name: "Circadin 2mg prolonged-release tablets (melatonin)",
+              dose: "2mg once daily, 1 to 2 hours before bedtime, after food, oral",
+              duration: `${state.prescription.quantityTablets} days (maximum 13 weeks in total)`,
+              quantity: state.prescription.quantityTablets ?? undefined,
+            },
+          }
+        : {}),
       summary: {
-        pharmacistName: state.summary.pharmacistName,
-        pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacistName: state.summary.pharmacistName || __pharmProfile?.name || "",
+        pharmacistGPhC: state.summary.pharmacistGPhC || __pharmProfile?.gphcNumber || "",
+        pharmacyName: state.summary.pharmacyName || __pharmProfile?.pharmacyName,
+        pharmacyAddress: state.summary.pharmacyAddress || __pharmProfile?.pharmacyAddress,
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: state.consent.notifyGp },
     };
-  }, [state, isBlocked]);
+  }, [state, isBlocked, alerts, __pharmProfile]);
 
   if (state.currentStep === TOTAL_STEPS - 1) {
     return (
@@ -149,9 +179,11 @@ export default function SleepMelatoninClient() {
           title={STEP_LABELS[state.currentStep]}
           onNext={handleNext}
           onPrev={handlePrev}
-          canProceed={true}
-          validationError={null}
-            getConsultationData={getConsultationData}
+          canProceed={validateStep(6, state) === null && !isBlocked}
+          validationError={validateStep(6, state)}
+          isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
+          onNewConsultation={handleNewConsultation}
         >
           <SleepMelatoninSummaryReport state={state} alerts={alerts} />
         </StepWrapper>
@@ -161,6 +193,12 @@ export default function SleepMelatoninClient() {
 
   return (
     <div className="space-y-6">
+      {/* Appendix 1 prints on its own from any step, so an excluded patient
+          still leaves with the written sleep hygiene advice. */}
+      <div className="hidden print:block">
+        <SleepHygieneAppendix patientName={`${state.patient.firstName} ${state.patient.lastName}`.trim()} />
+      </div>
+      <div className="print:hidden space-y-6">
       <ProgressBar current={state.currentStep + 1} total={TOTAL_STEPS} />
       {alerts.length > 0 && <AlertBanner alerts={alerts} />}
       <StepWrapper
@@ -171,7 +209,8 @@ export default function SleepMelatoninClient() {
         onPrev={handlePrev}
         canProceed={canProceed}
         validationError={validationError}
-        isBlocked={(state.currentStep === 2 && secondaryBlocked) || (state.currentStep === 3 && isBlocked)}
+        isBlocked={isBlocked}
+        getConsultationData={getConsultationData}
       >
         {state.currentStep === 0 && (
           <PatientDetailsStep
@@ -237,6 +276,7 @@ export default function SleepMelatoninClient() {
               value={state.assessment.daytimeImpact}
               onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "daytimeImpact", value: v })}
               placeholder="e.g. tired and irritable at work, poor concentration"
+              required
             />
 
             <div className="p-4 bg-red-50 border border-red-200 rounded-lg space-y-3">
@@ -301,6 +341,19 @@ export default function SleepMelatoninClient() {
               />
             </div>
 
+            <details className="p-4 bg-white border border-gray-200 rounded-lg">
+              <summary className="text-sm font-semibold text-navy-900 cursor-pointer">Appendix 1: sleep hygiene advice (show, and print for the patient)</summary>
+              <div className="mt-3">
+                <SleepHygieneAppendix patientName={`${state.patient.firstName} ${state.patient.lastName}`.trim()} />
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="mt-3 px-4 py-2 rounded-lg text-xs font-semibold border border-[color:var(--tenant-primary)]/40 text-[color:var(--tenant-primary)] hover:bg-[color:var(--tenant-primary)]/10"
+                >
+                  Print Appendix 1 for the patient
+                </button>
+              </div>
+            </details>
             <Checkbox
               label="Sleep hygiene advice given (Appendix 1) and, where not already tried, a period of trying it agreed before or alongside supply"
               checked={state.assessment.sleepHygieneAdviceGiven}
@@ -326,13 +379,36 @@ export default function SleepMelatoninClient() {
               description="A previous course under this PGD in the last 6 months, or 13 weeks already completed, is an exclusion (next step)."
             />
             {state.assessment.previousCircadin && (
-              <TextInput
-                label="Total weeks of Circadin treatment to date"
-                value={state.assessment.weeksTreatedToDate}
-                onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "weeksTreatedToDate", value: v })}
-                placeholder="e.g. 6"
-                required
-              />
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
+                <TextInput
+                  label="Total weeks of Circadin treatment to date"
+                  value={state.assessment.weeksTreatedToDate}
+                  onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "weeksTreatedToDate", value: v })}
+                  placeholder="e.g. 6"
+                  type="number"
+                  required
+                />
+                <TextInput
+                  label="Date of last Circadin supply"
+                  value={state.assessment.lastSupplyDate}
+                  onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "lastSupplyDate", value: v })}
+                  type="date"
+                  required
+                />
+                <SelectInput
+                  label="Previous course"
+                  value={state.assessment.previousCourseStatus}
+                  onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "previousCourseStatus", value: v })}
+                  options={[
+                    { value: "continuing", label: "Continuing the current course (under 13 weeks)" },
+                    { value: "completed", label: "Previous course completed or stopped" },
+                  ]}
+                  required
+                />
+                <p className="sm:col-span-3 text-xs text-gray-600">
+                  Maximum 13 weeks in total: {weeksTreated(state.assessment) !== null ? `${maxTabletsThisSupply(state.assessment)} tablets may be supplied this time.` : "enter the weeks to see the cap for this supply."} A completed course within the last 6 months is an exclusion.
+                </p>
+              </div>
             )}
             {secondaryBlocked && <div className="p-4 bg-red-50 border border-red-200 rounded-lg"><p className="text-sm font-semibold text-red-700">Refer, do not supply. Name the possible secondary cause and make the referral concrete. Give the sleep hygiene advice regardless. Document the advice given and the decision reached.</p></div>}
           </div>
@@ -448,8 +524,8 @@ export default function SleepMelatoninClient() {
               value={state.prescription.quantityTablets}
               onChange={(v) => dispatch({ type: "UPDATE_PRESCRIPTION", field: "quantityTablets", value: v })}
               min={1}
-              max={21}
-              placeholder="up to 21"
+              max={maxTabletsThisSupply(state.assessment)}
+              placeholder={`up to ${maxTabletsThisSupply(state.assessment)}`}
               unit="tablets"
               required
             />
@@ -542,6 +618,7 @@ export default function SleepMelatoninClient() {
           </div>
         )}
       </StepWrapper>
+      </div>
     </div>
   );
 }

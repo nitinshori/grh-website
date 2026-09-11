@@ -13,11 +13,24 @@ export interface TravelCoreDestinationAssessment {
   sunExposureRisk: "low" | "moderate" | "high";
 }
 
+export type ChemoprophylaxisPlan =
+  | ""
+  | "not-required"
+  | "supplied-antimalarials-pgd"
+  | "referred-antimalarials-pgd"
+  | "referred-gp-travel-clinic"
+  | "declined";
+
+/**
+ * Malaria is outside this PGD (it authorises three vaccines). The step records
+ * the risk assessment and where the traveller was sent for chemoprophylaxis;
+ * it never suggests a drug. Supply is under the anti-malarials PGD.
+ */
 export interface TravelCoreMalariaRisk {
   malariaZone: boolean;
-  resistanceProfile: string; // e.g., "CQ-resistant", "MDR"
+  resistanceProfile: string; // optional note, e.g. "chloroquine-resistant" per TravelHealthPro
   chemoprophylaxisAdvised: boolean;
-  recommendedDrug: string;
+  chemoprophylaxisPlan: ChemoprophylaxisPlan;
 }
 
 export interface TravelCorePreventiveMeasures {
@@ -52,6 +65,7 @@ export type HepAProduct = "havrix" | "avaxim" | "";
 export type HepADose = "primary" | "booster" | "";
 export type CholeraDose = "1" | "2" | "booster" | "";
 export type InjectionSite = "left-deltoid" | "right-deltoid" | "";
+export type ExclusionReferral = "" | "gp-informed" | "gp-referred" | "travel-clinic" | "declined";
 
 /**
  * Vaccine administration under the signed PGD: Hepatitis A (Havrix Monodose
@@ -72,29 +86,47 @@ export interface TravelCoreVaccineAdministration {
   recentAntibiotics: boolean;
   // Hepatitis A
   hepAGiven: boolean;
+  /** Inclusion: destination has high or intermediate hepatitis A prevalence (TravelHealthPro). */
+  hepAInclusionMet: boolean;
   hepAProduct: HepAProduct;
   hepADose: HepADose;
+  /** Booster only: date and product of the primary dose. */
+  hepAPrimaryDoseDate: string;
+  hepAPrimaryProduct: HepAProduct;
   hepAPreviousCompleteCourse: boolean;
   hepAImmunityDocumented: boolean;
   hepABatch: string;
-  hepAExpiry: string;
+  hepAExpiry: string; // yyyy-mm-dd
   hepASite: InjectionSite;
   // Typhoid
   typhoidGiven: boolean;
+  /** Inclusion: destination has high or intermediate typhoid prevalence (TravelHealthPro). */
+  typhoidInclusionMet: boolean;
+  typhoidPreviousDose: boolean;
+  typhoidPreviousDoseDate: string;
   typhoidBatch: string;
-  typhoidExpiry: string;
+  typhoidExpiry: string; // yyyy-mm-dd
   typhoidSite: InjectionSite;
   // Cholera
   choleraGiven: boolean;
   choleraRiskCriteriaMet: boolean;
   choleraDose: CholeraDose;
+  /** Dose 2 only: date of dose 1 (must be 1 to 6 weeks earlier). */
+  choleraDose1Date: string;
+  /** Booster only: date the last course or booster was completed. */
+  choleraLastCourseDate: string;
   choleraBatch: string;
-  choleraExpiry: string;
+  choleraExpiry: string; // yyyy-mm-dd
   // Safety block and counselling
   adrenalineAvailable: boolean;
   observationCompleted: boolean;
   pilSupplied: boolean;
   followUpAdviceGiven: boolean;
+  adverseReaction: boolean;
+  adverseReactionDetails: string;
+  // Exclusion outcome (document: record the advice given and the decision)
+  exclusionAdvice: string;
+  exclusionReferral: ExclusionReferral;
 }
 
 export interface TravelCoreConsultationState {
@@ -126,9 +158,9 @@ export const STEP_LABELS = [
   "Patient Details",
   "Consent",
   "Destination & Duration",
-  "Malaria Risk Assessment",
+  "Malaria Risk (advice only)",
   "Preventive Measures",
-  "Medicines & Supplies",
+  "Other Supplies (optional)",
   "Vaccine Administration",
   "Summary & Record",
   "Consultation Complete",
@@ -146,26 +178,38 @@ export function createInitialVaccineAdministration(): TravelCoreVaccineAdministr
     severeImmunocompromise: false,
     recentAntibiotics: false,
     hepAGiven: false,
+    hepAInclusionMet: false,
     hepAProduct: "",
     hepADose: "",
+    hepAPrimaryDoseDate: "",
+    hepAPrimaryProduct: "",
     hepAPreviousCompleteCourse: false,
     hepAImmunityDocumented: false,
     hepABatch: "",
     hepAExpiry: "",
     hepASite: "",
     typhoidGiven: false,
+    typhoidInclusionMet: false,
+    typhoidPreviousDose: false,
+    typhoidPreviousDoseDate: "",
     typhoidBatch: "",
     typhoidExpiry: "",
     typhoidSite: "",
     choleraGiven: false,
     choleraRiskCriteriaMet: false,
     choleraDose: "",
+    choleraDose1Date: "",
+    choleraLastCourseDate: "",
     choleraBatch: "",
     choleraExpiry: "",
     adrenalineAvailable: false,
     observationCompleted: false,
     pilSupplied: false,
     followUpAdviceGiven: false,
+    adverseReaction: false,
+    adverseReactionDetails: "",
+    exclusionAdvice: "",
+    exclusionReferral: "",
   };
 }
 
@@ -210,7 +254,7 @@ gpEmail: "",
       malariaZone: false,
       resistanceProfile: "",
       chemoprophylaxisAdvised: false,
-      recommendedDrug: "",
+      chemoprophylaxisPlan: "",
     },
     preventiveMeasures: {
       insectRepellentAdvised: false,
@@ -235,7 +279,10 @@ gpEmail: "",
       pharmacistGPhC: "",
       pharmacyName: "",
       pharmacyAddress: "",
-      consultationDate: new Date().toISOString().split("T")[0],
+      consultationDate: (() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      })(),
       consultationTime: new Date().toLocaleTimeString("en-GB", {
         hour: "2-digit",
         minute: "2-digit",

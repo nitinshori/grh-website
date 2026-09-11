@@ -24,10 +24,10 @@ export function getAllAlerts(state: EczemaConsultationState): ClinicalAlert[] {
   const c = state.contraindications;
   const mh = state.medicalHistory;
   const choice = state.medicineSelection.steroidChoice;
-  const thinSkin = a.thinSkinSite || c.faceOrGroin;
+  const thinSkin = a.thinSkinSite;
 
   // ── Age ──────────────────────────────────────────────────────────
-  if (c.childUnder1 || (state.patient.age !== null && state.patient.age < 12)) {
+  if (state.patient.age !== null && state.patient.age < 12) {
     alerts.push({
       severity: "stop",
       code: "ECZ_AGE",
@@ -64,16 +64,17 @@ export function getAllAlerts(state: EczemaConsultationState): ClinicalAlert[] {
       detail: "The eyelids are excluded from both arms. Say plainly why a steroid is not the right treatment here and arrange review.",
     });
   }
-  if ((c.bacterialInfection || a.isOozing) && !c.concurrentAntibioticSupplied) {
+  const concurrentRouteMet = c.concurrentAntibioticSupplied && c.concurrentInfectionMildLocalised;
+  if ((c.bacterialInfection || a.isOozing) && !concurrentRouteMet) {
     alerts.push({
       severity: "stop",
       code: "ECZ_BACTERIAL",
-      message: "Signs of secondary bacterial infection: refer, unless treated concurrently under the Skin and Soft Tissue Infection PGD",
+      message: "Signs of secondary bacterial infection: refer, unless MILD and LOCALISED and treated concurrently under the Skin and Soft Tissue Infection PGD",
       detail:
-        "Weeping, crusting or sudden worsening suggests secondary bacterial infection. Where the infection is MILD and LOCALISED the patient may have the topical corticosteroid under this PGD and an oral antibiotic under the Skin and Soft Tissue Infection PGD at the same consultation, both recorded in one record: confirm that on the Contraindications step. Otherwise refer and supply neither.",
+        "Weeping, crusting or sudden worsening suggests secondary bacterial infection. Where the infection is MILD and LOCALISED the patient may have the topical corticosteroid under this PGD and an oral antibiotic under the Skin and Soft Tissue Infection PGD at the same consultation, both recorded in one record: confirm both on the Contraindications step and record the antibiotic supplied. Where the infection is not mild and localised, or any red flag from the infection PGD is present, refer and supply neither.",
     });
   }
-  if (c.bacterialInfection && c.concurrentAntibioticSupplied) {
+  if ((c.bacterialInfection || a.isOozing) && concurrentRouteMet) {
     alerts.push({
       severity: "caution",
       code: "ECZ_CONCURRENT",
@@ -106,13 +107,33 @@ export function getAllAlerts(state: EczemaConsultationState): ClinicalAlert[] {
       detail: "Refer to the GP for review rather than supplying.",
     });
   }
-  if (mh.coursesLast12Months === "3-or-more") {
+  if (mh.coursesLast12Months === "3-or-more" && !mh.gpReviewSinceLastCourse) {
     alerts.push({
       severity: "stop",
       code: "ECZ_COURSES",
       message: "Three or more courses already supplied in the last 12 months without GP review: refer",
-      detail: "Maximum three courses in any 12 months before GP review. Refer to the GP rather than supplying again.",
+      detail: "Maximum three courses in any 12 months before GP review. Refer to the GP rather than supplying again. Where the GP has reviewed the patient since the last course, record that on the Medical History step.",
     });
+  }
+  if (mh.coursesLast12Months === "3-or-more" && mh.gpReviewSinceLastCourse) {
+    alerts.push({
+      severity: "caution",
+      code: "ECZ_COURSES_REVIEWED",
+      message: "Three or more courses in the last 12 months, GP review recorded since the last course",
+      detail: "Supply is permitted after GP review. Record the review in the clinical notes.",
+    });
+  }
+  if (mh.lastCourseEndDate) {
+    const end = new Date(mh.lastCourseEndDate).getTime();
+    const daysSince = isNaN(end) ? null : (Date.now() - end) / (1000 * 60 * 60 * 24);
+    if (daysSince !== null && daysSince < 28) {
+      alerts.push({
+        severity: "caution",
+        code: "ECZ_CONTINUOUS",
+        message: "The last course ended less than 4 weeks ago: check the 4 week continuous ceiling",
+        detail: "Maximum 4 weeks of continuous daily treatment on the trunk and limbs, and 7 days on the face, flexures or genital skin. A second supply may be made after review, within that ceiling; beyond it the patient needs GP review rather than a further supply here.",
+      });
+    }
   }
   if (mh.productHypersensitivity) {
     alerts.push({
@@ -202,7 +223,7 @@ export function calculateDoseRecommendation(state: EczemaConsultationState): Dos
   const a = state.assessment;
   const arm = requiredArm(state);
   if (!arm) return null;
-  const thinSkin = a.thinSkinSite || state.contraindications.faceOrGroin;
+  const thinSkin = a.thinSkinSite;
   const quantity =
     a.treatedArea && a.treatedArea !== "over-10-palms" ? QUANTITY_BY_AREA[a.treatedArea] : "sized to the treated area (15g, 30g or 60g)";
 

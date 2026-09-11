@@ -1,7 +1,7 @@
 "use client";
 
 import type { EczemaConsultationState } from "../lib/eczema-types";
-import { ECZEMA_PGD_VERSION, TREATED_AREA_LABEL } from "../lib/eczema-types";
+import { ECZEMA_PGD_VERSION, TREATED_AREA_LABEL, SITE_OPTIONS } from "../lib/eczema-types";
 import {
   SectionHeader,
   Row,
@@ -29,8 +29,11 @@ const COURSES_LABEL: Record<string, string> = {
 
 export function EczemaSummaryReport({ state }: EczemaSummaryReportProps) {
   const { patient, consent, assessment, medicalHistory, contraindications, medicineSelection, counselling, summary, alerts } = state;
-  const thinSkin = assessment.thinSkinSite || contraindications.faceOrGroin;
+  const thinSkin = assessment.thinSkinSite;
   const stopped = alerts.some((a) => a.severity === "stop");
+  const siteLabels = (assessment.sites || [])
+    .map((s) => SITE_OPTIONS.find((o) => o.value === s)?.label.replace(/ \(.*\)$/, "") || s)
+    .join(", ");
 
   return (
     <div className="print:p-0 space-y-0">
@@ -79,7 +82,7 @@ export function EczemaSummaryReport({ state }: EczemaSummaryReportProps) {
           <Row label="Severity (mild or moderate)" value={assessment.severity || "Not assessed"} />
           <Row
             label="Site treated"
-            value={`${assessment.affectedSite || "Not recorded"}${thinSkin ? ". Face, flexures or genital skin involved (7 day cap)" : ""}${assessment.eyelids ? ". Eyelids involved (excluded)" : ""}`}
+            value={`${[siteLabels, assessment.affectedSite].filter(Boolean).join("; ") || "Not recorded"}${thinSkin ? ". Face, flexures or genital skin involved (7 day cap)" : ""}${assessment.eyelids ? ". Eyelids involved (excluded)" : ""}`}
           />
           <Row
             label="Treated area"
@@ -106,18 +109,21 @@ export function EczemaSummaryReport({ state }: EczemaSummaryReportProps) {
         <SectionHeader>Medical History</SectionHeader>
         <div className="space-y-2 text-xs print:space-y-1">
           <Row label="Previous Treatments" value={medicalHistory.previousTreatments || "None recorded"} />
-          <Row label="Allergies" value={medicalHistory.allergies || "NKDA"} />
-          <Row label="Courses in the last 12 months" value={COURSES_LABEL[medicalHistory.coursesLast12Months] || "Not recorded"} />
+          <Row label="Allergies" value={medicalHistory.allergies.trim() || "Not recorded"} />
+          <Row
+            label="Courses in the last 12 months"
+            value={`${COURSES_LABEL[medicalHistory.coursesLast12Months] || "Not recorded"}${medicalHistory.coursesLast12Months === "3-or-more" ? (medicalHistory.gpReviewSinceLastCourse ? "; GP review since the last course recorded" : "; no GP review since the last course") : ""}${medicalHistory.lastCourseEndDate ? `; last course ended ${medicalHistory.lastCourseEndDate}` : ""}`}
+          />
           {medicalHistory.pregnantOrBreastfeeding && (
             <Row label="Pregnancy / breastfeeding" value={medicalHistory.treatmentToBreastArea ? "Treatment to breast or nipple area (excluded)" : "Yes; site treated recorded above"} />
           )}
-          {contraindications.bacterialInfection && (
+          {(contraindications.bacterialInfection || assessment.isOozing) && (
             <Row
               label="Secondary infection"
               value={
-                contraindications.concurrentAntibioticSupplied
-                  ? "Mild and localised: oral antibiotic supplied under the Skin and Soft Tissue Infection PGD at this consultation; both supplies are in this one record."
-                  : "Signs present, not treated concurrently: referred."
+                contraindications.concurrentAntibioticSupplied && contraindications.concurrentInfectionMildLocalised
+                  ? `Mild and localised, confirmed. Oral antibiotic supplied under the Skin and Soft Tissue Infection PGD at this consultation: ${contraindications.concurrentAntibioticName || "not recorded"}, ${contraindications.concurrentAntibioticDose || "dose not recorded"}, quantity ${contraindications.concurrentAntibioticQuantity || "not recorded"}, batch ${contraindications.concurrentAntibioticBatch || "not recorded"}, expiry ${contraindications.concurrentAntibioticExpiry || "not recorded"}${contraindications.concurrentConsultationRef ? `, skin infection consultation ${contraindications.concurrentConsultationRef}` : ""}. Both supplies are in this one record.`
+                  : "Signs present, not treated concurrently under the Skin and Soft Tissue Infection PGD: referred."
               }
             />
           )}
@@ -133,7 +139,10 @@ export function EczemaSummaryReport({ state }: EczemaSummaryReportProps) {
         <SectionHeader>Medicine Supplied</SectionHeader>
         <div className="space-y-2 text-xs print:space-y-1">
           {stopped ? (
-            <Row label="Outcome" value="NOT SUPPLIED: exclusion criteria met; patient referred." />
+            <>
+              <Row label="Outcome" value="NOT SUPPLIED: exclusion criteria met; patient referred." />
+              <Row label="Advice given and decision" value={summary.exclusionAdvice || "Not recorded"} />
+            </>
           ) : (
             <>
               <Row label="Emollient as base" value={medicineSelection.emollientFirst ? "Yes" : "Not confirmed"} />
@@ -176,6 +185,11 @@ export function EczemaSummaryReport({ state }: EczemaSummaryReportProps) {
         />
       </div>
 
+      <div className="px-6 py-4 print:px-4 print:py-2">
+        <SectionHeader>Adverse Drug Reactions</SectionHeader>
+        <p className="text-xs text-gray-700 whitespace-pre-wrap">{summary.adverseReactions || "None recorded at the time of supply. Report suspected reactions via https://yellowcard.mhra.gov.uk and inform the GP as appropriate."}</p>
+      </div>
+
       {summary.clinicalNotes && (
         <div className="px-6 py-4 print:px-4 print:py-2">
           <SectionHeader>Clinical Notes</SectionHeader>
@@ -184,12 +198,39 @@ export function EczemaSummaryReport({ state }: EczemaSummaryReportProps) {
       )}
 
       <div className="px-6 py-4 print:px-4 print:py-2">
-        <PharmacistDeclaration
-          pgdName={ECZEMA_PGD_VERSION}
-          pharmacistName={summary.pharmacistName}
-          pharmacistGPhC={summary.pharmacistGPhC}
-          pharmacyName={summary.pharmacyName}
-        />
+        {stopped ? (
+          <>
+            <SectionHeader>Practitioner Declaration</SectionHeader>
+            <p className="text-xs text-gray-600 mb-4">
+              I confirm that this consultation was conducted in accordance with the {ECZEMA_PGD_VERSION}, that an exclusion criterion applied and no medicine was supplied, and that the advice given and the decision reached are recorded above.
+            </p>
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-1">Name</p>
+                <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{summary.pharmacistName || ""}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-1">GPhC number</p>
+                <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{summary.pharmacistGPhC || ""}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-1">Pharmacy</p>
+                <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{summary.pharmacyName || ""}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-1">Signature</p>
+                <div className="border-b border-gray-300 min-h-[2rem]" />
+              </div>
+            </div>
+          </>
+        ) : (
+          <PharmacistDeclaration
+            pgdName={ECZEMA_PGD_VERSION}
+            pharmacistName={summary.pharmacistName}
+            pharmacistGPhC={summary.pharmacistGPhC}
+            pharmacyName={summary.pharmacyName}
+          />
+        )}
       </div>
 
       <div className="px-6 py-4 print:px-4 print:py-2">

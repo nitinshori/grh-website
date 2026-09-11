@@ -58,6 +58,9 @@ function reducer(state: CovidBoosterConsultationState, action: CovidBoosterActio
     case "SET_STEP":
       newState.currentStep = action.step;
       break;
+
+    case "RESET":
+      return createInitialConsultationState();
   }
 
   return newState;
@@ -87,20 +90,22 @@ export default function CovidBoosterClient() {
     return validateStep(state, state.currentStep);
   }, [state]);
 
+  // A stop anywhere blocks Next on every step and the final Save & Print
+  // (adversarial review, 11 Sep 2026). The progress bar only moves backwards.
   const canProceed = useMemo(() => {
-    if (state.currentStep >= TOTAL_STEPS - 1) return true;
-    if (state.currentStep <= 3 && hardStops) return false;
+    if (hardStops) return false;
     return !validationError;
-  }, [state, validationError, hardStops]);
+  }, [validationError, hardStops]);
 
   const handleNext = useCallback(() => {
+    if (hardStops) return;
     if (!validationError && state.currentStep < TOTAL_STEPS - 1) {
       const newCompleted = new Set(completedSteps);
       newCompleted.add(state.currentStep);
       setCompletedSteps(newCompleted);
       dispatch({ type: "SET_STEP", step: state.currentStep + 1 });
     }
-  }, [state.currentStep, validationError, completedSteps]);
+  }, [state.currentStep, validationError, completedSteps, hardStops]);
 
   const handlePrev = useCallback(() => {
     if (state.currentStep > 0) {
@@ -109,10 +114,27 @@ export default function CovidBoosterClient() {
   }, [state.currentStep]);
 
   const handleStepClick = useCallback((step: number) => {
-    if (completedSteps.has(step) || step <= state.currentStep) {
+    if (step < state.currentStep) {
       dispatch({ type: "SET_STEP", step });
     }
-  }, [completedSteps, state.currentStep]);
+  }, [state.currentStep]);
+
+  // When a stop appears, forget every step after the one being edited.
+  useEffect(() => {
+    if (!hardStops) return;
+    setCompletedSteps((prev) => {
+      const next = new Set<number>();
+      prev.forEach((s) => {
+        if (s < state.currentStep) next.add(s);
+      });
+      return next.size === prev.size ? prev : next;
+    });
+  }, [hardStops, state.currentStep]);
+
+  const handleNewConsultation = useCallback(() => {
+    dispatch({ type: "RESET" });
+    setCompletedSteps(new Set());
+  }, []);
 
 
   // ─── Consultation Record Data (for saving to database) ───
@@ -131,14 +153,27 @@ export default function CovidBoosterClient() {
       },
       clinicalData: state as unknown as Record<string, unknown>,
       outcome: hardStops ? "not_supplied" : "completed",
+      // Brand AND variant designation, written in full (PGD v006 records row).
+      medicine:
+        !hardStops && state.supply.vaccineProduct
+          ? {
+              name: COVID_PRODUCTS[state.supply.vaccineProduct].label,
+              dose: `${COVID_PRODUCTS[state.supply.vaccineProduct].volume} intramuscular`,
+              quantity: "1 dose",
+            }
+          : undefined,
       summary: {
-        pharmacistName: state.summary.pharmacistName,
-        pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacistName: state.summary.pharmacistName || __pharmProfile?.name || "",
+        pharmacistGPhC: state.summary.pharmacistGPhC || __pharmProfile?.gphcNumber || "",
+        pharmacyName: state.summary.pharmacyName || __pharmProfile?.pharmacyName,
+        pharmacyAddress: state.summary.pharmacyAddress || __pharmProfile?.pharmacyAddress,
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: state.consent.notifyGp },
     };
-  }, [state, hardStops]);
+  }, [state, hardStops, __pharmProfile]);
 
   const renderStep = () => {
     switch (state.currentStep) {
@@ -154,6 +189,69 @@ export default function CovidBoosterClient() {
         );
 
       case 1:
+        return (
+          <div className="space-y-6">
+            <ConsentStep
+              consent={state.consent}
+              onChange={(field, value) =>
+                dispatch({ type: "UPDATE_CONSENT", field, value })
+              }
+            />
+
+            {state.patient.age !== null && state.patient.age < 16 && (
+              <div className="p-4 bg-blue-50 border border-blue-300 rounded-lg space-y-3">
+                <p className="text-sm font-semibold text-blue-900">
+                  Patient is under 16: record the basis of consent
+                </p>
+                <p className="text-xs text-blue-900">
+                  Valid consent must come from a person with parental responsibility, or from the young person where assessed as Gillick competent, with the basis of any Gillick assessment recorded.
+                </p>
+                <SelectInput
+                  label="Consent given by"
+                  value={state.supply.consentBasis}
+                  onChange={(v) =>
+                    dispatch({ type: "UPDATE_SUPPLY", field: "consentBasis", value: v })
+                  }
+                  options={[
+                    { value: "parental", label: "A person with parental responsibility" },
+                    { value: "gillick", label: "The young person, assessed as Gillick competent" },
+                  ]}
+                  required
+                />
+                {state.supply.consentBasis === "parental" && (
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <TextInput
+                      label="Name of person with parental responsibility"
+                      value={state.supply.parentName}
+                      onChange={(v) => dispatch({ type: "UPDATE_SUPPLY", field: "parentName", value: v })}
+                      placeholder="Full name"
+                      required
+                    />
+                    <TextInput
+                      label="Relationship to the patient"
+                      value={state.supply.parentRelationship}
+                      onChange={(v) => dispatch({ type: "UPDATE_SUPPLY", field: "parentRelationship", value: v })}
+                      placeholder="Mother, father, guardian"
+                      required
+                    />
+                  </div>
+                )}
+                {state.supply.consentBasis === "gillick" && (
+                  <TextArea
+                    label="Basis of the Gillick competence assessment"
+                    value={state.supply.gillickBasis}
+                    onChange={(v) => dispatch({ type: "UPDATE_SUPPLY", field: "gillickBasis", value: v })}
+                    placeholder="What the young person understood about the vaccine, its benefits and risks, and the decision being made."
+                    rows={3}
+                    required
+                  />
+                )}
+              </div>
+            )}
+          </div>
+        );
+
+      case 2:
         return (
           <div className="space-y-4">
             <Checkbox
@@ -181,14 +279,27 @@ export default function CovidBoosterClient() {
               description="A previous dose is not required. Leave unticked for a first dose. The PGD only excludes a primary course where the patient is also immunosuppressed."
             />
             {state.assessment.previousCovidVaccine && (
-              <TextInput
-                label="Date of the previous COVID-19 vaccine dose, where known"
-                type="date"
-                value={state.assessment.previousDoseDate}
-                onChange={(v) =>
-                  dispatch({ type: "UPDATE_ASSESSMENT", field: "previousDoseDate", value: v })
-                }
-              />
+              <div className="pl-6 space-y-3">
+                <TextInput
+                  label="Date of the previous COVID-19 vaccine dose"
+                  type="date"
+                  value={state.assessment.previousDoseDate}
+                  onChange={(v) =>
+                    dispatch({ type: "UPDATE_ASSESSMENT", field: "previousDoseDate", value: v })
+                  }
+                  required={!state.assessment.previousDoseDateUnknown}
+                />
+                {!state.assessment.previousDoseDate && (
+                  <Checkbox
+                    label="Date not known: the individual states the last dose was more than 3 months ago"
+                    checked={state.assessment.previousDoseDateUnknown}
+                    onChange={(v) =>
+                      dispatch({ type: "UPDATE_ASSESSMENT", field: "previousDoseDateUnknown", value: v })
+                    }
+                    description="The 3 month minimum interval is an exclusion. Where no date can be established this statement is printed on the record as the basis for proceeding."
+                  />
+                )}
+              </div>
             )}
             {intervalTooShort(state) && (
               <div className="p-3 bg-red-50 border border-red-300 rounded-lg">
@@ -261,59 +372,59 @@ export default function CovidBoosterClient() {
           </div>
         );
 
-      case 2:
+      case 3:
         return (
           <div className="space-y-4">
             <p className="text-sm text-gray-700 font-medium">
-              Check exclusion and caution criteria:
+              Check exclusion and caution criteria. Each exclusion needs an explicit answer.
             </p>
-            <Checkbox
-              label="Anaphylaxis to a previous dose of the same vaccine or any of its components: NOT documented"
-              checked={!state.assessment.anaphylaxisToPreviousDose}
+            <SelectInput
+              label="Anaphylaxis to a previous dose of the same vaccine or any of its components?"
+              value={state.assessment.anaphylaxisToPreviousDose}
               onChange={(v) =>
-                dispatch({
-                  type: "UPDATE_ASSESSMENT",
-                  field: "anaphylaxisToPreviousDose",
-                  value: !v,
-                })
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "anaphylaxisToPreviousDose", value: v })
               }
-              description="Exclusion if anaphylaxis occurred. Untick to record."
+              options={[
+                { value: "no", label: "No: not documented" },
+                { value: "yes", label: "Yes: anaphylaxis documented (excluded)" },
+              ]}
+              required
             />
-            <Checkbox
-              label="Hypersensitivity to polyethylene glycol (PEG): NOT documented"
-              checked={!state.assessment.anaphylaxisToPEG}
+            <SelectInput
+              label="Known hypersensitivity to polyethylene glycol (PEG)?"
+              value={state.assessment.anaphylaxisToPEG}
               onChange={(v) =>
-                dispatch({
-                  type: "UPDATE_ASSESSMENT",
-                  field: "anaphylaxisToPEG",
-                  value: !v,
-                })
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "anaphylaxisToPEG", value: v })
               }
-              description="PEG is an excipient of the mRNA vaccines (Comirnaty, Spikevax). Exclusion. Untick to record."
+              options={[
+                { value: "no", label: "No: not documented" },
+                { value: "yes", label: "Yes: PEG hypersensitivity (excluded; PEG is an excipient of Comirnaty and Spikevax)" },
+              ]}
+              required
             />
-            <Checkbox
-              label="Hypersensitivity to polysorbate 80: NOT documented"
-              checked={!state.assessment.anaphylaxisToPolysorbate}
+            <SelectInput
+              label="Known hypersensitivity to polysorbate 80?"
+              value={state.assessment.anaphylaxisToPolysorbate}
               onChange={(v) =>
-                dispatch({
-                  type: "UPDATE_ASSESSMENT",
-                  field: "anaphylaxisToPolysorbate",
-                  value: !v,
-                })
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "anaphylaxisToPolysorbate", value: v })
               }
-              description="Polysorbate 80 is an excipient of Nuvaxovid. Exclusion. Untick to record."
+              options={[
+                { value: "no", label: "No: not documented" },
+                { value: "yes", label: "Yes: polysorbate 80 hypersensitivity (excluded; excipient of Nuvaxovid)" },
+              ]}
+              required
             />
-            <Checkbox
-              label="No acute severe febrile illness"
-              checked={!state.assessment.severeFebrilIllness}
+            <SelectInput
+              label="Acute severe febrile illness today?"
+              value={state.assessment.severeFebrilIllness}
               onChange={(v) =>
-                dispatch({
-                  type: "UPDATE_ASSESSMENT",
-                  field: "severeFebrilIllness",
-                  value: !v,
-                })
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "severeFebrilIllness", value: v })
               }
-              description="Postpone until recovered. A minor infection without fever is not a contraindication. Untick to record."
+              options={[
+                { value: "no", label: "No: well enough to be vaccinated (a minor infection without fever is not a contraindication)" },
+                { value: "yes", label: "Yes: postpone until recovered" },
+              ]}
+              required
             />
             <Checkbox
               label="Confirmed current COVID-19 infection"
@@ -406,7 +517,7 @@ export default function CovidBoosterClient() {
           </div>
         );
 
-      case 3:
+      case 4:
         return (
           <div className="space-y-4">
             <p className="text-sm text-gray-700 font-medium">
@@ -487,7 +598,7 @@ export default function CovidBoosterClient() {
           </div>
         );
 
-      case 4:
+      case 5:
         return (
           <div className="space-y-4">
             <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg">
@@ -601,6 +712,39 @@ export default function CovidBoosterClient() {
               placeholder="e.g. Influenza vaccine, right deltoid. Use separate sites, preferably different limbs, or at least 2.5 cm apart."
             />
 
+            <div className="border-t pt-4 space-y-4">
+              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Observation and adverse reactions (PGD v006)</p>
+              <Checkbox
+                label="Patient observed, seated, for 15 minutes after vaccination and the observation period has been completed"
+                checked={state.supply.observedFifteenMinutes}
+                onChange={(v) => dispatch({ type: "UPDATE_SUPPLY", field: "observedFifteenMinutes", value: v })}
+                description="Required by the PGD where there is a history of allergy or previous vaccine reaction. Tick only once the period has actually been completed."
+              />
+              <TextArea
+                label="Adverse reaction observed (leave blank if none)"
+                value={state.supply.adverseReaction}
+                onChange={(v) => dispatch({ type: "UPDATE_SUPPLY", field: "adverseReaction", value: v })}
+                placeholder="Describe any adverse reaction, including the time it started"
+                rows={2}
+              />
+              {state.supply.adverseReaction.trim() && (
+                <>
+                  <TextArea
+                    label="Action taken"
+                    value={state.supply.adverseReactionAction}
+                    onChange={(v) => dispatch({ type: "UPDATE_SUPPLY", field: "adverseReactionAction", value: v })}
+                    placeholder="Treatment given, referral made, GP informed"
+                    rows={2}
+                    required
+                  />
+                  <Checkbox
+                    label="Reported via the MHRA Yellow Card scheme (https://yellowcard.mhra.gov.uk), stating the variant designation, and the GP informed"
+                    checked={state.supply.yellowCardSubmitted}
+                    onChange={(v) => dispatch({ type: "UPDATE_SUPPLY", field: "yellowCardSubmitted", value: v })}
+                  />
+                </>
+              )}
+            </div>
             <TextArea
               label="Additional clinical notes"
               value={state.summary.clinicalNotes}
@@ -617,7 +761,7 @@ export default function CovidBoosterClient() {
           </div>
         );
 
-      case 5:
+      case 6:
         return (
           <div className="space-y-6">
             <div>
@@ -684,103 +828,15 @@ export default function CovidBoosterClient() {
                 />
               </div>
             </div>
-            <ConsentStep
-              consent={state.consent}
-              onChange={(field, value) =>
-                dispatch({ type: "UPDATE_CONSENT", field, value })
-              }
+            <p className="text-xs text-gray-600 print:hidden">
+              Check the record below, then press Save &amp; Print Record. The record is saved when that button is pressed, not before.
+            </p>
+            <CovidBoosterSummaryReport
+              state={state}
+              alerts={alerts}
+              doseRecommendation={doseRecommendation}
             />
-
-            {state.patient.age !== null && state.patient.age < 16 && (
-              <div className="p-4 bg-blue-50 border border-blue-300 rounded-lg space-y-3">
-                <p className="text-sm font-semibold text-blue-900">
-                  Patient is under 16: record the basis of consent
-                </p>
-                <p className="text-xs text-blue-900">
-                  Valid consent must come from a person with parental responsibility, or from the young person where assessed as Gillick competent, with the basis of any Gillick assessment recorded.
-                </p>
-                <SelectInput
-                  label="Consent given by"
-                  value={state.supply.consentBasis}
-                  onChange={(v) =>
-                    dispatch({ type: "UPDATE_SUPPLY", field: "consentBasis", value: v })
-                  }
-                  options={[
-                    { value: "parental", label: "A person with parental responsibility" },
-                    { value: "gillick", label: "The young person, assessed as Gillick competent" },
-                  ]}
-                  required
-                />
-                {state.supply.consentBasis === "parental" && (
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <TextInput
-                      label="Name of person with parental responsibility"
-                      value={state.supply.parentName}
-                      onChange={(v) => dispatch({ type: "UPDATE_SUPPLY", field: "parentName", value: v })}
-                      placeholder="Full name"
-                      required
-                    />
-                    <TextInput
-                      label="Relationship to the patient"
-                      value={state.supply.parentRelationship}
-                      onChange={(v) => dispatch({ type: "UPDATE_SUPPLY", field: "parentRelationship", value: v })}
-                      placeholder="Mother, father, guardian"
-                      required
-                    />
-                  </div>
-                )}
-                {state.supply.consentBasis === "gillick" && (
-                  <TextArea
-                    label="Basis of the Gillick competence assessment"
-                    value={state.supply.gillickBasis}
-                    onChange={(v) => dispatch({ type: "UPDATE_SUPPLY", field: "gillickBasis", value: v })}
-                    placeholder="What the young person understood about the vaccine, its benefits and risks, and the decision being made."
-                    rows={3}
-                    required
-                  />
-                )}
-              </div>
-            )}
           </div>
-        );
-
-      case 6:
-        return (
-          <div className="text-center py-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-[color:var(--tenant-primary)]/10 rounded-full mb-4">
-              <svg
-                className="w-8 h-8 text-[color:var(--tenant-primary)]"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-            </div>
-            <h3 className="text-lg font-semibold text-navy-900 mb-2">
-              Consultation Complete
-            </h3>
-            <p className="text-sm text-gray-600">
-              The COVID-19 booster vaccination ePGD consultation has been recorded successfully.
-            </p>
-            <p className="text-xs text-gray-500 mt-4">
-              Patient should remain for 15-minute observation period.
-            </p>
-          </div>
-        );
-
-      case 7:
-        return (
-          <CovidBoosterSummaryReport
-            state={state}
-            alerts={alerts}
-            doseRecommendation={doseRecommendation}
-          />
         );
 
       default:
@@ -809,7 +865,10 @@ export default function CovidBoosterClient() {
         onPrev={handlePrev}
         canProceed={canProceed}
         validationError={validationError}
-       getConsultationData={getConsultationData}>
+        isBlocked={hardStops}
+        getConsultationData={getConsultationData}
+        onNewConsultation={handleNewConsultation}
+      >
         {renderStep()}
       </StepWrapper>
     </div>

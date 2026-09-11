@@ -14,7 +14,7 @@ export default function HLToolPage() {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <PgdPageActions />
         {/* Page header */}
-        <div className="mb-6">
+        <div className="mb-6 print:hidden">
           <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
             <a
               href="/for-pharmacies"
@@ -39,7 +39,7 @@ export default function HLToolPage() {
         <HLClient />
 
         {/* Disclaimer */}
-        <div className="mt-8 text-center">
+        <div className="mt-8 text-center print:hidden">
           <p className="text-[11px] text-gray-400 max-w-2xl mx-auto">
             This ePGD is provided as a clinical decision support aid and does
             not replace professional clinical judgement. The pharmacist retains

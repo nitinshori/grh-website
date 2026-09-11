@@ -19,7 +19,7 @@ export default function SleepMelatoninPage() {
             <span className="text-navy-900 font-medium">Sleep Support - Melatonin Consultation ePGD</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-navy-900">
-            Sleep Support — Melatonin — PGD Consultation
+            Sleep Support, Melatonin: PGD Consultation
           </h1>
           <p className="text-sm text-gray-500 mt-1">
             Circadin 2mg prolonged-release melatonin tablets, as monotherapy for the short-term treatment of primary insomnia in adults aged 55 and over. PGD version 005, issued 11 September 2026.

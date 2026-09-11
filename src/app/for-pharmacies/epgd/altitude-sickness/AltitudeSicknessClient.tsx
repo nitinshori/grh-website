@@ -22,6 +22,7 @@ import {
   recommendMedicine,
   canProceedWithConsultation,
   maxQuantityTablets,
+  calculateASQuantity,
   AS_PGD_VERSION,
 } from './altitude-sickness-clinical-logic';
 import { validateStep } from './altitude-sickness-validation';
@@ -44,8 +45,28 @@ import {
 
 // ─── Reducer ───
 
+// Any change to the travel, medical-history or medication answers clears the
+// chosen medicine, its regimen and quantity, because they were set against
+// the old answers (adversarial review, 11 Sep 2026: 20 tablets saved against
+// a treatment indication whose ceiling is 6).
+function clearMedicineSelection(state: ASConsultationState): ASConsultationState {
+  if (!state.medicineSelection.selectedMedicine && state.medicineSelection.quantityTablets === null) return state;
+  return {
+    ...state,
+    medicineSelection: {
+      ...state.medicineSelection,
+      selectedMedicine: '',
+      dose: '',
+      startTiming: '',
+      continuationTiming: '',
+      includeTreatmentCourse: false,
+      quantityTablets: null,
+    },
+  };
+}
+
 function reducer(state: ASConsultationState, action: ASAction): ASConsultationState {
-  const newState = { ...state };
+  let newState = { ...state };
 
   switch (action.type) {
     case 'UPDATE_PATIENT':
@@ -64,6 +85,7 @@ function reducer(state: ASConsultationState, action: ASAction): ASConsultationSt
         ...newState.travelAssessment,
         [action.field]: action.value,
       };
+      newState = clearMedicineSelection(newState);
       break;
 
     case 'UPDATE_MEDICAL_HISTORY':
@@ -71,18 +93,37 @@ function reducer(state: ASConsultationState, action: ASAction): ASConsultationSt
         ...newState.medicalHistory,
         [action.field]: action.value,
       };
+      if (action.field !== 'allQuestionsAsked') newState = clearMedicineSelection(newState);
       break;
 
     case 'UPDATE_MEDICATIONS':
       newState.medications = { ...newState.medications, [action.field]: action.value };
+      if (action.field !== 'allQuestionsAsked' && action.field !== 'otherDrugsDetails')
+        newState = clearMedicineSelection(newState);
       break;
 
-    case 'UPDATE_MEDICINE_SELECTION':
+    case 'UPDATE_MEDICINE_SELECTION': {
       newState.medicineSelection = {
         ...newState.medicineSelection,
         [action.field]: action.value,
       };
+      // The regimen is the document's for the purpose, and the quantity is
+      // calculated from the itinerary. Neither is typed by hand.
+      if (action.field === 'selectedMedicine' || action.field === 'includeTreatmentCourse') {
+        const regimen = newState.medicineSelection.selectedMedicine
+          ? recommendMedicine(newState.medicalHistory, newState.medications, newState.travelAssessment)
+          : null;
+        const calc = calculateASQuantity(newState.travelAssessment, newState.medicineSelection.includeTreatmentCourse);
+        newState.medicineSelection = {
+          ...newState.medicineSelection,
+          dose: regimen?.dose ?? '',
+          startTiming: regimen?.startTiming ?? '',
+          continuationTiming: regimen?.continuationTiming ?? '',
+          quantityTablets: newState.medicineSelection.selectedMedicine ? calc.total : null,
+        };
+      }
       break;
+    }
 
     case 'UPDATE_COUNSELLING':
       newState.counselling = {
@@ -135,7 +176,6 @@ export function AltitudeSicknessClient() {
   }, [__pharmProfile, state.summary.pharmacistName, state.summary.pharmacistGPhC]);
 
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
-  const [showReport, setShowReport] = useState(false);
 
   // ─── Compute alerts and validation ───
 
@@ -147,11 +187,13 @@ export function AltitudeSicknessClient() {
     );
   }, [state.medicalHistory, state.medications, state.travelAssessment]);
 
-  const validationError = useMemo(() => {
-    return validateStep(state.currentStep, state);
-  }, [state, state.currentStep]);
-
   const isBlocked = !canProceedWithConsultation(alerts);
+
+  // A stop anywhere disables Next on every step, not only the review step.
+  const validationError = useMemo(() => {
+    if (isBlocked) return 'Exclusion criteria met: acetazolamide cannot be supplied under the PGD. Record the advice given and save as not supplied.';
+    return validateStep(state.currentStep, state);
+  }, [state, isBlocked]);
 
   // ─── Recommendation ───
 
@@ -162,6 +204,11 @@ export function AltitudeSicknessClient() {
       state.travelAssessment
     );
   }, [state.medicalHistory, state.medications, state.travelAssessment]);
+
+  const quantityCalc = useMemo(
+    () => calculateASQuantity(state.travelAssessment, state.medicineSelection.includeTreatmentCourse),
+    [state.travelAssessment, state.medicineSelection.includeTreatmentCourse]
+  );
 
   // ─── Navigation handlers ───
 
@@ -180,11 +227,12 @@ export function AltitudeSicknessClient() {
     dispatch({ type: 'PREV_STEP' });
   }, []);
 
+  // Backwards only; going forward always means pressing Next.
   const handleStepClick = useCallback((step: number) => {
-    if (completedSteps.has(step) || step <= state.currentStep) {
+    if (step < state.currentStep) {
       dispatch({ type: 'SET_STEP', step });
     }
-  }, [completedSteps, state.currentStep]);
+  }, [state.currentStep]);
 
   // ─── Handlers by step ───
 
@@ -221,7 +269,11 @@ export function AltitudeSicknessClient() {
   };
 
   // ─── Consultation Record Data (for saving to database) ───
+  // Returns a record on every step, including before a medicine is chosen,
+  // so an excluded patient can be saved as "not supplied" from any step.
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    const ms = state.medicineSelection;
+    const supplied = !isBlocked && ms.selectedMedicine === 'acetazolamide';
     return {
       patient: {
         firstName: state.patient.firstName,
@@ -233,17 +285,37 @@ export function AltitudeSicknessClient() {
         address: state.patient.address,
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
+        gpAddress: state.patient.gpAddress,
+        gpPhone: state.patient.gpPhone,
+        gpEmail: state.patient.gpEmail,
+        gpOdsCode: state.patient.gpOdsCode,
       },
-      clinicalData: state as unknown as Record<string, unknown>,
-      outcome: isBlocked ? "not_supplied" : "completed",
+      clinicalData: {
+        ...(state as unknown as Record<string, unknown>),
+        alerts,
+        pgdVersion: AS_PGD_VERSION,
+      },
+      outcome: isBlocked ? 'not_supplied' : 'completed',
+      medicine: supplied
+        ? {
+            name: `Acetazolamide 250 mg tablets (scored)${ms.brand ? `, ${ms.brand}` : ''}`,
+            dose: ms.dose,
+            duration: `${ms.startTiming}; ${ms.continuationTiming}`,
+            quantity: ms.quantityTablets ?? undefined,
+          }
+        : undefined,
       summary: {
-        pharmacistName: state.summary.pharmacistName,
-        pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacistName: state.summary.pharmacistName || __pharmProfile?.name || '',
+        pharmacistGPhC: state.summary.pharmacistGPhC || __pharmProfile?.gphcNumber || '',
+        pharmacyName: state.summary.pharmacyName || __pharmProfile?.pharmacyName,
+        pharmacyAddress: state.summary.pharmacyAddress || __pharmProfile?.pharmacyAddress,
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: state.consent.notifyGp },
     };
-  }, [state, isBlocked]);
+  }, [state, isBlocked, alerts, __pharmProfile]);
 
   const handleNewConsultation = useCallback(() => {
     dispatch({ type: "RESET" });
@@ -253,43 +325,21 @@ export function AltitudeSicknessClient() {
 
   // ─── Render ───
 
-  if (showReport) {
-    return (
-      <div className="space-y-4">
-        <button
-          onClick={() => setShowReport(false)}
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-        >
-          ← Back to Consultation
-        </button>
-        <AltitudeSicknessSummaryReport state={state} />
-        <div className="flex gap-4 justify-center mt-6">
-          <button
-            onClick={() => window.print()}
-            className="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
-          >
-            Print Report
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-8">
-      {/* Progress Bar */}
-      <ProgressBar
-        stepLabels={STEP_LABELS}
-        currentStep={state.currentStep}
-        onStepClick={handleStepClick}
-        completedSteps={completedSteps}
-        hasErrors={!!validationError}
-      />
-
-      {/* Alerts Banner */}
-      {alerts.length > 0 && (
-        <AlertBanner alerts={alerts} />
-      )}
+      {/* Progress Bar and live alerts: screen only; the printed record is the summary report on the last step */}
+      <div className="space-y-8 print:hidden">
+        <ProgressBar
+          stepLabels={STEP_LABELS}
+          currentStep={state.currentStep}
+          onStepClick={handleStepClick}
+          completedSteps={completedSteps}
+          hasErrors={!!validationError}
+        />
+        {alerts.length > 0 && (
+          <AlertBanner alerts={alerts} />
+        )}
+      </div>
 
       {/* Step 0: Patient Details */}
       {state.currentStep === 0 && (
@@ -301,6 +351,8 @@ export function AltitudeSicknessClient() {
           onPrev={handlePrev}
           canProceed={!validationError}
           validationError={validationError}
+          isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
         >
           <PatientDetailsStep
             patient={state.patient}
@@ -320,6 +372,8 @@ export function AltitudeSicknessClient() {
           onPrev={handlePrev}
           canProceed={!validationError}
           validationError={validationError}
+          isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
         >
           <ConsentStep
             consent={state.consent}
@@ -338,6 +392,8 @@ export function AltitudeSicknessClient() {
           onPrev={handlePrev}
           canProceed={!validationError}
           validationError={validationError}
+          isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
         >
           <div className="space-y-6">
             <TextInput
@@ -368,6 +424,35 @@ export function AltitudeSicknessClient() {
               ]}
               required
             />
+            {state.travelAssessment.purpose === 'prevention' && (
+              <div className="grid sm:grid-cols-2 gap-4">
+                <SelectInput
+                  label="Lead-in days before ascent"
+                  value={state.travelAssessment.leadInDays === null ? '' : String(state.travelAssessment.leadInDays)}
+                  onChange={(v) => handleTravelChange('leadInDays', v === '' ? null : (Number(v) as 1 | 2))}
+                  options={[
+                    { value: '1', label: '1 day before ascent' },
+                    { value: '2', label: '2 days before ascent' },
+                  ]}
+                  required
+                />
+                <NumberInput
+                  label="Days ascending"
+                  value={state.travelAssessment.daysAscending}
+                  onChange={(v) => handleTravelChange('daysAscending', v === null ? null : Math.ceil(v))}
+                  min={1}
+                  max={14}
+                  unit="days"
+                  placeholder="e.g. 5"
+                  required
+                />
+                <p className="text-xs text-gray-600 sm:col-span-2">
+                  PGD quantity: half a tablet twice daily for (lead-in days + days ascending + 2 days), rounded up to
+                  whole tablets, maximum 14 tablets (14 days) per supply without review. The quantity is calculated
+                  from these two figures.
+                </p>
+              </div>
+            )}
             <NumberInput
               label="Current Altitude (meters)"
               value={state.travelAssessment.currentAltitude}
@@ -451,6 +536,8 @@ export function AltitudeSicknessClient() {
           onPrev={handlePrev}
           canProceed={!validationError}
           validationError={validationError}
+          isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
         >
           <div className="space-y-4">
             <Checkbox
@@ -557,6 +644,16 @@ export function AltitudeSicknessClient() {
               }
               description="Exclusion under this PGD."
             />
+
+            <div className="pt-3 border-t border-gray-200">
+              <Checkbox
+                label="I have asked the patient every question on this page, and none applies unless ticked above"
+                checked={state.medicalHistory.allQuestionsAsked}
+                onChange={(v) => handleMedicalChange('allQuestionsAsked', v)}
+                description="Every exclusion on this page defaults to absent. This confirmation is what makes the record's negative answers true."
+                required
+              />
+            </div>
           </div>
         </StepWrapper>
       )}
@@ -571,6 +668,8 @@ export function AltitudeSicknessClient() {
           onPrev={handlePrev}
           canProceed={!validationError}
           validationError={validationError}
+          isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
         >
           <div className="space-y-4">
             <Checkbox
@@ -630,6 +729,16 @@ export function AltitudeSicknessClient() {
                 placeholder="e.g. metformin, amlodipine"
               />
             )}
+
+            <div className="pt-3 border-t border-gray-200">
+              <Checkbox
+                label="I have asked about every medicine on this page, and none applies unless ticked above"
+                checked={state.medications.allQuestionsAsked}
+                onChange={(v) => handleMedicationsChange('allQuestionsAsked', v)}
+                description="Every interaction on this page defaults to absent. This confirmation is what makes the record's negative answers true."
+                required
+              />
+            </div>
           </div>
         </StepWrapper>
       )}
@@ -646,6 +755,7 @@ export function AltitudeSicknessClient() {
           canProceed={!isBlocked}
           validationError={isBlocked ? 'Hard stop alerts present. Consultation cannot proceed.' : null}
           isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
         >
           <div className="space-y-4">
             {alerts.length === 0 ? (
@@ -683,7 +793,7 @@ export function AltitudeSicknessClient() {
       )}
 
       {/* Step 6: Medicine Selection */}
-      {state.currentStep === 6 && !isBlocked && (
+      {state.currentStep === 6 && (
         <StepWrapper
           title="Medicine Selection"
           currentStep={state.currentStep}
@@ -692,38 +802,13 @@ export function AltitudeSicknessClient() {
           onPrev={handlePrev}
           canProceed={!validationError}
           validationError={validationError}
+          isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
         >
+          {isBlocked ? (
+            <BlockedPanel />
+          ) : (
           <div className="space-y-6">
-            {recommendation ? (
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="font-medium text-sm text-blue-900 mb-2">
-                  Regimen per the PGD ({AS_PGD_VERSION})
-                </p>
-                <p className="text-sm text-blue-800 mb-3">
-                  <strong>{recommendation.medicine}</strong>
-                </p>
-                <ul className="text-xs text-blue-700 space-y-1">
-                  <li>
-                    <strong>Dose:</strong> {recommendation.dose}
-                  </li>
-                  <li>
-                    <strong>Start:</strong> {recommendation.startTiming}
-                  </li>
-                  <li>
-                    <strong>Continue:</strong> {recommendation.continuationTiming}
-                  </li>
-                  <li>{recommendation.reason}</li>
-                </ul>
-              </div>
-            ) : (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm text-red-800">
-                  Acetazolamide is contraindicated. Pharmacological prevention cannot be
-                  offered. Advise non-pharmacological prevention (slow ascent, hydration).
-                </p>
-              </div>
-            )}
-
             <SelectInput
               label="Medicine Choice"
               value={state.medicineSelection.selectedMedicine}
@@ -732,36 +817,43 @@ export function AltitudeSicknessClient() {
                 { value: '', label: 'Select...' },
                 { value: 'acetazolamide', label: 'Acetazolamide 250 mg tablets (scored)' },
               ]}
+              required
             />
+
+            {recommendation && state.medicineSelection.selectedMedicine && (
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="font-medium text-sm text-blue-900 mb-2">
+                  Regimen per the PGD ({AS_PGD_VERSION}) for{' '}
+                  {state.travelAssessment.purpose === 'treatment' ? 'symptomatic treatment' : 'prevention'}
+                </p>
+                <p className="text-sm text-blue-800 mb-3">
+                  <strong>{recommendation.medicine}</strong>
+                </p>
+                <ul className="text-xs text-blue-700 space-y-1">
+                  <li>
+                    <strong>Dose:</strong> {state.medicineSelection.dose}
+                  </li>
+                  <li>
+                    <strong>Start:</strong> {state.medicineSelection.startTiming}
+                  </li>
+                  <li>
+                    <strong>Continue:</strong> {state.medicineSelection.continuationTiming}
+                  </li>
+                  <li>{recommendation.reason}</li>
+                </ul>
+                <p className="text-[11px] text-blue-700 mt-2">
+                  Dose, start and continuation are the document&apos;s for this purpose and are recorded as shown.
+                  To change the purpose, go back to the Travel Assessment.
+                </p>
+              </div>
+            )}
 
             <TextInput
               label="Brand supplied"
               value={state.medicineSelection.brand}
               onChange={(v) => handleMedicineChange('brand', v)}
               placeholder="Name and brand of the product supplied"
-            />
-
-            <TextInput
-              label="Dose"
-              value={state.medicineSelection.dose}
-              onChange={(v) => handleMedicineChange('dose', v)}
-              placeholder={state.travelAssessment.purpose === 'treatment' ? 'e.g. 250 mg twice daily for up to 3 days' : 'e.g. 125 mg (half a tablet) twice daily'}
-            />
-
-            <TextInput
-              label="Start Timing"
-              value={state.medicineSelection.startTiming}
-              onChange={(v) => handleMedicineChange('startTiming', v)}
-              placeholder={state.travelAssessment.purpose === 'treatment' ? 'At symptom onset' : 'e.g. 1 to 2 days before ascent'}
-            />
-
-            <TextInput
-              label="Continuation Timing"
-              value={state.medicineSelection.continuationTiming}
-              onChange={(v) =>
-                handleMedicineChange('continuationTiming', v)
-              }
-              placeholder={state.travelAssessment.purpose === 'treatment' ? 'Maximum 3 days' : 'e.g. 2 days after reaching highest altitude, or until descent begins'}
+              required
             />
 
             {state.travelAssessment.purpose === 'prevention' && (
@@ -773,20 +865,23 @@ export function AltitudeSicknessClient() {
               />
             )}
 
-            <NumberInput
-              label="Quantity supplied (tablets)"
-              value={state.medicineSelection.quantityTablets}
-              onChange={(v) => handleMedicineChange('quantityTablets', v)}
-              min={1}
-              max={maxQuantityTablets(state.travelAssessment.purpose, state.medicineSelection.includeTreatmentCourse)}
-              unit="tablets"
-              placeholder="Rounded up to whole tablets"
-              required
-            />
-            <p className="text-xs text-gray-600">
-              PGD maximum for this regimen: {maxQuantityTablets(state.travelAssessment.purpose, state.medicineSelection.includeTreatmentCourse)} tablets
-              (prevention 14 = 28 doses over 14 days; treatment 6; total 20). Prevention: maximum 14 days per supply without review.
-            </p>
+            <div>
+              <NumberInput
+                label="Quantity supplied (tablets)"
+                value={state.medicineSelection.quantityTablets}
+                onChange={(v) => handleMedicineChange('quantityTablets', v === null ? null : Math.round(v))}
+                min={quantityCalc.total ?? 1}
+                max={maxQuantityTablets(state.travelAssessment.purpose, state.medicineSelection.includeTreatmentCourse)}
+                unit="tablets"
+                required
+              />
+              <p className="text-xs text-gray-600 mt-1">
+                {quantityCalc.text}. PGD maximum for this regimen:{' '}
+                {maxQuantityTablets(state.travelAssessment.purpose, state.medicineSelection.includeTreatmentCourse)} tablets
+                (prevention 14 = 28 doses over 14 days; treatment 6; total 20). The field is pre-filled with the
+                calculated course; a smaller quantity is refused.
+              </p>
+            </div>
 
             <Checkbox
               label="Off-label use explained and consented"
@@ -802,13 +897,15 @@ export function AltitudeSicknessClient() {
               onChange={(v) => handleMedicineChange('reason', v)}
               placeholder="Explain why this approach was chosen..."
               rows={4}
+              required
             />
           </div>
+          )}
         </StepWrapper>
       )}
 
       {/* Step 7: Counselling */}
-      {state.currentStep === 7 && !isBlocked && (
+      {state.currentStep === 7 && (
         <StepWrapper
           title="Counselling & Follow-up"
           description="Confirm that all counselling points have been discussed:"
@@ -818,7 +915,12 @@ export function AltitudeSicknessClient() {
           onPrev={handlePrev}
           canProceed={!validationError}
           validationError={validationError}
+          isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
         >
+          {isBlocked ? (
+            <BlockedPanel />
+          ) : (
           <div className="space-y-3">
             <Checkbox
               label="Paraesthesia is common and harmless"
@@ -879,64 +981,87 @@ export function AltitudeSicknessClient() {
               description="Patient information leaflet (PIL) provided with the medication"
             />
           </div>
+          )}
         </StepWrapper>
       )}
 
       {/* Step 8: Summary */}
-      {state.currentStep === 8 && !isBlocked && (
+      {state.currentStep === 8 && (
         <StepWrapper
           title="Summary & Print"
           currentStep={state.currentStep}
           totalSteps={TOTAL_STEPS}
-          onNext={() => {
-            setCompletedSteps((prev) => {
-              const updated = new Set(prev);
-              updated.add(state.currentStep);
-              return updated;
-            });
-            setShowReport(true);
-          }}
+          onNext={handleNext}
           onPrev={handlePrev}
           canProceed={!validationError}
           validationError={validationError}
-        getConsultationData={getConsultationData}
-        onNewConsultation={handleNewConsultation}
+          isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
+          onNewConsultation={handleNewConsultation}
         >
+          {isBlocked ? (
+            <BlockedPanel />
+          ) : (
           <div className="space-y-6">
-            <TextInput
-              label="Pharmacist Name"
-              value={state.summary.pharmacistName}
-              onChange={(v) => handleSummaryChange('pharmacistName', v)}
-              placeholder="Full name"
-            />
-            <TextInput
-              label="GPhC Registration Number"
-              value={state.summary.pharmacistGPhC}
-              onChange={(v) => handleSummaryChange('pharmacistGPhC', v)}
-              placeholder="e.g. 2123456"
-            />
-            <TextInput
-              label="Pharmacy Name"
-              value={state.summary.pharmacyName}
-              onChange={(v) => handleSummaryChange('pharmacyName', v)}
-              placeholder="Pharmacy name"
-            />
-            <TextInput
-              label="Pharmacy Address"
-              value={state.summary.pharmacyAddress}
-              onChange={(v) => handleSummaryChange('pharmacyAddress', v)}
-              placeholder="Full address"
-            />
-            <TextArea
-              label="Clinical Notes"
-              value={state.summary.clinicalNotes}
-              onChange={(v) => handleSummaryChange('clinicalNotes', v)}
-              placeholder="Any additional clinical notes or observations..."
-              rows={4}
-            />
+            <div className="space-y-6 print:hidden">
+              <TextInput
+                label="Pharmacist Name"
+                value={state.summary.pharmacistName}
+                onChange={(v) => handleSummaryChange('pharmacistName', v)}
+                placeholder="Full name"
+                required
+              />
+              <TextInput
+                label="GPhC Registration Number"
+                value={state.summary.pharmacistGPhC}
+                onChange={(v) => handleSummaryChange('pharmacistGPhC', v)}
+                placeholder="e.g. 2123456"
+                required
+              />
+              <TextInput
+                label="Pharmacy Name"
+                value={state.summary.pharmacyName}
+                onChange={(v) => handleSummaryChange('pharmacyName', v)}
+                placeholder="Pharmacy name"
+                required
+              />
+              <TextInput
+                label="Pharmacy Address"
+                value={state.summary.pharmacyAddress}
+                onChange={(v) => handleSummaryChange('pharmacyAddress', v)}
+                placeholder="Full address"
+              />
+              <TextArea
+                label="Clinical Notes"
+                value={state.summary.clinicalNotes}
+                onChange={(v) => handleSummaryChange('clinicalNotes', v)}
+                placeholder="Any additional clinical notes or observations..."
+                rows={4}
+              />
+            </div>
+
+            {/* The printed record. This is what Save & Print prints; the form above is print:hidden. */}
+            <AltitudeSicknessSummaryReport state={state} alerts={alerts} />
           </div>
+          )}
         </StepWrapper>
       )}
+    </div>
+  );
+}
+
+// Shown in place of the form on any step reached with a stop on screen.
+function BlockedPanel() {
+  return (
+    <div className="p-4 bg-red-50 border border-red-200 rounded-lg space-y-2">
+      <p className="text-sm font-semibold text-red-800">
+        Exclusion criteria met: acetazolamide cannot be supplied under this PGD.
+      </p>
+      <p className="text-xs text-red-700">
+        Go back to the Contraindications Review to see the reason. Advise on alternative options (gradual ascent,
+        hydration), refer to the GP as appropriate, and use &quot;Save as not supplied&quot; to record the
+        consultation and the advice given.
+      </p>
     </div>
   );
 }

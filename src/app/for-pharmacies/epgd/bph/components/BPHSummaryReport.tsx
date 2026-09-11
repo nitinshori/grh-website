@@ -17,6 +17,10 @@ interface BPHSummaryReportProps {
 }
 
 export function BPHSummaryReport({ state, alerts }: BPHSummaryReportProps) {
+  const stopsExist = alerts.some((a) => a.severity === "stop");
+  // Never print a supply, or the "no exclusion criteria applied" declaration,
+  // when a stop exists (adversarial review, 11 Sep 2026).
+  const supplied = !stopsExist && state.medicineSupply.tamsulosin400mcgMrOd;
   return (
     <div className="bg-white p-8 rounded-lg space-y-6 print:p-4">
       {/* Header */}
@@ -36,7 +40,8 @@ export function BPHSummaryReport({ state, alerts }: BPHSummaryReportProps) {
         <Row label="DOB" value={state.patient.dateOfBirth} />
         <Row label="Age" value={state.patient.age ? `${state.patient.age} years` : "Not recorded"} />
         <Row label="NHS Number" value={state.patient.nhsNumber || "Not recorded"} />
-        <Row label="GP" value={state.patient.gpName ? `${state.patient.gpName}, ${state.patient.gpPractice}` : "Not recorded"} />
+        <Row label="Address" value={state.patient.address || "Not recorded"} />
+        <Row label="GP" value={state.patient.gpName ? `${state.patient.gpName}, ${state.patient.gpPractice}` : state.patient.gpPractice || "Not recorded"} />
       </div>
 
       {/* Consent */}
@@ -104,6 +109,7 @@ export function BPHSummaryReport({ state, alerts }: BPHSummaryReportProps) {
           value={state.medicalHistory.plannedCataractSurgery ? "Yes" : "No"}
         />
         <Row label="Hypersensitivity to tamsulosin" value={state.medicalHistory.hypersensitivity ? "Yes" : "No"} />
+        <Row label="Blood pressure today" value={state.medicalHistory.bloodPressure || "Not recorded"} />
         <Row label="Uncontrolled hypertension" value={state.medicalHistory.uncontrolledHypertension ? "Yes" : "No"} />
         <Row label="Neurological disease affecting bladder" value={state.medicalHistory.neurologicalBladderDisease ? "Yes" : "No"} />
         <Row label="History of syncope" value={state.medicalHistory.syncopeHistory ? "Yes" : "No"} />
@@ -159,36 +165,45 @@ export function BPHSummaryReport({ state, alerts }: BPHSummaryReportProps) {
 
       {/* Medicine Supply */}
       <div>
-        <SectionHeader>Medicine Supply</SectionHeader>
-        <Row
-          label="Tamsulosin 400 micrograms MR capsules, once daily, oral"
-          value={state.medicineSupply.tamsulosin400mcgMrOd ? "Yes" : "No"}
-        />
-        <Row label="Brand" value={state.medicineSupply.brand || "Not recorded"} />
-        <Row label="Quantity" value={state.medicineSupply.quantity !== null ? `${state.medicineSupply.quantity} capsules` : "Not recorded"} />
-        <Row
-          label="Supply type"
-          value={
-            state.medicineSupply.supplyType === "initial"
-              ? "Initial 4-week supply"
-              : state.medicineSupply.supplyType === "continuation"
-                ? `Continuation: IPSS at start ${state.medicineSupply.previousIpss ?? "not recorded"}, GP examined ${state.medicineSupply.gpExaminedSinceStart ? "yes" : "no"}, ${state.medicineSupply.monthsOnTreatment ?? "?"} months on treatment`
-                : "Not recorded"
-          }
-        />
-        <Row label="Supplied under" value="Tamsulosin for BPH PGD v002, 11 September 2026" />
-        <Row
-          label="After food, preferably breakfast"
-          value={state.medicineSupply.afterFood30mins ? "Yes" : "No"}
-        />
-        <Row
-          label="Same time daily"
-          value={state.medicineSupply.sameTimeDaily ? "Yes" : "No"}
-        />
-        <Row
-          label="First-dose hypotension discussed"
-          value={state.medicineSupply.firstDoseHypotension ? "Yes" : "No"}
-        />
+        <SectionHeader>{supplied ? "Medicine Supply" : "Outcome"}</SectionHeader>
+        {supplied ? (
+          <>
+            <Row label="Tamsulosin 400 micrograms MR capsules, once daily, oral" value="Yes" />
+            <Row label="Brand" value={state.medicineSupply.brand || "Not recorded"} />
+            <Row label="Quantity" value={state.medicineSupply.quantity !== null ? `${state.medicineSupply.quantity} capsules` : "Not recorded"} />
+            <Row
+              label="Supply type"
+              value={
+                state.medicineSupply.supplyType === "initial"
+                  ? "Initial 4-week supply"
+                  : state.medicineSupply.supplyType === "continuation"
+                    ? `Continuation: IPSS at start ${state.medicineSupply.previousIpss ?? "not recorded"}, GP examined ${state.medicineSupply.gpExaminedSinceStart ? "yes" : "no"}, ${state.medicineSupply.monthsOnTreatment ?? "?"} months on treatment`
+                    : "Not recorded"
+              }
+            />
+            <Row label="Supplied under" value="Tamsulosin for BPH PGD v002, 11 September 2026" />
+            <Row
+              label="After food, preferably breakfast"
+              value={state.medicineSupply.afterFood30mins ? "Yes" : "No"}
+            />
+            <Row
+              label="Same time daily"
+              value={state.medicineSupply.sameTimeDaily ? "Yes" : "No"}
+            />
+            <Row
+              label="First-dose hypotension discussed"
+              value={state.medicineSupply.firstDoseHypotension ? "Yes" : "No"}
+            />
+          </>
+        ) : (
+          <>
+            <Row
+              label="Tamsulosin supplied"
+              value={stopsExist ? "NOT SUPPLIED: exclusion criteria met (see clinical alerts above)" : "No"}
+            />
+            <Row label="PGD" value="Tamsulosin for BPH PGD v002, 11 September 2026" />
+          </>
+        )}
       </div>
 
       {/* Counselling */}
@@ -206,6 +221,7 @@ export function BPHSummaryReport({ state, alerts }: BPHSummaryReportProps) {
             ["Urgent help for rapid heartbeat, chest pain, severe dizziness", state.counselling.urgentSymptoms],
             ["Rash or allergy: stop and contact GP or pharmacist", state.counselling.rashAllergy],
             ["Review at 4 to 6 weeks", state.counselling.reviewAt4To6Weeks],
+            ["PIL supplied", state.counselling.pilSupplied],
           ]}
         />
       </div>
@@ -228,12 +244,42 @@ export function BPHSummaryReport({ state, alerts }: BPHSummaryReportProps) {
       </div>
 
       {/* Pharmacist Declaration */}
-      <PharmacistDeclaration
-        pgdName="BPH (Tamsulosin)"
-        pharmacistName={state.summary.pharmacistName}
-        pharmacistGPhC={state.summary.pharmacistGPhC}
-        pharmacyName={state.summary.pharmacyName}
-      />
+      {stopsExist ? (
+        <div>
+          <SectionHeader>Pharmacist Declaration</SectionHeader>
+          <p className="text-xs text-gray-600 mb-4">
+            I confirm that this consultation was conducted in accordance with the
+            Patient Group Direction for BPH (Tamsulosin), that exclusion criteria
+            applied, that no medicine was supplied, and that the patient was given
+            the advice recorded above.
+          </p>
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">Pharmacist name</p>
+              <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{state.summary.pharmacistName || ""}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">GPhC number</p>
+              <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{state.summary.pharmacistGPhC || ""}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">Pharmacy</p>
+              <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{state.summary.pharmacyName || ""}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">Signature</p>
+              <div className="border-b border-gray-300 min-h-[2rem]" />
+            </div>
+          </div>
+        </div>
+      ) : (
+        <PharmacistDeclaration
+          pgdName="BPH (Tamsulosin)"
+          pharmacistName={state.summary.pharmacistName}
+          pharmacistGPhC={state.summary.pharmacistGPhC}
+          pharmacyName={state.summary.pharmacyName}
+        />
+      )}
 
       {/* Footer */}
       <ReportFooter pgdName="BPH (Tamsulosin)" />

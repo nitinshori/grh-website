@@ -1,39 +1,102 @@
 'use client';
 
-import { ImpetigoTreatmentSelection } from './impetigo-types';
-import { TreatmentRecommendation, ImpetigoRoute } from './impetigo-clinical-logic';
-import { SelectInput, TextInput, NumberInput, Checkbox, TextArea } from '../shared/components/FormInputs';
+import { useEffect } from 'react';
+import { ImpetigoTreatmentSelection, ImpetigoLesionAssessment, ImpetigoFormulation, ImpetigoTreatment } from './impetigo-types';
+import {
+  TreatmentRecommendation,
+  ImpetigoRoute,
+  getDoseOptions,
+  formulationOptions,
+  fixedFrequency,
+  computeQuantity,
+} from './impetigo-clinical-logic';
+import { SelectInput, TextInput, TextArea } from '../shared/components/FormInputs';
 
 interface TreatmentSelectionStepProps {
   treatment: ImpetigoTreatmentSelection;
   recommendation: TreatmentRecommendation | null;
   route: ImpetigoRoute;
   pregnant: boolean;
+  age: number;
+  weightKg: string;
+  hydrogenPeroxide: ImpetigoLesionAssessment['hydrogenPeroxide'];
   onChange: (treatment: ImpetigoTreatmentSelection) => void;
 }
 
+/**
+ * Only the document's regimens are offered. Dose is a select generated for
+ * the arm, age and weight band; frequency and quantity are derived. There is
+ * no free text for dose, frequency or quantity and no override: a PGD
+ * authorises no deviation (adversarial review, 11 Sep 2026).
+ */
 export function TreatmentSelectionStep({
   treatment,
   recommendation,
   route,
   pregnant,
+  age,
+  weightKg,
+  hydrogenPeroxide,
   onChange,
 }: TreatmentSelectionStepProps) {
-  const handleChange = (field: keyof ImpetigoTreatmentSelection, value: unknown) => {
+  const doseOptions = getDoseOptions(treatment.treatment, age, weightKg);
+  const selectedDose = doseOptions.find((d) => d.value === treatment.doseValue);
+  const formulations = formulationOptions(treatment.treatment, age);
+  const frequency = fixedFrequency(treatment.treatment);
+  const durationDays = treatment.duration === '7 days' ? 7 : treatment.duration === '5 days' ? 5 : 0;
+  const computed = computeQuantity(treatment.treatment, treatment.formulation, selectedDose, durationDays);
+
+  // Keep the derived fields (dose label, frequency, quantity) in state so the
+  // saved record and the printed record carry them.
+  useEffect(() => {
+    const next: ImpetigoTreatmentSelection = {
+      ...treatment,
+      formulation: formulations.length === 1 ? formulations[0].value : treatment.formulation,
+      dose: selectedDose ? selectedDose.label : '',
+      frequency: frequency.label,
+      quantity: computed.quantity,
+      quantityUnit: computed.unit,
+    };
+    if (
+      next.formulation !== treatment.formulation ||
+      next.dose !== treatment.dose ||
+      next.frequency !== treatment.frequency ||
+      next.quantity !== treatment.quantity ||
+      next.quantityUnit !== treatment.quantityUnit
+    ) {
+      onChange(next);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [treatment.treatment, treatment.formulation, treatment.doseValue, treatment.duration, selectedDose?.label, frequency.label, computed.quantity, computed.unit]);
+
+  const handleTreatmentChange = (value: string) => {
     onChange({
       ...treatment,
-      [field]: value,
+      treatment: value as ImpetigoTreatment,
+      formulation: '',
+      doseValue: '',
+      dose: '',
+      frequency: '',
+      severeDoseReason: '',
+      quantity: 0,
+      quantityUnit: '',
     });
   };
 
-  // Only the arm the document sends this patient to is offered. Topical and
-  // oral antibiotics are never combined.
+  // Only the arm the document sends this patient to is offered. Fusidic acid
+  // is authorised only where hydrogen peroxide 1% is unsuitable or
+  // ineffective: where it was sold as a P medicine, there is no PGD supply.
+  const fusidicAllowed = hydrogenPeroxide === 'unsuitable' || hydrogenPeroxide === 'ineffective';
   const treatmentOptions = [
     { value: '', label: 'Select treatment...' },
     ...(route === 'topical'
       ? [
-          { value: 'hydrogen-peroxide', label: 'Hydrogen peroxide 1% cream (P sale first; NOT a PGD supply)' },
-          { value: 'fusidic-acid', label: 'Fusidic acid 2% cream, three times a day for 5 days (localised non-bullous)' },
+          ...(hydrogenPeroxide === 'offered-p-sale' || !fusidicAllowed
+            ? [{ value: 'hydrogen-peroxide', label: 'Hydrogen peroxide 1% cream (P sale; NOT a PGD supply)' }]
+            : []),
+          ...(fusidicAllowed
+            ? [{ value: 'fusidic-acid', label: 'Fusidic acid 2% cream, three times a day for 5 days (hydrogen peroxide unsuitable or ineffective)' }]
+            : []),
         ]
       : []),
     ...(route === 'flucloxacillin'
@@ -50,7 +113,7 @@ export function TreatmentSelectionStep({
     <div className="space-y-6">
       {recommendation && (
         <div className="border-l-4 border-green-500 bg-green-50 p-4 rounded">
-          <h3 className="text-lg font-semibold text-green-900 mb-2">Recommended Treatment</h3>
+          <h3 className="text-lg font-semibold text-green-900 mb-2">The arm the document sends this patient to</h3>
           <p className="text-green-800 font-medium">{recommendation.treatment}</p>
           <p className="text-sm text-green-700 mt-2">{recommendation.rationale}</p>
           <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
@@ -69,7 +132,8 @@ export function TreatmentSelectionStep({
             <div>
               <span className="font-semibold text-green-800">Quantity:</span>
               <p className="text-green-700">
-                {recommendation.quantity} {recommendation.quantityUnit || ''}
+                {recommendation.quantity > 0 ? `${recommendation.quantity} ` : ''}
+                {recommendation.quantityUnit || ''}
               </p>
             </div>
           </div>
@@ -78,120 +142,105 @@ export function TreatmentSelectionStep({
 
       <div className="bg-amber-50 border border-amber-200 rounded p-3 text-sm text-amber-900">
         Do NOT combine a topical and an oral antibiotic. One course per episode; no repeat supply under this PGD.
+        Only the document&apos;s regimens are offered below: a PGD authorises no other dose, frequency or quantity.
       </div>
 
-      {/* Treatment Selection */}
-      <div>
+      {route === 'topical' && hydrogenPeroxide === 'offered-p-sale' && (
+        <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-blue-900">
+          Hydrogen peroxide 1% was offered as a P sale. Fusidic acid under this PGD is authorised only where hydrogen peroxide is unsuitable or ineffective, so it is not offered for this visit.
+        </div>
+      )}
+
+      <SelectInput
+        label="Selected treatment"
+        value={treatment.treatment}
+        onChange={handleTreatmentChange}
+        options={treatmentOptions}
+        required
+      />
+
+      {treatment.treatment && formulations.length > 1 && (
         <SelectInput
-          label="Selected Treatment *"
-          value={treatment.treatment}
-          onChange={(value) => handleChange('treatment', value)}
-          options={treatmentOptions}
+          label="Formulation"
+          value={treatment.formulation}
+          onChange={(v) => onChange({ ...treatment, formulation: v as ImpetigoFormulation })}
+          options={[{ value: '', label: 'Select formulation...' }, ...formulations]}
+          required
         />
-      </div>
+      )}
+      {treatment.treatment && formulations.length === 1 && (
+        <TextInput label="Formulation" value={formulations[0].label} onChange={() => undefined} disabled />
+      )}
 
-      {/* Dose */}
-      <div>
-        <TextInput
-          label="Dose *"
-          value={treatment.dose}
-          onChange={(value) => handleChange('dose', value)}
-          placeholder={recommendation?.dose || 'E.g., 250 mg, apply a thin layer'}
-        />
-        {recommendation && (
-          <p className="text-xs text-gray-600 mt-1">Recommended: {recommendation.dose}</p>
-        )}
-      </div>
+      {treatment.treatment && (
+        <div>
+          <SelectInput
+            label="Dose (from the document's regimens for this arm, age and weight)"
+            value={treatment.doseValue}
+            onChange={(v) => onChange({ ...treatment, doseValue: v, severeDoseReason: v === 'clari-500' ? treatment.severeDoseReason : '' })}
+            options={[
+              { value: '', label: doseOptions.length ? 'Select dose...' : 'No dose is stated in the document for this patient: refer' },
+              ...doseOptions.map((d) => ({ value: d.value, label: d.label })),
+            ]}
+            required
+          />
+          {treatment.treatment === 'clarithromycin' && age < 12 && (
+            <p className="text-xs text-gray-600 mt-1">
+              Weight is rounded to the nearest kilogram before banding (the document&apos;s bands are whole kilograms). Under 8 kg the dose is 7.5 mg/kg at the measured weight.
+            </p>
+          )}
+        </div>
+      )}
 
-      {treatment.treatment === 'clarithromycin' && (
+      {treatment.doseValue === 'clari-500' && (
         <TextArea
-          label="Clarithromycin 500mg twice a day (severe infection only): reason recorded"
+          label="Clarithromycin 500mg twice a day: reason (severe infection; required by the document)"
           value={treatment.severeDoseReason}
-          onChange={(value) => handleChange('severeDoseReason', value)}
-          placeholder="Leave blank for the standard 250mg twice a day. If 500mg twice a day is used, record the reason here."
+          onChange={(v) => onChange({ ...treatment, severeDoseReason: v })}
+          placeholder="Record why the infection is severe enough for the higher dose"
           rows={2}
+          required
         />
       )}
 
-      {/* Frequency */}
-      <div>
-        <TextInput
-          label="Frequency *"
-          value={treatment.frequency}
-          onChange={(value) => handleChange('frequency', value)}
-          placeholder={recommendation?.frequency || 'E.g., Three times a day, Four times a day'}
-        />
-        {recommendation && (
-          <p className="text-xs text-gray-600 mt-1">Recommended: {recommendation.frequency}</p>
-        )}
-      </div>
+      {treatment.treatment && (
+        <TextInput label="Frequency (fixed by the document)" value={frequency.label} onChange={() => undefined} disabled />
+      )}
 
-      {/* Duration */}
       <div>
         <SelectInput
-          label="Duration *"
+          label="Duration"
           value={treatment.duration}
-          onChange={(value) => handleChange('duration', value)}
+          onChange={(v) => onChange({ ...treatment, duration: v as ImpetigoTreatmentSelection['duration'], extensionReason: v === '7 days' ? treatment.extensionReason : '' })}
           options={[
             { value: '', label: 'Select duration...' },
             { value: '5 days', label: '5 days (standard course)' },
             { value: '7 days', label: '7 days (clinical judgement only, lesions severe or numerous; reason required)' },
           ]}
+          required
         />
         <p className="text-xs text-gray-600 mt-1">Courses are 5 days. Maximum 7 days, extended only on clinical judgement with the reason recorded.</p>
         {treatment.duration === '7 days' && (
           <div className="mt-3">
             <TextArea
-              label="Reason for extending to 7 days *"
+              label="Reason for extending to 7 days"
               value={treatment.extensionReason}
-              onChange={(value) => handleChange('extensionReason', value)}
+              onChange={(v) => onChange({ ...treatment, extensionReason: v })}
               placeholder="E.g., numerous lesions over both forearms"
               rows={2}
+              required
             />
           </div>
         )}
       </div>
 
-      {/* Quantity */}
-      <div>
-        <NumberInput
-          label="Quantity (number of units) *"
-          value={treatment.quantity}
-          onChange={(value) => handleChange('quantity', value)}
-          min={0}
-          placeholder="E.g., 1, 10, 20"
-          unit={recommendation?.quantityUnit}
-        />
-        {recommendation && (
-          <p className="text-xs text-gray-600 mt-1">
-            Recommended: {recommendation.quantity} {recommendation.quantityUnit || ''}
-          </p>
-        )}
-      </div>
-
-      {/* Pharmacist Override */}
-      <div className="border-t border-gray-200 pt-6">
-        <Checkbox
-          label="Pharmacist Override (if deviating from recommendation)"
-          checked={treatment.pharmacistOverride}
-          onChange={(checked) => handleChange('pharmacistOverride', checked)}
-          description="Check if making a clinical decision to deviate from the standard recommendation"
-        />
-        {treatment.pharmacistOverride && (
-          <div className="mt-3">
-            <TextArea
-              label="Reason for Override *"
-              value={treatment.overrideReason}
-              onChange={(value) => handleChange('overrideReason', value)}
-              placeholder="E.g., Patient preference, stock availability, previous good response to alternative agent..."
-              rows={3}
-            />
-            <p className="text-xs text-amber-600 mt-1">
-              Document the clinical rationale for deviating from standard recommendations
-            </p>
-          </div>
-        )}
-      </div>
+      <TextInput
+        label="Quantity (computed from the dose, formulation and duration)"
+        value={computed.quantity > 0 ? `${computed.quantity} ${computed.unit}` : 'Select the dose and duration'}
+        onChange={() => undefined}
+        disabled
+        required
+      />
     </div>
   );
 }

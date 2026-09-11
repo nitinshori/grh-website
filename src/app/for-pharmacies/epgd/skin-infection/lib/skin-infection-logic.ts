@@ -92,9 +92,127 @@ export function getObservationBreaches(state: SkinInfectionConsultationState): s
   return breaches;
 }
 
-/** Appendix 2 (skin-infection document): more extensive infection. */
+/**
+ * Appendix 2 (skin-infection document): more extensive infection means an
+ * area of erythema larger than about 10 cm across, OR more than one body
+ * region, OR cellulitis. Derived from the measured findings so the record
+ * holds the finding that met the definition, not a tick.
+ */
 export function isMoreExtensiveInfection(a: SkinInfectionAssessment): boolean {
-  return a.infectionType === "cellulitis" || a.extensiveInfection;
+  const diameter = num(a.erythemaDiameterCm);
+  const regions = num(a.bodyRegionCount);
+  return (
+    a.infectionType === "cellulitis" ||
+    (diameter !== null && diameter > 10) ||
+    (regions !== null && regions > 1)
+  );
+}
+
+/** The Appendix 2 finding(s) that met the definition, for the record. */
+export function extensiveInfectionFindings(a: SkinInfectionAssessment): string[] {
+  const diameter = num(a.erythemaDiameterCm);
+  const regions = num(a.bodyRegionCount);
+  const findings: string[] = [];
+  if (diameter !== null && diameter > 10) findings.push(`erythema ${diameter} cm across (larger than about 10 cm)`);
+  if (regions !== null && regions > 1) findings.push(`${regions} body regions involved (more than one)`);
+  if (a.infectionType === "cellulitis") findings.push("cellulitis rather than a superficial infection");
+  return findings;
+}
+
+export interface FormulationOption {
+  value: string;
+  label: string;
+  /** Quantity for a 5-day course, as the document states it. */
+  quantity5: string;
+  /** Quantity for a 7-day course, as the document states it. */
+  quantity7: string;
+}
+
+/**
+ * The document's formulations for the chosen arm, age band and weight band,
+ * each with its fixed quantity for 5 and 7 days. Quantity is never typed:
+ * it is read off the option for the course length chosen.
+ */
+export function getFormulationOptions(state: SkinInfectionConsultationState): FormulationOption[] {
+  const age = state.patient.age;
+  const choice = state.antibioticSelection.choice;
+  if (!choice || age === null) return [];
+  const cellulitisPgd = isCellulitisPgd(state);
+  const a = state.assessment;
+  const weight = num(a.weightKg);
+  const extensive = isMoreExtensiveInfection(a);
+
+  if (cellulitisPgd) {
+    if (choice === "flucloxacillin")
+      return [{ value: "flucloxacillin-500mg-capsules", label: "Flucloxacillin 500mg capsules", quantity5: "20 capsules", quantity7: "28 capsules" }];
+    if (choice === "clarithromycin") {
+      const halve =
+        state.medicalHistory.renalFunction === "crcl-below-30-or-suspected" ||
+        state.medicalHistory.renalFunction === "crcl-below-10" ||
+        state.medicalHistory.severeRenalImpairment;
+      return halve
+        ? [{ value: "clarithromycin-250mg-tablets", label: "Clarithromycin 250mg tablets (dose halved for renal impairment)", quantity5: "10 tablets", quantity7: "14 tablets" }]
+        : [{ value: "clarithromycin-500mg-tablets", label: "Clarithromycin 500mg tablets", quantity5: "10 tablets", quantity7: "14 tablets" }];
+    }
+    return [{ value: "doxycycline-100mg-capsules", label: "Doxycycline 100mg capsules", quantity5: "6 capsules", quantity7: "8 capsules" }];
+  }
+
+  if (choice === "flucloxacillin") {
+    if (age >= 2 && age <= 9)
+      return [{ value: "flucloxacillin-250mg-5ml-suspension", label: "Flucloxacillin 250mg/5mL oral suspension (5 mL four times a day)", quantity5: "100 mL", quantity7: "140 mL" }];
+    return [
+      { value: "flucloxacillin-500mg-capsules", label: "Flucloxacillin 500mg capsules", quantity5: "20 capsules", quantity7: "28 capsules" },
+      { value: "flucloxacillin-250mg-5ml-suspension", label: "Flucloxacillin 250mg/5mL oral suspension (10 mL four times a day; unable to swallow capsules)", quantity5: "200 mL", quantity7: "280 mL" },
+    ];
+  }
+
+  if (choice === "clarithromycin") {
+    if (age >= 2 && age <= 11) {
+      if (weight === null || weight < 12) return [];
+      if (weight <= 19)
+        return [{ value: "clarithromycin-125mg-5ml-suspension", label: "Clarithromycin 125mg/5mL oral suspension (12 to 19 kg: 5 mL twice daily)", quantity5: "50 mL", quantity7: "70 mL" }];
+      if (weight <= 29)
+        return [{ value: "clarithromycin-250mg-5ml-suspension", label: "Clarithromycin 250mg/5mL oral suspension (20 to 29 kg: 3.75 mL twice daily)", quantity5: "37.5 mL", quantity7: "52.5 mL" }];
+      if (weight <= 40)
+        return [{ value: "clarithromycin-250mg-5ml-suspension", label: "Clarithromycin 250mg/5mL oral suspension (30 to 40 kg: 5 mL twice daily)", quantity5: "50 mL", quantity7: "70 mL" }];
+      return [{ value: "clarithromycin-250mg-tablets", label: "Clarithromycin 250mg tablets (over 40 kg: 250 mg twice daily)", quantity5: "10 tablets", quantity7: "14 tablets" }];
+    }
+    return extensive
+      ? [
+          { value: "clarithromycin-250mg-tablets", label: "Clarithromycin 250mg tablets (500 mg twice daily: two tablets per dose)", quantity5: "20 tablets", quantity7: "28 tablets" },
+          { value: "clarithromycin-250mg-5ml-suspension", label: "Clarithromycin 250mg/5mL oral suspension (10 mL twice daily; unable to swallow tablets)", quantity5: "100 mL", quantity7: "140 mL" },
+        ]
+      : [
+          { value: "clarithromycin-250mg-tablets", label: "Clarithromycin 250mg tablets (250 mg twice daily)", quantity5: "10 tablets", quantity7: "14 tablets" },
+          { value: "clarithromycin-250mg-5ml-suspension", label: "Clarithromycin 250mg/5mL oral suspension (5 mL twice daily; unable to swallow tablets)", quantity5: "50 mL", quantity7: "70 mL" },
+        ];
+  }
+
+  if (choice === "doxycycline") {
+    if (age < 12) return [];
+    return extensive
+      ? [{ value: "doxycycline-100mg-capsules", label: "Doxycycline 100mg capsules (200 mg daily throughout)", quantity5: "10 capsules", quantity7: "14 capsules" }]
+      : [{ value: "doxycycline-100mg-capsules", label: "Doxycycline 100mg capsules (200 mg day 1, then 100 mg daily)", quantity5: "6 capsules", quantity7: "8 capsules" }];
+  }
+
+  return [];
+}
+
+/** The document's quantity for the formulation and course length chosen, or "" if not yet determinable. */
+export function derivedQuantity(state: SkinInfectionConsultationState): string {
+  const sel = state.antibioticSelection;
+  const opt = getFormulationOptions(state).find((o) => o.value === sel.formulation);
+  if (!opt || !sel.courseDays) return "";
+  return sel.courseDays === "7" ? opt.quantity7 : opt.quantity5;
+}
+
+/** Hours between the consultation date and time and an ISO datetime-local value; null if either is unparseable. */
+export function hoursUntilReview(consultationDate: string, consultationTime: string, reviewDateTime: string): number | null {
+  if (!consultationDate || !reviewDateTime) return null;
+  const start = new Date(`${consultationDate}T${consultationTime || "00:00"}`);
+  const review = new Date(reviewDateTime);
+  if (isNaN(start.getTime()) || isNaN(review.getTime())) return null;
+  return (review.getTime() - start.getTime()) / 3600000;
 }
 
 export function getAllAlerts(state: SkinInfectionConsultationState): ClinicalAlert[] {
@@ -320,6 +438,16 @@ export function getAllAlerts(state: SkinInfectionConsultationState): ClinicalAle
     });
   }
 
+  if (!cellulitisPgd && a.beyondMildModerateScope) {
+    alerts.push({
+      code: "beyond-scope",
+      severity: "stop",
+      message: "Infection beyond the Appendix 2 definition: outside the mild to moderate scope",
+      detail:
+        "Appendix 2: more extensive infection (erythema larger than about 10 cm, more than one body region, or cellulitis) takes the higher clarithromycin or doxycycline dose. Anything beyond that is outside this PGD: refer.",
+    });
+  }
+
   if (mh.interactingMedicines) {
     alerts.push({
       code: "interaction",
@@ -499,12 +627,16 @@ export function getAllAlerts(state: SkinInfectionConsultationState): ClinicalAle
           ? "Use with caution in patients with a history of hepatic issues or receiving potentially hepatotoxic drugs."
           : "Select an alternative antibiotic or refer.",
       });
-    if (!cellulitisPgd && mh.myastheniaSleOrPorphyria)
+    if (mh.myastheniaSleOrPorphyria)
       alerts.push({
         code: "doxy-mg-sle-porphyria",
-        severity: "stop",
-        message: "Myasthenia gravis, systemic lupus erythematosus or porphyria: doxycycline excluded",
-        detail: "Select an alternative antibiotic or refer.",
+        severity: cellulitisPgd ? "caution" : "stop",
+        message: cellulitisPgd
+          ? "Myasthenia gravis, systemic lupus erythematosus or porphyria: doxycycline caution"
+          : "Myasthenia gravis, systemic lupus erythematosus or porphyria: doxycycline excluded",
+        detail: cellulitisPgd
+          ? "The Cellulitis PGD lists these as cautions for doxycycline (weak neuromuscular blockade in myasthenia gravis; exacerbation of SLE; rare reports of porphyria). Consider flucloxacillin or clarithromycin instead."
+          : "Select an alternative antibiotic or refer.",
       });
     if (mh.takesIsotretinoin)
       alerts.push({
@@ -556,11 +688,11 @@ export function calculateDoseRecommendation(
   if (cellulitisPgd) {
     if (choice === "flucloxacillin")
       return {
-        medicine: "Flucloxacillin 500mg or 250mg capsules",
-        dose: "500 mg four times a day (every 6 hours)",
+        medicine: "Flucloxacillin 500mg capsules",
+        dose: "500 mg four times a day (every 6 hours), one 500mg capsule per dose",
         duration: "5 to 7 days depending on clinical response",
         reason:
-          "20 capsules for 5 days or 28 capsules for 7 days. Oral, on an empty stomach (1 hour before or 2 hours after food), ideally with a full glass of water (250 mL).",
+          "500mg capsules only: 20 capsules for 5 days or 28 capsules for 7 days. Oral, on an empty stomach (1 hour before or 2 hours after food), ideally with a full glass of water (250 mL).",
       };
     if (choice === "clarithromycin") {
       const halve =
@@ -568,7 +700,7 @@ export function calculateDoseRecommendation(
         state.medicalHistory.renalFunction === "crcl-below-10" ||
         state.medicalHistory.severeRenalImpairment;
       return {
-        medicine: "Clarithromycin 250mg or 500mg tablets",
+        medicine: halve ? "Clarithromycin 250mg tablets" : "Clarithromycin 500mg tablets",
         dose: halve
           ? "250 mg twice daily (dose halved: creatinine clearance below 30 mL/min)"
           : "500 mg twice daily",

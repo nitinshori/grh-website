@@ -2,46 +2,27 @@
 
 import React from 'react';
 import { Checkbox } from '../../shared/components/FormInputs';
-import { StepWrapper } from '../../shared/components/StepWrapper';
 import { ShinglesCounselling } from '../shingles-types';
 import { validateCounsellingStep } from '../shingles-clinical-logic';
 
 interface CounsellingStepProps {
   counselling: ShinglesCounselling;
   onChange: (counselling: ShinglesCounselling) => void;
-  currentStep: number;
-  totalSteps: number;
-  onNext: () => void;
-  onPrev: () => void;
 }
 
 export const CounsellingStep: React.FC<CounsellingStepProps> = ({
   counselling,
   onChange,
-  currentStep,
-  totalSteps,
-  onNext,
-  onPrev,
 }) => {
-  const validationError = validateCounsellingStep(counselling);
 
   const handleChange = (field: keyof ShinglesCounselling, value: boolean) => {
     onChange({ ...counselling, [field]: value });
   };
 
-  const allConfirmed = validationError === null;
+  const allConfirmed = validateCounsellingStep(counselling) === null;
 
   return (
-    <StepWrapper
-      title="Counselling"
-      description="Confirm patient counselling on antiviral use, infection control and safety netting, and record that it was given"
-      currentStep={currentStep}
-      totalSteps={totalSteps}
-      onNext={onNext}
-      onPrev={onPrev}
-      canProceed={!validationError}
-      validationError={validationError}
-    >
+    <>
       <div className="space-y-6">
         {/* Medicine Counselling */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -259,6 +240,6 @@ export const CounsellingStep: React.FC<CounsellingStepProps> = ({
           </p>
         </div>
       </div>
-    </StepWrapper>
+    </>
   );
 };

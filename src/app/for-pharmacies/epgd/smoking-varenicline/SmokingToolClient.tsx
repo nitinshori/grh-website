@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect } from "react";
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
-import { SmokingToolFormData, STEP_LABELS, DEFAULT_FORM_DATA, ClinicalAlert } from "./lib/smoking-types";
+import { SmokingToolFormData, STEP_LABELS, createDefaultFormData, ClinicalAlert } from "./lib/smoking-types";
 import { validateStep, ValidationError } from "./lib/smoking-validation";
 import {
   getAllClinicalAlerts,
@@ -19,20 +19,20 @@ import { useConsultationTracking, type ConsultationRecordData } from "../shared/
 
 export const SmokingToolClient: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<number>(0);
-  const [formData, setFormData] = useState<SmokingToolFormData>(DEFAULT_FORM_DATA);
+  const [formData, setFormData] = useState<SmokingToolFormData>(() => createDefaultFormData());
   // Auto-fill pharmacist details from logged-in user. Refires when fields
   // are empty (e.g. after "New Consultation"), so subsequent patients fill too.
   const __pharmProfile = usePharmacistProfile();
   useEffect(() => {
     if (!__pharmProfile) return;
-    if (formData.pharmacistName || formData.pharmacistGMCNumber) return;
+    if (formData.pharmacistName || formData.pharmacistGPhC) return;
     setFormData((prev) => ({
       ...prev,
       pharmacistName: __pharmProfile.name,
-      pharmacistGMCNumber: __pharmProfile.gphcNumber,
+      pharmacistGPhC: __pharmProfile.gphcNumber,
       pharmacyName: __pharmProfile.pharmacyName,
     }));
-  }, [__pharmProfile, formData.pharmacistName, formData.pharmacistGMCNumber]);
+  }, [__pharmProfile, formData.pharmacistName, formData.pharmacistGPhC]);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [showSummary, setShowSummary] = useState<boolean>(false);
@@ -40,15 +40,20 @@ export const SmokingToolClient: React.FC = () => {
   const handleInputChange = useCallback(
     (field: string, value: string | number | boolean | null): void => {
       setFormData((prev) => {
+        // Immutable update at every level. The previous version spread the
+        // top level only and then wrote nested fields in place, so every
+        // nested answer was written into the shared default object and
+        // carried over to the next patient (adversarial review, 11 Sep 2026).
         const keys: string[] = field.split(".");
-        const updatedData = { ...prev };
-        let current: any = updatedData;
-
-        for (let i: number = 0; i < keys.length - 1; i++) {
-          current = current[keys[i]];
+        const updatedData: SmokingToolFormData = { ...prev };
+        if (keys.length === 1) {
+          (updatedData as any)[keys[0]] = value;
+        } else {
+          const section = keys[0] as keyof SmokingToolFormData;
+          const nested = { ...(prev[section] as unknown as Record<string, unknown>) };
+          nested[keys[1]] = value;
+          (updatedData as any)[section] = nested;
         }
-
-        current[keys[keys.length - 1]] = value;
 
         // Auto-calculate age when DOB changes
         if (field === "dateOfBirth" && typeof value === "string") {
@@ -59,11 +64,20 @@ export const SmokingToolClient: React.FC = () => {
         if (field.startsWith("assessment.")) {
           updatedData.assessment = {
             ...updatedData.assessment,
-            [keys[1]]: value,
+            fagerstromScore: calculateFagerstromScore(updatedData.assessment),
           };
-          updatedData.assessment.fagerstromScore = calculateFagerstromScore(
-            updatedData.assessment
-          );
+        }
+
+        // Keep the total tablet count and supply type in step with the
+        // per-strength counts and the consultation type.
+        if (field.startsWith("dosePlan.") || field === "assessment.consultationType") {
+          const dp = { ...updatedData.dosePlan };
+          if (updatedData.assessment.consultationType === "continuation") {
+            dp.supplyType = "continuation";
+          }
+          if (dp.supplyType === "continuation") dp.quantityHalfMg = 0;
+          dp.quantity = (dp.quantityHalfMg || 0) + (dp.quantityOneMg || 0);
+          updatedData.dosePlan = dp;
         }
 
         return updatedData;
@@ -84,6 +98,16 @@ export const SmokingToolClient: React.FC = () => {
   }, [currentStep, formData]);
 
   const handleNext = useCallback((): void => {
+    // A hard stop blocks Next on every step, not only inside the
+    // Contraindications review (adversarial review, 11 Sep 2026).
+    const { hardStops: stopsNow } = getAllClinicalAlerts(formData);
+    if (stopsNow.length > 0) {
+      setValidationErrors([
+        ...validateStep(currentStep, formData),
+        { field: "hardStops", message: "An exclusion criterion applies. Varenicline cannot be supplied under this PGD; save the record as not supplied" },
+      ]);
+      return;
+    }
     if (validateAndProceed()) {
       if (currentStep < STEP_LABELS.length - 1) {
         setCurrentStep((prev) => prev + 1);
@@ -92,7 +116,7 @@ export const SmokingToolClient: React.FC = () => {
         setShowSummary(true);
       }
     }
-  }, [currentStep, validateAndProceed]);
+  }, [currentStep, validateAndProceed, formData]);
 
   const handlePrevious = useCallback((): void => {
     if (currentStep > 0) {
@@ -115,10 +139,14 @@ export const SmokingToolClient: React.FC = () => {
   const { hardStops, cautions, redFlags } = getAllClinicalAlerts(formData);
 
   // ─── Consultation tracking + record saving ───
-  const { markComplete, saveRecord } = useConsultationTracking('smoking-varenicline', currentStep);
+  const { markComplete, saveRecord, reset: resetTracking } = useConsultationTracking('smoking-varenicline', currentStep);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   const getConsultationData = useCallback((): ConsultationRecordData => {
+    const supplied = hardStops.length === 0 && formData.dosePlan.quantity > 0;
+    const supplyText = formData.dosePlan.supplyType === "starter"
+      ? `Starter supply: ${formData.dosePlan.quantityHalfMg} x 0.5mg and ${formData.dosePlan.quantityOneMg} x 1mg tablets`
+      : `Continuation supply: ${formData.dosePlan.quantityOneMg} x 1mg tablets`;
     return {
       patient: {
         firstName: formData.firstName,
@@ -126,34 +154,70 @@ export const SmokingToolClient: React.FC = () => {
         dateOfBirth: formData.dateOfBirth,
         phone: formData.contactNumber,
         email: formData.email,
+        address: formData.address,
+        nhsNumber: formData.nhsNumber,
+        gpName: formData.gpName,
+        gpPractice: formData.gpPractice,
       },
-      clinicalData: formData as unknown as Record<string, unknown>,
+      clinicalData: { ...formData, hardStops, cautions, redFlags } as unknown as Record<string, unknown>,
       outcome: hardStops.length > 0 ? 'not_supplied' : 'completed',
+      ...(supplied
+        ? {
+            medicine: {
+              name: `Varenicline 0.5mg and 1mg tablets (${formData.dosePlan.brand || "brand not recorded"})`,
+              dose: `Days 1-3 0.5mg once daily; days 4-7 0.5mg twice daily; day 8 onwards 1mg twice daily, oral. ${supplyText}`,
+              duration: formData.dosePlan.treatmentDuration === "24-weeks-extended" ? "24 weeks (extended)" : "12 weeks",
+              quantity: formData.dosePlan.quantity,
+            },
+          }
+        : {}),
       summary: {
-        pharmacistName: formData.pharmacistName,
-        pharmacistGPhC: formData.pharmacistGMCNumber,
-        consultationDate: formData.consultationDate,
+        pharmacistName: formData.pharmacistName || __pharmProfile?.name || "",
+        pharmacistGPhC: formData.pharmacistGPhC || __pharmProfile?.gphcNumber || "",
+        pharmacyName: formData.pharmacyName || __pharmProfile?.pharmacyName,
+        consultationDate: formData.consultationDate || new Date().toISOString().split("T")[0],
       },
     };
-  }, [formData, hardStops]);
+  }, [formData, hardStops, cautions, redFlags, __pharmProfile]);
 
   const handleSaveAndPrint = useCallback(async (): Promise<void> => {
+    // Same rules as Next: an exclusion, or a missing pharmacist name or
+    // GPhC number, blocks the print (adversarial review, 11 Sep 2026).
+    const errors = validateStep(8, formData);
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      setShowSummary(false);
+      return;
+    }
     markComplete();
     setSaveStatus('saving');
     const success = await saveRecord(getConsultationData());
     setSaveStatus(success ? 'saved' : 'error');
     window.print();
-  }, [markComplete, saveRecord, getConsultationData]);
+  }, [markComplete, saveRecord, getConsultationData, formData]);
+
+  // Every PGD requires the advice given to an excluded patient to be
+  // recorded. Saves the record with outcome not_supplied and no print.
+  const handleSaveNotSupplied = useCallback(async (): Promise<void> => {
+    setSaveStatus('saving');
+    const data = getConsultationData();
+    data.outcome = 'not_supplied';
+    (data.clinicalData as Record<string, unknown>).stoppedAtStep = currentStep;
+    (data.clinicalData as Record<string, unknown>).stopReason = hardStops.map((a) => a.message).join("; ");
+    const success = await saveRecord(data);
+    setSaveStatus(success ? 'saved' : 'error');
+  }, [getConsultationData, saveRecord, currentStep, hardStops]);
 
   const handleNewConsultation = useCallback((): void => {
     if (!window.confirm('Start a new consultation? The current consultation data will be cleared.')) return;
-    setFormData(DEFAULT_FORM_DATA);
+    setFormData(createDefaultFormData());
     setCurrentStep(0);
     setCompletedSteps(new Set());
     setValidationErrors([]);
     setShowSummary(false);
     setSaveStatus('idle');
-  }, []);
+    resetTracking();
+  }, [resetTracking]);
 
   if (showSummary) {
     return (
@@ -166,17 +230,27 @@ export const SmokingToolClient: React.FC = () => {
             >
               Back to Edit
             </button>
-            <button
-              onClick={handleSaveAndPrint}
-              disabled={saveStatus === 'saving'}
-              className={`px-4 py-2 rounded-lg ${
-                saveStatus === 'saving'
-                  ? 'bg-gray-300 text-gray-500 cursor-wait'
-                  : 'bg-navy-900 hover:bg-navy-950 text-white'
-              }`}
-            >
-              {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Print Again' : 'Save & Print Record'}
-            </button>
+            {hardStops.length > 0 ? (
+              <button
+                onClick={handleSaveNotSupplied}
+                disabled={saveStatus === 'saving' || saveStatus === 'saved'}
+                className="px-4 py-2 rounded-lg border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-50"
+              >
+                {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved as not supplied' : 'Save as not supplied'}
+              </button>
+            ) : (
+              <button
+                onClick={handleSaveAndPrint}
+                disabled={saveStatus === 'saving'}
+                className={`px-4 py-2 rounded-lg ${
+                  saveStatus === 'saving'
+                    ? 'bg-gray-300 text-gray-500 cursor-wait'
+                    : 'bg-navy-900 hover:bg-navy-950 text-white'
+                }`}
+              >
+                {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Print Again' : 'Save & Print Record'}
+              </button>
+            )}
             {saveStatus === 'saved' && (
               <button
                 onClick={handleNewConsultation}
@@ -251,9 +325,26 @@ export const SmokingToolClient: React.FC = () => {
             <AlertBanner alerts={hardStops} />
             <div className="mt-6 p-4 bg-red-50 border-2 border-red-300 rounded-lg">
               <p className="text-red-900 font-semibold">
-                This patient is NOT suitable for varenicline therapy. Please consider
-                alternative approaches or refer to a smoking cessation specialist.
+                This patient is NOT suitable for varenicline therapy. Advise on alternative treatment options and how to access them, document the advice given and the decision reached, and inform or refer to the GP as appropriate.
               </p>
+              <div className="mt-3 flex items-center gap-3 print:hidden">
+                <button
+                  onClick={handleSaveNotSupplied}
+                  disabled={saveStatus === 'saving' || saveStatus === 'saved'}
+                  className="px-4 py-2 rounded-lg text-sm font-semibold border border-red-300 text-red-700 hover:bg-red-100 disabled:opacity-50"
+                >
+                  {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved as not supplied' : 'Save as not supplied'}
+                </button>
+                {saveStatus === 'saved' && (
+                  <button
+                    onClick={handleNewConsultation}
+                    className="px-4 py-2 rounded-lg text-sm text-[color:var(--tenant-primary)] border border-[color:var(--tenant-primary)]/30 hover:bg-[color:var(--tenant-primary)]/10"
+                  >
+                    New Consultation
+                  </button>
+                )}
+                {saveStatus === 'error' && <span className="text-xs text-red-700">Could not save the record.</span>}
+              </div>
             </div>
           </div>
         )}
@@ -283,12 +374,14 @@ export const SmokingToolClient: React.FC = () => {
                   value={formData.firstName}
                   onChange={(v) => handleInputChange("firstName", v)}
                   placeholder="John"
+                  required
                 />
                 <TextInput
                   label="Last Name"
                   value={formData.lastName}
                   onChange={(v) => handleInputChange("lastName", v)}
                   placeholder="Smith"
+                  required
                 />
               </div>
 
@@ -297,7 +390,42 @@ export const SmokingToolClient: React.FC = () => {
                 type="date"
                 value={formData.dateOfBirth}
                 onChange={(v) => handleInputChange("dateOfBirth", v)}
+                required
               />
+              {getFieldError("dateOfBirth") && <p className="text-xs text-red-700">{getFieldError("dateOfBirth")}</p>}
+
+              <TextArea
+                label="Address"
+                value={formData.address}
+                onChange={(v) => handleInputChange("address", v)}
+                placeholder="House number, street, town, postcode"
+                rows={2}
+                required
+              />
+              {getFieldError("address") && <p className="text-xs text-red-700">{getFieldError("address")}</p>}
+
+              <div className="grid grid-cols-2 gap-6">
+                <TextInput
+                  label="NHS number (if known)"
+                  value={formData.nhsNumber}
+                  onChange={(v) => handleInputChange("nhsNumber", v)}
+                  placeholder="000 000 0000"
+                />
+                <TextInput
+                  label="GP name"
+                  value={formData.gpName}
+                  onChange={(v) => handleInputChange("gpName", v)}
+                  placeholder="Dr A Patel"
+                />
+              </div>
+              <TextInput
+                label="GP practice"
+                value={formData.gpPractice}
+                onChange={(v) => handleInputChange("gpPractice", v)}
+                placeholder="Practice name and town"
+                required
+              />
+              {getFieldError("gpPractice") && <p className="text-xs text-red-700">{getFieldError("gpPractice")}</p>}
 
               {formData.age !== null && (
                 <div className="p-4 bg-blue-50 rounded-lg">
@@ -321,7 +449,7 @@ export const SmokingToolClient: React.FC = () => {
               />
 
               <TextInput
-                label="Contact Number"
+                label="Contact Number (optional)"
                 type="tel"
                 value={formData.contactNumber}
                 onChange={(v) => handleInputChange("contactNumber", v)}
@@ -329,7 +457,7 @@ export const SmokingToolClient: React.FC = () => {
               />
 
               <TextInput
-                label="Email Address"
+                label="Email Address (optional)"
                 type="email"
                 value={formData.email}
                 onChange={(v) => handleInputChange("email", v)}
@@ -375,6 +503,25 @@ export const SmokingToolClient: React.FC = () => {
                 onChange={(v) => handleInputChange("identityVerified", v)}
                 description={getFieldError("identityVerified")}
               />
+              {formData.identityVerified && (
+                <SelectInput
+                  label="ID type"
+                  value={formData.idType}
+                  onChange={(v) => handleInputChange("idType", v)}
+                  options={[
+                    { value: "Driving licence", label: "Driving licence" },
+                    { value: "Passport", label: "Passport" },
+                    { value: "Known to pharmacist", label: "Known to pharmacist" },
+                    { value: "Other", label: "Other" },
+                  ]}
+                />
+              )}
+              <Checkbox
+                label="Patient aware this is a private service"
+                checked={formData.patientAwarePrivateService}
+                onChange={(v) => handleInputChange("patientAwarePrivateService", v)}
+                description={getFieldError("patientAwarePrivateService") || "The patient understands there is a consultation fee and the medicine is not supplied on NHS prescription through this service."}
+              />
             </div>
           )}
 
@@ -382,6 +529,18 @@ export const SmokingToolClient: React.FC = () => {
           {currentStep === 2 && (
             <div className="space-y-6">
               <h2 className="text-2xl font-bold text-gray-900">Smoking Assessment</h2>
+
+              <SelectInput
+                label="This consultation"
+                value={formData.assessment.consultationType}
+                onChange={(v) => handleInputChange("assessment.consultationType", v)}
+                options={[
+                  { value: "new", label: "First supply: starting varenicline, quit date within the next 1 to 2 weeks" },
+                  { value: "continuation", label: "Continuation supply: already on varenicline in this course (record the original quit date)" },
+                ]}
+                required
+              />
+              {getFieldError("assessment.consultationType") && <p className="text-xs text-red-700">{getFieldError("assessment.consultationType")}</p>}
 
               <div className="grid grid-cols-2 gap-6">
                 <NumberInput
@@ -419,11 +578,13 @@ export const SmokingToolClient: React.FC = () => {
               </div>
 
               <TextInput
-                label="Target quit date"
+                label={formData.assessment.consultationType === "continuation" ? "Original quit date (this course)" : "Target quit date (within the next 1 to 2 weeks)"}
                 type="date"
                 value={formData.assessment.quitDate}
                 onChange={(v) => handleInputChange("assessment.quitDate", v)}
+                required
               />
+              {getFieldError("assessment.quitDate") && <p className="text-xs text-red-700">{getFieldError("assessment.quitDate")}</p>}
 
               <TextArea
                 label="Previous quit methods"
@@ -582,9 +743,17 @@ export const SmokingToolClient: React.FC = () => {
               />
 
               <Checkbox
-                label="History of suicidal ideation or self-harm"
+                label="History of suicidal ideation or self-harm (past)"
                 checked={formData.medicalHistory.suicidalIdeation}
                 onChange={(v) => handleInputChange("medicalHistory.suicidalIdeation", v)}
+                description="PGD caution: supply may proceed; monitor mental health throughout treatment."
+              />
+
+              <Checkbox
+                label="Current suicidal ideation"
+                checked={formData.medicalHistory.currentSuicidalIdeation}
+                onChange={(v) => handleInputChange("medicalHistory.currentSuicidalIdeation", v)}
+                description="Exclusion: do not supply. Refer urgently to mental health services."
               />
             </div>
           )}
@@ -776,25 +945,81 @@ export const SmokingToolClient: React.FC = () => {
                 label="This supply"
                 value={formData.dosePlan.supplyType}
                 onChange={(v) => handleInputChange("dosePlan.supplyType", v)}
+                disabled={formData.assessment.consultationType === "continuation"}
                 options={[
-                  { value: "", label: "Select..." },
-                  { value: "starter", label: "Starter pack (titration, 0.5mg and 1mg tablets)" },
+                  { value: "starter", label: "Starter supply (first 4 weeks): 11 x 0.5mg then up to 42 x 1mg tablets" },
                   { value: "continuation", label: "Continuation supply: up to 56 x 1mg tablets (4 weeks at 1mg twice daily)" },
                 ]}
+                required
               />
               {getFieldError("dosePlan.supplyType") && (
                 <p className="text-xs text-red-700">{getFieldError("dosePlan.supplyType")}</p>
               )}
 
-              <NumberInput
-                label="Number of tablets to dispense"
-                value={formData.dosePlan.quantity}
-                onChange={(v) => handleInputChange("dosePlan.quantity", v)}
-                min={1}
-                max={formData.dosePlan.supplyType === "continuation" ? 56 : undefined}
+              {(formData.assessment.consultationType === "continuation" || formData.dosePlan.supplyType === "continuation") && (
+                <div>
+                  <NumberInput
+                    label="Weeks of treatment completed so far"
+                    value={formData.dosePlan.weeksCompleted}
+                    onChange={(v) => handleInputChange("dosePlan.weeksCompleted", v)}
+                    min={0}
+                    max={24}
+                    unit="weeks"
+                    required
+                  />
+                  {getFieldError("dosePlan.weeksCompleted") && (
+                    <p className="text-xs text-red-700 mt-1">{getFieldError("dosePlan.weeksCompleted")}</p>
+                  )}
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-6">
+                {formData.dosePlan.supplyType === "starter" && (
+                  <div>
+                    <NumberInput
+                      label="0.5mg tablets (days 1 to 7)"
+                      value={formData.dosePlan.quantityHalfMg}
+                      onChange={(v) => handleInputChange("dosePlan.quantityHalfMg", v ?? 0)}
+                      min={1}
+                      max={11}
+                      unit="max 11"
+                      required
+                    />
+                    {getFieldError("dosePlan.quantityHalfMg") && (
+                      <p className="text-xs text-red-700 mt-1">{getFieldError("dosePlan.quantityHalfMg")}</p>
+                    )}
+                  </div>
+                )}
+                {formData.dosePlan.supplyType && (
+                  <div>
+                    <NumberInput
+                      label={formData.dosePlan.supplyType === "starter" ? "1mg tablets (days 8 to 28)" : "1mg tablets"}
+                      value={formData.dosePlan.quantityOneMg}
+                      onChange={(v) => handleInputChange("dosePlan.quantityOneMg", v ?? 0)}
+                      min={formData.dosePlan.supplyType === "starter" ? 0 : 1}
+                      max={formData.dosePlan.supplyType === "starter" ? 42 : 56}
+                      unit={formData.dosePlan.supplyType === "starter" ? "max 42" : "max 56"}
+                      required
+                    />
+                    {getFieldError("dosePlan.quantityOneMg") && (
+                      <p className="text-xs text-red-700 mt-1">{getFieldError("dosePlan.quantityOneMg")}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+              {formData.dosePlan.quantity > 0 && (
+                <p className="text-sm text-gray-700">Total this supply: {formData.dosePlan.quantity} tablets.</p>
+              )}
+
+              <TextInput
+                label="Product and brand supplied"
+                value={formData.dosePlan.brand}
+                onChange={(v) => handleInputChange("dosePlan.brand", v)}
+                placeholder="e.g. Varenicline tablets (manufacturer name), or the branded product name"
+                required
               />
-              {getFieldError("dosePlan.quantity") && (
-                <p className="text-xs text-red-700">{getFieldError("dosePlan.quantity")}</p>
+              {getFieldError("dosePlan.brand") && (
+                <p className="text-xs text-red-700">{getFieldError("dosePlan.brand")}</p>
               )}
 
               <div className="bg-gray-50 border border-gray-300 rounded-lg p-4">
@@ -933,14 +1158,19 @@ export const SmokingToolClient: React.FC = () => {
                   label="Pharmacist name"
                   value={formData.pharmacistName}
                   onChange={(v) => handleInputChange("pharmacistName", v)}
+                  required
                 />
 
                 <TextInput
                   label="GPhC registration number"
-                  value={formData.pharmacistGMCNumber}
-                  onChange={(v) => handleInputChange("pharmacistGMCNumber", v)}
+                  value={formData.pharmacistGPhC}
+                  onChange={(v) => handleInputChange("pharmacistGPhC", v)}
+                  required
                 />
               </div>
+              {(getFieldError("pharmacistName") || getFieldError("pharmacistGPhC")) && (
+                <p className="text-xs text-red-700">{getFieldError("pharmacistName") || getFieldError("pharmacistGPhC")}</p>
+              )}
 
               <TextInput
                 label="Consultation date"
@@ -975,6 +1205,20 @@ export const SmokingToolClient: React.FC = () => {
             </div>
           )}
 
+          {/* Errors from the last attempt to continue. The Next button is
+              no longer disabled while errors exist: it used to lock until
+              the pharmacist went back and forward again (adversarial
+              review, 11 Sep 2026). */}
+          {validationErrors.length > 0 && (
+            <div className="mt-6 px-4 py-3 bg-red-50 border border-red-200 rounded-lg">
+              <ul className="text-sm text-red-700 list-disc pl-5 space-y-0.5">
+                {validationErrors.map((e) => (
+                  <li key={e.field + e.message}>{e.message}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {/* Navigation */}
           <div className="flex justify-between gap-4 mt-8">
             <button
@@ -989,7 +1233,7 @@ export const SmokingToolClient: React.FC = () => {
               {currentStep === STEP_LABELS.length - 1 ? (
                 <button
                   onClick={handleNext}
-                  disabled={validationErrors.length > 0}
+                  disabled={hardStops.length > 0}
                   className="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
                   View Summary & Print
@@ -997,7 +1241,7 @@ export const SmokingToolClient: React.FC = () => {
               ) : (
                 <button
                   onClick={handleNext}
-                  disabled={validationErrors.length > 0}
+                  disabled={hardStops.length > 0}
                   className="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
                   Next Step

@@ -9,7 +9,7 @@ import {
   FluChildConsent,
 } from './flu-types';
 import { BasePatientDetails, BaseConsent } from '../../shared/types';
-import { needsTwoDoses, vaccineTypeRefusal } from './flu-clinical-logic';
+import { needsTwoDoses, vaccineTypeRefusal, twoDoseCourseDoseNumber } from './flu-clinical-logic';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -41,7 +41,9 @@ export function validatePatientDetails(
   if (!patient.dateOfBirth) {
     errors.push('Date of birth is required');
   }
-  if (patient.dateOfBirth && patientAge !== undefined && patientAge < 2) {
+  if (patient.dateOfBirth && patientAge !== undefined && (!Number.isFinite(patientAge) || patientAge < 0)) {
+    errors.push('The age could not be calculated from the date of birth; check the date');
+  } else if (patient.dateOfBirth && patientAge !== undefined && patientAge < 2) {
     errors.push('Aged under 2 years: excluded. Refer to the NHS childhood programme, the GP or a service commissioned to vaccinate this age group');
   }
   if (!patient.nhsNumber?.trim()) {
@@ -87,6 +89,16 @@ export function validateScreening(screening: FluScreening, patientAge?: number):
 
   if (screening.temperature === null || screening.temperature === undefined) {
     errors.push('Temperature must be recorded');
+  }
+
+  if (
+    patientAge !== undefined &&
+    patientAge < 9 &&
+    screening.previousFluVaccine &&
+    screening.firstDoseThisSeason &&
+    !screening.firstDoseThisSeasonDate
+  ) {
+    errors.push('Record the date dose 1 of this season\'s two-dose course was given');
   }
 
   if (screening.previousReaction && !screening.previousReactionType) {
@@ -162,12 +174,12 @@ export function validateAdministration(
     errors.push('Expiry date is required');
   }
 
-  // Validate expiry date format and that it is not expired
+  // Expired stock: compare the labelled date with the start of today, so a
+  // vaccine expiring today is still in date (adversarial review, 11 Sep 2026).
   if (administration.expiryDate?.trim()) {
-    const expiryDate = new Date(administration.expiryDate);
-    const today = new Date();
-    if (expiryDate < today) {
-      errors.push('Vaccine batch has expired');
+    const today = new Date().toISOString().split('T')[0];
+    if (administration.expiryDate < today) {
+      errors.push('Vaccine batch has passed its labelled expiry date: do not administer');
     }
   }
 
@@ -191,8 +203,15 @@ export function validateAdministration(
   }
 
   if (screening && patientAge !== undefined && needsTwoDoses(screening, patientAge)) {
+    const expected = twoDoseCourseDoseNumber(screening, patientAge);
     if (!administration.doseNumber) {
       errors.push('Child under 9 receiving influenza vaccine for the first time: record whether this is dose 1 or dose 2 of 2');
+    } else if (administration.doseNumber !== expected) {
+      errors.push(
+        expected === '2'
+          ? 'Dose 1 of this season\'s course has already been given: this must be recorded as dose 2 of 2'
+          : 'No previous influenza vaccine recorded: this must be recorded as dose 1 of 2'
+      );
     }
     if (administration.doseNumber === '1' && !administration.nextDoseDue) {
       errors.push('Book the second dose at this appointment and record the date it is due (at least 4 weeks after today)');
@@ -229,6 +248,13 @@ export function validatePostVaccineObs(
     errors.push('Please describe the adverse reaction');
   }
 
+  return { isValid: errors.length === 0, errors };
+}
+
+export function validateSummary(summary: { pharmacistName: string; pharmacistGPhC: string }): ValidationResult {
+  const errors: string[] = [];
+  if (!summary.pharmacistName?.trim()) errors.push('Name of the immuniser is required');
+  if (!summary.pharmacistGPhC?.trim()) errors.push('GPhC registration number is required');
   return { isValid: errors.length === 0, errors };
 }
 

@@ -2,28 +2,17 @@
 
 import React from 'react';
 import { Checkbox, SelectInput, TextArea, TextInput } from '../../shared/components/FormInputs';
-import { StepWrapper } from '../../shared/components/StepWrapper';
 import { ShinglesMedicalHistory } from '../shingles-types';
-import { validateMedicalHistoryStep } from '../shingles-clinical-logic';
 
 interface MedicalHistoryStepProps {
   medicalHistory: ShinglesMedicalHistory;
   onChange: (history: ShinglesMedicalHistory) => void;
-  currentStep: number;
-  totalSteps: number;
-  onNext: () => void;
-  onPrev: () => void;
 }
 
 export const MedicalHistoryStep: React.FC<MedicalHistoryStepProps> = ({
   medicalHistory,
   onChange,
-  currentStep,
-  totalSteps,
-  onNext,
-  onPrev,
 }) => {
-  const validationError = validateMedicalHistoryStep(medicalHistory);
 
   const handleChange = <K extends keyof ShinglesMedicalHistory>(
     field: K,
@@ -35,16 +24,7 @@ export const MedicalHistoryStep: React.FC<MedicalHistoryStepProps> = ({
   const needsSeverity = medicalHistory.immunosuppressed || medicalHistory.hivPositive;
 
   return (
-    <StepWrapper
-      title="Medical History"
-      description="Review patient's medical conditions and relevant history"
-      currentStep={currentStep}
-      totalSteps={totalSteps}
-      onNext={onNext}
-      onPrev={onPrev}
-      canProceed={!validationError}
-      validationError={validationError}
-    >
+    <>
       <div className="space-y-6">
         {/* Immunosuppression - CRITICAL */}
         <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4">
@@ -322,6 +302,6 @@ export const MedicalHistoryStep: React.FC<MedicalHistoryStepProps> = ({
           </div>
         </div>
       </div>
-    </StepWrapper>
+    </>
   );
 };

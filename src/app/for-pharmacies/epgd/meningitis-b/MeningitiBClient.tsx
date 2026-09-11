@@ -133,8 +133,9 @@ export default function MeningitiBClient() {
   const underSixteen = state.patient.age !== null && state.patient.age < 16;
   const infantUnderOne = ageMonths !== null && ageMonths < 12;
 
-  // Can proceed?
-  const canProceed = !validationError && (!hasStops || state.currentStep >= 4);
+  // Can proceed? A stop anywhere disables Next on every step; the progress
+  // bar only goes backwards, so there is no way round it.
+  const canProceed = !validationError && !hasStops;
 
   // Mark step as completed
   const markStepComplete = useCallback(() => {
@@ -162,6 +163,8 @@ export default function MeningitiBClient() {
 
   // ─── Consultation Record Data (for saving to database) ───
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    const a = state.vaccineAdmin;
+    const productLabel = a.product === "bexsero" ? "Bexsero (4CMenB)" : a.product === "trumenba" ? "Trumenba (MenB-fHbp)" : "";
     return {
       patient: {
         firstName: state.patient.firstName,
@@ -173,17 +176,34 @@ export default function MeningitiBClient() {
         address: state.patient.address,
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
+        gpAddress: state.patient.gpAddress,
+        gpPhone: state.patient.gpPhone,
+        gpEmail: state.patient.gpEmail,
+        gpOdsCode: state.patient.gpOdsCode,
       },
-      clinicalData: state as unknown as Record<string, unknown>,
+      clinicalData: { ...state, alerts } as unknown as Record<string, unknown>,
       outcome: hasStops ? "not_supplied" : "completed",
+      medicine:
+        !hasStops && productLabel
+          ? {
+              name: productLabel,
+              dose: `0.5 ml intramuscular, ${a.doseNumber === "booster-12-months" ? "booster at 12 months" : `${a.doseNumber} dose`}${a.product === "trumenba" ? `, ${a.trumenbaSchedule === "increased-risk" ? "3 dose" : "2 dose"} schedule` : ""}`,
+              duration: "Single dose this attendance",
+              quantity: 1,
+            }
+          : undefined,
       summary: {
-        pharmacistName: state.summary.pharmacistName,
-        pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacistName: state.summary.pharmacistName || __pharmProfile?.name || "",
+        pharmacistGPhC: state.summary.pharmacistGPhC || __pharmProfile?.gphcNumber || "",
+        pharmacyName: state.summary.pharmacyName || __pharmProfile?.pharmacyName,
+        pharmacyAddress: state.summary.pharmacyAddress || __pharmProfile?.pharmacyAddress,
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: state.consent.notifyGp },
     };
-  }, [state, hasStops]);
+  }, [state, hasStops, alerts, __pharmProfile]);
 
   const handleNewConsultation = useCallback(() => {
     dispatch({ type: "RESET" });
@@ -206,6 +226,8 @@ export default function MeningitiBClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <PatientDetailsStep
               patient={state.patient}
@@ -228,6 +250,8 @@ export default function MeningitiBClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <ConsentStep
               consent={state.consent}
@@ -281,6 +305,8 @@ export default function MeningitiBClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
               <p className="text-sm font-semibold text-navy-900">PGD indications (tick all that apply)</p>
@@ -393,6 +419,8 @@ export default function MeningitiBClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
               <Checkbox
@@ -493,6 +521,7 @@ export default function MeningitiBClient() {
                 : null
             }
             isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             {alerts.length > 0 ? (
               <AlertBanner alerts={alerts} />
@@ -508,6 +537,15 @@ export default function MeningitiBClient() {
                 <p className="text-sm text-red-600">
                   Advise on alternative options and how these can be accessed, including the NHS routine programme for infants, their GP practice, and the MenACWY PGD where the request is travel related. Explain the risks of meningococcal disease and the benefit of vaccination. Document any advice given and the decision reached. Inform or refer to the GP as appropriate. Where the individual is at increased risk through asplenia, a complement disorder or complement inhibitor therapy, make the referral clear and timely.
                 </p>
+                <div className="mt-3">
+                  <TextArea
+                    label="Advice given and decision reached (saved with the exclusion record)"
+                    value={state.summary.clinicalNotes}
+                    onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "clinicalNotes", value: v })}
+                    placeholder="e.g., Travel request: directed to the MenACWY PGD; GP informed."
+                  />
+                  <p className="text-xs text-red-700 mt-1">Then use "Save as not supplied" below to record the consultation.</p>
+                </div>
               </div>
             )}
           </StepWrapper>
@@ -525,6 +563,7 @@ export default function MeningitiBClient() {
             canProceed={canProceed}
             validationError={validationError}
             isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-6">
               <SelectInput
@@ -561,7 +600,23 @@ export default function MeningitiBClient() {
                   }
                   options={[
                     { value: "routine", label: "Routine use: 2 doses at 0 and 6 months" },
-                    { value: "increased-risk", label: "Increased risk, or outbreak setting where advised: 3 doses at 0, 1 to 2 months, and 6 months" },
+                    { value: "increased-risk", label: "Increased risk (asplenia, complement disorder, complement inhibitor, laboratory staff): 3 doses at 0, 1 to 2 months, and 6 months" },
+                  ]}
+                  required
+                />
+              )}
+
+              {state.vaccineAdmin.product === "bexsero" && ageMonths !== null && ageMonths >= 12 && ageMonths < 24 && (
+                <SelectInput
+                  label="Doses of Bexsero given in the first year of life"
+                  value={state.vaccineAdmin.dosesInFirstYear}
+                  onChange={(v) =>
+                    dispatch({ type: "UPDATE_VACCINE_ADMIN", field: "dosesInFirstYear", value: v as MeningitiBVaccineAdmin["dosesInFirstYear"] })
+                  }
+                  options={[
+                    { value: "0", label: "None: 2 doses at least 4 weeks apart" },
+                    { value: "1", label: "One: 2 further doses at least 4 weeks apart" },
+                    { value: "2", label: "Two: booster at 12 months only" },
                   ]}
                   required
                 />
@@ -577,10 +632,22 @@ export default function MeningitiBClient() {
                   { value: "1st", label: "1st dose" },
                   { value: "2nd", label: "2nd dose" },
                   { value: "3rd", label: "3rd dose (Trumenba increased-risk schedule only)" },
-                  { value: "booster-12-months", label: "Booster at 12 months (Bexsero infant course)" },
+                  { value: "booster-12-months", label: "Booster at 12 months (Bexsero infant course, 12 months to under 2 years)" },
                 ]}
                 required
               />
+
+              {state.vaccineAdmin.doseNumber && state.vaccineAdmin.doseNumber !== "1st" && (
+                <TextInput
+                  label="Date of the previous dose in this course"
+                  value={state.vaccineAdmin.previousDoseDate}
+                  onChange={(v) =>
+                    dispatch({ type: "UPDATE_VACCINE_ADMIN", field: "previousDoseDate", value: v })
+                  }
+                  type="date"
+                  required
+                />
+              )}
 
               <div className="border-t-2 border-gray-200 pt-4">
                 <h4 className="font-semibold text-sm text-navy-900 mb-4">This dose: 0.5 ml intramuscular</h4>
@@ -701,8 +768,8 @@ export default function MeningitiBClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
-          getConsultationData={getConsultationData}
-          onNewConsultation={handleNewConsultation}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
               <Checkbox
@@ -879,99 +946,87 @@ export default function MeningitiBClient() {
 
       case 7: // Summary & Print
         return (
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
-              <h2 className="text-lg font-bold text-navy-900">
-                Summary &amp; Consultation Record
-              </h2>
+          <StepWrapper
+            title="Summary &amp; Consultation Record"
+            description="Complete the pharmacist declaration, then Save & Print. The record is saved to Patient Records when printed."
+            currentStep={state.currentStep}
+            totalSteps={TOTAL_STEPS}
+            onNext={handleNext}
+            onPrev={handlePrev}
+            canProceed={canProceed}
+            validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
+            onNewConsultation={handleNewConsultation}
+          >
+            <div className="space-y-4 mb-6 print:hidden">
+              <TextInput
+                label="Pharmacist name"
+                value={state.summary.pharmacistName}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_SUMMARY",
+                    field: "pharmacistName",
+                    value: v,
+                  })
+                }
+                required
+              />
+              <TextInput
+                label="GPhC registration number"
+                value={state.summary.pharmacistGPhC}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_SUMMARY",
+                    field: "pharmacistGPhC",
+                    value: v,
+                  })
+                }
+                required
+              />
+              <TextInput
+                label="Pharmacy name"
+                value={state.summary.pharmacyName}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_SUMMARY",
+                    field: "pharmacyName",
+                    value: v,
+                  })
+                }
+              />
+              <TextInput
+                label="Pharmacy address"
+                value={state.summary.pharmacyAddress}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_SUMMARY",
+                    field: "pharmacyAddress",
+                    value: v,
+                  })
+                }
+              />
+              <TextArea
+                label="Additional clinical notes"
+                value={state.summary.clinicalNotes}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_SUMMARY",
+                    field: "clinicalNotes",
+                    value: v,
+                  })
+                }
+                placeholder="Any additional information to record..."
+              />
             </div>
 
-            <div className="px-6 py-6">
-              <div className="space-y-4 mb-6">
-                <TextInput
-                  label="Pharmacist name"
-                  value={state.summary.pharmacistName}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_SUMMARY",
-                      field: "pharmacistName",
-                      value: v,
-                    })
-                  }
-                  required
-                />
-                <TextInput
-                  label="GPhC registration number"
-                  value={state.summary.pharmacistGPhC}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_SUMMARY",
-                      field: "pharmacistGPhC",
-                      value: v,
-                    })
-                  }
-                  required
-                />
-                <TextInput
-                  label="Pharmacy name"
-                  value={state.summary.pharmacyName}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_SUMMARY",
-                      field: "pharmacyName",
-                      value: v,
-                    })
-                  }
-                />
-                <TextInput
-                  label="Pharmacy address"
-                  value={state.summary.pharmacyAddress}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_SUMMARY",
-                      field: "pharmacyAddress",
-                      value: v,
-                    })
-                  }
-                />
-                <TextArea
-                  label="Additional clinical notes"
-                  value={state.summary.clinicalNotes}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_SUMMARY",
-                      field: "clinicalNotes",
-                      value: v,
-                    })
-                  }
-                  placeholder="Any additional information to record..."
-                />
-              </div>
-
-              <div className="border-t border-gray-200 pt-6">
-                <p className="text-sm text-gray-600 mb-4">
-                  Review the summary below before printing the consultation record.
-                </p>
-                <MeningitiBSummaryReport state={updatedState} />
-              </div>
+            <div className="border-t border-gray-200 pt-6">
+              <p className="text-sm text-gray-600 mb-4 print:hidden">
+                Review the summary below before saving and printing the consultation record.
+              </p>
+              <MeningitiBSummaryReport state={updatedState} />
             </div>
-
-            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/30 flex items-center justify-between">
-              <button
-                onClick={() => dispatch({ type: "PREV_STEP" })}
-                className="px-5 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-navy-900 transition-colors"
-              >
-                &larr; Previous
-              </button>
-
-              <button
-                onClick={() => window.print()}
-                className="px-6 py-2.5 rounded-lg text-sm font-semibold bg-navy-900 hover:bg-navy-950 text-white transition-colors"
-              >
-                Print Consultation Record
-              </button>
-            </div>
-          </div>
+          </StepWrapper>
         );
 
       default:
@@ -1015,7 +1070,8 @@ function MeningitiBSummaryReport({
       <Row label="Date of Birth" value={state.patient.dateOfBirth} />
       <Row label="Age" value={`${state.patient.age} years`} />
       <Row label="NHS Number" value={state.patient.nhsNumber} />
-      <Row label="GP" value={state.patient.gpName} />
+      <Row label="Address" value={state.patient.address || "Not recorded"} />
+      <Row label="GP" value={[state.patient.gpName, state.patient.gpPractice, state.patient.gpAddress].filter(Boolean).join(", ") || "Not recorded"} />
 
       {state.patient.age !== null && state.patient.age < 16 && (
         <>
@@ -1083,6 +1139,10 @@ function MeningitiBSummaryReport({
       <Row label="Breastfeeding" value={state.medicalHistory.breastfeeding ? "Yes" : "No"} />
 
       <SectionHeader>Vaccine Administration</SectionHeader>
+      {hasHardStops(state.alerts) ? (
+        <p className="text-xs font-semibold text-red-800">Outcome: NOT SUPPLIED. Exclusion criteria met; no vaccine administered.</p>
+      ) : (
+      <>
       <Row
         label="Product"
         value={
@@ -1094,6 +1154,12 @@ function MeningitiBSummaryReport({
         }
       />
       <Row label="Dose in course" value={state.vaccineAdmin.doseNumber === "booster-12-months" ? "Booster at 12 months" : state.vaccineAdmin.doseNumber} />
+      {state.vaccineAdmin.doseNumber && state.vaccineAdmin.doseNumber !== "1st" && (
+        <Row label="Previous dose in this course" value={state.vaccineAdmin.previousDoseDate || "Not recorded"} />
+      )}
+      {state.vaccineAdmin.dosesInFirstYear && (
+        <Row label="Doses given in the first year" value={state.vaccineAdmin.dosesInFirstYear} />
+      )}
       <Row label="Date of administration" value={state.vaccineAdmin.vaccinationDate1} />
       <Row label="Dose, form and route" value="0.5 ml suspension for injection, intramuscular; quantity administered one dose" />
       <Row label="Anatomical site" value={state.vaccineAdmin.injectionSite1} />
@@ -1103,6 +1169,8 @@ function MeningitiBSummaryReport({
       <Row label="Immuniser" value={state.vaccineAdmin.administeredBy} />
       <Row label="15 minute observation completed" value={state.postVaccine.observationCompleted ? "Yes" : "No"} />
       <Row label="Administered via PGD" value={`Yes, ${MENB_PGD_VERSION}`} />
+      </>
+      )}
 
       <SectionHeader>Clinical Alerts</SectionHeader>
       <AlertSummary alerts={state.alerts} />

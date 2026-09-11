@@ -26,7 +26,7 @@ import { AlertBanner } from "../shared/components/AlertBanner";
 import { PatientDetailsStep } from "../shared/steps/PatientDetailsStep";
 import { ConsentStep } from "../shared/steps/ConsentStep";
 import { HayfeverSummaryReport } from "./components/HayfeverSummaryReport";
-import { TextInput, Checkbox, SelectInput, TextArea } from "../shared/components/FormInputs";
+import { TextInput, Checkbox, SelectInput, TextArea, NumberInput } from "../shared/components/FormInputs";
 
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 function reducer(state: HayfeverConsultationState, action: HayfeverAction): HayfeverConsultationState {
@@ -63,6 +63,8 @@ function reducer(state: HayfeverConsultationState, action: HayfeverAction): Hayf
     case "SET_STEP":
       newState.currentStep = action.step;
       break;
+    case "RESET":
+      return createInitialConsultationState();
   }
 
   return newState;
@@ -88,22 +90,28 @@ export default function HayfeverClient() {
   const hardStops = useMemo(() => hasHardStops(state), [state]);
   const doseRecommendation = useMemo(() => calculateDoseRecommendation(state), [state]);
   const validationError = useMemo(() => validateStep(state, state.currentStep), [state]);
+  // A stop anywhere blocks Next on every step, including the last (Save &
+  // Print). Stops used to gate steps 0 to 5 only and handleNext never
+  // checked them (adversarial review, 11 Sep 2026).
   const canProceed = useMemo(() => {
-    if (state.currentStep >= TOTAL_STEPS - 1) return true;
-    // General exclusions block steps 0 to 4; arm-specific exclusions
-    // (evaluated once a medicine is chosen) block the Medicine Selection step.
-    if (state.currentStep <= 5 && hardStops) return false;
+    if (hardStops) return false;
     return !validationError;
-  }, [state, validationError, hardStops]);
+  }, [validationError, hardStops]);
 
   const handleNext = useCallback(() => {
+    if (hardStops) return;
     if (!validationError && state.currentStep < TOTAL_STEPS - 1) {
       const newCompleted = new Set(completedSteps);
       newCompleted.add(state.currentStep);
       setCompletedSteps(newCompleted);
       dispatch({ type: "SET_STEP", step: state.currentStep + 1 });
     }
-  }, [state.currentStep, validationError, completedSteps]);
+  }, [state.currentStep, validationError, completedSteps, hardStops]);
+
+  const handleNewConsultation = useCallback(() => {
+    dispatch({ type: "RESET" });
+    setCompletedSteps(new Set());
+  }, []);
 
   const handlePrev = useCallback(() => {
     if (state.currentStep > 0) {
@@ -200,12 +208,12 @@ export default function HayfeverClient() {
         return (
           <div className="space-y-4">
             <Checkbox
-              label="Asthma or LRTI history"
+              label="Co-existing asthma or LRTI history (red flag: refer)"
               checked={state.medicalHistory.asthmaOrLrti}
               onChange={(v) =>
                 dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "asthmaOrLrti", value: v })
               }
-              description="Hayfever with asthma is a reason to refer, not to treat here. This PGD does not authorise montelukast or any asthma treatment; the asthma needs reviewing by the GP."
+              description="Hayfever with asthma is a reason to refer, not to treat here. Ticking this raises a red flag on every step and prints the referral advice on the record. This PGD does not authorise montelukast or any asthma treatment; the asthma needs reviewing by the GP."
             />
             <Checkbox
               label="Severe hepatic impairment"
@@ -380,6 +388,34 @@ export default function HayfeverClient() {
                 required
               />
             )}
+            {(state.medicineSupply.medicineSelected === "fexofenadine" ||
+              state.medicineSupply.medicineSelected === "combination") && (
+              <NumberInput
+                label="Fexofenadine 120 mg tablets supplied"
+                value={state.medicineSupply.fexofenadineQuantity}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "fexofenadineQuantity", value: v })
+                }
+                min={1}
+                max={30}
+                unit="tablets (maximum 30)"
+                required
+              />
+            )}
+            {(state.medicineSupply.medicineSelected === "dymista" ||
+              state.medicineSupply.medicineSelected === "combination") && (
+              <NumberInput
+                label="Dymista 23 g bottles supplied"
+                value={state.medicineSupply.dymistaBottles}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "dymistaBottles", value: v })
+                }
+                min={1}
+                max={1}
+                unit="bottle (one per supply)"
+                required
+              />
+            )}
             {doseRecommendation && (
               <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-navy-900 space-y-1">
                 <p><span className="font-medium">Medicine:</span> {doseRecommendation.medicine}</p>
@@ -548,7 +584,16 @@ export default function HayfeverClient() {
   };
 
   // ─── Consultation Record Data (for saving to database) ───
+  // Returns a record on every step so an exclusion can be saved as "not
+  // supplied" from the step it is raised on.
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    const supplied = !hardStops && !!doseRecommendation;
+    const quantityParts: string[] = [];
+    const med = state.medicineSupply.medicineSelected;
+    if ((med === "fexofenadine" || med === "combination") && state.medicineSupply.fexofenadineQuantity)
+      quantityParts.push(`${state.medicineSupply.fexofenadineQuantity} x fexofenadine 120 mg tablets`);
+    if ((med === "dymista" || med === "combination") && state.medicineSupply.dymistaBottles)
+      quantityParts.push(`${state.medicineSupply.dymistaBottles} x Dymista 23 g bottle`);
     return {
       patient: {
         firstName: state.patient.firstName,
@@ -560,17 +605,35 @@ export default function HayfeverClient() {
         address: state.patient.address,
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
+        gpAddress: state.patient.gpAddress,
+        gpPhone: state.patient.gpPhone,
+        gpEmail: state.patient.gpEmail,
+        gpOdsCode: state.patient.gpOdsCode,
       },
-      clinicalData: state as unknown as Record<string, unknown>,
+      clinicalData: { ...state, alerts, hardStops } as unknown as Record<string, unknown>,
       outcome: hardStops ? "not_supplied" : "completed",
+      ...(supplied
+        ? {
+            medicine: {
+              name: doseRecommendation.medicine,
+              dose: doseRecommendation.dose,
+              duration: doseRecommendation.duration,
+              quantity: quantityParts.join(" + "),
+            },
+          }
+        : {}),
       summary: {
-        pharmacistName: state.summary.pharmacistName,
-        pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacistName: state.summary.pharmacistName || __pharmProfile?.name || "",
+        pharmacistGPhC: state.summary.pharmacistGPhC || __pharmProfile?.gphcNumber || "",
+        pharmacyName: state.summary.pharmacyName || __pharmProfile?.pharmacyName,
+        pharmacyAddress: state.summary.pharmacyAddress || __pharmProfile?.pharmacyAddress,
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: state.consent.notifyGp },
     };
-  }, [state, hardStops]);
+  }, [state, hardStops, alerts, doseRecommendation, __pharmProfile]);
 
   if (state.currentStep === TOTAL_STEPS - 1) {
     return (
@@ -588,9 +651,11 @@ export default function HayfeverClient() {
           title={STEP_LABELS[state.currentStep]}
           onNext={handleNext}
           onPrev={handlePrev}
-          canProceed={true}
-          validationError={null}
+          canProceed={canProceed}
+          validationError={validationError}
+          isBlocked={hardStops}
           getConsultationData={getConsultationData}
+          onNewConsultation={handleNewConsultation}
         >
           <HayfeverSummaryReport
             state={state}
@@ -624,26 +689,11 @@ export default function HayfeverClient() {
         onPrev={handlePrev}
         canProceed={canProceed}
         validationError={validationError}
+        isBlocked={hardStops}
+        getConsultationData={getConsultationData}
       >
         {renderStep()}
       </StepWrapper>
-
-      <div className="flex gap-3 justify-between">
-        <button
-          onClick={handlePrev}
-          disabled={state.currentStep === 0}
-          className="px-4 py-2 text-sm font-medium text-navy-900 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-50 disabled:text-gray-400 rounded-lg transition-colors"
-        >
-          ← Back
-        </button>
-        <button
-          onClick={handleNext}
-          disabled={!canProceed}
-          className="px-4 py-2 text-sm font-medium text-white bg-[color:var(--tenant-primary)] hover:bg-[color:var(--tenant-primary)]/15 disabled:bg-gray-300 rounded-lg transition-colors"
-        >
-          Next →
-        </button>
-      </div>
     </div>
   );
 }

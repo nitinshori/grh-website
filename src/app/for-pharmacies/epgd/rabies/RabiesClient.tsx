@@ -22,6 +22,8 @@ import {
   getObservationPeriodRecommendation,
   calculateNextDueDates,
   getDoseVolume,
+  getProductLabel,
+  daysFromToday,
 } from './rabies-clinical-logic';
 import {
   validatePatientDetails,
@@ -32,14 +34,19 @@ import {
   validateAdministration,
   validatePostVaccineObs,
   validateAdvice,
+  validateSummaryStep,
+  validateExclusionRecord,
 } from './rabies-validation';
 import { TextInput, Checkbox, SelectInput, NumberInput, TextArea } from '../shared/components/FormInputs';
 import { ProgressBar } from '../shared/components/ProgressBar';
 import Link from 'next/link';
 import { AlertBanner } from '../shared/components/AlertBanner';
-// Mounted directly: this tool does not use the shared StepWrapper, which is
-// where the other vaccination tools pick this up.
-import { VaccineSafetyChecks } from '../shared/components/VaccineSafetyChecks';
+// The shared safety panel is no longer mounted here: this tool has its own
+// required adrenaline confirmation (on the administration step, before the
+// injection is recorded), observation, batch, expiry and site fields, and the
+// panel's copy of those went nowhere. The store is cleared on New
+// Consultation in case an earlier session left values in it.
+import { clearVaccineSafety } from '../shared/components/VaccineSafetyChecks';
 import { PatientDetailsStep } from '../shared/steps/PatientDetailsStep';
 import { ConsentStep } from '../shared/steps/ConsentStep';
 import RabiesSummaryReport from './components/RabiesSummaryReport';
@@ -131,7 +138,13 @@ export default function RabiesClient({
     (field: keyof BasePatientDetails, value: any): void => {
       setState((prev) => ({
         ...prev,
-        patient: { ...prev.patient, [field]: value },
+        patient: {
+          ...prev.patient,
+          [field]: value,
+          // Age is recomputed on every DOB change so the under-2 gate on the
+          // patient step is live, not dead code.
+          ...(field === 'dateOfBirth' ? { age: calculateAge(String(value ?? '')) } : {}),
+        },
       }));
     },
     []
@@ -298,16 +311,32 @@ export default function RabiesClient({
     }));
   }, []);
 
+  const todayIso = (): string => new Date().toISOString().split('T')[0];
+
   const handleDoseNumberChange = useCallback((value: string): void => {
     setState((prev) => {
       const doseNumber = value as RabiesVaccineAdministration['doseNumber'];
+      const previousDoseDate = doseNumber === '1st' ? '' : prev.administration.previousDoseDate;
       const nextDueDates =
         prev.administration.schedule && doseNumber
-          ? calculateNextDueDates(new Date().toISOString().split('T')[0], prev.administration.schedule, doseNumber)
-          : prev.administration.nextDueDates;
+          ? calculateNextDueDates(todayIso(), prev.administration.schedule, doseNumber, previousDoseDate)
+          : '';
       return {
         ...prev,
-        administration: { ...prev.administration, doseNumber, nextDueDates },
+        administration: { ...prev.administration, doseNumber, previousDoseDate, nextDueDates },
+      };
+    });
+  }, []);
+
+  const handlePreviousDoseDateChange = useCallback((value: string): void => {
+    setState((prev) => {
+      const nextDueDates =
+        prev.administration.schedule && prev.administration.doseNumber
+          ? calculateNextDueDates(todayIso(), prev.administration.schedule, prev.administration.doseNumber, value)
+          : '';
+      return {
+        ...prev,
+        administration: { ...prev.administration, previousDoseDate: value, nextDueDates },
       };
     });
   }, []);
@@ -317,7 +346,7 @@ export default function RabiesClient({
       const schedule = value as RabiesVaccineAdministration['schedule'];
       const nextDueDates =
         schedule && prev.administration.doseNumber
-          ? calculateNextDueDates(new Date().toISOString().split('T')[0], schedule, prev.administration.doseNumber)
+          ? calculateNextDueDates(todayIso(), schedule, prev.administration.doseNumber, prev.administration.previousDoseDate)
           : '';
       return {
         ...prev,
@@ -347,13 +376,6 @@ export default function RabiesClient({
   }, []);
 
   // Post-vaccine observation handlers
-  const handleObservationPeriodChange = useCallback((value: string): void => {
-    setState((prev) => ({
-      ...prev,
-      postVaccineObs: { ...prev.postVaccineObs, observationPeriod: value as any },
-    }));
-  }, []);
-
   const handlePatientWellChange = useCallback((value: boolean): void => {
     setState((prev) => ({
       ...prev,
@@ -435,7 +457,13 @@ export default function RabiesClient({
         break;
       }
       case 5: {
-        const result = validateAdministration(state.administration, state.screening, state.contraindications, patientAge);
+        const result = validateAdministration(
+          state.administration,
+          state.screening,
+          state.contraindications,
+          patientAge,
+          state.postVaccineObs.anaphylaxisKitChecked
+        );
         errors.push(...result.errors);
         break;
       }
@@ -447,7 +475,10 @@ export default function RabiesClient({
         break;
       }
       case 7: {
-        // Summary can be skipped
+        // Name and registration number of the administering professional are
+        // in the PGD records row: the record cannot be saved without them.
+        const result = validateSummaryStep(state.summary);
+        errors.push(...result.errors);
         break;
       }
     }
@@ -514,10 +545,14 @@ export default function RabiesClient({
   }, []);
 
   // ─── Consultation tracking + record saving ───
-  const { markComplete, saveRecord } = useConsultationTracking('rabies', state.step);
+  const { markComplete, saveRecord, reset: resetTracking } = useConsultationTracking('rabies', state.step);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
+  const hasStop = hasHardStopContraindications(state.contraindications);
+
   const getConsultationData = useCallback((): ConsultationRecordData => {
+    const stopped = hasHardStopContraindications(state.contraindications);
+    const productChosen = !stopped && state.administration.product !== '';
     return {
       patient: {
         firstName: state.patient.firstName,
@@ -529,28 +564,80 @@ export default function RabiesClient({
         address: state.patient.address,
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
+        gpAddress: state.patient.gpAddress,
+        gpPhone: state.patient.gpPhone,
+        gpEmail: state.patient.gpEmail,
+        gpOdsCode: state.patient.gpOdsCode,
       },
       clinicalData: state as unknown as Record<string, unknown>,
-      outcome: hasHardStopContraindications(state.contraindications) ? 'not_supplied' : 'completed',
+      outcome: stopped ? 'not_supplied' : 'completed',
+      medicine: productChosen
+        ? {
+            name: getProductLabel(state.administration.product),
+            dose: `${getDoseVolume(state.administration.product)} ${state.administration.route === 'deep-subcutaneous' ? 'deep subcutaneous' : 'intramuscular'}, ${state.administration.doseNumber} dose, ${state.administration.schedule === 'accelerated' ? 'accelerated (day 0, 3, 7)' : 'conventional (day 0, 7, 28)'} schedule`,
+            duration: 'Single dose this attendance',
+            quantity: 1,
+          }
+        : undefined,
       summary: {
-        pharmacistName: state.summary.pharmacistName,
-        pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacistName: state.summary.pharmacistName || __pharmProfile?.name || '',
+        pharmacistGPhC: state.summary.pharmacistGPhC || __pharmProfile?.gphcNumber || '',
+        pharmacyName: state.summary.pharmacyName || __pharmProfile?.pharmacyName,
+        pharmacyAddress: state.summary.pharmacyAddress || __pharmProfile?.pharmacyAddress,
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: state.consent.notifyGp },
     };
-  }, [state]);
+  }, [state, __pharmProfile]);
 
   const handlePrint = useCallback(async (): Promise<void> => {
+    // Same rules as Next: no print or save with a stop on screen or without
+    // the pharmacist's name and registration number.
+    if (hasHardStopContraindications(state.contraindications)) return;
+    if (!validateStep(7)) return;
     markComplete();
     setSaveStatus('saving');
     const success = await saveRecord(getConsultationData());
     setSaveStatus(success ? 'saved' : 'error');
     window.print();
-  }, [markComplete, saveRecord, getConsultationData]);
+  }, [markComplete, saveRecord, getConsultationData, validateStep, state.contraindications]);
+
+  // An excluded patient used to leave no record at all: Next was disabled on
+  // the contraindications step and the only save lived on the summary. The
+  // PGD requires the reason for exclusion, the advice given and the decision
+  // reached to be documented.
+  const handleSaveExclusion = useCallback(async (): Promise<void> => {
+    const result = validateExclusionRecord(state.screening);
+    if (!result.isValid) {
+      setValidationErrors((prev) => new Map(prev).set(4, result.errors));
+      return;
+    }
+    setValidationErrors((prev) => {
+      const next = new Map(prev);
+      next.delete(4);
+      return next;
+    });
+    markComplete();
+    setSaveStatus('saving');
+    const data = getConsultationData();
+    data.outcome = state.contraindications.priorExposure ? 'referred' : 'not_supplied';
+    (data.clinicalData as Record<string, unknown>).stoppedAtStep = 4;
+    (data.clinicalData as Record<string, unknown>).stopReason = state.alerts
+      .filter((a) => a.severity === 'stop')
+      .map((a) => a.message)
+      .join('; ');
+    const success = await saveRecord(data);
+    setSaveStatus(success ? 'saved' : 'error');
+  }, [state.screening, state.contraindications, state.alerts, markComplete, saveRecord, getConsultationData]);
 
   const handleNewConsultation = useCallback((): void => {
     if (!window.confirm('Start a new consultation? The current consultation data will be cleared.')) return;
+    // Forget the saved consultation so the next patient is actually posted,
+    // and clear any stale values in the shared vaccine safety store.
+    resetTracking();
+    clearVaccineSafety('rabies');
     setState({
       patient: initialPatient || initialPatientDetails,
       consent: initialConsent,
@@ -566,7 +653,7 @@ export default function RabiesClient({
     setCompletedSteps(new Set());
     setValidationErrors(new Map());
     setSaveStatus('idle');
-  }, []);
+  }, [initialPatient, resetTracking]);
 
   const getStepAlerts = useCallback((): React.ReactNode => {
     const travelCodes = ['LIMITED_PEP_ACCESS', 'PRIOR_EXPOSURE_RABIES', 'AGE_UNDER_2_RABIES'];
@@ -583,16 +670,20 @@ export default function RabiesClient({
     return <AlertBanner alerts={stepAlerts} />;
   }, [state.alerts, state.step]);
 
+  // A stop raised on the contraindications review blocks Next on that step
+  // and on every step after it.
   const canProceedFromStep = useCallback((): boolean => {
-    if (state.step === 4 && hasHardStopContraindications(state.contraindications)) {
+    if (state.step >= 4 && hasHardStopContraindications(state.contraindications)) {
       return false;
     }
     return true;
   }, [state.step, state.contraindications]);
 
+  const daysToDeparture = daysFromToday(state.screening.departureDate);
+  const isTravelIndication = state.screening.indication !== 'occupational-uk';
+
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
-      <VaccineSafetyChecks slug="rabies" />
       <div className="max-w-4xl mx-auto">
         {state.step === 0 && (
           <div className="mb-4 print:hidden">
@@ -692,25 +783,44 @@ export default function RabiesClient({
                     ]}
                     required
                   />
-                  <TextInput
-                    label="Destination country/region"
-                    value={state.screening.destinationCountry}
-                    onChange={handleDestinationChange}
-                    placeholder="e.g., Nepal, India, Philippines"
-                  />
-                  <TextInput
-                    label="Departure date"
-                    type="date"
-                    value={state.screening.departureDate}
-                    onChange={handleDepartureDateChange}
-                  />
-                  <Checkbox
-                    label="Sufficient time before travel to complete the chosen course"
-                    checked={state.screening.sufficientTimeBeforeTravel}
-                    onChange={(v) => setScreening({ sufficientTimeBeforeTravel: v })}
-                    description="Inclusion criterion. Conventional course day 0, 7 and 28 (third dose may be brought forward to day 21). Accelerated course day 0, 3 and 7 is for adults 18 and over only, off-label, and only where there is genuinely insufficient time for the conventional course."
-                    required
-                  />
+                  {isTravelIndication ? (
+                    <>
+                      <TextInput
+                        label="Destination country/region"
+                        value={state.screening.destinationCountry}
+                        onChange={handleDestinationChange}
+                        placeholder="e.g., Nepal, India, Philippines"
+                        required
+                      />
+                      <TextInput
+                        label="Departure date"
+                        type="date"
+                        value={state.screening.departureDate}
+                        onChange={handleDepartureDateChange}
+                        required
+                      />
+                      {daysToDeparture !== null && (
+                        <p className={`text-sm ${daysToDeparture < 7 ? 'text-red-700 font-semibold' : daysToDeparture < 21 ? 'text-amber-700' : 'text-gray-700'}`}>
+                          {daysToDeparture < 0
+                            ? 'Departure date is in the past.'
+                            : daysToDeparture < 7
+                              ? `${daysToDeparture} days to departure: a first dose today cannot be followed by a complete course (accelerated course needs 7 days). Refer to a travel clinic unless this attendance is for a later dose in a course already started.`
+                              : daysToDeparture < 21
+                                ? `${daysToDeparture} days to departure: the conventional course (third dose from day 21) cannot be completed from a first dose today. The accelerated course (18 and over, off-label) is the only option for a new course.`
+                                : `${daysToDeparture} days to departure: the conventional course can be completed (third dose from day 21). The accelerated course may not be used.`}
+                        </p>
+                      )}
+                      <Checkbox
+                        label="Sufficient time before travel to complete the chosen course"
+                        checked={state.screening.sufficientTimeBeforeTravel}
+                        onChange={(v) => setScreening({ sufficientTimeBeforeTravel: v })}
+                        description="Inclusion criterion. Conventional course day 0, 7 and 28 (third dose may be brought forward to day 21). Accelerated course day 0, 3 and 7 is for adults 18 and over only, off-label, and only where there is genuinely insufficient time for the conventional course. The administration step checks the departure date against the chosen course."
+                        required
+                      />
+                    </>
+                  ) : (
+                    <p className="text-sm text-gray-600">UK-based occupational indication: no destination or departure date applies. Record the occupation below.</p>
+                  )}
                 </div>
               </div>
 
@@ -878,9 +988,21 @@ export default function RabiesClient({
                 <Checkbox
                   label="Hypersensitivity to polymyxin B, streptomycin or neomycin, or to any antibiotic of the same class"
                   checked={state.screening.antibioticHypersensitivity}
-                  onChange={(v) => setScreening({ antibioticHypersensitivity: v })}
-                  description="Excludes Verorab. Rabipur contains traces of neomycin, chlortetracycline and amphotericin B."
+                  onChange={(v) => setScreening({ antibioticHypersensitivity: v, hypersensitivityIncludesNeomycin: v ? state.screening.hypersensitivityIncludesNeomycin : '' })}
+                  description="Excludes Verorab. Rabipur contains traces of neomycin, chlortetracycline and amphotericin B, so where the hypersensitivity extends to neomycin neither product can be given."
                 />
+                {state.screening.antibioticHypersensitivity && (
+                  <SelectInput
+                    label="Does the hypersensitivity extend to neomycin?"
+                    value={state.screening.hypersensitivityIncludesNeomycin}
+                    onChange={(v) => setScreening({ hypersensitivityIncludesNeomycin: v as RabiesScreening['hypersensitivityIncludesNeomycin'] })}
+                    options={[
+                      { value: 'yes', label: 'Yes, or not known: neomycin cannot be excluded (both products excluded, refer)' },
+                      { value: 'no', label: 'No: confirmed hypersensitivity to polymyxin B or streptomycin only (Rabipur may be used)' },
+                    ]}
+                    required
+                  />
+                )}
 
                 <Checkbox
                   label="Bleeding disorder, thrombocytopenia or anticoagulation"
@@ -933,7 +1055,11 @@ export default function RabiesClient({
                 <div className="flex justify-between items-center">
                   <span className="text-gray-700">Polymyxin B, streptomycin or neomycin hypersensitivity (Verorab):</span>
                   <span className={`font-semibold ${state.contraindications.antibioticHypersensitivity ? 'text-red-600' : 'text-green-600'}`}>
-                    {state.contraindications.antibioticHypersensitivity ? 'VERORAB EXCLUDED' : 'OK'}
+                    {state.contraindications.neomycinHypersensitivity
+                      ? 'NEOMYCIN: BOTH PRODUCTS EXCLUDED'
+                      : state.contraindications.antibioticHypersensitivity
+                        ? 'VERORAB EXCLUDED'
+                        : 'OK'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
@@ -972,6 +1098,39 @@ export default function RabiesClient({
                   <p className="text-sm text-red-800 mt-2">
                     Discuss the reason for exclusion with the patient and make sure they understand it. Advise on alternative options: the GP, a travel clinic, or a specialist service. Where the exclusion is a possible exposure that has already occurred, make the urgency explicit: that patient needs assessment today, not an appointment. Document the reason for exclusion, the advice given and the decision reached. Inform or refer to the GP as appropriate.
                   </p>
+                  <div className="mt-4 space-y-3">
+                    <TextArea
+                      label="Advice given and decision reached (recorded with the exclusion)"
+                      value={state.screening.exclusionAdviceGiven}
+                      onChange={(v) => setScreening({ exclusionAdviceGiven: v })}
+                      placeholder="e.g., Advised same-day attendance at the emergency department for post-exposure assessment; GP informed."
+                      required
+                    />
+                    {saveStatus !== 'saved' ? (
+                      <button
+                        type="button"
+                        onClick={handleSaveExclusion}
+                        disabled={saveStatus === 'saving'}
+                        className="px-4 py-2.5 rounded-lg text-sm font-semibold border border-red-300 text-red-700 hover:bg-red-100 transition-colors disabled:opacity-50"
+                      >
+                        {saveStatus === 'saving' ? 'Saving...' : 'Record exclusion and finish (save as not supplied)'}
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm text-green-700">Exclusion recorded. No vaccine supplied.</span>
+                        <button
+                          type="button"
+                          onClick={handleNewConsultation}
+                          className="px-4 py-2 rounded-lg text-sm font-medium text-[color:var(--tenant-primary)] border border-[color:var(--tenant-primary)]/30 hover:bg-[color:var(--tenant-primary)]/10 transition-colors"
+                        >
+                          New Consultation
+                        </button>
+                      </div>
+                    )}
+                    {saveStatus === 'error' && (
+                      <p className="text-sm text-red-700">Could not save the exclusion record. Check the connection and try again.</p>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -998,6 +1157,16 @@ export default function RabiesClient({
                   </p>
                 </div>
 
+                <div className="p-4 rounded-lg border-2 border-red-400 bg-red-50">
+                  <Checkbox
+                    label="Adrenaline (epinephrine) 1 in 1,000 injection is immediately available in this room, in date, with a written anaphylaxis protocol and a telephone"
+                    checked={state.postVaccineObs.anaphylaxisKitChecked}
+                    onChange={handleAnaphylaxisKitChange}
+                    description="Required whenever a vaccine is administered under this PGD (protocol consistent with current Resuscitation Council UK guidance). Confirm before drawing up: the administration cannot be recorded until this is ticked."
+                    required
+                  />
+                </div>
+
                 <SelectInput
                   label="Product in hand"
                   value={state.administration.product}
@@ -1016,6 +1185,9 @@ export default function RabiesClient({
                 )}
                 {state.administration.product === 'verorab' && state.contraindications.antibioticHypersensitivity && (
                   <p className="text-xs text-red-700">Polymyxin B, streptomycin or neomycin hypersensitivity recorded: Verorab is excluded.</p>
+                )}
+                {state.administration.product === 'rabipur' && state.contraindications.neomycinHypersensitivity && (
+                  <p className="text-xs text-red-700">Neomycin hypersensitivity recorded: Rabipur contains traces of neomycin and is excluded. Refer.</p>
                 )}
 
                 <TextInput
@@ -1108,12 +1280,28 @@ export default function RabiesClient({
                   required
                 />
 
-                <TextInput
-                  label="Next due dates"
-                  value={state.administration.nextDueDates}
-                  onChange={(v) => setAdministration({ nextDueDates: v })}
-                  placeholder="Calculated from the schedule and dose number; edit if the course started on another date"
-                />
+                {state.administration.doseNumber && state.administration.doseNumber !== '1st' && (
+                  <TextInput
+                    label="Date of the previous dose in this course"
+                    type="date"
+                    value={state.administration.previousDoseDate}
+                    onChange={handlePreviousDoseDateChange}
+                    required
+                  />
+                )}
+                {state.administration.doseNumber && state.administration.doseNumber !== '1st' && state.administration.previousDoseDate && (
+                  <p className="text-sm text-gray-700">
+                    Previous dose {-(daysFromToday(state.administration.previousDoseDate) ?? 0)} days ago.
+                    Minimum interval for this dose: conventional 2nd dose 7 days, 3rd dose 14 days; accelerated 2nd dose 3 days, 3rd dose 4 days.
+                  </p>
+                )}
+
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Next due dates (calculated from the schedule, dose number and previous dose date)</p>
+                  <p className="mt-1 text-sm text-gray-900 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+                    {state.administration.nextDueDates || 'Select the schedule and dose number'}
+                  </p>
+                </div>
 
                 <TextInput
                   label="Administered by (name)"
@@ -1143,29 +1331,11 @@ export default function RabiesClient({
                   Immediate Observations
                 </h3>
                 <div className="space-y-4">
-                  <SelectInput
-                    label="Observation period"
-                    value={state.postVaccineObs.observationPeriod}
-                    onChange={handleObservationPeriodChange}
-                    options={[
-                      { value: '15-min', label: '15 minutes (PGD requirement)' },
-                      { value: '30-min', label: '30 minutes (extended)' },
-                    ]}
-                  />
-
                   <Checkbox
                     label="15 minute observation period completed"
                     checked={state.postVaccineObs.observationCompleted}
                     onChange={(v) => setState((prev) => ({ ...prev, postVaccineObs: { ...prev.postVaccineObs, observationCompleted: v } }))}
                     description="Observe every patient for 15 minutes after vaccination. Vaccinate seated. Procedures in place to prevent injury from a faint."
-                    required
-                  />
-
-                  <Checkbox
-                    label="Adrenaline 1 in 1,000 injection immediately available, with a written anaphylaxis protocol and a telephone"
-                    checked={state.postVaccineObs.anaphylaxisKitChecked}
-                    onChange={handleAnaphylaxisKitChange}
-                    description="Required whenever a vaccine is administered under this PGD; protocol consistent with current Resuscitation Council UK guidance."
                     required
                   />
 
@@ -1278,6 +1448,26 @@ export default function RabiesClient({
 
           {state.step === 7 && (
             <>
+              <div className="mb-6 p-4 rounded-lg border border-gray-200 bg-gray-50 space-y-3 print:hidden">
+                <p className="text-sm font-semibold text-gray-800">Administering professional (PGD records row: name and registration number)</p>
+                <TextInput
+                  label="Pharmacist name"
+                  value={state.summary.pharmacistName}
+                  onChange={(v) => handleSummaryChange('pharmacistName', v)}
+                  required
+                />
+                <TextInput
+                  label="GPhC registration number"
+                  value={state.summary.pharmacistGPhC}
+                  onChange={(v) => handleSummaryChange('pharmacistGPhC', v)}
+                  required
+                />
+                <TextArea
+                  label="Clinical notes (optional)"
+                  value={state.summary.clinicalNotes}
+                  onChange={(v) => handleSummaryChange('clinicalNotes', v)}
+                />
+              </div>
               <RabiesSummaryReport state={state} onPrint={handlePrint} />
               {saveStatus !== 'idle' && (
                 <div className={`mt-4 px-4 py-3 rounded-lg print:hidden ${

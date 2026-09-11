@@ -24,8 +24,15 @@ export interface TyphoidPatientDetails extends BasePatientDetails {
 }
 
 export interface TyphoidConsent extends BaseConsent {
+  /** Field name is historical. Records that the patient understands a
+   *  booster is needed every 3 YEARS (PGD v005), not 5. Kept for saved
+   *  records; do not read it as a 5 year validity. */
   understands5YearValidity: boolean;
   understandsTimingRequirement: boolean;
+  /** Field name is historical. Records that the patient understands the
+   *  vaccine is about 70 to 80% effective, does not cover paratyphoid, and
+   *  that food and water precautions remain the main protection. There is no
+   *  certificate. */
   certificateRequirement: boolean;
 }
 
@@ -88,7 +95,10 @@ export function initialTyphoidSummary(): TyphoidSummary {
     pharmacistGPhC: '',
     pharmacyName: '',
     pharmacyAddress: '',
-    consultationDate: new Date().toISOString().split('T')[0],
+    consultationDate: (() => {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    })(),
     consultationTime: new Date().toLocaleTimeString('en-GB', {
       hour: '2-digit',
       minute: '2-digit',

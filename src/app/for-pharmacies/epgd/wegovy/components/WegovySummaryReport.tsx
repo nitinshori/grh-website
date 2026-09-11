@@ -37,6 +37,18 @@ const DOSE_PRODUCT: Record<string, string> = {
 };
 
 export function WegovySummaryReport({ state }: { state: WegovyConsultationState }) {
+  const stopsExist = state.alerts.some((a) => a.severity === "stop");
+  // Never print a supply, or the "no exclusion criteria applied" declaration,
+  // when a stop exists (adversarial review, 11 Sep 2026).
+  const supplied = !stopsExist && state.doseSelection.dose !== "";
+  const visitLabel =
+    state.weightAssessment.visitType === "new"
+      ? "New patient"
+      : state.weightAssessment.visitType === "continuing"
+        ? "Continuing patient"
+        : state.weightAssessment.visitType === "restart"
+          ? `Restart after a break (${state.weightAssessment.breakOverTwoMonths ? "more than" : "within"} 2 months)`
+          : "Not recorded";
   const bmi = state.weightAssessment.bmi || calculateBMI(
     state.weightAssessment.height,
     state.weightAssessment.weight
@@ -84,7 +96,9 @@ export function WegovySummaryReport({ state }: { state: WegovyConsultationState 
       state.counselling.suicidalIdeationWarning,
     ],
     [
-      "Contraception and pregnancy advice given (stop 2 months before planned pregnancy)",
+      state.medicalHistory.childbearingPotential === "yes"
+        ? "Contraception and pregnancy advice given (stop 2 months before planned pregnancy)"
+        : "Contraception advice (not applicable: not of childbearing potential)",
       state.counselling.contraceptionAdvice,
     ],
     [
@@ -128,6 +142,7 @@ export function WegovySummaryReport({ state }: { state: WegovyConsultationState 
         <Row label="Date of Birth" value={state.patient.dateOfBirth} />
         <Row label="Age" value={state.patient.age?.toString() || "N/A"} />
         <Row label="NHS Number" value={state.patient.nhsNumber || "Not provided"} />
+        <Row label="Address" value={state.patient.address || "Not provided"} />
         <Row label="GP" value={state.patient.gpName || "Not provided"} />
         <Row label="GP Practice" value={state.patient.gpPractice || "Not provided"} />
       </div>
@@ -254,6 +269,10 @@ export function WegovySummaryReport({ state }: { state: WegovyConsultationState 
         <Row
           label="Active Eating Disorder"
           value={state.medicalHistory.eatingDisorder ? "Yes" : "No"}
+        />
+        <Row
+          label="Woman of childbearing potential"
+          value={state.medicalHistory.childbearingPotential === "yes" ? "Yes" : state.medicalHistory.childbearingPotential === "no" ? "No" : "Not recorded"}
         />
         <Row label="Pregnant" value={state.medicalHistory.pregnant ? "Yes" : "No"} />
         <Row
@@ -384,38 +403,55 @@ export function WegovySummaryReport({ state }: { state: WegovyConsultationState 
       )}
 
       {/* Dose Selection */}
-      <SectionHeader>Dose Selection & Supply</SectionHeader>
+      <SectionHeader>{supplied ? "Dose Selection & Supply" : "Outcome"}</SectionHeader>
       <div className="space-y-1.5 mb-6">
-        <Row label="Current Dose Stage" value={state.doseSelection.currentDoseStage} />
-        <Row label="Selected Dose" value={state.doseSelection.dose || "Not selected"} />
+        <Row label="Visit type" value={visitLabel} />
+        {supplied ? (
+          <>
+            <Row label="Current Dose Stage" value={state.doseSelection.currentDoseStage} />
+            <Row label="Selected Dose" value={state.doseSelection.dose} />
+            <Row
+              label="Product Supplied (name, brand, form)"
+              value={DOSE_PRODUCT[state.doseSelection.dose] || "Not selected"}
+            />
+            <Row label="Batch Number" value={state.doseSelection.batchNumber || "Not recorded"} />
+            <Row
+              label="Route and Frequency"
+              value="Subcutaneous injection (abdomen, thigh or upper arm), once weekly"
+            />
+            <Row
+              label="Quantity Supplied"
+              value={
+                state.doseSelection.dose === "7.2mg"
+                  ? "Four single use 7.2 mg pens (4 doses), one month of treatment"
+                  : "One pre-filled pen (4 doses) with 4 needles, one month of treatment"
+              }
+            />
+            <Row label="Supplied under" value={WEGOVY_PGD_VERSION} />
+          </>
+        ) : (
+          <Row
+            label="Medicine"
+            value={stopsExist ? "NOT SUPPLIED: exclusion criteria met (see clinical alerts above)" : "No medicine supplied"}
+          />
+        )}
         <Row
-          label="Product Supplied (name, brand, form)"
-          value={DOSE_PRODUCT[state.doseSelection.dose] || "Not selected"}
-        />
-        <Row label="Batch Number" value={state.doseSelection.batchNumber || "Not recorded"} />
-        <Row
-          label="Route and Frequency"
-          value="Subcutaneous injection (abdomen, thigh or upper arm), once weekly"
-        />
-        <Row
-          label="Quantity Supplied"
+          label="Previous Dose"
           value={
-            state.doseSelection.dose === "7.2mg"
-              ? "Four single use 7.2 mg pens (4 doses), one month of treatment"
-              : "One pre-filled pen (4 doses) with 4 needles, one month of treatment"
+            state.doseSelection.previousDose === "none"
+              ? "None (new patient or restart)"
+              : state.doseSelection.previousDose || "Not recorded"
           }
         />
         <Row
           label="Weeks on Previous Dose"
           value={
-            state.doseSelection.weeksAtCurrentDose
+            state.doseSelection.weeksAtCurrentDose !== null
               ? `${state.doseSelection.weeksAtCurrentDose} weeks`
-              : "New patient"
+              : state.weightAssessment.visitType === "continuing"
+                ? "Not recorded"
+                : "Not applicable"
           }
-        />
-        <Row
-          label="Previous Dose"
-          value={state.doseSelection.previousDose || "None (new patient)"}
         />
         <Row
           label="Recommencing After Previous Use"
@@ -437,24 +473,34 @@ export function WegovySummaryReport({ state }: { state: WegovyConsultationState 
             }`}
           />
         )}
-        {state.doseSelection.dose === "7.2mg" && (
+        {state.doseSelection.monthsOnMaxToleratedDose !== null && (
           <Row
-            label="Starting BMI (7.2 mg permitted only if 30 or above)"
-            value={
-              state.doseSelection.startingBMI !== null
-                ? `${state.doseSelection.startingBMI} kg/m²`
-                : "Not recorded"
-            }
+            label="Months on Maximum Tolerated Dose"
+            value={`${state.doseSelection.monthsOnMaxToleratedDose} months`}
           />
         )}
+        {state.doseSelection.continuationDecision.trim() && (
+          <Row
+            label="Decision on Continuation (5% rule)"
+            value={state.doseSelection.continuationDecision}
+          />
+        )}
+        <Row
+          label="Starting BMI"
+          value={
+            state.doseSelection.startingBMI !== null
+              ? `${state.doseSelection.startingBMI.toFixed(1)} kg/m² (7.2 mg permitted only if 30 or above)`
+              : "Not recorded"
+          }
+        />
         <Row
           label="Injection Site"
           value={state.doseSelection.injectionSite || "Not selected"}
         />
-        {state.doseSelection.pharmacistOverride && (
+        {state.doseSelection.overrideReason.trim() && (
           <Row
-            label="Pharmacist Override Reason"
-            value={state.doseSelection.overrideReason || "Not provided"}
+            label="Reason for a Lower Dose"
+            value={state.doseSelection.overrideReason}
           />
         )}
       </div>
@@ -476,12 +522,42 @@ export function WegovySummaryReport({ state }: { state: WegovyConsultationState 
       )}
 
       {/* Pharmacist Declaration */}
-      <PharmacistDeclaration
-        pgdName="Wegovy (Semaglutide) Weight Management"
-        pharmacistName={state.summary.pharmacistName}
-        pharmacistGPhC={state.summary.pharmacistGPhC}
-        pharmacyName={state.summary.pharmacyName}
-      />
+      {stopsExist ? (
+        <>
+          <SectionHeader>Pharmacist Declaration</SectionHeader>
+          <p className="text-xs text-gray-600 mb-4">
+            I confirm that this consultation was conducted in accordance with the
+            Patient Group Direction for Wegovy (Semaglutide) Weight Management, that
+            exclusion criteria applied, that no medicine was supplied, and that the
+            patient was given the advice recorded above.
+          </p>
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">Pharmacist name</p>
+              <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{state.summary.pharmacistName || ""}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">GPhC number</p>
+              <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{state.summary.pharmacistGPhC || ""}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">Pharmacy</p>
+              <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{state.summary.pharmacyName || ""}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">Signature</p>
+              <div className="border-b border-gray-300 min-h-[2rem]" />
+            </div>
+          </div>
+        </>
+      ) : (
+        <PharmacistDeclaration
+          pgdName="Wegovy (Semaglutide) Weight Management"
+          pharmacistName={state.summary.pharmacistName}
+          pharmacistGPhC={state.summary.pharmacistGPhC}
+          pharmacyName={state.summary.pharmacyName}
+        />
+      )}
 
       {/* Footer */}
       <ReportFooter pgdName="Wegovy (Semaglutide) Weight Management" />

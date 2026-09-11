@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
+import { FungalInfectionSummaryReport } from "./components/FungalInfectionSummaryReport";
 import type { ClinicalAlert } from "../shared/types";
 import {
   calculateAge,
@@ -37,7 +39,7 @@ const PRIMARY_FUNGAL = new Set(["athletes-foot", "ringworm", "candidal-intertrig
 
 const STEP_LABELS = ["Patient Details", "Consent", "Assessment & History", "Treatment", "Counselling & Summary"] as const;
 
-interface Clinical {
+export interface Clinical {
   presentation: string;
   site: string;
   brokenOozing: boolean;
@@ -84,6 +86,17 @@ export default function FungalInfectionClient() {
   const [summary, setSummary] = useState<BaseSummary>(initialSummary());
   const [c, setC] = useState<Clinical>({ ...EMPTY_CLINICAL });
   const set = (patch: Partial<Clinical>) => setC((prev) => ({ ...prev, ...patch }));
+
+  // Pharmacist details default to the logged-in profile (derived, so a new
+  // consultation picks them up again without an effect).
+  const __pharmProfile = usePharmacistProfile();
+  const effectiveSummary = useMemo<BaseSummary>(() => ({
+    ...summary,
+    pharmacistName: summary.pharmacistName || __pharmProfile?.name || "",
+    pharmacistGPhC: summary.pharmacistGPhC || __pharmProfile?.gphcNumber || "",
+    pharmacyName: summary.pharmacyName || __pharmProfile?.pharmacyName || "",
+    pharmacyAddress: summary.pharmacyAddress || __pharmProfile?.pharmacyAddress || "",
+  }), [summary, __pharmProfile]);
 
   const alerts = useMemo<ClinicalAlert[]>(() => {
     const a: ClinicalAlert[] = [];
@@ -132,32 +145,63 @@ export default function FungalInfectionClient() {
       case 3:
         if (!c.product) return "Please select the treatment";
         if (c.product === "miconazole" && c.presentation === "inflamed-mixed") return "Miconazole requires a diagnosis of superficial fungal skin infection. For inflamed intertrigo or infected eczema with a suspected secondary component, select Trimovate (18+) or refer.";
+        if (!c.brand.trim()) return "Record the brand supplied (PGD record: name and brand of medication)";
         if (!c.quantity.trim()) return "Please record the quantity supplied";
         return null;
       case 4:
         if (!c.completeCourse || !c.applicationAdvice || !c.reviewAdvice || !c.hygieneAdvice) return "Please confirm all counselling points";
         if (!c.pilSupplied) return "Please confirm the patient information leaflet has been supplied";
-        return validateSummaryStep(summary);
+        return validateSummaryStep(effectiveSummary);
       default: return null;
     }
-  }, [step, patient, consent, c, summary]);
+  }, [step, patient, consent, c, effectiveSummary]);
 
-  const canProceed = !validationError && (!hasStops || step >= 3);
+  // A stop anywhere disables Next on every step (adversarial review, 11 Sep 2026).
+  const canProceed = !validationError && !hasStops;
   const next = () => { if (canProceed) { setCompleted((p) => new Set([...p, step])); setStep((s) => Math.min(s + 1, STEP_LABELS.length - 1)); } };
   const prev = () => setStep((s) => Math.max(s - 1, 0));
 
+  const medicineName = c.product === "miconazole"
+    ? "Miconazole 2% cream"
+    : c.product === "trimovate"
+      ? "Trimovate cream (clobetasone butyrate 0.05%, oxytetracycline 3%, nystatin 100,000 units/g)"
+      : "";
+  const medicineDose = c.product === "miconazole"
+    ? "Apply thinly twice daily to the clean, dry affected area, topical; continue at least one week after symptoms clear (minimum 2 weeks, maximum 4 weeks)"
+    : c.product === "trimovate"
+      ? "Apply thinly once or twice daily, topical; maximum 7 to 10 days continuous use without review"
+      : "";
+
+  // Returns a record on every step so an exclusion can be saved as "not
+  // supplied" from the step it is raised on.
   const getConsultationData = (): ConsultationRecordData => ({
     patient: {
       firstName: patient.firstName, lastName: patient.lastName, dateOfBirth: patient.dateOfBirth,
       nhsNumber: patient.nhsNumber, phone: patient.phone, email: patient.email, address: patient.address,
-      gpName: patient.gpName, gpPractice: patient.gpPractice,
+      gpName: patient.gpName, gpPractice: patient.gpPractice, gpAddress: patient.gpAddress,
+      gpPhone: patient.gpPhone, gpEmail: patient.gpEmail, gpOdsCode: patient.gpOdsCode,
     },
-    clinicalData: { patient, consent, clinical: c, alerts } as unknown as Record<string, unknown>,
+    clinicalData: { patient, consent, clinical: c, alerts, hasStops, summary: effectiveSummary } as unknown as Record<string, unknown>,
     outcome: hasStops ? "not_supplied" : "completed",
+    ...(!hasStops && c.product
+      ? {
+          medicine: {
+            name: `${medicineName}${c.brand ? ` (${c.brand})` : ""}`,
+            dose: medicineDose,
+            duration: c.product === "miconazole" ? "2 to 4 weeks, one course" : "7 to 10 days, one course",
+            quantity: c.quantity === "one-30g-tube" ? "1 x 30 g tube" : c.quantity,
+          },
+        }
+      : {}),
     summary: {
-      pharmacistName: summary.pharmacistName, pharmacistGPhC: summary.pharmacistGPhC,
-      consultationDate: summary.consultationDate, consultationTime: summary.consultationTime,
+      pharmacistName: effectiveSummary.pharmacistName,
+      pharmacistGPhC: effectiveSummary.pharmacistGPhC,
+      pharmacyName: effectiveSummary.pharmacyName,
+      pharmacyAddress: effectiveSummary.pharmacyAddress,
+      consultationDate: effectiveSummary.consultationDate, consultationTime: effectiveSummary.consultationTime,
+      clinicalNotes: effectiveSummary.clinicalNotes,
     },
+    consent: { notifyGp: consent.notifyGp },
   });
 
   const onPatientChange = (field: keyof BasePatientDetails, value: any) =>
@@ -224,7 +268,7 @@ export default function FungalInfectionClient() {
                 <p>Do not use under occlusion. Avoid prolonged use. Avoid contact with eyes and mucous membranes. Not for the face, genitals, broken skin or long-term use without review. If the condition does not improve within seven days, or worsens, treatment and diagnosis should be re-evaluated.</p>
               </div>
             )}
-            <TextInput label="Brand supplied" value={c.brand} onChange={(v) => set({ brand: v })} placeholder={c.product === "trimovate" ? "Trimovate cream" : "e.g. Daktarin, or generic miconazole 2% cream"} />
+            <TextInput label="Brand supplied" value={c.brand} onChange={(v) => set({ brand: v })} placeholder={c.product === "trimovate" ? "Trimovate cream" : "e.g. Daktarin, or generic miconazole 2% cream"} required />
             <SelectInput label="Quantity supplied" value={c.quantity} onChange={(v) => set({ quantity: v })}
               options={[{ value: "one-30g-tube", label: "One 30 g tube per treatment course" }]} required />
           </div>
@@ -240,8 +284,8 @@ export default function FungalInfectionClient() {
               <Checkbox label="Hygiene advice given: wash affected skin daily and dry thoroughly (especially skin folds), loose-fitting cotton or moisture-wicking clothes, avoid scratching, do not share towels, wash towels, clothes and bed linen frequently" checked={c.hygieneAdvice} onChange={(v) => set({ hygieneAdvice: v })} />
               <Checkbox label="Patient information leaflet (PIL) supplied with the medication" checked={c.pilSupplied} onChange={(v) => set({ pilSupplied: v })} />
             </div>
-            <TextInput label="Pharmacist name" value={summary.pharmacistName} onChange={(v) => setSummary((p) => ({ ...p, pharmacistName: v }))} required />
-            <TextInput label="GPhC registration number" value={summary.pharmacistGPhC} onChange={(v) => setSummary((p) => ({ ...p, pharmacistGPhC: v }))} required />
+            <TextInput label="Pharmacist name" value={effectiveSummary.pharmacistName} onChange={(v) => setSummary((p) => ({ ...p, pharmacistName: v }))} required />
+            <TextInput label="GPhC registration number" value={effectiveSummary.pharmacistGPhC} onChange={(v) => setSummary((p) => ({ ...p, pharmacistGPhC: v }))} required />
             <TextArea label="Clinical notes (optional)" value={summary.clinicalNotes} onChange={(v) => setSummary((p) => ({ ...p, clinicalNotes: v }))} />
           </div>
         );
@@ -252,8 +296,11 @@ export default function FungalInfectionClient() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-6xl mx-auto px-4">
-        <div className="space-y-6">
+      <div className="max-w-6xl mx-auto px-4 print:px-0 print:py-0">
+        <div className="hidden print:block">
+          <FungalInfectionSummaryReport patient={patient} consent={consent} clinical={c} summary={effectiveSummary} alerts={alerts} />
+        </div>
+        <div className="print:hidden space-y-6">
           <p className="text-xs text-gray-500">{PGD_STRAPLINE}</p>
           <ProgressBar stepLabels={STEP_LABELS} currentStep={step} onStepClick={(s) => { if (completed.has(s) || s <= step) setStep(s); }} completedSteps={completed} hasErrors={!!validationError} />
           <StepWrapper
@@ -264,8 +311,9 @@ export default function FungalInfectionClient() {
             onPrev={prev}
             canProceed={canProceed}
             validationError={validationError}
-            isBlocked={hasStops && step === 3}
-            {...(step === STEP_LABELS.length - 1 ? { getConsultationData, onNewConsultation: () => { setStep(0); setCompleted(new Set()); setPatient({ ...initialPatientDetails }); setConsent({ ...initialConsent }); setSummary(initialSummary()); setC({ ...EMPTY_CLINICAL }); } } : {})}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
+            onNewConsultation={() => { setStep(0); setCompleted(new Set()); setPatient({ ...initialPatientDetails }); setConsent({ ...initialConsent }); setSummary(initialSummary()); setC({ ...EMPTY_CLINICAL }); }}
           >
             {stepBody()}
           </StepWrapper>

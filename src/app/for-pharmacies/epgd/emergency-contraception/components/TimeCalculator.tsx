@@ -1,25 +1,15 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React from "react";
 import { calculateHoursSinceUPSI } from "../lib/ec-clinical-logic";
 
 interface TimeCalculatorProps {
   upsiDate: string;
   upsiTime: string;
-  onHoursUpdate: (hours: number | null) => void;
 }
 
-export function TimeCalculator({
-  upsiDate,
-  upsiTime,
-  onHoursUpdate,
-}: TimeCalculatorProps) {
+export function TimeCalculator({ upsiDate, upsiTime }: TimeCalculatorProps) {
   const hours = calculateHoursSinceUPSI(upsiDate, upsiTime);
-
-  // Trigger callback on calculation
-  useEffect(() => {
-    onHoursUpdate(hours);
-  }, [hours, onHoursUpdate]);
 
   if (!upsiDate || !upsiTime) {
     return (

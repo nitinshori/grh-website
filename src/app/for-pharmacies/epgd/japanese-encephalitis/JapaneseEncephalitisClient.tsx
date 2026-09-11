@@ -1,9 +1,16 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 // Mounted directly: this tool does not use the shared StepWrapper,
-// which is where the other fifteen vaccination tools pick this up.
-import { VaccineSafetyChecks } from "../shared/components/VaccineSafetyChecks";
+// which is where the other fifteen vaccination tools pick this up. It is
+// wired into this tool's own Next button and record below, so the panel's
+// "Next stays locked" wording is true here too.
+import {
+  VaccineSafetyChecks,
+  getVaccineSafety,
+  clearVaccineSafety,
+  vaccineSafetySatisfied,
+} from "../shared/components/VaccineSafetyChecks";
 import {
   JapaneseEncephalitisConsultationState,
   JapaneseEncephalitisScreening,
@@ -22,11 +29,12 @@ import { useConsultationTracking, type ConsultationRecordData } from '../shared/
 import {
   evaluateJapaneseEncephalitisContraindications,
   hasHardStopContraindications,
-  getObservationPeriodRecommendation,
-  calculateNextDoseDate,
+  calculateNextDose,
   calculateAgeInMonths,
   getDoseVolume,
   isRapidScheduleOffLabel,
+  secondBoosterAllowed,
+  daysUntil,
   JE_PGD_VERSION,
 } from './japanese-encephalitis-clinical-logic';
 import {
@@ -38,6 +46,7 @@ import {
   validateAdministration,
   validatePostVaccineObs,
   validateAdvice,
+  validateSummary,
 } from './japanese-encephalitis-validation';
 import { TextInput, Checkbox, SelectInput, NumberInput, TextArea } from '../shared/components/FormInputs';
 import { ProgressBar } from '../shared/components/ProgressBar';
@@ -68,8 +77,8 @@ export default function JapaneseEncephalitisClient({
   initialPatient,
 }: JapaneseEncephalitisClientProps): React.ReactNode {
   const [state, setState] = useState<JapaneseEncephalitisConsultationState>({
-    patient: initialPatient || initialPatientDetails,
-    consent: initialConsent,
+    patient: { ...(initialPatient || initialPatientDetails) },
+    consent: { ...initialConsent },
     screening: initialJapaneseEncephalitisScreening(),
     contraindications: initialJapaneseEncephalitisContraindications(),
     administration: initialJapaneseEncephalitisVaccineAdministration(),
@@ -102,6 +111,33 @@ export default function JapaneseEncephalitisClient({
   const underSixteen = patientAge !== null && patientAge < 16;
   const doseVolume = getDoseVolume(patientAgeMonths);
   const rapidOffLabel = isRapidScheduleOffLabel(patientAge);
+  const daysToDeparture = daysUntil(state.screening.departureDate);
+  const latePresenter = daysToDeparture !== null && daysToDeparture >= 0 && daysToDeparture < 14;
+
+  // Contraindications and alerts are derived live from what is on screen, so
+  // a stop raised on any step is enforced on that step and every later one,
+  // never against a copy taken when a step was left.
+  const live = useMemo(
+    () => evaluateJapaneseEncephalitisContraindications(state.screening, patientAgeMonths, patientAge),
+    [state.screening, patientAgeMonths, patientAge]
+  );
+  const hasStops = hasHardStopContraindications(live.contraindications);
+
+  // Next dose is computed from the schedule and the dose number together.
+  const nextDose = useMemo(
+    () => calculateNextDose(state.administration.schedule, state.administration.doseNumber, patientAge),
+    [state.administration.schedule, state.administration.doseNumber, patientAge]
+  );
+  /** State as it is recorded and printed: live alerts and the computed next-due date folded in. */
+  const recordState = useMemo<JapaneseEncephalitisConsultationState>(
+    () => ({
+      ...state,
+      contraindications: live.contraindications,
+      alerts: live.alerts,
+      administration: { ...state.administration, nextDueDate: nextDose.date },
+    }),
+    [state, live, nextDose.date]
+  );
 
   /** Generic setter for screening fields added for PGD v005. */
   const setScreening = useCallback(
@@ -302,19 +338,10 @@ export default function JapaneseEncephalitisClient({
   }, []);
 
   const handleScheduleChange = useCallback((value: string): void => {
-    setState((prev) => {
-      const nextDueDate = value
-        ? calculateNextDoseDate(new Date().toISOString().split('T')[0], value as any)
-        : '';
-      return {
-        ...prev,
-        administration: {
-          ...prev.administration,
-          schedule: value as any,
-          nextDueDate,
-        },
-      };
-    });
+    setState((prev) => ({
+      ...prev,
+      administration: { ...prev.administration, schedule: value as any },
+    }));
   }, []);
 
   const handleAdministeredByChange = useCallback((value: string): void => {
@@ -331,12 +358,6 @@ export default function JapaneseEncephalitisClient({
     }));
   }, []);
 
-  const handleNextDueDateChange = useCallback((value: string): void => {
-    setState((prev) => ({
-      ...prev,
-      administration: { ...prev.administration, nextDueDate: value },
-    }));
-  }, []);
 
   // Post-vaccine observation handlers
   const handleObservationPeriodChange = useCallback((value: string): void => {
@@ -370,6 +391,7 @@ export default function JapaneseEncephalitisClient({
   const handleAnaphylaxisKitChange = useCallback((value: boolean): void => {
     setState((prev) => ({
       ...prev,
+      administration: { ...prev.administration, anaphylaxisKitChecked: value },
       postVaccineObs: { ...prev.postVaccineObs, anaphylaxisKitChecked: value },
     }));
   }, []);
@@ -446,9 +468,21 @@ export default function JapaneseEncephalitisClient({
         break;
       }
       case 7: {
-        // Summary can be skipped
+        const result = validateSummary(state.summary);
+        errors.push(...result.errors);
         break;
       }
+    }
+
+    // A stop anywhere blocks Next on every step. The route out is the
+    // exclusion record (below), not a later step.
+    const stop = live.alerts.find((a) => a.severity === 'stop');
+    if (stop && stepNum < 7) {
+      errors.push(`Exclusion present: ${stop.message}. Record the advice given and save the exclusion record.`);
+    }
+    // The shared pre-vaccination safety panel: adrenaline confirmed before proceeding.
+    if (!vaccineSafetySatisfied('japanese-encephalitis')) {
+      errors.push('Confirm in the pre-vaccination safety checks that adrenaline 1 in 1,000 is immediately available');
     }
 
     if (errors.length > 0) {
@@ -462,49 +496,21 @@ export default function JapaneseEncephalitisClient({
       return newErrors;
     });
     return true;
-  }, [state, validationErrors, patientAge]);
+  }, [state, validationErrors, patientAge, live.alerts]);
 
   const handleNextStep = useCallback((): void => {
     if (!validateStep(state.step)) {
       return;
     }
 
-    // Evaluate contraindications on leaving Travel Assessment (step 2) and
-    // again on leaving Medical History (step 3), once pregnancy, allergy,
-    // breastfeeding and temperature have been entered.
-    if (state.step === 2 || state.step === 3) {
-      const { contraindications, alerts } = evaluateJapaneseEncephalitisContraindications(
-        state.screening,
-        patientAgeMonths,
-        patientAge
-      );
-      setState((prev) => ({
-        ...prev,
-        contraindications,
-        alerts,
-      }));
-    }
-
-    // On step 5 (Administration), set recommended observation period
-    if (state.step === 5) {
-      const recommendedPeriod = getObservationPeriodRecommendation(
-        state.screening
-      );
-      setState((prev) => ({
-        ...prev,
-        postVaccineObs: {
-          ...prev.postVaccineObs,
-          observationPeriod: recommendedPeriod,
-        },
-      }));
-    }
-
+    // The observation period is chosen by the pharmacist on the next step;
+    // it is no longer pre-set to 30 minutes for every patient.
     setCompletedSteps((prev) => new Set(prev).add(state.step));
     setState((prev) => ({
       ...prev,
       step: Math.min(prev.step + 1, STEP_LABELS.length - 1),
     }));
-  }, [state, patientAge, patientAgeMonths, validateStep]);
+  }, [state, validateStep]);
 
   const handlePreviousStep = useCallback((): void => {
     setState((prev) => ({
@@ -514,10 +520,14 @@ export default function JapaneseEncephalitisClient({
   }, []);
 
   // ─── Consultation tracking + record saving ───
-  const { markComplete, saveRecord } = useConsultationTracking('japanese-encephalitis', state.step);
+  const { markComplete, saveRecord, reset: resetTracking } = useConsultationTracking('japanese-encephalitis', state.step);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  /** True once an exclusion record has been saved: the summary prints as "not supplied". */
+  const [excludedRecord, setExcludedRecord] = useState(false);
 
   const getConsultationData = useCallback((): ConsultationRecordData => {
+    const blocked = hasStops;
+    const stopMessages = live.alerts.filter((a) => a.severity === 'stop').map((a) => a.message);
     return {
       patient: {
         firstName: state.patient.firstName,
@@ -530,30 +540,98 @@ export default function JapaneseEncephalitisClient({
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
       },
-      clinicalData: state as unknown as Record<string, unknown>,
-      outcome: hasHardStopContraindications(state.contraindications) ? 'not_supplied' : 'completed',
+      clinicalData: {
+        ...recordState,
+        pgdVersion: JE_PGD_VERSION,
+        doseVolume: blocked ? null : doseVolume,
+        nextDoseNote: nextDose.note,
+        exclusion: blocked
+          ? { reasons: stopMessages, advice: state.screening.exclusionAdvice, referral: state.screening.exclusionReferral }
+          : null,
+        adverseReaction: state.postVaccineObs.adverseReaction ? state.postVaccineObs.reactionDetails : null,
+        // The shared pre-vaccination safety panel is attached here because this
+        // tool does not go through StepWrapper, which does it for the others.
+        vaccineSafetyChecks: getVaccineSafety('japanese-encephalitis'),
+      } as unknown as Record<string, unknown>,
+      outcome: blocked
+        ? (state.screening.exclusionReferral && state.screening.exclusionReferral !== 'declined' ? 'referred' : 'not_supplied')
+        : 'completed',
+      ...(blocked
+        ? {}
+        : {
+            medicine: {
+              name: 'Ixiaro (Japanese encephalitis vaccine, inactivated, adsorbed)',
+              dose: `${doseVolume || 'dose'} ${state.administration.route === 'deep-subcutaneous' ? 'deep subcutaneous' : 'intramuscular'}, ${state.administration.doseNumber || 'dose'}${state.administration.schedule ? `, ${state.administration.schedule === 'accelerated' ? 'rapid (day 0, day 7)' : 'conventional (day 0, day 28)'}` : ''}`,
+              duration: nextDose.date ? `Next dose due ${nextDose.date}` : nextDose.note,
+              quantity: 1,
+            },
+          }),
       summary: {
         pharmacistName: state.summary.pharmacistName,
         pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacyName: state.summary.pharmacyName,
+        pharmacyAddress: state.summary.pharmacyAddress,
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: !!state.consent.notifyGp },
     };
-  }, [state]);
+  }, [state, recordState, hasStops, live, doseVolume, nextDose]);
 
   const handlePrint = useCallback(async (): Promise<void> => {
+    // An excluded patient's record was saved by the exclusion route; this
+    // only prints it. A vaccination record cannot be saved while a stop exists.
+    if (hasStops) {
+      if (excludedRecord) window.print();
+      return;
+    }
+    // The record's pharmacist identity must not rest on autofill: name and
+    // GPhC number are validated before anything is saved.
+    if (!validateStep(7)) return;
     markComplete();
     setSaveStatus('saving');
     const success = await saveRecord(getConsultationData());
     setSaveStatus(success ? 'saved' : 'error');
     window.print();
-  }, [markComplete, saveRecord, getConsultationData]);
+  }, [markComplete, saveRecord, getConsultationData, validateStep, hasStops, excludedRecord]);
+
+  /**
+   * Exclusion route. The document requires the reason, the advice given and
+   * the decision reached to be documented, and the GP informed or the patient
+   * referred. Saves the record as referred or not supplied and moves to the
+   * summary, which prints as "not supplied".
+   */
+  const handleSaveExclusion = useCallback(async (): Promise<void> => {
+    const errors: string[] = [];
+    if (!state.screening.exclusionAdvice.trim()) errors.push('Record the advice given and the decision reached');
+    if (!state.screening.exclusionReferral) errors.push('Record whether the GP was informed or a referral made');
+    // Pharmacist name and GPhC come from the profile autofill; an exclusion
+    // record with them blank is still better than none, so they are not
+    // required here (the summary step is unreachable while a stop exists).
+    if (errors.length > 0) {
+      setValidationErrors(new Map(validationErrors).set(state.step, errors));
+      return;
+    }
+    setValidationErrors(new Map());
+    markComplete();
+    setSaveStatus('saving');
+    const success = await saveRecord(getConsultationData());
+    setSaveStatus(success ? 'saved' : 'error');
+    setExcludedRecord(true);
+    setState((prev) => ({ ...prev, step: STEP_LABELS.length - 1 }));
+  }, [state, validationErrors, markComplete, saveRecord, getConsultationData]);
 
   const handleNewConsultation = useCallback((): void => {
     if (!window.confirm('Start a new consultation? The current consultation data will be cleared.')) return;
+    // Forget the saved record and the shared safety panel values, or the
+    // next patient is never written and inherits this one's batch number.
+    resetTracking();
+    clearVaccineSafety('japanese-encephalitis');
+    setExcludedRecord(false);
     setState({
-      patient: initialPatient || initialPatientDetails,
-      consent: initialConsent,
+      patient: { ...(initialPatient || initialPatientDetails) },
+      consent: { ...initialConsent },
       screening: initialJapaneseEncephalitisScreening(),
       contraindications: initialJapaneseEncephalitisContraindications(),
       administration: initialJapaneseEncephalitisVaccineAdministration(),
@@ -566,7 +644,7 @@ export default function JapaneseEncephalitisClient({
     setCompletedSteps(new Set());
     setValidationErrors(new Map());
     setSaveStatus('idle');
-  }, []);
+  }, [initialPatient, resetTracking]);
 
   const getStepAlerts = useCallback((): React.ReactNode => {
     const travelCodes = [
@@ -579,10 +657,12 @@ export default function JapaneseEncephalitisClient({
       'AGE_OVER_65_JE',
       'AGE_UNDER_2_MONTHS_JE',
     ];
-    const stepAlerts = state.alerts.filter((alert: ClinicalAlert) => {
-      // Travel and age alerts (raised on leaving step 2) show on the medical
-      // history step; every alert shows on the contraindications review.
-      if (state.step === 4) return true;
+    const stepAlerts = live.alerts.filter((alert: ClinicalAlert) => {
+      // A stop shows on every step. Travel and age cautions show from the
+      // medical history step; every alert shows on the contraindications
+      // review and after.
+      if (alert.severity === 'stop') return true;
+      if (state.step >= 4) return true;
       if (state.step === 3) return travelCodes.includes(alert.code);
       return false;
     });
@@ -590,14 +670,47 @@ export default function JapaneseEncephalitisClient({
     if (stepAlerts.length === 0) return null;
 
     return <AlertBanner alerts={stepAlerts} />;
-  }, [state.alerts, state.step]);
+  }, [live.alerts, state.step]);
 
-  const canProceedFromStep = useCallback((): boolean => {
-    if (state.step === 4 && hasHardStopContraindications(state.contraindications)) {
-      return false;
-    }
-    return true;
-  }, [state.step, state.contraindications]);
+  // Next is disabled on every step while a stop exists; the only route out is
+  // the exclusion record.
+  const canProceedFromStep = useCallback((): boolean => !hasStops, [hasStops]);
+
+  const exclusionOutcomeBlock = hasStops && state.step < 7 ? (
+    <div className="mb-6 space-y-3 p-4 bg-red-50 border-2 border-red-300 rounded-lg print:hidden">
+      <p className="text-red-900 font-semibold">Vaccination is excluded under this PGD. Record the exclusion.</p>
+      <p className="text-sm text-red-800">
+        Discuss the reason for exclusion with the patient and ensure they understand it. Advise on alternative options (GP, travel clinic or specialist service) and give bite avoidance advice. Where the exclusion is time critical, make the urgency of the referral explicit.
+      </p>
+      <TextArea
+        label="Advice given and decision reached"
+        value={state.screening.exclusionAdvice}
+        onChange={(v) => setScreening({ exclusionAdvice: v })}
+        placeholder="e.g. Short urban stay, vaccination not recommended: reasoning explained, bite avoidance advice given (DEET, cover up at dusk and dawn, treated nets)"
+        required
+      />
+      <SelectInput
+        label="GP informed or referral"
+        value={state.screening.exclusionReferral}
+        onChange={(v) => setScreening({ exclusionReferral: v as JapaneseEncephalitisScreening['exclusionReferral'] })}
+        options={[
+          { value: 'gp', label: 'GP informed or referred' },
+          { value: 'travel-clinic', label: 'Referred to a travel clinic' },
+          { value: 'specialist', label: 'Referred to a specialist service (e.g. pregnancy: individual assessment)' },
+          { value: 'urgent', label: 'Urgent referral, urgency made explicit (time critical)' },
+          { value: 'declined', label: 'No referral needed or declined; advice given (e.g. low risk itinerary)' },
+        ]}
+        required
+      />
+      <button
+        onClick={handleSaveExclusion}
+        disabled={saveStatus === 'saving'}
+        className="px-5 py-2.5 rounded-lg text-sm font-semibold border border-red-400 text-red-800 hover:bg-red-100 transition disabled:opacity-50"
+      >
+        {saveStatus === 'saving' ? 'Saving...' : 'Save exclusion record (not supplied) and go to the record'}
+      </button>
+    </div>
+  ) : null;
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
@@ -619,7 +732,10 @@ export default function JapaneseEncephalitisClient({
         <ProgressBar
           currentStep={state.step}
           stepLabels={STEP_LABELS}
-          onStepClick={() => {}}
+          onStepClick={(s) => {
+            // Backwards only, and never out of a saved exclusion record.
+            if (s < state.step && !excludedRecord) setState((prev) => ({ ...prev, step: s }));
+          }}
           completedSteps={completedSteps}
           hasErrors={validationErrors.has(state.step)}
         />
@@ -641,6 +757,7 @@ export default function JapaneseEncephalitisClient({
           )}
 
           {getStepAlerts()}
+          {exclusionOutcomeBlock}
 
           {state.step === 0 && (
             <PatientDetailsStep
@@ -740,13 +857,30 @@ export default function JapaneseEncephalitisClient({
                     onChange={handleTravelDurationChange}
                     placeholder="e.g., 2 weeks, 1 month"
                   />
-                  <Checkbox
-                    label="Sufficient time before travel to complete the primary course"
-                    checked={state.screening.sufficientTimeBeforeTravel}
-                    onChange={(v) => setScreening({ sufficientTimeBeforeTravel: v })}
-                    description="Inclusion criterion: ideally at least one week between the second dose and potential exposure. Conventional course day 0 and day 28; rapid course day 0 and day 7 (licensed for adults 18 to 64 only)."
-                    required
-                  />
+                  {daysToDeparture !== null && (
+                    <p className="text-xs text-gray-600">{daysToDeparture < 0 ? `Departure date is ${-daysToDeparture} days in the past: check the dates` : `${daysToDeparture} days to departure`}</p>
+                  )}
+                  {latePresenter ? (
+                    <Checkbox
+                      label="Insufficient time to complete the primary course before travel: risk assessed, patient told protection will be incomplete, course to be completed on return"
+                      checked={state.screening.insufficientTimeAcknowledged}
+                      onChange={(v) => setScreening({ insufficientTimeAcknowledged: v, sufficientTimeBeforeTravel: false })}
+                      description="Under 14 days to departure: even the rapid course (day 0 and day 7) cannot be completed a week before exposure. The second dose may still be given before exposure and the course should be completed rather than abandoned."
+                      required
+                    />
+                  ) : (
+                    <Checkbox
+                      label={daysToDeparture !== null && daysToDeparture < 35
+                        ? "Sufficient time before travel to complete the primary course using the rapid course (day 0 and day 7)"
+                        : "Sufficient time before travel to complete the primary course"}
+                      checked={state.screening.sufficientTimeBeforeTravel}
+                      onChange={(v) => setScreening({ sufficientTimeBeforeTravel: v, insufficientTimeAcknowledged: false })}
+                      description={daysToDeparture !== null && daysToDeparture < 35
+                        ? "Under 35 days: the conventional course (day 0 and day 28) cannot be completed a week before travel. The rapid course is licensed for adults 18 to 64 only; otherwise off-label with documented consent."
+                        : "Inclusion criterion: ideally at least one week between the second dose and potential exposure. Conventional course day 0 and day 28; rapid course day 0 and day 7 (licensed for adults 18 to 64 only)."}
+                      required
+                    />
+                  )}
                 </div>
               </div>
 
@@ -785,17 +919,17 @@ export default function JapaneseEncephalitisClient({
 
               <div className="space-y-4">
                 <NumberInput
-                  label="Body temperature (°C)"
+                  label="Body temperature (°C), optional"
                   value={state.screening.temperature}
                   onChange={handleTemperatureChange}
-                  placeholder="36.5"
+                  placeholder="Record if measured"
                 />
 
                 <Checkbox
                   label="Acute severe febrile illness"
                   checked={state.screening.severeFebrileIllness}
                   onChange={handleSevereFebrileChange}
-                  description="Exclusion: postpone until recovered. A recorded temperature of 39 C or above also triggers this."
+                  description="Exclusion: postpone until recovered. The document sets no temperature threshold; this is the pharmacist's assessment."
                 />
 
                 <Checkbox
@@ -933,16 +1067,6 @@ export default function JapaneseEncephalitisClient({
                 </div>
               </div>
 
-              {!canProceedFromStep() && (
-                <div className="p-4 bg-red-50 border-2 border-red-200 rounded-lg">
-                  <p className="text-red-900 font-semibold">
-                    Vaccination is excluded under this PGD. Do not proceed.
-                  </p>
-                  <p className="text-sm text-red-800 mt-2">
-                    Discuss the reason for exclusion with the patient and ensure they understand it. Advise on alternative options (GP, travel clinic or specialist service). Document the reason for exclusion, the advice given and the decision reached. Inform or refer to the GP as appropriate, and where the exclusion is time critical make the urgency explicit.
-                  </p>
-                </div>
-              )}
             </div>
           )}
 
@@ -967,11 +1091,20 @@ export default function JapaneseEncephalitisClient({
                   </p>
                 </div>
 
+                <Checkbox
+                  label="Adrenaline 1:1000 injection immediately available, with a written anaphylaxis protocol, BEFORE the vaccine is given"
+                  checked={state.administration.anaphylaxisKitChecked}
+                  onChange={handleAnaphylaxisKitChange}
+                  description="Required whenever a vaccine is administered under this PGD; protocol consistent with current Resuscitation Council UK guidance. Confirmed here, before the batch is drawn up, not retrospectively."
+                  required
+                />
+
                 <TextInput
                   label="Batch number"
                   value={state.administration.batchNumber}
                   onChange={handleBatchChange}
                   placeholder="e.g., ABC123456"
+                  disabled={!state.administration.anaphylaxisKitChecked}
                 />
 
                 <TextInput
@@ -998,11 +1131,14 @@ export default function JapaneseEncephalitisClient({
                   value={state.administration.route}
                   onChange={(v) => setAdministration({ route: v as JapaneseEncephalitisVaccineAdministration['route'] })}
                   options={[
-                    { value: 'intramuscular', label: 'Intramuscular' },
-                    { value: 'deep-subcutaneous', label: 'Deep subcutaneous (bleeding disorders, thrombocytopenia or anticoagulation)' },
+                    ...(state.screening.bleedingDisorder ? [] : [{ value: 'intramuscular', label: 'Intramuscular' }]),
+                    ...(state.screening.bleedingDisorder ? [{ value: 'deep-subcutaneous', label: 'Deep subcutaneous (bleeding disorders, thrombocytopenia or anticoagulation)' }] : []),
                   ]}
                   required
                 />
+                {!state.screening.bleedingDisorder && (
+                  <p className="text-xs text-gray-500">Deep subcutaneous is offered only where a bleeding disorder, thrombocytopenia or anticoagulation was recorded on the Medical History step.</p>
+                )}
                 {state.screening.bleedingDisorder && state.administration.route !== 'deep-subcutaneous' && (
                   <p className="text-xs text-amber-700">Bleeding disorder, thrombocytopenia or anticoagulation recorded: give by deep subcutaneous injection instead.</p>
                 )}
@@ -1015,7 +1151,7 @@ export default function JapaneseEncephalitisClient({
                     { value: '1st', label: '1st dose (primary course)' },
                     { value: '2nd', label: '2nd dose (primary course)' },
                     { value: 'booster', label: 'First booster (12 to 24 months after primary course)' },
-                    { value: 'second-booster', label: 'Second booster (adults 18 to 64 at continued risk, 10 years after first booster)' },
+                    ...(secondBoosterAllowed(patientAge) ? [{ value: 'second-booster', label: 'Second booster (adults 18 to 64 at continued risk, 10 years after first booster)' }] : []),
                   ]}
                 />
 
@@ -1040,12 +1176,12 @@ export default function JapaneseEncephalitisClient({
                   </div>
                 )}
 
-                <TextInput
-                  label="Next dose due date"
-                  type="date"
-                  value={state.administration.nextDueDate}
-                  onChange={handleNextDueDateChange}
-                />
+                {state.administration.doseNumber && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-900">
+                    <p className="font-semibold">{nextDose.date ? `Next dose due: ${nextDose.date}` : 'No further dose scheduled'}</p>
+                    <p className="text-xs mt-1">{nextDose.note}. Computed from the schedule and the dose number; give it to the patient in writing.</p>
+                  </div>
+                )}
 
                 <TextInput
                   label="Administered by (name)"
@@ -1090,14 +1226,6 @@ export default function JapaneseEncephalitisClient({
                     checked={state.postVaccineObs.observationCompleted}
                     onChange={handleObservationCompletedChange}
                     description="Observe every patient for 15 minutes after vaccination, seated, and record that the observation period was completed. Procedures in place to prevent injury from a vasovagal faint."
-                    required
-                  />
-
-                  <Checkbox
-                    label="Adrenaline 1:1000 injection immediately available, with a written anaphylaxis protocol"
-                    checked={state.postVaccineObs.anaphylaxisKitChecked}
-                    onChange={handleAnaphylaxisKitChange}
-                    description="Required whenever a vaccine is administered under this PGD; protocol consistent with current Resuscitation Council UK guidance."
                     required
                   />
 
@@ -1202,7 +1330,12 @@ export default function JapaneseEncephalitisClient({
 
           {state.step === 7 && (
             <>
-              <JapaneseEncephalitisSummaryReport state={state} onPrint={handlePrint} />
+              <JapaneseEncephalitisSummaryReport state={recordState} onPrint={handlePrint} blocked={hasStops} nextDoseNote={nextDose.note} />
+              {hasStops && !excludedRecord && (
+                <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg print:hidden">
+                  <p className="text-sm text-red-800">An exclusion is present. Go back and save the exclusion record; a vaccination record cannot be saved or printed while a stop exists.</p>
+                </div>
+              )}
               {saveStatus !== 'idle' && (
                 <div className={`mt-4 px-4 py-3 rounded-lg print:hidden ${
                   saveStatus === 'saving' ? 'bg-blue-50 border border-blue-200' :
@@ -1236,7 +1369,7 @@ export default function JapaneseEncephalitisClient({
           <div className="flex justify-between mt-8 pt-8 border-t border-gray-200">
             <button
               onClick={handlePreviousStep}
-              disabled={state.step === 0}
+              disabled={state.step === 0 || excludedRecord}
               className="px-6 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
               Previous

@@ -5,7 +5,8 @@ import {
   RabiesPostVaccineObs,
   RabiesAdvice,
 } from './rabies-types';
-import { BasePatientDetails, BaseConsent } from '../shared/types';
+import { BasePatientDetails, BaseConsent, BaseSummary } from '../shared/types';
+import { daysFromToday, minimumIntervalDays } from './rabies-clinical-logic';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -78,8 +79,14 @@ export function validateScreening(screening: RabiesScreening): ValidationResult 
   if (screening.indication !== 'occupational-uk' && !screening.departureDate) {
     errors.push('Departure date is required');
   }
-  if (!screening.sufficientTimeBeforeTravel) {
-    errors.push('Confirm there is sufficient time before travel to complete the chosen course (inclusion criterion)');
+  if (screening.indication !== 'occupational-uk') {
+    if (!screening.sufficientTimeBeforeTravel) {
+      errors.push('Confirm there is sufficient time before travel to complete the chosen course (inclusion criterion)');
+    }
+    const days = daysFromToday(screening.departureDate);
+    if (days !== null && days < 0) {
+      errors.push('Departure date is in the past');
+    }
   }
   if (screening.highRiskActivities.length === 0 && !screening.otherActivities?.trim()) {
     errors.push('Select at least one activity category or describe the exposure risk');
@@ -102,6 +109,9 @@ export function validateMedicalHistory(screening: RabiesScreening): ValidationRe
   }
   if (screening.eggAllergy && !screening.eggAllergySeverity?.trim()) {
     errors.push('Please specify egg allergy severity');
+  }
+  if (screening.antibioticHypersensitivity && !screening.hypersensitivityIncludesNeomycin) {
+    errors.push('Antibiotic hypersensitivity: record whether it extends to neomycin (Rabipur contains traces of neomycin)');
   }
   if (screening.pregnant && !screening.pregnancyRiskAssessment?.trim()) {
     errors.push('Pregnancy: record the risk assessment (PGD caution)');
@@ -129,9 +139,17 @@ export function validateAdministration(
   administration: RabiesVaccineAdministration,
   screening: RabiesScreening,
   contraindications: RabiesContraindications,
-  ageYears: number | null
+  ageYears: number | null,
+  adrenalineConfirmed: boolean = true
 ): ValidationResult {
   const errors: string[] = [];
+
+  // Adrenaline must be immediately available whenever a vaccine is
+  // administered under this PGD: confirmed before the injection is recorded,
+  // not on the advice step afterwards.
+  if (!adrenalineConfirmed) {
+    errors.push('Confirm adrenaline 1 in 1,000, the written anaphylaxis protocol and a telephone are immediately available before administering');
+  }
 
   if (!administration.product) {
     errors.push('Select the product in hand: Rabipur (1.0 mL) or Verorab (0.5 mL)');
@@ -140,7 +158,10 @@ export function validateAdministration(
     errors.push('Severe egg allergy: Rabipur is excluded (chick embryo cell residues including ovalbumin). Use Verorab or refer.');
   }
   if (administration.product === 'verorab' && contraindications.antibioticHypersensitivity) {
-    errors.push('Hypersensitivity to polymyxin B, streptomycin or neomycin: Verorab is excluded. Use Rabipur where appropriate or refer.');
+    errors.push('Hypersensitivity to polymyxin B, streptomycin or neomycin: Verorab is excluded. Use Rabipur only where the hypersensitivity does not extend to neomycin, otherwise refer.');
+  }
+  if (administration.product === 'rabipur' && contraindications.neomycinHypersensitivity) {
+    errors.push('Neomycin hypersensitivity: Rabipur contains traces of neomycin and is excluded. Neither product can be given; refer.');
   }
   if (!administration.batchNumber?.trim()) {
     errors.push('Batch number is required');
@@ -186,6 +207,54 @@ export function validateAdministration(
       errors.push('Accelerated course is off-label: record that the consent script was given and consent to off-label use obtained, naming the day 0, 3 and 7 schedule');
     }
   }
+
+  // Interval since the previous dose. Dose number used to be a free select
+  // with no date behind it, so a second dose could be recorded the day after
+  // the first and the next-due dates printed from today rather than the
+  // course's own day 0.
+  const minInterval = minimumIntervalDays(administration.schedule, administration.doseNumber);
+  if (administration.doseNumber && administration.doseNumber !== '1st') {
+    if (!administration.previousDoseDate) {
+      errors.push('Record the date of the previous dose in this course');
+    } else {
+      const daysSincePrevious = -(daysFromToday(administration.previousDoseDate) ?? 0);
+      if (daysFromToday(administration.previousDoseDate) === null) {
+        errors.push('Previous dose date is not a valid date');
+      } else if (daysSincePrevious < 0) {
+        errors.push('Previous dose date cannot be in the future');
+      } else if (minInterval !== null && daysSincePrevious < minInterval) {
+        errors.push(`Too soon: this dose is not due until at least ${minInterval} days after the previous dose (${daysSincePrevious} days ago)`);
+      }
+    }
+  }
+
+  // Sufficient time before travel to complete the chosen course (inclusion
+  // criterion), and the accelerated course only where the conventional one
+  // genuinely cannot be completed.
+  if (screening.indication !== 'occupational-uk' && screening.departureDate) {
+    const daysToDeparture = daysFromToday(screening.departureDate);
+    if (daysToDeparture !== null) {
+      if (administration.doseNumber === '1st') {
+        if (administration.schedule === 'standard' && daysToDeparture < 21) {
+          errors.push(`Departure in ${daysToDeparture} days: the conventional course cannot be completed before travel (third dose not before day 21). Use the accelerated course (18 and over, off-label) or refer.`);
+        }
+        if (administration.schedule === 'accelerated' && daysToDeparture >= 21) {
+          errors.push(`Departure in ${daysToDeparture} days: there is time to complete the conventional course (third dose from day 21), so the off-label accelerated course may not be used.`);
+        }
+        if (administration.schedule === 'accelerated' && daysToDeparture < 7) {
+          errors.push(`Departure in ${daysToDeparture} days: not even the accelerated course can be completed before travel. The inclusion criterion is not met; refer to a travel clinic.`);
+        }
+      }
+      if (administration.doseNumber === '2nd' && administration.previousDoseDate) {
+        const sinceDay0 = -(daysFromToday(administration.previousDoseDate) ?? 0);
+        const daysNeeded = administration.schedule === 'accelerated' ? 7 : 21;
+        if (sinceDay0 + daysToDeparture < daysNeeded) {
+          errors.push('The third dose of the chosen course cannot be given before departure. Record the plan for completing the course, or refer.');
+        }
+      }
+    }
+  }
+
   if (!administration.administeredBy?.trim()) {
     errors.push('Administrator name is required');
   }
@@ -204,9 +273,6 @@ export function validatePostVaccineObs(
 ): ValidationResult {
   const errors: string[] = [];
 
-  if (!postVaccineObs.observationPeriod) {
-    errors.push('Observation period must be specified');
-  }
   if (!postVaccineObs.observationCompleted) {
     errors.push('Record that the 15 minute observation period was completed');
   }
@@ -239,5 +305,25 @@ export function validateAdvice(advice: RabiesAdvice): ValidationResult {
     errors.push('All advice points must be acknowledged');
   }
 
+  return { isValid: errors.length === 0, errors };
+}
+
+export function validateSummaryStep(summary: BaseSummary): ValidationResult {
+  const errors: string[] = [];
+  if (!summary.pharmacistName?.trim()) {
+    errors.push('Pharmacist name is required');
+  }
+  if (!summary.pharmacistGPhC?.trim()) {
+    errors.push('GPhC registration number is required');
+  }
+  return { isValid: errors.length === 0, errors };
+}
+
+/** Advice given to an excluded patient must be recorded (PGD records row). */
+export function validateExclusionRecord(screening: RabiesScreening): ValidationResult {
+  const errors: string[] = [];
+  if (!screening.exclusionAdviceGiven?.trim()) {
+    errors.push('Record the advice given to the patient and the decision reached (referral, postponement or alternative service)');
+  }
   return { isValid: errors.length === 0, errors };
 }

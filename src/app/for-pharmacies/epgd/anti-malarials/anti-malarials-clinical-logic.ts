@@ -18,6 +18,12 @@ import type {
 export const AM_PGD_VERSION = 'Malaria Chemoprophylaxis PGD v008, issued 11 September 2026';
 
 // ─── Calculate trip duration ───
+//
+// Days in the malarious area are counted INCLUSIVELY: the day of arrival and
+// the day of departure both count, because a tablet is due on each of them.
+// Arrive on the 1st and leave on the 15th is 15 days, not 14. The old
+// return-minus-departure count left every course one tablet short
+// (adversarial review, 11 Sep 2026).
 
 export function calculateTripDuration(
   departureDate: string,
@@ -29,12 +35,14 @@ export function calculateTripDuration(
   const returnD = new Date(returnDate);
 
   if (isNaN(departure.getTime()) || isNaN(returnD.getTime())) return null;
-  if (returnD <= departure) return null;
+  departure.setHours(0, 0, 0, 0);
+  returnD.setHours(0, 0, 0, 0);
+  if (returnD < departure) return null;
 
   const diffMs = returnD.getTime() - departure.getTime();
-  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
 
-  return diffDays;
+  return diffDays + 1;
 }
 
 // ─── Days from today until departure (mefloquine needs 2 to 3 weeks) ───
@@ -50,6 +58,18 @@ export function calculateDaysUntilDeparture(departureDate: string): number | nul
 }
 
 // ─── Atovaquone/proguanil weight band (PGD v008 Appendix 1) ───
+//
+// Fractional weights: the document's bands are written in whole kilograms
+// (11 to 20, 21 to 30, 31 to 40, over 40). A weight above the top of a band
+// is read as "over" that band and moves into the next one, so 20.5 kg is
+// dosed as 21 to 30 kg and 40.5 kg as over 40 kg. This matches the
+// document's own "over 40kg" wording and UKMEAG's "to x.9" convention at
+// every boundary except exactly 20.0, 30.0 and 40.0 kg, where the document's
+// whole-kg table is followed. The convention is stated on screen.
+
+export const WEIGHT_BAND_CONVENTION =
+  'Weights are read against the PGD bands as written: a weight above the top of a band moves into the next band ' +
+  '(20.5 kg is dosed as 21 to 30 kg; 40.5 kg as over 40 kg; 45.5 kg as over 45 kg).';
 
 export interface APWeightBand {
   label: string;
@@ -443,6 +463,18 @@ export function generateAMAlerts(
     });
   }
 
+  if (daysUntilDeparture !== null && daysUntilDeparture >= 0 && daysUntilDeparture < 2) {
+    alerts.push({
+      severity: 'caution',
+      code: 'DEPARTURE_IMMINENT',
+      message: daysUntilDeparture === 0 ? 'Departing today' : 'Departing tomorrow',
+      detail:
+        'Atovaquone/proguanil and doxycycline are started 1 to 2 days before entering the malarious area. The full ' +
+        'lead-in cannot be met: tell the patient to take the first dose today and record this. Bite avoidance advice ' +
+        'matters more than usual for the first days of the trip.',
+    });
+  }
+
   // ─── Maximum treatment periods ───
 
   if (travel.tripDuration !== null && travel.tripDuration > 365) {
@@ -615,12 +647,36 @@ export interface MedicineRecommendation {
   dose: string;
   startTiming: string;
   continuationAfterReturn: string;
+  /** Human-readable calculation, e.g. "(2 lead-in + 14 + 7 tail) x 1 per day = 23 tablets". */
   quantity: string;
+  /** Calculated whole course in tablets or capsules; null until the dates are known. */
+  total: number | null;
+  /** "tablets" or "capsules". */
+  unit: string;
   maxPeriod: string;
   reason: string;
 }
 
-function describeArm(
+/**
+ * Mefloquine lead-in in weeks: the document says start 2 to 3 weeks before
+ * travel. Three weeks where there is time, two where departure is 14 to 20
+ * days away. Under 14 days the arm is excluded (see generateAMAlerts), so
+ * a constant 3 week lead-in was supplying a dose the traveller could not
+ * take (adversarial review, 11 Sep 2026).
+ */
+export function getMefloquineLeadInWeeks(departureDate: string): number {
+  const days = calculateDaysUntilDeparture(departureDate);
+  if (days === null) return 3;
+  return days >= 21 ? 3 : 2;
+}
+
+/**
+ * The document's course for one arm: name, dose, timing and the calculated
+ * quantity. This is the ONLY place the quantity is computed; the medicine
+ * step pre-fills from it, validation checks against it, and the printed
+ * record reads from it.
+ */
+export function describeArm(
   choice: AMMedicineChoice,
   travel: AMTravelAssessment
 ): MedicineRecommendation | null {
@@ -640,6 +696,8 @@ function describeArm(
       quantity:
         `(2 lead-in + ${daysText} + 7 tail) x ${perDay} per day` +
         (total !== null ? ` = ${total} tablets` : ''),
+      total,
+      unit: 'tablets',
       maxPeriod: 'Continuous use for up to 12 months. Beyond that, refer for specialist advice.',
       reason: 'Supply the whole course. A short supply leaves the traveller unprotected at the end, which is when risk is highest.',
     };
@@ -653,6 +711,8 @@ function describeArm(
       startTiming: '1 to 2 days before entering the malarious area',
       continuationAfterReturn: 'Continue daily throughout and for 4 WEEKS (28 days) after leaving the malarious area',
       quantity: `2 lead-in + ${daysText} + 28 tail` + (total !== null ? ` = ${total} capsules` : '') + '. A quantity below 30 cannot be correct for any itinerary.',
+      total,
+      unit: 'capsules',
       maxPeriod: 'Continuous use for up to 2 years. Beyond that, refer.',
       reason: 'Supply the whole course including the 4 week tail.',
     };
@@ -661,17 +721,23 @@ function describeArm(
   if (choice === 'mefloquine') {
     const band = getMefloquineBand(travel.weightKg);
     if (!band) return null;
+    const leadIn = getMefloquineLeadInWeeks(travel.departureDate);
     const weeks = days === null ? null : Math.ceil(days / 7);
-    const doses = weeks === null ? null : 3 + weeks + 4;
+    const doses = weeks === null ? null : leadIn + weeks + 4;
+    const total = doses === null ? null : Math.ceil(doses * band.tabletFraction);
     return {
       medicine: 'Mefloquine 250mg tablets',
       dose: `${band.doseText}, on the same day each week, with food and plenty of water (weight band ${band.label})`,
-      startTiming: '2 to 3 weeks before travel, so that tolerability can be assessed before departure',
+      startTiming: `${leadIn} weeks before travel (the PGD says 2 to 3 weeks), so that tolerability can be assessed before departure`,
       continuationAfterReturn: 'Continue weekly throughout and for 4 WEEKS after leaving the malarious area',
       quantity:
-        `3 lead-in + ${weeks === null ? 'weeks in area' : weeks} + 4 tail` +
+        `${leadIn} lead-in + ${weeks === null ? 'weeks in area' : weeks} + 4 tail` +
         (doses !== null ? ` = ${doses} weekly doses` : '') +
-        (band.tabletFraction < 1 ? ' (divided dose: tablet must be scored)' : ' = tablets'),
+        (band.tabletFraction < 1
+          ? ` at ${band.tabletFraction} of a tablet each` + (total !== null ? ` = ${total} whole tablets (divided dose: tablet must be scored)` : '')
+          : total !== null ? ` = ${total} tablets` : ''),
+      total,
+      unit: 'tablets',
       maxPeriod: 'Continuous use for up to 1 year. Beyond that, refer.',
       reason: 'Tell the patient to STOP and seek advice at the first neuropsychiatric symptom, including insomnia and abnormal dreams.',
     };
@@ -679,6 +745,13 @@ function describeArm(
 
   return null;
 }
+
+/**
+ * Largest quantity accepted above the calculated course: one extra
+ * four-week pack, to allow for pack rounding. Anything more is a supply
+ * the document does not describe.
+ */
+export const QUANTITY_PACK_ALLOWANCE = 28;
 
 export function recommendMedicine(
   medical: AMMedicalHistory,

@@ -16,6 +16,60 @@ export function calculateBMI(heightCm: number | null, weightKg: number | null): 
   return weightKg / (heightM * heightM);
 }
 
+// ─── Dose schedule helpers ───
+
+export const DOSE_ORDER = ["0.25mg", "0.5mg", "1mg", "1.7mg", "2.4mg", "7.2mg"] as const;
+
+export function stageForDose(dose: string): "initiation" | "escalation" | "maintenance" | "" {
+  if (dose === "0.25mg") return "initiation";
+  if (dose === "0.5mg" || dose === "1mg" || dose === "1.7mg") return "escalation";
+  if (dose === "2.4mg" || dose === "7.2mg") return "maintenance";
+  return "";
+}
+
+export function doseIndex(dose: string): number {
+  return DOSE_ORDER.indexOf(dose as (typeof DOSE_ORDER)[number]);
+}
+
+/** True for a visit where the patient is already on treatment and the
+ *  document's initial-BMI inclusion is not reapplied: continuing, or a
+ *  restart within 2 months of the last dose. */
+export function isContinuingVisit(state: WegovyConsultationState): boolean {
+  const wa = state.weightAssessment;
+  return wa.visitType === "continuing" || (wa.visitType === "restart" && !wa.breakOverTwoMonths);
+}
+
+/** The BMI the inclusion criteria are applied to: the starting BMI for a
+ *  continuing patient, today's BMI otherwise. A patient who started at 32 and
+ *  is now 26 on maintenance is the licence's weight-maintenance use, not an
+ *  exclusion (adversarial review, 11 Sep 2026). */
+export function getGatingBMI(state: WegovyConsultationState): number | null {
+  if (isContinuingVisit(state)) return state.doseSelection.startingBMI;
+  return state.weightAssessment.bmi;
+}
+
+/** The doses the document allows at this visit. */
+export function getAllowedDoses(state: WegovyConsultationState): string[] {
+  const ds = state.doseSelection;
+  const wa = state.weightAssessment;
+  if (wa.visitType === "new" || wa.visitType === "restart" || ds.previousDose === "none") {
+    return ["0.25mg"];
+  }
+  if (wa.visitType !== "continuing" || !ds.previousDose) return [];
+  const idx = doseIndex(ds.previousDose);
+  if (idx < 0) return [];
+  const allowed: string[] = [];
+  // Any lower step (significant GI symptoms, or re-escalation after missed doses)
+  for (let i = 0; i < idx; i++) allowed.push(DOSE_ORDER[i]);
+  // The same dose
+  allowed.push(DOSE_ORDER[idx]);
+  // The next step up, after a minimum of 4 weeks on the current dose
+  if (idx + 1 < DOSE_ORDER.length && ds.weeksAtCurrentDose !== null && ds.weeksAtCurrentDose >= 4) {
+    allowed.push(DOSE_ORDER[idx + 1]);
+  }
+  return allowed;
+}
+
 // ─── BMI Category ───
 
 export function getBMICategory(
@@ -56,16 +110,17 @@ function getHardStopAlerts(state: WegovyConsultationState): ClinicalAlert[] {
     });
   }
 
-  // BMI eligibility
-  const bmi = state.weightAssessment.bmi;
+  // BMI eligibility: applied to the INITIAL BMI for a continuing patient
+  const continuing = isContinuingVisit(state);
+  const bmi = getGatingBMI(state);
   if (bmi !== null) {
     if (bmi < 27) {
       alerts.push({
         severity: "stop",
         code: "BMI_TOO_LOW",
-        message: "BMI is below 27 kg/m²",
+        message: continuing ? "Starting BMI was below 27 kg/m²" : "BMI is below 27 kg/m²",
         detail:
-          "BMI below the PGD inclusion threshold. Wegovy is indicated for BMI 30 kg/m² or above, or BMI 27 kg/m² or above with at least one weight-related comorbidity.",
+          "BMI below the PGD inclusion threshold. Wegovy is indicated for an initial BMI of 30 kg/m² or above, or 27 kg/m² or above with at least one weight-related comorbidity.",
       });
     } else if (bmi >= 27 && bmi < 30) {
       // BMI 27-29.9: needs comorbidity
@@ -73,12 +128,23 @@ function getHardStopAlerts(state: WegovyConsultationState): ClinicalAlert[] {
         alerts.push({
           severity: "stop",
           code: "BMI_27_NO_COMORBIDITY",
-          message: "BMI 27 to below 30 without a documented weight-related comorbidity",
+          message: `${continuing ? "Starting BMI" : "BMI"} 27 to below 30 without a documented weight-related comorbidity`,
           detail:
             "For BMI 27 to below 30 kg/m², at least one weight-related comorbidity (for example hypertension, type 2 diabetes, dyslipidaemia, obstructive sleep apnoea or established cardiovascular disease) must be present.",
         });
       }
     }
+  }
+
+  // Heart failure with reduced ejection fraction: EXCLUSION
+  if (state.medicalHistory.heartFailureReducedEF) {
+    alerts.push({
+      severity: "stop",
+      code: "HFREF",
+      message: "Heart failure with reduced ejection fraction (HFrEF)",
+      detail:
+        "Excluded under this PGD where there is a known diagnosis of heart failure with reduced ejection fraction below 40%. Semaglutide has shown benefit in HFpEF (preserved EF, STEP-HFpEF trial) but benefit is NOT established in HFrEF. Refer to GP. If EF is unknown but patient is under cardiology review for 'heart failure', refer to GP to confirm.",
+    });
   }
 
   // Known hypersensitivity to semaglutide or any excipient
@@ -365,21 +431,17 @@ export function getPercentWeightLost(state: WegovyConsultationState): number | n
   return ((initial - current) / initial) * 100;
 }
 
+/** True when the document's 5% stopping rule applies to this visit. */
+export function fivePercentRuleApplies(state: WegovyConsultationState): boolean {
+  const monthsOnMax = state.doseSelection.monthsOnMaxToleratedDose;
+  const lost = getPercentWeightLost(state);
+  return monthsOnMax !== null && monthsOnMax >= 6 && lost !== null && lost < 5;
+}
+
 // ─── Caution Alerts ───
 
 function getCautionAlerts(state: WegovyConsultationState): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
-
-  // Heart failure with reduced ejection fraction: EXCLUSION
-  if (state.medicalHistory.heartFailureReducedEF) {
-    alerts.push({
-      severity: "stop",
-      code: "HFREF",
-      message: "Heart failure with reduced ejection fraction (HFrEF)",
-      detail:
-        "Excluded under this PGD where there is a known diagnosis of heart failure with reduced ejection fraction below 40%. Semaglutide has shown benefit in HFpEF (preserved EF, STEP-HFpEF trial) but benefit is NOT established in HFrEF. Refer to GP. If EF is unknown but patient is under cardiology review for 'heart failure', refer to GP to confirm.",
-    });
-  }
 
   // Weight gain caused by a prescribed medicine (initial assessment)
   if (state.weightAssessment.medicationInducedWeightGain) {
@@ -489,10 +551,11 @@ function getCautionAlerts(state: WegovyConsultationState): ClinicalAlert[] {
     });
   }
 
-  // 5% rule: less than 5% of initial body weight lost after 6 months
-  const months = getMonthsOnTreatment(state);
+  // 5% rule: less than 5% of initial body weight lost after 6 months ON THE
+  // MAXIMUM TOLERATED DOSE (not 6 months from the start date)
+  const monthsOnMax = state.doseSelection.monthsOnMaxToleratedDose;
   const lost = getPercentWeightLost(state);
-  if (months !== null && months >= 6 && lost !== null && lost < 5) {
+  if (monthsOnMax !== null && monthsOnMax >= 6 && lost !== null && lost < 5) {
     alerts.push({
       severity: "caution",
       code: "LESS_THAN_5_PERCENT",
@@ -508,19 +571,10 @@ function getCautionAlerts(state: WegovyConsultationState): ClinicalAlert[] {
 // ─── Red Flag Alerts ───
 
 function getRedFlagAlerts(state: WegovyConsultationState): ClinicalAlert[] {
+  // Current suicidal ideation is a hard stop (SUICIDAL_IDEATION); the red
+  // flag that used to live here could never display and has been removed.
   const alerts: ClinicalAlert[] = [];
-
-  // Current suicidal ideation (tool red flag, stricter than the PGD caution)
-  if (state.medicalHistory.suicidalIdeation) {
-    alerts.push({
-      severity: "red-flag",
-      code: "SUICIDE_RISK",
-      message: "Acute suicide risk",
-      detail:
-        "URGENT: Do not supply. Refer to emergency mental health services immediately.",
-    });
-  }
-
+  void state;
   return alerts;
 }
 
@@ -593,18 +647,25 @@ export function validateConsentStep(state: WegovyConsultationState): string | nu
 }
 
 export function validateWeightAssessmentStep(state: WegovyConsultationState): string | null {
+  if (!state.weightAssessment.visitType)
+    return "Select whether this is a new patient, a continuing patient or a restart after a break";
   if (state.weightAssessment.height === null) return "Height is required";
   if (state.weightAssessment.weight === null) return "Weight is required";
   if (state.weightAssessment.bmi === null) return "BMI could not be calculated";
 
-  // Check eligibility
-  const bmi = state.weightAssessment.bmi;
+  // Check eligibility against the initial BMI for a continuing patient
+  const continuing = isContinuingVisit(state);
+  if (continuing && state.doseSelection.startingBMI === null)
+    return "Record the patient's BMI at the start of treatment: eligibility for a continuing patient is judged on the starting BMI";
+  const bmi = getGatingBMI(state);
+  if (bmi === null) return "BMI could not be calculated";
+  const which = continuing ? "Starting BMI" : "BMI";
   if (bmi < 27) {
-    return "BMI is below the PGD inclusion threshold (30 or above, or 27 or above with a weight-related comorbidity)";
+    return `${which} is below the PGD inclusion threshold (30 or above, or 27 or above with a weight-related comorbidity)`;
   }
   if (bmi >= 27 && bmi < 30) {
     if (state.weightAssessment.weightRelatedComorbidities.length === 0) {
-      return "For BMI 27 to below 30, at least one weight-related comorbidity must be documented";
+      return `For ${which.toLowerCase()} 27 to below 30, at least one weight-related comorbidity must be documented`;
     }
   }
   if (!state.weightAssessment.initialAssessmentCompleted) {
@@ -621,7 +682,8 @@ export function validateWeightAssessmentStep(state: WegovyConsultationState): st
 }
 
 export function validateMedicalHistoryStep(state: WegovyConsultationState): string | null {
-  // No required fields in medical history (all flags)
+  if (!state.medicalHistory.childbearingPotential)
+    return "Record whether the patient is a woman of childbearing potential";
   return null;
 }
 
@@ -657,30 +719,62 @@ export function validateContraindicationsStep(state: WegovyConsultationState): s
 
 export function validateDoseSelectionStep(state: WegovyConsultationState): string | null {
   const ds = state.doseSelection;
-  if (!ds.currentDoseStage) return "Current dose stage must be selected";
+  const wa = state.weightAssessment;
+  if (!wa.visitType) return "Go back to Weight Assessment and select the visit type";
   if (!ds.dose) return "Dose must be selected";
+  if (stageForDose(ds.dose) !== ds.currentDoseStage)
+    return "The dose stage does not match the dose selected";
   if (!ds.injectionSite) return "Injection site must be selected";
   if (!ds.batchNumber.trim()) return "Batch number of the product supplied is required";
 
-  // Continuing patients: treatment start date and initial weight are needed
-  // for the 2-year maximum and the 5% rule.
-  const isContinuing = ds.previousDose !== "" || ds.recommencingAfterBreak;
-  if (isContinuing && !ds.treatmentStartDate) {
-    return "Treatment start date is required for a patient already on treatment";
-  }
-  if (isContinuing && ds.initialWeight === null) {
-    return "Weight at initiation is required for a patient already on treatment";
+  const continuing = wa.visitType === "continuing";
+
+  // New patient, or recommencing after a break: 0.25 mg only
+  if (!continuing) {
+    if (ds.dose !== "0.25mg") {
+      return wa.visitType === "restart"
+        ? "A patient recommencing Wegovy must be titrated again from the lowest dose (0.25 mg)"
+        : "A new patient starts at 0.25 mg once weekly (weeks 1 to 4)";
+    }
+  } else {
+    // Continuing: the previous dose is not optional. Leaving it at "new
+    // patient" used to remove the 2-year cap and the 5% rule
+    // (adversarial review, 11 Sep 2026).
+    if (!ds.previousDose || ds.previousDose === "none")
+      return "Record the dose the patient has been on";
+    if (ds.weeksAtCurrentDose === null || ds.weeksAtCurrentDose < 0)
+      return "Record how many weeks the patient has been on the previous dose";
+    if (!ds.treatmentStartDate)
+      return "Treatment start date is required for a patient already on treatment";
+    if (ds.initialWeight === null)
+      return "Weight at initiation is required for a patient already on treatment";
+    if (ds.monthsOnMaxToleratedDose === null || ds.monthsOnMaxToleratedDose < 0)
+      return "Record how many months the patient has been on the maximum tolerated dose (0 if still titrating)";
+
+    const allowed = getAllowedDoses(state);
+    if (!allowed.includes(ds.dose)) {
+      const prevIdx = doseIndex(ds.previousDose);
+      const doseIdx = doseIndex(ds.dose);
+      if (doseIdx === prevIdx + 1)
+        return "Dose increases need a minimum of 4 weeks on the current dose (record at least 4 weeks)";
+      if (doseIdx > prevIdx + 1)
+        return "The schedule increases one step at a time, every 4 weeks. Select the previous dose or the next step up";
+      return "The selected dose is not permitted by the schedule for this patient";
+    }
+    // A step down is authorised (GI symptoms, or more than 2 missed doses)
+    // but the reason must be on the record.
+    if (doseIndex(ds.dose) < doseIndex(ds.previousDose) && !ds.overrideReason.trim())
+      return "Record the reason for supplying a lower dose than the patient has been on (for example significant GI symptoms, or re-escalation after more than 2 missed doses)";
+
+    // 5% rule: a documented decision is required
+    if (fivePercentRuleApplies(state) && !ds.continuationDecision.trim())
+      return "Less than 5% of initial body weight lost after 6 months on the maximum tolerated dose: record the decision on continuation and the reasoning";
   }
 
   // Maximum treatment period: 2 years of continuous treatment under this PGD
   const months = getMonthsOnTreatment(state);
   if (months !== null && months >= 24) {
     return "Maximum treatment period under this PGD is 2 years of continuous treatment. Refer to the GP or a specialist prescriber.";
-  }
-
-  // Recommencing after a break: titrate again from the lowest dose
-  if (ds.recommencingAfterBreak && ds.dose !== "0.25mg") {
-    return "A patient recommencing Wegovy must be titrated again from the lowest dose (0.25 mg)";
   }
 
   // 7.2 mg gate (PGD v007)
@@ -701,9 +795,6 @@ export function validateDoseSelectionStep(state: WegovyConsultationState): strin
     }
   }
 
-  if (ds.pharmacistOverride && !ds.overrideReason.trim()) {
-    return "Override reason is required";
-  }
   return null;
 }
 
@@ -717,7 +808,7 @@ export function validateCounsellingStep(state: WegovyConsultationState): string 
     state.counselling.pancreatitisWarning &&
     state.counselling.gallbladderWarning &&
     state.counselling.suicidalIdeationWarning &&
-    state.counselling.contraceptionAdvice &&
+    (state.medicalHistory.childbearingPotential !== "yes" || state.counselling.contraceptionAdvice) &&
     state.counselling.dietExerciseAdvice &&
     state.counselling.followUpSchedule &&
     state.counselling.urgentWarningSymptoms &&

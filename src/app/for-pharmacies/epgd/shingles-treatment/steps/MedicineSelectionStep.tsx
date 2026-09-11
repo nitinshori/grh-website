@@ -1,13 +1,11 @@
 'use client';
 
 import React, { useEffect, useMemo } from 'react';
-import { SelectInput, Checkbox, TextArea, TextInput } from '../../shared/components/FormInputs';
-import { StepWrapper } from '../../shared/components/StepWrapper';
+import { SelectInput, TextInput } from '../../shared/components/FormInputs';
 import { ShinglesMedicineSelection, ShinglesSymptoms, ShinglesMedicalHistory } from '../shingles-types';
 import {
   getRecommendedDose,
   getMedicineAvailability,
-  validateMedicineSelectionStep,
   isWithinTreatmentWindow,
   hasNonSevereImmunosuppression,
 } from '../shingles-clinical-logic';
@@ -17,10 +15,6 @@ interface MedicineSelectionStepProps {
   symptoms: ShinglesSymptoms;
   medicalHistory: ShinglesMedicalHistory;
   onChange: (medicine: ShinglesMedicineSelection) => void;
-  currentStep: number;
-  totalSteps: number;
-  onNext: () => void;
-  onPrev: () => void;
 }
 
 const MEDICINE_LABELS: Record<'aciclovir' | 'valaciclovir' | 'famciclovir', string> = {
@@ -34,12 +28,7 @@ export const MedicineSelectionStep: React.FC<MedicineSelectionStepProps> = ({
   symptoms,
   medicalHistory,
   onChange,
-  currentStep,
-  totalSteps,
-  onNext,
-  onPrev,
 }) => {
-  const validationError = validateMedicineSelectionStep(medicine, medicalHistory);
   const availability = useMemo(() => getMedicineAvailability(medicalHistory), [medicalHistory]);
 
   const recommendedDose = useMemo(
@@ -47,10 +36,11 @@ export const MedicineSelectionStep: React.FC<MedicineSelectionStepProps> = ({
     [medicine.medicine, medicalHistory]
   );
 
-  // The PGD specifies one complete course per agent. Fill the regimen from the
-  // PGD whenever the agent changes; the pharmacist may override with a reason.
+  // The PGD specifies one complete course per agent. The regimen is filled
+  // from the PGD whenever the agent changes and cannot be edited: a deviation
+  // is a prescription, not a PGD supply (adversarial review, 11 Sep 2026).
   useEffect(() => {
-    if (!recommendedDose || medicine.pharmacistOverride) return;
+    if (!recommendedDose) return;
     if (
       medicine.dose !== recommendedDose.dose ||
       medicine.frequency !== recommendedDose.frequency ||
@@ -66,7 +56,7 @@ export const MedicineSelectionStep: React.FC<MedicineSelectionStepProps> = ({
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recommendedDose, medicine.pharmacistOverride]);
+  }, [recommendedDose]);
 
   const handleChange = <K extends keyof ShinglesMedicineSelection>(
     field: K,
@@ -80,16 +70,7 @@ export const MedicineSelectionStep: React.FC<MedicineSelectionStepProps> = ({
     hoursSinceOnset !== null && !isWithinTreatmentWindow(hoursSinceOnset);
 
   return (
-    <StepWrapper
-      title="Medicine Selection"
-      description="Select the antiviral and confirm the PGD regimen"
-      currentStep={currentStep}
-      totalSteps={totalSteps}
-      onNext={onNext}
-      onPrev={onPrev}
-      canProceed={!validationError}
-      validationError={validationError}
-    >
+    <>
       <div className="space-y-6">
         {/* Treatment Window Warning */}
         {showExtendedWindowWarning && (
@@ -196,76 +177,27 @@ export const MedicineSelectionStep: React.FC<MedicineSelectionStepProps> = ({
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Dose per administration *</label>
-              <input
-                type="text"
-                value={medicine.dose}
-                onChange={(e) => handleChange('dose', e.target.value)}
-                disabled={!medicine.pharmacistOverride}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Frequency *</label>
-              <input
-                type="text"
-                value={medicine.frequency}
-                onChange={(e) => handleChange('frequency', e.target.value)}
-                disabled={!medicine.pharmacistOverride}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Duration *</label>
-                <input
-                  type="text"
-                  value={medicine.duration}
-                  onChange={(e) => handleChange('duration', e.target.value)}
-                  disabled={!medicine.pharmacistOverride}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-                />
+                <p className="text-xs text-gray-600">Dose per administration</p>
+                <p className="font-medium text-gray-900">{medicine.dose || 'Select an agent'}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Total quantity (tablets) *</label>
-                <input
-                  type="number"
-                  value={medicine.quantity || ''}
-                  onChange={(e) => handleChange('quantity', parseInt(e.target.value) || 0)}
-                  disabled={!medicine.pharmacistOverride}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-                  min="1"
-                />
+                <p className="text-xs text-gray-600">Frequency</p>
+                <p className="font-medium text-gray-900">{medicine.frequency || 'Select an agent'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-600">Duration</p>
+                <p className="font-medium text-gray-900">{medicine.duration || 'Select an agent'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-600">Total quantity</p>
+                <p className="font-medium text-gray-900">{medicine.quantity ? `${medicine.quantity} tablets` : 'Select an agent'}</p>
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Pharmacist Override */}
-        <div className="bg-orange-50 border border-orange-300 rounded-lg p-4">
-          <h3 className="font-semibold text-orange-900 mb-3">Pharmacist override (if applicable)</h3>
-
-          <div className="space-y-3">
-            <Checkbox
-              label="I am deviating from the PGD regimen and wish to record a pharmacist override"
-              checked={medicine.pharmacistOverride}
-              onChange={(v) => handleChange('pharmacistOverride', v)}
-              description="The PGD authorises one complete course as specified above. A deviation is outside the PGD and must be justified."
-            />
-
-            {medicine.pharmacistOverride && (
-              <TextArea
-                label="Reason for override *"
-                value={medicine.overrideReason}
-                onChange={(v) => handleChange('overrideReason', v)}
-                placeholder="Provide clinical justification for deviation from the PGD regimen..."
-                required
-                rows={3}
-              />
-            )}
+            <p className="text-xs text-gray-600">
+              The regimen is fixed by the PGD: one complete course as specified, no repeat supply. If this patient needs a different dose, frequency, duration or quantity (for example a renal adjustment), that is outside the PGD: do not supply, refer to a prescriber and record the advice given.
+            </p>
           </div>
         </div>
 
@@ -282,6 +214,6 @@ export const MedicineSelectionStep: React.FC<MedicineSelectionStepProps> = ({
           </ul>
         </div>
       </div>
-    </StepWrapper>
+    </>
   );
 };

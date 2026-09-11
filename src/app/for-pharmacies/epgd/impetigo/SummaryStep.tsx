@@ -1,7 +1,7 @@
 'use client';
 
-import { ImpetigoData, IMPETIGO_PGD_VERSION } from './impetigo-types';
-import { BaseSummary, ClinicalAlert } from '../shared/types';
+import { ImpetigoData, ImpetigoSummary, IMPETIGO_PGD_VERSION } from './impetigo-types';
+import { ClinicalAlert } from '../shared/types';
 import { TextInput, TextArea } from '../shared/components/FormInputs';
 import { clarithromycinWeightBand } from './impetigo-clinical-logic';
 import { drugSpecificAdviceLabel } from './CounsellingStep';
@@ -10,14 +10,12 @@ import {
   Row,
   AlertSummary,
   CounsellingGrid,
-  PharmacistDeclaration,
-  ReportFooter,
 } from '../shared/components/SummaryReportShell';
 
 interface SummaryStepProps {
   data: ImpetigoData;
-  summary: BaseSummary;
-  onSummaryChange: (summary: BaseSummary) => void;
+  summary: ImpetigoSummary;
+  onSummaryChange: (summary: ImpetigoSummary) => void;
   alerts: ClinicalAlert[];
 }
 
@@ -30,7 +28,7 @@ const TREATMENT_LABEL: Record<string, string> = {
 };
 
 export function SummaryStep({ data, summary, onSummaryChange, alerts }: SummaryStepProps) {
-  const handleSummaryChange = (field: keyof BaseSummary, value: unknown) => {
+  const handleSummaryChange = (field: keyof ImpetigoSummary, value: unknown) => {
     onSummaryChange({
       ...summary,
       [field]: value,
@@ -188,11 +186,8 @@ export function SummaryStep({ data, summary, onSummaryChange, alerts }: SummaryS
         {data.treatmentSelection.severeDoseReason && (
           <Row label="500mg twice a day, reason" value={data.treatmentSelection.severeDoseReason} />
         )}
-        <Row label="Quantity" value={String(data.treatmentSelection.quantity)} />
+        <Row label="Quantity" value={`${data.treatmentSelection.quantity} ${data.treatmentSelection.quantityUnit}`.trim()} />
         <Row label="Date of supply" value={summary.consultationDate} />
-        {data.treatmentSelection.pharmacistOverride && (
-          <Row label="Override reason" value={data.treatmentSelection.overrideReason} />
-        )}
       </div>
 
       {/* Counselling Provided */}
@@ -202,6 +197,13 @@ export function SummaryStep({ data, summary, onSummaryChange, alerts }: SummaryS
       {/* Clinical Notes */}
       <SectionHeader>Clinical Notes</SectionHeader>
       <TextArea
+        value={summary.adverseDrugReactions}
+        onChange={(value) => handleSummaryChange('adverseDrugReactions', value)}
+        placeholder="Leave blank if none. Any reaction: Yellow Card submitted, GP informed"
+        label="Adverse drug reactions reported and actions taken"
+        rows={2}
+      />
+      <TextArea
         value={summary.clinicalNotes}
         onChange={(value) => handleSummaryChange('clinicalNotes', value)}
         placeholder="Enter any additional clinical notes, treatment plan details, or patient education provided..."
@@ -209,17 +211,9 @@ export function SummaryStep({ data, summary, onSummaryChange, alerts }: SummaryS
         rows={4}
       />
 
-      {/* Pharmacist Declaration */}
-      <SectionHeader>Pharmacist Declaration</SectionHeader>
-      <PharmacistDeclaration
-        pgdName={IMPETIGO_PGD_VERSION}
-        pharmacistName={summary.pharmacistName}
-        pharmacistGPhC={summary.pharmacistGPhC || ''}
-        pharmacyName={summary.pharmacyName || ''}
-      />
-
-      {/* Footer */}
-      <ReportFooter pgdName={IMPETIGO_PGD_VERSION} />
+      <p className="text-xs text-gray-600">
+        &quot;Save &amp; Print Record&quot; saves the consultation and prints the PGD consultation record (not this form).
+      </p>
     </div>
   );
 }

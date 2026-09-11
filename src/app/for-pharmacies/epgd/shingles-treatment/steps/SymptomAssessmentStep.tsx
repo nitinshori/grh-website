@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { TextInput, SelectInput, TextArea, Checkbox } from '../../shared/components/FormInputs';
-import { StepWrapper } from '../../shared/components/StepWrapper';
 import { ShinglesSymptoms } from '../shingles-types';
 import {
   calculateHoursSinceOnset,
@@ -11,15 +10,10 @@ import {
   getTreatmentWindow,
   describeTreatmentWindow,
 } from '../shingles-clinical-logic';
-import { validateSymptomStep } from '../shingles-clinical-logic';
 
 interface SymptomAssessmentStepProps {
   symptoms: ShinglesSymptoms;
   onChange: (symptoms: ShinglesSymptoms) => void;
-  currentStep: number;
-  totalSteps: number;
-  onNext: () => void;
-  onPrev: () => void;
   /** Patient age, used for the treatment window criteria (age over 50; age 70 or over). */
   age?: number | null;
 }
@@ -27,14 +21,9 @@ interface SymptomAssessmentStepProps {
 export const SymptomAssessmentStep: React.FC<SymptomAssessmentStepProps> = ({
   symptoms,
   onChange,
-  currentStep,
-  totalSteps,
-  onNext,
-  onPrev,
   age = null,
 }) => {
-  const validationError = validateSymptomStep(symptoms);
-  const hoursSinceOnset = calculateHoursSinceOnset(symptoms.rashOnsetDate);
+  const hoursSinceOnset = calculateHoursSinceOnset(symptoms.rashOnsetDate, symptoms.rashOnsetTime);
   const withinWindow = isWithinTreatmentWindow(hoursSinceOnset);
   const withinSevenDays = isWithinSevenDays(hoursSinceOnset);
   const treatmentWindow = getTreatmentWindow(symptoms, age);
@@ -44,34 +33,39 @@ export const SymptomAssessmentStep: React.FC<SymptomAssessmentStepProps> = ({
   };
 
   return (
-    <StepWrapper
-      title="Symptom Assessment & Rash Assessment"
-      description="Assess the patient's current symptoms and rash characteristics"
-      currentStep={currentStep}
-      totalSteps={totalSteps}
-      onNext={onNext}
-      onPrev={onPrev}
-      canProceed={!validationError}
-      validationError={validationError}
-    >
+    <>
       <div className="space-y-6">
         {/* Rash Onset Information */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <h3 className="font-semibold text-blue-900 mb-3">Rash Onset</h3>
 
           <div className="space-y-4">
-            <TextInput
-              label="Date of rash onset"
-              type="date"
-              value={symptoms.rashOnsetDate}
-              onChange={(v) => {
-                const newSymptoms = { ...symptoms, rashOnsetDate: v };
-                const newHours = calculateHoursSinceOnset(v);
-                newSymptoms.hoursSinceOnset = newHours;
-                onChange(newSymptoms);
-              }}
-              required
-            />
+            <div className="grid sm:grid-cols-2 gap-4">
+              <TextInput
+                label="Date of rash onset"
+                type="date"
+                value={symptoms.rashOnsetDate}
+                onChange={(v) => {
+                  const newSymptoms = { ...symptoms, rashOnsetDate: v };
+                  newSymptoms.hoursSinceOnset = calculateHoursSinceOnset(v, symptoms.rashOnsetTime);
+                  onChange(newSymptoms);
+                }}
+                required
+              />
+              <TextInput
+                label="Approximate time of onset (optional)"
+                type="time"
+                value={symptoms.rashOnsetTime}
+                onChange={(v) => {
+                  const newSymptoms = { ...symptoms, rashOnsetTime: v };
+                  newSymptoms.hoursSinceOnset = calculateHoursSinceOnset(symptoms.rashOnsetDate, v);
+                  onChange(newSymptoms);
+                }}
+              />
+            </div>
+            <p className="text-xs text-blue-800">
+              The 72 hour and 7 day windows run from rash onset. With a time the interval is exact; without one it is counted in whole days from the onset date (onset up to 3 days ago counts as within 72 hours, up to 7 days ago as within 7 days).
+            </p>
 
             {hoursSinceOnset !== null && (
               <div className={`p-3 rounded ${
@@ -149,6 +143,7 @@ export const SymptomAssessmentStep: React.FC<SymptomAssessmentStepProps> = ({
               value={symptoms.dermatome}
               onChange={(v) => handleChange('dermatome', v as ShinglesSymptoms['dermatome'])}
               options={[
+                { value: '', label: 'Select dermatome...' },
                 { value: 'thoracic', label: 'Thoracic (chest / trunk), most common' },
                 { value: 'lumbar', label: 'Lumbar (lower back / abdomen)' },
                 { value: 'sacral', label: 'Sacral (buttocks)' },
@@ -185,11 +180,15 @@ export const SymptomAssessmentStep: React.FC<SymptomAssessmentStepProps> = ({
               rows={4}
             />
 
-            <Checkbox
-              label="Unilateral, dermatomal, painful vesicular rash that does not cross the midline"
-              checked={symptoms.unilateral}
-              onChange={(v) => handleChange('unilateral', v)}
-              description="Inclusion criterion. A disseminated or widespread rash, or one crossing the midline, suggests dissemination: refer, do not supply."
+            <SelectInput
+              label="Is the rash a unilateral, dermatomal, painful vesicular rash that does not cross the midline?"
+              value={symptoms.unilateral}
+              onChange={(v) => handleChange('unilateral', v as ShinglesSymptoms['unilateral'])}
+              options={[
+                { value: '', label: 'Select...' },
+                { value: 'yes', label: 'Yes: unilateral, dermatomal, does not cross the midline (inclusion criterion met)' },
+                { value: 'no', label: 'No: disseminated, widespread or crossing the midline (refer, do not supply)' },
+              ]}
               required
             />
           </div>
@@ -314,6 +313,6 @@ export const SymptomAssessmentStep: React.FC<SymptomAssessmentStepProps> = ({
         </div>
 
       </div>
-    </StepWrapper>
+    </>
   );
 };

@@ -2,24 +2,15 @@
 
 import React from 'react';
 import { AlertBanner } from '../../shared/components/AlertBanner';
-import { StepWrapper } from '../../shared/components/StepWrapper';
 import { ClinicalAlert } from '../../shared/types';
 
 interface ContraindicationsStepProps {
   alerts: ClinicalAlert[];
-  currentStep: number;
-  totalSteps: number;
-  onNext: () => void;
-  onPrev: () => void;
   isBlocked: boolean;
 }
 
 export const ContraindicationsStep: React.FC<ContraindicationsStepProps> = ({
   alerts,
-  currentStep,
-  totalSteps,
-  onNext,
-  onPrev,
   isBlocked,
 }) => {
   const blockingAlerts = alerts.filter((a) => a.severity === 'stop');
@@ -27,17 +18,7 @@ export const ContraindicationsStep: React.FC<ContraindicationsStepProps> = ({
   const highAlerts = alerts.filter((a) => a.severity === 'red-flag');
 
   return (
-    <StepWrapper
-      title="Contraindications Review"
-      description="Review clinical alerts and contraindications"
-      currentStep={currentStep}
-      totalSteps={totalSteps}
-      onNext={onNext}
-      onPrev={onPrev}
-      canProceed={!isBlocked}
-      isBlocked={isBlocked}
-      validationError={isBlocked ? 'Patient has blocking contraindications - cannot proceed with PGD' : null}
-    >
+    <>
       <div className="space-y-6">
         {/* Blocking Alerts */}
         {blockingAlerts.length > 0 && (
@@ -143,6 +124,6 @@ export const ContraindicationsStep: React.FC<ContraindicationsStepProps> = ({
           </div>
         )}
       </div>
-    </StepWrapper>
+    </>
   );
 };

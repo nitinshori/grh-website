@@ -31,6 +31,7 @@ import {
   validatePneumococcalRiskAssessmentStep,
   validatePneumococcalAdministrationStep,
   validatePneumococcalSummaryStep,
+  ppv23FollowsPcv13,
 } from './pneumococcal-validation';
 import { calculateAge } from '../shared/types';
 import PneumococcalSummaryReport from './components/PneumococcalSummaryReport';
@@ -77,6 +78,8 @@ export function PneumococcalClient() {
 
   const [contraIndicationsReviewed, setContraIndicationsReviewed] = useState({
     confirmedNoAbsoluteContraindications: false,
+    /** Advice given and decision reached where the patient is excluded (PGD records row). */
+    exclusionAdvice: '',
   });
 
   const [summary, setSummary] = useState<PneumococcalSummary>(initialPneumococcalSummary());
@@ -102,9 +105,9 @@ export function PneumococcalClient() {
     counselledBothVaccines: false,
     pilSupplied: false,
     followUpAdviceGiven: false,
+    /** Observed for 15 minutes, seated, and the observation period completed (both arms of the PGD). */
+    observationCompleted: false,
   });
-
-  const [showSummaryReport, setShowSummaryReport] = useState(false);
 
   // Calculate age when DOB changes
   const handlePatientDetailsChange = useCallback(
@@ -183,14 +186,17 @@ export function PneumococcalClient() {
   const canProceedStep1 = consentValidationError === null;
   const canProceedStep2 = riskValidationError === null;
   const canProceedStep3 = true; // Medical history is always valid
-  const canProceedStep4 = contraIndicationsReviewed.confirmedNoAbsoluteContraindications;
+  const canProceedStep4 = contraIndicationsReviewed.confirmedNoAbsoluteContraindications && !isBlocked;
   const canProceedStep5 = administrationValidationError === null;
   const canProceedStep6 =
+    postVaccineAdvice.observationCompleted &&
     postVaccineAdvice.patientAdvised &&
     postVaccineAdvice.counselledReactions &&
     postVaccineAdvice.pilSupplied &&
     postVaccineAdvice.followUpAdviceGiven;
-  const postVaccineValidationError = !postVaccineAdvice.counselledReactions
+  const postVaccineValidationError = !postVaccineAdvice.observationCompleted
+    ? 'Record that the 15 minute seated observation period was completed'
+    : !postVaccineAdvice.counselledReactions
     ? 'Confirm the patient was informed of possible side effects and when to seek help'
     : !postVaccineAdvice.followUpAdviceGiven
       ? 'Confirm the follow-up advice was given'
@@ -228,7 +234,11 @@ export function PneumococcalClient() {
   };
 
   // ─── Consultation Record Data (for saving to database) ───
+  // Returns a record on every step, including before a product has been
+  // chosen, so that an excluded patient can be saved as "not supplied".
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    const stopped = clinicalAlerts.some((a) => a.severity === 'stop');
+    const productLabel = summary.vaccineType === 'pcv13' ? 'Prevenar 13 (PCV13)' : summary.vaccineType === 'ppv23' ? 'Pneumovax 23 (PPV23)' : '';
     return {
       patient: {
         firstName: patientDetails.firstName,
@@ -240,7 +250,20 @@ export function PneumococcalClient() {
         address: patientDetails.address,
         gpName: patientDetails.gpName,
         gpPractice: patientDetails.gpPractice,
+        gpAddress: patientDetails.gpAddress,
+        gpPhone: patientDetails.gpPhone,
+        gpEmail: patientDetails.gpEmail,
+        gpOdsCode: patientDetails.gpOdsCode,
       },
+      medicine:
+        !stopped && productLabel
+          ? {
+              name: productLabel,
+              dose: `0.5 mL ${summary.administrationSite.endsWith('-sc') ? 'subcutaneous' : 'intramuscular'}, dose ${summary.doseNumber || '1'}`,
+              duration: 'Single dose this attendance',
+              quantity: 1,
+            }
+          : undefined,
       clinicalData: {
         patient: patientDetails,
         consent,
@@ -251,15 +274,19 @@ export function PneumococcalClient() {
         summary,
         clinicalAlerts,
       } as unknown as Record<string, unknown>,
-      outcome: clinicalAlerts.some((a) => a.severity === 'stop') ? "not_supplied" : "completed",
+      outcome: stopped ? "not_supplied" : "completed",
       summary: {
-        pharmacistName: summary.pharmacistName,
-        pharmacistGPhC: summary.pharmacistGPhC,
+        pharmacistName: summary.pharmacistName || __pharmProfile?.name || '',
+        pharmacistGPhC: summary.pharmacistGPhC || __pharmProfile?.gphcNumber || '',
+        pharmacyName: summary.pharmacyName || __pharmProfile?.pharmacyName,
+        pharmacyAddress: summary.pharmacyAddress || __pharmProfile?.pharmacyAddress,
         consultationDate: summary.consultationDate,
         consultationTime: summary.consultationTime,
+        clinicalNotes: summary.clinicalNotes,
       },
+      consent: { notifyGp: consent.notifyGp },
     };
-  }, [patientDetails, consent, riskAssessment, medicalHistory, contraIndicationsReviewed, postVaccineAdvice, summary, clinicalAlerts]);
+  }, [patientDetails, consent, riskAssessment, medicalHistory, contraIndicationsReviewed, postVaccineAdvice, summary, clinicalAlerts, __pharmProfile]);
 
   const handleNewConsultation = useCallback(() => {
     setCurrentStep(0);
@@ -283,34 +310,17 @@ export function PneumococcalClient() {
       severeFebrilleIllness: false,
       bleedingDisorder: false,
     });
-    setContraIndicationsReviewed({ confirmedNoAbsoluteContraindications: false });
+    setContraIndicationsReviewed({ confirmedNoAbsoluteContraindications: false, exclusionAdvice: '' });
     setPostVaccineAdvice({
       patientAdvised: false,
       counselledReactions: false,
       counselledBothVaccines: false,
       pilSupplied: false,
       followUpAdviceGiven: false,
+      observationCompleted: false,
     });
     setSummary(initialPneumococcalSummary());
-    setShowSummaryReport(false);
   }, []);
-
-  if (showSummaryReport) {
-    return (
-      <div>
-        <PneumococcalSummaryReport
-          patientDetails={patientDetails}
-          consent={consent}
-          summary={summary}
-          riskAssessment={riskAssessment}
-          medicalHistory={medicalHistory}
-          clinicalAlerts={clinicalAlerts}
-          postVaccineAdvice={postVaccineAdvice}
-          onBack={() => setShowSummaryReport(false)}
-        />
-      </div>
-    );
-  }
 
   return (
     <>
@@ -319,7 +329,9 @@ export function PneumococcalClient() {
           stepLabels={STEP_LABELS}
           currentStep={currentStep}
           onStepClick={(step) => {
-            if (completedSteps.has(step) || step <= currentStep) {
+            // Backwards only. Going forward always means pressing Next, where
+            // the stops are enforced.
+            if (step < currentStep) {
               setCurrentStep(step);
             }
           }}
@@ -341,6 +353,8 @@ export function PneumococcalClient() {
           onPrev={handlePrev}
           canProceed={canProceedStep0}
           validationError={patientValidationError}
+          isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
         >
           <PatientDetailsStep
             patient={patientDetails}
@@ -427,6 +441,8 @@ export function PneumococcalClient() {
           onPrev={handlePrev}
           canProceed={canProceedStep1}
           validationError={consentValidationError}
+          isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
         >
           <ConsentStep
             consent={consent}
@@ -518,6 +534,8 @@ export function PneumococcalClient() {
           onPrev={handlePrev}
           canProceed={canProceedStep2}
           validationError={riskValidationError}
+          isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
         >
           <div className="space-y-4">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -663,6 +681,8 @@ export function PneumococcalClient() {
           onPrev={handlePrev}
           canProceed={canProceedStep3}
           validationError={null}
+          isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
         >
           <div className="space-y-4">
             <Checkbox
@@ -732,14 +752,23 @@ export function PneumococcalClient() {
               : null
           }
           isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
         >
           <div className="space-y-4">
             {isBlocked && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-3">
                 <p className="text-red-700 text-sm font-semibold">
                   Absolute contraindication identified. Consultation cannot proceed. Patient
-                  should be referred to their GP.
+                  should be referred to their GP. Document the advice given and the decision reached.
                 </p>
+                <TextArea
+                  label="Advice given and decision reached (saved with the exclusion record)"
+                  value={contraIndicationsReviewed.exclusionAdvice ?? ''}
+                  onChange={(v) => setContraIndicationsReviewed({ ...contraIndicationsReviewed, exclusionAdvice: v })}
+                  placeholder="e.g., Febrile illness today: advised to return once recovered."
+                  rows={3}
+                />
+                <p className="text-xs text-red-700">Then use "Save as not supplied" below to record the consultation.</p>
               </div>
             )}
 
@@ -775,6 +804,7 @@ export function PneumococcalClient() {
                 checked={contraIndicationsReviewed.confirmedNoAbsoluteContraindications}
                 onChange={(v) =>
                   setContraIndicationsReviewed({
+                    ...contraIndicationsReviewed,
                     confirmedNoAbsoluteContraindications: v,
                   })
                 }
@@ -796,6 +826,8 @@ export function PneumococcalClient() {
           onPrev={handlePrev}
           canProceed={canProceedStep5}
           validationError={administrationValidationError}
+          isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
         >
           <div className="space-y-4">
             <SelectInput
@@ -872,6 +904,16 @@ export function PneumococcalClient() {
               required
             />
 
+            {ppv23FollowsPcv13(summary, patientDetails, historyInput) && (
+              <TextInput
+                label="Pneumovax 23 due (at least 8 weeks after this dose; book it at this appointment)"
+                type="date"
+                value={summary.counselledNextDue ?? ''}
+                onChange={(v) => setSummary({ ...summary, counselledNextDue: v })}
+                required
+              />
+            )}
+
             <div>
               <label className="block text-sm font-medium text-navy-900 mb-1">
                 Time of administration <span className="text-red-400">*</span>
@@ -898,6 +940,8 @@ export function PneumococcalClient() {
           onPrev={handlePrev}
           canProceed={canProceedStep6}
           validationError={postVaccineValidationError}
+          isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
         >
           <div className="space-y-4">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -921,6 +965,16 @@ export function PneumococcalClient() {
                 <li>Explain why vaccination is important for their specific risk group</li>
               </ul>
             </div>
+
+            <Checkbox
+              label="Observed for 15 minutes after vaccination, seated, and the observation period completed"
+              checked={postVaccineAdvice.observationCompleted}
+              onChange={(v) =>
+                setPostVaccineAdvice({ ...postVaccineAdvice, observationCompleted: v })
+              }
+              description="Required by both arms of the PGD. Tick only once the period has actually been completed."
+              required
+            />
 
             <Checkbox
               label="Patient informed of possible side effects and when to seek help"
@@ -978,14 +1032,15 @@ export function PneumococcalClient() {
           description="Complete pharmacist declaration and generate consultation record"
           currentStep={currentStep}
           totalSteps={STEP_LABELS.length}
-          onNext={() => setShowSummaryReport(true)}
+          onNext={() => {}}
           onPrev={handlePrev}
           canProceed={canProceedStep7}
           validationError={summaryValidationError}
+          isBlocked={isBlocked}
           getConsultationData={getConsultationData}
           onNewConsultation={handleNewConsultation}
         >
-          <div className="space-y-4">
+          <div className="space-y-4 print:hidden">
             <TextInput
               label="Pharmacist name"
               value={summary.pharmacistName}
@@ -1022,6 +1077,23 @@ export function PneumococcalClient() {
               onChange={(v) => setSummary({ ...summary, clinicalNotes: v })}
               placeholder="Any additional clinical notes or recommendations"
               rows={4}
+            />
+          </div>
+
+          {/* The printed record. StepWrapper's Save & Print prints this page,
+              so the report has to be on it: before this it lived behind an
+              onNext that the last step never calls, and what came out of the
+              printer was the declaration form with no patient on it. */}
+          <div className="mt-6">
+            <PneumococcalSummaryReport
+              patientDetails={patientDetails}
+              consent={consent}
+              summary={summary}
+              riskAssessment={riskAssessment}
+              medicalHistory={medicalHistory}
+              clinicalAlerts={clinicalAlerts}
+              postVaccineAdvice={postVaccineAdvice}
+              embedded
             />
           </div>
         </StepWrapper>

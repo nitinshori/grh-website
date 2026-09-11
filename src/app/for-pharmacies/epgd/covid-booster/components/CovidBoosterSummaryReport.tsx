@@ -23,6 +23,9 @@ export function CovidBoosterSummaryReport({
   alerts,
   doseRecommendation,
 }: CovidBoosterSummaryReportProps) {
+  const hasStop = alerts.some((a) => a.severity === "stop");
+  const answer = (v: "" | "yes" | "no", yesText: string) =>
+    v === "yes" ? yesText : v === "no" ? "No" : "NOT ANSWERED";
   return (
     <div className="max-w-4xl mx-auto bg-white p-6 rounded-lg border border-gray-200 print:border-0 print:shadow-none print:p-0">
       <div className="border-b border-gray-300 pb-4 mb-6">
@@ -38,10 +41,27 @@ export function CovidBoosterSummaryReport({
       <SectionHeader>Patient Details</SectionHeader>
       <div className="space-y-0.5">
         <Row label="Name" value={`${state.patient.firstName} ${state.patient.lastName}`} />
-        <Row label="Age" value={`${state.patient.age} years`} />
+        <Row label="Date of birth" value={state.patient.dateOfBirth || "Not recorded"} />
+        <Row label="Age" value={state.patient.age !== null ? `${state.patient.age} years` : "Not recorded"} />
+        <Row label="Address" value={state.patient.address || "Not provided"} />
+        <Row label="Registered GP" value={state.patient.gpName || "Not provided"} />
         <Row label="GP Practice" value={state.patient.gpPractice || "Not provided"} />
         <Row label="NHS Number" value={state.patient.nhsNumber || "Not provided"} />
       </div>
+
+      <SectionHeader>Consent</SectionHeader>
+      <CounsellingGrid
+        items={[
+          ["Valid informed consent obtained", state.consent.informedConsentGiven],
+          [`ID verified${state.consent.idType ? ` (${state.consent.idType})` : ""}`, state.consent.idVerified],
+          ["Patient aware this is a private service", state.consent.patientAwarePrivateService],
+        ]}
+      />
+      {!(state.patient.age !== null && state.patient.age < 16) && (
+        <div className="space-y-0.5 mt-2">
+          <Row label="Consent given by" value={state.consent.informedConsentGiven ? "The patient" : "Not recorded"} />
+        </div>
+      )}
 
       <SectionHeader>Clinical Alerts</SectionHeader>
       <AlertSummary alerts={alerts} />
@@ -53,8 +73,14 @@ export function CovidBoosterSummaryReport({
           label="Previous COVID-19 Vaccine"
           value={
             state.assessment.previousCovidVaccine
-              ? `Yes${state.assessment.previousDoseDate ? ` (last dose ${state.assessment.previousDoseDate})` : " (date not known)"}`
-              : "No"
+              ? `Yes${
+                  state.assessment.previousDoseDate
+                    ? ` (last dose ${state.assessment.previousDoseDate})`
+                    : state.assessment.previousDoseDateUnknown
+                      ? " (date not known: the individual states the last dose was more than 3 months ago)"
+                      : " (date not recorded)"
+                }`
+              : "No (first dose)"
           }
         />
         <Row label="Immunosuppressed" value={state.assessment.immunosuppressed ? "Yes" : "No"} />
@@ -97,6 +123,15 @@ export function CovidBoosterSummaryReport({
       )}
 
       <SectionHeader>Vaccine Administered</SectionHeader>
+      {hasStop ? (
+        <div className="space-y-0.5">
+          <Row label="Outcome" value="NOT ADMINISTERED: exclusion criteria met (see clinical alerts above)" />
+          <Row
+            label="Advice given"
+            value={state.summary.clinicalNotes || "Advised on alternative options and how to access them; informed or referred to the GP as appropriate"}
+          />
+        </div>
+      ) : (
       <div className="space-y-0.5">
         <Row
           label="Product and variant"
@@ -142,32 +177,28 @@ export function CovidBoosterSummaryReport({
             }
           />
         )}
+        <Row label="15 minute observation" value={state.supply.observedFifteenMinutes ? "Completed" : "Not recorded"} />
+      </div>
+      )}
+
+      <SectionHeader>Adverse Reactions</SectionHeader>
+      <div className="space-y-0.5">
+        <Row label="Adverse reaction" value={state.supply.adverseReaction.trim() || "None observed"} />
+        {state.supply.adverseReaction.trim() && (
+          <>
+            <Row label="Action taken" value={state.supply.adverseReactionAction || "Not recorded"} />
+            <Row label="Yellow Card" value={state.supply.yellowCardSubmitted ? "Reported via yellowcard.mhra.gov.uk with the variant designation" : "Not yet reported"} />
+          </>
+        )}
       </div>
 
       <SectionHeader>Contraindication Check</SectionHeader>
       <div className="space-y-1.5 text-xs">
-        <div className="flex items-center gap-2">
-          <span className={`w-3 h-3 rounded border flex items-center justify-center ${!state.assessment.anaphylaxisToPreviousDose ? "bg-[color:var(--tenant-primary)]/100 border-[color:var(--tenant-primary)]/30 text-white" : "border-red-500 bg-red-50"}`}>
-            {!state.assessment.anaphylaxisToPreviousDose && (
-              <svg className="w-2 h-2" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-              </svg>
-            )}
-          </span>
-          <span>No anaphylaxis to previous COVID vaccine</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className={`w-3 h-3 rounded border flex items-center justify-center ${!state.assessment.anaphylaxisToPEG && !state.assessment.anaphylaxisToPolysorbate ? "bg-[color:var(--tenant-primary)]/100 border-[color:var(--tenant-primary)]/30 text-white" : "border-red-500 bg-red-50"}`}>
-            {!state.assessment.anaphylaxisToPEG && !state.assessment.anaphylaxisToPolysorbate && (
-              <svg className="w-2 h-2" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-              </svg>
-            )}
-          </span>
-          <span>No anaphylaxis to PEG or polysorbate</span>
-        </div>
         <div className="grid sm:grid-cols-2 gap-x-6 gap-y-0.5 mt-2">
-          <Row label="Acute severe febrile illness" value={state.assessment.severeFebrilIllness ? "Yes (postponed)" : "No"} />
+          <Row label="Anaphylaxis to a previous dose or component" value={answer(state.assessment.anaphylaxisToPreviousDose, "Yes (excluded)")} />
+          <Row label="Hypersensitivity to PEG" value={answer(state.assessment.anaphylaxisToPEG, "Yes (excluded)")} />
+          <Row label="Hypersensitivity to polysorbate 80" value={answer(state.assessment.anaphylaxisToPolysorbate, "Yes (excluded)")} />
+          <Row label="Acute severe febrile illness" value={answer(state.assessment.severeFebrilIllness, "Yes (postponed)")} />
           <Row label="Current COVID-19 infection" value={state.assessment.currentCovidInfection ? "Yes (deferred)" : "No"} />
           <Row label="Myocarditis or pericarditis after mRNA dose" value={state.assessment.myocarditisHistory ? "Yes (excluded)" : "No"} />
           <Row
@@ -199,7 +230,9 @@ export function CovidBoosterSummaryReport({
       />
 
       <SectionHeader>Vaccine Supply</SectionHeader>
-      {doseRecommendation ? (
+      {hasStop ? (
+        <p className="text-xs text-gray-500">Not supplied: exclusion criteria met.</p>
+      ) : doseRecommendation ? (
         <div className="space-y-0.5">
           <Row label="Vaccine" value={doseRecommendation.medicine} />
           <Row label="Dose" value={doseRecommendation.dose} />
@@ -219,12 +252,41 @@ export function CovidBoosterSummaryReport({
         Administered under the COVID-19 Vaccination 2026/27 Season Patient Group Direction, version 006, issued 11 September 2026.
       </p>
 
-      <PharmacistDeclaration
-        pgdName="COVID-19 Booster Vaccination"
-        pharmacistName={state.summary.pharmacistName}
-        pharmacistGPhC={state.summary.pharmacistGPhC}
-        pharmacyName={state.summary.pharmacyName}
-      />
+      {hasStop ? (
+        <>
+          <SectionHeader>Practitioner Declaration</SectionHeader>
+          <p className="text-xs text-gray-600 mb-4">
+            I confirm that this consultation was conducted in accordance with the COVID-19
+            Vaccination 2026/27 Patient Group Direction, that an exclusion criterion applied, that
+            no vaccine was administered, and that the individual was advised as recorded above.
+          </p>
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">Practitioner name</p>
+              <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{state.summary.pharmacistName || ""}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">GPhC number</p>
+              <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{state.summary.pharmacistGPhC || ""}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">Pharmacy</p>
+              <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{state.summary.pharmacyName || ""}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">Signature</p>
+              <div className="border-b border-gray-300 min-h-[2rem]" />
+            </div>
+          </div>
+        </>
+      ) : (
+        <PharmacistDeclaration
+          pgdName="COVID-19 Booster Vaccination"
+          pharmacistName={state.summary.pharmacistName}
+          pharmacistGPhC={state.summary.pharmacistGPhC}
+          pharmacyName={state.summary.pharmacyName}
+        />
+      )}
 
       <ReportFooter pgdName="COVID-19 Booster Vaccination" />
     </div>

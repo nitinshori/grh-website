@@ -20,13 +20,30 @@ export function validateStep(stepIndex: number, state: AnxietyPropranololConsult
       return null;
 
     case 4:
+      // The medicines list underpins the interaction exclusions (another
+      // beta-blocker, verapamil, diltiazem) and is part of the record.
+      if (!state.medicalHistory.currentMedications.trim())
+        return "Record the patient's current medicines and doses (enter 'none' if nothing)";
       return null;
 
-    case 5:
+    case 5: {
+      // The document excludes on measured thresholds; the record must show
+      // both were measured before a beta-blocker was supplied.
+      const hr = state.contraindications.restingHeartRate;
+      const sbp = state.contraindications.systolicBP;
+      if (hr === null) return "Measure and record the resting heart rate";
+      if (hr < 20 || hr > 250) return "Resting heart rate must be between 20 and 250 bpm";
+      if (sbp === null) return "Measure and record the systolic blood pressure";
+      if (sbp < 50 || sbp > 300) return "Systolic blood pressure must be between 50 and 300 mmHg";
       return null;
+    }
 
     case 6: {
       if (!state.medicineSupply.regimen) return "Please select the dosing regimen";
+      if (!["10", "20", "30", "40"].includes(state.medicineSupply.propranololDose))
+        return "Select the dose advised (10, 20, 30 or 40mg)";
+      if (state.medicineSupply.regimen === "regular" && !["2", "3"].includes(state.medicineSupply.timesDaily))
+        return "Select how many times daily (two or three) for the regular regimen";
       const q = state.medicineSupply.quantity;
       if (q === null) return "Please enter quantity to supply";
       if (q < 1) return "Please enter quantity to supply";

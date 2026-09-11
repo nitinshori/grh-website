@@ -5,6 +5,7 @@ import { BasePatientDetails, BaseConsent, BaseSummary } from '../shared/types';
 
 export type RashStage = 'prodromal' | 'vesicular' | 'pustular' | 'crusting' | '';
 export type RashDermatome =
+  | ''
   | 'thoracic'
   | 'cervical'
   | 'trigeminal-V1'
@@ -26,13 +27,15 @@ export type Medicine = 'valaciclovir' | 'aciclovir' | 'famciclovir' | '';
 
 export interface ShinglesSymptoms {
   rashOnsetDate: string; // ISO date string
+  /** Approximate time of onset (HH:MM), optional. Without it the window is counted in calendar days. */
+  rashOnsetTime: string;
   hoursSinceOnset: number | null; // calculated automatically
   rashStage: RashStage;
   dermatome: RashDermatome;
   painLevel: number | null; // 1-10 scale
   painType: PainType;
-  /** Inclusion: unilateral, dermatomal rash that does not cross the midline. Must be confirmed. */
-  unilateral: boolean;
+  /** Inclusion: unilateral, dermatomal rash that does not cross the midline. Explicit answer: "" unanswered, "yes", "no". */
+  unilateral: '' | 'yes' | 'no';
   rashDescription: string;
   /** Moderate or severe rash with confluent lesions is a 72-hour window criterion. */
   rashSeverity: RashSeverity;
@@ -108,8 +111,6 @@ export interface ShinglesMedicineSelection {
   /** Record: name and brand of medicine, and batch number. */
   brand: string;
   batchNumber: string;
-  pharmacistOverride: boolean;
-  overrideReason: string;
 }
 
 export interface ShinglesCounselling {
@@ -147,12 +148,13 @@ export interface ShinglesSummary extends BaseSummary {
 // Initial state factories
 export const initialShinglesSymptoms = (): ShinglesSymptoms => ({
   rashOnsetDate: '',
+  rashOnsetTime: '',
   hoursSinceOnset: null,
   rashStage: '',
-  dermatome: 'thoracic',
+  dermatome: '',
   painLevel: null,
   painType: '',
-  unilateral: false,
+  unilateral: '',
   rashDescription: '',
   rashSeverity: '',
   newVesiclesForming: false,
@@ -207,8 +209,6 @@ export const initialShinglesMedicineSelection = (): ShinglesMedicineSelection =>
   quantity: 0,
   brand: '',
   batchNumber: '',
-  pharmacistOverride: false,
-  overrideReason: '',
 });
 
 export const initialShinglesCounselling = (): ShinglesCounselling => ({

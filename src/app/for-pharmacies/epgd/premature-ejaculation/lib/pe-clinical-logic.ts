@@ -8,8 +8,10 @@ import type { PEConsultationState } from "./pe-types";
 export function getAllAlerts(state: PEConsultationState): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
 
-  // Hard stop: Not male
-  if (!state.patient.maleConfirmed) {
+  // Hard stop: Not male. Raised once the patient step has been left; on
+  // step 0 the shared validation asks for the confirmation instead, so a
+  // blank form does not open with an exclusion on screen.
+  if (!state.patient.maleConfirmed && state.currentStep > 0) {
     alerts.push({
       severity: "stop",
       code: "PE_GENDER",
@@ -166,6 +168,18 @@ export function getAllAlerts(state: PEConsultationState): ClinicalAlert[] {
   }
   if (state.medicalHistory.hyponatraemiaRisk) {
     alerts.push({ severity: "caution", code: "PE_SODIUM", message: "Hyponatraemia risk: monitor sodium levels, particularly during the first 2 weeks", detail: "Use with caution." });
+  }
+
+  // Caution: a previous severe or sudden adverse reaction recorded on the
+  // Contraindications step. Not an exclusion in PGD v003, but it was a field
+  // nothing read (adversarial review, 11 Sep 2026).
+  if (state.contraindications.hadSevereOrSuddenAE) {
+    alerts.push({
+      severity: "caution",
+      code: "PE_PREVIOUS_AE",
+      message: "Previous severe or sudden adverse reaction to a medicine recorded",
+      detail: `Review the reaction before supply and consider referral: ${state.contraindications.aeDetail || "details not recorded"}. Hypersensitivity to dapoxetine or any excipient contraindicates (Priligy SmPC).`,
+    });
   }
 
   // Caution: Orthostatic hypotension test not done

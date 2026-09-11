@@ -1,6 +1,7 @@
 "use client";
 
 import type { AnxietyPropranololConsultationState } from "../lib/anxiety-propranolol-types";
+import { doseAdvisedMg, daysCovered } from "../lib/anxiety-propranolol-clinical-logic";
 import {
   SectionHeader,
   Row,
@@ -10,30 +11,107 @@ import {
   ReportFooter,
 } from "../../shared/components/SummaryReportShell";
 
+const PGD_NAME = "Anxiety (Situational and Somatic Symptoms), Propranolol";
+const PGD_VERSION = "PGD version 004, issued 11 September 2026 (valid to 31 July 2027)";
+
 interface AnxietyPropranololSummaryReportProps {
   state: AnxietyPropranololConsultationState;
 }
 
+/**
+ * Declaration used when an exclusion applies. The shared
+ * PharmacistDeclaration states that "no exclusion criteria applied", which
+ * must never be printed on a not-supplied record.
+ */
+function NotSuppliedDeclaration({
+  pharmacistName,
+  pharmacistGPhC,
+  pharmacyName,
+}: {
+  pharmacistName: string;
+  pharmacistGPhC: string;
+  pharmacyName: string;
+}) {
+  return (
+    <>
+      <SectionHeader>Practitioner Declaration</SectionHeader>
+      <p className="text-xs text-gray-600 mb-4">
+        I confirm that this consultation was conducted under the Patient Group Direction for {PGD_NAME}, that an exclusion criterion applied, that propranolol was NOT supplied, and that the patient was advised on alternative options and referred as recorded above.
+      </p>
+      <div className="grid grid-cols-2 gap-6">
+        <div>
+          <p className="text-xs font-medium text-gray-500 mb-1">Practitioner name</p>
+          <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{pharmacistName || ""}</p>
+        </div>
+        <div>
+          <p className="text-xs font-medium text-gray-500 mb-1">GPhC number</p>
+          <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{pharmacistGPhC || ""}</p>
+        </div>
+        <div>
+          <p className="text-xs font-medium text-gray-500 mb-1">Pharmacy</p>
+          <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{pharmacyName || ""}</p>
+        </div>
+        <div>
+          <p className="text-xs font-medium text-gray-500 mb-1">Signature</p>
+          <div className="border-b border-gray-300 min-h-[2rem]" />
+        </div>
+      </div>
+    </>
+  );
+}
+
 export function AnxietyPropranololSummaryReport({ state }: AnxietyPropranololSummaryReportProps) {
-  const { patient, assessment, medicineSupply, counselling, summary, alerts } = state;
+  const { patient, consent, assessment, medicalHistory, contraindications, medicineSupply, counselling, summary, alerts } = state;
+  const hasStops = alerts.some((a) => a.severity === "stop");
+  const dose = doseAdvisedMg(state);
+  const days = daysCovered(state);
+  const anxietyTypeLabel =
+    assessment.anxietyType === "situational"
+      ? "Situational / performance anxiety"
+      : assessment.anxietyType === "generalized"
+        ? "Generalised anxiety disorder (outside PGD)"
+        : assessment.anxietyType === "social"
+          ? "Social anxiety disorder (outside PGD)"
+          : "Not assessed";
 
   return (
     <div className="print:p-0 space-y-0">
       <div className="bg-navy-900 text-white px-6 py-4 mb-6 print:mb-4 print:px-4 print:py-3">
-        <h1 className="text-2xl font-bold print:text-lg">Anxiety — Propranolol ePGD</h1>
+        <h1 className="text-2xl font-bold print:text-lg">Anxiety: Propranolol ePGD</h1>
         <p className="text-sm text-gray-100 mt-1 print:text-xs">
-          Patient Group Direction Consultation Record
+          Patient Group Direction Consultation Record. {PGD_VERSION}
         </p>
       </div>
+
+      {hasStops && (
+        <div className="mx-6 mb-4 px-4 py-3 border-2 border-red-600 rounded-lg print:mx-4">
+          <p className="text-sm font-bold text-red-700 uppercase">Not supplied: exclusion criteria met</p>
+          <p className="text-xs text-red-700 mt-1">
+            Propranolol was not supplied under this PGD. The exclusion(s) are listed under Clinical Alerts. Advice given and the referral decision are recorded in the clinical notes.
+          </p>
+        </div>
+      )}
 
       <div className="px-6 py-4 print:px-4 print:py-2">
         <SectionHeader>Patient Details</SectionHeader>
         <div className="grid grid-cols-2 gap-4 text-xs print:gap-2">
           <Row label="Name" value={`${patient.firstName} ${patient.lastName}`} />
           <Row label="DOB" value={patient.dateOfBirth} />
-          <Row label="Age" value={`${patient.age} years`} />
+          <Row label="Age" value={`${patient.age ?? ""} years`} />
+          <Row label="Address" value={patient.address || "Not recorded"} />
+          <Row label="NHS number" value={patient.nhsNumber || "Not recorded"} />
           <Row label="GP" value={patient.gpName || "Not recorded"} />
           <Row label="GP Practice" value={patient.gpPractice || "Not recorded"} />
+        </div>
+      </div>
+
+      <div className="px-6 py-4 print:px-4 print:py-2">
+        <SectionHeader>Consent</SectionHeader>
+        <div className="grid grid-cols-2 gap-4 text-xs print:gap-2">
+          <Row label="Informed consent given" value={consent.informedConsentGiven ? "Yes" : "No"} />
+          <Row label="ID verified" value={consent.idVerified ? `Yes${consent.idType ? ` (${consent.idType})` : ""}` : "No"} />
+          <Row label="Aware this is a private service" value={consent.patientAwarePrivateService ? "Yes" : "No"} />
+          <Row label="Copy to GP" value={consent.notifyGp ? "Yes" : "No"} />
         </div>
       </div>
 
@@ -43,16 +121,52 @@ export function AnxietyPropranololSummaryReport({ state }: AnxietyPropranololSum
           <Row label="Date" value={summary.consultationDate} />
           <Row label="Time" value={summary.consultationTime} />
           <Row label="Pharmacy" value={summary.pharmacyName || "Not recorded"} />
+          <Row label="PGD" value={PGD_VERSION} />
         </div>
       </div>
 
       <div className="px-6 py-4 print:px-4 print:py-2">
         <SectionHeader>Anxiety Assessment</SectionHeader>
         <div className="space-y-2 text-xs print:space-y-1">
-          <Row label="Anxiety Type" value={assessment.anxietyType || "Not assessed"} />
+          <Row label="Anxiety Type" value={anxietyTypeLabel} />
           <Row label="Trigger Situation" value={assessment.triggerSituation || "Not recorded"} />
           <Row label="Physical Symptoms" value={assessment.physicalSymptoms || "Not recorded"} />
           <Row label="Frequency" value={assessment.frequencyOfEvents || "Not recorded"} />
+        </div>
+      </div>
+
+      <div className="px-6 py-4 print:px-4 print:py-2">
+        <SectionHeader>Medical History and Measurements</SectionHeader>
+        <div className="space-y-2 text-xs print:space-y-1">
+          <Row label="Current medicines" value={medicalHistory.currentMedications || "Not recorded"} />
+          <Row
+            label="Resting heart rate"
+            value={contraindications.restingHeartRate !== null ? `${contraindications.restingHeartRate} bpm` : "Not measured"}
+          />
+          <Row
+            label="Systolic BP"
+            value={contraindications.systolicBP !== null ? `${contraindications.systolicBP} mmHg` : "Not measured"}
+          />
+          <Row
+            label="Cautions recorded"
+            value={
+              [
+                medicalHistory.diabetes && "Diabetes",
+                medicalHistory.raynauds && "Raynaud's",
+                medicalHistory.hepaticImpairment && "Hepatic impairment",
+                medicalHistory.renalImpairment && "Renal impairment",
+                medicalHistory.firstDegreeHeartBlock && "First-degree heart block",
+                medicalHistory.portalHypertension && "Portal hypertension",
+                medicalHistory.mildPeripheralVascularDisease && "Mild peripheral vascular disease",
+                medicalHistory.psoriasis && "Psoriasis",
+                medicalHistory.myastheniaGravis && "Myasthenia gravis",
+                medicalHistory.historyOfAnaphylaxis && "History of anaphylaxis",
+                medicalHistory.mildDepression && "Depression (not severe, no suicidal ideation)",
+              ]
+                .filter(Boolean)
+                .join(", ") || "None"
+            }
+          />
         </div>
       </div>
 
@@ -62,50 +176,77 @@ export function AnxietyPropranololSummaryReport({ state }: AnxietyPropranololSum
       </div>
 
       <div className="px-6 py-4 print:px-4 print:py-2">
-        <SectionHeader>Medicine Recommended</SectionHeader>
-        <div className="space-y-2 text-xs print:space-y-1">
-          <Row label="Medicine" value="Propranolol 10mg tablets" />
-          <Row label="Dose" value={medicineSupply.regimen === "regular" ? "10 to 40mg two to three times daily (maximum 120mg daily)" : "10 to 40mg PRN (maximum 120mg daily)"} />
-          <Row label="Timing" value={medicineSupply.regimen === "regular" ? "Ongoing situational anxiety; review at 4 weeks" : "30 to 60 minutes before anxiety-provoking situation"} />
-          <Row label="Quantity" value={medicineSupply.quantity ? `${medicineSupply.quantity} tablets of 10mg (${medicineSupply.quantity * 10}mg in total)` : "Not specified"} />
-        </div>
+        <SectionHeader>{hasStops ? "Medicine" : "Medicine Supplied"}</SectionHeader>
+        {hasStops ? (
+          <p className="text-xs font-semibold text-red-700">NOT SUPPLIED. Exclusion criteria met; see Clinical Alerts.</p>
+        ) : (
+          <div className="space-y-2 text-xs print:space-y-1">
+            <Row label="Medicine" value="Propranolol 10mg tablets (generic; brand as dispensed)" />
+            <Row label="Form and route" value="Tablet, oral" />
+            <Row label="Dose advised" value={dose !== null ? `${dose}mg (${dose / 10} x 10mg tablet${dose > 10 ? "s" : ""}) per administration` : "Not recorded"} />
+            <Row
+              label="Regimen"
+              value={
+                medicineSupply.regimen === "regular"
+                  ? `${medicineSupply.timesDaily === "3" ? "Three times" : medicineSupply.timesDaily === "2" ? "Twice" : "Two to three times"} daily for ongoing situational anxiety (maximum 120mg daily); review at 4 weeks`
+                  : medicineSupply.regimen === "prn"
+                    ? "PRN, 30 to 60 minutes before the anxiety-provoking situation (maximum 120mg daily)"
+                    : "Not recorded"
+              }
+            />
+            <Row label="Quantity supplied" value={medicineSupply.quantity ? `${medicineSupply.quantity} tablets of 10mg (${medicineSupply.quantity * 10}mg in total)` : "Not specified"} />
+            {days !== null && <Row label="Supply covers" value={`${days} day${days === 1 ? "" : "s"} at the advised dose and frequency; review before any further supply`} />}
+            <Row label="Date of supply" value={summary.consultationDate} />
+          </div>
+        )}
       </div>
 
-      <div className="px-6 py-4 print:px-4 print:py-2">
-        <SectionHeader>Counselling Provided</SectionHeader>
-        <CounsellingGrid
-          items={[
-            [medicineSupply.regimen === "regular" ? "Two to three times daily, maximum 120mg daily, review at 4 weeks" : "PRN use only, 30 to 60 minutes before the situation", counselling.prnUseOnly],
-            ["Reduces physical symptoms (tremor, palpitations, sweating)", counselling.physicalSymptoms],
-            ["Not a cure for anxiety; consider psychological therapy", counselling.notACure],
-            ["Does not cause dependence at PRN doses", counselling.noDependence],
-            ["Do not stop suddenly if used regularly", counselling.noSuddenWithdrawal],
-            ["Report breathlessness or wheeze", counselling.reportWheeze],
-            ["May cause cold hands and feet", counselling.coldExtremities],
-            ["Avoid alcohol (additive CNS depression)", counselling.avoidAlcohol],
-            ["Do NOT use with verapamil or diltiazem", counselling.avoidVerapamil],
-          ]}
-        />
-      </div>
+      {!hasStops && (
+        <div className="px-6 py-4 print:px-4 print:py-2">
+          <SectionHeader>Counselling Provided</SectionHeader>
+          <CounsellingGrid
+            items={[
+              [medicineSupply.regimen === "regular" ? "Regular dosing as advised, maximum 120mg daily, review before any further supply" : "PRN use only, 30 to 60 minutes before the situation", counselling.prnUseOnly],
+              ["Reduces physical symptoms (tremor, palpitations, sweating)", counselling.physicalSymptoms],
+              ["Not a cure for anxiety; consider psychological therapy", counselling.notACure],
+              ["Does not cause dependence at PRN doses", counselling.noDependence],
+              ["Do not stop suddenly if used regularly", counselling.noSuddenWithdrawal],
+              ["Report breathlessness or wheeze", counselling.reportWheeze],
+              ["May cause cold hands and feet", counselling.coldExtremities],
+              ["Avoid alcohol (additive CNS depression)", counselling.avoidAlcohol],
+              ["Do NOT use with verapamil or diltiazem", counselling.avoidVerapamil],
+            ]}
+          />
+          <p className="text-xs text-gray-600 mt-2">Patient information leaflet supplied. Suspected adverse effects to be reported via the Yellow Card scheme (yellowcard.mhra.gov.uk) and the GP informed as appropriate.</p>
+        </div>
+      )}
 
       {summary.clinicalNotes && (
         <div className="px-6 py-4 print:px-4 print:py-2">
-          <SectionHeader>Clinical Notes</SectionHeader>
+          <SectionHeader>Clinical Notes{hasStops ? " and Advice Given" : ""}</SectionHeader>
           <p className="text-xs text-gray-700 whitespace-pre-wrap">{summary.clinicalNotes}</p>
         </div>
       )}
 
       <div className="px-6 py-4 print:px-4 print:py-2">
-        <PharmacistDeclaration
-          pgdName="Anxiety — Propranolol"
-          pharmacistName={summary.pharmacistName}
-          pharmacistGPhC={summary.pharmacistGPhC}
-          pharmacyName={summary.pharmacyName}
-        />
+        {hasStops ? (
+          <NotSuppliedDeclaration
+            pharmacistName={summary.pharmacistName}
+            pharmacistGPhC={summary.pharmacistGPhC}
+            pharmacyName={summary.pharmacyName}
+          />
+        ) : (
+          <PharmacistDeclaration
+            pgdName={PGD_NAME}
+            pharmacistName={summary.pharmacistName}
+            pharmacistGPhC={summary.pharmacistGPhC}
+            pharmacyName={summary.pharmacyName}
+          />
+        )}
       </div>
 
       <div className="px-6 py-4 print:px-4 print:py-2">
-        <ReportFooter pgdName="Anxiety — Propranolol" />
+        <ReportFooter pgdName={PGD_NAME} />
       </div>
     </div>
   );

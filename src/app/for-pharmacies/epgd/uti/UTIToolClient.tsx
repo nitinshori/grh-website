@@ -198,11 +198,11 @@ export function UTIToolClient() {
     return validateUTIStep(currentStep, state);
   }, [currentStep, state]);
 
-  // Clinical alerts should only block navigation from step 2 onwards (clinical steps).
-  // Steps 0 (Patient Details) and 1 (Consent) should not be blocked by clinical logic
-  // since the pharmacist hasn't entered clinical data yet.
-  const isBlockedForStep = currentStep >= 2 && isBlocked;
-  const canProceed = validationError === null && !isBlockedForStep;
+  // A stop anywhere disables Next on every step, including the patient and
+  // consent steps (an age or renal stop can be raised there). The progress
+  // bar only moves backwards, so the only route past a stop is "Save as not
+  // supplied", which records the exclusion and the advice given.
+  const canProceed = validationError === null && !isBlocked;
 
   // Step navigation
   const handleNext = () => {
@@ -219,14 +219,30 @@ export function UTIToolClient() {
   };
 
   const handleStepClick = (step: number) => {
-    if (completedSteps.has(step) || step <= currentStep) {
+    // Backwards only: going forward always means pressing Next.
+    if (step < currentStep) {
       setCurrentStep(step);
     }
   };
 
   // ─── Consultation Record Data (for saving to database) ───
 
+  // Returns a record on every step, with or without a medicine, so an
+  // excluded patient can be saved as not supplied from the step the stop was
+  // raised. The computed alerts and recommendation are stored with it.
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    const med = state.medicineSelection.medicine;
+    const medicine = !isBlocked && med
+      ? {
+          name: med === 'nitrofurantoin'
+            ? 'Nitrofurantoin 100mg modified release capsules'
+            : 'Trimethoprim 200mg tablets',
+          medicine: med,
+          dose: `${state.medicineSelection.dose} twice daily`,
+          duration: state.medicineSelection.duration,
+          quantity: medicineQuantity.toString(),
+        }
+      : undefined;
     return {
       patient: {
         firstName: state.patient.firstName,
@@ -238,25 +254,26 @@ export function UTIToolClient() {
         address: state.patient.address,
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
+        gpAddress: state.patient.gpAddress,
+        gpPhone: state.patient.gpPhone,
+        gpEmail: state.patient.gpEmail,
+        gpOdsCode: state.patient.gpOdsCode,
       },
-      clinicalData: state as unknown as Record<string, unknown>,
+      clinicalData: { ...state, alerts, doseRecommendation } as unknown as Record<string, unknown>,
       outcome: isBlocked ? 'not_supplied' : 'completed',
-      medicine: {
-        name: state.medicineSelection.medicine === 'nitrofurantoin'
-          ? 'Nitrofurantoin 100mg modified release capsules'
-          : 'Trimethoprim 200mg tablets',
-        dose: state.medicineSelection.dose,
-        duration: state.medicineSelection.duration,
-        quantity: medicineQuantity.toString(),
-      },
+      medicine,
       summary: {
-        pharmacistName: state.summary.pharmacistName,
-        pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacistName: state.summary.pharmacistName || __pharmProfile?.name || "",
+        pharmacistGPhC: state.summary.pharmacistGPhC || __pharmProfile?.gphcNumber || "",
+        pharmacyName: state.summary.pharmacyName || __pharmProfile?.pharmacyName || "",
+        pharmacyAddress: state.summary.pharmacyAddress || __pharmProfile?.pharmacyAddress || "",
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: state.consent.notifyGp },
     };
-  }, [state, isBlocked, medicineQuantity]);
+  }, [state, isBlocked, medicineQuantity, alerts, doseRecommendation, __pharmProfile]);
 
   const handleNewConsultation = useCallback(() => {
     dispatch({ type: "RESET" });
@@ -519,7 +536,7 @@ export function UTIToolClient() {
                 description="One course per episode. Refer."
               />
               <Checkbox
-                label="Previous UTI within last 4 weeks"
+                label="Previous UTI within the last 4 weeks (recorded; not an exclusion in itself)"
                 checked={state.medicalHistory.previousUTIWithin4Weeks}
                 onChange={(v) =>
                   dispatch({
@@ -583,24 +600,24 @@ export function UTIToolClient() {
                 }
               />
               <SelectInput
-                label="Renal function"
+                label="Patient's answer to the kidney question (record the answer given)"
                 value={state.medicalHistory.renalImpairment}
                 onChange={(v) =>
                   dispatch({
                     type: "UPDATE_MEDICAL_HISTORY",
-                    payload: { renalImpairment: v as "none" | "checked-adequate" | "moderate" | "severe" | "unknown" },
+                    payload: { renalImpairment: v as "" | "none" | "moderate" | "severe" | "unknown" },
                   })
                 }
                 options={[
-                  { value: "none", label: "Answer NO, no known kidney disease (aged 16 to 59: proceed)" },
-                  { value: "checked-adequate", label: "Recent renal function result seen and adequate (eGFR 45 or more)" },
-                  { value: "unknown", label: "Patient does not know" },
-                  { value: "moderate", label: "Moderate impairment (eGFR 30 to 44)" },
-                  { value: "severe", label: "Severe impairment (eGFR under 30)" },
+                  { value: "none", label: "Answer NO: no known kidney disease (aged 16 to 59: proceed; aged 60 to 64: exclude)" },
+                  { value: "unknown", label: "Patient does not know (exclude; refer for a renal function check first)" },
+                  { value: "moderate", label: "Answer YES: moderate impairment (eGFR 30 to 44) (exclude)" },
+                  { value: "severe", label: "Answer YES: severe impairment (eGFR under 30) (exclude)" },
                 ]}
+                required
               />
               <p className="text-xs text-gray-600">
-                Aged 60 to 64: exclude and refer for a renal function check first unless a recent result has been seen and is adequate.
+                PGD v005 renal row: YES or under renal follow-up, exclude. NO and aged 16 to 59, proceed. NO but aged 60 to 64, or does not know, exclude and refer for a renal function check first. The document gives no route back to supply on a seen result.
               </p>
               <Checkbox
                 label="Known structural or functional abnormality of the urinary tract, or renal stones"
@@ -986,7 +1003,7 @@ export function UTIToolClient() {
             <AlertBanner alerts={alerts} />
             <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-4">
               <p className="text-sm text-blue-800">
-                Based on the clinical assessment, a medicine has been recommended. Confirm the selection or override if clinically appropriate.
+                Based on the clinical assessment, a medicine has been recommended. Only the two regimens the PGD states can be supplied; there is no override.
               </p>
             </div>
             <div className="bg-[color:var(--tenant-primary)]/10 border border-[color:var(--tenant-primary)]/30 rounded-lg px-4 py-3 mb-4">
@@ -1089,31 +1106,6 @@ export function UTIToolClient() {
                 Maximum treatment period 3 days. A patient still symptomatic at 48 hours is referred, not re-supplied.
               </p>
             </div>
-            <Checkbox
-              label="Pharmacist override required"
-              checked={state.medicineSelection.pharmacistOverride}
-              onChange={(v) =>
-                dispatch({
-                  type: "UPDATE_MEDICINE",
-                  payload: { pharmacistOverride: v },
-                })
-              }
-              description="Check if deviating from standard recommendations for clinical reasons"
-            />
-            {state.medicineSelection.pharmacistOverride && (
-              <TextArea
-                label="Override reason"
-                value={state.medicineSelection.overrideReason}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_MEDICINE",
-                    payload: { overrideReason: v },
-                  })
-                }
-                placeholder="Document clinical reasoning for override..."
-                rows={3}
-              />
-            )}
           </div>
         );
 
@@ -1251,18 +1243,28 @@ export function UTIToolClient() {
                   })
                 }
               />
-              {state.medicalHistory.pregnancyPossible && (
-                <Checkbox
-                  label="Discussed contraception and confirmed not at risk of pregnancy"
-                  checked={state.counselling.pregnancyPrecautions}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_COUNSELLING",
-                      payload: { pregnancyPrecautions: v },
-                    })
-                  }
-                />
-              )}
+              <Checkbox
+                label="Patient information leaflet supplied with the product"
+                checked={state.counselling.pilSupplied}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_COUNSELLING",
+                    payload: { pilSupplied: v },
+                  })
+                }
+                required
+              />
+              <Checkbox
+                label="Return any unused medicine to a pharmacy; do not flush or put in household waste"
+                checked={state.counselling.disposalAdvice}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_COUNSELLING",
+                    payload: { disposalAdvice: v },
+                  })
+                }
+                required
+              />
             </div>
           </div>
         );
@@ -1373,9 +1375,9 @@ export function UTIToolClient() {
             totalSteps={STEP_LABELS.length}
             onNext={handleNext}
             onPrev={handlePrev}
-            canProceed={validationError === null}
+            canProceed={canProceed}
             validationError={validationError}
-            isBlocked={false}
+            isBlocked={isBlocked}
             getConsultationData={getConsultationData}
             onNewConsultation={handleNewConsultation}
           >
@@ -1391,7 +1393,8 @@ export function UTIToolClient() {
           onPrev={handlePrev}
           canProceed={canProceed}
           validationError={validationError}
-          isBlocked={isBlockedForStep}
+          isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
         >
           {renderStepContent()}
         </StepWrapper>

@@ -30,6 +30,8 @@ interface SoreThroatSummaryReportProps {
   counselling: SoreThroatCounselling;
   summary: BaseSummary;
   alerts: ClinicalAlert[];
+  /** A stop exists: the record says NOT SUPPLIED and prints no medicine. */
+  isBlocked?: boolean;
   onSummaryChange: (field: keyof BaseSummary, value: string) => void;
 }
 
@@ -44,8 +46,10 @@ export function SoreThroatSummaryReport({
   counselling,
   summary,
   alerts,
+  isBlocked = false,
   onSummaryChange,
 }: SoreThroatSummaryReportProps) {
+  const supplied = !isBlocked && medicine.medicine !== "" && medicine.medicine !== "none";
   const formatDate = (dateStr: string) => {
     if (!dateStr) return "";
     const date = new Date(dateStr);
@@ -87,10 +91,11 @@ export function SoreThroatSummaryReport({
               label="Date of birth"
               value={formatDate(patient.dateOfBirth)}
             />
-            <Row label="Age" value={patient.age ? `${patient.age} years` : ""} />
-            <Row label="GP" value={patient.gpName} />
-            <Row label="GP practice" value={patient.gpPractice} />
-            <Row label="NHS number" value={patient.nhsNumber} />
+            <Row label="Age" value={patient.age !== null ? `${patient.age} years` : "Not recorded"} />
+            <Row label="Address" value={patient.address || "Not recorded"} />
+            <Row label="GP" value={patient.gpName || "Not recorded"} />
+            <Row label="GP practice" value={patient.gpPractice || "Not recorded"} />
+            <Row label="NHS number" value={patient.nhsNumber || "Not recorded"} />
           </div>
         </div>
 
@@ -107,6 +112,11 @@ export function SoreThroatSummaryReport({
               label="ID type verified"
               value={consent.idType || "Not recorded"}
             />
+            <Row
+              label="Consent"
+              value={consent.informedConsentGiven ? "Valid informed consent given" : "Not recorded"}
+            />
+            <Row label="Pharmacy" value={summary.pharmacyName || "Not recorded"} />
           </div>
         </div>
 
@@ -334,32 +344,41 @@ export function SoreThroatSummaryReport({
           />
         </div>
 
-        {/* Medicine Prescribed */}
-        {medicine.medicine && medicine.medicine !== "none" && (
-          <div>
-            <SectionHeader>Medicine Supplied</SectionHeader>
-            <div className="space-y-1.5">
-              <Row
-                label="Medicine"
-                value={
-                  medicine.medicine === "phenoxymethylpenicillin"
-                    ? "Phenoxymethylpenicillin 500mg tablets (Pen V)"
-                    : "Clarithromycin 250mg tablets"
-                }
-              />
-              <Row label="Brand" value={medicine.brand || "Not recorded"} />
-              <Row label="Form and route" value="Tablets, oral" />
-              <Row label="Dose" value={medicine.dose} />
-              <Row label="Frequency" value={medicine.frequency} />
-              <Row label="Duration" value={medicine.duration} />
-              <Row label="Quantity" value={`${medicine.quantity} tablets`} />
-              <Row
-                label="Back-up prescription"
-                value={medicine.backupPrescription ? "Yes" : "No"}
-              />
-            </div>
+        {/* Outcome and medicine */}
+        <div>
+          <SectionHeader>Outcome</SectionHeader>
+          <div className="space-y-1.5">
+            {isBlocked ? (
+              <>
+                <Row label="Outcome" value="NOT SUPPLIED: exclusion criteria met; patient referred." />
+                <Row label="Advice given and decision" value={counselling.exclusionAdvice || "Not recorded"} />
+              </>
+            ) : medicine.medicine === "none" ? (
+              <Row label="Outcome" value="No antibiotic under this PGD: self-care advice given (FeverPAIN below 4 and RAST not positive)." />
+            ) : supplied ? (
+              <>
+                <Row label="Outcome" value="Supplied under the Sore Throat Test and Treat PGD, version 003" />
+                <Row
+                  label="Medicine"
+                  value={
+                    medicine.medicine === "phenoxymethylpenicillin"
+                      ? "Phenoxymethylpenicillin 500mg tablets (Pen V)"
+                      : "Clarithromycin 250mg tablets"
+                  }
+                />
+                <Row label="Brand" value={medicine.brand || "Not recorded"} />
+                <Row label="Form and route" value="Tablets, oral" />
+                <Row label="Dose" value={medicine.dose} />
+                <Row label="Frequency" value={medicine.frequency} />
+                <Row label="Duration" value={medicine.duration} />
+                <Row label="Quantity" value={`${medicine.quantity} tablets`} />
+                <Row label="Date of supply" value={formatDate(summary.consultationDate)} />
+              </>
+            ) : (
+              <Row label="Outcome" value="No medicine recorded" />
+            )}
           </div>
-        )}
+        </div>
 
         {/* Counselling Provided */}
         <div>
@@ -382,8 +401,14 @@ export function SoreThroatSummaryReport({
               ["Clarithromycin: persistent diarrhoea, metallic taste", counselling.clarithromycinAdvice],
               ["Avoid antibiotic sharing", counselling.avoidAntibioticSharing],
               ["Return to school/work advice", counselling.schoolWorkAdvice],
+              ["Patient information leaflet supplied", counselling.pilSupplied],
             ]}
           />
+        </div>
+
+        <div>
+          <SectionHeader>Adverse Drug Reactions</SectionHeader>
+          <p className="text-xs text-gray-700 whitespace-pre-wrap">{counselling.adverseReactions || "None recorded at the time of supply. Report suspected reactions via https://yellowcard.mhra.gov.uk."}</p>
         </div>
 
         {/* Clinical Notes */}
@@ -401,12 +426,39 @@ export function SoreThroatSummaryReport({
         </div>
 
         {/* Pharmacist Details */}
-        <PharmacistDeclaration
-          pgdName="Sore Throat Test & Treat"
-          pharmacistName={summary.pharmacistName}
-          pharmacistGPhC={summary.pharmacistGPhC}
-          pharmacyName={summary.pharmacyName}
-        />
+        {supplied ? (
+          <PharmacistDeclaration
+            pgdName="Sore Throat Test & Treat"
+            pharmacistName={summary.pharmacistName}
+            pharmacistGPhC={summary.pharmacistGPhC}
+            pharmacyName={summary.pharmacyName}
+          />
+        ) : (
+          <div>
+            <SectionHeader>Practitioner Declaration</SectionHeader>
+            <p className="text-xs text-gray-600 mb-4">
+              I confirm that this consultation was conducted in accordance with the Patient Group Direction for Sore Throat Test & Treat, that no antibiotic was supplied, and that the advice given and the decision reached are recorded above.
+            </p>
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-1">Name</p>
+                <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{summary.pharmacistName || ""}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-1">GPhC number</p>
+                <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{summary.pharmacistGPhC || ""}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-1">Pharmacy</p>
+                <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{summary.pharmacyName || ""}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-1">Signature</p>
+                <div className="border-b border-gray-300 min-h-[2rem]" />
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Editable Fields for Pharmacist (screen only) */}
         <div className="print:hidden space-y-4 pt-4 border-t border-gray-200">

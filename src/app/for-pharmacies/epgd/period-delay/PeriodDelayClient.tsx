@@ -1,8 +1,8 @@
 "use client";
 import { useReducer, useMemo, useState, useCallback, useEffect } from "react";
 import type { PeriodDelayConsultationState, PeriodDelayAction } from "./lib/period-delay-types";
-import { STEP_LABELS, TOTAL_STEPS, createInitialConsultationState } from "./lib/period-delay-types";
-import { getAllAlerts, hasHardStops, calculateDoseRecommendation, calculateBmi, MAX_TREATMENT_DAYS } from "./lib/period-delay-clinical-logic";
+import { STEP_LABELS, TOTAL_STEPS, createInitialConsultationState, APPENDIX1_FIELD } from "./lib/period-delay-types";
+import { getAllAlerts, hasHardStops, calculateDoseRecommendation, calculateBmi, MAX_TREATMENT_DAYS, MAX_TABLETS, parseUkDate, formatUkDate, daysFromToday, daysBetweenUk } from "./lib/period-delay-clinical-logic";
 import { validateStep } from "./lib/period-delay-validation";
 import { calculateAge } from "../shared/types";
 import { ProgressBar } from "../shared/components/ProgressBar";
@@ -16,39 +16,30 @@ import { PeriodDelaySummaryReport } from "./components/PeriodDelaySummaryReport"
 
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 
-/**
- * Parse DD/MM/YYYY. Returns null on anything else, including 31/02/2026,
- * because Date() would silently roll that forward to 3 March and the whole
- * point of this field is that the date is right.
- */
-function parseUkDate(v: string): Date | null {
-  const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec((v || "").trim());
-  if (!m) return null;
-  const [dd, mm, yyyy] = [Number(m[1]), Number(m[2]), Number(m[3])];
-  const d = new Date(yyyy, mm - 1, dd);
-  if (d.getFullYear() !== yyyy || d.getMonth() !== mm - 1 || d.getDate() !== dd) return null;
-  return d;
-}
-
-function formatUkDate(d: Date): string {
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`;
-}
-
-/** Whole days from today to `d`, negative if it is in the past. */
-function daysFromToday(d: Date): number {
-  const t = new Date();
-  t.setHours(0, 0, 0, 0);
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  return Math.round((x.getTime() - t.getTime()) / 86400000);
-}
-
 /** Norethisterone is started 3 days before the period is due. */
 function startDateFor(expected: Date): Date {
   const s = new Date(expected);
   s.setDate(s.getDate() - 3);
   return s;
+}
+
+/** A yes/no question with no default. Appendix 1 requires the answer, not the outcome. */
+function YesNo({ label, description, value, onChange }: { label: string; description?: string; value: boolean | null; onChange: (v: boolean) => void }) {
+  return (
+    <div className="py-1.5">
+      <p className="text-sm text-navy-900">{label} <span className="text-red-400">*</span></p>
+      {description && <p className="text-xs text-gray-500 mt-0.5">{description}</p>}
+      <div className="flex gap-4 mt-1">
+        {([["yes", true], ["no", false]] as const).map(([k, v]) => (
+          <label key={k} className="flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer">
+            <input type="radio" checked={value === v} onChange={() => onChange(v)} className="accent-teal-600" />
+            {k === "yes" ? "Yes" : "No"}
+          </label>
+        ))}
+        {value === null && <span className="text-xs text-amber-700">Not yet asked</span>}
+      </div>
+    </div>
+  );
 }
 
 function reducer(state: PeriodDelayConsultationState, action: PeriodDelayAction): PeriodDelayConsultationState {
@@ -78,6 +69,24 @@ function reducer(state: PeriodDelayConsultationState, action: PeriodDelayAction)
       break;
     case "UPDATE_MEDICAL_HISTORY":
       newState.medicalHistory = { ...newState.medicalHistory, [action.field]: action.value };
+      break;
+    case "ANSWER_APPENDIX1": {
+      // Records the answer as given and writes the underlying history field,
+      // so the alert and the record come from the same answer.
+      const appendix1 = { ...newState.medicalHistory.appendix1, [action.key]: action.value };
+      if (action.key === "q3CurrentSmoker" && action.value === true) {
+        appendix1.q3StoppedUnderOneYear = false;
+      }
+      newState.medicalHistory = {
+        ...newState.medicalHistory,
+        appendix1,
+        [APPENDIX1_FIELD[action.key]]: action.value,
+        ...(action.key === "q3CurrentSmoker" && action.value === true ? { stoppedSmokingUnderOneYear: false } : {}),
+      };
+      break;
+    }
+    case "UPDATE_EXCLUSION_ADVICE":
+      newState.exclusionAdvice = { ...newState.exclusionAdvice, [action.field]: action.value };
       break;
     case "UPDATE_MEDICATIONS":
       newState.medications = { ...newState.medications, [action.field]: action.value };
@@ -137,7 +146,10 @@ export default function PeriodDelayClient() {
   }, [state, alerts, doseRecommendation]);
 
   const validationError = useMemo(() => validateStep(state.currentStep, state), [state.currentStep, state]);
-  const canProceed = !validationError && (!hasStops || state.currentStep >= 4);
+  // A stop anywhere disables Next on every step. The progress bar only moves
+  // backwards, so the only route past a stop is "Save as not supplied",
+  // which records the exclusion and the Appendix 2 advice given.
+  const canProceed = !validationError && !hasStops;
 
   const markStepComplete = useCallback(() => {
     const newCompleted = new Set(completedSteps);
@@ -162,7 +174,20 @@ export default function PeriodDelayClient() {
 
 
   // ─── Consultation Record Data (for saving to database) ───
+  // Returns a record on every step, with or without a medicine, so an
+  // excluded patient can be saved as not supplied from the step the stop was
+  // raised. Saves updatedState so alerts and the recommendation are stored.
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    const days = state.medicineSelection.daysToDelay;
+    const medicine = !hasStops && doseRecommendation && days !== null && days > 0
+      ? {
+          name: "Norethisterone 5mg tablets",
+          medicine: "norethisterone",
+          dose: "5 mg three times daily",
+          duration: `${days} days from ${state.medicineSelection.startDate || "start date not recorded"}`,
+          quantity: `${Math.min(days, MAX_TREATMENT_DAYS) * 3} tablets`,
+        }
+      : undefined;
     return {
       patient: {
         firstName: state.patient.firstName,
@@ -174,17 +199,26 @@ export default function PeriodDelayClient() {
         address: state.patient.address,
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
+        gpAddress: state.patient.gpAddress,
+        gpPhone: state.patient.gpPhone,
+        gpEmail: state.patient.gpEmail,
+        gpOdsCode: state.patient.gpOdsCode,
       },
-      clinicalData: state as unknown as Record<string, unknown>,
+      clinicalData: updatedState as unknown as Record<string, unknown>,
       outcome: hasStops ? "not_supplied" : "completed",
+      medicine,
       summary: {
-        pharmacistName: state.summary.pharmacistName,
-        pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacistName: state.summary.pharmacistName || __pharmProfile?.name || "",
+        pharmacistGPhC: state.summary.pharmacistGPhC || __pharmProfile?.gphcNumber || "",
+        pharmacyName: state.summary.pharmacyName || __pharmProfile?.pharmacyName || "",
+        pharmacyAddress: state.summary.pharmacyAddress || __pharmProfile?.pharmacyAddress || "",
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: state.consent.notifyGp },
     };
-  }, [state, hasStops]);
+  }, [state, updatedState, hasStops, doseRecommendation, __pharmProfile]);
 
   const handleNewConsultation = useCallback(() => {
     dispatch({ type: "RESET" });
@@ -195,7 +229,7 @@ export default function PeriodDelayClient() {
     switch (state.currentStep) {
       case 0:
         return (
-          <StepWrapper title="Patient Details" currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={validationError}>
+          <StepWrapper title="Patient Details" currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={validationError} isBlocked={hasStops} getConsultationData={getConsultationData}>
             <PatientDetailsStep
               patient={state.patient}
               onChange={(field, value) => dispatch({ type: "UPDATE_PATIENT", field, value })}
@@ -211,13 +245,13 @@ export default function PeriodDelayClient() {
         );
       case 1:
         return (
-          <StepWrapper title="Consent & ID Verification" currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={validationError}>
+          <StepWrapper title="Consent & ID Verification" currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={validationError} isBlocked={hasStops} getConsultationData={getConsultationData}>
             <ConsentStep consent={state.consent} onChange={(field, value) => dispatch({ type: "UPDATE_CONSENT", field, value })} />
           </StepWrapper>
         );
       case 2:
         return (
-          <StepWrapper title="Period Delay Assessment" description="Assess the patient's reason for period delay and menstrual history." currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={validationError}>
+          <StepWrapper title="Period Delay Assessment" description="Assess the patient's reason for period delay and menstrual history." currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={validationError} isBlocked={hasStops} getConsultationData={getConsultationData}>
             <div className="space-y-4">
               <SelectInput label="Reason for period delay" value={state.assessment.reasonForDelay} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "reasonForDelay", value: v })} options={[{ value: "holiday", label: "Holiday / travel" }, { value: "event", label: "Special event (wedding, exam, etc.)" }, { value: "religious", label: "Religious observance" }, { value: "other", label: "Other" }]} required />
               {state.assessment.reasonForDelay === "other" && (
@@ -254,8 +288,17 @@ export default function PeriodDelayClient() {
                 {!(state.assessment.lastPeriodNormalOnTime && state.assessment.noUnprotectedSexSince) && (
                   <div className="space-y-2 pt-1">
                     <p className="text-xs text-amber-800">Pregnancy cannot be excluded on history. Do not supply until a pregnancy test taken no earlier than 21 days after the last unprotected sex is negative. Record the date and result.</p>
+                    <TextInput label="Date of the last unprotected sex or contraceptive failure" value={state.assessment.lastUpsiDate} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "lastUpsiDate", value: v })} placeholder="DD/MM/YYYY" required />
                     <Checkbox label="Pregnancy test negative, taken no earlier than 21 days after the last unprotected sex" checked={state.assessment.pregnancyTestNegative} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "pregnancyTestNegative", value: v })} />
-                    <TextInput label="Date of pregnancy test" value={state.assessment.pregnancyTestDate} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "pregnancyTestDate", value: v })} placeholder="DD/MM/YYYY" />
+                    <TextInput label="Date of pregnancy test" value={state.assessment.pregnancyTestDate} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "pregnancyTestDate", value: v })} placeholder="DD/MM/YYYY" required />
+                    {(() => {
+                      const interval = daysBetweenUk(state.assessment.lastUpsiDate, state.assessment.pregnancyTestDate);
+                      return interval !== null ? (
+                        <p className={`text-xs ${interval >= 21 ? "text-gray-700" : "font-semibold text-red-700"}`}>
+                          Test taken {interval} days after the last unprotected sex{interval >= 21 ? "" : ": too early, the test must be at least 21 days after. Do not supply"}.
+                        </p>
+                      ) : null;
+                    })()}
                   </div>
                 )}
               </div>
@@ -282,7 +325,7 @@ export default function PeriodDelayClient() {
         );
       case 3:
         return (
-          <StepWrapper title="Medical History" description="Screen for contraindications to norethisterone." currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={validationError}>
+          <StepWrapper title="Medical History" description="Screen for contraindications to norethisterone." currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={validationError} isBlocked={hasStops} getConsultationData={getConsultationData}>
             <div className="space-y-4">
               <div className="border-b pb-3"><p className="text-sm font-semibold text-red-700">EXCLUSIONS (PGD v008). If any is present, do NOT supply. Refer.</p></div>
               <Checkbox label="Known or suspected pregnancy" checked={state.medicalHistory.pregnancy} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "pregnancy", value: v })} description="Norethisterone is contraindicated in pregnancy. Pregnancy exclusion is recorded on the Assessment step." />
@@ -292,13 +335,18 @@ export default function PeriodDelayClient() {
                 <p className="text-sm font-semibold text-amber-900">Venous thromboembolism gate (Appendix 1). Ask all eight. Any single YES excludes.</p>
                 <p className="text-xs text-amber-800 mt-1">At 5mg three times daily a clinically significant proportion of norethisterone is metabolised to ethinylestradiol, so the clot risk is closer to a combined pill than to a progestogen-only pill. Record the answers, not just the outcome.</p>
               </div>
-              <Checkbox label="1. Ever had a blood clot, a DVT, a clot on the lung, a stroke, a mini-stroke or a heart attack (personal history of VTE, DVT, PE, stroke, TIA, MI or any arterial disease)" checked={state.medicalHistory.historyOfDVT} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "historyOfDVT", value: v })} />
-              <Checkbox label="2. Known thrombophilia, or anyone in the immediate family with a blood clot before the age of 45 or a clotting disorder" checked={state.medicalHistory.familyVteUnder45} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "familyVteUnder45", value: v })} />
-              <Checkbox label="3. Currently smokes, any amount, any age" description="PGD v008 excludes all current smokers." checked={state.medicalHistory.currentSmoker} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "currentSmoker", value: v })} />
-              <Checkbox label="Stopped smoking less than a year ago, any age" description="Ask this separately: a question that only asks whether she smokes misclassifies a recent quitter. Excludes." checked={state.medicalHistory.stoppedSmokingUnderOneYear} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "stoppedSmokingUnderOneYear", value: v })} />
-              <Checkbox label="Stopped smoking a year or more ago" description="Recorded. At 35 or over this is UKMEC 2, not an exclusion in the PGD." checked={state.medicalHistory.stoppedSmokingOverOneYear} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "stoppedSmokingOverOneYear", value: v })} />
-              {state.medicalHistory.currentSmoker && (
-                <TextInput label="Cigarettes per day" type="number" value={state.medicalHistory.cigarettesPerDay === null ? "" : String(state.medicalHistory.cigarettesPerDay)} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "cigarettesPerDay", value: v === "" ? null : Number(v) })} placeholder="For the record: any amount excludes" />
+              <p className="text-sm font-semibold text-navy-900">1. Ever had a blood clot, a DVT, a clot on the lung, a stroke, a mini-stroke or a heart attack? (one answer per condition)</p>
+              <YesNo label="Deep vein thrombosis (DVT) or any venous blood clot" value={state.medicalHistory.appendix1.q1Dvt} onChange={(v) => dispatch({ type: "ANSWER_APPENDIX1", key: "q1Dvt", value: v })} />
+              <YesNo label="Pulmonary embolism (clot on the lung)" value={state.medicalHistory.appendix1.q1Pe} onChange={(v) => dispatch({ type: "ANSWER_APPENDIX1", key: "q1Pe", value: v })} />
+              <YesNo label="Stroke or transient ischaemic attack (mini-stroke)" value={state.medicalHistory.appendix1.q1Stroke} onChange={(v) => dispatch({ type: "ANSWER_APPENDIX1", key: "q1Stroke", value: v })} />
+              <YesNo label="Heart attack or any arterial disease" value={state.medicalHistory.appendix1.q1Arterial} onChange={(v) => dispatch({ type: "ANSWER_APPENDIX1", key: "q1Arterial", value: v })} />
+              <YesNo label="2. Known thrombophilia, or anyone in the immediate family with a blood clot before the age of 45 or a clotting disorder" value={state.medicalHistory.appendix1.q2Thrombophilia} onChange={(v) => dispatch({ type: "ANSWER_APPENDIX1", key: "q2Thrombophilia", value: v })} />
+              <YesNo label="3. Currently smokes, any amount, any age" description="PGD v008 excludes all current smokers." value={state.medicalHistory.appendix1.q3CurrentSmoker} onChange={(v) => dispatch({ type: "ANSWER_APPENDIX1", key: "q3CurrentSmoker", value: v })} />
+              {state.medicalHistory.appendix1.q3CurrentSmoker === false && (
+                <YesNo label="Stopped smoking less than a year ago, any age" description="Ask this separately: a question that only asks whether she smokes misclassifies a recent quitter. Excludes." value={state.medicalHistory.appendix1.q3StoppedUnderOneYear} onChange={(v) => dispatch({ type: "ANSWER_APPENDIX1", key: "q3StoppedUnderOneYear", value: v })} />
+              )}
+              {state.medicalHistory.appendix1.q3CurrentSmoker === false && state.medicalHistory.appendix1.q3StoppedUnderOneYear === false && (
+                <Checkbox label="Stopped smoking a year or more ago" description="Recorded. At 35 or over this is UKMEC 2, not an exclusion in the PGD." checked={state.medicalHistory.stoppedSmokingOverOneYear} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "stoppedSmokingOverOneYear", value: v })} />
               )}
               <p className="text-sm text-navy-900">4. Height and weight, for BMI. Measure or ask. Do not estimate. BMI 30 or above excludes.</p>
               <div className="grid sm:grid-cols-2 gap-4">
@@ -308,14 +356,11 @@ export default function PeriodDelayClient() {
               {bmi !== null && (
                 <p className={`text-sm ${bmi >= 30 ? "font-semibold text-red-700" : "text-gray-700"}`}>BMI {bmi.toFixed(1)} kg/m2{bmi >= 30 ? ": 30 or above, excluded" : ""}</p>
               )}
-              <Checkbox label="5. Flight, coach, train or car journey of 4 hours or more during the course, or in the 2 weeks after it" checked={state.medicalHistory.longJourney} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "longJourney", value: v })} description="Excludes. This will exclude many holiday requests; that is the intended effect. Give the alternatives in Appendix 2." />
-              <Checkbox label="6. Surgery under general anaesthetic in the last 6 weeks, or planned during or within 2 weeks of the course" checked={state.medicalHistory.recentOrPlannedSurgery} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "recentOrPlannedSurgery", value: v })} />
-              <Checkbox label="7. Any current or expected period of immobility, including a leg in plaster or being bed-bound" checked={state.medicalHistory.immobility} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "immobility", value: v })} />
-              <Checkbox label="8. Cancer now, or treated for cancer in the last 12 months" checked={state.medicalHistory.activeOrRecentCancer} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "activeOrRecentCancer", value: v })} />
+              <YesNo label="5. Flight, coach, train or car journey of 4 hours or more during the course, or in the 2 weeks after it" description="Excludes. This will exclude many holiday requests; that is the intended effect. Give the alternatives in Appendix 2." value={state.medicalHistory.appendix1.q5LongJourney} onChange={(v) => dispatch({ type: "ANSWER_APPENDIX1", key: "q5LongJourney", value: v })} />
+              <YesNo label="6. Surgery under general anaesthetic in the last 6 weeks, or planned during or within 2 weeks of the course" value={state.medicalHistory.appendix1.q6Surgery} onChange={(v) => dispatch({ type: "ANSWER_APPENDIX1", key: "q6Surgery", value: v })} />
+              <YesNo label="7. Any current or expected period of immobility, including a leg in plaster or being bed-bound" value={state.medicalHistory.appendix1.q7Immobility} onChange={(v) => dispatch({ type: "ANSWER_APPENDIX1", key: "q7Immobility", value: v })} />
+              <YesNo label="8. Cancer now, or treated for cancer in the last 12 months" value={state.medicalHistory.appendix1.q8Cancer} onChange={(v) => dispatch({ type: "ANSWER_APPENDIX1", key: "q8Cancer", value: v })} />
               <div className="border-t pt-4"><p className="text-sm font-semibold text-red-700">Other exclusions</p></div>
-              <Checkbox label="History of pulmonary embolism (PE)" checked={state.medicalHistory.historyOfPE} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "historyOfPE", value: v })} />
-              <Checkbox label="History of stroke or TIA" checked={state.medicalHistory.historyOfStroke} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "historyOfStroke", value: v })} />
-              <Checkbox label="Myocardial infarction or any arterial disease" checked={state.medicalHistory.severeArterialDisease} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "severeArterialDisease", value: v })} />
               <Checkbox label="Liver dysfunction, active liver disease, or a liver tumour" checked={state.medicalHistory.liverDisease} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "liverDisease", value: v })} />
               <Checkbox label="History of jaundice in pregnancy" checked={state.medicalHistory.jaundiceInPregnancy} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "jaundiceInPregnancy", value: v })} />
               <Checkbox label="Acute porphyria" checked={state.medicalHistory.porphyria} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "porphyria", value: v })} />
@@ -360,7 +405,7 @@ export default function PeriodDelayClient() {
         );
       case 4:
         return (
-          <StepWrapper title="Contraindications & Drug Interactions" currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={!hasStops} validationError={hasStops ? "Exclusion present, cannot proceed. Give the alternatives in Appendix 2 and record the advice." : null} isBlocked={hasStops}>
+          <StepWrapper title="Contraindications & Drug Interactions" currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={!hasStops} validationError={hasStops ? "Exclusion present, cannot proceed. Give the alternatives in Appendix 2, record the advice above, and save as not supplied." : null} isBlocked={hasStops} getConsultationData={getConsultationData}>
             <div className="space-y-4 mb-4">
               <Checkbox label="Taking anticoagulants (warfarin, DOACs)" checked={state.medications.anticoagulants} onChange={(v) => dispatch({ type: "UPDATE_MEDICATIONS", field: "anticoagulants", value: v })} />
               <Checkbox label="Taking antiepileptic medication" checked={state.medications.antiepileptics} onChange={(v) => dispatch({ type: "UPDATE_MEDICATIONS", field: "antiepileptics", value: v })} description="Enzyme inducers and lamotrigine monotherapy are exclusions (Medical History step)" />
@@ -373,7 +418,7 @@ export default function PeriodDelayClient() {
         );
       case 5:
         return (
-          <StepWrapper title="Treatment Plan" description="Confirm norethisterone supply." currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={validationError} isBlocked={hasStops}>
+          <StepWrapper title="Treatment Plan" description="Confirm norethisterone supply." currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={validationError} isBlocked={hasStops} getConsultationData={getConsultationData}>
             <div className="space-y-4">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <p className="text-sm font-semibold text-blue-900 mb-1">Standard regimen</p>
@@ -386,14 +431,15 @@ export default function PeriodDelayClient() {
                   Tablets to supply: <strong>{Math.min(state.medicineSelection.daysToDelay, MAX_TREATMENT_DAYS) * 3}</strong> x norethisterone 5mg{state.medicineSelection.daysToDelay > MAX_TREATMENT_DAYS ? " (exceeds the 14 day maximum)" : ""}
                 </p>
               )}
-              <TextInput label="Planned start date (3 days before expected period)" value={state.medicineSelection.startDate} onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "startDate", value: v })} placeholder="DD/MM/YYYY" />
+              <TextInput label="Planned start date (derived: 3 days before the date the period is due)" value={state.medicineSelection.startDate} onChange={() => undefined} placeholder="Set from the Assessment step" disabled />
+              <p className="text-xs text-gray-600">Tablets are limited to {MAX_TABLETS}. To change the start date, go back to the Assessment step and correct the date the period is due.</p>
               <Checkbox label="I confirm this treatment is appropriate for this patient" checked={state.medicineSelection.confirmed} onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "confirmed", value: v })} />
             </div>
           </StepWrapper>
         );
       case 6:
         return (
-          <StepWrapper title="Counselling & Patient Education" currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={validationError}>
+          <StepWrapper title="Counselling & Patient Education" currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={validationError} isBlocked={hasStops} getConsultationData={getConsultationData}>
             <div className="space-y-3">
               <Checkbox label="Take one tablet three times a day, every day, swallowed whole with some liquid, until you stop" checked={state.counselling.howToTake} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "howToTake", value: v })} required />
               <Checkbox label="Start 3 days before your period is due" checked={state.counselling.startThreeDaysBefore} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "startThreeDaysBefore", value: v })} required />
@@ -416,9 +462,9 @@ export default function PeriodDelayClient() {
             totalSteps={TOTAL_STEPS}
             onNext={handleNext}
             onPrev={handlePrev}
-            canProceed={true}
-            validationError={null}
-            isBlocked={false}
+            canProceed={canProceed}
+            validationError={validationError}
+            isBlocked={hasStops}
             getConsultationData={getConsultationData}
             onNewConsultation={handleNewConsultation}
           >
@@ -443,6 +489,16 @@ export default function PeriodDelayClient() {
     <div className="space-y-6">
       <ProgressBar stepLabels={STEP_LABELS} currentStep={state.currentStep} onStepClick={handleStepClick} completedSteps={completedSteps} hasErrors={Boolean(validationError)} />
       {alerts.length > 0 && state.currentStep < 4 && <AlertBanner alerts={alerts} />}
+      {hasStops && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-5 py-4 space-y-3 print:hidden">
+          <p className="text-sm font-semibold text-red-800">Excluded: record the advice given and the decision reached, then save as not supplied</p>
+          <p className="text-xs text-red-700">
+            Appendix 2: a monophasic combined pill can be run back to back for up to 3 packs; an everyday combined preparation can skip the placebo tablets; a progestogen-only pill cannot reliably delay a period (refer); an implant or injection has no role in delaying a period; a woman excluded on VTE grounds can be assessed individually by her GP; practical measures for the event (menstrual cup, period underwear, tranexamic acid or an NSAID for heavy or painful bleeding, subject to the usual checks).
+          </p>
+          <Checkbox label="Appendix 2 alternatives explained to the patient" checked={state.exclusionAdvice.appendix2Given} onChange={(v) => dispatch({ type: "UPDATE_EXCLUSION_ADVICE", field: "appendix2Given", value: v })} required />
+          <TextArea label="Advice given and decision reached (including any referral)" value={state.exclusionAdvice.adviceNotes} onChange={(v) => dispatch({ type: "UPDATE_EXCLUSION_ADVICE", field: "adviceNotes", value: v })} placeholder="e.g. Excluded on the 4 hour flight. Advised running her combined pill packs back to back; explained how. No referral needed." />
+        </div>
+      )}
       {renderStep()}
     </div>
   );

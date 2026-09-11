@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import type { ClinicalAlert } from "../shared/types";
 import {
   calculateAge, initialPatientDetails, initialConsent, initialSummary,
@@ -14,6 +14,8 @@ import { PatientDetailsStep } from "../shared/steps/PatientDetailsStep";
 import { ConsentStep } from "../shared/steps/ConsentStep";
 import type { ConsultationRecordData } from "../shared/hooks/useConsultationTracking";
 import { TextInput, Checkbox, SelectInput, TextArea } from "../shared/components/FormInputs";
+import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
+import { PsoriasisSummaryReport } from "./components/PsoriasisSummaryReport";
 
 /**
  * Plaque Psoriasis ePGD, aligned to the Plaque Psoriasis PGD version 004,
@@ -29,16 +31,28 @@ export const PSORIASIS_PGD_VERSION = "Plaque Psoriasis PGD, version 004, issued 
 
 const STEP_LABELS = ["Patient Details", "Consent", "Assessment & History", "Treatment", "Counselling & Summary"] as const;
 
-type Formulation = "" | "ointment" | "gel" | "foam" | "cream";
+export type Formulation = "" | "ointment" | "gel" | "foam" | "cream";
 
-const FORMULATION_LABEL: Record<Exclude<Formulation, "">, string> = {
+export const FORMULATION_LABEL: Record<Exclude<Formulation, "">, string> = {
   ointment: "Ointment (Dovobet ointment or generic): body and limb plaques",
   gel: "Gel (Dovobet gel or generic): licensed for scalp as well as body",
   foam: "Cutaneous foam (Enstilar): body and scalp; extremely flammable aerosol",
   cream: "Cream (Wynzora)",
 };
 
-interface Clinical {
+/** Document quantity ceiling: up to 100g per week for the 4 week course. */
+export const MAX_COURSE_GRAMS = 400;
+
+/** Grams a 4 week once-daily course could plausibly use for the recorded
+ *  area: one fingertip unit (about 0.5g) covers about 2% of body surface,
+ *  so extent% x 0.25g per day, x 28 days, with a 50% allowance for tube
+ *  sizes and a 60g floor (the smallest common pack). */
+export function expectedCourseGrams(extentPercent: number): number {
+  if (isNaN(extentPercent) || extentPercent <= 0) return 60;
+  return Math.max(60, Math.ceil(extentPercent * 0.25 * 28 * 1.5));
+}
+
+export interface Clinical {
   confirmedPlaque: boolean;
   emergencyFormsExcluded: boolean; // erythrodermic, pustular, exfoliative and guttate considered and excluded
   erythrodermic: boolean;
@@ -66,6 +80,8 @@ interface Clinical {
   diabetes: boolean;
   visualDisturbance: boolean;
   courseType: "" | "first" | "repeat";
+  /** Repeat course: when the last course ended, so "reviewed since" can be checked. */
+  lastCourseEndDate: string;
   gpReviewDate: string;
   coursesLast12Months: "" | "0" | "1" | "2" | "3-or-more";
   allergies: string;
@@ -73,7 +89,8 @@ interface Clinical {
   formulation: Formulation;
   brand: string;
   licensedForSite: boolean;
-  quantity: string;
+  /** Quantity supplied in grams (document: up to 100g per week, enough for 4 weeks and no more). */
+  quantityGrams: string;
   batchNumber: string;
   expiryDate: string;
   applicationAdvice: boolean;
@@ -86,9 +103,15 @@ interface Clinical {
   reboundAdvice: boolean;
   symptomsAdvice: boolean;
   reviewAdvice: boolean;
+  disposalAdvice: boolean;
+  writtenAdviceGiven: boolean;
+  /** Advice given where the patient is excluded or declines (document record item). */
+  exclusionAdvice: string;
+  /** Details of any adverse drug reactions and the actions taken (Yellow Card). */
+  adverseReactions: string;
 }
 
-const blank: Clinical = {
+const blankClinical = (): Clinical => ({
   confirmedPlaque: false, emergencyFormsExcluded: false,
   erythrodermic: false, pustular: false, exfoliative: false, guttate: false, unstable: false,
   extentPercent: "", extentEstimatedHow: "", sites: "", scalpInvolved: false, faceGenitalFlexural: false,
@@ -96,12 +119,15 @@ const blank: Clinical = {
   ulcersOrWounds: false, secondaryInfection: false, otherTopicalSteroidSameArea: false,
   phototherapyOrImmunosuppressed: false, pregnantOrBreastfeeding: false, componentAllergy: false,
   calciumDisorder: false, severeRenalOrHepatic: false, diabetes: false, visualDisturbance: false,
-  courseType: "", gpReviewDate: "", coursesLast12Months: "", allergies: "",
-  product: "", formulation: "", brand: "", licensedForSite: false, quantity: "", batchNumber: "", expiryDate: "",
+  courseType: "", lastCourseEndDate: "", gpReviewDate: "", coursesLast12Months: "", allergies: "",
+  product: "", formulation: "", brand: "", licensedForSite: false, quantityGrams: "", batchNumber: "", expiryDate: "",
   applicationAdvice: false, maxDoseAdvice: false, handsDressingShowerAdvice: false, emollientAdvice: false,
   fireRiskAdvice: false, sunAdvice: false, fourWeekAdvice: false, reboundAdvice: false, symptomsAdvice: false,
-  reviewAdvice: false,
-};
+  reviewAdvice: false, disposalAdvice: false, writtenAdviceGiven: false,
+  exclusionAdvice: "", adverseReactions: "",
+});
+
+const todayIso = () => new Date().toISOString().split("T")[0];
 
 export default function PsoriasisClient() {
   const [step, setStep] = useState(0);
@@ -109,10 +135,18 @@ export default function PsoriasisClient() {
   const [patient, setPatient] = useState<BasePatientDetails>({ ...initialPatientDetails });
   const [consent, setConsent] = useState<BaseConsent>({ ...initialConsent });
   const [summary, setSummary] = useState<BaseSummary>(initialSummary());
-  const [c, setC] = useState<Clinical>(blank);
+  const [c, setC] = useState<Clinical>(blankClinical);
   const set = (patch: Partial<Clinical>) => setC((prev) => ({ ...prev, ...patch }));
 
+  const __pharmProfile = usePharmacistProfile();
+  useEffect(() => {
+    if (!__pharmProfile) return;
+    if (summary.pharmacistName || summary.pharmacistGPhC) return;
+    setSummary((p) => ({ ...p, pharmacistName: __pharmProfile.name, pharmacistGPhC: __pharmProfile.gphcNumber, pharmacyName: __pharmProfile.pharmacyName, pharmacyAddress: __pharmProfile.pharmacyAddress }));
+  }, [__pharmProfile, summary.pharmacistName, summary.pharmacistGPhC]);
+
   const extent = parseFloat(c.extentPercent);
+  const quantityGrams = parseFloat(c.quantityGrams);
 
   const alerts = useMemo<ClinicalAlert[]>(() => {
     const a: ClinicalAlert[] = [];
@@ -158,6 +192,10 @@ export default function PsoriasisClient() {
       a.push({ code: "renal-hepatic", severity: "stop", message: "Severe renal impairment or severe hepatic disease: excluded", detail: "Safety and efficacy have not been evaluated. Refer." });
     if (c.courseType === "repeat" && !c.gpReviewDate)
       a.push({ code: "repeat-no-review", severity: "stop", message: "Repeat course without GP review since the last course: excluded", detail: "A further course requires that the GP has reviewed the patient since the last course and agreed continuation. Ask, and record the answer and the date." });
+    if (c.courseType === "repeat" && c.gpReviewDate && c.lastCourseEndDate && c.gpReviewDate < c.lastCourseEndDate)
+      a.push({ code: "review-before-course", severity: "stop", message: "The GP review is dated before the last course ended: it is not a review SINCE the last course", detail: "The document requires that the GP has reviewed the patient since the last course. A review that predates the end of that course does not meet the criterion. Refer." });
+    if (c.courseType === "first" && (c.coursesLast12Months === "1" || c.coursesLast12Months === "2"))
+      a.push({ code: "first-with-courses", severity: "caution", message: "Recorded as a first course, but courses under this PGD in the last 12 months are also recorded", detail: "A course after an earlier course under this PGD is a repeat and needs a GP review since the last course. Check which it is." });
     if (c.coursesLast12Months === "3-or-more")
       a.push({ code: "three-courses", severity: "stop", message: "Three 4 week courses already in the last 12 months: refer", detail: "Maximum three 4 week courses in any 12 months under this PGD, whatever the GP has said. Beyond that, refer." });
     if (c.visualDisturbance)
@@ -165,44 +203,73 @@ export default function PsoriasisClient() {
     if (c.diabetes)
       a.push({ code: "diabetes", severity: "caution", message: "Diabetes: systemic absorption of a potent corticosteroid can affect glycaemic control", detail: "Advise closer monitoring during the course." });
     if (c.scalpInvolved && (c.formulation === "ointment" || c.formulation === "cream"))
-      a.push({ code: "scalp-formulation", severity: "caution", message: "Scalp treated: check the formulation is licensed for the scalp", detail: "The gel and the cutaneous foam are licensed for the scalp. The Dovobet ointment SPC states there is limited experience of its use on the scalp. Check the formulation is licensed for the site being treated before supplying." });
+      a.push({ code: "scalp-formulation", severity: "stop", message: "Scalp treated: this formulation is not one the document lists as licensed for the scalp", detail: "The document lists the gel and the cutaneous foam as licensed for the scalp; the ointment is for body and limb plaques, and the Dovobet ointment SPC states there is limited experience of its use on the scalp. Select the gel or the foam for a patient with scalp involvement, or refer." });
+    if (!isNaN(quantityGrams) && quantityGrams > 0 && !isNaN(extent) && extent > 0 && quantityGrams > expectedCourseGrams(extent))
+      a.push({ code: "quantity-vs-area", severity: "caution", message: `Quantity ${quantityGrams}g is more than a 4 week course could use on ${extent}% of body surface`, detail: `At about one fingertip unit (0.5g) per 2% of body surface once daily, ${extent}% uses about ${Math.ceil(extent * 0.25 * 28)}g in 28 days. The document says supply enough for the 4 week course and no more. Reduce the quantity or record why more is needed.` });
     return a;
-  }, [patient.age, c, extent]);
+  }, [patient.age, c, extent, quantityGrams]);
   const hasStops = alerts.some((x) => x.severity === "stop");
+
+  const validateAssessment = (): string | null => {
+    if (patient.age === null) return "The patient's age is not known: enter the date of birth on the Patient Details step";
+    if (!c.confirmedPlaque) return "Please confirm the diagnosis of stable plaque psoriasis, mild to moderate, amenable to topical therapy";
+    if (!c.emergencyFormsExcluded) return "Confirm that erythrodermic, pustular, exfoliative and guttate presentations were considered and excluded (Appendix 1)";
+    if (!c.sites.trim()) return "Please record the sites treated (trunk, limbs or scalp)";
+    if (!c.extentPercent.trim() || isNaN(extent) || extent <= 0) return "Record the body surface area affected as a percentage (the patient's palm is roughly 1%)";
+    if (!c.extentEstimatedHow.trim()) return "Record how the body surface area was estimated";
+    if (!c.courseType) return "Record whether this is a first course or a repeat";
+    if (c.courseType === "repeat" && !c.lastCourseEndDate) return "Repeat course: record when the last course ended";
+    if (c.courseType === "repeat" && c.lastCourseEndDate > todayIso()) return "The last course end date is in the future";
+    if (c.courseType === "repeat" && !c.gpReviewDate) return "Repeat course: record the date of the GP review that agreed continuation";
+    if (c.courseType === "repeat" && c.gpReviewDate > todayIso()) return "The GP review date is in the future";
+    if (!c.coursesLast12Months) return "Record the number of courses in the last 12 months";
+    if (!c.allergies.trim()) return "Please record allergy status (or NKDA)";
+    return null;
+  };
+  const validateTreatment = (): string | null => {
+    if (!c.product) return "Please confirm the product";
+    if (!c.formulation) return "Please select the formulation";
+    if (!c.brand.trim()) return "Record the brand or generic product supplied";
+    if (!c.licensedForSite) return "Confirm the formulation is licensed for the site being treated";
+    if (!c.quantityGrams.trim() || isNaN(quantityGrams) || quantityGrams <= 0) return "Record the quantity supplied in grams";
+    if (quantityGrams > MAX_COURSE_GRAMS) return `The document allows up to 100g per week for the 4 week course: ${MAX_COURSE_GRAMS}g maximum`;
+    if (!c.batchNumber.trim()) return "Please record the batch number";
+    if (!c.expiryDate.trim()) return "Please record the expiry date";
+    return null;
+  };
+  const validateCounselling = (): string | null => {
+    if (!c.applicationAdvice || !c.maxDoseAdvice || !c.handsDressingShowerAdvice || !c.emollientAdvice || !c.fireRiskAdvice || !c.sunAdvice || !c.fourWeekAdvice || !c.reboundAdvice || !c.symptomsAdvice || !c.reviewAdvice)
+      return "Please confirm all counselling points, including the rebound advice in terms";
+    if (!c.disposalAdvice) return "Confirm the disposal advice (return any unused product to a pharmacy)";
+    if (!c.writtenAdviceGiven) return "Confirm the patient information leaflet and the written advice sheet were supplied";
+    return validateSummaryStep(summary);
+  };
 
   const validationError = useMemo(() => {
     switch (step) {
       case 0: return validatePatientStep(patient, { minAge: 18 });
       case 1: return validateConsentStep(consent);
-      case 2:
-        if (!c.confirmedPlaque) return "Please confirm the diagnosis of stable plaque psoriasis, mild to moderate, amenable to topical therapy";
-        if (!c.emergencyFormsExcluded) return "Confirm that erythrodermic, pustular, exfoliative and guttate presentations were considered and excluded (Appendix 1)";
-        if (!c.sites.trim()) return "Please record the sites treated (trunk, limbs or scalp)";
-        if (!c.extentPercent.trim() || isNaN(extent)) return "Record the body surface area affected as a percentage (the patient's palm is roughly 1%)";
-        if (!c.extentEstimatedHow.trim()) return "Record how the body surface area was estimated";
-        if (!c.courseType) return "Record whether this is a first course or a repeat";
-        if (c.courseType === "repeat" && !c.gpReviewDate) return "Repeat course: record the date of the GP review that agreed continuation";
-        if (!c.coursesLast12Months) return "Record the number of courses in the last 12 months";
-        if (!c.allergies.trim()) return "Please record allergy status (or NKDA)";
-        return null;
-      case 3:
-        if (!c.product) return "Please confirm the product";
-        if (!c.formulation) return "Please select the formulation";
-        if (!c.brand.trim()) return "Record the brand or generic product supplied";
-        if (!c.licensedForSite) return "Confirm the formulation is licensed for the site being treated";
-        if (!c.quantity.trim()) return "Please record the quantity supplied (enough for the 4 week course and no more, up to 100g per week)";
-        if (!c.batchNumber.trim()) return "Please record the batch number";
-        if (!c.expiryDate.trim()) return "Please record the expiry date";
-        return null;
+      case 2: return validateAssessment();
+      case 3: return validateTreatment();
+      // Last step: every validator runs again before Save & Print, so an
+      // answer changed on an earlier step cannot be printed unchecked.
       case 4:
-        if (!c.applicationAdvice || !c.maxDoseAdvice || !c.handsDressingShowerAdvice || !c.emollientAdvice || !c.fireRiskAdvice || !c.sunAdvice || !c.fourWeekAdvice || !c.reboundAdvice || !c.symptomsAdvice || !c.reviewAdvice)
-          return "Please confirm all counselling points, including the rebound advice in terms";
-        return validateSummaryStep(summary);
+        return (
+          validatePatientStep(patient, { minAge: 18 }) ||
+          validateConsentStep(consent) ||
+          validateAssessment() ||
+          validateTreatment() ||
+          validateCounselling()
+        );
       default: return null;
     }
-  }, [step, patient, consent, c, summary, extent]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, patient, consent, c, summary, extent, quantityGrams]);
 
-  const canProceed = !validationError && (!hasStops || step >= 3);
+  // A stop anywhere disables Next on every step and offers "Save as not
+  // supplied" wherever it is shown.
+  const isBlocked = hasStops && step >= 2;
+  const canProceed = !validationError && !isBlocked;
   const next = () => { if (canProceed) { setCompleted((p) => new Set([...p, step])); setStep((s) => Math.min(s + 1, STEP_LABELS.length - 1)); } };
   const prev = () => setStep((s) => Math.max(s - 1, 0));
 
@@ -213,12 +280,34 @@ export default function PsoriasisClient() {
       gpName: patient.gpName, gpPractice: patient.gpPractice,
     },
     clinicalData: { patient, consent, clinical: c, alerts, pgdVersion: PSORIASIS_PGD_VERSION } as unknown as Record<string, unknown>,
-    outcome: hasStops ? "not_supplied" : "completed",
+    outcome: hasStops ? "referred" : "completed",
+    medicine:
+      !hasStops && c.product
+        ? {
+            name: `Calcipotriol 50 micrograms/g with betamethasone (as dipropionate) 0.5 mg/g ${c.formulation}${c.brand ? ` (${c.brand})` : ""}`.trim(),
+            dose: "Apply once daily to affected areas; maximum 15g in any one day; not more than 30% of body surface",
+            duration: "4 weeks",
+            quantity: c.quantityGrams ? `${c.quantityGrams}g` : undefined,
+          }
+        : undefined,
     summary: {
-      pharmacistName: summary.pharmacistName, pharmacistGPhC: summary.pharmacistGPhC,
+      pharmacistName: summary.pharmacistName || __pharmProfile?.name || "",
+      pharmacistGPhC: summary.pharmacistGPhC || __pharmProfile?.gphcNumber || "",
+      pharmacyName: summary.pharmacyName || __pharmProfile?.pharmacyName,
+      pharmacyAddress: summary.pharmacyAddress || __pharmProfile?.pharmacyAddress,
       consultationDate: summary.consultationDate, consultationTime: summary.consultationTime,
+      clinicalNotes: summary.clinicalNotes,
     },
+    consent: { notifyGp: !!consent.notifyGp },
   });
+
+  const exclusionBox = hasStops ? (
+    <div className="p-4 bg-red-50 rounded-lg border border-red-200 space-y-2">
+      <p className="text-sm font-medium text-navy-900">Excluded: record the advice given and the decision reached, then use Save as not supplied</p>
+      <p className="text-xs text-gray-700">Where the presentation is erythrodermic, pustular or exfoliative, make the urgency explicit: same-day emergency assessment. Otherwise refer to the GP and say why a potent steroid is not the right treatment here.</p>
+      <TextArea label="Advice given and decision reached" value={c.exclusionAdvice} onChange={(v) => set({ exclusionAdvice: v })} rows={3} placeholder="e.g. same-day referral to A&E for erythrodermic psoriasis; emollient advice given" />
+    </div>
+  ) : null;
 
   const onPatientChange = (field: keyof BasePatientDetails, value: any) =>
     setPatient((p) => ({ ...p, [field]: value, ...(field === "dateOfBirth" ? { age: calculateAge(value) } : {}) }));
@@ -236,6 +325,7 @@ export default function PsoriasisClient() {
         return (
           <div className="space-y-4">
             <AlertBanner alerts={alerts} />
+            {exclusionBox}
             <Checkbox label="Stable plaque psoriasis, diagnosed or previously diagnosed, mild to moderate, amenable to topical therapy" checked={c.confirmedPlaque} onChange={(v) => set({ confirmedPlaque: v })} />
             <div className="space-y-3 p-4 bg-red-50 rounded-lg border border-red-200">
               <p className="text-sm font-medium text-navy-900">The form of psoriasis (Appendix 1): SPC contraindications and emergencies</p>
@@ -260,7 +350,10 @@ export default function PsoriasisClient() {
                   { value: "repeat", label: "Repeat course (GP has reviewed since the last course and agreed continuation)" },
                 ]} required />
               {c.courseType === "repeat" && (
-                <TextInput label="Date of the GP review that agreed continuation" type="date" value={c.gpReviewDate} onChange={(v) => set({ gpReviewDate: v })} required />
+                <>
+                  <TextInput label="Date the last course ended" type="date" value={c.lastCourseEndDate} onChange={(v) => set({ lastCourseEndDate: v })} required />
+                  <TextInput label="Date of the GP review that agreed continuation (must be after the last course ended)" type="date" value={c.gpReviewDate} onChange={(v) => set({ gpReviewDate: v })} required />
+                </>
               )}
             </div>
             <SelectInput label="4 week courses under this PGD in the last 12 months" value={c.coursesLast12Months} onChange={(v) => set({ coursesLast12Months: v as Clinical["coursesLast12Months"] })}
@@ -295,6 +388,7 @@ export default function PsoriasisClient() {
         return (
           <div className="space-y-4">
             <AlertBanner alerts={alerts} />
+            {exclusionBox}
             <SelectInput label="Product" value={c.product} onChange={(v) => set({ product: v as Clinical["product"] })}
               options={[
                 { value: "calcipotriol-betamethasone", label: "Calcipotriol 50 micrograms/g with betamethasone (as dipropionate) 0.5 mg/g, once daily" },
@@ -312,7 +406,10 @@ export default function PsoriasisClient() {
             <div className="p-4 bg-[color:var(--tenant-primary)]/10 rounded-lg border border-[color:var(--tenant-primary)]/30 text-sm">
               Apply once daily to affected areas. MAXIMUM 15g IN ANY ONE DAY. Body surface treated must not exceed 30%. Up to 100g per week, within the 15g daily maximum and appropriate to the area treated: supply enough for the 4 WEEK course and no more. Then stop and review. Continuing or restarting beyond 4 weeks requires GP review; maximum three courses in any 12 months.
             </div>
-            <TextInput label="Quantity supplied" value={c.quantity} onChange={(v) => set({ quantity: v })} placeholder="e.g. two 60g tubes (4 weeks at about 4g a day)" required />
+            <TextInput label={`Quantity supplied in grams (maximum ${MAX_COURSE_GRAMS}g: 100g per week for 4 weeks; enough for the course and no more)`} type="number" value={c.quantityGrams} onChange={(v) => set({ quantityGrams: v })} placeholder="e.g. 60" required />
+            {!isNaN(extent) && extent > 0 && (
+              <p className="text-xs text-gray-600">Guide for {extent}% of body surface once daily for 28 days: about {Math.ceil(extent * 0.25 * 28)}g (one fingertip unit, 0.5g, covers about 2%). The tool warns above {expectedCourseGrams(extent)}g and refuses above {MAX_COURSE_GRAMS}g.</p>
+            )}
             <div className="grid sm:grid-cols-2 gap-3">
               <TextInput label="Batch number" value={c.batchNumber} onChange={(v) => set({ batchNumber: v })} required />
               <TextInput label="Expiry date" type="month" value={c.expiryDate} onChange={(v) => set({ expiryDate: v })} required />
@@ -323,8 +420,9 @@ export default function PsoriasisClient() {
         return (
           <div className="space-y-4">
             <AlertBanner alerts={alerts} />
+            {exclusionBox}
             <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
-              <p className="text-sm font-medium text-navy-900">Confirm counselling covered (supply the PIL and written advice on how much to use, the 4 week limit, and what to do when the course finishes):</p>
+              <p className="text-sm font-medium text-navy-900">Confirm counselling covered:</p>
               <Checkbox label="Once a day, to the patchy areas only. Not on your face, genitals or in skin folds" checked={c.applicationAdvice} onChange={(v) => set({ applicationAdvice: v })} />
               <Checkbox label="No more than one 15g tube-worth in a day, and not on more than about a third of your body. Your palm is roughly 1% of your skin" checked={c.maxDoseAdvice} onChange={(v) => set({ maxDoseAdvice: v })} />
               <Checkbox label="Wash your hands thoroughly afterwards so none reaches your face or eyes. Do not cover the treated area with a dressing or wrap. Do not shower or bathe straight after putting it on" checked={c.handsDressingShowerAdvice} onChange={(v) => set({ handsDressingShowerAdvice: v })} />
@@ -335,27 +433,54 @@ export default function PsoriasisClient() {
               <Checkbox label="REBOUND advice given in terms: when you finish, keep using emollients and see your GP as arranged; do not just stop everything. Get medical advice THE SAME DAY if the skin becomes widely red and sore, starts shedding or peeling all over, or you develop crops of small pus-filled spots. Do not restart the cream yourself to control that; come back or see the GP" checked={c.reboundAdvice} onChange={(v) => set({ reboundAdvice: v })} />
               <Checkbox label="Seek advice for blurred vision or other eye symptoms, and for increased thirst, passing urine often, constipation, muscle weakness or confusion (hypercalcaemia)" checked={c.symptomsAdvice} onChange={(v) => set({ symptomsAdvice: v })} />
               <Checkbox label="Review at 4 weeks as arranged; seek advice sooner if worsening, skin thinning or irritation" checked={c.reviewAdvice} onChange={(v) => set({ reviewAdvice: v })} />
+              <Checkbox label="Return any unused product to a pharmacy (disposal)" checked={c.disposalAdvice} onChange={(v) => set({ disposalAdvice: v })} />
+              <Checkbox label="Patient information leaflet for the formulation supplied, together with WRITTEN advice on how much to use, the 4 week limit, and what to do when the course finishes" checked={c.writtenAdviceGiven} onChange={(v) => set({ writtenAdviceGiven: v })} />
             </div>
             <div className="p-4 bg-gray-50 rounded-lg border border-gray-200 text-xs text-gray-700 space-y-1">
               <p className="font-semibold text-navy-900">Record ({PSORIASIS_PGD_VERSION})</p>
               <p>Form: stable plaque psoriasis; erythrodermic, pustular, exfoliative and guttate {c.emergencyFormsExcluded ? "considered and excluded" : "NOT confirmed as excluded"}. Body surface {c.extentPercent || "?"}% ({c.extentEstimatedHow || "method not recorded"}). Sites: {c.sites || "not recorded"}; face, genitals and flexures {c.faceGenitalFlexural ? "INVOLVED" : "not involved"}.</p>
-              <p>{hasStops ? "NOT SUPPLIED: exclusion criteria met; patient referred." : `Supplied: calcipotriol 50 micrograms/g with betamethasone 0.5 mg/g ${c.formulation || ""} (${c.brand || "brand not recorded"}), licensed for the site treated: ${c.licensedForSite ? "yes" : "no"}. Quantity ${c.quantity || "not recorded"}. Batch ${c.batchNumber || "not recorded"}, expiry ${c.expiryDate || "not recorded"}. Date ${summary.consultationDate}.`}</p>
-              <p>Course: {c.courseType === "repeat" ? `repeat; GP review agreeing continuation on ${c.gpReviewDate || "date not recorded"}` : c.courseType === "first" ? "first course" : "not recorded"}. Courses in the last 12 months: {c.coursesLast12Months || "not recorded"}. Rebound advice given in terms: {c.reboundAdvice ? "yes" : "no"}.</p>
+              <p>{hasStops ? "NOT SUPPLIED: exclusion criteria met; patient referred." : `Supplied: calcipotriol 50 micrograms/g with betamethasone 0.5 mg/g ${c.formulation || ""} (${c.brand || "brand not recorded"}), licensed for the site treated: ${c.licensedForSite ? "yes" : "no"}. Quantity ${c.quantityGrams ? `${c.quantityGrams}g` : "not recorded"}. Batch ${c.batchNumber || "not recorded"}, expiry ${c.expiryDate || "not recorded"}. Date ${summary.consultationDate}.`}</p>
+              <p>Course: {c.courseType === "repeat" ? `repeat; last course ended ${c.lastCourseEndDate || "date not recorded"}; GP review agreeing continuation on ${c.gpReviewDate || "date not recorded"}` : c.courseType === "first" ? "first course" : "not recorded"}. Courses in the last 12 months: {c.coursesLast12Months || "not recorded"}. Rebound advice given in terms: {c.reboundAdvice ? "yes" : "no"}.</p>
             </div>
             <TextInput label="Pharmacist name" value={summary.pharmacistName} onChange={(v) => setSummary((p) => ({ ...p, pharmacistName: v }))} required />
             <TextInput label="GPhC registration number" value={summary.pharmacistGPhC} onChange={(v) => setSummary((p) => ({ ...p, pharmacistGPhC: v }))} required />
+            <TextInput label="Pharmacy name" value={summary.pharmacyName} onChange={(v) => setSummary((p) => ({ ...p, pharmacyName: v }))} />
             <TextArea label="Clinical notes (optional)" value={summary.clinicalNotes} onChange={(v) => setSummary((p) => ({ ...p, clinicalNotes: v }))} />
+            <TextArea label="Adverse drug reactions and actions taken (report via Yellow Card, https://yellowcard.mhra.gov.uk, and inform the GP)" value={c.adverseReactions} onChange={(v) => set({ adverseReactions: v })} placeholder="None known at the time of supply" />
           </div>
         );
       default: return null;
     }
   };
 
+  const newConsultation = () => {
+    setStep(0);
+    setCompleted(new Set());
+    setPatient({ ...initialPatientDetails });
+    setConsent({ ...initialConsent });
+    setSummary(initialSummary());
+    setC(blankClinical());
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <>
+    <div className="min-h-screen bg-gray-50 py-8 print:hidden">
       <div className="max-w-6xl mx-auto px-4">
         <div className="space-y-6">
-          <ProgressBar stepLabels={STEP_LABELS} currentStep={step} onStepClick={(s) => { if (completed.has(s) || s <= step) setStep(s); }} completedSteps={completed} hasErrors={!!validationError} />
+          <ProgressBar
+            stepLabels={STEP_LABELS}
+            currentStep={step}
+            onStepClick={(s) => {
+              // Backwards only; every later step is forgotten so an edited
+              // answer has to pass Next (and its validator) again.
+              if (s <= step) {
+                setCompleted((p) => new Set([...p].filter((x) => x < s)));
+                setStep(s);
+              }
+            }}
+            completedSteps={completed}
+            hasErrors={!!validationError}
+          />
           <StepWrapper
             title={STEP_LABELS[step]}
             currentStep={step}
@@ -364,13 +489,18 @@ export default function PsoriasisClient() {
             onPrev={prev}
             canProceed={canProceed}
             validationError={validationError}
-            isBlocked={hasStops && step === 3}
-            {...(step === STEP_LABELS.length - 1 ? { getConsultationData, onNewConsultation: () => { setStep(0); setCompleted(new Set()); setPatient({ ...initialPatientDetails }); setConsent({ ...initialConsent }); setSummary(initialSummary()); setC(blank); } } : {})}
+            isBlocked={isBlocked}
+            getConsultationData={getConsultationData}
+            onNewConsultation={newConsultation}
           >
             {stepBody()}
           </StepWrapper>
         </div>
       </div>
     </div>
+    <div className="hidden print:block">
+      <PsoriasisSummaryReport patient={patient} consent={consent} clinical={c} summary={summary} alerts={alerts} />
+    </div>
+    </>
   );
 }

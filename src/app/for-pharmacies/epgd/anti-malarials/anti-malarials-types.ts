@@ -4,10 +4,7 @@ import type { BasePatientDetails, BaseConsent, BaseSummary } from '../shared/typ
 
 // ─── Patient Details (extends base) ───
 
-export interface AMPatientDetails extends BasePatientDetails {
-  maleConfirmed: boolean;
-  femaleConfirmed: boolean;
-}
+export type AMPatientDetails = BasePatientDetails;
 
 // ─── Travel Assessment ───
 
@@ -34,6 +31,8 @@ export interface AMTravelAssessment {
 // ─── Medical History (Anti-malarials specific) ───
 
 export interface AMMedicalHistory {
+  /** The pharmacist confirms every question on the page was asked. Without this every exclusion defaulted to "absent" with no one having to read it. */
+  allQuestionsAsked: boolean;
   /** PGD v008: any febrile illness now, or presenting for treatment of suspected/confirmed malaria. Exclusion, refer same day. */
   currentFeverOrSuspectedMalaria: boolean;
   /** PGD v008: fever within the last 12 months after travel to a malarious area, not investigated with a blood film. Exclusion. */
@@ -42,8 +41,6 @@ export interface AMMedicalHistory {
   severeHepaticImpairment: boolean; // doxycycline and mefloquine excluded
   epilepsy: boolean; // epilepsy or any seizure disorder: mefloquine excluded
   psychiatricHistory: boolean; // ANY current or previous psychiatric disorder: mefloquine excluded
-  sulfonamideAllergy: boolean; // caution re: doxycycline
-  penicillinAllergy: boolean;
   atovaquoneProguanilAllergy: boolean; // A/P excluded
   tetracyclineAllergy: boolean; // doxycycline excluded
   mefloquineQuinineAllergy: boolean; // mefloquine, quinine or quinidine: mefloquine excluded
@@ -59,6 +56,8 @@ export interface AMMedicalHistory {
 // ─── Current Medications ───
 
 export interface AMMedications {
+  /** The pharmacist confirms every medicine on the page was asked about. */
+  allQuestionsAsked: boolean;
   takesWarfarin: boolean; // A/P and doxycycline excluded (refer for INR monitoring)
   takesOralContraception: boolean; // doxycycline is non-enzyme-inducing; no extra precautions unless vomiting/diarrhoea
   takesAntacids: boolean; // separate doxycycline from antacids, iron and dairy by 2 hours
@@ -74,14 +73,6 @@ export interface AMMedications {
   otherDrugsDetails: string;
 }
 
-// ─── Medicine Contraindications Check ───
-
-export interface AMContraindications {
-  malaioneContraindicated: boolean;
-  doxyContraindicated: boolean;
-  mefloquineContraindicated: boolean;
-}
-
 // ─── Medicine Selection ───
 
 export type AMMedicineChoice =
@@ -93,11 +84,14 @@ export type AMMedicineChoice =
 
 export interface AMMedicineSelection {
   selectedMedicine: AMMedicineChoice;
+  /** Dose, timing and continuation are the document's for the chosen arm. They are set by the reducer when the arm is chosen and are not editable. */
   dose: string;
   startTiming: string;
   continuationAfterReturn: string;
-  /** PGD v008 records: quantity supplied and the calculated course length including the tail. */
-  quantity: string;
+  /** PGD v008 records: quantity supplied. Pre-filled from the calculated course and validated against it. */
+  quantity: number | null;
+  /** The calculated course length including the tail, as text, set with the quantity. */
+  courseCalculation: string;
   /** PGD v008 mefloquine arm: a divided dose may only be supplied from a scored tablet. */
   scoredTabletConfirmed: boolean;
   /** PGD v008 records: batch number and expiry date. */
@@ -113,6 +107,8 @@ export interface AMCounselling {
   sunProtectionAdvice: boolean; // especially for Doxy
   bitePrevention: boolean;
   pregnancyAdvice: boolean;
+  /** Pregnancy / breastfeeding implications do not apply (for example a male patient). One of pregnancyAdvice or this must be ticked. */
+  pregnancyAdviceNotApplicable: boolean;
   diarrhoeaManagement: boolean;
   feverManagement: boolean;
   sideEffectsExplained: boolean;
@@ -126,9 +122,7 @@ export interface AMCounselling {
 
 // ─── Full Consultation Summary ───
 
-export interface AMConsultationSummary extends BaseSummary {
-  // Additional AM-specific fields if needed
-}
+export type AMConsultationSummary = BaseSummary;
 
 // ─── Full Consultation State ───
 
@@ -139,14 +133,9 @@ export interface AMConsultationState {
   travelAssessment: AMTravelAssessment;
   medicalHistory: AMMedicalHistory;
   medications: AMMedications;
-  contraindications: AMContraindications;
   medicineSelection: AMMedicineSelection;
   counselling: AMCounselling;
   summary: AMConsultationSummary;
-  // Computed
-  alerts: any[];
-  canProceed: boolean;
-  isComplete: boolean;
 }
 
 // ─── Reducer Actions ───
@@ -157,7 +146,6 @@ export type AMAction =
   | { type: 'UPDATE_TRAVEL'; field: keyof AMTravelAssessment; value: AMTravelAssessment[keyof AMTravelAssessment] }
   | { type: 'UPDATE_MEDICAL_HISTORY'; field: keyof AMMedicalHistory; value: AMMedicalHistory[keyof AMMedicalHistory] }
   | { type: 'UPDATE_MEDICATIONS'; field: keyof AMMedications; value: AMMedications[keyof AMMedications] }
-  | { type: 'UPDATE_CONTRAINDICATIONS'; field: keyof AMContraindications; value: boolean }
   | { type: 'UPDATE_MEDICINE_SELECTION'; field: keyof AMMedicineSelection; value: AMMedicineSelection[keyof AMMedicineSelection] }
   | { type: 'UPDATE_COUNSELLING'; field: keyof AMCounselling; value: boolean }
   | { type: 'UPDATE_SUMMARY'; field: keyof AMConsultationSummary; value: string }
@@ -202,8 +190,6 @@ gpOdsCode: '',
       address: '',
       phone: '',
       email: '',
-      maleConfirmed: false,
-      femaleConfirmed: false,
     },
     consent: {
       informedConsentGiven: false,
@@ -227,14 +213,13 @@ gpOdsCode: '',
       breastfeeding: false,
     },
     medicalHistory: {
+      allQuestionsAsked: false,
       currentFeverOrSuspectedMalaria: false,
       uninvestigatedPostTravelFever: false,
       severeRenalImpairment: false,
       severeHepaticImpairment: false,
       epilepsy: false,
       psychiatricHistory: false,
-      sulfonamideAllergy: false,
-      penicillinAllergy: false,
       atovaquoneProguanilAllergy: false,
       tetracyclineAllergy: false,
       mefloquineQuinineAllergy: false,
@@ -247,6 +232,7 @@ gpOdsCode: '',
       qTprolongation: false,
     },
     medications: {
+      allQuestionsAsked: false,
       takesWarfarin: false,
       takesOralContraception: false,
       takesAntacids: false,
@@ -261,17 +247,13 @@ gpOdsCode: '',
       takesOtherDrugs: false,
       otherDrugsDetails: '',
     },
-    contraindications: {
-      malaioneContraindicated: false,
-      doxyContraindicated: false,
-      mefloquineContraindicated: false,
-    },
     medicineSelection: {
       selectedMedicine: '',
       dose: '',
       startTiming: '',
       continuationAfterReturn: '',
-      quantity: '',
+      quantity: null,
+      courseCalculation: '',
       scoredTabletConfirmed: false,
       batchNumber: '',
       expiryDate: '',
@@ -282,6 +264,7 @@ gpOdsCode: '',
       sunProtectionAdvice: false,
       bitePrevention: false,
       pregnancyAdvice: false,
+      pregnancyAdviceNotApplicable: false,
       diarrhoeaManagement: false,
       feverManagement: false,
       sideEffectsExplained: false,
@@ -302,8 +285,5 @@ gpOdsCode: '',
       }),
       clinicalNotes: '',
     },
-    alerts: [],
-    canProceed: false,
-    isComplete: false,
   };
 }

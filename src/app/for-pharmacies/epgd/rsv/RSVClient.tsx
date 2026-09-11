@@ -13,26 +13,28 @@ import type {
   RSVPatientDetails,
   RSVConsent,
   RSVSummary,
+  RSVMedicalHistory,
+  RSVPostVaccineAdvice,
 } from './rsv-types';
 import {
   initialRSVPatientDetails,
   initialRSVConsent,
   initialRSVMedicalHistory,
   initialRSVSummary,
+  initialRSVPostVaccineAdvice,
 } from './rsv-types';
-import type { RSVMedicalHistory } from './rsv-types';
 import {
   getRSVClinicalAlerts,
   getRSVVaccineGuidance,
   shouldBlockConsultation,
   isCurrentRSVSeason,
-  determineMaternalProtectionPeriod,
 } from './rsv-clinical-logic';
 import {
   validateRSVPatientStep,
   validateRSVConsentStep,
   validateRSVEligibilityAssessmentStep,
   validateRSVAdministrationStep,
+  validateRSVPostVaccineStep,
   validateRSVSummaryStep,
 } from './rsv-validation';
 import { calculateAge } from '../shared/types';
@@ -47,6 +49,17 @@ const STEP_LABELS = [
   'Vaccine Administration',
   'Post-Vaccine Advice',
   'Summary',
+] as const;
+
+const STEP_DESCRIPTIONS = [
+  'Collect patient information and confirm category (adult 60+ or pregnant woman)',
+  'Obtain informed consent and ID verification',
+  'Confirm RSV vaccination eligibility and assess risk factors',
+  'Assess relevant medical history and risk factors',
+  'Review clinical alerts and confirm no absolute contraindications',
+  'Record vaccine details and administration information',
+  'Provide patient counselling, complete the observation period and record any adverse reaction',
+  'Complete the practitioner declaration and check the consultation record before saving',
 ] as const;
 
 export function RSVClient() {
@@ -92,16 +105,9 @@ export function RSVClient() {
     }));
   }, [__pharmProfile, summary.pharmacistName, summary.pharmacistGPhC]);
 
-  const [postVaccineAdvice, setPostVaccineAdvice] = useState({
-    patientAdvised: false,
-    counselledReactions: false,
-    counselledNoBooster: false,
-    counselledSeason: false,
-    followUpAdviceGiven: false,
-    pilSupplied: false,
-  });
-
-  const [showSummaryReport, setShowSummaryReport] = useState(false);
+  const [postVaccineAdvice, setPostVaccineAdvice] = useState<RSVPostVaccineAdvice>(
+    initialRSVPostVaccineAdvice()
+  );
 
   // Calculate age when DOB changes
   const handlePatientDetailsChange = useCallback(
@@ -153,48 +159,49 @@ export function RSVClient() {
     return validateRSVSummaryStep(summary);
   }, [summary]);
 
-  // Step can proceed checks
-  const canProceedStep0 = patientValidationError === null;
-  const canProceedStep1 = consentValidationError === null;
-  const canProceedStep2 = eligibilityValidationError === null;
-  const canProceedStep3 = true; // Medical history is always valid
-  const canProceedStep4 = contraIndicationsReviewed.confirmedNoAbsoluteContraindications;
-  const canProceedStep5 = administrationValidationError === null;
-  const canProceedStep6 =
-    postVaccineAdvice.patientAdvised &&
-    postVaccineAdvice.counselledReactions &&
-    postVaccineAdvice.followUpAdviceGiven &&
-    postVaccineAdvice.pilSupplied;
-  const postVaccineValidationError = !postVaccineAdvice.counselledReactions
-    ? 'Confirm the patient was advised on possible side effects and when to seek medical attention'
-    : !postVaccineAdvice.followUpAdviceGiven
-      ? 'Confirm the follow-up advice was given'
-      : !postVaccineAdvice.pilSupplied
-        ? 'Confirm the patient information leaflet was supplied'
-        : !postVaccineAdvice.patientAdvised
-          ? 'Patient must be advised'
-          : null;
-  const canProceedStep7 = summaryValidationError === null;
+  const postVaccineValidationError = useMemo(() => {
+    return validateRSVPostVaccineStep(postVaccineAdvice);
+  }, [postVaccineAdvice]);
 
-  const canProceedByStep = [
-    canProceedStep0,
-    canProceedStep1,
-    canProceedStep2,
-    canProceedStep3,
-    canProceedStep4,
-    canProceedStep5,
-    canProceedStep6,
-    canProceedStep7,
+  // One validation message per step. A stop alert anywhere blocks every
+  // step's Next and the final Save & Print: the progress bar only moves
+  // backwards, so this is the only forward gate (adversarial review, 11 Sep 2026).
+  const validationErrorByStep: (string | null)[] = [
+    patientValidationError,
+    consentValidationError,
+    eligibilityValidationError,
+    null,
+    !contraIndicationsReviewed.confirmedNoAbsoluteContraindications
+      ? 'You must confirm review before proceeding'
+      : null,
+    administrationValidationError,
+    postVaccineValidationError,
+    summaryValidationError,
   ];
+  const validationError = validationErrorByStep[currentStep] ?? null;
+  const canProceed = !isBlocked && validationError === null;
 
   const handleNext = () => {
-    if (canProceedByStep[currentStep]) {
-      const newCompleted = new Set(completedSteps);
-      newCompleted.add(currentStep);
-      setCompletedSteps(newCompleted);
-      setCurrentStep(currentStep + 1);
-    }
+    if (isBlocked || validationError !== null) return;
+    if (currentStep >= STEP_LABELS.length - 1) return;
+    const newCompleted = new Set(completedSteps);
+    newCompleted.add(currentStep);
+    setCompletedSteps(newCompleted);
+    setCurrentStep(currentStep + 1);
   };
+
+  // When a stop appears, the steps after the one being edited are no longer
+  // trustworthy: forget them so the pharmacist walks forward through Next.
+  useEffect(() => {
+    if (!isBlocked) return;
+    setCompletedSteps((prev) => {
+      const next = new Set<number>();
+      prev.forEach((s) => {
+        if (s < currentStep) next.add(s);
+      });
+      return next.size === prev.size ? prev : next;
+    });
+  }, [isBlocked, currentStep]);
 
   const handlePrev = () => {
     if (currentStep > 0) {
@@ -204,6 +211,13 @@ export function RSVClient() {
 
   // ─── Consultation Record Data (for saving to database) ───
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    const hasStop = clinicalAlerts.some((a) => a.severity === 'stop');
+    const vaccineName =
+      summary.vaccineType === 'abrysvo'
+        ? 'Abrysvo'
+        : summary.vaccineType === 'arexvy'
+          ? 'Arexvy'
+          : '';
     return {
       patient: {
         firstName: patientDetails.firstName,
@@ -226,15 +240,27 @@ export function RSVClient() {
         summary,
         clinicalAlerts,
       } as unknown as Record<string, unknown>,
-      outcome: clinicalAlerts.some((a) => a.severity === 'stop') ? "not_supplied" : "completed",
+      outcome: hasStop ? 'not_supplied' : 'completed',
+      medicine:
+        !hasStop && vaccineName
+          ? {
+              name: vaccineName,
+              dose: '0.5 mL intramuscular',
+              quantity: '1 dose',
+            }
+          : undefined,
       summary: {
-        pharmacistName: summary.pharmacistName,
-        pharmacistGPhC: summary.pharmacistGPhC,
+        pharmacistName: summary.pharmacistName || __pharmProfile?.name || '',
+        pharmacistGPhC: summary.pharmacistGPhC || __pharmProfile?.gphcNumber || '',
+        pharmacyName: summary.pharmacyName || __pharmProfile?.pharmacyName,
+        pharmacyAddress: summary.pharmacyAddress || __pharmProfile?.pharmacyAddress,
         consultationDate: summary.consultationDate,
         consultationTime: summary.consultationTime,
+        clinicalNotes: summary.clinicalNotes,
       },
+      consent: { notifyGp: consent.notifyGp },
     };
-  }, [patientDetails, consent, eligibilityAssessment, medicalHistory, contraIndicationsReviewed, postVaccineAdvice, summary, clinicalAlerts]);
+  }, [patientDetails, consent, eligibilityAssessment, medicalHistory, contraIndicationsReviewed, postVaccineAdvice, summary, clinicalAlerts, __pharmProfile]);
 
   const handleNewConsultation = useCallback(() => {
     setCurrentStep(0);
@@ -245,33 +271,8 @@ export function RSVClient() {
     setMedicalHistory(initialRSVMedicalHistory);
     setContraIndicationsReviewed({ confirmedNoAbsoluteContraindications: false });
     setSummary(initialRSVSummary());
-    setPostVaccineAdvice({
-      patientAdvised: false,
-      counselledReactions: false,
-      counselledNoBooster: false,
-      counselledSeason: false,
-      followUpAdviceGiven: false,
-      pilSupplied: false,
-    });
-    setShowSummaryReport(false);
+    setPostVaccineAdvice(initialRSVPostVaccineAdvice());
   }, []);
-
-  if (showSummaryReport) {
-    return (
-      <div>
-        <RSVSummaryReport
-          patientDetails={patientDetails}
-          consent={consent}
-          summary={summary}
-          medicalHistory={medicalHistory}
-          clinicalAlerts={clinicalAlerts}
-          postVaccineAdvice={postVaccineAdvice}
-          nhsStatus={eligibilityAssessment.nhsStatus}
-          onBack={() => setShowSummaryReport(false)}
-        />
-      </div>
-    );
-  }
 
   return (
     <>
@@ -280,7 +281,8 @@ export function RSVClient() {
           stepLabels={STEP_LABELS}
           currentStep={currentStep}
           onStepClick={(step) => {
-            if (completedSteps.has(step) || step <= currentStep) {
+            // Backwards only (the shared ProgressBar also refuses forward clicks).
+            if (step < currentStep) {
               setCurrentStep(step);
             }
           }}
@@ -291,18 +293,23 @@ export function RSVClient() {
 
       {clinicalAlerts.length > 0 && <AlertBanner alerts={clinicalAlerts} />}
 
+      <StepWrapper
+        title={STEP_LABELS[currentStep]}
+        description={STEP_DESCRIPTIONS[currentStep]}
+        currentStep={currentStep}
+        totalSteps={STEP_LABELS.length}
+        onNext={handleNext}
+        onPrev={handlePrev}
+        canProceed={canProceed}
+        validationError={validationError}
+        isBlocked={isBlocked}
+        getConsultationData={getConsultationData}
+        onNewConsultation={handleNewConsultation}
+      >
+
       {/* Step 0: Patient Details */}
       {currentStep === 0 && (
-        <StepWrapper
-          title={STEP_LABELS[0]}
-          description="Collect patient information and confirm category (adult 60+ or pregnant woman)"
-          currentStep={currentStep}
-          totalSteps={STEP_LABELS.length}
-          onNext={handleNext}
-          onPrev={handlePrev}
-          canProceed={canProceedStep0}
-          validationError={patientValidationError}
-        >
+        <>
           <PatientDetailsStep
             patient={patientDetails}
             onChange={handlePatientDetailsChange}
@@ -373,21 +380,12 @@ export function RSVClient() {
               placeholder="Enter any known allergies"
             />
           </div>
-        </StepWrapper>
+        </>
       )}
 
       {/* Step 1: Consent */}
       {currentStep === 1 && (
-        <StepWrapper
-          title={STEP_LABELS[1]}
-          description="Obtain informed consent and ID verification"
-          currentStep={currentStep}
-          totalSteps={STEP_LABELS.length}
-          onNext={handleNext}
-          onPrev={handlePrev}
-          canProceed={canProceedStep1}
-          validationError={consentValidationError}
-        >
+        <>
           <ConsentStep
             consent={consent}
             onChange={(field, value) => setConsent({ ...consent, [field]: value })}
@@ -472,21 +470,12 @@ export function RSVClient() {
               />
             )}
           </div>
-        </StepWrapper>
+        </>
       )}
 
       {/* Step 2: Eligibility Assessment */}
       {currentStep === 2 && (
-        <StepWrapper
-          title={STEP_LABELS[2]}
-          description="Confirm RSV vaccination eligibility and assess risk factors"
-          currentStep={currentStep}
-          totalSteps={STEP_LABELS.length}
-          onNext={handleNext}
-          onPrev={handlePrev}
-          canProceed={canProceedStep2}
-          validationError={eligibilityValidationError}
-        >
+        <>
           <div className="space-y-4">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               {patientDetails.patientCategory === 'adult-60-plus' && (
@@ -574,21 +563,12 @@ export function RSVClient() {
               </div>
             )}
           </div>
-        </StepWrapper>
+        </>
       )}
 
       {/* Step 3: Medical History */}
       {currentStep === 3 && (
-        <StepWrapper
-          title={STEP_LABELS[3]}
-          description="Assess relevant medical history and risk factors"
-          currentStep={currentStep}
-          totalSteps={STEP_LABELS.length}
-          onNext={handleNext}
-          onPrev={handlePrev}
-          canProceed={canProceedStep3}
-          validationError={null}
-        >
+        <>
           <div className="space-y-4">
             <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Exclusion criteria (PGD v005)</p>
 
@@ -673,26 +653,12 @@ export function RSVClient() {
               />
             )}
           </div>
-        </StepWrapper>
+        </>
       )}
 
       {/* Step 4: Review Contraindications */}
       {currentStep === 4 && (
-        <StepWrapper
-          title={STEP_LABELS[4]}
-          description="Review clinical alerts and confirm no absolute contraindications"
-          currentStep={currentStep}
-          totalSteps={STEP_LABELS.length}
-          onNext={handleNext}
-          onPrev={handlePrev}
-          canProceed={canProceedStep4}
-          validationError={
-            !contraIndicationsReviewed.confirmedNoAbsoluteContraindications
-              ? 'You must confirm review before proceeding'
-              : null
-          }
-          isBlocked={isBlocked}
-        >
+        <>
           <div className="space-y-4">
             {isBlocked && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -744,21 +710,12 @@ export function RSVClient() {
               />
             )}
           </div>
-        </StepWrapper>
+        </>
       )}
 
       {/* Step 5: Vaccine Administration */}
       {currentStep === 5 && (
-        <StepWrapper
-          title={STEP_LABELS[5]}
-          description="Record vaccine details and administration information"
-          currentStep={currentStep}
-          totalSteps={STEP_LABELS.length}
-          onNext={handleNext}
-          onPrev={handlePrev}
-          canProceed={canProceedStep5}
-          validationError={administrationValidationError}
-        >
+        <>
           <div className="space-y-4">
             <SelectInput
               label="Vaccine type"
@@ -772,10 +729,12 @@ export function RSVClient() {
               options={
                 patientDetails.patientCategory === 'pregnant-woman'
                   ? [{ value: 'abrysvo', label: 'Abrysvo (Pfizer), 0.5 mL IM: maternal use' }]
-                  : [
-                      { value: 'abrysvo', label: 'Abrysvo (Pfizer), 0.5 mL IM' },
-                      { value: 'arexvy', label: 'Arexvy (GSK), 0.5 mL IM: 60 years and over only' },
-                    ]
+                  : medicalHistory.pregnantOrBreastfeeding
+                    ? [{ value: 'abrysvo', label: 'Abrysvo (Pfizer), 0.5 mL IM (Arexvy excluded: pregnant or breastfeeding)' }]
+                    : [
+                        { value: 'abrysvo', label: 'Abrysvo (Pfizer), 0.5 mL IM' },
+                        { value: 'arexvy', label: 'Arexvy (GSK), 0.5 mL IM: 60 years and over only' },
+                      ]
               }
               required
             />
@@ -839,21 +798,12 @@ export function RSVClient() {
               />
             </div>
           </div>
-        </StepWrapper>
+        </>
       )}
 
       {/* Step 6: Post-Vaccine Advice */}
       {currentStep === 6 && (
-        <StepWrapper
-          title={STEP_LABELS[6]}
-          description="Provide patient counselling and safety information"
-          currentStep={currentStep}
-          totalSteps={STEP_LABELS.length}
-          onNext={handleNext}
-          onPrev={handlePrev}
-          canProceed={canProceedStep6}
-          validationError={postVaccineValidationError}
-        >
+        <>
           <div className="space-y-4">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm font-semibold text-blue-900">Possible side effects to advise the patient about (PGD v005):</p>
@@ -883,7 +833,6 @@ export function RSVClient() {
                     <li>Babies born to women who have had Abrysvo can be safely breastfed</li>
                   </>
                 )}
-                <li>Paracetamol or ibuprofen can be taken for fever or myalgia</li>
               </ul>
             </div>
 
@@ -935,6 +884,51 @@ export function RSVClient() {
               />
             )}
 
+            <div className="border-t pt-4 space-y-4">
+              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Observation and adverse reactions (PGD v005)</p>
+              <Checkbox
+                label="Patient observed for 15 minutes after vaccination and the observation period has been completed"
+                checked={postVaccineAdvice.observedFifteenMinutes}
+                onChange={(v) =>
+                  setPostVaccineAdvice({ ...postVaccineAdvice, observedFifteenMinutes: v })
+                }
+                description="PGD cautions row: observe for 15 minutes post-vaccination. Tick only once the period has actually been completed."
+                required
+              />
+              <TextArea
+                label="Adverse reaction observed (leave blank if none)"
+                value={postVaccineAdvice.adverseReaction}
+                onChange={(v) => setPostVaccineAdvice({ ...postVaccineAdvice, adverseReaction: v })}
+                placeholder="Describe any adverse reaction, including the time it started"
+                rows={2}
+              />
+              {postVaccineAdvice.adverseReaction.trim() && (
+                <>
+                  <TextArea
+                    label="Action taken"
+                    value={postVaccineAdvice.adverseReactionAction}
+                    onChange={(v) =>
+                      setPostVaccineAdvice({ ...postVaccineAdvice, adverseReactionAction: v })
+                    }
+                    placeholder="Treatment given, referral made, GP informed"
+                    rows={2}
+                    required
+                  />
+                  <Checkbox
+                    label="Reported to the MHRA Yellow Card scheme (https://yellowcard.mhra.gov.uk) and the GP informed as appropriate"
+                    checked={postVaccineAdvice.yellowCardSubmitted}
+                    onChange={(v) =>
+                      setPostVaccineAdvice({ ...postVaccineAdvice, yellowCardSubmitted: v })
+                    }
+                    description="PGD Yellow Card reporting row: report suspected adverse effects via yellowcard.mhra.gov.uk"
+                  />
+                </>
+              )}
+              <p className="text-xs text-gray-600">
+                Report any suspected adverse reaction via the Yellow Card scheme: https://yellowcard.mhra.gov.uk
+              </p>
+            </div>
+
             <Checkbox
               label="All counselling completed and documented"
               checked={postVaccineAdvice.patientAdvised}
@@ -944,23 +938,12 @@ export function RSVClient() {
               description="Confirm pharmacist has completed patient consultation"
             />
           </div>
-        </StepWrapper>
+        </>
       )}
 
       {/* Step 7: Summary */}
       {currentStep === 7 && (
-        <StepWrapper
-          title={STEP_LABELS[7]}
-          description="Complete pharmacist declaration and generate consultation record"
-          currentStep={currentStep}
-          totalSteps={STEP_LABELS.length}
-          onNext={() => setShowSummaryReport(true)}
-          onPrev={handlePrev}
-          canProceed={canProceedStep7}
-          validationError={summaryValidationError}
-          getConsultationData={getConsultationData}
-          onNewConsultation={handleNewConsultation}
-        >
+        <>
           <div className="space-y-4">
             <TextInput
               label="Pharmacist name"
@@ -1000,8 +983,23 @@ export function RSVClient() {
               rows={4}
             />
           </div>
-        </StepWrapper>
+
+          {/* The printed consultation record. Save & Print prints this page,
+              so the record must be on it (adversarial review, 11 Sep 2026). */}
+          <div className="mt-6">
+            <RSVSummaryReport
+              patientDetails={patientDetails}
+              consent={consent}
+              summary={summary}
+              medicalHistory={medicalHistory}
+              clinicalAlerts={clinicalAlerts}
+              postVaccineAdvice={postVaccineAdvice}
+              nhsStatus={eligibilityAssessment.nhsStatus}
+            />
+          </div>
+        </>
       )}
+      </StepWrapper>
     </>
   );
 }

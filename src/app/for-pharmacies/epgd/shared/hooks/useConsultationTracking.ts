@@ -147,9 +147,24 @@ export function useConsultationTracking(pgdSlug: string, currentStep: number) {
     [pgdSlug]
   )
 
+  /**
+   * Forget the current consultation so the next patient is saved. Without
+   * this, hasSavedRef stayed true for the life of the component and every
+   * consultation after the first in a session showed "saved" without a POST
+   * (adversarial review, 11 Sep 2026).
+   */
+  const reset = useCallback(() => {
+    consultationIdRef.current = null
+    hasStartedRef.current = false
+    hasCompletedRef.current = false
+    hasSavedRef.current = false
+    isSavingRef.current = false
+  }, [])
+
   return {
     markComplete,
     saveRecord,
+    reset,
     consultationId: consultationIdRef.current,
   }
 }

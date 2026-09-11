@@ -38,8 +38,15 @@ export function OrlistatSummaryReport({ state }: { state: OrlistatConsultationSt
 
       <SectionHeader>Weight Assessment</SectionHeader>
       <div className="space-y-1.5">
+        <Row label="Visit" value={state.weightAssessment.visitType === "continuation" ? `Continuation (treatment started ${state.weightAssessment.treatmentStartDate || NOT_RECORDED})` : state.weightAssessment.visitType === "initiation" ? "First supply" : NOT_RECORDED} />
         <Row label="Height" value={state.weightAssessment.height ? `${state.weightAssessment.height} cm` : NOT_RECORDED} />
-        <Row label="Baseline Weight" value={state.weightAssessment.weight ? `${state.weightAssessment.weight} kg` : NOT_RECORDED} />
+        {state.weightAssessment.visitType === "continuation" && (
+          <Row label="Baseline Weight (start of treatment)" value={state.weightAssessment.baselineWeight ? `${state.weightAssessment.baselineWeight} kg` : NOT_RECORDED} />
+        )}
+        <Row label={state.weightAssessment.visitType === "continuation" ? "Weight at this visit" : "Baseline Weight"} value={state.weightAssessment.weight ? `${state.weightAssessment.weight} kg` : NOT_RECORDED} />
+        {state.weightAssessment.visitType === "continuation" && state.weightAssessment.baselineWeight && state.weightAssessment.weight && (
+          <Row label="Weight change from baseline" value={`${Math.round(((state.weightAssessment.baselineWeight - state.weightAssessment.weight) / state.weightAssessment.baselineWeight) * 1000) / 10}% lost`} />
+        )}
         <Row label="BMI" value={state.weightAssessment.bmi ? `${state.weightAssessment.bmi} kg/m²` : NOT_RECORDED} />
         <Row label="BMI Category" value={state.weightAssessment.bmiCategory || NOT_RECORDED} />
         <Row
@@ -93,7 +100,7 @@ export function OrlistatSummaryReport({ state }: { state: OrlistatConsultationSt
         <Row label="HIV antiretrovirals" value={state.medications.takesHIVAntiretrovirals ? "Yes" : "No"} />
         <Row label="Other significant interaction" value={state.medications.otherSignificantInteraction ? "Yes" : "No"} />
         <Row label="Other medications" value={state.medications.otherMedications || "None recorded"} />
-        <Row label="Allergies" value={state.medications.allergies || "NKDA"} />
+        <Row label="Allergies" value={state.medications.allergies.trim() ? state.medications.allergies : state.medications.nkda ? "No known drug allergies (confirmed)" : NOT_RECORDED} />
       </div>
 
       <SectionHeader>Clinical Alerts</SectionHeader>
@@ -144,19 +151,6 @@ export function OrlistatSummaryReport({ state }: { state: OrlistatConsultationSt
           ["Yellow Card reporting advised", state.counselling.yellowCard],
         ]}
       />
-
-      <SectionHeader>Clinical Observations</SectionHeader>
-      <div className="space-y-1.5">
-        <Row
-          label="Blood Pressure"
-          value={
-            state.observations.systolicBP && state.observations.diastolicBP
-              ? `${state.observations.systolicBP}/${state.observations.diastolicBP} mmHg`
-              : NOT_RECORDED
-          }
-        />
-        <Row label="Weight (at consultation)" value={state.observations.weight ? `${state.observations.weight} kg` : NOT_RECORDED} />
-      </div>
 
       <PharmacistDeclaration
         pgdName="Orlistat"

@@ -18,6 +18,8 @@ interface ECSummaryReportProps {
 
 export function ECSummaryReport({ state }: ECSummaryReportProps) {
   const { patient, clinicalAssessment, medicalHistory, medications, medicineSelection, counselling, summary, alerts, doseRecommendation } = state;
+  const stopped = alerts.some((a) => a.severity === "stop");
+  const supplied = !stopped && (medicineSelection.medicine === "levonorgestrel" || medicineSelection.medicine === "ulipristal");
 
   return (
     <div className="max-w-4xl mx-auto p-8 bg-white text-navy-900 print:p-6">
@@ -39,6 +41,7 @@ export function ECSummaryReport({ state }: ECSummaryReportProps) {
         <Row label="Name" value={`${patient.firstName} ${patient.lastName}`} />
         <Row label="Age" value={patient.age ? `${patient.age} years` : "—"} />
         <Row label="Date of birth" value={patient.dateOfBirth || "—"} />
+        <Row label="Address" value={patient.address || "Not provided"} />
         <Row
           label="NHS number"
           value={patient.nhsNumber || "Not provided"}
@@ -53,7 +56,10 @@ export function ECSummaryReport({ state }: ECSummaryReportProps) {
           <SectionHeader>Safeguarding</SectionHeader>
           <div className="grid grid-cols-2 gap-4 mb-4">
             {patient.age < 13 ? (
-              <Row label="Under 13: safeguarding referral (mandatory)" value={patient.safeguardingReferralMade ? "Made" : "NOT made"} />
+              <>
+                <Row label="Under 13" value="Not supplied under this ePGD (Get Real Health service decision); same-day referral to GP or sexual health service" />
+                <Row label="Under 13: safeguarding referral (mandatory)" value={patient.safeguardingReferralMade ? "Made" : "NOT made"} />
+              </>
             ) : (
               <>
                 <Row label="Fraser competence" value={patient.fraserCompetent ? "Assessed and recorded" : "Not established"} />
@@ -79,6 +85,7 @@ export function ECSummaryReport({ state }: ECSummaryReportProps) {
           value={summary.consultationTime || "—"}
         />
         <Row label="Pharmacy" value={summary.pharmacyName || "—"} />
+        <Row label="Valid informed consent given" value={state.consent.informedConsentGiven ? "Yes" : "No"} />
       </div>
 
       {/* Clinical Assessment */}
@@ -126,6 +133,14 @@ export function ECSummaryReport({ state }: ECSummaryReportProps) {
           label="Pregnancy symptoms"
           value={clinicalAssessment.currentPregnancySymptoms ? "Yes" : "No"}
         />
+        <Row
+          label="Previous EC this cycle"
+          value={
+            clinicalAssessment.previousEC
+              ? `${clinicalAssessment.previousECType || "type not recorded"}${clinicalAssessment.previousECDetails ? `: ${clinicalAssessment.previousECDetails}` : ""}`
+              : "No"
+          }
+        />
       </div>
 
       {/* Medical History */}
@@ -146,8 +161,8 @@ export function ECSummaryReport({ state }: ECSummaryReportProps) {
           value={medicalHistory.currentlyPregnant ? "Yes" : "No"}
         />
         <Row
-          label="Weight / BMI"
-          value={`${medicalHistory.weightKg !== null ? medicalHistory.weightKg + " kg" : "not recorded"} / ${calculateBmi(medicalHistory.weightKg, medicalHistory.heightCm) ?? "not calculated"}`}
+          label="Weight / height / BMI"
+          value={`${medicalHistory.weightKg !== null ? medicalHistory.weightKg + " kg" : "not recorded"} / ${medicalHistory.heightCm !== null ? medicalHistory.heightCm + " cm" : "not recorded"} / ${calculateBmi(medicalHistory.weightKg, medicalHistory.heightCm) ?? "not calculated"}`}
         />
         <Row
           label="Hypersensitivity (LNG / UPA)"
@@ -218,10 +233,10 @@ export function ECSummaryReport({ state }: ECSummaryReportProps) {
 
       {/* Medicine Selection */}
       <SectionHeader>Medicine Selection & Dosing</SectionHeader>
-      {medicineSelection.medicine ? (
+      {supplied ? (
         <div className="space-y-2 mb-4">
           <Row
-            label="Medicine selected"
+            label="Medicine and brand"
             value={
               medicineSelection.medicine === "levonorgestrel"
                 ? "Levonorgestrel 1.5mg tablet (Levonelle)"
@@ -229,10 +244,12 @@ export function ECSummaryReport({ state }: ECSummaryReportProps) {
             }
           />
           <Row label="Dose" value={medicineSelection.dose || "—"} />
+          <Row label="Form and route" value="Tablet, oral (swallowed whole with water)" />
           <Row
             label="Quantity supplied"
             value={medicineSelection.medicine === "ulipristal" ? "1 tablet (30 mg)" : medicineSelection.dose === "3mg" ? "2 tablets (3 mg double dose)" : "1 tablet (1.5 mg)"}
           />
+          <Row label="Date and time of supply" value={`${summary.consultationDate || "not recorded"} ${summary.consultationTime || ""}`.trim()} />
           {medicineSelection.dose === "3mg" && (
             <Row
               label="Reason for 3 mg dose"
@@ -248,17 +265,23 @@ export function ECSummaryReport({ state }: ECSummaryReportProps) {
           {medications.takesEnzymeInducers && (
             <Row label="Copper IUD offered" value={medicineSelection.copperIudOffered ? "Yes, declined" : "No"} />
           )}
-          {medicineSelection.pharmacistOverride && (
-            <Row
-              label="Pharmacist override"
-              value={medicineSelection.overrideReason || "—"}
-            />
-          )}
         </div>
       ) : (
-        <p className="text-xs text-gray-500 mb-4">
-          No medicine supplied — patient referred (see clinical alerts).
-        </p>
+        <div className="space-y-2 mb-4">
+          <Row
+            label="Outcome"
+            value={
+              stopped
+                ? "NOT SUPPLIED: exclusion criteria met. Patient advised and referred as recorded."
+                : medicineSelection.medicine === "not-supplied"
+                  ? "NOT SUPPLIED: patient declined or referred."
+                  : "No medicine selected."
+            }
+          />
+          {medicineSelection.notSuppliedReason && (
+            <Row label="Advice given and decision reached" value={medicineSelection.notSuppliedReason} />
+          )}
+        </div>
       )}
 
       {/* Recommendation */}
@@ -294,9 +317,13 @@ export function ECSummaryReport({ state }: ECSummaryReportProps) {
             counselling.sideEffectsExplained,
           ],
           [
-            "How to restart/continue regular contraception",
+            "How to restart/continue regular contraception (5 day wait after ulipristal)",
             counselling.hormonalContraceptionRestart,
           ],
+          ...(medicalHistory.breastfeeding
+            ? [["Breastfeeding: avoid 8 hours (LNG) or 7 days (UPA)", counselling.breastfeedingAdvice] as [string, boolean]]
+            : []),
+          ["PIL supplied", counselling.pilSupplied],
         ]}
       />
 
@@ -310,13 +337,31 @@ export function ECSummaryReport({ state }: ECSummaryReportProps) {
         </>
       )}
 
-      {/* Pharmacist Declaration */}
-      <PharmacistDeclaration
-        pgdName="Emergency Hormonal Contraception"
-        pharmacistName={summary.pharmacistName}
-        pharmacistGPhC={summary.pharmacistGPhC}
-        pharmacyName={summary.pharmacyName}
-      />
+      {/* Pharmacist Declaration (not the "no exclusion criteria applied"
+          wording when the patient was excluded or nothing was supplied) */}
+      {supplied ? (
+        <PharmacistDeclaration
+          pgdName="Emergency Hormonal Contraception"
+          pharmacistName={summary.pharmacistName}
+          pharmacistGPhC={summary.pharmacistGPhC}
+          pharmacyName={summary.pharmacyName}
+        />
+      ) : (
+        <>
+          <SectionHeader>Practitioner</SectionHeader>
+          <p className="text-xs text-gray-600 mb-2">
+            {stopped
+              ? "The patient met one or more exclusion criteria and no medicine was supplied under this PGD. Advice given and the decision reached are recorded above."
+              : "No medicine was supplied under this PGD. Advice given and the decision reached are recorded above."}
+          </p>
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <Row label="Name" value={summary.pharmacistName || "Not recorded"} />
+            <Row label="GPhC number" value={summary.pharmacistGPhC || "Not recorded"} />
+            <Row label="Pharmacy" value={summary.pharmacyName || "Not recorded"} />
+            <Row label="Date" value={summary.consultationDate || "Not recorded"} />
+          </div>
+        </>
+      )}
 
       {/* Footer */}
       <ReportFooter pgdName="Emergency Hormonal Contraception" />

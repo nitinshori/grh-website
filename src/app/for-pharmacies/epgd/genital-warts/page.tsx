@@ -16,7 +16,7 @@ export default function GenitalWartsPage() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
           <PgdPageActions />
 
-          <div className="mb-6">
+          <div className="mb-6 print:hidden">
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
               Genital Warts ePGD
             </h1>
@@ -41,7 +41,7 @@ export default function GenitalWartsPage() {
 
           <GenitalWartsClient />
 
-          <div className="mt-8 text-center text-xs text-gray-500">
+          <div className="mt-8 text-center text-xs text-gray-500 print:hidden">
             <p>
               Get Real Health ePGD, Genital Warts | Confidential Patient
               Information

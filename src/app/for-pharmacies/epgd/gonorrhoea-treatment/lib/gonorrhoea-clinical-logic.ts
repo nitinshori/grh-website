@@ -16,14 +16,14 @@ export function getAllAlerts(state: GonorrhoeaConsultationState): ClinicalAlert[
     });
   }
 
-  if (a.pharyngealGonorrhoea) {
-    // Stricter than the PGD, which covers uncomplicated pharyngeal infection:
-    // this tool refers pharyngeal infection to a sexual health specialist.
+  if (a.pharyngealGonorrhoea || a.infectionSite === "pharyngeal") {
+    // The PGD's indication and inclusion cover uncomplicated pharyngeal
+    // infection: this is a caution, not a block.
     alerts.push({
-      severity: "red-flag",
+      severity: "caution",
       code: "GONNO_PHARYNGEAL",
       message: "Pharyngeal gonorrhoea",
-      detail: "Refer to a sexual health specialist (tool policy; the PGD itself covers uncomplicated pharyngeal infection).",
+      detail: "Covered by this PGD (uncomplicated pharyngeal infection). Pharyngeal infection is harder to eradicate: the test of cure at 2 weeks is essential.",
     });
   }
 
@@ -146,8 +146,13 @@ export function validateAdministration(state: GonorrhoeaConsultationState): stri
   const ad = state.administration;
   if (!ad.adrenalineAvailable) return "Adrenaline 1 in 1,000 must be immediately available in the room, in date, with a telephone";
   if (!ad.anaphylaxisProtocolAvailable) return "A written anaphylaxis protocol must be available and the administrator trained in anaphylaxis and basic life support";
+  const today = new Date().toISOString().split("T")[0];
   if (!ad.ceftriaxoneBatch.trim()) return "Ceftriaxone batch number is required";
+  if (!ad.ceftriaxoneExpiry) return "Ceftriaxone expiry date is required";
+  if (ad.ceftriaxoneExpiry < today) return "Ceftriaxone expiry date is in the past: do not use this vial";
   if (!ad.lidocaineBatch.trim()) return "Lidocaine 1% batch number is required";
+  if (!ad.lidocaineExpiry) return "Lidocaine 1% expiry date is required";
+  if (ad.lidocaineExpiry < today) return "Lidocaine 1% expiry date is in the past: do not use this ampoule";
   if (!ad.injectionSite) return "Injection site (gluteal muscle) is required";
   if (!ad.notGivenIntravenously) return "Confirm the lidocaine-reconstituted solution was given intramuscularly and not intravenously";
   if (!ad.observationCompleted) return "Record that the 15 minute seated observation period was completed";

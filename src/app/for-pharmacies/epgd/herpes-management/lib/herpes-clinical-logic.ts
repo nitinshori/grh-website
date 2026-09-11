@@ -82,7 +82,7 @@ export function getAllAlerts(state: HerpesConsultationState): ClinicalAlert[] {
     });
   }
 
-  if (a.episodeType === "recurrent" && a.daysFromOnset !== null && a.daysFromOnset > 2) {
+  if (a.episodeType === "recurrent" && a.hoursFromOnset !== null && a.hoursFromOnset > 48) {
     alerts.push({
       severity: "stop",
       code: "HERPES_RECURRENT_LATE",
@@ -173,10 +173,12 @@ export function calculateDoseRecommendation(state: HerpesConsultationState): Dos
         return {
           medicine: "Aciclovir 400 mg tablets",
           dose: "400 mg three times daily",
-          dosingRegimen: a.newLesionsAtDay5
-            ? "Extension: a further 15 tablets, to 10 days, where new lesions are still forming at day 5"
-            : "5 days: 15 tablets",
-          reason: "First episode. Extend to 10 days only where new lesions are still forming at day 5.",
+          dosingRegimen: a.firstEpisodeSupply === "day5Extension"
+            ? "Day 5 review: a further 15 tablets, to 10 days, because new lesions are still forming"
+            : "Initial supply, 5 days: 15 tablets",
+          reason: a.firstEpisodeSupply === "day5Extension"
+            ? "First episode, day 5 review supply."
+            : "First episode, initial supply. Review at day 5; extend only where new lesions are still forming.",
         };
       case "recurrent":
         return {
@@ -202,16 +204,20 @@ export function calculateDoseRecommendation(state: HerpesConsultationState): Dos
       return {
         medicine: "Valaciclovir 500 mg tablets",
         dose: "500 mg twice daily",
-        dosingRegimen: a.newLesionsAtDay5
-          ? "Extension: a further 10 tablets, to 10 days, where new lesions are still forming at day 5"
-          : "5 days: 10 tablets",
-        reason: "First episode. Extend to 10 days only where new lesions are still forming at day 5.",
+        dosingRegimen: a.firstEpisodeSupply === "day5Extension"
+          ? "Day 5 review: a further 10 tablets, to 10 days, because new lesions are still forming"
+          : "Initial supply, 5 days: 10 tablets",
+        reason: a.firstEpisodeSupply === "day5Extension"
+          ? "First episode, day 5 review supply."
+          : "First episode, initial supply. Review at day 5; extend only where new lesions are still forming.",
       };
     case "recurrent":
       return {
         medicine: "Valaciclovir 500 mg tablets",
         dose: "500 mg twice daily",
-        dosingRegimen: "3 to 5 days: 6 to 10 tablets, starting within 48 hours of symptom onset",
+        dosingRegimen: a.recurrentCourseDays
+          ? `${a.recurrentCourseDays} days: ${a.recurrentCourseDays * 2} tablets, starting within 48 hours of symptom onset`
+          : "Select 3, 4 or 5 days (6, 8 or 10 tablets), starting within 48 hours of symptom onset",
         reason: "Recurrent episode.",
       };
     case "suppressive":

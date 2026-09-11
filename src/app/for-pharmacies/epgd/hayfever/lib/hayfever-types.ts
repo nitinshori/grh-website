@@ -57,6 +57,10 @@ export interface HayfeverMedicineSupply {
    *  antihistamine or corticosteroid not sufficient. */
   dualTherapyRequired: boolean;
   dosageConfirmed: boolean;
+  /** Fexofenadine 120 mg tablets handed over, 1 to 30 (document: up to 30). */
+  fexofenadineQuantity: number | null;
+  /** Dymista bottles handed over: the document authorises one 23 g bottle. */
+  dymistaBottles: number | null;
 }
 
 export interface HayfeverCounselling {
@@ -100,7 +104,8 @@ export type HayfeverAction =
   | { type: "UPDATE_MEDICINE_SUPPLY"; field: keyof HayfeverMedicineSupply; value: any }
   | { type: "UPDATE_COUNSELLING"; field: keyof HayfeverCounselling; value: any }
   | { type: "UPDATE_SUMMARY"; field: keyof BaseSummary; value: any }
-  | { type: "SET_STEP"; step: number };
+  | { type: "SET_STEP"; step: number }
+  | { type: "RESET" };
 
 export const STEP_LABELS = [
   "Patient Details",
@@ -175,6 +180,8 @@ gpEmail: "",
       fexofenadineBrand: "",
       dualTherapyRequired: false,
       dosageConfirmed: false,
+      fexofenadineQuantity: null,
+      dymistaBottles: null,
     },
     counselling: {
       allergenAvoidance: false,

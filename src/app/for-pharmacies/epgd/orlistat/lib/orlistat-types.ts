@@ -1,6 +1,13 @@
 import type { BasePatientDetails, BaseConsent, BaseSummary, ClinicalAlert, DoseRecommendation } from "../../shared/types";
 
+export type OrlistatVisitType = "" | "initiation" | "continuation";
+
 export interface OrlistatWeightAssessment {
+  // PGD v002: review at 12 weeks from the start of treatment; continue only
+  // if at least 5% of body weight has been lost from baseline.
+  visitType: OrlistatVisitType;
+  treatmentStartDate: string;
+  baselineWeight: number | null;
   height: number | null;
   weight: number | null;
   bmi: number | null;
@@ -54,6 +61,9 @@ export interface OrlistatMedications {
   otherSignificantInteraction: boolean;
   otherMedications: string;
   allergies: string;
+  // Explicit "no known drug allergies" assertion; the printed record used
+  // to say NKDA whenever the allergies box was left blank.
+  nkda: boolean;
 }
 
 export interface OrlistatObservations {
@@ -105,6 +115,8 @@ export interface OrlistatConsultationState {
   medicineSupply: OrlistatMedicineSupply;
   counselling: OrlistatCounselling;
   summary: BaseSummary;
+  // PGD records row: advice given if excluded or declines treatment.
+  exclusionAdvice: string;
   alerts: ClinicalAlert[];
   doseRecommendation: DoseRecommendation | null;
 }
@@ -119,6 +131,7 @@ export type OrlistatAction =
   | { type: "UPDATE_MEDICINE_SUPPLY"; field: string; value: any }
   | { type: "UPDATE_COUNSELLING"; field: string; value: any }
   | { type: "UPDATE_SUMMARY"; field: string; value: any }
+  | { type: "UPDATE_EXCLUSION_ADVICE"; value: string }
   | { type: "SET_STEP"; step: number }
   | { type: "NEXT_STEP" }
   | { type: "PREV_STEP" }
@@ -164,6 +177,9 @@ gpEmail: "",
       patientAwarePrivateService: false,
     },
     weightAssessment: {
+      visitType: "",
+      treatmentStartDate: "",
+      baselineWeight: null,
       height: null,
       weight: null,
       bmi: null,
@@ -199,6 +215,7 @@ gpEmail: "",
       otherSignificantInteraction: false,
       otherMedications: "",
       allergies: "",
+      nkda: false,
     },
     observations: {
       systolicBP: null,
@@ -243,6 +260,7 @@ gpEmail: "",
       }),
       clinicalNotes: "",
     },
+    exclusionAdvice: "",
     alerts: [],
     doseRecommendation: null,
   };

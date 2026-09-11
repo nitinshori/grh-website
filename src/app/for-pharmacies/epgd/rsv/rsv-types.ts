@@ -51,10 +51,38 @@ export interface RSVSummary extends BaseSummary {
   expiryDate: string;
   administrationSite: 'left-deltoid' | 'right-deltoid' | '';
   administrationTime: string;
+  clinicalAlertsCodes: string[];
+}
+
+/** Post-vaccination counselling, observation and adverse reaction record (PGD v005 cautions and records rows). */
+export interface RSVPostVaccineAdvice {
+  patientAdvised: boolean;
   counselledReactions: boolean;
   counselledNoBooster: boolean;
-  counselledSeason?: boolean;
-  clinicalAlertsCodes: string[];
+  counselledSeason: boolean;
+  followUpAdviceGiven: boolean;
+  pilSupplied: boolean;
+  /** Caution row: observe for 15 minutes post-vaccination. Ticked only once the period has been completed. */
+  observedFifteenMinutes: boolean;
+  /** Records row: details of any adverse drug reactions and actions taken. */
+  adverseReaction: string;
+  adverseReactionAction: string;
+  yellowCardSubmitted: boolean;
+}
+
+export function initialRSVPostVaccineAdvice(): RSVPostVaccineAdvice {
+  return {
+    patientAdvised: false,
+    counselledReactions: false,
+    counselledNoBooster: false,
+    counselledSeason: false,
+    followUpAdviceGiven: false,
+    pilSupplied: false,
+    observedFifteenMinutes: false,
+    adverseReaction: '',
+    adverseReactionAction: '',
+    yellowCardSubmitted: false,
+  };
 }
 
 export const initialRSVPatientDetails: RSVPatientDetails = {
@@ -126,9 +154,6 @@ export function initialRSVSummary(): RSVSummary {
     expiryDate: '',
     administrationSite: '',
     administrationTime: '',
-    counselledReactions: false,
-    counselledNoBooster: false,
-    counselledSeason: false,
     clinicalAlertsCodes: [],
   };
 }

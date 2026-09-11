@@ -62,7 +62,10 @@ export interface GonorrhoeaConsultationState {
   currentStep: number;
 }
 
-export const STEP_LABELS = ["Patient Details", "Diagnostic Confirmation", "Assessment", "Contraindications", "Counselling", "Treatment", "Summary", "Review"];
+// Consent sits before anything is administered. The earlier scaffold validated
+// consent on the Summary step, after the injection had been recorded
+// (adversarial review, 11 Sep 2026).
+export const STEP_LABELS = ["Patient Details", "Consent", "Diagnostic Confirmation", "Assessment", "Contraindications", "Counselling", "Treatment", "Summary"];
 export const TOTAL_STEPS = STEP_LABELS.length;
 
 export const MEDICINE_DETAILS = {

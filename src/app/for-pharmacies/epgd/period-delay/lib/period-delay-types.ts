@@ -31,6 +31,61 @@ export interface PeriodDelayAssessment {
   noUnprotectedSexSince: boolean;
   pregnancyTestNegative: boolean;
   pregnancyTestDate: string;
+  /** Date of the last unprotected sex, DD/MM/YYYY: the test must be no earlier than 21 days after it. */
+  lastUpsiDate: string;
+}
+
+/**
+ * Appendix 1 asks eight questions and the document requires the answers to
+ * be recorded, not only the outcome. Each is tri-state: null is "not asked",
+ * which is not a "no". Question 4 is height and weight (numeric, required).
+ * Question 1 is one field per condition (DVT, PE, stroke or TIA, MI or
+ * arterial disease) so the alert names the condition actually reported.
+ */
+export type Appendix1Key =
+  | "q1Dvt"
+  | "q1Pe"
+  | "q1Stroke"
+  | "q1Arterial"
+  | "q2Thrombophilia"
+  | "q3CurrentSmoker"
+  | "q3StoppedUnderOneYear"
+  | "q5LongJourney"
+  | "q6Surgery"
+  | "q7Immobility"
+  | "q8Cancer";
+
+export type Appendix1Answers = Record<Appendix1Key, boolean | null>;
+
+/** The medical history field each Appendix 1 answer writes to. */
+export const APPENDIX1_FIELD: Record<Appendix1Key, keyof PeriodDelayMedicalHistory> = {
+  q1Dvt: "historyOfDVT",
+  q1Pe: "historyOfPE",
+  q1Stroke: "historyOfStroke",
+  q1Arterial: "severeArterialDisease",
+  q2Thrombophilia: "familyVteUnder45",
+  q3CurrentSmoker: "currentSmoker",
+  q3StoppedUnderOneYear: "stoppedSmokingUnderOneYear",
+  q5LongJourney: "longJourney",
+  q6Surgery: "recentOrPlannedSurgery",
+  q7Immobility: "immobility",
+  q8Cancer: "activeOrRecentCancer",
+};
+
+export function createInitialAppendix1Answers(): Appendix1Answers {
+  return {
+    q1Dvt: null,
+    q1Pe: null,
+    q1Stroke: null,
+    q1Arterial: null,
+    q2Thrombophilia: null,
+    q3CurrentSmoker: null,
+    q3StoppedUnderOneYear: null,
+    q5LongJourney: null,
+    q6Surgery: null,
+    q7Immobility: null,
+    q8Cancer: null,
+  };
 }
 
 export interface PeriodDelayMedicalHistory {
@@ -97,6 +152,8 @@ export interface PeriodDelayMedicalHistory {
   safeguardingConcern: boolean;
   /** 16 or 17: the assessment in full, not just the conclusion. */
   under18AssessmentNotes: string;
+  /** Appendix 1 answers as given (null: not asked). */
+  appendix1: Appendix1Answers;
 }
 
 export interface PeriodDelayMedications {
@@ -110,7 +167,15 @@ export interface PeriodDelayMedications {
 export interface PeriodDelayMedicineSelection {
   confirmed: boolean;
   daysToDelay: number | null;
+  /** Derived from the date the period is due (3 days before). Read-only. */
   startDate: string;
+}
+
+/** Recorded whenever the patient is excluded or declines: the document says
+ *  every excluded woman should leave with the Appendix 2 alternatives. */
+export interface PeriodDelayExclusionAdvice {
+  appendix2Given: boolean;
+  adviceNotes: string;
 }
 
 export interface PeriodDelayCounselling {
@@ -138,6 +203,7 @@ export interface PeriodDelayConsultationState {
   medications: PeriodDelayMedications;
   medicineSelection: PeriodDelayMedicineSelection;
   counselling: PeriodDelayCounselling;
+  exclusionAdvice: PeriodDelayExclusionAdvice;
   summary: BaseSummary;
   alerts: ClinicalAlert[];
   doseRecommendation: DoseRecommendation | null;
@@ -148,6 +214,8 @@ export type PeriodDelayAction =
   | { type: "UPDATE_CONSENT"; field: string; value: any }
   | { type: "UPDATE_ASSESSMENT"; field: string; value: any }
   | { type: "UPDATE_MEDICAL_HISTORY"; field: string; value: any }
+  | { type: "ANSWER_APPENDIX1"; key: Appendix1Key; value: boolean }
+  | { type: "UPDATE_EXCLUSION_ADVICE"; field: keyof PeriodDelayExclusionAdvice; value: any }
   | { type: "UPDATE_MEDICATIONS"; field: string; value: any }
   | { type: "UPDATE_MEDICINE_SELECTION"; field: string; value: any }
   | { type: "UPDATE_COUNSELLING"; field: string; value: any }
@@ -165,10 +233,11 @@ export function createInitialConsultationState(): PeriodDelayConsultationState {
     currentStep: 0,
     patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", gpAddress: "", gpPhone: "", gpEmail: "", gpOdsCode: "", nhsNumber: "", address: "", phone: "", email: "" },
     consent: { informedConsentGiven: false, idVerified: false, idType: "", patientAwarePrivateService: false },
-    assessment: { reasonForDelay: "", reasonDetails: "", lastPeriodDate: "", cycleRegular: false, expectedPeriodDate: "", daysUntilExpected: null, previousUse: false, previousIssues: "", datesNeededFor: "", previousSuppliesLast6Months: "", daysSuppliedLast6Months: null, lastPeriodNormalOnTime: false, noUnprotectedSexSince: false, pregnancyTestNegative: false, pregnancyTestDate: "" },
-    medicalHistory: { pregnancy: false, breastfeeding: false, liverDisease: false, historyOfDVT: false, historyOfPE: false, historyOfStroke: false, activeBreastCancer: false, severeArterialDisease: false, porphyria: false, abnormalVaginalBleeding: false, hormonalContraception: false, hormonalContraceptionType: "", ageUnder16: false, femaleConfirmed: false, hypersensitivity: false, jaundiceInPregnancy: false, severePruritusInPregnancy: false, diabetesWithVascularComplications: false, hypertension: false, systolicBP: null, diastolicBP: null, atrialFibrillationOrValvularDisease: false, sleOrAntiphospholipid: false, brcaCarrier: false, dyslipidaemiaWithRiskFactor: false, lamotrigineMonotherapy: false, ciclosporin: false, historyOfDepression: false, severeDepressionOrSuicidalIdeation: false, familyVteUnder45: false, currentSmoker: false, stoppedSmokingUnderOneYear: false, stoppedSmokingOverOneYear: false, cigarettesPerDay: null, heightCm: null, weightKg: null, longJourney: false, recentOrPlannedSurgery: false, immobility: false, activeOrRecentCancer: false, migraineWithAura: false, enzymeInducer: false, under18AssessmentDone: false, safeguardingConcern: false, under18AssessmentNotes: "" },
+    assessment: { reasonForDelay: "", reasonDetails: "", lastPeriodDate: "", cycleRegular: false, expectedPeriodDate: "", daysUntilExpected: null, previousUse: false, previousIssues: "", datesNeededFor: "", previousSuppliesLast6Months: "", daysSuppliedLast6Months: null, lastPeriodNormalOnTime: false, noUnprotectedSexSince: false, pregnancyTestNegative: false, pregnancyTestDate: "", lastUpsiDate: "" },
+    medicalHistory: { pregnancy: false, breastfeeding: false, liverDisease: false, historyOfDVT: false, historyOfPE: false, historyOfStroke: false, activeBreastCancer: false, severeArterialDisease: false, porphyria: false, abnormalVaginalBleeding: false, hormonalContraception: false, hormonalContraceptionType: "", ageUnder16: false, femaleConfirmed: false, hypersensitivity: false, jaundiceInPregnancy: false, severePruritusInPregnancy: false, diabetesWithVascularComplications: false, hypertension: false, systolicBP: null, diastolicBP: null, atrialFibrillationOrValvularDisease: false, sleOrAntiphospholipid: false, brcaCarrier: false, dyslipidaemiaWithRiskFactor: false, lamotrigineMonotherapy: false, ciclosporin: false, historyOfDepression: false, severeDepressionOrSuicidalIdeation: false, familyVteUnder45: false, currentSmoker: false, stoppedSmokingUnderOneYear: false, stoppedSmokingOverOneYear: false, cigarettesPerDay: null, heightCm: null, weightKg: null, longJourney: false, recentOrPlannedSurgery: false, immobility: false, activeOrRecentCancer: false, migraineWithAura: false, enzymeInducer: false, under18AssessmentDone: false, safeguardingConcern: false, under18AssessmentNotes: "", appendix1: createInitialAppendix1Answers() },
     medications: { anticoagulants: false, antiepileptics: false, ciclosporin: false, otherMedications: "", allergies: "" },
     medicineSelection: { confirmed: false, daysToDelay: null, startDate: "" },
+    exclusionAdvice: { appendix2Given: false, adviceNotes: "" },
     counselling: { howToTake: false, startThreeDaysBefore: false, maxDuration: false, periodReturnsAfter: false, sideEffects: false, notContraceptive: false, pregnancyTestIfNoPeriod: false, mobilityAndHydration: false, moodMonitoring: false, seekHelpIfUnwell: false },
     summary: { pharmacistName: "", pharmacistGPhC: "", pharmacyName: "", pharmacyAddress: "", consultationDate: new Date().toISOString().split("T")[0], consultationTime: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }), clinicalNotes: "" },
     alerts: [],

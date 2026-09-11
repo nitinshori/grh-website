@@ -45,11 +45,42 @@ export function isHighWeightOrBmi(state: ECConsultationState): boolean {
   return (weightKg !== null && weightKg >= 70) || (bmi !== null && bmi >= 26);
 }
 
+/** Days from the last menstrual period to today, or null if not recorded. */
+export function daysSinceLmp(lmp: string): number | null {
+  if (!lmp) return null;
+  const d = new Date(lmp);
+  if (isNaN(d.getTime())) return null;
+  return Math.floor((Date.now() - d.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+/**
+ * The document excludes known or suspected pregnancy. Pregnancy is suspected
+ * when the patient reports pregnancy-like symptoms or the last period was
+ * more than 5 weeks ago, and only a negative test lifts the suspicion; a
+ * test that was "not done" does not. Returns the reason, or null.
+ */
+export function getSuspectedPregnancyReason(state: ECConsultationState): string | null {
+  const { medicalHistory, clinicalAssessment } = state;
+  if (medicalHistory.pregnancyTestResult === "positive") return "positive pregnancy test";
+  if (medicalHistory.currentlyPregnant) return "known or suspected pregnancy recorded";
+  if (medicalHistory.pregnancyTestResult === "negative") return null;
+  if (clinicalAssessment.currentPregnancySymptoms) return "pregnancy-like symptoms reported and no negative pregnancy test";
+  const days = daysSinceLmp(clinicalAssessment.lastMenstrualPeriod);
+  if (days !== null && days > 35) return `last menstrual period ${days} days ago (more than 5 weeks) and no negative pregnancy test`;
+  return null;
+}
+
 export function isKnownOrSuspectedPregnancy(state: ECConsultationState): boolean {
-  return (
-    state.medicalHistory.pregnancyTestResult === "positive" ||
-    state.medicalHistory.currentlyPregnant
-  );
+  return getSuspectedPregnancyReason(state) !== null;
+}
+
+/** Levonorgestrel dose fixed by the document: 3 mg with enzyme inducers
+ *  (licensed) or at 70 kg or over / BMI 26 or over (off-label, FSRH);
+ *  otherwise 1.5 mg. There is no lower option for these patients. */
+export function getRequiredLngDose(state: ECConsultationState): { dose: "1.5mg" | "3mg"; reason: "" | "enzyme-inducers" | "weight-bmi" } {
+  if (state.medications.takesEnzymeInducers) return { dose: "3mg", reason: "enzyme-inducers" };
+  if (isHighWeightOrBmi(state)) return { dose: "3mg", reason: "weight-bmi" };
+  return { dose: "1.5mg", reason: "" };
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -114,13 +145,14 @@ export function checkExclusions(state: ECConsultationState): ClinicalAlert[] {
   const { medicalHistory } = state;
   const hours = state.clinicalAssessment.hoursSinceUPSI;
 
-  if (isKnownOrSuspectedPregnancy(state)) {
+  const pregnancyReason = getSuspectedPregnancyReason(state);
+  if (pregnancyReason) {
     alerts.push({
       severity: "stop",
       code: "CURRENTLY_PREGNANT",
-      message: "Known or suspected pregnancy: CANNOT supply",
+      message: `Known or suspected pregnancy (${pregnancyReason}): CANNOT supply`,
       detail:
-        "Known or suspected pregnancy is an exclusion for both levonorgestrel and ulipristal. Refer to the GP or sexual health clinic.",
+        "Known or suspected pregnancy is an exclusion for both levonorgestrel and ulipristal. A negative pregnancy test lifts a suspicion based on symptoms or a late period; a test that was not done does not. Refer to the GP or sexual health clinic.",
     });
   }
 
@@ -338,12 +370,15 @@ export function checkRedFlags(state: ECConsultationState): ClinicalAlert[] {
   }
 
   if (patient.age !== null && patient.age < 13) {
+    // Get Real Health service decision (11 September 2026): no supply under
+    // 13 through this tool, even though the document says supply may still
+    // be appropriate. Validator, alert and screen text all say the same.
     alerts.push({
-      severity: "red-flag",
+      severity: "stop",
       code: "UNDER_13",
-      message: "Aged under 13: any sexual activity is a safeguarding concern",
+      message: "Aged under 13: not supplied under this ePGD",
       detail:
-        "Supply may still be appropriate but a safeguarding referral is MANDATORY. Record the referral on this consultation.",
+        "Any sexual activity under 13 is a safeguarding concern. Refer the same day to the GP or sexual health service, make a safeguarding referral (mandatory), record both, and save this consultation as not supplied.",
     });
   }
 

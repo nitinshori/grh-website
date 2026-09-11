@@ -8,6 +8,12 @@ export interface PEPatientDetails extends BasePatientDetails {
   maleConfirmed: boolean;
 }
 
+/** Inclusion criterion: "Patient has provided informed WRITTEN consent". The
+ *  shared consent step records verbal-or-written as one tick. */
+export interface PEConsent extends BaseConsent {
+  writtenConsentObtained: boolean;
+}
+
 export interface PEClinicalAssessment {
   peType: "lifelong" | "acquired" | ""; // lifelong vs acquired
   ieltMinutes: number | null; // Intravaginal Ejaculation Latency Time
@@ -71,6 +77,8 @@ export interface PEMedicineSupply {
   brand: string;
   understandsUsage: boolean; // 1-3 hours before, max once per 24h, take with water
   understandsOrthostatic: boolean; // Lying/standing BP done
+  /** Written information row: the Priligy PIL was supplied. */
+  pilSupplied: boolean;
 }
 
 export interface PECounselling {
@@ -91,7 +99,7 @@ export interface PECounselling {
 
 export interface PEConsultationState {
   patient: PEPatientDetails;
-  consent: BaseConsent;
+  consent: PEConsent;
   clinicalAssessment: PEClinicalAssessment;
   medicalHistory: PEMedicalHistory;
   currentMedications: PECurrentMedications;
@@ -104,7 +112,7 @@ export interface PEConsultationState {
 
 export type PEAction =
   | { type: "UPDATE_PATIENT"; field: keyof PEPatientDetails; value: any }
-  | { type: "UPDATE_CONSENT"; field: keyof BaseConsent; value: any }
+  | { type: "UPDATE_CONSENT"; field: keyof PEConsent; value: any }
   | { type: "UPDATE_CLINICAL_ASSESSMENT"; field: keyof PEClinicalAssessment; value: any }
   | { type: "UPDATE_MEDICAL_HISTORY"; field: keyof PEMedicalHistory; value: any }
   | { type: "UPDATE_CURRENT_MEDICATIONS"; field: keyof PECurrentMedications; value: any }
@@ -112,7 +120,8 @@ export type PEAction =
   | { type: "UPDATE_MEDICINE_SUPPLY"; field: keyof PEMedicineSupply; value: any }
   | { type: "UPDATE_COUNSELLING"; field: keyof PECounselling; value: any }
   | { type: "UPDATE_SUMMARY"; field: string; value: any }
-  | { type: "SET_STEP"; step: number };
+  | { type: "SET_STEP"; step: number }
+  | { type: "RESET" };
 
 // ─── Step labels ───
 
@@ -156,6 +165,7 @@ gpEmail: "",
       idVerified: false,
       idType: "",
       patientAwarePrivateService: false,
+      writtenConsentObtained: false,
     },
     clinicalAssessment: {
       peType: "",
@@ -201,6 +211,7 @@ gpEmail: "",
       brand: "",
       understandsUsage: false,
       understandsOrthostatic: false,
+      pilSupplied: false,
     },
     counselling: {
       takeWithWater: false,

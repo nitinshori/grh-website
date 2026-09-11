@@ -11,6 +11,7 @@ import type {
   WegovyDoseSelection,
   WegovyCounselling,
   WegovyConsultationSummary,
+  WegovyVisitType,
 } from "./lib/wegovy-types";
 import type { BasePatientDetails } from "../shared/types";
 import {
@@ -23,6 +24,11 @@ import {
   hasHardStops,
   calculateDoseRecommendation,
   calculateBMI,
+  stageForDose,
+  isContinuingVisit,
+  getAllowedDoses,
+  fivePercentRuleApplies,
+  doseIndex,
 } from "./lib/wegovy-clinical-logic";
 import { validateStep } from "./lib/wegovy-validation";
 import { calculateAge } from "../shared/types";
@@ -76,6 +82,30 @@ function reducer(state: WegovyConsultationState, action: WegovyAction): WegovyCo
           newState.weightAssessment.weight
         );
       }
+      // Visit type drives the dose step: a new patient or a restart has no
+      // previous dose and titrates from 0.25 mg; a continuing patient must
+      // record the dose he is on.
+      if (action.field === "visitType" || action.field === "breakOverTwoMonths") {
+        const vt = newState.weightAssessment.visitType;
+        newState.doseSelection = {
+          ...newState.doseSelection,
+          // A starting BMI auto-set from today's reading must not survive a
+          // switch to "continuing": the pharmacist records the real one.
+          startingBMI: action.field === "visitType" ? null : newState.doseSelection.startingBMI,
+          recommencingAfterBreak: vt === "restart",
+          previousDose: vt === "continuing" ? (newState.doseSelection.previousDose === "none" ? "" : newState.doseSelection.previousDose) : vt ? "none" : "",
+          dose: vt === "continuing" ? newState.doseSelection.dose : vt ? "0.25mg" : "",
+          currentDoseStage: vt === "continuing" ? newState.doseSelection.currentDoseStage : vt ? "initiation" : "",
+        };
+      }
+      // For a patient starting (or restarting after more than 2 months) the
+      // starting BMI is today's BMI.
+      if (!isContinuingVisit(newState) && newState.weightAssessment.visitType) {
+        newState.doseSelection = {
+          ...newState.doseSelection,
+          startingBMI: newState.weightAssessment.bmi,
+        };
+      }
       break;
 
     case "UPDATE_MEDICAL_HISTORY":
@@ -83,6 +113,11 @@ function reducer(state: WegovyConsultationState, action: WegovyAction): WegovyCo
         ...newState.medicalHistory,
         [action.field]: action.value,
       };
+      if (action.field === "childbearingPotential" && action.value !== "yes") {
+        newState.medicalHistory.pregnant = false;
+        newState.medicalHistory.breastfeeding = false;
+        newState.medicalHistory.planningPregnancy = false;
+      }
       break;
 
     case "UPDATE_MEDICATIONS":
@@ -104,6 +139,17 @@ function reducer(state: WegovyConsultationState, action: WegovyAction): WegovyCo
         ...newState.doseSelection,
         [action.field]: action.value,
       };
+      // The stage is a property of the dose, not a separate choice
+      if (action.field === "dose") {
+        newState.doseSelection.currentDoseStage = stageForDose(action.value as string);
+      }
+      if (action.field === "previousDose") {
+        // Changing the previous dose invalidates a dose chosen against it
+        newState.doseSelection.dose = "";
+        newState.doseSelection.currentDoseStage = "";
+        newState.doseSelection.overrideReason = "";
+        newState.doseSelection.pharmacistOverride = false;
+      }
       break;
 
     case "UPDATE_COUNSELLING":
@@ -176,9 +222,9 @@ export function WegovyToolClient() {
     [state.currentStep, state]
   );
 
-  // Can proceed to next step?
-  const canProceed =
-    !validationError && (!hasStops || state.currentStep >= 6);
+  // Can proceed to next step? A stop anywhere blocks Next and Save & Print
+  // on every step (adversarial review, 11 Sep 2026).
+  const canProceed = !validationError && !hasStops;
 
   // Mark step as completed
   const markStepComplete = useCallback(() => {
@@ -218,16 +264,30 @@ export function WegovyToolClient() {
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
       },
-      clinicalData: state as unknown as Record<string, unknown>,
+      clinicalData: { ...(state as unknown as Record<string, unknown>), alerts },
       outcome: hasStops ? "not_supplied" : "completed",
+      medicine:
+        !hasStops && state.doseSelection.dose
+          ? {
+              name: "Wegovy (semaglutide)",
+              medicine: `Wegovy ${state.doseSelection.dose.replace("mg", " mg")} solution for injection in pre-filled pen${state.doseSelection.batchNumber ? ` (batch ${state.doseSelection.batchNumber})` : ""}`,
+              dose: `${state.doseSelection.dose.replace("mg", " mg")} subcutaneously once weekly`,
+              duration: "4 weeks (one month of treatment)",
+              quantity: state.doseSelection.dose === "7.2mg" ? "4 single use pens" : "1 pen (4 doses)",
+            }
+          : undefined,
       summary: {
         pharmacistName: state.summary.pharmacistName,
         pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacyName: state.summary.pharmacyName,
+        pharmacyAddress: state.summary.pharmacyAddress,
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: state.consent.notifyGp },
     };
-  }, [state, hasStops]);
+  }, [state, hasStops, alerts]);
 
   const handleNewConsultation = useCallback(() => {
     dispatch({ type: "RESET" });
@@ -250,6 +310,8 @@ export function WegovyToolClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <PatientDetailsStep
               patient={state.patient}
@@ -271,6 +333,8 @@ export function WegovyToolClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <ConsentStep
               consent={state.consent}
@@ -292,7 +356,52 @@ export function WegovyToolClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
+            <div className="mb-6 space-y-4">
+              <SelectInput
+                label="Visit type"
+                value={state.weightAssessment.visitType}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_WEIGHT_ASSESSMENT", field: "visitType", value: v as WegovyVisitType })
+                }
+                options={[
+                  { value: "new", label: "New patient: starting Wegovy (0.25 mg)" },
+                  { value: "continuing", label: "Continuing patient: already on Wegovy" },
+                  { value: "restart", label: "Restart after a break: titrate again from 0.25 mg" },
+                ]}
+                required
+              />
+              {state.weightAssessment.visitType === "restart" && (
+                <Checkbox
+                  label="More than 2 months have passed since the last dose"
+                  checked={state.weightAssessment.breakOverTwoMonths}
+                  onChange={(v) =>
+                    dispatch({ type: "UPDATE_WEIGHT_ASSESSMENT", field: "breakOverTwoMonths", value: v })
+                  }
+                  description="If so, the BMI inclusion criteria are reapplied to today's BMI. Within 2 months, eligibility rests on the starting BMI."
+                />
+              )}
+              {isContinuingVisit(state) && (
+                <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 space-y-3">
+                  <p className="text-xs text-amber-900">
+                    The document's inclusion is an INITIAL BMI. Today's height and weight are recorded below, but eligibility for a continuing patient is judged on the BMI at the start of treatment; losing weight is not an exclusion.
+                  </p>
+                  <NumberInput
+                    label="BMI at the start of treatment"
+                    value={state.doseSelection.startingBMI}
+                    onChange={(v) =>
+                      dispatch({ type: "UPDATE_DOSE_SELECTION", field: "startingBMI", value: v })
+                    }
+                    min={10}
+                    max={100}
+                    unit="kg/m²"
+                    required
+                  />
+                </div>
+              )}
+            </div>
             <BMICalculator
               height={state.weightAssessment.height}
               weight={state.weightAssessment.weight}
@@ -424,6 +533,8 @@ export function WegovyToolClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
               <div className="p-3 bg-red-50 border border-red-200 rounded">
@@ -740,6 +851,25 @@ export function WegovyToolClient() {
                 </p>
               </div>
 
+              <SelectInput
+                label="Woman of childbearing potential?"
+                value={state.medicalHistory.childbearingPotential}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "childbearingPotential",
+                    value: v as "" | "yes" | "no",
+                  })
+                }
+                options={[
+                  { value: "no", label: "No (male, post-menopausal, or otherwise not of childbearing potential)" },
+                  { value: "yes", label: "Yes" },
+                ]}
+                required
+              />
+
+              {state.medicalHistory.childbearingPotential === "yes" && (
+              <>
               <Checkbox
                 label="Currently pregnant"
                 checked={state.medicalHistory.pregnant}
@@ -776,6 +906,8 @@ export function WegovyToolClient() {
                 }
                 description="Exclusion. Effective contraception is required; advise discontinuation at least 2 months before planned conception."
               />
+              </>
+              )}
             </div>
           </StepWrapper>
         );
@@ -791,6 +923,8 @@ export function WegovyToolClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
               <div className="p-3 bg-red-50 border border-red-200 rounded">
@@ -954,6 +1088,8 @@ export function WegovyToolClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="grid sm:grid-cols-2 gap-4">
               <NumberInput
@@ -1039,13 +1175,14 @@ export function WegovyToolClient() {
             totalSteps={TOTAL_STEPS}
             onNext={handleNext}
             onPrev={handlePrev}
-            canProceed={!hasStops}
+            canProceed={canProceed}
             validationError={
               hasStops
                 ? "Hard stop contraindications present, cannot proceed to dose selection."
                 : null
             }
             isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             {alerts.length > 0 ? (
               <AlertBanner alerts={alerts} />
@@ -1084,6 +1221,7 @@ export function WegovyToolClient() {
             canProceed={canProceed}
             validationError={validationError}
             isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <DoseTitrationSelector
               currentStage={state.doseSelection.currentDoseStage}
@@ -1091,6 +1229,8 @@ export function WegovyToolClient() {
               weeksAtCurrentDose={state.doseSelection.weeksAtCurrentDose}
               previousDose={state.doseSelection.previousDose}
               injectionSite={state.doseSelection.injectionSite}
+              visitType={state.weightAssessment.visitType}
+              allowedDoses={getAllowedDoses(state)}
               onStageChange={(v) =>
                 dispatch({
                   type: "UPDATE_DOSE_SELECTION",
@@ -1129,21 +1269,16 @@ export function WegovyToolClient() {
             />
 
             <div className="mt-6 space-y-4">
-              <Checkbox
-                label="Patient has used Wegovy in the past and is recommencing treatment"
-                checked={state.doseSelection.recommencingAfterBreak}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_DOSE_SELECTION",
-                    field: "recommencingAfterBreak",
-                    value: v,
-                  })
-                }
-                description="The dose must be titrated again from the lowest dose (0.25 mg). The BMI inclusion criteria for initiation must be reapplied if more than 2 months have passed since discontinuing treatment."
-              />
+              {state.weightAssessment.visitType === "restart" && (
+                <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-xs text-amber-900">
+                  Recommencing after a break: the dose is titrated again from 0.25 mg.
+                  {state.weightAssessment.breakOverTwoMonths
+                    ? " More than 2 months since the last dose: the BMI inclusion criteria were reapplied on the Weight Assessment step."
+                    : " Within 2 months of the last dose: eligibility rests on the starting BMI."}
+                </div>
+              )}
 
-              {(state.doseSelection.previousDose !== "" ||
-                state.doseSelection.recommencingAfterBreak) && (
+              {state.weightAssessment.visitType === "continuing" && (
                 <div className="grid sm:grid-cols-2 gap-4">
                   <TextInput
                     label="Treatment start date (current course)"
@@ -1173,10 +1308,49 @@ export function WegovyToolClient() {
                     unit="kg"
                     required
                   />
+                  <NumberInput
+                    label="Months on the maximum tolerated dose (0 if still titrating)"
+                    value={state.doseSelection.monthsOnMaxToleratedDose}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_DOSE_SELECTION",
+                        field: "monthsOnMaxToleratedDose",
+                        value: v,
+                      })
+                    }
+                    min={0}
+                    max={36}
+                    unit="months"
+                    required
+                  />
                 </div>
               )}
 
-              {state.doseSelection.dose === "7.2mg" && (
+              {fivePercentRuleApplies(state) && (
+                <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 space-y-2">
+                  <p className="text-sm font-semibold text-red-800">
+                    Less than 5% of initial body weight lost after 6 months on the maximum tolerated dose
+                  </p>
+                  <p className="text-xs text-red-800">
+                    Under this PGD treatment is stopped where this applies. A decision on continuation is required and must be documented before any further supply.
+                  </p>
+                  <TextArea
+                    label="Decision on continuation and reasoning"
+                    value={state.doseSelection.continuationDecision}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_DOSE_SELECTION",
+                        field: "continuationDecision",
+                        value: v,
+                      })
+                    }
+                    required
+                    placeholder="For example: stopped and referred to GP; or continued because ... (document the clinical reasoning)"
+                  />
+                </div>
+              )}
+
+              {state.doseSelection.dose === "7.2mg" && !isContinuingVisit(state) && (
                 <NumberInput
                   label="Starting BMI (at initiation of treatment)"
                   value={state.doseSelection.startingBMI}
@@ -1220,34 +1394,24 @@ export function WegovyToolClient() {
                 </p>
               </div>
 
-              <Checkbox
-                label="Pharmacist override"
-                checked={state.doseSelection.pharmacistOverride}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_DOSE_SELECTION",
-                    field: "pharmacistOverride",
-                    value: v,
-                  })
-                }
-                description="Tick if deviating from standard dose recommendation"
-              />
-
-              {state.doseSelection.pharmacistOverride && (
-                <TextArea
-                  label="Reason for override"
-                  value={state.doseSelection.overrideReason}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_DOSE_SELECTION",
-                      field: "overrideReason",
-                      value: v,
-                    })
-                  }
-                  required
-                  placeholder="Document clinical reasoning for deviation from standard dosing."
-                />
-              )}
+              {state.weightAssessment.visitType === "continuing" &&
+                state.doseSelection.dose &&
+                state.doseSelection.previousDose &&
+                doseIndex(state.doseSelection.dose) < doseIndex(state.doseSelection.previousDose) && (
+                  <TextArea
+                    label="Reason for supplying a lower dose than the patient has been on"
+                    value={state.doseSelection.overrideReason}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_DOSE_SELECTION",
+                        field: "overrideReason",
+                        value: v,
+                      })
+                    }
+                    required
+                    placeholder="The document allows lowering to the previous dose for significant GI symptoms, or reducing and re-escalating after more than 2 missed doses. Record which."
+                  />
+                )}
             </div>
           </StepWrapper>
         );
@@ -1263,6 +1427,7 @@ export function WegovyToolClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
           getConsultationData={getConsultationData}
           onNewConsultation={handleNewConsultation}
           >
@@ -1371,6 +1536,7 @@ export function WegovyToolClient() {
                 description="Report any low mood or suicidal thoughts; mood is monitored at review; when to seek urgent psychiatric help"
               />
 
+              {state.medicalHistory.childbearingPotential === "yes" && (
               <Checkbox
                 label="Contraception and pregnancy advice given"
                 checked={state.counselling.contraceptionAdvice}
@@ -1383,6 +1549,7 @@ export function WegovyToolClient() {
                 }
                 description="Women of childbearing potential should use effective contraception. Semaglutide must not be used in pregnancy or breastfeeding, and must be discontinued at least 2 months before a planned pregnancy; stop and seek advice if pregnancy occurs."
               />
+              )}
 
               {state.medications.takesOtherDiabetesMeds && (
                 <Checkbox
@@ -1469,99 +1636,87 @@ export function WegovyToolClient() {
 
       case 9: // Summary & Print
         return (
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
-              <h2 className="text-lg font-bold text-navy-900">
-                Summary & Consultation Record
-              </h2>
+          <StepWrapper
+            title="Summary & Consultation Record"
+            description="Confirm the pharmacist details, review the record, then Save & Print."
+            currentStep={state.currentStep}
+            totalSteps={TOTAL_STEPS}
+            onNext={handleNext}
+            onPrev={handlePrev}
+            canProceed={canProceed}
+            validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
+            onNewConsultation={handleNewConsultation}
+          >
+            <div className="space-y-4 mb-6">
+              <TextInput
+                label="Pharmacist name"
+                value={state.summary.pharmacistName}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_SUMMARY",
+                    field: "pharmacistName",
+                    value: v,
+                  })
+                }
+                required
+              />
+              <TextInput
+                label="GPhC registration number"
+                value={state.summary.pharmacistGPhC}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_SUMMARY",
+                    field: "pharmacistGPhC",
+                    value: v,
+                  })
+                }
+                required
+              />
+              <TextInput
+                label="Pharmacy name"
+                value={state.summary.pharmacyName}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_SUMMARY",
+                    field: "pharmacyName",
+                    value: v,
+                  })
+                }
+              />
+              <TextInput
+                label="Pharmacy address"
+                value={state.summary.pharmacyAddress}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_SUMMARY",
+                    field: "pharmacyAddress",
+                    value: v,
+                  })
+                }
+              />
+              <TextArea
+                label="Additional clinical notes"
+                value={state.summary.clinicalNotes}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_SUMMARY",
+                    field: "clinicalNotes",
+                    value: v,
+                  })
+                }
+                placeholder="Any additional information to record..."
+              />
             </div>
 
-            <div className="px-6 py-6">
-              <div className="space-y-4 mb-6">
-                <TextInput
-                  label="Pharmacist name"
-                  value={state.summary.pharmacistName}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_SUMMARY",
-                      field: "pharmacistName",
-                      value: v,
-                    })
-                  }
-                  required
-                />
-                <TextInput
-                  label="GPhC registration number"
-                  value={state.summary.pharmacistGPhC}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_SUMMARY",
-                      field: "pharmacistGPhC",
-                      value: v,
-                    })
-                  }
-                  required
-                />
-                <TextInput
-                  label="Pharmacy name"
-                  value={state.summary.pharmacyName}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_SUMMARY",
-                      field: "pharmacyName",
-                      value: v,
-                    })
-                  }
-                />
-                <TextInput
-                  label="Pharmacy address"
-                  value={state.summary.pharmacyAddress}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_SUMMARY",
-                      field: "pharmacyAddress",
-                      value: v,
-                    })
-                  }
-                />
-                <TextArea
-                  label="Additional clinical notes"
-                  value={state.summary.clinicalNotes}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_SUMMARY",
-                      field: "clinicalNotes",
-                      value: v,
-                    })
-                  }
-                  placeholder="Any additional information to record..."
-                />
-              </div>
-
-              <div className="border-t border-gray-200 pt-6">
-                <p className="text-sm text-gray-600 mb-4">
-                  Review the summary below before printing the consultation record.
-                </p>
-                <WegovySummaryReport state={updatedState} />
-              </div>
+            <div className="border-t border-gray-200 pt-6">
+              <p className="text-sm text-gray-600 mb-4 print:hidden">
+                Review the summary below before saving and printing the consultation record.
+              </p>
+              <WegovySummaryReport state={updatedState} />
             </div>
-
-            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/30 flex items-center justify-between">
-              <button
-                onClick={() => dispatch({ type: "PREV_STEP" })}
-                className="px-5 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-navy-900 transition-colors"
-              >
-                &larr; Previous
-              </button>
-
-              <button
-                onClick={() => window.print()}
-                className="px-6 py-2.5 rounded-lg text-sm font-semibold bg-navy-900 hover:bg-navy-950 text-white transition-colors"
-              >
-                Print Consultation Record
-              </button>
-            </div>
-          </div>
+          </StepWrapper>
         );
 
       default:
@@ -1581,7 +1736,7 @@ export function WegovyToolClient() {
       />
 
       {/* Alert Banner */}
-      {alerts.length > 0 && (state.currentStep < 6 || state.currentStep === 7) && (
+      {alerts.length > 0 && state.currentStep !== 9 && (
         <AlertBanner alerts={alerts} />
       )}
 

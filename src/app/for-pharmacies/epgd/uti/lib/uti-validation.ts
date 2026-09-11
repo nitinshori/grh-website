@@ -1,4 +1,5 @@
 import { validatePatientStep, validateConsentStep, validateSummaryStep } from "../../shared/types";
+import { isNitrofurantoinContraindicated } from "./uti-clinical-logic";
 import type {
   UTIPatientDetails,
   UTISymptoms,
@@ -46,6 +47,11 @@ export function validateUTISymptomStep(symptoms: UTISymptoms): string | null {
 }
 
 export function validateUTIMedicalHistoryStep(medicalHistory: UTIMedicalHistory): string | null {
+  // PGD v005 renal row: the question is asked in set terms and the answer
+  // recorded. No default: an unasked question is not a NO.
+  if (!medicalHistory.renalImpairment && !medicalHistory.kidneyDisease) {
+    return "Ask the kidney question in the PGD's words and record the answer (No / Does not know / Yes)";
+  }
   // PGD v005: ask both recurrent UTI questions and record both answers
   if (!medicalHistory.utiEpisodesLast6Months) {
     return "Please record the number of UTI episodes in the last 6 months";
@@ -70,7 +76,10 @@ export function validateUTIRedFlagsStep(symptoms: UTISymptoms): string | null {
   return null;
 }
 
-export function validateUTIMedicineSelectionStep(medicineSelection: UTIMedicineSelection): string | null {
+export function validateUTIMedicineSelectionStep(
+  medicineSelection: UTIMedicineSelection,
+  medicalHistory?: UTIMedicalHistory
+): string | null {
   if (!medicineSelection.medicine) {
     return "Please select a medicine";
   }
@@ -85,6 +94,17 @@ export function validateUTIMedicineSelectionStep(medicineSelection: UTIMedicineS
 
   if (medicineSelection.medicine === "trimethoprim" && !medicineSelection.trimethoprimReason) {
     return "Trimethoprim is second line only. Record why nitrofurantoin is unsuitable for this patient";
+  }
+
+  // "Contraindicated" must match the history recorded on the medical history
+  // step; the record cannot state a contraindication the history denies.
+  if (
+    medicineSelection.medicine === "trimethoprim" &&
+    medicineSelection.trimethoprimReason === "contraindicated" &&
+    medicalHistory &&
+    !isNitrofurantoinContraindicated(medicalHistory)
+  ) {
+    return "No nitrofurantoin contraindication is recorded on the medical history step. Go back and record it, or choose a different reason";
   }
 
   return null;
@@ -109,6 +129,12 @@ export function validateUTICounsellingStep(
 
   if (!requiredCounselling.every(Boolean)) {
     return "Please confirm all counselling points and the 48 hour safety netting have been given";
+  }
+  if (!counselling.pilSupplied) {
+    return "Confirm the patient information leaflet was supplied with the product";
+  }
+  if (!counselling.disposalAdvice) {
+    return "Confirm the patient was advised to return any unused medicine to a pharmacy";
   }
 
   return null;
@@ -147,7 +173,7 @@ export function validateUTIStep(
     case 5:
       return validateUTIRedFlagsStep(state.symptoms);
     case 6:
-      return validateUTIMedicineSelectionStep(state.medicineSelection);
+      return validateUTIMedicineSelectionStep(state.medicineSelection, state.medicalHistory);
     case 7:
       return validateUTICounsellingStep(state.counselling, state.medicineSelection.medicine);
     case 8:

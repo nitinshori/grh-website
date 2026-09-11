@@ -34,11 +34,14 @@ export function validateStep(step: number, state: ChickenpoxConsultationState): 
         return "Confirm that the patient has no history of chickenpox infection (inclusion criterion), or record a history of chickenpox (exclusion)";
       }
       if (state.eligibility.dose1GivenElsewhere) {
+        if (!state.eligibility.dose1Where) {
+          return "Dose 1 already given: record where it was given (this pharmacy or elsewhere)";
+        }
         if (!state.eligibility.dose1ElsewhereDate) {
-          return "Dose 1 given elsewhere: record the date of dose 1";
+          return "Dose 1 already given: record the date of dose 1";
         }
         if (!state.eligibility.dose1ElsewhereBrand.trim()) {
-          return "Dose 1 given elsewhere: record the brand of dose 1";
+          return "Dose 1 already given: record the brand of dose 1";
         }
       }
       return null;
@@ -61,10 +64,10 @@ export function validateStep(step: number, state: ChickenpoxConsultationState): 
         return "Record whether this is dose 1 or dose 2 of the course";
       }
       if (a.doseNumber === "2nd" && !state.eligibility.dose1GivenElsewhere) {
-        return "Dose 2: record the date and brand of dose 1 on the Eligibility step";
+        return "Dose 2: tick \"Dose 1 already given\" and record the date and brand of dose 1 on the Eligibility step";
       }
       if (a.doseNumber === "1st" && state.eligibility.dose1GivenElsewhere) {
-        return "Dose 1 has already been given elsewhere; this administration is dose 2";
+        return "Dose 1 has already been given; this administration is dose 2";
       }
       if (!a.route) {
         return "Route must be selected";
@@ -80,6 +83,9 @@ export function validateStep(step: number, state: ChickenpoxConsultationState): 
         if (interval !== null && interval < 28) {
           return "Second dose must be at least 4 weeks after the first (Varilrix: at least 6 weeks, never less than 4)";
         }
+        if (interval !== null && a.vaccine === "Varilrix" && interval < 42 && !a.intervalReason.trim()) {
+          return "Varilrix second dose between 4 and 6 weeks after the first: record the reason (PGD caution)";
+        }
       }
       if (!a.dose1Site.trim()) {
         return "Injection site is required";
@@ -89,6 +95,13 @@ export function validateStep(step: number, state: ChickenpoxConsultationState): 
       }
       if (!a.expiryDate) {
         return "Expiry date is required";
+      }
+      {
+        const today = new Date().toISOString().split("T")[0];
+        const untilExpiry = daysBetween(today, a.expiryDate);
+        if (untilExpiry !== null && untilExpiry < 0) {
+          return "This batch has expired. Do not use it.";
+        }
       }
       if (a.doseNumber === "1st" && !a.dose2Scheduled) {
         return "Record the date dose 2 is due";
@@ -128,6 +141,9 @@ export function validateStep(step: number, state: ChickenpoxConsultationState): 
       }
       if (!c.sideEffectsExplained) {
         return "Explain the expected side effects";
+      }
+      if (!p.salicylatesAvoided || !c.salicylatesAvoidanceAdvice) {
+        return "Advise the patient to avoid salicylates (e.g. aspirin) for 6 weeks after vaccination (Reye's syndrome risk)";
       }
       if (!p.followUpAdviceGiven) {
         return "Give the follow-up advice: seek medical advice if symptoms worsen rapidly or significantly, do not improve in 3 to 4 weeks, or they become systemically very unwell";

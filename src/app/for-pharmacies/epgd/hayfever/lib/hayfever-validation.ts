@@ -54,6 +54,19 @@ export function validateStep(state: HayfeverConsultationState, step: number): st
       if (dymista && !state.medicineSupply.dualTherapyRequired) {
         return "Please confirm dual therapy is required (monotherapy with an intranasal antihistamine or corticosteroid is not sufficient)";
       }
+      // Quantity supplied is a required record; the tool used to print the
+      // document's ceiling as prose instead (adversarial review, 11 Sep 2026).
+      if (fexofenadine) {
+        const q = state.medicineSupply.fexofenadineQuantity;
+        if (q === null || q < 1) return "Enter the number of fexofenadine 120 mg tablets supplied (1 to 30)";
+        if (!Number.isInteger(q)) return "Fexofenadine quantity must be a whole number of tablets";
+        if (q > 30) return "Maximum 30 fexofenadine 120 mg tablets (1 month supply) under this PGD";
+      }
+      if (dymista) {
+        const b = state.medicineSupply.dymistaBottles;
+        if (b === null || b < 1) return "Record the Dymista bottle supplied (one 23 g bottle)";
+        if (b > 1) return "This PGD authorises one Dymista bottle (23 g, approx. 120 sprays) per supply";
+      }
       if (!state.medicineSupply.dosageConfirmed) {
         return "Please confirm dosage with patient";
       }

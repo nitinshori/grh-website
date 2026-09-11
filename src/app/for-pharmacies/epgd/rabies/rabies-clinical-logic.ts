@@ -31,6 +31,7 @@ export function evaluateRabiesContraindications(
     anaphylaxisHistory: false,
     severeEggAllergy: false,
     antibioticHypersensitivity: false,
+    neomycinHypersensitivity: false,
     acuteFebrileIllness: false,
     // Cover of the PGD: from age 2 years onwards; children under 2 are not covered.
     ageAppropriate: patientAge !== null && patientAge >= 2,
@@ -80,19 +81,32 @@ export function evaluateRabiesContraindications(
     });
   }
 
-  // Exclusion (Verorab only): hypersensitivity to polymyxin B, streptomycin or neomycin
+  // Exclusion (Verorab only): hypersensitivity to polymyxin B, streptomycin or neomycin.
+  // Rabipur contains traces of neomycin, so where the hypersensitivity extends to
+  // neomycin it is a component of the product to be used and Rabipur is excluded too.
   if (screening.antibioticHypersensitivity) {
     contraindications.antibioticHypersensitivity = true;
-    alerts.push({
-      severity: contraindications.severeEggAllergy ? 'stop' : 'caution',
-      code: 'ANTIBIOTIC_HYPERSENSITIVITY_RABIES',
-      message: 'Hypersensitivity to polymyxin B, streptomycin or neomycin: Verorab excluded',
-      detail:
-        'Verorab may contain traces of polymyxin B, streptomycin and neomycin and must not be used. Rabipur (traces of neomycin, chlortetracycline and amphotericin B) may be used only where the hypersensitivity does not extend to neomycin; otherwise refer.',
-    });
+    contraindications.neomycinHypersensitivity = screening.hypersensitivityIncludesNeomycin !== 'no';
+    if (contraindications.neomycinHypersensitivity) {
+      alerts.push({
+        severity: 'stop',
+        code: 'NEOMYCIN_HYPERSENSITIVITY_RABIES',
+        message: 'Neomycin hypersensitivity: neither product can be given',
+        detail:
+          'Verorab may contain traces of polymyxin B, streptomycin and neomycin, and Rabipur contains traces of neomycin, chlortetracycline and amphotericin B. Hypersensitivity to a component of the product to be used is an exclusion for both. Refer to a travel clinic or specialist service.',
+      });
+    } else {
+      alerts.push({
+        severity: contraindications.severeEggAllergy ? 'stop' : 'caution',
+        code: 'ANTIBIOTIC_HYPERSENSITIVITY_RABIES',
+        message: 'Hypersensitivity to polymyxin B or streptomycin: Verorab excluded',
+        detail:
+          'Verorab may contain traces of polymyxin B, streptomycin and neomycin and must not be used. The hypersensitivity has been recorded as not extending to neomycin, so Rabipur (traces of neomycin, chlortetracycline and amphotericin B) may be used.',
+      });
+    }
   }
 
-  if (contraindications.severeEggAllergy && contraindications.antibioticHypersensitivity) {
+  if (contraindications.severeEggAllergy && contraindications.antibioticHypersensitivity && !contraindications.neomycinHypersensitivity) {
     alerts.push({
       severity: 'stop',
       code: 'NO_SUITABLE_PRODUCT_RABIES',
@@ -112,14 +126,14 @@ export function evaluateRabiesContraindications(
     });
   }
 
-  // Caution: mild egg allergy (no exclusion in the PGD; tool keeps its extended observation)
+  // Caution: mild egg allergy (no exclusion in the PGD)
   if (screening.eggAllergy && screening.eggAllergySeverity === 'mild') {
     alerts.push({
       severity: 'caution',
       code: 'MILD_EGG_ALLERGY_RABIES',
       message: 'Mild egg allergy noted',
       detail:
-        'Only severe egg allergy excludes Rabipur. Can proceed; the tool extends the observation period to 30 minutes.',
+        'Only severe egg allergy excludes Rabipur. Can proceed. Observe for 15 minutes after vaccination as for every patient.',
     });
   }
 
@@ -186,22 +200,46 @@ export function hasHardStopContraindications(
     contraindications.priorExposure ||
     contraindications.anaphylaxisHistory ||
     contraindications.acuteFebrileIllness ||
+    contraindications.neomycinHypersensitivity ||
     (contraindications.severeEggAllergy && contraindications.antibioticHypersensitivity) ||
     !contraindications.ageAppropriate
   );
 }
 
 export function getObservationPeriodRecommendation(
-  screening: RabiesScreening
-): '15-min' | '30-min' {
-  // PGD: observe every patient for 15 minutes. The tool extends this for egg allergy or immunosuppression.
-  if (
-    (screening.eggAllergy && screening.eggAllergySeverity === 'mild') ||
-    screening.immunosuppressed
-  ) {
-    return '30-min';
-  }
+  _screening: RabiesScreening
+): '15-min' {
+  // PGD: observe every patient for 15 minutes after vaccination. Nothing in
+  // the signed document extends this, so the tool no longer invents a 30
+  // minute period for egg allergy or immunosuppression.
   return '15-min';
+}
+
+/** Whole calendar days from today to an ISO date (negative when in the past). null when blank or invalid. */
+export function daysFromToday(isoDate: string): number | null {
+  if (!isoDate) return null;
+  const target = new Date(isoDate);
+  if (isNaN(target.getTime())) return null;
+  const today = new Date();
+  const a = Date.UTC(target.getFullYear(), target.getMonth(), target.getDate());
+  const b = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  return Math.round((a - b) / 86400000);
+}
+
+/** Minimum days between the previous dose and this one, per schedule and dose number. */
+export function minimumIntervalDays(
+  schedule: 'standard' | 'accelerated' | '',
+  doseNumber: RabiesVaccineAdministration['doseNumber']
+): number | null {
+  if (doseNumber === '2nd') return schedule === 'accelerated' ? 3 : 7;
+  if (doseNumber === '3rd') return schedule === 'accelerated' ? 4 : 14;
+  // Accelerated course: further dose at one year. Taken as not before 300
+  // days so that a traveller leaving shortly before the anniversary can be
+  // given it.
+  if (doseNumber === 'one-year-dose') return 300;
+  // Booster: considered if travelling again more than a year after the course.
+  if (doseNumber === 'booster') return 365;
+  return null;
 }
 
 function addDays(base: Date, days: number): string {
@@ -214,13 +252,20 @@ function addDays(base: Date, days: number): string {
  * Next due dates for the dose just given, per the PGD schedules.
  * Conventional: day 0, day 7 and day 28 (third dose may be brought forward to day 21).
  * Accelerated: day 0, day 3 and day 7, with a further dose at one year if travel to high risk areas continues.
+ *
+ * `currentDate` is the date of the dose being given now; `previousDoseDate`
+ * is the date of the previous dose in the course, so that a late second dose
+ * still yields the course's own day 21 and day 28 rather than today plus 21.
  */
 export function calculateNextDueDates(
   currentDate: string,
   schedule: 'standard' | 'accelerated',
-  doseNumber: RabiesVaccineAdministration['doseNumber']
+  doseNumber: RabiesVaccineAdministration['doseNumber'],
+  previousDoseDate?: string
 ): string {
   const current = new Date(currentDate);
+  const prev = previousDoseDate ? new Date(previousDoseDate) : null;
+  const day0 = prev && !isNaN(prev.getTime()) ? prev : current;
   const oneYear = new Date(current);
   oneYear.setFullYear(oneYear.getFullYear() + 1);
 
@@ -229,7 +274,8 @@ export function calculateNextDueDates(
       return `Day 7: ${addDays(current, 7)}; Day 28: ${addDays(current, 28)} (may be brought forward to day 21: ${addDays(current, 21)})`;
     }
     if (doseNumber === '2nd') {
-      return `Day 28: ${addDays(current, 21)} (may be brought forward to day 21: ${addDays(current, 14)})`;
+      // Previous dose was day 0 of the course.
+      return `Day 28: ${addDays(day0, 28)} (may be brought forward to day 21: ${addDays(day0, 21)}); if that date has passed, give the third dose as soon as possible`;
     }
     if (doseNumber === '3rd') {
       return 'Primary course complete. Boosters are not routinely recommended for most travellers; a single booster may be considered after risk assessment if travelling again to an enzootic area more than a year after the course.';
@@ -238,10 +284,11 @@ export function calculateNextDueDates(
   }
 
   if (doseNumber === '1st') {
-    return `Day 3: ${addDays(current, 3)}; Day 7: ${addDays(current, 7)}; further dose at one year if travel to high risk areas continues: ${oneYear.toLocaleDateString()}`;
+    return `Day 3: ${addDays(current, 3)}; Day 7: ${addDays(current, 7)}; further dose at one year if travel to high risk areas continues: ${addDays(current, 365)}`;
   }
   if (doseNumber === '2nd') {
-    return `Day 7: ${addDays(current, 4)}; further dose at one year if travel to high risk areas continues: ${oneYear.toLocaleDateString()}`;
+    // Previous dose was day 0 of the course.
+    return `Day 7: ${addDays(day0, 7)}; further dose at one year if travel to high risk areas continues: ${addDays(day0, 365)}`;
   }
   if (doseNumber === '3rd') {
     return `Accelerated primary course complete. Further dose at one year if travel to high risk areas continues: ${oneYear.toLocaleDateString()}`;

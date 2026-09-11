@@ -9,6 +9,43 @@ export const MAX_TREATMENT_DAYS = 14;
 export const MAX_TABLETS = 42;
 export const MAX_DAYS_IN_6_MONTHS = 30;
 
+/**
+ * Parse DD/MM/YYYY. Returns null on anything else, including 31/02/2026,
+ * because Date() would silently roll that forward to 3 March.
+ */
+export function parseUkDate(v: string): Date | null {
+  const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec((v || "").trim());
+  if (!m) return null;
+  const [dd, mm, yyyy] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const d = new Date(yyyy, mm - 1, dd);
+  if (d.getFullYear() !== yyyy || d.getMonth() !== mm - 1 || d.getDate() !== dd) return null;
+  return d;
+}
+
+export function formatUkDate(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`;
+}
+
+/** Whole days from today to `d`, negative if it is in the past. */
+export function daysFromToday(d: Date): number {
+  const t = new Date();
+  t.setHours(0, 0, 0, 0);
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return Math.round((x.getTime() - t.getTime()) / 86400000);
+}
+
+/** Whole days between two UK dates (b minus a), or null if either is invalid. */
+export function daysBetweenUk(a: string, b: string): number | null {
+  const da = parseUkDate(a);
+  const db = parseUkDate(b);
+  if (!da || !db) return null;
+  da.setHours(0, 0, 0, 0);
+  db.setHours(0, 0, 0, 0);
+  return Math.round((db.getTime() - da.getTime()) / 86400000);
+}
+
 export function calculateBmi(heightCm: number | null, weightKg: number | null): number | null {
   return heightCm && weightKg && heightCm > 0 ? weightKg / Math.pow(heightCm / 100, 2) : null;
 }
@@ -19,7 +56,27 @@ export function calculateBmi(heightCm: number | null, weightKg: number | null): 
 export function isPregnancyExcluded(state: PeriodDelayConsultationState): boolean {
   const a = state.assessment;
   if (a.lastPeriodNormalOnTime && a.noUnprotectedSexSince) return true;
-  return a.pregnancyTestNegative && a.pregnancyTestDate.trim() !== "";
+  if (!a.pregnancyTestNegative) return false;
+  // The test must be a real date, no earlier than 21 days after the last
+  // unprotected sex, and not in the future.
+  const test = parseUkDate(a.pregnancyTestDate);
+  if (!test || daysFromToday(test) > 0) return false;
+  const interval = daysBetweenUk(a.lastUpsiDate, a.pregnancyTestDate);
+  return interval !== null && interval >= 21;
+}
+
+/** Why pregnancy is not yet excluded, for the validator. */
+export function getPregnancyExclusionError(state: PeriodDelayConsultationState): string | null {
+  const a = state.assessment;
+  if (a.lastPeriodNormalOnTime && a.noUnprotectedSexSince) return null;
+  if (!a.pregnancyTestNegative) return "Pregnancy cannot be excluded on history: a negative pregnancy test, taken no earlier than 21 days after the last unprotected sex, is required before supply";
+  if (!parseUkDate(a.lastUpsiDate)) return "Enter the date of the last unprotected sex as DD/MM/YYYY";
+  const test = parseUkDate(a.pregnancyTestDate);
+  if (!test) return "Enter the date of the pregnancy test as DD/MM/YYYY";
+  if (daysFromToday(test) > 0) return "The pregnancy test date is in the future";
+  const interval = daysBetweenUk(a.lastUpsiDate, a.pregnancyTestDate);
+  if (interval === null || interval < 21) return `The test was taken ${interval === null ? "an unknown number of" : interval} days after the last unprotected sex; it must be at least 21 days after. Do not supply`;
+  return null;
 }
 
 export function getAllAlerts(state: PeriodDelayConsultationState): ClinicalAlert[] {
@@ -151,12 +208,14 @@ export function getAllAlerts(state: PeriodDelayConsultationState): ClinicalAlert
         "On its own this does not exclude. Supply, and counsel on the precautions: move around at least hourly on any journey, keep well hydrated, avoid alcohol and sedatives on the journey, and consider graduated compression stockings. Seek urgent help for a painful swollen calf, sudden breathlessness or chest pain. Record the risk factor, not only the conclusion.",
     });
   } else if (riskFactors.length >= 2) {
+    // Not an exclusion in PGD v008 (neither age 40 plus nor a long-quit
+    // ex-smoker is listed): a caution for the pharmacist's judgement.
     alerts.push({
-      severity: "stop",
+      severity: "caution",
       code: "UKMEC2_CUMULATIVE",
       message: `${riskFactors.length} UKMEC 2 risk factors together: ${riskFactors.join(", ")}`,
       detail:
-        "UKMEC 2025 states that where multiple category 2 conditions relate to the same risk, clinical judgement must decide whether the risks outweigh the benefits. Exclude and refer. Record which factors were present.",
+        "UKMEC 2025 states that where multiple category 2 conditions relate to the same risk, clinical judgement must decide whether the risks outweigh the benefits. Not an exclusion in the PGD. Use judgement, counsel on the VTE precautions, and record which factors were present and the decision.",
     });
   }
 

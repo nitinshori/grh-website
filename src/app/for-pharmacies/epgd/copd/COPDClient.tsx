@@ -16,7 +16,8 @@ import { STEP_LABELS, TOTAL_STEPS, createInitialConsultationState, PGD_STRAPLINE
 import {
   getAllAlerts,
   hasHardStops,
-  calculateDoseRecommendation,
+  calculateDoseRecommendations,
+  effectiveSalbutamolSupplies12Months,
   SALBUTAMOL_RECOMMENDATION,
   AMOXICILLIN_RECOMMENDATION,
 } from "./lib/copd-clinical-logic";
@@ -72,9 +73,14 @@ function reducer(state: COPDConsultationState, action: COPDAction): COPDConsulta
     case "UPDATE_SUMMARY":
       newState.summary = { ...newState.summary, [action.field]: action.value };
       break;
+    case "UPDATE_EXCLUSION_OUTCOME":
+      newState.exclusionOutcome = { ...newState.exclusionOutcome, [action.field]: action.value };
+      break;
     case "SET_STEP":
       newState.currentStep = action.step;
       break;
+    case "RESET":
+      return createInitialConsultationState();
   }
 
   return newState;
@@ -98,22 +104,61 @@ export default function COPDClient() {
 
   const alerts = useMemo(() => getAllAlerts(state), [state]);
   const hardStops = useMemo(() => hasHardStops(state), [state]);
-  const doseRecommendation = useMemo(() => calculateDoseRecommendation(state), [state]);
+  const doseRecommendations = useMemo(() => calculateDoseRecommendations(state), [state]);
   const validationError = useMemo(() => validateStep(state, state.currentStep), [state]);
+  // A stop anywhere disables Next (and Save & Print) everywhere. Stops used
+  // to be enforced only up to step 5, so a stop raised after going back could
+  // be carried through to a printed supply (adversarial review, 11 Sep 2026).
   const canProceed = useMemo(() => {
-    if (state.currentStep >= TOTAL_STEPS - 1) return true;
-    if (state.currentStep <= 5 && hardStops) return false;
+    if (hardStops) return false;
     return !validationError;
-  }, [state, validationError, hardStops]);
+  }, [validationError, hardStops]);
+
+  // Count this pharmacy's saved COPD salbutamol supplies for the same patient
+  // in the last 365 days, so the 2-in-12-months limit does not rest only on
+  // what the patient remembers. Runs when the assessment step is reached.
+  const { firstName, lastName, dateOfBirth } = state.patient;
+  useEffect(() => {
+    if (state.currentStep !== 2) return;
+    if (!firstName.trim() || !lastName.trim() || !dateOfBirth) return;
+    let cancelled = false;
+    const from = new Date();
+    from.setDate(from.getDate() - 365);
+    const qs = new URLSearchParams({
+      pgdSlug: "copd",
+      search: lastName.trim(),
+      outcome: "completed",
+      dateFrom: from.toISOString().split("T")[0],
+      limit: "50",
+    });
+    fetch(`/api/consultation-records?${qs}`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { records?: { patientFirstName: string; patientDob: string; medicineSupplied: string | null }[] } | null) => {
+        if (cancelled || !d?.records) return;
+        const count = d.records.filter(
+          (r) =>
+            r.patientFirstName.trim().toLowerCase() === firstName.trim().toLowerCase() &&
+            String(r.patientDob).slice(0, 10) === dateOfBirth &&
+            (r.medicineSupplied || "").toLowerCase().includes("salbutamol")
+        ).length;
+        dispatch({ type: "UPDATE_ASSESSMENT", field: "platformSalbutamolSupplies12Months", value: count });
+      })
+      .catch(() => {
+        // The lookup is a safety net; the patient-reported number still applies.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [state.currentStep, firstName, lastName, dateOfBirth]);
 
   const handleNext = useCallback(() => {
-    if (!validationError && state.currentStep < TOTAL_STEPS - 1) {
+    if (!validationError && !hardStops && state.currentStep < TOTAL_STEPS - 1) {
       const newCompleted = new Set(completedSteps);
       newCompleted.add(state.currentStep);
       setCompletedSteps(newCompleted);
       dispatch({ type: "SET_STEP", step: state.currentStep + 1 });
     }
-  }, [state.currentStep, validationError, completedSteps]);
+  }, [state.currentStep, validationError, hardStops, completedSteps]);
 
   const handlePrev = useCallback(() => {
     if (state.currentStep > 0) {
@@ -121,11 +166,18 @@ export default function COPDClient() {
     }
   }, [state.currentStep]);
 
+  // Backwards only: going forward always means pressing Next, where the
+  // stops and validators are enforced.
   const handleStepClick = useCallback((step: number) => {
-    if (completedSteps.has(step) || step <= state.currentStep) {
+    if (step < state.currentStep) {
       dispatch({ type: "SET_STEP", step });
     }
-  }, [completedSteps, state.currentStep]);
+  }, [state.currentStep]);
+
+  const handleNewConsultation = useCallback(() => {
+    dispatch({ type: "RESET" });
+    setCompletedSteps(new Set());
+  }, []);
 
   const renderStep = () => {
     switch (state.currentStep) {
@@ -133,6 +185,7 @@ export default function COPDClient() {
         return (
           <PatientDetailsStep
             patient={state.patient}
+            requireAdult
             onChange={(field, value) =>
               dispatch({ type: "UPDATE_PATIENT", field: field as keyof COPDPatientDetails, value })
             }
@@ -172,8 +225,8 @@ export default function COPDClient() {
                 { value: "2", label: "GOLD 2: FEV1 50 to 79% predicted (moderate)" },
                 { value: "3", label: "GOLD 3: FEV1 30 to 49% predicted (severe)" },
                 { value: "4", label: "GOLD 4: FEV1 below 30% predicted (very severe)" },
-                { value: "unknown", label: "Documented, classification not to hand" },
               ]}
+              required
             />
             <SelectInput
               label="Presentation"
@@ -218,6 +271,20 @@ export default function COPDClient() {
               unit="(maximum 2 supplies in any 12 months; a third request is a GP review)"
               required
             />
+            {state.assessment.platformSalbutamolSupplies12Months !== null && (
+              <div
+                className={`rounded p-3 border text-xs ${
+                  state.assessment.platformSalbutamolSupplies12Months >= 2
+                    ? "bg-red-50 border-red-200 text-red-700"
+                    : "bg-blue-50 border-blue-200 text-blue-800"
+                }`}
+              >
+                Platform records: {state.assessment.platformSalbutamolSupplies12Months} salbutamol{" "}
+                {state.assessment.platformSalbutamolSupplies12Months === 1 ? "supply" : "supplies"} under this PGD
+                at this pharmacy in the last 12 months for this patient. The higher of this and the number
+                recorded above is applied to the limit (currently {effectiveSalbutamolSupplies12Months(state)}).
+              </div>
+            )}
             <Checkbox
               label="Capable of using an inhaler device, or willing to use a spacer"
               checked={state.assessment.canUseInhalerOrSpacer}
@@ -237,11 +304,13 @@ export default function COPDClient() {
             <NumberInput
               label="MRC breathlessness scale (1-5)"
               value={state.assessment.mrcBreathlessnessScale}
-              onChange={(v) =>
-                dispatch({ type: "UPDATE_ASSESSMENT", field: "mrcBreathlessnessScale", value: v })
-              }
+              onChange={(v) => {
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "mrcBreathlessnessScale", value: v });
+                dispatch({ type: "UPDATE_RED_FLAGS", field: "mrcGrade5", value: v === 5 });
+              }}
               min={1}
               max={5}
+              required
             />
             {state.assessment.mrcBreathlessnessScale === 5 && (
               <div className="bg-red-50 border border-red-200 rounded p-3">
@@ -278,13 +347,6 @@ export default function COPDClient() {
       case 3:
         return (
           <div className="space-y-4">
-            <Checkbox
-              label="COPD documented in medical records"
-              checked={state.medicalHistory.copdDocumented}
-              onChange={(v) =>
-                dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "copdDocumented", value: v })
-              }
-            />
             <SelectInput
               label="Current smoking status"
               value={state.medicalHistory.smokingStatus}
@@ -341,6 +403,15 @@ export default function COPDClient() {
                 <Checkbox label="Breastfeeding" checked={state.medicalHistory.breastfeeding} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "breastfeeding", value: v })} description="Caution: amoxicillin generally safe; ensure informed consent" />
               </div>
             </div>
+            <div className="pt-2 border-t border-gray-200">
+              <Checkbox
+                label="Every exclusion and caution question on this step was asked and answered by the patient"
+                checked={state.medicalHistory.exclusionsAskedAndAnswered}
+                onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "exclusionsAskedAndAnswered", value: v })}
+                description="An unticked box means the patient answered no, not that the question was skipped"
+                required
+              />
+            </div>
           </div>
         );
 
@@ -380,6 +451,14 @@ export default function COPDClient() {
               placeholder="List current medicines"
               rows={3}
             />
+            <div className="pt-2 border-t border-gray-200">
+              <Checkbox
+                label="Allergy status confirmed with the patient (salbutamol and other beta-2 agonists; penicillins and other beta-lactams)"
+                checked={state.currentMedications.allergyStatusConfirmed}
+                onChange={(v) => dispatch({ type: "UPDATE_CURRENT_MEDICATIONS", field: "allergyStatusConfirmed", value: v })}
+                required
+              />
+            </div>
           </div>
         );
 
@@ -409,10 +488,11 @@ export default function COPDClient() {
             />
             <Checkbox
               label="MRC Grade 5 (housebound, breathless at rest)"
-              checked={state.redFlags.mrcGrade5}
+              checked={state.redFlags.mrcGrade5 || state.assessment.mrcBreathlessnessScale === 5}
               onChange={(v) =>
                 dispatch({ type: "UPDATE_RED_FLAGS", field: "mrcGrade5", value: v })
               }
+              description="Set automatically from the recorded MRC scale"
             />
             <Checkbox
               label="New haemoptysis"
@@ -475,6 +555,12 @@ export default function COPDClient() {
                         }
                         placeholder="e.g. Ventolin Evohaler, Salamol"
                       />
+                      <Checkbox
+                        label="Patient information leaflet supplied with the salbutamol inhaler"
+                        checked={state.medicineSupply.salbutamolPilSupplied}
+                        onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "salbutamolPilSupplied", value: v })}
+                        required
+                      />
                     </div>
                   )}
                 </div>
@@ -499,6 +585,12 @@ export default function COPDClient() {
                           dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "amoxicillinBrand", value: v })
                         }
                         placeholder="Manufacturer or brand"
+                      />
+                      <Checkbox
+                        label="Patient information leaflet supplied with the amoxicillin capsules"
+                        checked={state.medicineSupply.amoxicillinPilSupplied}
+                        onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "amoxicillinPilSupplied", value: v })}
+                        required
                       />
                     </div>
                   )}
@@ -547,6 +639,7 @@ export default function COPDClient() {
               onChange={(v) =>
                 dispatch({ type: "UPDATE_COUNSELLING", field: "inhalerTechniqueShown", value: v })
               }
+              required={state.medicineSupply.supplySalbutamol}
             />
             <Checkbox
               label="Smoking cessation advice given"
@@ -554,7 +647,7 @@ export default function COPDClient() {
               onChange={(v) =>
                 dispatch({ type: "UPDATE_COUNSELLING", field: "smokingCessationAdvised", value: v })
               }
-              description="Mandatory counselling on smoking cessation"
+              description="Good practice; not a follow-up item in PGD v002"
             />
             <Checkbox
               label="Symptom management explained"
@@ -578,6 +671,7 @@ export default function COPDClient() {
                       label="Use a spacer device if you have difficulty coordinating MDI actuation"
                       checked={state.counselling.spacerAdvice}
                       onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "spacerAdvice", value: v })}
+                      required
                     />
                   </>
                 )}
@@ -593,11 +687,13 @@ export default function COPDClient() {
                       label="Take amoxicillin at regular intervals, ideally 1 hour before or 2 hours after meals for best absorption (with food if GI upset occurs)"
                       checked={state.counselling.amoxicillinTiming}
                       onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "amoxicillinTiming", value: v })}
+                      required
                     />
                     <Checkbox
                       label="If using oral contraception, use additional contraceptive methods during and for 7 days after the antibiotic course"
                       checked={state.counselling.contraceptionAdvice}
                       onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "contraceptionAdvice", value: v })}
+                      required
                     />
                   </>
                 )}
@@ -605,11 +701,13 @@ export default function COPDClient() {
                   label="Monitor your sputum colour: purulent (yellow/green) sputum suggests continued infection"
                   checked={state.counselling.sputumColour}
                   onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "sputumColour", value: v })}
+                  required
                 />
                 <Checkbox
                   label="Seek immediate medical attention if symptoms worsen despite treatment, or if you develop fever, persistent chest pain, or haemoptysis"
                   checked={state.counselling.seekImmediateAttention}
                   onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "seekImmediateAttention", value: v })}
+                  required
                 />
                 <Checkbox
                   label="Seek urgent assessment if you experience worsening breathlessness, difficulty speaking in sentences, confusion, or cyanosis"
@@ -621,12 +719,23 @@ export default function COPDClient() {
                   label="Monitor your oxygen saturation if you have a pulse oximeter at home; report any drop below 88%"
                   checked={state.counselling.oximeterAdvice}
                   onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "oximeterAdvice", value: v })}
+                  required
+                />
+                <Checkbox
+                  label="Ensure you have regular follow-up with your GP to review your COPD management plan"
+                  checked={state.counselling.gpFollowUpAdvice}
+                  onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "gpFollowUpAdvice", value: v })}
+                  required
                 />
                 <Checkbox
                   label="Report any allergic reactions (rash, facial swelling, difficulty breathing) immediately"
                   checked={state.counselling.allergicReactionAdvice}
                   onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "allergicReactionAdvice", value: v })}
+                  required
                 />
+                <p className="text-xs text-gray-500">
+                  Report suspected adverse effects via the Yellow Card scheme (https://yellowcard.mhra.gov.uk) and inform the GP as appropriate.
+                </p>
               </div>
             </div>
           </div>
@@ -690,13 +799,26 @@ export default function COPDClient() {
     }
   };
 
-  const handlePrint = useCallback(() => {
-    window.print();
-  }, []);
-
-
   // ─── Consultation Record Data (for saving to database) ───
+  // Returns a record whether or not a medicine was chosen, so an excluded
+  // patient can be saved as not supplied from any step.
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    const ms = state.medicineSupply;
+    const supplied = !hardStops && ms.medicinePrescribed && (ms.supplySalbutamol || ms.supplyAmoxicillin);
+    const names: string[] = [];
+    const doses: string[] = [];
+    const quantities: string[] = [];
+    if (supplied && ms.supplySalbutamol) {
+      names.push("Salbutamol 100mcg MDI" + (ms.salbutamolBrand ? ` (${ms.salbutamolBrand})` : ""));
+      doses.push(SALBUTAMOL_RECOMMENDATION.dose);
+      quantities.push("1 inhaler (200 doses)");
+    }
+    if (supplied && ms.supplyAmoxicillin) {
+      names.push("Amoxicillin 500mg capsules" + (ms.amoxicillinBrand ? ` (${ms.amoxicillinBrand})` : ""));
+      doses.push(AMOXICILLIN_RECOMMENDATION.dose);
+      quantities.push("15 capsules");
+    }
+    const referred = hardStops && state.exclusionOutcome.referredTo !== "";
     return {
       patient: {
         firstName: state.patient.firstName,
@@ -708,17 +830,67 @@ export default function COPDClient() {
         address: state.patient.address,
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
+        gpAddress: state.patient.gpAddress,
+        gpPhone: state.patient.gpPhone,
+        gpEmail: state.patient.gpEmail,
+        gpOdsCode: state.patient.gpOdsCode,
       },
-      clinicalData: state as unknown as Record<string, unknown>,
-      outcome: hardStops ? "not_supplied" : "completed",
+      clinicalData: {
+        ...(state as unknown as Record<string, unknown>),
+        alerts,
+      },
+      outcome: hardStops ? (referred ? "referred" : "not_supplied") : "completed",
+      medicine: supplied
+        ? {
+            name: names.join(" + "),
+            dose: doses.join("; "),
+            duration: ms.supplyAmoxicillin ? "5 days" : "As required",
+            quantity: quantities.join("; "),
+          }
+        : undefined,
       summary: {
-        pharmacistName: state.summary.pharmacistName,
-        pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacistName: state.summary.pharmacistName || __pharmProfile?.name || "",
+        pharmacistGPhC: state.summary.pharmacistGPhC || __pharmProfile?.gphcNumber || "",
+        pharmacyName: state.summary.pharmacyName,
+        pharmacyAddress: state.summary.pharmacyAddress,
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: state.consent.notifyGp },
     };
-  }, [state, hardStops]);
+  }, [state, hardStops, alerts, __pharmProfile]);
+
+  // Advice given and decision reached for an excluded patient (PGD v002:
+  // Actions if patient is excluded or declines treatment). Shown on any step
+  // where a stop is present, alongside the Save as not supplied button.
+  const exclusionOutcomeBlock = hardStops ? (
+    <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-3 print:hidden">
+      <p className="text-sm font-semibold text-red-800">
+        Patient excluded: do not supply. Record the advice given and the decision reached, then use Save as not supplied.
+      </p>
+      <SelectInput
+        label="Referred to"
+        value={state.exclusionOutcome.referredTo}
+        onChange={(v) => dispatch({ type: "UPDATE_EXCLUSION_OUTCOME", field: "referredTo", value: v })}
+        options={[
+          { value: "999", label: "Emergency: 999 or A&E" },
+          { value: "urgent-care", label: "Same-day GP or urgent care" },
+          { value: "gp", label: "GP (routine review)" },
+          { value: "other", label: "Other (state in advice given)" },
+        ]}
+        required
+      />
+      <TextArea
+        label="Advice given and decision reached"
+        value={state.exclusionOutcome.adviceGiven}
+        onChange={(v) => dispatch({ type: "UPDATE_EXCLUSION_OUTCOME", field: "adviceGiven", value: v })}
+        placeholder="Alternative treatment options advised and how to access them; who the patient was referred to; whether the GP was informed"
+        rows={3}
+        required
+      />
+    </div>
+  ) : null;
 
   if (state.currentStep === TOTAL_STEPS - 1) {
     return (
@@ -730,21 +902,25 @@ export default function COPDClient() {
           completedSteps={completedSteps}
           onStepClick={handleStepClick}
         />
+        {alerts.length > 0 && <AlertBanner alerts={alerts} />}
+        {exclusionOutcomeBlock}
         <StepWrapper
           currentStep={state.currentStep}
           totalSteps={TOTAL_STEPS}
           title={STEP_LABELS[state.currentStep]}
           onNext={handleNext}
           onPrev={handlePrev}
-          canProceed={true}
-          validationError={null}
-            getConsultationData={getConsultationData}
+          canProceed={canProceed}
+          validationError={validationError}
+          isBlocked={hardStops}
+          getConsultationData={getConsultationData}
+          onNewConsultation={handleNewConsultation}
         >
           <COPDSummaryReport
-          state={state}
-          alerts={alerts}
-          doseRecommendation={doseRecommendation}
-        />
+            state={state}
+            alerts={alerts}
+            doseRecommendations={doseRecommendations}
+          />
         </StepWrapper>
       </div>
     );
@@ -763,6 +939,7 @@ export default function COPDClient() {
       {alerts.length > 0 && (
         <AlertBanner alerts={alerts} />
       )}
+      {exclusionOutcomeBlock}
 
       <StepWrapper
         currentStep={state.currentStep}
@@ -772,26 +949,12 @@ export default function COPDClient() {
         onPrev={handlePrev}
         canProceed={canProceed}
         validationError={validationError}
+        isBlocked={hardStops}
+        getConsultationData={getConsultationData}
+        onNewConsultation={handleNewConsultation}
       >
         {renderStep()}
       </StepWrapper>
-
-      <div className="flex gap-3 justify-between">
-        <button
-          onClick={handlePrev}
-          disabled={state.currentStep === 0}
-          className="px-4 py-2 text-sm font-medium text-navy-900 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-50 disabled:text-gray-400 rounded-lg transition-colors"
-        >
-          ← Back
-        </button>
-        <button
-          onClick={handleNext}
-          disabled={!canProceed}
-          className="px-4 py-2 text-sm font-medium text-white bg-[color:var(--tenant-primary)] hover:bg-[color:var(--tenant-primary)]/15 disabled:bg-gray-300 rounded-lg transition-colors"
-        >
-          Next →
-        </button>
-      </div>
     </div>
   );
 }

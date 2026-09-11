@@ -1,6 +1,6 @@
 "use client";
 
-import { useReducer, useMemo, useCallback, useEffect } from "react";
+import { useReducer, useMemo, useCallback, useEffect, useState } from "react";
 import { usePharmacistProfile } from "../../shared/hooks/usePharmacistProfile";
 import type { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/types";
 import {
@@ -65,8 +65,23 @@ const STEP_LABELS = [
   "Summary & Print",
 ] as const;
 
+function createInitialState(): SoreThroatState {
+  return {
+    patient: { ...initialPatientDetails },
+    consent: { ...initialConsent },
+    symptoms: { ...initialSoreThroatSymptoms },
+    feverPainScore: { ...initialFeverPAINScore },
+    examination: { ...initialSoreThroatExamination },
+    history: { ...initialSoreThroatHistory },
+    medicine: { ...initialSoreThroatMedicine },
+    counselling: { ...initialSoreThroatCounselling },
+    summary: initialSummary(),
+  };
+}
+
 type Action =
   | { type: "SET_STEP"; step: number }
+  | { type: "RESET" }
   | { type: "UPDATE_PATIENT"; field: keyof BasePatientDetails; value: any }
   | { type: "UPDATE_CONSENT"; field: keyof BaseConsent; value: any }
   | { type: "UPDATE_SYMPTOMS"; field: string; value: any }
@@ -79,10 +94,17 @@ type Action =
 
 function stateReducer(state: SoreThroatState, action: Action): SoreThroatState {
   switch (action.type) {
+    case "RESET":
+      // Fresh objects every time: nothing from the previous patient survives.
+      return createInitialState();
     case "UPDATE_PATIENT":
       return {
         ...state,
-        patient: { ...state.patient, [action.field]: action.value },
+        patient: {
+          ...state.patient,
+          [action.field]: action.value,
+          ...(action.field === "dateOfBirth" ? { age: calculateAge(String(action.value ?? "")) } : {}),
+        },
       };
     case "UPDATE_CONSENT":
       return {
@@ -138,17 +160,10 @@ export function SoreThroatToolClient({
   currentStep,
   onStepChange,
 }: SoreThroatToolClientProps) {
-  const [state, dispatch] = useReducer(stateReducer, {
-    patient: { ...initialPatientDetails },
-    consent: { ...initialConsent },
-    symptoms: { ...initialSoreThroatSymptoms },
-    feverPainScore: { ...initialFeverPAINScore },
-    examination: { ...initialSoreThroatExamination },
-    history: { ...initialSoreThroatHistory },
-    medicine: { ...initialSoreThroatMedicine },
-    counselling: { ...initialSoreThroatCounselling },
-    summary: initialSummary(),
-  });
+  const [state, dispatch] = useReducer(stateReducer, undefined, createInitialState);
+  // Steps actually passed by pressing Next (not "every step whose validator
+  // happens to be null", which made Summary clickable from step 0).
+  const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
 
   // Auto-fill pharmacist details from logged-in user. Refires when fields
   // are empty (e.g. after "New Consultation"), so subsequent patients fill too.
@@ -189,17 +204,23 @@ export function SoreThroatToolClient({
     return exclusionAlerts.length > 0;
   }, [exclusionAlerts]);
 
-  // Calculate FeverPAIN score
+  // Calculate FeverPAIN score. "Attend rapidly" is derived from the recorded
+  // duration and "fever" is forced on by a measured temperature of 38 or
+  // above, so the score cannot contradict the facts recorded beside it.
   const updatedFeverPain = useMemo(() => {
+    const attendRapidly = state.symptoms.duration === "<3 days";
+    const fever =
+      state.feverPainScore.fever ||
+      (state.examination.temperature !== null && state.examination.temperature >= 38);
     const score = calculateFeverPAINScore(
-      state.feverPainScore.fever,
+      fever,
       state.feverPainScore.purulence,
-      state.feverPainScore.attendRapidly,
+      attendRapidly,
       state.feverPainScore.inflamedTonsils,
       state.feverPainScore.noCoughCoryza
     );
-    return { ...state.feverPainScore, totalScore: score };
-  }, [state.feverPainScore]);
+    return { ...state.feverPainScore, fever, attendRapidly, totalScore: score };
+  }, [state.feverPainScore, state.symptoms.duration, state.examination.temperature]);
 
   // Get FeverPAIN interpretation
   const feverPainInterpretation = useMemo(() => {
@@ -222,7 +243,7 @@ export function SoreThroatToolClient({
 
   // Validation errors
   const validationErrors: Record<number, string | null> = useMemo(() => {
-    return {
+    const perStep = {
       0: validatePatientStep(patientWithAge, { minAge: 18 }),
       1: validateConsentStep(state.consent),
       2: validateSymptomStep(state.symptoms),
@@ -233,9 +254,17 @@ export function SoreThroatToolClient({
         shouldPrescribe: medicineRecommendation.shouldPrescribe,
         penicillinAllergy: state.history.penicillinAllergy,
       }),
-      7: validateCounsellingStep(state.counselling),
-      8: validateSummaryStep(state.summary),
+      7: validateCounsellingStep(state.counselling, {
+        medicine: state.medicine.medicine,
+        oralContraceptive: state.history.oralContraceptive,
+      }),
     };
+    // Save & Print on the last step runs every validator again, so an
+    // answer changed on an earlier step (a new allergy, a different
+    // medicine) is never printed without the medicine check running.
+    const all =
+      perStep[0] || perStep[1] || perStep[2] || perStep[3] || perStep[4] || perStep[5] || perStep[6] || perStep[7] || validateSummaryStep(state.summary);
+    return { ...perStep, 8: all };
   }, [
     patientWithAge,
     state.consent,
@@ -249,39 +278,41 @@ export function SoreThroatToolClient({
     medicineRecommendation.shouldPrescribe,
   ]);
 
-  const completedSteps = useMemo(() => {
-    const completed = new Set<number>();
-    for (let i = 0; i < STEP_LABELS.length; i++) {
-      if (validationErrors[i] === null) {
-        completed.add(i);
-      }
-    }
-    return completed;
-  }, [validationErrors]);
-
-  const canProceed = validationErrors[currentStep] === null;
+  const canProceed = validationErrors[currentStep] === null && !isBlocked;
 
   const handleNext = () => {
     if (canProceed && currentStep < STEP_LABELS.length - 1) {
+      setCompletedSteps((prev) => new Set([...prev, currentStep]));
       onStepChange(currentStep + 1);
     }
   };
 
   const handlePrev = () => {
     if (currentStep > 0) {
+      setCompletedSteps((prev) => new Set([...prev].filter((s) => s < currentStep - 1)));
       onStepChange(currentStep - 1);
     }
   };
 
   const handleStepClick = (step: number) => {
-    if (completedSteps.has(step) || step <= currentStep) {
+    // Backwards only; every later step is forgotten so an edited answer has
+    // to pass Next (and its validator) again.
+    if (step <= currentStep) {
+      setCompletedSteps((prev) => new Set([...prev].filter((s) => s < step)));
       onStepChange(step);
     }
   };
 
+  const handleNewConsultation = useCallback(() => {
+    dispatch({ type: "RESET" });
+    setCompletedSteps(new Set());
+    onStepChange(0);
+  }, [onStepChange]);
 
   // ─── Consultation Record Data (for saving to database) ───
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    const m = state.medicine;
+    const supplied = !isBlocked && m.medicine !== "" && m.medicine !== "none";
     return {
       patient: {
         firstName: state.patient.firstName,
@@ -294,16 +325,44 @@ export function SoreThroatToolClient({
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
       },
-      clinicalData: state as unknown as Record<string, unknown>,
-      outcome: isBlocked ? "not_supplied" : "completed",
+      clinicalData: { ...state, patient: patientWithAge, feverPainScore: updatedFeverPain, alerts: allAlerts } as unknown as Record<string, unknown>,
+      outcome: isBlocked ? "referred" : m.medicine === "none" ? "not_supplied" : "completed",
+      medicine: supplied
+        ? {
+            name: m.medicine === "phenoxymethylpenicillin" ? "Phenoxymethylpenicillin 500mg tablets" : "Clarithromycin 250mg tablets",
+            dose: `${m.dose} ${m.frequency}`.trim(),
+            duration: m.duration,
+            quantity: m.quantity,
+          }
+        : undefined,
       summary: {
-        pharmacistName: state.summary.pharmacistName,
-        pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacistName: state.summary.pharmacistName || __pharmProfile?.name || "",
+        pharmacistGPhC: state.summary.pharmacistGPhC || __pharmProfile?.gphcNumber || "",
+        pharmacyName: state.summary.pharmacyName || __pharmProfile?.pharmacyName,
+        pharmacyAddress: state.summary.pharmacyAddress || __pharmProfile?.pharmacyAddress,
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: !!state.consent.notifyGp },
     };
-  }, [state, isBlocked]);
+  }, [state, isBlocked, patientWithAge, updatedFeverPain, allAlerts, __pharmProfile]);
+
+  // Shown on every clinical step where a stop exists: the advice given and
+  // the decision reached (document record item), then "Save as not supplied".
+  const exclusionBox = isBlocked ? (
+    <div className="p-4 bg-red-50 rounded-lg border border-red-200 space-y-2 mb-4">
+      <p className="text-sm font-medium text-navy-900">Excluded: record the advice given and the decision reached, then use Save as not supplied</p>
+      <p className="text-xs text-gray-700">Advise on alternative treatment options and how these can be accessed. Inform or refer to the GP as appropriate.</p>
+      <TextArea
+        label="Advice given and decision reached"
+        value={state.counselling.exclusionAdvice}
+        onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "exclusionAdvice", value: v })}
+        rows={3}
+        placeholder="e.g. emergency referral to A&E for suspected quinsy; GP informed"
+      />
+    </div>
+  ) : null;
 
   // ─── Render Step Content ───
 
@@ -313,6 +372,7 @@ export function SoreThroatToolClient({
         return (
           <>
             <AlertBanner alerts={allAlerts} />
+            {exclusionBox}
             <PatientDetailsStep
               patient={patientWithAge}
               onChange={(field, value) => {
@@ -326,6 +386,7 @@ export function SoreThroatToolClient({
         return (
           <>
             <AlertBanner alerts={allAlerts} />
+            {exclusionBox}
             <ConsentStep
               consent={state.consent}
               onChange={(field, value) => {
@@ -340,6 +401,7 @@ export function SoreThroatToolClient({
         return (
           <>
             <AlertBanner alerts={allAlerts} />
+            {exclusionBox}
             <div className="space-y-4">
               <SelectInput
                 label="Duration of symptoms"
@@ -352,9 +414,10 @@ export function SoreThroatToolClient({
                   })
                 }
                 options={[
-                  { value: "<3 days", label: "Less than 3 days" },
+                  { value: "<3 days", label: "Less than 3 days (scores the FeverPAIN 'attend rapidly' point)" },
                   { value: "3-7 days", label: "3-7 days" },
-                  { value: ">7 days", label: "More than 7 days" },
+                  { value: "8-14 days", label: "8-14 days" },
+                  { value: ">14 days", label: "More than 2 weeks (excluded: refer to GP)" },
                 ]}
                 required
               />
@@ -535,12 +598,25 @@ export function SoreThroatToolClient({
         return (
           <>
             <AlertBanner alerts={allAlerts} />
+            {exclusionBox}
             <FeverPAINScore
-              fever={state.feverPainScore.fever}
+              fever={updatedFeverPain.fever}
               purulence={state.feverPainScore.purulence}
-              attendRapidly={state.feverPainScore.attendRapidly}
+              attendRapidly={updatedFeverPain.attendRapidly}
               inflamedTonsils={state.feverPainScore.inflamedTonsils}
               noCoughCoryza={state.feverPainScore.noCoughCoryza}
+              attendRapidlyLocked
+              attendRapidlyNote={
+                state.symptoms.duration
+                  ? `Derived from the duration recorded on the Symptom Assessment step (${state.symptoms.duration})`
+                  : "Derived from the duration recorded on the Symptom Assessment step"
+              }
+              feverLocked={state.examination.temperature !== null && state.examination.temperature >= 38}
+              feverNote={
+                state.examination.temperature !== null && state.examination.temperature >= 38
+                  ? `Measured temperature ${state.examination.temperature} C on the Examination step`
+                  : "Temperature above 38 C in the last 24 hours (reported); a measured temperature of 38 or above sets this automatically"
+              }
               onFeverChange={(v) =>
                 dispatch({
                   type: "UPDATE_FEVER_PAIN",
@@ -585,6 +661,7 @@ export function SoreThroatToolClient({
         return (
           <>
             <AlertBanner alerts={allAlerts} />
+            {exclusionBox}
             <div className="space-y-4">
               <SelectInput
                 label="Rapid Strep A test result"
@@ -742,6 +819,7 @@ export function SoreThroatToolClient({
         return (
           <>
             <AlertBanner alerts={allAlerts} />
+            {exclusionBox}
             <div className="space-y-4">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
                 <p className="text-xs text-blue-700">
@@ -922,6 +1000,20 @@ export function SoreThroatToolClient({
                     }
                     description="Hypokalaemia, hypomagnesaemia, cardiac arrhythmia history. Exclusion"
                   />
+                  {!state.history.qtProlongationRisk && (
+                    <Checkbox
+                      label="Baseline QT risk assessed: no cardiac history, no known electrolyte disturbance, no other QT-prolonging medicine"
+                      checked={state.history.qtBaselineRiskAssessed}
+                      onChange={(v) =>
+                        dispatch({
+                          type: "UPDATE_HISTORY",
+                          field: "qtBaselineRiskAssessed",
+                          value: v,
+                        })
+                      }
+                      description="Document caution for clarithromycin: QT interval risk, assess baseline risk; avoid in high-risk patients. Required before supply"
+                    />
+                  )}
                   <Checkbox
                     label="Concurrent colchicine, ticagrelor, ranolazine, ivabradine, domperidone, pimozide, astemizole, cisapride, terfenadine, oral midazolam or lomitapide"
                     checked={state.history.clarithromycinInteractingMedicine}
@@ -1037,7 +1129,7 @@ export function SoreThroatToolClient({
               />
 
               <TextArea
-                label="Known allergies (optional)"
+                label="Known allergies (record NKDA where none)"
                 value={state.history.allergies}
                 onChange={(v) =>
                   dispatch({
@@ -1046,8 +1138,9 @@ export function SoreThroatToolClient({
                     value: v,
                   })
                 }
-                placeholder="List any drug or other allergies..."
+                placeholder="List any drug or other allergies, or NKDA"
                 rows={2}
+                required
               />
             </div>
           </>
@@ -1058,6 +1151,7 @@ export function SoreThroatToolClient({
         return (
           <>
             <AlertBanner alerts={allAlerts} />
+            {exclusionBox}
             <div className="space-y-4">
               <div className={`border rounded-lg p-4 ${
                 feverPainInterpretation.riskLevel === "very-low"
@@ -1182,24 +1276,10 @@ export function SoreThroatToolClient({
                     required
                   />
 
-                  <NumberInput
-                    label="Quantity"
-                    value={state.medicine.quantity}
-                    onChange={(v) =>
-                      dispatch({
-                        type: "UPDATE_MEDICINE",
-                        field: "quantity",
-                        value: v ?? 0,
-                      })
-                    }
-                    unit={
-                      state.medicine.medicine === "clarithromycin"
-                        ? "tablets (10 tablets, 5-day course)"
-                        : "tablets (20-40 tablets, 5-10 day course)"
-                    }
-                    placeholder="e.g., 20"
-                    required
-                  />
+                  <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <p className="text-xs font-medium text-gray-500">Quantity (from the document: four a day for phenoxymethylpenicillin, two a day for clarithromycin, for the course length chosen)</p>
+                    <p className="text-sm font-semibold text-navy-900">{state.medicine.quantity ? `${state.medicine.quantity} tablets` : "Select the duration"}</p>
+                  </div>
 
                   <TextInput
                     label="Brand / manufacturer supplied"
@@ -1214,18 +1294,6 @@ export function SoreThroatToolClient({
                     placeholder="Record the name and brand of the medication supplied"
                   />
 
-                  <Checkbox
-                    label="Back-up/delayed antibiotic prescription"
-                    checked={state.medicine.backupPrescription}
-                    onChange={(v) =>
-                      dispatch({
-                        type: "UPDATE_MEDICINE",
-                        field: "backupPrescription",
-                        value: v,
-                      })
-                    }
-                    description="Prescription to be used only if symptoms worsen or do not improve within 3-5 days"
-                  />
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -1264,6 +1332,7 @@ export function SoreThroatToolClient({
         return (
           <>
             <AlertBanner alerts={allAlerts} />
+            {exclusionBox}
             <div className="space-y-4">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
                 <p className="text-xs text-blue-700">
@@ -1434,6 +1503,34 @@ export function SoreThroatToolClient({
                     })
                   }
                 />
+
+                {state.medicine.medicine !== "none" && state.medicine.medicine !== "" && (
+                  <Checkbox
+                    label="Patient information leaflet (PIL) provided with the medication supplied"
+                    checked={state.counselling.pilSupplied}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_COUNSELLING",
+                        field: "pilSupplied",
+                        value: v,
+                      })
+                    }
+                  />
+                )}
+
+                <TextArea
+                  label="Adverse drug reactions and actions taken (report via Yellow Card, https://yellowcard.mhra.gov.uk)"
+                  value={state.counselling.adverseReactions}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_COUNSELLING",
+                      field: "adverseReactions",
+                      value: v,
+                    })
+                  }
+                  placeholder="None known at the time of supply"
+                  rows={2}
+                />
               </div>
             </div>
           </>
@@ -1442,21 +1539,25 @@ export function SoreThroatToolClient({
       case 8:
         // Summary & Print
         return (
-          <SoreThroatSummaryReport
-            patient={patientWithAge}
-            consent={state.consent}
-            symptoms={state.symptoms}
-            feverPainScore={updatedFeverPain}
-            examination={state.examination}
-            history={state.history}
-            medicine={state.medicine}
-            counselling={state.counselling}
-            summary={state.summary}
-            alerts={allAlerts}
-            onSummaryChange={(field, value) => {
-              dispatch({ type: "UPDATE_SUMMARY", field, value });
-            }}
-          />
+          <>
+            <div className="print:hidden">{exclusionBox}</div>
+            <SoreThroatSummaryReport
+              patient={patientWithAge}
+              consent={state.consent}
+              symptoms={state.symptoms}
+              feverPainScore={updatedFeverPain}
+              examination={state.examination}
+              history={state.history}
+              medicine={state.medicine}
+              counselling={state.counselling}
+              summary={state.summary}
+              alerts={allAlerts}
+              isBlocked={isBlocked}
+              onSummaryChange={(field, value) => {
+                dispatch({ type: "UPDATE_SUMMARY", field, value });
+              }}
+            />
+          </>
         );
 
       default:
@@ -1482,8 +1583,10 @@ export function SoreThroatToolClient({
         onPrev={handlePrev}
         canProceed={canProceed}
         validationError={validationErrors[currentStep]}
-        isBlocked={isBlocked && currentStep !== 0}
-       getConsultationData={getConsultationData}>
+        isBlocked={isBlocked}
+        getConsultationData={getConsultationData}
+        onNewConsultation={handleNewConsultation}
+      >
         {renderStepContent()}
       </StepWrapper>
     </div>

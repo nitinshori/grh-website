@@ -56,7 +56,10 @@ export interface SkinInfectionAssessment {
   suspectedDvtOrBilateral: boolean; // cellulitis document: suspected DVT or redness of both legs
   antibioticAlreadyTaken: boolean; // skin-infection document: an antibiotic already taken for this episode
   antibioticFailureOrRecurrence: boolean; // cellulitis document: not improving after 48 h of an antibiotic, or second episode same site within 3 months
-  extensiveInfection: boolean; // Appendix 2: erythema larger than about 10 cm across, or more than one body region
+  extensiveInfection: boolean; // Appendix 2: derived from the measured findings below (kept for older saved records)
+  erythemaDiameterCm: string; // Appendix 2 finding: largest diameter of erythema in cm (required, skin-infection document)
+  bodyRegionCount: string; // Appendix 2 finding: number of body regions involved (required, skin-infection document)
+  beyondMildModerateScope: boolean; // Appendix 2: infection is beyond the definition (outside the mild to moderate scope): refer
   weightKg: string; // required under 12 (clarithromycin weight bands; 12 kg floor)
   // Observations, recorded against the age band (skin-infection Appendix 1)
   // or the adult sepsis thresholds (cellulitis document).
@@ -108,13 +111,26 @@ export interface SkinInfectionMedicalHistory {
   currentMedicines: string;
 }
 
+export type FlucloxUnsuitableReason =
+  | ""
+  | "penicillin-allergy"
+  | "hepatic-history"
+  | "cannot-manage-empty-stomach"
+  | "intolerance";
+
 export interface SkinInfectionAntibioticSelection {
   choice: "flucloxacillin" | "clarithromycin" | "doxycycline" | "";
+  /** Selected from the document's formulations for the arm, age band and weight band (see getFormulationOptions). */
   formulation: string;
+  /** Records requirement (both documents): name and brand of medication. */
+  brand: string;
   courseDays: "5" | "7" | "";
+  /** Derived from the formulation and course length: the document's fixed quantity. Not free text. */
   quantitySupplied: string;
   batchNumber: string;
   expiryDate: string;
+  /** Second and third line arms: the structured reason flucloxacillin was unsuitable (inclusion for those arms). */
+  flucloxUnsuitableReason: FlucloxUnsuitableReason;
   rationale: string;
 }
 
@@ -134,8 +150,14 @@ export interface SkinInfectionCounselling {
 }
 
 export interface SkinInfectionSummary extends BaseSummary {
+  /** Populated at save time from antibioticSelection. */
   antibioticSupplied: string;
+  /** Populated at save time from antibioticSelection. */
   courseLength: string;
+  /** Records requirement: advice given if excluded or declining treatment, and the referral arranged. */
+  referralAdvice: string;
+  /** Records requirement: details of any adverse drug reactions and the actions taken. */
+  adverseDrugReactions: string;
 }
 
 export interface SkinInfectionConsultationState {
@@ -210,6 +232,9 @@ export function createInitialConsultationState(
       antibioticAlreadyTaken: false,
       antibioticFailureOrRecurrence: false,
       extensiveInfection: false,
+      erythemaDiameterCm: "",
+      bodyRegionCount: "",
+      beyondMildModerateScope: false,
       weightKg: "",
       respiratoryRate: "",
       pulse: "",
@@ -252,10 +277,12 @@ export function createInitialConsultationState(
     antibioticSelection: {
       choice: "",
       formulation: "",
+      brand: "",
       courseDays: "",
       quantitySupplied: "",
       batchNumber: "",
       expiryDate: "",
+      flucloxUnsuitableReason: "",
       rationale: "",
     },
     counselling: {
@@ -276,6 +303,8 @@ export function createInitialConsultationState(
       ...initialSummary(),
       antibioticSupplied: "",
       courseLength: "",
+      referralAdvice: "",
+      adverseDrugReactions: "",
     },
     currentStep: 0,
     alerts: [],

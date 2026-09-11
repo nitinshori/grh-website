@@ -10,7 +10,7 @@ import type {
   STITestSelection,
   STICounselling,
 } from "./lib/sti-types";
-import { STEP_LABELS, TOTAL_STEPS, createInitialConsultationState } from "./lib/sti-types";
+import { STEP_LABELS, TOTAL_STEPS, createInitialConsultationState, PGD_VERSION_LABEL } from "./lib/sti-types";
 import {
   getAllAlerts,
   getRecommendedTests,
@@ -45,6 +45,13 @@ function reducer(state: STIConsultationState, action: STIAction): STIConsultatio
       if (action.field === "dateOfBirth") {
         newState.patient.age = calculateAge(action.value as string);
       }
+      // Fraser competence is the five limbs together, never a single tick.
+      newState.patient.fraserCompetent =
+        newState.patient.fraserUnderstandsAdvice &&
+        newState.patient.fraserCannotBePersuaded &&
+        newState.patient.fraserLikelyToContinue &&
+        newState.patient.fraserHealthWouldSuffer &&
+        newState.patient.fraserBestInterests;
       break;
 
     case "UPDATE_CONSENT":
@@ -90,9 +97,16 @@ function reducer(state: STIConsultationState, action: STIAction): STIConsultatio
       newState.summary = { ...newState.summary, [action.field]: action.value };
       break;
 
+    case "UPDATE_EXCLUSION_OUTCOME":
+      newState.exclusionOutcome = { ...newState.exclusionOutcome, [action.field]: action.value };
+      break;
+
     case "SET_STEP":
       newState.currentStep = action.step;
       break;
+
+    case "RESET":
+      return createInitialConsultationState();
   }
 
   return newState;
@@ -127,21 +141,29 @@ export default function STIClient() {
     return validateStep(state, state.currentStep);
   }, [state]);
 
+  // A stop anywhere (age, safeguarding or treatment exclusion) disables Next
+  // and Save & Print on every step. Stops used to be enforced only by the
+  // step 0 and step 5 validators (adversarial review, 11 Sep 2026).
   const canProceed = useMemo(() => {
-    if (state.currentStep >= TOTAL_STEPS - 1) return true;
+    if (hasStops) return false;
     return !validationError;
-  }, [state, validationError]);
+  }, [validationError, hasStops]);
 
   // ─── Handlers ───
 
   const handleNext = useCallback(() => {
-    if (!validationError && state.currentStep < TOTAL_STEPS - 1) {
+    if (!validationError && !hasStops && state.currentStep < TOTAL_STEPS - 1) {
       const newCompleted = new Set(completedSteps);
       newCompleted.add(state.currentStep);
       setCompletedSteps(newCompleted);
       dispatch({ type: "SET_STEP", step: state.currentStep + 1 });
     }
-  }, [state.currentStep, validationError, completedSteps]);
+  }, [state.currentStep, validationError, hasStops, completedSteps]);
+
+  const handleNewConsultation = useCallback(() => {
+    dispatch({ type: "RESET" });
+    setCompletedSteps(new Set());
+  }, []);
 
   const handlePrev = useCallback(() => {
     if (state.currentStep > 0) {
@@ -149,17 +171,24 @@ export default function STIClient() {
     }
   }, [state.currentStep]);
 
+  // Backwards only: going forward always means pressing Next, where the
+  // stops and validators are enforced.
   const handleStepClick = useCallback((step: number) => {
-    if (completedSteps.has(step) || step <= state.currentStep) {
+    if (step < state.currentStep) {
       dispatch({ type: "SET_STEP", step });
     }
-  }, [completedSteps, state.currentStep]);
+  }, [state.currentStep]);
 
   // ─── Step content rendering ───
 
 
   // ─── Consultation Record Data (for saving to database) ───
+  // Returns a record whether or not a medicine was chosen, so an excluded
+  // patient (including a child needing a safeguarding referral) can be saved
+  // as not supplied or referred from any step.
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    const supplied = !hasStops && state.treatment.treatUnderPgd && treatmentPlan !== null;
+    const referred = hasStops && (state.exclusionOutcome.referredTo !== "" || state.exclusionOutcome.safeguardingReferralMade);
     return {
       patient: {
         firstName: state.patient.firstName,
@@ -171,17 +200,77 @@ export default function STIClient() {
         address: state.patient.address,
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
+        gpAddress: state.patient.gpAddress,
+        gpPhone: state.patient.gpPhone,
+        gpEmail: state.patient.gpEmail,
+        gpOdsCode: state.patient.gpOdsCode,
       },
-      clinicalData: state as unknown as Record<string, unknown>,
-      outcome: hasStops ? "not_supplied" : "completed",
+      clinicalData: { ...(state as unknown as Record<string, unknown>), pgdVersion: PGD_VERSION_LABEL, alerts },
+      outcome: hasStops ? (referred ? "referred" : "not_supplied") : "completed",
+      medicine: supplied && treatmentPlan
+        ? {
+            name: treatmentPlan.product + (state.treatment.brand ? ` (${state.treatment.brand})` : ""),
+            dose: treatmentPlan.dose,
+            duration: treatmentPlan.duration,
+            quantity: treatmentPlan.quantity,
+          }
+        : undefined,
       summary: {
-        pharmacistName: state.summary.pharmacistName,
-        pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacistName: state.summary.pharmacistName || __pharmProfile?.name || "",
+        pharmacistGPhC: state.summary.pharmacistGPhC || __pharmProfile?.gphcNumber || "",
+        pharmacyName: state.summary.pharmacyName,
+        pharmacyAddress: state.summary.pharmacyAddress,
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: state.consent.notifyGp },
     };
-  }, [state, hasStops]);
+  }, [state, hasStops, treatmentPlan, alerts, __pharmProfile]);
+
+  // Advice given and decision reached for an excluded patient (PGD: Actions
+  // if patient is excluded or declines treatment; under 13 or a 13 to 15 year
+  // old with a safeguarding concern: same-day referral and safeguarding
+  // referral). Shown on any step where a stop is present, alongside the
+  // Save as not supplied button.
+  const isChildStop = alerts.some((a) => a.code === "STI_UNDER_13" || a.code === "STI_SAFEGUARDING_CONCERN");
+  const exclusionOutcomeBlock = hasStops ? (
+    <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-3 print:hidden">
+      <p className="text-sm font-semibold text-red-800">
+        {isChildStop
+          ? "Do not supply. Refer to the GP or sexual health service the same day and make a safeguarding referral. Record the referral, then use Save as not supplied."
+          : "Patient excluded: do not supply. Record the advice given and the decision reached, then use Save as not supplied."}
+      </p>
+      <SelectInput
+        label="Referred to"
+        value={state.exclusionOutcome.referredTo}
+        onChange={(v) => dispatch({ type: "UPDATE_EXCLUSION_OUTCOME", field: "referredTo", value: v })}
+        options={[
+          { value: "sexual-health", label: "Sexual health service (same day)" },
+          { value: "gp", label: "GP (same day)" },
+          { value: "safeguarding", label: "Local safeguarding pathway" },
+          { value: "other", label: "Other (state in advice given)" },
+        ]}
+        required
+      />
+      {isChildStop && (
+        <Checkbox
+          label="Safeguarding referral made (local safeguarding pathway)"
+          checked={state.exclusionOutcome.safeguardingReferralMade}
+          onChange={(v) => dispatch({ type: "UPDATE_EXCLUSION_OUTCOME", field: "safeguardingReferralMade", value: v })}
+          required
+        />
+      )}
+      <TextArea
+        label="Advice given and decision reached"
+        value={state.exclusionOutcome.adviceGiven}
+        onChange={(v) => dispatch({ type: "UPDATE_EXCLUSION_OUTCOME", field: "adviceGiven", value: v })}
+        placeholder="Who the patient was referred to and when; safeguarding referral destination and reference; whether the GP was informed"
+        rows={3}
+        required
+      />
+    </div>
+  ) : null;
 
   const renderStep = () => {
     switch (state.currentStep) {
@@ -254,13 +343,36 @@ export default function STIClient() {
                   Aged 13 to 15: supply only where Fraser competence is assessed and recorded and a
                   safeguarding assessment is completed with no concern
                 </p>
+                <p className="text-xs font-medium text-amber-900">Fraser competence: record each of the five criteria</p>
                 <Checkbox
-                  label="Fraser competence assessed and recorded"
-                  checked={state.patient.fraserCompetent}
-                  onChange={(v) =>
-                    dispatch({ type: "UPDATE_PATIENT", field: "fraserCompetent", value: v })
-                  }
-                  description="The young person understands the advice, cannot be persuaded to involve a parent, and their best interests require supply."
+                  label="The young person understands the advice given"
+                  checked={state.patient.fraserUnderstandsAdvice}
+                  onChange={(v) => dispatch({ type: "UPDATE_PATIENT", field: "fraserUnderstandsAdvice", value: v })}
+                  required
+                />
+                <Checkbox
+                  label="They cannot be persuaded to inform their parents, or to allow the pharmacist to inform them"
+                  checked={state.patient.fraserCannotBePersuaded}
+                  onChange={(v) => dispatch({ type: "UPDATE_PATIENT", field: "fraserCannotBePersuaded", value: v })}
+                  required
+                />
+                <Checkbox
+                  label="They are likely to continue having sexual intercourse with or without treatment"
+                  checked={state.patient.fraserLikelyToContinue}
+                  onChange={(v) => dispatch({ type: "UPDATE_PATIENT", field: "fraserLikelyToContinue", value: v })}
+                  required
+                />
+                <Checkbox
+                  label="Their physical or mental health is likely to suffer unless they receive treatment"
+                  checked={state.patient.fraserHealthWouldSuffer}
+                  onChange={(v) => dispatch({ type: "UPDATE_PATIENT", field: "fraserHealthWouldSuffer", value: v })}
+                  required
+                />
+                <Checkbox
+                  label="Their best interests require treatment without parental consent"
+                  checked={state.patient.fraserBestInterests}
+                  onChange={(v) => dispatch({ type: "UPDATE_PATIENT", field: "fraserBestInterests", value: v })}
+                  required
                 />
                 <Checkbox
                   label="Safeguarding assessment completed (partner age, coercion, exploitation indicators)"
@@ -737,6 +849,23 @@ export default function STIClient() {
                   required
                 />
 
+                <TextArea
+                  label="Current medicines (prescribed, bought and recreational)"
+                  value={state.treatment.currentMedicines}
+                  onChange={(v) => dispatch({ type: "UPDATE_TREATMENT", field: "currentMedicines", value: v })}
+                  placeholder="Write 'none' if none. Check for QT-prolonging drugs (for example citalopram, escitalopram, amiodarone, sotalol, ondansetron, domperidone, methadone, quinolones, antipsychotics) and ergot derivatives (ergotamine, dihydroergotamine, methysergide) before azithromycin"
+                  rows={2}
+                  required
+                />
+                <TextArea
+                  label="Known allergies"
+                  value={state.treatment.knownAllergies}
+                  onChange={(v) => dispatch({ type: "UPDATE_TREATMENT", field: "knownAllergies", value: v })}
+                  placeholder="Write 'none known' if none. Tetracyclines (doxycycline) and macrolides (azithromycin, erythromycin, clarithromycin) are exclusions"
+                  rows={2}
+                  required
+                />
+
                 <p className="text-sm font-semibold text-red-700">Exclusions (both arms): tick any that apply</p>
                 <Checkbox
                   label="Pregnant"
@@ -811,11 +940,13 @@ export default function STIClient() {
                   label="History of QT prolongation or taking interacting QT-prolonging drugs"
                   checked={state.treatment.qtProlongation}
                   onChange={(v) => dispatch({ type: "UPDATE_TREATMENT", field: "qtProlongation", value: v })}
+                  description="Check the medicines listed above: citalopram, escitalopram, amiodarone, sotalol, ondansetron, domperidone, methadone, quinolones, antipsychotics, hydroxychloroquine"
                 />
                 <Checkbox
                   label="Concurrent use of ergot derivatives"
                   checked={state.treatment.ergotDerivatives}
                   onChange={(v) => dispatch({ type: "UPDATE_TREATMENT", field: "ergotDerivatives", value: v })}
+                  description="Ergotamine, dihydroergotamine, methysergide"
                 />
 
                 <SelectInput
@@ -838,6 +969,14 @@ export default function STIClient() {
                   required
                 />
 
+                {treatmentPlan && (
+                  <TextInput
+                    label={`Brand or manufacturer supplied (${treatmentPlan.product})`}
+                    value={state.treatment.brand}
+                    onChange={(v) => dispatch({ type: "UPDATE_TREATMENT", field: "brand", value: v })}
+                    placeholder="Manufacturer or brand on the pack"
+                  />
+                )}
                 {treatmentPlan && (
                   <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-900 space-y-1">
                     <p className="font-semibold">{treatmentPlan.product}</p>
@@ -984,12 +1123,23 @@ export default function STIClient() {
                   }
                 />
                 <Checkbox
+                  label="Retest at 3 months to detect reinfection (especially under 25s); test of cure at least 3 weeks after treatment where required (pregnancy, rectal infection, persistent symptoms, non-standard treatment)"
+                  checked={state.counselling.retestAdvice}
+                  onChange={(v) =>
+                    dispatch({ type: "UPDATE_COUNSELLING", field: "retestAdvice", value: v })
+                  }
+                  required
+                />
+                <Checkbox
                   label="Patient information leaflet (PIL) supplied with the medication"
                   checked={state.counselling.pilSupplied}
                   onChange={(v) =>
                     dispatch({ type: "UPDATE_COUNSELLING", field: "pilSupplied", value: v })
                   }
                 />
+                <p className="text-xs text-gray-500">
+                  Report suspected adverse effects via the Yellow Card scheme (https://yellowcard.mhra.gov.uk) and inform the GP as appropriate.
+                </p>
               </div>
             )}
           </div>
@@ -1067,6 +1217,7 @@ export default function STIClient() {
           alerts={alerts}
         />
       )}
+      {exclusionOutcomeBlock}
 
       <StepWrapper
         title={STEP_LABELS[state.currentStep]}
@@ -1076,7 +1227,10 @@ export default function STIClient() {
         onPrev={handlePrev}
         canProceed={canProceed}
         validationError={validationError}
-       getConsultationData={getConsultationData}>
+        isBlocked={hasStops}
+        getConsultationData={getConsultationData}
+        onNewConsultation={handleNewConsultation}
+      >
         {renderStep()}
       </StepWrapper>
     </div>

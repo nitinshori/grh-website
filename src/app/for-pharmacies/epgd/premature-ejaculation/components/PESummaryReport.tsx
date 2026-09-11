@@ -17,6 +17,11 @@ interface PESummaryReportProps {
 }
 
 export function PESummaryReport({ state, alerts }: PESummaryReportProps) {
+  const stopsExist = alerts.some((a) => a.severity === "stop");
+  // Never print a supply, or the "no exclusion criteria applied" declaration,
+  // when a stop exists (adversarial review, 11 Sep 2026).
+  const supplied =
+    !stopsExist && state.medicineSupply.dapoxetine30mgSupplied && state.medicineSupply.strengthSupplied !== "";
   return (
     <div className="bg-white p-8 rounded-lg space-y-6 print:p-4">
       {/* Header */}
@@ -36,13 +41,15 @@ export function PESummaryReport({ state, alerts }: PESummaryReportProps) {
         <Row label="DOB" value={state.patient.dateOfBirth} />
         <Row label="Age" value={state.patient.age ? `${state.patient.age} years` : "Not recorded"} />
         <Row label="NHS Number" value={state.patient.nhsNumber || "Not recorded"} />
-        <Row label="GP" value={state.patient.gpName ? `${state.patient.gpName}, ${state.patient.gpPractice}` : "Not recorded"} />
+        <Row label="Address" value={state.patient.address || "Not recorded"} />
+        <Row label="GP" value={state.patient.gpName ? `${state.patient.gpName}, ${state.patient.gpPractice}` : state.patient.gpPractice || "Not recorded"} />
       </div>
 
       {/* Consent */}
       <div>
         <SectionHeader>Consent</SectionHeader>
         <Row label="Informed consent" value={state.consent.informedConsentGiven ? "Yes" : "No"} />
+        <Row label="Written consent obtained and filed" value={state.consent.writtenConsentObtained ? "Yes" : "No"} />
         <Row label="ID verified" value={state.consent.idVerified ? `Yes (${state.consent.idType})` : "No"} />
         <Row
           label="Private service awareness"
@@ -145,27 +152,37 @@ export function PESummaryReport({ state, alerts }: PESummaryReportProps) {
 
       {/* Medicine Supply */}
       <div>
-        <SectionHeader>Medicine Supply</SectionHeader>
-        <Row
-          label="Dapoxetine supplied"
-          value={state.medicineSupply.dapoxetine30mgSupplied ? "Yes" : "No"}
-        />
-        <Row
-          label="Medicine, form and strength"
-          value={state.medicineSupply.strengthSupplied ? `Dapoxetine ${state.medicineSupply.strengthSupplied} tablets, oral` : "Not recorded"}
-        />
-        <Row label="Brand" value={state.medicineSupply.brand || "Not recorded"} />
-        <Row label="Quantity" value={state.medicineSupply.quantity !== null ? `${state.medicineSupply.quantity} tablets` : "Not recorded"} />
-        <Row label="Dose" value="One tablet 1 to 3 hours before sexual activity; maximum one dose in 24 hours; not daily" />
-        <Row
-          label="30mg insufficient, 60mg permitted"
-          value={state.medicineSupply.mayIncreaseTo60mg ? "Yes" : "No"}
-        />
-        <Row label="Supplied under" value="Dapoxetine for Premature Ejaculation PGD v003, 11 September 2026" />
-        <Row
-          label="Patient understands usage"
-          value={state.medicineSupply.understandsUsage ? "Yes" : "No"}
-        />
+        <SectionHeader>{supplied ? "Medicine Supply" : "Outcome"}</SectionHeader>
+        {supplied ? (
+          <>
+            <Row label="Dapoxetine supplied" value="Yes" />
+            <Row
+              label="Medicine, form and strength"
+              value={`Dapoxetine ${state.medicineSupply.strengthSupplied} tablets, oral`}
+            />
+            <Row label="Brand" value={state.medicineSupply.brand || "Not recorded"} />
+            <Row label="Quantity" value={state.medicineSupply.quantity !== null ? `${state.medicineSupply.quantity} tablets` : "Not recorded"} />
+            <Row label="Dose" value="One tablet 1 to 3 hours before sexual activity; maximum one dose in 24 hours; not daily" />
+            <Row
+              label="30mg insufficient, 60mg permitted"
+              value={state.medicineSupply.mayIncreaseTo60mg ? "Yes" : "No"}
+            />
+            <Row label="Supplied under" value="Dapoxetine for Premature Ejaculation PGD v003, 11 September 2026" />
+            <Row
+              label="Patient understands usage"
+              value={state.medicineSupply.understandsUsage ? "Yes" : "No"}
+            />
+            <Row label="PIL supplied" value={state.medicineSupply.pilSupplied ? "Yes" : "No"} />
+          </>
+        ) : (
+          <>
+            <Row
+              label="Dapoxetine supplied"
+              value={stopsExist ? "NOT SUPPLIED: exclusion criteria met (see clinical alerts above)" : "No"}
+            />
+            <Row label="PGD" value="Dapoxetine for Premature Ejaculation PGD v003, 11 September 2026" />
+          </>
+        )}
       </div>
 
       {/* Counselling */}
@@ -208,12 +225,42 @@ export function PESummaryReport({ state, alerts }: PESummaryReportProps) {
       </div>
 
       {/* Pharmacist Declaration */}
-      <PharmacistDeclaration
-        pgdName="Premature Ejaculation (Dapoxetine)"
-        pharmacistName={state.summary.pharmacistName}
-        pharmacistGPhC={state.summary.pharmacistGPhC}
-        pharmacyName={state.summary.pharmacyName}
-      />
+      {stopsExist ? (
+        <div>
+          <SectionHeader>Pharmacist Declaration</SectionHeader>
+          <p className="text-xs text-gray-600 mb-4">
+            I confirm that this consultation was conducted in accordance with the
+            Patient Group Direction for Premature Ejaculation (Dapoxetine), that
+            exclusion criteria applied, that no medicine was supplied, and that the
+            patient was given the advice recorded above.
+          </p>
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">Pharmacist name</p>
+              <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{state.summary.pharmacistName || ""}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">GPhC number</p>
+              <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{state.summary.pharmacistGPhC || ""}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">Pharmacy</p>
+              <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{state.summary.pharmacyName || ""}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">Signature</p>
+              <div className="border-b border-gray-300 min-h-[2rem]" />
+            </div>
+          </div>
+        </div>
+      ) : (
+        <PharmacistDeclaration
+          pgdName="Premature Ejaculation (Dapoxetine)"
+          pharmacistName={state.summary.pharmacistName}
+          pharmacistGPhC={state.summary.pharmacistGPhC}
+          pharmacyName={state.summary.pharmacyName}
+        />
+      )}
 
       {/* Footer */}
       <ReportFooter pgdName="Premature Ejaculation (Dapoxetine)" />

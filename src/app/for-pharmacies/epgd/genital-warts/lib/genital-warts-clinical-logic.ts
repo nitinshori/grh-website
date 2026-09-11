@@ -1,4 +1,5 @@
 import type { GenitalWartsConsultationState } from "./genital-warts-types";
+import { MAX_SUPPLIES } from "./genital-warts-types";
 import type { ClinicalAlert } from "../../shared/types";
 
 /**
@@ -86,13 +87,55 @@ export function getAllAlerts(
     });
   }
 
-  if (a.hypersensitivityToAgent) {
+  // Hypersensitivity is recorded per agent so the record keeps the allergy
+  // when the other agent is used; it stops only when the matching agent is
+  // selected (adversarial review, 11 Sep 2026).
+  if (a.hypersensitivityPodophyllotoxin && agent === "podophyllotoxin") {
     alerts.push({
       severity: "stop",
-      code: "WARTS_HYPERSENSITIVITY",
-      message: "Known hypersensitivity to the selected agent",
+      code: "WARTS_HYPERSENSITIVITY_PODO",
+      message: "Known hypersensitivity to podophyllotoxin: excluded for this agent",
       detail:
-        "Excluded. Consider the alternative agent if the sensitivity is agent-specific, otherwise refer.",
+        "Excluded from the podophyllotoxin arm. Select imiquimod if otherwise suitable, otherwise refer.",
+    });
+  }
+
+  if (a.hypersensitivityImiquimod && agent === "imiquimod") {
+    alerts.push({
+      severity: "stop",
+      code: "WARTS_HYPERSENSITIVITY_IMIQ",
+      message: "Known hypersensitivity to imiquimod: excluded for this agent",
+      detail:
+        "Excluded from the imiquimod arm. Select podophyllotoxin if otherwise suitable, otherwise refer.",
+    });
+  }
+
+  // Course limits, both agents: podophyllotoxin 4 cycles; imiquimod 4
+  // dispensings (16 weeks). Beyond that the PGD authorises nothing.
+  if (agent && state.treatment.supplyNumber !== null && state.treatment.supplyNumber > MAX_SUPPLIES[agent]) {
+    alerts.push({
+      severity: "stop",
+      code: "WARTS_COURSE_LIMIT",
+      message:
+        agent === "podophyllotoxin"
+          ? "More than 4 podophyllotoxin cycles: outside the PGD"
+          : "More than 4 imiquimod dispensings (16 weeks): outside the PGD",
+      detail:
+        agent === "podophyllotoxin"
+          ? "The PGD authorises up to 4 cycles (4 weeks, the licensed maximum). Refer to the GP or a sexual health service."
+          : "The PGD authorises up to 16 weeks of imiquimod. Refer to the GP or a sexual health service.",
+    });
+  }
+
+  if (agent && state.treatment.supplyNumber !== null && state.treatment.supplyNumber >= 3 && state.treatment.priorReviewOutcome === "cleared") {
+    alerts.push({
+      severity: "stop",
+      code: "WARTS_CLEARED",
+      message: "Warts cleared at review: no further supply",
+      detail:
+        agent === "podophyllotoxin"
+          ? "The PGD repeats treatment only if warts persist after 2 cycles."
+          : "The PGD: if complete clearance at the 8-week review, stop treatment.",
     });
   }
 
@@ -116,11 +159,11 @@ export function getAllAlerts(
 
     if (a.keratinised) {
       alerts.push({
-        severity: "caution",
+        severity: "stop",
         code: "WARTS_PODO_KERATINISED",
-        message: "Keratinised lesions with podophyllotoxin selected",
+        message: "Keratinised lesions: podophyllotoxin is not indicated",
         detail:
-          "The PGD indicates podophyllotoxin for small non-keratinised warts and imiquimod for larger or keratinised lesions. Reconsider the agent.",
+          "The podophyllotoxin arm covers visible, non-keratinised external warts only. Select imiquimod, the agent the PGD indicates for keratinised lesions.",
       });
     }
   }

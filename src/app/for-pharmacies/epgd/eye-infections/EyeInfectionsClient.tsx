@@ -7,86 +7,35 @@ import type { ConsultationRecordData } from "../shared/hooks/useConsultationTrac
 import { AlertBanner } from "../shared/components/AlertBanner";
 import { PatientDetailsStep } from "../shared/steps/PatientDetailsStep";
 import { ConsentStep } from "../shared/steps/ConsentStep";
-import { TextInput, Checkbox, SelectInput, NumberInput, TextArea } from "../shared/components/FormInputs";
+import { TextInput, Checkbox, SelectInput, TextArea } from "../shared/components/FormInputs";
 import type { ClinicalAlert } from "../shared/types";
 import { validatePatientStep, validateConsentStep, validateSummaryStep, calculateAge } from "../shared/types";
-
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
+import { EyeInfectionsSummaryReport } from "./components/EyeInfectionsSummaryReport";
+import {
+  PGD_STRAPLINE,
+  STEP_LABELS,
+  TOTAL_STEPS,
+  createInitialEyeState,
+  describeMedicine,
+  type EyeConsultationState,
+} from "./lib/eye-infections-state";
 
 // Aligned to the Chloramphenicol eye drops and eye ointment (Bacterial
 // Conjunctivitis) PGD, version 002, issued 11 September 2026.
-const PGD_STRAPLINE = "Chloramphenicol eye drops and eye ointment (Bacterial Conjunctivitis) PGD, version 002, issued 11 September 2026";
 
 export default function EyeInfectionsClient() {
   const [currentStep, setCurrentStep] = useState(0);
-  const [state, setState] = useState({
-    patient: { firstName: "", lastName: "", dateOfBirth: "", age: null as number | null, gpName: "", gpPractice: "", gpAddress: "", gpPhone: "", gpEmail: "", gpOdsCode: "", nhsNumber: "", address: "", phone: "", email: "" },
-    consent: { informedConsentGiven: false, idVerified: false, idType: "", patientAwarePrivateService: false },
-    assessment: {
-      eyeAffected: "",
-      durationSymptoms: "",
-      stickyDischarge: false,
-      redEye: false,
-      grittySensation: false,
-      eyelidSwelling: false,
-      crustingOnWaking: false,
-      contactLensWearer: false,
-      chloramphenicolAllergy: false,
-      boneMarrowProblems: false,
-      boneMarrowSuppressionOrChemo: false,
-      pregnantOrBreastfeeding: false,
-      painInsideEye: false,
-      photophobia: false,
-      suspectedCornealUlcerOrAbrasion: false,
-      suspectedViral: false,
-      recentSurgeryOrTrauma: false,
-      onlyOneFunctionalEye: false,
-      symptomsRecurrent: false,
-      childUnder2: false,
-      ableToInstil: false,
-    },
-    treatment: {
-      formulation: "",
-      dropsStartTime: "",
-      durationDays: 5,
-      dropsBatchNumber: "",
-      dropsExpiry: "",
-      ointmentBatchNumber: "",
-      ointmentExpiry: "",
-    },
-    counselling: {
-      handsBeforeAfter: false,
-      noSharing: false,
-      discardContactLenses: false,
-      completeCourse: false,
-      discard28Days: false,
-      returnIfWorse: false,
-      blurredVisionWarning: false,
-      innerCanthusPressure: false,
-      urgentSymptoms: false,
-      reportAdverse: false,
-      pregnancyInform: false,
-      pilSupplied: false,
-    },
-    summary: {
-      pharmacistName: "",
-      pharmacistGPhC: "",
-      pharmacyName: "",
-      pharmacyAddress: "",
-      consultationDate: new Date().toISOString().split("T")[0],
-      consultationTime: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
-      clinicalNotes: "",
-    },
-  });
+  const [state, setState] = useState<EyeConsultationState>(() => createInitialEyeState());
 
   // Auto-fill pharmacist details from logged-in user. Refires when fields
   // are empty (e.g. after "New Consultation"), so subsequent patients fill too.
   const __pharmProfile = usePharmacistProfile();
   useEffect(() => {
     if (!__pharmProfile) return;
-    if ((state as any).summary?.pharmacistName || (state as any).summary?.pharmacistGPhC) return;
-    setState((prev: any) => ({ ...prev, summary: { ...(prev.summary || {}), pharmacistName: __pharmProfile.name, pharmacistGPhC: __pharmProfile.gphcNumber, pharmacyName: __pharmProfile.pharmacyName, pharmacyAddress: __pharmProfile.pharmacyAddress } }));
-  }, [__pharmProfile, (state as any).summary?.pharmacistName, (state as any).summary?.pharmacistGPhC]);
+    if (state.summary.pharmacistName || state.summary.pharmacistGPhC) return;
+    setState((prev) => ({ ...prev, summary: { ...prev.summary, pharmacistName: __pharmProfile.name, pharmacistGPhC: __pharmProfile.gphcNumber, pharmacyName: __pharmProfile.pharmacyName, pharmacyAddress: __pharmProfile.pharmacyAddress } }));
+  }, [__pharmProfile, state.summary.pharmacistName, state.summary.pharmacistGPhC]);
 
 
   const clinicalAlerts = useMemo((): ClinicalAlert[] => {
@@ -158,16 +107,19 @@ export default function EyeInfectionsClient() {
       });
     }
 
-    // RED FLAGS (urgent referral)
+    // Traumatic onset is listed under Exclude in the document's guidance
+    // summary, so it is a stop, not a flag that Next ignores.
     if (state.assessment.recentSurgeryOrTrauma) {
       alerts.push({
-        severity: "red-flag",
+        severity: "stop",
         code: "SURGERY_TRAUMA",
-        message: "Recent Eye Surgery or Trauma",
-        detail: "Recent eye surgery or trauma. Cannot supply under PGD. Refer to GP or eye care.",
+        message: "Recent eye surgery or trauma",
+        detail: "Exclusion: traumatic onset or recent eye surgery. Cannot supply under this PGD. Refer to the GP or eye care.",
       });
     }
-    if (state.assessment.symptomsRecurrent) {
+
+    // RED FLAGS (urgent referral)
+    if (state.assessment.symptomsRecurrent || state.assessment.durationSymptoms === ">7d") {
       alerts.push({
         severity: "red-flag",
         code: "RECURRENT",
@@ -203,32 +155,81 @@ export default function EyeInfectionsClient() {
     }
 
     return alerts;
-  }, [state.assessment]);
+  }, [state.assessment, state.patient.age]);
 
   const hasStopAlerts = clinicalAlerts.some(a => a.severity === "stop");
 
-  const handleNext = useCallback(() => setCurrentStep(prev => Math.min(prev + 1, 6)), []);
+  const handleNext = useCallback(() => {
+    if (currentStep === 0) {
+      // Contemporaneous record: stamp the date and time when the
+      // consultation actually starts, not when the tab was opened.
+      setState(s => ({
+        ...s,
+        summary: {
+          ...s.summary,
+          consultationDate: new Date().toISOString().split("T")[0],
+          consultationTime: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
+        },
+      }));
+    }
+    setCurrentStep(prev => Math.min(prev + 1, TOTAL_STEPS - 1));
+  }, [currentStep]);
   const handlePrev = useCallback(() => setCurrentStep(prev => Math.max(prev - 1, 0)), []);
+  const handleNewConsultation = useCallback(() => {
+    setState(createInitialEyeState());
+    setCurrentStep(0);
+  }, []);
+  const today = new Date().toISOString().split("T")[0];
 
   const validationError = useMemo((): string | null => {
     switch (currentStep) {
-      case 0:
-        return validatePatientStep(state.patient, { minAge: 2 });
-      case 1:
-        return validateConsentStep(state.consent);
+      case 0: {
+        const base = validatePatientStep(state.patient, { minAge: 2 });
+        if (base) return base;
+        // The PGD record must contain name, address, date of birth and GP.
+        if (!state.patient.address.trim()) return "Patient address is required for the PGD record";
+        if (!state.patient.gpPractice.trim()) return "GP practice is required for the PGD record";
+        return null;
+      }
+      case 1: {
+        const base = validateConsentStep(state.consent);
+        if (base) return base;
+        if (state.patient.age !== null && state.patient.age < 16) {
+          if (!state.consent.consentBasis || state.consent.consentBasis === "patient") {
+            return "For a patient under 16, record whether the child is Gillick competent or a person with parental responsibility gave consent";
+          }
+          if (state.consent.consentBasis === "parental") {
+            if (!state.consent.consentGivenByName.trim()) return "Record the name of the person with parental responsibility who gave consent";
+            if (!state.consent.consentGivenByRelationship.trim()) return "Record the relationship of the person who gave consent to the patient";
+          }
+        }
+        return null;
+      }
       case 2: {
-        if (hasStopAlerts) return "Patient meets exclusion criteria. Advise on alternative options; document the advice given and the decision reached; inform or refer to the GP as appropriate.";
+        if (hasStopAlerts) return "Patient meets exclusion criteria. Advise on alternative options; record the advice given and the decision reached in the box above; inform or refer to the GP as appropriate. Use Save as not supplied.";
         if (!state.assessment.eyeAffected) return "Please record which eye is affected";
         if (!state.assessment.durationSymptoms) return "Please record the duration of symptoms";
         if (!state.assessment.redEye || !state.assessment.stickyDischarge) return "Clinical diagnosis of bacterial conjunctivitis requires conjunctival injection (red eye) and purulent discharge (inclusion criterion)";
         if (!state.assessment.ableToInstil) return "Please confirm the patient is able to instil drops / apply ointment, or have this done by a carer (inclusion criterion)";
+        if (!state.assessment.questionsAsked) return "Confirm that each of the exclusion and red-flag questions has been put to the patient";
         return null;
       }
       case 3: {
         const f = state.treatment.formulation;
+        const t = state.treatment;
         if (!f) return "Please select the formulation supplied";
-        if ((f === "drops" || f === "both") && !state.treatment.dropsBatchNumber.trim()) return "Please record the eye drops batch number";
-        if ((f === "ointment" || f === "both") && !state.treatment.ointmentBatchNumber.trim()) return "Please record the eye ointment batch number";
+        if (f === "drops" || f === "both") {
+          if (!t.dropsBrand.trim()) return "Please record the brand of eye drops dispensed";
+          if (!t.dropsBatchNumber.trim()) return "Please record the eye drops batch number";
+          if (!t.dropsExpiry) return "Please record the eye drops expiry date";
+          if (t.dropsExpiry < today) return "The eye drops expiry date is before today; do not supply an expired product";
+        }
+        if (f === "ointment" || f === "both") {
+          if (!t.ointmentBrand.trim()) return "Please record the brand of eye ointment dispensed";
+          if (!t.ointmentBatchNumber.trim()) return "Please record the eye ointment batch number";
+          if (!t.ointmentExpiry) return "Please record the eye ointment expiry date";
+          if (t.ointmentExpiry < today) return "The eye ointment expiry date is before today; do not supply an expired product";
+        }
         return null;
       }
       case 4: {
@@ -240,18 +241,22 @@ export default function EyeInfectionsClient() {
         if (!c.pilSupplied) return "Please confirm the patient information leaflet has been supplied";
         return null;
       }
-      case 5:
-        return validateSummaryStep(state.summary);
+      case 5: {
+        const base = validateSummaryStep(state.summary);
+        if (base) return base;
+        if (!state.summary.consultationDate) return "Consultation date is required";
+        return null;
+      }
       default:
         return null;
     }
-  }, [currentStep, state, hasStopAlerts]);
-
-  const stepTitles = ["Patient Details", "Consent", "Assessment", "Treatment", "Counselling", "Summary", "Consultation Complete"];
+  }, [currentStep, state, hasStopAlerts, today]);
 
 
   // ─── Consultation Record Data (for saving to database) ───
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    const medicine = describeMedicine(state.treatment);
+    const supplied = !hasStopAlerts && !!medicine;
     return {
       patient: {
         firstName: state.patient.firstName,
@@ -263,52 +268,115 @@ export default function EyeInfectionsClient() {
         address: state.patient.address,
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
+        gpAddress: state.patient.gpAddress,
+        gpPhone: state.patient.gpPhone,
+        gpEmail: state.patient.gpEmail,
+        gpOdsCode: state.patient.gpOdsCode,
       },
-      clinicalData: state as unknown as Record<string, unknown>,
+      clinicalData: { ...state, alerts: clinicalAlerts } as unknown as Record<string, unknown>,
       outcome: hasStopAlerts ? "not_supplied" : "completed",
+      medicine: supplied ? { name: medicine.name, dose: medicine.dose, duration: medicine.duration, quantity: medicine.quantity } : undefined,
       summary: {
-        pharmacistName: state.summary.pharmacistName,
-        pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacistName: state.summary.pharmacistName || __pharmProfile?.name || "",
+        pharmacistGPhC: state.summary.pharmacistGPhC || __pharmProfile?.gphcNumber || "",
+        pharmacyName: state.summary.pharmacyName || __pharmProfile?.pharmacyName || "",
+        pharmacyAddress: state.summary.pharmacyAddress || __pharmProfile?.pharmacyAddress || "",
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: [state.summary.clinicalNotes, hasStopAlerts && state.summary.exclusionAdvice ? `Advice given (excluded): ${state.summary.exclusionAdvice}` : ""]
+          .filter(Boolean)
+          .join("\n"),
       },
+      consent: { notifyGp: state.consent.notifyGp },
     };
-  }, [state, hasStopAlerts]);
+  }, [state, hasStopAlerts, clinicalAlerts, __pharmProfile]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 print:space-y-0">
+      <div className="print:hidden space-y-6">
       <p className="text-xs text-gray-500">{PGD_STRAPLINE}</p>
-      <ProgressBar current={currentStep + 1} total={7} />
+      <ProgressBar current={currentStep + 1} total={TOTAL_STEPS} />
 
       {clinicalAlerts.length > 0 && (
         <AlertBanner alerts={clinicalAlerts} />
       )}
 
+      {hasStopAlerts && (
+        <div className="bg-white rounded-xl border border-red-200 shadow-sm p-4">
+          <TextArea
+            label="Advice given to the excluded patient and referral made (recorded with the not-supplied record)"
+            value={state.summary.exclusionAdvice}
+            onChange={v => setState(prev => ({ ...prev, summary: { ...prev.summary, exclusionAdvice: v } }))}
+            placeholder="e.g. Advised that chloramphenicol cannot be supplied; referred urgently to eye casualty; written information given"
+            rows={2}
+          />
+        </div>
+      )}
+
       <StepWrapper
-        title={stepTitles[currentStep]}
+        title={STEP_LABELS[currentStep]}
         currentStep={currentStep}
-        totalSteps={7}
+        totalSteps={TOTAL_STEPS}
         onNext={handleNext}
         onPrev={handlePrev}
-        canProceed={!validationError}
+        canProceed={!validationError && !hasStopAlerts}
         validationError={validationError}
-        isBlocked={currentStep === 2 && hasStopAlerts}
-       getConsultationData={getConsultationData}>
+        isBlocked={hasStopAlerts}
+        getConsultationData={getConsultationData}
+        onNewConsultation={handleNewConsultation}
+      >
         {/* STEP 0: Patient Details */}
         {currentStep === 0 && (
-          <PatientDetailsStep
-            patient={state.patient}
-            onChange={(field, value) => setState(prev => ({ ...prev, patient: { ...prev.patient, [field]: value, ...(field === "dateOfBirth" ? { age: calculateAge(String(value)) } : {}) } }))}
-            requireAdult={false}
-          />
+          <div className="space-y-4">
+            <PatientDetailsStep
+              patient={state.patient}
+              onChange={(field, value) => setState(prev => ({ ...prev, patient: { ...prev.patient, [field]: value, ...(field === "dateOfBirth" ? { age: calculateAge(String(value)) } : {}) } }))}
+              requireAdult={false}
+            />
+            <p className="text-xs text-gray-500">Adults and children aged 2 years and over. Address and GP practice are required for the PGD record.</p>
+          </div>
         )}
 
         {/* STEP 1: Consent */}
         {currentStep === 1 && (
-          <ConsentStep
-            consent={state.consent}
-            onChange={(field, value) => setState(prev => ({ ...prev, consent: { ...prev.consent, [field]: value } }))}
-          />
+          <div className="space-y-4">
+            <ConsentStep
+              consent={state.consent}
+              onChange={(field, value) => setState(prev => ({ ...prev, consent: { ...prev.consent, [field]: value } }))}
+            />
+            {state.patient.age !== null && state.patient.age < 16 && (
+              <div className="space-y-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                <p className="text-sm font-medium text-navy-900">Patient is under 16: record who gave consent</p>
+                <SelectInput
+                  label="Consent basis"
+                  value={state.consent.consentBasis}
+                  onChange={v => setState(prev => ({ ...prev, consent: { ...prev.consent, consentBasis: v as EyeConsultationState["consent"]["consentBasis"] } }))}
+                  options={[
+                    { value: "gillick", label: "Child assessed as Gillick competent and consented" },
+                    { value: "parental", label: "Person with parental responsibility consented" },
+                  ]}
+                  required
+                />
+                {state.consent.consentBasis === "parental" && (
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <TextInput
+                      label="Name of person with parental responsibility"
+                      value={state.consent.consentGivenByName}
+                      onChange={v => setState(prev => ({ ...prev, consent: { ...prev.consent, consentGivenByName: v } }))}
+                      required
+                    />
+                    <TextInput
+                      label="Relationship to patient"
+                      value={state.consent.consentGivenByRelationship}
+                      onChange={v => setState(prev => ({ ...prev, consent: { ...prev.consent, consentGivenByRelationship: v } }))}
+                      placeholder="e.g. Mother"
+                      required
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         )}
 
         {/* STEP 2: Assessment */}
@@ -447,9 +515,10 @@ export default function EyeInfectionsClient() {
                   description="Exclusion: refer urgently"
                 />
                 <Checkbox
-                  label="Recent eye surgery or trauma"
+                  label="Recent eye surgery or trauma (traumatic onset)"
                   checked={state.assessment.recentSurgeryOrTrauma}
                   onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, recentSurgeryOrTrauma: v } }))}
+                  description="Exclusion: refer to GP or eye care"
                 />
                 <Checkbox
                   label="Only one functional eye"
@@ -457,7 +526,7 @@ export default function EyeInfectionsClient() {
                   onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, onlyOneFunctionalEye: v } }))}
                 />
                 <Checkbox
-                  label="Symptoms >7 days or recurrent episodes"
+                  label="Recurrent episodes (symptoms over 7 days are flagged from the duration above)"
                   checked={state.assessment.symptomsRecurrent}
                   onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, symptomsRecurrent: v } }))}
                 />
@@ -468,6 +537,15 @@ export default function EyeInfectionsClient() {
                   description="Exclusion (also enforced from the date of birth)"
                 />
               </div>
+            </div>
+
+            <div className="border-t pt-4">
+              <Checkbox
+                label="I have asked the patient each of the exclusion and red-flag questions above and recorded the answers"
+                checked={state.assessment.questionsAsked}
+                onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, questionsAsked: v } }))}
+                required
+              />
             </div>
           </div>
         )}
@@ -500,34 +578,52 @@ export default function EyeInfectionsClient() {
 
             {(state.treatment.formulation === "drops" || state.treatment.formulation === "both") && (
               <div className="border-l-4 border-blue-400 bg-blue-50 p-4 space-y-3">
-                <h3 className="font-medium text-sm text-gray-900">Eye Drops - Chloramphenicol 0.5%</h3>
+                <h3 className="font-medium text-sm text-gray-900">Eye Drops - Chloramphenicol 0.5%: 1 x 10 ml bottle</h3>
+                <TextInput
+                  label="Brand dispensed"
+                  value={state.treatment.dropsBrand}
+                  onChange={v => setState(prev => ({ ...prev, treatment: { ...prev.treatment, dropsBrand: v } }))}
+                  placeholder="e.g. Optrex Infected Eyes, Golden Eye, or generic chloramphenicol 0.5%"
+                  required
+                />
                 <TextInput
                   label="Batch Number"
                   value={state.treatment.dropsBatchNumber}
                   onChange={v => setState(prev => ({ ...prev, treatment: { ...prev.treatment, dropsBatchNumber: v } }))}
+                  required
                 />
                 <TextInput
                   label="Expiry Date"
                   type="date"
                   value={state.treatment.dropsExpiry}
                   onChange={v => setState(prev => ({ ...prev, treatment: { ...prev.treatment, dropsExpiry: v } }))}
+                  required
                 />
               </div>
             )}
 
             {(state.treatment.formulation === "ointment" || state.treatment.formulation === "both") && (
               <div className="border-l-4 border-green-400 bg-green-50 p-4 space-y-3">
-                <h3 className="font-medium text-sm text-gray-900">Eye Ointment - Chloramphenicol 1%</h3>
+                <h3 className="font-medium text-sm text-gray-900">Eye Ointment - Chloramphenicol 1%: 1 x 4 g tube</h3>
+                <TextInput
+                  label="Brand dispensed"
+                  value={state.treatment.ointmentBrand}
+                  onChange={v => setState(prev => ({ ...prev, treatment: { ...prev.treatment, ointmentBrand: v } }))}
+                  placeholder="e.g. Golden Eye ointment, or generic chloramphenicol 1%"
+                  required
+                />
                 <TextInput
                   label="Batch Number"
                   value={state.treatment.ointmentBatchNumber}
                   onChange={v => setState(prev => ({ ...prev, treatment: { ...prev.treatment, ointmentBatchNumber: v } }))}
+                  required
                 />
                 <TextInput
                   label="Expiry Date"
                   type="date"
                   value={state.treatment.ointmentExpiry}
                   onChange={v => setState(prev => ({ ...prev, treatment: { ...prev.treatment, ointmentExpiry: v } }))}
+                  required
                 />
               </div>
             )}
@@ -647,6 +743,7 @@ export default function EyeInfectionsClient() {
                 type="date"
                 value={state.summary.consultationDate}
                 onChange={v => setState(prev => ({ ...prev, summary: { ...prev.summary, consultationDate: v } }))}
+                required
               />
               <TextInput
                 label="Consultation Time"
@@ -661,19 +758,16 @@ export default function EyeInfectionsClient() {
               onChange={v => setState(prev => ({ ...prev, summary: { ...prev.summary, clinicalNotes: v } }))}
               rows={4}
             />
-          </div>
-        )}
-
-        {/* STEP 6: Consultation Complete */}
-        {currentStep === 6 && (
-          <div className="p-6 bg-green-50 border border-green-300 rounded-lg text-center">
-            <p className="text-lg font-semibold text-green-900 mb-2">Consultation Record Complete</p>
-            <p className="text-sm text-green-700">
-              Eye infection ePGD consultation for Chloramphenicol 0.5% eye drops / 1% eye ointment has been recorded ({PGD_STRAPLINE}).
-            </p>
+            <p className="text-xs text-gray-500">Save &amp; Print Record saves the consultation and prints the record below.</p>
           </div>
         )}
       </StepWrapper>
+      </div>
+
+      {/* Print view: the consultation record */}
+      <div className="hidden print:block">
+        <EyeInfectionsSummaryReport state={state} alerts={clinicalAlerts} hasStops={hasStopAlerts} />
+      </div>
     </div>
   );
 }

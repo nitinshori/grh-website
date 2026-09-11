@@ -19,16 +19,27 @@ import {
 interface COPDSummaryReportProps {
   state: COPDConsultationState;
   alerts: ClinicalAlert[];
-  doseRecommendation: DoseRecommendation | null;
+  doseRecommendations: DoseRecommendation[];
 }
+
+const REFERRED_LABELS: Record<string, string> = {
+  "999": "Emergency: 999 or A&E",
+  "urgent-care": "Same-day GP or urgent care",
+  gp: "GP (routine review)",
+  other: "Other",
+};
 
 export function COPDSummaryReport({
   state,
   alerts,
-  doseRecommendation,
+  doseRecommendations,
 }: COPDSummaryReportProps) {
   const ms = state.medicineSupply;
-  void doseRecommendation;
+  // A stop anywhere means nothing was supplied under this PGD: the supply
+  // section and the "no exclusion criteria applied" declaration must not
+  // print (adversarial review, 11 Sep 2026).
+  const hasStop = alerts.some((a) => a.severity === "stop");
+  const supplied = !hasStop && ms.medicinePrescribed && doseRecommendations.length > 0;
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6 print:border-0 print:shadow-none print:p-0 text-xs print:text-[11px]">
       <div className="text-center mb-6 pb-4 border-b border-gray-300">
@@ -48,6 +59,7 @@ export function COPDSummaryReport({
           />
           <Row label="Date of Birth" value={state.patient.dateOfBirth} />
           <Row label="Age" value={state.patient.age ? `${state.patient.age} years` : "Not recorded"} />
+          <Row label="Address" value={state.patient.address || "Not recorded"} />
         </div>
         <div>
           <Row label="GP Name" value={state.patient.gpName || "Not recorded"} />
@@ -99,7 +111,8 @@ export function COPDSummaryReport({
       />
 
       <SectionHeader>Medical History</SectionHeader>
-      <Row label="COPD documented" value={state.medicalHistory.copdDocumented ? "Yes" : "No"} />
+      <Row label="Exclusion and caution questions asked and answered" value={state.medicalHistory.exclusionsAskedAndAnswered ? "Yes" : "Not recorded"} />
+      <Row label="Allergy status confirmed with patient" value={state.currentMedications.allergyStatusConfirmed ? "Yes" : "Not recorded"} />
       <Row label="Smoking status" value={state.medicalHistory.smokingStatus || "Not recorded"} />
       <Row
         label="Other respiratory conditions"
@@ -131,12 +144,27 @@ export function COPDSummaryReport({
       <SectionHeader>Exclusions and Red Flags</SectionHeader>
       <Row label="Severe hypoxia (SpO2 below 88%)" value={state.redFlags.severeHypoxia ? "Yes: STOP" : "No"} />
       <Row label="Acute distress / respiratory failure" value={state.redFlags.acuteDistress ? "Yes: STOP" : "No"} />
-      <Row label="MRC Grade 5" value={state.redFlags.mrcGrade5 ? "Yes: STOP" : "No"} />
+      <Row label="MRC Grade 5" value={state.redFlags.mrcGrade5 || state.assessment.mrcBreathlessnessScale === 5 ? "Yes: STOP" : "No"} />
       <Row label="New haemoptysis" value={state.redFlags.newHaemoptysis ? "Yes: Refer" : "No"} />
       <Row label="Weight loss" value={state.redFlags.weightLoss ? "Yes: Refer" : "No"} />
       <Row label="Recurrent infections" value={state.redFlags.recurrentInfections ? "Yes: Refer" : "No"} />
 
-      {ms.medicinePrescribed && (ms.supplySalbutamol || ms.supplyAmoxicillin) && (
+      {hasStop && (
+        <>
+          <SectionHeader>Outcome: Not Supplied</SectionHeader>
+          <Row label="Medicine supplied" value="None. Exclusion criteria met; see clinical alerts above." />
+          <Row
+            label="Referred to"
+            value={REFERRED_LABELS[state.exclusionOutcome.referredTo] || "Not recorded"}
+          />
+          <Row
+            label="Advice given and decision reached"
+            value={state.exclusionOutcome.adviceGiven || "Not recorded"}
+          />
+        </>
+      )}
+
+      {supplied && (
         <>
           <SectionHeader>Medicine Supply &amp; Dosing</SectionHeader>
           {ms.supplySalbutamol && (
@@ -146,6 +174,7 @@ export function COPDSummaryReport({
               <Row label="Dose" value={SALBUTAMOL_RECOMMENDATION.dose} />
               <Row label="Frequency and limits" value={SALBUTAMOL_RECOMMENDATION.frequency || ""} />
               <Row label="Quantity" value={SALBUTAMOL_RECOMMENDATION.duration || ""} />
+              <Row label="PIL supplied" value={ms.salbutamolPilSupplied ? "Yes" : "No"} />
             </>
           )}
           {ms.supplyAmoxicillin && (
@@ -155,6 +184,7 @@ export function COPDSummaryReport({
               <Row label="Dose" value={AMOXICILLIN_RECOMMENDATION.dose} />
               <Row label="How to take" value={AMOXICILLIN_RECOMMENDATION.frequency || ""} />
               <Row label="Quantity" value={AMOXICILLIN_RECOMMENDATION.duration || ""} />
+              <Row label="PIL supplied" value={ms.amoxicillinPilSupplied ? "Yes" : "No"} />
             </>
           )}
           <Row label="Supplied under" value={PGD_STRAPLINE} />
@@ -178,9 +208,13 @@ export function COPDSummaryReport({
           ["Seek immediate attention (worse, fever, chest pain, haemoptysis)", state.counselling.seekImmediateAttention],
           ["Seek urgent assessment (breathlessness, speech, confusion, cyanosis)", state.counselling.seekUrgentAssessment],
           ["Home oximeter: report below 88%", state.counselling.oximeterAdvice],
+          ["Regular GP follow-up of COPD management plan", state.counselling.gpFollowUpAdvice],
           ["Report allergic reactions immediately", state.counselling.allergicReactionAdvice],
         ]}
       />
+      <p className="text-gray-600 mt-2">
+        Adverse effects: report suspected adverse effects via the Yellow Card scheme (https://yellowcard.mhra.gov.uk) and inform the GP as appropriate.
+      </p>
 
       {state.summary.clinicalNotes && (
         <>
@@ -191,12 +225,41 @@ export function COPDSummaryReport({
         </>
       )}
 
-      <PharmacistDeclaration
-        pgdName="COPD Management"
-        pharmacistName={state.summary.pharmacistName}
-        pharmacistGPhC={state.summary.pharmacistGPhC}
-        pharmacyName={state.summary.pharmacyName}
-      />
+      {hasStop ? (
+        <>
+          <SectionHeader>Pharmacist Declaration</SectionHeader>
+          <p className="text-xs text-gray-600 mb-4">
+            I confirm that this consultation was conducted in accordance with the Patient Group Direction for COPD Management,
+            that exclusion criteria applied, that no medicine was supplied under the PGD, and that the advice given and the
+            decision reached are recorded above.
+          </p>
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">Pharmacist name</p>
+              <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{state.summary.pharmacistName || ""}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">GPhC number</p>
+              <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{state.summary.pharmacistGPhC || ""}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">Pharmacy</p>
+              <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{state.summary.pharmacyName || ""}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">Signature</p>
+              <div className="border-b border-gray-300 min-h-[2rem]" />
+            </div>
+          </div>
+        </>
+      ) : (
+        <PharmacistDeclaration
+          pgdName="COPD Management"
+          pharmacistName={state.summary.pharmacistName}
+          pharmacistGPhC={state.summary.pharmacistGPhC}
+          pharmacyName={state.summary.pharmacyName}
+        />
+      )}
 
       <ReportFooter pgdName="COPD Management" />
     </div>

@@ -7,9 +7,7 @@ import type { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/
 
 export const PGD_STRAPLINE = "COPD Management PGD version 002, issued 11 September 2026";
 
-export interface COPDPatientDetails extends BasePatientDetails {
-  maleConfirmed: boolean;
-}
+export type COPDPatientDetails = BasePatientDetails;
 
 export type COPDPresentation = "" | "exacerbation" | "breathlessness";
 
@@ -19,7 +17,8 @@ export interface COPDAssessment {
   presentation: COPDPresentation; // acute exacerbation, or breathlessness requiring symptom relief
   purulentSputum: boolean; // yellow/green: infective exacerbation (amoxicillin arm)
   spo2: number | null; // % on air; below 88 is an exclusion
-  salbutamolSuppliesLast12Months: number | null; // max 2 supplies in 12 months under this PGD
+  salbutamolSuppliesLast12Months: number | null; // max 2 supplies in 12 months under this PGD (as told by the patient)
+  platformSalbutamolSupplies12Months: number | null; // counted from this pharmacy's saved COPD records
   canUseInhalerOrSpacer: boolean; // inclusion, salbutamol arm
   ableToTakeOralMedication: boolean; // inclusion, amoxicillin arm
   mrcBreathlessnessScale: number | null; // 1-5
@@ -28,7 +27,7 @@ export interface COPDAssessment {
 }
 
 export interface COPDMedicalHistory {
-  copdDocumented: boolean;
+  exclusionsAskedAndAnswered: boolean; // attestation: every exclusion and caution question was put to the patient
   smokingStatus: string; // "current" | "former" | "never"
   otherRespiratoryConditions: string;
   otherConditions: string;
@@ -50,6 +49,7 @@ export interface COPDMedicalHistory {
 }
 
 export interface COPDCurrentMedications {
+  allergyStatusConfirmed: boolean; // attestation: allergy status asked and confirmed with the patient
   salbutamolAllergy: boolean; // hypersensitivity to salbutamol or other beta-2 agonists
   penicillinAllergy: boolean; // penicillin or beta-lactam allergy
   oralContraceptive: boolean;
@@ -73,6 +73,8 @@ export interface COPDMedicineSupply {
   amoxicillinBrand: string;
   dosageConfirmed: boolean;
   notReplacementForMaintenance: boolean;
+  salbutamolPilSupplied: boolean; // PIL supplied with the salbutamol inhaler
+  amoxicillinPilSupplied: boolean; // PIL supplied with the amoxicillin capsules
 }
 
 export interface COPDCounselling {
@@ -92,6 +94,12 @@ export interface COPDCounselling {
   seekUrgentAssessment: boolean; // worsening breathlessness, difficulty speaking, confusion, cyanosis
   oximeterAdvice: boolean;
   allergicReactionAdvice: boolean;
+  gpFollowUpAdvice: boolean; // regular GP follow-up to review the COPD management plan
+}
+
+export interface COPDExclusionOutcome {
+  adviceGiven: string; // advice given and decision reached when excluded or declines (PGD: Actions if patient is excluded)
+  referredTo: string; // "" | "gp" | "urgent-care" | "999" | "other"
 }
 
 export interface COPDConsultationState {
@@ -103,6 +111,7 @@ export interface COPDConsultationState {
   redFlags: COPDRedFlags;
   medicineSupply: COPDMedicineSupply;
   counselling: COPDCounselling;
+  exclusionOutcome: COPDExclusionOutcome;
   summary: BaseSummary;
   currentStep: number;
 }
@@ -117,7 +126,9 @@ export type COPDAction =
   | { type: "UPDATE_MEDICINE_SUPPLY"; field: keyof COPDMedicineSupply; value: any }
   | { type: "UPDATE_COUNSELLING"; field: keyof COPDCounselling; value: any }
   | { type: "UPDATE_SUMMARY"; field: keyof BaseSummary; value: any }
-  | { type: "SET_STEP"; step: number };
+  | { type: "UPDATE_EXCLUSION_OUTCOME"; field: keyof COPDExclusionOutcome; value: any }
+  | { type: "SET_STEP"; step: number }
+  | { type: "RESET" };
 
 export const STEP_LABELS = [
   "Patient Details",
@@ -150,7 +161,8 @@ export function createInitialConsultationState(): COPDConsultationState {
       address: "",
       phone: "",
       email: "",
-      maleConfirmed: false,
+      deliveryDetails: "",
+      consultationNotes: "",
     },
     consent: {
       informedConsentGiven: false,
@@ -165,6 +177,7 @@ export function createInitialConsultationState(): COPDConsultationState {
       purulentSputum: false,
       spo2: null,
       salbutamolSuppliesLast12Months: null,
+      platformSalbutamolSupplies12Months: null,
       canUseInhalerOrSpacer: false,
       ableToTakeOralMedication: false,
       mrcBreathlessnessScale: null,
@@ -172,7 +185,7 @@ export function createInitialConsultationState(): COPDConsultationState {
       currentInhalerRegimen: "",
     },
     medicalHistory: {
-      copdDocumented: false,
+      exclusionsAskedAndAnswered: false,
       smokingStatus: "",
       otherRespiratoryConditions: "",
       otherConditions: "",
@@ -191,6 +204,7 @@ export function createInitialConsultationState(): COPDConsultationState {
       breastfeeding: false,
     },
     currentMedications: {
+      allergyStatusConfirmed: false,
       salbutamolAllergy: false,
       penicillinAllergy: false,
       oralContraceptive: false,
@@ -212,6 +226,8 @@ export function createInitialConsultationState(): COPDConsultationState {
       amoxicillinBrand: "",
       dosageConfirmed: false,
       notReplacementForMaintenance: false,
+      salbutamolPilSupplied: false,
+      amoxicillinPilSupplied: false,
     },
     counselling: {
       notReplacementForMaintenance: false,
@@ -229,6 +245,11 @@ export function createInitialConsultationState(): COPDConsultationState {
       seekUrgentAssessment: false,
       oximeterAdvice: false,
       allergicReactionAdvice: false,
+      gpFollowUpAdvice: false,
+    },
+    exclusionOutcome: {
+      adviceGiven: "",
+      referredTo: "",
     },
     summary: {
       pharmacistName: "",

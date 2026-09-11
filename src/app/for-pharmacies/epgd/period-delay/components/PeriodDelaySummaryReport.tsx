@@ -1,15 +1,22 @@
 "use client";
 import type { PeriodDelayConsultationState } from "../lib/period-delay-types";
 import { SectionHeader, Row, AlertSummary, CounsellingGrid, PharmacistDeclaration, ReportFooter } from "../../shared/components/SummaryReportShell";
-import { calculateBmi, isPregnancyExcluded } from "../lib/period-delay-clinical-logic";
+import { calculateBmi, isPregnancyExcluded, MAX_TREATMENT_DAYS } from "../lib/period-delay-clinical-logic";
+
+function yesNo(v: boolean | null): string {
+  return v === null ? "Not asked" : v ? "Yes" : "No";
+}
 
 export function PeriodDelaySummaryReport({ state }: { state: PeriodDelayConsultationState }) {
   const bmi = calculateBmi(state.medicalHistory.heightCm, state.medicalHistory.weightKg);
   const days = state.medicineSelection.daysToDelay;
+  const stopped = state.alerts.some((a) => a.severity === "stop");
+  const supplied = !stopped && Boolean(state.doseRecommendation) && days !== null && days > 0;
+  const a1 = state.medicalHistory.appendix1;
   const pregnancyExcludedBy = state.assessment.lastPeriodNormalOnTime && state.assessment.noUnprotectedSexSince
     ? "History: last period normal and on time, no unprotected sex since"
     : state.assessment.pregnancyTestNegative
-      ? `Negative pregnancy test on ${state.assessment.pregnancyTestDate || "date not recorded"}`
+      ? `Negative pregnancy test on ${state.assessment.pregnancyTestDate || "date not recorded"} (last unprotected sex ${state.assessment.lastUpsiDate || "date not recorded"})`
       : "Not excluded";
   const smokingStatus = state.medicalHistory.currentSmoker
     ? `Current smoker${state.medicalHistory.cigarettesPerDay !== null ? `, ${state.medicalHistory.cigarettesPerDay} a day` : ""}`
@@ -52,15 +59,20 @@ export function PeriodDelaySummaryReport({ state }: { state: PeriodDelayConsulta
       </div>
       <SectionHeader>Venous Thromboembolism Gate (Appendix 1)</SectionHeader>
       <div className="space-y-1.5">
-        <Row label="1. Personal history of clot, stroke, TIA or heart attack" value={state.medicalHistory.historyOfDVT || state.medicalHistory.historyOfPE || state.medicalHistory.historyOfStroke || state.medicalHistory.severeArterialDisease ? "Yes" : "No"} />
-        <Row label="2. Thrombophilia or family clot under 45" value={state.medicalHistory.familyVteUnder45 ? "Yes" : "No"} />
-        <Row label="3. Smoking status" value={smokingStatus} />
+        <Row label="1. DVT or venous clot" value={yesNo(a1.q1Dvt)} />
+        <Row label="1. Pulmonary embolism" value={yesNo(a1.q1Pe)} />
+        <Row label="1. Stroke or TIA" value={yesNo(a1.q1Stroke)} />
+        <Row label="1. Heart attack or arterial disease" value={yesNo(a1.q1Arterial)} />
+        <Row label="2. Thrombophilia or family clot under 45" value={yesNo(a1.q2Thrombophilia)} />
+        <Row label="3. Current smoker" value={yesNo(a1.q3CurrentSmoker)} />
+        <Row label="3. Stopped smoking less than a year ago" value={a1.q3CurrentSmoker === true ? "Not applicable" : yesNo(a1.q3StoppedUnderOneYear)} />
+        <Row label="3. Smoking status as recorded" value={smokingStatus} />
         <Row label="4. Height and weight" value={state.medicalHistory.heightCm !== null && state.medicalHistory.weightKg !== null ? `${state.medicalHistory.heightCm} cm, ${state.medicalHistory.weightKg} kg` : "Not recorded"} />
         <Row label="BMI" value={bmi !== null ? `${bmi.toFixed(1)} kg/m2` : "Not calculated"} />
-        <Row label="5. Journey of 4 hours or more during or within 2 weeks of the course" value={state.medicalHistory.longJourney ? "Yes" : "No"} />
-        <Row label="6. Surgery under GA in last 6 weeks or planned" value={state.medicalHistory.recentOrPlannedSurgery ? "Yes" : "No"} />
-        <Row label="7. Current or expected immobility" value={state.medicalHistory.immobility ? "Yes" : "No"} />
-        <Row label="8. Cancer now or treated in last 12 months" value={state.medicalHistory.activeOrRecentCancer ? "Yes" : "No"} />
+        <Row label="5. Journey of 4 hours or more during or within 2 weeks of the course" value={yesNo(a1.q5LongJourney)} />
+        <Row label="6. Surgery under GA in last 6 weeks or planned" value={yesNo(a1.q6Surgery)} />
+        <Row label="7. Current or expected immobility" value={yesNo(a1.q7Immobility)} />
+        <Row label="8. Cancer now or treated in last 12 months" value={yesNo(a1.q8Cancer)} />
       </div>
       <SectionHeader>Medical History & Other Exclusions</SectionHeader>
       <CounsellingGrid items={[
@@ -102,20 +114,25 @@ export function PeriodDelaySummaryReport({ state }: { state: PeriodDelayConsulta
       )}
       <SectionHeader>Clinical Alerts</SectionHeader>
       <AlertSummary alerts={state.alerts} />
-      {state.doseRecommendation && (
-        <>
-          <SectionHeader>Treatment Plan</SectionHeader>
-          <div className="space-y-1.5">
-            <Row label="Medicine" value={state.doseRecommendation.medicine} />
-            <Row label="Dose" value={state.doseRecommendation.dose} />
-            <Row label="Frequency" value={state.doseRecommendation.frequency} />
-            <Row label="Start date" value={state.medicineSelection.startDate || "Not recorded"} />
-            <Row label="Days supplied" value={days !== null ? `${days} days` : "Not recorded"} />
-            <Row label="Tablets supplied" value={days !== null ? `${days * 3} x norethisterone 5mg tablets` : "Not recorded"} />
-            <Row label="Dosing Regimen" value={state.doseRecommendation.dosingRegimen || "Not recorded"} />
-            <Row label="Supplied under" value="Period Delay (Norethisterone) PGD v008, 11 September 2026" />
-          </div>
-        </>
+      <SectionHeader>Treatment Plan</SectionHeader>
+      {supplied && state.doseRecommendation ? (
+        <div className="space-y-1.5">
+          <Row label="Medicine" value={state.doseRecommendation.medicine} />
+          <Row label="Dose" value={state.doseRecommendation.dose} />
+          <Row label="Frequency" value={state.doseRecommendation.frequency} />
+          <Row label="Start date" value={state.medicineSelection.startDate || "Not recorded"} />
+          <Row label="Days supplied" value={days !== null ? `${days} days` : "Not recorded"} />
+          <Row label="Tablets supplied" value={days !== null ? `${Math.min(days, MAX_TREATMENT_DAYS) * 3} x norethisterone 5mg tablets` : "Not recorded"} />
+          <Row label="Dosing Regimen" value={state.doseRecommendation.dosingRegimen || "Not recorded"} />
+          <Row label="Date of supply" value={`${state.summary.consultationDate} ${state.summary.consultationTime}`.trim()} />
+          <Row label="Supplied under" value="Period Delay (Norethisterone) PGD v008, 11 September 2026" />
+        </div>
+      ) : (
+        <div className="space-y-1.5">
+          <Row label="Outcome" value={stopped ? "NOT SUPPLIED: exclusion criteria met." : "No medicine supplied"} />
+          <Row label="Appendix 2 alternatives explained" value={state.exclusionAdvice.appendix2Given ? "Yes" : "No"} />
+          <Row label="Advice given and decision reached" value={state.exclusionAdvice.adviceNotes || "Not recorded"} />
+        </div>
       )}
       <SectionHeader>Counselling</SectionHeader>
       <CounsellingGrid items={[
@@ -136,7 +153,19 @@ export function PeriodDelaySummaryReport({ state }: { state: PeriodDelayConsulta
           <p className="text-xs text-gray-700 whitespace-pre-wrap">{state.summary.clinicalNotes}</p>
         </>
       )}
-      <PharmacistDeclaration pgdName="Period Delay (Norethisterone) PGD v008" pharmacistName={state.summary.pharmacistName} pharmacistGPhC={state.summary.pharmacistGPhC} pharmacyName={state.summary.pharmacyName} />
+      {supplied ? (
+        <PharmacistDeclaration pgdName="Period Delay (Norethisterone) PGD v008" pharmacistName={state.summary.pharmacistName} pharmacistGPhC={state.summary.pharmacistGPhC} pharmacyName={state.summary.pharmacyName} />
+      ) : (
+        <>
+          <SectionHeader>Practitioner</SectionHeader>
+          <p className="text-xs text-gray-600 mb-2">No medicine was supplied under this PGD. Advice given and the decision reached are recorded above.</p>
+          <div className="space-y-1.5">
+            <Row label="Name" value={state.summary.pharmacistName || "Not recorded"} />
+            <Row label="GPhC number" value={state.summary.pharmacistGPhC || "Not recorded"} />
+            <Row label="Pharmacy" value={state.summary.pharmacyName || "Not recorded"} />
+          </div>
+        </>
+      )}
       <ReportFooter pgdName="Period Delay (Norethisterone) v008" />
     </div>
   );

@@ -19,9 +19,7 @@ interface UTISummaryReportProps {
 function renalFunctionLabel(value: UTIConsultationState["medicalHistory"]["renalImpairment"]): string {
   switch (value) {
     case "none":
-      return "No known kidney disease (patient's answer)";
-    case "checked-adequate":
-      return "Recent result seen, adequate (eGFR 45 or more)";
+      return "Answer NO: no known kidney disease (patient's answer)";
     case "unknown":
       return "Patient does not know";
     case "moderate":
@@ -48,6 +46,8 @@ function trimethoprimReasonLabel(value: UTIConsultationState["medicineSelection"
 
 export function UTISummaryReport({ state, alerts }: UTISummaryReportProps) {
   const isTrimethoprim = state.medicineSelection.medicine === "trimethoprim";
+  const stopped = alerts.some((a) => a.severity === "stop");
+  const supplied = !stopped && Boolean(state.medicineSelection.medicine);
   return (
     <div className="max-w-4xl mx-auto bg-white p-8 print:p-0">
       {/* Header */}
@@ -201,6 +201,11 @@ export function UTISummaryReport({ state, alerts }: UTISummaryReportProps) {
 
       {/* Medicine Selection */}
       <SectionHeader>Medicine & Dosing</SectionHeader>
+      {!supplied ? (
+        <div className="space-y-1 mb-4">
+          <Row label="Outcome" value={stopped ? "NOT SUPPLIED: exclusion criteria met. Patient advised and referred as recorded." : "No medicine selected"} />
+        </div>
+      ) : (
       <div className="space-y-1 mb-4">
         <Row
           label="Medicine"
@@ -231,16 +236,11 @@ export function UTISummaryReport({ state, alerts }: UTISummaryReportProps) {
           label="Quantity"
           value={`${state.medicineSelection.quantity} ${state.medicineSelection.medicine === "trimethoprim" ? "tablets" : "capsules"}`}
         />
+        <Row label="Form and route" value={isTrimethoprim ? "Tablet, oral" : "Modified release capsule, oral"} />
+        <Row label="Date of supply" value={`${state.summary.consultationDate} ${state.summary.consultationTime}`.trim()} />
         <Row label="Supplied under" value="UTI in Women aged 16 to 64 PGD v005, 11 September 2026" />
-        {state.medicineSelection.pharmacistOverride && (
-          <>
-            <Row label="Pharmacist Override" value="Yes" />
-            {state.medicineSelection.overrideReason && (
-              <Row label="Override Reason" value={state.medicineSelection.overrideReason} />
-            )}
-          </>
-        )}
       </div>
+      )}
 
       {/* Counselling */}
       <SectionHeader>Patient Counselling</SectionHeader>
@@ -267,9 +267,8 @@ export function UTISummaryReport({ state, alerts }: UTISummaryReportProps) {
             ["Paracetamol or ibuprofen for pain if suitable", state.counselling.painRelief] as [string, boolean],
             ["Cranberry not evidence-based for treatment", state.counselling.avoidCranberry] as [string, boolean],
             ["Avoid sexual activity until symptoms resolve", state.counselling.sexualActivityAdvice] as [string, boolean],
-            ...(state.medicalHistory.pregnancyPossible
-              ? [["Contraception and pregnancy discussed", state.counselling.pregnancyPrecautions] as [string, boolean]]
-              : []),
+            ["Patient information leaflet supplied", state.counselling.pilSupplied] as [string, boolean],
+            ["Return unused medicine to a pharmacy", state.counselling.disposalAdvice] as [string, boolean],
           ]}
         />
       </div>
@@ -284,13 +283,25 @@ export function UTISummaryReport({ state, alerts }: UTISummaryReportProps) {
         </>
       )}
 
-      {/* Pharmacist Declaration */}
-      <PharmacistDeclaration
-        pgdName="Uncomplicated UTI (Nitrofurantoin/Trimethoprim)"
-        pharmacistName={state.summary.pharmacistName}
-        pharmacistGPhC={state.summary.pharmacistGPhC}
-        pharmacyName={state.summary.pharmacyName}
-      />
+      {/* Pharmacist Declaration, or a practitioner block when nothing was supplied */}
+      {supplied ? (
+        <PharmacistDeclaration
+          pgdName="Uncomplicated UTI (Nitrofurantoin/Trimethoprim)"
+          pharmacistName={state.summary.pharmacistName}
+          pharmacistGPhC={state.summary.pharmacistGPhC}
+          pharmacyName={state.summary.pharmacyName}
+        />
+      ) : (
+        <>
+          <SectionHeader>Practitioner</SectionHeader>
+          <p className="text-xs text-gray-600 mb-2">No medicine was supplied under this PGD. Advice given (including the 48 hour and immediate-action advice) and the decision reached are recorded above.</p>
+          <div className="space-y-1 mb-4">
+            <Row label="Name" value={state.summary.pharmacistName || "Not recorded"} />
+            <Row label="GPhC number" value={state.summary.pharmacistGPhC || "Not recorded"} />
+            <Row label="Pharmacy" value={state.summary.pharmacyName || "Not recorded"} />
+          </div>
+        </>
+      )}
 
       {/* Footer */}
       <ReportFooter pgdName="Uncomplicated UTI" />

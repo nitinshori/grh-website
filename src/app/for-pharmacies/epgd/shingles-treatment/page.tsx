@@ -3,8 +3,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { PgdPageActions } from "@/components/PgdPageActions";
 import { ProgressBar } from '../shared/components/ProgressBar';
+import { StepWrapper } from '../shared/components/StepWrapper';
 import type { ConsultationRecordData } from '../shared/hooks/useConsultationTracking';
-import Link from 'next/link';
 import { AlertBanner } from '../shared/components/AlertBanner';
 import { PatientDetailsStep } from '../shared/steps/PatientDetailsStep';
 import { ConsentStep } from '../shared/steps/ConsentStep';
@@ -36,7 +36,6 @@ import {
 } from './shingles-types';
 import {
   generateClinicalAlerts,
-  canProceedToMedicineSelection,
   validateSymptomStep,
   validateMedicalHistoryStep,
   validateMedicineSelectionStep,
@@ -53,6 +52,18 @@ const STEP_LABELS = [
   'Medicine Selection',
   'Counselling',
   'Summary & Print',
+] as const;
+
+const STEP_DESCRIPTIONS = [
+  'Collect patient information (adults aged 18 years and over)',
+  'Obtain informed consent and verify identity',
+  "Assess the patient's current symptoms and rash characteristics",
+  "Review patient's medical conditions and relevant history",
+  'Review all medications the patient is currently taking',
+  'Review clinical alerts and contraindications',
+  'Select the antiviral and confirm the PGD regimen',
+  'Confirm patient counselling on antiviral use, infection control and safety netting, and record that it was given',
+  'Review the consultation record, complete the declaration and save',
 ] as const;
 
 export default function ShinglesTreatmentPage() {
@@ -73,8 +84,21 @@ export default function ShinglesTreatmentPage() {
   const [medicineSelection, setMedicineSelection] = useState(initialShinglesMedicineSelection());
   const [counselling, setCounselling] = useState(initialShinglesCounselling());
 
-  // Pharmacist details for the record (name of healthcare practitioner)
+  // Pharmacist details for the record (name of healthcare practitioner).
+  // Prefilled from the profile, editable and required: a failed profile
+  // fetch used to print a blank declaration and fail the save (adversarial review).
   const pharmacistProfile = usePharmacistProfile();
+  const [pharmacistName, setPharmacistName] = useState('');
+  const [pharmacistGPhC, setPharmacistGPhC] = useState('');
+  useEffect(() => {
+    if (!pharmacistProfile) return;
+    if (pharmacistName || pharmacistGPhC) return;
+    setPharmacistName(pharmacistProfile.name ?? '');
+    setPharmacistGPhC(pharmacistProfile.gphcNumber ?? '');
+  }, [pharmacistProfile, pharmacistName, pharmacistGPhC]);
+
+  // Declaration tick on the summary step
+  const [agreed, setAgreed] = useState(false);
 
   // Derived state
   const [alerts, setAlerts] = useState<ClinicalAlert[]>([]);
@@ -85,32 +109,50 @@ export default function ShinglesTreatmentPage() {
     setAlerts(newAlerts);
   }, [symptoms, medicalHistory, patientDetails.age]);
 
-  const canProceedFromCurrentStep = (): boolean => {
-    switch (currentStep) {
-      case 0: // Patient Details (PGD: adults aged 18 years and over)
-        return !validatePatientStep(patientDetails, { minAge: 18 });
-      case 1: // Consent
-        return !validateConsentStep(consent);
-      case 2: // Symptoms
-        return !validateSymptomStep(symptoms);
-      case 3: // Medical History
-        return !validateMedicalHistoryStep(medicalHistory);
-      case 4: // Medications
-        return true; // Optional step
-      case 5: // Contraindications
-        return canProceedToMedicineSelection(alerts);
-      case 6: // Medicine Selection
-        return !validateMedicineSelectionStep(medicineSelection, medicalHistory);
-      case 7: // Counselling
-        return !validateCounsellingStep(counselling);
-      case 8: // Summary
-        return true;
+  const blockingAlerts = alerts.filter((a) => a.severity === 'stop');
+  const isBlocked = blockingAlerts.length > 0;
+
+  // One validation message per step, enforced by the single StepWrapper on
+  // Next and on Save & Print. A stop anywhere blocks every step's Next.
+  const validationErrorForStep = (step: number): string | null => {
+    switch (step) {
+      case 0: {
+        // PGD: adults aged 18 years and over. A blank date of birth never passes the age gate.
+        const base = validatePatientStep(patientDetails, { minAge: 18 });
+        if (base) return base;
+        if (patientDetails.age === null) return 'Unable to calculate age from the date of birth';
+        return null;
+      }
+      case 1:
+        return validateConsentStep(consent);
+      case 2:
+        return validateSymptomStep(symptoms);
+      case 3:
+        return validateMedicalHistoryStep(medicalHistory);
+      case 4:
+        return !medicalHistory.currentMedications.trim()
+          ? 'Record the current medications (or "none") before continuing'
+          : null;
+      case 5:
+        return isBlocked ? 'Patient has blocking contraindications: cannot proceed with PGD supply' : null;
+      case 6:
+        return validateMedicineSelectionStep(medicineSelection, medicalHistory);
+      case 7:
+        return validateCounsellingStep(counselling);
+      case 8:
+        if (!pharmacistName.trim()) return 'Pharmacist name is required';
+        if (!pharmacistGPhC.trim()) return 'GPhC registration number is required';
+        if (!agreed) return 'Confirm the PGD supply declaration before saving';
+        return null;
       default:
-        return false;
+        return null;
     }
   };
+  const validationError = validationErrorForStep(currentStep);
+  const canProceed = !isBlocked && validationError === null;
 
   const handleNext = () => {
+    if (isBlocked || validationError !== null) return;
     const newCompleted = new Set(completedSteps);
     newCompleted.add(currentStep);
     setCompletedSteps(newCompleted);
@@ -127,11 +169,23 @@ export default function ShinglesTreatmentPage() {
   };
 
   const handleStepClick = (step: number) => {
-    // Only allow clicking on completed steps or current step
-    if (step <= currentStep || completedSteps.has(step - 1)) {
+    // Backwards only. Going forward always means pressing Next, where the gates are.
+    if (step < currentStep) {
       setCurrentStep(step);
     }
   };
+
+  // When a stop appears, forget every step after the one being edited.
+  useEffect(() => {
+    if (!isBlocked) return;
+    setCompletedSteps((prev) => {
+      const next = new Set<number>();
+      prev.forEach((s) => {
+        if (s < currentStep) next.add(s);
+      });
+      return next.size === prev.size ? prev : next;
+    });
+  }, [isBlocked, currentStep]);
 
   // Field-level update handlers for PatientDetailsStep and ConsentStep
   const updatePatientField = (field: keyof typeof patientDetails, value: any) => {
@@ -152,8 +206,8 @@ export default function ShinglesTreatmentPage() {
   // Build summary object
   const summary: ShinglesSummary = {
     ...initialSummary(),
-    pharmacistName: pharmacistProfile?.name ?? '',
-    pharmacistGPhC: pharmacistProfile?.gphcNumber ?? '',
+    pharmacistName,
+    pharmacistGPhC,
     pharmacyName: pharmacistProfile?.pharmacyName ?? '',
     pharmacyAddress: pharmacistProfile?.pharmacyAddress ?? '',
     patientDetails,
@@ -163,9 +217,6 @@ export default function ShinglesTreatmentPage() {
     medicineSelection,
     counselling,
   };
-
-  const blockingAlerts = alerts.filter((a) => a.severity === 'stop');
-  const isBlocked = blockingAlerts.length > 0;
 
   // ─── Consultation Record Data (for saving to database) ───
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
@@ -191,20 +242,26 @@ export default function ShinglesTreatmentPage() {
         alerts,
       } as unknown as Record<string, unknown>,
       outcome: isBlocked ? 'not_supplied' : 'completed',
-      medicine: {
-        name: medicineSelection.medicine,
-        dose: medicineSelection.dose,
-        duration: medicineSelection.duration,
-        quantity: medicineSelection.quantity?.toString(),
-      },
+      medicine:
+        !isBlocked && medicineSelection.medicine
+          ? {
+              name: medicineSelection.medicine,
+              dose: `${medicineSelection.dose} ${medicineSelection.frequency}`.trim(),
+              duration: medicineSelection.duration,
+              quantity: medicineSelection.quantity?.toString(),
+            }
+          : undefined,
       summary: {
-        pharmacistName: summary.pharmacistName,
-        pharmacistGPhC: summary.pharmacistGPhC,
+        pharmacistName: summary.pharmacistName || pharmacistProfile?.name || '',
+        pharmacistGPhC: summary.pharmacistGPhC || pharmacistProfile?.gphcNumber || '',
+        pharmacyName: summary.pharmacyName,
+        pharmacyAddress: summary.pharmacyAddress,
         consultationDate: summary.consultationDate,
         consultationTime: summary.consultationTime,
       },
+      consent: { notifyGp: consent.notifyGp },
     };
-  }, [patientDetails, consent, symptoms, medicalHistory, medicineSelection, counselling, alerts, isBlocked, summary]);
+  }, [patientDetails, consent, symptoms, medicalHistory, medicineSelection, counselling, alerts, isBlocked, summary, pharmacistProfile]);
 
   const handleNewConsultation = useCallback(() => {
     setCurrentStep(0);
@@ -215,6 +272,7 @@ export default function ShinglesTreatmentPage() {
     setMedicalHistory(initialShinglesMedicalHistory());
     setMedicineSelection(initialShinglesMedicineSelection());
     setCounselling(initialShinglesCounselling());
+    setAgreed(false);
   }, []);
 
   return (
@@ -228,20 +286,6 @@ export default function ShinglesTreatmentPage() {
             Aciclovir, valaciclovir or famciclovir for adults aged 18 and over. Shingles (Herpes Zoster) Treatment PGD, version 005, issued 11 September 2026.
           </p>
         </div>
-
-        {currentStep === 0 && (
-          <div className="mb-4 print:hidden">
-            <Link
-              href="/for-pharmacies/dashboard"
-              className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-[color:var(--tenant-primary)] transition-colors"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              Back to Dashboard
-            </Link>
-          </div>
-        )}
 
         {/* Progress Bar */}
         <div className="mb-8">
@@ -261,62 +305,34 @@ export default function ShinglesTreatmentPage() {
           </div>
         )}
 
-        {/* Steps */}
-        <div className="bg-white rounded-lg shadow-lg p-8">
+        {/* Steps: one StepWrapper for the whole flow, so stops, the not-supplied
+            save and analytics are handled once rather than per step. */}
+        <StepWrapper
+          title={STEP_LABELS[currentStep]}
+          description={STEP_DESCRIPTIONS[currentStep]}
+          currentStep={currentStep}
+          totalSteps={STEP_LABELS.length}
+          onNext={handleNext}
+          onPrev={handlePrev}
+          canProceed={canProceed}
+          validationError={validationError}
+          isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
+          onNewConsultation={handleNewConsultation}
+        >
           {currentStep === 0 && (
-            <>
-              <PatientDetailsStep
-                patient={patientDetails}
-                onChange={updatePatientField}
-                requireAdult
-              />
-              {validatePatientStep(patientDetails, { minAge: 18 }) && patientDetails.dateOfBirth && (
-                <p className="mt-3 text-sm text-red-600">
-                  {validatePatientStep(patientDetails, { minAge: 18 })}
-                </p>
-              )}
-              <div className="flex justify-between mt-8">
-                <button
-                  onClick={handlePrev}
-                  disabled={currentStep === 0}
-                  className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Previous
-                </button>
-                <button
-                  onClick={handleNext}
-                  disabled={!canProceedFromCurrentStep()}
-                  className="px-6 py-2 bg-[color:var(--tenant-primary)]/100 text-white rounded-lg font-medium hover:bg-[color:var(--tenant-primary)]/15 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Next
-                </button>
-              </div>
-            </>
+            <PatientDetailsStep
+              patient={patientDetails}
+              onChange={updatePatientField}
+              requireAdult
+            />
           )}
 
           {currentStep === 1 && (
-            <>
-              <ConsentStep
-                consent={consent}
-                onChange={updateConsentField}
-              />
-              <div className="flex justify-between mt-8">
-                <button
-                  onClick={handlePrev}
-                  disabled={currentStep <= 0}
-                  className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Previous
-                </button>
-                <button
-                  onClick={handleNext}
-                  disabled={!canProceedFromCurrentStep()}
-                  className="px-6 py-2 bg-[color:var(--tenant-primary)]/100 text-white rounded-lg font-medium hover:bg-[color:var(--tenant-primary)]/15 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Next
-                </button>
-              </div>
-            </>
+            <ConsentStep
+              consent={consent}
+              onChange={updateConsentField}
+            />
           )}
 
           {currentStep === 2 && (
@@ -324,10 +340,6 @@ export default function ShinglesTreatmentPage() {
               symptoms={symptoms}
               onChange={setSymptoms}
               age={patientDetails.age}
-              currentStep={currentStep}
-              totalSteps={STEP_LABELS.length}
-              onNext={handleNext}
-              onPrev={handlePrev}
             />
           )}
 
@@ -335,10 +347,6 @@ export default function ShinglesTreatmentPage() {
             <MedicalHistoryStep
               medicalHistory={medicalHistory}
               onChange={setMedicalHistory}
-              currentStep={currentStep}
-              totalSteps={STEP_LABELS.length}
-              onNext={handleNext}
-              onPrev={handlePrev}
             />
           )}
 
@@ -348,20 +356,12 @@ export default function ShinglesTreatmentPage() {
               onChange={(meds) =>
                 setMedicalHistory({ ...medicalHistory, currentMedications: meds })
               }
-              currentStep={currentStep}
-              totalSteps={STEP_LABELS.length}
-              onNext={handleNext}
-              onPrev={handlePrev}
             />
           )}
 
           {currentStep === 5 && (
             <ContraindicationsStep
               alerts={alerts}
-              currentStep={currentStep}
-              totalSteps={STEP_LABELS.length}
-              onNext={handleNext}
-              onPrev={handlePrev}
               isBlocked={isBlocked}
             />
           )}
@@ -372,10 +372,6 @@ export default function ShinglesTreatmentPage() {
               symptoms={symptoms}
               medicalHistory={medicalHistory}
               onChange={setMedicineSelection}
-              currentStep={currentStep}
-              totalSteps={STEP_LABELS.length}
-              onNext={handleNext}
-              onPrev={handlePrev}
             />
           )}
 
@@ -383,10 +379,6 @@ export default function ShinglesTreatmentPage() {
             <CounsellingStep
               counselling={counselling}
               onChange={setCounselling}
-              currentStep={currentStep}
-              totalSteps={STEP_LABELS.length}
-              onNext={handleNext}
-              onPrev={handlePrev}
             />
           )}
 
@@ -394,15 +386,13 @@ export default function ShinglesTreatmentPage() {
             <SummaryStep
               summary={summary}
               alerts={alerts}
-              currentStep={currentStep}
-              totalSteps={STEP_LABELS.length}
-              onNext={handleNext}
-              onPrev={handlePrev}
-              getConsultationData={getConsultationData}
-              onNewConsultation={handleNewConsultation}
+              agreed={agreed}
+              onAgreedChange={setAgreed}
+              onPharmacistNameChange={setPharmacistName}
+              onPharmacistGPhCChange={setPharmacistGPhC}
             />
           )}
-        </div>
+        </StepWrapper>
 
         {/* Footer */}
         <div className="mt-8 text-center text-sm text-gray-600">

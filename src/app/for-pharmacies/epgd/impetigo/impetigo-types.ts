@@ -40,6 +40,7 @@ export interface ImpetigoMedicalHistory {
   cephalosporinAllergyHighRisk: boolean; // cephalosporin allergy with high risk of cross-reactivity
   flucloxCholestasisHistory: boolean; // previous cholestasis or jaundice with flucloxacillin
   fusidicAcidAllergy: boolean;
+  fusidicAcidResistanceSuspected: boolean; // topical arm exclusion: resistance suspected or confirmed (mupirocin not authorised)
   macrolideAllergy: boolean;
   severeHepaticImpairment: boolean;
   severeRenalImpairment: boolean; // eGFR below 30 mL/min/1.73m2
@@ -65,16 +66,30 @@ export interface ImpetigoMedicalHistory {
   allergies: string;
 }
 
+export type ImpetigoTreatment = 'fusidic-acid' | 'hydrogen-peroxide' | 'flucloxacillin' | 'clarithromycin' | 'erythromycin' | '';
+export type ImpetigoFormulation = '' | 'cream' | 'suspension' | 'tablets';
+
+/**
+ * Nothing here is typed by the pharmacist except the two reason boxes. The
+ * dose is chosen from the document's regimens for the arm, age and weight
+ * band; frequency and quantity are derived from that choice. A PGD
+ * authorises no deviation, so the earlier "override" mechanism is gone.
+ */
 export interface ImpetigoTreatmentSelection {
-  treatment: 'fusidic-acid' | 'hydrogen-peroxide' | 'flucloxacillin' | 'clarithromycin' | 'erythromycin' | '';
+  treatment: ImpetigoTreatment;
+  formulation: ImpetigoFormulation;
+  /** The selected dose option (see getDoseOptions); "" until chosen. */
+  doseValue: string;
+  /** Derived label of the selected dose, for the record. */
   dose: string;
+  /** Derived: the document's fixed frequency for the arm. */
   frequency: string;
   duration: '5 days' | '7 days' | '';
   extensionReason: string; // required where the course is extended to 7 days
-  severeDoseReason: string; // clarithromycin 500mg twice daily: reason recorded
+  severeDoseReason: string; // clarithromycin 500mg twice daily: reason required
+  /** Derived from dose, formulation and duration. */
   quantity: number;
-  pharmacistOverride: boolean;
-  overrideReason: string;
+  quantityUnit: string;
 }
 
 export interface ImpetigoCounselling {
@@ -99,6 +114,13 @@ export interface ImpetigoConsentDetails {
 
 import type { BasePatientDetails, BaseConsent, BaseSummary } from '../shared/types';
 
+export interface ImpetigoSummary extends BaseSummary {
+  /** Records requirement: advice given if excluded or declining, and where the patient was referred. */
+  referralAdvice: string;
+  /** Records requirement: adverse drug reactions and actions taken. */
+  adverseDrugReactions: string;
+}
+
 export interface ImpetigoData {
   patientDetails: BasePatientDetails;
   consent: BaseConsent;
@@ -107,5 +129,5 @@ export interface ImpetigoData {
   medicalHistory: ImpetigoMedicalHistory;
   treatmentSelection: ImpetigoTreatmentSelection;
   counselling: ImpetigoCounselling;
-  summary: BaseSummary;
+  summary: ImpetigoSummary;
 }

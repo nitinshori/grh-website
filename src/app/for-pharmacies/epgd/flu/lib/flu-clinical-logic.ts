@@ -9,9 +9,21 @@ import {
   FLU_VACCINES,
 } from './flu-types';
 
-/** Is a child under 9 having influenza vaccine for the first time (two doses at least 4 weeks apart)? */
+/**
+ * Is a child under 9 on the two-dose first course (two doses at least 4 weeks
+ * apart)? True for a child who has never had influenza vaccine (dose 1) and
+ * for a child whose only previous dose was dose 1 of this season's course
+ * (dose 2). A null or unknown age fails every age gate.
+ */
 export function needsTwoDoses(screening: FluScreening, patientAge: number): boolean {
-  return patientAge < 9 && !screening.previousFluVaccine;
+  if (!Number.isFinite(patientAge) || patientAge < 0) return false;
+  return patientAge < 9 && (!screening.previousFluVaccine || screening.firstDoseThisSeason);
+}
+
+/** Dose number in the two-dose course, derived from the screening answers rather than chosen freely. */
+export function twoDoseCourseDoseNumber(screening: FluScreening, patientAge: number): '' | '1' | '2' {
+  if (!needsTwoDoses(screening, patientAge)) return '';
+  return screening.firstDoseThisSeason ? '2' : '1';
 }
 
 /** Vaccine types permitted for this patient under PGD v004 (age range and egg allergy). */
@@ -19,6 +31,8 @@ export function permittedVaccineTypes(
   patientAge: number,
   eggAllergy: boolean
 ): Exclude<FluVaccineType, ''>[] {
+  // An unknown age (blank or unparseable date of birth) permits nothing.
+  if (!Number.isFinite(patientAge) || patientAge < 0) return [];
   return (Object.keys(FLU_VACCINES) as Exclude<FluVaccineType, ''>[]).filter((t) => {
     const v = FLU_VACCINES[t];
     if (patientAge < v.minAge) return false;
@@ -37,6 +51,9 @@ export function vaccineTypeRefusal(
 ): string | null {
   if (!type) return null;
   const v = FLU_VACCINES[type];
+  if (!Number.isFinite(patientAge) || patientAge < 0) {
+    return 'The patient\'s age could not be calculated from the date of birth; no vaccine can be selected';
+  }
   if (patientAge < 18 && type !== 'iivc') {
     return 'No vaccine other than IIVc (cell-based) may be given under this PGD to anyone under 18 years';
   }
@@ -97,7 +114,9 @@ export function evaluateFluContraindications(
   }
 
   // Hard stop: already vaccinated this season, unless a child under 9 attending for dose 2
-  if (screening.receivedThisSeason && !needsTwoDoses(screening, patientAge)) {
+  // of this season's first course (recorded as firstDoseThisSeason).
+  const attendingForDose2 = patientAge < 9 && screening.firstDoseThisSeason;
+  if (screening.receivedThisSeason && !attendingForDose2) {
     contraindications.alreadyVaccinatedThisSeason = true;
     alerts.push({
       severity: 'stop',
@@ -210,9 +229,12 @@ export function evaluateFluContraindications(
     alerts.push({
       severity: 'caution',
       code: 'TWO_DOSE_CHILD',
-      message: 'Child under 9 receiving influenza vaccine for the first time: 2 doses required',
-      detail:
-        'Give 2 doses at least 4 weeks apart. Book the second dose at the first appointment and record that this is dose 1 of 2. Give written confirmation of the date the second dose is due.',
+      message: screening.firstDoseThisSeason
+        ? 'Child under 9 attending for dose 2 of 2 of this season\'s first course'
+        : 'Child under 9 receiving influenza vaccine for the first time: 2 doses required',
+      detail: screening.firstDoseThisSeason
+        ? `Dose 1 given ${screening.firstDoseThisSeasonDate || '(date not recorded)'}. Dose 2 must be at least 4 weeks after dose 1. This is recorded as dose 2 of 2.`
+        : 'Give 2 doses at least 4 weeks apart. Book the second dose at the first appointment and record that this is dose 1 of 2. Give written confirmation of the date the second dose is due.',
     });
   }
 

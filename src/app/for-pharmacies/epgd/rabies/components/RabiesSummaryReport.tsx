@@ -3,7 +3,13 @@
 import React from 'react';
 import { RabiesConsultationState } from '../rabies-types';
 import { calculateAge } from '../../shared/types';
-import { getDoseVolume, getProductLabel, RABIES_PGD_VERSION } from '../rabies-clinical-logic';
+import { getDoseVolume, getProductLabel, RABIES_PGD_VERSION, hasHardStopContraindications } from '../rabies-clinical-logic';
+
+function fmtDate(iso: string): string {
+  if (!iso) return 'Not recorded';
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? 'Not recorded' : d.toLocaleDateString();
+}
 
 const INDICATION_LABELS: Record<string, string> = {
   'travel-enzootic-area': 'Travel to a rabies enzootic area',
@@ -29,6 +35,9 @@ export default function RabiesSummaryReport({
   onPrint,
 }: RabiesSummaryReportProps): React.ReactNode {
   const patientAge = calculateAge(state.patient.dateOfBirth);
+  const stopped = hasHardStopContraindications(state.contraindications);
+  const isTravel = state.screening.indication !== 'occupational-uk';
+  const stopReasons = state.alerts.filter((a) => a.severity === 'stop').map((a) => a.message);
 
   return (
     <div className="space-y-8">
@@ -72,8 +81,30 @@ export default function RabiesSummaryReport({
               <p className="text-sm font-medium text-gray-600">Phone</p>
               <p className="text-gray-900">{state.patient.phone}</p>
             </div>
+            <div>
+              <p className="text-sm font-medium text-gray-600">Address</p>
+              <p className="text-gray-900">{state.patient.address || 'Not recorded'}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-600">GP practice</p>
+              <p className="text-gray-900">
+                {[state.patient.gpPractice, state.patient.gpAddress].filter(Boolean).join(', ') || 'Not recorded'}
+              </p>
+            </div>
           </div>
         </section>
+
+        {stopped && (
+          <section className="mb-8 pb-8 border-b border-gray-200">
+            <div className="p-4 rounded-lg border-2 border-red-300 bg-red-50">
+              <p className="font-semibold text-red-900">Outcome: NOT SUPPLIED. Vaccination excluded under this PGD.</p>
+              <p className="text-sm text-red-800 mt-1">Reason: {stopReasons.join('; ') || 'Exclusion criteria met'}</p>
+              {state.screening.exclusionAdviceGiven && (
+                <p className="text-sm text-red-800 mt-1">Advice given and decision reached: {state.screening.exclusionAdviceGiven}</p>
+              )}
+            </div>
+          </section>
+        )}
 
         {/* Travel & Risk Assessment */}
         <section className="mb-8 pb-8 border-b border-gray-200">
@@ -90,13 +121,13 @@ export default function RabiesSummaryReport({
             <div className="flex justify-between">
               <span className="text-gray-600">Destination:</span>
               <span className="font-medium text-gray-900">
-                {state.screening.destinationCountry}
+                {isTravel ? state.screening.destinationCountry || 'Not recorded' : 'Not applicable (UK occupational)'}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Departure date:</span>
               <span className="font-medium text-gray-900">
-                {new Date(state.screening.departureDate).toLocaleDateString()}
+                {isTravel ? fmtDate(state.screening.departureDate) : 'Not applicable (UK occupational)'}
               </span>
             </div>
             <div>
@@ -121,12 +152,14 @@ export default function RabiesSummaryReport({
                 </span>
               </div>
             )}
-            <div className="flex justify-between">
-              <span className="text-gray-600">Sufficient time to complete the chosen course:</span>
-              <span className="font-medium text-gray-900">
-                {state.screening.sufficientTimeBeforeTravel ? 'Yes' : 'No'}
-              </span>
-            </div>
+            {isTravel && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Sufficient time to complete the chosen course:</span>
+                <span className="font-medium text-gray-900">
+                  {state.screening.sufficientTimeBeforeTravel ? 'Yes' : 'No'}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-gray-600">Exposure already occurred (post-exposure):</span>
               <span className="font-medium text-gray-900">
@@ -217,7 +250,11 @@ export default function RabiesSummaryReport({
             <div className="flex justify-between">
               <span className="text-gray-600">Polymyxin B, streptomycin or neomycin hypersensitivity:</span>
               <span className="font-medium text-gray-900">
-                {state.screening.antibioticHypersensitivity ? 'Yes' : 'No'}
+                {state.screening.antibioticHypersensitivity
+                  ? state.screening.hypersensitivityIncludesNeomycin === 'no'
+                    ? 'Yes (does not extend to neomycin)'
+                    : 'Yes (extends to neomycin: both products excluded)'
+                  : 'No'}
               </span>
             </div>
             <div className="flex justify-between">
@@ -240,6 +277,14 @@ export default function RabiesSummaryReport({
         </section>
 
         {/* Administration Summary */}
+        {stopped ? (
+          <section className="mb-8 pb-8 border-b border-gray-200">
+            <h3 className="text-xl font-semibold text-gray-800 mb-4">
+              Vaccine Administration
+            </h3>
+            <p className="text-gray-900">No vaccine administered. Not supplied.</p>
+          </section>
+        ) : (
         <section className="mb-8 pb-8 border-b border-gray-200">
           <h3 className="text-xl font-semibold text-gray-800 mb-4">
             Vaccine Administration
@@ -272,7 +317,7 @@ export default function RabiesSummaryReport({
             <div className="flex justify-between">
               <span className="text-gray-600">Expiry date:</span>
               <span className="font-medium text-gray-900">
-                {new Date(state.administration.expiryDate).toLocaleDateString()}
+                {fmtDate(state.administration.expiryDate)}
               </span>
             </div>
             <div className="flex justify-between">
@@ -311,9 +356,17 @@ export default function RabiesSummaryReport({
                 </div>
               </>
             )}
+            {state.administration.doseNumber !== '1st' && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Previous dose in this course:</span>
+                <span className="font-medium text-gray-900">
+                  {fmtDate(state.administration.previousDoseDate)}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-gray-600">Next due dates:</span>
-              <span className="font-medium text-gray-900">
+              <span className="font-medium text-gray-900 text-right">
                 {state.administration.nextDueDates}
               </span>
             </div>
@@ -331,21 +384,15 @@ export default function RabiesSummaryReport({
             </div>
           </div>
         </section>
+        )}
 
         {/* Post-Vaccine Observations */}
+        {!stopped && (
         <section className="mb-8 pb-8 border-b border-gray-200">
           <h3 className="text-xl font-semibold text-gray-800 mb-4">
             Post-Vaccine Observations
           </h3>
           <div className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Observation period:</span>
-              <span className="font-medium text-gray-900">
-                {state.postVaccineObs.observationPeriod === '15-min'
-                  ? '15 minutes'
-                  : '30 minutes'}
-              </span>
-            </div>
             <div className="flex justify-between">
               <span className="text-gray-600">15 minute observation period completed:</span>
               <span className="font-medium text-gray-900">
@@ -392,6 +439,7 @@ export default function RabiesSummaryReport({
             )}
           </div>
         </section>
+        )}
 
         {/* Pharmacist Declaration */}
         <section className="mb-8 pb-8 border-b border-gray-200">
@@ -413,8 +461,8 @@ export default function RabiesSummaryReport({
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Pharmacy:</span>
-              <span className="font-medium text-gray-900">
-                {state.summary.pharmacyName}
+              <span className="font-medium text-gray-900 text-right">
+                {[state.summary.pharmacyName, state.summary.pharmacyAddress].filter(Boolean).join(', ')}
               </span>
             </div>
             <div className="flex justify-between">

@@ -167,12 +167,16 @@ export function getUTIClinicalAlerts(
     });
   }
 
+  // "Previous UTI within 4 weeks" is not an exclusion in PGD v005, which
+  // defines recurrence by the 6 and 12 month counts. The answer is recorded
+  // and shown as a caution so the pharmacist checks the counts, nothing more.
   if (medicalHistory.previousUTIWithin4Weeks) {
     alerts.push({
-      severity: "stop",
+      severity: "caution",
       code: "UTI_WITHIN_4_WEEKS",
-      message: "Previous UTI within last 4 weeks",
-      detail: "Risk of treatment failure and resistance. Refer to GP for further investigation.",
+      message: "Previous UTI within the last 4 weeks",
+      detail:
+        "Not an exclusion in itself. Check the 6 and 12 month episode counts (recurrent UTI is 2 or more in 6 months or 3 or more in 12 months) and that no antibiotic has been taken for this episode.",
     });
   }
 
@@ -322,9 +326,16 @@ export function getUTIClinicalAlerts(
     alerts.push({
       severity: "stop",
       code: "RENAL_UNKNOWN_OLDER",
-      message: "Renal function not known, patient aged 60 to 64",
+      message: "Aged 60 to 64: excluded by the renal row",
       detail:
-        "PGD v005 excludes supply where renal function is unknown in a patient aged 60 to 64. Refer for a renal function check first. Supply only where a recent result has been seen and is adequate.",
+        "PGD v005: answer NO but aged 60 to 64, or the patient does not know: EXCLUDE. Refer for a renal function check first. The document gives no route back to pharmacy supply on a seen result.",
+    });
+  } else if (patient.age !== null && patient.age < 60 && medicalHistory.renalImpairment === "unknown") {
+    alerts.push({
+      severity: "stop",
+      code: "RENAL_UNKNOWN",
+      message: "Patient does not know whether they have kidney disease",
+      detail: "PGD v005 renal row: the patient does not know: EXCLUDE. Refer for a renal function check first.",
     });
   }
 
@@ -482,65 +493,4 @@ export function getMedicineQuantity(medicine: string, duration: string): number 
   void medicine;
   void duration;
   return 6;
-}
-
-export function validateMedicineSelection(
-  medicine: string,
-  dose: string,
-  medicalHistory: UTIMedicalHistory
-): string | null {
-  if (!medicine) {
-    return "Please select a medicine";
-  }
-
-  if (
-    medicalHistory.renalImpairment === "moderate" ||
-    medicalHistory.renalImpairment === "severe" ||
-    medicalHistory.kidneyDisease
-  ) {
-    return "PGD v005 excludes both arms where there is known kidney disease or measured renal impairment. Refer; do not substitute trimethoprim.";
-  }
-
-  if (!dose) {
-    return "Please select a dose";
-  }
-
-  return null;
-}
-
-export function getCounsellingRequired(medicalHistory: UTIMedicalHistory): {
-  label: string;
-  required: boolean;
-}[] {
-  return [
-    { label: "Complete the full course (6 doses over 3 days)", required: true },
-    { label: "Drink plenty of fluids", required: true },
-    {
-      label: "If you are no better in 48 hours, or you get worse at any point, contact your GP or NHS 111 the same day. Do not wait.",
-      required: true,
-    },
-    {
-      label:
-        "Seek help IMMEDIATELY for: a temperature, shivering or shaking; pain in the back or side below the ribs; feeling or being sick; visible blood in the urine; confusion, drowsiness or feeling very unwell",
-      required: true,
-    },
-    {
-      label: "Cranberry products are not evidence-based for treatment",
-      required: false,
-    },
-    {
-      label: "Paracetamol or ibuprofen can be used for the pain if they suit you",
-      required: false,
-    },
-    {
-      label: "Avoid sexual activity until symptoms resolve",
-      required: false,
-    },
-    medicalHistory.pregnancyPossible
-      ? {
-          label: "Discuss contraception options, confirm not at risk of pregnancy",
-          required: true,
-        }
-      : { label: "", required: false },
-  ].filter((item) => item.label !== "");
 }

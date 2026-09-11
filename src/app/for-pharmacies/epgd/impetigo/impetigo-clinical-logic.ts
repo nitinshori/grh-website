@@ -1,4 +1,10 @@
-import { ImpetigoLesionAssessment, ImpetigoMedicalHistory, ImpetigoTreatmentSelection } from './impetigo-types';
+import {
+  ImpetigoLesionAssessment,
+  ImpetigoMedicalHistory,
+  ImpetigoTreatmentSelection,
+  ImpetigoTreatment,
+  ImpetigoFormulation,
+} from './impetigo-types';
 import { ClinicalAlert, AlertSeverity } from '../shared/types';
 
 /**
@@ -67,6 +73,24 @@ export function calculateAgeMonths(dateOfBirth: string): number | null {
   return months;
 }
 
+/**
+ * Largest dimension in the free-text size field ("3 x 2", "6cm", "4"), in cm,
+ * or null if nothing numeric was entered. The document defines widespread as
+ * more than about 5 lesions or an area over about 5 cm, so the size is
+ * parsed rather than trusted as a label.
+ */
+export function parseLesionSizeCm(size: string): number | null {
+  const nums = (size.match(/\d+(?:\.\d+)?/g) || []).map(Number).filter((n) => !isNaN(n));
+  if (nums.length === 0) return null;
+  return Math.max(...nums);
+}
+
+/** True where the recorded size exceeds about 5 cm: widespread by the document definition. */
+export function sizeIsWidespread(lesionAssessment: ImpetigoLesionAssessment): boolean {
+  const s = parseLesionSizeCm(lesionAssessment.lesionSizeCm);
+  return s !== null && s > 5;
+}
+
 /** The document defines widespread as more than about 5 lesions or an area over about 5cm. */
 export function needsOralRoute(lesionAssessment: ImpetigoLesionAssessment): boolean {
   return (
@@ -93,16 +117,207 @@ export function determineRoute(
 export interface ClarithromycinBand {
   label: string;
   dose: string;
+  /** mg per dose (twice a day). */
+  mg: number;
+  /** Suspension strength the band is measured from. */
+  strength: '125mg/5ml' | '250mg/5ml';
+  /** mL per dose at that strength. */
+  mlPerDose: number;
+  /** True where the document states no dose (over 40 kg under 12): refer. */
+  outsideDocument: boolean;
 }
 
-/** Clarithromycin paediatric weight bands, 1 month to 11 years, from the document. */
+/**
+ * Clarithromycin paediatric weight bands, 1 month to 11 years, from the
+ * document. The document's bands are whole kilograms (8 to 11, 12 to 19, 20
+ * to 29, 30 to 40), so the measured weight is ROUNDED TO THE NEAREST
+ * KILOGRAM before banding; the rule is stated on screen and on the record.
+ * Over 40 kg under 12 the document states no dose: refer.
+ */
 export function clarithromycinWeightBand(weightKg: number): ClarithromycinBand {
-  if (weightKg < 8) return { label: 'under 8 kg', dose: `7.5 mg/kg twice a day (${(weightKg * 7.5).toFixed(1)} mg twice a day at ${weightKg} kg)` };
-  if (weightKg <= 11) return { label: '8 to 11 kg', dose: '62.5 mg twice a day' };
-  if (weightKg <= 19) return { label: '12 to 19 kg', dose: '125 mg twice a day' };
-  if (weightKg <= 29) return { label: '20 to 29 kg', dose: '187.5 mg twice a day' };
-  if (weightKg <= 40) return { label: '30 to 40 kg', dose: '250 mg twice a day' };
-  return { label: 'over 40 kg', dose: '250 mg twice a day (adult dose)' };
+  const kg = Math.round(weightKg);
+  if (kg < 8) {
+    const mg = Math.round(weightKg * 7.5 * 10) / 10;
+    return {
+      label: `under 8 kg (${kg} kg to the nearest kg)`,
+      dose: `7.5 mg/kg twice a day: ${mg} mg twice a day at ${weightKg} kg`,
+      mg,
+      strength: '125mg/5ml',
+      mlPerDose: Math.round((mg / 25) * 100) / 100,
+      outsideDocument: false,
+    };
+  }
+  if (kg <= 11) return { label: `8 to 11 kg (${kg} kg to the nearest kg)`, dose: '62.5 mg twice a day', mg: 62.5, strength: '125mg/5ml', mlPerDose: 2.5, outsideDocument: false };
+  if (kg <= 19) return { label: `12 to 19 kg (${kg} kg to the nearest kg)`, dose: '125 mg twice a day', mg: 125, strength: '125mg/5ml', mlPerDose: 5, outsideDocument: false };
+  if (kg <= 29) return { label: `20 to 29 kg (${kg} kg to the nearest kg)`, dose: '187.5 mg twice a day', mg: 187.5, strength: '250mg/5ml', mlPerDose: 3.75, outsideDocument: false };
+  if (kg <= 40) return { label: `30 to 40 kg (${kg} kg to the nearest kg)`, dose: '250 mg twice a day', mg: 250, strength: '250mg/5ml', mlPerDose: 5, outsideDocument: false };
+  return {
+    label: `over 40 kg (${kg} kg to the nearest kg)`,
+    dose: 'No dose stated in the document for a child under 12 over 40 kg: refer',
+    mg: 0,
+    strength: '250mg/5ml',
+    mlPerDose: 0,
+    outsideDocument: true,
+  };
+}
+
+export interface DoseOption {
+  value: string;
+  label: string;
+  /** mg per dose. */
+  mg: number;
+  /** Suspension: mL per dose at the stated strength. */
+  mlPerDose?: number;
+  /** Suspension strength label. */
+  strength?: string;
+  /** Clarithromycin 500 mg twice a day: the document requires the reason recorded. */
+  requiresReason?: boolean;
+}
+
+/** The document's fixed frequency for the arm (doses per day). */
+export function fixedFrequency(treatment: ImpetigoTreatment): { label: string; perDay: number } {
+  switch (treatment) {
+    case 'fusidic-acid':
+      return { label: 'Three times a day', perDay: 3 };
+    case 'hydrogen-peroxide':
+      return { label: 'Two or three times a day', perDay: 3 };
+    case 'flucloxacillin':
+      return { label: 'Four times a day (four times a day means four times a day; three times a day underdoses the child)', perDay: 4 };
+    case 'clarithromycin':
+      return { label: 'Twice a day', perDay: 2 };
+    case 'erythromycin':
+      return { label: 'Four times a day', perDay: 4 };
+    default:
+      return { label: '', perDay: 0 };
+  }
+}
+
+/** The formulations the document names for the arm. */
+export function formulationOptions(treatment: ImpetigoTreatment, age: number): { value: ImpetigoFormulation; label: string }[] {
+  switch (treatment) {
+    case 'fusidic-acid':
+      return [{ value: 'cream', label: 'Fusidic acid 2% cream, 15 g tube' }];
+    case 'hydrogen-peroxide':
+      return [{ value: 'cream', label: 'Hydrogen peroxide 1% cream (P sale)' }];
+    case 'flucloxacillin':
+      return [{ value: 'suspension', label: 'Flucloxacillin 250mg/5ml oral suspension' }];
+    case 'clarithromycin':
+      return age < 12
+        ? [{ value: 'suspension', label: 'Clarithromycin 125mg/5ml or 250mg/5ml oral suspension (strength set by the weight band)' }]
+        : [{ value: 'tablets', label: 'Clarithromycin 250mg tablets' }];
+    case 'erythromycin':
+      return [
+        { value: 'tablets', label: 'Erythromycin 250mg tablets' },
+        { value: 'suspension', label: 'Erythromycin 250mg/5ml oral suspension' },
+      ];
+    default:
+      return [];
+  }
+}
+
+/**
+ * The document's dose options for the arm, age and (for a child on
+ * clarithromycin) weight. Where the document states a range (flucloxacillin
+ * "62.5mg to 125mg"), the two endpoints are offered; nothing between or
+ * beyond them is.
+ */
+export function getDoseOptions(
+  treatment: ImpetigoTreatment,
+  age: number,
+  weightKg: string,
+): DoseOption[] {
+  switch (treatment) {
+    case 'fusidic-acid':
+      return [{ value: 'thin-layer', label: 'Apply a thin layer, covering the lesion and about 1 cm of surrounding skin', mg: 0 }];
+    case 'hydrogen-peroxide':
+      return [{ value: 'apply', label: 'Apply to the lesions', mg: 0 }];
+    case 'flucloxacillin': {
+      if (age >= 18) return [];
+      if (age < 2)
+        return [
+          { value: 'fluclox-62.5', label: '62.5 mg (1.25 mL of 250mg/5ml)', mg: 62.5, mlPerDose: 1.25, strength: '250mg/5ml' },
+          { value: 'fluclox-125', label: '125 mg (2.5 mL of 250mg/5ml)', mg: 125, mlPerDose: 2.5, strength: '250mg/5ml' },
+        ];
+      if (age <= 9)
+        return [
+          { value: 'fluclox-125', label: '125 mg (2.5 mL of 250mg/5ml)', mg: 125, mlPerDose: 2.5, strength: '250mg/5ml' },
+          { value: 'fluclox-250', label: '250 mg (5 mL of 250mg/5ml)', mg: 250, mlPerDose: 5, strength: '250mg/5ml' },
+        ];
+      return [
+        { value: 'fluclox-250', label: '250 mg (5 mL of 250mg/5ml)', mg: 250, mlPerDose: 5, strength: '250mg/5ml' },
+        { value: 'fluclox-500', label: '500 mg (10 mL of 250mg/5ml)', mg: 500, mlPerDose: 10, strength: '250mg/5ml' },
+      ];
+    }
+    case 'clarithromycin': {
+      if (age < 12) {
+        const w = parseWeight(weightKg);
+        if (w === null) return [];
+        const band = clarithromycinWeightBand(w);
+        if (band.outsideDocument) return [];
+        return [
+          {
+            value: `clari-band-${band.mg}`,
+            label: `${band.dose} (${band.mlPerDose} mL of ${band.strength}); band ${band.label}`,
+            mg: band.mg,
+            mlPerDose: band.mlPerDose,
+            strength: band.strength,
+          },
+        ];
+      }
+      return [
+        { value: 'clari-250', label: '250 mg (one 250mg tablet)', mg: 250 },
+        { value: 'clari-500', label: '500 mg (two 250mg tablets): severe infection only, reason required', mg: 500, requiresReason: true },
+      ];
+    }
+    case 'erythromycin': {
+      if (age < 8) return [];
+      return [
+        { value: 'erythro-250', label: '250 mg', mg: 250, mlPerDose: 5, strength: '250mg/5ml' },
+        { value: 'erythro-500', label: '500 mg', mg: 500, mlPerDose: 10, strength: '250mg/5ml' },
+      ];
+    }
+    default:
+      return [];
+  }
+}
+
+/** Quantity for the course, computed from the dose option, formulation and duration. */
+export function computeQuantity(
+  treatment: ImpetigoTreatment,
+  formulation: ImpetigoFormulation,
+  dose: DoseOption | undefined,
+  durationDays: number,
+): { quantity: number; unit: string } {
+  if (!treatment || !dose || durationDays <= 0) return { quantity: 0, unit: '' };
+  const perDay = fixedFrequency(treatment).perDay;
+  switch (treatment) {
+    case 'fusidic-acid':
+      return { quantity: 1, unit: 'x 15 g tube (one tube; no repeat supply)' };
+    case 'hydrogen-peroxide':
+      return { quantity: 1, unit: 'tube, sold as a pharmacy medicine (not a PGD supply)' };
+    case 'flucloxacillin': {
+      const ml = (dose.mlPerDose ?? 0) * perDay * durationDays;
+      return { quantity: ml, unit: `mL of flucloxacillin 250mg/5ml oral suspension (${dose.mlPerDose} mL x ${perDay} a day x ${durationDays} days)` };
+    }
+    case 'clarithromycin': {
+      if (formulation === 'suspension') {
+        const ml = Math.round((dose.mlPerDose ?? 0) * perDay * durationDays * 100) / 100;
+        return { quantity: ml, unit: `mL of clarithromycin ${dose.strength} oral suspension (${dose.mlPerDose} mL x ${perDay} a day x ${durationDays} days)` };
+      }
+      const tabs = (dose.mg / 250) * perDay * durationDays;
+      return { quantity: tabs, unit: `x 250mg tablets (${dose.mg / 250} x ${perDay} a day x ${durationDays} days)` };
+    }
+    case 'erythromycin': {
+      if (formulation === 'suspension') {
+        const ml = (dose.mlPerDose ?? 0) * perDay * durationDays;
+        return { quantity: ml, unit: `mL of erythromycin 250mg/5ml oral suspension (${dose.mlPerDose} mL x ${perDay} a day x ${durationDays} days)` };
+      }
+      const tabs = (dose.mg / 250) * perDay * durationDays;
+      return { quantity: tabs, unit: `x 250mg tablets (${dose.mg / 250} x ${perDay} a day x ${durationDays} days)` };
+    }
+    default:
+      return { quantity: 0, unit: '' };
+  }
 }
 
 function parseWeight(w: string): number | null {
@@ -191,6 +406,12 @@ export function evaluateReferralCriteria(
         reason: 'Known hypersensitivity to fusidic acid or an excipient. Mupirocin is not authorised by this PGD. Refer.',
       });
     }
+    if (medicalHistory.fusidicAcidResistanceSuspected) {
+      referrals.push({
+        shouldRefer: true,
+        reason: 'Fusidic acid resistance suspected or confirmed (for example previous fusidic acid courses with no response). Mupirocin is NOT authorised by this PGD, so refer.',
+      });
+    }
   }
 
   // ── Oral arms ────────────────────────────────────────────────────
@@ -243,35 +464,47 @@ export function evaluateReferralCriteria(
         reason: 'A child who cannot be weighed today. Do not estimate from age. Refer.',
       });
     }
-    if (medicalHistory.pregnant) {
-      if (age < 8) {
+    if (medicalHistory.pregnant && age < 8) {
+      referrals.push({
+        shouldRefer: true,
+        reason: 'Pregnant and under 8 years: no erythromycin dose is authorised. Do not substitute clarithromycin. Refer.',
+      });
+    }
+    if (!medicalHistory.pregnant && age < 12) {
+      const w = parseWeight(medicalHistory.weightKg);
+      if (w !== null && clarithromycinWeightBand(w).outsideDocument) {
         referrals.push({
           shouldRefer: true,
-          reason: 'Pregnant and under 8 years: no erythromycin dose is authorised. Do not substitute clarithromycin. Refer.',
+          reason: 'Child under 12 weighing over 40 kg (to the nearest kilogram). The document\'s clarithromycin weight bands stop at 40 kg and state no dose above it. Refer.',
         });
       }
-    } else {
-      // Clarithromycin SPC contraindications, handled as exclusions.
+    }
+    {
+      // Interaction and QT exclusions apply to BOTH macrolides. The document
+      // lists them under clarithromycin; erythromycin shares the CYP3A4 and
+      // QT liabilities (its SmPC contraindicates ergotamine, simvastatin,
+      // ticagrelor and QT-prolonging drugs), so a pregnant patient routed to
+      // erythromycin is checked too (adversarial review, 11 Sep 2026).
       if (medicalHistory.takesSimvastatinOrLovastatin) {
         referrals.push({
           shouldRefer: true,
-          reason: 'Taking simvastatin or lovastatin. Clarithromycin raises their levels and the combination causes myopathy and rhabdomyolysis. Do not supply, and do not advise the patient to stop their statin; that is a prescriber decision. Refer the same day so the impetigo is still treated.',
+          reason: 'Taking simvastatin or lovastatin. A macrolide (clarithromycin or erythromycin) raises their levels and the combination causes myopathy and rhabdomyolysis. Do not supply, and do not advise the patient to stop their statin; that is a prescriber decision. Refer the same day so the impetigo is still treated.',
         });
       }
       if (medicalHistory.takesColchicine) {
         referrals.push({
           shouldRefer: true,
-          reason: 'Taking colchicine. Deaths from colchicine toxicity have been reported with clarithromycin. Refer the same day.',
+          reason: 'Taking colchicine. Deaths from colchicine toxicity have been reported with macrolides. Refer the same day.',
         });
       }
       if (medicalHistory.takesErgotAlkaloid) {
         referrals.push({
           shouldRefer: true,
-          reason: 'Taking an ergot alkaloid (ergotamine or dihydroergotamine). Acute ergot toxicity with clarithromycin. Refer the same day.',
+          reason: 'Taking an ergot alkaloid (ergotamine or dihydroergotamine). Acute ergot toxicity with clarithromycin or erythromycin. Refer the same day.',
         });
       }
       if (medicalHistory.takesTicagrelor) {
-        referrals.push({ shouldRefer: true, reason: 'Taking ticagrelor. Clarithromycin contraindicated. Refer the same day.' });
+        referrals.push({ shouldRefer: true, reason: 'Taking ticagrelor. Clarithromycin and erythromycin contraindicated. Refer the same day.' });
       }
       if (medicalHistory.takesClariSpcContraindicated) {
         referrals.push({
@@ -282,13 +515,13 @@ export function evaluateReferralCriteria(
       if (medicalHistory.qtProlongationHistory) {
         referrals.push({
           shouldRefer: true,
-          reason: 'History of QT prolongation, congenital or acquired, or of ventricular arrhythmia including torsades de pointes. Clarithromycin contraindicated. Refer.',
+          reason: 'History of QT prolongation, congenital or acquired, or of ventricular arrhythmia including torsades de pointes. Clarithromycin and erythromycin contraindicated. Refer.',
         });
       }
       if (medicalHistory.qtMedicinesOrElectrolytes) {
         referrals.push({
           shouldRefer: true,
-          reason: 'Taking another medicine known to prolong the QT interval, or hypokalaemia or hypomagnesaemia. Clarithromycin contraindicated. Refer.',
+          reason: 'Taking another medicine known to prolong the QT interval, or hypokalaemia or hypomagnesaemia. Clarithromycin and erythromycin contraindicated. Refer.',
         });
       }
       if (medicalHistory.severeHepaticImpairment && medicalHistory.severeRenalImpairment) {
@@ -357,8 +590,8 @@ export function determineTreatmentRecommendation(
       dose,
       frequency: 'Four times a day (four times a day means four times a day; a three-times-daily regimen underdoses the child)',
       duration: '5 days',
-      quantity: 1,
-      quantityUnit: 'bottle(s) sufficient for a 5 day course at the dose selected',
+      quantity: 0,
+      quantityUnit: 'mL: computed from the dose selected (mL per dose x 4 a day x days)',
       rationale:
         'Widespread non-bullous impetigo, bullous impetigo, or failure of topical treatment, in a child aged 3 months to 17 years who is not penicillin-allergic. Oral, on an empty stomach, an hour before food or two hours after. The suspension is unpalatable: where the child will not take it, the macrolide arm is a reasonable alternative on grounds of unsuitability. Do not combine with a topical antibiotic. No repeat supply.',
     };
@@ -388,8 +621,8 @@ export function determineTreatmentRecommendation(
           : 'BY WEIGHT: weigh the child today. Under 8kg 7.5mg/kg; 8 to 11kg 62.5mg; 12 to 19kg 125mg; 20 to 29kg 187.5mg; 30 to 40kg 250mg, each twice a day',
         frequency: 'Twice a day',
         duration: '5 days',
-        quantity: 1,
-        quantityUnit: 'bottle(s) sufficient for a 5 day course at the dose selected',
+        quantity: 0,
+        quantityUnit: 'mL: computed from the weight-band dose (mL per dose x 2 a day x days)',
         rationale:
           'Penicillin-allergic child aged 1 month to 11 years, or a child who will not take the flucloxacillin suspension. The dose is by weight, not by age: weigh the child today and record the weight and the band. Shake the suspension before use. Check the clarithromycin contraindications first: simvastatin, lovastatin, colchicine, ergot alkaloids, ticagrelor, QT prolongation.',
       };
@@ -642,12 +875,12 @@ export function validateTreatmentSelection(
     errors.push('Treatment selection required');
   }
 
-  if (!treatment.dose) {
-    errors.push('Dose required');
+  if (!treatment.formulation) {
+    errors.push('Formulation required');
   }
 
-  if (!treatment.frequency) {
-    errors.push('Frequency required');
+  if (!treatment.doseValue) {
+    errors.push('Select the dose from the document\'s regimens');
   }
 
   if (!treatment.duration) {
@@ -658,9 +891,15 @@ export function validateTreatmentSelection(
     errors.push('A 7 day course needs the reason recorded');
   }
 
-  if (treatment.quantity <= 0) {
-    errors.push('Quantity must be greater than 0');
+  if (treatment.treatment === 'clarithromycin' && treatment.doseValue === 'clari-500' && !treatment.severeDoseReason.trim()) {
+    errors.push('Clarithromycin 500mg twice a day needs the reason recorded');
   }
+
+  if (treatment.quantity <= 0) {
+    errors.push('Quantity could not be computed from the dose selected');
+  }
+
+  void recommendation;
 
   return {
     valid: errors.length === 0,

@@ -19,14 +19,36 @@ export const SEVERE_PAIN_THRESHOLD = 7;
 export const ELDERLY_AGE = 65;
 
 /**
- * Calculate hours since rash onset from ISO date string
+ * Hours since rash onset.
+ *
+ * With an approximate onset time the interval is measured exactly. Without
+ * one it is counted in whole calendar days (onset date to today, local time)
+ * times 24, so that "within 72 hours" means onset today or up to three days
+ * ago and "within 7 days" means up to seven days ago. It used to parse the
+ * date as UTC midnight and measure to the current instant, which pushed an
+ * evening onset three days ago outside the 72 hour window (adversarial
+ * review, 11 Sep 2026).
  */
-export function calculateHoursSinceOnset(rashOnsetDate: string): number | null {
+export function calculateHoursSinceOnset(rashOnsetDate: string, rashOnsetTime: string = ''): number | null {
   if (!rashOnsetDate) return null;
-  const onset = new Date(rashOnsetDate);
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(rashOnsetDate);
+  if (!m) return null;
+  const y = parseInt(m[1], 10);
+  const mo = parseInt(m[2], 10) - 1;
+  const d = parseInt(m[3], 10);
   const now = new Date();
-  const hours = (now.getTime() - onset.getTime()) / (1000 * 60 * 60);
-  return hours > 0 ? Math.round(hours) : null;
+  const t = /^(\d{2}):(\d{2})$/.exec(rashOnsetTime || '');
+  if (t) {
+    const onset = new Date(y, mo, d, parseInt(t[1], 10), parseInt(t[2], 10));
+    if (isNaN(onset.getTime())) return null;
+    const hours = (now.getTime() - onset.getTime()) / (1000 * 60 * 60);
+    return hours >= 0 ? Math.round(hours) : null;
+  }
+  const onsetDay = new Date(y, mo, d);
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (isNaN(onsetDay.getTime())) return null;
+  const days = Math.round((today.getTime() - onsetDay.getTime()) / (1000 * 60 * 60 * 24));
+  return days >= 0 ? days * 24 : null;
 }
 
 /**
@@ -105,7 +127,8 @@ export type TreatmentWindow = 'within-72h' | 'within-7-days' | 'outside' | 'not-
 
 export function meets72HourCriteria(symptoms: ShinglesSymptoms, age: number | null): boolean {
   return (
-    (age !== null && age > 50) ||
+    // NICE CKS, quoted in the PGD's guidance summary: people aged 50 years and over.
+    (age !== null && age >= 50) ||
     isNonTruncal(symptoms.dermatome) ||
     (symptoms.painLevel !== null && symptoms.painLevel >= MODERATE_PAIN_THRESHOLD) ||
     symptoms.rashSeverity === 'moderate' ||
@@ -137,7 +160,7 @@ export function getTreatmentWindow(symptoms: ShinglesSymptoms, age: number | nul
 export function describeTreatmentWindow(window: TreatmentWindow): string {
   switch (window) {
     case 'within-72h':
-      return 'Rash onset within 72 hours with a qualifying criterion (age over 50, non-truncal involvement, moderate or severe pain, or moderate or severe rash)';
+      return 'Rash onset within 72 hours with a qualifying criterion (age 50 or over, non-truncal involvement, moderate or severe pain, or moderate or severe rash)';
     case 'within-7-days':
       return 'Rash onset within 7 days with a qualifying criterion (new vesicles forming, severe pain, age 70 or over, or high risk of severe shingles)';
     case 'outside':
@@ -255,7 +278,7 @@ export function generateClinicalAlerts(
     });
   }
 
-  if (!symptoms.unilateral && symptoms.rashDescription.trim()) {
+  if (symptoms.unilateral === 'no') {
     alerts.push({
       code: 'not-dermatomal',
       message: 'Rash is not a unilateral dermatomal rash, or crosses the midline. Refer.',
@@ -280,7 +303,7 @@ export function generateClinicalAlerts(
       code: 'window-criteria-not-met',
       message: 'No treatment window inclusion criterion is met. Refer to a prescriber.',
       detail: isWithinTreatmentWindow(symptoms.hoursSinceOnset)
-        ? 'Within 72 hours, supply requires at least one of: age over 50; non-truncal involvement of the limbs or perineum; moderate or severe pain; or moderate or severe rash with confluent lesions.'
+        ? 'Within 72 hours, supply requires at least one of: age 50 or over; non-truncal involvement of the limbs or perineum; moderate or severe pain; or moderate or severe rash with confluent lesions.'
         : 'Between 72 hours and 7 days, supply requires at least one of: continued formation of new vesicles; severe pain; age 70 or over; or a high risk of severe shingles (for example severe atopic eczema).',
       severity: 'stop',
     });
@@ -731,7 +754,10 @@ export function validateSymptomStep(symptoms: ShinglesSymptoms): string | null {
     return 'Rash description is required';
   }
   if (!symptoms.unilateral) {
-    return 'Confirm a unilateral, dermatomal rash that does not cross the midline. If it does not fit, refer: not for supply under this PGD';
+    return 'Answer whether the rash is unilateral, dermatomal and does not cross the midline';
+  }
+  if (symptoms.unilateral === 'no') {
+    return 'The rash is not a unilateral dermatomal rash: refer, not for supply under this PGD';
   }
   if (!symptoms.ophthalmicExcluded) {
     return 'Record that ophthalmic involvement was specifically excluded (PGD records requirement)';
@@ -774,23 +800,24 @@ export function validateMedicineSelectionStep(
       return `${selection.medicine} may not be supplied to this patient (${entry.reason})`;
     }
   }
-  if (!selection.dose) {
-    return 'Dose is required';
+  // The regimen is the PGD's, read-only. Anything else is a prescription,
+  // not a PGD supply (adversarial review, 11 Sep 2026).
+  if (medicalHistory) {
+    const pgd = getRecommendedDose(selection.medicine, medicalHistory);
+    if (
+      selection.dose !== pgd.dose ||
+      selection.frequency !== pgd.frequency ||
+      selection.duration !== pgd.duration ||
+      selection.quantity !== pgd.quantity
+    ) {
+      return 'The regimen recorded does not match the PGD regimen for this agent. Only the PGD regimen may be supplied; any deviation is a referral to a prescriber';
+    }
   }
-  if (!selection.frequency) {
-    return 'Frequency is required';
-  }
-  if (!selection.duration) {
-    return 'Duration is required';
-  }
-  if (selection.quantity <= 0) {
-    return 'Quantity must be greater than 0';
+  if (!selection.dose || !selection.frequency || !selection.duration || selection.quantity <= 0) {
+    return 'The PGD regimen could not be determined for the selected agent';
   }
   if (!selection.batchNumber.trim()) {
     return 'Batch number must be recorded (PGD records requirement)';
-  }
-  if (selection.pharmacistOverride && !selection.overrideReason.trim()) {
-    return 'Override reason is required';
   }
   return null;
 }

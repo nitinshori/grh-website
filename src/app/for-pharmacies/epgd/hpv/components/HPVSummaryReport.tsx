@@ -22,6 +22,8 @@ export function HPVSummaryReport({
   alerts,
   doseRecommendation,
 }: HPVSummaryReportProps) {
+  const hasStop = alerts.some((a) => a.severity === "stop");
+  const answer = (v: "" | "yes" | "no") => (v === "no" ? true : false);
   return (
     <div className="max-w-4xl mx-auto bg-white p-6 rounded-lg border border-gray-200 print:border-0 print:shadow-none print:p-0">
       {/* Header */}
@@ -42,7 +44,10 @@ export function HPVSummaryReport({
       <SectionHeader>Patient Details</SectionHeader>
       <div className="space-y-0.5">
         <Row label="Name" value={`${state.patient.firstName} ${state.patient.lastName}`} />
-        <Row label="Age" value={`${state.patient.age} years`} />
+        <Row label="Date of birth" value={state.patient.dateOfBirth || "Not recorded"} />
+        <Row label="Age" value={state.patient.age !== null ? `${state.patient.age} years` : "Not recorded"} />
+        <Row label="Address" value={state.patient.address || "Not provided"} />
+        <Row label="GP" value={state.patient.gpName || "Not provided"} />
         <Row label="GP Practice" value={state.patient.gpPractice || "Not provided"} />
         <Row label="NHS Number" value={state.patient.nhsNumber || "Not provided"} />
       </div>
@@ -69,8 +74,8 @@ export function HPVSummaryReport({
       <SectionHeader>Exclusions Check</SectionHeader>
       <div className="space-y-1.5 text-xs">
         {([
-          ["No confirmed anaphylaxis to a previous HPV vaccine dose", !state.assessment.anaphylaxisToPreviousDose],
-          ["No confirmed anaphylaxis to a component of Gardasil 9, and no hypersensitivity after previous Gardasil 9, Gardasil or Silgard", !state.assessment.anaphylaxisToComponent],
+          [`No confirmed anaphylaxis to a previous HPV vaccine dose${state.assessment.anaphylaxisToPreviousDose === "" ? " (NOT ANSWERED)" : ""}`, answer(state.assessment.anaphylaxisToPreviousDose)],
+          [`No confirmed anaphylaxis to a component of Gardasil 9, and no hypersensitivity after previous Gardasil 9, Gardasil or Silgard${state.assessment.anaphylaxisToComponent === "" ? " (NOT ANSWERED)" : ""}`, answer(state.assessment.anaphylaxisToComponent)],
           ["Not known to be pregnant", state.assessment.pregnancyStatus !== "confirmed"],
           ["No acute severe febrile illness or systemic upset", !state.assessment.currentFebrileIllness],
           ["Course not already complete for age and immune status", !alerts.some((a) => a.code === "HPV_COURSE_COMPLETE")],
@@ -94,7 +99,9 @@ export function HPVSummaryReport({
       {/* Consent */}
       <SectionHeader>Consent</SectionHeader>
       <div className="space-y-0.5">
-        <Row label="Informed consent" value={state.consent.informedConsentGiven ? "Obtained" : "Not recorded"} />
+        <Row label="Informed consent" value={state.consent.informedConsentGiven ? "Obtained before administration" : "Not recorded"} />
+        <Row label="ID verified" value={state.consent.idVerified ? `Yes${state.consent.idType ? ` (${state.consent.idType})` : ""}` : "Not recorded"} />
+        <Row label="Aware this is a private service" value={state.consent.patientAwarePrivateService ? "Yes" : "Not recorded"} />
         {state.patient.age !== null && state.patient.age < 16 && (
           <>
             <Row
@@ -137,7 +144,15 @@ export function HPVSummaryReport({
 
       {/* Medicine Supply */}
       <SectionHeader>Vaccine Supply</SectionHeader>
-      {doseRecommendation ? (
+      {hasStop ? (
+        <div className="space-y-0.5">
+          <Row label="Outcome" value="NOT SUPPLIED: exclusion criteria met (see clinical alerts above)" />
+          <Row
+            label="Advice given"
+            value={state.summary.clinicalNotes || "Advised on alternative options and how to access them; informed or referred to the GP as appropriate"}
+          />
+        </div>
+      ) : doseRecommendation ? (
         <div className="space-y-0.5">
           <Row label="Vaccine" value={doseRecommendation.medicine} />
           <Row label="Dose" value={doseRecommendation.dose} />
@@ -149,6 +164,8 @@ export function HPVSummaryReport({
       )}
 
       {/* Administration */}
+      {!hasStop && (
+      <>
       <SectionHeader>Administration and Safety</SectionHeader>
       <div className="space-y-0.5">
         <Row label="Product" value={`${state.administration.productName} suspension for injection`} />
@@ -157,9 +174,12 @@ export function HPVSummaryReport({
         <Row label="Expiry date" value={state.administration.expiryDate || "Not recorded"} />
         <Row label="Anatomical site" value={state.administration.site || "Not recorded"} />
         <Row label="Dose number in course" value={state.administration.doseNumber || "Not recorded"} />
+        {parseInt(state.administration.doseNumber || "0", 10) > 1 && (
+          <Row label="Previous dose given" value={state.administration.previousDoseDate || "Not recorded"} />
+        )}
         <Row
           label="Next dose due"
-          value={state.administration.nextDoseDue || "No further dose required"}
+          value={state.administration.nextDoseDue || "Course complete: no further dose required"}
         />
         <Row
           label="Other vaccine at this visit (and site)"
@@ -174,6 +194,8 @@ export function HPVSummaryReport({
           value={state.administration.observedFifteenMinutes ? "Yes, patient observed seated" : "NOT RECORDED"}
         />
       </div>
+      </>
+      )}
 
       {/* Clinical Notes */}
       <SectionHeader>Clinical Notes</SectionHeader>
@@ -182,12 +204,41 @@ export function HPVSummaryReport({
       </p>
 
       {/* Pharmacist Declaration */}
-      <PharmacistDeclaration
-        pgdName="HPV Vaccination (Gardasil 9)"
-        pharmacistName={state.summary.pharmacistName}
-        pharmacistGPhC={state.summary.pharmacistGPhC}
-        pharmacyName={state.summary.pharmacyName}
-      />
+      {hasStop ? (
+        <>
+          <SectionHeader>Practitioner Declaration</SectionHeader>
+          <p className="text-xs text-gray-600 mb-4">
+            I confirm that this consultation was conducted in accordance with the Patient Group
+            Direction for Gardasil 9, that an exclusion criterion applied, that no vaccine was
+            administered, and that the patient was advised as recorded above.
+          </p>
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">Practitioner name</p>
+              <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{state.summary.pharmacistName || ""}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">GPhC number</p>
+              <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{state.summary.pharmacistGPhC || ""}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">Pharmacy</p>
+              <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{state.summary.pharmacyName || ""}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">Signature</p>
+              <div className="border-b border-gray-300 min-h-[2rem]" />
+            </div>
+          </div>
+        </>
+      ) : (
+        <PharmacistDeclaration
+          pgdName="HPV Vaccination (Gardasil 9)"
+          pharmacistName={state.summary.pharmacistName}
+          pharmacistGPhC={state.summary.pharmacistGPhC}
+          pharmacyName={state.summary.pharmacyName}
+        />
+      )}
 
       {/* Footer */}
       <ReportFooter pgdName="HPV Vaccination (Gardasil 9)" />

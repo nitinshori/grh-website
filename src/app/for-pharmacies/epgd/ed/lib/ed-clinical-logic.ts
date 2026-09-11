@@ -4,6 +4,17 @@ import type {
   DoseRecommendation,
 } from "./ed-types";
 
+/** Doxazosin is an alpha-blocker; ticking it implies alpha-blocker use even
+ *  if the parent box has been cleared. */
+export function takesAnyAlphaBlocker(medications: EDConsultationState["medications"]): boolean {
+  return medications.takesAlphaBlockers || medications.takesDoxazosin;
+}
+
+/** The document says "over 65". */
+export function isOver65(age: number | null): boolean {
+  return age !== null && age > 65;
+}
+
 // ══════════════════════════════════════════════════════════════
 // EXCLUSION CHECKS — Hard stops: cannot supply
 // ══════════════════════════════════════════════════════════════
@@ -11,6 +22,30 @@ import type {
 export function checkExclusions(state: EDConsultationState): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
   const { medications, observations, medicalHistory, redFlags } = state;
+
+  // First exclusion in both arms. Was a free-text allergies box with no gate
+  // (adversarial review, 11 Sep 2026).
+  if (medications.hypersensitivityPDE5) {
+    alerts.push({
+      severity: "stop",
+      code: "HYPERSENSITIVITY",
+      message: "Known hypersensitivity to sildenafil, tadalafil or any excipient",
+      detail:
+        "Exclusion in both arms of PGD v006. Do not supply. Refer to the GP.",
+    });
+  }
+
+  // The document says the patient MUST be stable on his alpha-blocker before
+  // starting. This was a caution that said "defer supply" and deferred nothing.
+  if (takesAnyAlphaBlocker(medications) && !medications.alphaBlockerStable) {
+    alerts.push({
+      severity: "stop",
+      code: "ALPHA_UNSTABLE",
+      message: "Not yet stable on his alpha-blocker: do not supply",
+      detail:
+        "PGD v006 (both arms): the patient must be stable on his alpha-blocker before starting a PDE5 inhibitor. Defer supply until he is, and record it.",
+    });
+  }
 
   // Nitrates: absolute contraindication
   if (medications.takesNitrates) {
@@ -236,25 +271,15 @@ export function checkCautions(state: EDConsultationState): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
   const { medications, medicalHistory, patient } = state;
 
-  // Alpha-blocker use
-  if (medications.takesAlphaBlockers) {
-    if (!medications.alphaBlockerStable) {
-      alerts.push({
-        severity: "caution",
-        code: "ALPHA_UNSTABLE",
-        message: "Patient not stable on alpha-blocker, stabilise first",
-        detail:
-          "The patient must be stable on his alpha-blocker before starting. Defer supply.",
-      });
-    } else {
-      alerts.push({
-        severity: "caution",
-        code: "ALPHA_BLOCKER",
-        message: "Alpha-blocker: sildenafil START AT 25mg; tadalafil on-demand 10mg (do not exceed until tolerance established), once-daily 2.5mg",
-        detail:
-          "Do not start sildenafil at 50mg. Record which alpha-blocker and that he is stable on it. Doxazosin excludes the tadalafil arm.",
-      });
-    }
+  // Alpha-blocker use (not stable is a stop, in checkExclusions)
+  if (takesAnyAlphaBlocker(medications) && medications.alphaBlockerStable) {
+    alerts.push({
+      severity: "caution",
+      code: "ALPHA_BLOCKER",
+      message: "Alpha-blocker: sildenafil START AT 25mg; tadalafil on-demand 10mg (do not exceed until tolerance established), once-daily 2.5mg",
+      detail:
+        "Do not start sildenafil at 50mg. Record which alpha-blocker and that he is stable on it. Doxazosin excludes the tadalafil arm.",
+    });
   }
 
   if (medications.takesRitonavirOrCobicistat) {
@@ -287,12 +312,12 @@ export function checkCautions(state: EDConsultationState): ClinicalAlert[] {
     });
   }
 
-  // Age over 65
-  if (patient.age !== null && patient.age >= 65) {
+  // Age over 65 (the document says "over 65")
+  if (isOver65(patient.age)) {
     alerts.push({
       severity: "caution",
       code: "AGE_65",
-      message: "Aged 65 or over: sildenafil start at 25mg; tadalafil on-demand 10mg rather than escalating, once-daily 2.5mg",
+      message: "Aged over 65: sildenafil start at 25mg; tadalafil on-demand 10mg rather than escalating, once-daily 2.5mg",
       detail:
         "PGD v006 dose reduction for the over-65s. Record the starting dose chosen.",
     });
@@ -473,20 +498,20 @@ export function calculateDoseRecommendation(
   if (exclusions.length > 0) return null;
 
   const needsLowerDose =
-    (patient.age !== null && patient.age >= 65) ||
+    isOver65(patient.age) ||
     medicalHistory.hepaticImpairment === "mild-moderate" ||
     medicalHistory.renalImpairment === "severe" ||
-    medications.takesAlphaBlockers ||
+    takesAnyAlphaBlocker(medications) ||
     medications.takesCYP3A4Inhibitors;
 
   const reasons: string[] = [];
 
-  if (patient.age !== null && patient.age >= 65) reasons.push("age 65 or over");
+  if (isOver65(patient.age)) reasons.push("age over 65");
   if (medicalHistory.hepaticImpairment === "mild-moderate")
     reasons.push("hepatic impairment");
   if (medicalHistory.renalImpairment === "severe")
     reasons.push("severe renal impairment");
-  if (medications.takesAlphaBlockers) reasons.push("alpha-blocker use");
+  if (takesAnyAlphaBlocker(medications)) reasons.push("alpha-blocker use");
   if (medications.takesCYP3A4Inhibitors)
     reasons.push("CYP3A4 inhibitor use");
 
@@ -564,26 +589,58 @@ export function getArmAvailability(state: EDConsultationState): ArmAvailability 
   };
 }
 
-/** Dose limits from the PGD v006 cautions. Starting-dose rules apply to a
- *  patient who has not used the medicine before; hard caps always apply. */
+/** Dose limits from the PGD v006 cautions and dose rows.
+ *
+ *  Starting-dose rules apply to a patient who has not used THAT medicine
+ *  before: the document's dose rows give one starting dose (sildenafil 50mg,
+ *  or 25mg with a dose-adjustment factor; tadalafil on-demand 10mg; once-daily
+ *  2.5mg) and allow titration "on efficacy and tolerability", which needs a
+ *  previous, tolerated supply of the same medicine. Ticking "previous
+ *  treatment" for a pump or a herbal product used to lift every cap
+ *  (adversarial review, 11 Sep 2026). Hard caps always apply. */
 export interface DoseCaps {
+  sildenafilMinMg: number;
   sildenafilMaxMg: number;
+  tadalafilOnDemandMinMg: number;
   tadalafilOnDemandMaxMg: number;
+  tadalafilDailyMinMg: number;
   tadalafilDailyMaxMg: number;
   tadalafilDailyAllowed: boolean;
+  /** Tadalafil on-demand with a potent CYP3A4 inhibitor: 10mg in 72 hours. */
+  tadalafil72HourRule: boolean;
   reasons: string[];
+}
+
+/** Which medicine, if any, the patient has previously taken at a stated dose
+ *  and tolerated. Only that arm may be titrated. */
+export function priorToleratedMedicine(
+  complaint: EDConsultationState["complaint"]
+): "sildenafil" | "tadalafil-on-demand" | "tadalafil-daily" | "" {
+  if (!complaint.previousTreatment) return "";
+  if (!complaint.previousPDE5Tolerated) return "";
+  if (!complaint.previousPDE5Dose.trim()) return "";
+  const p = complaint.previousPDE5Inhibitor;
+  if (p === "sildenafil" || p === "tadalafil-on-demand" || p === "tadalafil-daily") return p;
+  return "";
 }
 
 export function getDoseCaps(state: EDConsultationState): DoseCaps {
   const { medications, medicalHistory, patient, complaint } = state;
   const caps: DoseCaps = {
+    sildenafilMinMg: 25,
     sildenafilMaxMg: 100,
+    tadalafilOnDemandMinMg: 5,
     tadalafilOnDemandMaxMg: 20,
+    tadalafilDailyMinMg: 2.5,
     tadalafilDailyMaxMg: 5,
     tadalafilDailyAllowed: true,
+    tadalafil72HourRule: false,
     reasons: [],
   };
-  const firstUse = !complaint.previousTreatment;
+  const prior = priorToleratedMedicine(complaint);
+  const sildenafilFirstUse = prior !== "sildenafil";
+  const tadalafilOnDemandFirstUse = prior !== "tadalafil-on-demand";
+  const tadalafilDailyFirstUse = prior !== "tadalafil-daily";
 
   // Hard caps, whatever the history
   if (medicalHistory.hepaticImpairment === "mild-moderate") {
@@ -592,7 +649,8 @@ export function getDoseCaps(state: EDConsultationState): DoseCaps {
   }
   if (medications.takesCYP3A4Inhibitors || medications.takesRitonavirOrCobicistat) {
     caps.tadalafilOnDemandMaxMg = Math.min(caps.tadalafilOnDemandMaxMg, 10);
-    caps.reasons.push("CYP3A4 inhibitor: tadalafil on-demand not more than 10mg in any 72 hours");
+    caps.tadalafil72HourRule = true;
+    caps.reasons.push("potent CYP3A4 inhibitor: tadalafil on-demand not more than 10mg in any 72 hours (quantity capped at 4)");
   }
   if (medicalHistory.renalImpairment === "severe") {
     caps.tadalafilOnDemandMaxMg = Math.min(caps.tadalafilOnDemandMaxMg, 10);
@@ -602,21 +660,38 @@ export function getDoseCaps(state: EDConsultationState): DoseCaps {
 
   // Starting-dose rules for a patient new to the medicine
   const startLow =
-    (patient.age !== null && patient.age >= 65) ||
+    isOver65(patient.age) ||
     medicalHistory.hepaticImpairment === "mild-moderate" ||
     medicalHistory.renalImpairment === "severe" ||
-    medications.takesAlphaBlockers ||
+    takesAnyAlphaBlocker(medications) ||
     medications.takesCYP3A4Inhibitors;
-  if (firstUse && startLow) {
-    caps.sildenafilMaxMg = Math.min(caps.sildenafilMaxMg, 25);
+
+  if (sildenafilFirstUse) {
+    const start = startLow ? 25 : 50;
+    caps.sildenafilMinMg = start;
+    caps.sildenafilMaxMg = Math.min(caps.sildenafilMaxMg, start);
+    caps.reasons.push(
+      startLow
+        ? "first sildenafil supply: START AT 25mg (over 65, alpha-blocker, CYP3A4 inhibitor, hepatic or severe renal impairment)"
+        : "first sildenafil supply: starting dose 50mg (titration needs a previous tolerated supply of sildenafil)"
+    );
+  }
+  if (tadalafilOnDemandFirstUse) {
+    caps.tadalafilOnDemandMinMg = 10;
     caps.tadalafilOnDemandMaxMg = Math.min(caps.tadalafilOnDemandMaxMg, 10);
-    caps.tadalafilDailyMaxMg = Math.min(caps.tadalafilDailyMaxMg, 2.5);
-    caps.reasons.push("starting dose: sildenafil 25mg, tadalafil on-demand 10mg, once-daily 2.5mg (over 65, alpha-blocker, CYP3A4 inhibitor, hepatic or renal impairment)");
+    caps.reasons.push("first tadalafil on-demand supply: starting dose 10mg");
   }
-  if (firstUse && medicalHistory.renalImpairment === "moderate") {
+  if (tadalafilDailyFirstUse || medicalHistory.renalImpairment === "moderate" || startLow) {
+    caps.tadalafilDailyMinMg = 2.5;
     caps.tadalafilDailyMaxMg = Math.min(caps.tadalafilDailyMaxMg, 2.5);
-    caps.reasons.push("moderate renal impairment: tadalafil once-daily start at 2.5mg");
+    caps.reasons.push(
+      tadalafilDailyFirstUse
+        ? "first tadalafil once-daily supply: start at 2.5mg"
+        : "tadalafil once-daily: start at 2.5mg (moderate renal impairment, over 65, alpha-blocker, CYP3A4 inhibitor, hepatic impairment)"
+    );
   }
+  // A patient who has titrated before may be decreased on tolerability; the
+  // floor is the document's lowest strength, so no further change.
   return caps;
 }
 
@@ -630,18 +705,38 @@ export function getAvailableDoses(
   caps?: DoseCaps
 ): readonly string[] {
   if (medicine === "sildenafil")
-    return SILDENAFIL_DOSES.filter((d) => !caps || mg(d) <= caps.sildenafilMaxMg);
+    return SILDENAFIL_DOSES.filter(
+      (d) => !caps || (mg(d) <= caps.sildenafilMaxMg && mg(d) >= caps.sildenafilMinMg)
+    );
   if (medicine === "tadalafil" && regimen === "daily")
-    return TADALAFIL_DAILY_DOSES.filter((d) => !caps || mg(d) <= caps.tadalafilDailyMaxMg);
+    return TADALAFIL_DAILY_DOSES.filter(
+      (d) => !caps || (mg(d) <= caps.tadalafilDailyMaxMg && mg(d) >= caps.tadalafilDailyMinMg)
+    );
   if (medicine === "tadalafil")
-    return TADALAFIL_ON_DEMAND_DOSES.filter((d) => !caps || mg(d) <= caps.tadalafilOnDemandMaxMg);
+    return TADALAFIL_ON_DEMAND_DOSES.filter(
+      (d) => !caps || (mg(d) <= caps.tadalafilOnDemandMaxMg && mg(d) >= caps.tadalafilOnDemandMinMg)
+    );
   return [];
 }
 
 export function getMaxQuantity(
   medicine: string,
-  regimen: string
+  regimen: string,
+  caps?: DoseCaps
 ): number {
   if (medicine === "tadalafil" && regimen === "daily") return 28;
+  // 10mg in any 72 hours: 8 tablets would be 24 days of daily use. Four is
+  // about a month at the permitted frequency.
+  if (medicine === "tadalafil" && caps?.tadalafil72HourRule) return 4;
   return 8;
+}
+
+/** True when the tadalafil on-demand 72-hour rule applies to this supply. */
+export function tadalafil72HourApplies(state: EDConsultationState): boolean {
+  const sel = state.medicineSelection;
+  return (
+    sel.medicine === "tadalafil" &&
+    sel.dosingRegimen === "on-demand" &&
+    getDoseCaps(state).tadalafil72HourRule
+  );
 }

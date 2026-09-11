@@ -6,7 +6,7 @@ import {
   validateConsentStep,
   validateSummaryStep,
 } from "../../shared/types";
-import { calculateAgeInMonths, hasIndication } from "./meningitis-b-clinical-logic";
+import { calculateAgeInMonths, hasIndication, daysSince, isIncreasedRisk, minimumIntervalDays } from "./meningitis-b-clinical-logic";
 
 export function validateStep(step: number, state: MeningitiBConsultationState): string | null {
   const ageMonths = calculateAgeInMonths(state.patient.dateOfBirth);
@@ -64,7 +64,10 @@ export function validateStep(step: number, state: MeningitiBConsultationState): 
         return "Bexsero is licensed from 2 months of age";
       }
       if (a.product === "trumenba" && !a.trumenbaSchedule) {
-        return "Trumenba: select the schedule (routine 2 dose, or 3 dose for increased risk or outbreak setting where advised)";
+        return "Trumenba: select the schedule (routine 2 dose, or 3 dose for individuals at increased risk)";
+      }
+      if (a.product === "trumenba" && a.trumenbaSchedule === "increased-risk" && !isIncreasedRisk(state)) {
+        return "Trumenba 3 dose schedule is for individuals at increased risk: asplenia, a complement disorder, complement inhibitor therapy or laboratory staff must be recorded on the indication step. Otherwise use the routine 2 dose schedule.";
       }
       if (!a.doseNumber) {
         return "Record which dose in the course this administration represents";
@@ -80,6 +83,33 @@ export function validateStep(step: number, state: MeningitiBConsultationState): 
       }
       if (a.product === "bexsero" && a.doseNumber === "booster-12-months" && ageMonths !== null && ageMonths < 12) {
         return "The Bexsero booster is given at 12 months of age";
+      }
+      if (a.product === "bexsero" && a.doseNumber === "booster-12-months" && ageMonths !== null && ageMonths >= 24) {
+        return "Booster at 12 months is the Bexsero infant course booster (12 months to under 2 years). Aged 2 years and over: 2 doses at least 1 month apart; select 1st or 2nd dose.";
+      }
+      if (a.product === "bexsero" && ageMonths !== null && ageMonths >= 12 && ageMonths < 24) {
+        if (!a.dosesInFirstYear) {
+          return "Bexsero, 12 months to under 2 years: record how many doses were given in the first year";
+        }
+        if (a.dosesInFirstYear === "2" && a.doseNumber !== "booster-12-months") {
+          return "Two doses in the first year: this child needs the booster at 12 months only; select Booster at 12 months";
+        }
+        if (a.dosesInFirstYear !== "2" && a.doseNumber === "booster-12-months") {
+          return "Fewer than 2 doses in the first year: 2 further doses at least 4 weeks apart; select 1st or 2nd dose";
+        }
+      }
+      // Interval since the previous dose.
+      if (a.doseNumber && a.doseNumber !== "1st") {
+        if (!a.previousDoseDate) {
+          return "Record the date of the previous dose in this course";
+        }
+        const since = daysSince(a.previousDoseDate);
+        if (since === null) return "Previous dose date is not a valid date";
+        if (since < 0) return "Previous dose date cannot be in the future";
+        const min = minimumIntervalDays(a.product, a.trumenbaSchedule, a.doseNumber);
+        if (min && since < min.days) {
+          return `Too soon: this dose is due ${min.label}. The previous dose was ${since} days ago; not before ${min.days} days.`;
+        }
       }
       if (!a.vaccinationDate1) {
         return "Date of administration is required";
@@ -98,6 +128,11 @@ export function validateStep(step: number, state: MeningitiBConsultationState): 
       }
       if (!a.expiryDate) {
         return "Expiry date is required";
+      }
+      {
+        const exp = daysSince(a.expiryDate);
+        if (exp === null) return "Expiry date is not a valid date";
+        if (exp > 0) return "This batch has expired. Do not use it.";
       }
       if (!a.courseComplete && !a.vaccinationDate2) {
         return "Book the next dose in the course at this appointment and record when it is due (or mark the course complete)";

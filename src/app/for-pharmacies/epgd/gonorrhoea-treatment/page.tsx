@@ -74,16 +74,29 @@ export default function GonorrhoeaToolPage() {
         {/* Status Message */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
           <p className="text-gray-700 text-sm">
-            This ePGD consultation tool is currently in development. We're creating a structured framework to support safe and effective gonorrhoea treatment delivery in pharmacy.
+            This ePGD consultation tool is currently in development. No electronic consultation record is created for this PGD yet.
           </p>
         </div>
 
         {/* Interim Guidance */}
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
-          <h3 className="font-semibold text-amber-900 mb-2">In the meantime</h3>
-          <p className="text-amber-900 text-sm">
-            Please refer to the printed PGD documentation for clinical guidance.
+          <h3 className="font-semibold text-amber-900 mb-2">Until the tool is live: keep a full written record</h3>
+          <p className="text-amber-900 text-sm mb-3">
+            Work from the signed PGD (download above). The platform does not store anything for this PGD, so every item in the
+            PGD&apos;s records list must be kept in writing, signed and dated, at the pharmacy for 8 years:
           </p>
+          <ul className="text-amber-900 text-sm space-y-1 list-disc list-inside">
+            <li>Valid informed consent, obtained before the injection</li>
+            <li>Patient name, address, date of birth and GP</li>
+            <li>Diagnosis basis: positive NAAT, or strong clinical suspicion with a clear epidemiological link; site of infection</li>
+            <li>Every exclusion asked about and absent; allergy history (cephalosporins, penicillins, lidocaine)</li>
+            <li>Adrenaline 1 in 1,000 immediately available and in date; written anaphylaxis protocol available</li>
+            <li>Ceftriaxone batch number and expiry; lidocaine 1% batch number and expiry; injection site; given intramuscularly, never intravenously</li>
+            <li>15 minute seated observation completed and the time recorded</li>
+            <li>Advice given (partner notification within 2 weeks, abstinence, test of cure at 2 weeks, injection site, allergic reaction, severe diarrhoea), PIL supplied</li>
+            <li>Advice given and the decision reached if the patient is excluded or declines; any adverse reaction and the action taken (Yellow Card)</li>
+            <li>Name and GPhC number of the pharmacist, and that the medicine was supplied under this PGD</li>
+          </ul>
         </div>
 
         {/* Disclaimer */}

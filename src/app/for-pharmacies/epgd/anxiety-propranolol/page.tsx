@@ -2,7 +2,7 @@ import AnxietyPropranololClient from "./AnxietyPropranololClient";
 import { PgdPageActions } from "@/components/PgdPageActions";
 
 export const metadata = {
-  title: "Anxiety — Propranolol ePGD | GRH Pharmacy",
+  title: "Anxiety: Propranolol ePGD | GRH Pharmacy",
   description: "Patient Group Direction for situational anxiety with propranolol",
 };
 

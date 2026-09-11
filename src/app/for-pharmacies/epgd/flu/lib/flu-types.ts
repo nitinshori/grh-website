@@ -55,6 +55,14 @@ export interface FluScreening {
   reactionDetails: string;
   /** Exclusion: already received an influenza vaccine for the 2026/27 season (other than a child under 9 attending for dose 2). */
   receivedThisSeason: boolean;
+  /**
+   * Child under 9: the only previous influenza vaccine was dose 1 of this
+   * season's two-dose first course. Asked separately from "ever had a flu
+   * vaccine" so that dose 2 can be recorded truthfully (adversarial review,
+   * 11 Sep 2026). Dose number and the dose 1 date are derived from it.
+   */
+  firstDoseThisSeason: boolean;
+  firstDoseThisSeasonDate: string;
   /** Exclusion: known hypersensitivity to the active substances or any excipient or residue in the SPC. */
   hypersensitivityToComponent: boolean;
   eggAllergy: boolean;
@@ -160,6 +168,8 @@ export const initialFluScreening = (): FluScreening => ({
   previousReactionType: '',
   reactionDetails: '',
   receivedThisSeason: false,
+  firstDoseThisSeason: false,
+  firstDoseThisSeasonDate: '',
   hypersensitivityToComponent: false,
   eggAllergy: false,
   eggAllergySeverity: '',

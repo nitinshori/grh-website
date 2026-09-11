@@ -26,7 +26,16 @@ export function EDMedicineSelector({
     selection.dosingRegimen,
     caps
   );
-  const maxQty = getMaxQuantity(selection.medicine, selection.dosingRegimen);
+  const maxQty = getMaxQuantity(selection.medicine, selection.dosingRegimen, caps);
+  const rule72 = !!caps?.tadalafil72HourRule;
+  const differsFromRecommendation =
+    !!recommendation &&
+    !!selection.medicine &&
+    (selection.medicine !== recommendation.medicine ||
+      selection.dose !== recommendation.dose ||
+      (selection.medicine === "tadalafil" &&
+        !!selection.dosingRegimen &&
+        selection.dosingRegimen !== recommendation.dosingRegimen));
   const sildenafilOpen = armAvailability ? armAvailability.sildenafil : true;
   const tadalafilOpen = armAvailability ? armAvailability.tadalafil : true;
   const dailyAllowed = caps ? caps.tadalafilDailyAllowed : true;
@@ -47,6 +56,8 @@ export function EDMedicineSelector({
     onChange("dosingRegimen", regimen);
     onChange("dose", "");
     onChange("quantity", regimen === "daily" ? 28 : 4);
+    onChange("pharmacistOverride", false);
+    onChange("overrideReason", "");
   };
 
   return (
@@ -160,8 +171,16 @@ export function EDMedicineSelector({
             >
               <p className="font-semibold text-navy-900 text-sm">On-demand</p>
               <p className="text-xs text-gray-500 mt-1">
-                Starting dose 10mg at least 30 minutes before sexual activity; 5mg to 20mg on efficacy and tolerability. Maximum one dose in any 24 hours. Up to 8 tablets.
+                Starting dose 10mg at least 30 minutes before sexual activity; 5mg to 20mg on efficacy and tolerability.{" "}
+                {rule72
+                  ? "With a potent CYP3A4 inhibitor: NOT MORE THAN 10mg IN ANY 72 HOURS. Up to 4 tablets."
+                  : "Maximum one dose in any 24 hours. Up to 8 tablets."}
               </p>
+              {rule72 && (
+                <p className="text-xs text-red-700 mt-1 font-medium">
+                  Potent CYP3A4 inhibitor (ritonavir, cobicistat, ketoconazole, itraconazole, clarithromycin): one 10mg dose in any 72 hour period.
+                </p>
+              )}
             </button>
 
             <button
@@ -228,7 +247,9 @@ export function EDMedicineSelector({
             Maximum {maxQty} tablets per supply
             {selection.dosingRegimen === "daily"
               ? " (once daily, one month)"
-              : " (about one month at twice-weekly use)"}
+              : rule72 && selection.medicine === "tadalafil"
+                ? " (10mg in any 72 hours: about one month)"
+                : " (about one month at twice-weekly use)"}
             . Decide the quantity on individual need and record the decision.
           </p>
           <input
@@ -261,44 +282,30 @@ export function EDMedicineSelector({
         </div>
       )}
 
-      {/* Override recommendation */}
-      {recommendation &&
-        selection.medicine &&
-        (selection.medicine !== recommendation.medicine ||
-          selection.dose !== recommendation.dose) && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={selection.pharmacistOverride}
-                onChange={(e) =>
-                  onChange("pharmacistOverride", e.target.checked)
-                }
-                className="mt-0.5 rounded border-gray-300 text-[color:var(--tenant-primary)] focus:ring-[color:var(--tenant-primary)]"
-              />
-              <div>
-                <p className="text-sm font-medium text-amber-800">
-                  I am overriding the recommended dose/medicine
-                </p>
-                <p className="text-xs text-amber-700 mt-1">
-                  You have selected a different medicine or dose from the
-                  auto-recommendation. Please confirm and provide a reason.
-                </p>
-              </div>
-            </label>
-            {selection.pharmacistOverride && (
-              <textarea
-                value={selection.overrideReason}
-                onChange={(e) =>
-                  onChange("overrideReason", e.target.value)
-                }
-                placeholder="Reason for override..."
-                rows={2}
-                className="mt-3 w-full px-3 py-2 border border-amber-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
-              />
-            )}
-          </div>
-        )}
+      {/* A choice between authorised regimens that differs from the
+          recommendation: the reason is required, not optional (adversarial
+          review, 11 Sep 2026). */}
+      {differsFromRecommendation && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+          <p className="text-sm font-medium text-amber-800">
+            You have chosen a different medicine, regimen or dose from the recommendation
+          </p>
+          <p className="text-xs text-amber-700 mt-1">
+            Only the document's authorised doses are offered. Record why this
+            one was chosen; the reason is printed on the record.
+          </p>
+          <textarea
+            value={selection.overrideReason}
+            onChange={(e) => {
+              onChange("overrideReason", e.target.value);
+              onChange("pharmacistOverride", e.target.value.trim().length > 0);
+            }}
+            placeholder="Reason for this choice (required)..."
+            rows={2}
+            className="mt-3 w-full px-3 py-2 border border-amber-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
+          />
+        </div>
+      )}
     </div>
   );
 }

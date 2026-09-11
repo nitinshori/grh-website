@@ -30,12 +30,15 @@ export function getAllAlerts(state: BVConsultationState): ClinicalAlert[] {
     });
   }
 
+  // Caution, not a stop: the inclusion is a clinical diagnosis of bacterial
+  // vaginosis, confirmed or presumptive on clinical grounds. A first episode
+  // is the commonest presentation and is within the PGD.
   if (state.medicalHistory.firstEpisode) {
     alerts.push({
-      severity: "stop",
+      severity: "caution",
       code: "FIRST_EPISODE",
       message: "First episode of BV",
-      detail: "Requires GP diagnosis confirmation before treatment.",
+      detail: "Within the PGD: a presumptive diagnosis on clinical grounds is sufficient. Confirm the typical features (thin greyish-white discharge, fishy odour) and exclude thrush and STI before supply.",
     });
   }
 
@@ -174,6 +177,7 @@ export function getMedicineSelectionError(state: BVConsultationState): string | 
     if (state.medications.lithium) return "Concurrent lithium therapy excludes oral metronidazole. Select the vaginal gel or refer.";
     if (state.medications.disulfiram) return "Concurrent disulfiram therapy excludes oral metronidazole. Select the vaginal gel or refer.";
     if (state.medicalHistory.cnsDiseaseOrBloodDyscrasia) return "Active CNS disease or blood dyscrasia excludes oral metronidazole. Select the vaginal gel or refer.";
+    if (choice === "metronidazole-400" && !state.medicineSelection.courseDays) return "Select the course length (5, 6 or 7 days)";
     if (!state.medicineSelection.abilityConfirmed) return "Confirm the patient is able to swallow tablets";
   } else {
     if (age !== null && age < 18) return "Metronidazole vaginal gel (Zidoval) is for women aged 18 to 65; 16 and 17 year olds are treated under the oral arm";
@@ -182,16 +186,31 @@ export function getMedicineSelectionError(state: BVConsultationState): string | 
   return null;
 }
 
+/** Quantity supplied, in the document's terms, for the regimen chosen. */
+export function quantitySupplied(state: BVConsultationState): string {
+  const ms = state.medicineSelection;
+  if (ms.medicineChoice === "metronidazole-400") {
+    const days = parseInt(ms.courseDays, 10);
+    return isNaN(days) ? "10 to 14 tablets (400 mg each)" : `${days * 2} tablets (400 mg each) for ${days} days`;
+  }
+  if (ms.medicineChoice === "metronidazole-2g") return "5 tablets (400 mg each): 2 g single dose";
+  if (ms.medicineChoice === "metronidazole-gel") return "1 tube (40 g, 8 applications of 5 g)";
+  return "";
+}
+
 export function calculateDoseRecommendation(state: BVConsultationState): DoseRecommendation | null {
   const choice = state.medicineSelection.medicineChoice;
+  const days = state.medicineSelection.courseDays;
 
   if (choice === "metronidazole-400") {
     return {
       medicine: "Metronidazole 400mg tablets (oral)",
       dose: "400mg",
       frequency: "Twice daily",
-      duration: "5-7 days",
-      dosingRegimen: "400 mg twice daily for 5 to 7 days (preferred regimen); 10 to 14 tablets supplied; swallowed with water",
+      duration: days ? `${days} days` : "5-7 days",
+      dosingRegimen: days
+        ? `400 mg twice daily for ${days} days (preferred regimen); ${parseInt(days, 10) * 2} tablets supplied; swallowed with water`
+        : "400 mg twice daily for 5 to 7 days (preferred regimen); 10 to 14 tablets supplied; swallowed with water",
       reason: "Uncomplicated bacterial vaginosis",
     };
   } else if (choice === "metronidazole-2g") {
@@ -200,7 +219,7 @@ export function calculateDoseRecommendation(state: BVConsultationState): DoseRec
       dose: "2g",
       frequency: "Single dose",
       duration: "One-off",
-      dosingRegimen: "2 g (five 400 mg tablets) as a single oral dose; alternative, less effective than the 5 to 7 day course",
+      dosingRegimen: "2 g (five 400 mg tablets) as a single oral dose; 5 tablets supplied; alternative, less effective than the 5 to 7 day course",
       reason: "Uncomplicated bacterial vaginosis",
     };
   } else if (choice === "metronidazole-gel") {

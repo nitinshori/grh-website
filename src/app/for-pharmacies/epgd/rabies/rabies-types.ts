@@ -34,6 +34,13 @@ export interface RabiesScreening {
   eggAllergySeverity: string;
   /** Hypersensitivity to polymyxin B, streptomycin or neomycin, or any antibiotic of the same class (Verorab). */
   antibioticHypersensitivity: boolean;
+  /**
+   * Where antibioticHypersensitivity is ticked: does it extend to neomycin?
+   * Rabipur contains traces of neomycin, so 'yes' excludes both products.
+   */
+  hypersensitivityIncludesNeomycin: 'yes' | 'no' | '';
+  /** Advice given where the patient is excluded (PGD records row). */
+  exclusionAdviceGiven: string;
   /** Bleeding disorder, thrombocytopenia or anticoagulation: deep subcutaneous route. */
   bleedingDisorder: boolean;
   temperature: number | null;
@@ -47,8 +54,10 @@ export interface RabiesContraindications {
   anaphylaxisHistory: boolean;
   /** Rabipur is excluded; Verorab may be a suitable alternative. */
   severeEggAllergy: boolean;
-  /** Verorab is excluded; Rabipur may be used. */
+  /** Verorab is excluded; Rabipur may be used only where the hypersensitivity does not extend to neomycin. */
   antibioticHypersensitivity: boolean;
+  /** Neomycin hypersensitivity: Rabipur is excluded as well (it contains traces of neomycin). */
+  neomycinHypersensitivity: boolean;
   acuteFebrileIllness: boolean;
   ageAppropriate: boolean;
 }
@@ -68,6 +77,8 @@ export interface RabiesVaccineAdministration {
   offLabelConsent: boolean;
   administeredBy: string;
   timeAdministered: string;
+  /** Date the previous dose in this course was given. Required for every dose other than the first. */
+  previousDoseDate: string;
   nextDueDates: string;
 }
 
@@ -129,6 +140,8 @@ export const initialRabiesScreening = (): RabiesScreening => ({
   eggAllergy: false,
   eggAllergySeverity: '',
   antibioticHypersensitivity: false,
+  hypersensitivityIncludesNeomycin: '',
+  exclusionAdviceGiven: '',
   bleedingDisorder: false,
   temperature: null,
   consentBasis: '',
@@ -140,6 +153,7 @@ export const initialRabiesContraindications = (): RabiesContraindications => ({
   anaphylaxisHistory: false,
   severeEggAllergy: false,
   antibioticHypersensitivity: false,
+  neomycinHypersensitivity: false,
   acuteFebrileIllness: false,
   ageAppropriate: false,
 });
@@ -157,6 +171,7 @@ export const initialRabiesVaccineAdministration = (): RabiesVaccineAdministratio
   offLabelConsent: false,
   administeredBy: '',
   timeAdministered: '',
+  previousDoseDate: '',
   nextDueDates: '',
 });
 

@@ -20,14 +20,19 @@ import {
   createInitialConsultationState,
   STEP_LABELS,
   PGD_VERSION_LINE,
+  fixedQuantity,
+  addDays,
+  REVIEW_INTERVAL_DAYS,
   type GenitalWartsConsultationState,
 } from "./lib/genital-warts-types";
 import {
   getAllAlerts,
+  hasHardStops,
   suggestedAgent,
   doseSchedule,
 } from "./lib/genital-warts-clinical-logic";
 import { validateStep } from "./lib/genital-warts-validation";
+import { GenitalWartsSummaryReport } from "./components/GenitalWartsSummaryReport";
 
 export function GenitalWartsClient() {
   const [currentStep, setCurrentStep] = useState(0);
@@ -101,9 +106,13 @@ export function GenitalWartsClient() {
   }
 
   const alerts = getAllAlerts(state);
+  const hasStops = hasHardStops(state);
   const suggestion = suggestedAgent(state);
   const schedule = doseSchedule(state.treatment.agent);
-  const canProceed = validateStep(currentStep, effectiveState);
+  const validationError = validateStep(currentStep, effectiveState);
+  // A stop anywhere disables Next on every step; the progress bar only goes
+  // backwards, so this is the only forward path.
+  const canProceed = !validationError && !hasStops;
 
   const handleNext = () =>
     setCurrentStep((s) => Math.min(s + 1, STEP_LABELS.length - 1));
@@ -122,25 +131,71 @@ export function GenitalWartsClient() {
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
       },
-      clinicalData: effectiveState as unknown as Record<string, unknown>,
-      outcome: "completed",
+      clinicalData: { ...effectiveState, alerts } as unknown as Record<string, unknown>,
+      outcome: hasStops ? "not_supplied" : "completed",
+      medicine:
+        !hasStops && state.treatment.agent
+          ? {
+              name:
+                state.treatment.agent === "imiquimod"
+                  ? "Imiquimod 5% cream"
+                  : state.treatment.podophyllotoxinForm === "cream"
+                    ? "Podophyllotoxin 0.15% cream"
+                    : "Podophyllotoxin 0.5% solution",
+              dose: schedule?.regimen,
+              duration: schedule?.course,
+              quantity: state.treatment.quantitySupplied,
+            }
+          : undefined,
       summary: {
         pharmacistName: effectiveSummary.pharmacistName,
         pharmacistGPhC: effectiveSummary.pharmacistGPhC,
+        pharmacyName: effectiveSummary.pharmacyName,
+        pharmacyAddress: effectiveSummary.pharmacyAddress,
         consultationDate: effectiveSummary.consultationDate,
         consultationTime: effectiveSummary.consultationTime,
+        clinicalNotes: [
+          hasStops && state.summary.referralAdvice ? `Advice given on referral: ${state.summary.referralAdvice}` : "",
+          state.summary.adverseDrugReactions ? `Adverse drug reactions: ${state.summary.adverseDrugReactions}` : "",
+          state.summary.clinicalNotes,
+        ]
+          .filter(Boolean)
+          .join("\n"),
       },
+      consent: { notifyGp: state.consent.notifyGp },
     }),
-    [state, effectiveState, effectiveSummary],
+    [state, effectiveState, effectiveSummary, hasStops, alerts, schedule],
   );
+
+  const handleNewConsultation = useCallback(() => {
+    setState(createInitialConsultationState());
+    setCurrentStep(0);
+  }, []);
 
   const isPodo = state.treatment.agent === "podophyllotoxin";
 
   return (
-    <div className="space-y-6">
+    <>
+    <div className="space-y-6 print:hidden">
       <ProgressBar current={currentStep + 1} total={STEP_LABELS.length} />
 
       {alerts.length > 0 && <AlertBanner alerts={alerts} />}
+
+      {hasStops && (
+        <div className="p-4 bg-red-50 rounded-lg border border-red-200 space-y-2">
+          <p className="text-sm font-medium text-red-800">
+            Not supplied under this PGD. Record the advice given and the referral made, then use "Save as not supplied".
+          </p>
+          <TextArea
+            label="Advice given and decision reached (PGD records requirement)"
+            value={state.summary.referralAdvice}
+            onChange={(v) => updateSummary("referralAdvice", v)}
+            placeholder="e.g. Referred to the sexual health clinic for assessment; advised on transmission and partner screening"
+            rows={2}
+            required
+          />
+        </div>
+      )}
 
       <StepWrapper
         title={STEP_LABELS[currentStep]}
@@ -150,13 +205,15 @@ export function GenitalWartsClient() {
         onPrev={handlePrev}
         canProceed={canProceed}
         validationError={
-          !canProceed
-            ? alerts.some((a) => a.severity === "stop")
+          validationError
+            ? validationError
+            : hasStops
               ? "This patient is excluded under the PGD. Review the alerts above, advise on alternatives and refer as appropriate."
-              : "Please complete all required fields"
-            : null
+              : null
         }
+        isBlocked={hasStops}
         getConsultationData={getConsultationData}
+        onNewConsultation={handleNewConsultation}
       >
         {currentStep === 0 && (
           <PatientDetailsStep
@@ -234,14 +291,14 @@ export function GenitalWartsClient() {
                 label="Number of warts"
                 value={state.assessment.wartCount}
                 onChange={(v) => updateAssessment("wartCount", v)}
-                min={0}
+                min={1}
                 required
               />
               <NumberInput
                 label="Total treatment area (podophyllotoxin: up to and including 4 cm2)"
                 value={state.assessment.treatmentAreaCm2}
                 onChange={(v) => updateAssessment("treatmentAreaCm2", v)}
-                min={0}
+                min={0.1}
                 unit="cm2"
                 required
               />
@@ -307,9 +364,16 @@ export function GenitalWartsClient() {
               onChange={(v) => updateAssessment("openWoundsPresent", v)}
             />
             <Checkbox
-              label="Known hypersensitivity to the intended agent"
-              checked={state.assessment.hypersensitivityToAgent}
-              onChange={(v) => updateAssessment("hypersensitivityToAgent", v)}
+              label="Known hypersensitivity to podophyllotoxin or its excipients"
+              checked={state.assessment.hypersensitivityPodophyllotoxin}
+              onChange={(v) => updateAssessment("hypersensitivityPodophyllotoxin", v)}
+              description="Excludes the podophyllotoxin arm only; imiquimod may still be used if otherwise suitable."
+            />
+            <Checkbox
+              label="Known hypersensitivity to imiquimod or its excipients"
+              checked={state.assessment.hypersensitivityImiquimod}
+              onChange={(v) => updateAssessment("hypersensitivityImiquimod", v)}
+              description="Excludes the imiquimod arm only; podophyllotoxin may still be used if otherwise suitable."
             />
 
             <div className="border-t border-gray-200 pt-4 space-y-3">
@@ -367,12 +431,19 @@ export function GenitalWartsClient() {
             <SelectInput
               label="Agent supplied"
               value={state.treatment.agent}
-              onChange={(v) =>
-                updateTreatment(
-                  "agent",
-                  v as GenitalWartsConsultationState["treatment"]["agent"],
-                )
-              }
+              onChange={(v) => {
+                const agent = v as GenitalWartsConsultationState["treatment"]["agent"];
+                setState((prev) => ({
+                  ...prev,
+                  treatment: {
+                    ...prev.treatment,
+                    agent,
+                    podophyllotoxinForm: agent === "podophyllotoxin" ? prev.treatment.podophyllotoxinForm : "",
+                    quantitySupplied: fixedQuantity(agent, agent === "podophyllotoxin" ? prev.treatment.podophyllotoxinForm : ""),
+                    reviewDate: agent ? addDays(prev.summary.consultationDate, REVIEW_INTERVAL_DAYS[agent]) : "",
+                  },
+                }));
+              }}
               options={[
                 {
                   value: "podophyllotoxin",
@@ -388,7 +459,16 @@ export function GenitalWartsClient() {
               <SelectInput
                 label="Podophyllotoxin form"
                 value={state.treatment.podophyllotoxinForm}
-                onChange={(v) => updateTreatment("podophyllotoxinForm", v)}
+                onChange={(v) =>
+                  setState((prev) => ({
+                    ...prev,
+                    treatment: {
+                      ...prev.treatment,
+                      podophyllotoxinForm: v,
+                      quantitySupplied: fixedQuantity("podophyllotoxin", v),
+                    },
+                  }))
+                }
                 options={[
                   { value: "solution", label: "0.5% solution, 15 mL bottle" },
                   { value: "cream", label: "0.15% cream, 5 g tube" },
@@ -419,13 +499,39 @@ export function GenitalWartsClient() {
               required
             />
 
+            <div className="grid sm:grid-cols-2 gap-4">
+              <NumberInput
+                label={isPodo ? "Treatment cycle this supply is for (1 to 4)" : "Dispensing number in this course (1 to 4)"}
+                value={state.treatment.supplyNumber}
+                onChange={(v) => updateTreatment("supplyNumber", v)}
+                min={1}
+                max={4}
+                required
+              />
+              {state.treatment.supplyNumber !== null && state.treatment.supplyNumber >= 3 && (
+                <SelectInput
+                  label={isPodo ? "Outcome of the review after 2 cycles" : "Outcome of the 8-week review"}
+                  value={state.treatment.priorReviewOutcome}
+                  onChange={(v) =>
+                    updateTreatment(
+                      "priorReviewOutcome",
+                      v as GenitalWartsConsultationState["treatment"]["priorReviewOutcome"],
+                    )
+                  }
+                  options={[
+                    { value: "persisting", label: "Warts persist: continue treatment" },
+                    { value: "cleared", label: "Complete clearance: stop treatment (no supply)" },
+                  ]}
+                  required
+                />
+              )}
+            </div>
+
             <TextInput
-              label="Quantity supplied"
+              label="Quantity supplied (fixed by the PGD for this agent and form)"
               value={state.treatment.quantitySupplied}
-              onChange={(v) => updateTreatment("quantitySupplied", v)}
-              placeholder={
-                isPodo ? "e.g. 1 x 15 mL bottle" : "e.g. 12 sachets"
-              }
+              onChange={() => undefined}
+              disabled
               required
             />
 
@@ -446,7 +552,7 @@ export function GenitalWartsClient() {
             </div>
 
             <TextInput
-              label="Review date"
+              label={isPodo ? "Review date (PGD: after 2 cycles, within 14 days)" : "Review date (PGD: at 8 weeks, within 56 days)"}
               type="date"
               value={state.treatment.reviewDate}
               onChange={(v) => updateTreatment("reviewDate", v)}
@@ -594,6 +700,17 @@ export function GenitalWartsClient() {
               value={effectiveSummary.pharmacyName}
               onChange={(v) => updateSummary("pharmacyName", v)}
             />
+            <TextInput
+              label="Pharmacy address"
+              value={effectiveSummary.pharmacyAddress}
+              onChange={(v) => updateSummary("pharmacyAddress", v)}
+            />
+            <TextArea
+              label="Adverse drug reactions reported and actions taken (leave blank if none)"
+              value={effectiveSummary.adverseDrugReactions}
+              onChange={(v) => updateSummary("adverseDrugReactions", v)}
+              rows={2}
+            />
             <TextArea
               label="Clinical notes"
               value={effectiveSummary.clinicalNotes}
@@ -612,15 +729,22 @@ export function GenitalWartsClient() {
               {state.treatment.agent === "imiquimod"
                 ? "Imiquimod 5% cream supplied."
                 : "Podophyllotoxin supplied."}{" "}
-              Review booked for {state.treatment.reviewDate || "a date to be arranged"}.
+              {state.treatment.quantitySupplied}. Review booked for {state.treatment.reviewDate || "a date to be arranged"}.
             </p>
             <p className="text-xs text-green-800 mt-1">Supplied under the {PGD_VERSION_LINE}.</p>
             {schedule && (
               <p className="text-xs text-green-800 mt-2">{schedule.review}</p>
             )}
+            <p className="text-xs text-green-800 mt-2">
+              "Save & Print Record" saves the consultation and prints the full PGD consultation record (patient, consent, assessment, exclusions, medicine, counselling and practitioner declaration).
+            </p>
           </div>
         )}
       </StepWrapper>
     </div>
+    <div className="hidden print:block">
+      <GenitalWartsSummaryReport state={effectiveState} alerts={alerts} />
+    </div>
+    </>
   );
 }

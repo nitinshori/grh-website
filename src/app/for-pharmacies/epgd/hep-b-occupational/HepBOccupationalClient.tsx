@@ -8,10 +8,33 @@ import { AlertBanner } from "../shared/components/AlertBanner";
 import { PatientDetailsStep } from "../shared/steps/PatientDetailsStep";
 import { ConsentStep } from "../shared/steps/ConsentStep";
 import { TextInput, Checkbox, SelectInput, TextArea } from "../shared/components/FormInputs";
-import type { ClinicalAlert } from "../shared/types";
-import { calculateAge, validatePatientStep, validateConsentStep } from "../shared/types";
-
+import { calculateAge } from "../shared/types";
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
+import {
+  PGD_VERSION,
+  VACCINE_LABEL,
+  STEP_LABELS,
+  TOTAL_STEPS,
+  createInitialHepBOccupationalState,
+  type HepBState,
+  type Vaccine,
+  type Schedule,
+  type DoseNumber,
+  type PreviousVaccination,
+  type ExclusionReferral,
+} from "./lib/hep_b_occupational-types";
+import {
+  getAllAlerts,
+  hasHardStops,
+  getDoseRule,
+  doseOptionsFor,
+  computeNextDoseDate,
+  parseLocalDate,
+  todayLocal,
+  daysBetween,
+} from "./lib/hep_b_occupational-clinical-logic";
+import { validateStep } from "./lib/hep_b_occupational-validation";
+import { HepBOccupationalSummaryReport } from "./components/HepBOccupationalSummaryReport";
 
 /**
  * Hepatitis B (Engerix B / HBvaxPRO) ePGD, aligned to the signed document
@@ -20,279 +43,79 @@ import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
  * issued 11 September 2026. Individuals aged 16 years and over; under 16
  * refers. Standard (0, 1, 6 months) and accelerated (0, 1, 2, 12 months)
  * schedules only.
+ *
+ * Fix round, 11 September 2026 (adversarial review findings_2): the clinical
+ * logic, types and validators now live in lib/ and are what the client runs;
+ * the vaccine is chosen, not pre-selected; the previous dose date is captured
+ * and the interval checked; the next dose date is computed; a stop on any
+ * step offers "Save as not supplied" with the advice recorded; the final step
+ * prints a real record; New Consultation resets everything.
  */
-const PGD_VERSION = "Hepatitis B (Engerix B / HBvaxPRO) PGD v004, issued 11 September 2026";
-
-type Vaccine = "engerix-20" | "hbvaxpro-10";
-const VACCINE_LABEL: Record<Vaccine, string> = {
-  "engerix-20": "Engerix B 20 micrograms/1 mL, 1 mL per dose (16 years and over)",
-  "hbvaxpro-10": "HBvaxPRO 10 micrograms/1 mL, 1 mL per dose (16 years and over)",
-};
-
-interface HepBState {
-  patient: { firstName: string; lastName: string; dateOfBirth: string; age: number | null; gpName: string; gpPractice: string; gpAddress: string; gpPhone: string; gpEmail: string; gpOdsCode: string; nhsNumber: string; address: string; phone: string; email: string };
-  consent: { informedConsentGiven: boolean; idVerified: boolean; idType: string; patientAwarePrivateService: boolean };
-  assessment: {
-    reasonForVaccination: string;
-    previousVaccination: string;
-    antiHBsLevelChecked: boolean;
-    antiHBsLevel: string;
-    knownHBPositive: boolean;
-    knownHCVPositive: boolean;
-    knownHIVPositive: boolean;
-    currentAcuteIllness: boolean;
-    allergyVaccineComponent: boolean;
-    immunosuppressed: boolean;
-    pregnancy: boolean;
-    ageUnder16: boolean;
-    previousSevereReaction: boolean;
-    bleedingDisorderOrAnticoagulant: boolean;
-    eligibleUnderGuidance: boolean;
-  };
-  treatment: {
-    vaccine: Vaccine;
-    schedule: string;
-    doseNumber: string;
-    injectionSite: string;
-    batchNumber: string;
-    expiryDate: string;
-    adrenalineAvailable: boolean;
-    observationPeriodCompleted: boolean;
-  };
-  counselling: {
-    counsellingProvided: boolean;
-    pilSupplied: boolean;
-    followUpAdviceGiven: boolean;
-    nextDoseDate: string;
-    courseComplete: boolean;
-    serologyRecommended: boolean;
-    postExposureProtocolExplained: boolean;
-    counsellingNotes: string;
-  };
-  summary: {
-    pharmacistName: string;
-    pharmacistGPhC: string;
-    pharmacyName: string;
-    pharmacyAddress: string;
-    consultationDate: string;
-    consultationTime: string;
-    clinicalNotes: string;
-  };
-}
-
 export default function HepBOccupationalClient() {
   const [currentStep, setCurrentStep] = useState(0);
+  const [state, setState] = useState<HepBState>(createInitialHepBOccupationalState);
 
-  const [state, setState] = useState<HepBState>({
-    patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", gpAddress: "", gpPhone: "", gpEmail: "", gpOdsCode: "", nhsNumber: "", address: "", phone: "", email: "" },
-    consent: { informedConsentGiven: false, idVerified: false, idType: "", patientAwarePrivateService: false },
-    assessment: {
-      reasonForVaccination: "",
-      previousVaccination: "",
-      antiHBsLevelChecked: false,
-      antiHBsLevel: "",
-      knownHBPositive: false,
-      knownHCVPositive: false,
-      knownHIVPositive: false,
-      currentAcuteIllness: false,
-      allergyVaccineComponent: false,
-      immunosuppressed: false,
-      pregnancy: false,
-      ageUnder16: false,
-      previousSevereReaction: false,
-      bleedingDisorderOrAnticoagulant: false,
-      eligibleUnderGuidance: false,
-    },
-    treatment: {
-      vaccine: "engerix-20",
-      schedule: "",
-      doseNumber: "",
-      injectionSite: "",
-      batchNumber: "",
-      expiryDate: "",
-      adrenalineAvailable: false,
-      observationPeriodCompleted: false,
-    },
-    counselling: {
-      counsellingProvided: false,
-      pilSupplied: false,
-      followUpAdviceGiven: false,
-      nextDoseDate: "",
-      courseComplete: false,
-      serologyRecommended: false,
-      postExposureProtocolExplained: false,
-      counsellingNotes: "",
-    },
-    summary: {
-      pharmacistName: "",
-      pharmacistGPhC: "",
-      pharmacyName: "",
-      pharmacyAddress: "",
-      consultationDate: new Date().toISOString().split("T")[0],
-      consultationTime: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
-      clinicalNotes: "",
-    },
-  });
+  const handleNewConsultation = useCallback(() => {
+    setState(createInitialHepBOccupationalState());
+    setCurrentStep(0);
+  }, []);
 
-
-  // Auto-fill pharmacist details from logged-in user. Refires when fields
-
-  // are empty (e.g. after "New Consultation"), so subsequent patients fill too.
-
-  const __pharmProfile = usePharmacistProfile();
-
+  // Auto-fill pharmacist details from the logged-in user. Refires when the
+  // fields are empty (after New Consultation), so subsequent patients fill too.
+  const profile = usePharmacistProfile();
   useEffect(() => {
-
-    if (!__pharmProfile) return;
-
-    if ((state as any).summary?.pharmacistName || (state as any).summary?.pharmacistGPhC) return;
-
-    setState((prev: any) => ({ ...prev, summary: { ...(prev.summary || {}), pharmacistName: __pharmProfile.name, pharmacistGPhC: __pharmProfile.gphcNumber, pharmacyName: __pharmProfile.pharmacyName, pharmacyAddress: __pharmProfile.pharmacyAddress } }));
-
-  }, [__pharmProfile, (state as any).summary?.pharmacistName, (state as any).summary?.pharmacistGPhC]);
-
+    if (!profile) return;
+    if (state.summary.pharmacistName || state.summary.pharmacistGPhC) return;
+    setState((prev) => ({
+      ...prev,
+      summary: { ...prev.summary, pharmacistName: profile.name, pharmacistGPhC: profile.gphcNumber, pharmacyName: profile.pharmacyName, pharmacyAddress: profile.pharmacyAddress },
+    }));
+  }, [profile, state.summary.pharmacistName, state.summary.pharmacistGPhC]);
 
   const isUnder16 = state.patient.age !== null && state.patient.age < 16;
 
-  // Alerts are derived from state so a stop can never be evaluated against a
-  // stale copy (the previous implementation checked the old alerts array on
-  // the same tick it requested a re-evaluation).
-  const alerts = useMemo<ClinicalAlert[]>(() => {
-    const newAlerts: ClinicalAlert[] = [];
+  const alerts = useMemo(() => getAllAlerts(state), [state]);
+  const hasStopAlerts = hasHardStops(alerts);
+  const stopReason = alerts.find((a) => a.severity === "stop");
 
-    if (isUnder16) {
-      newAlerts.push({ severity: "stop", code: "AGE_UNDER_16", message: "Aged under 16 years", detail: "Children under 16 are not vaccinated under this PGD. Refer to the GP or an appropriate immunisation service." });
-    }
+  // Next dose date and course-complete flag are derived from the schedule and
+  // dose number, never typed: the document requires "the date the next dose is
+  // due" to be recorded, and a typed date is whatever was typed.
+  const nextDoseDate = computeNextDoseDate(state.treatment.schedule, state.treatment.doseNumber);
+  const doseRule = getDoseRule(state.treatment.schedule, state.treatment.doseNumber);
+  const courseComplete = doseRule !== null && doseRule.nextMonths === null;
 
-    if (state.assessment.knownHBPositive) {
-      newAlerts.push({ severity: "stop", code: "HBV_POSITIVE", message: "Known Hepatitis B Positive", detail: "Do not vaccinate. Refer for specialist care." });
-    }
+  const previousDoseRequired = doseRule !== null && doseRule.minDays !== null;
+  const prevDate = parseLocalDate(state.treatment.previousDoseDate);
+  const daysSincePrevious = prevDate ? daysBetween(prevDate, todayLocal()) : null;
 
-    if (state.assessment.allergyVaccineComponent) {
-      newAlerts.push({ severity: "stop", code: "VACCINE_ALLERGY", message: "Known hypersensitivity to the active substance or any excipient", detail: "Excluded. Do not administer. Advise on alternatives and inform or refer to the GP." });
-    }
-
-    if (state.assessment.previousSevereReaction) {
-      newAlerts.push({ severity: "stop", code: "SEVERE_REACTION", message: "Previous allergic reaction to any hepatitis B vaccine", detail: "Excluded. Do not vaccinate. Inform or refer to the GP." });
-    }
-
-    if (state.assessment.currentAcuteIllness) {
-      newAlerts.push({ severity: "stop", code: "ACUTE_ILLNESS", message: "Acute severe febrile illness", detail: "Excluded: postpone until recovered. Advise when to return." });
-    }
-
-    if (state.assessment.knownHCVPositive || state.assessment.knownHIVPositive) {
-      newAlerts.push({ severity: "caution", code: "HCV_HIV", message: "HCV/HIV Co-infection", detail: "May need specialist vaccination schedule. Consider higher dose or additional doses." });
-    }
-
-    if (state.assessment.immunosuppressed) {
-      newAlerts.push({ severity: "caution", code: "IMMUNOSUPPRESSED", message: "Immunosuppressed Patient", detail: "May need higher dose or additional doses. Consult specialist." });
-    }
-
-    if (state.assessment.pregnancy) {
-      newAlerts.push({ severity: "caution", code: "PREGNANCY", message: "Pregnancy", detail: "Vaccine can be given if high occupational risk. Consider timing and specialist advice." });
-    }
-
-    if (state.assessment.bleedingDisorderOrAnticoagulant) {
-      newAlerts.push({ severity: "caution", code: "BLEEDING", message: "Bleeding disorder or anticoagulant therapy", detail: "Use with caution: fine needle, firm pressure without rubbing for at least 2 minutes, advise on the risk of haematoma." });
-    }
-
-    if (state.assessment.previousVaccination === "full-course" && state.assessment.antiHBsLevelChecked && state.assessment.antiHBsLevel === "above-10") {
-      newAlerts.push({ severity: "caution", code: "GOOD_IMMUNITY", message: "Good Immunity Documented", detail: "Anti-HBs >10 IU/L. Revaccination may not be necessary. Consider workplace exposure risk." });
-    }
-
-    return newAlerts;
-  }, [state.assessment, isUnder16]);
-
-  const hasStopAlerts = alerts.some(a => a.severity === "stop");
-
-  const assessmentError = (() => {
-    if (!state.assessment.reasonForVaccination) return "Select the reason for vaccination";
-    if (state.assessment.previousVaccination === "") return "Record previous hepatitis B vaccination";
-    if (!state.assessment.eligibleUnderGuidance) return "Confirm the individual is eligible under national immunisation or occupational health guidance";
-    const stop = alerts.find(a => a.severity === "stop");
-    if (stop) return `Exclusion present: ${stop.message}. ${stop.detail}`;
-    return null;
-  })();
-
-  const treatmentError = (() => {
-    if (!state.treatment.adrenalineAvailable) return "Confirm adrenaline 1 in 1,000 is immediately available in the room, in date, with a telephone and a written anaphylaxis protocol";
-    if (!state.treatment.vaccine) return "Select the vaccine";
-    if (!state.treatment.schedule) return "Select the schedule";
-    if (!state.treatment.doseNumber) return "Record the dose number";
-    if (!state.treatment.injectionSite) return "Record the injection site";
-    if (!state.treatment.batchNumber) return "Record the batch number";
-    if (!state.treatment.expiryDate) return "Record the expiry date";
-    if (!state.treatment.observationPeriodCompleted) return "Confirm the 15 minute post-vaccination observation was completed";
-    return null;
-  })();
-
-  const counsellingError = (() => {
-    if (!state.counselling.pilSupplied) return "Confirm the patient information leaflet was supplied";
-    if (!state.counselling.followUpAdviceGiven) return "Confirm the follow-up advice was given";
-    if (!state.counselling.counsellingProvided) return "Confirm counselling was provided";
-    if (!state.counselling.courseComplete && !state.counselling.nextDoseDate) return "Record the date the next dose is due, or mark the course complete";
-    if (!state.counselling.counsellingNotes) return "Record counselling notes";
-    return null;
-  })();
-
-  const summaryError = (() => {
-    if (!state.summary.pharmacistName) return "Pharmacist name is required";
-    if (!state.summary.pharmacistGPhC) return "GPhC registration number is required";
-    if (!state.summary.pharmacyName) return "Pharmacy name is required";
-    return null;
-  })();
-
-  const stepErrors: (string | null)[] = [
-    validatePatientStep(state.patient, { minAge: 16 }),
-    validateConsentStep(state.consent),
-    assessmentError,
-    treatmentError,
-    counsellingError,
-    summaryError,
-    null,
-  ];
-  const validationError = stepErrors[currentStep] ?? null;
-  const canProceed = validationError === null;
+  const validationError = hasStopAlerts && currentStep !== 2 && currentStep !== 3 && stopReason
+    ? `Exclusion criteria met: ${stopReason.message}. Record the advice given and save as not supplied.`
+    : validateStep(currentStep, state, alerts);
+  // A stop anywhere disables Next on every step and Save & Print on the last.
+  const canProceed = validationError === null && !hasStopAlerts;
 
   const handleNext = useCallback(() => {
     if (!canProceed) return;
-    setCurrentStep(prev => Math.min(prev + 1, 6));
+    setCurrentStep((prev) => Math.min(prev + 1, TOTAL_STEPS - 1));
   }, [canProceed]);
 
   const handlePrev = useCallback(() => {
-    setCurrentStep(prev => Math.max(prev - 1, 0));
+    setCurrentStep((prev) => Math.max(prev - 1, 0));
   }, []);
 
-  const getNextDoseDatePlus30Days = () => {
-    const today = new Date();
-    const nextDose = new Date(today.setDate(today.getDate() + 30));
-    return nextDose.toISOString().split("T")[0];
-  };
-
-  const calculateNextDose = () => {
-    const today = new Date();
-    if (state.treatment.schedule === "standard" && state.treatment.doseNumber === "1st") {
-      const nextDose = new Date(today.setMonth(today.getMonth() + 1));
-      return nextDose.toISOString().split("T")[0];
-    } else if (state.treatment.schedule === "standard" && state.treatment.doseNumber === "2nd") {
-      const nextDose = new Date(today.setMonth(today.getMonth() + 5));
-      return nextDose.toISOString().split("T")[0];
-    } else if (state.treatment.schedule === "accelerated" && state.treatment.doseNumber === "1st") {
-      const nextDose = new Date(today.setMonth(today.getMonth() + 1));
-      return nextDose.toISOString().split("T")[0];
-    } else if (state.treatment.schedule === "accelerated" && state.treatment.doseNumber === "2nd") {
-      const nextDose = new Date(today.setMonth(today.getMonth() + 1));
-      return nextDose.toISOString().split("T")[0];
-    } else if (state.treatment.schedule === "accelerated" && state.treatment.doseNumber === "3rd") {
-      const nextDose = new Date(today.setMonth(today.getMonth() + 11));
-      return nextDose.toISOString().split("T")[0];
-    }
-    return "";
-  };
-
+  const setAssessment = <K extends keyof HepBState["assessment"]>(field: K, value: HepBState["assessment"][K]) =>
+    setState((prev) => ({ ...prev, assessment: { ...prev.assessment, [field]: value } }));
+  const setTreatment = <K extends keyof HepBState["treatment"]>(field: K, value: HepBState["treatment"][K]) =>
+    setState((prev) => ({ ...prev, treatment: { ...prev.treatment, [field]: value } }));
+  const setCounselling = <K extends keyof HepBState["counselling"]>(field: K, value: HepBState["counselling"][K]) =>
+    setState((prev) => ({ ...prev, counselling: { ...prev.counselling, [field]: value } }));
+  const setSummary = <K extends keyof HepBState["summary"]>(field: K, value: HepBState["summary"][K]) =>
+    setState((prev) => ({ ...prev, summary: { ...prev.summary, [field]: value } }));
 
   // ─── Consultation Record Data (for saving to database) ───
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    const vaccine = state.treatment.vaccine;
     return {
       patient: {
         firstName: state.patient.firstName,
@@ -307,39 +130,100 @@ export default function HepBOccupationalClient() {
       },
       clinicalData: {
         ...state,
+        counselling: { ...state.counselling, nextDoseDate, courseComplete },
         alerts,
         pgdVersion: PGD_VERSION,
-        vaccineLabel: VACCINE_LABEL[state.treatment.vaccine],
-        dose: "1 mL",
-        route: "Intramuscular",
+        vaccineLabel: !hasStopAlerts && vaccine ? VACCINE_LABEL[vaccine] : "",
+        dose: hasStopAlerts ? null : "1 mL",
+        route: hasStopAlerts ? null : "Intramuscular",
+        nextDoseDate,
+        courseComplete,
+        exclusion: hasStopAlerts
+          ? { reasons: alerts.filter((a) => a.severity === "stop").map((a) => a.message), advice: state.assessment.exclusionAdvice, referral: state.assessment.exclusionReferral }
+          : null,
+        adverseReaction: state.treatment.adverseReaction ? state.treatment.adverseReactionDetails : null,
       } as unknown as Record<string, unknown>,
-      outcome: hasStopAlerts ? "not_supplied" : "completed",
+      outcome: hasStopAlerts
+        ? (state.assessment.exclusionReferral && state.assessment.exclusionReferral !== "declined" ? "referred" : "not_supplied")
+        : "completed",
+      ...(hasStopAlerts || !vaccine
+        ? {}
+        : {
+            medicine: {
+              name: VACCINE_LABEL[vaccine],
+              dose: `1 mL intramuscular, ${state.treatment.doseNumber || "dose"}${state.treatment.schedule ? `, ${state.treatment.schedule} schedule` : ""}`,
+              duration: courseComplete ? "Course complete" : nextDoseDate ? `Next dose due ${nextDoseDate}` : "",
+              quantity: 1,
+            },
+          }),
       summary: {
         pharmacistName: state.summary.pharmacistName,
         pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacyName: state.summary.pharmacyName,
+        pharmacyAddress: state.summary.pharmacyAddress,
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: state.counselling.gpInformed === "informed" },
     };
-  }, [state, alerts, hasStopAlerts]);
+  }, [state, alerts, hasStopAlerts, nextDoseDate, courseComplete]);
+
+  // Shown wherever a stop is on screen. The document: "Document any advice
+  // given and the decision reached. Inform or refer to the GP as appropriate."
+  const exclusionOutcomeBlock = hasStopAlerts ? (
+    <div className="space-y-3 rounded-lg border border-red-300 bg-red-50 p-4 print:hidden">
+      <p className="text-sm font-semibold text-red-800">Exclusion: record the advice given and the decision reached</p>
+      <p className="text-xs text-red-800">No vaccine can be given under this PGD while an exclusion applies. Advise on alternative options and how to access them, then use &quot;Save as not supplied&quot; in the step footer.</p>
+      <TextArea
+        label="Advice given and decision reached"
+        value={state.assessment.exclusionAdvice}
+        onChange={(v) => setAssessment("exclusionAdvice", v)}
+        rows={3}
+        placeholder="e.g. Aged 15: not vaccinated under this PGD; referred to GP for the childhood or occupational programme"
+        required
+      />
+      <SelectInput
+        label="GP informed or referral"
+        value={state.assessment.exclusionReferral}
+        onChange={(v) => setAssessment("exclusionReferral", v as ExclusionReferral)}
+        options={[
+          { value: "gp", label: "Referred to GP" },
+          { value: "occupational-health", label: "Referred to occupational health" },
+          { value: "immunisation-service", label: "Referred to an immunisation service or specialist" },
+          { value: "declined", label: "Patient declined referral; advice given" },
+        ]}
+        required
+      />
+    </div>
+  ) : null;
 
   return (
     <div className="space-y-6">
-      <ProgressBar current={currentStep + 1} total={7} />
+      <ProgressBar current={currentStep + 1} total={TOTAL_STEPS} />
       <StepWrapper
-        title={["Patient Details", "Consent", "Assessment", "Treatment", "Counselling", "Summary", "Consultation Complete"][currentStep]}
+        title={STEP_LABELS[currentStep]}
         currentStep={currentStep}
-        totalSteps={7}
+        totalSteps={TOTAL_STEPS}
         onNext={handleNext}
         onPrev={handlePrev}
         canProceed={canProceed}
         validationError={validationError}
-        isBlocked={hasStopAlerts && currentStep === 2}
-       getConsultationData={getConsultationData}>
+        isBlocked={hasStopAlerts}
+        getConsultationData={getConsultationData}
+        onNewConsultation={handleNewConsultation}
+      >
+        {currentStep !== 2 && currentStep !== 3 && currentStep !== 6 && hasStopAlerts && (
+          <div className="space-y-4 mb-4">
+            <AlertBanner alerts={alerts} />
+            {exclusionOutcomeBlock}
+          </div>
+        )}
+
         {currentStep === 0 && (
           <PatientDetailsStep
             patient={state.patient}
-            onChange={(field, value) => setState(prev => ({ ...prev, patient: { ...prev.patient, [field]: value, ...(field === "dateOfBirth" ? { age: calculateAge(value as string) } : {}) } }))}
+            onChange={(field, value) => setState((prev) => ({ ...prev, patient: { ...prev.patient, [field]: value, ...(field === "dateOfBirth" ? { age: calculateAge(value as string) } : {}) } }))}
             requireAdult={false}
           />
         )}
@@ -347,22 +231,20 @@ export default function HepBOccupationalClient() {
         {currentStep === 1 && (
           <ConsentStep
             consent={state.consent}
-            onChange={(field, value) => setState(prev => ({ ...prev, consent: { ...prev.consent, [field]: value } }))}
+            onChange={(field, value) => setState((prev) => ({ ...prev, consent: { ...prev.consent, [field]: value } }))}
           />
         )}
 
         {currentStep === 2 && (
           <div className="space-y-6">
-            {alerts.length > 0 && (
-              <AlertBanner alerts={alerts} />
-            )}
+            {alerts.length > 0 && <AlertBanner alerts={alerts} />}
+            {exclusionOutcomeBlock}
 
             <SelectInput
               label="Reason for Vaccination"
               value={state.assessment.reasonForVaccination}
-              onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, reasonForVaccination: v } }))}
+              onChange={(v) => setAssessment("reasonForVaccination", v)}
               options={[
-                { value: "", label: "Select reason" },
                 { value: "healthcare-worker", label: "Healthcare Worker" },
                 { value: "care-worker", label: "Care Worker" },
                 { value: "first-responder", label: "First Responder" },
@@ -381,19 +263,18 @@ export default function HepBOccupationalClient() {
             <Checkbox
               label="Eligible under national immunisation (Green Book chapter 18) or occupational health guidance (inclusion criterion)"
               checked={state.assessment.eligibleUnderGuidance}
-              onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, eligibleUnderGuidance: v } }))}
+              onChange={(v) => setAssessment("eligibleUnderGuidance", v)}
               required
             />
 
             <SelectInput
               label="Previous Hepatitis B Vaccination"
               value={state.assessment.previousVaccination}
-              onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, previousVaccination: v } }))}
+              onChange={(v) => setAssessment("previousVaccination", v as PreviousVaccination)}
               options={[
-                { value: "", label: "Select status" },
                 { value: "none", label: "None" },
-                { value: "partial-course", label: "Partial Course (1-2 doses)" },
-                { value: "full-course", label: "Full Course (3 doses)" },
+                { value: "partial-course", label: "Partial Course (1-2 doses): resume, do not restart" },
+                { value: "full-course", label: "Full Course (3 doses): booster only" },
               ]}
               required
             />
@@ -403,18 +284,16 @@ export default function HepBOccupationalClient() {
                 <Checkbox
                   label="Anti-HBs level checked"
                   checked={state.assessment.antiHBsLevelChecked}
-                  onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, antiHBsLevelChecked: v } }))}
+                  onChange={(v) => setAssessment("antiHBsLevelChecked", v)}
                 />
-
                 {state.assessment.antiHBsLevelChecked && (
                   <SelectInput
                     label="Anti-HBs Level"
                     value={state.assessment.antiHBsLevel}
-                    onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, antiHBsLevel: v } }))}
+                    onChange={(v) => setAssessment("antiHBsLevel", v)}
                     options={[
-                      { value: "", label: "Select level" },
                       { value: "above-10", label: ">10 IU/L (Good Immunity)" },
-                      { value: "below-10", label: "<10 IU/L (Non-immune)" },
+                      { value: "below-10", label: "<10 IU/L (Non-immune; repeat course may be indicated)" },
                     ]}
                   />
                 )}
@@ -424,81 +303,40 @@ export default function HepBOccupationalClient() {
             <div className="bg-red-50 p-4 rounded-lg border border-red-200">
               <p className="text-sm font-semibold text-red-900 mb-3">Contraindications</p>
               <div className="space-y-2">
-                <Checkbox
-                  label="Known Hepatitis B Positive"
-                  checked={state.assessment.knownHBPositive}
-                  onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, knownHBPositive: v } }))}
-                />
-                <Checkbox
-                  label="Known hypersensitivity to the active substance or any excipient (including yeast)"
-                  checked={state.assessment.allergyVaccineComponent}
-                  onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, allergyVaccineComponent: v } }))}
-                />
-                <Checkbox
-                  label="Previous allergic reaction to any hepatitis B vaccine"
-                  checked={state.assessment.previousSevereReaction}
-                  onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, previousSevereReaction: v } }))}
-                />
-                <Checkbox
-                  label="Acute severe febrile illness (postpone until recovered)"
-                  checked={state.assessment.currentAcuteIllness}
-                  onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, currentAcuteIllness: v } }))}
-                />
+                <Checkbox label="Known Hepatitis B Positive" checked={state.assessment.knownHBPositive} onChange={(v) => setAssessment("knownHBPositive", v)} />
+                <Checkbox label="Known hypersensitivity to the active substance or any excipient (including yeast)" checked={state.assessment.allergyVaccineComponent} onChange={(v) => setAssessment("allergyVaccineComponent", v)} />
+                <Checkbox label="Previous allergic reaction to any hepatitis B vaccine" checked={state.assessment.previousSevereReaction} onChange={(v) => setAssessment("previousSevereReaction", v)} />
+                <Checkbox label="Acute severe febrile illness (postpone until recovered)" checked={state.assessment.currentAcuteIllness} onChange={(v) => setAssessment("currentAcuteIllness", v)} />
                 {isUnder16 && (
                   <p className="text-xs text-red-800">Patient is under 16 (from date of birth): not vaccinated under this PGD, refer.</p>
                 )}
               </div>
             </div>
 
-            <Checkbox
-              label="Known Hepatitis C Positive"
-              checked={state.assessment.knownHCVPositive}
-              onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, knownHCVPositive: v } }))}
-            />
-
-            <Checkbox
-              label="Known HIV Positive"
-              checked={state.assessment.knownHIVPositive}
-              onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, knownHIVPositive: v } }))}
-            />
-
-            <Checkbox
-              label="Immunosuppressed"
-              checked={state.assessment.immunosuppressed}
-              onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, immunosuppressed: v } }))}
-            />
-
-            <Checkbox
-              label="Pregnant"
-              checked={state.assessment.pregnancy}
-              onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, pregnancy: v } }))}
-            />
-
-            <Checkbox
-              label="Bleeding disorder or on anticoagulants (caution: fine needle, firm pressure 2 minutes)"
-              checked={state.assessment.bleedingDisorderOrAnticoagulant}
-              onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, bleedingDisorderOrAnticoagulant: v } }))}
-            />
+            <Checkbox label="Known Hepatitis C Positive" checked={state.assessment.knownHCVPositive} onChange={(v) => setAssessment("knownHCVPositive", v)} />
+            <Checkbox label="Known HIV Positive" checked={state.assessment.knownHIVPositive} onChange={(v) => setAssessment("knownHIVPositive", v)} />
+            <Checkbox label="Immunosuppressed" checked={state.assessment.immunosuppressed} onChange={(v) => setAssessment("immunosuppressed", v)} />
+            <Checkbox label="Pregnant (not a contraindication: safe in pregnancy and breastfeeding; may be given where indicated)" checked={state.assessment.pregnancy} onChange={(v) => setAssessment("pregnancy", v)} />
+            <Checkbox label="Bleeding disorder or on anticoagulants (caution: fine needle, firm pressure 2 minutes)" checked={state.assessment.bleedingDisorderOrAnticoagulant} onChange={(v) => setAssessment("bleedingDisorderOrAnticoagulant", v)} />
           </div>
         )}
 
         {currentStep === 3 && (
           <div className="space-y-6">
-            {alerts.length > 0 && (
-              <AlertBanner alerts={alerts} />
-            )}
+            {alerts.length > 0 && <AlertBanner alerts={alerts} />}
+            {exclusionOutcomeBlock}
 
             <Checkbox
               label="Adrenaline (epinephrine) 1 in 1,000 injection immediately available in the room, in date, with a telephone and a written anaphylaxis protocol (Resuscitation Council UK)"
               checked={state.treatment.adrenalineAvailable}
-              onChange={v => setState(prev => ({ ...prev, treatment: { ...prev.treatment, adrenalineAvailable: v } }))}
+              onChange={(v) => setTreatment("adrenalineAvailable", v)}
               required
             />
 
             <SelectInput
-              label="Vaccine"
+              label="Vaccine (brand given)"
               value={state.treatment.vaccine}
-              onChange={v => setState(prev => ({ ...prev, treatment: { ...prev.treatment, vaccine: v as Vaccine } }))}
+              onChange={(v) => setTreatment("vaccine", v as Vaccine)}
               options={[
                 { value: "engerix-20", label: VACCINE_LABEL["engerix-20"] },
                 { value: "hbvaxpro-10", label: VACCINE_LABEL["hbvaxpro-10"] },
@@ -508,15 +346,14 @@ export default function HepBOccupationalClient() {
 
             <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
               <p className="text-sm font-semibold text-blue-900">Vaccine Information</p>
-              <p className="text-xs text-blue-800 mt-1">{VACCINE_LABEL[state.treatment.vaccine]}. Intramuscular injection, usually in the deltoid muscle. Standard schedule 0, 1 and 6 months; accelerated schedule 0, 1, 2 and 12 months. Pre-dialysis and dialysis patients (40 microgram presentation) are not covered by this PGD; refer.</p>
+              <p className="text-xs text-blue-800 mt-1">{state.treatment.vaccine ? `${VACCINE_LABEL[state.treatment.vaccine]}. ` : ""}Intramuscular injection, usually in the deltoid muscle. Standard schedule 0, 1 and 6 months; accelerated schedule 0, 1, 2 and 12 months. Pre-dialysis and dialysis patients (40 microgram presentation) are not covered by this PGD; refer.</p>
             </div>
 
             <SelectInput
               label="Vaccination Schedule"
               value={state.treatment.schedule}
-              onChange={v => setState(prev => ({ ...prev, treatment: { ...prev.treatment, schedule: v } }))}
+              onChange={(v) => { setTreatment("schedule", v as Schedule); }}
               options={[
-                { value: "", label: "Select schedule" },
                 { value: "standard", label: "Standard (0, 1, 6 months)" },
                 { value: "accelerated", label: "Accelerated (0, 1, 2, 12 months)" },
               ]}
@@ -526,23 +363,36 @@ export default function HepBOccupationalClient() {
             <SelectInput
               label="Dose Number Being Given Today"
               value={state.treatment.doseNumber}
-              onChange={v => setState(prev => ({ ...prev, treatment: { ...prev.treatment, doseNumber: v } }))}
-              options={[
-                { value: "", label: "Select dose" },
-                { value: "1st", label: "1st Dose" },
-                { value: "2nd", label: "2nd Dose" },
-                { value: "3rd", label: "3rd Dose" },
-                { value: "booster", label: "Booster" },
-              ]}
+              onChange={(v) => setTreatment("doseNumber", v as DoseNumber)}
+              options={doseOptionsFor(state.treatment.schedule)}
               required
             />
+            {!state.treatment.schedule && <p className="text-xs text-gray-500 -mt-4">Select the schedule first.</p>}
+
+            {previousDoseRequired && (
+              <div>
+                <TextInput
+                  label="Date of the previous dose"
+                  type="date"
+                  value={state.treatment.previousDoseDate}
+                  onChange={(v) => setTreatment("previousDoseDate", v)}
+                  required
+                />
+                {doseRule && doseRule.minDays !== null && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    {daysSincePrevious !== null && daysSincePrevious >= 0
+                      ? `${daysSincePrevious} days since the previous dose; schedule minimum ${doseRule.minDays} days.`
+                      : `Schedule minimum ${doseRule.minDays} days since the previous dose.`}
+                  </p>
+                )}
+              </div>
+            )}
 
             <SelectInput
               label="Injection Site"
               value={state.treatment.injectionSite}
-              onChange={v => setState(prev => ({ ...prev, treatment: { ...prev.treatment, injectionSite: v } }))}
+              onChange={(v) => setTreatment("injectionSite", v)}
               options={[
-                { value: "", label: "Select site" },
                 { value: "left-deltoid", label: "Left Deltoid" },
                 { value: "right-deltoid", label: "Right Deltoid" },
               ]}
@@ -550,27 +400,37 @@ export default function HepBOccupationalClient() {
             />
 
             <div className="grid grid-cols-2 gap-4">
-              <TextInput
-                label="Batch Number"
-                value={state.treatment.batchNumber}
-                onChange={v => setState(prev => ({ ...prev, treatment: { ...prev.treatment, batchNumber: v } }))}
-                required
-              />
-              <TextInput
-                label="Expiry Date"
-                type="date"
-                value={state.treatment.expiryDate}
-                onChange={v => setState(prev => ({ ...prev, treatment: { ...prev.treatment, expiryDate: v } }))}
-                required
-              />
+              <TextInput label="Batch Number" value={state.treatment.batchNumber} onChange={(v) => setTreatment("batchNumber", v)} required />
+              <TextInput label="Expiry Date" type="date" value={state.treatment.expiryDate} onChange={(v) => setTreatment("expiryDate", v)} required />
             </div>
 
             <Checkbox
               label="15-minute post-vaccination observation period completed"
               checked={state.treatment.observationPeriodCompleted}
-              onChange={v => setState(prev => ({ ...prev, treatment: { ...prev.treatment, observationPeriodCompleted: v } }))}
+              onChange={(v) => setTreatment("observationPeriodCompleted", v)}
               required
             />
+            <Checkbox
+              label="Adverse reaction observed during or after vaccination"
+              checked={state.treatment.adverseReaction}
+              onChange={(v) => { setTreatment("adverseReaction", v); if (!v) setTreatment("adverseReactionDetails", ""); }}
+            />
+            {state.treatment.adverseReaction && (
+              <TextArea
+                label="Adverse reaction and action taken (report via Yellow Card and inform the GP)"
+                value={state.treatment.adverseReactionDetails}
+                onChange={(v) => setTreatment("adverseReactionDetails", v)}
+                rows={2}
+                required
+              />
+            )}
+
+            {doseRule && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-900">
+                <p className="font-semibold">{courseComplete ? "Course complete with this dose" : `Next dose due: ${nextDoseDate}`}</p>
+                <p className="text-xs mt-1">{doseRule.nextLabel}. Computed from the schedule and dose number; give it to the patient in writing.</p>
+              </div>
+            )}
           </div>
         )}
 
@@ -586,60 +446,45 @@ export default function HepBOccupationalClient() {
               </ul>
             </div>
 
-            <Checkbox
-              label="Counselling provided to patient (common side effects; complete the full vaccination schedule)"
-              checked={state.counselling.counsellingProvided}
-              onChange={v => setState(prev => ({ ...prev, counselling: { ...prev.counselling, counsellingProvided: v } }))}
-              required
-            />
-
-            <Checkbox
-              label="Patient information leaflet (PIL) supplied"
-              checked={state.counselling.pilSupplied}
-              onChange={v => setState(prev => ({ ...prev, counselling: { ...prev.counselling, pilSupplied: v } }))}
-              required
-            />
-
+            <Checkbox label="Counselling provided to patient (common side effects; complete the full vaccination schedule)" checked={state.counselling.counsellingProvided} onChange={(v) => setCounselling("counsellingProvided", v)} required />
+            <Checkbox label="Patient information leaflet (PIL) supplied" checked={state.counselling.pilSupplied} onChange={(v) => setCounselling("pilSupplied", v)} required />
             <Checkbox
               label="Follow-up advice given: seek medical advice if symptoms worsen rapidly or significantly, do not improve in 3 to 4 weeks, or they become systemically very unwell; report suspected adverse reactions via the Yellow Card scheme"
               checked={state.counselling.followUpAdviceGiven}
-              onChange={v => setState(prev => ({ ...prev, counselling: { ...prev.counselling, followUpAdviceGiven: v } }))}
+              onChange={(v) => setCounselling("followUpAdviceGiven", v)}
               required
             />
 
-            <Checkbox
-              label="Course complete with this dose (no further dose due)"
-              checked={state.counselling.courseComplete}
-              onChange={v => setState(prev => ({ ...prev, counselling: { ...prev.counselling, courseComplete: v } }))}
-            />
-
-            {!state.counselling.courseComplete && (
-              <TextInput
-                label="Next Dose Date"
-                type="date"
-                value={state.counselling.nextDoseDate}
-                onChange={v => setState(prev => ({ ...prev, counselling: { ...prev.counselling, nextDoseDate: v } }))}
-                placeholder={calculateNextDose()}
-                required
-              />
-            )}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-900">
+              <p className="font-semibold">{courseComplete ? "Course complete with this dose (no further dose due)" : nextDoseDate ? `Next dose due: ${nextDoseDate}` : "Next dose date: select the schedule and dose number on the Treatment step"}</p>
+              {doseRule && <p className="text-xs mt-1">{doseRule.nextLabel}.</p>}
+            </div>
 
             <Checkbox
               label="Anti-HBs serology recommended 1 to 4 months after the final dose where high-risk (e.g. healthcare workers, immunocompromised); anti-HBs 10 mIU/mL or above is protective"
               checked={state.counselling.serologyRecommended}
-              onChange={v => setState(prev => ({ ...prev, counselling: { ...prev.counselling, serologyRecommended: v } }))}
+              onChange={(v) => setCounselling("serologyRecommended", v)}
             />
-
             <Checkbox
               label="Post-exposure protocol explained (if occupational exposure before course complete)"
               checked={state.counselling.postExposureProtocolExplained}
-              onChange={v => setState(prev => ({ ...prev, counselling: { ...prev.counselling, postExposureProtocolExplained: v } }))}
+              onChange={(v) => setCounselling("postExposureProtocolExplained", v)}
+            />
+            <SelectInput
+              label="GP informed (the document: inform the GP as appropriate)"
+              value={state.counselling.gpInformed}
+              onChange={(v) => setCounselling("gpInformed", v as HepBState["counselling"]["gpInformed"])}
+              options={[
+                { value: "informed", label: "GP informed (with the patient's consent)" },
+                { value: "declined", label: "Patient declined GP notification; recorded" },
+              ]}
+              required
             />
 
             <TextArea
               label="Counselling Notes"
               value={state.counselling.counsellingNotes}
-              onChange={v => setState(prev => ({ ...prev, counselling: { ...prev.counselling, counsellingNotes: v } }))}
+              onChange={(v) => setCounselling("counsellingNotes", v)}
               rows={3}
               placeholder="Include protection minimum titre (10 mIU/ml) and any additional advice"
               required
@@ -649,42 +494,25 @@ export default function HepBOccupationalClient() {
 
         {currentStep === 5 && (
           <div className="space-y-4">
-            <TextInput
-              label="Pharmacist Name"
-              value={state.summary.pharmacistName}
-              onChange={v => setState(prev => ({ ...prev, summary: { ...prev.summary, pharmacistName: v } }))}
-              required
-            />
-            <TextInput
-              label="GPhC Registration"
-              value={state.summary.pharmacistGPhC}
-              onChange={v => setState(prev => ({ ...prev, summary: { ...prev.summary, pharmacistGPhC: v } }))}
-              required
-            />
-            <TextInput
-              label="Pharmacy Name"
-              value={state.summary.pharmacyName}
-              onChange={v => setState(prev => ({ ...prev, summary: { ...prev.summary, pharmacyName: v } }))}
-            />
-            <TextInput
-              label="Pharmacy Address"
-              value={state.summary.pharmacyAddress}
-              onChange={v => setState(prev => ({ ...prev, summary: { ...prev.summary, pharmacyAddress: v } }))}
-            />
-            <TextArea
-              label="Clinical Notes"
-              value={state.summary.clinicalNotes}
-              onChange={v => setState(prev => ({ ...prev, summary: { ...prev.summary, clinicalNotes: v } }))}
-              rows={3}
-            />
+            <TextInput label="Pharmacist Name" value={state.summary.pharmacistName} onChange={(v) => setSummary("pharmacistName", v)} required />
+            <TextInput label="GPhC Registration" value={state.summary.pharmacistGPhC} onChange={(v) => setSummary("pharmacistGPhC", v)} required />
+            <TextInput label="Pharmacy Name" value={state.summary.pharmacyName} onChange={(v) => setSummary("pharmacyName", v)} required />
+            <TextInput label="Pharmacy Address" value={state.summary.pharmacyAddress} onChange={(v) => setSummary("pharmacyAddress", v)} />
+            <TextArea label="Clinical Notes" value={state.summary.clinicalNotes} onChange={(v) => setSummary("clinicalNotes", v)} rows={3} />
             <p className="text-xs text-gray-500">Administered under {PGD_VERSION}.</p>
           </div>
         )}
 
         {currentStep === 6 && (
-          <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-            <p className="text-sm font-semibold text-green-900">Hepatitis B Occupational Vaccination Complete</p>
-            <p className="text-xs text-green-700 mt-1">Click Print Consultation Record to generate and save the PDF report.</p>
+          <div className="space-y-4">
+            {hasStopAlerts && <div className="print:hidden"><AlertBanner alerts={alerts} />{exclusionOutcomeBlock}</div>}
+            <HepBOccupationalSummaryReport
+              state={state}
+              alerts={alerts}
+              blocked={hasStopAlerts}
+              nextDoseDate={nextDoseDate}
+              courseComplete={courseComplete}
+            />
           </div>
         )}
       </StepWrapper>

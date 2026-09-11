@@ -7,6 +7,12 @@ import {
 
 export const DENGUE_PGD_VERSION = 'Qdenga (TAK-003) Dengue PGD v005, issued 11 September 2026';
 
+/** Temperature at or above which the tool treats the patient as having an acute fever (exclusion). */
+export const FEVER_THRESHOLD_C = 38.0;
+
+/** Minimum interval between dose 1 and dose 2: 3 calendar months. */
+export const DOSE_INTERVAL_MONTHS = 3;
+
 export function evaluateDengueContraindications(
   screening: DengueScreening,
   patientAge: number
@@ -68,8 +74,10 @@ export function evaluateDengueContraindications(
     });
   }
 
-  // Hard stop: Severe acute febrile illness
-  if (screening.temperature !== null && screening.temperature >= 38.5) {
+  // Hard stop: acute fever. The document says "acute fever" without a
+  // figure; the tool applies the Green Book's usual 38.0 C. The old 38.5
+  // threshold, combined with an integer-only input, let 38.7 pass as 38.
+  if (screening.temperature !== null && screening.temperature >= FEVER_THRESHOLD_C) {
     contraindications.acuteFebrileIllness = true;
     alerts.push({
       severity: 'stop',
@@ -182,8 +190,46 @@ export function getObservationPeriodRecommendation(
   return '15-min';
 }
 
+/** Add calendar months, clamping the day so 30 November + 3 months is 28 February, not 1 or 2 March. */
+export function addMonthsClamped(date: Date, months: number): Date {
+  const d = new Date(date.getTime());
+  const day = d.getDate();
+  d.setDate(1);
+  d.setMonth(d.getMonth() + months);
+  const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  d.setDate(Math.min(day, lastDay));
+  return d;
+}
+
+function toIsoDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 export function calculateNextDoseDate(currentDate: string): string {
   const current = new Date(currentDate);
-  current.setMonth(current.getMonth() + 3);
-  return current.toISOString().split('T')[0];
+  if (isNaN(current.getTime())) return '';
+  return toIsoDate(addMonthsClamped(current, DOSE_INTERVAL_MONTHS));
+}
+
+/** Today as YYYY-MM-DD in local time. */
+export function todayIso(): string {
+  return toIsoDate(new Date());
+}
+
+/**
+ * Is the second dose due yet? True when firstDoseDate + 3 calendar months is
+ * on or before today. Null when the date is missing or unreadable.
+ */
+export function secondDoseIntervalMet(firstDoseDate: string): boolean | null {
+  if (!firstDoseDate) return null;
+  const first = new Date(firstDoseDate);
+  if (isNaN(first.getTime())) return null;
+  first.setHours(0, 0, 0, 0);
+  const due = addMonthsClamped(first, DOSE_INTERVAL_MONTHS);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return due.getTime() <= today.getTime();
 }

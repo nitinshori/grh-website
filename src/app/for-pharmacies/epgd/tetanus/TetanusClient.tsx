@@ -21,6 +21,21 @@ import { PatientDetailsStep } from "../shared/steps/PatientDetailsStep";
 import { ConsentStep } from "../shared/steps/ConsentStep";
 import type { ConsultationRecordData } from "../shared/hooks/useConsultationTracking";
 import { TextInput, Checkbox, SelectInput, TextArea } from "../shared/components/FormInputs";
+import {
+  PGD_VERSION,
+  STEP_LABELS,
+  WITHIN_10_YEARS,
+  type Clinical,
+  type Indication,
+  type LastDose,
+  type Priming,
+  type ConsentBasis,
+  type Route,
+  createEmptyClinical,
+  expiryMonthIsCurrent,
+  daysSince,
+} from "./tetanus-types";
+import { TetanusSummaryReport } from "./components/TetanusSummaryReport";
 
 /**
  * Tetanus, Diphtheria and Polio ePGD (Td/IPV, Revaxis), PGD version 008,
@@ -35,80 +50,13 @@ import { TextInput, Checkbox, SelectInput, TextArea } from "../shared/components
  * the dose is given and the patient is referred the same day.
  */
 
-const PGD_VERSION = "Tetanus, Diphtheria and Polio (Revaxis, Td/IPV) PGD v008, issued 11 September 2026";
-
-const STEP_LABELS = [
-  "Patient Details",
-  "Consent",
-  "Indication",
-  "History & Exclusions",
-  "Administration",
-  "Counselling & Summary",
-] as const;
-
-type Indication = "adolescent-booster" | "incomplete-history" | "travel" | "wound" | "";
-type LastDose = "over-10" | "5-to-10" | "under-5" | "under-12-months" | "unknown" | "";
-type Priming = "adequate" | "incomplete" | "";
-type ConsentBasis = "gillick" | "parental" | "";
-
-interface Clinical {
-  indication: Indication;
-  destination: string;
-  lastDose: LastDose;
-  lastDoseDate: string;
-  dosesReceived: string;
-  dosesSource: string;
-  primaryCourseContinuation: boolean;
-  consentBasis: ConsentBasis;
-  parentName: string;
-  woundProne: boolean;
-  woundHighRisk: boolean;
-  priming: Priming;
-  woundAssessmentNote: string;
-  outbreakContact: boolean;
-  anaphylaxisPreviousDose: boolean;
-  anaphylaxisComponent: boolean;
-  acuteFebrileIllness: boolean;
-  pregnant: boolean;
-  neurologicalDeterioration: boolean;
-  neuroComplicationsPrevious: boolean;
-  immunosuppressed: boolean;
-  bleedingDisorder: boolean;
-  allergies: string;
-  batchNumber: string;
-  expiryDate: string;
-  site: string;
-  anaphylaxisKit: boolean;
-  offLabelExplained: boolean;
-  immunoglobulinReferralArranged: boolean;
-  observationCompleted: boolean;
-  courseAdvice: boolean;
-  sideEffectAdvice: boolean;
-  woundAdvice: boolean;
-  recordAdvice: boolean;
-}
-
-const emptyClinical: Clinical = {
-  indication: "", destination: "", lastDose: "", lastDoseDate: "", dosesReceived: "", dosesSource: "",
-  primaryCourseContinuation: false, consentBasis: "", parentName: "",
-  woundProne: false, woundHighRisk: false, priming: "", woundAssessmentNote: "", outbreakContact: false,
-  anaphylaxisPreviousDose: false, anaphylaxisComponent: false, acuteFebrileIllness: false,
-  pregnant: false, neurologicalDeterioration: false, neuroComplicationsPrevious: false,
-  immunosuppressed: false, bleedingDisorder: false,
-  allergies: "", batchNumber: "", expiryDate: "", site: "", anaphylaxisKit: false,
-  offLabelExplained: false, immunoglobulinReferralArranged: false, observationCompleted: false,
-  courseAdvice: false, sideEffectAdvice: false, woundAdvice: false, recordAdvice: false,
-};
-
-const WITHIN_10_YEARS: LastDose[] = ["under-12-months", "under-5", "5-to-10"];
-
 export default function TetanusClient() {
   const [step, setStep] = useState(0);
   const [completed, setCompleted] = useState<Set<number>>(new Set());
   const [patient, setPatient] = useState<BasePatientDetails>({ ...initialPatientDetails });
   const [consent, setConsent] = useState<BaseConsent>({ ...initialConsent });
   const [summary, setSummary] = useState<BaseSummary>(initialSummary());
-  const [c, setC] = useState<Clinical>({ ...emptyClinical });
+  const [c, setC] = useState<Clinical>(createEmptyClinical());
   const set = (patch: Partial<Clinical>) => setC((prev) => ({ ...prev, ...patch }));
 
   const isUnder16 = patient.age !== null && patient.age < 16;
@@ -122,7 +70,7 @@ export default function TetanusClient() {
   const woundDoseIndicated = wound && c.woundProne && !primedWithin10 && (c.lastDose === "over-10" || uncertainHistory);
 
   // Off-label: primary immunisation over 10 years, or a dose 12 months to 5 years after the last.
-  const offLabel = c.indication === "incomplete-history" || c.lastDose === "under-5";
+  const offLabel = c.indication === "incomplete-history" || (c.lastDose === "under-5" && c.indication !== "adolescent-booster");
 
   const alerts = useMemo<ClinicalAlert[]>(() => {
     const a: ClinicalAlert[] = [];
@@ -200,12 +148,24 @@ export default function TetanusClient() {
         message: "Travel booster not indicated",
         detail: "A travel booster under this PGD requires the final dose of the relevant antigen more than 10 years ago (this applies even where 5 doses have been received). Give reassurance and wound care advice, and check TravelHealthPro for the destination.",
       });
-    if (c.indication === "travel" && c.lastDose === "unknown")
+    if ((c.indication === "travel" || c.indication === "adolescent-booster") && c.lastDose === "unknown")
       a.push({
         code: "travel-uncertain",
         severity: "stop",
-        message: "Uncertain history in a traveller: use the incomplete or uncertain history indication",
+        message: c.indication === "travel"
+          ? "Uncertain history in a traveller: use the incomplete or uncertain history indication"
+          : "Uncertain history: a single adolescent booster is not indicated; use the incomplete or uncertain history indication",
         detail: "Where there is no reliable history, assume undocumented doses are missing. Select 'No history, or incomplete or unknown history' so that a primary course is offered and recorded.",
+      });
+    // The adolescent booster is 'a minimum of 5 years after the pre-school
+    // booster' (dose row). Earlier than that it is not indicated, not
+    // off-label: the off-label paragraph covers resumed primary courses only.
+    if (c.indication === "adolescent-booster" && c.lastDose === "under-5")
+      a.push({
+        code: "booster-too-early",
+        severity: "stop",
+        message: "Adolescent booster not indicated: last dose within 5 years",
+        detail: "The adolescent booster is given a minimum of 5 years after the pre-school booster. A booster given earlier is not authorised by this PGD. Refer to the GP if there is doubt about the history; otherwise advise when the booster falls due.",
       });
 
     // Tetanus-prone wound, assessed by time since the last dose.
@@ -249,13 +209,25 @@ export default function TetanusClient() {
         message: "Primary course required",
         detail: "Where there is no reliable history, assume undocumented doses are missing: 3 doses one month apart, resumed (not restarted) if interrupted, then a first booster at least 5 years after the third dose and a second booster a minimum of 5 and ideally 10 years after the first. Primary immunisation over 10 years of age is off-label: explain and record. Book the next dose today and inform the GP.",
       });
-    if (c.lastDose === "under-5")
+    if (c.lastDose === "under-5" && c.indication !== "adolescent-booster")
       a.push({
         code: "off-label-interval",
         severity: "caution",
         message: "Dose within 5 years of the last diphtheria or tetanus toxoid containing vaccine is off-label",
-        detail: "Outside the Revaxis SmPC (section 4.4) and given in accordance with the Green Book. Explain this as part of consent and record it. For the adolescent booster, confirm a minimum of 5 years since the pre-school booster.",
+        detail: "Outside the Revaxis SmPC (section 4.4) and given in accordance with the Green Book. Explain this as part of consent and record it.",
       });
+    {
+      // The 12-month exception is only for the scheduled second or third
+      // primary dose: the prior dose must have been about a month ago.
+      const d = daysSince(c.priorPrimaryDoseDate);
+      if (c.indication === "incomplete-history" && c.primaryCourseContinuation && d !== null && (d < 21 || d > 365))
+        a.push({
+          code: "primary-interval",
+          severity: "stop",
+          message: d < 21 ? "Prior primary dose less than 3 weeks ago: the next dose is not yet due" : "Prior primary dose more than 12 months ago: this is not the scheduled continuation",
+          detail: "Primary doses are given one month apart. Where the interval is longer, the course is resumed, not restarted, but the 12 month exclusion no longer applies as an exception and the dose must be recorded as a resumed course. Check the date.",
+        });
+    }
     if (c.immunosuppressed)
       a.push({
         code: "immunosuppression",
@@ -296,13 +268,25 @@ export default function TetanusClient() {
 
   const validationError = useMemo(() => {
     switch (step) {
-      case 0: return validatePatientStep(patient, { minAge: 10 });
+      case 0: {
+        const base = validatePatientStep(patient, { minAge: 10 });
+        if (base) return base;
+        // Never trust a stale age: recompute from the DOB here.
+        const age = calculateAge(patient.dateOfBirth);
+        if (age === null) return "Unable to calculate age from the date of birth";
+        if (age < 10) return "Patient must be 10 years or older";
+        // PGD v008 records: patient name, address, date of birth and the GP with whom they are registered.
+        if (!patient.address.trim()) return "Patient address is required (the PGD requires it to be recorded)";
+        if (!patient.gpPractice.trim() && !patient.gpName.trim()) return "The GP with whom the patient is registered is required: search for the practice, or enter \"Not registered\" as the GP name";
+        return null;
+      }
       case 1: {
         const base = validateConsentStep(consent);
         if (base) return base;
         if (isUnder16) {
           if (!c.consentBasis) return "Under 16: record whether the young person is Gillick competent or consent was given by a person with parental responsibility";
           if (c.consentBasis === "parental" && !c.parentName.trim()) return "Record the name and relationship of the person with parental responsibility";
+          if (c.consentBasis === "gillick" && !c.parentName.trim()) return "Record the basis of the Gillick assessment (the PGD requires it to be recorded)";
         }
         return null;
       }
@@ -310,6 +294,8 @@ export default function TetanusClient() {
         if (!c.indication) return "Please select the indication";
         if (c.indication === "travel" && !c.destination.trim()) return "Please record the destination";
         if (!c.lastDose) return "Please record when the last tetanus-containing dose was given";
+        if (c.indication === "incomplete-history" && c.lastDose === "under-12-months" && c.primaryCourseContinuation && !c.priorPrimaryDoseDate.trim())
+          return "Record the date of the prior primary-course dose given under this PGD";
         if (!c.lastDoseDate.trim()) return "Please record the date of the most recent tetanus-containing dose and how it was established";
         if (!c.dosesReceived.trim()) return "Please record the number of documented prior doses";
         if (!c.dosesSource.trim()) return "Please record the source of the dose history";
@@ -325,6 +311,8 @@ export default function TetanusClient() {
         if (immunoglobulinIndicated && !c.immunoglobulinReferralArranged) return "Confirm the same-day referral for tetanus immunoglobulin has been arranged";
         if (!c.batchNumber.trim()) return "Please record the batch number";
         if (!c.expiryDate.trim()) return "Please record the expiry date";
+        if (!expiryMonthIsCurrent(c.expiryDate)) return "Expiry date must be MM/YYYY and must not be in the past";
+        if (!c.route) return "Please record the route (intramuscular, or deep subcutaneous where the intramuscular route is not suitable)";
         if (!c.site.trim()) return "Please record the anatomical site";
         return null;
       case 5:
@@ -335,26 +323,51 @@ export default function TetanusClient() {
     }
   }, [step, patient, consent, c, summary, isUnder16, wound, offLabel, immunoglobulinIndicated]);
 
-  const canProceed = !validationError && (!hasStops || step >= 4);
+  // A stop anywhere disables Next on every step; an excluded patient is
+  // recorded through the "not vaccinated" panel and "Save as not supplied".
+  const canProceed = !validationError && !hasStops;
   const next = () => { if (canProceed) { setCompleted((p) => new Set([...p, step])); setStep((s) => Math.min(s + 1, STEP_LABELS.length - 1)); } };
   const prev = () => setStep((s) => Math.max(s - 1, 0));
 
-  const getConsultationData = (): ConsultationRecordData => ({
-    patient: {
-      firstName: patient.firstName, lastName: patient.lastName, dateOfBirth: patient.dateOfBirth,
-      nhsNumber: patient.nhsNumber, phone: patient.phone, email: patient.email, address: patient.address,
-      gpName: patient.gpName, gpPractice: patient.gpPractice,
-    },
-    clinicalData: {
-      patient, consent, clinical: c, alerts, dose: doseText, pgdVersion: PGD_VERSION,
-      route: "Intramuscular", woundDoseIndicated, immunoglobulinIndicated, offLabel,
-    } as unknown as Record<string, unknown>,
-    outcome: hasStops ? "not_supplied" : "completed",
-    summary: {
-      pharmacistName: summary.pharmacistName, pharmacistGPhC: summary.pharmacistGPhC,
-      consultationDate: summary.consultationDate, consultationTime: summary.consultationTime,
-    },
-  });
+  const routeText = c.route === "deep-subcutaneous" ? "Deep subcutaneous" : c.route === "intramuscular" ? "Intramuscular" : "";
+
+  // Returns a record on every step so an excluded patient can be saved as
+  // "not supplied" from the step the stop is raised on.
+  const getConsultationData = (): ConsultationRecordData => {
+    const vaccinated = !hasStops && !!c.batchNumber.trim();
+    return {
+      patient: {
+        firstName: patient.firstName, lastName: patient.lastName, dateOfBirth: patient.dateOfBirth,
+        nhsNumber: patient.nhsNumber, phone: patient.phone, email: patient.email, address: patient.address,
+        gpName: patient.gpName, gpPractice: patient.gpPractice, gpAddress: patient.gpAddress,
+        gpPhone: patient.gpPhone, gpEmail: patient.gpEmail, gpOdsCode: patient.gpOdsCode,
+      },
+      clinicalData: {
+        patient, consent, clinical: c, alerts, dose: doseText, pgdVersion: PGD_VERSION,
+        route: routeText, woundDoseIndicated, immunoglobulinIndicated, offLabel,
+      } as unknown as Record<string, unknown>,
+      outcome: hasStops ? "not_supplied" : "completed",
+      medicine: vaccinated
+        ? {
+            name: "Revaxis (Td/IPV), adsorbed diphtheria (low dose), tetanus and inactivated poliomyelitis vaccine",
+            dose: `0.5 mL ${routeText.toLowerCase() || "intramuscular"}${c.site ? `, ${c.site}` : ""}`,
+            duration: c.indication === "incomplete-history"
+              ? (c.primaryCourseContinuation ? "Second or third primary dose" : "First primary dose (3 dose course)")
+              : c.indication === "wound" ? "Single reinforcing dose (tetanus-prone wound)"
+              : c.indication === "travel" ? "Single travel booster"
+              : "Single adolescent booster",
+            quantity: 1,
+          }
+        : undefined,
+      summary: {
+        pharmacistName: summary.pharmacistName, pharmacistGPhC: summary.pharmacistGPhC,
+        pharmacyName: summary.pharmacyName, pharmacyAddress: summary.pharmacyAddress,
+        consultationDate: summary.consultationDate, consultationTime: summary.consultationTime,
+        clinicalNotes: summary.clinicalNotes,
+      },
+      consent: { notifyGp: consent.notifyGp },
+    };
+  };
 
   const onPatientChange = (field: keyof BasePatientDetails, value: unknown) =>
     setPatient((p) => ({ ...p, [field]: value, ...(field === "dateOfBirth" ? { age: calculateAge(value as string) } : {}) }));
@@ -379,7 +392,7 @@ export default function TetanusClient() {
                   <TextInput label="Name and relationship of the person with parental responsibility" value={c.parentName} onChange={(v) => set({ parentName: v })} placeholder="e.g. Jane Smith, mother" required />
                 )}
                 {c.consentBasis === "gillick" && (
-                  <TextInput label="Basis of the Gillick assessment (optional note)" value={c.parentName} onChange={(v) => set({ parentName: v })} placeholder="e.g. understands the purpose, benefits and risks and can retain and weigh the information" />
+                  <TextInput label="Basis of the Gillick assessment" value={c.parentName} onChange={(v) => set({ parentName: v })} placeholder="e.g. understands the purpose, benefits and risks and can retain and weigh the information" required />
                 )}
               </div>
             )}
@@ -408,7 +421,10 @@ export default function TetanusClient() {
                 { value: "unknown", label: "Unknown or uncertain" },
               ]} required />
             {c.indication === "incomplete-history" && c.lastDose === "under-12-months" && (
-              <Checkbox label="This is the second or third dose of a primary course being given under this PGD at the scheduled one-month interval" checked={c.primaryCourseContinuation} onChange={(v) => set({ primaryCourseContinuation: v })} />
+              <Checkbox label="This is the second or third dose of a primary course being given under this PGD at the scheduled one-month interval" checked={c.primaryCourseContinuation} onChange={(v) => set({ primaryCourseContinuation: v, priorPrimaryDoseDate: v ? c.priorPrimaryDoseDate : "" })} />
+            )}
+            {c.indication === "incomplete-history" && c.lastDose === "under-12-months" && c.primaryCourseContinuation && (
+              <TextInput label="Date of the prior primary-course dose given under this PGD" type="date" value={c.priorPrimaryDoseDate} onChange={(v) => set({ priorPrimaryDoseDate: v })} required />
             )}
             <TextInput label="Date of the most recent tetanus-containing dose, and how it was established" value={c.lastDoseDate} onChange={(v) => set({ lastDoseDate: v })} placeholder="e.g. 14/03/2012 from GP record; or unknown, no records available" required />
             <TextInput label="Number of documented prior doses" value={c.dosesReceived} onChange={(v) => set({ dosesReceived: v })} placeholder="e.g. 5, or 0 documented" required />
@@ -443,6 +459,12 @@ export default function TetanusClient() {
                     { value: "adequate", label: "Adequate priming course: 3 or more documented doses" },
                     { value: "incomplete", label: "Not adequately primed, or incomplete or uncertain history" },
                   ]} required />
+                <p className="text-xs text-amber-900 font-medium">
+                  Definition applied by this tool: adequate priming is 3 or more documented doses (UKHSA Tetanus: advice
+                  for health professionals, Table 4; Green Book chapter 30). The document&apos;s &quot;Five documented
+                  doses&quot; box says fewer than 5 doses needs immunoglobulin with a tetanus-prone wound; that wording is
+                  referred for clinical review and is not applied here. Record which definition you used in the assessment note.
+                </p>
                 <TextArea label="Assessment against table 30.1 and conclusion on immunoglobulin" value={c.woundAssessmentNote} onChange={(v) => set({ woundAssessmentNote: v })} placeholder="e.g. puncture wound gardening, soil contamination, 3 doses documented, last dose 2009: reinforcing dose given, high-risk wound, same-day referral for immunoglobulin" required />
                 <p className="text-xs text-amber-800">
                   Adequate priming with the last dose within 10 years: no vaccine. Last dose more than 10 years ago, whatever the total number of doses: a reinforcing dose. Immunoglobulin is indicated where the wound is high risk, or where the person is not adequately primed or the history is uncertain; it is a same-day referral, not a PGD supply, and does not exclude the vaccine dose.
@@ -477,24 +499,38 @@ export default function TetanusClient() {
             )}
             <TextInput label="Batch number" value={c.batchNumber} onChange={(v) => set({ batchNumber: v })} required />
             <TextInput label="Expiry date" value={c.expiryDate} onChange={(v) => set({ expiryDate: v })} placeholder="MM/YYYY" required />
-            <TextInput label="Anatomical site (route: intramuscular)" value={c.site} onChange={(v) => set({ site: v })} placeholder="e.g. left deltoid" required />
+            <SelectInput
+              label="Route"
+              value={c.route}
+              onChange={(v) => set({ route: v as Route })}
+              options={[
+                { value: "intramuscular", label: "Intramuscular (the PGD route)" },
+                { value: "deep-subcutaneous", label: "Deep subcutaneous (bleeding disorder where the intramuscular route is not suitable)" },
+              ]}
+              required
+            />
+            <TextInput label="Anatomical site" value={c.site} onChange={(v) => set({ site: v })} placeholder="e.g. left deltoid" required />
           </div>
         );
       case 5:
         return (
           <div className="space-y-4">
-            <AlertBanner alerts={alerts} />
-            <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
+            <div className="print:hidden"><AlertBanner alerts={alerts} /></div>
+            <div className="space-y-3 p-4 bg-gray-50 rounded-lg print:hidden">
               <Checkbox label="15 minute observation period after vaccination completed" checked={c.observationCompleted} onChange={(v) => set({ observationCompleted: v })} />
               <Checkbox label="Written record of the vaccine given (date, brand, batch number) and the patient information leaflet supplied; told to keep the record because the number of doses determines what happens if they are ever injured" checked={c.recordAdvice} onChange={(v) => set({ recordAdvice: v })} />
               <Checkbox label="Where a course is involved, the next dose has been booked at this appointment and the patient advised to come back for every dose" checked={c.courseAdvice} onChange={(v) => set({ courseAdvice: v })} />
               <Checkbox label="Advised that a sore arm, mild fever, headache or aching for a day or two is common and settles by itself; Yellow Card reporting explained" checked={c.sideEffectAdvice} onChange={(v) => set({ sideEffectAdvice: v })} />
               <Checkbox label="Advised that any dirty wound, puncture wound, burn, animal bite or wound with soil or manure in it must be cleaned and medical advice sought, whatever vaccinations they have had (and, for travellers, that vaccination does not remove the need to get any significant wound cleaned and assessed while away)" checked={c.woundAdvice} onChange={(v) => set({ woundAdvice: v })} />
             </div>
-            <p className="text-xs text-gray-500">{PGD_VERSION}.</p>
-            <TextInput label="Pharmacist name" value={summary.pharmacistName} onChange={(v) => setSummary((p) => ({ ...p, pharmacistName: v }))} required />
-            <TextInput label="GPhC registration number" value={summary.pharmacistGPhC} onChange={(v) => setSummary((p) => ({ ...p, pharmacistGPhC: v }))} required />
-            <TextArea label="Clinical notes (optional)" value={summary.clinicalNotes} onChange={(v) => setSummary((p) => ({ ...p, clinicalNotes: v }))} />
+            <div className="space-y-4 print:hidden">
+              <p className="text-xs text-gray-500">{PGD_VERSION}.</p>
+              <TextInput label="Pharmacist name" value={summary.pharmacistName} onChange={(v) => setSummary((p) => ({ ...p, pharmacistName: v }))} required />
+              <TextInput label="GPhC registration number" value={summary.pharmacistGPhC} onChange={(v) => setSummary((p) => ({ ...p, pharmacistGPhC: v }))} required />
+              <TextArea label="Clinical notes (optional)" value={summary.clinicalNotes} onChange={(v) => setSummary((p) => ({ ...p, clinicalNotes: v }))} />
+            </div>
+            {/* The printed record: this is what Save & Print prints. */}
+            <TetanusSummaryReport patient={patient} consent={consent} clinical={c} summary={summary} alerts={alerts} doseText={doseText} immunoglobulinIndicated={immunoglobulinIndicated} offLabel={offLabel} />
           </div>
         );
       default:
@@ -506,7 +542,9 @@ export default function TetanusClient() {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-6xl mx-auto px-4">
         <div className="space-y-6">
-          <ProgressBar stepLabels={STEP_LABELS} currentStep={step} onStepClick={(s) => { if (completed.has(s) || s <= step) setStep(s); }} completedSteps={completed} hasErrors={!!validationError} />
+          <div className="print:hidden">
+            <ProgressBar stepLabels={STEP_LABELS} currentStep={step} onStepClick={(s) => { if (s < step) setStep(s); }} completedSteps={completed} hasErrors={!!validationError} />
+          </div>
           <StepWrapper
             title={STEP_LABELS[step]}
             currentStep={step}
@@ -514,18 +552,44 @@ export default function TetanusClient() {
             onNext={next}
             onPrev={prev}
             canProceed={canProceed}
-            validationError={validationError}
-            isBlocked={hasStops && step === 4}
-            {...(step === STEP_LABELS.length - 1 ? {
-              getConsultationData,
-              onNewConsultation: () => {
-                setStep(0); setCompleted(new Set());
-                setPatient({ ...initialPatientDetails }); setConsent({ ...initialConsent });
-                setSummary(initialSummary()); setC({ ...emptyClinical });
-              },
-            } : {})}
+            validationError={hasStops ? (validationError ?? "Exclusion criteria met: do not vaccinate under this PGD. Record the assessment, referral and advice, and save as not supplied.") : validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
+            onNewConsultation={() => {
+              setStep(0); setCompleted(new Set());
+              setPatient({ ...initialPatientDetails }); setConsent({ ...initialConsent });
+              setSummary(initialSummary()); setC(createEmptyClinical());
+            }}
           >
             {stepBody()}
+            {hasStops && step > 0 && (
+              <div className="mt-6 space-y-3 p-4 rounded-lg border border-red-300 bg-red-50">
+                <p className="text-sm font-semibold text-red-900">Not vaccinated: record the assessment, referral and advice</p>
+                <p className="text-xs text-red-900">
+                  The PGD requires the advice given to an excluded patient to be recorded, the wound assessment and
+                  the conclusion on immunoglobulin where a wound is involved, and same-day referral for a pregnant
+                  patient or a high-risk wound. Complete the items below and use &quot;Save as not supplied&quot;.
+                </p>
+                <Checkbox label="Explained why the vaccine cannot be given under this PGD and what happens next" checked={c.exclusionExplained} onChange={(v) => set({ exclusionExplained: v })} />
+                <Checkbox
+                  label={
+                    c.pregnant || (wound && c.woundHighRisk)
+                      ? "SAME-DAY referral arranged (pregnancy: GP or midwife; high-risk wound: tetanus immunoglobulin)"
+                      : "Referral arranged where indicated (GP, immunisation service, Health Protection Team, or immunoglobulin)"
+                  }
+                  checked={c.referralArranged}
+                  onChange={(v) => set({ referralArranged: v })}
+                />
+                <TextInput label="Referral: to whom, and when" value={c.referralDetails} onChange={(v) => set({ referralDetails: v })} placeholder="e.g. GP surgery, same day, phoned 14:20; or emergency department for immunoglobulin" />
+                <Checkbox label="Wound care advice given (clean the wound, seek medical advice for any dirty, puncture or contaminated wound)" checked={c.woundAdvice} onChange={(v) => set({ woundAdvice: v })} />
+                <Checkbox label="GP informed, or will be informed" checked={c.gpInformed} onChange={(v) => set({ gpInformed: v })} />
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <TextInput label="Pharmacist name" value={summary.pharmacistName} onChange={(v) => setSummary((p) => ({ ...p, pharmacistName: v }))} required />
+                  <TextInput label="GPhC registration number" value={summary.pharmacistGPhC} onChange={(v) => setSummary((p) => ({ ...p, pharmacistGPhC: v }))} required />
+                </div>
+                <TextArea label="Advice given and decision reached" value={summary.clinicalNotes} onChange={(v) => setSummary((p) => ({ ...p, clinicalNotes: v }))} />
+              </div>
+            )}
           </StepWrapper>
         </div>
       </div>

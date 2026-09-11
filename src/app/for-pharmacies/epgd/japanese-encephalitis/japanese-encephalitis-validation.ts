@@ -6,7 +6,7 @@ import {
   JapaneseEncephalitisAdvice,
 } from './japanese-encephalitis-types';
 import { BasePatientDetails, BaseConsent } from '../shared/types';
-import { calculateAgeInMonths, isRapidScheduleOffLabel } from './japanese-encephalitis-clinical-logic';
+import { calculateAgeInMonths, isRapidScheduleOffLabel, daysUntil, parseLocalDate, secondBoosterAllowed } from './japanese-encephalitis-clinical-logic';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -33,9 +33,7 @@ export function validatePatientDetails(
   if (ageInMonths !== null && ageInMonths < 2) {
     errors.push('This PGD applies to individuals aged 2 months or over');
   }
-  if (!patient.nhsNumber?.trim()) {
-    errors.push('NHS number is required');
-  }
+  // NHS number is optional, as on every other tool: a visitor without one can still be seen.
 
   return { isValid: errors.length === 0, errors };
 }
@@ -52,6 +50,9 @@ export function validateConsent(
   }
   if (!consent.idVerified) {
     errors.push('Patient ID must be verified');
+  }
+  if (!consent.patientAwarePrivateService) {
+    errors.push('Patient must be aware this is a private service');
   }
   if (ageYears !== null && ageYears < 16) {
     if (!screening.consentBasis) {
@@ -83,8 +84,18 @@ export function validateScreening(screening: JapaneseEncephalitisScreening): Val
   if (!screening.travelDuration?.trim()) {
     errors.push('Travel duration is required');
   }
-  if (!screening.sufficientTimeBeforeTravel) {
-    errors.push('Confirm there is sufficient time before travel to complete the primary course (inclusion criterion)');
+  // Under 14 days to departure the course cannot be completed before travel,
+  // so the inclusion tick would be a false statement in the record. The late
+  // presenter acknowledges the risk assessment instead.
+  const days = daysUntil(screening.departureDate);
+  if (days !== null && days >= 0 && days < 14) {
+    if (!screening.insufficientTimeAcknowledged) {
+      errors.push('Under 14 days to departure: confirm the risk has been assessed, the patient told protection will be incomplete, and the course will be completed on return');
+    }
+  } else if (!screening.sufficientTimeBeforeTravel) {
+    errors.push(days !== null && days < 35
+      ? 'Confirm there is sufficient time before travel to complete the primary course: under 35 days only the rapid course (day 0 and day 7) can be completed a week before travel'
+      : 'Confirm there is sufficient time before travel to complete the primary course (inclusion criterion)');
   }
   if (screening.outdoorActivities && !screening.activitiesDetails?.trim()) {
     errors.push('Please describe outdoor activities');
@@ -96,9 +107,8 @@ export function validateScreening(screening: JapaneseEncephalitisScreening): Val
 export function validateMedicalHistory(screening: JapaneseEncephalitisScreening): ValidationResult {
   const errors: string[] = [];
 
-  if (screening.temperature === null || screening.temperature === undefined) {
-    errors.push('Temperature must be recorded');
-  }
+  // Temperature is optional: the document's exclusion is the pharmacist's
+  // assessment of acute severe febrile illness, with no threshold.
   if (screening.currentIllness && !screening.illnessDetails?.trim()) {
     errors.push('Please describe current illness');
   }
@@ -131,17 +141,19 @@ export function validateAdministration(
 ): ValidationResult {
   const errors: string[] = [];
 
+  // Adrenaline must be confirmed BEFORE the vaccine is given, so it is
+  // checked here on the administration step, not retrospectively.
+  if (!administration.anaphylaxisKitChecked) {
+    errors.push('Confirm adrenaline 1:1000 and the written anaphylaxis protocol are immediately available before the vaccine is given');
+  }
   if (!administration.batchNumber?.trim()) {
     errors.push('Batch number is required');
   }
-  if (!administration.expiryDate?.trim()) {
+  if (!parseLocalDate(administration.expiryDate)) {
     errors.push('Expiry date is required');
-  }
-
-  if (administration.expiryDate?.trim()) {
-    const expiryDate = new Date(administration.expiryDate);
-    const today = new Date();
-    if (expiryDate < today) {
+  } else {
+    const d = daysUntil(administration.expiryDate);
+    if (d !== null && d < 0) {
       errors.push('Vaccine batch has expired');
     }
   }
@@ -155,8 +167,14 @@ export function validateAdministration(
   if (screening.bleedingDisorder && administration.route === 'intramuscular') {
     errors.push('Bleeding disorder, thrombocytopenia or anticoagulation: give by deep subcutaneous injection, not intramuscularly');
   }
+  if (!screening.bleedingDisorder && administration.route === 'deep-subcutaneous') {
+    errors.push('Deep subcutaneous is authorised only for bleeding disorders, thrombocytopenia or anticoagulation; otherwise give intramuscularly');
+  }
   if (!administration.doseNumber) {
     errors.push('Dose number must be selected');
+  }
+  if (administration.doseNumber === 'second-booster' && !secondBoosterAllowed(ageYears)) {
+    errors.push('The second booster is authorised for adults aged 18 to 64 only');
   }
   if (!administration.schedule) {
     errors.push('Schedule must be selected');
@@ -174,9 +192,8 @@ export function validateAdministration(
   if (!administration.timeAdministered?.trim()) {
     errors.push('Time of administration is required');
   }
-  if (!administration.nextDueDate?.trim()) {
-    errors.push('Next due date is required');
-  }
+  // nextDueDate is computed from the schedule and dose number; it is blank
+  // only where no further dose is scheduled, so it is not validated here.
 
   return { isValid: errors.length === 0, errors };
 }
@@ -192,14 +209,18 @@ export function validatePostVaccineObs(
   if (!postVaccineObs.observationCompleted) {
     errors.push('Record that the observation period was completed (15 minutes minimum, seated)');
   }
-  if (!postVaccineObs.anaphylaxisKitChecked) {
-    errors.push('Confirm adrenaline 1:1000 and the written anaphylaxis protocol are immediately available');
-  }
 
   if (postVaccineObs.adverseReaction && !postVaccineObs.reactionDetails?.trim()) {
     errors.push('Please describe the adverse reaction');
   }
 
+  return { isValid: errors.length === 0, errors };
+}
+
+export function validateSummary(summary: { pharmacistName: string; pharmacistGPhC: string }): ValidationResult {
+  const errors: string[] = [];
+  if (!summary.pharmacistName?.trim()) errors.push('Pharmacist name is required');
+  if (!summary.pharmacistGPhC?.trim()) errors.push('GPhC registration number is required');
   return { isValid: errors.length === 0, errors };
 }
 

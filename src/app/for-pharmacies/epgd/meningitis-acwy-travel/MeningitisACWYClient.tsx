@@ -94,6 +94,8 @@ export function MeningitisACWYClient() {
 
   const [contraIndicationsReviewed, setContraIndicationsReviewed] = useState({
     confirmedNoAbsoluteContraindications: false,
+    /** Advice given and decision reached where the patient is excluded (PGD records row). */
+    exclusionAdvice: '',
   });
 
   const [summary, setSummary] = useState<MeningitisACWYSummary>(
@@ -103,8 +105,6 @@ export function MeningitisACWYClient() {
   const [postVaccineAdvice, setPostVaccineAdvice] = useState<MeningitisACWYPostVaccineAdvice>(
     initialMeningitisACWYPostVaccineAdvice
   );
-
-  const [showSummaryReport, setShowSummaryReport] = useState(false);
 
   // Persist form data to sessionStorage so it survives accidental navigation
   const formState = useMemo(() => ({
@@ -232,7 +232,7 @@ export function MeningitisACWYClient() {
   const canProceedStep1 = consentValidationError === null;
   const canProceedStep2 = travelValidationError === null;
   const canProceedStep3 = true; // Medical history is always valid
-  const canProceedStep4 = contraIndicationsReviewed.confirmedNoAbsoluteContraindications;
+  const canProceedStep4 = contraIndicationsReviewed.confirmedNoAbsoluteContraindications && !isBlocked;
   const canProceedStep5 = administrationValidationError === null;
   const canProceedStep6 = postVaccineValidationError === null;
   const canProceedStep7 = summaryValidationError === null;
@@ -264,7 +264,13 @@ export function MeningitisACWYClient() {
   };
 
   // ─── Consultation Record Data (for saving to database) ───
+  // Returns a record on every step, including before a product has been
+  // chosen, so that an excluded patient can be saved as "not supplied" from
+  // the step where the stop was raised.
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    const stopped = clinicalAlerts.some((a) => a.severity === 'stop');
+    const productLabel =
+      summary.vaccineType === 'nimenrix' ? 'Nimenrix' : summary.vaccineType === 'menquadfi' ? 'MenQuadfi' : summary.vaccineType === 'menveo' ? 'Menveo' : '';
     return {
       patient: {
         firstName: patientDetails.firstName,
@@ -276,7 +282,20 @@ export function MeningitisACWYClient() {
         address: patientDetails.address,
         gpName: patientDetails.gpName,
         gpPractice: patientDetails.gpPractice,
+        gpAddress: patientDetails.gpAddress,
+        gpPhone: patientDetails.gpPhone,
+        gpEmail: patientDetails.gpEmail,
+        gpOdsCode: patientDetails.gpOdsCode,
       },
+      medicine:
+        !stopped && productLabel
+          ? {
+              name: `${productLabel} (MenACWY conjugate vaccine)`,
+              dose: `0.5 mL intramuscular, ${summary.doseNumber || 'single'} dose`,
+              duration: 'Single dose this attendance',
+              quantity: 1,
+            }
+          : undefined,
       clinicalData: {
         patient: patientDetails,
         consent,
@@ -287,15 +306,19 @@ export function MeningitisACWYClient() {
         summary,
         clinicalAlerts,
       } as unknown as Record<string, unknown>,
-      outcome: clinicalAlerts.some((a) => a.severity === 'stop') ? "not_supplied" : "completed",
+      outcome: stopped ? "not_supplied" : "completed",
       summary: {
-        pharmacistName: summary.pharmacistName,
-        pharmacistGPhC: summary.pharmacistGPhC,
+        pharmacistName: summary.pharmacistName || profile?.name || '',
+        pharmacistGPhC: summary.pharmacistGPhC || profile?.gphcNumber || '',
+        pharmacyName: summary.pharmacyName || profile?.pharmacyName,
+        pharmacyAddress: summary.pharmacyAddress || profile?.pharmacyAddress,
         consultationDate: summary.consultationDate,
         consultationTime: summary.consultationTime,
+        clinicalNotes: summary.clinicalNotes,
       },
+      consent: { notifyGp: consent.notifyGp },
     };
-  }, [patientDetails, consent, travelAssessment, medicalHistory, contraIndicationsReviewed, postVaccineAdvice, summary, clinicalAlerts]);
+  }, [patientDetails, consent, travelAssessment, medicalHistory, contraIndicationsReviewed, postVaccineAdvice, summary, clinicalAlerts, profile]);
 
   const handleNewConsultation = useCallback(() => {
     setCurrentStep(0);
@@ -304,28 +327,11 @@ export function MeningitisACWYClient() {
     setConsent(initialMeningitisACWYConsent);
     setTravelAssessment({ travelDestinationConfirmed: false, travelReasonConfirmed: false, timingConfirmed: false });
     setMedicalHistory(initialMeningitisACWYMedicalHistory);
-    setContraIndicationsReviewed({ confirmedNoAbsoluteContraindications: false });
+    setContraIndicationsReviewed({ confirmedNoAbsoluteContraindications: false, exclusionAdvice: '' });
     setPostVaccineAdvice(initialMeningitisACWYPostVaccineAdvice);
     setSummary(initialMeningitisACWYSummary());
-    setShowSummaryReport(false);
-  }, []);
-
-  if (showSummaryReport) {
-    return (
-      <div>
-        <MeningitisACWYSummaryReport
-          patientDetails={patientDetails}
-          consent={consent}
-          summary={summary}
-          medicalHistory={medicalHistory}
-          clinicalAlerts={clinicalAlerts}
-          postVaccineAdvice={postVaccineAdvice}
-          pgdVersion={MENACWY_PGD_VERSION}
-          onBack={() => setShowSummaryReport(false)}
-        />
-      </div>
-    );
-  }
+    clearSaved();
+  }, [clearSaved]);
 
   return (
     <>
@@ -344,7 +350,9 @@ export function MeningitisACWYClient() {
           stepLabels={STEP_LABELS}
           currentStep={currentStep}
           onStepClick={(step) => {
-            if (completedSteps.has(step) || step <= currentStep) {
+            // Backwards only. Going forward always means pressing Next, where
+            // the stops are enforced.
+            if (step < currentStep) {
               setCurrentStep(step);
             }
           }}
@@ -448,6 +456,8 @@ export function MeningitisACWYClient() {
           onPrev={handlePrev}
           canProceed={canProceedStep2}
           validationError={travelValidationError}
+          isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
         >
           <div className="space-y-4">
             {/* Almost every MenACWY patient is travelling to Saudi Arabia for
@@ -615,6 +625,8 @@ export function MeningitisACWYClient() {
           onPrev={handlePrev}
           canProceed={canProceedStep3}
           validationError={null}
+          isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
         >
           <div className="space-y-4">
             <Checkbox
@@ -717,13 +729,22 @@ export function MeningitisACWYClient() {
               : null
           }
           isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
         >
           <div className="space-y-4">
             {isBlocked && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-3">
                 <p className="text-red-700 text-sm font-semibold">
                   Exclusion identified. Refer, do not vaccinate. Explain why vaccination cannot be given today and what the alternative is. Where it is acute febrile illness, arrange to vaccinate after recovery and, if travel is imminent, say plainly that protection may not be achieved in time. Where outbreak or contact management is involved, refer to the GP or the UKHSA Health Protection Team. Document the advice and the decision.
                 </p>
+                <TextArea
+                  label="Advice given and decision reached (saved with the exclusion record)"
+                  value={contraIndicationsReviewed.exclusionAdvice ?? ''}
+                  onChange={(v) => setContraIndicationsReviewed({ ...contraIndicationsReviewed, exclusionAdvice: v })}
+                  placeholder="e.g., Febrile illness today: advised to return once recovered; travel in 3 weeks, told protection may not be achieved in time."
+                  rows={3}
+                />
+                <p className="text-xs text-red-700">Then use "Save as not supplied" below to record the consultation.</p>
               </div>
             )}
 
@@ -761,6 +782,7 @@ export function MeningitisACWYClient() {
                 checked={contraIndicationsReviewed.confirmedNoAbsoluteContraindications}
                 onChange={(v) =>
                   setContraIndicationsReviewed({
+                    ...contraIndicationsReviewed,
                     confirmedNoAbsoluteContraindications: v,
                   })
                 }
@@ -782,6 +804,8 @@ export function MeningitisACWYClient() {
           onPrev={handlePrev}
           canProceed={canProceedStep5}
           validationError={administrationValidationError}
+          isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
         >
           <div className="space-y-4">
             <SelectInput
@@ -926,6 +950,8 @@ export function MeningitisACWYClient() {
           onPrev={handlePrev}
           canProceed={canProceedStep6}
           validationError={postVaccineValidationError}
+          isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
         >
           <div className="space-y-4">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -1050,14 +1076,15 @@ export function MeningitisACWYClient() {
           description="Complete pharmacist declaration and generate consultation record"
           currentStep={currentStep}
           totalSteps={STEP_LABELS.length}
-          onNext={() => { clearSaved(); setShowSummaryReport(true); }}
+          onNext={() => {}}
           onPrev={handlePrev}
           canProceed={canProceedStep7}
           validationError={summaryValidationError}
+          isBlocked={isBlocked}
           getConsultationData={getConsultationData}
           onNewConsultation={handleNewConsultation}
         >
-          <div className="space-y-4">
+          <div className="space-y-4 print:hidden">
             <TextInput
               label="Pharmacist name"
               value={summary.pharmacistName}
@@ -1132,6 +1159,8 @@ export function MeningitisACWYClient() {
                       batchNumber: summary.batchNumber,
                       expiryDate: summary.expiryDate,
                       administrationSite: summary.administrationSite,
+                      doseNumber: summary.doseNumber,
+                      passportNumber: patientDetails.passportNumber,
                       travelReason: patientDetails.travelReason,
                       consultationDate: summary.consultationDate,
                       pharmacistName: summary.pharmacistName,
@@ -1182,6 +1211,23 @@ export function MeningitisACWYClient() {
                 name to be filled in.
               </p>
             </div>
+          </div>
+
+          {/* The printed record. StepWrapper's Save & Print prints this page,
+              so the report has to be on it: before this it lived behind an
+              onNext that the last step never calls, and what came out of the
+              printer was the declaration form with no patient on it. */}
+          <div className="mt-6">
+            <MeningitisACWYSummaryReport
+              patientDetails={patientDetails}
+              consent={consent}
+              summary={summary}
+              medicalHistory={medicalHistory}
+              clinicalAlerts={clinicalAlerts}
+              postVaccineAdvice={postVaccineAdvice}
+              pgdVersion={MENACWY_PGD_VERSION}
+              embedded
+            />
           </div>
         </StepWrapper>
       )}

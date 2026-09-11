@@ -102,6 +102,9 @@ function reducer(state: PEConsultationState, action: PEAction): PEConsultationSt
     case "SET_STEP":
       newState.currentStep = action.step;
       break;
+
+    case "RESET":
+      return createInitialConsultationState();
   }
 
   return newState;
@@ -135,22 +138,23 @@ export default function PEClient() {
     return validateStep(state, state.currentStep);
   }, [state]);
 
+  // A stop anywhere blocks Next and Save & Print on every step, and the last
+  // step's Save applies its own validation (adversarial review, 11 Sep 2026).
   const canProceed = useMemo(() => {
-    if (state.currentStep >= TOTAL_STEPS - 1) return true;
-    if (state.currentStep <= 5 && hardStops) return false;
+    if (hardStops) return false;
     return !validationError;
-  }, [state, validationError, hardStops]);
+  }, [validationError, hardStops]);
 
   // ─── Handlers ───
 
   const handleNext = useCallback(() => {
-    if (!validationError && state.currentStep < TOTAL_STEPS - 1) {
+    if (!validationError && !hardStops && state.currentStep < TOTAL_STEPS - 1) {
       const newCompleted = new Set(completedSteps);
       newCompleted.add(state.currentStep);
       setCompletedSteps(newCompleted);
       dispatch({ type: "SET_STEP", step: state.currentStep + 1 });
     }
-  }, [state.currentStep, validationError, completedSteps]);
+  }, [state.currentStep, validationError, hardStops, completedSteps]);
 
   const handlePrev = useCallback(() => {
     if (state.currentStep > 0) {
@@ -158,11 +162,17 @@ export default function PEClient() {
     }
   }, [state.currentStep]);
 
+  // Backwards only. Forward always means Next, where the stops are enforced.
   const handleStepClick = useCallback((step: number) => {
-    if (completedSteps.has(step) || step <= state.currentStep) {
+    if (step < state.currentStep) {
       dispatch({ type: "SET_STEP", step });
     }
-  }, [completedSteps, state.currentStep]);
+  }, [state.currentStep]);
+
+  const handleNewConsultation = useCallback(() => {
+    dispatch({ type: "RESET" });
+    setCompletedSteps(new Set());
+  }, []);
 
   // ─── Step content rendering ───
 
@@ -181,16 +191,30 @@ export default function PEClient() {
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
       },
-      clinicalData: state as unknown as Record<string, unknown>,
+      clinicalData: { ...(state as unknown as Record<string, unknown>), alerts },
       outcome: hardStops ? "not_supplied" : "completed",
+      medicine:
+        !hardStops && state.medicineSupply.dapoxetine30mgSupplied && state.medicineSupply.strengthSupplied
+          ? {
+              name: "Dapoxetine",
+              medicine: `Dapoxetine ${state.medicineSupply.strengthSupplied} tablets${state.medicineSupply.brand ? ` (${state.medicineSupply.brand})` : ""}`,
+              dose: `${state.medicineSupply.strengthSupplied} 1 to 3 hours before sexual activity, maximum one dose in 24 hours`,
+              duration: "As required, review after 4 weeks",
+              quantity: state.medicineSupply.quantity ?? undefined,
+            }
+          : undefined,
       summary: {
         pharmacistName: state.summary.pharmacistName,
         pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacyName: state.summary.pharmacyName,
+        pharmacyAddress: state.summary.pharmacyAddress,
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: state.consent.notifyGp },
     };
-  }, [state, hardStops]);
+  }, [state, hardStops, alerts]);
 
   const renderStep = () => {
     switch (state.currentStep) {
@@ -213,12 +237,22 @@ export default function PEClient() {
 
       case 1: // Consent
         return (
-          <ConsentStep
-            consent={state.consent}
-            onChange={(field, value) =>
-              dispatch({ type: "UPDATE_CONSENT", field, value })
-            }
-          />
+          <div className="space-y-4">
+            <ConsentStep
+              consent={state.consent}
+              onChange={(field, value) =>
+                dispatch({ type: "UPDATE_CONSENT", field, value })
+              }
+            />
+            <Checkbox
+              label="Informed WRITTEN consent obtained and filed"
+              checked={state.consent.writtenConsentObtained}
+              onChange={(v) =>
+                dispatch({ type: "UPDATE_CONSENT", field: "writtenConsentObtained", value: v })
+              }
+              description="PGD v003 inclusion criterion: the patient has provided informed written consent. Verbal consent alone does not meet it."
+            />
+          </div>
         );
 
       case 2: // Assessment
@@ -536,6 +570,11 @@ export default function PEClient() {
               }
               description="Starting dose 30mg"
             />
+            {(state.currentMedications.moderateCyp3a4Inhibitor || state.medicalHistory.cyp2d6PoorMetaboliser) && (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                Moderate CYP3A4 inhibitor or CYP2D6 poor metaboliser: maximum 30mg. 60mg is not available for this patient.
+              </div>
+            )}
             <Checkbox
               label="30mg dose previously insufficient and well tolerated: 60mg may be supplied"
               checked={state.medicineSupply.mayIncreaseTo60mg}
@@ -553,10 +592,14 @@ export default function PEClient() {
               value={state.medicineSupply.strengthSupplied}
               onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "strengthSupplied", value: v })}
               required
-              options={[
-                { value: "30mg", label: "Dapoxetine 30mg tablets (starting dose)" },
-                { value: "60mg", label: "Dapoxetine 60mg tablets (30mg insufficient and well tolerated)" },
-              ]}
+              options={
+                state.currentMedications.moderateCyp3a4Inhibitor || state.medicalHistory.cyp2d6PoorMetaboliser
+                  ? [{ value: "30mg", label: "Dapoxetine 30mg tablets (maximum for this patient)" }]
+                  : [
+                      { value: "30mg", label: "Dapoxetine 30mg tablets (starting dose)" },
+                      { value: "60mg", label: "Dapoxetine 60mg tablets (30mg insufficient and well tolerated)" },
+                    ]
+              }
             />
             <NumberInput
               label="Quantity supplied (tablets, maximum 6 per supply)"
@@ -598,6 +641,7 @@ export default function PEClient() {
                     dispatch({ type: "UPDATE_SUMMARY", field: "lyingBP", value: v })
                   }
                   placeholder="mmHg"
+                  required
                 />
                 <TextInput
                   label="Standing BP (e.g. 118/78)"
@@ -606,6 +650,7 @@ export default function PEClient() {
                     dispatch({ type: "UPDATE_SUMMARY", field: "standingBP", value: v })
                   }
                   placeholder="mmHg"
+                  required
                 />
               </div>
               <Checkbox
@@ -621,6 +666,14 @@ export default function PEClient() {
                 description="Lying and standing BP measured before first dose"
               />
             </div>
+            <Checkbox
+              label="Patient information leaflet (PIL) supplied with Priligy"
+              checked={state.medicineSupply.pilSupplied}
+              onChange={(v) =>
+                dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "pilSupplied", value: v })
+              }
+              description="Written information row of PGD v003. Required."
+            />
           </div>
         );
 
@@ -824,7 +877,9 @@ export default function PEClient() {
         canProceed={canProceed}
         validationError={validationError}
         isBlocked={hardStops}
-       getConsultationData={getConsultationData}>
+        getConsultationData={getConsultationData}
+        onNewConsultation={handleNewConsultation}
+      >
         {renderStep()}
       </StepWrapper>
 

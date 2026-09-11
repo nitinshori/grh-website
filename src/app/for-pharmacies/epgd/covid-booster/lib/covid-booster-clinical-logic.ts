@@ -5,8 +5,8 @@ import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
 // Aligned to the COVID-19 Vaccination 2026/27 PGD version 006, issued 11 September 2026.
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-/** Minimum interval between COVID-19 vaccine doses: 3 months, taken as 90 days. */
-export const MIN_INTERVAL_DAYS = 90;
+/** Minimum interval between COVID-19 vaccine doses: 3 months, operationalised as 91 days (13 weeks) as in the NHS programme. */
+export const MIN_INTERVAL_DAYS = 91;
 
 /** Days since an ISO date, or null when missing or invalid. */
 export function daysSince(date: string): number | null {
@@ -47,7 +47,7 @@ export function getAllAlerts(state: CovidBoosterConsultationState): ClinicalAler
   }
 
   // Anaphylaxis to previous COVID vaccine
-  if (state.assessment.anaphylaxisToPreviousDose) {
+  if (state.assessment.anaphylaxisToPreviousDose === "yes") {
     alerts.push({
       severity: "stop",
       code: "COVID_ANAPHYLAXIS_PREV",
@@ -57,7 +57,7 @@ export function getAllAlerts(state: CovidBoosterConsultationState): ClinicalAler
   }
 
   // Hypersensitivity to the active substance or an excipient (PEG for mRNA, polysorbate 80 for Nuvaxovid)
-  if (state.assessment.anaphylaxisToPEG || state.assessment.anaphylaxisToPolysorbate) {
+  if (state.assessment.anaphylaxisToPEG === "yes" || state.assessment.anaphylaxisToPolysorbate === "yes") {
     alerts.push({
       severity: "stop",
       code: "COVID_ANAPHYLAXIS_COMPONENT",
@@ -67,7 +67,7 @@ export function getAllAlerts(state: CovidBoosterConsultationState): ClinicalAler
   }
 
   // Acute severe febrile illness
-  if (state.assessment.severeFebrilIllness) {
+  if (state.assessment.severeFebrilIllness === "yes") {
     alerts.push({
       severity: "stop",
       code: "COVID_FEBRILE",
@@ -93,7 +93,7 @@ export function getAllAlerts(state: CovidBoosterConsultationState): ClinicalAler
       alerts.push({
         severity: "caution",
         code: "COVID_INTERVAL_SHORT_ADVISED",
-        message: "Less than 3 months since the last COVID-19 vaccine dose",
+        message: "Less than 3 months (91 days) since the last COVID-19 vaccine dose",
         detail:
           "Permitted only because a shorter interval is specifically advised in national guidance for this individual. Record the guidance relied on in the clinical notes.",
       });
@@ -101,9 +101,9 @@ export function getAllAlerts(state: CovidBoosterConsultationState): ClinicalAler
       alerts.push({
         severity: "stop",
         code: "COVID_INTERVAL_SHORT",
-        message: "Less than 3 months since the last COVID-19 vaccine dose",
+        message: "Less than 3 months (91 days) since the last COVID-19 vaccine dose",
         detail:
-          "Excluded: a minimum interval of 3 months is required between COVID-19 vaccine doses, unless a shorter interval is specifically advised in national guidance for that individual.",
+          "Excluded: a minimum interval of 3 months (91 days) is required between COVID-19 vaccine doses, unless a shorter interval is specifically advised in national guidance for that individual.",
       });
     }
   }

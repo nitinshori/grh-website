@@ -13,6 +13,12 @@ interface FeverPAINScoreProps {
   onAttendRapidlyChange: (v: boolean) => void;
   onInflamedTonselsChange: (v: boolean) => void;
   onNoCoughCorynaChange: (v: boolean) => void;
+  /** "Attend rapidly" is derived from the recorded duration and cannot be ticked by hand. */
+  attendRapidlyLocked?: boolean;
+  attendRapidlyNote?: string;
+  /** "Fever" is forced on by a measured temperature of 38 or above. */
+  feverLocked?: boolean;
+  feverNote?: string;
 }
 
 export function FeverPAINScore({
@@ -26,6 +32,10 @@ export function FeverPAINScore({
   onAttendRapidlyChange,
   onInflamedTonselsChange,
   onNoCoughCorynaChange,
+  attendRapidlyLocked = false,
+  attendRapidlyNote,
+  feverLocked = false,
+  feverNote,
 }: FeverPAINScoreProps) {
   const totalScore = (fever ? 1 : 0) +
     (purulence ? 1 : 0) +
@@ -70,8 +80,8 @@ export function FeverPAINScore({
         <Checkbox
           label="Fever"
           checked={fever}
-          onChange={onFeverChange}
-          description="Temperature &gt;38°C in the last 24 hours"
+          onChange={(v) => { if (!feverLocked) onFeverChange(v); }}
+          description={feverNote ?? "Temperature above 38 C in the last 24 hours"}
         />
 
         <Checkbox
@@ -84,8 +94,8 @@ export function FeverPAINScore({
         <Checkbox
           label="Attend rapidly"
           checked={attendRapidly}
-          onChange={onAttendRapidlyChange}
-          description="Symptoms onset <3 days ago"
+          onChange={(v) => { if (!attendRapidlyLocked) onAttendRapidlyChange(v); }}
+          description={attendRapidlyNote ?? "Symptom onset less than 3 days ago"}
         />
 
         <Checkbox

@@ -1,6 +1,12 @@
 import type { SkinInfectionConsultationState } from "./skin-infection-types";
 import { validatePatientStep, validateConsentStep, validateSummaryStep } from "../../shared/types";
-import { getAgeBand, isCellulitisPgd } from "./skin-infection-logic";
+import {
+  getAgeBand,
+  isCellulitisPgd,
+  getFormulationOptions,
+  derivedQuantity,
+  hoursUntilReview,
+} from "./skin-infection-logic";
 
 export function validateStep(
   stepIndex: number,
@@ -35,6 +41,11 @@ export function validateStep(
       if (!a.severity) return "Please assess severity";
       if (!a.affectedSite.trim()) return "Please describe the affected site";
       if (!a.durationDays.trim()) return "Please record how long symptoms have been present";
+      if (!cellulitisPgd) {
+        // Appendix 2: the record must hold the finding, so the measurements are required.
+        if (!a.erythemaDiameterCm.trim()) return "Record the largest diameter of the erythema in cm (Appendix 2 finding)";
+        if (!a.bodyRegionCount.trim()) return "Record how many body regions are involved (Appendix 2 finding)";
+      }
       if (!cellulitisPgd && age !== null && age < 12 && !a.weightKg.trim())
         return "Please record the child's current weight in kg";
       // Observations: every observation must be measured and recorded before any supply.
@@ -56,8 +67,15 @@ export function validateStep(
             : "Cellulitis: confirm the edge of the erythema has been marked with a skin-safe pen";
         if (cellulitisPgd && !a.marginMarkedTime.trim())
           return "Cellulitis: record the time the margin was marked";
-        if (!cellulitisPgd && !a.reviewDateTime.trim())
-          return "Cellulitis: record the date and time of the booked in-person 48-hour review at this pharmacy";
+        if (!a.reviewDateTime.trim())
+          return cellulitisPgd
+            ? "Cellulitis: record the date and time of the booked 48-hour reassessment"
+            : "Cellulitis: record the date and time of the booked in-person 48-hour review at this pharmacy";
+        // The review is AT 48 hours: a booking outside 36 to 60 hours is not the document's review.
+        const hours = hoursUntilReview(state.summary.consultationDate, state.summary.consultationTime, a.reviewDateTime);
+        if (hours === null) return "The review date and time could not be read; re-enter it";
+        if (hours < 36 || hours > 60)
+          return `The 48-hour review must be booked between 36 and 60 hours after this consultation (entered: ${Math.round(hours)} hours)`;
       }
       return null;
     }
@@ -71,8 +89,8 @@ export function validateStep(
       if (!sel.choice) return "Please select the antibiotic";
       if (sel.choice === "clarithromycin" && !mh.renalFunction)
         return "Clarithromycin: ask about renal function and record the answer (Medical History step)";
-      if (sel.choice !== "flucloxacillin" && !sel.rationale.trim())
-        return "Record the reason flucloxacillin was unsuitable (penicillin allergy or other reason)";
+      if (sel.choice !== "flucloxacillin" && !sel.flucloxUnsuitableReason)
+        return "Select the reason flucloxacillin was unsuitable (inclusion for the second and third line arms: penicillin allergy, hepatic history, cannot manage empty-stomach dosing, or intolerance). Patient preference is not a reason under this PGD";
       if (!sel.courseDays) return "Please select the course length";
       if (!cellulitisPgd) {
         // Document: 5 days for uncomplicated infection; 7 days for cellulitis.
@@ -81,11 +99,15 @@ export function validateStep(
         if (a.infectionType !== "cellulitis" && sel.courseDays !== "5")
           return "Uncomplicated infection is a 5-day course under this PGD (7 days is for cellulitis only)";
       }
-      if (!sel.quantitySupplied.trim()) return "Please record the quantity supplied";
-      if (!cellulitisPgd) {
-        if (!sel.batchNumber.trim()) return "Please record the batch number";
-        if (!sel.expiryDate.trim()) return "Please record the expiry date";
-      }
+      const options = getFormulationOptions(state);
+      if (options.length === 0) return "No formulation is authorised for this antibiotic at this age or weight; choose another arm or refer";
+      if (!sel.formulation || !options.some((o) => o.value === sel.formulation))
+        return "Select the formulation supplied from the PGD's list for this arm";
+      if (!sel.brand.trim()) return "Record the brand of the product supplied (PGD records requirement)";
+      const quantity = derivedQuantity(state);
+      if (!quantity || sel.quantitySupplied !== quantity) return "Quantity is fixed by the PGD for the formulation and course length";
+      if (!sel.batchNumber.trim()) return "Please record the batch number";
+      if (!sel.expiryDate.trim()) return "Please record the expiry date";
       return null;
     }
 
@@ -97,18 +119,18 @@ export function validateStep(
         return "Please confirm same-day warning-sign advice and the 2 to 3 day review advice";
       if (sel.choice === "doxycycline" && !c.sunProtection)
         return "Please confirm sun-protection advice for doxycycline";
-      if (cellulitisPgd) {
-        if (!c.selfCareAdvice) return "Please confirm the self-care and prevention advice";
-        return null;
-      }
       if (!c.seriousReactionAdvice)
         return "Please confirm the serious reaction advice (stop and seek urgent help for rash, wheeze, lip or tongue swelling; 999 for breathing difficulty)";
       if (sel.choice === "flucloxacillin" && !c.hepaticAdvice)
         return "Please confirm the jaundice / dark urine advice for flucloxacillin";
-      if (sel.choice === "flucloxacillin" && age !== null && age <= 9 && !c.childSyringeAdvice)
-        return "Please confirm the oral syringe and 5 mL dose advice for a child aged 2 to 9";
       if (a.infectionType === "cellulitis" && !c.cellulitisReviewAdvice)
         return "Please confirm the cellulitis marking and 48-hour review advice";
+      if (cellulitisPgd) {
+        if (!c.selfCareAdvice) return "Please confirm the self-care and prevention advice";
+        return null;
+      }
+      if (sel.choice === "flucloxacillin" && age !== null && age <= 9 && !c.childSyringeAdvice)
+        return "Please confirm the oral syringe and 5 mL dose advice for a child aged 2 to 9";
       if (sel.choice === "clarithromycin" && !c.interactionAdvice)
         return "Please confirm the interaction advice for clarithromycin";
       if (sel.choice === "doxycycline" && !c.antacidAdvice)

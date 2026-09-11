@@ -145,11 +145,15 @@ export function NumberInput({
           type="number"
           value={value ?? ""}
           onChange={(e) => {
-            const v = e.target.value === "" ? null : parseInt(e.target.value, 10);
+            // parseFloat, not parseInt: 40.9 kg was being stored as 40 and
+            // 38.7 C as 38, which moved patients across weight bands and
+            // under the fever threshold (adversarial review, 11 Sep 2026).
+            const v = e.target.value === "" ? null : parseFloat(e.target.value);
             onChange(v !== null && isNaN(v) ? null : v);
           }}
           min={min}
           max={max}
+          step="any"
           placeholder={placeholder}
           className="w-24 px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
         />

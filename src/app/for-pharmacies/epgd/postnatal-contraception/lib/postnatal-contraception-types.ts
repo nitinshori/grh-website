@@ -24,8 +24,9 @@ export const PGD_VERSION_LABEL =
 export type PostnatalMedicineChoice = "" | "desogestrel" | "depo-provera";
 
 export interface PostnatalAssessment {
+  deliveryDate: string; // YYYY-MM-DD: the document's assessment list starts with the delivery date
   weeksPostpartum: number; // derived from daysPostpartum for display
-  daysPostpartum: number | null;
+  daysPostpartum: number | null; // derived from deliveryDate, never typed
   deliveryType: string;
   breastfeedingStatus: string;
   vteRiskAssessment: string; // legacy free field, no longer required
@@ -37,8 +38,9 @@ export interface PostnatalAssessment {
   postpartumHaemorrhage: boolean;
   preEclampsia: boolean;
   smoking: boolean;
-  // From day 21 pregnancy must be reasonably excluded
-  unprotectedSexSinceDay21: boolean;
+  // From day 21 pregnancy must be reasonably excluded. Asked as yes/no with
+  // no default: an unanswered question is not a "no".
+  unprotectedSexSinceDay21: boolean | null;
   negativeTest21DaysAfterLastUpsi: boolean;
 }
 
@@ -47,8 +49,9 @@ export interface PostnatalMedicalHistory {
   currentBreastCancer: boolean; // exclusion, both arms
   severeLiverDisease: boolean; // exclusion, both arms
   unexplainedVaginalBleeding: boolean; // exclusion, both arms
-  porphyria: boolean;
+  porphyria: boolean; // not in the PGD: caution only
   pastBreastCancer: boolean; // caution (more than 5 years ago)
+  breastCancerWithin5Years: boolean; // past breast cancer treated within the last 5 years: UKMEC 3, refer
   liverTumours: boolean; // desogestrel exclusion
   sleWithAntiphospholipidAntibodies: boolean;
   activeThromboembolicDisorder: boolean; // desogestrel exclusion
@@ -61,6 +64,7 @@ export interface PostnatalMedicalHistory {
   hypertension: boolean; // caution
   migraine: boolean; // caution
   depression: boolean; // caution
+  exclusionsAsked: boolean; // pharmacist attests every exclusion and caution above was asked and recorded
 }
 
 export interface PostnatalMedicineSupply {
@@ -70,11 +74,16 @@ export interface PostnatalMedicineSupply {
   quantity: number; // desogestrel: tablets supplied (up to 84)
   startDate: string;
   administeredBy: string;
+  ukmecConfirmed: boolean; // inclusion criterion: UKMEC 2025 category 1 or 2 for the chosen method
   // Depo-Provera administration record
+  injectionType: "" | "first" | "repeat";
+  lastInjectionDate: string; // repeat only: the dose row is every 12 weeks plus or minus 5 days
+  lateRepeatPregnancyExcluded: boolean; // repeat beyond 89 days: pregnancy reasonably excluded
+  lateRepeatBarrierAdvised: boolean; // repeat beyond 89 days: barrier method for 7 days advised
   injectionSite: "" | "gluteal" | "deltoid";
   batchNumber: string;
   expiryDate: string;
-  nextInjectionDue: string;
+  nextInjectionDue: string; // derived: date of injection plus 84 days
 }
 
 export interface PostnatalCounselling {
@@ -143,6 +152,7 @@ export function createInitialPostnatalContraceptionState(): PostnatalContracepti
     patient: { ...initialPatientDetails },
     consent: { ...initialConsent },
     assessment: {
+      deliveryDate: "",
       weeksPostpartum: 0,
       daysPostpartum: null,
       deliveryType: "",
@@ -155,7 +165,7 @@ export function createInitialPostnatalContraceptionState(): PostnatalContracepti
       postpartumHaemorrhage: false,
       preEclampsia: false,
       smoking: false,
-      unprotectedSexSinceDay21: false,
+      unprotectedSexSinceDay21: null,
       negativeTest21DaysAfterLastUpsi: false,
     },
     medicalHistory: {
@@ -165,6 +175,7 @@ export function createInitialPostnatalContraceptionState(): PostnatalContracepti
       unexplainedVaginalBleeding: false,
       porphyria: false,
       pastBreastCancer: false,
+      breastCancerWithin5Years: false,
       liverTumours: false,
       sleWithAntiphospholipidAntibodies: false,
       activeThromboembolicDisorder: false,
@@ -177,6 +188,7 @@ export function createInitialPostnatalContraceptionState(): PostnatalContracepti
       hypertension: false,
       migraine: false,
       depression: false,
+      exclusionsAsked: false,
     },
     medicineSupply: {
       medicineChoice: "",
@@ -185,6 +197,11 @@ export function createInitialPostnatalContraceptionState(): PostnatalContracepti
       quantity: 0,
       startDate: "",
       administeredBy: "",
+      ukmecConfirmed: false,
+      injectionType: "",
+      lastInjectionDate: "",
+      lateRepeatPregnancyExcluded: false,
+      lateRepeatBarrierAdvised: false,
       injectionSite: "",
       batchNumber: "",
       expiryDate: "",

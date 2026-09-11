@@ -133,13 +133,27 @@ export function getAllAlerts(state: MMRConsultationState): ClinicalAlert[] {
     });
   }
 
-  // Anaphylaxis to egg (MMRVaxPro specific; the PGD notes egg allergy is not a contraindication to MMR)
-  if (state.medicalHistory.anaphylaxisEgg && state.vaccineAdmin.vaccine === "MMRVaxPro") {
+  // Egg allergy, including anaphylaxis, is not a contraindication to MMR (PGD
+  // and Green Book): both products are grown on chick embryo fibroblast
+  // cultures and neither is contraindicated. Informational only; the tool used
+  // to refuse MMRVaxPro here, an exclusion the signed document does not contain.
+  if (state.medicalHistory.anaphylaxisEgg) {
+    alerts.push({
+      severity: "caution",
+      code: "EGG_ALLERGY_NOTE",
+      message: "Egg allergy recorded: not a contraindication",
+      detail: "Egg allergy is not a contraindication to MMR (PGD, Green Book chapter 21). Either product may be given. Observe for 15 minutes as for every patient.",
+    });
+  }
+
+  // Two or more documented doses: the inclusion criterion is "without two
+  // documented doses of MMR". Nothing in the tool asked this before.
+  if (state.eligibility.documentedDoses === "2") {
     alerts.push({
       severity: "stop",
-      code: "ANAPHYLAXIS_EGG",
-      message: "Anaphylaxis to egg with MMRVaxPro selected",
-      detail: "Egg allergy is not a contraindication to MMR (Green Book), but this tool does not give MMRVaxPro after egg anaphylaxis. Select Priorix (egg-free).",
+      code: "TWO_DOCUMENTED_DOSES",
+      message: "Two documented doses of MMR already received",
+      detail: "The PGD covers individuals without two documented doses. A third dose is not authorised under this PGD. Explain that the course is complete and refer to the GP if there is doubt about the records.",
     });
   }
 

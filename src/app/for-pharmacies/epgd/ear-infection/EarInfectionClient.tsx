@@ -8,8 +8,19 @@ import { AlertBanner } from "../shared/components/AlertBanner";
 import { PatientDetailsStep } from "../shared/steps/PatientDetailsStep";
 import { ConsentStep } from "../shared/steps/ConsentStep";
 import { TextInput, Checkbox, SelectInput, TextArea } from "../shared/components/FormInputs";
-import type { ClinicalAlert } from "../shared/types";
-import { calculateAge, validatePatientStep, validateConsentStep } from "../shared/types";
+import type { ClinicalAlert, BaseConsent } from "../shared/types";
+import { calculateAge, validatePatientStep, validateConsentStep, validateSummaryStep } from "../shared/types";
+
+/** Whole months from date of birth to today; null when the date is blank or invalid. */
+function calculateAgeMonths(dob: string): number | null {
+  if (!dob) return null;
+  const b = new Date(dob);
+  if (isNaN(b.getTime())) return null;
+  const t = new Date();
+  let months = (t.getFullYear() - b.getFullYear()) * 12 + (t.getMonth() - b.getMonth());
+  if (t.getDate() < b.getDate()) months--;
+  return months;
+}
 
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 
@@ -67,7 +78,8 @@ function initialState() {
       idVerified: false,
       idType: "",
       patientAwarePrivateService: false,
-    },
+      notifyGp: false,
+    } as BaseConsent,
     consent16: {
       basis: "" as "" | "parental" | "gillick",
       detail: "",
@@ -82,6 +94,10 @@ function initialState() {
       discharge: false,
       reducedHearing: false,
       itching: false,
+      canalSwollenOrRed: false,
+      // Attestation: the record must show every Appendix 1 red flag was asked
+      // about or looked for, not merely that no box was ticked.
+      redFlagsAllAsked: false,
       earSurgeryHistory: false,
       grommetsInPlace: false,
       foreignBodySuspected: false,
@@ -114,6 +130,11 @@ function initialState() {
       productReason: "",
       batchNumber: "",
       expiryDate: "",
+      pilSupplied: false,
+    },
+    exclusionOutcome: {
+      adviceGiven: "",
+      referredTo: "" as "" | "999" | "urgent-care" | "gp" | "ent" | "other",
     },
     counselling: {
       warmDrops: false,
@@ -127,6 +148,7 @@ function initialState() {
       sprayStopIfIrritation: false,
       seekAdvice: false,
       noSecondCourse: false,
+      disposalAdvice: false,
     },
     summary: {
       pharmacistName: "",
@@ -158,6 +180,7 @@ export default function EarInfectionClient() {
   }, [__pharmProfile, (state as any).summary?.pharmacistName, (state as any).summary?.pharmacistGPhC]);
 
   const age = useMemo(() => calculateAge(state.patient.dateOfBirth), [state.patient.dateOfBirth]);
+  const ageMonths = useMemo(() => calculateAgeMonths(state.patient.dateOfBirth), [state.patient.dateOfBirth]);
   const under16 = age !== null && age < 16;
 
   const alerts: ClinicalAlert[] = useMemo(() => {
@@ -166,13 +189,17 @@ export default function EarInfectionClient() {
     const product = state.treatment.product;
 
     // ── Age ──────────────────────────────────────────────────────────────
-    if (age !== null && age <= 1) {
+    // Age in months, not whole years: the cover says the drops are licensed
+    // from 1 year and that a child aged 1 to under 2 may have the drops. A
+    // whole-year test (age <= 1) refused that whole cohort (adversarial
+    // review, 11 Sep 2026). Boundary applied: first birthday.
+    if (ageMonths !== null && ageMonths < 12) {
       issues.push({
         severity: "stop",
-        code: "AGE_UNDER_2",
-        message: "Aged 1 year or under",
+        code: "AGE_UNDER_1",
+        message: "Aged under 1 year",
         detail:
-          "Ciprofloxacin drops: safety and efficacy below 1 year have not been established (inclusion: aged more than 1 year). The spray is for 2 years and over. Refer.",
+          "Ciprofloxacin drops: safety and efficacy below 1 year have not been established (licensed from 1 year). The spray is for 2 years and over. Refer.",
       });
     }
 
@@ -193,7 +220,10 @@ export default function EarInfectionClient() {
     }
 
     // ── Appendix 1 red flags: any one excludes ───────────────────────────
-    if (a.severeUnremittingPain && (a.diabetes || a.immunosuppressed)) {
+    // Severe pain recorded on the severity select counts as well as the
+    // separate red-flag box: the necrotising stop was gated on the second of
+    // two boxes (adversarial review, 11 Sep 2026).
+    if ((a.severeUnremittingPain || a.painSeverity === "severe") && (a.diabetes || a.immunosuppressed)) {
       issues.push({
         severity: "stop",
         code: "NECROTISING_OE",
@@ -351,7 +381,7 @@ export default function EarInfectionClient() {
         detail: "The spray cannot be supplied. Use the ciprofloxacin arm if its own criteria are met, or refer.",
       });
     }
-    if (product === "spray" && age !== null && age < 2) {
+    if (product === "spray" && ageMonths !== null && ageMonths < 24) {
       issues.push({
         severity: "stop",
         code: "SPRAY_AGE",
@@ -416,9 +446,18 @@ export default function EarInfectionClient() {
     }
 
     return issues;
-  }, [state.assessment, state.treatment.product, age]);
+  }, [state.assessment, state.treatment.product, ageMonths]);
 
   const hasStopAlerts = alerts.some((a) => a.severity === "stop");
+
+  // The spray is offered only where its own criteria are met; otherwise the
+  // select cannot reach it and the ciprofloxacin arm is the only choice.
+  const sprayAllowed =
+    !(ageMonths !== null && ageMonths < 24) &&
+    !state.assessment.pregnancy &&
+    !(state.assessment.breastfeeding && !state.assessment.breastfeedingDecisionRecorded.trim()) &&
+    !state.assessment.neomycinOrSprayAllergy;
+
 
   const stepError = useMemo<string | null>(() => {
     const a = state.assessment;
@@ -443,16 +482,27 @@ export default function EarInfectionClient() {
         if (a.earAffected === "both" && !a.bothEarsExamined) return "Both ears affected: confirm both were examined";
         if (!a.symptomDuration) return "Record how long symptoms have been present";
         if (!a.painSeverity) return "Record the severity of pain";
+        if (!a.earPain && !a.discharge && !a.itching && !a.canalSwollenOrRed)
+          return "Record at least one clinical sign or symptom of acute otitis externa (pain or tenderness, discharge, itch, or a swollen or red canal)";
         if (!a.tympanicMembrane) return "Record the otoscopy finding";
         if (!a.canalFindings.trim()) return "Record the otoscopy finding in terms: the state of the canal";
+        if (!a.redFlagsAllAsked) return "Confirm that every Appendix 1 red flag was asked about or looked for";
         if (!a.previousEpisodes12m) return "Record any previous episode in the last 12 months";
         return null;
       case 3:
+        // Stops are re-checked on every later step: a stop that only bit on
+        // step 2 could be raised afterwards and carried to a printed supply.
+        if (hasStopAlerts) return "Cannot proceed: exclusion criteria present";
         if (!state.treatment.product) return "Select the product supplied";
+        if (state.treatment.product === "spray" && !sprayAllowed) return "The ear spray cannot be supplied to this patient: select the ciprofloxacin drops";
         if (!state.treatment.productReason.trim()) return "Record which product was supplied and why";
+        if (!state.treatment.batchNumber.trim()) return "Record the batch number";
         if (!state.treatment.expiryDate) return "Record the expiry date";
+        if (state.treatment.expiryDate < state.summary.consultationDate) return "The expiry date is before today: do not supply this pack";
+        if (!state.treatment.pilSupplied) return "Confirm the patient information leaflet was supplied with the product";
         return null;
       case 4: {
+        if (hasStopAlerts) return "Cannot proceed: exclusion criteria present";
         const c = state.counselling;
         if (state.treatment.product === "ciprofloxacin" && (!c.warmDrops || !c.liedPosition || !c.instilTechnique || !c.completeCourse))
           return "Confirm the ciprofloxacin administration counselling";
@@ -460,31 +510,38 @@ export default function EarInfectionClient() {
           return "Confirm the spray counselling";
         if (!c.avoidWater || !c.nothingInEar) return "Confirm the water-avoidance and nothing-in-the-ear advice";
         if (!c.seekAdvice || !c.noSecondCourse) return "Confirm the same-day help advice and that no second course is to be started";
+        if (!c.disposalAdvice) return "Confirm the disposal advice was given (return unused ampoules or product to a pharmacy)";
         return null;
       }
+      case 5:
+      case 6:
+        if (hasStopAlerts) return "Cannot proceed: exclusion criteria present";
+        return validateSummaryStep(state.summary);
       default:
         return null;
     }
-  }, [currentStep, state, age, under16, hasStopAlerts]);
+  }, [currentStep, state, age, under16, hasStopAlerts, sprayAllowed]);
 
   const handleNext = useCallback(() => {
-    if (stepError) return;
+    if (stepError || hasStopAlerts) return;
     setCompletedSteps((prev) => new Set([...prev, currentStep]));
     setCurrentStep((prev) => Math.min(prev + 1, 6));
-  }, [currentStep, stepError]);
+  }, [currentStep, stepError, hasStopAlerts]);
 
   const handlePrev = useCallback(
     () => setCurrentStep((prev) => Math.max(prev - 1, 0)),
     []
   );
 
+  // Backwards only: going forward always means pressing Next, where the
+  // stops and validators are enforced.
   const handleStepClick = useCallback(
     (step: number) => {
-      if (completedSteps.has(step) || step <= currentStep) {
+      if (step < currentStep) {
         setCurrentStep(step);
       }
     },
-    [completedSteps, currentStep]
+    [currentStep]
   );
 
   const stepTitles = [
@@ -504,6 +561,22 @@ export default function EarInfectionClient() {
   }, []);
 
   const product = state.treatment.product ? PRODUCTS[state.treatment.product as Exclude<Product, "">] : null;
+  // Quantity follows the ears treated: a bilateral 7 day course of drops needs
+  // 28 ampoules, which is two packs.
+  const quantitySupplied = product
+    ? state.treatment.product === "ciprofloxacin" && state.assessment.earAffected === "both"
+      ? "Two packs of 15 single-dose ampoules (both ears affected and examined: a 7 day course at twice daily uses 28)"
+      : product.quantity
+    : "";
+  const suppliedUnderPgd = !hasStopAlerts && product !== null;
+
+  const REFERRED_LABELS: Record<string, string> = {
+    "999": "Emergency: 999 or A&E",
+    "urgent-care": "Same-day GP or urgent care",
+    gp: "GP",
+    ent: "ENT (emergency, same day)",
+    other: "Other",
+  };
 
   // ─── Consultation Record Data (for saving to database) ───
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
@@ -521,18 +594,33 @@ export default function EarInfectionClient() {
       },
       clinicalData: {
         ...(state as unknown as Record<string, unknown>),
-        productSupplied: product?.name ?? null,
+        patient: { ...state.patient, age, ageMonths },
+        productSupplied: suppliedUnderPgd ? product?.name ?? null : null,
+        quantitySupplied: suppliedUnderPgd ? quantitySupplied : null,
         pgdVersion: PGD_STRAPLINE,
+        alerts,
       },
-      outcome: hasStopAlerts ? "not_supplied" : "completed",
+      outcome: hasStopAlerts ? (state.exclusionOutcome.referredTo ? "referred" : "not_supplied") : "completed",
+      medicine: suppliedUnderPgd && product
+        ? {
+            name: product.name,
+            dose: `${product.dose}; ${product.frequency}`,
+            duration: product.duration,
+            quantity: quantitySupplied,
+          }
+        : undefined,
       summary: {
-        pharmacistName: state.summary.pharmacistName,
-        pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacistName: state.summary.pharmacistName || __pharmProfile?.name || "",
+        pharmacistGPhC: state.summary.pharmacistGPhC || __pharmProfile?.gphcNumber || "",
+        pharmacyName: state.summary.pharmacyName,
+        pharmacyAddress: state.summary.pharmacyAddress,
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: state.consent.notifyGp },
     };
-  }, [state, hasStopAlerts, product]);
+  }, [state, hasStopAlerts, product, suppliedUnderPgd, quantitySupplied, age, ageMonths, alerts, __pharmProfile]);
 
   const setA = (patch: Partial<typeof state.assessment>) =>
     setState((prev) => ({ ...prev, assessment: { ...prev.assessment, ...patch } }));
@@ -546,16 +634,45 @@ export default function EarInfectionClient() {
         currentStep={currentStep}
         onStepClick={handleStepClick}
         completedSteps={completedSteps}
-        hasErrors={currentStep === 2 && hasStopAlerts}
+        hasErrors={hasStopAlerts}
       />
+      {hasStopAlerts && currentStep !== 2 && <AlertBanner alerts={alerts.filter((x) => x.severity === "stop")} />}
+      {hasStopAlerts && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-3 print:hidden">
+          <p className="text-sm font-semibold text-red-800">
+            Patient excluded: do not supply. Record the advice given and the decision reached, then use Save as not supplied.
+          </p>
+          <SelectInput
+            label="Referred to"
+            value={state.exclusionOutcome.referredTo}
+            onChange={(v) => setState((prev) => ({ ...prev, exclusionOutcome: { ...prev.exclusionOutcome, referredTo: v as typeof prev.exclusionOutcome.referredTo } }))}
+            options={[
+              { value: "999", label: "Emergency: 999 or A&E" },
+              { value: "ent", label: "ENT (emergency, same day)" },
+              { value: "urgent-care", label: "Same-day GP or urgent care" },
+              { value: "gp", label: "GP" },
+              { value: "other", label: "Other (state in advice given)" },
+            ]}
+            required
+          />
+          <TextArea
+            label="Advice given and decision reached"
+            value={state.exclusionOutcome.adviceGiven}
+            onChange={(v) => setState((prev) => ({ ...prev, exclusionOutcome: { ...prev.exclusionOutcome, adviceGiven: v } }))}
+            placeholder="Alternative treatment advised, who the patient was referred to, whether the GP was informed"
+            rows={3}
+            required
+          />
+        </div>
+      )}
       <StepWrapper
         title={stepTitles[currentStep]}
         currentStep={currentStep}
         totalSteps={7}
         onNext={handleNext}
         onPrev={handlePrev}
-        canProceed={stepError === null}
-        isBlocked={currentStep === 2 && hasStopAlerts}
+        canProceed={stepError === null && !hasStopAlerts}
+        isBlocked={hasStopAlerts}
         validationError={stepError}
         getConsultationData={getConsultationData}
         onNewConsultation={handleNewConsultation}
@@ -563,13 +680,17 @@ export default function EarInfectionClient() {
         {/* Step 0: Patient Details */}
         {currentStep === 0 && (
           <>
-            {age !== null && age <= 1 && <AlertBanner alerts={alerts.filter((x) => x.code === "AGE_UNDER_2")} />}
+            {ageMonths !== null && ageMonths < 12 && <AlertBanner alerts={alerts.filter((x) => x.code === "AGE_UNDER_1")} />}
             <PatientDetailsStep
               patient={{ ...state.patient, age }}
               onChange={(field, value) =>
                 setState((prev) => ({
                   ...prev,
-                  patient: { ...prev.patient, [field]: value },
+                  patient: {
+                    ...prev.patient,
+                    [field]: value,
+                    ...(field === "dateOfBirth" ? { age: calculateAge(String(value ?? "")) } : {}),
+                  },
                 }))
               }
               requireAdult={false}
@@ -697,9 +818,11 @@ export default function EarInfectionClient() {
                 <div className="space-y-2">
                   <Checkbox label="Ear pain, or tenderness of the tragus or pinna" checked={state.assessment.earPain} onChange={(v) => setA({ earPain: v })} />
                   <Checkbox label="Discharge from ear" checked={state.assessment.discharge} onChange={(v) => setA({ discharge: v })} />
-                  <Checkbox label="Reduced hearing (simple canal blockage)" checked={state.assessment.reducedHearing} onChange={(v) => setA({ reducedHearing: v })} />
                   <Checkbox label="Itching in the ear" checked={state.assessment.itching} onChange={(v) => setA({ itching: v })} />
+                  <Checkbox label="Swollen or erythematous (red) canal on otoscopy" checked={state.assessment.canalSwollenOrRed} onChange={(v) => setA({ canalSwollenOrRed: v })} />
+                  <Checkbox label="Reduced hearing (simple canal blockage; not a sign of itself)" checked={state.assessment.reducedHearing} onChange={(v) => setA({ reducedHearing: v })} />
                 </div>
+                <p className="text-xs text-blue-900 mt-2">At least one of pain or tenderness, discharge, itch, or a swollen or red canal is required (inclusion criterion).</p>
               </div>
 
               <div className="mb-4 rounded-lg border border-red-300 bg-red-50 px-3 py-3 space-y-3">
@@ -747,6 +870,13 @@ export default function EarInfectionClient() {
                 <Checkbox label="Vertigo, new hearing loss beyond simple canal blockage, tinnitus of new onset, or any other neurological symptom" checked={state.assessment.vertigoHearingLossNeuro} onChange={(v) => setA({ vertigoHearingLossNeuro: v })} />
                 <Checkbox label="Suspected foreign body in the canal" checked={state.assessment.foreignBodySuspected} onChange={(v) => setA({ foreignBodySuspected: v })} description="Refer for removal." />
                 <Checkbox label="White or black fuzzy debris in the canal" checked={state.assessment.fungalDebris} onChange={(v) => setA({ fungalDebris: v })} description="Suggests fungal infection. Antibacterial drops will not help and may worsen it. Refer." />
+                <Checkbox
+                  label="Every Appendix 1 red flag above was asked about or looked for"
+                  checked={state.assessment.redFlagsAllAsked}
+                  onChange={(v) => setA({ redFlagsAllAsked: v })}
+                  description="The record must show the red flags were asked about or looked for and were absent; an unticked box is not evidence the question was asked"
+                  required
+                />
                 <SelectInput
                   label="Episodes of this in the last 12 months"
                   value={state.assessment.previousEpisodes12m}
@@ -795,7 +925,6 @@ export default function EarInfectionClient() {
         {/* Step 3: Treatment */}
         {currentStep === 3 && (
           <div className="space-y-6">
-            {alerts.some((x) => x.severity === "stop") && <AlertBanner alerts={alerts.filter((x) => x.severity === "stop")} />}
             <div className="p-3 rounded-md bg-gray-50 border border-gray-200 text-xs text-gray-600 space-y-1">
               <p>Where the tympanic membrane is intact and clearly seen, either product may be used. Ciprofloxacin drops are preferred where there is any doubt about the drum, in pregnancy and breastfeeding, and for a child aged 1 to under 2.</p>
               <p>The spray contains a corticosteroid and may settle a very inflamed, itchy canal faster; that is the only reason to choose it over the drops. Do not use both.</p>
@@ -806,10 +935,17 @@ export default function EarInfectionClient() {
               onChange={(v) => setState((prev) => ({ ...prev, treatment: { ...prev.treatment, product: v as Product } }))}
               options={[
                 { value: "ciprofloxacin", label: "Ciprofloxacin 2mg/ml ear drops, single-dose containers (from 1 year; preferred)" },
-                { value: "spray", label: "Dexamethasone, neomycin and acetic acid ear spray (from 2 years; not in pregnancy)" },
+                ...(sprayAllowed
+                  ? [{ value: "spray", label: "Dexamethasone, neomycin and acetic acid ear spray (from 2 years; not in pregnancy)" }]
+                  : []),
               ]}
               required
             />
+            {!sprayAllowed && (
+              <p className="text-xs text-gray-600">
+                The ear spray is not offered: the patient is under 2, pregnant, breastfeeding without a recorded decision, or allergic to a spray constituent. Only the ciprofloxacin drops may be supplied.
+              </p>
+            )}
             <TextArea
               label="Which product was supplied and why"
               value={state.treatment.productReason}
@@ -828,7 +964,7 @@ export default function EarInfectionClient() {
                   <div className="flex justify-between gap-4"><dt className="text-gray-600">Dose:</dt><dd className="font-medium text-gray-900 text-right">{product.dose}</dd></div>
                   <div className="flex justify-between gap-4"><dt className="text-gray-600">Frequency:</dt><dd className="font-medium text-gray-900 text-right">{product.frequency}</dd></div>
                   <div className="flex justify-between gap-4"><dt className="text-gray-600">Duration:</dt><dd className="font-medium text-gray-900 text-right">{product.duration}</dd></div>
-                  <div className="flex justify-between gap-4"><dt className="text-gray-600">Quantity supplied:</dt><dd className="font-medium text-gray-900 text-right">{product.quantity}</dd></div>
+                  <div className="flex justify-between gap-4"><dt className="text-gray-600">Quantity supplied:</dt><dd className="font-medium text-gray-900 text-right">{quantitySupplied}</dd></div>
                   <div className="flex justify-between gap-4"><dt className="text-gray-600">Route and method:</dt><dd className="font-medium text-gray-900 text-right">{product.route}</dd></div>
                 </dl>
               </div>
@@ -845,6 +981,7 @@ export default function EarInfectionClient() {
                   }))
                 }
                 placeholder="e.g., LOT123456"
+                required
               />
               <TextInput
                 label="Expiry date"
@@ -856,6 +993,12 @@ export default function EarInfectionClient() {
                     treatment: { ...prev.treatment, expiryDate: v },
                   }))
                 }
+                required
+              />
+              <Checkbox
+                label="Patient information leaflet supplied with the product"
+                checked={state.treatment.pilSupplied}
+                onChange={(v) => setState((prev) => ({ ...prev, treatment: { ...prev.treatment, pilSupplied: v } }))}
                 required
               />
             </div>
@@ -893,7 +1036,11 @@ export default function EarInfectionClient() {
                 onChange={(v) => setC({ seekAdvice: v })}
               />
               <Checkbox label="If no better after finishing the 7 days, go to your GP. Do not start a second course." checked={state.counselling.noSecondCourse} onChange={(v) => setC({ noSecondCourse: v })} />
+              <Checkbox label="Return any unused ampoules or product to a pharmacy for disposal" checked={state.counselling.disposalAdvice} onChange={(v) => setC({ disposalAdvice: v })} required />
             </div>
+            <p className="text-xs text-gray-500">
+              Report suspected adverse reactions via the Yellow Card scheme (https://yellowcard.mhra.gov.uk) and inform the GP.
+            </p>
           </div>
         )}
 
@@ -973,17 +1120,30 @@ export default function EarInfectionClient() {
 
             <div className="p-4 bg-gray-50 rounded-md text-xs space-y-1 border border-gray-200">
               <div><strong>PGD:</strong> {PGD_STRAPLINE}</div>
+              <div><strong>Patient:</strong> {state.patient.firstName} {state.patient.lastName}; DOB {state.patient.dateOfBirth || "not recorded"}{age !== null ? ` (${age} years)` : ""}; {state.patient.address || "address not recorded"}; GP: {state.patient.gpName || "not recorded"}{state.patient.gpPractice ? `, ${state.patient.gpPractice}` : ""}</div>
+              <div><strong>Date and time:</strong> {state.summary.consultationDate} {state.summary.consultationTime}</div>
               <div><strong>Consent:</strong> {state.consent.informedConsentGiven ? "Given" : "Not recorded"}{under16 ? `; under 16: ${state.consent16.basis === "parental" ? "person with parental responsibility" : state.consent16.basis === "gillick" ? "Gillick competent young person" : "not recorded"}${state.consent16.detail ? ` (${state.consent16.detail})` : ""}` : ""}</div>
               <div><strong>Ear:</strong> {state.assessment.earAffected || "not recorded"}{state.assessment.earAffected === "both" ? `; both examined: ${state.assessment.bothEarsExamined ? "yes" : "no"}` : ""}</div>
               <div><strong>Otoscopy:</strong> drum {state.assessment.tympanicMembrane === "intact" ? "seen and intact" : state.assessment.tympanicMembrane === "perforated" ? "perforated or suspected" : state.assessment.tympanicMembrane === "not-seen" ? "not visualised" : "not recorded"}; canal: {state.assessment.canalFindings || "not recorded"}</div>
-              <div><strong>Red flags (Appendix 1) asked about or looked for:</strong> {hasStopAlerts ? "present, see alerts" : "all absent"}</div>
+              <div><strong>Red flags (Appendix 1) asked about or looked for:</strong> {hasStopAlerts ? "present, see alerts" : state.assessment.redFlagsAllAsked ? "all asked about or looked for, all absent" : "not recorded"}</div>
+              <div><strong>Signs and symptoms:</strong> {[state.assessment.earPain && "pain or tenderness", state.assessment.discharge && "discharge", state.assessment.itching && "itch", state.assessment.canalSwollenOrRed && "swollen or red canal", state.assessment.reducedHearing && "reduced hearing"].filter(Boolean).join(", ") || "none recorded"}</div>
               <div><strong>Diabetes:</strong> {state.assessment.diabetes ? "yes" : "no"}; <strong>immunosuppression:</strong> {state.assessment.immunosuppressed ? "yes" : "no"}; <strong>pain severity:</strong> {state.assessment.painSeverity || "not recorded"}</div>
               <div><strong>Duration:</strong> {state.assessment.symptomDuration || "not recorded"}; <strong>treatment tried:</strong> {state.assessment.treatmentTried || "none recorded"}</div>
               <div><strong>Episodes in last 12 months:</strong> {state.assessment.previousEpisodes12m || "not recorded"}; <strong>previous course under this PGD:</strong> {state.assessment.previousCourseUnderPgd12m ? "yes" : "no"}</div>
-              <div><strong>Product supplied and why:</strong> {product?.name ?? "none"}; {state.treatment.productReason || "reason not recorded"}</div>
-              {product && (
-                <div><strong>Form, strength, dose, quantity:</strong> {product.form}; {product.dose}, {product.frequency}; {product.duration}; {product.quantity}. Batch {state.treatment.batchNumber || "not recorded"}, expiry {state.treatment.expiryDate || "not recorded"}. Supplied under this PGD.</div>
+              {hasStopAlerts ? (
+                <>
+                  <div><strong>Outcome:</strong> NOT SUPPLIED. Exclusion criteria met: {alerts.filter((x) => x.severity === "stop").map((x) => x.message).join("; ")}</div>
+                  <div><strong>Referred to:</strong> {REFERRED_LABELS[state.exclusionOutcome.referredTo] || "not recorded"}; <strong>advice given and decision reached:</strong> {state.exclusionOutcome.adviceGiven || "not recorded"}</div>
+                </>
+              ) : (
+                <>
+                  <div><strong>Product supplied and why:</strong> {product?.name ?? "none"}; {state.treatment.productReason || "reason not recorded"}</div>
+                  {product && (
+                    <div><strong>Form, strength, dose, quantity:</strong> {product.form}; {product.dose}, {product.frequency}; {product.duration}; {quantitySupplied}. Batch {state.treatment.batchNumber || "not recorded"}, expiry {state.treatment.expiryDate || "not recorded"}. PIL supplied: {state.treatment.pilSupplied ? "yes" : "no"}. Supplied under this PGD.</div>
+                  )}
+                </>
               )}
+              <div><strong>Adverse reactions:</strong> report via the Yellow Card scheme (https://yellowcard.mhra.gov.uk) and inform the GP.</div>
             </div>
 
             <TextArea
@@ -1001,15 +1161,86 @@ export default function EarInfectionClient() {
           </div>
         )}
 
-        {/* Step 6: Consultation Complete */}
+        {/* Step 6: Consultation record (this is the page that prints) */}
         {currentStep === 6 && (
-          <div className="p-6 bg-green-50 border border-green-200 rounded-lg text-center">
-            <div className="text-4xl text-green-600 mb-2">✓</div>
-            <p className="text-lg font-semibold text-green-900 mb-2">
-              Consultation Record Complete
-            </p>
-            <p className="text-sm text-green-700">
-              The acute otitis externa ePGD consultation ({product?.name ?? "no product supplied"}) has been recorded under the {PGD_STRAPLINE}.
+          <div className="space-y-4 text-xs print:text-[11px]">
+            <div className="text-center pb-3 border-b border-gray-300">
+              <h2 className="text-base font-bold text-navy-900 print:text-sm">Acute Otitis Externa: Consultation Record</h2>
+              <p className="text-gray-500">Get Real Health ePGD Consultation Tool</p>
+              <p className="text-gray-500">{PGD_STRAPLINE}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+              <div><strong>Patient:</strong> {state.patient.firstName} {state.patient.lastName}</div>
+              <div><strong>Date of birth:</strong> {state.patient.dateOfBirth || "not recorded"}{age !== null ? ` (${age} years)` : ""}</div>
+              <div><strong>Address:</strong> {state.patient.address || "not recorded"}</div>
+              <div><strong>NHS number:</strong> {state.patient.nhsNumber || "not recorded"}</div>
+              <div><strong>GP:</strong> {state.patient.gpName || "not recorded"}{state.patient.gpPractice ? `, ${state.patient.gpPractice}` : ""}</div>
+              <div><strong>Date and time:</strong> {state.summary.consultationDate} {state.summary.consultationTime}</div>
+            </div>
+            <div className="space-y-1 border-t border-gray-200 pt-2">
+              <div><strong>Consent:</strong> {state.consent.informedConsentGiven ? "Valid informed consent given" : "Not recorded"}{under16 ? `; under 16: ${state.consent16.basis === "parental" ? "person with parental responsibility" : state.consent16.basis === "gillick" ? "Gillick competent young person" : "not recorded"}${state.consent16.detail ? ` (${state.consent16.detail})` : ""}` : ""}</div>
+              <div><strong>Ear:</strong> {state.assessment.earAffected || "not recorded"}{state.assessment.earAffected === "both" ? `; both examined: ${state.assessment.bothEarsExamined ? "yes" : "no"}` : ""}</div>
+              <div><strong>Otoscopy:</strong> drum {state.assessment.tympanicMembrane === "intact" ? "seen and intact" : state.assessment.tympanicMembrane === "perforated" ? "perforated or suspected" : state.assessment.tympanicMembrane === "not-seen" ? "not visualised" : "not recorded"}; canal: {state.assessment.canalFindings || "not recorded"}</div>
+              <div><strong>Signs and symptoms:</strong> {[state.assessment.earPain && "pain or tenderness", state.assessment.discharge && "discharge", state.assessment.itching && "itch", state.assessment.canalSwollenOrRed && "swollen or red canal", state.assessment.reducedHearing && "reduced hearing"].filter(Boolean).join(", ") || "none recorded"}</div>
+              <div><strong>Red flags (Appendix 1):</strong> {hasStopAlerts ? "present: " + alerts.filter((x) => x.severity === "stop").map((x) => x.message).join("; ") : state.assessment.redFlagsAllAsked ? "all asked about or looked for, all absent" : "not recorded"}</div>
+              <div><strong>Diabetes:</strong> {state.assessment.diabetes ? "yes" : "no"}; <strong>immunosuppression:</strong> {state.assessment.immunosuppressed ? "yes" : "no"}; <strong>pain severity:</strong> {state.assessment.painSeverity || "not recorded"}</div>
+              <div><strong>Duration:</strong> {state.assessment.symptomDuration || "not recorded"}; <strong>treatment tried:</strong> {state.assessment.treatmentTried || "none recorded"}</div>
+              <div><strong>Episodes in last 12 months:</strong> {state.assessment.previousEpisodes12m || "not recorded"}; <strong>previous course under this PGD:</strong> {state.assessment.previousCourseUnderPgd12m ? "yes" : "no"}</div>
+            </div>
+            <div className="space-y-1 border-t border-gray-200 pt-2">
+              {hasStopAlerts ? (
+                <>
+                  <div><strong>Outcome:</strong> NOT SUPPLIED. Exclusion criteria met.</div>
+                  <div><strong>Referred to:</strong> {REFERRED_LABELS[state.exclusionOutcome.referredTo] || "not recorded"}</div>
+                  <div><strong>Advice given and decision reached:</strong> {state.exclusionOutcome.adviceGiven || "not recorded"}</div>
+                </>
+              ) : (
+                <>
+                  <div><strong>Product supplied and why:</strong> {product?.name ?? "none"}; {state.treatment.productReason || "reason not recorded"}</div>
+                  {product && (
+                    <>
+                      <div><strong>Form and strength:</strong> {product.form}</div>
+                      <div><strong>Dose, frequency and route:</strong> {product.dose}, {product.frequency}. {product.route}</div>
+                      <div><strong>Duration:</strong> {product.duration}</div>
+                      <div><strong>Quantity supplied:</strong> {quantitySupplied}</div>
+                      <div><strong>Batch:</strong> {state.treatment.batchNumber || "not recorded"}; <strong>expiry:</strong> {state.treatment.expiryDate || "not recorded"}; <strong>PIL supplied:</strong> {state.treatment.pilSupplied ? "yes" : "no"}</div>
+                      <div><strong>Supplied under:</strong> {PGD_STRAPLINE}</div>
+                    </>
+                  )}
+                </>
+              )}
+              <div><strong>Counselling given:</strong> {[
+                state.counselling.warmDrops && "warm the ampoule",
+                state.counselling.liedPosition && "lie with ear up, tug, stay 5 minutes",
+                state.counselling.instilTechnique && "new ampoule each time; wick first dose doubled",
+                state.counselling.completeCourse && "twice a day for 7 days",
+                state.counselling.sprayTechnique && "spray technique",
+                state.counselling.sprayStopIfIrritation && "stop if irritation or rash",
+                state.counselling.avoidWater && "keep water out",
+                state.counselling.nothingInEar && "nothing in the ear",
+                state.counselling.painRelief && "analgesia",
+                state.counselling.seekAdvice && "same-day help red flags",
+                state.counselling.noSecondCourse && "no second course; GP if no better",
+                state.counselling.disposalAdvice && "return unused product to a pharmacy",
+              ].filter(Boolean).join("; ") || "none recorded"}</div>
+              <div><strong>Adverse reactions:</strong> report via the Yellow Card scheme (https://yellowcard.mhra.gov.uk) and inform the GP.</div>
+              {state.summary.clinicalNotes && <div><strong>Clinical notes:</strong> {state.summary.clinicalNotes}</div>}
+            </div>
+            <div className="border-t border-gray-200 pt-2 space-y-1">
+              <p className="text-gray-600">
+                {hasStopAlerts
+                  ? "I confirm that this consultation was conducted in accordance with the Patient Group Direction for Acute Otitis Externa, that exclusion criteria applied, that no medicine was supplied under the PGD, and that the advice given and the decision reached are recorded above."
+                  : "I confirm that this consultation was conducted in accordance with the Patient Group Direction for Acute Otitis Externa, and that the patient met all inclusion criteria and no exclusion criteria applied."}
+              </p>
+              <div className="grid grid-cols-2 gap-x-6">
+                <div><strong>Pharmacist:</strong> {state.summary.pharmacistName || ""}</div>
+                <div><strong>GPhC number:</strong> {state.summary.pharmacistGPhC || ""}</div>
+                <div><strong>Pharmacy:</strong> {state.summary.pharmacyName || ""}{state.summary.pharmacyAddress ? `, ${state.summary.pharmacyAddress}` : ""}</div>
+                <div><strong>Signature:</strong> <span className="inline-block w-40 border-b border-gray-400 align-bottom" /></div>
+              </div>
+            </div>
+            <p className="text-[10px] text-gray-400 text-center pt-2">
+              Get Real Health ePGD: Acute Otitis Externa Consultation Record | Confidential Patient Information | Retain for 8 years (adults) or until the 25th birthday (under 18s)
             </p>
           </div>
         )}

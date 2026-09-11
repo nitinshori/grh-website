@@ -5,7 +5,8 @@ import type { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/
 // ─── Symptoms ───
 
 export interface SoreThroatSymptoms {
-  duration: "<3 days" | "3-7 days" | ">7 days" | "";
+  /** Document exclusion: symptoms for more than 2 weeks. */
+  duration: "<3 days" | "3-7 days" | "8-14 days" | ">14 days" | "";
   soreThroatSeverity: "mild" | "moderate" | "severe" | "";
   dysphagia: boolean; // difficulty swallowing
   drooling: boolean;
@@ -27,7 +28,7 @@ export interface SoreThroatSymptoms {
 export interface FeverPAINScore {
   fever: boolean; // temp >38 in last 24hrs
   purulence: boolean; // tonsillar exudate
-  attendRapidly: boolean; // symptoms <3 days
+  attendRapidly: boolean; // symptoms <3 days: DERIVED from symptoms.duration, never ticked by hand
   inflamedTonsils: boolean; // severely inflamed
   noCoughCoryza: boolean; // absence of cough/runny nose
   totalScore: number; // 0-5, auto-calculated
@@ -65,6 +66,8 @@ export interface SoreThroatHistory {
   ergotamineUse: boolean;
   simvastatinLovastatinUse: boolean;
   qtProlongationRisk: boolean;
+  /** Clarithromycin caution: "QT interval risk: assess baseline risk". Recorded, not assumed. */
+  qtBaselineRiskAssessed: boolean;
   clarithromycinInteractingMedicine: boolean; // SmPC 4.3 list
   severeHepaticImpairment: boolean;
   myastheniaGravis: boolean;
@@ -87,7 +90,6 @@ export interface SoreThroatMedicine {
   duration: string;
   quantity: number;
   brand: string; // records: name and brand of medication
-  backupPrescription: boolean; // delayed/back-up strategy
 }
 
 // ─── Counselling ───
@@ -106,6 +108,11 @@ export interface SoreThroatCounselling {
   clarithromycinAdvice: boolean; // persistent diarrhoea (C. difficile), metallic taste
   avoidAntibioticSharing: boolean;
   schoolWorkAdvice: boolean;
+  pilSupplied: boolean; // the patient information leaflet provided with the medication
+  /** Advice given where the patient is excluded or declines (document record item). */
+  exclusionAdvice: string;
+  /** Details of any adverse drug reactions and the actions taken (Yellow Card). */
+  adverseReactions: string;
 }
 
 // ─── Complete State ───
@@ -175,6 +182,7 @@ export const initialSoreThroatHistory: SoreThroatHistory = {
   ergotamineUse: false,
   simvastatinLovastatinUse: false,
   qtProlongationRisk: false,
+  qtBaselineRiskAssessed: false,
   clarithromycinInteractingMedicine: false,
   severeHepaticImpairment: false,
   myastheniaGravis: false,
@@ -194,7 +202,6 @@ export const initialSoreThroatMedicine: SoreThroatMedicine = {
   duration: "",
   quantity: 0,
   brand: "",
-  backupPrescription: false,
 };
 
 export const initialSoreThroatCounselling: SoreThroatCounselling = {
@@ -211,4 +218,7 @@ export const initialSoreThroatCounselling: SoreThroatCounselling = {
   clarithromycinAdvice: false,
   avoidAntibioticSharing: false,
   schoolWorkAdvice: false,
+  pilSupplied: false,
+  exclusionAdvice: "",
+  adverseReactions: "",
 };

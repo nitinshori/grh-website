@@ -23,7 +23,9 @@ export function EDProgressBar({
           {STEP_LABELS.map((label, i) => {
             const isActive = i === currentStep;
             const isCompleted = completedSteps.has(i);
-            const isClickable = isCompleted || i <= currentStep;
+            // Backwards only. Going forward always means pressing Next,
+            // where the stops are enforced (adversarial review, 11 Sep 2026).
+            const isClickable = i < currentStep;
 
             return (
               <div key={label} className="flex items-center flex-1">

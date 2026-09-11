@@ -80,7 +80,7 @@ export function generateTDAlerts(
       code: 'BREASTFEEDING_TRAVELLERS_DIARRHOEA',
       message: 'Patient is breastfeeding',
       detail:
-        'Both loperamide and azithromycin enter breast milk in small amounts. Discuss with patient.',
+        'Azithromycin passes into breast milk in small amounts; the BNF regards it as suitable for use in breastfeeding. Discuss with the patient and record the decision.',
     });
   }
 
@@ -102,7 +102,7 @@ export function generateTDAlerts(
       code: 'RENAL_DISEASE_DIARRHOEA',
       message: 'Severe renal impairment: caution',
       detail:
-        'Both agents need careful dosing in renal impairment. Specialist advice may be needed.',
+        'Azithromycin needs no dose adjustment in renal impairment (eGFR below 10 is a caution in the SmPC). Confirm the impairment is not part of a wider illness that would exclude, and record it.',
     });
   }
 
@@ -205,6 +205,11 @@ export interface TravellersDiarrhoeaRecommendation {
   approach: string;
   treatment: string;
   reason: string;
+}
+
+/** The document's dose text for a chosen course length. */
+export function azithromycinDoseText(days: 1 | 2 | 3): string {
+  return `500 mg (one tablet) once daily for ${days} day${days > 1 ? 's' : ''}, with food`;
 }
 
 export function recommendApproach(

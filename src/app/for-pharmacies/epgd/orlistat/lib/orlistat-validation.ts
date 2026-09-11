@@ -9,23 +9,40 @@ export function validateStep(step: number, state: OrlistatConsultationState): st
       return validatePatientStep(state.patient, { minAge: 18, maxAge: 74 });
     case 1:
       return validateConsentStep(state.consent);
-    case 2:
-      if (state.weightAssessment.height === null) return "Height is required";
-      if (state.weightAssessment.weight === null) return "Weight is required";
-      if (state.weightAssessment.bmi === null) return "BMI must be calculated";
-      if (state.weightAssessment.waistCircumference === null)
+    case 2: {
+      const w = state.weightAssessment;
+      if (!w.visitType) return "Select the type of visit (first supply, or continuation)";
+      if (w.height === null) return "Height is required";
+      if (w.weight === null) return "Weight is required";
+      if (w.bmi === null) return "BMI must be calculated";
+      if (w.visitType === "continuation") {
+        if (!w.treatmentStartDate) return "Treatment start date (first orlistat supply) is required for a continuation";
+        if (w.treatmentStartDate > new Date().toISOString().split("T")[0]) return "Treatment start date cannot be in the future";
+        if (w.baselineWeight === null) return "Baseline weight at the start of treatment is required for a continuation";
+      }
+      if (w.waistCircumference === null)
         return "Baseline waist circumference must be documented";
+      // Inclusion BMI is applied at initiation; on a continuation the
+      // patient is expected to have lost weight, so the 12 week rule
+      // (clinical logic) governs instead.
+      const bmiForInclusion =
+        w.visitType === "continuation" && w.baselineWeight !== null && w.height
+          ? Math.round((w.baselineWeight / Math.pow(w.height / 100, 2)) * 10) / 10
+          : w.bmi;
       const meetsWeightCriteria =
-        state.weightAssessment.bmi >= 30 ||
-        (state.weightAssessment.bmi >= 28 && state.weightAssessment.comorbidities.length > 0);
+        bmiForInclusion >= 30 ||
+        (bmiForInclusion >= 28 && state.weightAssessment.comorbidities.length > 0);
       if (!meetsWeightCriteria)
-        return "Patient must have BMI 30 or more, or BMI 28 or more with at least one obesity-related comorbidity";
+        return `Patient must have ${w.visitType === "continuation" ? "baseline " : ""}BMI 30 or more, or BMI 28 or more with at least one obesity-related comorbidity`;
       if (!state.weightAssessment.motivatedStructuredDiet)
         return "Confirm the patient is motivated and committed to weight loss with a structured reduced-calorie diet";
       return null;
+    }
     case 3:
       return null;
     case 4:
+      if (!state.medications.allergies.trim() && !state.medications.nkda)
+        return "Record the patient's drug allergies, or confirm no known drug allergies";
       return null;
     case 5:
       return null;

@@ -8,7 +8,6 @@ import {
   AlertSummary,
   CounsellingGrid,
   PharmacistDeclaration,
-  ReportFooter,
 } from "../../shared/components/SummaryReportShell";
 
 interface AcneSummaryReportProps {
@@ -16,10 +15,22 @@ interface AcneSummaryReportProps {
 }
 
 export function AcneSummaryReport({ state }: AcneSummaryReportProps) {
-  const { patient, assessment, medicalHistory, contraindications, medicineSelection, counselling, summary, alerts, doseRecommendation } = state;
+  const { patient, consent, assessment, medicalHistory, contraindications, medicineSelection, counselling, summary, alerts, doseRecommendation } = state;
   const choice = medicineSelection.medicineChoice;
   const duac = choice === "duac-3" || choice === "duac-5";
   const epiduo = choice === "epiduo-0.1" || choice === "epiduo-0.3";
+  const hasStops = alerts.some((a) => a.severity === "stop");
+  const supplied = !hasStops && !!doseRecommendation;
+  const isChild = patient.age !== null && patient.age < 18;
+  const consentBasisLabel: Record<string, string> = {
+    patient: "Patient (16 years or over)",
+    gillick: "Child assessed as Gillick competent and consented",
+    parental: `Person with parental responsibility: ${consent.consentGivenByName || "name not recorded"} (${consent.consentGivenByRelationship || "relationship not recorded"})`,
+  };
+  const consentBasisText =
+    patient.age !== null && patient.age < 16
+      ? consentBasisLabel[consent.consentBasis] || "Not recorded"
+      : "Patient (16 years or over)";
   const strengthRationaleLabel: Record<string, string> = {
     "lower-strength-less-effective": "The 10 mg/g + 30 mg/g strength has proven less effective",
     "more-moderate": "More moderate presentation",
@@ -37,6 +48,23 @@ export function AcneSummaryReport({ state }: AcneSummaryReportProps) {
         <p className="text-xs text-gray-100 mt-1 print:text-[10px]">{PGD_STRAPLINE}</p>
       </div>
 
+      {/* Outcome */}
+      <div className="px-6 py-4 print:px-4 print:py-2">
+        <SectionHeader>Outcome</SectionHeader>
+        <div className={`text-sm font-semibold px-3 py-2 rounded ${hasStops ? "bg-red-50 text-red-700" : supplied ? "bg-green-50 text-green-700" : "bg-gray-50 text-gray-700"}`}>
+          {hasStops
+            ? "NOT SUPPLIED: exclusion criteria met, patient advised and referred to the GP as appropriate"
+            : supplied
+              ? "Supplied under PGD"
+              : "Not supplied: no medicine selected"}
+        </div>
+        {hasStops && summary.exclusionAdvice && (
+          <div className="mt-2">
+            <Row label="Advice given / referral" value={summary.exclusionAdvice} />
+          </div>
+        )}
+      </div>
+
       {/* Patient Details */}
       <div className="px-6 py-4 print:px-4 print:py-2">
         <SectionHeader>Patient Details</SectionHeader>
@@ -44,9 +72,21 @@ export function AcneSummaryReport({ state }: AcneSummaryReportProps) {
           <Row label="Name" value={`${patient.firstName} ${patient.lastName}`} />
           <Row label="DOB" value={patient.dateOfBirth} />
           <Row label="Age" value={`${patient.age} years`} />
+          <Row label="Address" value={patient.address || "Not recorded"} />
           <Row label="GP" value={patient.gpName || "Not recorded"} />
           <Row label="GP Practice" value={patient.gpPractice || "Not recorded"} />
           <Row label="NHS Number" value={patient.nhsNumber || "Not recorded"} />
+        </div>
+      </div>
+
+      {/* Consent */}
+      <div className="px-6 py-4 print:px-4 print:py-2">
+        <SectionHeader>Consent</SectionHeader>
+        <div className="grid grid-cols-2 gap-4 text-xs print:gap-2">
+          <Row label="Informed consent" value={consent.informedConsentGiven ? "Obtained" : "NOT recorded"} />
+          <Row label="Consent given by" value={consentBasisText} />
+          <Row label="ID verified" value={consent.idVerified ? consent.idType || "Yes" : "No"} />
+          <Row label="Private service" value={consent.patientAwarePrivateService ? "Patient aware" : "NOT recorded"} />
         </div>
       </div>
 
@@ -111,6 +151,7 @@ export function AcneSummaryReport({ state }: AcneSummaryReportProps) {
           <Row label="Broken skin at site" value={contraindications.brokenSkinAtSite ? "Yes" : "No"} />
           <Row label="Inflamed skin at site" value={contraindications.inflamedSkinAtSite ? "Yes" : "No"} />
           <Row label="Eczema or sunburn at site" value={contraindications.eczemaOrSunburnAtSite ? "Yes" : "No"} />
+          <Row label="Questions put to patient" value={contraindications.questionsAsked ? "Yes, confirmed by pharmacist" : "NOT confirmed"} />
         </div>
       </div>
 
@@ -120,22 +161,31 @@ export function AcneSummaryReport({ state }: AcneSummaryReportProps) {
         <AlertSummary alerts={alerts} />
       </div>
 
-      {/* Medicine Recommended */}
+      {/* Medicine Supplied (hidden when a stop exists) */}
       <div className="px-6 py-4 print:px-4 print:py-2">
-        <SectionHeader>Medicine Recommended</SectionHeader>
-        <div className="space-y-2 text-xs print:space-y-1">
-          <Row label="Medicine" value={doseRecommendation?.medicine || "Not selected"} />
-          {doseRecommendation && (
-            <>
-              <Row label="Dose and route" value={doseRecommendation.dose} />
-              <Row label="Quantity and treatment period" value={doseRecommendation.duration || "Not recorded"} />
-            </>
-          )}
-          {choice === "duac-5" && (
-            <Row label="Reason for 10 mg/g + 50 mg/g strength" value={strengthRationaleLabel[medicineSelection.strengthRationale] || "Not recorded"} />
-          )}
-          <Row label="Repeat course" value={medicineSelection.repeatCourse ? (medicineSelection.repeatCourseReviewed ? "Yes, review completed" : "Yes, review NOT recorded") : "No"} />
-        </div>
+        <SectionHeader>Medicine Supplied</SectionHeader>
+        {hasStops ? (
+          <p className="text-xs text-red-700 font-medium">No medicine supplied: exclusion criteria met.</p>
+        ) : (
+          <div className="space-y-2 text-xs print:space-y-1">
+            <Row label="Medicine (name and brand)" value={doseRecommendation?.medicine || "Not selected"} />
+            {doseRecommendation && (
+              <>
+                <Row label="Dose, form and route" value={`Topical gel. ${doseRecommendation.dose}`} />
+                <Row label="Quantity supplied" value={medicineSelection.quantitySupplied || "Not recorded"} />
+                <Row label="Treatment period" value={doseRecommendation.duration || "Not recorded"} />
+                <Row label="Date of supply" value={summary.consultationDate} />
+              </>
+            )}
+            {choice === "duac-5" && (
+              <Row label="Reason for 10 mg/g + 50 mg/g strength" value={strengthRationaleLabel[medicineSelection.strengthRationale] || "Not recorded"} />
+            )}
+            <Row label="Repeat course" value={medicineSelection.repeatCourse ? (medicineSelection.repeatCourseReviewed ? "Yes, review completed" : "Yes, review NOT recorded") : "No"} />
+            {medicineSelection.repeatCourse && (
+              <Row label="Previous course" value={`${medicineSelection.previousCourseStartDate || "?"} to ${medicineSelection.previousCourseEndDate || "?"}`} />
+            )}
+          </div>
+        )}
       </div>
 
       {/* Counselling Provided */}
@@ -167,19 +217,58 @@ export function AcneSummaryReport({ state }: AcneSummaryReportProps) {
         </div>
       )}
 
-      {/* Pharmacist Declaration */}
+      {/* Pharmacist Declaration: the shared wording ("no exclusion criteria
+          applied") is only true for a supply, so an excluded consultation
+          carries its own declaration. */}
       <div className="px-6 py-4 print:px-4 print:py-2">
-        <PharmacistDeclaration
-          pgdName="Acne Treatment"
-          pharmacistName={summary.pharmacistName}
-          pharmacistGPhC={summary.pharmacistGPhC}
-          pharmacyName={summary.pharmacyName}
-        />
+        {hasStops ? (
+          <>
+            <SectionHeader>Pharmacist Declaration</SectionHeader>
+            <p className="text-xs text-gray-600 mb-4">
+              I confirm that this consultation was conducted in accordance with the Patient Group Direction for Acne Treatment, that the patient met one or more exclusion criteria, that no medicine was supplied under this PGD, and that the advice given and the decision reached have been recorded above.
+            </p>
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-1">Pharmacist name</p>
+                <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{summary.pharmacistName || ""}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-1">GPhC number</p>
+                <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{summary.pharmacistGPhC || ""}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-1">Pharmacy</p>
+                <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{summary.pharmacyName || ""}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-1">Signature</p>
+                <div className="border-b border-gray-300 min-h-[2rem]" />
+              </div>
+            </div>
+          </>
+        ) : (
+          <PharmacistDeclaration
+            pgdName="Acne Treatment"
+            pharmacistName={summary.pharmacistName}
+            pharmacistGPhC={summary.pharmacistGPhC}
+            pharmacyName={summary.pharmacyName}
+          />
+        )}
       </div>
 
-      {/* Footer */}
+      {/* Footer: retention rule follows the patient's age (the PGD keeps
+          child records until the 25th birthday, 26th if 17 at completion). */}
       <div className="px-6 py-4 print:px-4 print:py-2">
-        <ReportFooter pgdName="Acne Treatment" />
+        <div className="mt-8 pt-4 border-t border-gray-300 text-center">
+          <p className="text-[10px] text-gray-400">
+            Get Real Health ePGD, Acne Treatment Consultation Record | Confidential Patient Information |{" "}
+            {isChild
+              ? patient.age === 17
+                ? "Retain until the patient's 26th birthday (patient aged 17 at completion)"
+                : "Retain until the patient's 25th birthday (patient under 18)"
+              : "Retain for 8 years (adults)"}
+          </p>
+        </div>
       </div>
     </div>
   );

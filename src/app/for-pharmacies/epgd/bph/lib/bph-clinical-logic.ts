@@ -16,8 +16,10 @@ export function getAllAlerts(state: BPHConsultationState): ClinicalAlert[] {
   const rf = state.redFlags;
   const ci = state.contraindications;
 
-  // Hard stop: Not male
-  if (!state.patient.maleConfirmed) {
+  // Hard stop: Not male. Raised once step 0 has been left; on step 0 the
+  // shared validation asks for the confirmation, so a blank form does not
+  // open with an exclusion on screen.
+  if (!state.patient.maleConfirmed && state.currentStep > 0) {
     alerts.push({
       severity: "stop",
       code: "BPH_GENDER",
@@ -36,8 +38,15 @@ export function getAllAlerts(state: BPHConsultationState): ClinicalAlert[] {
     });
   }
 
-  // Inclusion: IPSS 8 or above
-  if (state.lutsAssessment.ipssScore !== null && state.lutsAssessment.ipssScore < 8) {
+  // Inclusion: IPSS 8 or above, at INITIATION. A continuation patient is
+  // required to have improved by 3 or more points; a man who started at 10
+  // and is now 6 is the success the PGD wants, not an exclusion
+  // (adversarial review, 11 Sep 2026).
+  if (
+    state.medicineSupply.supplyType !== "continuation" &&
+    state.lutsAssessment.ipssScore !== null &&
+    state.lutsAssessment.ipssScore < 8
+  ) {
     alerts.push({
       severity: "stop",
       code: "BPH_IPSS",

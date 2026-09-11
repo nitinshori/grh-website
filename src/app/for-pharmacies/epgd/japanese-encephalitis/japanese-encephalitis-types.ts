@@ -21,6 +21,9 @@ export interface JapaneseEncephalitisScreening {
   departureDate: string;
   travelDuration: string;
   sufficientTimeBeforeTravel: boolean;
+  /** Late presenter (under 14 days to departure): the course cannot be completed before travel. Replaces the
+   *  sufficient-time tick so the record never asserts something the tool knows is false. */
+  insufficientTimeAcknowledged: boolean;
   continuedRisk: boolean;
   currentIllness: boolean;
   illnessDetails: string;
@@ -40,6 +43,9 @@ export interface JapaneseEncephalitisScreening {
   /** Under 16 only: who gave consent (PGD consent in children block). */
   consentBasis: 'parental' | 'gillick' | '';
   consentGiverDetails: string;
+  /** Exclusion outcome: the document requires the reason, the advice given and the decision to be recorded. */
+  exclusionAdvice: string;
+  exclusionReferral: '' | 'gp' | 'travel-clinic' | 'specialist' | 'urgent' | 'declined';
 }
 
 export interface JapaneseEncephalitisContraindications {
@@ -63,7 +69,10 @@ export interface JapaneseEncephalitisVaccineAdministration {
   offLabelRapidConsent: boolean;
   administeredBy: string;
   timeAdministered: string;
+  /** Computed from the schedule and dose number ("" when no further dose is scheduled). */
   nextDueDate: string;
+  /** Adrenaline 1:1000 and a written anaphylaxis protocol confirmed BEFORE the vaccine is given. */
+  anaphylaxisKitChecked: boolean;
 }
 
 export interface JapaneseEncephalitisPostVaccineObs {
@@ -110,6 +119,7 @@ export const initialJapaneseEncephalitisScreening = (): JapaneseEncephalitisScre
   departureDate: '',
   travelDuration: '',
   sufficientTimeBeforeTravel: false,
+  insufficientTimeAcknowledged: false,
   continuedRisk: false,
   currentIllness: false,
   illnessDetails: '',
@@ -125,6 +135,8 @@ export const initialJapaneseEncephalitisScreening = (): JapaneseEncephalitisScre
   bleedingDisorder: false,
   consentBasis: '',
   consentGiverDetails: '',
+  exclusionAdvice: '',
+  exclusionReferral: '',
 });
 
 export const initialJapaneseEncephalitisContraindications = (): JapaneseEncephalitisContraindications => ({
@@ -148,6 +160,7 @@ export const initialJapaneseEncephalitisVaccineAdministration = (): JapaneseEnce
   administeredBy: '',
   timeAdministered: '',
   nextDueDate: '',
+  anaphylaxisKitChecked: false,
 });
 
 export const initialJapaneseEncephalitisPostVaccineObs = (): JapaneseEncephalitisPostVaccineObs => ({

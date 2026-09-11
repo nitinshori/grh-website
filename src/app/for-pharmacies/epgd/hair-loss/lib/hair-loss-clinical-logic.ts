@@ -13,8 +13,10 @@ import type { HLConsultationState } from "./hair-loss-types";
 export function getAllAlerts(state: HLConsultationState): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
 
-  // Hard stop: Not male
-  if (!state.patient.maleConfirmed) {
+  // Hard stop: not male. Raised only on an explicit answer; an empty form
+  // used to open with "CONSULTATION CANNOT PROCEED" before any patient data
+  // existed. The patient-step validator is the gate for an unanswered form.
+  if (state.patient.sexRecorded === "not-male") {
     alerts.push({
       severity: "stop",
       code: "HL_GENDER",
@@ -99,6 +101,16 @@ export function getAllAlerts(state: HLConsultationState): ClinicalAlert[] {
       code: "HL_GALACTOSE",
       message: "Rare hereditary galactose intolerance, Lapp lactase deficiency or glucose-galactose malabsorption",
       detail: "Patients with these problems should not take this medicine (contains lactose). Do not supply.",
+    });
+  }
+
+  // Hard stop: current suicidal ideation
+  if (state.contraindications.suicidalIdeation) {
+    alerts.push({
+      severity: "stop",
+      code: "HL_SUICIDAL",
+      message: "Current suicidal ideation reported",
+      detail: "Suicidal ideation has been reported with finasteride 1 mg and the document requires discontinuation and medical advice if psychiatric symptoms occur. Do not start treatment; refer the patient for medical assessment today (GP, NHS 111, or emergency services if at immediate risk).",
     });
   }
 

@@ -13,8 +13,9 @@ import { AlertBanner } from "../shared/components/AlertBanner";
 import { PatientDetailsStep } from "../shared/steps/PatientDetailsStep";
 import { ConsentStep } from "../shared/steps/ConsentStep";
 import { TextInput, Checkbox, SelectInput, TextArea } from "../shared/components/FormInputs";
-
+import { RosaceaSummaryReport } from "./components/RosaceaSummaryReport";
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
+
 function reducer(state: RosaceaConsultationState, action: RosaceaAction): RosaceaConsultationState {
   const newState = { ...state };
   switch (action.type) {
@@ -44,6 +45,7 @@ function reducer(state: RosaceaConsultationState, action: RosaceaAction): Rosace
         newState.treatment.duration = details?.duration ?? "";
         newState.treatment.quantity = details ? "One 30 g tube" : "";
         newState.treatment.supplyNumber = "";
+        newState.treatment.brand = "";
       }
       break;
     case "UPDATE_COUNSELLING":
@@ -55,6 +57,9 @@ function reducer(state: RosaceaConsultationState, action: RosaceaAction): Rosace
     case "SET_STEP":
       newState.currentStep = action.step;
       break;
+    case "RESET":
+      // Fresh state objects, including a fresh date and time.
+      return createInitialRosaceaState();
   }
   return newState;
 }
@@ -75,16 +80,17 @@ export default function RosaceaClient() {
 
   const [validationError, setValidationError] = useState<string | null>(null);
   const alerts = useMemo(() => getAllAlerts(state.assessment, state.contraindications, state.treatment), [state.assessment, state.contraindications, state.treatment]);
-  const isBlocked = hasHardStops(state.contraindications, state.assessment);
+  // Any stop (arm-independent or for the chosen product, or an age below 18
+  // from the date of birth) disables Next on every step, not just the step
+  // it was raised on.
+  const ageStop = state.patient.age !== null && state.patient.age < 18;
+  const isBlocked = hasHardStops(state.contraindications, state.assessment) || ageStop;
   const isProductBlocked = hasProductHardStops(state.contraindications, state.treatment);
+  const anyStop = isBlocked || isProductBlocked;
 
   const handleNext = useCallback(() => {
-    if (state.currentStep >= 2 && state.currentStep <= 3 && isBlocked) {
+    if (anyStop) {
       setValidationError("Patient meets exclusion criteria");
-      return;
-    }
-    if (state.currentStep === 4 && (isBlocked || isProductBlocked)) {
-      setValidationError("Patient meets exclusion criteria for the selected product");
       return;
     }
     const error = validateStep(state.currentStep, state);
@@ -93,19 +99,37 @@ export default function RosaceaClient() {
       return;
     }
     setValidationError(null);
+    if (state.currentStep === 0) {
+      // Contemporaneous record: stamp the date and time when the
+      // consultation actually starts, not when the tab was opened.
+      dispatch({ type: "UPDATE_SUMMARY", field: "consultationDate", value: new Date().toISOString().split("T")[0] });
+      dispatch({
+        type: "UPDATE_SUMMARY",
+        field: "consultationTime",
+        value: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
+      });
+    }
     dispatch({ type: "SET_STEP", step: Math.min(state.currentStep + 1, TOTAL_STEPS - 1) });
-  }, [state, isBlocked, isProductBlocked]);
+  }, [state, anyStop]);
 
   const handlePrev = useCallback(() => {
     setValidationError(null);
     dispatch({ type: "SET_STEP", step: Math.max(state.currentStep - 1, 0) });
+  }, [state.currentStep]);
+
+  const handleNewConsultation = useCallback(() => {
+    setValidationError(null);
+    dispatch({ type: "RESET" });
   }, []);
 
-  const canProceed = validateStep(state.currentStep, state) === null && !(state.currentStep >= 2 && state.currentStep <= 4 && isBlocked) && !(state.currentStep === 4 && isProductBlocked);
+  const stepError = validateStep(state.currentStep, state);
+  const canProceed = stepError === null && !anyStop;
 
 
   // ─── Consultation Record Data (for saving to database) ───
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    const product = PRODUCT_DETAILS[state.treatment.product];
+    const supplied = !anyStop && !!product;
     return {
       patient: {
         firstName: state.patient.firstName,
@@ -117,23 +141,53 @@ export default function RosaceaClient() {
         address: state.patient.address,
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
+        gpAddress: state.patient.gpAddress,
+        gpPhone: state.patient.gpPhone,
+        gpEmail: state.patient.gpEmail,
+        gpOdsCode: state.patient.gpOdsCode,
       },
-      clinicalData: state as unknown as Record<string, unknown>,
-      outcome: isBlocked || isProductBlocked ? "not_supplied" : "completed",
+      clinicalData: { ...state, alerts } as unknown as Record<string, unknown>,
+      outcome: anyStop ? "not_supplied" : "completed",
+      medicine: supplied
+        ? {
+            name: `${product.label}${state.treatment.brand ? ` (${state.treatment.brand})` : ""}`,
+            dose: state.treatment.frequency,
+            duration: state.treatment.duration,
+            quantity: `Supply ${state.treatment.supplyNumber} of up to ${product.maxSupplies}: one 30 g tube`,
+          }
+        : undefined,
       summary: {
-        pharmacistName: state.summary.pharmacistName,
-        pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacistName: state.summary.pharmacistName || __pharmProfile?.name || "",
+        pharmacistGPhC: state.summary.pharmacistGPhC || __pharmProfile?.gphcNumber || "",
+        pharmacyName: state.summary.pharmacyName || __pharmProfile?.pharmacyName || "",
+        pharmacyAddress: state.summary.pharmacyAddress || __pharmProfile?.pharmacyAddress || "",
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: [state.summary.clinicalNotes, anyStop && state.summary.exclusionAdvice ? `Advice given (excluded): ${state.summary.exclusionAdvice}` : ""]
+          .filter(Boolean)
+          .join("\n"),
       },
+      consent: { notifyGp: state.consent.notifyGp },
     };
-  }, [state, isBlocked]);
+  }, [state, anyStop, alerts, __pharmProfile]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 print:space-y-0">
+      <div className="print:hidden space-y-6">
       <p className="text-xs text-gray-500">{PGD_STRAPLINE}</p>
       <ProgressBar current={state.currentStep + 1} total={TOTAL_STEPS} />
       {alerts.length > 0 && <AlertBanner alerts={alerts} />}
+      {anyStop && (
+        <div className="bg-white rounded-xl border border-red-200 shadow-sm p-4">
+          <TextArea
+            label="Advice given to the excluded patient and referral made (recorded with the not-supplied record)"
+            value={state.summary.exclusionAdvice}
+            onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "exclusionAdvice", value: v })}
+            placeholder="e.g. Advised that neither product can be supplied during pregnancy; referred to GP; written information given"
+            rows={2}
+          />
+        </div>
+      )}
       <StepWrapper
         title={STEP_LABELS[state.currentStep]}
         currentStep={state.currentStep}
@@ -141,11 +195,16 @@ export default function RosaceaClient() {
         onNext={handleNext}
         onPrev={handlePrev}
         canProceed={canProceed}
-        validationError={validationError}
-        isBlocked={(state.currentStep >= 2 && state.currentStep <= 4 && isBlocked) || (state.currentStep === 4 && isProductBlocked)}
-       getConsultationData={getConsultationData}>
+        validationError={validationError ?? (state.currentStep === TOTAL_STEPS - 1 ? stepError : null)}
+        isBlocked={anyStop}
+        getConsultationData={getConsultationData}
+        onNewConsultation={handleNewConsultation}
+      >
         {state.currentStep === 0 && (
-          <PatientDetailsStep patient={state.patient} onChange={(field, value) => dispatch({ type: "UPDATE_PATIENT", field, value })} />
+          <div className="space-y-4">
+            <PatientDetailsStep patient={state.patient} onChange={(field, value) => dispatch({ type: "UPDATE_PATIENT", field, value })} />
+            <p className="text-xs text-gray-500">Adults aged 18 years and over. Address and GP practice are required for the PGD record.</p>
+          </div>
         )}
 
         {state.currentStep === 1 && (
@@ -194,6 +253,12 @@ export default function RosaceaClient() {
               checked={state.assessment.papulesPostules}
               onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "papulesPostules", value: v })}
               description="Required for both arms: metronidazole gel is for rosacea with inflammatory lesions; azelaic acid gel is for papulopustular rosacea."
+            />
+            <Checkbox
+              label="Ocular symptoms (dry, sore or gritty eyes, blepharitis)"
+              checked={state.assessment.ocularSymptoms}
+              onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "ocularSymptoms", value: v })}
+              description="Neither arm treats ocular rosacea: advise artificial tears and refer to the GP (ophthalmology if severe or vision affected)."
             />
             <TextInput
               label="Known triggers"
@@ -249,6 +314,14 @@ export default function RosaceaClient() {
               onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "asthma", value: v })}
               description="Caution: worsening of asthma has been reported with azelaic acid"
             />
+            <div className="pt-2 border-t border-amber-200">
+              <Checkbox
+                label="I have asked the patient each of the questions above and recorded the answers"
+                checked={state.contraindications.questionsAsked}
+                onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "questionsAsked", value: v })}
+                required
+              />
+            </div>
             {isBlocked && <div className="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700 font-semibold">Exclusion criteria met. Advise on alternative treatment options; document the advice given and the decision reached; inform or refer to the GP as appropriate.</div>}
           </div>
         )}
@@ -277,16 +350,46 @@ export default function RosaceaClient() {
               </div>
             )}
             {state.treatment.product && PRODUCT_DETAILS[state.treatment.product] && (
-              <SelectInput
-                label="Supply number within this course (one 30 g tube per supply)"
-                value={state.treatment.supplyNumber}
-                onChange={(v) => dispatch({ type: "UPDATE_TREATMENT", field: "supplyNumber", value: v })}
-                required
-                options={Array.from({ length: PRODUCT_DETAILS[state.treatment.product].maxSupplies }, (_, i) => ({
-                  value: String(i + 1),
-                  label: `Supply ${i + 1} of up to ${PRODUCT_DETAILS[state.treatment.product].maxSupplies} (one 30 g tube)`,
-                }))}
-              />
+              <>
+                <TextInput
+                  label="Brand dispensed"
+                  value={state.treatment.brand}
+                  onChange={(v) => dispatch({ type: "UPDATE_TREATMENT", field: "brand", value: v })}
+                  placeholder={PRODUCT_DETAILS[state.treatment.product].brandExamples}
+                  required
+                />
+                <SelectInput
+                  label="Supply number within this course (one 30 g tube per supply)"
+                  value={state.treatment.supplyNumber}
+                  onChange={(v) => dispatch({ type: "UPDATE_TREATMENT", field: "supplyNumber", value: v })}
+                  required
+                  options={Array.from({ length: PRODUCT_DETAILS[state.treatment.product].maxSupplies }, (_, i) => ({
+                    value: String(i + 1),
+                    label: `Supply ${i + 1} of up to ${PRODUCT_DETAILS[state.treatment.product].maxSupplies} (one 30 g tube)`,
+                  }))}
+                />
+                {Number(state.treatment.supplyNumber) > 1 && (
+                  <div className="grid sm:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+                    <TextInput
+                      label="Date this course started"
+                      type="date"
+                      value={state.treatment.courseStartDate}
+                      onChange={(v) => dispatch({ type: "UPDATE_TREATMENT", field: "courseStartDate", value: v })}
+                      required
+                    />
+                    <TextInput
+                      label="Date of previous supply"
+                      type="date"
+                      value={state.treatment.previousSupplyDate}
+                      onChange={(v) => dispatch({ type: "UPDATE_TREATMENT", field: "previousSupplyDate", value: v })}
+                      required
+                    />
+                    <p className="text-xs text-gray-500 sm:col-span-2">
+                      Cap: {PRODUCT_DETAILS[state.treatment.product].maxSupplies} x 30 g per {PRODUCT_DETAILS[state.treatment.product].courseWeeks}-week course. Use the returning-patient search on the first step to check earlier supplies.
+                    </p>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
@@ -349,10 +452,21 @@ export default function RosaceaClient() {
             <TextInput label="Pharmacist name" value={state.summary.pharmacistName} onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "pharmacistName", value: v })} required />
             <TextInput label="GPhC registration" value={state.summary.pharmacistGPhC} onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "pharmacistGPhC", value: v })} required />
             <TextInput label="Pharmacy name" value={state.summary.pharmacyName} onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "pharmacyName", value: v })} />
+            <div className="grid sm:grid-cols-2 gap-4">
+              <TextInput label="Consultation date" type="date" value={state.summary.consultationDate} onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "consultationDate", value: v })} required />
+              <TextInput label="Consultation time" type="time" value={state.summary.consultationTime} onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "consultationTime", value: v })} />
+            </div>
             <TextArea label="Clinical notes" value={state.summary.clinicalNotes} onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "clinicalNotes", value: v })} rows={3} />
+            <p className="text-xs text-gray-500">Save &amp; Print Record saves the consultation and prints the record below.</p>
           </div>
         )}
       </StepWrapper>
+      </div>
+
+      {/* Print view: the consultation record */}
+      <div className="hidden print:block">
+        <RosaceaSummaryReport state={state} alerts={alerts} hasStops={anyStop} />
+      </div>
     </div>
   );
 }

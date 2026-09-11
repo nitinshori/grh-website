@@ -41,10 +41,11 @@ export interface UTIMedicalHistory {
   utiEpisodesLast6Months: "" | "0" | "1" | "2+";
   utiEpisodesLast12Months: "" | "0" | "1" | "2" | "3+";
   kidneyDisease: boolean;
-  /** "unknown" is a real answer at a pharmacy counter and the PGD acts on it.
-   *  "checked-adequate" means a recent renal function result has been seen and
-   *  is adequate (eGFR 45 or more); PGD v005 needs this for patients aged 60 to 64. */
-  renalImpairment: "none" | "checked-adequate" | "moderate" | "severe" | "unknown";
+  /** The document's renal row, answered in its own terms, with no default:
+   *  "" is unanswered and blocks Next. "unknown" is a real answer at a
+   *  pharmacy counter and the PGD acts on it (exclude). There is no
+   *  "result seen" route for 60 to 64 year olds: the document excludes them. */
+  renalImpairment: "" | "none" | "moderate" | "severe" | "unknown";
   /** Diabetes, or any condition causing peripheral neuropathy (nitrofurantoin caution). */
   diabetesUncontrolled: boolean;
   immunosuppressed: boolean;
@@ -82,8 +83,6 @@ export interface UTIMedicineSelection {
   /** PGD v005 gate on the trimethoprim arm: the reason nitrofurantoin is
    *  unsuitable must be one of these and must be recorded. */
   trimethoprimReason: "" | "contraindicated" | "intolerance" | "unavailable";
-  pharmacistOverride: boolean;
-  overrideReason: string;
 }
 
 export interface UTICounselling {
@@ -103,7 +102,10 @@ export interface UTICounselling {
   avoidCranberry: boolean;
   painRelief: boolean;
   sexualActivityAdvice: boolean;
-  pregnancyPrecautions: boolean;
+  /** Written information row: PIL supplied with the product. */
+  pilSupplied: boolean;
+  /** Disposal row: return any unused medicine to a pharmacy. */
+  disposalAdvice: boolean;
 }
 
 // ─── UTI Consultation State ───
@@ -156,7 +158,7 @@ export const initialUTIMedicalHistory: UTIMedicalHistory = {
   utiEpisodesLast6Months: "",
   utiEpisodesLast12Months: "",
   kidneyDisease: false,
-  renalImpairment: "none",
+  renalImpairment: "",
   diabetesUncontrolled: false,
   immunosuppressed: false,
   knownAbnormalUrinaryTract: false,
@@ -189,8 +191,6 @@ export const initialUTIMedicineSelection: UTIMedicineSelection = {
   duration: "",
   quantity: 0,
   trimethoprimReason: "",
-  pharmacistOverride: false,
-  overrideReason: "",
 };
 
 export const initialUTICounselling: UTICounselling = {
@@ -204,7 +204,8 @@ export const initialUTICounselling: UTICounselling = {
   avoidCranberry: false,
   painRelief: false,
   sexualActivityAdvice: false,
-  pregnancyPrecautions: false,
+  pilSupplied: false,
+  disposalAdvice: false,
 };
 
 export const initialUTIPatientDetails = (basePatient?: Partial<BasePatientDetails>): UTIPatientDetails => ({

@@ -45,7 +45,7 @@ export function validatePatientDetails(
         message: "Please enter a valid date of birth",
       });
     } else if (age < 18) {
-      // Age gate per signed PGD — adults 18+ (consistency review Jul 2026)
+      // Age gate per signed PGD: adults 18+ (consistency review Jul 2026)
       errors.push({
         field: "dateOfBirth",
         message: "This PGD applies to adults aged 18 years and over",
@@ -53,21 +53,22 @@ export function validatePatientDetails(
     }
   }
 
-  if (!formData.gender.trim()) {
-    errors.push({ field: "gender", message: "Gender is required" });
-  }
-
-  if (!formData.contactNumber.trim()) {
-    errors.push({ field: "contactNumber", message: "Contact number is required" });
-  }
-
-  if (!formData.email.trim()) {
-    errors.push({ field: "email", message: "Email address is required" });
-  } else if (!isValidEmail(formData.email)) {
+  // Gender, phone and email are not required by the document; a patient
+  // without an email address used to be unable to be seen (adversarial
+  // review, 11 Sep 2026). Address and GP are required records.
+  if (formData.email.trim() && !isValidEmail(formData.email)) {
     errors.push({
       field: "email",
       message: "Please enter a valid email address",
     });
+  }
+
+  if (!formData.address.trim()) {
+    errors.push({ field: "address", message: "Patient address is required (PGD record)" });
+  }
+
+  if (!formData.gpName.trim() && !formData.gpPractice.trim()) {
+    errors.push({ field: "gpPractice", message: "The patient's GP or GP practice is required (PGD record)" });
   }
 
   return errors;
@@ -93,6 +94,13 @@ export function validateConsent(formData: SmokingToolFormData): ValidationError[
     });
   }
 
+  if (!formData.patientAwarePrivateService) {
+    errors.push({
+      field: "patientAwarePrivateService",
+      message: "The patient must be aware this is a private service",
+    });
+  }
+
   return errors;
 }
 
@@ -104,6 +112,13 @@ export function validateSmokingAssessment(
 ): ValidationError[] {
   const errors: ValidationError[] = [];
   const { assessment } = formData;
+
+  if (!assessment.consultationType) {
+    errors.push({
+      field: "assessment.consultationType",
+      message: "Select whether this is a first supply or a continuation supply",
+    });
+  }
 
   if (assessment.cigarettesPerDay === null) {
     errors.push({
@@ -153,14 +168,26 @@ export function validateSmokingAssessment(
       field: "assessment.quitDate",
       message: "Target quit date is required",
     });
-  } else {
-    // PGD inclusion: set a quit date within the next 1-2 weeks.
+  } else if (assessment.consultationType !== "continuation") {
+    // PGD inclusion: set a quit date within the next 1-2 weeks. For a
+    // continuation supply the quit date is the original one and may be in
+    // the past; the pharmacist used to have to type a false future date to
+    // record a week-six supply (adversarial review, 11 Sep 2026).
     const today: string = new Date().toISOString().split("T")[0];
     const ahead: number | null = daysBetween(today, assessment.quitDate);
     if (ahead !== null && (ahead < 0 || ahead > 14)) {
       errors.push({
         field: "assessment.quitDate",
         message: "The PGD requires a quit date set within the next 1 to 2 weeks",
+      });
+    }
+  } else {
+    const today: string = new Date().toISOString().split("T")[0];
+    const ahead: number | null = daysBetween(today, assessment.quitDate);
+    if (ahead !== null && ahead > 14) {
+      errors.push({
+        field: "assessment.quitDate",
+        message: "For a continuation supply enter the original quit date (not more than 2 weeks ahead)",
       });
     }
   }
@@ -336,15 +363,74 @@ export function validateDosePlan(
     });
   }
 
-  if (dosePlan.quantity <= 0) {
+  // Continuation supply: weeks completed is required and the course may
+  // not run past the selected duration (12 or 24 weeks).
+  const isContinuation = formData.assessment.consultationType === "continuation" || dosePlan.supplyType === "continuation";
+  if (isContinuation) {
+    if (dosePlan.weeksCompleted === null) {
+      errors.push({
+        field: "dosePlan.weeksCompleted",
+        message: "Enter the weeks of treatment completed so far",
+      });
+    } else if (dosePlan.weeksCompleted < 0 || !Number.isInteger(dosePlan.weeksCompleted)) {
+      errors.push({
+        field: "dosePlan.weeksCompleted",
+        message: "Weeks completed must be a whole number",
+      });
+    } else if (dosePlan.treatmentDuration) {
+      const maxWeeks: number = dosePlan.treatmentDuration === "24-weeks-extended" ? 24 : 12;
+      if (dosePlan.weeksCompleted >= maxWeeks) {
+        errors.push({
+          field: "dosePlan.weeksCompleted",
+          message: `The ${maxWeeks}-week course is complete. No further supply under this PGD; refer to the GP`,
+        });
+      } else if (dosePlan.weeksCompleted + 4 > maxWeeks) {
+        errors.push({
+          field: "dosePlan.weeksCompleted",
+          message: `A 4-week supply would take the course past ${maxWeeks} weeks. Supply ${(maxWeeks - dosePlan.weeksCompleted) * 14} tablets at most, or select the 24-week extended course if it has been agreed`,
+        });
+      }
+    }
+  }
+
+  // Quantities. The document authorises a starter pack (first 4 weeks: 11
+  // x 0.5mg for days 1 to 7, then 1mg twice daily) followed by up to 56 x
+  // 1mg tablets per supply. The starter quantity used to have no upper
+  // limit at all (adversarial review, 11 Sep 2026).
+  const half: number = dosePlan.quantityHalfMg || 0;
+  const one: number = dosePlan.quantityOneMg || 0;
+  if (dosePlan.supplyType === "starter") {
+    if (half <= 0 || !Number.isInteger(half)) {
+      errors.push({ field: "dosePlan.quantityHalfMg", message: "Enter the number of 0.5mg tablets (11 for days 1 to 7)" });
+    } else if (half > 11) {
+      errors.push({ field: "dosePlan.quantityHalfMg", message: "Maximum 11 x 0.5mg tablets in a starter pack (days 1 to 7)" });
+    }
+    if (one < 0 || !Number.isInteger(one)) {
+      errors.push({ field: "dosePlan.quantityOneMg", message: "Enter the number of 1mg tablets (0 to 42)" });
+    } else if (one > 42) {
+      errors.push({ field: "dosePlan.quantityOneMg", message: "Maximum 42 x 1mg tablets in a starter supply (days 8 to 28 at 1mg twice daily)" });
+    }
+  } else if (dosePlan.supplyType === "continuation") {
+    if (half !== 0) {
+      errors.push({ field: "dosePlan.quantityHalfMg", message: "A continuation supply is 1mg tablets only" });
+    }
+    if (one <= 0 || !Number.isInteger(one)) {
+      errors.push({ field: "dosePlan.quantityOneMg", message: "Enter the number of 1mg tablets (1 to 56)" });
+    } else if (one > 56) {
+      errors.push({ field: "dosePlan.quantityOneMg", message: "Maximum 56 tablets per continuation supply under this PGD (4-week supply at 1mg twice daily)" });
+    } else if (isContinuation && dosePlan.weeksCompleted !== null && dosePlan.treatmentDuration) {
+      const maxWeeks: number = dosePlan.treatmentDuration === "24-weeks-extended" ? 24 : 12;
+      const remaining: number = Math.max(0, maxWeeks - dosePlan.weeksCompleted) * 14;
+      if (one > remaining) {
+        errors.push({ field: "dosePlan.quantityOneMg", message: `Only ${remaining} tablets remain in the ${maxWeeks}-week course` });
+      }
+    }
+  }
+
+  if (!dosePlan.brand.trim()) {
     errors.push({
-      field: "dosePlan.quantity",
-      message: "Quantity must be greater than 0",
-    });
-  } else if (dosePlan.supplyType === "continuation" && dosePlan.quantity > 56) {
-    errors.push({
-      field: "dosePlan.quantity",
-      message: "Maximum 56 tablets per continuation supply under this PGD (4-week supply at 1mg twice daily)",
+      field: "dosePlan.brand",
+      message: "Record the product and brand supplied (PGD record: name and brand of medication)",
     });
   }
 
@@ -402,10 +488,21 @@ export function validateSummary(formData: SmokingToolFormData): ValidationError[
     });
   }
 
-  if (!formData.pharmacistGMCNumber.trim()) {
+  if (!formData.pharmacistGPhC.trim()) {
     errors.push({
-      field: "pharmacistGMCNumber",
+      field: "pharmacistGPhC",
       message: "GPhC registration number is required",
+    });
+  }
+
+  // Exclusions are enforced on every step from the Contraindications
+  // review onwards, including the final one (adversarial review, 11 Sep
+  // 2026): a stop ticked after the review must still block Save & Print.
+  const { hardStops } = getAllClinicalAlerts(formData);
+  if (hardStops.length > 0) {
+    errors.push({
+      field: "hardStops",
+      message: "An exclusion criterion applies. Varenicline cannot be supplied under this PGD; save the record as not supplied",
     });
   }
 

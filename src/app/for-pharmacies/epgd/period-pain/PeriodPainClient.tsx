@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import type { ClinicalAlert } from "../shared/types";
 import {
   calculateAge, initialPatientDetails, initialConsent, initialSummary,
@@ -13,7 +13,9 @@ import { AlertBanner } from "../shared/components/AlertBanner";
 import { PatientDetailsStep } from "../shared/steps/PatientDetailsStep";
 import { ConsentStep } from "../shared/steps/ConsentStep";
 import type { ConsultationRecordData } from "../shared/hooks/useConsultationTracking";
-import { TextInput, Checkbox, SelectInput, TextArea } from "../shared/components/FormInputs";
+import { TextInput, Checkbox, SelectInput, TextArea, NumberInput } from "../shared/components/FormInputs";
+import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
+import { PeriodPainSummaryReport } from "./components/PeriodPainSummaryReport";
 
 /**
  * Period Pain ePGD, aligned to the Naproxen or Mefenamic acid for Period
@@ -51,6 +53,13 @@ interface Clinical {
   epilepsy: boolean; // caution, mefenamic acid
   bleedingRiskMedicines: boolean; // caution: corticosteroids, SSRIs
   allergies: string;
+  /** One cycle per supply; short-term use only. Previous supplies are asked so
+   *  a woman is not supplied month after month with no reassessment. */
+  previousSupply: boolean;
+  lastSupplyDate: string;
+  previousCycles: number | null;
+  /** Failure of first-line treatment is a referral trigger in the guidance summary. */
+  notRespondingToTreatment: boolean;
   product: "naproxen" | "mefenamic-acid" | "";
   quantity: string;
   brand: string;
@@ -62,6 +71,7 @@ interface Clinical {
   stopIfReactionAdvice: boolean;
   nonDrugAdvice: boolean;
   contraceptionAlternativeAdvice: boolean;
+  pilSupplied: boolean;
 }
 
 export default function PeriodPainClient() {
@@ -77,19 +87,33 @@ export default function PeriodPainClient() {
     otherNsaidsOrAnticoagulants: false, coagulationDisorder: false, interactingMedicines: false,
     inflammatoryBowelDisease: false,
     asthma: false, giConditionHistory: false, cardiovascularRisk: false, sleOrMctd: false, epilepsy: false, bleedingRiskMedicines: false,
-    allergies: "", product: "", quantity: "", brand: "",
+    allergies: "", previousSupply: false, lastSupplyDate: "", previousCycles: null, notRespondingToTreatment: false,
+    product: "", quantity: "", brand: "",
     withFoodAdvice: false, maxDoseAdvice: false, reviewAdvice: false,
-    avoidAlcoholAdvice: false, noOtherNsaidsAdvice: false, stopIfReactionAdvice: false, nonDrugAdvice: false, contraceptionAlternativeAdvice: false,
+    avoidAlcoholAdvice: false, noOtherNsaidsAdvice: false, stopIfReactionAdvice: false, nonDrugAdvice: false, contraceptionAlternativeAdvice: false, pilSupplied: false,
   };
   const [c, setC] = useState<Clinical>(blank);
   const set = (patch: Partial<Clinical>) => setC((prev) => ({ ...prev, ...patch }));
+
+  // Auto-fill pharmacist details from the logged-in user; refires after a
+  // "New Consultation" reset so later patients fill too.
+  const __pharmProfile = usePharmacistProfile();
+  useEffect(() => {
+    if (!__pharmProfile) return;
+    if (summary.pharmacistName || summary.pharmacistGPhC) return;
+    setSummary((p) => ({
+      ...p,
+      pharmacistName: __pharmProfile.name,
+      pharmacistGPhC: __pharmProfile.gphcNumber,
+      pharmacyName: __pharmProfile.pharmacyName,
+      pharmacyAddress: __pharmProfile.pharmacyAddress,
+    }));
+  }, [__pharmProfile, summary.pharmacistName, summary.pharmacistGPhC]);
 
   const alerts = useMemo<ClinicalAlert[]>(() => {
     const a: ClinicalAlert[] = [];
     if (patient.age !== null && patient.age < 16)
       a.push({ code: "under-16", severity: "stop", message: "Under 16, excluded from this PGD", detail: "Refer to the GP." });
-    if (!c.femaleConfirmed)
-      a.push({ code: "not-female", severity: "stop", message: "Patient not confirmed as female", detail: "This PGD is for female patients aged 16 years or older." });
     if (c.redFlagSymptoms)
       a.push({ code: "red-flags", severity: "stop", message: "Features suggesting secondary dysmenorrhoea", detail: "Symptoms starting later in life; severe, progressive or unresponsive pain; intermenstrual or postcoital bleeding, dyspareunia or abnormal discharge need GP assessment, not PGD supply." });
     if (c.pregnantOrSuspected)
@@ -108,10 +132,16 @@ export default function PeriodPainClient() {
       a.push({ code: "coagulation", severity: "stop", message: "Coagulation disorder or drug therapy interfering with haemostasis, excluded", detail: "Refer to the GP." });
     if (c.interactingMedicines)
       a.push({ code: "interaction", severity: "stop", message: "Clinically significant interacting medication", detail: "Excluded from this PGD; refer." });
-    if (c.inflammatoryBowelDisease && c.product !== "naproxen")
-      a.push({ code: "ibd", severity: "stop", message: "Inflammatory bowel disease, excluded from the mefenamic acid arm", detail: "Mefenamic acid is excluded. Naproxen may be given with care (ulcerative colitis or Crohn's disease may be exacerbated)." });
-    if (c.inflammatoryBowelDisease && c.product === "naproxen")
-      a.push({ code: "ibd-caution", severity: "caution", message: "Inflammatory bowel disease, naproxen caution", detail: "Give with care: ulcerative colitis and Crohn's disease may be exacerbated. Mefenamic acid is excluded." });
+    // IBD excludes only the mefenamic acid arm. The stop fires only once
+    // mefenamic acid is chosen; before a product is chosen, and with
+    // naproxen, it is a caution, so the IBD patient is not stopped on the
+    // history step before she can be offered naproxen.
+    if (c.inflammatoryBowelDisease && c.product === "mefenamic-acid")
+      a.push({ code: "ibd", severity: "stop", message: "Inflammatory bowel disease, excluded from the mefenamic acid arm", detail: "Mefenamic acid is excluded. Choose naproxen (with care: ulcerative colitis or Crohn's disease may be exacerbated) or refer." });
+    if (c.inflammatoryBowelDisease && c.product !== "mefenamic-acid")
+      a.push({ code: "ibd-caution", severity: "caution", message: "Inflammatory bowel disease: mefenamic acid excluded, naproxen with care", detail: "Ulcerative colitis and Crohn's disease may be exacerbated by NSAIDs. Mefenamic acid cannot be supplied; naproxen may be given with care." });
+    if (c.notRespondingToTreatment)
+      a.push({ code: "not-responding", severity: "stop", message: "Symptoms have not responded to first-line treatment over 3 to 6 months", detail: "Failure of first-line treatment is a referral trigger. Refer to the GP or gynaecology rather than supplying again." });
     if (c.asthma)
       a.push({ code: "asthma", severity: "caution", message: "Asthma, NSAID caution", detail: "NSAIDs have been reported to precipitate bronchospasm. Confirm no previous NSAID-triggered bronchospasm; counsel to stop and seek help if wheeze develops." });
     if (c.giConditionHistory)
@@ -135,6 +165,7 @@ export default function PeriodPainClient() {
       case 2:
         if (!c.primaryDysmenorrhoea) return "Please confirm the presentation is primary dysmenorrhoea";
         if (!c.allergies.trim()) return "Please record allergy status (or NKDA)";
+        if (c.previousSupply && (!c.lastSupplyDate || c.previousCycles === null)) return "Record the date of the last supply and the number of cycles already treated";
         return null;
       case 3:
         if (!c.product) return "Please select the treatment";
@@ -146,12 +177,15 @@ export default function PeriodPainClient() {
           !c.withFoodAdvice || !c.maxDoseAdvice || !c.reviewAdvice || !c.avoidAlcoholAdvice ||
           !c.noOtherNsaidsAdvice || !c.stopIfReactionAdvice || !c.nonDrugAdvice || !c.contraceptionAlternativeAdvice
         ) return "Please confirm all counselling points";
+        if (!c.pilSupplied) return "Confirm the patient information leaflet was supplied";
         return validateSummaryStep(summary);
       default: return null;
     }
   }, [step, patient, consent, c, summary]);
 
-  const canProceed = !validationError && (!hasStops || step >= 3);
+  // A stop anywhere disables Next on every step. The progress bar only moves
+  // backwards, so the only route past a stop is "Save as not supplied".
+  const canProceed = !validationError && !hasStops;
   const next = () => { if (canProceed) { setCompleted((p) => new Set([...p, step])); setStep((s) => Math.min(s + 1, STEP_LABELS.length - 1)); } };
   const prev = () => setStep((s) => Math.max(s - 1, 0));
 
@@ -163,16 +197,24 @@ export default function PeriodPainClient() {
     },
     clinicalData: { patient, consent, clinical: c, alerts, pgd: PGD_STRAPLINE } as unknown as Record<string, unknown>,
     outcome: hasStops ? "not_supplied" : "completed",
-    medicine: {
-      name: c.product === "naproxen" ? "Naproxen" : c.product === "mefenamic-acid" ? "Mefenamic acid" : "",
-      dose: c.product === "naproxen" ? "500 mg then 250 mg every 6 to 8 hours as needed" : c.product === "mefenamic-acid" ? "500 mg three times a day" : "",
-      duration: "Up to 3 days per menstrual cycle",
-      quantity: c.quantity,
-    },
+    medicine: !hasStops && c.product
+      ? {
+          name: c.product === "naproxen" ? "Naproxen tablets" : "Mefenamic acid",
+          medicine: c.product,
+          dose: c.product === "naproxen" ? "500 mg then 250 mg every 6 to 8 hours as needed" : "500 mg three times a day",
+          duration: "Up to 3 days per menstrual cycle",
+          quantity: c.quantity,
+        }
+      : undefined,
     summary: {
-      pharmacistName: summary.pharmacistName, pharmacistGPhC: summary.pharmacistGPhC,
+      pharmacistName: summary.pharmacistName || __pharmProfile?.name || "",
+      pharmacistGPhC: summary.pharmacistGPhC || __pharmProfile?.gphcNumber || "",
+      pharmacyName: summary.pharmacyName || __pharmProfile?.pharmacyName || "",
+      pharmacyAddress: summary.pharmacyAddress || __pharmProfile?.pharmacyAddress || "",
       consultationDate: summary.consultationDate, consultationTime: summary.consultationTime,
+      clinicalNotes: summary.clinicalNotes,
     },
+    consent: { notifyGp: consent.notifyGp },
   });
 
   const onPatientChange = (field: keyof BasePatientDetails, value: any) =>
@@ -201,6 +243,17 @@ export default function PeriodPainClient() {
             <AlertBanner alerts={alerts} />
             <Checkbox label="Presentation consistent with primary dysmenorrhoea (cyclical crampy pain before or during menstruation, no red flags), where paracetamol or antispasmodics are insufficient" checked={c.primaryDysmenorrhoea} onChange={(v) => set({ primaryDysmenorrhoea: v })} />
             <TextInput label="Allergies" value={c.allergies} onChange={(v) => set({ allergies: v })} placeholder="Record allergies, or NKDA" required />
+            <div className="space-y-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <p className="text-sm font-semibold text-navy-900">Previous treatment (one cycle per supply; short-term use only)</p>
+              <Checkbox label="Supplied under this PGD before" checked={c.previousSupply} onChange={(v) => set({ previousSupply: v, ...(v ? {} : { lastSupplyDate: "", previousCycles: null }) })} />
+              {c.previousSupply && (
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <TextInput label="Date of last supply" type="date" value={c.lastSupplyDate} onChange={(v) => set({ lastSupplyDate: v })} required />
+                  <NumberInput label="Cycles already treated" value={c.previousCycles} onChange={(v) => set({ previousCycles: v })} min={0} max={24} unit="cycles" required />
+                </div>
+              )}
+              <Checkbox label="Symptoms have not responded to first-line treatment over 3 to 6 months" description="Failure of first-line treatment is a referral trigger: refer rather than supply again." checked={c.notRespondingToTreatment} onChange={(v) => set({ notRespondingToTreatment: v })} />
+            </div>
             <div className="space-y-3 p-4 bg-red-50 rounded-lg border border-red-200">
               <p className="text-sm font-semibold text-red-800">Exclusions. Any one excludes; refer.</p>
               <Checkbox label="Features suggesting a secondary cause: symptoms starting later in life; severe, progressively worsening or unresponsive pain; intermenstrual or postcoital bleeding, dyspareunia or abnormal discharge; fever" checked={c.redFlagSymptoms} onChange={(v) => set({ redFlagSymptoms: v })} />
@@ -238,7 +291,7 @@ export default function PeriodPainClient() {
               {c.product === "naproxen" && (
                 <>
                   <p>Naproxen: initially 500 mg followed by 250 mg every 6 to 8 hours as needed. Maximum 1250 mg on day 1, then up to 1000 mg daily. Oral, with or after food.</p>
-                  <p>Supply: 28 tablets of 250 mg or 14 tablets of 500 mg. Typically up to 3 days per menstrual cycle. Lowest effective dose for the shortest duration.</p>
+                  <p>Supply: 28 tablets of 250 mg. Typically up to 3 days per menstrual cycle. Lowest effective dose for the shortest duration. (The document also lists 14 x 500 mg, but the regimen needs 250 mg doses, which 500 mg tablets cannot deliver without splitting; that pack is not offered until the document is reissued.)</p>
                 </>
               )}
               {c.product === "mefenamic-acid" && (
@@ -259,7 +312,6 @@ export default function PeriodPainClient() {
                 c.product === "naproxen"
                   ? [
                       { value: "28 x naproxen 250 mg tablets", label: "28 x 250 mg tablets" },
-                      { value: "14 x naproxen 500 mg tablets", label: "14 x 500 mg tablets" },
                     ]
                   : c.product === "mefenamic-acid"
                     ? [
@@ -276,6 +328,7 @@ export default function PeriodPainClient() {
       case 4:
         return (
           <div className="space-y-4">
+            <div className="space-y-4 print:hidden">
             <AlertBanner alerts={alerts} />
             <p className="text-xs text-gray-600">{PGD_STRAPLINE}. Supplied: {c.product === "naproxen" ? "Naproxen" : c.product === "mefenamic-acid" ? "Mefenamic acid" : "not selected"}{c.quantity ? `, ${c.quantity}` : ""}{c.brand ? ` (${c.brand})` : ""}. Oral, with or after food.</p>
             <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
@@ -287,10 +340,17 @@ export default function PeriodPainClient() {
               <Checkbox label="Seek medical advice if symptoms worsen rapidly or significantly, do not improve in 3 to 4 weeks, or you become systemically very unwell; refer to a gynaecologist if severe symptoms do not respond within 3 to 6 months" checked={c.reviewAdvice} onChange={(v) => set({ reviewAdvice: v })} />
               <Checkbox label="Local heat (hot water bottle or heat patch) and TENS may help reduce pain" checked={c.nonDrugAdvice} onChange={(v) => set({ nonDrugAdvice: v })} />
               <Checkbox label="For women who do not wish to conceive, hormonal contraception is an alternative first-line treatment" checked={c.contraceptionAlternativeAdvice} onChange={(v) => set({ contraceptionAlternativeAdvice: v })} />
+              <Checkbox label="Patient information leaflet (PIL) supplied with the medication" checked={c.pilSupplied} onChange={(v) => set({ pilSupplied: v })} required />
             </div>
             <TextInput label="Pharmacist name" value={summary.pharmacistName} onChange={(v) => setSummary((p) => ({ ...p, pharmacistName: v }))} required />
             <TextInput label="GPhC registration number" value={summary.pharmacistGPhC} onChange={(v) => setSummary((p) => ({ ...p, pharmacistGPhC: v }))} required />
+            <TextInput label="Pharmacy name" value={summary.pharmacyName} onChange={(v) => setSummary((p) => ({ ...p, pharmacyName: v }))} />
             <TextArea label="Clinical notes (optional)" value={summary.clinicalNotes} onChange={(v) => setSummary((p) => ({ ...p, clinicalNotes: v }))} />
+            </div>
+            <div className="border-t border-gray-200 pt-6">
+              <p className="text-sm text-gray-600 mb-4 print:hidden">Review the record below before saving and printing. This is what prints.</p>
+              <PeriodPainSummaryReport patient={patient} consent={consent} clinical={c} summary={summary} alerts={alerts} strapline={PGD_STRAPLINE} />
+            </div>
           </div>
         );
       default: return null;
@@ -301,7 +361,7 @@ export default function PeriodPainClient() {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-6xl mx-auto px-4">
         <div className="space-y-6">
-          <ProgressBar stepLabels={STEP_LABELS} currentStep={step} onStepClick={(s) => { if (completed.has(s) || s <= step) setStep(s); }} completedSteps={completed} hasErrors={!!validationError} />
+          <ProgressBar stepLabels={STEP_LABELS} currentStep={step} onStepClick={(s) => { if (s < step) setStep(s); }} completedSteps={completed} hasErrors={!!validationError} />
           <StepWrapper
             title={STEP_LABELS[step]}
             currentStep={step}
@@ -310,8 +370,9 @@ export default function PeriodPainClient() {
             onPrev={prev}
             canProceed={canProceed}
             validationError={validationError}
-            isBlocked={hasStops && step === 3}
-            {...(step === STEP_LABELS.length - 1 ? { getConsultationData, onNewConsultation: () => { setStep(0); setCompleted(new Set()); setPatient({ ...initialPatientDetails }); setConsent({ ...initialConsent }); setSummary(initialSummary()); setC(blank); } } : {})}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
+            onNewConsultation={() => { setStep(0); setCompleted(new Set()); setPatient({ ...initialPatientDetails }); setConsent({ ...initialConsent }); setSummary(initialSummary()); setC({ ...blank }); }}
           >
             {stepBody()}
           </StepWrapper>

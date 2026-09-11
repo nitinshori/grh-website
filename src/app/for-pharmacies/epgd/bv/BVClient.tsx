@@ -2,7 +2,7 @@
 import { useReducer, useMemo, useState, useCallback, useEffect } from "react";
 import type { BVConsultationState, BVAction } from "./lib/bv-types";
 import { STEP_LABELS, TOTAL_STEPS, createInitialConsultationState } from "./lib/bv-types";
-import { getAllAlerts, hasHardStops, calculateDoseRecommendation, isOralChoice } from "./lib/bv-clinical-logic";
+import { getAllAlerts, hasHardStops, calculateDoseRecommendation, isOralChoice, quantitySupplied } from "./lib/bv-clinical-logic";
 import { validateStep } from "./lib/bv-validation";
 import { calculateAge } from "../shared/types";
 import { ProgressBar } from "../shared/components/ProgressBar";
@@ -42,6 +42,9 @@ function reducer(state: BVConsultationState, action: BVAction): BVConsultationSt
       break;
     case "UPDATE_SUMMARY":
       newState.summary = { ...newState.summary, [action.field]: action.value };
+      break;
+    case "UPDATE_EXCLUSION_OUTCOME":
+      newState.exclusionOutcome = { ...newState.exclusionOutcome, [action.field]: action.value };
       break;
     case "SET_STEP":
       newState.currentStep = action.step;
@@ -88,7 +91,9 @@ export default function BVClient() {
   }, [state, alerts, doseRecommendation]);
 
   const validationError = useMemo(() => validateStep(state.currentStep, state), [state.currentStep, state]);
-  const canProceed = !validationError && (!hasStops || state.currentStep >= 4);
+  // A stop anywhere disables Next (and Save & Print) everywhere. Stops used
+  // to be waived from step 4 onwards (adversarial review, 11 Sep 2026).
+  const canProceed = !validationError && !hasStops;
 
   const markStepComplete = useCallback(() => {
     const newCompleted = new Set(completedSteps);
@@ -112,7 +117,11 @@ export default function BVClient() {
   };
 
   // ─── Consultation Record Data (for saving to database) ───
+  // Returns a record whether or not a medicine was chosen, so an excluded
+  // patient can be saved as not supplied or referred from any step.
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    const supplied = !hasStops && doseRecommendation !== null;
+    const referred = hasStops && state.exclusionOutcome.referredTo !== "";
     return {
       patient: {
         firstName: state.patient.firstName,
@@ -124,17 +133,76 @@ export default function BVClient() {
         address: state.patient.address,
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
+        gpAddress: state.patient.gpAddress,
+        gpPhone: state.patient.gpPhone,
+        gpEmail: state.patient.gpEmail,
+        gpOdsCode: state.patient.gpOdsCode,
       },
-      clinicalData: state as unknown as Record<string, unknown>,
-      outcome: hasStops ? "not_supplied" : "completed",
+      clinicalData: { ...(updatedState as unknown as Record<string, unknown>), quantitySupplied: supplied ? quantitySupplied(state) : null },
+      outcome: hasStops ? (referred ? "referred" : "not_supplied") : "completed",
+      medicine: supplied && doseRecommendation
+        ? {
+            name: doseRecommendation.medicine + (state.medicineSelection.brand ? ` (${state.medicineSelection.brand})` : ""),
+            dose: `${doseRecommendation.dose} ${doseRecommendation.frequency ?? ""}`.trim(),
+            duration: doseRecommendation.duration,
+            quantity: quantitySupplied(state),
+          }
+        : undefined,
       summary: {
-        pharmacistName: state.summary.pharmacistName,
-        pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacistName: state.summary.pharmacistName || __pharmProfile?.name || "",
+        pharmacistGPhC: state.summary.pharmacistGPhC || __pharmProfile?.gphcNumber || "",
+        pharmacyName: state.summary.pharmacyName,
+        pharmacyAddress: state.summary.pharmacyAddress,
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: state.consent.notifyGp },
     };
-  }, [state, hasStops]);
+  }, [state, updatedState, hasStops, doseRecommendation, __pharmProfile]);
+
+  // Shared props so every step enforces stops and can save an excluded
+  // patient as not supplied.
+  const stepProps = {
+    currentStep: state.currentStep,
+    totalSteps: TOTAL_STEPS,
+    onNext: handleNext,
+    onPrev: handlePrev,
+    canProceed,
+    validationError,
+    isBlocked: hasStops,
+    getConsultationData,
+  };
+
+  // Advice given and decision reached for an excluded patient (PGD v003:
+  // Actions if patient is excluded or declines treatment).
+  const exclusionOutcomeBlock = hasStops ? (
+    <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-3 print:hidden">
+      <p className="text-sm font-semibold text-red-800">
+        Patient excluded: do not supply. Record the advice given and the decision reached, then use Save as not supplied.
+      </p>
+      <SelectInput
+        label="Referred to"
+        value={state.exclusionOutcome.referredTo}
+        onChange={(v) => dispatch({ type: "UPDATE_EXCLUSION_OUTCOME", field: "referredTo", value: v })}
+        options={[
+          { value: "gp", label: "GP" },
+          { value: "midwife", label: "Midwife or maternity service (pregnancy)" },
+          { value: "sexual-health", label: "Sexual health service" },
+          { value: "other", label: "Other (state in advice given)" },
+        ]}
+        required
+      />
+      <TextArea
+        label="Advice given and decision reached"
+        value={state.exclusionOutcome.adviceGiven}
+        onChange={(v) => dispatch({ type: "UPDATE_EXCLUSION_OUTCOME", field: "adviceGiven", value: v })}
+        placeholder="Alternative treatment options advised and how to access them; who the patient was referred to; whether the GP was informed"
+        rows={3}
+        required
+      />
+    </div>
+  ) : null;
 
   const handleNewConsultation = useCallback(() => {
     dispatch({ type: "RESET" });
@@ -145,7 +213,7 @@ export default function BVClient() {
     switch (state.currentStep) {
       case 0:
         return (
-          <StepWrapper title="Patient Details" currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={validationError}>
+          <StepWrapper title="Patient Details" {...stepProps}>
             <PatientDetailsStep
               patient={state.patient}
               onChange={(field, value) => dispatch({ type: "UPDATE_PATIENT", field, value })}
@@ -164,13 +232,13 @@ export default function BVClient() {
         );
       case 1:
         return (
-          <StepWrapper title="Consent & ID Verification" currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={validationError}>
+          <StepWrapper title="Consent & ID Verification" {...stepProps}>
             <ConsentStep consent={state.consent} onChange={(field, value) => dispatch({ type: "UPDATE_CONSENT", field, value })} />
           </StepWrapper>
         );
       case 2:
         return (
-          <StepWrapper title="Symptom Assessment" description="Assess for typical bacterial vaginosis symptoms." currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={validationError}>
+          <StepWrapper title="Symptom Assessment" description="Assess for typical bacterial vaginosis symptoms." {...stepProps}>
             <div className="space-y-4">
               <p className="text-sm text-navy-900 font-semibold">Typical BV symptoms:</p>
               <Checkbox label="Thin greyish-white discharge" checked={state.assessment.thinGrayishDischarge} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "thinGrayishDischarge", value: v })} />
@@ -183,19 +251,19 @@ export default function BVClient() {
               <Checkbox label="Dyspareunia (pain on intercourse)" checked={state.assessment.dyspareunia} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "dyspareunia", value: v })} />
               <p className="text-sm text-red-700 font-semibold mt-4">RED FLAGS - If any present, refer to GP:</p>
               <Checkbox label="Blood-stained discharge" checked={state.assessment.bloodStainedDischarge} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "bloodStainedDischarge", value: v })} />
-              <Checkbox label="Fever or pelvic pain" checked={state.assessment.fever || state.assessment.pelvicPain} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "fever", value: v })} />
+              <Checkbox label="Fever" checked={state.assessment.fever} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "fever", value: v })} />
+              <Checkbox label="Pelvic pain or lower abdominal pain" checked={state.assessment.pelvicPain} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "pelvicPain", value: v })} />
             </div>
           </StepWrapper>
         );
       case 3:
         return (
-          <StepWrapper title="Medical History" currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={validationError}>
+          <StepWrapper title="Medical History" {...stepProps}>
             <div className="space-y-4">
-              <Checkbox label="First episode of BV (not diagnosed before)" checked={state.medicalHistory.firstEpisode} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "firstEpisode", value: v })} />
+              <Checkbox label="First episode of BV (not diagnosed before)" checked={state.medicalHistory.firstEpisode} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "firstEpisode", value: v })} description="Within the PGD: a presumptive diagnosis on clinical grounds is sufficient." />
               <Checkbox label="Recurrent BV" checked={state.medicalHistory.recurrentBV} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "recurrentBV", value: v })} />
               <Checkbox label="Pregnant, known or suspected" checked={state.medicalHistory.pregnancy} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "pregnancy", value: v })} description="This PGD is for non-pregnant women. Refer to GP or midwife." />
               <Checkbox label="Breastfeeding" checked={state.medicalHistory.breastfeeding} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "breastfeeding", value: v })} description="Oral: significant amounts in breast milk, consider alternatives or temporary cessation. Gel: minimal absorption, caution advised." />
-              <Checkbox label="Planning pregnancy within 2 months" checked={state.medicalHistory.planningPregnancy} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "planningPregnancy", value: v })} />
               <Checkbox label="Active pelvic inflammatory disease" checked={state.medicalHistory.activePelvicInflammation} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "activePelvicInflammation", value: v })} />
               <Checkbox label="Known hypersensitivity to metronidazole or nitroimidazoles" checked={state.medicalHistory.hypersensitivity} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "hypersensitivity", value: v })} description="Exclusion for both arms." />
               <Checkbox label="Active CNS disease or blood dyscrasia" checked={state.medicalHistory.cnsDiseaseOrBloodDyscrasia} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "cnsDiseaseOrBloodDyscrasia", value: v })} description="Exclusion for oral metronidazole." />
@@ -206,18 +274,27 @@ export default function BVClient() {
               <Checkbox label="Concurrent disulfiram therapy" checked={state.medications.disulfiram} onChange={(v) => dispatch({ type: "UPDATE_MEDICATIONS", field: "disulfiram", value: v })} description="Exclusion for oral metronidazole." />
               <Checkbox label="Taking warfarin" checked={state.medications.warfarin} onChange={(v) => dispatch({ type: "UPDATE_MEDICATIONS", field: "warfarin", value: v })} description="Increased anticoagulant effect; monitor INR." />
               <Checkbox label="Taking phenytoin" checked={state.medications.phenytoin} onChange={(v) => dispatch({ type: "UPDATE_MEDICATIONS", field: "phenytoin", value: v })} description="Increased phenytoin levels." />
+              <div className="pt-2 border-t border-gray-200">
+                <Checkbox
+                  label="Every exclusion and caution question on this step was asked and answered by the patient"
+                  checked={state.medicalHistory.exclusionsAskedAndAnswered}
+                  onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "exclusionsAskedAndAnswered", value: v })}
+                  description="An unticked box means the patient answered no, not that the question was skipped"
+                  required
+                />
+              </div>
             </div>
           </StepWrapper>
         );
       case 4:
         return (
-          <StepWrapper title="Contraindications Review" currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={!hasStops} validationError={hasStops ? "Hard stops present - cannot proceed" : null} isBlocked={hasStops}>
+          <StepWrapper title="Contraindications Review" {...stepProps} validationError={hasStops ? "Hard stops present - cannot proceed" : null}>
             {alerts.length > 0 ? <AlertBanner alerts={alerts} /> : <p className="text-sm text-gray-600">No alerts identified.</p>}
           </StepWrapper>
         );
       case 5:
         return (
-          <StepWrapper title="Medicine Selection" description="Choose treatment option." currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={validationError} isBlocked={hasStops}>
+          <StepWrapper title="Medicine Selection" description="Choose treatment option." {...stepProps}>
             <div className="space-y-4">
               <SelectInput
                 label="Treatment"
@@ -225,6 +302,7 @@ export default function BVClient() {
                 onChange={(v) => {
                   dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "medicineChoice", value: v });
                   dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "abilityConfirmed", value: false });
+                  dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "courseDays", value: "" });
                 }}
                 options={[
                   { value: "metronidazole-400", label: "Metronidazole 400mg tablets: 400 mg twice daily for 5 to 7 days (10 to 14 tablets), preferred" },
@@ -233,6 +311,27 @@ export default function BVClient() {
                 ]}
                 required
               />
+              {state.medicineSelection.medicineChoice === "metronidazole-400" && (
+                <SelectInput
+                  label="Course length"
+                  value={state.medicineSelection.courseDays}
+                  onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "courseDays", value: v })}
+                  options={[
+                    { value: "5", label: "5 days (10 tablets)" },
+                    { value: "6", label: "6 days (12 tablets)" },
+                    { value: "7", label: "7 days (14 tablets)" },
+                  ]}
+                  required
+                />
+              )}
+              {state.medicineSelection.medicineChoice && (
+                <TextInput
+                  label="Brand or manufacturer supplied"
+                  value={state.medicineSelection.brand}
+                  onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "brand", value: v })}
+                  placeholder={state.medicineSelection.medicineChoice === "metronidazole-gel" ? "Zidoval" : "Manufacturer or brand on the pack"}
+                />
+              )}
               {state.medicineSelection.medicineChoice && (
                 <Checkbox
                   label={isOralChoice(state.medicineSelection.medicineChoice) ? "Patient is able to swallow tablets" : "Patient is able to insert the gel intravaginally"}
@@ -245,6 +344,7 @@ export default function BVClient() {
                 <div className="p-4 bg-blue-50 border border-blue-200 rounded text-sm text-blue-900">
                   <p className="font-semibold">{doseRecommendation.medicine}</p>
                   <p>{doseRecommendation.dosingRegimen}</p>
+                  <p>Quantity supplied: {quantitySupplied(state)}</p>
                 </div>
               )}
             </div>
@@ -252,20 +352,26 @@ export default function BVClient() {
         );
       case 6:
         return (
-          <StepWrapper title="Counselling & Patient Education" currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={validationError}>
+          <StepWrapper title="Counselling & Patient Education" {...stepProps}>
             <div className="space-y-3">
               <Checkbox label="BV symptoms explained (not thrush, not STI)" checked={state.counselling.symptomsExplained} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "symptomsExplained", value: v })} />
               <Checkbox label="Differentiated from thrush (itch indicates thrush)" checked={state.counselling.differentiateThrush} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "differentiateThrush", value: v })} />
-              <Checkbox label="Avoid alcohol during and for 48 hours after treatment" checked={state.counselling.noAlcoholAdvice} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "noAlcoholAdvice", value: v })} description="Risk of disulfiram reaction" />
-              <Checkbox label="Avoid vaginal douching" checked={state.counselling.avoidDouching} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "avoidDouching", value: v })} />
-              <Checkbox label="Complete full course of treatment" checked={state.counselling.completesCourse} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "completesCourse", value: v })} />
-              <Checkbox label="BV is NOT an STI" checked={state.counselling.notSTI} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "notSTI", value: v })} description="Partner treatment not routinely recommended" />
-              <Checkbox label="Recurrence likely (50% within 3 months)" checked={state.counselling.recurrenceAdvice} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "recurrenceAdvice", value: v })} />
-              <Checkbox label="Sexual contacts/partner notification" checked={state.counselling.sexPartnerAdvice} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "sexPartnerAdvice", value: v })} description="Partners may not require treatment unless they develop symptoms" />
-              <Checkbox label="Seek medical advice if symptoms do not resolve within 5 to 7 days of completing treatment, or if new symptoms develop (pelvic pain, fever)" checked={state.counselling.seekAdviceIfNotResolved} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "seekAdviceIfNotResolved", value: v })} />
-              {state.medicineSelection.medicineChoice === "metronidazole-gel" && (
-                <Checkbox label="Gel may damage latex condoms and diaphragms: use alternative contraception during treatment and for 5 days after" checked={state.counselling.latexAdvice} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "latexAdvice", value: v })} />
+              {isOralChoice(state.medicineSelection.medicineChoice) && (
+                <Checkbox label="Avoid all alcohol during the course and for 48 hours after the last dose" checked={state.counselling.noAlcoholAdvice} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "noAlcoholAdvice", value: v })} description="Disulfiram-like reaction: flushing, nausea, vomiting, abdominal pain, headache" required />
               )}
+              <Checkbox label="Avoid vaginal douching" checked={state.counselling.avoidDouching} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "avoidDouching", value: v })} />
+              <Checkbox label="Complete the full course of treatment, even if symptoms resolve" checked={state.counselling.completesCourse} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "completesCourse", value: v })} required />
+              <Checkbox label="BV is NOT an STI" checked={state.counselling.notSTI} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "notSTI", value: v })} description="Partner treatment not routinely recommended" required />
+              <Checkbox label="BV may recur; if symptoms return within 3 months, contact the GP for reassessment" checked={state.counselling.recurrenceAdvice} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "recurrenceAdvice", value: v })} required />
+              <Checkbox label="Sexual contacts/partner notification" checked={state.counselling.sexPartnerAdvice} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "sexPartnerAdvice", value: v })} description="Partners may not require treatment unless they develop symptoms" />
+              <Checkbox label="Seek medical advice if symptoms do not resolve within 5 to 7 days of completing treatment, or if new symptoms develop (pelvic pain, fever)" checked={state.counselling.seekAdviceIfNotResolved} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "seekAdviceIfNotResolved", value: v })} required />
+              {state.medicineSelection.medicineChoice === "metronidazole-gel" && (
+                <Checkbox label="Gel may damage latex condoms and diaphragms: use alternative contraception during treatment and for 5 days after" checked={state.counselling.latexAdvice} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "latexAdvice", value: v })} required />
+              )}
+              <Checkbox label="Patient information leaflet supplied with the medication" checked={state.counselling.pilSupplied} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "pilSupplied", value: v })} required />
+              <p className="text-xs text-gray-500">
+                Report any adverse effects to your healthcare provider or via the Yellow Card scheme (https://yellowcard.mhra.gov.uk).
+              </p>
             </div>
           </StepWrapper>
         );
@@ -273,14 +379,7 @@ export default function BVClient() {
         return (
           <StepWrapper
             title="Summary & Consultation Record"
-            currentStep={state.currentStep}
-            totalSteps={TOTAL_STEPS}
-            onNext={handleNext}
-            onPrev={handlePrev}
-            canProceed={true}
-            validationError={null}
-            isBlocked={false}
-            getConsultationData={getConsultationData}
+            {...stepProps}
             onNewConsultation={handleNewConsultation}
           >
             <div className="space-y-4 mb-6">
@@ -303,7 +402,8 @@ export default function BVClient() {
   return (
     <div className="space-y-6">
       <ProgressBar stepLabels={STEP_LABELS} currentStep={state.currentStep} onStepClick={handleStepClick} completedSteps={completedSteps} hasErrors={Boolean(validationError)} />
-      {alerts.length > 0 && state.currentStep < 4 && <AlertBanner alerts={alerts} />}
+      {alerts.length > 0 && state.currentStep !== 4 && <AlertBanner alerts={alerts} />}
+      {exclusionOutcomeBlock}
       {renderStep()}
     </div>
   );

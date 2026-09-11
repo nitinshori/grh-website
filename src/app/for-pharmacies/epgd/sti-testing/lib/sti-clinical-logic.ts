@@ -5,6 +5,18 @@ import type { STIConsultationState, STITreatmentMedicine } from "./sti-types";
 
 // ─── Age and safeguarding (PGD v002, both arms) ───
 
+/** All five Fraser limbs recorded individually. */
+export function fraserAllLimbs(state: STIConsultationState): boolean {
+  const p = state.patient;
+  return (
+    p.fraserUnderstandsAdvice &&
+    p.fraserCannotBePersuaded &&
+    p.fraserLikelyToContinue &&
+    p.fraserHealthWouldSuffer &&
+    p.fraserBestInterests
+  );
+}
+
 export function getAgeAlerts(state: STIConsultationState): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
   const age = state.patient.age;
@@ -30,7 +42,7 @@ export function getAgeAlerts(state: STIConsultationState): ClinicalAlert[] {
         detail:
           "Partner 18 or over, coercion, exploitation or learning disability: refer and follow the local safeguarding pathway.",
       });
-    } else if (!state.patient.fraserCompetent || !state.patient.safeguardingAssessed) {
+    } else if (!fraserAllLimbs(state) || !state.patient.safeguardingAssessed) {
       alerts.push({
         severity: "stop",
         code: "STI_FRASER_NOT_ESTABLISHED",

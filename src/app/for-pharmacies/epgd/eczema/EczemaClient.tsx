@@ -19,6 +19,9 @@ import {
   ECZEMA_PGD_VERSION,
   TREATED_AREA_LABEL,
   QUANTITY_BY_AREA,
+  SITE_OPTIONS,
+  isThinSkinSite,
+  isEyelidSite,
 } from "./lib/eczema-types";
 import {
   getAllAlerts,
@@ -64,6 +67,14 @@ function reducer(state: EczemaConsultationState, action: EczemaAction): EczemaCo
         ...newState.assessment,
         [action.field]: action.value,
       };
+      // The thin-skin gate and the eyelid exclusion are derived from the
+      // structured site list, never from a separate tick that defaults to
+      // false (adversarial review, 11 Sep 2026).
+      if (action.field === "sites") {
+        const sites = action.value as string[];
+        newState.assessment.thinSkinSite = isThinSkinSite(sites);
+        newState.assessment.eyelids = isEyelidSite(sites);
+      }
       break;
 
     case "UPDATE_MEDICAL_HISTORY":
@@ -148,7 +159,9 @@ export default function EczemaClient() {
   }, [state, alerts, doseRecommendation]);
 
   const validationError = useMemo(() => validateStep(state.currentStep, state), [state.currentStep, state]);
-  const canProceed = !validationError && (!hasStops || state.currentStep >= 5);
+  // A stop anywhere disables Next on every step: the only way past a stop is
+  // "Save as not supplied" on the step where it is shown.
+  const canProceed = !validationError && !hasStops;
 
   const markStepComplete = useCallback(() => {
     setCompletedSteps((prev) => new Set([...prev, state.currentStep]));
@@ -166,13 +179,23 @@ export default function EczemaClient() {
   };
 
   const handleSetStep = (step: number) => {
-    if (completedSteps.has(step) || step <= state.currentStep) {
+    // Backwards only (the progress bar enforces this too). Every step after
+    // the target is forgotten, so an edited answer has to pass Next again.
+    if (step <= state.currentStep) {
+      setCompletedSteps((prev) => new Set([...prev].filter((s) => s < step)));
       dispatch({ type: "SET_STEP", step });
     }
   };
 
   // ─── Consultation Record Data (for saving to database) ───
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    const ms = state.medicineSelection;
+    const medicineName =
+      ms.steroidChoice === "clobetasone"
+        ? "Clobetasone butyrate 0.05%"
+        : ms.steroidChoice === "betamethasone"
+          ? "Betamethasone valerate 0.1%"
+          : "";
     return {
       patient: {
         firstName: state.patient.firstName,
@@ -185,16 +208,29 @@ export default function EczemaClient() {
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
       },
-      clinicalData: state as unknown as Record<string, unknown>,
-      outcome: hasStops ? "not_supplied" : "completed",
+      clinicalData: { ...state, alerts, pgdVersion: ECZEMA_PGD_VERSION } as unknown as Record<string, unknown>,
+      outcome: hasStops ? "referred" : "completed",
+      medicine:
+        !hasStops && medicineName
+          ? {
+              name: `${medicineName} ${ms.formulation}`.trim(),
+              dose: "Thin layer once or twice daily to affected skin only, in fingertip units",
+              duration: state.assessment.thinSkinSite ? "7 days maximum (face, flexures or genital skin)" : "Up to 7 days then review; maximum 4 weeks continuous",
+              quantity: ms.quantitySupplied || undefined,
+            }
+          : undefined,
       summary: {
-        pharmacistName: state.summary.pharmacistName,
-        pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacistName: state.summary.pharmacistName || __pharmProfile?.name || "",
+        pharmacistGPhC: state.summary.pharmacistGPhC || __pharmProfile?.gphcNumber || "",
+        pharmacyName: state.summary.pharmacyName || __pharmProfile?.pharmacyName,
+        pharmacyAddress: state.summary.pharmacyAddress || __pharmProfile?.pharmacyAddress,
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: !!state.consent.notifyGp },
     };
-  }, [state, hasStops]);
+  }, [state, hasStops, alerts, __pharmProfile]);
 
   const handleNewConsultation = useCallback(() => {
     dispatch({ type: "RESET" });
@@ -202,12 +238,46 @@ export default function EczemaClient() {
   }, []);
 
   const age = state.patient.age;
-  const thinSkin = state.assessment.thinSkinSite || state.contraindications.faceOrGroin;
+  const thinSkin = state.assessment.thinSkinSite;
   const arm = requiredArm(state);
   const areaQuantity =
     state.assessment.treatedArea && state.assessment.treatedArea !== "over-10-palms"
       ? QUANTITY_BY_AREA[state.assessment.treatedArea]
       : null;
+
+  // Same rules on every step: a stop blocks Next everywhere and offers
+  // "Save as not supplied" everywhere, and every step can save a record.
+  const wrapperProps = {
+    currentStep: state.currentStep,
+    totalSteps: TOTAL_STEPS,
+    onNext: handleNextStep,
+    onPrev: handlePrevStep,
+    canProceed,
+    validationError,
+    isBlocked: hasStops,
+    getConsultationData,
+    onNewConsultation: handleNewConsultation,
+  };
+
+  // Shown on every clinical step: the alerts, and where a stop exists, the
+  // box for the advice given and the decision reached (document record item).
+  const alertsAndExclusion = (
+    <>
+      {alerts.length > 0 && <AlertBanner alerts={alerts} />}
+      {hasStops && (
+        <div className="p-4 bg-red-50 rounded-lg border border-red-200 space-y-2 mb-4">
+          <p className="text-sm font-medium text-navy-900">Excluded: record the reason, the advice given and the decision reached, then use Save as not supplied</p>
+          <TextArea
+            label="Advice given and decision reached"
+            value={state.summary.exclusionAdvice}
+            onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "exclusionAdvice", value: v })}
+            rows={3}
+            placeholder="e.g. explained why a steroid is not the right treatment; referred to GP for review; emollient advice given"
+          />
+        </div>
+      )}
+    </>
+  );
 
   const renderCurrentStep = () => {
     switch (state.currentStep) {
@@ -215,12 +285,7 @@ export default function EczemaClient() {
         return (
           <StepWrapper
             title="Patient Details"
-            currentStep={state.currentStep}
-            totalSteps={TOTAL_STEPS}
-            onNext={handleNextStep}
-            onPrev={handlePrevStep}
-            canProceed={canProceed}
-            validationError={validationError}
+            {...wrapperProps}
           >
             <p className="text-xs text-gray-600 mb-3">{ECZEMA_PGD_VERSION}. Patients aged 12 years and over.</p>
             <PatientDetailsStep
@@ -235,12 +300,7 @@ export default function EczemaClient() {
         return (
           <StepWrapper
             title="Consent"
-            currentStep={state.currentStep}
-            totalSteps={TOTAL_STEPS}
-            onNext={handleNextStep}
-            onPrev={handlePrevStep}
-            canProceed={canProceed}
-            validationError={validationError}
+            {...wrapperProps}
           >
             <ConsentStep
               consent={state.consent}
@@ -274,13 +334,9 @@ export default function EczemaClient() {
         return (
           <StepWrapper
             title="Eczema Assessment"
-            currentStep={state.currentStep}
-            totalSteps={TOTAL_STEPS}
-            onNext={handleNextStep}
-            onPrev={handlePrevStep}
-            canProceed={canProceed}
-            validationError={validationError}
+            {...wrapperProps}
           >
+            {alertsAndExclusion}
             <div className="space-y-4">
               <SelectInput
                 label="Eczema Severity"
@@ -328,26 +384,37 @@ export default function EczemaClient() {
                 </div>
               )}
 
+              <div className="space-y-2 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                <p className="text-sm font-medium text-navy-900">Sites treated (severity and site together decide the arm) *</p>
+                <p className="text-xs text-gray-600">Face, flexures and genital skin are thin skin: clobetasone only, 7 days maximum there. The eyelids are excluded from both arms.</p>
+                <div className="grid sm:grid-cols-2 gap-x-4">
+                  {SITE_OPTIONS.map((opt) => (
+                    <Checkbox
+                      key={opt.value}
+                      label={opt.label}
+                      checked={state.assessment.sites.includes(opt.value)}
+                      onChange={(checked) => {
+                        const next = checked
+                          ? [...state.assessment.sites, opt.value]
+                          : state.assessment.sites.filter((s) => s !== opt.value);
+                        dispatch({ type: "UPDATE_ASSESSMENT", field: "sites", value: next });
+                      }}
+                    />
+                  ))}
+                </div>
+                {thinSkin && (
+                  <p className="text-xs text-amber-800 font-medium">Thin-skin site selected: Arm 1 (clobetasone) only, 7 days maximum at that site.</p>
+                )}
+                {state.assessment.eyelids && (
+                  <p className="text-xs text-red-700 font-medium">Eyelids selected: excluded from both arms. Refer.</p>
+                )}
+              </div>
               <TextArea
-                label="Site treated"
+                label="Site detail (optional; required where Other is selected)"
                 value={state.assessment.affectedSite}
                 onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "affectedSite", value: v })}
                 placeholder="e.g. flexures of both elbows; spares face and groin"
-                required
               />
-              <div className="space-y-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
-                <p className="text-sm font-medium text-navy-900">Site: severity and site together decide the arm</p>
-                <Checkbox
-                  label="Face, flexures or genital skin involved (thin skin: clobetasone only, 7 days maximum at those sites)"
-                  checked={state.assessment.thinSkinSite}
-                  onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "thinSkinSite", value: v })}
-                />
-                <Checkbox
-                  label="Eyelids involved (excluded from both arms: refer)"
-                  checked={state.assessment.eyelids}
-                  onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "eyelids", value: v })}
-                />
-              </div>
               <SelectInput
                 label="Treated area, in adult palms (one fingertip unit covers about two adult palms)"
                 value={state.assessment.treatedArea}
@@ -368,13 +435,9 @@ export default function EczemaClient() {
         return (
           <StepWrapper
             title="Medical History"
-            currentStep={state.currentStep}
-            totalSteps={TOTAL_STEPS}
-            onNext={handleNextStep}
-            onPrev={handlePrevStep}
-            canProceed={canProceed}
-            validationError={validationError}
+            {...wrapperProps}
           >
+            {alertsAndExclusion}
             <div className="space-y-4">
               <TextArea
                 label="Previous eczema treatments"
@@ -398,10 +461,26 @@ export default function EczemaClient() {
                   { value: "0", label: "None" },
                   { value: "1", label: "One" },
                   { value: "2", label: "Two" },
-                  { value: "3-or-more", label: "Three or more without GP review (refer)" },
+                  { value: "3-or-more", label: "Three or more" },
                 ]}
                 required
               />
+              {state.medicalHistory.coursesLast12Months === "3-or-more" && (
+                <Checkbox
+                  label="The GP has reviewed the patient since the last course"
+                  checked={state.medicalHistory.gpReviewSinceLastCourse}
+                  onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "gpReviewSinceLastCourse", value: v })}
+                  description="Exclusion: three or more courses in the last 12 months WITHOUT GP review. With a GP review since the last course, supply is permitted; record the review in the clinical notes."
+                />
+              )}
+              {state.medicalHistory.coursesLast12Months && state.medicalHistory.coursesLast12Months !== "0" && (
+                <TextInput
+                  label="Date the last course ended (for the 4 week continuous ceiling)"
+                  type="date"
+                  value={state.medicalHistory.lastCourseEndDate}
+                  onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "lastCourseEndDate", value: v })}
+                />
+              )}
               <Checkbox
                 label="Already using another topical corticosteroid (do not add a second: refer)"
                 checked={state.medicalHistory.currentlyUsingTopicalSteroid}
@@ -433,15 +512,9 @@ export default function EczemaClient() {
         return (
           <StepWrapper
             title="Contraindications Check"
-            currentStep={state.currentStep}
-            totalSteps={TOTAL_STEPS}
-            onNext={handleNextStep}
-            onPrev={handlePrevStep}
-            canProceed={canProceed}
-            validationError={validationError}
-            isBlocked={hasStops}
+            {...wrapperProps}
           >
-            <AlertBanner alerts={alerts} />
+            {alertsAndExclusion}
             <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
               <Checkbox
                 label="Signs of secondary bacterial infection (weeping, crusting, sudden worsening or fever)"
@@ -450,11 +523,28 @@ export default function EczemaClient() {
                 description="Excluded unless the infection is MILD and LOCALISED and is treated at this visit under the Skin and Soft Tissue Infection PGD. Otherwise refer and supply neither."
               />
               {(state.contraindications.bacterialInfection || state.assessment.isOozing) && (
-                <Checkbox
-                  label="Concurrent supply: mild, localised infection treated at this consultation with an oral antibiotic under the Skin and Soft Tissue Infection PGD, both supplies recorded in this one consultation record"
-                  checked={state.contraindications.concurrentAntibioticSupplied}
-                  onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "concurrentAntibioticSupplied", value: v })}
-                />
+                <div className="space-y-3 p-3 bg-white rounded-lg border border-gray-200">
+                  <Checkbox
+                    label="The infection is MILD and LOCALISED, with no red flag from the Skin and Soft Tissue Infection PGD (widespread or systemic infection: refer and supply neither)"
+                    checked={state.contraindications.concurrentInfectionMildLocalised}
+                    onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "concurrentInfectionMildLocalised", value: v })}
+                  />
+                  <Checkbox
+                    label="Concurrent supply: an oral antibiotic is supplied at this consultation under the Skin and Soft Tissue Infection PGD, recorded below so that both supplies are in this one consultation record"
+                    checked={state.contraindications.concurrentAntibioticSupplied}
+                    onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "concurrentAntibioticSupplied", value: v })}
+                  />
+                  {state.contraindications.concurrentAntibioticSupplied && (
+                    <div className="grid sm:grid-cols-2 gap-3">
+                      <TextInput label="Antibiotic supplied (name and strength)" value={state.contraindications.concurrentAntibioticName} onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "concurrentAntibioticName", value: v })} required placeholder="e.g. flucloxacillin 500mg capsules" />
+                      <TextInput label="Dose and duration" value={state.contraindications.concurrentAntibioticDose} onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "concurrentAntibioticDose", value: v })} required placeholder="e.g. 500mg four times daily for 5 days" />
+                      <TextInput label="Quantity" value={state.contraindications.concurrentAntibioticQuantity} onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "concurrentAntibioticQuantity", value: v })} required placeholder="e.g. 20 capsules" />
+                      <TextInput label="Batch number" value={state.contraindications.concurrentAntibioticBatch} onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "concurrentAntibioticBatch", value: v })} required />
+                      <TextInput label="Expiry date" type="date" value={state.contraindications.concurrentAntibioticExpiry} onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "concurrentAntibioticExpiry", value: v })} required />
+                      <TextInput label="Skin infection consultation reference (if saved separately)" value={state.contraindications.concurrentConsultationRef} onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "concurrentConsultationRef", value: v })} />
+                    </div>
+                  )}
+                </div>
               )}
 
               <Checkbox
@@ -489,16 +579,10 @@ export default function EczemaClient() {
         return (
           <StepWrapper
             title="Medicine Selection"
-            currentStep={state.currentStep}
-            totalSteps={TOTAL_STEPS}
-            onNext={handleNextStep}
-            onPrev={handlePrevStep}
-            canProceed={canProceed}
-            validationError={validationError}
-            isBlocked={hasStops}
+            {...wrapperProps}
           >
+            {alertsAndExclusion}
             <div className="space-y-4">
-              <AlertBanner alerts={alerts} />
               <Checkbox
                 label="Emollient confirmed as the base of treatment"
                 checked={state.medicineSelection.emollientFirst}
@@ -575,13 +659,9 @@ export default function EczemaClient() {
         return (
           <StepWrapper
             title="Counselling"
-            currentStep={state.currentStep}
-            totalSteps={TOTAL_STEPS}
-            onNext={handleNextStep}
-            onPrev={handlePrevStep}
-            canProceed={canProceed}
-            validationError={validationError}
+            {...wrapperProps}
           >
+            {alertsAndExclusion}
             <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
               <p className="text-sm font-medium text-navy-900 mb-3">Confirm counselling covered (supply the patient information leaflet):</p>
               <Checkbox
@@ -649,15 +729,9 @@ export default function EczemaClient() {
         return (
           <StepWrapper
             title="Summary"
-            currentStep={state.currentStep}
-            totalSteps={TOTAL_STEPS}
-            onNext={handleNextStep}
-            onPrev={handlePrevStep}
-            canProceed={canProceed}
-            validationError={validationError}
-          getConsultationData={getConsultationData}
-          onNewConsultation={handleNewConsultation}
+            {...wrapperProps}
           >
+            {alertsAndExclusion}
             <div className="space-y-4">
               <TextInput
                 label="Pharmacist name"
@@ -685,6 +759,12 @@ export default function EczemaClient() {
                 label="Clinical notes (optional)"
                 value={state.summary.clinicalNotes}
                 onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "clinicalNotes", value: v })}
+              />
+              <TextArea
+                label="Adverse drug reactions and actions taken (report via Yellow Card, https://yellowcard.mhra.gov.uk, and inform the GP)"
+                value={state.summary.adverseReactions}
+                onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "adverseReactions", value: v })}
+                placeholder="None known at the time of supply"
               />
             </div>
           </StepWrapper>

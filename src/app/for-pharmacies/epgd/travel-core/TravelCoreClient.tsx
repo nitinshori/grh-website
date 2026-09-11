@@ -16,13 +16,15 @@ import {
   type HepADose,
   type CholeraDose,
   type InjectionSite,
+  type ChemoprophylaxisPlan,
+  type ExclusionReferral,
 } from "./lib/travel-core-types";
 import {
   getAllAlerts,
   getVaccineDoseText,
+  getBoosterDueDates,
   calculateTravelDuration,
-  assessMalariaRisk,
-  getChemoprophylaxisRecommendation,
+  daysUntilDeparture,
 } from "./lib/travel-core-clinical-logic";
 import { validateStep } from "./lib/travel-core-validation";
 import { calculateAge } from "../shared/types";
@@ -37,7 +39,6 @@ import {
   TextInput,
   Checkbox,
   SelectInput,
-  NumberInput,
   TextArea,
 } from "../shared/components/FormInputs";
 
@@ -72,6 +73,11 @@ function reducer(
           newState.destination.returnDate
         );
       }
+      // One flag drives the malaria step: ticking "endemic malaria zone" here
+      // is the same fact as "malaria transmission zone" on step 3.
+      if (action.field === "isEndemicMalariaZone") {
+        newState.malariaRisk = { ...newState.malariaRisk, malariaZone: Boolean(action.value) };
+      }
       break;
 
     case "UPDATE_MALARIA_RISK":
@@ -79,6 +85,9 @@ function reducer(
         ...newState.malariaRisk,
         [action.field]: action.value,
       };
+      if (action.field === "malariaZone") {
+        newState.destination = { ...newState.destination, isEndemicMalariaZone: Boolean(action.value) };
+      }
       break;
 
     case "UPDATE_PREVENTIVE_MEASURES":
@@ -148,6 +157,13 @@ export default function TravelCoreClient() {
     dispatch({ type: "UPDATE_VACCINES", field, value });
 
   const handleNext = useCallback(() => {
+    // A stop anywhere blocks Next on every step, not only the vaccine step
+    // (adversarial review, 11 Sep 2026).
+    const stop = alerts.find((a) => a.severity === "stop");
+    if (stop) {
+      setValidationError(`Exclusion present: ${stop.message}. Record the advice given and save as not supplied, or resolve the exclusion.`);
+      return;
+    }
     const error = validateStep(state.currentStep, state);
     if (error) {
       setValidationError(error);
@@ -159,21 +175,22 @@ export default function TravelCoreClient() {
       type: "SET_STEP",
       step: Math.min(state.currentStep + 1, TOTAL_STEPS - 1),
     });
-  }, [state]);
+  }, [state, alerts]);
 
   const handlePrev = useCallback(() => {
     setValidationError(null);
     dispatch({ type: "SET_STEP", step: Math.max(state.currentStep - 1, 0) });
   }, []);
 
+  // Backwards only: forward movement is always through Next, where the gates are.
   const handleStepClick = useCallback(
     (step: number) => {
-      if (completedSteps.has(step) || step <= state.currentStep) {
+      if (step < state.currentStep) {
         setValidationError(null);
         dispatch({ type: "SET_STEP", step });
       }
     },
-    [completedSteps, state.currentStep]
+    [state.currentStep]
   );
 
   const handleNewConsultation = useCallback(() => {
@@ -184,8 +201,9 @@ export default function TravelCoreClient() {
     dispatch({ type: "RESET" });
   }, []);
 
-  const canProceed = validateStep(state.currentStep, state) === null;
-
+  const canProceed = validateStep(state.currentStep, state) === null && !vaccineStops;
+  const daysToDeparture = daysUntilDeparture(state.destination.departureDate);
+  const boosterDue = useMemo(() => getBoosterDueDates(state.vaccines), [state.vaccines]);
 
   // ─── Consultation Record Data (for saving to database) ───
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
@@ -203,19 +221,71 @@ export default function TravelCoreClient() {
       },
       clinicalData: {
         ...state,
+        completedSteps: undefined,
         alerts,
         pgdVersion: TRAVEL_CORE_PGD_VERSION,
-        vaccineDoses: getVaccineDoseText(state.vaccines),
+        vaccineDoses: vaccineStops ? [] : getVaccineDoseText(state.vaccines),
+        boosterDue: vaccineStops ? [] : boosterDue,
+        exclusion: vaccineStops
+          ? {
+              reasons: alerts.filter((a) => a.severity === "stop").map((a) => a.message),
+              advice: state.vaccines.exclusionAdvice,
+              referral: state.vaccines.exclusionReferral,
+            }
+          : null,
+        adverseReaction: state.vaccines.adverseReaction ? state.vaccines.adverseReactionDetails : null,
       } as unknown as Record<string, unknown>,
-      outcome: anyVaccineGiven && !vaccineStops ? "completed" : "not_supplied",
+      outcome: vaccineStops
+        ? (state.vaccines.exclusionReferral && state.vaccines.exclusionReferral !== "declined" ? "referred" : "not_supplied")
+        : anyVaccineGiven
+        ? "completed"
+        : "not_supplied",
+      ...(anyVaccineGiven && !vaccineStops
+        ? {
+            medicine: {
+              name: [
+                state.vaccines.hepAGiven ? (state.vaccines.hepAProduct === "avaxim" ? "Avaxim (hepatitis A)" : "Havrix Monodose (hepatitis A)") : null,
+                state.vaccines.typhoidGiven ? "Typhim Vi (typhoid)" : null,
+                state.vaccines.choleraGiven ? "Dukoral (cholera, oral)" : null,
+              ].filter(Boolean).join("; "),
+              dose: [
+                state.vaccines.hepAGiven ? `Hepatitis A ${state.vaccines.hepAProduct === "avaxim" ? "0.5 mL" : "1.0 mL"} IM, ${state.vaccines.hepADose || "dose"}` : null,
+                state.vaccines.typhoidGiven ? "Typhim Vi 0.5 mL IM, single dose" : null,
+                state.vaccines.choleraGiven ? `Dukoral one 3 mL vial with buffer, oral, ${state.vaccines.choleraDose === "booster" ? "booster" : `dose ${state.vaccines.choleraDose}`}` : null,
+              ].filter(Boolean).join("; "),
+              duration: "Single visit",
+              quantity: [state.vaccines.hepAGiven, state.vaccines.typhoidGiven, state.vaccines.choleraGiven].filter(Boolean).length,
+            },
+          }
+        : {}),
       summary: {
         pharmacistName: state.summary.pharmacistName,
         pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacyName: state.summary.pharmacyName,
+        pharmacyAddress: state.summary.pharmacyAddress,
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: !!state.consent.notifyGp },
     };
-  }, [state, alerts, anyVaccineGiven, vaccineStops]);
+  }, [state, alerts, anyVaccineGiven, vaccineStops, boosterDue]);
+
+  // Shown on any step where a stop is present. The document: "Document any
+  // advice given and the decision reached. Inform or refer to the GP."
+  const exclusionOutcomeBlock = vaccineStops ? (
+    <div className="space-y-3 p-4 bg-red-50 rounded-lg border border-red-300 print:hidden">
+      <p className="text-sm font-semibold text-red-800">Exclusion: record the advice given and the decision reached</p>
+      <p className="text-xs text-red-800">No vaccine can be given under this PGD while an exclusion applies. Advise on alternative options and how to access them, then use &quot;Save as not supplied&quot; in the step footer.</p>
+      <TextArea label="Advice given and decision reached" value={state.vaccines.exclusionAdvice} onChange={(v) => setVaccine("exclusionAdvice", v)} placeholder="e.g. Pregnant: advised to discuss vaccine timing with GP before travel; food and water advice given" rows={3} required />
+      <SelectInput label="GP informed or referral" value={state.vaccines.exclusionReferral} onChange={(v) => setVaccine("exclusionReferral", v as ExclusionReferral)} options={[
+        { value: "gp-informed", label: "GP informed" },
+        { value: "gp-referred", label: "Referred to GP" },
+        { value: "travel-clinic", label: "Referred to a travel health clinic" },
+        { value: "declined", label: "Patient declined referral; advice given" },
+      ]} required />
+    </div>
+  ) : null;
 
   if (state.currentStep === TOTAL_STEPS - 1) {
     return (
@@ -233,12 +303,14 @@ export default function TravelCoreClient() {
           title={STEP_LABELS[state.currentStep]}
           onNext={handleNext}
           onPrev={handlePrev}
-          canProceed={true}
-          validationError={null}
+          canProceed={validateStep(7, state) === null && !vaccineStops}
+          validationError={vaccineStops ? "Exclusion criteria met: record the advice given and save as not supplied" : validateStep(7, state)}
+          isBlocked={vaccineStops}
           getConsultationData={getConsultationData}
           onNewConsultation={handleNewConsultation}
         >
-          <TravelCoreSummaryReport state={state} alerts={alerts} />
+          {exclusionOutcomeBlock}
+          <TravelCoreSummaryReport state={state} alerts={alerts} boosterDue={boosterDue} isBlocked={vaccineStops} />
         </StepWrapper>
       </div>
     );
@@ -266,7 +338,11 @@ export default function TravelCoreClient() {
         onPrev={handlePrev}
         canProceed={canProceed}
         validationError={validationError}
+        isBlocked={vaccineStops}
+        getConsultationData={getConsultationData}
+        onNewConsultation={handleNewConsultation}
       >
+        {state.currentStep !== 6 && exclusionOutcomeBlock}
         {state.currentStep === 0 && (
           <PatientDetailsStep
             patient={state.patient}
@@ -337,6 +413,9 @@ export default function TravelCoreClient() {
                 />
               </div>
             </div>
+            {daysToDeparture !== null && (
+              <p className="text-xs text-gray-600">{daysToDeparture < 0 ? `Departure date is ${-daysToDeparture} days in the past: check the dates` : `${daysToDeparture} days to departure`}</p>
+            )}
             <div className="grid sm:grid-cols-2 gap-4">
               <Checkbox
                 label="Endemic malaria zone"
@@ -400,6 +479,9 @@ export default function TravelCoreClient() {
 
         {state.currentStep === 3 && (
           <div className="space-y-4">
+            <div className="p-4 bg-[color:var(--tenant-primary)]/10 rounded-lg border border-[color:var(--tenant-primary)]/30 text-sm">
+              Malaria chemoprophylaxis is outside this PGD, which authorises three vaccines. Record the risk assessment and where the traveller was sent. Supply of antimalarials is under the anti-malarials PGD; this tool does not recommend a drug.
+            </div>
             <Checkbox
               label="Malaria transmission zone"
               checked={state.malariaRisk.malariaZone}
@@ -415,7 +497,7 @@ export default function TravelCoreClient() {
             {state.malariaRisk.malariaZone && (
               <>
                 <TextInput
-                  label="Resistance profile"
+                  label="TravelHealthPro malaria note (optional)"
                   value={state.malariaRisk.resistanceProfile}
                   onChange={(v) =>
                     dispatch({
@@ -424,11 +506,10 @@ export default function TravelCoreClient() {
                       value: v,
                     })
                   }
-                  required
-                  placeholder="e.g., CQ-resistant, MDR"
+                  placeholder="e.g. high risk, chloroquine-resistant P. falciparum per TravelHealthPro"
                 />
                 <Checkbox
-                  label="Chemoprophylaxis advised"
+                  label="Chemoprophylaxis advised as indicated by TravelHealthPro"
                   checked={state.malariaRisk.chemoprophylaxisAdvised}
                   onChange={(v) =>
                     dispatch({
@@ -437,24 +518,27 @@ export default function TravelCoreClient() {
                       value: v,
                     })
                   }
-                  description="Antimalarial medication recommended"
+                  description="Bite avoidance advice is given in every case; chemoprophylaxis where TravelHealthPro recommends it"
                 />
-                {state.malariaRisk.chemoprophylaxisAdvised && (
-                  <TextInput
-                    label="Recommended drug"
-                    value={state.malariaRisk.recommendedDrug}
-                    onChange={(v) =>
-                      dispatch({
-                        type: "UPDATE_MALARIA_RISK",
-                        field: "recommendedDrug",
-                        value: v,
-                      })
-                    }
-                    placeholder={getChemoprophylaxisRecommendation(
-                      state.malariaRisk.resistanceProfile
-                    )}
-                  />
-                )}
+                <SelectInput
+                  label="Chemoprophylaxis plan"
+                  value={state.malariaRisk.chemoprophylaxisPlan}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_MALARIA_RISK",
+                      field: "chemoprophylaxisPlan",
+                      value: v as ChemoprophylaxisPlan,
+                    })
+                  }
+                  options={[
+                    { value: "supplied-antimalarials-pgd", label: "Supplied at this visit under the anti-malarials PGD (separate consultation record)" },
+                    { value: "referred-antimalarials-pgd", label: "Booked for an anti-malarials PGD consultation" },
+                    { value: "referred-gp-travel-clinic", label: "Referred to GP or travel health clinic" },
+                    { value: "not-required", label: "Not required per TravelHealthPro for this itinerary (bite avoidance only)" },
+                    { value: "declined", label: "Traveller declined chemoprophylaxis; risks explained" },
+                  ]}
+                  required
+                />
               </>
             )}
           </div>
@@ -462,6 +546,7 @@ export default function TravelCoreClient() {
 
         {state.currentStep === 4 && (
           <div className="space-y-4">
+            <p className="text-xs text-gray-600">Record the advice given. None of these is required to proceed.</p>
             <Checkbox
               label="Insect repellent advised"
               checked={state.preventiveMeasures.insectRepellentAdvised}
@@ -551,6 +636,7 @@ export default function TravelCoreClient() {
 
         {state.currentStep === 5 && (
           <div className="space-y-4">
+            <p className="text-xs text-gray-600">Optional. These items are outside this PGD; record only what was actually supplied or advised. Nothing here is required to proceed.</p>
             <Checkbox
               label="Bite avoidance kit supplied"
               checked={state.medicinesSupplied.biteAvoidanceKitSupplied}
@@ -653,19 +739,29 @@ export default function TravelCoreClient() {
               <Checkbox label="Hepatitis A vaccine (Havrix Monodose 1440 EL.U/1.0 mL or Avaxim 160 U/0.5 mL), intramuscular, deltoid" checked={state.vaccines.hepAGiven} onChange={(v) => setVaccine("hepAGiven", v)} description="Inclusion: travelling to an area of high or intermediate hepatitis A prevalence; no previous complete course; no documented immunity" />
               {state.vaccines.hepAGiven && (
                 <div className="space-y-3 pl-2 border-l-2 border-gray-200">
-                  <Checkbox label="Previous complete Hepatitis A vaccination course" checked={state.vaccines.hepAPreviousCompleteCourse} onChange={(v) => setVaccine("hepAPreviousCompleteCourse", v)} />
-                  <Checkbox label="Documented evidence of Hepatitis A immunity" checked={state.vaccines.hepAImmunityDocumented} onChange={(v) => setVaccine("hepAImmunityDocumented", v)} />
+                  <Checkbox label="Inclusion met: destination has high or intermediate hepatitis A prevalence on current TravelHealthPro guidance (checked at this consultation)" checked={state.vaccines.hepAInclusionMet} onChange={(v) => setVaccine("hepAInclusionMet", v)} />
+                  <Checkbox label="Previous complete Hepatitis A vaccination course (primary dose plus booster): excluded" checked={state.vaccines.hepAPreviousCompleteCourse} onChange={(v) => setVaccine("hepAPreviousCompleteCourse", v)} />
+                  <Checkbox label="Documented evidence of Hepatitis A immunity: excluded" checked={state.vaccines.hepAImmunityDocumented} onChange={(v) => setVaccine("hepAImmunityDocumented", v)} />
                   <SelectInput label="Product" value={state.vaccines.hepAProduct} onChange={(v) => setVaccine("hepAProduct", v as HepAProduct)} options={[
                     { value: "havrix", label: "Havrix Monodose 1440 EL.U/1.0 mL (dose 1.0 mL)" },
                     { value: "avaxim", label: "Avaxim 160 U/0.5 mL (dose 0.5 mL)" },
                   ]} required />
                   <SelectInput label="Dose" value={state.vaccines.hepADose} onChange={(v) => setVaccine("hepADose", v as HepADose)} options={[
-                    { value: "primary", label: "Primary course: one dose" },
+                    { value: "primary", label: "Primary course: one dose (no previous hepatitis A vaccine)" },
                     { value: "booster", label: "Booster at 6 to 12 months after the primary dose" },
                   ]} required />
+                  {state.vaccines.hepADose === "booster" && (
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <TextInput label="Date of the primary dose" type="date" value={state.vaccines.hepAPrimaryDoseDate} onChange={(v) => setVaccine("hepAPrimaryDoseDate", v)} required />
+                      <SelectInput label="Product used for the primary dose" value={state.vaccines.hepAPrimaryProduct} onChange={(v) => setVaccine("hepAPrimaryProduct", v as HepAProduct)} options={[
+                        { value: "havrix", label: "Havrix (booster 6 to 12 months)" },
+                        { value: "avaxim", label: "Avaxim (booster 6 to 36 months)" },
+                      ]} required />
+                    </div>
+                  )}
                   <div className="grid sm:grid-cols-3 gap-4">
                     <TextInput label="Batch number" value={state.vaccines.hepABatch} onChange={(v) => setVaccine("hepABatch", v)} required />
-                    <TextInput label="Expiry date" value={state.vaccines.hepAExpiry} onChange={(v) => setVaccine("hepAExpiry", v)} placeholder="MM/YYYY" required />
+                    <TextInput label="Expiry date" type="date" value={state.vaccines.hepAExpiry} onChange={(v) => setVaccine("hepAExpiry", v)} required />
                     <SelectInput label="Site" value={state.vaccines.hepASite} onChange={(v) => setVaccine("hepASite", v as InjectionSite)} options={[
                       { value: "left-deltoid", label: "Left deltoid" },
                       { value: "right-deltoid", label: "Right deltoid" },
@@ -678,13 +774,20 @@ export default function TravelCoreClient() {
             <div className="space-y-3 p-4 bg-white rounded-lg border border-gray-200">
               <Checkbox label="Typhoid vaccine (Typhim Vi 25 mcg/0.5 mL), 0.5 mL intramuscular, deltoid" checked={state.vaccines.typhoidGiven} onChange={(v) => setVaccine("typhoidGiven", v)} description="Inclusion: travelling to an area of high or intermediate typhoid prevalence (South Asia, Southeast Asia, Africa, Central/South America). Revaccination every 3 years if continuing risk" />
               {state.vaccines.typhoidGiven && (
-                <div className="grid sm:grid-cols-3 gap-4 pl-2 border-l-2 border-gray-200">
-                  <TextInput label="Batch number" value={state.vaccines.typhoidBatch} onChange={(v) => setVaccine("typhoidBatch", v)} required />
-                  <TextInput label="Expiry date" value={state.vaccines.typhoidExpiry} onChange={(v) => setVaccine("typhoidExpiry", v)} placeholder="MM/YYYY" required />
-                  <SelectInput label="Site" value={state.vaccines.typhoidSite} onChange={(v) => setVaccine("typhoidSite", v as InjectionSite)} options={[
-                    { value: "left-deltoid", label: "Left deltoid" },
-                    { value: "right-deltoid", label: "Right deltoid" },
-                  ]} required />
+                <div className="space-y-3 pl-2 border-l-2 border-gray-200">
+                  <Checkbox label="Inclusion met: destination has high or intermediate typhoid prevalence on current TravelHealthPro guidance (checked at this consultation)" checked={state.vaccines.typhoidInclusionMet} onChange={(v) => setVaccine("typhoidInclusionMet", v)} />
+                  <Checkbox label="Previous typhoid Vi vaccine dose (revaccination is every 3 years)" checked={state.vaccines.typhoidPreviousDose} onChange={(v) => setVaccine("typhoidPreviousDose", v)} />
+                  {state.vaccines.typhoidPreviousDose && (
+                    <TextInput label="Date of the previous typhoid dose" type="date" value={state.vaccines.typhoidPreviousDoseDate} onChange={(v) => setVaccine("typhoidPreviousDoseDate", v)} required />
+                  )}
+                  <div className="grid sm:grid-cols-3 gap-4">
+                    <TextInput label="Batch number" value={state.vaccines.typhoidBatch} onChange={(v) => setVaccine("typhoidBatch", v)} required />
+                    <TextInput label="Expiry date" type="date" value={state.vaccines.typhoidExpiry} onChange={(v) => setVaccine("typhoidExpiry", v)} required />
+                    <SelectInput label="Site" value={state.vaccines.typhoidSite} onChange={(v) => setVaccine("typhoidSite", v as InjectionSite)} options={[
+                      { value: "left-deltoid", label: "Left deltoid" },
+                      { value: "right-deltoid", label: "Right deltoid" },
+                    ]} required />
+                  </div>
                 </div>
               )}
             </div>
@@ -699,9 +802,15 @@ export default function TravelCoreClient() {
                     { value: "2", label: "Primary course, dose 2 of 2 (1 to 6 weeks after dose 1)" },
                     { value: "booster", label: "Booster (every 2 years if continuing risk)" },
                   ]} required />
+                  {state.vaccines.choleraDose === "2" && (
+                    <TextInput label="Date of dose 1 (dose 2 is due 1 to 6 weeks later; beyond 6 weeks the course restarts)" type="date" value={state.vaccines.choleraDose1Date} onChange={(v) => setVaccine("choleraDose1Date", v)} required />
+                  )}
+                  {state.vaccines.choleraDose === "booster" && (
+                    <TextInput label="Date the last course or booster was completed (beyond 2 years the primary course is repeated)" type="date" value={state.vaccines.choleraLastCourseDate} onChange={(v) => setVaccine("choleraLastCourseDate", v)} required />
+                  )}
                   <div className="grid sm:grid-cols-2 gap-4">
                     <TextInput label="Batch number" value={state.vaccines.choleraBatch} onChange={(v) => setVaccine("choleraBatch", v)} required />
-                    <TextInput label="Expiry date" value={state.vaccines.choleraExpiry} onChange={(v) => setVaccine("choleraExpiry", v)} placeholder="MM/YYYY" required />
+                    <TextInput label="Expiry date" type="date" value={state.vaccines.choleraExpiry} onChange={(v) => setVaccine("choleraExpiry", v)} required />
                   </div>
                 </div>
               )}
@@ -714,8 +823,18 @@ export default function TravelCoreClient() {
                   <p key={i}>{line}</p>
                 ))}
                 <p className="mt-1">Vaccinate at least 2 weeks before departure if possible. Where more than one vaccine is given, use separate sites and record the site of each.</p>
+                {boosterDue.length > 0 && (
+                  <div className="mt-2">
+                    <p className="font-semibold">Next dose or booster due</p>
+                    {boosterDue.map((b) => (
+                      <p key={b.vaccine}>{b.vaccine}: {b.due ? `${b.due}. ` : ""}{b.note}</p>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
+
+            {exclusionOutcomeBlock}
 
             {!anyVaccineGiven && (
               <Checkbox label="No vaccine administered at this visit (advice only, or patient excluded or declined; document the advice given)" checked={state.vaccines.noVaccineToday} onChange={(v) => setVaccine("noVaccineToday", v)} />
@@ -726,6 +845,10 @@ export default function TravelCoreClient() {
                 <p className="text-sm font-semibold text-amber-800">Before and after administration</p>
                 <Checkbox label="Adrenaline (epinephrine) 1 in 1,000 injection immediately available in the room, in date, with a telephone and a written anaphylaxis protocol (Resuscitation Council UK)" checked={state.vaccines.adrenalineAvailable} onChange={(v) => setVaccine("adrenalineAvailable", v)} />
                 <Checkbox label="Observed for 15 minutes after vaccination, seated, and the observation period completed" checked={state.vaccines.observationCompleted} onChange={(v) => setVaccine("observationCompleted", v)} />
+                <Checkbox label="Adverse reaction observed during or after vaccination" checked={state.vaccines.adverseReaction} onChange={(v) => { setVaccine("adverseReaction", v); if (!v) setVaccine("adverseReactionDetails", ""); }} />
+                {state.vaccines.adverseReaction && (
+                  <TextArea label="Adverse reaction and action taken (report via Yellow Card and inform the GP)" value={state.vaccines.adverseReactionDetails} onChange={(v) => setVaccine("adverseReactionDetails", v)} rows={2} required />
+                )}
                 <Checkbox label="Patient information leaflet supplied for each vaccine; importance of completing the course and the booster schedule explained (Hepatitis A at 6 to 12 months; Typhoid every 3 years; Cholera every 2 years)" checked={state.vaccines.pilSupplied} onChange={(v) => setVaccine("pilSupplied", v)} />
                 <Checkbox label="Follow-up advice given: report serious side effects; food and water hygiene; travel insurance covering medical evacuation for remote areas; report symptoms of hepatitis A, typhoid or cholera (fever, diarrhoea, jaundice) immediately; if pregnant or planning pregnancy discuss timing with the GP" checked={state.vaccines.followUpAdviceGiven} onChange={(v) => setVaccine("followUpAdviceGiven", v)} />
               </div>

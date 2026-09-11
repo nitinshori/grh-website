@@ -1,6 +1,7 @@
 "use client";
 
 import type { EDConsultationState, ClinicalAlert } from "../lib/ed-types";
+import { tadalafil72HourApplies } from "../lib/ed-clinical-logic";
 
 interface EDSummaryReportProps {
   state: EDConsultationState;
@@ -55,15 +56,34 @@ function AlertSummary({ alerts }: { alerts: ClinicalAlert[] }) {
 }
 
 export function EDSummaryReport({ state }: EDSummaryReportProps) {
+  const stopsExist = state.alerts.some((a) => a.severity === "stop");
   const medicineName =
     state.medicineSelection.medicine === "sildenafil"
       ? "Sildenafil"
-      : "Tadalafil";
+      : state.medicineSelection.medicine === "tadalafil"
+        ? "Tadalafil"
+        : "";
+  // Never print a medicine when a stop exists or nothing was chosen
+  // (adversarial review, 11 Sep 2026).
+  const supplied = !stopsExist && medicineName !== "" && state.medicineSelection.dose !== "";
   const fullMedicine = `${medicineName} ${state.medicineSelection.dose}`;
   const regimenLabel =
     state.medicineSelection.dosingRegimen === "daily"
       ? "Once daily"
-      : "On-demand";
+      : tadalafil72HourApplies(state)
+        ? "On-demand, not more than 10mg in any 72 hours"
+        : "On-demand";
+  const prev = state.complaint;
+  const previousPDE5Label =
+    prev.previousPDE5Inhibitor === "sildenafil"
+      ? "Sildenafil"
+      : prev.previousPDE5Inhibitor === "tadalafil-on-demand"
+        ? "Tadalafil on-demand"
+        : prev.previousPDE5Inhibitor === "tadalafil-daily"
+          ? "Tadalafil once daily"
+          : prev.previousPDE5Inhibitor === "none"
+            ? "No previous PDE5 inhibitor"
+            : "";
 
   return (
     <div className="max-w-3xl mx-auto print:max-w-none">
@@ -145,6 +165,16 @@ export function EDSummaryReport({ state }: EDSummaryReportProps) {
               : "No"
           }
         />
+        {state.complaint.previousTreatment && (
+          <Row
+            label="Previous PDE5 inhibitor"
+            value={
+              previousPDE5Label
+                ? `${previousPDE5Label}${prev.previousPDE5Dose ? `, ${prev.previousPDE5Dose}` : ""}${prev.previousPDE5Inhibitor !== "none" ? `, tolerated: ${prev.previousPDE5Tolerated ? "yes" : "no"}` : ""}`
+                : "Not recorded"
+            }
+          />
+        )}
         {state.complaint.description && (
           <Row label="Notes" value={state.complaint.description} />
         )}
@@ -270,6 +300,10 @@ export function EDSummaryReport({ state }: EDSummaryReportProps) {
           label="Allergies"
           value={state.medications.allergies || "NKDA"}
         />
+        <Row
+          label="Hypersensitivity to sildenafil, tadalafil or excipient"
+          value={state.medications.hypersensitivityPDE5 ? "Yes (excluded)" : "No"}
+        />
       </dl>
 
       {/* Observations */}
@@ -318,21 +352,37 @@ export function EDSummaryReport({ state }: EDSummaryReportProps) {
       <AlertSummary alerts={state.alerts} />
 
       {/* Medicine supplied */}
-      <SectionHeader>Medicine Supplied</SectionHeader>
+      <SectionHeader>{supplied ? "Medicine Supplied" : "Outcome"}</SectionHeader>
       <dl>
-        <Row label="Medicine" value={`${fullMedicine} film-coated tablets, oral`} />
-        <Row label="Brand" value={state.medicineSelection.brand || "Not recorded"} />
-        <Row label="Regimen" value={regimenLabel} />
-        <Row
-          label="Quantity"
-          value={`${state.medicineSelection.quantity} tablets`}
-        />
-        <Row label="Supplied under" value="Erectile Dysfunction PGD v006, 11 September 2026" />
-        {state.medicineSelection.pharmacistOverride && (
-          <Row
-            label="Override reason"
-            value={state.medicineSelection.overrideReason || "Not recorded"}
-          />
+        {supplied ? (
+          <>
+            <Row label="Medicine" value={`${fullMedicine} film-coated tablets, oral`} />
+            <Row label="Brand" value={state.medicineSelection.brand || "Not recorded"} />
+            <Row label="Regimen" value={regimenLabel} />
+            <Row
+              label="Quantity"
+              value={`${state.medicineSelection.quantity} tablets`}
+            />
+            <Row label="Supplied under" value="Erectile Dysfunction PGD v006, 11 September 2026" />
+            {state.medicineSelection.overrideReason.trim() && (
+              <Row
+                label="Reason for choice"
+                value={state.medicineSelection.overrideReason}
+              />
+            )}
+          </>
+        ) : (
+          <>
+            <Row
+              label="Medicine"
+              value={
+                stopsExist
+                  ? "NOT SUPPLIED: exclusion criteria met (see clinical alerts above)"
+                  : "No medicine supplied"
+              }
+            />
+            <Row label="PGD" value="Erectile Dysfunction PGD v006, 11 September 2026" />
+          </>
         )}
       </dl>
 
@@ -346,13 +396,16 @@ export function EDSummaryReport({ state }: EDSummaryReportProps) {
           ["Priapism warning", state.counselling.priapismWarning],
           ["Vision/hearing", state.counselling.visionHearingWarning],
           ["No STI protection (advised)", state.counselling.noSTIProtection],
-          ["One dose in 24 hours", state.counselling.maxOneDoseIn24Hours],
+          [tadalafil72HourApplies(state) ? "Not more than 10mg in any 72 hours" : "One dose in 24 hours", state.counselling.maxOneDoseIn24Hours],
           ["Never with poppers or nitrates", state.counselling.nitrateWarningGiven],
           ["Chest pain: no GTN, tell paramedics", state.counselling.chestPainAdvice],
           ["Grapefruit avoidance", state.counselling.grapefruitAvoidance],
           ["Alcohol moderation", state.counselling.alcoholModeration],
           ["Side effects", state.counselling.sideEffectsExplained],
           ["Review advice", state.counselling.reviewAdvice],
+          ["PIL supplied", state.counselling.pilSupplied],
+          ["Return unused tablets to a pharmacy", state.counselling.disposalAdvice],
+          ["CV and diabetes check recommended", state.counselling.gpReviewRecommended],
         ].map(([label, checked]) => (
           <div key={label as string} className="flex items-center gap-2 py-0.5">
             <span
@@ -390,10 +443,9 @@ export function EDSummaryReport({ state }: EDSummaryReportProps) {
       {/* Pharmacist signature */}
       <SectionHeader>Pharmacist Declaration</SectionHeader>
       <p className="text-xs text-gray-600 mb-4">
-        I confirm that this consultation was conducted in accordance with the
-        Patient Group Direction for Sildenafil/Tadalafil for Erectile
-        Dysfunction, and that the patient met all inclusion criteria and no
-        exclusion criteria applied.
+        {stopsExist
+          ? "I confirm that this consultation was conducted in accordance with the Patient Group Direction for Sildenafil/Tadalafil for Erectile Dysfunction, that exclusion criteria applied, that no medicine was supplied, and that the patient was given the advice recorded above."
+          : "I confirm that this consultation was conducted in accordance with the Patient Group Direction for Sildenafil/Tadalafil for Erectile Dysfunction, and that the patient met all inclusion criteria and no exclusion criteria applied."}
       </p>
       <div className="grid grid-cols-2 gap-6">
         <div>

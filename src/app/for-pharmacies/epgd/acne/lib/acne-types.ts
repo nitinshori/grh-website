@@ -2,8 +2,18 @@ import { BasePatientDetails, BaseConsent, BaseSummary, ClinicalAlert, DoseRecomm
 
 export interface AcnePatientDetails extends BasePatientDetails {}
 
+/** Consent basis for patients under 16 (the PGD covers 12 to 17-year-olds
+ *  and requires a record that valid informed consent was given). */
+export type AcneConsentBasis = "" | "patient" | "gillick" | "parental";
+
 export interface AcneConsent extends BaseConsent {
-  femaleConfirmed: boolean;
+  /** Who gave consent: the patient (16+), a Gillick-competent child, or a
+   *  person with parental responsibility. Required when age < 16. */
+  consentBasis: AcneConsentBasis;
+  /** Name of the person with parental responsibility (when consentBasis is parental). */
+  consentGivenByName: string;
+  /** Relationship to the patient (when consentBasis is parental). */
+  consentGivenByRelationship: string;
 }
 
 export interface AcneAssessment {
@@ -48,6 +58,9 @@ export interface AcneContraindications {
   inflamedSkinAtSite: boolean;
   /** Eczema or sunburned skin at the application site (Epiduo exclusion). */
   eczemaOrSunburnAtSite: boolean;
+  /** Attestation that every exclusion question above was put to the patient.
+   *  Without it an untouched screen and a completed screen were identical. */
+  questionsAsked: boolean;
 }
 
 /** Medicine values: "duac-3" (clindamycin 10mg/g + benzoyl peroxide 30mg/g),
@@ -61,6 +74,12 @@ export interface AcneMedicineSelection {
   /** Repeat course (maximum 12 weeks continuous use; review required for repeat courses). */
   repeatCourse: boolean;
   repeatCourseReviewed: boolean;
+  /** Date the previous course started (repeat courses only). */
+  previousCourseStartDate: string;
+  /** Date the previous course ended or the last supply was made (repeat courses only). */
+  previousCourseEndDate: string;
+  /** Quantity actually supplied (the PGD ceiling is 1 x 30 g tube or pump per course). */
+  quantitySupplied: string;
 }
 
 export interface AcneCounselling {
@@ -88,6 +107,9 @@ export interface AcneConsultationSummary extends BaseSummary {
   severity: string;
   medicineRecommended: string;
   counsellingPoints: string[];
+  /** Advice given and referral made when the patient is excluded (the PGD
+   *  requires advice given if excluded to be recorded). */
+  exclusionAdvice: string;
 }
 
 export interface AcneConsultationState {
@@ -142,7 +164,7 @@ export function createInitialConsultationState(): AcneConsultationState {
       gpPractice: "",
       gpAddress: "",
       gpPhone: "",
-gpEmail: "",
+      gpEmail: "",
       gpOdsCode: "",
       nhsNumber: "",
       address: "",
@@ -154,7 +176,9 @@ gpEmail: "",
       idVerified: false,
       idType: "",
       patientAwarePrivateService: false,
-      femaleConfirmed: false,
+      consentBasis: "",
+      consentGivenByName: "",
+      consentGivenByRelationship: "",
     },
     assessment: {
       severity: "",
@@ -184,12 +208,16 @@ gpEmail: "",
       brokenSkinAtSite: false,
       inflamedSkinAtSite: false,
       eczemaOrSunburnAtSite: false,
+      questionsAsked: false,
     },
     medicineSelection: {
       medicineChoice: "",
       strengthRationale: "",
       repeatCourse: false,
       repeatCourseReviewed: false,
+      previousCourseStartDate: "",
+      previousCourseEndDate: "",
+      quantitySupplied: "",
     },
     counselling: {
       improvementTimeline: false,
@@ -219,6 +247,7 @@ gpEmail: "",
       severity: "",
       medicineRecommended: "",
       counsellingPoints: [],
+      exclusionAdvice: "",
     },
     currentStep: 0,
     alerts: [],

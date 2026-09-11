@@ -1,8 +1,41 @@
 import type { OrlistatConsultationState } from "./orlistat-types";
 import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
 
+// PGD v002: review at 12 weeks from the start of treatment; continue only if
+// at least 5% of body weight has been lost from baseline.
+export const ORLISTAT_REVIEW_WEEKS = 12;
+export const ORLISTAT_MIN_LOSS_PERCENT = 5;
+
+export function weeksSinceStart(startIso: string): number | null {
+  if (!startIso) return null;
+  const start = new Date(startIso);
+  if (isNaN(start.getTime())) return null;
+  return Math.floor((Date.now() - start.getTime()) / (7 * 24 * 60 * 60 * 1000));
+}
+
+export function weightLossPercent(baseline: number | null, current: number | null): number | null {
+  if (!baseline || !current || baseline <= 0) return null;
+  return Math.round(((baseline - current) / baseline) * 1000) / 10;
+}
+
 export function getAllAlerts(state: OrlistatConsultationState): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
+
+  // 12 week review on a continuation visit: less than 5% lost from baseline
+  // means discontinue and refer, not another 84 capsules.
+  if (state.weightAssessment.visitType === "continuation") {
+    const weeks = weeksSinceStart(state.weightAssessment.treatmentStartDate);
+    const loss = weightLossPercent(state.weightAssessment.baselineWeight, state.weightAssessment.weight);
+    if (weeks !== null && weeks >= ORLISTAT_REVIEW_WEEKS && (loss === null || loss < ORLISTAT_MIN_LOSS_PERCENT)) {
+      alerts.push({
+        severity: "stop",
+        code: "REVIEW_12_WEEKS",
+        message: `12 week review: ${loss === null ? "weight loss not calculable" : `${loss}% body weight lost`} (target at least ${ORLISTAT_MIN_LOSS_PERCENT}%)`,
+        detail:
+          "PGD maximum treatment period: continue only if the patient has achieved at least a 5% reduction in body weight from baseline at 12 weeks. Discontinue orlistat and refer to the GP. Do not supply.",
+      });
+    }
+  }
 
   if (state.medicalHistory.cholestasis) {
     alerts.push({
@@ -130,15 +163,6 @@ export function getAllAlerts(state: OrlistatConsultationState): ClinicalAlert[] 
     });
   }
 
-  if (state.medications.takesAntiEpileptics) {
-    alerts.push({
-      severity: "caution",
-      code: "ANTI_EPILEPTICS",
-      message: "Taking anti-epileptic medications",
-      detail: "Risk of reduced absorption. Monitor drug levels closely.",
-    });
-  }
-
   // PGD v002: concurrent ciclosporin therapy is an exclusion, not a caution.
   if (state.medications.takesCiclosporin) {
     alerts.push({
@@ -203,6 +227,27 @@ export function getAllAlerts(state: OrlistatConsultationState): ClinicalAlert[] 
       message: "Concurrent antiepileptic therapy",
       detail:
         "Orlistat may decrease absorption of antiepileptic drugs and unbalance treatment, leading to convulsions. Counsel patient; if poorly controlled epilepsy, refer to GP.",
+    });
+  }
+
+  // Asked on the medical history step; the SmPC advises against use in
+  // pregnancy and orlistat is not a treatment for severe GI disease.
+  if (state.medicalHistory.planningPregnancy) {
+    alerts.push({
+      severity: "caution",
+      code: "PLANNING_PREGNANCY",
+      message: "Planning pregnancy within 2 months",
+      detail:
+        "Pregnancy is an exclusion. Advise effective contraception while taking orlistat and to stop and seek advice if pregnancy is planned or confirmed; a 28 day supply may be inappropriate if conception is imminent.",
+    });
+  }
+  if (state.medicalHistory.severeGastrointestinal) {
+    alerts.push({
+      severity: "caution",
+      code: "SEVERE_GI",
+      message: "Severe gastrointestinal disease",
+      detail:
+        "Chronic malabsorption and cholestasis exclude (tick above if present). Other severe gastrointestinal disease: orlistat will worsen faecal urgency, oily stools and flatulence; consider referral rather than supply.",
     });
   }
 

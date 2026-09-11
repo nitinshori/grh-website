@@ -42,8 +42,12 @@ interface PneumococcalSummaryReportProps {
     counselledBothVaccines: boolean;
     pilSupplied?: boolean;
     followUpAdviceGiven?: boolean;
+    observationCompleted?: boolean;
   };
-  onBack: () => void;
+  /** Standalone use: back button and print footer. */
+  onBack?: () => void;
+  /** Rendered inside the summary step, where StepWrapper owns Save & Print. */
+  embedded?: boolean;
 }
 
 const SITE_LABELS: Record<string, string> = {
@@ -73,7 +77,9 @@ export default function PneumococcalSummaryReport({
   clinicalAlerts,
   postVaccineAdvice,
   onBack,
+  embedded = false,
 }: PneumococcalSummaryReportProps) {
+  const stopped = clinicalAlerts.some((a) => a.severity === 'stop');
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
       {/* Header with print styles */}
@@ -92,8 +98,9 @@ export default function PneumococcalSummaryReport({
             <Row label="Date of Birth" value={patientDetails.dateOfBirth} />
             <Row label="Age" value={patientDetails.age !== null ? `${patientDetails.age} years` : 'N/A'} />
             <Row label="NHS Number" value={patientDetails.nhsNumber || 'Not provided'} />
+            <Row label="Address" value={patientDetails.address || 'Not provided'} />
             <Row label="GP Name" value={patientDetails.gpName || 'Not provided'} />
-            <Row label="GP Practice" value={patientDetails.gpPractice || 'Not provided'} />
+            <Row label="GP Practice" value={[patientDetails.gpPractice, patientDetails.gpAddress].filter(Boolean).join(', ') || 'Not provided'} />
           </div>
         </div>
 
@@ -181,12 +188,23 @@ export default function PneumococcalSummaryReport({
         </div>
 
         {/* Vaccine Administration */}
+        {stopped ? (
+          <div>
+            <SectionHeader>Vaccine Administration</SectionHeader>
+            <div className="p-3 rounded-lg border border-red-300 bg-red-50 text-sm">
+              <p className="font-semibold text-red-900">Outcome: NOT SUPPLIED. Exclusion criteria met; no vaccine administered.</p>
+              <p className="text-red-800 text-xs mt-1">
+                {clinicalAlerts.filter((a) => a.severity === 'stop').map((a) => a.message).join('; ')}
+              </p>
+            </div>
+          </div>
+        ) : (
         <div>
           <SectionHeader>Vaccine Administration</SectionHeader>
           <div className="space-y-1.5">
             <Row
               label="Vaccine type"
-              value={summary.vaccineType === 'pcv13' ? 'Prevenar 13 (PCV13)' : 'Pneumovax 23 (PPV23)'}
+              value={summary.vaccineType === 'pcv13' ? 'Prevenar 13 (PCV13)' : summary.vaccineType === 'ppv23' ? 'Pneumovax 23 (PPV23)' : 'Not recorded'}
             />
             <Row label="Dose and route" value={summary.vaccineType === 'pcv13' ? '0.5 mL intramuscular' : '0.5 mL intramuscular or subcutaneous'} />
             <Row
@@ -200,8 +218,13 @@ export default function PneumococcalSummaryReport({
               value={SITE_LABELS[summary.administrationSite] || 'Not recorded'}
             />
             <Row label="Administration time" value={summary.administrationTime} />
+            {summary.counselledNextDue && (
+              <Row label="Pneumovax 23 due (booked)" value={summary.counselledNextDue} />
+            )}
+            <Row label="15 minute observation completed" value={postVaccineAdvice.observationCompleted ? 'Yes' : 'No'} />
           </div>
         </div>
+        )}
 
         {/* Patient Counselling */}
         <div>
@@ -254,7 +277,8 @@ export default function PneumococcalSummaryReport({
         <ReportFooter pgdName="Pneumococcal Vaccination" />
       </div>
 
-      {/* Back button */}
+      {/* Back button (standalone use only) */}
+      {!embedded && (
       <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/30 flex items-center justify-between print:hidden">
         <button
           onClick={onBack}
@@ -269,6 +293,7 @@ export default function PneumococcalSummaryReport({
           Print Consultation Record
         </button>
       </div>
+      )}
     </div>
   );
 }

@@ -212,7 +212,7 @@ export function getAllAlerts(state: MounjaroConsultationState): ClinicalAlert[] 
       code: "HFREF",
       message: "Known diagnosis of heart failure with reduced ejection fraction",
       detail:
-        "Exclusion where left ventricular ejection fraction is 40% or below. HFpEF (preserved EF) is not excluded. If EF is unknown but the patient is under cardiology review for heart failure, refer to the GP to confirm EF before considering treatment.",
+        "Exclusion where left ventricular ejection fraction is below 40%. HFpEF (preserved EF) is not excluded. If EF is unknown but the patient is under cardiology review for heart failure, refer to the GP to confirm EF before considering treatment.",
     });
   }
 
@@ -337,6 +337,16 @@ export function getAllAlerts(state: MounjaroConsultationState): ClinicalAlert[] 
 
   // ─── RED-FLAG Alerts (monitoring) ───
 
+  if (fivePercentRuleApplies(state)) {
+    alerts.push({
+      severity: "caution",
+      code: "LESS_THAN_5_PERCENT",
+      message: "Less than 5% of initial body weight lost after 6 months on the maximum tolerated dose",
+      detail:
+        "PGD v007 monitoring row: a decision is required on whether to continue treatment, taking into account the benefit-risk profile in this patient. Record the decision and the reasoning before any further supply.",
+    });
+  }
+
   if (state.medicalHistory.thyroidDisease) {
     alerts.push({
       severity: "red-flag",
@@ -347,6 +357,54 @@ export function getAllAlerts(state: MounjaroConsultationState): ClinicalAlert[] 
   }
 
   return alerts;
+}
+
+// ─── Supply-type helpers ───
+
+/** A visit at which the document's initial-BMI inclusion is applied to
+ *  today's BMI: a new start, or a restart after more than 2 months. */
+export function bmiGateAppliesToday(state: MounjaroConsultationState): boolean {
+  const ds = state.doseSelection;
+  return ds.supplyType === "new-start" || ds.supplyType === "" || (ds.supplyType === "restart" && ds.breakOverTwoMonths);
+}
+
+/** A visit where the patient is already on treatment (previous dose, initial
+ *  weight and the 5% rule apply). */
+export function isContinuingSupply(state: MounjaroConsultationState): boolean {
+  const t = state.doseSelection.supplyType;
+  return t === "continue" || t === "escalate" || t === "reduce";
+}
+
+export function getPercentWeightLost(state: MounjaroConsultationState): number | null {
+  const initial = state.doseSelection.initialWeight;
+  const current = state.weightAssessment.weight;
+  if (initial === null || current === null || initial <= 0) return null;
+  return ((initial - current) / initial) * 100;
+}
+
+/** True when the document's 5% rule applies: less than 5% of initial body
+ *  weight lost after 6 months on the maximum tolerated dose. */
+export function fivePercentRuleApplies(state: MounjaroConsultationState): boolean {
+  const months = state.doseSelection.monthsOnMaxToleratedDose;
+  const lost = getPercentWeightLost(state);
+  return isContinuingSupply(state) && months !== null && months >= 6 && lost !== null && lost < 5;
+}
+
+/** The stage keys the document allows at this visit, given the supply type
+ *  and the previous dose. */
+export function getAllowedStages(state: MounjaroConsultationState): string[] {
+  const ds = state.doseSelection;
+  const order = ["init", "1", "2", "3", "4", "5"];
+  if (ds.supplyType === "new-start" || ds.supplyType === "restart") return ["init"];
+  const idx = order.indexOf(ds.previousDose);
+  if (idx < 0) return [];
+  if (ds.supplyType === "continue") return [order[idx]];
+  if (ds.supplyType === "escalate") {
+    if (idx + 1 >= order.length) return [];
+    return ds.weeksAtCurrentDose !== null && ds.weeksAtCurrentDose >= 4 ? [order[idx + 1]] : [];
+  }
+  if (ds.supplyType === "reduce") return order.slice(0, idx);
+  return [];
 }
 
 export function hasHardStops(alerts: ClinicalAlert[]): boolean {

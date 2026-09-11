@@ -5,6 +5,17 @@ import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
 
 export const MAX_SALBUTAMOL_SUPPLIES_12_MONTHS = 2;
 
+/**
+ * Supplies in the last 12 months: the higher of what the patient reports and
+ * what this pharmacy's saved COPD records show. The document's only quantity
+ * control (maximum 2 supplies in any 12 months) used to rest on a number
+ * typed from memory (adversarial review, 11 Sep 2026).
+ */
+export function effectiveSalbutamolSupplies12Months(state: COPDConsultationState): number {
+  const a = state.assessment;
+  return Math.max(a.salbutamolSuppliesLast12Months ?? 0, a.platformSalbutamolSupplies12Months ?? 0);
+}
+
 /** Salbutamol arm: exclusions that apply whichever arm is chosen are in getAllAlerts. */
 export function salbutamolArmBlockers(state: COPDConsultationState): string[] {
   const out: string[] = [];
@@ -13,10 +24,7 @@ export function salbutamolArmBlockers(state: COPDConsultationState): string[] {
     out.push("known hypersensitivity to salbutamol or other beta-2 agonists");
   if (!a.canUseInhalerOrSpacer)
     out.push("not capable of using an inhaler device or willing to use a spacer");
-  if (
-    a.salbutamolSuppliesLast12Months !== null &&
-    a.salbutamolSuppliesLast12Months >= MAX_SALBUTAMOL_SUPPLIES_12_MONTHS
-  )
+  if (effectiveSalbutamolSupplies12Months(state) >= MAX_SALBUTAMOL_SUPPLIES_12_MONTHS)
     out.push(
       "already had 2 supplies in the last 12 months under this PGD: a third request is a GP review of the patient's COPD, not a further supply"
     );
@@ -90,7 +98,9 @@ export function getAllAlerts(state: COPDConsultationState): ClinicalAlert[] {
     });
   }
 
-  if (r.mrcGrade5) {
+  // Derived from the assessment value as well as the checkbox: recording
+  // MRC 5 on the assessment step used to show a red banner without a stop.
+  if (r.mrcGrade5 || a.mrcBreathlessnessScale === 5) {
     alerts.push({
       severity: "stop",
       code: "MRC_GRADE_5",
@@ -247,11 +257,13 @@ export const AMOXICILLIN_RECOMMENDATION: DoseRecommendation = {
   reason: "Infective acute exacerbation of COPD with purulent sputum",
 };
 
-export function calculateDoseRecommendation(
+/** Every regimen chosen, in the order the document lists them. */
+export function calculateDoseRecommendations(
   state: COPDConsultationState
-): DoseRecommendation | null {
-  if (!state.medicineSupply.medicinePrescribed) return null;
-  if (state.medicineSupply.supplySalbutamol) return SALBUTAMOL_RECOMMENDATION;
-  if (state.medicineSupply.supplyAmoxicillin) return AMOXICILLIN_RECOMMENDATION;
-  return null;
+): DoseRecommendation[] {
+  if (!state.medicineSupply.medicinePrescribed) return [];
+  const out: DoseRecommendation[] = [];
+  if (state.medicineSupply.supplySalbutamol) out.push(SALBUTAMOL_RECOMMENDATION);
+  if (state.medicineSupply.supplyAmoxicillin) out.push(AMOXICILLIN_RECOMMENDATION);
+  return out;
 }

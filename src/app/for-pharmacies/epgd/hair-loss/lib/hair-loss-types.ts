@@ -4,7 +4,13 @@ import type { BasePatientDetails, BaseConsent, BaseSummary, DoseRecommendation, 
 
 // ─── Extended types for Hair Loss PGD ───
 
+/** Recorded sex: unanswered until the pharmacist answers. The gender stop is
+ *  raised only on an explicit "not male" answer, not on an empty form. */
+export type HLSexRecorded = "" | "male" | "not-male";
+
 export interface HLPatientDetails extends BasePatientDetails {
+  sexRecorded: HLSexRecorded;
+  /** Derived from sexRecorded === "male"; kept for the dose and report logic. */
   maleConfirmed: boolean;
 }
 
@@ -28,17 +34,29 @@ export interface HLMedicalHistory {
    *  glucose-galactose malabsorption: should not take this medicine. */
   galactoseIntolerance: boolean;
   otherConditions: string;
+  /** Attestation that every exclusion question on this step was put to the patient. */
+  questionsAsked: boolean;
 }
 
 export interface HLContraindications {
   depressiveMood: boolean;
   depressiveMoodDetail: string;
+  /** Documented reason for proceeding despite current depression or mood symptoms. */
+  moodProceedReason: string;
+  /** Current suicidal ideation: stop and refer. */
+  suicidalIdeation: boolean;
+  /** Attestation that the mood questions were put to the patient. */
+  questionsAsked: boolean;
 }
 
 export interface HLMedicineSupply {
   finasteride1mgOd: boolean;
   /** Months of treatment supplied between reviews: "3" | "6" | "9" | "12". */
   quantityMonths: string;
+  /** Number of tablets actually handed over (for example 84 or 90 for 3 months). */
+  tabletsSupplied: number | null;
+  /** Brand dispensed (the PGD record requires name and brand). */
+  brand: string;
   partnerNotified: boolean; // critical caution: teratogenic
   /** Condom recommended if a female partner is pregnant or likely to become pregnant. */
   condomAdvice: boolean;
@@ -69,8 +87,13 @@ export interface HLConsultationState {
   contraindications: HLContraindications;
   medicineSupply: HLMedicineSupply;
   counselling: HLCounselling;
-  summary: BaseSummary;
+  summary: HLSummary;
   currentStep: number;
+}
+
+export interface HLSummary extends BaseSummary {
+  /** Advice given and referral made when the patient is excluded. */
+  exclusionAdvice: string;
 }
 
 export type HLAction =
@@ -81,8 +104,9 @@ export type HLAction =
   | { type: "UPDATE_CONTRAINDICATIONS"; field: keyof HLContraindications; value: any }
   | { type: "UPDATE_MEDICINE_SUPPLY"; field: keyof HLMedicineSupply; value: any }
   | { type: "UPDATE_COUNSELLING"; field: keyof HLCounselling; value: any }
-  | { type: "UPDATE_SUMMARY"; field: keyof BaseSummary; value: any }
-  | { type: "SET_STEP"; step: number };
+  | { type: "UPDATE_SUMMARY"; field: keyof HLSummary; value: any }
+  | { type: "SET_STEP"; step: number }
+  | { type: "RESET" };
 
 // ─── Step labels ───
 
@@ -112,12 +136,13 @@ export function createInitialConsultationState(): HLConsultationState {
       gpPractice: "",
       gpAddress: "",
       gpPhone: "",
-gpEmail: "",
+      gpEmail: "",
       gpOdsCode: "",
       nhsNumber: "",
       address: "",
       phone: "",
       email: "",
+      sexRecorded: "",
       maleConfirmed: false,
     },
     consent: {
@@ -142,14 +167,20 @@ gpEmail: "",
       current5ARI: false,
       galactoseIntolerance: false,
       otherConditions: "",
+      questionsAsked: false,
     },
     contraindications: {
       depressiveMood: false,
       depressiveMoodDetail: "",
+      moodProceedReason: "",
+      suicidalIdeation: false,
+      questionsAsked: false,
     },
     medicineSupply: {
       finasteride1mgOd: false,
       quantityMonths: "",
+      tabletsSupplied: null,
+      brand: "",
       partnerNotified: false,
       condomAdvice: false,
       willMonitorSE: false,
@@ -177,6 +208,7 @@ gpEmail: "",
         minute: "2-digit",
       }),
       clinicalNotes: "",
+      exclusionAdvice: "",
     },
     currentStep: 0,
   };

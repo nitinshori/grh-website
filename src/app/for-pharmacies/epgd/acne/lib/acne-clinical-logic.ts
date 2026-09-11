@@ -54,12 +54,18 @@ export function getAllAlerts(state: AcneConsultationState): ClinicalAlert[] {
   }
 
   if (ci.breastfeeding) {
+    // Per arm, as the document has it: the clindamycin arm refers
+    // breastfeeding to the GP (stop); the adapalene arm lists it as a
+    // caution (decide whether to discontinue breastfeeding; avoid the chest).
     alerts.push({
-      severity: "stop",
+      severity: duac ? "stop" : "caution",
       code: "ACNE_BREASTFEEDING",
       message: "Patient is breastfeeding",
-      detail:
-        "Benzoyl peroxide / clindamycin: clindamycin is found in breast milk; for breastfeeding refer the patient to the GP. Adapalene / benzoyl peroxide: a decision must be made whether to discontinue breast-feeding; a risk to the suckling child cannot be excluded. Refer to the GP.",
+      detail: duac
+        ? "Benzoyl peroxide / clindamycin: clindamycin is found in breast milk; for breastfeeding refer the patient to the GP."
+        : epiduo
+          ? "Adapalene / benzoyl peroxide (caution): a decision must be made whether to discontinue breast-feeding, weighing the benefit to the child against the benefit of therapy. Avoid application to the chest. A risk to the suckling child cannot be excluded."
+          : "Benzoyl peroxide / clindamycin: refer to the GP (clindamycin is found in breast milk). Adapalene / benzoyl peroxide: caution only; decide whether to discontinue breast-feeding and avoid application to the chest.",
     });
   }
 
@@ -153,6 +159,24 @@ export function getAllAlerts(state: AcneConsultationState): ClinicalAlert[] {
     });
   }
 
+  // Repeat course: 12 weeks continuous use maximum. Warn when the previous
+  // course ended within the last 12 weeks and had already run 12 weeks.
+  const ms = state.medicineSelection;
+  if (ms.repeatCourse && ms.previousCourseStartDate && ms.previousCourseEndDate) {
+    const start = new Date(ms.previousCourseStartDate).getTime();
+    const end = new Date(ms.previousCourseEndDate).getTime();
+    const weeksOnTreatment = (end - start) / (7 * 24 * 3600 * 1000);
+    const weeksSinceEnd = (Date.now() - end) / (7 * 24 * 3600 * 1000);
+    if (!isNaN(weeksOnTreatment) && !isNaN(weeksSinceEnd) && weeksSinceEnd < 1 && weeksOnTreatment >= 12) {
+      alerts.push({
+        severity: "caution",
+        code: "ACNE_CONTINUOUS_USE",
+        message: "Previous course already at the 12-week continuous-use maximum",
+        detail: "The previous course ran 12 weeks or more and ended within the last week; a further supply would exceed 12 weeks of continuous use. Record the review and the reason for continuing, or refer.",
+      });
+    }
+  }
+
   // Cautions
   if (mh.gastrointestinalDisease) {
     alerts.push({
@@ -222,7 +246,7 @@ export function calculateDoseRecommendation(state: AcneConsultationState): DoseR
       reason: "Mild to moderate acne vulgaris, especially where comedones and inflammatory lesions are present.",
     },
     "epiduo-0.3": {
-      medicine: "Adapalene 0.3% / benzoyl peroxide 2.5% gel (Epiduo Forte), POM",
+      medicine: "Adapalene 0.3% / benzoyl peroxide 2.5% gel (Epiduo 0.3% / 2.5%), POM",
       dose: EPIDUO_DOSE,
       frequency: "Once daily in the evening",
       duration: EPIDUO_DURATION,
@@ -237,12 +261,36 @@ export const MEDICINE_OPTIONS: { value: string; label: string }[] = [
   { value: "duac-3", label: "Benzoyl peroxide + clindamycin gel 10 mg/g + 30 mg/g (Duac 3%), once daily in the evening" },
   { value: "duac-5", label: "Benzoyl peroxide + clindamycin gel 10 mg/g + 50 mg/g (Duac 5%), once daily in the evening" },
   { value: "epiduo-0.1", label: "Adapalene 0.1% / benzoyl peroxide 2.5% gel (Epiduo), once daily in the evening" },
-  { value: "epiduo-0.3", label: "Adapalene 0.3% / benzoyl peroxide 2.5% gel (Epiduo Forte), once daily in the evening" },
+  { value: "epiduo-0.3", label: "Adapalene 0.3% / benzoyl peroxide 2.5% gel (Epiduo 0.3% / 2.5%), once daily in the evening" },
 ];
 
-export function getMedicineOptions(severity: string): string[] {
-  if (severity === "mild" || severity === "moderate") {
-    return MEDICINE_OPTIONS.map((o) => o.value);
+/** Quantity options per arm. The PGD ceiling is 1 x 30 g tube (Duac) or
+ *  1 x 30 g tube or pump (Epiduo) per treatment course. */
+export function getQuantityOptions(choice: string): { value: string; label: string }[] {
+  if (isDuac(choice)) return [{ value: "1 x 30 g tube", label: "1 x 30 g tube" }];
+  if (isEpiduo(choice)) {
+    return [
+      { value: "1 x 30 g tube", label: "1 x 30 g tube" },
+      { value: "1 x 30 g pump", label: "1 x 30 g pump" },
+    ];
   }
   return [];
+}
+
+/** Products the patient can be offered. Filtered by severity and by the
+ *  arm-specific exclusions already captured, so the tool no longer offers a
+ *  product it will then refuse to let the pharmacist pick. */
+export function getMedicineOptions(state: AcneConsultationState): string[] {
+  const severity = state.assessment.severity;
+  if (severity !== "mild" && severity !== "moderate") return [];
+  const ci = state.contraindications;
+  const mh = state.medicalHistory;
+  const duacExcluded =
+    ci.hypersensitivityClindamycinLincomycin || ci.inflamedSkinAtSite || mh.antibioticAssociatedColitis || ci.breastfeeding;
+  const epiduoExcluded = ci.hypersensitivityAdapalene || ci.planningPregnancy || ci.eczemaOrSunburnAtSite;
+  return MEDICINE_OPTIONS.map((o) => o.value).filter((v) => {
+    if (isDuac(v) && duacExcluded) return false;
+    if (isEpiduo(v) && epiduoExcluded) return false;
+    return true;
+  });
 }

@@ -6,9 +6,11 @@ export interface ShinglesAssessment {
   /** Aged 50 or older and eligible under national immunisation guidelines (PGD v005 inclusion). */
   ageEligible: boolean;
   immunosuppressed: boolean;
-  anaphylaxisToComponent: boolean;
-  severeAcuteIllness: boolean;
-  /** "not-pregnant" | "unknown" | "confirmed" | "breastfeeding". Pregnancy or breastfeeding is an exclusion. */
+  /** Exclusion. Tri-state so the step cannot be passed without an explicit answer: "" (unanswered), "yes", "no". */
+  anaphylaxisToComponent: "" | "yes" | "no";
+  /** Defer in acute illness with fever. Tri-state, as above. */
+  severeAcuteIllness: "" | "yes" | "no";
+  /** "not-pregnant" | "unknown" | "confirmed" | "breastfeeding". Pregnancy or breastfeeding is an exclusion; unknown is a stop until established. */
   pregnancyStatus: string;
   /** Dose 1 of Shingrix already given (here or elsewhere). */
   previousShingrix: boolean;
@@ -32,6 +34,12 @@ export interface ShinglesSupply {
   site: "" | "left-deltoid" | "right-deltoid";
   /** Date the second dose is due (2 to 6 months after dose 1). */
   nextDoseDue: string;
+  /** Safety block: record that the 15 minute observation period was completed. */
+  observedFifteenMinutes: boolean;
+  /** Records row: details of any adverse drug reactions and actions taken. */
+  adverseReaction: string;
+  adverseReactionAction: string;
+  yellowCardSubmitted: boolean;
 }
 
 export interface ShinglesCounselling {
@@ -60,20 +68,22 @@ export type ShinglesAction =
   | { type: "UPDATE_PATIENT"; field: keyof BasePatientDetails; value: string | number | boolean | null }
   | { type: "UPDATE_CONSENT"; field: keyof BaseConsent; value: string | boolean | undefined }
   | { type: "UPDATE_ASSESSMENT"; field: keyof ShinglesAssessment; value: string | boolean }
-  | { type: "UPDATE_SUPPLY"; field: keyof ShinglesSupply; value: string }
+  | { type: "UPDATE_SUPPLY"; field: keyof ShinglesSupply; value: string | boolean }
   | { type: "UPDATE_COUNSELLING"; field: keyof ShinglesCounselling; value: boolean }
   | { type: "UPDATE_SUMMARY"; field: keyof BaseSummary; value: string }
-  | { type: "SET_STEP"; step: number };
+  | { type: "SET_STEP"; step: number }
+  | { type: "RESET" };
 
+// Consent is taken before the vaccine is drawn up: the PGD lists informed
+// consent as an inclusion criterion (adversarial review, 11 Sep 2026).
 export const STEP_LABELS = [
   "Patient Details",
+  "Consent",
   "Eligibility Assessment",
   "Contraindications",
   "Counselling",
   "Vaccine Supply",
   "Summary & Declaration",
-  "Consultation Complete",
-  "Review",
 ];
 
 export const TOTAL_STEPS = STEP_LABELS.length;
@@ -105,8 +115,8 @@ gpEmail: "",
     assessment: {
       ageEligible: false,
       immunosuppressed: false,
-      anaphylaxisToComponent: false,
-      severeAcuteIllness: false,
+      anaphylaxisToComponent: "",
+      severeAcuteIllness: "",
       pregnancyStatus: "",
       previousShingrix: false,
       previousShingrixDate: "",
@@ -122,6 +132,10 @@ gpEmail: "",
       expiryDate: "",
       site: "",
       nextDoseDue: "",
+      observedFifteenMinutes: false,
+      adverseReaction: "",
+      adverseReactionAction: "",
+      yellowCardSubmitted: false,
     },
     counselling: {
       explainedDoseSchedule: false,

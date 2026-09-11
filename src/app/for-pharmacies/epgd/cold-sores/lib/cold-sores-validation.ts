@@ -6,12 +6,27 @@ export function validateStep(stepIndex: number, state: ColdSoresConsultationStat
     case 0: // Patient Details
       return validatePatientStep(state.patient, { minAge: 12 });
 
-    case 1: // Consent
-      return validateConsentStep(state.consent);
+    case 1: {
+      // Consent. The PGD covers patients from 12: for an under-16 the record
+      // must say who consented (parental responsibility or Gillick competence).
+      const base = validateConsentStep(state.consent);
+      if (base) return base;
+      const age = state.patient.age;
+      if (age !== null && age < 16) {
+        if (!state.consent.consentBasis)
+          return "Patient is under 16: record whether consent came from a person with parental responsibility or from the young person assessed as Gillick competent";
+        if (!state.consent.consentBasisNotes.trim())
+          return "Record the basis of consent (who gave it, and for Gillick competence, the assessment made)";
+      }
+      return null;
+    }
 
     case 2: // Symptom Assessment
       if (!state.symptomAssessment.isRecurrent && !state.symptomAssessment.isFirstEpisode) {
         return "Please confirm whether this is a recurrent episode (PGD inclusion) or a first episode (refer)";
+      }
+      if (state.symptomAssessment.daysSinceOnset === null) {
+        return "Record how many days this episode has been present (consult a doctor if lesions persist beyond 10 days)";
       }
       if (!state.symptomAssessment.currentSymptoms.trim()) {
         return "Please describe current symptoms";
@@ -60,7 +75,8 @@ export function validateStep(stepIndex: number, state: ColdSoresConsultationStat
         !state.counselling.safetyNetting ||
         !state.counselling.symptomRelief ||
         !state.counselling.hygieneMeasures ||
-        !state.counselling.providedPIL
+        !state.counselling.providedPIL ||
+        !state.counselling.yellowCard
       ) {
         return "Please confirm all counselling points have been covered";
       }

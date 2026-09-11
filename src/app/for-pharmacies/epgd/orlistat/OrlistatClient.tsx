@@ -13,6 +13,9 @@ import {
   getAllAlerts,
   hasHardStops,
   calculateDoseRecommendation,
+  weeksSinceStart,
+  weightLossPercent,
+  ORLISTAT_REVIEW_WEEKS,
 } from "./lib/orlistat-clinical-logic";
 import { validateStep, calculateBMI } from "./lib/orlistat-validation";
 import { calculateAge } from "../shared/types";
@@ -26,10 +29,12 @@ import {
   Checkbox,
   NumberInput,
   TextArea,
+  SelectInput,
 } from "../shared/components/FormInputs";
 import { OrlistatSummaryReport } from "./components/OrlistatSummaryReport";
 
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
+import { usePreviousWeightConsultation, describePrevious } from "../shared/hooks/usePreviousWeightConsultation";
 function reducer(state: OrlistatConsultationState, action: OrlistatAction): OrlistatConsultationState {
   const newState = { ...state };
 
@@ -104,6 +109,10 @@ function reducer(state: OrlistatConsultationState, action: OrlistatAction): Orli
       newState.summary = { ...newState.summary, [action.field]: action.value };
       break;
 
+    case "UPDATE_EXCLUSION_ADVICE":
+      newState.exclusionAdvice = action.value;
+      break;
+
     case "SET_STEP":
       newState.currentStep = action.step;
       break;
@@ -141,6 +150,7 @@ export default function OrlistatClient() {
   }, [__pharmProfile, state.summary.pharmacistName, state.summary.pharmacistGPhC]);
 
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
+  const { previous, lookup: lookupPrevious } = usePreviousWeightConsultation();
 
   const alerts = useMemo(() => getAllAlerts(state), [state]);
   const doseRecommendation = useMemo(() => calculateDoseRecommendation(state), [state]);
@@ -158,7 +168,13 @@ export default function OrlistatClient() {
     [state.currentStep, state]
   );
 
-  const canProceed = !validationError && (!hasStops || state.currentStep >= 5);
+  // A stop anywhere blocks Next on that step and on every later step, and
+  // blocks Save & Print on the summary; excluded patients are saved with
+  // "Save as not supplied" from whichever step raised the stop.
+  const canProceed = !validationError && !hasStops;
+  const stopSummary = alerts.filter((a) => a.severity === "stop").map((a) => a.message).join("; ");
+  const weeks = weeksSinceStart(state.weightAssessment.treatmentStartDate);
+  const lossPercent = weightLossPercent(state.weightAssessment.baselineWeight, state.weightAssessment.weight);
 
   const markStepComplete = useCallback(() => {
     const newCompleted = new Set(completedSteps);
@@ -198,23 +214,30 @@ export default function OrlistatClient() {
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
       },
-      clinicalData: state as unknown as Record<string, unknown>,
+      clinicalData: { ...state, alerts, stopSummary, weeksSinceStart: weeks, weightLossPercent: lossPercent } as unknown as Record<string, unknown>,
       outcome: hasStops ? "not_supplied" : "completed",
-      medicine: {
-        name: state.medicineSupply.brand.trim()
-          ? `Orlistat 120mg capsules (${state.medicineSupply.brand.trim()})`
-          : "Orlistat 120mg capsules",
-        dose: state.medicineSupply.dosage,
-        quantity: state.medicineSupply.quantity?.toString() ?? "",
-      },
+      medicine: hasStops
+        ? undefined
+        : {
+            name: state.medicineSupply.brand.trim()
+              ? `Orlistat 120mg capsules (${state.medicineSupply.brand.trim()})`
+              : "Orlistat 120mg capsules",
+            dose: state.medicineSupply.dosage,
+            duration: state.medicineSupply.refillSchedule || undefined,
+            quantity: state.medicineSupply.quantity ?? undefined,
+          },
       summary: {
         pharmacistName: state.summary.pharmacistName,
         pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacyName: state.summary.pharmacyName,
+        pharmacyAddress: state.summary.pharmacyAddress,
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: state.consent.notifyGp },
     };
-  }, [state, hasStops]);
+  }, [state, hasStops, alerts, stopSummary, weeks, lossPercent]);
 
   const handleNewConsultation = useCallback(() => {
     dispatch({ type: "RESET" });
@@ -234,13 +257,39 @@ export default function OrlistatClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
-            <PatientDetailsStep
-              patient={state.patient}
-              onChange={(field, value) =>
-                dispatch({ type: "UPDATE_PATIENT", field, value })
-              }
-            />
+            <div className="space-y-4">
+              <PatientDetailsStep
+                patient={state.patient}
+                onChange={(field, value) =>
+                  dispatch({ type: "UPDATE_PATIENT", field, value })
+                }
+                onReturningPatient={(p) =>
+                  lookupPrevious(p, (prev) => {
+                    if (prev.heightCm !== null) {
+                      dispatch({ type: "UPDATE_WEIGHT_ASSESSMENT", field: "height", value: prev.heightCm });
+                    }
+                    if (prev.baselineWeightKg !== null) {
+                      dispatch({ type: "UPDATE_WEIGHT_ASSESSMENT", field: "baselineWeight", value: prev.baselineWeightKg });
+                    }
+                    if (prev.pgdSlug === "orlistat") {
+                      dispatch({ type: "UPDATE_WEIGHT_ASSESSMENT", field: "visitType", value: "continuation" });
+                    }
+                  })
+                }
+              />
+              {previous && (
+                <div className="p-4 rounded-lg border border-amber-300 bg-amber-50 text-sm">
+                  <p className="font-semibold text-amber-900">This patient already has a weight management record</p>
+                  <p className="mt-1 text-amber-900">
+                    Last seen {previous.consultationDate}{previous.pgdSlug ? ` (${previous.pgdSlug})` : ""}: {describePrevious(previous)}.
+                    Height{previous.baselineWeightKg !== null ? " and baseline weight have" : " has"} been carried forward; confirm them, the visit type and the start date on the weight assessment step.
+                  </p>
+                </div>
+              )}
+            </div>
           </StepWrapper>
         );
 
@@ -255,6 +304,8 @@ export default function OrlistatClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <ConsentStep
               consent={state.consent}
@@ -276,8 +327,50 @@ export default function OrlistatClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
+              <SelectInput
+                label="Type of visit"
+                value={state.weightAssessment.visitType}
+                onChange={(v) => dispatch({ type: "UPDATE_WEIGHT_ASSESSMENT", field: "visitType", value: v })}
+                options={[
+                  { value: "initiation", label: "First supply of orlistat (baseline recorded today)" },
+                  { value: "continuation", label: "Continuation: patient already on orlistat" },
+                ]}
+                required
+              />
+              {state.weightAssessment.visitType === "continuation" && (
+                <div className="p-3 rounded-md bg-gray-50 border border-gray-200 space-y-3">
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-navy-900 mb-1">Treatment start date (first orlistat supply) <span className="text-red-400">*</span></label>
+                      <input
+                        type="date"
+                        value={state.weightAssessment.treatmentStartDate}
+                        onChange={(e) => dispatch({ type: "UPDATE_WEIGHT_ASSESSMENT", field: "treatmentStartDate", value: e.target.value })}
+                        max={new Date().toISOString().split("T")[0]}
+                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
+                      />
+                    </div>
+                    <NumberInput
+                      label="Baseline weight at start of treatment"
+                      value={state.weightAssessment.baselineWeight}
+                      onChange={(v) => dispatch({ type: "UPDATE_WEIGHT_ASSESSMENT", field: "baselineWeight", value: v })}
+                      min={30}
+                      max={300}
+                      unit="kg"
+                      required
+                    />
+                  </div>
+                  <p className="text-xs text-gray-600">
+                    {weeks !== null ? `Week ${weeks + 1} of treatment. ` : ""}
+                    {lossPercent !== null ? `${lossPercent}% of baseline body weight lost. ` : ""}
+                    PGD: review at {ORLISTAT_REVIEW_WEEKS} weeks from the start; continue only if at least 5% of body weight has been lost from baseline, otherwise discontinue and refer to the GP.
+                  </p>
+                </div>
+              )}
               <div className="grid sm:grid-cols-2 gap-4">
                 <NumberInput
                   label="Height"
@@ -290,7 +383,7 @@ export default function OrlistatClient() {
                   unit="cm"
                 />
                 <NumberInput
-                  label="Weight"
+                  label={state.weightAssessment.visitType === "continuation" ? "Weight today" : "Baseline weight"}
                   value={state.weightAssessment.weight}
                   onChange={(v) =>
                     dispatch({ type: "UPDATE_WEIGHT_ASSESSMENT", field: "weight", value: v })
@@ -385,6 +478,8 @@ export default function OrlistatClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
               <div className="p-3 bg-red-50 border border-red-200 rounded">
@@ -575,6 +670,8 @@ export default function OrlistatClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
               <Checkbox
@@ -707,18 +804,32 @@ export default function OrlistatClient() {
                 placeholder="List other regular medications"
               />
 
-              <TextInput
-                label="Allergies"
-                value={state.medications.allergies}
+              <Checkbox
+                label="No known drug allergies (confirmed with the patient)"
+                checked={state.medications.nkda}
                 onChange={(v) =>
                   dispatch({
                     type: "UPDATE_MEDICATIONS",
-                    field: "allergies",
+                    field: "nkda",
                     value: v,
                   })
                 }
-                placeholder="e.g., NKDA"
               />
+              {!state.medications.nkda && (
+                <TextInput
+                  label="Drug allergies"
+                  value={state.medications.allergies}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_MEDICATIONS",
+                      field: "allergies",
+                      value: v,
+                    })
+                  }
+                  placeholder="Name the medicine and the reaction"
+                  required
+                />
+              )}
             </div>
           </StepWrapper>
         );
@@ -739,6 +850,7 @@ export default function OrlistatClient() {
                 : null
             }
             isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             {alerts.length > 0 ? (
               <AlertBanner alerts={alerts} />
@@ -774,6 +886,7 @@ export default function OrlistatClient() {
             canProceed={canProceed}
             validationError={validationError}
             isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
               <div className="p-3 bg-blue-50 border border-blue-200 rounded space-y-1">
@@ -848,6 +961,8 @@ export default function OrlistatClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-3">
               <Checkbox
@@ -1059,9 +1174,9 @@ export default function OrlistatClient() {
             totalSteps={TOTAL_STEPS}
             onNext={handleNext}
             onPrev={handlePrev}
-            canProceed={true}
-            validationError={null}
-            isBlocked={false}
+            canProceed={canProceed}
+            validationError={validationError}
+            isBlocked={hasStops}
             getConsultationData={getConsultationData}
             onNewConsultation={handleNewConsultation}
           >
@@ -1141,6 +1256,20 @@ export default function OrlistatClient() {
 
       {alerts.length > 0 && state.currentStep < 5 && (
         <AlertBanner alerts={alerts} />
+      )}
+
+      {hasStops && (
+        <div className="rounded-lg bg-red-50 border border-red-300 p-4 space-y-2 print:hidden">
+          <p className="text-sm font-semibold text-red-900">Excluded: {stopSummary}. Orlistat cannot be supplied under this PGD.</p>
+          <TextArea
+            label="Advice given (excluded or declines treatment): alternative treatment options and how to access them, decision reached, GP informed or referred"
+            value={state.exclusionAdvice}
+            onChange={(v) => dispatch({ type: "UPDATE_EXCLUSION_ADVICE", value: v })}
+            rows={3}
+            required
+          />
+          <p className="text-xs text-red-800">Record the advice, then use &quot;Save as not supplied&quot; on the step below. The PGD requires advice given to an excluded patient to be recorded.</p>
+        </div>
       )}
 
       {renderStep()}

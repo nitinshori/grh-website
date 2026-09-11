@@ -7,7 +7,7 @@ import type {
 } from "./lib/chickenpox-types";
 import { STEP_LABELS, TOTAL_STEPS, CHICKENPOX_PGD_VERSION, createInitialChickenpoxState } from "./lib/chickenpox-types";
 import type { ChickenpoxMedicalHistory, ChickenpoxVaccineAdmin } from "./lib/chickenpox-types";
-import { getAllAlerts, hasHardStops, getScheduleText } from "./lib/chickenpox-clinical-logic";
+import { getAllAlerts, hasHardStops, getScheduleText, daysBetween } from "./lib/chickenpox-clinical-logic";
 import { validateStep } from "./lib/chickenpox-validation";
 import { calculateAge } from "../shared/types";
 import { ProgressBar } from "../shared/components/ProgressBar";
@@ -132,7 +132,9 @@ export default function ChickenpoxClient() {
   const underSixteen = state.patient.age !== null && state.patient.age < 16;
 
   // Can proceed?
-  const canProceed = !validationError && (!hasStops || state.currentStep >= 4);
+  // A stop anywhere disables Next on every step; the progress bar only goes
+  // backwards, so there is no way round it.
+  const canProceed = !validationError && !hasStops;
 
   // Mark step as completed
   const markStepComplete = useCallback(() => {
@@ -160,6 +162,7 @@ export default function ChickenpoxClient() {
 
   // ─── Consultation Record Data (for saving to database) ───
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    const a = state.vaccineAdmin;
     return {
       patient: {
         firstName: state.patient.firstName,
@@ -171,17 +174,34 @@ export default function ChickenpoxClient() {
         address: state.patient.address,
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
+        gpAddress: state.patient.gpAddress,
+        gpPhone: state.patient.gpPhone,
+        gpEmail: state.patient.gpEmail,
+        gpOdsCode: state.patient.gpOdsCode,
       },
-      clinicalData: state as unknown as Record<string, unknown>,
+      clinicalData: { ...state, alerts } as unknown as Record<string, unknown>,
       outcome: hasStops ? "not_supplied" : "completed",
+      medicine:
+        !hasStops && a.vaccine
+          ? {
+              name: `${a.vaccine} (varicella vaccine, live)`,
+              dose: `0.5 mL ${a.route || "subcutaneous"}, dose ${a.doseNumber || "1st"} of 2`,
+              duration: "Single dose this attendance",
+              quantity: 1,
+            }
+          : undefined,
       summary: {
-        pharmacistName: state.summary.pharmacistName,
-        pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacistName: state.summary.pharmacistName || __pharmProfile?.name || "",
+        pharmacistGPhC: state.summary.pharmacistGPhC || __pharmProfile?.gphcNumber || "",
+        pharmacyName: state.summary.pharmacyName || __pharmProfile?.pharmacyName,
+        pharmacyAddress: state.summary.pharmacyAddress || __pharmProfile?.pharmacyAddress,
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: state.consent.notifyGp },
     };
-  }, [state, hasStops]);
+  }, [state, hasStops, alerts, __pharmProfile]);
 
   const handleNewConsultation = useCallback(() => {
     dispatch({ type: "RESET" });
@@ -204,6 +224,8 @@ export default function ChickenpoxClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <PatientDetailsStep
               patient={state.patient}
@@ -226,6 +248,8 @@ export default function ChickenpoxClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <ConsentStep
               consent={state.consent}
@@ -271,6 +295,8 @@ export default function ChickenpoxClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
               <Checkbox
@@ -303,15 +329,25 @@ export default function ChickenpoxClient() {
                 description="Exclusion"
               />
               <Checkbox
-                label="Dose 1 was given elsewhere (attending for dose 2)"
+                label="Dose 1 already given (attending for dose 2)"
                 checked={state.eligibility.dose1GivenElsewhere}
                 onChange={(v) =>
                   dispatch({ type: "UPDATE_ELIGIBILITY", field: "dose1GivenElsewhere", value: v })
                 }
-                description="Dose 2 may be given under this PGD where dose 1 was given elsewhere; record the date and brand of dose 1."
+                description="Dose 2 may be given under this PGD whether dose 1 was given here or elsewhere; record where, the date and the brand of dose 1."
               />
               {state.eligibility.dose1GivenElsewhere && (
                 <>
+                  <SelectInput
+                    label="Where was dose 1 given?"
+                    value={state.eligibility.dose1Where}
+                    onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "dose1Where", value: v })}
+                    options={[
+                      { value: "this-pharmacy", label: "This pharmacy (under this PGD)" },
+                      { value: "elsewhere", label: "Elsewhere (another provider)" },
+                    ]}
+                    required
+                  />
                   <TextInput
                     label="Date of dose 1"
                     value={state.eligibility.dose1ElsewhereDate}
@@ -381,6 +417,8 @@ export default function ChickenpoxClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
               <Checkbox
@@ -516,6 +554,7 @@ export default function ChickenpoxClient() {
                 : null
             }
             isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             {alerts.length > 0 ? (
               <AlertBanner alerts={alerts} />
@@ -531,6 +570,15 @@ export default function ChickenpoxClient() {
                 <p className="text-sm text-red-600">
                   Advise on alternative treatment options and how these can be accessed. Document any advice given and the decision reached. Inform or refer to the GP as appropriate.
                 </p>
+                <div className="mt-3">
+                  <TextArea
+                    label="Advice given and decision reached (saved with the exclusion record)"
+                    value={state.summary.clinicalNotes}
+                    onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "clinicalNotes", value: v })}
+                    placeholder="e.g., History of chickenpox: vaccination not needed; explained and no supply made."
+                  />
+                  <p className="text-xs text-red-700 mt-1">Then use "Save as not supplied" below to record the consultation.</p>
+                </div>
               </div>
             )}
           </StepWrapper>
@@ -548,6 +596,7 @@ export default function ChickenpoxClient() {
             canProceed={canProceed}
             validationError={validationError}
             isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
               <SelectInput
@@ -666,6 +715,19 @@ export default function ChickenpoxClient() {
                 />
               )}
 
+              {state.vaccineAdmin.doseNumber === "2nd" && state.vaccineAdmin.vaccine === "Varilrix" && (() => {
+                const interval = daysBetween(state.eligibility.dose1ElsewhereDate, state.vaccineAdmin.dose1Date);
+                return interval !== null && interval >= 28 && interval < 42;
+              })() && (
+                <TextInput
+                  label="Varilrix dose 2 given between 4 and 6 weeks after dose 1: reason"
+                  value={state.vaccineAdmin.intervalReason}
+                  onChange={(v) => dispatch({ type: "UPDATE_VACCINE_ADMIN", field: "intervalReason", value: v })}
+                  placeholder="e.g., travel before the 6 week date; PGD gives at least 6 weeks, never less than 4"
+                  required
+                />
+              )}
+
               <TextInput
                 label="Administered by (name and credentials)"
                 value={state.vaccineAdmin.administeredBy}
@@ -694,8 +756,8 @@ export default function ChickenpoxClient() {
             onPrev={handlePrev}
             canProceed={canProceed}
             validationError={validationError}
-          getConsultationData={getConsultationData}
-          onNewConsultation={handleNewConsultation}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
               <Checkbox
@@ -720,33 +782,6 @@ export default function ChickenpoxClient() {
                 }
                 description="e.g. redness, swelling at injection site"
               />
-
-              <Checkbox
-                label="Mild rash developed (5-26 days post-vaccine)"
-                checked={state.postVaccine.rashDeveloped}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_POST_VACCINE",
-                    field: "rashDeveloped",
-                    value: v,
-                  })
-                }
-              />
-
-              {state.postVaccine.rashDeveloped && (
-                <TextInput
-                  label="Date rash onset"
-                  value={state.postVaccine.rashOnset}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_POST_VACCINE",
-                      field: "rashOnset",
-                      value: v,
-                    })
-                  }
-                  type="date"
-                />
-              )}
 
               <p className="text-sm font-semibold text-navy-900 pt-2">Counselling and written information (PGD)</p>
 
@@ -810,7 +845,8 @@ export default function ChickenpoxClient() {
                   });
                   dispatch({ type: "UPDATE_COUNSELLING", field: "salicylatesAvoidanceAdvice", value: v });
                 }}
-                description="Reye's syndrome risk (Green Book precaution)."
+                description="Reye's syndrome risk (PGD precaution). Required for every patient."
+                required
               />
 
               <Checkbox
@@ -826,99 +862,87 @@ export default function ChickenpoxClient() {
 
       case 7: // Summary & Print
         return (
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
-              <h2 className="text-lg font-bold text-navy-900">
-                Summary &amp; Consultation Record
-              </h2>
+          <StepWrapper
+            title="Summary &amp; Consultation Record"
+            description="Complete the pharmacist declaration, then Save & Print. The record is saved to Patient Records when printed."
+            currentStep={state.currentStep}
+            totalSteps={TOTAL_STEPS}
+            onNext={handleNext}
+            onPrev={handlePrev}
+            canProceed={canProceed}
+            validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
+            onNewConsultation={handleNewConsultation}
+          >
+            <div className="space-y-4 mb-6 print:hidden">
+              <TextInput
+                label="Pharmacist name"
+                value={state.summary.pharmacistName}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_SUMMARY",
+                    field: "pharmacistName",
+                    value: v,
+                  })
+                }
+                required
+              />
+              <TextInput
+                label="GPhC registration number"
+                value={state.summary.pharmacistGPhC}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_SUMMARY",
+                    field: "pharmacistGPhC",
+                    value: v,
+                  })
+                }
+                required
+              />
+              <TextInput
+                label="Pharmacy name"
+                value={state.summary.pharmacyName}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_SUMMARY",
+                    field: "pharmacyName",
+                    value: v,
+                  })
+                }
+              />
+              <TextInput
+                label="Pharmacy address"
+                value={state.summary.pharmacyAddress}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_SUMMARY",
+                    field: "pharmacyAddress",
+                    value: v,
+                  })
+                }
+              />
+              <TextArea
+                label="Additional clinical notes"
+                value={state.summary.clinicalNotes}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_SUMMARY",
+                    field: "clinicalNotes",
+                    value: v,
+                  })
+                }
+                placeholder="Any additional information to record..."
+              />
             </div>
 
-            <div className="px-6 py-6">
-              <div className="space-y-4 mb-6">
-                <TextInput
-                  label="Pharmacist name"
-                  value={state.summary.pharmacistName}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_SUMMARY",
-                      field: "pharmacistName",
-                      value: v,
-                    })
-                  }
-                  required
-                />
-                <TextInput
-                  label="GPhC registration number"
-                  value={state.summary.pharmacistGPhC}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_SUMMARY",
-                      field: "pharmacistGPhC",
-                      value: v,
-                    })
-                  }
-                  required
-                />
-                <TextInput
-                  label="Pharmacy name"
-                  value={state.summary.pharmacyName}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_SUMMARY",
-                      field: "pharmacyName",
-                      value: v,
-                    })
-                  }
-                />
-                <TextInput
-                  label="Pharmacy address"
-                  value={state.summary.pharmacyAddress}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_SUMMARY",
-                      field: "pharmacyAddress",
-                      value: v,
-                    })
-                  }
-                />
-                <TextArea
-                  label="Additional clinical notes"
-                  value={state.summary.clinicalNotes}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_SUMMARY",
-                      field: "clinicalNotes",
-                      value: v,
-                    })
-                  }
-                  placeholder="Any additional information to record..."
-                />
-              </div>
-
-              <div className="border-t border-gray-200 pt-6">
-                <p className="text-sm text-gray-600 mb-4">
-                  Review the summary below before printing the consultation record.
-                </p>
-                <ChickenpoxSummaryReport state={updatedState} />
-              </div>
+            <div className="border-t border-gray-200 pt-6">
+              <p className="text-sm text-gray-600 mb-4 print:hidden">
+                Review the summary below before saving and printing the consultation record.
+              </p>
+              <ChickenpoxSummaryReport state={updatedState} />
             </div>
-
-            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/30 flex items-center justify-between">
-              <button
-                onClick={() => dispatch({ type: "PREV_STEP" })}
-                className="px-5 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-navy-900 transition-colors"
-              >
-                &larr; Previous
-              </button>
-
-              <button
-                onClick={() => window.print()}
-                className="px-6 py-2.5 rounded-lg text-sm font-semibold bg-navy-900 hover:bg-navy-950 text-white transition-colors"
-              >
-                Print Consultation Record
-              </button>
-            </div>
-          </div>
+          </StepWrapper>
         );
 
       default:
@@ -962,7 +986,8 @@ function ChickenpoxSummaryReport({
       <Row label="Date of Birth" value={state.patient.dateOfBirth} />
       <Row label="Age" value={`${state.patient.age} years`} />
       <Row label="NHS Number" value={state.patient.nhsNumber} />
-      <Row label="GP" value={state.patient.gpName} />
+      <Row label="Address" value={state.patient.address || "Not recorded"} />
+      <Row label="GP" value={[state.patient.gpName, state.patient.gpPractice, state.patient.gpAddress].filter(Boolean).join(", ") || "Not recorded"} />
 
       {state.patient.age !== null && state.patient.age < 16 && (
         <Row
@@ -990,7 +1015,7 @@ function ChickenpoxSummaryReport({
       />
       {state.eligibility.dose1GivenElsewhere && (
         <Row
-          label="Dose 1 given elsewhere"
+          label={state.eligibility.dose1Where === "elsewhere" ? "Dose 1 given elsewhere" : "Dose 1 given at this pharmacy"}
           value={`${state.eligibility.dose1ElsewhereDate}, ${state.eligibility.dose1ElsewhereBrand}`}
         />
       )}
@@ -1035,6 +1060,10 @@ function ChickenpoxSummaryReport({
       />
 
       <SectionHeader>Vaccine Administration</SectionHeader>
+      {hasHardStops(state.alerts) ? (
+        <p className="text-xs font-semibold text-red-800">Outcome: NOT SUPPLIED. Exclusion criteria met; no vaccine administered.</p>
+      ) : (
+      <>
       <Row label="Vaccine" value={state.vaccineAdmin.vaccine} />
       <Row label="Dose in course" value={state.vaccineAdmin.doseNumber === "2nd" ? "Dose 2" : "Dose 1"} />
       <Row label="Date of administration" value={state.vaccineAdmin.dose1Date} />
@@ -1043,9 +1072,12 @@ function ChickenpoxSummaryReport({
       <Row label="Batch number" value={state.vaccineAdmin.dose1Lot} />
       <Row label="Expiry date" value={state.vaccineAdmin.expiryDate} />
       {state.vaccineAdmin.doseNumber === "1st" && <Row label="Dose 2 due" value={state.vaccineAdmin.dose2Scheduled} />}
+      {state.vaccineAdmin.intervalReason && <Row label="Reason for 4 to 6 week interval (Varilrix)" value={state.vaccineAdmin.intervalReason} />}
       <Row label="Administered by" value={state.vaccineAdmin.administeredBy} />
       <Row label="15 minute observation completed" value={state.postVaccine.observationCompleted ? "Yes" : "No"} />
       <Row label="Administered via PGD" value={`Yes, ${CHICKENPOX_PGD_VERSION}`} />
+      </>
+      )}
 
       <SectionHeader>Clinical Alerts</SectionHeader>
       <AlertSummary alerts={state.alerts} />

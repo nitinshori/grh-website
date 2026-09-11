@@ -1,38 +1,45 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 // Mounted directly: this tool does not use the shared StepWrapper,
-// which is where the other fifteen vaccination tools pick this up.
-import { VaccineSafetyChecks } from "../shared/components/VaccineSafetyChecks";
+// which is where the other fifteen vaccination tools pick this up. Unlike
+// the StepWrapper tools it used not to block Next on the adrenaline
+// confirmation; it does now (vaccineSafetySatisfied in handleNextStep).
+import {
+  VaccineSafetyChecks,
+  vaccineSafetySatisfied,
+  getVaccineSafety,
+  clearVaccineSafety,
+} from "../shared/components/VaccineSafetyChecks";
 import {
   DengueConsultationState,
   DengueScreening,
-  DengueContraindications,
-  DengueVaccineAdministration,
-  DenguePostVaccineObs,
   DengueAdvice,
   initialDengueScreening,
-  initialDengueContraindications,
   initialDengueVaccineAdministration,
   initialDenguePostVaccineObs,
   initialDengueAdvice,
 } from './dengue-types';
-import { ClinicalAlert, BasePatientDetails, BaseConsent, BaseSummary } from '../shared/types';
+import { ClinicalAlert, BasePatientDetails, BaseSummary } from '../shared/types';
 import {
   evaluateDengueContraindications,
   hasHardStopContraindications,
   getObservationPeriodRecommendation,
   calculateNextDoseDate,
+  todayIso,
   DENGUE_PGD_VERSION,
+  FEVER_THRESHOLD_C,
 } from './dengue-clinical-logic';
 import {
   validatePatientDetails,
   validateConsent,
-  validateScreening,
+  validateTravel,
+  validateMedicalHistory,
   validateContraindications,
   validateAdministration,
   validatePostVaccineObs,
   validateAdvice,
+  validateSummary,
 } from './dengue-validation';
 import { TextInput, Checkbox, SelectInput, NumberInput, TextArea } from '../shared/components/FormInputs';
 import { ProgressBar } from '../shared/components/ProgressBar';
@@ -64,15 +71,13 @@ export default function DengueClient({
   initialPatient,
 }: DengueClientProps): React.ReactNode {
   const [state, setState] = useState<DengueConsultationState>({
-    patient: initialPatient || initialPatientDetails,
-    consent: initialConsent,
+    patient: initialPatient ? { ...initialPatient } : { ...initialPatientDetails },
+    consent: { ...initialConsent },
     screening: initialDengueScreening(),
-    contraindications: initialDengueContraindications(),
     administration: initialDengueVaccineAdministration(),
     postVaccineObs: initialDenguePostVaccineObs(),
     advice: initialDengueAdvice(),
     summary: initialSummary(),
-    alerts: [],
     step: 0,
   });
 
@@ -95,12 +100,27 @@ export default function DengueClient({
 
   const patientAge = calculateAge(state.patient.dateOfBirth);
 
+  // Contraindications and alerts are derived from the current answers, so a
+  // stop raised by going back and ticking an exclusion is enforced at once
+  // on every later step (they used to be evaluated only on leaving steps 2
+  // and 3 and enforced only on step 4).
+  const evaluation = useMemo(
+    () => evaluateDengueContraindications(state.screening, patientAge ?? 0),
+    [state.screening, patientAge]
+  );
+  const hasStops = hasHardStopContraindications(evaluation.contraindications);
+
   // Patient Details handlers
   const handlePatientChange = useCallback(
     (field: keyof BasePatientDetails, value: any): void => {
       setState((prev) => ({
         ...prev,
-        patient: { ...prev.patient, [field]: value },
+        patient: {
+          ...prev.patient,
+          [field]: value,
+          // Age is computed on every DOB change; it used never to be set.
+          ...(field === 'dateOfBirth' ? { age: calculateAge(value as string) } : {}),
+        },
       }));
     },
     []
@@ -268,8 +288,23 @@ export default function DengueClient({
       administration: {
         ...prev.administration,
         doseNumber: value as any,
-        nextDueDate: value === '1st' ? calculateNextDoseDate(new Date().toISOString().split('T')[0]) : '',
+        nextDueDate: value === '1st' ? calculateNextDoseDate(todayIso()) : '',
+        firstDoseDate: value === '2nd' ? prev.administration.firstDoseDate : '',
       },
+    }));
+  }, []);
+
+  const handleFirstDoseDateChange = useCallback((value: string): void => {
+    setState((prev) => ({
+      ...prev,
+      administration: { ...prev.administration, firstDoseDate: value },
+    }));
+  }, []);
+
+  const handleAdrenalineConfirmedChange = useCallback((value: boolean): void => {
+    setState((prev) => ({
+      ...prev,
+      administration: { ...prev.administration, adrenalineConfirmed: value },
     }));
   }, []);
 
@@ -330,13 +365,6 @@ export default function DengueClient({
     }));
   }, []);
 
-  const handleAnaphylaxisKitChange = useCallback((value: boolean): void => {
-    setState((prev) => ({
-      ...prev,
-      postVaccineObs: { ...prev.postVaccineObs, anaphylaxisKitChecked: value },
-    }));
-  }, []);
-
   // Advice handlers
   const handleAdviceChange = useCallback(
     (field: keyof DengueAdvice, value: boolean): void => {
@@ -359,85 +387,75 @@ export default function DengueClient({
     []
   );
 
-  // Validation
-  const validateStep = useCallback((stepNum: number): boolean => {
+  // Validation: pure per-step check, used by Next and by the pre-save sweep.
+  const errorsForStep = useCallback((stepNum: number): string[] => {
     const errors: string[] = [];
 
     switch (stepNum) {
       case 0: {
-        const result = validatePatientDetails(state.patient);
-        errors.push(...result.errors);
+        errors.push(...validatePatientDetails(state.patient).errors);
         break;
       }
       case 1: {
-        const result = validateConsent(state.consent);
-        errors.push(...result.errors);
+        errors.push(...validateConsent(state.consent).errors);
         break;
       }
       case 2: {
-        const result = validateScreening(state.screening);
-        errors.push(...result.errors);
+        errors.push(...validateTravel(state.screening).errors);
         break;
       }
       case 3: {
-        // Medical history validation included in screening
+        errors.push(...validateMedicalHistory(state.screening).errors);
         break;
       }
       case 4: {
-        const result = validateContraindications(state.contraindications);
-        errors.push(...result.errors);
+        errors.push(...validateContraindications(evaluation.contraindications).errors);
         break;
       }
       case 5: {
-        const result = validateAdministration(state.administration);
-        errors.push(...result.errors);
+        errors.push(...validateAdministration(state.administration).errors);
         break;
       }
       case 6: {
-        const obsResult = validatePostVaccineObs(state.postVaccineObs);
-        errors.push(...obsResult.errors);
-        const result = validateAdvice(state.advice);
-        errors.push(...result.errors);
+        errors.push(...validatePostVaccineObs(state.postVaccineObs).errors);
+        errors.push(...validateAdvice(state.advice).errors);
         break;
       }
       case 7: {
-        // Summary can be skipped
+        errors.push(...validateSummary(state.summary).errors);
         break;
       }
     }
 
+    // A stop anywhere blocks every step from the one it is raised on.
+    if (hasStops && stepNum >= 3) {
+      errors.push('Exclusion criteria met: vaccination is contraindicated under this PGD. Record the advice given and save as not vaccinated.');
+    }
+    // Adrenaline confirmation on the shared safety panel locks Next on every
+    // step, as it does on the StepWrapper tools.
+    if (!vaccineSafetySatisfied('dengue')) {
+      errors.push('Confirm on the pre-vaccination safety panel that adrenaline 1 in 1,000 is immediately available');
+    }
+    return errors;
+  }, [state, evaluation, hasStops]);
+
+  const validateStep = useCallback((stepNum: number): boolean => {
+    const errors = errorsForStep(stepNum);
     if (errors.length > 0) {
-      setValidationErrors(new Map(validationErrors).set(stepNum, errors));
+      setValidationErrors((prev) => new Map(prev).set(stepNum, errors));
       return false;
     }
-
     setValidationErrors((prev) => {
       const newErrors = new Map(prev);
       newErrors.delete(stepNum);
       return newErrors;
     });
     return true;
-  }, [state, validationErrors]);
+  }, [errorsForStep]);
 
   const handleNextStep = useCallback((): void => {
     if (!validateStep(state.step)) {
       return;
-    }
-
-    // Evaluate contraindications on leaving Travel Assessment (step 2) and
-    // again on leaving Medical History (step 3), where the exclusion
-    // questions are answered. Previously this ran only at step 2, before
-    // pregnancy, immunosuppression and fever had been entered.
-    if (state.step === 2 || state.step === 3) {
-      const { contraindications, alerts } = evaluateDengueContraindications(
-        state.screening,
-        patientAge || 0
-      );
-      setState((prev) => ({
-        ...prev,
-        contraindications,
-        alerts,
-      }));
     }
 
     // On step 5 (Administration), set recommended observation period
@@ -459,7 +477,14 @@ export default function DengueClient({
       ...prev,
       step: Math.min(prev.step + 1, STEP_LABELS.length - 1),
     }));
-  }, [state, patientAge, validateStep]);
+  }, [state, validateStep]);
+
+  // Backwards only; going forward always means pressing Next.
+  const handleStepClick = useCallback((step: number): void => {
+    if (step < state.step) {
+      setState((prev) => ({ ...prev, step }));
+    }
+  }, [state.step]);
 
   const handlePreviousStep = useCallback((): void => {
     setState((prev) => ({
@@ -469,10 +494,12 @@ export default function DengueClient({
   }, []);
 
   // ─── Consultation tracking + record saving ───
-  const { markComplete, saveRecord } = useConsultationTracking('dengue', state.step);
+  const { markComplete, saveRecord, reset } = useConsultationTracking('dengue', state.step);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [saveErrors, setSaveErrors] = useState<string[]>([]);
 
   const getConsultationData = useCallback((): ConsultationRecordData => {
+    const vaccinated = !hasStops && !!state.administration.batchNumber.trim();
     return {
       patient: {
         firstName: state.patient.firstName,
@@ -484,63 +511,116 @@ export default function DengueClient({
         address: state.patient.address,
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
+        gpAddress: state.patient.gpAddress,
+        gpPhone: state.patient.gpPhone,
+        gpEmail: state.patient.gpEmail,
+        gpOdsCode: state.patient.gpOdsCode,
       },
-      clinicalData: state as unknown as Record<string, unknown>,
-      outcome: hasHardStopContraindications(state.contraindications) ? 'not_supplied' : 'completed',
+      clinicalData: {
+        ...(state as unknown as Record<string, unknown>),
+        contraindications: evaluation.contraindications,
+        alerts: evaluation.alerts,
+        vaccineSafetyChecks: getVaccineSafety('dengue'),
+        pgdVersion: DENGUE_PGD_VERSION,
+      },
+      outcome: hasStops ? 'not_supplied' : 'completed',
+      medicine: vaccinated
+        ? {
+            name: 'Qdenga (TAK-003) dengue vaccine',
+            dose: '0.5 mL subcutaneous',
+            duration: state.administration.doseNumber === '2nd' ? 'Dose 2 of 2' : 'Dose 1 of 2 (dose 2 due in 3 months)',
+            quantity: 1,
+          }
+        : undefined,
       summary: {
-        pharmacistName: state.summary.pharmacistName,
-        pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacistName: state.summary.pharmacistName || __pharmProfile?.name || '',
+        pharmacistGPhC: state.summary.pharmacistGPhC || __pharmProfile?.gphcNumber || '',
+        pharmacyName: state.summary.pharmacyName || __pharmProfile?.pharmacyName,
+        pharmacyAddress: state.summary.pharmacyAddress || __pharmProfile?.pharmacyAddress,
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: state.consent.notifyGp },
     };
-  }, [state]);
+  }, [state, hasStops, evaluation, __pharmProfile]);
 
+  // Save & Print re-runs every step's validation first. The summary used to
+  // save and print whatever was on screen.
   const handlePrint = useCallback(async (): Promise<void> => {
+    const all: string[] = [];
+    const names = STEP_LABELS;
+    for (let i = 0; i < STEP_LABELS.length; i++) {
+      const errs = errorsForStep(i);
+      all.push(...errs.map((e) => `${names[i]}: ${e}`));
+    }
+    if (all.length > 0) {
+      setSaveErrors(Array.from(new Set(all)));
+      return;
+    }
+    setSaveErrors([]);
     markComplete();
     setSaveStatus('saving');
     const success = await saveRecord(getConsultationData());
     setSaveStatus(success ? 'saved' : 'error');
     window.print();
-  }, [markComplete, saveRecord, getConsultationData]);
+  }, [markComplete, saveRecord, getConsultationData, errorsForStep]);
+
+  // An excluded patient is saved as "not vaccinated" from any step; the
+  // document requires the advice given to an excluded patient to be recorded.
+  const handleSaveNotVaccinated = useCallback(async (): Promise<void> => {
+    setSaveStatus('saving');
+    const data = getConsultationData();
+    data.outcome = 'not_supplied';
+    (data.clinicalData as Record<string, unknown>).stoppedAtStep = state.step;
+    (data.clinicalData as Record<string, unknown>).stopReason = evaluation.alerts
+      .filter((a) => a.severity === 'stop')
+      .map((a) => a.message)
+      .join('; ');
+    const success = await saveRecord(data);
+    setSaveStatus(success ? 'saved' : 'error');
+  }, [getConsultationData, saveRecord, state.step, evaluation]);
 
   const handleNewConsultation = useCallback((): void => {
     if (!window.confirm('Start a new consultation? The current consultation data will be cleared.')) return;
+    // Fresh objects every time; never reuse the module-level defaults.
     setState({
-      patient: initialPatientDetails,
-      consent: initialConsent,
+      patient: { ...initialPatientDetails },
+      consent: { ...initialConsent },
       screening: initialDengueScreening(),
-      contraindications: initialDengueContraindications(),
       administration: initialDengueVaccineAdministration(),
       postVaccineObs: initialDenguePostVaccineObs(),
       advice: initialDengueAdvice(),
       summary: initialSummary(),
-      alerts: [],
       step: 0,
     });
     setCompletedSteps(new Set());
     setValidationErrors(new Map());
+    setSaveErrors([]);
     setSaveStatus('idle');
-  }, []);
+    reset();
+    clearVaccineSafety('dengue');
+  }, [reset]);
 
   const getStepAlerts = useCallback((): React.ReactNode => {
     const travelCodes = ['PREVIOUS_DENGUE_INFECTION', 'ENDEMIC_AREA_TRAVEL'];
-    const stepAlerts = state.alerts.filter((alert: ClinicalAlert) => {
+    const stepAlerts = evaluation.alerts.filter((alert: ClinicalAlert) => {
+      if (alert.severity === 'stop') return state.step >= 3;
       if (travelCodes.includes(alert.code)) return state.step === 2 || state.step === 4;
-      return state.step === 4;
+      return state.step >= 3;
     });
 
     if (stepAlerts.length === 0) return null;
 
     return <AlertBanner alerts={stepAlerts} />;
-  }, [state.alerts, state.step]);
+  }, [evaluation.alerts, state.step]);
 
   const canProceedFromStep = useCallback((): boolean => {
-    if (state.step === 4 && hasHardStopContraindications(state.contraindications)) {
+    if (hasStops && state.step >= 3) {
       return false;
     }
     return true;
-  }, [state.step, state.contraindications]);
+  }, [state.step, hasStops]);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
@@ -559,17 +639,19 @@ export default function DengueClient({
             </Link>
           </div>
         )}
-        <ProgressBar
-          currentStep={state.step}
-          stepLabels={STEP_LABELS}
-          onStepClick={() => {}}
-          completedSteps={completedSteps}
-          hasErrors={validationErrors.has(state.step)}
-        />
+        <div className="print:hidden">
+          <ProgressBar
+            currentStep={state.step}
+            stepLabels={STEP_LABELS}
+            onStepClick={handleStepClick}
+            completedSteps={completedSteps}
+            hasErrors={validationErrors.has(state.step)}
+          />
+        </div>
 
         <div className="bg-white rounded-lg shadow mt-8 p-8">
           {validationErrors.has(state.step) && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg print:hidden">
               <p className="text-sm font-semibold text-red-900 mb-2">
                 Please fix the following errors:
               </p>
@@ -583,7 +665,7 @@ export default function DengueClient({
             </div>
           )}
 
-          {getStepAlerts()}
+          <div className="print:hidden">{getStepAlerts()}</div>
 
           {state.step === 0 && (
             <PatientDetailsStep
@@ -676,7 +758,15 @@ export default function DengueClient({
                   value={state.screening.temperature}
                   onChange={handleTemperatureChange}
                   placeholder="36.5"
+                  min={30}
+                  max={45}
+                  unit="°C"
+                  required
                 />
+                <p className="text-xs text-gray-600">
+                  Decimals are accepted. The tool treats {FEVER_THRESHOLD_C.toFixed(1)} °C or above as an acute fever
+                  (exclusion: defer until recovered). The document says &quot;acute fever&quot; without a figure.
+                </p>
 
                 <Checkbox
                   label="Acute fever or significant intercurrent illness"
@@ -763,24 +853,24 @@ export default function DengueClient({
                   <span className="text-gray-700">Age appropriate (18 years and over):</span>
                   <span
                     className={`font-semibold ${
-                      state.contraindications.ageAppropriate
+                      evaluation.contraindications.ageAppropriate
                         ? 'text-green-600'
                         : 'text-red-600'
                     }`}
                   >
-                    {state.contraindications.ageAppropriate ? 'OK' : 'NOT OK'}
+                    {evaluation.contraindications.ageAppropriate ? 'OK' : 'NOT OK'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-700">Pregnancy:</span>
                   <span
                     className={`font-semibold ${
-                      state.contraindications.pregnancy
+                      evaluation.contraindications.pregnancy
                         ? 'text-red-600'
                         : 'text-green-600'
                     }`}
                   >
-                    {state.contraindications.pregnancy
+                    {evaluation.contraindications.pregnancy
                       ? 'CONTRAINDICATED'
                       : 'OK'}
                   </span>
@@ -789,22 +879,22 @@ export default function DengueClient({
                   <span className="text-gray-700">Acute fever or significant intercurrent illness:</span>
                   <span
                     className={`font-semibold ${
-                      state.contraindications.acuteFebrileIllness
+                      evaluation.contraindications.acuteFebrileIllness
                         ? 'text-red-600'
                         : 'text-green-600'
                     }`}
                   >
-                    {state.contraindications.acuteFebrileIllness
+                    {evaluation.contraindications.acuteFebrileIllness
                       ? 'CONTRAINDICATED'
                       : 'OK'}
                   </span>
                 </div>
                 {([
-                  ['Breastfeeding', state.contraindications.breastfeeding],
-                  ['Immune deficiency of any cause', state.contraindications.immunosuppressed],
-                  ['Hypersensitivity to a vaccine component', state.contraindications.severeAllergy],
-                  ['Other live vaccine within 4 weeks', state.contraindications.liveVaccineInterval],
-                  ['Guillain-Barre syndrome after prior dengue vaccination', state.contraindications.gbsHistory],
+                  ['Breastfeeding', evaluation.contraindications.breastfeeding],
+                  ['Immune deficiency of any cause', evaluation.contraindications.immunosuppressed],
+                  ['Hypersensitivity to a vaccine component', evaluation.contraindications.severeAllergy],
+                  ['Other live vaccine within 4 weeks', evaluation.contraindications.liveVaccineInterval],
+                  ['Guillain-Barre syndrome after prior dengue vaccination', evaluation.contraindications.gbsHistory],
                 ] as [string, boolean][]).map(([label, flagged]) => (
                   <div key={label} className="flex justify-between items-center">
                     <span className="text-gray-700">{label}:</span>
@@ -844,11 +934,20 @@ export default function DengueClient({
                   </p>
                 </div>
 
+                <Checkbox
+                  label="Adrenaline 1 in 1,000 immediately available, checked BEFORE vaccinating"
+                  checked={state.administration.adrenalineConfirmed}
+                  onChange={handleAdrenalineConfirmedChange}
+                  description="In date, in the room where vaccination takes place, with a telephone and a written anaphylaxis protocol. The document requires this to be in place before the vaccine is given."
+                  required
+                />
+
                 <TextInput
                   label="Batch number"
                   value={state.administration.batchNumber}
                   onChange={handleBatchChange}
                   placeholder="e.g., ABC123456"
+                  required
                 />
 
                 <TextInput
@@ -889,6 +988,22 @@ export default function DengueClient({
                   />
                 )}
 
+                {state.administration.doseNumber === '2nd' && (
+                  <div>
+                    <TextInput
+                      label="Date of the first dose"
+                      type="date"
+                      value={state.administration.firstDoseDate}
+                      onChange={handleFirstDoseDateChange}
+                      required
+                    />
+                    <p className="text-xs text-gray-600 mt-1">
+                      The schedule is a second dose 3 months after the first. The tool refuses a second dose before
+                      that interval has elapsed. Check the first dose against the patient&apos;s record.
+                    </p>
+                  </div>
+                )}
+
                 <TextInput
                   label="Administered by (name)"
                   value={state.administration.administeredBy}
@@ -925,14 +1040,6 @@ export default function DengueClient({
                       { value: '15-min', label: '15 minutes' },
                       { value: '30-min', label: '30 minutes' },
                     ]}
-                  />
-
-                  <Checkbox
-                    label="Adrenaline 1 in 1,000 immediately available"
-                    checked={state.postVaccineObs.anaphylaxisKitChecked}
-                    onChange={handleAnaphylaxisKitChange}
-                    description="In date, in the room where vaccination takes place, with a telephone and a written anaphylaxis protocol"
-                    required
                   />
 
                   <Checkbox
@@ -1045,7 +1152,42 @@ export default function DengueClient({
 
           {state.step === 7 && (
             <>
-              <DengueSummaryReport state={state} onPrint={handlePrint} />
+              <div className="space-y-4 mb-6 print:hidden">
+                <h2 className="text-2xl font-bold text-gray-900">Summary</h2>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <TextInput
+                    label="Pharmacist name"
+                    value={state.summary.pharmacistName}
+                    onChange={(v) => handleSummaryChange('pharmacistName', v)}
+                    required
+                  />
+                  <TextInput
+                    label="GPhC registration number"
+                    value={state.summary.pharmacistGPhC}
+                    onChange={(v) => handleSummaryChange('pharmacistGPhC', v)}
+                    required
+                  />
+                </div>
+                <TextArea
+                  label="Clinical notes"
+                  value={state.summary.clinicalNotes}
+                  onChange={(v) => handleSummaryChange('clinicalNotes', v)}
+                  placeholder="Any additional clinical notes or observations..."
+                />
+              </div>
+              {saveErrors.length > 0 && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg print:hidden">
+                  <p className="text-sm font-semibold text-red-900 mb-2">
+                    The record cannot be saved until these are fixed:
+                  </p>
+                  <ul className="list-disc list-inside space-y-1">
+                    {saveErrors.map((error) => (
+                      <li key={error} className="text-sm text-red-800">{error}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <DengueSummaryReport state={state} alerts={evaluation.alerts} onPrint={handlePrint} />
               {saveStatus !== 'idle' && (
                 <div className={`mt-4 px-4 py-3 rounded-lg print:hidden ${
                   saveStatus === 'saving' ? 'bg-blue-50 border border-blue-200' :
@@ -1076,7 +1218,21 @@ export default function DengueClient({
             </>
           )}
 
-          <div className="flex justify-between mt-8 pt-8 border-t border-gray-200">
+          {hasStops && state.step >= 3 && state.step < STEP_LABELS.length - 1 && saveStatus !== 'idle' && (
+            <div className={`mt-6 px-4 py-3 rounded-lg print:hidden ${
+              saveStatus === 'saving' ? 'bg-blue-50 border border-blue-200' :
+              saveStatus === 'saved' ? 'bg-green-50 border border-green-200' :
+              'bg-red-50 border border-red-200'
+            }`}>
+              <p className="text-sm">
+                {saveStatus === 'saving' && 'Saving consultation record...'}
+                {saveStatus === 'saved' && 'Consultation saved as not vaccinated. You can access it from Patient Records on your dashboard.'}
+                {saveStatus === 'error' && 'Could not save consultation record.'}
+              </p>
+            </div>
+          )}
+
+          <div className="flex justify-between mt-8 pt-8 border-t border-gray-200 print:hidden">
             <button
               onClick={handlePreviousStep}
               disabled={state.step === 0}
@@ -1084,13 +1240,35 @@ export default function DengueClient({
             >
               Previous
             </button>
-            <button
-              onClick={handleNextStep}
-              disabled={state.step === STEP_LABELS.length - 1 || !canProceedFromStep()}
-              className="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
-            >
-              {state.step === STEP_LABELS.length - 1 ? 'Complete' : 'Next'}
-            </button>
+            <div className="flex items-center gap-3">
+              {hasStops && state.step >= 3 && (
+                <span className="text-xs text-red-600 font-medium">Cannot proceed: exclusion criteria met</span>
+              )}
+              {hasStops && state.step >= 3 && saveStatus !== 'saved' && (
+                <button
+                  onClick={handleSaveNotVaccinated}
+                  disabled={saveStatus === 'saving'}
+                  className="px-4 py-2 rounded-lg text-sm font-semibold border border-red-300 text-red-700 hover:bg-red-50 transition"
+                >
+                  {saveStatus === 'saving' ? 'Saving...' : 'Save as not vaccinated'}
+                </button>
+              )}
+              {hasStops && state.step >= 3 && saveStatus === 'saved' && (
+                <button
+                  onClick={handleNewConsultation}
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-[color:var(--tenant-primary)] border border-[color:var(--tenant-primary)]/30 hover:bg-[color:var(--tenant-primary)]/10 transition"
+                >
+                  New Consultation
+                </button>
+              )}
+              <button
+                onClick={handleNextStep}
+                disabled={state.step === STEP_LABELS.length - 1 || !canProceedFromStep()}
+                className="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              >
+                {state.step === STEP_LABELS.length - 1 ? 'Complete' : 'Next'}
+              </button>
+            </div>
           </div>
         </div>
       </div>

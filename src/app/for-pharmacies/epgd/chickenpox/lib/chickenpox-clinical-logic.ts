@@ -173,15 +173,28 @@ export function getAllAlerts(state: ChickenpoxConsultationState): ClinicalAlert[
     }
   }
 
-  // Post-vaccination rash with immunosuppressed contact
-  if (state.postVaccine.rashDeveloped && state.postVaccine.contactWithImmunosuppressed) {
-    alerts.push({
-      severity: "red-flag",
-      code: "RASH_IMMUNOSUPPRESSED_CONTACT",
-      message: "Rash developed and contact with immunosuppressed person",
-      detail: "Avoid contact with high-risk individuals (e.g. immunosuppressed) for 4 to 6 weeks if a rash develops post-vaccination.",
-    });
+  // Varivax, 13 years and over: second dose 4 to 8 weeks after the first.
+  if (
+    state.vaccineAdmin.doseNumber === "2nd" &&
+    state.vaccineAdmin.vaccine === "Varivax" &&
+    state.patient.age !== null &&
+    state.patient.age >= 13
+  ) {
+    const interval = daysBetween(state.eligibility.dose1ElsewhereDate, state.vaccineAdmin.dose1Date);
+    if (interval !== null && interval > 56) {
+      alerts.push({
+        severity: "caution",
+        code: "VARIVAX_INTERVAL_LONG",
+        message: "Varivax second dose more than 8 weeks after the first (13 years and over)",
+        detail: "The PGD gives 4 to 8 weeks for this age group. Give the second dose now rather than restarting the course; there is no maximum interval beyond which the first dose does not count. Record the reason for the delay.",
+      });
+    }
   }
+
+  // The close-contact alert that used to sit here fired for every patient
+  // who recorded a rash, because the flag it read was the mandatory advice
+  // tick. Rash onset is 5 to 26 days after the dose and cannot be observed
+  // at the consultation, so neither is asked on the observation step now.
 
   return alerts;
 }

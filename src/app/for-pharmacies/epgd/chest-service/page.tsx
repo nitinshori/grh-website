@@ -45,10 +45,11 @@ export default async function ChestServicePage() {
               </div>
               <p className="mt-3 text-xs text-gray-500">
                 This service does not cover pneumonia, which needs same-day
-                assessment, nor cough lasting more than three weeks, which is no
-                longer an acute cough and needs investigation. A pregnant or
-                breastfeeding patient who is penicillin-allergic has no arm
-                under this PGD and is referred the same day.
+                assessment, nor a cough lasting more than three weeks in a
+                current or former smoker, which is referred in line with the
+                lung cancer referral guidance. A pregnant or breastfeeding
+                patient who is penicillin-allergic has no arm under this PGD
+                and is referred the same day.
               </p>
             </div>
           </div>

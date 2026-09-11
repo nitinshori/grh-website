@@ -2,38 +2,19 @@
 
 import React from 'react';
 import { TextArea } from '../../shared/components/FormInputs';
-import { StepWrapper } from '../../shared/components/StepWrapper';
 
 interface CurrentMedicationsStepProps {
   medications: string;
   onChange: (medications: string) => void;
-  currentStep: number;
-  totalSteps: number;
-  onNext: () => void;
-  onPrev: () => void;
 }
 
 export const CurrentMedicationsStep: React.FC<CurrentMedicationsStepProps> = ({
   medications,
   onChange,
-  currentStep,
-  totalSteps,
-  onNext,
-  onPrev,
 }) => {
-  const validationError = !medications.trim() ? 'Current medications information is required' : null;
 
   return (
-    <StepWrapper
-      title="Current Medications"
-      description="Review all medications patient is currently taking"
-      currentStep={currentStep}
-      totalSteps={totalSteps}
-      onNext={onNext}
-      onPrev={onPrev}
-      canProceed={!validationError}
-      validationError={validationError}
-    >
+    <>
       <div className="space-y-6">
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <h3 className="font-semibold text-blue-900 mb-3">Medication Review</h3>
@@ -74,6 +55,6 @@ export const CurrentMedicationsStep: React.FC<CurrentMedicationsStepProps> = ({
           </div>
         </div>
       </div>
-    </StepWrapper>
+    </>
   );
 };

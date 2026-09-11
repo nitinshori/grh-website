@@ -17,10 +17,22 @@ interface STISummaryReportProps {
   alerts: ClinicalAlert[];
 }
 
+const PGD_NAME = "the Treatment of Chlamydia (doxycycline or azithromycin)";
+
+const REFERRED_LABELS: Record<string, string> = {
+  "sexual-health": "Sexual health service (same day)",
+  gp: "GP (same day)",
+  safeguarding: "Local safeguarding pathway",
+  other: "Other",
+};
+
 export function STISummaryReport({ state, alerts }: STISummaryReportProps) {
   const windowPeriods = getWindowPeriodInfo();
   const treatmentPlan = getTreatmentPlan(state);
   const isMinor = state.patient.age !== null && state.patient.age >= 13 && state.patient.age <= 15;
+  // A stop anywhere means nothing was supplied under this PGD: the treatment
+  // rows and the "no exclusion criteria applied" declaration must not print.
+  const hasStop = alerts.some((a) => a.severity === "stop");
 
   return (
     <div className="bg-white p-8 rounded-lg space-y-6 print:p-4">
@@ -42,11 +54,17 @@ export function STISummaryReport({ state, alerts }: STISummaryReportProps) {
         <Row label="DOB" value={state.patient.dateOfBirth} />
         <Row label="Age" value={state.patient.age ? `${state.patient.age} years` : "—"} />
         <Row label="Gender Identity" value={state.patient.genderIdentity || "—"} />
+        <Row label="Address" value={state.patient.address || "Not recorded"} />
         <Row label="NHS Number" value={state.patient.nhsNumber || "—"} />
         <Row label="GP" value={state.patient.gpName ? `${state.patient.gpName}, ${state.patient.gpPractice}` : "—"} />
         {isMinor && (
           <>
-            <Row label="Fraser competence" value={state.patient.fraserCompetent ? "Assessed and recorded" : "Not established"} />
+            <Row label="Fraser competence" value={state.patient.fraserCompetent ? "All five criteria recorded" : "Not established"} />
+            <Row label="Understands the advice" value={state.patient.fraserUnderstandsAdvice ? "Yes" : "No"} />
+            <Row label="Cannot be persuaded to inform parents" value={state.patient.fraserCannotBePersuaded ? "Yes" : "No"} />
+            <Row label="Likely to continue intercourse regardless" value={state.patient.fraserLikelyToContinue ? "Yes" : "No"} />
+            <Row label="Health likely to suffer without treatment" value={state.patient.fraserHealthWouldSuffer ? "Yes" : "No"} />
+            <Row label="Best interests require treatment" value={state.patient.fraserBestInterests ? "Yes" : "No"} />
             <Row
               label="Safeguarding assessment"
               value={
@@ -183,10 +201,23 @@ export function STISummaryReport({ state, alerts }: STISummaryReportProps) {
         </div>
       </div>
 
+      {/* Outcome when excluded */}
+      {hasStop && (
+        <div>
+          <SectionHeader>Outcome: Not Supplied</SectionHeader>
+          <Row label="Medicine supplied" value="None. Exclusion criteria met; see clinical notes below." />
+          <Row label="Referred to" value={REFERRED_LABELS[state.exclusionOutcome.referredTo] || "Not recorded"} />
+          <Row label="Safeguarding referral made" value={state.exclusionOutcome.safeguardingReferralMade ? "Yes" : "No"} />
+          <Row label="Advice given and decision reached" value={state.exclusionOutcome.adviceGiven || "Not recorded"} />
+        </div>
+      )}
+
       {/* Treatment supplied under the PGD */}
       <div>
         <SectionHeader>Chlamydia Treatment (PGD)</SectionHeader>
-        {state.treatment.treatUnderPgd ? (
+        {hasStop ? (
+          <p className="text-xs text-gray-500">No medicine supplied under the PGD: exclusion criteria met.</p>
+        ) : state.treatment.treatUnderPgd ? (
           <>
             <Row
               label="Diagnosis"
@@ -217,13 +248,17 @@ export function STISummaryReport({ state, alerts }: STISummaryReportProps) {
             {state.treatment.doxycyclineUnsuitable && (
               <Row label="Doxycycline unsuitable" value={state.treatment.doxycyclineUnsuitableReason || "Yes"} />
             )}
+            <Row label="Current medicines" value={state.treatment.currentMedicines || "Not recorded"} />
+            <Row label="Known allergies" value={state.treatment.knownAllergies || "Not recorded"} />
             {treatmentPlan ? (
               <>
                 <Row label="Medicine supplied" value={treatmentPlan.product} />
+                <Row label="Brand" value={state.treatment.brand || "Not recorded"} />
                 <Row label="Dose and frequency" value={treatmentPlan.dose} />
                 <Row label="Route" value={treatmentPlan.route} />
                 <Row label="Quantity supplied" value={treatmentPlan.quantity} />
                 <Row label="Treatment period" value={treatmentPlan.duration} />
+                <Row label="Supplied under" value={PGD_VERSION_LABEL} />
               </>
             ) : (
               <Row label="Medicine supplied" value="None" />
@@ -291,9 +326,15 @@ export function STISummaryReport({ state, alerts }: STISummaryReportProps) {
               <p>
                 {state.counselling.worseningAdvice ? "✓" : "[ ]"} Seek medical advice if symptoms worsen, do not improve in 3 to 4 weeks, or systemically very unwell
               </p>
+              <p>
+                {state.counselling.retestAdvice ? "✓" : "[ ]"} Retest at 3 months; test of cure at least 3 weeks after treatment where required
+              </p>
               <p>{state.counselling.pilSupplied ? "✓" : "[ ]"} PIL supplied</p>
             </>
           )}
+          <p className="text-gray-600 pt-1">
+            Adverse effects: report suspected adverse effects via the Yellow Card scheme (https://yellowcard.mhra.gov.uk) and inform the GP as appropriate.
+          </p>
         </div>
       </div>
 
@@ -315,15 +356,44 @@ export function STISummaryReport({ state, alerts }: STISummaryReportProps) {
       </div>
 
       {/* Pharmacist Declaration */}
-      <PharmacistDeclaration
-        pgdName="STI Testing"
-        pharmacistName={state.summary.pharmacistName}
-        pharmacistGPhC={state.summary.pharmacistGPhC}
-        pharmacyName={state.summary.pharmacyName}
-      />
+      {hasStop ? (
+        <>
+          <SectionHeader>Pharmacist Declaration</SectionHeader>
+          <p className="text-xs text-gray-600 mb-4">
+            I confirm that this consultation was conducted in accordance with the Patient Group Direction for {PGD_NAME},
+            that exclusion criteria applied, that no medicine was supplied under the PGD, and that the advice given, the
+            decision reached and any referral made are recorded above.
+          </p>
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">Pharmacist name</p>
+              <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{state.summary.pharmacistName || ""}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">GPhC number</p>
+              <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{state.summary.pharmacistGPhC || ""}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">Pharmacy</p>
+              <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{state.summary.pharmacyName || ""}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">Signature</p>
+              <div className="border-b border-gray-300 min-h-[2rem]" />
+            </div>
+          </div>
+        </>
+      ) : (
+        <PharmacistDeclaration
+          pgdName={PGD_NAME}
+          pharmacistName={state.summary.pharmacistName}
+          pharmacistGPhC={state.summary.pharmacistGPhC}
+          pharmacyName={state.summary.pharmacyName}
+        />
+      )}
 
       {/* Footer */}
-      <ReportFooter pgdName="STI Testing" />
+      <ReportFooter pgdName="Chlamydia Treatment" />
     </div>
   );
 }

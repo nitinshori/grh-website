@@ -26,6 +26,59 @@ export function calculateAgeInDays(dob: string): number | null {
   return Math.floor((Date.now() - birth.getTime()) / (1000 * 60 * 60 * 24));
 }
 
+/** Whole calendar days from today to an ISO date (negative when past). Null when blank or invalid. */
+export function daysFromToday(iso: string): number | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  const today = new Date();
+  const a = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  const b = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  return Math.round((a - b) / 86400000);
+}
+
+/** Whole days since a previous dose. Null when blank or invalid. */
+export function daysSince(iso: string | undefined): number | null {
+  if (!iso) return null;
+  const d = daysFromToday(iso);
+  return d === null ? null : -d;
+}
+
+/** Whole months between the date of birth and another ISO date. Null when either is missing or invalid. */
+export function ageInMonthsAt(dob: string, iso: string | undefined): number | null {
+  if (!dob || !iso) return null;
+  const birth = new Date(dob);
+  const at = new Date(iso);
+  if (isNaN(birth.getTime()) || isNaN(at.getTime())) return null;
+  let months = (at.getFullYear() - birth.getFullYear()) * 12 + (at.getMonth() - birth.getMonth());
+  if (at.getDate() < birth.getDate()) months--;
+  return months;
+}
+
+/** True where the travel is to Saudi Arabia, the only destination for which the PGD authorises a repeat dose. */
+export function isSaudiTravel(patient: MeningitisACWYPatientDetails): boolean {
+  return patient.travelReason === 'hajj-umrah' || /saudi/i.test(patient.travelDestination);
+}
+
+/**
+ * An infant who had a Nimenrix dose before 12 months of age and is now 12 to
+ * 23 months is completing the licensed course (booster at 12 months of age,
+ * at least 2 months after the primary dose), not repeating one. The 5 year
+ * repeat rule does not apply.
+ */
+export function isInfantBoosterCandidate(patient: MeningitisACWYPatientDetails): boolean {
+  const ageMonths = calculateAgeInMonths(patient.dateOfBirth);
+  const ageAtPrevious = ageInMonthsAt(patient.dateOfBirth, patient.previousDoseDate);
+  return (
+    patient.previousMenACWYDose &&
+    ageMonths !== null &&
+    ageMonths >= 12 &&
+    ageMonths < 24 &&
+    ageAtPrevious !== null &&
+    ageAtPrevious < 12
+  );
+}
+
 export function getMeningitisACWYClinicalAlerts(
   patient: MeningitisACWYPatientDetails,
   medicalHistory: MeningitisACWYMedicalHistory
@@ -90,9 +143,9 @@ export function getMeningitisACWYClinicalAlerts(
         'For Hajj or Umrah the dose must be given at least 10 days before arrival in Saudi Arabia. Confirm timing.',
     });
   } else {
-    const departure = new Date(patient.departureDate);
-    const today = new Date();
-    const daysUntilTravel = Math.floor((departure.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    // Calendar days, so a departure exactly 10 days ahead is 10, not 9.x
+    // floored to 9 (which used to alarm the pharmacist a day early).
+    const daysUntilTravel = daysFromToday(patient.departureDate) ?? 0;
 
     if (daysUntilTravel < 10 && daysUntilTravel >= 0) {
       alerts.push({
@@ -114,37 +167,46 @@ export function getMeningitisACWYClinicalAlerts(
   }
 
   // Repeat doses: routine boosters are not recommended for most travellers. A repeat is
-  // authorised only where the previous dose was more than 5 years ago and a valid
+  // authorised only where the previous dose was more than 5 years ago AND a valid
   // certificate is required for travel to Saudi Arabia. An infant under 12 months with
-  // a previous dose is completing a course, not repeating one.
-  if (patient.previousMenACWYDose && (ageMonths === null || ageMonths >= 12)) {
+  // a previous dose is completing a course, not repeating one, and so is a 12 to 23
+  // month old whose primary dose was given under 12 months (booster at 12 months).
+  if (patient.previousMenACWYDose && (ageMonths === null || ageMonths >= 12) && !isInfantBoosterCandidate(patient)) {
     if (!patient.previousDoseDate) {
       alerts.push({
-        severity: 'caution',
+        severity: 'stop',
         code: 'PREVIOUS_DOSE_DATE_MISSING',
         message: 'Previous MenACWY dose: date not recorded',
-        detail: 'Record the date of the previous dose. A repeat is authorised only where it was more than 5 years ago and a valid certificate is required.',
+        detail: 'Record the date of the previous dose. A repeat is authorised only where it was more than 5 years ago and a valid certificate is required for travel to Saudi Arabia.',
       });
     } else {
       const previousDose = new Date(patient.previousDoseDate);
       const today = new Date();
       const yearsElapsed = (today.getTime() - previousDose.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
 
-      if (yearsElapsed >= 5) {
-        alerts.push({
-          severity: 'caution',
-          code: 'REPEAT_FOR_CERTIFICATE',
-          message: 'Previous dose more than 5 years ago',
-          detail:
-            'A repeat dose is authorised under this PGD where a valid certificate is required for travel to Saudi Arabia (a conjugate vaccine is accepted within the last 5 years). Record the date of the previous dose and the reason for the repeat.',
-        });
-      } else {
+      if (yearsElapsed < 5) {
         alerts.push({
           severity: 'stop',
           code: 'REPEAT_NOT_AUTHORISED',
           message: 'Previous dose within the last 5 years',
           detail:
             'Routine boosters are not recommended for most travellers, and a repeat is authorised under this PGD only where the previous dose was more than 5 years ago and a valid certificate is required. A conjugate vaccine given within the last 5 years is accepted for Hajj and Umrah. JCVI has not determined boosters for at-risk groups; do not invent an interval, assess individually and refer where there is doubt.',
+        });
+      } else if (!isSaudiTravel(patient)) {
+        alerts.push({
+          severity: 'stop',
+          code: 'REPEAT_NOT_AUTHORISED_DESTINATION',
+          message: 'Previous dose more than 5 years ago, but no Saudi certificate is required',
+          detail:
+            'A repeat dose is authorised under this PGD only where a valid certificate is required for travel to Saudi Arabia. Routine boosters are not recommended for other travellers, and JCVI has not determined boosters for at-risk groups. Do not vaccinate under this PGD; refer where there is doubt.',
+        });
+      } else {
+        alerts.push({
+          severity: 'caution',
+          code: 'REPEAT_FOR_CERTIFICATE',
+          message: 'Previous dose more than 5 years ago: repeat for Saudi certificate',
+          detail:
+            'A repeat dose is authorised under this PGD because a valid certificate is required for travel to Saudi Arabia (a conjugate vaccine is accepted within the last 5 years). Select "Repeat for certificate" as the dose number and record the reason for the repeat.',
         });
       }
     }

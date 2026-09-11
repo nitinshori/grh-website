@@ -3,7 +3,8 @@ import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
 
 // Vaginal Thrush PGD v003 (11 September 2026). Two arms: fluconazole 150 mg
 // capsule and clotrimazole 500 mg vaginal pessary. Non-pregnant women aged 16
-// to 60 (the exclusion row governs; the inclusion row says 16 to 65).
+// to 60 (the exclusion row governs; the inclusion row says 16 to 65, and the
+// tool shows that contradiction to the pharmacist on the patient step).
 
 export function getAllAlerts(state: ThrushConsultationState): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
@@ -60,7 +61,11 @@ export function getAllAlerts(state: ThrushConsultationState): ClinicalAlert[] {
     alerts.push({ severity: "caution", code: "IMIDAZOLE_ALLERGY", message: "Hypersensitivity to clotrimazole or imidazoles: pessary excluded", detail: "Clotrimazole pessary cannot be supplied." });
   }
   if (state.medicalHistory.pregnancy) {
-    alerts.push({ severity: "caution", code: "PREGNANCY", message: "Pregnancy: fluconazole excluded", detail: "Oral fluconazole is contraindicated in pregnancy. Topical antifungal only: the applicator should not be used; advise inserting the pessary with fingers." });
+    // Both arms state the indication as non-pregnant women. The pessary arm's
+    // caution row mentions pregnancy, but the indication and the fluconazole
+    // exclusion govern: a pregnant woman is outside this PGD until the
+    // signatories reissue the pessary arm with pregnancy in its indication.
+    alerts.push({ severity: "stop", code: "PREGNANCY", message: "Pregnancy: outside the PGD indication (non-pregnant women)", detail: "Oral fluconazole is contraindicated in pregnancy, and the PGD indication for both arms is non-pregnant women. Refer to the GP; topical treatment can be prescribed." });
   }
   if (state.medicalHistory.breastfeeding) {
     alerts.push({ severity: "caution", code: "BREASTFEEDING", message: "Breastfeeding: fluconazole excluded", detail: "Relative contraindication due to insufficient data. Clotrimazole pessary may be used." });
@@ -113,8 +118,8 @@ export function getMedicineSelectionError(state: ThrushConsultationState): strin
   const choice = state.medicineSelection.medicineChoice;
   if (!choice) return "Medicine must be selected";
   const h = state.medicalHistory;
+  if (h.pregnancy) return "Pregnancy: outside the PGD indication (non-pregnant women). Refer to the GP.";
   if (choice === "fluconazole-oral") {
-    if (h.pregnancy) return "Pregnancy: oral fluconazole is contraindicated. Select the clotrimazole pessary or refer.";
     if (h.breastfeeding) return "Breastfeeding excludes fluconazole (insufficient data). Select the clotrimazole pessary or refer.";
     if (h.azoleHypersensitivity) return "Hypersensitivity to fluconazole or azoles: fluconazole cannot be supplied.";
     if (state.medications.qtDrugs) return "Concurrent terfenadine, astemizole, cisapride, pimozide, quinidine or erythromycin: fluconazole cannot be supplied.";
@@ -129,16 +134,15 @@ export function getMedicineSelectionError(state: ThrushConsultationState): strin
 }
 
 export function calculateDoseRecommendation(state: ThrushConsultationState): DoseRecommendation | null {
-  const combi = state.medicineSelection.combiPack;
+  // Only the two products the signed PGD names. No cream: the document
+  // contains no clotrimazole 1% cream, so none is presented or recorded.
   if (state.medicineSelection.medicineChoice === "fluconazole-oral") {
     return {
       medicine: "Fluconazole 150mg capsule",
       dose: "150mg",
       frequency: "Single dose",
       duration: "One-off",
-      dosingRegimen: combi
-        ? "Single oral dose of 150 mg, swallowed whole (1 capsule) + clotrimazole 1% external cream (Duo pack)"
-        : "Single oral dose of 150 mg, swallowed whole (1 capsule supplied)",
+      dosingRegimen: "Single oral dose of 150 mg, swallowed whole (1 capsule supplied)",
       reason: "Uncomplicated vulvovaginal candidiasis",
     };
   } else if (state.medicineSelection.medicineChoice === "clotrimazole-pessary") {
@@ -146,12 +150,17 @@ export function calculateDoseRecommendation(state: ThrushConsultationState): Dos
       medicine: "Clotrimazole 500mg vaginal pessary",
       dose: "500mg",
       frequency: "Single dose",
-      duration: combi ? "One-off pessary + cream" : "One-off",
-      dosingRegimen: combi
-        ? "Single 500 mg pessary inserted intravaginally at night (1 pessary) + clotrimazole 1% external cream (Combi pack)"
-        : "Single 500 mg pessary inserted intravaginally at night (1 pessary supplied); treatment completed in one night",
+      duration: "One-off",
+      dosingRegimen: "Single 500 mg pessary inserted intravaginally at night (1 pessary supplied); treatment completed in one night",
       reason: "Uncomplicated vulvovaginal candidiasis",
     };
   }
+  return null;
+}
+
+/** Form, route and quantity as the document's medicine table states them. */
+export function getSupplyDetails(choice: ThrushConsultationState["medicineSelection"]["medicineChoice"]): { form: string; route: string; quantity: string } | null {
+  if (choice === "fluconazole-oral") return { form: "Capsule", route: "Oral, swallowed whole", quantity: "1 capsule (150 mg)" };
+  if (choice === "clotrimazole-pessary") return { form: "Vaginal pessary", route: "Intravaginal insertion at bedtime", quantity: "1 pessary (500 mg)" };
   return null;
 }

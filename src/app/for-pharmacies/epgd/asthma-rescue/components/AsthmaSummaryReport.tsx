@@ -20,8 +20,15 @@ import {
 interface AsthmaSummaryReportProps {
   state: AsthmaConsultationState;
   alerts: ClinicalAlert[];
-  doseRecommendation: DoseRecommendation | null;
+  doseRecommendations: DoseRecommendation[];
 }
+
+const REFERRED_LABELS: Record<string, string> = {
+  "999": "Emergency: 999 or A&E",
+  "urgent-care": "Same-day GP or urgent care",
+  gp: "GP (routine review)",
+  other: "Other",
+};
 
 const EVIDENCE_LABEL: Record<string, string> = {
   "gp-record": "GP record",
@@ -33,13 +40,17 @@ const EVIDENCE_LABEL: Record<string, string> = {
 export function AsthmaSummaryReport({
   state,
   alerts,
-  doseRecommendation,
+  doseRecommendations,
 }: AsthmaSummaryReportProps) {
-  void doseRecommendation;
   const ms = state.medicineSupply;
   const o = state.observations;
   const pred = prednisoloneRecommendation(state);
   const severe = acuteSevereFeatures(state);
+  // A stop anywhere means nothing was supplied under this PGD: the supply
+  // section and the "no exclusion criteria applied" declaration must not
+  // print (adversarial review, 11 Sep 2026).
+  const hasStop = alerts.some((a) => a.severity === "stop");
+  const supplied = !hasStop && doseRecommendations.length > 0;
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6 print:border-0 print:shadow-none print:p-0 text-xs print:text-[11px]">
       {/* Header */}
@@ -63,6 +74,7 @@ export function AsthmaSummaryReport({
           />
           <Row label="Date of Birth" value={state.patient.dateOfBirth} />
           <Row label="Age" value={state.patient.age ? `${state.patient.age} years` : "Not recorded"} />
+          <Row label="Address" value={state.patient.address || "Not recorded"} />
         </div>
         <div>
           <Row label="GP Name" value={state.patient.gpName || "Not recorded"} />
@@ -104,8 +116,12 @@ export function AsthmaSummaryReport({
         value={state.assessment.onPreventer ? `Yes${state.assessment.preventerDetails ? `: ${state.assessment.preventerDetails}` : ""}` : "None recorded"}
       />
       <Row
-        label="Rescue courses in last 12 months"
+        label="Rescue courses needed in last 12 months (any source)"
         value={state.assessment.rescueCoursesLast12Months !== null ? String(state.assessment.rescueCoursesLast12Months) : "Not recorded"}
+      />
+      <Row
+        label="Rescue courses supplied under this PGD in last 12 months"
+        value={state.assessment.pgdRescueCoursesLast12Months !== null ? String(state.assessment.pgdRescueCoursesLast12Months) : "Not recorded"}
       />
       <Row label="Acute exacerbation with bronchospasm" value={state.assessment.acuteExacerbation ? "Yes" : "No"} />
       <Row label="Can use inhaler or willing to use spacer" value={state.assessment.canUseInhalerOrSpacer ? "Yes" : "No"} />
@@ -136,7 +152,8 @@ export function AsthmaSummaryReport({
 
       {/* Medical History */}
       <SectionHeader>Medical History</SectionHeader>
-      <Row label="Asthma documented" value={state.medicalHistory.hasAsthmaRecord ? "Yes" : "No"} />
+      <Row label="Prednisolone exclusions and cautions asked and answered" value={state.medicalHistory.exclusionsAskedAndAnswered ? "Yes" : "Not recorded"} />
+      <Row label="Allergy status confirmed with patient" value={state.redFlags.allergyStatusConfirmed ? "Yes" : "Not recorded"} />
       <Row
         label="Other respiratory conditions"
         value={state.medicalHistory.otherRespiratoryConditions || "None reported"}
@@ -173,8 +190,8 @@ export function AsthmaSummaryReport({
         value={state.redFlags.noExistingDiagnosis ? "Yes: STOP" : "No"}
       />
       <Row
-        label="Never used salbutamol"
-        value={state.redFlags.neverUsedSalbutamolBefore ? "Yes: STOP" : "No"}
+        label="Not used salbutamol before"
+        value={state.redFlags.neverUsedSalbutamolBefore ? "Yes: caution" : "No"}
       />
       <Row
         label="Increasing use"
@@ -189,8 +206,17 @@ export function AsthmaSummaryReport({
         value={state.redFlags.activityLimitation ? "Yes: Refer" : "No"}
       />
 
+      {hasStop && (
+        <>
+          <SectionHeader>Outcome: Not Supplied</SectionHeader>
+          <Row label="Medicine supplied" value="None. Exclusion criteria met; see clinical alerts above." />
+          <Row label="Referred to" value={REFERRED_LABELS[state.exclusionOutcome.referredTo] || "Not recorded"} />
+          <Row label="Advice given and decision reached" value={state.exclusionOutcome.adviceGiven || "Not recorded"} />
+        </>
+      )}
+
       {/* Medicine Supply */}
-      {(ms.salbutamol100mcgPMDI || ms.prednisolone5mg) && (
+      {supplied && (
         <>
           <SectionHeader>Medicine Supply &amp; Dosing</SectionHeader>
           {ms.salbutamol100mcgPMDI && (
@@ -200,6 +226,7 @@ export function AsthmaSummaryReport({
               <Row label="Dose" value={SALBUTAMOL_RECOMMENDATION.dose} />
               <Row label="Frequency" value={SALBUTAMOL_RECOMMENDATION.frequency || ""} />
               <Row label="Quantity" value={SALBUTAMOL_RECOMMENDATION.duration || ""} />
+              <Row label="PIL supplied" value={ms.salbutamolPilSupplied ? "Yes" : "No"} />
             </>
           )}
           {ms.prednisolone5mg && pred && (
@@ -209,6 +236,8 @@ export function AsthmaSummaryReport({
               <Row label="Dose" value={pred.dose} />
               <Row label="How to take" value={pred.frequency || ""} />
               <Row label="Course and quantity" value={`${pred.duration}; ${ms.prednisoloneTablets ?? "?"} tablets supplied`} />
+              <Row label="Tablet count checked against dose" value={ms.tabletCountChecked ? "Yes" : "No"} />
+              <Row label="PIL supplied" value={ms.prednisolonePilSupplied ? "Yes" : "No"} />
             </>
           )}
           <Row label="Supplied under" value={PGD_STRAPLINE} />
@@ -224,7 +253,6 @@ export function AsthmaSummaryReport({
             "Inhaler technique demonstrated, technique sheet given",
             state.counselling.inhalerTechniqueDemonstration,
           ],
-          ["Rinse mouth after use", state.counselling.rinseMouthAfterUse],
           ["Spacer use recommended", state.counselling.spacerUse],
           ["Emergency care if no improvement within 15 to 30 minutes", state.counselling.emergencyIfNoImprovement],
           ["Prednisolone: full course, do not stop abruptly", state.counselling.prednisoloneFullCourse],
@@ -236,9 +264,13 @@ export function AsthmaSummaryReport({
             "Seek urgent care if not resolving",
             state.counselling.seekUrgentCareIfNotResolving,
           ],
-          ["Review action plan and maintenance therapy with GP", state.counselling.reviewActionPlan],
+          ["Review action plan and triggers with GP after recovery", state.counselling.reviewActionPlan],
+          ["Maintenance therapy to be optimised", state.counselling.maintenanceOptimised],
         ]}
       />
+      <p className="text-gray-600 mt-2">
+        Adverse effects: report suspected adverse effects via the Yellow Card scheme (https://yellowcard.mhra.gov.uk) and inform the GP as appropriate.
+      </p>
 
       {/* Clinical Notes */}
       {state.summary.clinicalNotes && (
@@ -251,12 +283,41 @@ export function AsthmaSummaryReport({
       )}
 
       {/* Pharmacist Declaration */}
-      <PharmacistDeclaration
-        pgdName="Asthma Rescue"
-        pharmacistName={state.summary.pharmacistName}
-        pharmacistGPhC={state.summary.pharmacistGPhC}
-        pharmacyName={state.summary.pharmacyName}
-      />
+      {hasStop ? (
+        <>
+          <SectionHeader>Pharmacist Declaration</SectionHeader>
+          <p className="text-xs text-gray-600 mb-4">
+            I confirm that this consultation was conducted in accordance with the Patient Group Direction for Asthma Rescue,
+            that exclusion criteria applied, that no medicine was supplied under the PGD, and that the advice given and the
+            decision reached are recorded above.
+          </p>
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">Pharmacist name</p>
+              <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{state.summary.pharmacistName || ""}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">GPhC number</p>
+              <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{state.summary.pharmacistGPhC || ""}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">Pharmacy</p>
+              <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{state.summary.pharmacyName || ""}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-1">Signature</p>
+              <div className="border-b border-gray-300 min-h-[2rem]" />
+            </div>
+          </div>
+        </>
+      ) : (
+        <PharmacistDeclaration
+          pgdName="Asthma Rescue"
+          pharmacistName={state.summary.pharmacistName}
+          pharmacistGPhC={state.summary.pharmacistGPhC}
+          pharmacyName={state.summary.pharmacyName}
+        />
+      )}
 
       <ReportFooter pgdName="Asthma Rescue" />
     </div>

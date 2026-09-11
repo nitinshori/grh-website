@@ -3,7 +3,11 @@ import type {
   TyphoidConsent,
   TyphoidSummary,
 } from './typhoid-types';
-import { daysUntilDeparture, yearsSincePreviousDose } from './typhoid-clinical-logic';
+import { daysUntilDeparture, yearsSincePreviousDose, isExpired, RENEWAL_WINDOW_YEARS } from './typhoid-clinical-logic';
+
+/** Age from which a Gillick competence assessment is offered. The document
+ *  sets no age; below this the parental route is the only one offered. */
+export const GILLICK_MIN_AGE = 12;
 
 export function validateTyphoidPatientStep(
   patient: TyphoidPatientDetails
@@ -42,8 +46,12 @@ export function validateTyphoidStep(
   if (patient.previousTyphoidDose && !patient.previousDoseDate)
     return 'Record the date of the previous typhoid dose';
   const years = yearsSincePreviousDose(patient.previousDoseDate);
+  if (patient.previousTyphoidDose && years !== null && years < 0)
+    return 'The previous dose date is in the future: check the date';
+  if (patient.previousTyphoidDose && years !== null && years < RENEWAL_WINDOW_YEARS)
+    return 'A dose within the last 3 years that is not yet due for renewal excludes: record the advice given and save as not supplied';
   if (patient.previousTyphoidDose && years !== null && years < 3 && !patient.previousDoseRenewalReason.trim())
-    return 'A dose within the last 3 years excludes unless the traveller is returning to a risk area and the previous dose is due for renewal: record the reason, or refer';
+    return 'Previous dose is within 6 months of its renewal date: record that the traveller is returning to a risk area and why the dose is due for renewal, or save as not supplied and refer';
   return null;
 }
 
@@ -60,6 +68,10 @@ export function validateTyphoidConsentStep(
     if (!patient.consentBasis) return 'Record who gave consent';
     if (under16 && patient.consentBasis === 'self')
       return 'Under 16: consent must come from a person with parental responsibility, or the young person must be assessed as Gillick competent';
+    if (patient.consentBasis === 'gillick' && patient.age !== null && patient.age < GILLICK_MIN_AGE)
+      return `Gillick competence is offered from ${GILLICK_MIN_AGE} years; record consent from a person with parental responsibility`;
+    if (!under16 && patient.consentBasis !== 'self')
+      return 'Aged 16 and over: the patient consents in their own right';
     if (patient.consentBasis === 'parental' && !patient.consentDetail.trim())
       return 'Record the name and relationship of the person with parental responsibility';
     if (patient.consentBasis === 'gillick' && !patient.consentDetail.trim())
@@ -99,6 +111,7 @@ export function validateTyphoidAdministrationStep(
   if (summary.vaccineType === 'other-vi' && !summary.vaccineBrand?.trim()) return 'Record the brand of the Vi polysaccharide vaccine given';
   if (!summary.batchNumber?.trim()) return 'Batch number is required';
   if (!summary.expiryDate) return 'Expiry date is required';
+  if (isExpired(summary.expiryDate)) return 'Vaccine batch has expired: do not administer, quarantine the stock and select an in-date batch';
   if (!summary.administrationSite) return 'Administration site must be selected';
   if (!summary.administrationTime) return 'Administration time is required';
   if (!summary.nextBoosterDue) return 'Record the date the next booster is due';
@@ -113,9 +126,13 @@ export function validateTyphoidPostVaccineStep(data: {
   counselledFoodWater: boolean;
   counselledFeverWarning: boolean;
   observationCompleted: boolean;
+  adverseReaction: boolean;
+  adverseReactionDetails: string;
 }): string | null {
   if (!data.observationCompleted)
     return 'Confirm the 15 minute observation period was completed';
+  if (data.adverseReaction && !data.adverseReactionDetails.trim())
+    return 'Record the adverse reaction and the action taken';
   if (!data.counselledFoodWater)
     return 'Food and water hygiene advice must be given and recorded in every case';
   if (!data.counselledFeverWarning)

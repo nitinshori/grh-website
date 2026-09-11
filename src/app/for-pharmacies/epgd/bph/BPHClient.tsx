@@ -102,6 +102,9 @@ function reducer(state: BPHConsultationState, action: BPHAction): BPHConsultatio
     case "SET_STEP":
       newState.currentStep = action.step;
       break;
+
+    case "RESET":
+      return createInitialConsultationState();
   }
 
   return newState;
@@ -135,22 +138,23 @@ export default function BPHClient() {
     return validateStep(state, state.currentStep);
   }, [state]);
 
+  // A stop anywhere blocks Next and Save & Print on every step, and the last
+  // step's Save applies its own validation (adversarial review, 11 Sep 2026).
   const canProceed = useMemo(() => {
-    if (state.currentStep >= TOTAL_STEPS - 1) return true;
-    if (state.currentStep <= 4 && hardStops) return false;
+    if (hardStops) return false;
     return !validationError;
-  }, [state, validationError, hardStops]);
+  }, [validationError, hardStops]);
 
   // ─── Handlers ───
 
   const handleNext = useCallback(() => {
-    if (!validationError && state.currentStep < TOTAL_STEPS - 1) {
+    if (!validationError && !hardStops && state.currentStep < TOTAL_STEPS - 1) {
       const newCompleted = new Set(completedSteps);
       newCompleted.add(state.currentStep);
       setCompletedSteps(newCompleted);
       dispatch({ type: "SET_STEP", step: state.currentStep + 1 });
     }
-  }, [state.currentStep, validationError, completedSteps]);
+  }, [state.currentStep, validationError, hardStops, completedSteps]);
 
   const handlePrev = useCallback(() => {
     if (state.currentStep > 0) {
@@ -158,11 +162,17 @@ export default function BPHClient() {
     }
   }, [state.currentStep]);
 
+  // Backwards only. Forward always means Next, where the stops are enforced.
   const handleStepClick = useCallback((step: number) => {
-    if (completedSteps.has(step) || step <= state.currentStep) {
+    if (step < state.currentStep) {
       dispatch({ type: "SET_STEP", step });
     }
-  }, [completedSteps, state.currentStep]);
+  }, [state.currentStep]);
+
+  const handleNewConsultation = useCallback(() => {
+    dispatch({ type: "RESET" });
+    setCompletedSteps(new Set());
+  }, []);
 
   // ─── Step content rendering ───
 
@@ -181,16 +191,30 @@ export default function BPHClient() {
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
       },
-      clinicalData: state as unknown as Record<string, unknown>,
+      clinicalData: { ...(state as unknown as Record<string, unknown>), alerts },
       outcome: hardStops ? "not_supplied" : "completed",
+      medicine:
+        !hardStops && state.medicineSupply.tamsulosin400mcgMrOd
+          ? {
+              name: "Tamsulosin",
+              medicine: `Tamsulosin 400 micrograms modified-release capsules${state.medicineSupply.brand ? ` (${state.medicineSupply.brand})` : ""}`,
+              dose: "400 micrograms once daily after food",
+              duration: state.medicineSupply.quantity !== null ? `${state.medicineSupply.quantity} days` : "28 days",
+              quantity: state.medicineSupply.quantity ?? undefined,
+            }
+          : undefined,
       summary: {
         pharmacistName: state.summary.pharmacistName,
         pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacyName: state.summary.pharmacyName,
+        pharmacyAddress: state.summary.pharmacyAddress,
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: state.consent.notifyGp },
     };
-  }, [state, hardStops]);
+  }, [state, hardStops, alerts]);
 
   const renderStep = () => {
     switch (state.currentStep) {
@@ -224,6 +248,16 @@ export default function BPHClient() {
       case 2: // LUTS Assessment
         return (
           <div className="space-y-4">
+            <SelectInput
+              label="Supply type"
+              value={state.medicineSupply.supplyType}
+              onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "supplyType", value: v })}
+              required
+              options={[
+                { value: "initial", label: "Initial supply (4 weeks): IPSS must be 8 or more" },
+                { value: "continuation", label: "Continuation after the 4 to 6 week review: IPSS must have improved by 3 or more" },
+              ]}
+            />
             <NumberInput
               label="IPSS Score (0-35)"
               value={state.lutsAssessment.ipssScore}
@@ -395,11 +429,17 @@ export default function BPHClient() {
               }
               description="Exclusion: risk of intraoperative floppy iris syndrome (IFIS)"
             />
+            <TextInput
+              label="Blood pressure today (record only, e.g. 138/86)"
+              value={state.medicalHistory.bloodPressure}
+              onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "bloodPressure", value: v })}
+              placeholder="mmHg"
+            />
             <Checkbox
               label="Uncontrolled hypertension"
               checked={state.medicalHistory.uncontrolledHypertension}
               onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "uncontrolledHypertension", value: v })}
-              description="Exclusion"
+              description="Exclusion. Record the reading above so the answer has a basis on the record."
             />
             <Checkbox
               label="Neurological disease affecting bladder function: multiple sclerosis, Parkinson's disease, spinal cord disease, diabetic neuropathy"
@@ -772,6 +812,12 @@ export default function BPHClient() {
                 })
               }
             />
+            <Checkbox
+              label="Patient information leaflet supplied with the product"
+              checked={state.counselling.pilSupplied}
+              onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "pilSupplied", value: v })}
+              description="Written information row of PGD v002. Required."
+            />
           </div>
         );
 
@@ -857,7 +903,9 @@ export default function BPHClient() {
         canProceed={canProceed}
         validationError={validationError}
         isBlocked={hardStops}
-       getConsultationData={getConsultationData}>
+        getConsultationData={getConsultationData}
+        onNewConsultation={handleNewConsultation}
+      >
         {renderStep()}
       </StepWrapper>
 

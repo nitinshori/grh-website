@@ -138,9 +138,41 @@ export function validatePneumococcalAdministrationStep(
   if (!summary.doseNumber) return 'Dose number must be specified';
   if (!summary.batchNumber?.trim()) return 'Batch number is required';
   if (!summary.expiryDate) return 'Expiry date is required';
+  {
+    const exp = new Date(summary.expiryDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (!isNaN(exp.getTime()) && exp < today) return 'This batch has expired. Do not use it.';
+  }
   if (!summary.administrationSite) return 'Administration site must be selected';
+  // PCV13 given to a patient in whom PPV23 also follows: the document
+  // specifies "at least 8 weeks after", so the next-due date is recorded and
+  // booked now rather than left to memory.
+  if (patient && history && ppv23FollowsPcv13(summary, patient, history)) {
+    if (!summary.counselledNextDue) return 'Pneumovax 23 follows Prevenar 13 in this patient: record the date it is due (at least 8 weeks from today) and book it';
+    const due = new Date(summary.counselledNextDue);
+    const earliest = new Date();
+    earliest.setHours(0, 0, 0, 0);
+    earliest.setDate(earliest.getDate() + 56);
+    if (isNaN(due.getTime())) return 'Next due date is not a valid date';
+    if (due < earliest) return 'Pneumovax 23 must be at least 8 weeks (56 days) after Prevenar 13: choose a later date';
+  }
   if (!summary.administrationTime) return 'Administration time is required';
   return null;
+}
+
+/** True where Prevenar 13 is being given and the PGD sequence calls for Pneumovax 23 to follow. */
+export function ppv23FollowsPcv13(
+  summary: Partial<PneumococcalSummary>,
+  patient: PneumococcalPatientDetails,
+  history: PneumococcalMedicalHistoryInput
+): boolean {
+  return (
+    summary.vaccineType === 'pcv13' &&
+    (patient.riskCategory === 'asplenia' || patient.riskCategory === 'immunosuppressed') &&
+    !history.previousPPV23 &&
+    !history.previousPCV20
+  );
 }
 
 export function validatePneumococcalPostVaccineStep(data: {

@@ -20,7 +20,7 @@ export interface BVMedicalHistory {
   firstEpisode: boolean;
   recurrentBV: boolean;
   activePelvicInflammation: boolean;
-  planningPregnancy: boolean;
+  exclusionsAskedAndAnswered: boolean; // attestation: every exclusion and caution question was put to the patient
   hypersensitivity: boolean; // metronidazole or nitroimidazoles: exclusion, both arms
   hepaticImpairment: boolean; // caution (oral)
   renalImpairment: boolean; // caution (oral)
@@ -39,9 +39,12 @@ export interface BVMedications {
 
 export type BVMedicineChoice = "" | "metronidazole-400" | "metronidazole-2g" | "metronidazole-gel";
 
+export type BVCourseDays = "" | "5" | "6" | "7";
+
 export interface BVMedicineSelection {
   medicineChoice: BVMedicineChoice;
-  duration: string;
+  courseDays: BVCourseDays; // 400 mg twice daily arm only: 5, 6 or 7 days (10, 12 or 14 tablets)
+  brand: string; // brand or manufacturer of the pack supplied
   abilityConfirmed: boolean; // oral: able to swallow tablets; gel: able to insert gel intravaginally
 }
 
@@ -56,6 +59,12 @@ export interface BVCounselling {
   sexPartnerAdvice: boolean;
   latexAdvice: boolean; // gel may damage latex condoms and diaphragms; alternative contraception during treatment and for 5 days after
   seekAdviceIfNotResolved: boolean; // no resolution within 5 to 7 days of completing treatment, or new symptoms (pelvic pain, fever)
+  pilSupplied: boolean; // PIL supplied with the medication
+}
+
+export interface BVExclusionOutcome {
+  adviceGiven: string; // advice given and decision reached when excluded or declines
+  referredTo: string; // "" | "gp" | "midwife" | "sexual-health" | "other"
 }
 
 export const PGD_VERSION_LABEL =
@@ -70,6 +79,7 @@ export interface BVConsultationState {
   medications: BVMedications;
   medicineSelection: BVMedicineSelection;
   counselling: BVCounselling;
+  exclusionOutcome: BVExclusionOutcome;
   summary: BaseSummary;
   alerts: ClinicalAlert[];
   doseRecommendation: DoseRecommendation | null;
@@ -84,6 +94,7 @@ export type BVAction =
   | { type: "UPDATE_MEDICINE_SELECTION"; field: string; value: any }
   | { type: "UPDATE_COUNSELLING"; field: string; value: any }
   | { type: "UPDATE_SUMMARY"; field: string; value: any }
+  | { type: "UPDATE_EXCLUSION_OUTCOME"; field: keyof BVExclusionOutcome; value: any }
   | { type: "SET_STEP"; step: number }
   | { type: "NEXT_STEP" }
   | { type: "PREV_STEP" }
@@ -98,10 +109,11 @@ export function createInitialConsultationState(): BVConsultationState {
     patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", gpAddress: "", gpPhone: "", gpEmail: "", gpOdsCode: "", nhsNumber: "", address: "", phone: "", email: "" },
     consent: { informedConsentGiven: false, idVerified: false, idType: "", patientAwarePrivateService: false },
     assessment: { thinGrayishDischarge: false, fishyOdour: false, odourWorseSexOrMenses: false, itching: false, soreness: false, dysuria: false, dyspareunia: false, bloodStainedDischarge: false, fever: false, pelvicPain: false },
-    medicalHistory: { femaleConfirmed: false, pregnancy: false, breastfeeding: false, firstEpisode: false, recurrentBV: false, activePelvicInflammation: false, planningPregnancy: false, hypersensitivity: false, hepaticImpairment: false, renalImpairment: false, cnsDiseaseOrBloodDyscrasia: false },
+    medicalHistory: { femaleConfirmed: false, pregnancy: false, breastfeeding: false, firstEpisode: false, recurrentBV: false, activePelvicInflammation: false, exclusionsAskedAndAnswered: false, hypersensitivity: false, hepaticImpairment: false, renalImpairment: false, cnsDiseaseOrBloodDyscrasia: false },
     medications: { warfarin: false, alcohol: false, lithium: false, disulfiram: false, phenytoin: false, otherMedications: "", allergies: "" },
-    medicineSelection: { medicineChoice: "", duration: "5-7 days", abilityConfirmed: false },
-    counselling: { symptomsExplained: false, differentiateThrush: false, noAlcoholAdvice: false, avoidDouching: false, completesCourse: false, notSTI: false, recurrenceAdvice: false, sexPartnerAdvice: false, latexAdvice: false, seekAdviceIfNotResolved: false },
+    medicineSelection: { medicineChoice: "", courseDays: "", brand: "", abilityConfirmed: false },
+    counselling: { symptomsExplained: false, differentiateThrush: false, noAlcoholAdvice: false, avoidDouching: false, completesCourse: false, notSTI: false, recurrenceAdvice: false, sexPartnerAdvice: false, latexAdvice: false, seekAdviceIfNotResolved: false, pilSupplied: false },
+    exclusionOutcome: { adviceGiven: "", referredTo: "" },
     summary: { pharmacistName: "", pharmacistGPhC: "", pharmacyName: "", pharmacyAddress: "", consultationDate: new Date().toISOString().split("T")[0], consultationTime: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }), clinicalNotes: "" },
     alerts: [],
     doseRecommendation: null,

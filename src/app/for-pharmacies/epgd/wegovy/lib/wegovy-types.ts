@@ -4,7 +4,16 @@ import type { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/
 
 // ─── Weight Assessment ───
 
+/** What kind of visit this is. Drives which BMI is gated (the document's
+ *  inclusion is an INITIAL BMI, reapplied only after a break of more than
+ *  2 months) and which doses may be supplied. */
+export type WegovyVisitType = "" | "new" | "continuing" | "restart";
+
 export interface WegovyWeightAssessment {
+  visitType: WegovyVisitType;
+  /** Restart only: more than 2 months since the last dose, so the BMI
+   *  inclusion criteria are reapplied to today's BMI. */
+  breakOverTwoMonths: boolean;
   height: number | null; // cm
   weight: number | null; // kg
   bmi: number | null; // auto-calculated
@@ -56,6 +65,9 @@ export interface WegovyMedicalHistory {
   severeRenal: boolean;
   // Mild to moderate renal impairment. Caution: monitor for dehydration.
   mildModerateRenal: boolean;
+  /** Woman of childbearing potential. The pregnancy questions and the
+   *  contraception counselling item apply only when "yes". */
+  childbearingPotential: "" | "yes" | "no";
   pregnant: boolean;
   breastfeeding: boolean;
   planningPregnancy: boolean;
@@ -113,7 +125,13 @@ export interface WegovyDoseSelection {
   currentDoseStage: "initiation" | "escalation" | "maintenance" | "";
   dose: string; // "0.25mg" | "0.5mg" | "1mg" | "1.7mg" | "2.4mg" | "7.2mg"
   weeksAtCurrentDose: number | null;
+  /** "" not yet answered; "none" new patient or restart; otherwise the dose
+   *  the patient has been on. */
   previousDose: string;
+  /** Months on the maximum tolerated dose, for the 5% rule. */
+  monthsOnMaxToleratedDose: number | null;
+  /** Documented decision on continuation when the 5% rule applies. */
+  continuationDecision: string;
   injectionSite: string;
   pharmacistOverride: boolean;
   overrideReason: string;
@@ -296,6 +314,8 @@ gpEmail: "",
       patientAwarePrivateService: false,
     },
     weightAssessment: {
+      visitType: "",
+      breakOverTwoMonths: false,
       height: null,
       weight: null,
       bmi: null,
@@ -322,6 +342,7 @@ gpEmail: "",
       severeHepatic: false,
       severeRenal: false,
       mildModerateRenal: false,
+      childbearingPotential: "",
       pregnant: false,
       breastfeeding: false,
       planningPregnancy: false,
@@ -360,6 +381,8 @@ gpEmail: "",
       dose: "",
       weeksAtCurrentDose: null,
       previousDose: "",
+      monthsOnMaxToleratedDose: null,
+      continuationDecision: "",
       injectionSite: "",
       pharmacistOverride: false,
       overrideReason: "",

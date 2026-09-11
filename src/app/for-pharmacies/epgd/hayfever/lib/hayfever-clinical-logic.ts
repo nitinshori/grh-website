@@ -37,32 +37,49 @@ export function getAllAlerts(state: HayfeverConsultationState): ClinicalAlert[] 
     });
   }
 
+  // Co-existing asthma: the label has always said this is a reason to
+  // refer (Medical Director's ruling, see calculateDoseRecommendation) but
+  // nothing enforced it (adversarial review, 11 Sep 2026). Red flag: the
+  // record shows the referral advice, and the pharmacist must act on it.
+  if (state.medicalHistory.asthmaOrLrti) {
+    alerts.push({
+      severity: "red-flag",
+      code: "ASTHMA_REFER",
+      message: "Co-existing asthma or lower respiratory tract infection: refer for GP review",
+      detail:
+        "Hay fever with asthma is a reason to refer, not to treat here. This PGD does not authorise montelukast or any asthma treatment; the asthma needs reviewing by the GP. Record the referral and the advice given.",
+    });
+  }
+
+  // Pregnancy and breastfeeding are fexofenadine-arm exclusions in the
+  // document; the Dymista arm does not list them. Recent nasal surgery is a
+  // Dymista-arm exclusion. Each stops its own arm and is a caution otherwise.
   if (state.contraindications.pregnant) {
     alerts.push({
-      severity: "stop",
+      severity: fexofenadineSelected(state) ? "stop" : "caution",
       code: "PREGNANCY",
       message: "Patient is pregnant",
       detail:
-        "Pregnancy is an exclusion for fexofenadine under this PGD. Advise on alternative treatment options; inform or refer to the GP as appropriate.",
+        "Exclusion for fexofenadine under this PGD: do not supply fexofenadine. Dymista is not excluded by the document in pregnancy; use clinical judgement and the SPC. Advise on alternative treatment options; inform or refer to the GP as appropriate.",
     });
   }
 
   if (state.contraindications.breastfeeding) {
     alerts.push({
-      severity: "stop",
+      severity: fexofenadineSelected(state) ? "stop" : "caution",
       code: "BREASTFEEDING",
       message: "Patient is breastfeeding",
       detail:
-        "Breastfeeding is an exclusion for fexofenadine under this PGD. Advise on alternative treatment options; inform or refer to the GP as appropriate.",
+        "Exclusion for fexofenadine under this PGD: do not supply fexofenadine. Dymista is not excluded by the document in breastfeeding; use clinical judgement and the SPC. Advise on alternative treatment options; inform or refer to the GP as appropriate.",
     });
   }
 
   if (state.medicalHistory.recentNasalSurgery) {
     alerts.push({
-      severity: "stop",
+      severity: dymistaSelected(state) ? "stop" : "caution",
       code: "NASAL_SURGERY",
       message: "Recent nasal surgery or trauma",
-      detail: "Exclusion for Dymista nasal spray. Do not supply Dymista.",
+      detail: "Exclusion for Dymista nasal spray: do not supply Dymista. Fexofenadine may still be considered.",
     });
   }
 
@@ -153,12 +170,7 @@ export function getAllAlerts(state: HayfeverConsultationState): ClinicalAlert[] 
 
 /** Stops that apply whatever medicine is chosen (or before one is chosen). */
 function hasGeneralHardStops(state: HayfeverConsultationState): boolean {
-  return (
-    isUnder12(state) ||
-    state.contraindications.pregnant ||
-    state.contraindications.breastfeeding ||
-    state.medicalHistory.recentNasalSurgery
-  );
+  return isUnder12(state);
 }
 
 /** Arm-specific exclusions, applied once a medicine has been selected. */
@@ -167,7 +179,9 @@ export function hasMedicineHardStops(state: HayfeverConsultationState): boolean 
     if (
       state.contraindications.hypersensitivityFexofenadine ||
       state.medicalHistory.severeHepaticImpairment ||
-      state.medicalHistory.renalImpairment
+      state.medicalHistory.renalImpairment ||
+      state.contraindications.pregnant ||
+      state.contraindications.breastfeeding
     ) {
       return true;
     }
@@ -205,7 +219,7 @@ export function calculateDoseRecommendation(
       medicine: `Fexofenadine 120 mg tablets, ${brand}`,
       dose: "120 mg once daily, oral administration with water before food",
       frequency: "Once daily",
-      duration: "Up to 30 tablets (1 month supply). As required for symptom control, typically seasonal use.",
+      duration: `${state.medicineSupply.fexofenadineQuantity ?? "?"} tablets supplied (document maximum 30, 1 month). As required for symptom control, typically seasonal use.`,
       reason: "Symptomatic relief of allergic rhinitis, including seasonal hay fever, in adults and adolescents aged 12 years and over",
     },
     dymista: {
@@ -213,7 +227,7 @@ export function calculateDoseRecommendation(
         "Dymista nasal spray, suspension: azelastine hydrochloride 137 micrograms and fluticasone propionate 50 micrograms per actuation, 23 g bottle delivering 120 actuations (Viatris)",
       dose: "One spray in each nostril twice daily (morning and evening), intranasal",
       frequency: "Twice daily",
-      duration: "One bottle (23 g), approx. 120 sprays. Use as required; assess effectiveness after 2 to 4 weeks.",
+      duration: `${state.medicineSupply.dymistaBottles ?? "?"} bottle (23 g, approx. 120 sprays) supplied. Use as required; assess effectiveness after 2 to 4 weeks.`,
       reason: "Moderate to severe seasonal or perennial allergic rhinitis where monotherapy with either intranasal antihistamine or corticosteroid is not sufficient",
     },
     // Montelukast is deliberately absent. Nitin's decision, 8 September 2026:
@@ -234,7 +248,7 @@ export function calculateDoseRecommendation(
       medicine: `Fexofenadine 120 mg tablets (${brand}) + Dymista nasal spray (azelastine 137 micrograms / fluticasone propionate 50 micrograms per actuation, 23 g, 120 actuations)`,
       dose: "Fexofenadine 120 mg once daily with water before food + Dymista one spray in each nostril twice daily (morning and evening)",
       frequency: "Fexofenadine once daily; Dymista twice daily",
-      duration: "Up to 30 fexofenadine tablets (1 month supply) + one Dymista bottle (23 g, approx. 120 sprays). Assess Dymista effectiveness after 2 to 4 weeks.",
+      duration: `${state.medicineSupply.fexofenadineQuantity ?? "?"} fexofenadine tablets (document maximum 30) + ${state.medicineSupply.dymistaBottles ?? "?"} Dymista bottle (23 g, approx. 120 sprays). Assess Dymista effectiveness after 2 to 4 weeks.`,
       reason: "Moderate to severe symptoms requiring dual therapy (oral antihistamine plus combination nasal spray)",
     },
   };

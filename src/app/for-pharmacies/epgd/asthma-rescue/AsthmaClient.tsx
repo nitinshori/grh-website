@@ -15,9 +15,10 @@ import { STEP_LABELS, TOTAL_STEPS, createInitialConsultationState, PGD_STRAPLINE
 import {
   getAllAlerts,
   hasHardStops,
-  calculateDoseRecommendation,
+  calculateDoseRecommendations,
   acuteSevereFeatures,
   prednisoloneTabletCount,
+  prednisoloneRecommendation,
   SALBUTAMOL_RECOMMENDATION,
 } from "./lib/asthma-clinical-logic";
 import { validateStep } from "./lib/asthma-validation";
@@ -101,9 +102,16 @@ function reducer(state: AsthmaConsultationState, action: AsthmaAction): AsthmaCo
       newState.summary = { ...newState.summary, [action.field]: action.value };
       break;
 
+    case "UPDATE_EXCLUSION_OUTCOME":
+      newState.exclusionOutcome = { ...newState.exclusionOutcome, [action.field]: action.value };
+      break;
+
     case "SET_STEP":
       newState.currentStep = action.step;
       break;
+
+    case "RESET":
+      return createInitialConsultationState();
   }
 
   return newState;
@@ -131,28 +139,34 @@ export default function AsthmaClient() {
 
   const alerts = useMemo(() => getAllAlerts(state), [state]);
   const hardStops = useMemo(() => hasHardStops(state), [state]);
-  const doseRecommendation = useMemo(() => calculateDoseRecommendation(state), [state]);
+  const doseRecommendations = useMemo(() => calculateDoseRecommendations(state), [state]);
 
   const validationError = useMemo(() => {
     return validateStep(state, state.currentStep);
   }, [state]);
 
+  // A stop anywhere disables Next (and Save & Print) everywhere. Stops used
+  // to be enforced only up to step 5 (adversarial review, 11 Sep 2026).
   const canProceed = useMemo(() => {
-    if (state.currentStep >= TOTAL_STEPS - 1) return true;
-    if (state.currentStep <= 5 && hardStops) return false;
+    if (hardStops) return false;
     return !validationError;
-  }, [state, validationError, hardStops]);
+  }, [validationError, hardStops]);
 
   // ─── Handlers ───
 
   const handleNext = useCallback(() => {
-    if (!validationError && state.currentStep < TOTAL_STEPS - 1) {
+    if (!validationError && !hardStops && state.currentStep < TOTAL_STEPS - 1) {
       const newCompleted = new Set(completedSteps);
       newCompleted.add(state.currentStep);
       setCompletedSteps(newCompleted);
       dispatch({ type: "SET_STEP", step: state.currentStep + 1 });
     }
-  }, [state.currentStep, validationError, completedSteps]);
+  }, [state.currentStep, validationError, hardStops, completedSteps]);
+
+  const handleNewConsultation = useCallback(() => {
+    dispatch({ type: "RESET" });
+    setCompletedSteps(new Set());
+  }, []);
 
   const handlePrev = useCallback(() => {
     if (state.currentStep > 0) {
@@ -160,11 +174,13 @@ export default function AsthmaClient() {
     }
   }, [state.currentStep]);
 
+  // Backwards only: going forward always means pressing Next, where the
+  // stops and validators are enforced.
   const handleStepClick = useCallback((step: number) => {
-    if (completedSteps.has(step) || step <= state.currentStep) {
+    if (step < state.currentStep) {
       dispatch({ type: "SET_STEP", step });
     }
-  }, [completedSteps, state.currentStep]);
+  }, [state.currentStep]);
 
   // ─── Step content rendering ───
 
@@ -177,7 +193,7 @@ export default function AsthmaClient() {
             onChange={(field, value) =>
               dispatch({ type: "UPDATE_PATIENT", field: field as keyof AsthmaPatientDetails, value })
             }
-            requireAdult={false}
+            requireAdult
           />
         );
 
@@ -222,7 +238,7 @@ export default function AsthmaClient() {
               required
             />
             <Checkbox
-              label="Confirm patient normally uses SABA"
+              label="Patient normally uses a SABA reliever"
               checked={state.assessment.normallyUsesSABA}
               onChange={(v) =>
                 dispatch({
@@ -231,7 +247,7 @@ export default function AsthmaClient() {
                   value: v,
                 })
               }
-              description="Patient must routinely use short-acting beta-agonist inhaler"
+              description="For information only: the PGD's inclusion is a documented diagnosis plus current preventer therapy, not SABA use"
             />
             <TextInput
               label="Current SABA medication (optional)"
@@ -263,14 +279,25 @@ export default function AsthmaClient() {
               placeholder="e.g. beclometasone 200mcg two puffs twice daily; or none"
             />
             <NumberInput
-              label="Rescue courses in the last 12 months"
+              label="Rescue courses needed in the last 12 months (any source, including GP)"
               value={state.assessment.rescueCoursesLast12Months}
               onChange={(v) =>
                 dispatch({ type: "UPDATE_ASSESSMENT", field: "rescueCoursesLast12Months", value: v })
               }
               min={0}
               max={20}
-              unit="(no more than one rescue course in 12 months is supplied under this PGD; more than one: refer to GP)"
+              unit="(more than one, that is 2 or more: refer to the GP for review, do not supply)"
+              required
+            />
+            <NumberInput
+              label="Rescue courses supplied under this PGD in the last 12 months"
+              value={state.assessment.pgdRescueCoursesLast12Months}
+              onChange={(v) =>
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "pgdRescueCoursesLast12Months", value: v })
+              }
+              min={0}
+              max={20}
+              unit="(no more than one rescue course in 12 months is supplied under this PGD: 1 or more means do not supply)"
               required
             />
             <Checkbox
@@ -364,17 +391,6 @@ export default function AsthmaClient() {
       case 3: // Medical History
         return (
           <div className="space-y-4">
-            <Checkbox
-              label="Asthma documented in GP records"
-              checked={state.medicalHistory.hasAsthmaRecord}
-              onChange={(v) =>
-                dispatch({
-                  type: "UPDATE_MEDICAL_HISTORY",
-                  field: "hasAsthmaRecord",
-                  value: v,
-                })
-              }
-            />
             <TextInput
               label="Other respiratory conditions (optional)"
               value={state.medicalHistory.otherRespiratoryConditions}
@@ -442,6 +458,15 @@ export default function AsthmaClient() {
                 <Checkbox label="Infection" checked={state.medicalHistory.infection} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "infection", value: v })} description="Corticosteroids can mask symptoms; ensure appropriate investigation before use" />
               </div>
             </div>
+            <div className="pt-2 border-t border-gray-200">
+              <Checkbox
+                label="The prednisolone exclusions and every caution on this step were asked and answered by the patient"
+                checked={state.medicalHistory.exclusionsAskedAndAnswered}
+                onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "exclusionsAskedAndAnswered", value: v })}
+                description="An unticked box means the patient answered no, not that the question was skipped"
+                required
+              />
+            </div>
           </div>
         );
 
@@ -459,13 +484,13 @@ export default function AsthmaClient() {
               </p>
             </div>
             <div className="grid sm:grid-cols-3 gap-4">
-              <NumberInput label="SpO2 on air" value={o.spo2} onChange={(v) => dispatch({ type: "UPDATE_OBSERVATIONS", field: "spo2", value: v })} min={50} max={100} unit="% (below 92: severe)" required />
-              <NumberInput label="Respiratory rate" value={o.respiratoryRate} onChange={(v) => dispatch({ type: "UPDATE_OBSERVATIONS", field: "respiratoryRate", value: v })} min={4} max={80} unit="/min (25 or more: severe)" required />
-              <NumberInput label="Heart rate" value={o.heartRate} onChange={(v) => dispatch({ type: "UPDATE_OBSERVATIONS", field: "heartRate", value: v })} min={20} max={250} unit="/min (110 or more: severe)" required />
+              <NumberInput label="SpO2 on air" value={o.spo2} onChange={(v) => dispatch({ type: "UPDATE_OBSERVATIONS", field: "spo2", value: v === null ? null : Math.round(v) })} min={50} max={100} unit="% (below 92: severe; whole number 50 to 100)" required />
+              <NumberInput label="Respiratory rate" value={o.respiratoryRate} onChange={(v) => dispatch({ type: "UPDATE_OBSERVATIONS", field: "respiratoryRate", value: v === null ? null : Math.round(v) })} min={4} max={60} unit="/min (25 or more: severe; whole number 4 to 60)" required />
+              <NumberInput label="Heart rate" value={o.heartRate} onChange={(v) => dispatch({ type: "UPDATE_OBSERVATIONS", field: "heartRate", value: v === null ? null : Math.round(v) })} min={30} max={220} unit="/min (110 or more: severe; whole number 30 to 220)" required />
             </div>
             <Checkbox label="Peak flow meter available: PEF measured" checked={o.pefMeasured} onChange={(v) => dispatch({ type: "UPDATE_OBSERVATIONS", field: "pefMeasured", value: v })} description="Where a peak flow meter is available, record PEF" />
             {o.pefMeasured && (
-              <NumberInput label="PEF as % of best or predicted" value={o.pefPercentBest} onChange={(v) => dispatch({ type: "UPDATE_OBSERVATIONS", field: "pefPercentBest", value: v })} min={0} max={150} unit="% (33 to 50: acute severe; below 33: life-threatening; over 50 required for prednisolone)" required />
+              <NumberInput label="PEF as % of best or predicted" value={o.pefPercentBest} onChange={(v) => dispatch({ type: "UPDATE_OBSERVATIONS", field: "pefPercentBest", value: v === null ? null : Math.round(v) })} min={5} max={150} unit="% (33 to 50: acute severe; below 33: life-threatening; over 50 required for prednisolone)" required />
             )}
             <Checkbox label="Able to complete sentences in one breath" checked={o.canCompleteSentences} onChange={(v) => dispatch({ type: "UPDATE_OBSERVATIONS", field: "canCompleteSentences", value: v })} description="Unable to complete sentences is acute severe asthma: do not supply" required />
             <p className="text-sm font-medium text-navy-900 pt-2">Life-threatening features</p>
@@ -494,6 +519,12 @@ export default function AsthmaClient() {
               description="Exclusion for the prednisolone arm"
             />
             <Checkbox
+              label="Allergy status confirmed with the patient (salbutamol and other beta-2 agonists; prednisolone and other corticosteroids)"
+              checked={state.redFlags.allergyStatusConfirmed}
+              onChange={(v) => dispatch({ type: "UPDATE_RED_FLAGS", field: "allergyStatusConfirmed", value: v })}
+              required
+            />
+            <Checkbox
               label="No documented asthma diagnosis (first presentation suggestive of asthma)"
               checked={state.redFlags.noExistingDiagnosis}
               onChange={(v) =>
@@ -506,7 +537,7 @@ export default function AsthmaClient() {
               description="Refer for assessment. Do not supply."
             />
             <Checkbox
-              label="Never used salbutamol before"
+              label="Not used salbutamol before"
               checked={state.redFlags.neverUsedSalbutamolBefore}
               onChange={(v) =>
                 dispatch({
@@ -515,7 +546,7 @@ export default function AsthmaClient() {
                   value: v,
                 })
               }
-              description="Patient has no history of SABA use"
+              description="Caution, not an exclusion: demonstrate technique and recommend a spacer"
             />
             <Checkbox
               label="Increasing use trend"
@@ -618,6 +649,12 @@ export default function AsthmaClient() {
                     }
                     description="Use a spacer device in less experienced patients to optimise drug delivery"
                   />
+                  <Checkbox
+                    label="Patient information leaflet supplied with the salbutamol inhaler"
+                    checked={ms.salbutamolPilSupplied}
+                    onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "salbutamolPilSupplied", value: v })}
+                    required
+                  />
                 </div>
               )}
             </div>
@@ -674,6 +711,18 @@ export default function AsthmaClient() {
                     onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "prednisoloneBrand", value: v })}
                     placeholder="Manufacturer or brand"
                   />
+                  <Checkbox
+                    label={`Tablet count checked against the dose before supply${tablets !== null ? ` (${ms.prednisoloneDoseMg}mg daily is ${parseInt(ms.prednisoloneDoseMg, 10) / 5} tablets a day; ${tablets} tablets for ${ms.prednisoloneDays} days)` : ""}`}
+                    checked={ms.tabletCountChecked}
+                    onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "tabletCountChecked", value: v })}
+                    required
+                  />
+                  <Checkbox
+                    label="Patient information leaflet supplied with the prednisolone tablets"
+                    checked={ms.prednisolonePilSupplied}
+                    onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "prednisolonePilSupplied", value: v })}
+                    required
+                  />
                 </div>
               )}
             </div>
@@ -709,18 +758,6 @@ export default function AsthmaClient() {
               description="If using an MDI without a spacer, coordinate inhalation with actuation"
             />
             <Checkbox
-              label="Rinse mouth after use"
-              checked={state.counselling.rinseMouthAfterUse}
-              onChange={(v) =>
-                dispatch({
-                  type: "UPDATE_COUNSELLING",
-                  field: "rinseMouthAfterUse",
-                  value: v,
-                })
-              }
-              description="Reduces risk of oral thrush and sore throat"
-            />
-            <Checkbox
               label="Spacer use discussed"
               checked={state.counselling.spacerUse}
               onChange={(v) =>
@@ -731,6 +768,7 @@ export default function AsthmaClient() {
                 })
               }
               description="Spacer recommended if available; improves deposition"
+              required={state.medicineSupply.salbutamol100mcgPMDI}
             />
             <Checkbox
               label="If symptoms do not improve within 15 to 30 minutes of salbutamol use, seek emergency medical attention"
@@ -756,11 +794,13 @@ export default function AsthmaClient() {
                   label="If diabetic, monitor blood glucose more frequently as prednisolone may raise levels; inform your GP"
                   checked={state.counselling.prednisoloneDiabetes}
                   onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "prednisoloneDiabetes", value: v })}
+                  required
                 />
                 <Checkbox
                   label="If taking other medications, inform your healthcare provider of steroid use"
                   checked={state.counselling.prednisoloneOtherMedicines}
                   onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "prednisoloneOtherMedicines", value: v })}
+                  required
                 />
               </>
             )}
@@ -783,10 +823,20 @@ export default function AsthmaClient() {
               description="Patient advised when to seek emergency care (persistent symptoms despite reliever)"
             />
             <Checkbox
-              label="Review your asthma action plan and triggers with your GP after recovery; ensure maintenance therapy is optimised"
+              label="Review your asthma action plan and triggers with your GP after recovery"
               checked={state.counselling.reviewActionPlan}
               onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "reviewActionPlan", value: v })}
+              required
             />
+            <Checkbox
+              label="Ensure your asthma maintenance therapy is optimised to prevent future exacerbations"
+              checked={state.counselling.maintenanceOptimised}
+              onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "maintenanceOptimised", value: v })}
+              required
+            />
+            <p className="text-xs text-gray-500">
+              Report suspected adverse effects via the Yellow Card scheme (https://yellowcard.mhra.gov.uk) and inform the GP as appropriate.
+            </p>
           </div>
         );
 
@@ -873,17 +923,27 @@ export default function AsthmaClient() {
     }
   };
 
-  // ─── Print report ───
-
-  const handlePrint = useCallback(() => {
-    window.print();
-  }, []);
-
-  // ─── Main render ───
-
-
   // ─── Consultation Record Data (for saving to database) ───
+  // Returns a record whether or not a medicine was chosen, so an excluded
+  // patient can be saved as not supplied or referred from any step.
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    const ms = state.medicineSupply;
+    const supplied = !hardStops && (ms.salbutamol100mcgPMDI || ms.prednisolone5mg);
+    const pred = prednisoloneRecommendation(state);
+    const names: string[] = [];
+    const doses: string[] = [];
+    const quantities: string[] = [];
+    if (supplied && ms.salbutamol100mcgPMDI) {
+      names.push("Salbutamol 100mcg MDI" + (ms.salbutamolBrand ? ` (${ms.salbutamolBrand})` : ""));
+      doses.push(SALBUTAMOL_RECOMMENDATION.dose);
+      quantities.push("1 inhaler (200 doses)");
+    }
+    if (supplied && ms.prednisolone5mg && pred) {
+      names.push("Prednisolone 5mg tablets" + (ms.prednisoloneBrand ? ` (${ms.prednisoloneBrand})` : ""));
+      doses.push(pred.dose);
+      quantities.push(`${ms.prednisoloneTablets ?? "?"} tablets`);
+    }
+    const referred = hardStops && state.exclusionOutcome.referredTo !== "";
     return {
       patient: {
         firstName: state.patient.firstName,
@@ -895,17 +955,64 @@ export default function AsthmaClient() {
         address: state.patient.address,
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
+        gpAddress: state.patient.gpAddress,
+        gpPhone: state.patient.gpPhone,
+        gpEmail: state.patient.gpEmail,
+        gpOdsCode: state.patient.gpOdsCode,
       },
-      clinicalData: { ...(state as unknown as Record<string, unknown>), pgdVersion: PGD_STRAPLINE },
-      outcome: hardStops ? "not_supplied" : "completed",
+      clinicalData: { ...(state as unknown as Record<string, unknown>), pgdVersion: PGD_STRAPLINE, alerts },
+      outcome: hardStops ? (referred ? "referred" : "not_supplied") : "completed",
+      medicine: supplied
+        ? {
+            name: names.join(" + "),
+            dose: doses.join("; "),
+            duration: ms.prednisolone5mg && ms.prednisoloneDays ? `${ms.prednisoloneDays} days` : "As required during the exacerbation",
+            quantity: quantities.join("; "),
+          }
+        : undefined,
       summary: {
-        pharmacistName: state.summary.pharmacistName,
-        pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacistName: state.summary.pharmacistName || __pharmProfile?.name || "",
+        pharmacistGPhC: state.summary.pharmacistGPhC || __pharmProfile?.gphcNumber || "",
+        pharmacyName: state.summary.pharmacyName,
+        pharmacyAddress: state.summary.pharmacyAddress,
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: state.consent.notifyGp },
     };
-  }, [state, hardStops]);
+  }, [state, hardStops, alerts, __pharmProfile]);
+
+  // Advice given and decision reached for an excluded patient (PGD v005:
+  // Actions if patient is excluded or declines treatment). Shown on any step
+  // where a stop is present, alongside the Save as not supplied button.
+  const exclusionOutcomeBlock = hardStops ? (
+    <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-3 print:hidden">
+      <p className="text-sm font-semibold text-red-800">
+        Patient excluded: do not supply. Record the advice given and the decision reached, then use Save as not supplied.
+      </p>
+      <SelectInput
+        label="Referred to"
+        value={state.exclusionOutcome.referredTo}
+        onChange={(v) => dispatch({ type: "UPDATE_EXCLUSION_OUTCOME", field: "referredTo", value: v })}
+        options={[
+          { value: "999", label: "Emergency: 999 or A&E" },
+          { value: "urgent-care", label: "Same-day GP or urgent care" },
+          { value: "gp", label: "GP (routine review)" },
+          { value: "other", label: "Other (state in advice given)" },
+        ]}
+        required
+      />
+      <TextArea
+        label="Advice given and decision reached"
+        value={state.exclusionOutcome.adviceGiven}
+        onChange={(v) => dispatch({ type: "UPDATE_EXCLUSION_OUTCOME", field: "adviceGiven", value: v })}
+        placeholder="Observations at referral, alternative treatment options advised, who the patient was referred to, whether the GP was informed"
+        rows={3}
+        required
+      />
+    </div>
+  ) : null;
 
   if (state.currentStep === TOTAL_STEPS - 1) {
     return (
@@ -917,21 +1024,25 @@ export default function AsthmaClient() {
           completedSteps={completedSteps}
           onStepClick={handleStepClick}
         />
+        {alerts.length > 0 && <AlertBanner alerts={alerts} />}
+        {exclusionOutcomeBlock}
         <StepWrapper
           currentStep={state.currentStep}
           totalSteps={TOTAL_STEPS}
           title={STEP_LABELS[state.currentStep]}
           onNext={handleNext}
           onPrev={handlePrev}
-          canProceed={true}
-          validationError={null}
-            getConsultationData={getConsultationData}
+          canProceed={canProceed}
+          validationError={validationError}
+          isBlocked={hardStops}
+          getConsultationData={getConsultationData}
+          onNewConsultation={handleNewConsultation}
         >
           <AsthmaSummaryReport
-          state={state}
-          alerts={alerts}
-          doseRecommendation={doseRecommendation}
-        />
+            state={state}
+            alerts={alerts}
+            doseRecommendations={doseRecommendations}
+          />
         </StepWrapper>
       </div>
     );
@@ -950,6 +1061,7 @@ export default function AsthmaClient() {
       {alerts.length > 0 && (
         <AlertBanner alerts={alerts} />
       )}
+      {exclusionOutcomeBlock}
 
       <StepWrapper
         currentStep={state.currentStep}
@@ -959,26 +1071,12 @@ export default function AsthmaClient() {
         onPrev={handlePrev}
         canProceed={canProceed}
         validationError={validationError}
+        isBlocked={hardStops}
+        getConsultationData={getConsultationData}
+        onNewConsultation={handleNewConsultation}
       >
         {renderStep()}
       </StepWrapper>
-
-      <div className="flex gap-3 justify-between">
-        <button
-          onClick={handlePrev}
-          disabled={state.currentStep === 0}
-          className="px-4 py-2 text-sm font-medium text-navy-900 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-50 disabled:text-gray-400 rounded-lg transition-colors"
-        >
-          ← Back
-        </button>
-        <button
-          onClick={handleNext}
-          disabled={!canProceed}
-          className="px-4 py-2 text-sm font-medium text-white bg-[color:var(--tenant-primary)] hover:bg-[color:var(--tenant-primary)]/15 disabled:bg-gray-300 rounded-lg transition-colors"
-        >
-          Next →
-        </button>
-      </div>
     </div>
   );
 }

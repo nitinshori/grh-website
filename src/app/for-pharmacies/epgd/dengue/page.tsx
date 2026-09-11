@@ -5,7 +5,7 @@ import { PgdPageActions } from "@/components/PgdPageActions";
 export const metadata = {
   title: 'Dengue Fever Vaccination ePGD | Pharmacy PGD',
   description:
-    'UK Pharmacy Group Protocol Direction (PGD) consultation tool for dengue fever vaccination with Qdenga (TAK-003)',
+    'UK pharmacy Patient Group Direction (PGD) consultation tool for dengue fever vaccination with Qdenga (TAK-003)',
 };
 
 export default function DenguePage(): React.ReactNode {

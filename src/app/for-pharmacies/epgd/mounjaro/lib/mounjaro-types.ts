@@ -15,6 +15,10 @@ export interface MounjaroWeightAssessment {
   lifestylePlanAgreed: boolean;
   // PGD v007 inclusion: initial assessment completed and documented (face to face)
   initialAssessmentCompleted: boolean;
+  /** BMI at the start of treatment. The document's inclusion is an INITIAL
+   *  BMI, reapplied only after a break of more than 2 months; a continuing
+   *  patient is judged on this, not on today's BMI. */
+  startingBMI: number | null;
 }
 
 export interface MounjaroMedicalHistory {
@@ -32,7 +36,7 @@ export interface MounjaroMedicalHistory {
   // Known hypersensitivity to tirzepatide or any excipient
   hypersensitivity: boolean;
   type1Diabetes: boolean;
-  // Heart failure with REDUCED ejection fraction (EF 40% or below). Exclusion
+  // Heart failure with REDUCED ejection fraction (EF below 40%). Exclusion
   // under this PGD. HF with PRESERVED ejection fraction (HFpEF) is NOT an
   // exclusion. If the EF is unknown but the patient is under cardiology
   // review for "heart failure", refer to the GP for clarification.
@@ -95,7 +99,17 @@ export interface MounjaroDoseSelection {
   currentDoseStage: string; // "init" | "1" | "2" | "3" | "4" | "5"
   dose: string;
   weeksAtCurrentDose: number | null;
+  /** Stage key of the dose the patient has been on ("init" to "5"). Required
+   *  for continue, escalate and reduce; the one rule that matters for a
+   *  titrated injectable (adversarial review, 11 Sep 2026). */
   previousDose: string;
+  /** Weight at initiation (kg) and start date, for the 5% rule and the record. */
+  initialWeight: number | null;
+  treatmentStartDate: string;
+  /** Months on the maximum tolerated dose, for the 5% rule. */
+  monthsOnMaxToleratedDose: number | null;
+  /** Documented decision on continuation when the 5% rule applies. */
+  continuationDecision: string;
   injectionSite: string;
   // Nature of today's supply: new start, continuation, escalation, reduction or restart after a break
   supplyType: MounjaroSupplyType;
@@ -198,6 +212,8 @@ export const COMORBIDITY_OPTIONS: { id: string; label: string }[] = [
 ];
 
 // Mounjaro KwikPen strengths by titration stage (PGD v007 dose and frequency row)
+export const STAGE_ORDER = ["init", "1", "2", "3", "4", "5"] as const;
+
 export const DOSE_BY_STAGE: Record<string, string> = {
   init: "2.5 mg",
   "1": "5 mg",
@@ -244,6 +260,7 @@ gpEmail: "",
       targetWeight: null,
       lifestylePlanAgreed: false,
       initialAssessmentCompleted: false,
+      startingBMI: null,
     },
     medicalHistory: {
       personalMTCHistory: false,
@@ -296,6 +313,10 @@ gpEmail: "",
       dose: DOSE_BY_STAGE.init,
       weeksAtCurrentDose: null,
       previousDose: "",
+      initialWeight: null,
+      treatmentStartDate: "",
+      monthsOnMaxToleratedDose: null,
+      continuationDecision: "",
       injectionSite: "",
       supplyType: "",
       missedMoreThanTwoDoses: false,

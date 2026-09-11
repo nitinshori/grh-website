@@ -32,7 +32,6 @@ import {
   TextInput,
   Checkbox,
   SelectInput,
-  NumberInput,
   TextArea,
 } from "../shared/components/FormInputs";
 
@@ -46,6 +45,9 @@ function reducer(state: HLConsultationState, action: HLAction): HLConsultationSt
       newState.patient = { ...newState.patient, [action.field]: action.value };
       if (action.field === "dateOfBirth") {
         newState.patient.age = calculateAge(action.value as string);
+      }
+      if (action.field === "sexRecorded") {
+        newState.patient.maleConfirmed = action.value === "male";
       }
       break;
 
@@ -95,6 +97,10 @@ function reducer(state: HLConsultationState, action: HLAction): HLConsultationSt
     case "SET_STEP":
       newState.currentStep = action.step;
       break;
+
+    case "RESET":
+      // Fresh state objects, including a fresh date and time.
+      return createInitialConsultationState();
   }
 
   return newState;
@@ -128,23 +134,38 @@ export default function HLClient() {
     return validateStep(state, state.currentStep);
   }, [state]);
 
+  // A stop anywhere disables Next on every step, and the last step's
+  // Save & Print applies the same rule (no "last step always true").
   const canProceed = useMemo(() => {
-    if (state.currentStep >= TOTAL_STEPS - 1) return true;
-    // Hard stops prevent progression
-    if (state.currentStep <= 4 && hardStops) return false;
+    if (hardStops) return false;
     return !validationError;
-  }, [state, validationError, hardStops]);
+  }, [validationError, hardStops]);
 
   // ─── Handlers ───
 
   const handleNext = useCallback(() => {
-    if (!validationError && state.currentStep < TOTAL_STEPS - 1) {
+    if (!validationError && !hardStops && state.currentStep < TOTAL_STEPS - 1) {
       const newCompleted = new Set(completedSteps);
       newCompleted.add(state.currentStep);
       setCompletedSteps(newCompleted);
+      if (state.currentStep === 0) {
+        // Contemporaneous record: stamp the date and time when the
+        // consultation actually starts, not when the tab was opened.
+        dispatch({ type: "UPDATE_SUMMARY", field: "consultationDate", value: new Date().toISOString().split("T")[0] });
+        dispatch({
+          type: "UPDATE_SUMMARY",
+          field: "consultationTime",
+          value: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
+        });
+      }
       dispatch({ type: "SET_STEP", step: state.currentStep + 1 });
     }
-  }, [state.currentStep, validationError, completedSteps]);
+  }, [state.currentStep, validationError, hardStops, completedSteps]);
+
+  const handleNewConsultation = useCallback(() => {
+    dispatch({ type: "RESET" });
+    setCompletedSteps(new Set());
+  }, []);
 
   const handlePrev = useCallback(() => {
     if (state.currentStep > 0) {
@@ -152,17 +173,21 @@ export default function HLClient() {
     }
   }, [state.currentStep]);
 
+  // Backwards only: going forward always means pressing Next, where the
+  // gates are.
   const handleStepClick = useCallback((step: number) => {
-    if (completedSteps.has(step) || step <= state.currentStep) {
+    if (step <= state.currentStep) {
       dispatch({ type: "SET_STEP", step });
     }
-  }, [completedSteps, state.currentStep]);
+  }, [state.currentStep]);
 
   // ─── Step content rendering ───
 
 
   // ─── Consultation Record Data (for saving to database) ───
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    const ms = state.medicineSupply;
+    const supplied = !hardStops && ms.finasteride1mgOd && !!ms.quantityMonths;
     return {
       patient: {
         firstName: state.patient.firstName,
@@ -174,36 +199,61 @@ export default function HLClient() {
         address: state.patient.address,
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
+        gpAddress: state.patient.gpAddress,
+        gpPhone: state.patient.gpPhone,
+        gpEmail: state.patient.gpEmail,
+        gpOdsCode: state.patient.gpOdsCode,
       },
-      clinicalData: state as unknown as Record<string, unknown>,
+      clinicalData: { ...state, alerts } as unknown as Record<string, unknown>,
       outcome: hardStops ? "not_supplied" : "completed",
+      medicine: supplied
+        ? {
+            name: `Finasteride 1 mg tablets${ms.brand ? ` (${ms.brand})` : ""}`,
+            dose: "1 mg orally once daily",
+            duration: `${ms.quantityMonths} months`,
+            quantity: `${ms.tabletsSupplied ?? "?"} tablets (${ms.quantityMonths} months)`,
+          }
+        : undefined,
       summary: {
-        pharmacistName: state.summary.pharmacistName,
-        pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacistName: state.summary.pharmacistName || __pharmProfile?.name || "",
+        pharmacistGPhC: state.summary.pharmacistGPhC || __pharmProfile?.gphcNumber || "",
+        pharmacyName: state.summary.pharmacyName || __pharmProfile?.pharmacyName || "",
+        pharmacyAddress: state.summary.pharmacyAddress || __pharmProfile?.pharmacyAddress || "",
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: [state.summary.clinicalNotes, hardStops && state.summary.exclusionAdvice ? `Advice given (excluded): ${state.summary.exclusionAdvice}` : ""]
+          .filter(Boolean)
+          .join("\n"),
       },
+      consent: { notifyGp: state.consent.notifyGp },
     };
-  }, [state, hardStops]);
+  }, [state, hardStops, alerts, __pharmProfile]);
 
   const renderStep = () => {
     switch (state.currentStep) {
       case 0: // Patient Details
         return (
-          <PatientDetailsStep
-            patient={state.patient}
-            onChange={(field, value) =>
-              dispatch({ type: "UPDATE_PATIENT", field: field as keyof HLPatientDetails, value })
-            }
-            genderOption={{
-              label: "Confirm patient is male",
-              description:
-                "Finasteride is teratogenic and contraindicated in women. This PGD is for male patients only.",
-              checked: state.patient.maleConfirmed,
-              onToggle: (v) =>
-                dispatch({ type: "UPDATE_PATIENT", field: "maleConfirmed", value: v }),
-            }}
-          />
+          <div className="space-y-4">
+            <PatientDetailsStep
+              patient={state.patient}
+              onChange={(field, value) =>
+                dispatch({ type: "UPDATE_PATIENT", field: field as keyof HLPatientDetails, value })
+              }
+            />
+            <SelectInput
+              label="Patient sex"
+              value={state.patient.sexRecorded}
+              onChange={(v) => dispatch({ type: "UPDATE_PATIENT", field: "sexRecorded", value: v })}
+              options={[
+                { value: "male", label: "Male" },
+                { value: "not-male", label: "Female or other (excluded under this PGD)" },
+              ]}
+              required
+            />
+            <p className="text-xs text-gray-500">
+              This PGD is for male patients aged 18 to 65 only: finasteride is teratogenic and is not indicated in women. Address and GP practice are required for the PGD record.
+            </p>
+          </div>
         );
 
       case 1: // Consent
@@ -219,18 +269,17 @@ export default function HLClient() {
       case 2: // Assessment
         return (
           <div className="space-y-4">
-            <NumberInput
-              label="Norwood-Hamilton Scale (1-7)"
-              value={state.clinicalAssessment.norwoodHamiltonScale}
+            <SelectInput
+              label="Norwood-Hamilton Scale (1 to 7)"
+              value={state.clinicalAssessment.norwoodHamiltonScale === null ? "" : String(state.clinicalAssessment.norwoodHamiltonScale)}
               onChange={(v) =>
                 dispatch({
                   type: "UPDATE_CLINICAL_ASSESSMENT",
                   field: "norwoodHamiltonScale",
-                  value: v,
+                  value: v === "" ? null : Number(v),
                 })
               }
-              min={1}
-              max={7}
+              options={[1, 2, 3, 4, 5, 6, 7].map((n) => ({ value: String(n), label: `Stage ${n}` }))}
               required
             />
             <Checkbox
@@ -387,6 +436,16 @@ export default function HLClient() {
               }
               placeholder="Diabetes, cardiovascular disease, etc."
             />
+            <div className="pt-3 border-t border-gray-200">
+              <Checkbox
+                label="I have asked the patient each of the questions above and recorded the answers"
+                checked={state.medicalHistory.questionsAsked}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "questionsAsked", value: v })
+                }
+                required
+              />
+            </div>
           </div>
         );
 
@@ -406,19 +465,58 @@ export default function HLClient() {
               description="Mood alterations including depressed mood, depression and, less frequently, suicidal ideation have been reported. Monitor; discontinue and seek medical advice if psychiatric symptoms occur."
             />
             {state.contraindications.depressiveMood && (
-              <TextInput
-                label="Details of mood symptoms"
-                value={state.contraindications.depressiveMoodDetail}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_CONTRAINDICATIONS",
-                    field: "depressiveMoodDetail",
-                    value: v,
-                  })
-                }
-                placeholder="When, severity, current treatment"
-              />
+              <div className="space-y-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                <TextInput
+                  label="Details of mood symptoms"
+                  value={state.contraindications.depressiveMoodDetail}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_CONTRAINDICATIONS",
+                      field: "depressiveMoodDetail",
+                      value: v,
+                    })
+                  }
+                  placeholder="When, severity, current treatment"
+                  required
+                />
+                <TextArea
+                  label="Clinical reason for proceeding despite current depression or mood symptoms (or refer)"
+                  value={state.contraindications.moodProceedReason}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_CONTRAINDICATIONS",
+                      field: "moodProceedReason",
+                      value: v,
+                    })
+                  }
+                  placeholder="e.g. Historical low mood, stable and treated; patient counselled to stop and seek advice if mood worsens"
+                  rows={2}
+                  required
+                />
+              </div>
             )}
+            <Checkbox
+              label="Patient reports current suicidal ideation"
+              checked={state.contraindications.suicidalIdeation}
+              onChange={(v) =>
+                dispatch({
+                  type: "UPDATE_CONTRAINDICATIONS",
+                  field: "suicidalIdeation",
+                  value: v,
+                })
+              }
+              description="Stop: do not start finasteride; refer for medical assessment today (emergency services if at immediate risk)."
+            />
+            <div className="pt-3 border-t border-gray-200">
+              <Checkbox
+                label="I have asked the patient about mood, depression and suicidal ideation and recorded the answers"
+                checked={state.contraindications.questionsAsked}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "questionsAsked", value: v })
+                }
+                required
+              />
+            </div>
           </div>
         );
 
@@ -456,6 +554,38 @@ export default function HLClient() {
               required
             />
             <p className="text-xs text-gray-500">3 to 12 months of treatment can be supplied between reviews. It is advisable to carry out the first review after 3 to 6 months. Minimum 3 to 6 months of continuous treatment to assess effectiveness; reassess if no improvement after 12 months.</p>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <SelectInput
+                label="Tablets supplied"
+                value={state.medicineSupply.tabletsSupplied === null ? "" : String(state.medicineSupply.tabletsSupplied)}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICINE_SUPPLY",
+                    field: "tabletsSupplied",
+                    value: v === "" ? null : Number(v),
+                  })
+                }
+                options={
+                  state.medicineSupply.quantityMonths
+                    ? [28, 30].map((perPack) => {
+                        const n = perPack * Number(state.medicineSupply.quantityMonths);
+                        return { value: String(n), label: `${n} tablets (${state.medicineSupply.quantityMonths} x ${perPack})` };
+                      })
+                    : []
+                }
+                required
+                disabled={!state.medicineSupply.quantityMonths}
+              />
+              <TextInput
+                label="Brand dispensed"
+                value={state.medicineSupply.brand}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "brand", value: v })
+                }
+                placeholder="e.g. Propecia, or generic finasteride 1 mg (manufacturer)"
+                required
+              />
+            </div>
             <Checkbox
               label="Tablets must not be handled by women who are or may become pregnant (risk of fetal harm); partner informed if applicable"
               checked={state.medicineSupply.partnerNotified}
@@ -653,6 +783,21 @@ export default function HLClient() {
               }
               placeholder="123 High Street, London"
             />
+            <div className="grid sm:grid-cols-2 gap-4">
+              <TextInput
+                label="Consultation date"
+                type="date"
+                value={state.summary.consultationDate}
+                onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "consultationDate", value: v })}
+                required
+              />
+              <TextInput
+                label="Consultation time"
+                type="time"
+                value={state.summary.consultationTime}
+                onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "consultationTime", value: v })}
+              />
+            </div>
             <TextArea
               label="Clinical notes (optional)"
               value={state.summary.clinicalNotes}
@@ -662,7 +807,9 @@ export default function HLClient() {
               placeholder="Any additional clinical observations..."
               rows={4}
             />
-            <HLSummaryReport state={state} alerts={alerts} />
+            <div className="border border-gray-200 rounded-lg">
+              <HLSummaryReport state={state} alerts={alerts} hasStops={hardStops} />
+            </div>
           </div>
         );
 
@@ -674,7 +821,8 @@ export default function HLClient() {
   // ─── Render ───
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 print:space-y-0">
+      <div className="print:hidden space-y-6">
       <p className="text-xs text-gray-500">{PGD_STRAPLINE}</p>
       <ProgressBar
         stepLabels={STEP_LABELS}
@@ -684,10 +832,21 @@ export default function HLClient() {
         hasErrors={!!validationError}
       />
 
-      {alerts.length > 0 && (
-        <AlertBanner
-          alerts={alerts.filter((a) => a.severity === "stop")}
-        />
+      {/* Every alert, not only stops: the mood, fetal-harm and PSA cautions
+          were computed and never shown on screen. AlertBanner sorts by
+          severity. */}
+      {alerts.length > 0 && <AlertBanner alerts={alerts} />}
+
+      {hardStops && (
+        <div className="bg-white rounded-xl border border-red-200 shadow-sm p-4">
+          <TextArea
+            label="Advice given to the excluded patient and referral made (recorded with the not-supplied record)"
+            value={state.summary.exclusionAdvice}
+            onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "exclusionAdvice", value: v })}
+            placeholder="e.g. Advised that finasteride cannot be supplied under this PGD; referred to GP; written information given"
+            rows={2}
+          />
+        </div>
       )}
 
       <StepWrapper
@@ -699,7 +858,9 @@ export default function HLClient() {
         canProceed={canProceed}
         validationError={validationError}
         isBlocked={hardStops}
-       getConsultationData={getConsultationData}>
+        getConsultationData={getConsultationData}
+        onNewConsultation={handleNewConsultation}
+      >
         {renderStep()}
       </StepWrapper>
 
@@ -722,6 +883,12 @@ export default function HLClient() {
           </div>
         </div>
       )}
+      </div>
+
+      {/* Print view: the consultation record */}
+      <div className="hidden print:block">
+        <HLSummaryReport state={state} alerts={alerts} hasStops={hardStops} />
+      </div>
     </div>
   );
 }

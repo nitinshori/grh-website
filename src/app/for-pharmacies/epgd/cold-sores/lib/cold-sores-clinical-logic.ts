@@ -91,8 +91,19 @@ export function getAllAlerts(state: ColdSoresConsultationState): ClinicalAlert[]
     alerts.push({
       severity: "stop",
       code: "CS_RENAL_SEVERE",
-      message: "Severe renal impairment: refer to GP",
-      detail: "Aciclovir requires significant dose adjustment. Specialist assessment needed.",
+      message: "Severe renal impairment (eGFR below 10 mL/min): refer to GP",
+      detail:
+        "Pharmacy safety threshold, not a PGD exclusion criterion: the PGD lists renal impairment as a caution. Aciclovir requires significant dose adjustment at this level; a prescriber should assess.",
+    });
+  }
+
+  if (state.symptomAssessment.daysSinceOnset !== null && state.symptomAssessment.daysSinceOnset > 10) {
+    alerts.push({
+      severity: "stop",
+      code: "CS_OVER_10_DAYS",
+      message: "Lesions present for more than 10 days",
+      detail:
+        "The PGD: if lesions are still present after 10 days, the patient should be advised to consult a doctor. Cold sores lasting more than 10 days or spreading are a referral. Do not supply.",
     });
   }
 

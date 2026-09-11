@@ -7,10 +7,32 @@ export function validateStep(stepIndex: number, state: AcneConsultationState): s
 
   switch (stepIndex) {
     case 0: // Patient Details
-      return validatePatientStep(state.patient, { minAge: 12 });
+      {
+        const base = validatePatientStep(state.patient, { minAge: 12 });
+        if (base) return base;
+        // The PGD record must contain the individual's name, address, date of
+        // birth and GP; only the names and DOB were enforced before.
+        if (!state.patient.address.trim()) return "Patient address is required for the PGD record";
+        if (!state.patient.gpPractice.trim()) return "GP practice is required for the PGD record";
+        return null;
+      }
 
     case 1: // Consent
-      return validateConsentStep(state.consent);
+      {
+        const base = validateConsentStep(state.consent);
+        if (base) return base;
+        // Under-16s: the record must say who consented.
+        if (state.patient.age !== null && state.patient.age < 16) {
+          if (!state.consent.consentBasis || state.consent.consentBasis === "patient") {
+            return "For a patient under 16, record whether the child is Gillick competent or a person with parental responsibility gave consent";
+          }
+          if (state.consent.consentBasis === "parental") {
+            if (!state.consent.consentGivenByName.trim()) return "Record the name of the person with parental responsibility who gave consent";
+            if (!state.consent.consentGivenByRelationship.trim()) return "Record the relationship of the person who gave consent to the patient";
+          }
+        }
+        return null;
+      }
 
     case 2: // Acne Assessment
       if (!state.assessment.severity) return "Please select acne severity";
@@ -30,6 +52,9 @@ export function validateStep(stepIndex: number, state: AcneConsultationState): s
       return null;
 
     case 4: // Contraindications
+      if (!state.contraindications.questionsAsked) {
+        return "Confirm that each of the exclusion questions above has been put to the patient";
+      }
       return null;
 
     case 5: // Medicine Selection
@@ -37,8 +62,22 @@ export function validateStep(stepIndex: number, state: AcneConsultationState): s
       if (choice === "duac-5" && !state.medicineSelection.strengthRationale) {
         return "Please record the clinical reason for choosing the 10 mg/g + 50 mg/g strength";
       }
-      if (state.medicineSelection.repeatCourse && !state.medicineSelection.repeatCourseReviewed) {
-        return "A review is required for repeat courses (maximum 12 weeks continuous use). Please confirm the review has been completed.";
+      if (state.medicineSelection.repeatCourse) {
+        if (!state.medicineSelection.previousCourseStartDate) {
+          return "Record the date the previous course started";
+        }
+        if (!state.medicineSelection.previousCourseEndDate) {
+          return "Record the date the previous course ended (or the date of the last supply)";
+        }
+        if (state.medicineSelection.previousCourseEndDate < state.medicineSelection.previousCourseStartDate) {
+          return "The previous course cannot end before it started";
+        }
+        if (!state.medicineSelection.repeatCourseReviewed) {
+          return "A review is required for repeat courses (maximum 12 weeks continuous use). Please confirm the review has been completed.";
+        }
+      }
+      if (!state.medicineSelection.quantitySupplied) {
+        return "Record the quantity supplied";
       }
       return null;
 
@@ -68,7 +107,12 @@ export function validateStep(stepIndex: number, state: AcneConsultationState): s
       return null;
 
     case 7: // Summary
-      return validateSummaryStep(state.summary);
+      {
+        const base = validateSummaryStep(state.summary);
+        if (base) return base;
+        if (!state.summary.consultationDate) return "Consultation date is required";
+        return null;
+      }
 
     default:
       return null;

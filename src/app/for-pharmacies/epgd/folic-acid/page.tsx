@@ -40,23 +40,23 @@ export default function FolicAcidPage(): React.ReactNode {
                 </summary>
                 <div className="mt-2 space-y-2">
                   <p>
-                    <strong>Serum folate &lt;7 nmol/L (3 µg/L)</strong> —
+                    <strong>Serum folate below 7 nmol/L (3 µg/L)</strong>:
                     deficiency.
                   </p>
                   <p>
-                    <strong>Serum folate 7–10 nmol/L (3–4.5 µg/L)</strong> —
+                    <strong>Serum folate 7 to 10 nmol/L (3 to 4.5 µg/L)</strong>:
                     indeterminate; treat as suggestive of deficiency, not
                     diagnostic.
                   </p>
                   <p>
-                    <strong>Red-cell folate &lt;340 nmol/L (150 µg/L)</strong>{" "}
-                    — consistent with clinical folate deficiency in the
+                    <strong>Red-cell folate below 340 nmol/L (150 µg/L)</strong>:
+                    consistent with clinical folate deficiency in the
                     absence of B12 deficiency. Only request if serum folate
                     normal but clinical suspicion is strong.
                   </p>
                   <p>
                     <strong>CRITICAL:</strong> B12 deficiency must be
-                    excluded before starting folate replacement —
+                    excluded before starting folate replacement:
                     high-dose folate can mask haematological signs of B12
                     deficiency while neurological damage progresses.
                   </p>
@@ -67,7 +67,7 @@ export default function FolicAcidPage(): React.ReactNode {
         </div>
         <FolicAcidClient />
         <div className="mt-8 text-center text-xs text-gray-500">
-          <p>Get Real Health ePGD — Folic Acid | Confidential Patient Information</p>
+          <p>Get Real Health ePGD: Folic Acid | Confidential Patient Information</p>
         </div>
       </div>
     </div>

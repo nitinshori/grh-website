@@ -5,7 +5,18 @@ import type {
   MeningitisACWYMedicalHistory,
   MeningitisACWYPostVaccineAdvice,
 } from './meningitis-acwy-travel-types';
-import { calculateAgeInDays, calculateAgeInMonths } from './meningitis-acwy-travel-clinical-logic';
+import {
+  calculateAgeInDays,
+  calculateAgeInMonths,
+  daysSince,
+  daysFromToday,
+  ageInMonthsAt,
+  isSaudiTravel,
+  isInfantBoosterCandidate,
+} from './meningitis-acwy-travel-clinical-logic';
+
+/** Two months, the minimum gap in every Nimenrix infant schedule in the PGD. */
+const TWO_MONTHS_DAYS = 61;
 
 export function validateMeningitisACWYPatientStep(
   patient: MeningitisACWYPatientDetails
@@ -34,6 +45,13 @@ export function validateMeningitisACWYTravelStep(
   if (!patient.departureDate) return 'Departure date is required';
   if (patient.previousMenACWYDose && !patient.previousDoseDate) {
     return 'Record the date of the previous MenACWY dose';
+  }
+  if (patient.previousMenACWYDose && patient.previousDoseDate) {
+    const since = daysSince(patient.previousDoseDate);
+    if (since === null) return 'Previous dose date is not a valid date';
+    if (since < 0) return 'Previous dose date cannot be in the future';
+    const ageAt = ageInMonthsAt(patient.dateOfBirth, patient.previousDoseDate);
+    if (ageAt !== null && ageAt < 0) return 'Previous dose date is before the date of birth';
   }
   if (!travelAssessment.travelDestinationConfirmed) return 'Please confirm travel destination';
   if (!travelAssessment.travelReasonConfirmed) return 'Please confirm travel reason';
@@ -123,18 +141,86 @@ export function validateMeningitisACWYAdministrationStep(
     return 'From 1 year of age and in adults: give into the deltoid';
   }
   if (!summary.doseNumber) return 'Dose number must be selected';
-  if (ageMonths !== null && ageMonths >= 12 && (summary.doseNumber === '1st' || summary.doseNumber === '2nd')) {
-    return 'From 12 months of age all products are a single dose; select "Single dose", "Booster at 12 months" or "Repeat for certificate"';
+  if (!summary.expiryDate) return 'Expiry date is required';
+  {
+    const exp = daysFromToday(summary.expiryDate);
+    if (exp === null) return 'Expiry date is not a valid date';
+    if (exp < 0) return 'This batch has expired. Do not use it.';
   }
-  if (ageMonths !== null && ageMonths < 6 && summary.doseNumber !== '1st' && summary.doseNumber !== '2nd') {
-    return '6 weeks to under 6 months (Nimenrix): two doses at least 2 months apart; select 1st or 2nd dose';
+
+  const since = daysSince(patient.previousDoseDate);
+  const ageAtPrevious = ageInMonthsAt(patient.dateOfBirth, patient.previousDoseDate);
+  const infantBooster = isInfantBoosterCandidate(patient);
+  const infantCourseContinuing =
+    patient.previousMenACWYDose && ageMonths !== null && ageMonths < 12 && ageAtPrevious !== null && ageAtPrevious < 6;
+
+  // Which dose numbers are open to this patient, by age and history.
+  if (ageMonths !== null && ageMonths < 6) {
+    if (summary.doseNumber !== '1st' && summary.doseNumber !== '2nd') {
+      return '6 weeks to under 6 months (Nimenrix): two doses at least 2 months apart; select 1st or 2nd dose';
+    }
+    if (summary.doseNumber === '1st' && patient.previousMenACWYDose) {
+      return 'A previous MenACWY dose is recorded on the travel step: this is the 2nd dose of the course, not the 1st';
+    }
+  } else if (ageMonths !== null && ageMonths < 12) {
+    if (infantCourseContinuing) {
+      if (summary.doseNumber !== '2nd') {
+        return 'Course started under 6 months: this is the 2nd dose of two (Nimenrix); select 2nd dose';
+      }
+    } else if (summary.doseNumber !== 'single') {
+      return '6 to 11 months (Nimenrix): a single dose with a booster at 12 months of age';
+    }
+  } else if (ageMonths !== null) {
+    if (infantBooster) {
+      if (summary.doseNumber !== 'booster-12-months') {
+        return 'Primary dose given under 12 months of age: this is the booster at 12 months of age (Nimenrix); select "Booster at 12 months"';
+      }
+    } else if (patient.previousMenACWYDose) {
+      if (summary.doseNumber !== 'repeat-certificate') {
+        return 'A previous MenACWY dose is recorded: the only repeat authorised under this PGD is "Repeat for certificate" (previous dose more than 5 years ago, valid certificate required for travel to Saudi Arabia)';
+      }
+    } else if (summary.doseNumber !== 'single') {
+      return 'From 12 months of age all products are a single dose; select "Single dose"';
+    }
   }
-  if (ageMonths !== null && ageMonths >= 6 && ageMonths < 12 && summary.doseNumber !== 'single') {
-    return '6 to 11 months (Nimenrix): a single dose with a booster at 12 months of age';
+
+  // Intervals. Every infant schedule in the PGD is defined by a gap of at
+  // least 2 months; until now the tool checked which label was allowed but
+  // never the gap.
+  if (summary.doseNumber === '2nd') {
+    if (!patient.previousMenACWYDose || !patient.previousDoseDate) {
+      return '2nd dose: tick "Previous MenACWY dose received" on the travel step and record the date of the 1st dose';
+    }
+    if (since !== null && since < TWO_MONTHS_DAYS) {
+      return `2nd dose: the two doses must be at least 2 months apart. The 1st dose was ${since} days ago; not due until ${TWO_MONTHS_DAYS} days`;
+    }
+  }
+  if (summary.doseNumber === 'booster-12-months') {
+    if (!patient.previousMenACWYDose || !patient.previousDoseDate) {
+      return 'Booster at 12 months: tick "Previous MenACWY dose received" on the travel step and record the date of the primary dose';
+    }
+    if (ageMonths !== null && ageMonths < 12) {
+      return 'Booster at 12 months: the patient is not yet 12 months old';
+    }
+    if (ageMonths !== null && ageMonths >= 24) {
+      return 'Booster at 12 months of age is the Nimenrix infant course booster (12 to 23 months); it does not apply at this age';
+    }
+    if (ageAtPrevious !== null && ageAtPrevious >= 12) {
+      return 'Booster at 12 months applies only where the primary dose was given before 12 months of age';
+    }
+    if (since !== null && since < TWO_MONTHS_DAYS) {
+      return `Booster at 12 months: must be at least 2 months after the primary dose. The primary dose was ${since} days ago; not due until ${TWO_MONTHS_DAYS} days`;
+    }
   }
   if (summary.doseNumber === 'repeat-certificate') {
     if (!patient.previousMenACWYDose || !patient.previousDoseDate) {
       return 'Repeat for certificate: record the date of the previous dose on the travel step';
+    }
+    if (since !== null && since < 5 * 365) {
+      return 'Repeat for certificate: authorised only where the previous dose was more than 5 years ago. A conjugate vaccine given within the last 5 years is accepted for Hajj and Umrah.';
+    }
+    if (!isSaudiTravel(patient)) {
+      return 'Repeat for certificate: authorised only where a valid certificate is required for travel to Saudi Arabia. Routine boosters are not recommended for other travellers.';
     }
     if (!patient.repeatDoseReason.trim()) {
       return 'Repeat for certificate: record the reason for the repeat';

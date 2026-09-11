@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { usePharmacistProfile } from '../shared/hooks/usePharmacistProfile';
-import type { BasePatientDetails, BaseConsent, BaseSummary } from '../shared/types';
+import type { BasePatientDetails, BaseConsent } from '../shared/types';
 import { calculateAge, initialSummary } from '../shared/types';
 import {
   ImpetigoData,
@@ -13,6 +13,7 @@ import {
   ImpetigoConsentDetails,
   IMPETIGO_PGD_VERSION,
 } from './impetigo-types';
+import { ImpetigoSummaryReport } from './ImpetigoSummaryReport';
 import { LesionAssessmentStep } from './LesionAssessmentStep';
 import { MedicalHistoryStep } from './MedicalHistoryStep';
 import { ContraindicationsStep } from './ContraindicationsStep';
@@ -30,6 +31,7 @@ import {
   calculateAgeMonths,
   assessPatient,
   needsOralRoute,
+  sizeIsWidespread,
 } from './impetigo-clinical-logic';
 
 const STEP_LABELS = [
@@ -73,6 +75,7 @@ const INITIAL_MEDICAL_HISTORY: ImpetigoMedicalHistory = {
   cephalosporinAllergyHighRisk: false,
   flucloxCholestasisHistory: false,
   fusidicAcidAllergy: false,
+  fusidicAcidResistanceSuspected: false,
   macrolideAllergy: false,
   severeHepaticImpairment: false,
   severeRenalImpairment: false,
@@ -100,14 +103,15 @@ const INITIAL_MEDICAL_HISTORY: ImpetigoMedicalHistory = {
 
 const INITIAL_TREATMENT_SELECTION: ImpetigoTreatmentSelection = {
   treatment: '',
+  formulation: '',
+  doseValue: '',
   dose: '',
   frequency: '',
   duration: '',
   extensionReason: '',
   severeDoseReason: '',
   quantity: 0,
-  pharmacistOverride: false,
-  overrideReason: '',
+  quantityUnit: '',
 };
 
 const INITIAL_COUNSELLING: ImpetigoCounselling = {
@@ -156,14 +160,14 @@ const INITIAL_CONSENT: BaseConsent = {
 
 function initialData(): ImpetigoData {
   return {
-    patientDetails: INITIAL_PATIENT_DETAILS,
-    consent: INITIAL_CONSENT,
-    consentDetails: INITIAL_CONSENT_DETAILS,
-    lesionAssessment: INITIAL_LESION_ASSESSMENT,
-    medicalHistory: INITIAL_MEDICAL_HISTORY,
-    treatmentSelection: INITIAL_TREATMENT_SELECTION,
-    counselling: INITIAL_COUNSELLING,
-    summary: initialSummary(),
+    patientDetails: { ...INITIAL_PATIENT_DETAILS },
+    consent: { ...INITIAL_CONSENT },
+    consentDetails: { ...INITIAL_CONSENT_DETAILS },
+    lesionAssessment: { ...INITIAL_LESION_ASSESSMENT, affectedAreas: [] },
+    medicalHistory: { ...INITIAL_MEDICAL_HISTORY },
+    treatmentSelection: { ...INITIAL_TREATMENT_SELECTION },
+    counselling: { ...INITIAL_COUNSELLING },
+    summary: { ...initialSummary(), referralAdvice: '', adverseDrugReactions: '' },
   };
 }
 
@@ -191,8 +195,9 @@ export function ImpetigoConsultationClient() {
     }));
   }, [__pharmProfile, data.summary.pharmacistName, data.summary.pharmacistGPhC]);
 
-  // Calculate patient age (years, and whole months for the 1-month and 3-month floors)
-  const patientAge = data.patientDetails.age ?? (data.patientDetails.dateOfBirth ? calculateAge(data.patientDetails.dateOfBirth) : null);
+  // Patient age is written into patientDetails.age on every DOB change (see
+  // the patient step onChange), so the record and the summary carry it.
+  const patientAge = data.patientDetails.age;
   const patientAgeMonths = calculateAgeMonths(data.patientDetails.dateOfBirth);
 
   // Run clinical assessment
@@ -247,6 +252,8 @@ export function ImpetigoConsultationClient() {
     if (!la.lesionSizeCm.trim()) return 'Record the size of the affected area (the number and size of lesions must be recorded)';
     if (la.extent === 'localised' && la.numberOfLesions === '>5')
       return 'More than 5 lesions is widespread by the document definition; change the extent';
+    if (la.extent === 'localised' && sizeIsWidespread(la))
+      return 'An affected area over about 5 cm is widespread by the document definition; change the extent to widespread (oral route)';
     if (la.affectedAreas.length === 0) return 'At least one affected area required';
     if (!la.duration) return 'Duration is required';
     if (
@@ -284,12 +291,13 @@ export function ImpetigoConsultationClient() {
   const treatmentError = (): string => {
     const t = data.treatmentSelection;
     if (!t.treatment) return 'Treatment selection is required';
-    if (!t.dose.trim()) return 'Dose is required';
-    if (!t.frequency.trim()) return 'Frequency is required';
+    if (!t.formulation) return 'Select the formulation';
+    if (!t.doseValue) return 'Select the dose from the document\'s regimens for this arm, age and weight';
+    if (t.treatment === 'clarithromycin' && t.doseValue === 'clari-500' && !t.severeDoseReason.trim())
+      return 'Clarithromycin 500mg twice a day is for severe infection only: the document requires the reason recorded';
     if (!t.duration) return 'Duration is required';
     if (t.duration === '7 days' && !t.extensionReason.trim()) return 'A 7 day course is clinical judgement only: record the reason';
-    if (t.quantity <= 0) return 'Quantity must be greater than 0';
-    if (t.pharmacistOverride && !t.overrideReason.trim()) return 'Override reason is required';
+    if (t.quantity <= 0) return 'Quantity could not be computed: check the dose and duration';
     return '';
   };
 
@@ -377,8 +385,13 @@ export function ImpetigoConsultationClient() {
     }
   };
 
+  // A stop anywhere disables Next on every step: the progress bar only goes
+  // backwards, so this is the only forward path. The excluded patient is
+  // saved from whichever step raised the stop with "Save as not supplied".
+  const canProceedNow = canProceedToNextStep(currentStep) && !shouldRefer;
+
   const handleNext = () => {
-    if (canProceedToNextStep(currentStep)) {
+    if (canProceedNow) {
       const newCompleted = new Set(completedSteps);
       newCompleted.add(currentStep);
       setCompletedSteps(newCompleted);
@@ -400,10 +413,6 @@ export function ImpetigoConsultationClient() {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   // ─── Consultation Record Data (for saving to database) ───
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
     return {
@@ -418,16 +427,47 @@ export function ImpetigoConsultationClient() {
         gpName: data.patientDetails.gpName,
         gpPractice: data.patientDetails.gpPractice,
       },
-      clinicalData: data as unknown as Record<string, unknown>,
-      outcome: shouldRefer ? "not_supplied" : "completed",
+      clinicalData: {
+        ...data,
+        alerts: clinicalAssessment.alerts,
+        referralReasons,
+        // A hydrogen peroxide P sale is not a PGD supply: flagged so the audit
+        // does not count it as one.
+        pSale: !shouldRefer && data.treatmentSelection.treatment === 'hydrogen-peroxide',
+      } as unknown as Record<string, unknown>,
+      outcome: shouldRefer
+        ? 'referred'
+        : data.treatmentSelection.treatment === 'hydrogen-peroxide'
+          ? 'not_supplied'
+          : 'completed',
+      medicine:
+        !shouldRefer && data.treatmentSelection.treatment && data.treatmentSelection.treatment !== 'hydrogen-peroxide'
+          ? {
+              name: data.treatmentSelection.treatment,
+              dose: `${data.treatmentSelection.dose}; ${data.treatmentSelection.frequency}`,
+              duration: data.treatmentSelection.duration,
+              quantity: `${data.treatmentSelection.quantity} ${data.treatmentSelection.quantityUnit}`.trim(),
+            }
+          : undefined,
       summary: {
-        pharmacistName: data.summary.pharmacistName,
-        pharmacistGPhC: data.summary.pharmacistGPhC,
+        pharmacistName: data.summary.pharmacistName || __pharmProfile?.name || '',
+        pharmacistGPhC: data.summary.pharmacistGPhC || __pharmProfile?.gphcNumber || '',
+        pharmacyName: data.summary.pharmacyName || __pharmProfile?.pharmacyName || '',
+        pharmacyAddress: data.summary.pharmacyAddress || __pharmProfile?.pharmacyAddress || '',
         consultationDate: data.summary.consultationDate,
         consultationTime: data.summary.consultationTime,
+        clinicalNotes: [
+          shouldRefer && data.summary.referralAdvice ? `Advice given on referral: ${data.summary.referralAdvice}` : '',
+          shouldRefer && referralReasons.length ? `Referral criteria: ${referralReasons.join(' ')}` : '',
+          data.summary.adverseDrugReactions ? `Adverse drug reactions: ${data.summary.adverseDrugReactions}` : '',
+          data.summary.clinicalNotes,
+        ]
+          .filter(Boolean)
+          .join('\n'),
       },
+      consent: { notifyGp: data.consent.notifyGp },
     };
-  }, [data, shouldRefer]);
+  }, [data, shouldRefer, clinicalAssessment.alerts, referralReasons, __pharmProfile]);
 
   const handleNewConsultation = useCallback(() => {
     setCurrentStep(0);
@@ -435,19 +475,12 @@ export function ImpetigoConsultationClient() {
     setData(initialData());
   }, []);
 
-  const handleReset = () => {
-    if (window.confirm('Are you sure you want to start a new consultation?')) {
-      setCurrentStep(0);
-      setCompletedSteps(new Set());
-      setData(initialData());
-    }
-  };
-
-  const isBlockedByReferral = shouldRefer && currentStep > 4;
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      <div className="max-w-6xl mx-auto px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 print:bg-white print:min-h-0">
+      <div className="hidden print:block">
+        <ImpetigoSummaryReport data={data} alerts={clinicalAssessment.alerts} referralReasons={referralReasons} stopped={shouldRefer} />
+      </div>
+      <div className="max-w-6xl mx-auto px-4 py-8 print:hidden">
         {/* Header */}
         <div className="mb-8">
           <div className="bg-white rounded-lg shadow p-6 mb-6">
@@ -458,6 +491,26 @@ export function ImpetigoConsultationClient() {
           {/* Critical Alerts */}
           {clinicalAssessment.alerts.length > 0 && (
             <AlertBanner alerts={clinicalAssessment.alerts} />
+          )}
+          {shouldRefer && (
+            <div className="mt-4 p-4 bg-red-50 rounded-lg border border-red-200 space-y-2">
+              <p className="text-sm font-medium text-red-800">
+                Not supplied under this PGD. Record where the patient was referred and the advice given (same-day for interacting medicines, as the document directs), then use &quot;Save as not supplied&quot;.
+              </p>
+              <ul className="text-xs text-red-800 list-disc list-inside">
+                {referralReasons.map((r) => (
+                  <li key={r}>{r}</li>
+                ))}
+              </ul>
+              <TextArea
+                label="Advice given and referral arranged (PGD records requirement)"
+                value={data.summary.referralAdvice}
+                onChange={(v) => setData((prev) => ({ ...prev, summary: { ...prev.summary, referralAdvice: v } }))}
+                placeholder="e.g. Same-day GP appointment arranged at 16:00; explained why no antibiotic could be supplied; hygiene advice given"
+                rows={2}
+                required
+              />
+            </div>
           )}
         </div>
 
@@ -481,21 +534,29 @@ export function ImpetigoConsultationClient() {
             totalSteps={STEP_LABELS.length}
             onNext={handleNext}
             onPrev={handlePrev}
-            canProceed={canProceedToNextStep(currentStep)}
-            validationError={getValidationError(currentStep)}
-            isBlocked={isBlockedByReferral}
+            canProceed={canProceedNow}
+            validationError={getValidationError(currentStep) || (shouldRefer ? 'Patient meets referral criteria and cannot proceed in pharmacy' : '')}
+            isBlocked={shouldRefer}
             getConsultationData={getConsultationData}
             onNewConsultation={handleNewConsultation}
           >
             {currentStep === 0 && (
               <PatientDetailsStep
                 patient={data.patientDetails}
-                onChange={(field, value) => setData({
-                  ...data,
-                  patientDetails: { ...data.patientDetails, [field]: value }
-                })}
+                onChange={(field, value) =>
+                  setData((prev) => ({
+                    ...prev,
+                    patientDetails: {
+                      ...prev.patientDetails,
+                      [field]: value,
+                      // Age gates every arm and the record must show it, so it
+                      // is written on every DOB change.
+                      ...(field === 'dateOfBirth' ? { age: calculateAge(typeof value === 'string' ? value : '') } : {}),
+                    },
+                  }))
+                }
                 requireAdult={false}
-          />
+              />
             )}
 
             {currentStep === 1 && (
@@ -586,7 +647,10 @@ export function ImpetigoConsultationClient() {
                 recommendation={clinicalAssessment.treatmentRecommendation}
                 route={clinicalAssessment.route}
                 pregnant={data.medicalHistory.pregnant}
-                onChange={(treatment) => setData({ ...data, treatmentSelection: treatment })}
+                age={patientAge ?? 0}
+                weightKg={data.medicalHistory.weightKg}
+                hydrogenPeroxide={data.lesionAssessment.hydrogenPeroxide}
+                onChange={(treatment) => setData((prev) => ({ ...prev, treatmentSelection: treatment }))}
               />
             )}
 
@@ -608,24 +672,6 @@ export function ImpetigoConsultationClient() {
             )}
           </StepWrapper>
         </div>
-
-        {/* Action Buttons */}
-        {currentStep === STEP_LABELS.length - 1 && !shouldRefer && (
-          <div className="mt-8 flex gap-4 justify-end">
-            <button
-              onClick={handleReset}
-              className="px-6 py-3 border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition"
-            >
-              New Consultation
-            </button>
-            <button
-              onClick={handlePrint}
-              className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition"
-            >
-              Print Report
-            </button>
-          </div>
-        )}
 
         {/* Footer */}
         <div className="mt-8 text-center text-sm text-gray-600">

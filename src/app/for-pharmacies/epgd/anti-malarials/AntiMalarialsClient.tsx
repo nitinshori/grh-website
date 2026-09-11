@@ -9,6 +9,7 @@ import type {
   AMMedicalHistory,
   AMMedications,
   AMMedicineSelection,
+  AMMedicineChoice,
   AMCounselling,
   AMConsultationSummary,
 } from './anti-malarials-types';
@@ -20,11 +21,14 @@ import {
 import {
   generateAMAlerts,
   recommendMedicine,
+  describeArm,
   canProceedWithConsultation,
   calculateTripDuration,
   getEligibleMedicineOptions,
   getMefloquineBand,
   AM_PGD_VERSION,
+  WEIGHT_BAND_CONVENTION,
+  QUANTITY_PACK_ALLOWANCE,
 } from './anti-malarials-clinical-logic';
 import { validateStep } from './anti-malarials-validation';
 import { calculateAge } from '../shared/types';
@@ -46,8 +50,29 @@ import {
 
 // ─── Reducer ───
 
+// Any change to the travel, medical-history or medication answers clears the
+// chosen arm and its dose. The arm was chosen against the old answers; the
+// selector only hides ineligible arms, so a stored choice survived a change
+// that excluded it (adversarial review, 11 Sep 2026).
+function clearMedicineSelection(state: AMConsultationState): AMConsultationState {
+  if (!state.medicineSelection.selectedMedicine) return state;
+  return {
+    ...state,
+    medicineSelection: {
+      ...state.medicineSelection,
+      selectedMedicine: '',
+      dose: '',
+      startTiming: '',
+      continuationAfterReturn: '',
+      quantity: null,
+      courseCalculation: '',
+      scoredTabletConfirmed: false,
+    },
+  };
+}
+
 function reducer(state: AMConsultationState, action: AMAction): AMConsultationState {
-  const newState = { ...state };
+  let newState = { ...state };
 
   switch (action.type) {
     case 'UPDATE_PATIENT':
@@ -72,6 +97,7 @@ function reducer(state: AMConsultationState, action: AMAction): AMConsultationSt
           newState.travelAssessment.returnDate
         );
       }
+      newState = clearMedicineSelection(newState);
       break;
 
     case 'UPDATE_MEDICAL_HISTORY':
@@ -79,17 +105,13 @@ function reducer(state: AMConsultationState, action: AMAction): AMConsultationSt
         ...newState.medicalHistory,
         [action.field]: action.value,
       };
+      if (action.field !== 'allQuestionsAsked') newState = clearMedicineSelection(newState);
       break;
 
     case 'UPDATE_MEDICATIONS':
       newState.medications = { ...newState.medications, [action.field]: action.value };
-      break;
-
-    case 'UPDATE_CONTRAINDICATIONS':
-      newState.contraindications = {
-        ...newState.contraindications,
-        [action.field]: action.value,
-      };
+      if (action.field !== 'allQuestionsAsked' && action.field !== 'otherDrugsDetails')
+        newState = clearMedicineSelection(newState);
       break;
 
     case 'UPDATE_MEDICINE_SELECTION':
@@ -97,6 +119,20 @@ function reducer(state: AMConsultationState, action: AMAction): AMConsultationSt
         ...newState.medicineSelection,
         [action.field]: action.value,
       };
+      if (action.field === 'selectedMedicine') {
+        // Dose, timing, continuation and quantity are the document's for the
+        // chosen arm, weight and itinerary. They are not typed by hand.
+        const arm = describeArm(action.value as AMMedicineChoice, newState.travelAssessment);
+        newState.medicineSelection = {
+          ...newState.medicineSelection,
+          dose: arm?.dose ?? '',
+          startTiming: arm?.startTiming ?? '',
+          continuationAfterReturn: arm?.continuationAfterReturn ?? '',
+          quantity: arm?.total ?? null,
+          courseCalculation: arm?.quantity ?? '',
+          scoredTabletConfirmed: false,
+        };
+      }
       break;
 
     case 'UPDATE_COUNSELLING':
@@ -150,7 +186,6 @@ export function AntiMalarialsClient() {
   }, [__pharmProfile, state.summary.pharmacistName, state.summary.pharmacistGPhC]);
 
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
-  const [showReport, setShowReport] = useState(false);
 
   // ─── Compute alerts and validation ───
 
@@ -163,11 +198,13 @@ export function AntiMalarialsClient() {
     );
   }, [state.patient, state.travelAssessment, state.medicalHistory, state.medications]);
 
-  const validationError = useMemo(() => {
-    return validateStep(state.currentStep, state);
-  }, [state, state.currentStep]);
-
   const isBlocked = !canProceedWithConsultation(alerts);
+
+  // A stop anywhere disables Next on every step, not only the review step.
+  const validationError = useMemo(() => {
+    if (isBlocked) return 'Exclusion criteria met: this consultation cannot proceed under the PGD. Record the advice given and save as not supplied.';
+    return validateStep(state.currentStep, state);
+  }, [state, isBlocked]);
 
   // ─── Recommendation ───
 
@@ -194,6 +231,10 @@ export function AntiMalarialsClient() {
     state.medicineSelection.selectedMedicine === 'mefloquine' &&
     mefloquineBand !== null &&
     mefloquineBand.tabletFraction < 1;
+  const selectedArm = state.medicineSelection.selectedMedicine;
+  const isAP = selectedArm === 'malarone' || selectedArm === 'malarone-paediatric';
+  const isDoxy = selectedArm === 'doxycycline';
+  const isMefloquine = selectedArm === 'mefloquine';
 
   // ─── Navigation handlers ───
 
@@ -212,11 +253,12 @@ export function AntiMalarialsClient() {
     dispatch({ type: 'PREV_STEP' });
   }, []);
 
+  // Backwards only; going forward always means pressing Next.
   const handleStepClick = useCallback((step: number) => {
-    if (completedSteps.has(step) || step <= state.currentStep) {
+    if (step < state.currentStep) {
       dispatch({ type: 'SET_STEP', step });
     }
-  }, [completedSteps, state.currentStep]);
+  }, [state.currentStep]);
 
   // ─── Handlers by step ───
 
@@ -253,7 +295,13 @@ export function AntiMalarialsClient() {
   };
 
   // ─── Consultation Record Data (for saving to database) ───
+  // Returns a record on every step, including before a medicine is chosen,
+  // so an excluded patient can be saved as "not supplied" from any step.
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
+    const arm = state.medicineSelection.selectedMedicine
+      ? describeArm(state.medicineSelection.selectedMedicine, state.travelAssessment)
+      : null;
+    const supplied = !isBlocked && !!arm;
     return {
       patient: {
         firstName: state.patient.firstName,
@@ -265,17 +313,37 @@ export function AntiMalarialsClient() {
         address: state.patient.address,
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
+        gpAddress: state.patient.gpAddress,
+        gpPhone: state.patient.gpPhone,
+        gpEmail: state.patient.gpEmail,
+        gpOdsCode: state.patient.gpOdsCode,
       },
-      clinicalData: state as unknown as Record<string, unknown>,
-      outcome: isBlocked ? "not_supplied" : "completed",
+      clinicalData: {
+        ...(state as unknown as Record<string, unknown>),
+        alerts,
+        pgdVersion: AM_PGD_VERSION,
+      },
+      outcome: isBlocked ? 'not_supplied' : 'completed',
+      medicine: supplied && arm
+        ? {
+            name: arm.medicine,
+            dose: arm.dose,
+            duration: `${arm.startTiming}; ${arm.continuationAfterReturn}`,
+            quantity: state.medicineSelection.quantity ?? undefined,
+          }
+        : undefined,
       summary: {
-        pharmacistName: state.summary.pharmacistName,
-        pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacistName: state.summary.pharmacistName || __pharmProfile?.name || '',
+        pharmacistGPhC: state.summary.pharmacistGPhC || __pharmProfile?.gphcNumber || '',
+        pharmacyName: state.summary.pharmacyName || __pharmProfile?.pharmacyName,
+        pharmacyAddress: state.summary.pharmacyAddress || __pharmProfile?.pharmacyAddress,
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: state.consent.notifyGp },
     };
-  }, [state, isBlocked]);
+  }, [state, isBlocked, alerts, __pharmProfile]);
 
   const handleNewConsultation = useCallback(() => {
     dispatch({ type: "RESET" });
@@ -285,43 +353,21 @@ export function AntiMalarialsClient() {
 
   // ─── Render ───
 
-  if (showReport) {
-    return (
-      <div className="space-y-4">
-        <button
-          onClick={() => setShowReport(false)}
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-        >
-          ← Back to Consultation
-        </button>
-        <AntiMalarialsSummaryReport state={state} />
-        <div className="flex gap-4 justify-center mt-6">
-          <button
-            onClick={() => window.print()}
-            className="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
-          >
-            Print Report
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-8">
-      {/* Progress Bar */}
-      <ProgressBar
-        stepLabels={STEP_LABELS}
-        currentStep={state.currentStep}
-        onStepClick={handleStepClick}
-        completedSteps={completedSteps}
-        hasErrors={!!validationError}
-      />
-
-      {/* Alerts Banner */}
-      {alerts.length > 0 && (
-        <AlertBanner alerts={alerts} />
-      )}
+      {/* Progress Bar and live alerts: screen only; the printed record is the summary report on the last step */}
+      <div className="space-y-8 print:hidden">
+        <ProgressBar
+          stepLabels={STEP_LABELS}
+          currentStep={state.currentStep}
+          onStepClick={handleStepClick}
+          completedSteps={completedSteps}
+          hasErrors={!!validationError}
+        />
+        {alerts.length > 0 && (
+          <AlertBanner alerts={alerts} />
+        )}
+      </div>
 
       {/* Step 0: Patient Details */}
       {state.currentStep === 0 && (
@@ -333,6 +379,8 @@ export function AntiMalarialsClient() {
           onPrev={handlePrev}
           canProceed={!validationError}
           validationError={validationError}
+          isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
         >
           <PatientDetailsStep
             patient={state.patient}
@@ -352,6 +400,8 @@ export function AntiMalarialsClient() {
           onPrev={handlePrev}
           canProceed={!validationError}
           validationError={validationError}
+          isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
         >
           <ConsentStep
             consent={state.consent}
@@ -370,6 +420,8 @@ export function AntiMalarialsClient() {
           onPrev={handlePrev}
           canProceed={!validationError}
           validationError={validationError}
+          isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
         >
           <div className="space-y-6">
             <TextInput
@@ -392,7 +444,8 @@ export function AntiMalarialsClient() {
             />
             {state.travelAssessment.tripDuration !== null && (
               <p className="text-xs text-gray-600">
-                Days in the malarious area: {state.travelAssessment.tripDuration}
+                Days in the malarious area: {state.travelAssessment.tripDuration} (counted inclusively: the day of
+                arrival and the day of departure both count, because a dose is due on each)
               </p>
             )}
 
@@ -424,7 +477,7 @@ export function AntiMalarialsClient() {
             <p className="text-xs text-gray-600">
               Weight determines the product strength and dose: atovaquone/proguanil adult tablet only over 40kg
               (paediatric 62.5mg/25mg tablets from 11 to 40kg); mefloquine one tablet weekly over 45kg, with divided
-              doses below that.
+              doses below that. Decimals are accepted (for example 40.5). {WEIGHT_BAND_CONVENTION}
             </p>
 
             <Checkbox
@@ -489,6 +542,8 @@ export function AntiMalarialsClient() {
           onPrev={handlePrev}
           canProceed={!validationError}
           validationError={validationError}
+          isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
         >
           <div className="space-y-4">
             <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
@@ -614,6 +669,16 @@ export function AntiMalarialsClient() {
               onChange={(v) => handleMedicalChange('g6pdDeficiency', v)}
               description="Glucose-6-phosphate dehydrogenase deficiency (all three agents can be used; record it)"
             />
+
+            <div className="pt-3 border-t border-gray-200">
+              <Checkbox
+                label="I have asked the patient every question on this page, and none applies unless ticked above"
+                checked={state.medicalHistory.allQuestionsAsked}
+                onChange={(v) => handleMedicalChange('allQuestionsAsked', v)}
+                description="Every exclusion on this page defaults to absent. This confirmation is what makes the record's negative answers true."
+                required
+              />
+            </div>
           </div>
         </StepWrapper>
       )}
@@ -628,6 +693,8 @@ export function AntiMalarialsClient() {
           onPrev={handlePrev}
           canProceed={!validationError}
           validationError={validationError}
+          isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
         >
           <div className="space-y-4">
             <Checkbox
@@ -715,6 +782,16 @@ export function AntiMalarialsClient() {
                 placeholder="e.g. metformin, atorvastatin"
               />
             )}
+
+            <div className="pt-3 border-t border-gray-200">
+              <Checkbox
+                label="I have asked about every medicine on this page, and none applies unless ticked above"
+                checked={state.medications.allQuestionsAsked}
+                onChange={(v) => handleMedicationsChange('allQuestionsAsked', v)}
+                description="Every interaction on this page defaults to absent. This confirmation is what makes the record's negative answers true."
+                required
+              />
+            </div>
           </div>
         </StepWrapper>
       )}
@@ -731,6 +808,7 @@ export function AntiMalarialsClient() {
           canProceed={!isBlocked}
           validationError={isBlocked ? 'Hard stop alerts present. Consultation cannot proceed.' : null}
           isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
         >
           <div className="space-y-4">
             {alerts.length === 0 ? (
@@ -768,7 +846,7 @@ export function AntiMalarialsClient() {
       )}
 
       {/* Step 6: Medicine Selection */}
-      {state.currentStep === 6 && !isBlocked && (
+      {state.currentStep === 6 && (
         <StepWrapper
           title="Medicine Selection"
           currentStep={state.currentStep}
@@ -777,42 +855,18 @@ export function AntiMalarialsClient() {
           onPrev={handlePrev}
           canProceed={!validationError}
           validationError={validationError}
+          isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
         >
+          {isBlocked ? (
+            <BlockedPanel />
+          ) : (
           <div className="space-y-6">
             <p className="text-xs text-gray-600">
               {AM_PGD_VERSION}. Only arms not excluded for this patient are offered. Use current
-              NaTHNaC / TravelHealthPro guidance to choose between them.
+              NaTHNaC / TravelHealthPro guidance to choose between them. Dose, timing and the calculated
+              course are the PGD&apos;s for the chosen arm, weight and itinerary and are not edited here.
             </p>
-
-            {recommendation && (
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="font-medium text-sm text-blue-900 mb-2">
-                  {state.medicineSelection.selectedMedicine ? 'Selected arm, per the PGD' : 'First eligible arm, per the PGD'}
-                </p>
-                <p className="text-sm text-blue-800 mb-3">
-                  <strong>{recommendation.medicine}</strong>
-                </p>
-                <ul className="text-xs text-blue-700 space-y-1">
-                  <li>
-                    <strong>Dose:</strong> {recommendation.dose}
-                  </li>
-                  <li>
-                    <strong>Start:</strong> {recommendation.startTiming}
-                  </li>
-                  <li>
-                    <strong>Continue:</strong>{' '}
-                    {recommendation.continuationAfterReturn}
-                  </li>
-                  <li>
-                    <strong>Quantity:</strong> {recommendation.quantity}
-                  </li>
-                  <li>
-                    <strong>Maximum treatment period:</strong> {recommendation.maxPeriod}
-                  </li>
-                  <li>{recommendation.reason}</li>
-                </ul>
-              </div>
-            )}
 
             <SelectInput
               label="Selected Medicine (name, form and strength)"
@@ -822,38 +876,58 @@ export function AntiMalarialsClient() {
                 { value: '', label: 'Select a medicine...' },
                 ...eligibleOptions,
               ]}
-            />
-
-            <TextInput
-              label="Dose"
-              value={state.medicineSelection.dose}
-              onChange={(v) => handleMedicineChange('dose', v)}
-              placeholder="e.g. 1 adult tablet once daily with food or a milky drink"
-            />
-
-            <TextInput
-              label="Start Timing"
-              value={state.medicineSelection.startTiming}
-              onChange={(v) => handleMedicineChange('startTiming', v)}
-              placeholder="e.g. 1 to 2 days before entering the malarious area (mefloquine: 2 to 3 weeks)"
-            />
-
-            <TextInput
-              label="Continuation After Return"
-              value={state.medicineSelection.continuationAfterReturn}
-              onChange={(v) =>
-                handleMedicineChange('continuationAfterReturn', v)
-              }
-              placeholder="e.g. 7 days after leaving (atovaquone/proguanil) or 4 weeks (doxycycline, mefloquine)"
-            />
-
-            <TextInput
-              label="Quantity supplied and calculated course length (including the tail)"
-              value={state.medicineSelection.quantity}
-              onChange={(v) => handleMedicineChange('quantity', v)}
-              placeholder="e.g. 23 tablets: 2 lead-in + 14 days + 7 tail"
               required
             />
+
+            {state.medicineSelection.selectedMedicine && recommendation && (
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="font-medium text-sm text-blue-900 mb-2">
+                  Regimen per the PGD for this arm, weight band and itinerary
+                </p>
+                <p className="text-sm text-blue-800 mb-3">
+                  <strong>{recommendation.medicine}</strong>
+                </p>
+                <ul className="text-xs text-blue-700 space-y-1">
+                  <li>
+                    <strong>Dose:</strong> {state.medicineSelection.dose}
+                  </li>
+                  <li>
+                    <strong>Start:</strong> {state.medicineSelection.startTiming}
+                  </li>
+                  <li>
+                    <strong>Continue:</strong>{' '}
+                    {state.medicineSelection.continuationAfterReturn}
+                  </li>
+                  <li>
+                    <strong>Calculated course:</strong> {state.medicineSelection.courseCalculation}
+                  </li>
+                  <li>
+                    <strong>Maximum treatment period:</strong> {recommendation.maxPeriod}
+                  </li>
+                  <li>{recommendation.reason}</li>
+                </ul>
+              </div>
+            )}
+
+            {state.medicineSelection.selectedMedicine && recommendation && (
+              <div>
+                <NumberInput
+                  label={`Quantity supplied (${recommendation.unit})`}
+                  value={state.medicineSelection.quantity}
+                  onChange={(v) => handleMedicineChange('quantity', v)}
+                  min={recommendation.total ?? 1}
+                  max={(recommendation.total ?? 0) + QUANTITY_PACK_ALLOWANCE}
+                  unit={recommendation.unit}
+                  required
+                />
+                <p className="text-xs text-gray-600 mt-1">
+                  Pre-filled with the calculated course
+                  {recommendation.total !== null ? ` of ${recommendation.total} ${recommendation.unit}` : ''}. A
+                  smaller quantity is refused; up to one extra pack ({QUANTITY_PACK_ALLOWANCE}) above it is accepted
+                  for pack rounding.
+                </p>
+              </div>
+            )}
 
             {mefloquineDividedDose && (
               <Checkbox
@@ -886,13 +960,15 @@ export function AntiMalarialsClient() {
               onChange={(v) => handleMedicineChange('reason', v)}
               placeholder="Which agent was chosen and why, including why any alternative was unsuitable..."
               rows={4}
+              required
             />
           </div>
+          )}
         </StepWrapper>
       )}
 
       {/* Step 7: Counselling */}
-      {state.currentStep === 7 && !isBlocked && (
+      {state.currentStep === 7 && (
         <StepWrapper
           title="Counselling & Follow-up"
           description="Confirm that all counselling points have been discussed:"
@@ -902,47 +978,84 @@ export function AntiMalarialsClient() {
           onPrev={handlePrev}
           canProceed={!validationError}
           validationError={validationError}
+          isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
         >
+          {isBlocked ? (
+            <BlockedPanel />
+          ) : (
           <div className="space-y-3">
             <Checkbox
               label="How to take it"
               checked={state.counselling.takeWithFood}
               onChange={(v) => handleCounsellingChange('takeWithFood', v)}
-              description="Atovaquone/proguanil: every day at the same time, with food or a milky drink; missing doses or an empty stomach reduces protection. Doxycycline: with plenty of water, sitting or standing, not just before bed. Mefloquine: on the SAME DAY each week, with food and plenty of water."
+              description={
+                isAP
+                  ? 'Every day at the same time, with food or a milky drink; missing doses or an empty stomach reduces protection.'
+                  : isDoxy
+                    ? 'With plenty of water, sitting or standing, not just before bed.'
+                    : 'On the SAME DAY each week, with food and plenty of water.'
+              }
             />
             <Checkbox
               label="Keep taking it after leaving the malaria area"
               checked={state.counselling.completeCourseAdvised}
               onChange={(v) => handleCounsellingChange('completeCourseAdvised', v)}
-              description="7 days after leaving for atovaquone/proguanil; FOUR WEEKS for doxycycline and mefloquine. Stopping when you get home is the commonest reason prophylaxis fails."
-            />
-            <Checkbox
-              label="Sun protection advice"
-              checked={state.counselling.sunProtectionAdvice}
-              onChange={(v) =>
-                handleCounsellingChange('sunProtectionAdvice', v)
+              description={
+                (isAP ? '7 DAYS after leaving. ' : 'FOUR WEEKS after leaving. ') +
+                'Stopping when you get home is the commonest reason prophylaxis fails.'
               }
-              description="Doxycycline: you will burn much more easily in the sun. Use high-factor sunscreen, cover up and avoid midday sun. Apply sunscreen first, then repellent."
             />
+            {isDoxy && (
+              <Checkbox
+                label="Sun protection advice (doxycycline)"
+                checked={state.counselling.sunProtectionAdvice}
+                onChange={(v) =>
+                  handleCounsellingChange('sunProtectionAdvice', v)
+                }
+                description="You will burn much more easily in the sun. Use high-factor sunscreen, cover up and avoid midday sun. Apply sunscreen first, then repellent."
+                required
+              />
+            )}
             <Checkbox
               label="Bite avoidance (given and recorded in every case)"
               checked={state.counselling.bitePrevention}
               onChange={(v) => handleCounsellingChange('bitePrevention', v)}
               description="No tablet is completely effective. Repellent containing 20 to 30% DEET or 20% picaridin, cover arms and legs from dusk onwards, sleep under an insecticide-treated net where accommodation is not screened or air-conditioned."
             />
+            <div className="rounded-lg border border-gray-200 p-3 space-y-1">
+              <Checkbox
+                label="Pregnancy / breastfeeding implications discussed"
+                checked={state.counselling.pregnancyAdvice}
+                onChange={(v) => {
+                  handleCounsellingChange('pregnancyAdvice', v);
+                  if (v) handleCounsellingChange('pregnancyAdviceNotApplicable', false);
+                }}
+                description="Implications if the patient becomes pregnant while taking it, and that pregnancy or breastfeeding would take them outside this PGD."
+              />
+              <Checkbox
+                label="Not applicable to this patient"
+                checked={state.counselling.pregnancyAdviceNotApplicable}
+                onChange={(v) => {
+                  handleCounsellingChange('pregnancyAdviceNotApplicable', v);
+                  if (v) handleCounsellingChange('pregnancyAdvice', false);
+                }}
+                description="For example a male patient. One of the two boxes must be ticked."
+              />
+            </div>
             <Checkbox
-              label="Pregnancy / breastfeeding implications"
-              checked={state.counselling.pregnancyAdvice}
-              onChange={(v) => handleCounsellingChange('pregnancyAdvice', v)}
-              description="Discussed implications if patient becomes pregnant while taking"
-            />
-            <Checkbox
-              label="Vomiting, diarrhoea and interactions with food"
+              label={isAP ? 'Vomited dose and food' : isDoxy ? 'Antacids, iron, milk and candidiasis' : 'Vomiting and diarrhoea'}
               checked={state.counselling.diarrhoeaManagement}
               onChange={(v) =>
                 handleCounsellingChange('diarrhoeaManagement', v)
               }
-              description="Atovaquone/proguanil: if you are sick within an hour of a dose, take another one. Doxycycline: avoid indigestion remedies, iron tablets and milk within 2 hours of a dose; may increase vaginal candidiasis, consider advising women to carry treatment."
+              description={
+                isAP
+                  ? 'If you are sick within an hour of a dose, take another one.'
+                  : isDoxy
+                    ? 'Avoid indigestion remedies, iron tablets and milk within 2 hours of a dose; may increase vaginal candidiasis, consider advising women to carry treatment.'
+                    : 'Vomiting or diarrhoea may reduce absorption; seek advice if a weekly dose is vomited within an hour.'
+              }
             />
             <Checkbox
               label="Post-travel fever warning (verbal and written)"
@@ -958,7 +1071,7 @@ export function AntiMalarialsClient() {
               }
               description="Common side effects for the agent supplied and when to contact pharmacist/doctor. Report suspected side effects via Yellow Card."
             />
-            {state.medicineSelection.selectedMedicine === 'mefloquine' && (
+            {isMefloquine && (
               <Checkbox
                 label="Mefloquine: STOP at the first neuropsychiatric symptom"
                 checked={state.counselling.mefloquineStopAdvice}
@@ -982,64 +1095,87 @@ export function AntiMalarialsClient() {
               description="Patient information leaflet for the product and strength given, the Get Real Health bite avoidance and post-travel fever sheet, and for mefloquine the manufacturer alert card where provided."
             />
           </div>
+          )}
         </StepWrapper>
       )}
 
       {/* Step 8: Summary */}
-      {state.currentStep === 8 && !isBlocked && (
+      {state.currentStep === 8 && (
         <StepWrapper
           title="Summary & Print"
           currentStep={state.currentStep}
           totalSteps={TOTAL_STEPS}
-          onNext={() => {
-            setCompletedSteps((prev) => {
-              const updated = new Set(prev);
-              updated.add(state.currentStep);
-              return updated;
-            });
-            setShowReport(true);
-          }}
+          onNext={handleNext}
           onPrev={handlePrev}
           canProceed={!validationError}
           validationError={validationError}
-        getConsultationData={getConsultationData}
-        onNewConsultation={handleNewConsultation}
+          isBlocked={isBlocked}
+          getConsultationData={getConsultationData}
+          onNewConsultation={handleNewConsultation}
         >
+          {isBlocked ? (
+            <BlockedPanel />
+          ) : (
           <div className="space-y-6">
-            <TextInput
-              label="Pharmacist Name"
-              value={state.summary.pharmacistName}
-              onChange={(v) => handleSummaryChange('pharmacistName', v)}
-              placeholder="Full name"
-            />
-            <TextInput
-              label="GPhC Registration Number"
-              value={state.summary.pharmacistGPhC}
-              onChange={(v) => handleSummaryChange('pharmacistGPhC', v)}
-              placeholder="e.g. 2123456"
-            />
-            <TextInput
-              label="Pharmacy Name"
-              value={state.summary.pharmacyName}
-              onChange={(v) => handleSummaryChange('pharmacyName', v)}
-              placeholder="Pharmacy name"
-            />
-            <TextInput
-              label="Pharmacy Address"
-              value={state.summary.pharmacyAddress}
-              onChange={(v) => handleSummaryChange('pharmacyAddress', v)}
-              placeholder="Full address"
-            />
-            <TextArea
-              label="Clinical Notes"
-              value={state.summary.clinicalNotes}
-              onChange={(v) => handleSummaryChange('clinicalNotes', v)}
-              placeholder="Any additional clinical notes or observations..."
-              rows={4}
-            />
+            <div className="space-y-6 print:hidden">
+              <TextInput
+                label="Pharmacist Name"
+                value={state.summary.pharmacistName}
+                onChange={(v) => handleSummaryChange('pharmacistName', v)}
+                placeholder="Full name"
+                required
+              />
+              <TextInput
+                label="GPhC Registration Number"
+                value={state.summary.pharmacistGPhC}
+                onChange={(v) => handleSummaryChange('pharmacistGPhC', v)}
+                placeholder="e.g. 2123456"
+                required
+              />
+              <TextInput
+                label="Pharmacy Name"
+                value={state.summary.pharmacyName}
+                onChange={(v) => handleSummaryChange('pharmacyName', v)}
+                placeholder="Pharmacy name"
+                required
+              />
+              <TextInput
+                label="Pharmacy Address"
+                value={state.summary.pharmacyAddress}
+                onChange={(v) => handleSummaryChange('pharmacyAddress', v)}
+                placeholder="Full address"
+              />
+              <TextArea
+                label="Clinical Notes"
+                value={state.summary.clinicalNotes}
+                onChange={(v) => handleSummaryChange('clinicalNotes', v)}
+                placeholder="Any additional clinical notes or observations..."
+                rows={4}
+              />
+            </div>
+
+            {/* The printed record. This is what Save & Print prints; the form above is print:hidden. */}
+            <AntiMalarialsSummaryReport state={state} alerts={alerts} />
           </div>
+          )}
         </StepWrapper>
       )}
+    </div>
+  );
+}
+
+// Shown in place of the form on any step reached with a stop on screen.
+function BlockedPanel() {
+  return (
+    <div className="p-4 bg-red-50 border border-red-200 rounded-lg space-y-2">
+      <p className="text-sm font-semibold text-red-800">
+        Exclusion criteria met: no medicine can be supplied under this PGD.
+      </p>
+      <p className="text-xs text-red-700">
+        Go back to the Contraindications Review to see the reason. Give bite avoidance and post-travel fever
+        advice regardless, refer as the alert directs, and use &quot;Save as not supplied&quot; to record the
+        consultation and the advice given.
+      </p>
     </div>
   );
 }

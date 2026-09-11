@@ -8,6 +8,7 @@ import {
   AGE_BAND_LABEL,
   isCellulitisPgd,
   isMoreExtensiveInfection,
+  extensiveInfectionFindings,
 } from "../lib/skin-infection-logic";
 
 interface SkinInfectionSummaryReportProps {
@@ -26,6 +27,13 @@ const ANTIBIOTIC_LABEL: Record<string, string> = {
   flucloxacillin: "Flucloxacillin",
   clarithromycin: "Clarithromycin",
   doxycycline: "Doxycycline",
+};
+
+const REASON_LABEL: Record<string, string> = {
+  "penicillin-allergy": "penicillin or beta-lactam allergy",
+  "hepatic-history": "history of flucloxacillin-associated jaundice or hepatic dysfunction",
+  "cannot-manage-empty-stomach": "cannot manage empty-stomach dosing",
+  intolerance: "documented intolerance of flucloxacillin",
 };
 
 const RENAL_LABEL: Record<string, string> = {
@@ -99,18 +107,11 @@ export function SkinInfectionSummaryReport({ state }: SkinInfectionSummaryReport
         ; {a.alteredConsciousness ? "new confusion or drowsiness present" : "no new confusion or drowsiness"}
         {cellulitisPgd ? `; rigors ${a.rigors ? "present" : "absent"}` : ""}.
       </p>
-      {!cellulitisPgd && (a.extensiveInfection || isCellulitisCase) && (
+      {!cellulitisPgd && (
         <p>
-          More extensive infection (Appendix 2):{" "}
-          {isMoreExtensiveInfection(a)
-            ? [
-                a.extensiveInfection ? "erythema larger than about 10 cm across or more than one body region" : "",
-                isCellulitisCase ? "cellulitis rather than a superficial infection" : "",
-              ]
-                .filter(Boolean)
-                .join("; ")
-            : "no"}
-          .
+          Extent (Appendix 2): erythema {a.erythemaDiameterCm || "not recorded"} cm across; {a.bodyRegionCount || "not recorded"} body region(s).
+          More extensive infection: {isMoreExtensiveInfection(a) ? `YES (${extensiveInfectionFindings(a).join("; ")})` : "no"}.
+          {a.beyondMildModerateScope ? " Beyond the Appendix 2 definition: outside the PGD, referred." : ""}
         </p>
       )}
       {isCellulitisCase && (
@@ -118,7 +119,7 @@ export function SkinInfectionSummaryReport({ state }: SkinInfectionSummaryReport
           Cellulitis: {cellulitisPgd ? "adult 18 or over" : "patient 12 or over"}. Margins marked:{" "}
           {a.marginsMarked ? "yes" : "NO"}
           {cellulitisPgd
-            ? `. Time marked: ${a.marginMarkedTime || "not recorded"}`
+            ? `. Time marked: ${a.marginMarkedTime || "not recorded"}. 48-hour reassessment booked for: ${a.reviewDateTime || "not recorded"}`
             : `. In-person 48-hour review at this pharmacy booked for: ${a.reviewDateTime || "not recorded"}`}
           .
         </p>
@@ -145,6 +146,7 @@ export function SkinInfectionSummaryReport({ state }: SkinInfectionSummaryReport
         {state.medicalHistory.pregnant ? "Pregnant. " : ""}
         {state.medicalHistory.breastfeeding ? "Breastfeeding. " : ""}
         {state.medicalHistory.immunosuppressed ? "Immunosuppressed. " : ""}
+        {state.medicalHistory.myastheniaSleOrPorphyria ? "Myasthenia gravis, SLE or porphyria. " : ""}
         {state.medicalHistory.renalFunction
           ? `Renal function asked: ${RENAL_LABEL[state.medicalHistory.renalFunction]}. `
           : ""}
@@ -153,14 +155,18 @@ export function SkinInfectionSummaryReport({ state }: SkinInfectionSummaryReport
 
       <h2 className="font-semibold border-b border-gray-300 mb-2">Outcome</h2>
       {stopped ? (
-        <p className="mb-4 font-semibold">
-          NOT SUPPLIED: exclusion criteria met; patient referred. See alerts below.
-        </p>
+        <div className="mb-4">
+          <p className="font-semibold">
+            NOT SUPPLIED: exclusion criteria met; patient referred. See alerts below.
+          </p>
+          <p>Advice given and referral arranged: {state.summary.referralAdvice || "not recorded"}.</p>
+          <p>Adverse drug reactions: {state.summary.adverseDrugReactions || "none reported"}.</p>
+        </div>
       ) : (
         <div className="mb-4">
           <p className="font-semibold">
-            Supplied: {ANTIBIOTIC_LABEL[state.antibioticSelection.choice] || "not recorded"}{" "}
-            {state.antibioticSelection.formulation}
+            Supplied: {dose?.medicine || ANTIBIOTIC_LABEL[state.antibioticSelection.choice] || "not recorded"}. Brand:{" "}
+            {state.antibioticSelection.brand || "not recorded"}
           </p>
           {dose && (
             <p>
@@ -173,14 +179,17 @@ export function SkinInfectionSummaryReport({ state }: SkinInfectionSummaryReport
             {state.antibioticSelection.batchNumber || "not recorded"}. Expiry:{" "}
             {state.antibioticSelection.expiryDate || "not recorded"}.
           </p>
-          {state.antibioticSelection.rationale && (
+          {state.antibioticSelection.choice && state.antibioticSelection.choice !== "flucloxacillin" && (
             <p>
-              {state.antibioticSelection.choice && state.antibioticSelection.choice !== "flucloxacillin"
-                ? "Reason flucloxacillin unsuitable: "
-                : "Rationale: "}
-              {state.antibioticSelection.rationale}
+              Reason flucloxacillin unsuitable:{" "}
+              {REASON_LABEL[state.antibioticSelection.flucloxUnsuitableReason] || "not recorded"}
+              {state.antibioticSelection.rationale ? ` (${state.antibioticSelection.rationale})` : ""}.
             </p>
           )}
+          {state.antibioticSelection.choice === "flucloxacillin" && state.antibioticSelection.rationale && (
+            <p>Rationale: {state.antibioticSelection.rationale}</p>
+          )}
+          <p>Adverse drug reactions: {state.summary.adverseDrugReactions || "none reported"}.</p>
         </div>
       )}
 
@@ -212,7 +221,9 @@ export function SkinInfectionSummaryReport({ state }: SkinInfectionSummaryReport
         {state.summary.pharmacyName} {state.summary.pharmacyAddress}
       </p>
       <p className="mt-6 text-xs text-gray-500">
-        Supplied under the {cellulitisPgd ? "Cellulitis" : "Skin and Soft Tissue Infection"} Patient Group Direction ({PGD_VERSION_LABEL[state.variant]}). Signed and dated record retained per PGD record-keeping requirements.
+        {stopped ? "Consultation under" : "Supplied under"} the {cellulitisPgd ? "Cellulitis" : "Skin and Soft Tissue Infection"} Patient Group Direction ({PGD_VERSION_LABEL[state.variant]}).{" "}
+        {stopped ? "No medicine was supplied under the PGD; an exclusion criterion applied and the referral is recorded above. " : ""}
+        Signed and dated record retained per PGD record-keeping requirements.
       </p>
     </div>
   );

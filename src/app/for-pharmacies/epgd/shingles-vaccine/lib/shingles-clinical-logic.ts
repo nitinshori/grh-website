@@ -30,7 +30,7 @@ export function getAllAlerts(state: ShinglesConsultationState): ClinicalAlert[] 
     });
   }
 
-  if (state.assessment.anaphylaxisToComponent) {
+  if (state.assessment.anaphylaxisToComponent === "yes") {
     alerts.push({
       severity: "stop",
       code: "SHINGLES_ANAPHYLAXIS",
@@ -39,7 +39,7 @@ export function getAllAlerts(state: ShinglesConsultationState): ClinicalAlert[] 
     });
   }
 
-  if (state.assessment.severeAcuteIllness) {
+  if (state.assessment.severeAcuteIllness === "yes") {
     alerts.push({
       severity: "stop",
       code: "SHINGLES_ACUTE_ILLNESS",
@@ -67,11 +67,13 @@ export function getAllAlerts(state: ShinglesConsultationState): ClinicalAlert[] 
   }
 
   if (state.assessment.pregnancyStatus === "unknown") {
+    // Pregnancy or breastfeeding is an exclusion; an unestablished status
+    // cannot satisfy it (adversarial review, 11 Sep 2026).
     alerts.push({
-      severity: "caution",
+      severity: "stop",
       code: "SHINGLES_PREGNANCY_UNKNOWN",
-      message: "Pregnancy status unknown",
-      detail: "Pregnancy or breastfeeding excludes. Establish status before vaccinating a patient of childbearing potential.",
+      message: "Pregnancy or breastfeeding status not established",
+      detail: "Pregnancy or breastfeeding is an exclusion under this PGD. Establish the status before vaccinating; do not proceed until it is recorded as not pregnant and not breastfeeding.",
     });
   }
 
@@ -115,11 +117,14 @@ export function getAllAlerts(state: ShinglesConsultationState): ClinicalAlert[] 
   if (state.supply.doseNumber === "2" && state.assessment.previousShingrixDate && state.supply.vaccinationDate) {
     const days = daysBetween(state.assessment.previousShingrixDate, state.supply.vaccinationDate);
     if (days !== null && days > MAX_INTERVAL_DAYS) {
+      // The PGD's dose, quantity and treatment period rows all say 2 to 6
+      // months. A later second dose is outside the signed document until the
+      // signatories add a late-dose provision (adversarial review, 11 Sep 2026).
       alerts.push({
-        severity: "caution",
+        severity: "stop",
         code: "SHINGLES_INTERVAL_LONG",
         message: "More than 6 months since dose 1",
-        detail: "The PGD schedules dose 2 at 2 to 6 months after dose 1. Green Book advice is to complete the course without restarting; use clinical judgement and record the reason.",
+        detail: "The PGD authorises dose 2 only at 2 to 6 months after dose 1. A second dose beyond 6 months is outside this PGD: refer to a prescriber (Green Book advice is to complete the course without restarting, so the prescriber can issue it). Record the advice given.",
       });
     }
   }

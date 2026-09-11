@@ -472,30 +472,11 @@ export const pgds: PGD[] = [
       "Fluconazole oral and clotrimazole. Very high demand, simple consultation.",
     pharmadoctor: "Yes",
   },
-  {
-    id: "thrush-combi",
-    title: "Vaginal Thrush \u2014 Combi (Pessary + Cream)",
-    category: "Women's Health",
-    priority: 1,
-    isNew: true,
-    revenueEstimate: "\u00a318\u201332 per consultation",
-    consultTime: "10 min",
-    description:
-      "Generic clotrimazole 500mg pessary + clotrimazole 1% external cream. The classic combination supply for symptomatic vaginal thrush \u2014 covers both internal and external symptoms in one supply.",
-    pharmadoctor: "No",
-  },
-  {
-    id: "thrush-duo",
-    title: "Vaginal Thrush \u2014 Duo (Oral + Cream)",
-    category: "Women's Health",
-    priority: 1,
-    isNew: true,
-    revenueEstimate: "\u00a318\u201332 per consultation",
-    consultTime: "10 min",
-    description:
-      "Generic fluconazole 150mg single oral dose + clotrimazole 1% external cream. Patient-friendly oral-tablet route (no pessary) plus topical cream for vulval symptoms.",
-    pharmadoctor: "No",
-  },
+  // thrush-combi and thrush-duo removed from the catalogue 11 Sep 2026: the
+  // signed Vaginal Thrush PGD authorises fluconazole 150 mg and the
+  // clotrimazole 500 mg pessary only, not a clotrimazole cream, so a
+  // "combi" or "duo" pack was never a PGD supply. Their tool routes now
+  // redirect to the thrush tool.
   {
     id: "period-delay",
     title: "Period Delay (Norethisterone)",

@@ -61,6 +61,10 @@ export interface MeningitiBVaccineAdmin {
   doseNumber: "1st" | "2nd" | "3rd" | "booster-12-months" | "";
   /** Trumenba only: routine 2 dose (0 and 6 months) or increased risk 3 dose (0, 1 to 2 and 6 months). */
   trumenbaSchedule: "routine" | "increased-risk" | "";
+  /** Date of the previous dose in this course. Required for every dose other than the first. */
+  previousDoseDate: string;
+  /** Bexsero, 12 months to under 2 years: how many doses were given in the first year (PGD schedule row). */
+  dosesInFirstYear: "0" | "1" | "2" | "";
   /** Date of this dose. */
   vaccinationDate1: string;
   /** Site of this dose. */
@@ -181,6 +185,8 @@ export function createInitialMeningitiBState(): MeningitiBConsultationState {
       product: "",
       doseNumber: "",
       trumenbaSchedule: "",
+      previousDoseDate: "",
+      dosesInFirstYear: "",
       vaccinationDate1: "",
       injectionSite1: "",
       lotNumber1: "",

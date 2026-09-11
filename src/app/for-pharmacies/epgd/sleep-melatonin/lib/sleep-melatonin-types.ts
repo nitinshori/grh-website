@@ -14,9 +14,17 @@ export interface SleepMelatoninAssessment {
   sleepHygieneAdviceGiven: boolean;
   sleepHygieneTried: string;
   ageConfirmed: boolean;
-  // Previous Circadin supply and total weeks of treatment to date (record)
+  // Previous Circadin supply and total weeks of treatment to date (record).
+  // The weeks are parsed as a number and enforced: 13 or more is a stop,
+  // and the quantity is capped so the course cannot exceed 13 weeks.
   previousCircadin: boolean;
   weeksTreatedToDate: string;
+  /** Date of the most recent Circadin supply (YYYY-MM-DD). */
+  lastSupplyDate: string;
+  /** Is this a continuation of the current course, or was the previous
+   *  course completed or stopped? A completed course within the last 6
+   *  months is an exclusion. */
+  previousCourseStatus: "" | "continuing" | "completed";
 }
 
 /**
@@ -103,7 +111,8 @@ export type SleepMelatoninAction =
   | { type: "UPDATE_PRESCRIPTION"; field: keyof SleepMelatoninPrescription; value: unknown }
   | { type: "UPDATE_COUNSELLING"; field: keyof SleepMelatoninCounselling; value: unknown }
   | { type: "UPDATE_SUMMARY"; field: keyof SleepMelatoninConsultationSummary; value: unknown }
-  | { type: "SET_STEP"; step: number };
+  | { type: "SET_STEP"; step: number }
+  | { type: "RESET" };
 
 export const STEP_LABELS = ["Patient Details", "Consent", "Sleep Assessment", "Contraindications", "Prescription", "Counselling", "Summary & Record", "Consultation Complete"];
 
@@ -126,6 +135,8 @@ export function createInitialSleepMelatoninState(): SleepMelatoninConsultationSt
       ageConfirmed: false,
       previousCircadin: false,
       weeksTreatedToDate: "",
+      lastSupplyDate: "",
+      previousCourseStatus: "",
     },
     secondaryCauses: {
       historyTaken: false,

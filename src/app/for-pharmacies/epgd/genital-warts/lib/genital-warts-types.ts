@@ -47,7 +47,10 @@ export interface GenitalWartsAssessment {
   /** "", "not-pregnant", "confirmed", "possible" */
   pregnancyStatus: string;
   breastfeeding: boolean;
-  hypersensitivityToAgent: boolean;
+  /** Hypersensitivity to podophyllotoxin or its excipients: a stop when podophyllotoxin is selected. */
+  hypersensitivityPodophyllotoxin: boolean;
+  /** Hypersensitivity to imiquimod or its excipients: a stop when imiquimod is selected. */
+  hypersensitivityImiquimod: boolean;
   /** Imiquimod caution: risk of phimosis. */
   uncircumcisedMale: boolean;
   /** Imiquimod caution: may exacerbate. */
@@ -58,12 +61,27 @@ export interface GenitalWartsAssessment {
   stiScreeningOffered: boolean;
 }
 
+export type PriorReviewOutcome = "" | "persisting" | "cleared";
+
 export interface GenitalWartsTreatment {
   agent: WartAgent;
   /** Podophyllotoxin only: "solution" (15 mL) or "cream" (5 g). */
   podophyllotoxinForm: string;
   /** Record: name and brand of medication. */
   brand: string;
+  /**
+   * Which supply this is in the current course. Podophyllotoxin: one bottle
+   * or tube per cycle, maximum 4 cycles. Imiquimod: 12 sachets per
+   * dispensing (4 weeks), maximum 4 dispensings (16 weeks).
+   */
+  supplyNumber: number | null;
+  /**
+   * Outcome of the PGD's mid-course review (podophyllotoxin after 2 cycles,
+   * imiquimod at 8 weeks). Required before the third supply; "cleared" means
+   * no further supply.
+   */
+  priorReviewOutcome: PriorReviewOutcome;
+  /** Derived from the agent and form: the document's fixed pack per supply. */
   quantitySupplied: string;
   batchNumber: string;
   expiryDate: string;
@@ -94,13 +112,50 @@ export interface GenitalWartsCounselling {
   followUpAndScreeningAdvised: boolean;
 }
 
+export interface GenitalWartsSummary extends BaseSummary {
+  /** Records requirement: advice given if excluded or declining treatment, and the decision reached. */
+  referralAdvice: string;
+  /** Records requirement: details of any adverse drug reactions and actions taken. */
+  adverseDrugReactions: string;
+}
+
 export interface GenitalWartsConsultationState {
   patient: BasePatientDetails;
   consent: BaseConsent;
   assessment: GenitalWartsAssessment;
   treatment: GenitalWartsTreatment;
   counselling: GenitalWartsCounselling;
-  summary: BaseSummary;
+  summary: GenitalWartsSummary;
+}
+
+/** The document's fixed quantity per supply for the chosen agent and form. */
+export function fixedQuantity(agent: WartAgent, podophyllotoxinForm: string): string {
+  if (agent === "imiquimod") return "12 sachets (4 weeks at 3 times a week)";
+  if (agent === "podophyllotoxin") {
+    if (podophyllotoxinForm === "solution") return "1 x 15 mL bottle of 0.5% solution (one treatment cycle)";
+    if (podophyllotoxinForm === "cream") return "1 x 5 g tube of 0.15% cream (one treatment cycle)";
+    return "";
+  }
+  return "";
+}
+
+/** Maximum supplies in a course: podophyllotoxin 4 cycles; imiquimod 4 dispensings (16 weeks). */
+export const MAX_SUPPLIES: Record<Exclude<WartAgent, "">, number> = {
+  podophyllotoxin: 4,
+  imiquimod: 4,
+};
+
+/** Days from supply to the PGD review point: podophyllotoxin after 2 cycles (14 days); imiquimod at 8 weeks (56 days). */
+export const REVIEW_INTERVAL_DAYS: Record<Exclude<WartAgent, "">, number> = {
+  podophyllotoxin: 14,
+  imiquimod: 56,
+};
+
+export function addDays(isoDate: string, days: number): string {
+  const d = new Date(isoDate);
+  if (isNaN(d.getTime())) return "";
+  d.setDate(d.getDate() + days);
+  return d.toISOString().split("T")[0];
 }
 
 export const STEP_LABELS = [
@@ -156,7 +211,8 @@ export function createInitialConsultationState(): GenitalWartsConsultationState 
       immunosuppressed: false,
       pregnancyStatus: "",
       breastfeeding: false,
-      hypersensitivityToAgent: false,
+      hypersensitivityPodophyllotoxin: false,
+      hypersensitivityImiquimod: false,
       uncircumcisedMale: false,
       autoimmuneCondition: false,
       cervicalScreeningUpToDate: false,
@@ -167,6 +223,8 @@ export function createInitialConsultationState(): GenitalWartsConsultationState 
       agent: "",
       podophyllotoxinForm: "",
       brand: "",
+      supplyNumber: null,
+      priorReviewOutcome: "",
       quantitySupplied: "",
       batchNumber: "",
       expiryDate: "",
@@ -201,6 +259,8 @@ export function createInitialConsultationState(): GenitalWartsConsultationState 
         minute: "2-digit",
       }),
       clinicalNotes: "",
+      referralAdvice: "",
+      adverseDrugReactions: "",
     },
   };
 }

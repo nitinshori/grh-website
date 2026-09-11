@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 // Mounted directly: this tool does not use the shared StepWrapper,
 // which is where the other fifteen vaccination tools pick this up.
-import { VaccineSafetyChecks } from "../shared/components/VaccineSafetyChecks";
+import { VaccineSafetyChecks, getVaccineSafety, clearVaccineSafety } from "../shared/components/VaccineSafetyChecks";
 import {
   FluConsultationState,
   FluScreening,
@@ -20,6 +20,7 @@ import {
   FluChildConsent,
   FluVaccineType,
   FLU_SEASON,
+  FLU_VACCINES,
 } from './lib/flu-types';
 import { ClinicalAlert } from '../shared/types';
 import {
@@ -28,6 +29,7 @@ import {
   getObservationPeriodRecommendation,
   needsTwoDoses,
   permittedVaccineTypes,
+  twoDoseCourseDoseNumber,
 } from './lib/flu-clinical-logic';
 import {
   validatePatientDetails,
@@ -37,6 +39,7 @@ import {
   validateAdministration,
   validatePostVaccineObs,
   validateAdvice,
+  validateSummary,
 } from './lib/flu-validation';
 import { TextInput, Checkbox, SelectInput, NumberInput, TextArea } from '../shared/components/FormInputs';
 import { PostcodeLookup } from '../shared/components/PostcodeLookup';
@@ -45,22 +48,10 @@ import Link from 'next/link';
 import { AlertBanner } from '../shared/components/AlertBanner';
 import VaccineAdminFields from './components/VaccineAdminFields';
 import FluSummaryReport from './components/FluSummaryReport';
-import { BasePatientDetails, BaseConsent, BaseSummary } from '../shared/types';
+import { BasePatientDetails, BaseConsent, BaseSummary, calculateAge } from '../shared/types';
 import { useConsultationTracking, type ConsultationRecordData } from '../shared/hooks/useConsultationTracking';
 
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
-// Inline date utility function
-const calculateAge = (dateOfBirth: string): number => {
-  if (!dateOfBirth) return 0;
-  const today = new Date();
-  const birthDate = new Date(dateOfBirth);
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-    age--;
-  }
-  return age;
-};
 
 const STEP_LABELS = [
   'Patient Details',
@@ -139,7 +130,9 @@ gpOdsCode: '',
     new Map<number, string[]>()
   );
 
-  const patientAge = calculateAge(state.patient.dateOfBirth);
+  // Shared age calculation. A blank or unparseable date of birth gives -1,
+  // which fails every age gate rather than passing them (adversarial review).
+  const patientAge = calculateAge(state.patient.dateOfBirth) ?? -1;
 
   // Patient Details handlers
   const handleFirstNameChange = useCallback((value: string): void => {
@@ -166,7 +159,7 @@ gpOdsCode: '',
   const handleDOBChange = useCallback((value: string): void => {
     setState((prev) => ({
       ...prev,
-      patient: { ...prev.patient, dateOfBirth: value },
+      patient: { ...prev.patient, dateOfBirth: value, age: calculateAge(value) },
     }));
   }, []);
 
@@ -482,6 +475,13 @@ gpOdsCode: '',
     }));
   }, []);
 
+  const handlePharmacistGPhCChange = useCallback((value: string): void => {
+    setState((prev) => ({
+      ...prev,
+      summary: { ...prev.summary, pharmacistGPhC: value },
+    }));
+  }, []);
+
   const handleClinicalNotesChange = useCallback((value: string): void => {
     setState((prev) => ({
       ...prev,
@@ -533,7 +533,8 @@ gpOdsCode: '',
         break;
       }
       case 7: {
-        // Summary validation can be skipped
+        const result = validateSummary(state.summary);
+        errors.push(...result.errors);
         break;
       }
     }
@@ -551,7 +552,33 @@ gpOdsCode: '',
     return true;
   }, [state, validationErrors, patientAge]);
 
+  // Contraindications used to be evaluated only when leaving the screening
+  // step, so a stop introduced by going back (a corrected date of birth, a
+  // newly ticked exclusion) was not seen until that step's Next was pressed
+  // again. Evaluate whenever the inputs change (adversarial review, 11 Sep 2026).
+  useEffect(() => {
+    const { contraindications, alerts } = evaluateFluContraindications(state.screening, patientAge);
+    setState((prev) => ({ ...prev, contraindications, alerts }));
+  }, [state.screening, patientAge]);
+
+  // Dose number in the under-9 two-dose course is derived from the screening
+  // answers, not chosen freely; the dose 1 date comes from the same answer.
+  useEffect(() => {
+    const derived = twoDoseCourseDoseNumber(state.screening, patientAge);
+    setState((prev) => {
+      const nextPrev = derived === '2' ? prev.screening.firstDoseThisSeasonDate : prev.administration.previousDoseDate;
+      if (prev.administration.doseNumber === derived && prev.administration.previousDoseDate === nextPrev) return prev;
+      return {
+        ...prev,
+        administration: { ...prev.administration, doseNumber: derived, previousDoseDate: nextPrev },
+      };
+    });
+  }, [state.screening, patientAge]);
+
+  const hardStops = hasHardStopContraindications(state.contraindications);
+
   const handleNextStep = useCallback((): void => {
+    if (hardStops) return;
     if (!validateStep(state.step)) {
       return;
     }
@@ -588,7 +615,7 @@ gpOdsCode: '',
       ...prev,
       step: Math.min(prev.step + 1, STEP_LABELS.length - 1),
     }));
-  }, [state.step, state.screening, state.patient, validateStep, patientAge]);
+  }, [state.step, state.screening, state.patient, validateStep, patientAge, hardStops]);
 
   const handlePreviousStep = useCallback((): void => {
     setState((prev) => ({
@@ -598,10 +625,14 @@ gpOdsCode: '',
   }, []);
 
   // ─── Consultation tracking + record saving ───
-  const { markComplete, saveRecord } = useConsultationTracking('flu', state.step);
+  const { markComplete, saveRecord, reset: resetTracking } = useConsultationTracking('flu', state.step);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   const getConsultationData = useCallback((): ConsultationRecordData => {
+    const stop = hasHardStopContraindications(state.contraindications);
+    const vaccine = state.administration.vaccineName
+      ? FLU_VACCINES[state.administration.vaccineName]
+      : null;
     return {
       patient: {
         firstName: state.patient.firstName,
@@ -614,27 +645,61 @@ gpOdsCode: '',
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
       },
-      clinicalData: state as unknown as Record<string, unknown>,
-      outcome: hasHardStopContraindications(state.contraindications) ? 'not_supplied' : 'completed',
+      clinicalData: {
+        ...(state as unknown as Record<string, unknown>),
+        // The shared safety panel is mounted on this page; attach what it captured.
+        vaccineSafetyChecks: getVaccineSafety('flu'),
+      },
+      outcome: stop ? 'not_supplied' : 'completed',
+      medicine:
+        !stop && vaccine
+          ? {
+              name: `${state.administration.brandName || vaccine.label} (${vaccine.label})`,
+              dose: '0.5 ml intramuscular',
+              quantity: '1 dose',
+            }
+          : undefined,
       summary: {
-        pharmacistName: state.summary.pharmacistName,
-        pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacistName: state.summary.pharmacistName || __pharmProfile?.name || '',
+        pharmacistGPhC: state.summary.pharmacistGPhC || __pharmProfile?.gphcNumber || '',
+        pharmacyName: state.summary.pharmacyName || __pharmProfile?.pharmacyName,
+        pharmacyAddress: state.summary.pharmacyAddress || __pharmProfile?.pharmacyAddress,
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: state.consent.notifyGp },
     };
-  }, [state]);
+  }, [state, __pharmProfile]);
 
   const handlePrint = useCallback(async (): Promise<void> => {
+    // Same rules as Next: the immuniser's name and GPhC number are required,
+    // and nothing is printed as a vaccination record while a stop exists.
+    if (!validateStep(7)) return;
+    if (hasHardStopContraindications(state.contraindications)) return;
     markComplete();
     setSaveStatus('saving');
     const success = await saveRecord(getConsultationData());
     setSaveStatus(success ? 'saved' : 'error');
     window.print();
-  }, [markComplete, saveRecord, getConsultationData]);
+  }, [markComplete, saveRecord, getConsultationData, validateStep, state.contraindications]);
+
+  // Every PGD requires the advice given to an excluded patient to be recorded.
+  const handleSaveNotSupplied = useCallback(async (): Promise<void> => {
+    setSaveStatus('saving');
+    const data = getConsultationData();
+    data.outcome = 'not_supplied';
+    (data.clinicalData as Record<string, unknown>).stoppedAtStep = state.step;
+    const success = await saveRecord(data);
+    setSaveStatus(success ? 'saved' : 'error');
+  }, [getConsultationData, saveRecord, state.step]);
 
   const handleNewConsultation = useCallback((): void => {
     if (!window.confirm('Start a new consultation? The current consultation data will be cleared.')) return;
+    // Forget the saved consultation, or the next patient's save is skipped
+    // and reported as saved (adversarial review, 11 Sep 2026).
+    resetTracking();
+    clearVaccineSafety('flu');
     setState({
       patient: {
         firstName: '',
@@ -678,7 +743,7 @@ gpOdsCode: '',
     setCompletedSteps(new Set());
     setValidationErrors(new Map());
     setSaveStatus('idle');
-  }, []);
+  }, [resetTracking]);
 
   const getStepAlerts = useCallback((): React.ReactNode => {
     const stepAlerts = state.alerts.filter((alert: ClinicalAlert) => {
@@ -694,12 +759,10 @@ gpOdsCode: '',
     return <AlertBanner alerts={stepAlerts} />;
   }, [state.alerts, state.step]);
 
+  // A stop anywhere blocks Next on every step (adversarial review, 11 Sep 2026).
   const canProceedFromStep = useCallback((): boolean => {
-    if (state.step === 3 && hasHardStopContraindications(state.contraindications)) {
-      return false;
-    }
-    return true;
-  }, [state.step, state.contraindications]);
+    return !hasHardStopContraindications(state.contraindications);
+  }, [state.contraindications]);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
@@ -942,12 +1005,31 @@ gpOdsCode: '',
                     )}
                   </div>
                 )}
+                {patientAge >= 0 && patientAge < 9 && state.screening.previousFluVaccine && (
+                  <div className="mt-4 ml-6 space-y-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <Checkbox
+                      label={`The only previous influenza vaccine was dose 1 of this season's (${FLU_SEASON}) two-dose first course; the child is attending for dose 2`}
+                      checked={state.screening.firstDoseThisSeason}
+                      onChange={(v) => setScreeningField('firstDoseThisSeason', v)}
+                      description="Permitted under the PGD: a child under 9 receiving influenza vaccine for the first time needs 2 doses at least 4 weeks apart. This visit will be recorded as dose 2 of 2."
+                    />
+                    {state.screening.firstDoseThisSeason && (
+                      <TextInput
+                        label="Date dose 1 was given"
+                        type="date"
+                        value={state.screening.firstDoseThisSeasonDate}
+                        onChange={(v) => setScreeningField('firstDoseThisSeasonDate', v)}
+                        required
+                      />
+                    )}
+                  </div>
+                )}
                 <div className="mt-4">
                   <Checkbox
                     label={`Already received an influenza vaccine for the ${FLU_SEASON} season`}
                     checked={state.screening.receivedThisSeason}
                     onChange={(v) => setScreeningField('receivedThisSeason', v)}
-                    description="Exclusion: one dose per individual per season, other than a child under 9 years attending for the second of two doses."
+                    description="Exclusion: one dose per individual per season, other than a child under 9 years attending for the second of two doses (record that above)."
                   />
                 </div>
                 <div className="mt-4">
@@ -1297,7 +1379,11 @@ gpOdsCode: '',
                   label="Pain relief advice"
                   checked={state.advice.paracetamolAdvice}
                   onChange={handleParacetamolAdviceChange}
-                  description="Patient can take paracetamol or ibuprofen for mild fever or arm soreness"
+                  description={
+                    state.screening.pregnant
+                      ? 'Paracetamol may be taken for mild fever or arm soreness. Do not advise ibuprofen or other NSAIDs in pregnancy.'
+                      : 'Paracetamol may be taken for mild fever or arm soreness (ibuprofen only where not otherwise contraindicated for the patient)'
+                  }
                 />
                 <Checkbox
                   label="When to seek help"
@@ -1336,7 +1422,43 @@ gpOdsCode: '',
 
           {state.step === 7 && (
             <>
-              <FluSummaryReport state={state} onPrint={handlePrint} />
+              <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6 print:hidden space-y-4">
+                <h2 className="text-xl font-semibold text-gray-900">Immuniser declaration</h2>
+                <p className="text-sm text-gray-600">
+                  The PGD requires the name and registration number of the healthcare professional administering. Prefilled from your profile; correct it if a different registrant vaccinated this patient.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <TextInput
+                    label="Name of immuniser"
+                    value={state.summary.pharmacistName}
+                    onChange={handlePharmacistNameChange}
+                    placeholder="Full name"
+                    required
+                  />
+                  <TextInput
+                    label="GPhC registration number"
+                    value={state.summary.pharmacistGPhC}
+                    onChange={handlePharmacistGPhCChange}
+                    placeholder="e.g. 2123456"
+                    required
+                  />
+                </div>
+                <TextArea
+                  label="Clinical notes (optional)"
+                  value={state.summary.clinicalNotes}
+                  onChange={handleClinicalNotesChange}
+                  placeholder="Any additional clinical notes"
+                  rows={3}
+                />
+                {validationErrors.get(7) && (
+                  <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-lg">
+                    {validationErrors.get(7)!.map((e) => (
+                      <p key={e} className="text-sm text-red-700">{e}</p>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <FluSummaryReport state={state} onPrint={hardStops ? handleSaveNotSupplied : handlePrint} />
               {saveStatus !== 'idle' && (
                 <div className={`mt-4 px-4 py-3 rounded-lg print:hidden ${
                   saveStatus === 'saving' ? 'bg-blue-50 border border-blue-200' :
@@ -1376,6 +1498,18 @@ gpOdsCode: '',
             >
               Previous
             </button>
+            {!canProceedFromStep() && saveStatus !== 'saved' && (
+              <button
+                onClick={handleSaveNotSupplied}
+                disabled={saveStatus === 'saving'}
+                className="px-4 py-2 rounded-lg border border-red-300 text-red-700 hover:bg-red-50 transition text-sm font-semibold"
+              >
+                {saveStatus === 'saving' ? 'Saving...' : 'Save as not supplied'}
+              </button>
+            )}
+            {!canProceedFromStep() && saveStatus === 'saved' && (
+              <span className="text-sm text-green-700 self-center">Recorded as not supplied</span>
+            )}
             <button
               onClick={handleNextStep}
               disabled={state.step === STEP_LABELS.length - 1 || !canProceedFromStep()}

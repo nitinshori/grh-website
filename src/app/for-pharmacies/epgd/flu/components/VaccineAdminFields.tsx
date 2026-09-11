@@ -110,31 +110,24 @@ export default function VaccineAdminFields({
           <p className="text-sm font-semibold text-amber-900">
             Child under 9 receiving influenza vaccine for the first time: 2 doses at least 4 weeks apart
           </p>
-          <SelectInput
-            label="Dose number"
-            value={administration.doseNumber}
-            onChange={onDoseNumberChange}
-            options={[
-              { value: '1', label: 'Dose 1 of 2' },
-              { value: '2', label: 'Dose 2 of 2 (at least 4 weeks after dose 1)' },
-            ]}
-            required
-          />
+          {/* The dose number is derived from the screening answers (never
+              vaccinated: dose 1; dose 1 of this season's course already
+              given: dose 2). It is not a free choice, so a child cannot be
+              recorded for a third dose in a season (adversarial review). */}
+          <p className="text-sm text-amber-900">
+            <span className="font-medium">Dose number: </span>
+            {administration.doseNumber === '2'
+              ? `Dose 2 of 2 (dose 1 given ${administration.previousDoseDate || 'date not recorded'}; at least 4 weeks after dose 1)`
+              : administration.doseNumber === '1'
+                ? 'Dose 1 of 2'
+                : 'Not determined: check the vaccination history on the screening step'}
+          </p>
           {administration.doseNumber === '1' && (
             <TextInput
               label="Second dose booked for (at least 4 weeks from today)"
               type="date"
               value={administration.nextDoseDue}
               onChange={onNextDoseDueChange}
-              required
-            />
-          )}
-          {administration.doseNumber === '2' && (
-            <TextInput
-              label="Date of dose 1"
-              type="date"
-              value={administration.previousDoseDate}
-              onChange={onPreviousDoseDateChange}
               required
             />
           )}
@@ -193,10 +186,10 @@ export default function VaccineAdminFields({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <TextInput
-          label="Administered By"
+          label="Administered By (name of immuniser)"
           value={administration.administeredBy}
           onChange={onAdministeredByChange}
-          placeholder="Pharmacist name and GPhC number"
+          placeholder="Name of the person giving the vaccine"
           required
         />
         <TextInput

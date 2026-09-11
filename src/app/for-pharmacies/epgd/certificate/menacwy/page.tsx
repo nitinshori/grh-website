@@ -37,6 +37,10 @@ interface CertData {
   batchNumber: string;
   expiryDate: string;
   administrationSite: string;
+  /** Dose number in the course, as recorded on the consultation. */
+  doseNumber?: string;
+  /** Passport number, so the certificate matches the travel document (Saudi entry). */
+  passportNumber?: string;
   travelReason: string;
   consultationDate: string;
   pharmacistName: string;
@@ -54,6 +58,16 @@ const VACCINE_LABEL: Record<string, string> = {
 const SITE_LABEL: Record<string, string> = {
   "left-deltoid": "Left deltoid (intramuscular)",
   "right-deltoid": "Right deltoid (intramuscular)",
+  "left-thigh": "Left anterolateral thigh (intramuscular)",
+  "right-thigh": "Right anterolateral thigh (intramuscular)",
+};
+
+const DOSE_LABEL: Record<string, string> = {
+  single: "0.5 mL intramuscular, single dose",
+  "1st": "0.5 mL intramuscular, 1st dose of two (infant course)",
+  "2nd": "0.5 mL intramuscular, 2nd dose of two (infant course)",
+  "booster-12-months": "0.5 mL intramuscular, booster at 12 months of age",
+  "repeat-certificate": "0.5 mL intramuscular, repeat dose for certificate",
 };
 
 const TRAVEL_LABEL: Record<string, string> = {
@@ -64,7 +78,7 @@ const TRAVEL_LABEL: Record<string, string> = {
 };
 
 function formatDateUK(iso: string): string {
-  if (!iso) return "—";
+  if (!iso) return "Not recorded";
   const d = new Date(iso);
   if (isNaN(d.getTime())) return iso;
   return d.toLocaleDateString("en-GB", {
@@ -159,7 +173,7 @@ export default function MenACWYCertificatePage() {
       {/* Top control bar — visible on screen, hidden when printing */}
       <div className="no-print bg-slate-900 text-white px-6 py-3 flex items-center justify-between sticky top-0">
         <p className="text-sm">
-          MenACWY Vaccination Certificate — preview. Use your browser&apos;s
+          MenACWY Vaccination Certificate: preview. Use your browser&apos;s
           print dialog to save as PDF or print to paper.
         </p>
         <button
@@ -189,7 +203,7 @@ export default function MenACWYCertificatePage() {
           <div className="text-right text-xs text-gray-500">
             <p>Issued by</p>
             <p className="font-semibold text-gray-900 mt-0.5">
-              {data.pharmacyName || "—"}
+              {data.pharmacyName || "Not recorded"}
             </p>
             <p className="max-w-[60mm]">{data.pharmacyAddress || ""}</p>
           </div>
@@ -212,6 +226,9 @@ export default function MenACWYCertificatePage() {
             {data.patientNhsNumber && (
               <Field label="NHS number" value={data.patientNhsNumber} />
             )}
+            {data.passportNumber && (
+              <Field label="Passport number" value={data.passportNumber} />
+            )}
             {data.travelReason && (
               <Field
                 label="Reason for vaccination"
@@ -229,7 +246,7 @@ export default function MenACWYCertificatePage() {
           <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
             <Field
               label="Vaccine"
-              value={VACCINE_LABEL[data.vaccineType] || data.vaccineType || "—"}
+              value={VACCINE_LABEL[data.vaccineType] || data.vaccineType || "Not recorded"}
             />
             <Field
               label="Date administered"
@@ -245,18 +262,21 @@ export default function MenACWYCertificatePage() {
               value={
                 SITE_LABEL[data.administrationSite] ||
                 data.administrationSite ||
-                "—"
+                "Not recorded"
               }
             />
-            <Field label="Dose" value="0.5 mL intramuscular, single dose" />
+            <Field
+              label="Dose"
+              value={DOSE_LABEL[data.doseNumber || ""] || "0.5 mL intramuscular, single dose"}
+            />
           </div>
           <p className="text-xs text-[color:var(--tenant-primary)] mt-4 leading-relaxed">
-            The MenACWY vaccine listed above provides protection against
-            meningococcal serogroups A, C, W and Y. Protection begins
-            approximately 10 days after administration and is considered
-            valid for travel purposes — including Saudi Arabian visa
-            requirements for Hajj and Umrah — for at least three years from
-            the date of administration.
+            The vaccine listed above is a CONJUGATE MenACWY vaccine and
+            provides protection against meningococcal serogroups A, C, W and
+            Y. Protection begins approximately 10 days after administration.
+            A conjugate MenACWY vaccine is accepted for travel purposes,
+            including Saudi Arabian visa requirements for Hajj and Umrah, for
+            five years from the date of administration.
           </p>
         </section>
 
@@ -330,7 +350,7 @@ function Field({ label, value }: { label: string; value: string }) {
       <p className="text-[10px] uppercase tracking-wider text-gray-500 font-medium">
         {label}
       </p>
-      <p className="text-sm font-medium text-gray-900">{value || "—"}</p>
+      <p className="text-sm font-medium text-gray-900">{value || "Not recorded"}</p>
     </div>
   );
 }

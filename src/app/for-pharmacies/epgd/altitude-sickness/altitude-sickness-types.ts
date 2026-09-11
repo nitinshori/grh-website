@@ -4,10 +4,7 @@ import type { BasePatientDetails, BaseConsent, BaseSummary } from '../shared/typ
 
 // ─── Patient Details (extends base) ───
 
-export interface ASPatientDetails extends BasePatientDetails {
-  maleConfirmed: boolean;
-  femaleConfirmed: boolean;
-}
+export type ASPatientDetails = BasePatientDetails;
 
 // ─── Travel Assessment ───
 
@@ -20,6 +17,10 @@ export interface ASTravelAssessment {
   departureDate: string; // YYYY-MM-DD
   /** PGD v003 inclusion: requesting preventative treatment or symptomatic treatment for AMS. */
   purpose: ASPurpose;
+  /** PGD v003 quantity: days ascending (from first day above 2,500 m to the highest point). Needed to calculate the prevention course. */
+  daysAscending: number | null;
+  /** PGD v003: 1 to 2 lead-in days before ascent. A choice between the document's two values. */
+  leadInDays: 1 | 2 | null;
   ascentRate: string; // 'slow' (gradual), 'moderate', 'rapid'
   acclimatisationPlan: boolean;
   acclimatisationDays: number | null; // days at intermediate altitude
@@ -31,6 +32,8 @@ export interface ASTravelAssessment {
 // ─── Medical History (Altitude Sickness specific) ───
 
 export interface ASMedicalHistory {
+  /** The pharmacist confirms every question on the page was asked. Every exclusion defaults to absent. */
+  allQuestionsAsked: boolean;
   sulfonamideAllergy: boolean; // hypersensitivity to acetazolamide or sulfonamides: exclusion
   severeHepaticImpairment: boolean; // severe hepatic impairment or hepatic cirrhosis: exclusion
   severeRenalImpairment: boolean; // exclusion
@@ -50,6 +53,8 @@ export interface ASMedicalHistory {
 // ─── Current Medications ───
 
 export interface ASMedications {
+  /** The pharmacist confirms every medicine on the page was asked about. */
+  allQuestionsAsked: boolean;
   takesThiazideDiuretics: boolean; // potassium-depleting diuretic (thiazide or loop): exclusion, refer
   takesLithium: boolean; // exclusion, refer
   takesPhenytoin: boolean; // exclusion, refer
@@ -64,6 +69,7 @@ export interface ASMedications {
 
 export interface ASMedicineSelection {
   selectedMedicine: 'acetazolamide' | '';
+  /** Set by the reducer from the document's regimen for the purpose; not typed. */
   dose: string; // prevention 125 mg (half a 250 mg tablet) BD; treatment 250 mg BD up to 3 days
   startTiming: string;
   continuationTiming: string;
@@ -94,9 +100,7 @@ export interface ASCounselling {
 
 // ─── Full Consultation Summary ───
 
-export interface ASConsultationSummary extends BaseSummary {
-  // Additional AS-specific fields if needed
-}
+export type ASConsultationSummary = BaseSummary;
 
 // ─── Full Consultation State ───
 
@@ -110,10 +114,6 @@ export interface ASConsultationState {
   medicineSelection: ASMedicineSelection;
   counselling: ASCounselling;
   summary: ASConsultationSummary;
-  // Computed
-  alerts: any[];
-  canProceed: boolean;
-  isComplete: boolean;
 }
 
 // ─── Reducer Actions ───
@@ -168,8 +168,6 @@ gpOdsCode: '',
       address: '',
       phone: '',
       email: '',
-      maleConfirmed: false,
-      femaleConfirmed: false,
     },
     consent: {
       informedConsentGiven: false,
@@ -183,6 +181,8 @@ gpOdsCode: '',
       currentAltitude: null,
       departureDate: '',
       purpose: '',
+      daysAscending: null,
+      leadInDays: null,
       ascentRate: '',
       acclimatisationPlan: false,
       acclimatisationDays: null,
@@ -191,6 +191,7 @@ gpOdsCode: '',
       previousSicknessDetails: '',
     },
     medicalHistory: {
+      allQuestionsAsked: false,
       sulfonamideAllergy: false,
       severeHepaticImpairment: false,
       severeRenalImpairment: false,
@@ -207,6 +208,7 @@ gpOdsCode: '',
       pregnantOrBreastfeeding: false,
     },
     medications: {
+      allQuestionsAsked: false,
       takesThiazideDiuretics: false,
       takesLithium: false,
       takesPhenytoin: false,
@@ -250,8 +252,5 @@ gpOdsCode: '',
       }),
       clinicalNotes: '',
     },
-    alerts: [],
-    canProceed: false,
-    isComplete: false,
   };
 }

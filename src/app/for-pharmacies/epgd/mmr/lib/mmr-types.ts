@@ -14,6 +14,12 @@ import {
 // ─── MMR-Specific Types ───
 
 export interface MMREligibility {
+  /**
+   * Number of documented MMR doses already received (0, 1, or 2 or more).
+   * The inclusion criterion is "without two documented doses": 2 or more is
+   * a stop, and the dose number for this administration follows from it.
+   */
+  documentedDoses: "" | "0" | "1" | "2";
   bornAfter1970: boolean;
   noPriorTwoDoses: boolean;
   healthcareWorker: boolean;
@@ -63,6 +69,10 @@ export interface MMRVaccineAdmin {
   vaccinationDate: string;
   injectionSite: string;
   lotNumber: string;
+  /** Expiry date of the batch (PGD records row). */
+  expiryDate: string;
+  /** Route actually used. The PGD authorises subcutaneous only. */
+  route: "" | "subcutaneous" | "intramuscular";
   administeredBy: string;
   /** Dose number (1 or 2), PGD v004 records row. */
   doseNumber: "" | "1" | "2";
@@ -79,6 +89,8 @@ export interface MMRPostVaccine {
   rashObserved: boolean;
   jointPainReported: boolean;
   pregnancyAdviceGiven: boolean;
+  /** Observe every patient for 15 minutes, seated, and record that it was completed (PGD caution). */
+  observationCompleted: boolean;
 }
 
 export interface MMRCounselling {
@@ -151,6 +163,7 @@ export function createInitialMMRState(): MMRConsultationState {
       gillickBasis: "",
     },
     eligibility: {
+      documentedDoses: "",
       bornAfter1970: false,
       noPriorTwoDoses: false,
       healthcareWorker: false,
@@ -180,6 +193,8 @@ export function createInitialMMRState(): MMRConsultationState {
       vaccinationDate: "",
       injectionSite: "",
       lotNumber: "",
+      expiryDate: "",
+      route: "",
       administeredBy: "",
       doseNumber: "",
       previousDoseDate: "",
@@ -192,6 +207,7 @@ export function createInitialMMRState(): MMRConsultationState {
       rashObserved: false,
       jointPainReported: false,
       pregnancyAdviceGiven: false,
+      observationCompleted: false,
     },
     counselling: {
       commonReactionsAdvice: false,

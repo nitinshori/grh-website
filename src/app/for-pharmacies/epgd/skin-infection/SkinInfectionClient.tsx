@@ -19,6 +19,10 @@ import {
   getAgeBand,
   AGE_BAND_LABEL,
   isCellulitisPgd,
+  isMoreExtensiveInfection,
+  extensiveInfectionFindings,
+  getFormulationOptions,
+  derivedQuantity,
 } from "./lib/skin-infection-logic";
 import { validateStep } from "./lib/skin-infection-validation";
 import { calculateAge } from "../shared/types";
@@ -120,9 +124,42 @@ export default function SkinInfectionClient({ variant = "skin-infection" }: { va
     () => validateStep(state.currentStep, state),
     [state.currentStep, state],
   );
-  // Hard stops block progression beyond antibiotic selection; the record
-  // can still be completed as "not supplied" from the summary step.
-  const canProceed = !validationError && (!hasStops || state.currentStep >= 4);
+  // A stop anywhere disables Next on every step; the progress bar only goes
+  // backwards, so this is the only forward path. An excluded patient is
+  // saved with "Save as not supplied" on the step the stop was raised.
+  const canProceed = !validationError && !hasStops;
+
+  // Quantity is the document's figure for the formulation and course length,
+  // never typed. Keep the stored value in step with the derived one so the
+  // saved record and the printed record carry it.
+  const quantity = derivedQuantity(state);
+  useEffect(() => {
+    if (state.antibioticSelection.quantitySupplied !== quantity) {
+      dispatch({ type: "UPDATE_ANTIBIOTIC_SELECTION", field: "quantitySupplied", value: quantity });
+    }
+  }, [quantity, state.antibioticSelection.quantitySupplied]);
+
+  // Appendix 2: the extensive-infection flag is derived from the measured
+  // findings, so the record holds what was seen rather than a tick.
+  const extensive = isMoreExtensiveInfection(state.assessment);
+  useEffect(() => {
+    if (state.assessment.extensiveInfection !== extensive) {
+      dispatch({ type: "UPDATE_ASSESSMENT", field: "extensiveInfection", value: extensive });
+    }
+  }, [extensive, state.assessment.extensiveInfection]);
+
+  // Penicillin allergy recorded on the history step is the reason for the
+  // second-line arms; fill it in rather than ask twice.
+  useEffect(() => {
+    if (
+      state.medicalHistory.penicillinAllergy &&
+      state.antibioticSelection.choice &&
+      state.antibioticSelection.choice !== "flucloxacillin" &&
+      !state.antibioticSelection.flucloxUnsuitableReason
+    ) {
+      dispatch({ type: "UPDATE_ANTIBIOTIC_SELECTION", field: "flucloxUnsuitableReason", value: "penicillin-allergy" });
+    }
+  }, [state.medicalHistory.penicillinAllergy, state.antibioticSelection.choice, state.antibioticSelection.flucloxUnsuitableReason]);
 
   const markStepComplete = useCallback(() => {
     setCompletedSteps((prev) => new Set([...prev, state.currentStep]));
@@ -154,16 +191,70 @@ export default function SkinInfectionClient({ variant = "skin-infection" }: { va
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
       },
-      clinicalData: state as unknown as Record<string, unknown>,
+      clinicalData: {
+        ...state,
+        alerts,
+        doseRecommendation,
+        summary: {
+          ...state.summary,
+          antibioticSupplied: hasStops
+            ? ""
+            : [doseRecommendation?.medicine, state.antibioticSelection.brand ? `(${state.antibioticSelection.brand})` : ""]
+                .filter(Boolean)
+                .join(" "),
+          courseLength: hasStops ? "" : state.antibioticSelection.courseDays ? `${state.antibioticSelection.courseDays} days` : "",
+        },
+      } as unknown as Record<string, unknown>,
       outcome: hasStops ? "not_supplied" : "completed",
+      medicine:
+        !hasStops && doseRecommendation
+          ? {
+              name: doseRecommendation.medicine,
+              dose: doseRecommendation.dose,
+              duration: state.antibioticSelection.courseDays ? `${state.antibioticSelection.courseDays} days` : doseRecommendation.duration,
+              quantity: state.antibioticSelection.quantitySupplied,
+            }
+          : undefined,
       summary: {
-        pharmacistName: state.summary.pharmacistName,
-        pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacistName: state.summary.pharmacistName || __pharmProfile?.name || "",
+        pharmacistGPhC: state.summary.pharmacistGPhC || __pharmProfile?.gphcNumber || "",
+        pharmacyName: state.summary.pharmacyName || __pharmProfile?.pharmacyName || "",
+        pharmacyAddress: state.summary.pharmacyAddress || __pharmProfile?.pharmacyAddress || "",
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: [
+          hasStops && state.summary.referralAdvice ? `Advice given on referral: ${state.summary.referralAdvice}` : "",
+          state.summary.adverseDrugReactions ? `Adverse drug reactions: ${state.summary.adverseDrugReactions}` : "",
+          state.summary.clinicalNotes,
+        ]
+          .filter(Boolean)
+          .join("\n"),
       },
+      consent: { notifyGp: state.consent.notifyGp },
     };
-  }, [state, hasStops]);
+  }, [state, hasStops, alerts, doseRecommendation, __pharmProfile]);
+
+  // Shown at the top of every step: the alerts, and when a stop exists the
+  // advice-given box both documents' records rows require for excluded patients.
+  const stopPanel = (
+    <>
+      {alerts.length > 0 && <AlertBanner alerts={alerts} />}
+      {hasStops && (
+        <div className="p-4 bg-red-50 rounded-lg border border-red-200 space-y-2">
+          <p className="text-sm font-medium text-red-800">
+            Not supplied under this PGD. Record the advice given and the referral arranged (same-day or emergency as the alert directs), then use "Save as not supplied".
+          </p>
+          <TextArea
+            label="Advice given and referral arranged (PGD records requirement)"
+            value={state.summary.referralAdvice}
+            onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "referralAdvice", value: v })}
+            placeholder="e.g. Explained why no antibiotic could be supplied; same-day GP appointment arranged at 15:30; advised to attend A&E if pain worsens"
+            required
+          />
+        </div>
+      )}
+    </>
+  );
 
   const handleNewConsultation = useCallback(() => {
     dispatch({ type: "RESET" });
@@ -190,8 +281,11 @@ export default function SkinInfectionClient({ variant = "skin-infection" }: { va
             onPrev={handlePrevStep}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <p className="text-xs text-gray-600 mb-3">{PGD_VERSION_LABEL[state.variant]}</p>
+            {stopPanel}
             <PatientDetailsStep
               patient={state.patient}
               onChange={(field, value) => dispatch({ type: "UPDATE_PATIENT", field, value })}
@@ -210,7 +304,10 @@ export default function SkinInfectionClient({ variant = "skin-infection" }: { va
             onPrev={handlePrevStep}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
+            {stopPanel}
             <ConsentStep
               consent={state.consent}
               onChange={(field, value) => dispatch({ type: "UPDATE_CONSENT", field, value })}
@@ -249,9 +346,11 @@ export default function SkinInfectionClient({ variant = "skin-infection" }: { va
             onPrev={handlePrevStep}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
-              <AlertBanner alerts={alerts} />
+              {stopPanel}
               {cellulitisPgd ? (
                 <p className="text-sm text-gray-700">
                   Cellulitis PGD: MILD cellulitis (Eron class I) of a limb or the trunk in adults aged 18 and over. Localised erythema, warmth, swelling and pain, with NO fever, NO tachycardia, NO hypotension, NO confusion and NO rapidly spreading margin. Moderate or severe cellulitis (Eron class II to IV) is not covered.
@@ -304,12 +403,38 @@ export default function SkinInfectionClient({ variant = "skin-infection" }: { va
                 required
               />
               {!cellulitisPgd && (
-                <Checkbox
-                  label="More extensive infection (Appendix 2): erythema larger than about 10 cm across, or more than one body region involved"
-                  description="Triggers the higher clarithromycin (500 mg twice daily) or doxycycline (200 mg daily) dose. Cellulitis always counts as more extensive. Anything beyond this definition is outside the mild to moderate scope: refer."
-                  checked={a.extensiveInfection}
-                  onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "extensiveInfection", value: v })}
-                />
+                <div className="space-y-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-sm font-medium text-navy-900">Extent (Appendix 2): measure and record the findings</p>
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <TextInput
+                      label="Largest diameter of erythema (cm)"
+                      value={a.erythemaDiameterCm}
+                      onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "erythemaDiameterCm", value: v })}
+                      type="number"
+                      placeholder="e.g. 6"
+                      required
+                    />
+                    <TextInput
+                      label="Number of body regions involved"
+                      value={a.bodyRegionCount}
+                      onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "bodyRegionCount", value: v })}
+                      type="number"
+                      placeholder="e.g. 1"
+                      required
+                    />
+                  </div>
+                  <p className="text-xs text-gray-600">
+                    {extensive
+                      ? `MORE EXTENSIVE INFECTION (Appendix 2): ${extensiveInfectionFindings(a).join("; ")}. The higher clarithromycin (500 mg twice daily) or doxycycline (200 mg daily) dose applies.`
+                      : "Not more extensive: erythema of about 10 cm or less in one body region. Standard doses apply."}
+                  </p>
+                  <Checkbox
+                    label="The infection is beyond the Appendix 2 definition (outside the mild to moderate scope of this PGD): refer"
+                    description="Appendix 2 covers erythema larger than about 10 cm, more than one body region, or cellulitis. Anything beyond that is not a pharmacy supply."
+                    checked={a.beyondMildModerateScope}
+                    onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "beyondMildModerateScope", value: v })}
+                  />
+                </div>
               )}
               {!cellulitisPgd && age !== null && age < 12 && (
                 <TextInput
@@ -510,7 +635,7 @@ export default function SkinInfectionClient({ variant = "skin-infection" }: { va
                     onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "marginsMarked", value: v })}
                     required
                   />
-                  {cellulitisPgd ? (
+                  {cellulitisPgd && (
                     <TextInput
                       label="Time the margin was marked"
                       value={a.marginMarkedTime}
@@ -518,15 +643,18 @@ export default function SkinInfectionClient({ variant = "skin-infection" }: { va
                       type="time"
                       required
                     />
-                  ) : (
-                    <TextInput
-                      label="In-person 48-hour review at this pharmacy: booked date and time"
-                      value={a.reviewDateTime}
-                      onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "reviewDateTime", value: v })}
-                      type="datetime-local"
-                      required
-                    />
                   )}
+                  <TextInput
+                    label={
+                      cellulitisPgd
+                        ? "48-hour reassessment: booked date and time (between 36 and 60 hours from now)"
+                        : "In-person 48-hour review at this pharmacy: booked date and time (between 36 and 60 hours from now)"
+                    }
+                    value={a.reviewDateTime}
+                    onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "reviewDateTime", value: v })}
+                    type="datetime-local"
+                    required
+                  />
                 </div>
               )}
             </div>
@@ -543,9 +671,11 @@ export default function SkinInfectionClient({ variant = "skin-infection" }: { va
             onPrev={handlePrevStep}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
-              <AlertBanner alerts={alerts} />
+              {stopPanel}
               <TextInput
                 label="Allergies"
                 value={mh.allergies}
@@ -617,13 +747,12 @@ export default function SkinInfectionClient({ variant = "skin-infection" }: { va
                   checked={mh.qtProlongation}
                   onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "qtProlongation", value: v })}
                 />
-                {!cellulitisPgd && (
-                  <Checkbox
-                    label="Myasthenia gravis, systemic lupus erythematosus, or porphyria"
-                    checked={mh.myastheniaSleOrPorphyria}
-                    onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "myastheniaSleOrPorphyria", value: v })}
-                  />
-                )}
+                <Checkbox
+                  label="Myasthenia gravis, systemic lupus erythematosus, or porphyria"
+                  description={cellulitisPgd ? "Doxycycline caution under the Cellulitis PGD" : "Doxycycline exclusion"}
+                  checked={mh.myastheniaSleOrPorphyria}
+                  onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "myastheniaSleOrPorphyria", value: v })}
+                />
                 <Checkbox
                   label="Recent antibiotics or hospitalisation"
                   checked={mh.recentAntibioticsOrHospital}
@@ -705,9 +834,10 @@ export default function SkinInfectionClient({ variant = "skin-infection" }: { va
             canProceed={canProceed}
             validationError={validationError}
             isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
-              <AlertBanner alerts={alerts} />
+              {stopPanel}
               <SelectInput
                 label="Antibiotic"
                 value={choice}
@@ -734,11 +864,19 @@ export default function SkinInfectionClient({ variant = "skin-infection" }: { va
                   )}
                 </div>
               )}
-              <TextInput
-                label="Formulation supplied"
+              <SelectInput
+                label="Formulation supplied (from the PGD for this arm, age and weight)"
                 value={state.antibioticSelection.formulation}
                 onChange={(v) => dispatch({ type: "UPDATE_ANTIBIOTIC_SELECTION", field: "formulation", value: v })}
-                placeholder={cellulitisPgd ? "e.g. 500mg capsules / 500mg tablets / 100mg capsules" : "e.g. 500mg capsules / 250mg/5mL suspension"}
+                options={getFormulationOptions(state).map((o) => ({ value: o.value, label: o.label }))}
+                required
+              />
+              <TextInput
+                label="Brand supplied"
+                value={state.antibioticSelection.brand}
+                onChange={(v) => dispatch({ type: "UPDATE_ANTIBIOTIC_SELECTION", field: "brand", value: v })}
+                placeholder="Manufacturer or brand on the pack (PGD records requirement)"
+                required
               />
               <SelectInput
                 label="Course length"
@@ -758,10 +896,10 @@ export default function SkinInfectionClient({ variant = "skin-infection" }: { va
                 required
               />
               <TextInput
-                label="Quantity supplied"
-                value={state.antibioticSelection.quantitySupplied}
-                onChange={(v) => dispatch({ type: "UPDATE_ANTIBIOTIC_SELECTION", field: "quantitySupplied", value: v })}
-                placeholder="e.g. 28 capsules / 100 mL suspension / 8 capsules"
+                label="Quantity supplied (fixed by the PGD: supply the whole course, do not split)"
+                value={quantity || "Select the formulation and course length"}
+                onChange={() => undefined}
+                disabled
                 required
               />
               <div className="grid sm:grid-cols-2 gap-3">
@@ -769,26 +907,39 @@ export default function SkinInfectionClient({ variant = "skin-infection" }: { va
                   label="Batch number"
                   value={state.antibioticSelection.batchNumber}
                   onChange={(v) => dispatch({ type: "UPDATE_ANTIBIOTIC_SELECTION", field: "batchNumber", value: v })}
-                  required={!cellulitisPgd}
+                  required
                 />
                 <TextInput
                   label="Expiry date"
                   value={state.antibioticSelection.expiryDate}
                   onChange={(v) => dispatch({ type: "UPDATE_ANTIBIOTIC_SELECTION", field: "expiryDate", value: v })}
                   type="month"
-                  required={!cellulitisPgd}
+                  required
                 />
               </div>
+              {choice && choice !== "flucloxacillin" && (
+                <SelectInput
+                  label="Reason flucloxacillin was unsuitable (inclusion for the second and third line arms)"
+                  value={state.antibioticSelection.flucloxUnsuitableReason}
+                  onChange={(v) => dispatch({ type: "UPDATE_ANTIBIOTIC_SELECTION", field: "flucloxUnsuitableReason", value: v })}
+                  options={[
+                    { value: "penicillin-allergy", label: "Penicillin or beta-lactam allergy" },
+                    { value: "hepatic-history", label: "History of flucloxacillin-associated jaundice or hepatic dysfunction" },
+                    { value: "cannot-manage-empty-stomach", label: "Cannot manage empty-stomach dosing (food substantially reduces absorption)" },
+                    { value: "intolerance", label: "Documented intolerance of flucloxacillin" },
+                  ]}
+                  required
+                />
+              )}
               <TextArea
                 label={
                   choice && choice !== "flucloxacillin"
-                    ? "Reason flucloxacillin was unsuitable (required for second-line arms)"
-                    : "Clinical rationale"
+                    ? "Detail of the reason (optional)"
+                    : "Clinical rationale (optional)"
                 }
                 value={state.antibioticSelection.rationale}
                 onChange={(v) => dispatch({ type: "UPDATE_ANTIBIOTIC_SELECTION", field: "rationale", value: v })}
-                placeholder="e.g. first-line choice; penicillin allergy so clarithromycin selected"
-                required={!!choice && choice !== "flucloxacillin"}
+                placeholder="e.g. first-line choice; documented penicillin allergy (rash 2019)"
               />
             </div>
           </StepWrapper>
@@ -804,7 +955,10 @@ export default function SkinInfectionClient({ variant = "skin-infection" }: { va
             onPrev={handlePrevStep}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
+            getConsultationData={getConsultationData}
           >
+            {stopPanel}
             <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
               <p className="text-sm font-medium text-navy-900 mb-3">Confirm counselling covered:</p>
               <Checkbox
@@ -837,16 +991,16 @@ export default function SkinInfectionClient({ variant = "skin-infection" }: { va
                 checked={state.counselling.sideEffects}
                 onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "sideEffects", value: v })}
               />
-              {!cellulitisPgd && (
-                <Checkbox
-                  label="Stop and seek urgent help if you develop a rash, wheeze, or swelling of the lips or tongue. Call 999 for any difficulty breathing"
-                  checked={state.counselling.seriousReactionAdvice}
-                  onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "seriousReactionAdvice", value: v })}
-                />
-              )}
-              {!cellulitisPgd && choice === "flucloxacillin" && (
+              <Checkbox
+                label="Stop and seek urgent help if you develop a rash, wheeze, or swelling of the lips or tongue. Call 999 for any difficulty breathing"
+                description={cellulitisPgd ? "Cellulitis PGD cautions: anaphylaxis with beta-lactams, AGEP and severe cutaneous reactions" : undefined}
+                checked={state.counselling.seriousReactionAdvice}
+                onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "seriousReactionAdvice", value: v })}
+              />
+              {choice === "flucloxacillin" && (
                 <Checkbox
                   label="Report yellowing of the eyes or skin, or dark urine, even weeks after finishing"
+                  description={cellulitisPgd ? "Cellulitis PGD caution: hepatitis and cholestatic jaundice may be delayed for up to two months after treatment" : undefined}
                   checked={state.counselling.hepaticAdvice}
                   onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "hepaticAdvice", value: v })}
                 />
@@ -860,9 +1014,13 @@ export default function SkinInfectionClient({ variant = "skin-infection" }: { va
                 checked={state.counselling.worseningAdvice}
                 onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "worseningAdvice", value: v })}
               />
-              {!cellulitisPgd && a.infectionType === "cellulitis" && (
+              {a.infectionType === "cellulitis" && (
                 <Checkbox
-                  label="We have marked the edge of the redness and booked you back in 48 hours. Come to that appointment. If the redness passes the mark before then, seek help the same day"
+                  label={
+                    cellulitisPgd
+                      ? `We have marked the edge of the redness and booked your 48-hour reassessment${a.reviewDateTime ? ` for ${a.reviewDateTime.replace("T", " at ")}` : ""}. Come to that appointment. If the redness passes the mark before then, seek help the same day`
+                      : "We have marked the edge of the redness and booked you back in 48 hours. Come to that appointment. If the redness passes the mark before then, seek help the same day"
+                  }
                   checked={state.counselling.cellulitisReviewAdvice}
                   onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "cellulitisReviewAdvice", value: v })}
                 />
@@ -911,11 +1069,12 @@ export default function SkinInfectionClient({ variant = "skin-infection" }: { va
             onPrev={handlePrevStep}
             canProceed={canProceed}
             validationError={validationError}
+            isBlocked={hasStops}
             getConsultationData={getConsultationData}
             onNewConsultation={handleNewConsultation}
           >
             <div className="space-y-4">
-              <AlertBanner alerts={alerts} />
+              {stopPanel}
               <TextInput
                 label="Pharmacist name"
                 value={state.summary.pharmacistName}
@@ -937,6 +1096,12 @@ export default function SkinInfectionClient({ variant = "skin-infection" }: { va
                 label="Pharmacy address"
                 value={state.summary.pharmacyAddress}
                 onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "pharmacyAddress", value: v })}
+              />
+              <TextArea
+                label="Adverse drug reactions reported and actions taken (leave blank if none)"
+                value={state.summary.adverseDrugReactions}
+                onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "adverseDrugReactions", value: v })}
+                placeholder="e.g. None reported. Any reaction: Yellow Card submitted, GP informed"
               />
               <TextArea
                 label="Clinical notes (optional)"

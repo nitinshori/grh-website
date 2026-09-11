@@ -189,10 +189,6 @@ export function getRSVVaccineGuidance(
   };
 }
 
-export function determineMaternalProtectionPeriod(): string {
-  return 'Abrysvo maternal vaccination provides passive protection to the newborn for approximately 6 months of life through maternal antibodies. Advise the patient to ensure the infant is monitored for RSV infection.';
-}
-
 export function shouldBlockConsultation(alerts: ClinicalAlert[]): boolean {
   return alerts.some((a) => a.severity === 'stop');
 }

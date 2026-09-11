@@ -6,10 +6,14 @@ import {
   initialConsent,
   initialSummary,
   calculateAge,
+  validatePatientStep,
+  validateConsentStep,
+  validateSummaryStep,
   type BasePatientDetails,
   type BaseConsent,
   type BaseSummary,
 } from "../shared/types";
+import { ChestServiceSummaryReport } from "./components/ChestServiceSummaryReport";
 import { ProgressBar } from "../shared/components/ProgressBar";
 import { StepWrapper } from "../shared/components/StepWrapper";
 import { AlertBanner } from "../shared/components/AlertBanner";
@@ -43,16 +47,18 @@ import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 // Doses come from the signed document:
 //   Doxycycline 200 mg on day 1 then 100 mg once daily for 4 days (6 capsules)
 //   Amoxicillin 500 mg three times a day, 5 days (15 capsules)
-//   Clarithromycin 250 mg twice a day, 5 days (10 tablets), or 500 mg twice
-//   a day, 5 days (20 tablets)
+//   Clarithromycin 250 mg twice a day, 5 days (10 tablets). The document's
+//   500 mg twice a day row is for "marked systemic upset" and says those
+//   patients are referred, not treated at the higher dose, so it is not
+//   offered (adversarial review, 11 Sep 2026).
 // ─────────────────────────────────────────────────────────────────────────
 
-const PGD_STRAPLINE =
+export const PGD_STRAPLINE =
   "Acute Bacterial Bronchitis PGD version 007, issued 11 September 2026";
 
-type Antibiotic = "" | "amoxicillin" | "doxycycline" | "clarithromycin" | "clarithromycin-500";
+export type Antibiotic = "" | "amoxicillin" | "doxycycline" | "clarithromycin";
 
-const ANTIBIOTIC_REGIMENS: Record<
+export const ANTIBIOTIC_REGIMENS: Record<
   Exclude<Antibiotic, "">,
   { label: string; dose: string; product: string; quantity: string; route: string }
 > = {
@@ -77,22 +83,9 @@ const ANTIBIOTIC_REGIMENS: Record<
     quantity: "10 tablets",
     route: "Oral, with or without food",
   },
-  // PGD v007: 500 mg twice daily for 5 days "where the infection is more
-  // severe". The document then says such patients (marked systemic upset)
-  // are referred, not treated at the higher dose. Kept because the document
-  // lists it in the dose and quantity rows; recorded when chosen.
-  "clarithromycin-500": {
-    label: "Arm 3. Clarithromycin 500 mg twice a day for 5 days (20 tablets), more severe infection",
-    dose: "500 mg BD, 5 days",
-    product: "Clarithromycin 500mg tablets",
-    quantity: "20 tablets",
-    route: "Oral, with or without food",
-  },
 };
 
-type Comorbidity =
-  | ""
-  | "none"
+export type Comorbidity =
   | "chronic-lung"
   | "heart-failure"
   | "diabetes"
@@ -100,19 +93,20 @@ type Comorbidity =
   | "immunosuppression"
   | "age-65";
 
-const COMORBIDITY_OPTIONS: { value: Exclude<Comorbidity, "">; label: string }[] = [
-  { value: "none", label: "No higher-risk comorbidity" },
+export const COMORBIDITY_OPTIONS: { value: Comorbidity; label: string }[] = [
   { value: "chronic-lung", label: "Chronic lung disease, including COPD and asthma" },
   { value: "heart-failure", label: "Heart failure" },
   { value: "diabetes", label: "Diabetes" },
   { value: "ckd-liver", label: "Chronic kidney or liver disease" },
   { value: "immunosuppression", label: "Immunosuppression" },
-  { value: "age-65", label: "Age 65 and over" },
+  { value: "age-65", label: "Age 65 and over (set from the date of birth)" },
 ];
+
+export type SmokingStatus = "" | "never" | "former" | "current";
 
 type ConsentBasis = "" | "parental" | "gillick";
 
-interface ChestState {
+export interface ChestState {
   currentStep: number;
   patient: BasePatientDetails;
   consent: BaseConsent;
@@ -127,8 +121,13 @@ interface ChestState {
     breathless: boolean;
     wheeze: boolean;
     chestPain: boolean;
-    // PGD v007 inclusion: purulent sputum AND (comorbidity OR symptoms beyond 14 days)
-    comorbidity: Comorbidity;
+    // PGD v007 inclusion: purulent sputum AND (comorbidity OR symptoms beyond 14 days).
+    // Several comorbidities may apply; "age-65" is derived from the date of birth.
+    comorbidities: Comorbidity[];
+    /** Explicit confirmation that no higher-risk comorbidity is present. */
+    noComorbidity: boolean;
+    /** The 3 week exclusion applies to current or former smokers only. */
+    smokingStatus: SmokingStatus;
     lowerThresholdOver65Considered: boolean;
     rationale: string;
   };
@@ -204,6 +203,11 @@ interface ChestState {
     safetyNetting: boolean;
     followUp: boolean;
     selfCare: boolean;
+    pilSupplied: boolean;
+    /** Advice given where excluded, declining, or not meeting the inclusion criteria. */
+    exclusionAdvice: string;
+    /** Details of any adverse drug reactions and the actions taken (Yellow Card). */
+    adverseReactions: string;
   };
   summary: BaseSummary;
 }
@@ -226,6 +230,7 @@ const STEP_PRESENTATION = STEP_LABELS.indexOf("Presentation");
 const STEP_OBSERVATIONS = STEP_LABELS.indexOf("Observations");
 const STEP_MEDICINES = STEP_LABELS.indexOf("Medicines");
 const STEP_ANTIBIOTIC = STEP_LABELS.indexOf("Antibiotic");
+const STEP_COUNSELLING = STEP_LABELS.indexOf("Counselling");
 
 function initialState(): ChestState {
   return {
@@ -240,7 +245,9 @@ function initialState(): ChestState {
       breathless: false,
       wheeze: false,
       chestPain: false,
-      comorbidity: "",
+      comorbidities: [],
+      noComorbidity: false,
+      smokingStatus: "",
       lowerThresholdOver65Considered: false,
       rationale: "",
     },
@@ -310,6 +317,9 @@ function initialState(): ChestState {
       safetyNetting: false,
       followUp: false,
       selfCare: false,
+      pilSupplied: false,
+      exclusionAdvice: "",
+      adverseReactions: "",
     },
     summary: initialSummary(),
   };
@@ -325,7 +335,7 @@ type Action =
   | { type: "UPDATE_EXCLUSION"; field: keyof ChestState["exclusions"]; value: boolean }
   | { type: "UPDATE_MEDICINE"; field: keyof ChestState["medicines"]; value: unknown }
   | { type: "UPDATE_TREATMENT"; field: keyof ChestState["treatment"]; value: unknown }
-  | { type: "UPDATE_COUNSELLING"; field: keyof ChestState["counselling"]; value: boolean }
+  | { type: "UPDATE_COUNSELLING"; field: keyof ChestState["counselling"]; value: boolean | string }
   | { type: "UPDATE_SUMMARY"; field: keyof BaseSummary; value: unknown }
   | { type: "SET_STEP"; step: number }
   | { type: "NEXT_STEP" }
@@ -372,7 +382,7 @@ function reducer(state: ChestState, action: Action): ChestState {
   }
 }
 
-interface Alert {
+export interface Alert {
   code: string;
   severity: "stop" | "caution" | "red-flag";
   message: string;
@@ -398,10 +408,17 @@ const RED_FLAG_LABELS: [keyof ChestState["redFlags"], string, string][] = [
   ["smokerNewOrChangedCough", "Current or former smoker with a cough over 3 weeks, or a smoker over 45 with a new or changed cough or voice change", "Exclusion. Refer in line with the lung cancer referral guidance."],
 ];
 
-const isClari = (a: Antibiotic) => a === "clarithromycin" || a === "clarithromycin-500";
+const isClari = (a: Antibiotic) => a === "clarithromycin";
 
-function comorbidityLabel(c: Comorbidity): string {
-  return COMORBIDITY_OPTIONS.find((o) => o.value === c)?.label ?? "Not recorded";
+export function comorbidityLabel(c: Comorbidity): string {
+  return COMORBIDITY_OPTIONS.find((o) => o.value === c)?.label.replace(/ \(.*\)$/, "") ?? c;
+}
+
+/** Comorbidities that count for inclusion: those recorded, with "age 65 and
+ *  over" driven by the calculated age rather than by a dropdown choice. */
+export function effectiveComorbidities(recorded: Comorbidity[], age: number | null): Comorbidity[] {
+  const base = recorded.filter((c) => c !== "age-65");
+  return age !== null && age >= 65 ? [...base, "age-65"] : base;
 }
 
 export function ChestServiceClient() {
@@ -424,10 +441,7 @@ export function ChestServiceClient() {
     const out = new Set<string>();
     if (m.penicillinAllergy) out.add("amoxicillin");
     if (m.tetracyclineAllergy) out.add("doxycycline");
-    if (m.macrolideAllergy) {
-      out.add("clarithromycin");
-      out.add("clarithromycin-500");
-    }
+    if (m.macrolideAllergy) out.add("clarithromycin");
     return out;
   }, [state.medicines]);
 
@@ -458,10 +472,16 @@ export function ChestServiceClient() {
     return s;
   }, [state.observations]);
 
+  const comorbidities = useMemo(
+    () => effectiveComorbidities(state.presentation.comorbidities, state.patient.age),
+    [state.presentation.comorbidities, state.patient.age]
+  );
+  const isOver65 = state.patient.age !== null && state.patient.age >= 65;
+
   /** PGD v007 inclusion: purulent sputum AND (higher-risk comorbidity OR symptoms beyond 14 days). */
   const inclusion = useMemo(() => {
     const p = state.presentation;
-    const comorbidityMet = p.comorbidity !== "" && p.comorbidity !== "none";
+    const comorbidityMet = comorbidities.length > 0;
     const durationMet = p.coughDurationDays !== null && p.coughDurationDays > 14;
     const met = p.purulentSputum && (comorbidityMet || durationMet);
     const feature = !met
@@ -472,7 +492,7 @@ export function ChestServiceClient() {
           ? "Purulent sputum plus comorbidity"
           : "Purulent sputum plus duration beyond 14 days";
     return { met, comorbidityMet, durationMet, feature };
-  }, [state.presentation]);
+  }, [state.presentation, comorbidities]);
 
   const alerts = useMemo<Alert[]>(() => {
     const out: Alert[] = [];
@@ -496,15 +516,27 @@ export function ChestServiceClient() {
       }
     }
 
-    // ── Duration. Beyond 3 weeks this is no longer an acute cough. ──
+    // ── Duration. The document excludes a cough of more than 3 weeks in a
+    // current or former smoker. For everyone else it is a caution, not a stop.
     if (presentation.coughDurationDays !== null && presentation.coughDurationDays > 21) {
-      out.push({
-        code: "duration",
-        severity: "stop",
-        message: `Cough lasting ${presentation.coughDurationDays} days`,
-        detail:
-          "A cough of more than three weeks is not an acute cough and is outside this PGD. It needs assessment for the causes of a subacute or chronic cough, which include asthma, reflux, ACE inhibitors and, in smokers, malignancy. Refer.",
-      });
+      const smoker = presentation.smokingStatus === "current" || presentation.smokingStatus === "former";
+      if (smoker) {
+        out.push({
+          code: "duration",
+          severity: "stop",
+          message: `Cough lasting ${presentation.coughDurationDays} days in a ${presentation.smokingStatus} smoker`,
+          detail:
+            "Exclusion: a cough lasting more than 3 weeks in a current or former smoker. Refer in line with the lung cancer referral guidance.",
+        });
+      } else if (presentation.smokingStatus === "never") {
+        out.push({
+          code: "duration-caution",
+          severity: "caution",
+          message: `Cough lasting ${presentation.coughDurationDays} days`,
+          detail:
+            "The document excludes a cough over 3 weeks only in a current or former smoker. In a never-smoker it is not an exclusion, but a cough of this length needs the causes of a subacute cough considered (asthma, reflux, ACE inhibitors). Record the reasoning.",
+        });
+      }
     }
 
     // ── Appendix 1 observation thresholds. Any breach refers. ───────
@@ -595,8 +627,12 @@ export function ChestServiceClient() {
       }
     }
 
-    // ── Inclusion criteria. Recorded, not assumed. ──────────────────
-    if (state.currentStep > STEP_PRESENTATION && !inclusion.met) {
+    // ── Inclusion criteria. Recorded, not assumed. Raised on the
+    // Presentation step itself once its required fields are in, and enforced
+    // on every later step.
+    const presentationEntered =
+      presentation.coughDurationDays !== null && (presentation.noComorbidity || presentation.comorbidities.length > 0 || isOver65);
+    if ((state.currentStep > STEP_PRESENTATION || presentationEntered) && !inclusion.met) {
       out.push({
         code: "inclusion",
         severity: "stop",
@@ -605,10 +641,10 @@ export function ChestServiceClient() {
           "This PGD requires PURULENT SPUTUM (yellow or green) AND EITHER a higher-risk comorbidity (chronic lung disease including COPD and asthma, heart failure, diabetes, chronic kidney or liver disease, immunosuppression, or age 65 and over) OR symptoms persisting beyond 14 days. Most acute cough is viral: give self-care and safety-netting advice, which is a legitimate and common outcome for this service.",
       });
     }
+    // Driven by the calculated age, not by which comorbidity was picked.
     if (
-      state.currentStep > STEP_PRESENTATION &&
-      inclusion.met &&
-      presentation.comorbidity === "age-65" &&
+      (state.currentStep > STEP_PRESENTATION || presentationEntered) &&
+      isOver65 &&
       !presentation.lowerThresholdOver65Considered
     ) {
       out.push({
@@ -733,60 +769,126 @@ export function ChestServiceClient() {
     }
 
     return out;
-  }, [state, blockedAgents, armsAvailable, crbScore, inclusion]);
+  }, [state, blockedAgents, armsAvailable, crbScore, inclusion, isOver65]);
 
   /** Per-step validation: required records before the pharmacist may move on. */
+  const validators = useMemo(() => {
+    const { patient, consent, consent16, presentation, observations, medicines, treatment, counselling, summary } = state;
+    const patientStep = (): string | null => {
+      const base = validatePatientStep(patient, { minAge: 12 });
+      if (base) return base;
+      if (patient.age === null) return "The patient's age could not be calculated from the date of birth";
+      return null;
+    };
+    const consentStep = (): string | null => {
+      const base = validateConsentStep(consent);
+      if (base) return base;
+      if (patient.age !== null && patient.age < 16) {
+        if (!consent16.basis) return "Under 16: record who gave consent (parental responsibility or Gillick competence)";
+        if (!consent16.detail.trim())
+          return consent16.basis === "parental"
+            ? "Record the name of the person with parental responsibility"
+            : "Record the basis of the Gillick competence assessment";
+      }
+      return null;
+    };
+    const presentationStep = (): string | null => {
+      if (presentation.coughDurationDays === null) return "Record how many days the cough has lasted";
+      if (!presentation.smokingStatus) return "Record the smoking status (the 3 week exclusion applies to current and former smokers)";
+      if (!presentation.noComorbidity && presentation.comorbidities.filter((c) => c !== "age-65").length === 0 && !isOver65)
+        return "Record the higher-risk comorbidities present, or confirm there are none";
+      if (presentation.noComorbidity && presentation.comorbidities.filter((c) => c !== "age-65").length > 0)
+        return "Either confirm no comorbidity or select the comorbidities present, not both";
+      return null;
+    };
+    const observationsStep = (): string | null => {
+      if (observations.spo2 === null) return "Record SpO2 (required before any supply)";
+      if (observations.respiratoryRate === null) return "Record the respiratory rate, counted for a full 60 seconds";
+      if (observations.pulse === null) return "Record the pulse";
+      if (observations.systolicBP === null || observations.diastolicBP === null) return "Record the blood pressure (systolic and diastolic)";
+      if (observations.temperature === null) return "Record the temperature";
+      return null;
+    };
+    const medicinesStep = (): string | null => {
+      if (medicines.penicillinAllergy && !medicines.penicillinAllergyHistory.trim())
+        return "Record the penicillin allergy history in the patient's own terms";
+      return null;
+    };
+    const antibioticStep = (): string | null => {
+      if (!treatment.antibiotic) return "Select the antibiotic arm";
+      if (!treatment.batch.trim()) return "Record the batch number";
+      if (!treatment.expiry) return "Record the expiry date";
+      return null;
+    };
+    const counsellingStep = (): string | null => {
+      const c = counselling;
+      if (!c.courseCompletion) return "Confirm the advice to complete the full 5 day course";
+      if (!c.viralExplanation) return "Confirm the patient was told a cough alone may take three weeks to settle";
+      if (!c.sideEffects) return "Confirm the common side effects were explained";
+      if (treatment.antibiotic === "doxycycline" && !c.doxycyclineAdvice) return "Confirm the doxycycline-specific advice";
+      if (treatment.antibiotic === "amoxicillin" && !c.amoxicillinAdvice) return "Confirm the amoxicillin-specific advice";
+      if (treatment.antibiotic === "clarithromycin" && !c.clarithromycinAdvice) return "Confirm the clarithromycin-specific advice";
+      if (!c.selfCare) return "Confirm the self-care advice";
+      if (!c.safetyNetting) return "Confirm the same-day safety-netting advice";
+      if (!c.followUp) return "Confirm the follow-up advice";
+      if (!c.pilSupplied) return "Confirm the patient information leaflet was supplied";
+      return null;
+    };
+    const summaryStep = (): string | null => validateSummaryStep(summary);
+    return { patientStep, consentStep, presentationStep, observationsStep, medicinesStep, antibioticStep, counsellingStep, summaryStep };
+  }, [state, isOver65]);
+
   const validationError = useMemo<string | null>(() => {
-    const { patient, consent16, observations, medicines, treatment } = state;
+    const v = validators;
     switch (state.currentStep) {
-      case STEP_CONSENT:
-        if (patient.age !== null && patient.age < 16) {
-          if (!consent16.basis) return "Under 16: record who gave consent (parental responsibility or Gillick competence)";
-          if (!consent16.detail.trim())
-            return consent16.basis === "parental"
-              ? "Record the name of the person with parental responsibility"
-              : "Record the basis of the Gillick competence assessment";
-        }
-        return null;
-      case STEP_PRESENTATION:
-        if (state.presentation.coughDurationDays === null) return "Record how many days the cough has lasted";
-        if (!state.presentation.comorbidity) return "Record whether a higher-risk comorbidity is present";
-        return null;
-      case STEP_OBSERVATIONS:
-        if (observations.spo2 === null) return "Record SpO2 (required before any supply)";
-        if (observations.respiratoryRate === null) return "Record the respiratory rate, counted for a full 60 seconds";
-        if (observations.pulse === null) return "Record the pulse";
-        if (observations.systolicBP === null || observations.diastolicBP === null) return "Record the blood pressure (systolic and diastolic)";
-        if (observations.temperature === null) return "Record the temperature";
-        return null;
-      case STEP_MEDICINES:
-        if (medicines.penicillinAllergy && !medicines.penicillinAllergyHistory.trim())
-          return "Record the penicillin allergy history in the patient's own terms";
-        return null;
-      case STEP_ANTIBIOTIC:
-        if (!treatment.antibiotic) return "Select the antibiotic arm";
-        if (!treatment.batch.trim()) return "Record the batch number";
-        if (!treatment.expiry) return "Record the expiry date";
-        return null;
+      case 0: return v.patientStep();
+      case STEP_CONSENT: return v.consentStep();
+      case STEP_PRESENTATION: return v.presentationStep();
+      case STEP_OBSERVATIONS: return v.observationsStep();
+      case STEP_MEDICINES: return v.medicinesStep();
+      case STEP_ANTIBIOTIC: return v.antibioticStep();
+      case STEP_COUNSELLING: return v.counsellingStep();
+      // Save & Print on the last step runs every validator again, so an
+      // answer changed on an earlier step cannot be printed unchecked.
+      case TOTAL_STEPS - 1:
+        return (
+          v.patientStep() ||
+          v.consentStep() ||
+          v.presentationStep() ||
+          v.observationsStep() ||
+          v.medicinesStep() ||
+          v.antibioticStep() ||
+          v.counsellingStep() ||
+          v.summaryStep()
+        );
       default:
         return null;
     }
-  }, [state]);
+  }, [state.currentStep, validators]);
 
   const hasStops = alerts.some((a) => a.severity === "stop");
-  const canProceed = (!hasStops || state.currentStep >= TOTAL_STEPS - 2) && validationError === null;
+  // A stop anywhere disables Next on every step; the blocked step offers
+  // "Save as not supplied" (self-care and referrals both end there).
+  const canProceed = !hasStops && validationError === null;
 
   const markComplete = useCallback(() => {
     setCompletedSteps((prev) => new Set(prev).add(state.currentStep));
   }, [state.currentStep]);
 
   const handleNext = () => {
+    if (!canProceed) return;
     markComplete();
     dispatch({ type: "NEXT_STEP" });
   };
-  const handlePrev = () => dispatch({ type: "PREV_STEP" });
+  const handlePrev = () => {
+    setCompletedSteps((prev) => new Set([...prev].filter((s) => s < state.currentStep - 1)));
+    dispatch({ type: "PREV_STEP" });
+  };
   const handleStepClick = (step: number) => {
-    if (step < state.currentStep) dispatch({ type: "SET_STEP", step });
+    if (step < state.currentStep) {
+      setCompletedSteps((prev) => new Set([...prev].filter((s) => s < step)));
+      dispatch({ type: "SET_STEP", step });
+    }
   };
 
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
@@ -806,17 +908,32 @@ export function ChestServiceClient() {
         ...(state as unknown as Record<string, unknown>),
         crbScore,
         inclusionFeature: inclusion.feature,
+        effectiveComorbidities: comorbidities,
+        alerts,
         pgdVersion: PGD_STRAPLINE,
       },
-      outcome: hasStops ? "not_supplied" : "completed",
+      outcome: hasStops ? (inclusion.met ? "referred" : "not_supplied") : "completed",
+      medicine:
+        !hasStops && state.treatment.antibiotic
+          ? {
+              name: ANTIBIOTIC_REGIMENS[state.treatment.antibiotic].product,
+              dose: ANTIBIOTIC_REGIMENS[state.treatment.antibiotic].dose,
+              duration: "5 days",
+              quantity: ANTIBIOTIC_REGIMENS[state.treatment.antibiotic].quantity,
+            }
+          : undefined,
       summary: {
-        pharmacistName: state.summary.pharmacistName,
-        pharmacistGPhC: state.summary.pharmacistGPhC,
+        pharmacistName: state.summary.pharmacistName || __pharm?.name || "",
+        pharmacistGPhC: state.summary.pharmacistGPhC || __pharm?.gphcNumber || "",
+        pharmacyName: state.summary.pharmacyName || __pharm?.pharmacyName,
+        pharmacyAddress: state.summary.pharmacyAddress || __pharm?.pharmacyAddress,
         consultationDate: state.summary.consultationDate,
         consultationTime: state.summary.consultationTime,
+        clinicalNotes: state.summary.clinicalNotes,
       },
+      consent: { notifyGp: !!state.consent.notifyGp },
     };
-  }, [state, hasStops, crbScore, inclusion.feature]);
+  }, [state, hasStops, crbScore, inclusion, comorbidities, alerts, __pharm]);
 
   const handleNewConsultation = useCallback(() => {
     dispatch({ type: "RESET" });
@@ -830,7 +947,31 @@ export function ChestServiceClient() {
     onPrev: handlePrev,
     canProceed,
     validationError,
+    isBlocked: hasStops,
+    getConsultationData,
+    onNewConsultation: handleNewConsultation,
   };
+
+  // Where a stop exists (a referral, or the common no-antibiotic outcome),
+  // the advice given and the decision reached are recorded here, then the
+  // consultation is saved with "Save as not supplied".
+  const exclusionBox = hasStops ? (
+    <div className="p-4 bg-red-50 rounded-lg border border-red-200 space-y-2 mb-4">
+      <p className="text-sm font-medium text-navy-900">
+        {inclusion.met ? "Excluded: record the advice given and the decision reached, then use Save as not supplied" : "No antibiotic under this PGD: record the self-care and safety-netting advice given, then use Save as not supplied"}
+      </p>
+      <p className="text-xs text-gray-700">
+        Explain why an antibiotic cannot be supplied, and say plainly that most acute coughs do not need one and settle on their own. Refer same-day where any Appendix 1 threshold is breached, the CRB score is 1 or more, or pneumonia is suspected. Give self-care and safety-netting advice, including that a cough alone may take three weeks to settle. Inform the GP where the reason for exclusion is a new clinical finding such as a low SpO2.
+      </p>
+      <TextArea
+        label="Advice given and decision reached"
+        value={state.counselling.exclusionAdvice}
+        onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "exclusionAdvice", value: v })}
+        rows={3}
+        placeholder="e.g. self-care and safety-netting advice given; no antibiotic; return if breathless, chest pain, haemoptysis or much worse"
+      />
+    </div>
+  ) : null;
 
   const under16 = state.patient.age !== null && state.patient.age < 16;
   const isAdult = state.patient.age !== null && state.patient.age >= 18;
@@ -911,10 +1052,22 @@ export function ChestServiceClient() {
                 required
               />
               <div className="p-3 rounded-md bg-gray-50 border border-gray-200 text-xs text-gray-600">
-                More than 21 days is not an acute cough and falls outside this PGD. A cough from
-                acute bronchitis commonly lasts around three weeks, and that duration alone is not a
-                reason to treat.
+                A cough from acute bronchitis commonly lasts around three weeks, and that duration alone
+                is not a reason to treat. The document excludes a cough lasting more than 3 weeks in a
+                current or former smoker.
               </div>
+              <SelectInput
+                label="Smoking status"
+                value={state.presentation.smokingStatus}
+                onChange={(v) => dispatch({ type: "UPDATE_PRESENTATION", field: "smokingStatus", value: v as SmokingStatus })}
+                options={[
+                  { value: "", label: "Select..." },
+                  { value: "never", label: "Never smoked" },
+                  { value: "former", label: "Former smoker" },
+                  { value: "current", label: "Current smoker" },
+                ]}
+                required
+              />
 
               <p className="text-sm font-semibold text-navy-900 pt-2">Symptoms</p>
               <Checkbox label="Purulent sputum (yellow or green)" checked={state.presentation.purulentSputum} onChange={(v) => dispatch({ type: "UPDATE_PRESENTATION", field: "purulentSputum", value: v })} description="Required for inclusion. Purulent sputum on its own does not indicate a bacterial infection needing an antibiotic." />
@@ -931,14 +1084,37 @@ export function ChestServiceClient() {
                   netting, and that is a normal result for this service rather than a failed
                   consultation.
                 </p>
-                <SelectInput
-                  label="Higher-risk comorbidity"
-                  value={state.presentation.comorbidity}
-                  onChange={(v) => dispatch({ type: "UPDATE_PRESENTATION", field: "comorbidity", value: v as Comorbidity })}
-                  options={COMORBIDITY_OPTIONS}
-                  required
+                <p className="text-xs font-medium text-navy-900">Higher-risk comorbidities present (select all that apply) *</p>
+                {COMORBIDITY_OPTIONS.map((opt) => {
+                  const derived = opt.value === "age-65";
+                  const checked = derived ? isOver65 : state.presentation.comorbidities.includes(opt.value);
+                  return (
+                    <Checkbox
+                      key={opt.value}
+                      label={opt.label}
+                      checked={checked}
+                      onChange={(v) => {
+                        if (derived) return;
+                        const next = v
+                          ? [...state.presentation.comorbidities.filter((c) => c !== opt.value), opt.value]
+                          : state.presentation.comorbidities.filter((c) => c !== opt.value);
+                        dispatch({ type: "UPDATE_PRESENTATION", field: "comorbidities", value: next });
+                        if (v) dispatch({ type: "UPDATE_PRESENTATION", field: "noComorbidity", value: false });
+                      }}
+                      description={derived ? (state.patient.age !== null ? `Patient is ${state.patient.age}: ${isOver65 ? "applies" : "does not apply"}. Set from the date of birth, not by hand.` : "Enter the date of birth on the Patient step") : undefined}
+                    />
+                  );
+                })}
+                <Checkbox
+                  label="No higher-risk comorbidity present (confirmed)"
+                  checked={state.presentation.noComorbidity}
+                  onChange={(v) => {
+                    dispatch({ type: "UPDATE_PRESENTATION", field: "noComorbidity", value: v });
+                    if (v) dispatch({ type: "UPDATE_PRESENTATION", field: "comorbidities", value: [] });
+                  }}
+                  description={isOver65 ? "Age 65 and over still counts as a higher-risk comorbidity for inclusion." : undefined}
                 />
-                {state.presentation.comorbidity === "age-65" && (
+                {isOver65 && (
                   <Checkbox
                     label="Lower referral threshold for a patient aged 65 and over considered"
                     checked={state.presentation.lowerThresholdOver65Considered}
@@ -1079,12 +1255,12 @@ export function ChestServiceClient() {
           (abx === "amoxicillin" && isAdult && !state.exclusions.pregnancy) ||
           (isClari(abx) && isAdult);
         return (
-          <StepWrapper title="Antibiotic & Supply" {...stepProps} isBlocked={hasStops}>
+          <StepWrapper title="Antibiotic & Supply" {...stepProps}>
             <div className="space-y-4">
               <div className="p-3 rounded-md bg-gray-50 border border-gray-200 text-xs text-gray-600 space-y-1">
                 <p><strong>Arm 1, doxycycline:</strong> adults 18 and over. First line.</p>
                 <p><strong>Arm 2, amoxicillin:</strong> patients aged 12 to 17; pregnant patients of any age; and adults 18 and over for whom doxycycline is unsuitable and who are not penicillin-allergic.</p>
-                <p><strong>Arm 3, clarithromycin:</strong> patients aged 12 and over who are penicillin-allergic and for whom the first-line agent for their circumstances is unsuitable or unavailable. Not in pregnancy or breastfeeding.</p>
+                <p><strong>Arm 3, clarithromycin:</strong> patients aged 12 and over who are penicillin-allergic and for whom the first-line agent for their circumstances is unsuitable or unavailable. Not in pregnancy or breastfeeding. 250 mg twice a day only: the document&apos;s 500 mg row is for marked systemic upset and says those patients are referred, so it is not offered here.</p>
               </div>
               {blockedAgents.size > 0 && (
                 <div className="p-3 rounded-md bg-amber-50 border border-amber-300 text-sm text-amber-900">
@@ -1106,11 +1282,6 @@ export function ChestServiceClient() {
                   <p className="text-xs text-gray-700">
                     Route: {ANTIBIOTIC_REGIMENS[abx as Exclude<Antibiotic, "">].route}. Maximum treatment period 5 days.
                   </p>
-                  {abx === "clarithromycin-500" && (
-                    <p className="text-xs text-red-700">
-                      The PGD reserves 500 mg for "more severe" infection (marked systemic upset with no CRB point and no feature of pneumonia) and then states that those patients are referred, not treated at the higher dose. Record the justification in the clinical notes.
-                    </p>
-                  )}
                 </div>
               )}
               {needsReason && (
@@ -1156,8 +1327,15 @@ export function ChestServiceClient() {
                 <Checkbox label="Clarithromycin: one tablet twice a day; tell us or your GP before starting any new medicine, this antibiotic interacts with a lot of them; it can cause a metallic or altered taste, which settles after the course; possible dizziness or vertigo" checked={state.counselling.clarithromycinAdvice} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "clarithromycinAdvice", value: v })} />
               )}
               <Checkbox label="Self-care: fluids, rest, simple analgesia, and honey for cough" checked={state.counselling.selfCare} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "selfCare", value: v })} />
-              <Checkbox label="Seek help the same day if you become breathless, develop chest pain, cough blood, develop a fever, or feel much worse at any point. Do not wait to finish the course." checked={state.counselling.safetyNetting} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "safetyNetting", value: v })} />
-              <Checkbox label="Come back if you are no better 5 to 7 days after finishing the course" checked={state.counselling.followUp} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "followUp", value: v })} />
+              <Checkbox label="Seek help the same day if you become breathless, develop chest pain, cough blood, or feel much worse at any point. Do not wait to finish the course." checked={state.counselling.safetyNetting} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "safetyNetting", value: v })} />
+              <Checkbox label="Seek advice if breathlessness, chest pain or fever develop, if symptoms are no better after finishing the course, or you are worse at any point. A cough alone may take three weeks to settle." checked={state.counselling.followUp} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "followUp", value: v })} />
+              <Checkbox label="Patient information leaflet supplied" checked={state.counselling.pilSupplied} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "pilSupplied", value: v })} />
+              <TextArea
+                label="Adverse drug reactions and actions taken (report via Yellow Card, https://yellowcard.mhra.gov.uk, and inform the GP)"
+                value={state.counselling.adverseReactions}
+                onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "adverseReactions", value: v })}
+                placeholder="None known at the time of supply"
+              />
             </div>
           </StepWrapper>
         );
@@ -1167,17 +1345,7 @@ export function ChestServiceClient() {
         const regimen = abx ? ANTIBIOTIC_REGIMENS[abx as Exclude<Antibiotic, "">] : null;
         const o = state.observations;
         return (
-          <StepWrapper
-            title="Summary & Record"
-            currentStep={state.currentStep}
-            totalSteps={TOTAL_STEPS}
-            onNext={handleNext}
-            onPrev={handlePrev}
-            canProceed={true}
-            validationError={null}
-            getConsultationData={getConsultationData}
-            onNewConsultation={handleNewConsultation}
-          >
+          <StepWrapper title="Summary & Record" {...stepProps}>
             <div className="space-y-4 mb-6">
               <TextInput label="Pharmacist name" value={state.summary.pharmacistName} onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "pharmacistName", value: v })} required />
               <TextInput label="GPhC registration number" value={state.summary.pharmacistGPhC} onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "pharmacistGPhC", value: v })} required />
@@ -1195,22 +1363,27 @@ export function ChestServiceClient() {
                 )}
                 <div><strong>Cough duration:</strong> {state.presentation.coughDurationDays ?? "not recorded"} days</div>
                 <div><strong>Inclusion feature met:</strong> {inclusion.feature}</div>
-                <div><strong>Comorbidity:</strong> {comorbidityLabel(state.presentation.comorbidity)}{state.presentation.comorbidity === "age-65" ? `; lower referral threshold considered: ${state.presentation.lowerThresholdOver65Considered ? "yes" : "no"}` : ""}</div>
+                <div><strong>Consent:</strong> {state.consent.informedConsentGiven ? "Valid informed consent given" : "NOT recorded"}</div>
+                <div><strong>Comorbidities:</strong> {comorbidities.length > 0 ? comorbidities.map(comorbidityLabel).join(", ") : "None"}{isOver65 ? `; lower referral threshold considered: ${state.presentation.lowerThresholdOver65Considered ? "yes" : "no"}` : ""}</div>
+                <div><strong>Smoking status:</strong> {state.presentation.smokingStatus || "not recorded"}</div>
                 <div><strong>Observations:</strong> SpO2 {o.spo2 ?? "?"}%, RR {o.respiratoryRate ?? "?"}/min, pulse {o.pulse ?? "?"} bpm, BP {o.systolicBP ?? "?"}/{o.diastolicBP ?? "?"} mmHg, temp {o.temperature ?? "?"} C, new confusion {o.newConfusion ? "yes" : "no"}</div>
                 <div><strong>CRB score (without age point):</strong> {crbScore}</div>
                 <div><strong>Arm and medicine:</strong> {regimen ? `${regimen.product}; ${regimen.dose}; ${regimen.quantity}; ${regimen.route}` : "None supplied"}</div>
                 {state.treatment.firstLineUnsuitableReason && (
                   <div><strong>Reason first-line agent not used:</strong> {state.treatment.firstLineUnsuitableReason}</div>
                 )}
-                {state.medicines.penicillinAllergy && (
-                  <div><strong>Penicillin allergy history:</strong> {state.medicines.penicillinAllergyHistory || "not recorded"}</div>
-                )}
+                <div><strong>Penicillin allergy:</strong> {state.medicines.penicillinAllergy ? `Yes: ${state.medicines.penicillinAllergyHistory || "history not recorded"}` : "None recorded"}</div>
                 {isClari(abx) && (
                   <div><strong>Renal function asked:</strong> {state.medicines.renalFunctionAsked ? "yes" : "no"}{state.medicines.renalFunctionAnswer ? `; answer: ${state.medicines.renalFunctionAnswer}` : ""}</div>
                 )}
                 <div><strong>Batch / expiry:</strong> {state.treatment.batch || "not recorded"} / {state.treatment.expiry || "not recorded"}</div>
+                <div><strong>Counselling:</strong> {[state.counselling.courseCompletion && "course completion", state.counselling.viralExplanation && "three week cough explained", state.counselling.sideEffects && "side effects", state.counselling.selfCare && "self-care", state.counselling.safetyNetting && "same-day safety netting", state.counselling.followUp && "follow-up", state.counselling.pilSupplied && "PIL supplied"].filter(Boolean).join(", ") || "none recorded"}</div>
                 <div><strong>Stops present:</strong> {hasStops ? "Yes" : "No"}</div>
-                <div><strong>Supplied under:</strong> {PGD_STRAPLINE}</div>
+                {regimen && !hasStops ? (
+                  <div><strong>Supplied under:</strong> {PGD_STRAPLINE}</div>
+                ) : (
+                  <div><strong>Outcome:</strong> NOT SUPPLIED. {state.counselling.exclusionAdvice ? `Advice: ${state.counselling.exclusionAdvice}` : ""}</div>
+                )}
               </div>
             </div>
           </StepWrapper>
@@ -1223,16 +1396,29 @@ export function ChestServiceClient() {
   };
 
   return (
-    <div className="space-y-6">
-      <ProgressBar
-        stepLabels={STEP_LABELS}
-        currentStep={state.currentStep}
-        onStepClick={handleStepClick}
-        completedSteps={completedSteps}
-        hasErrors={false}
-      />
-      {alerts.length > 0 && <AlertBanner alerts={alerts} />}
-      {renderStep()}
-    </div>
+    <>
+      <div className="space-y-6 print:hidden">
+        <ProgressBar
+          stepLabels={STEP_LABELS}
+          currentStep={state.currentStep}
+          onStepClick={handleStepClick}
+          completedSteps={completedSteps}
+          hasErrors={validationError !== null || hasStops}
+        />
+        {alerts.length > 0 && <AlertBanner alerts={alerts} />}
+        {exclusionBox}
+        {renderStep()}
+      </div>
+      <div className="hidden print:block">
+        <ChestServiceSummaryReport
+          state={state}
+          alerts={alerts}
+          crbScore={crbScore}
+          inclusionFeature={inclusion.feature}
+          comorbidities={comorbidities}
+          isOver65={isOver65}
+        />
+      </div>
+    </>
   );
 }
