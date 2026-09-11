@@ -16,7 +16,7 @@ import { WoundCareSummaryReport } from "./components/WoundCareSummaryReport";
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 
 /**
- * Minor Wound Care ePGD, aligned to the Minor Wound Care PGD version 007,
+ * Minor Wound Care ePGD, aligned to the Minor Wound Care PGD version 008,
  * issued 11 September 2026. Two arms, chosen on the mechanism of the wound:
  *   Arm 1, co-amoxiclav 500/125mg tablets: infected bite wounds and heavily
  *     contaminated wounds, 12 years and over.
@@ -26,7 +26,7 @@ import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
  * tetanus status is established and recorded for every patient; both arms are
  * beta-lactams so penicillin allergy is a referral with the alternative named.
  */
-export const WOUND_CARE_PGD_VERSION = "Minor Wound Care PGD, version 007, issued 11 September 2026";
+export const WOUND_CARE_PGD_VERSION = "Minor Wound Care PGD, version 008, issued 11 September 2026";
 
 export type AgeBand = "2-4" | "5-11" | "12+" | null;
 export function getAgeBand(age: number | null): AgeBand {

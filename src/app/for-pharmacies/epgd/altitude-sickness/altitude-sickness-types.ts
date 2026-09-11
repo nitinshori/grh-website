@@ -12,14 +12,14 @@ export type ASPurpose = 'prevention' | 'treatment' | '';
 
 export interface ASTravelAssessment {
   destinationCountry: string;
-  destinationAltitude: number | null; // metres; PGD v003 inclusion: above 2,500 metres
+  destinationAltitude: number | null; // metres; PGD v004 inclusion: above 2,500 metres
   currentAltitude: number | null; // current altitude they're at (base)
   departureDate: string; // YYYY-MM-DD
-  /** PGD v003 inclusion: requesting preventative treatment or symptomatic treatment for AMS. */
+  /** PGD v004 inclusion: requesting preventative treatment or symptomatic treatment for AMS. */
   purpose: ASPurpose;
-  /** PGD v003 quantity: days ascending (from first day above 2,500 m to the highest point). Needed to calculate the prevention course. */
+  /** PGD v004 quantity: days ascending (from first day above 2,500 m to the highest point). Needed to calculate the prevention course. */
   daysAscending: number | null;
-  /** PGD v003: 1 to 2 lead-in days before ascent. A choice between the document's two values. */
+  /** PGD v004: 1 to 2 lead-in days before ascent. A choice between the document's two values. */
   leadInDays: 1 | 2 | null;
   ascentRate: string; // 'slow' (gradual), 'moderate', 'rapid'
   acclimatisationPlan: boolean;
@@ -37,7 +37,7 @@ export interface ASMedicalHistory {
   sulfonamideAllergy: boolean; // hypersensitivity to acetazolamide or sulfonamides: exclusion
   severeHepaticImpairment: boolean; // severe hepatic impairment or hepatic cirrhosis: exclusion
   severeRenalImpairment: boolean; // exclusion
-  mildRenalImpairment: boolean; // PGD v003 caution
+  mildRenalImpairment: boolean; // PGD v004 caution
   adrenalInsufficiency: boolean; // contraindication
   hypokalaemia: boolean; // contraindication
   hyponatraemia: boolean; // contraindication
@@ -73,13 +73,13 @@ export interface ASMedicineSelection {
   dose: string; // prevention 125 mg (half a 250 mg tablet) BD; treatment 250 mg BD up to 3 days
   startTiming: string;
   continuationTiming: string;
-  /** PGD v003: 6 treatment tablets may be supplied in addition to the prevention course where descent is difficult. */
+  /** PGD v004: 6 treatment tablets may be supplied in addition to the prevention course where descent is difficult. */
   includeTreatmentCourse: boolean;
-  /** PGD v003: quantity supplied in tablets. Max 14 prevention, 6 treatment, 20 total. */
+  /** PGD v004: quantity supplied in tablets. Max 14 prevention, 6 treatment, 20 total. */
   quantityTablets: number | null;
-  /** PGD v003 records: name and brand of medication. */
+  /** PGD v004 records: name and brand of medication. */
   brand: string;
-  /** PGD v003: patient told that use for AMS is off-label, recorded. */
+  /** PGD v004: patient told that use for AMS is off-label, recorded. */
   offLabelExplained: boolean;
   reason: string;
 }

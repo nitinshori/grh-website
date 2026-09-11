@@ -112,7 +112,7 @@ export default function RabiesClient({
   const underSixteen = patientAge !== null && patientAge < 16;
   const underEighteen = patientAge !== null && patientAge < 18;
 
-  /** Generic setters for fields added for PGD v005. */
+  /** Generic setters for fields added for PGD v006. */
   const setScreening = useCallback(
     (patch: Partial<RabiesScreening>): void => {
       setState((prev) => ({

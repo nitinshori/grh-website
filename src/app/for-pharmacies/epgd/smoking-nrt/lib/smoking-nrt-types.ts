@@ -22,7 +22,7 @@ export interface SmokingMedicalHistory {
   cardiovascularDisease: boolean;
   diabetes: boolean;
   pheochromocytoma: boolean;
-  // PGD v002 cautions
+  // PGD v003 cautions
   hepaticRenalImpairment: boolean;
   pepticUlcer: boolean;
   oralUlcerationOrDentalWork: boolean;
@@ -37,7 +37,7 @@ export interface SmokingContraindications {
   // Recent cardiac event and phaeochromocytoma were stops here and cautions
   // on the Medical History step; the document lists both as cautions
   // (adversarial review, 11 Sep 2026). They are asked once, as cautions.
-  // PGD v002 exclusions
+  // PGD v003 exclusions
   hypersensitivity: boolean;
   nonSmokerOrOccasional: boolean;
   /** Generalised skin disorder that may affect absorption: excludes the patch arm. */
@@ -73,7 +73,7 @@ export interface SmokingCounselling {
   behavioralSupport: boolean;
   sideEffects: boolean;
   courseDuration: boolean;
-  // PGD v002 follow-up advice row
+  // PGD v003 follow-up advice row
   correctTechnique: boolean;
   useEnough: boolean;
   doNotSmoke: boolean;

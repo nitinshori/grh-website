@@ -36,7 +36,7 @@ export default function UTIToolPage() {
             UTI Consultation ePGD
           </h1>
           <p className="text-lg text-gray-600">
-            Patient Group Direction: Urinary Tract Infection in Women aged 16 to 64, version 005, issued 11 September 2026. Nitrofurantoin first line; trimethoprim only where nitrofurantoin is unsuitable.
+            Patient Group Direction: Urinary Tract Infection in Women aged 16 to 64, version 006, issued 11 September 2026. Nitrofurantoin first line; trimethoprim only where nitrofurantoin is unsuitable.
           </p>
         </div>
 

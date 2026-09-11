@@ -5,7 +5,7 @@ import { PgdPageActions } from "@/components/PgdPageActions";
 export const metadata = {
   title: 'Flu Vaccination ePGD 2026/27 | Pharmacy PGD',
   description:
-    'UK Pharmacy Patient Group Direction (PGD) consultation tool for seasonal influenza vaccination (IIVc, aIIV, IIVr, IIVe), 2026/27 season, version 004',
+    'UK Pharmacy Patient Group Direction (PGD) consultation tool for seasonal influenza vaccination (IIVc, aIIV, IIVr, IIVe), 2026/27 season, version 005',
 };
 
 export default function FluToolPage(): React.ReactNode {

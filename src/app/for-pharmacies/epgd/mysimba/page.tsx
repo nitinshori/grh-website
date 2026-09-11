@@ -25,7 +25,7 @@ export default function MysimbaPage(): React.ReactNode {
               over with BMI ≥30, or ≥27 with at least one weight-related comorbidity.
             </p>
             <p className="text-xs text-gray-500 mb-4">
-              Patient Group Direction version 003, issued 11 September 2026. Valid from
+              Patient Group Direction version 004, issued 11 September 2026. Valid from
               11 September 2026, expiry 31 July 2027.
             </p>
             <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
@@ -44,7 +44,7 @@ export default function MysimbaPage(): React.ReactNode {
         </div>
         <MysimbaClient />
         <div className="mt-8 text-center text-xs text-gray-500">
-          <p>Get Real Health ePGD, Mysimba (Naltrexone/Bupropion) PGD v003, 11 September 2026 | Confidential Patient Information</p>
+          <p>Get Real Health ePGD, Mysimba (Naltrexone/Bupropion) PGD v004, 11 September 2026 | Confidential Patient Information</p>
         </div>
       </div>
     </div>

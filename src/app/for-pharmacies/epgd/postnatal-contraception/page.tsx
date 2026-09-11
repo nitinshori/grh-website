@@ -10,7 +10,7 @@ export default function PostnatalContraceptionPage() {
           Postnatal Contraception
         </h1>
         <p className="text-gray-600">
-          Patient Group Direction consultation tool for desogestrel 75 microgram tablets (women 16 and over) or Depo-Provera 150 mg injection (women 18 and over) for postnatal women. PGD version 004, issued 11 September 2026.
+          Patient Group Direction consultation tool for desogestrel 75 microgram tablets (women 16 and over) or Depo-Provera 150 mg injection (women 18 and over) for postnatal women. PGD version 005, issued 11 September 2026.
         </p>
       </div>
       <PostnatalContraceptionClient />

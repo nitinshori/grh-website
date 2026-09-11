@@ -65,7 +65,7 @@ export function SoreThroatSummaryReport({
           Sore Throat Test & Treat Consultation Record
         </h2>
         <p className="text-xs mt-2 opacity-80 print:text-gray-600">
-          Patient Group Direction: Sore Throat Test & Treat, version 003, issued 11 September 2026
+          Patient Group Direction: Sore Throat Test & Treat, version 004, issued 11 September 2026
         </p>
       </div>
 
@@ -357,7 +357,7 @@ export function SoreThroatSummaryReport({
               <Row label="Outcome" value="No antibiotic under this PGD: self-care advice given (FeverPAIN below 4 and RAST not positive)." />
             ) : supplied ? (
               <>
-                <Row label="Outcome" value="Supplied under the Sore Throat Test and Treat PGD, version 003" />
+                <Row label="Outcome" value="Supplied under the Sore Throat Test and Treat PGD, version 004" />
                 <Row
                   label="Medicine"
                   value={

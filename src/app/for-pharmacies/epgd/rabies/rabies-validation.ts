@@ -28,7 +28,7 @@ export function validatePatientDetails(
     errors.push('Date of birth is required');
   }
 
-  // Age gate per PGD v005 cover: from age 2 years onwards. Accelerated course 18 and over (checked at administration).
+  // Age gate per PGD v006 cover: from age 2 years onwards. Accelerated course 18 and over (checked at administration).
   if (patient.age !== null && patient.age < 2) {
     errors.push('This PGD covers patients from age 2 years onwards');
   }

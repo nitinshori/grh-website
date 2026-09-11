@@ -5,7 +5,7 @@ import { startingPatchStrength, oralStrengthFor } from "./smoking-nrt-clinical-l
 export function validateStep(stepIndex: number, state: SmokingNRTConsultationState): string | null {
   switch (stepIndex) {
     case 0:
-      // PGD v002: adults aged 18 years and over.
+      // PGD v003: adults aged 18 years and over.
       return validatePatientStep(state.patient, { minAge: 18 });
 
     case 1:

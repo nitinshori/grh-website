@@ -1,11 +1,11 @@
 // Aligned to the Benzoyl Peroxide plus Clindamycin or Adapalene plus Benzoyl
-// Peroxide (Acne Vulgaris) PGD, version 003, issued 11 September 2026.
+// Peroxide (Acne Vulgaris) PGD, version 004, issued 11 September 2026.
 
 import type { AcneConsultationState } from "./acne-types";
 import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
 
 export const PGD_STRAPLINE =
-  "Benzoyl Peroxide plus Clindamycin or Adapalene plus Benzoyl Peroxide (Acne Vulgaris) PGD, version 003, issued 11 September 2026";
+  "Benzoyl Peroxide plus Clindamycin or Adapalene plus Benzoyl Peroxide (Acne Vulgaris) PGD, version 004, issued 11 September 2026";
 
 export function isDuac(choice: string): boolean {
   return choice === "duac-3" || choice === "duac-5";

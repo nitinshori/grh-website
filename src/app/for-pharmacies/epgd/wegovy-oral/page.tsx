@@ -41,7 +41,7 @@ export default async function WegovyOralPage() {
             <p className="text-gray-600 mb-4">
               Semaglutide 1.5, 4, 9 and 25 mg oral tablets. Licensed in the UK for
               weight management in adults. Wegovy (semaglutide) Tablets PGD
-              version 010, issued 11 September 2026.
+              version 011, issued 11 September 2026.
             </p>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-900">

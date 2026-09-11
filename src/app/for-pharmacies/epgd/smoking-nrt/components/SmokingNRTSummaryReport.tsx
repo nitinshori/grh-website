@@ -12,7 +12,7 @@ import {
 } from "../../shared/components/SummaryReportShell";
 
 const PGD_NAME = "Smoking Cessation, Nicotine Replacement Therapy";
-const PGD_VERSION = "PGD version 002, issued 11 September 2026";
+const PGD_VERSION = "PGD version 003, issued 11 September 2026";
 
 interface SmokingNRTSummaryReportProps {
   state: SmokingNRTConsultationState;

@@ -5,7 +5,7 @@ import type { ClinicalAlert } from "../../shared/types";
 /**
  * Clinical logic for the genital warts ePGD.
  *
- * Every rule here traces to the signed PGD version 003 (11 September 2026),
+ * Every rule here traces to the signed PGD version 004 (11 September 2026),
  * which carries separate inclusion and exclusion criteria for podophyllotoxin and
  * for imiquimod. Where they differ, the rule is scoped to the chosen agent.
  *
@@ -20,7 +20,7 @@ import type { ClinicalAlert } from "../../shared/types";
 /**
  * Podophyllotoxin: the Warticon SmPC limits unsupervised application to a
  * total treatment area of 4 cm2 and treatment to 4 weekly cycles (PGD v002
- * correction, carried in v003). The earlier 50-wart figure had no source and
+ * correction, carried in v004). The earlier 50-wart figure had no source and
  * was removed from the document.
  */
 const PODO_MAX_AREA_CM2 = 4;

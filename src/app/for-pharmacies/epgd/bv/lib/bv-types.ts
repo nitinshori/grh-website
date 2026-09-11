@@ -68,7 +68,7 @@ export interface BVExclusionOutcome {
 }
 
 export const PGD_VERSION_LABEL =
-  "Bacterial Vaginosis PGD (metronidazole 400 mg tablets / 0.75% vaginal gel), version 003, issued 11 September 2026";
+  "Bacterial Vaginosis PGD (metronidazole 400 mg tablets / 0.75% vaginal gel), version 004, issued 11 September 2026";
 
 export interface BVConsultationState {
   currentStep: number;

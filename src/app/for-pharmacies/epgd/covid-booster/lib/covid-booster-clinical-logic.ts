@@ -2,7 +2,7 @@ import type { CovidBoosterConsultationState } from "./covid-booster-types";
 import { COVID_PRODUCTS } from "./covid-booster-types";
 import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
 
-// Aligned to the COVID-19 Vaccination 2026/27 PGD version 006, issued 11 September 2026.
+// Aligned to the COVID-19 Vaccination 2026/27 PGD version 007, issued 11 September 2026.
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** Minimum interval between COVID-19 vaccine doses: 3 months, operationalised as 91 days (13 weeks) as in the NHS programme. */
@@ -23,7 +23,7 @@ export function intervalTooShort(state: CovidBoosterConsultationState): boolean 
   return d !== null && d < MIN_INTERVAL_DAYS;
 }
 
-/** NHS-eligible cohorts for autumn 2026 (PGD v006 guideline summary). */
+/** NHS-eligible cohorts for autumn 2026 (PGD v007 guideline summary). */
 export function nhsEligible(state: CovidBoosterConsultationState): boolean {
   const age = state.patient.age;
   return (
@@ -202,7 +202,7 @@ export function getAllAlerts(state: CovidBoosterConsultationState): ClinicalAler
       code: "COVID_LP81_HIGH_RISK",
       message: "Comirnaty LP.8.1 selected for a high-risk patient",
       detail:
-        "PGD v006 requires Comirnaty XFG, the current 2026/27 formulation, for anyone immunosuppressed or aged 75 and over. Use XFG stock, or rebook rather than substitute.",
+        "PGD v007 requires Comirnaty XFG, the current 2026/27 formulation, for anyone immunosuppressed or aged 75 and over. Use XFG stock, or rebook rather than substitute.",
     });
   }
 
@@ -212,7 +212,7 @@ export function getAllAlerts(state: CovidBoosterConsultationState): ClinicalAler
       code: "COVID_LP81_RUNOUT",
       message: "Comirnaty LP.8.1 is the previous seasonal formulation",
       detail:
-        "Permitted under PGD v006 from existing stock only, until that stock is used up or reaches its expiry date. Tell the patient this is the previous formulation and that XFG is the current one, and record that you did. Check the variant printed on the syringe label before injecting.",
+        "Permitted under PGD v007 from existing stock only, until that stock is used up or reaches its expiry date. Tell the patient this is the previous formulation and that XFG is the current one, and record that you did. Check the variant printed on the syringe label before injecting.",
     });
   }
 
@@ -255,7 +255,7 @@ export function calculateDoseRecommendation(state: CovidBoosterConsultationState
       frequency: "Single dose",
       duration: "One dose for the 2026/27 season",
       reason:
-        "Comirnaty XFG is the vaccine of choice under PGD v006. Comirnaty LP.8.1 may be used from existing stock only, and not for patients who are immunosuppressed or aged 75 and over. Spikevax LP.8.1 where Comirnaty is unavailable; Nuvaxovid JN.1 where the mRNA vaccines are unavailable or unsuitable.",
+        "Comirnaty XFG is the vaccine of choice under PGD v007. Comirnaty LP.8.1 may be used from existing stock only, and not for patients who are immunosuppressed or aged 75 and over. Spikevax LP.8.1 where Comirnaty is unavailable; Nuvaxovid JN.1 where the mRNA vaccines are unavailable or unsuitable.",
     };
   }
 
@@ -267,7 +267,7 @@ export function calculateDoseRecommendation(state: CovidBoosterConsultationState
     duration: "One dose for the 2026/27 season",
     reason:
       chosen === "comirnaty-lp81"
-        ? "Existing stock of the previous seasonal formulation. Permitted under PGD v006 until stock is exhausted or expires. The patient must be told."
-        : "Administered under COVID-19 PGD v006, 2026/27 season.",
+        ? "Existing stock of the previous seasonal formulation. Permitted under PGD v007 until stock is exhausted or expires. The patient must be told."
+        : "Administered under COVID-19 PGD v007, 2026/27 season.",
   };
 }

@@ -1,5 +1,5 @@
 // ─── BPH (Tamsulosin) Clinical Logic ───
-// Aligned to the Tamsulosin 400mcg MR capsules for BPH PGD, version 002,
+// Aligned to the Tamsulosin 400mcg MR capsules for BPH PGD, version 003,
 // issued 11 September 2026.
 
 import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
@@ -34,7 +34,7 @@ export function getAllAlerts(state: BPHConsultationState): ClinicalAlert[] {
       severity: "stop",
       code: "BPH_AGE",
       message: "Aged under 45: lower urinary tract symptoms at this age are unlikely to be BPH",
-      detail: "Excluded under PGD v002. Refer to the GP for diagnosis.",
+      detail: "Excluded under PGD v003. Refer to the GP for diagnosis.",
     });
   }
 
@@ -55,7 +55,7 @@ export function getAllAlerts(state: BPHConsultationState): ClinicalAlert[] {
     });
   }
 
-  // ─── Exclusions (PGD v002) ───
+  // ─── Exclusions (PGD v003) ───
   if (mh.hypersensitivity) {
     alerts.push({ severity: "stop", code: "BPH_HYPERSENSITIVITY", message: "Known hypersensitivity to tamsulosin or any excipient", detail: "Excluded. Refer." });
   }
@@ -65,7 +65,7 @@ export function getAllAlerts(state: BPHConsultationState): ClinicalAlert[] {
       severity: "stop",
       code: "BPH_ORTHOSTASIS",
       message: "History of orthostatic hypotension (blood pressure drop on standing)",
-      detail: "Excluded under PGD v002. Tamsulosin can cause first-dose hypotension and syncope. Refer.",
+      detail: "Excluded under PGD v003. Tamsulosin can cause first-dose hypotension and syncope. Refer.",
     });
   }
 
@@ -82,7 +82,7 @@ export function getAllAlerts(state: BPHConsultationState): ClinicalAlert[] {
       severity: "stop",
       code: "BPH_CATARACT",
       message: "Planned cataract or glaucoma surgery",
-      detail: "Excluded under PGD v002 because of the risk of intraoperative floppy iris syndrome (IFIS). Refer to the GP; the surgeon must be told of any alpha-blocker use.",
+      detail: "Excluded under PGD v003 because of the risk of intraoperative floppy iris syndrome (IFIS). Refer to the GP; the surgeon must be told of any alpha-blocker use.",
     });
   }
 
@@ -174,7 +174,7 @@ export function getAllAlerts(state: BPHConsultationState): ClinicalAlert[] {
     });
   }
 
-  // ─── Cautions (PGD v002) ───
+  // ─── Cautions (PGD v003) ───
   if (ci.takingAntihypertensives || (state.patient.age !== null && state.patient.age >= 65)) {
     alerts.push({
       severity: "caution",
@@ -227,7 +227,7 @@ export function getAllAlerts(state: BPHConsultationState): ClinicalAlert[] {
         severity: "stop",
         code: "BPH_GP_EXAM",
         message: "Continuation requires that the patient has been examined by the GP",
-        detail: "PGD v002 maximum treatment period. Do not continue supply until the GP has examined the patient.",
+        detail: "PGD v003 maximum treatment period. Do not continue supply until the GP has examined the patient.",
       });
     }
     if (ms.monthsOnTreatment !== null && ms.monthsOnTreatment >= MAX_MONTHS_CONTINUOUS) {

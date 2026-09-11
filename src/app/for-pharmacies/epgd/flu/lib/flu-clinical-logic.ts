@@ -1,5 +1,5 @@
 // Aligned to the seasonal influenza vaccines PGD (IIVc, aIIV, IIVr, IIVe), 2026/27 season,
-// version 004, issued 11 September 2026.
+// version 005, issued 11 September 2026.
 import { ClinicalAlert } from '../../shared/types';
 import {
   FluScreening,
@@ -26,7 +26,7 @@ export function twoDoseCourseDoseNumber(screening: FluScreening, patientAge: num
   return screening.firstDoseThisSeason ? '2' : '1';
 }
 
-/** Vaccine types permitted for this patient under PGD v004 (age range and egg allergy). */
+/** Vaccine types permitted for this patient under PGD v005 (age range and egg allergy). */
 export function permittedVaccineTypes(
   patientAge: number,
   eggAllergy: boolean

@@ -246,7 +246,7 @@ export default function PneumococcalSummaryReport({
         </div>
 
         <p className="text-[10px] text-gray-500">
-          Patient Group Direction for Pneumovax 23 or Prevenar 13 (pneumococcal disease), version 004, issued 11 September 2026.
+          Patient Group Direction for Pneumovax 23 or Prevenar 13 (pneumococcal disease), version 005, issued 11 September 2026.
         </p>
 
         {/* Clinical Notes */}

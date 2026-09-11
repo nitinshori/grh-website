@@ -455,7 +455,7 @@ export default function SmokingNRTClient() {
           >
             <div className="space-y-4">
               <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-900 space-y-1">
-                <p className="font-semibold">PGD version 002, issued 11 September 2026. Two arms:</p>
+                <p className="font-semibold">PGD version 003, issued 11 September 2026. Two arms:</p>
                 <p>1. Nicotine 24-hour transdermal patches 7mg, 14mg, 21mg (e.g. NiQuitin Clear). Nicorette Invisi patches are 16-hour patches (10mg, 15mg, 25mg) and are NOT the product described. More than 10 cigarettes a day: 21mg daily for 6 to 8 weeks, then 14mg for 2 weeks, then 7mg for 2 weeks. 10 or fewer a day: start 14mg and step down. Apply to clean, dry, hairless skin (arm or chest), rotate sites daily, press firmly for 10 seconds. 28 patches (4-week supply). Store below 25°C.</p>
                 <p>2. Nicotine lozenges or gum 2mg and 4mg. 20 or fewer cigarettes a day: 2mg; more than 20 a day: 4mg. Initially 8 to 12 pieces a day, reduce gradually over 8 to 12 weeks. Up to 4-week supply, maximum 120 pieces. Store below 25°C.</p>
                 <p>Total course 8 to 12 weeks. Review at 2 weeks, 4 weeks, then regularly.</p>

@@ -13,7 +13,7 @@ export interface TDTravelAssessment {
   departureDate: string; // YYYY-MM-DD
   returnDate: string; // YYYY-MM-DD
   tripDuration: number | null; // calculated days
-  /** PGD v003 inclusion: recent or planned travel to a high-risk region, confirmed against a risk source (TravelHealthPro), not from memory. */
+  /** PGD v004 inclusion: recent or planned travel to a high-risk region, confirmed against a risk source (TravelHealthPro), not from memory. */
   highRiskRegionConfirmed: boolean;
   travelType: string; // 'backpacking', 'business', 'cruise', 'resort', 'other'
   dietaryHabits: string; // street food, local markets, etc.
@@ -28,13 +28,13 @@ export interface TDMedicalHistory {
   allQuestionsAsked: boolean;
   currentlyPregnant: boolean;
   breastfeeding: boolean;
-  severeHepaticImpairment: boolean; // PGD v003 exclusion: severe liver disease
+  severeHepaticImpairment: boolean; // PGD v004 exclusion: severe liver disease
   severeRenalImpairment: boolean;
-  liverDisease: boolean; // PGD v003 exclusion: significant hepatic dysfunction
-  bloodInStool: boolean; // PGD v003 exclusion: bloody diarrhoea
-  feverAbove38_5C: boolean; // PGD v003 exclusion: high fever
-  systemicallyUnwell: boolean; // PGD v003 exclusion: signs of systemic illness
-  symptomsOver72Hours: boolean; // PGD v003 exclusion: symptoms lasting more than 72 hours without improvement
+  liverDisease: boolean; // PGD v004 exclusion: significant hepatic dysfunction
+  bloodInStool: boolean; // PGD v004 exclusion: bloody diarrhoea
+  feverAbove38_5C: boolean; // PGD v004 exclusion: high fever
+  systemicallyUnwell: boolean; // PGD v004 exclusion: signs of systemic illness
+  symptomsOver72Hours: boolean; // PGD v004 exclusion: symptoms lasting more than 72 hours without improvement
   crohnsDisease: boolean;
   ulcerativeColitis: boolean;
   ibd: boolean;
@@ -47,7 +47,7 @@ export interface TDMedicalHistory {
 export interface TDMedications {
   /** The pharmacist confirms every medicine on the page was asked about. */
   allQuestionsAsked: boolean;
-  takesQTprolongingDrugs: boolean; // PGD v003 exclusion: concomitant QT-prolonging medicines
+  takesQTprolongingDrugs: boolean; // PGD v004 exclusion: concomitant QT-prolonging medicines
   takesWarfarin: boolean;
   takesMethadone: boolean;
   takesDigoxin: boolean;
@@ -59,13 +59,13 @@ export interface TDMedications {
 
 export interface TDMedicineSelection {
   selectedApproach: 'standby' | 'not-supplied' | '';
-  /** PGD v003: 500 mg once daily for 1 to 3 days depending on clinical severity. The course length is the only choice; the dose is the document's. */
+  /** PGD v004: 500 mg once daily for 1 to 3 days depending on clinical severity. The course length is the only choice; the dose is the document's. */
   azithromycinDays: 1 | 2 | 3 | null;
   /** Set by the reducer from azithromycinDays; not typed. */
   azithromycinDose: string;
-  /** PGD v003: one to three 500 mg tablets; equals the course length in days. Set by the reducer. */
+  /** PGD v004: one to three 500 mg tablets; equals the course length in days. Set by the reducer. */
   azithromycinQuantity: number | null;
-  /** PGD v003 records: name and brand of medication. */
+  /** PGD v004 records: name and brand of medication. */
   brand: string;
   selectedForCriteria: string; // 'moderate-severe' (PGD indication)
   reason: string;

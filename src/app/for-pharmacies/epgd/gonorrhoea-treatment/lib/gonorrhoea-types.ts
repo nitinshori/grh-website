@@ -1,9 +1,9 @@
 import { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/types";
 
 // Aligned to the Gonorrhoea Treatment PGD (ceftriaxone 1 g reconstituted with
-// 3.5 mL lidocaine 1%), version 003, issued 11 September 2026.
+// 3.5 mL lidocaine 1%), version 004, issued 11 September 2026.
 export const PGD_VERSION_LABEL =
-  "Gonorrhoea Treatment PGD (ceftriaxone 1 g with lidocaine 1%), version 003, issued 11 September 2026";
+  "Gonorrhoea Treatment PGD (ceftriaxone 1 g with lidocaine 1%), version 004, issued 11 September 2026";
 
 export type GonorrhoeaInfectionSite = "" | "genital" | "rectal" | "pharyngeal";
 

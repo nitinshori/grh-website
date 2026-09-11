@@ -3,7 +3,7 @@
 // them without a cycle.
 
 export const PGD_VERSION =
-  "Hepatitis A and Hepatitis B Vaccination (Havrix, Avaxim, Engerix B and Twinrix) PGD v006, issued 11 September 2026"
+  "Hepatitis A and Hepatitis B Vaccination (Havrix, Avaxim, Engerix B and Twinrix) PGD v007, issued 11 September 2026"
 
 export const STEP_TITLES = [
   "Patient Details",

@@ -24,7 +24,7 @@ export default function FluSummaryReport({
           Flu Vaccination Consultation Summary, {FLU_SEASON} season
         </h2>
         <p className="text-xs text-gray-500 mb-6">
-          Administered via the Patient Group Direction for seasonal influenza vaccines (IIVc, aIIV, IIVr and IIVe), version 004, issued 11 September 2026.
+          Administered via the Patient Group Direction for seasonal influenza vaccines (IIVc, aIIV, IIVr and IIVe), version 005, issued 11 September 2026.
         </p>
 
         {/* Patient Details Section */}
@@ -460,8 +460,8 @@ export default function FluSummaryReport({
           </h3>
           <p className="text-sm text-gray-700 mb-4">
             {hasStop
-              ? `I confirm that this consultation was conducted in accordance with the Patient Group Direction for seasonal influenza vaccines (${FLU_SEASON}), version 004, that an exclusion criterion applied, that no vaccine was administered, and that the patient was advised as recorded above.`
-              : `I confirm that this vaccine was administered in accordance with the Patient Group Direction for seasonal influenza vaccines (${FLU_SEASON}), version 004, that the patient met the inclusion criteria and that no exclusion criterion applied.`}
+              ? `I confirm that this consultation was conducted in accordance with the Patient Group Direction for seasonal influenza vaccines (${FLU_SEASON}), version 005, that an exclusion criterion applied, that no vaccine was administered, and that the patient was advised as recorded above.`
+              : `I confirm that this vaccine was administered in accordance with the Patient Group Direction for seasonal influenza vaccines (${FLU_SEASON}), version 005, that the patient met the inclusion criteria and that no exclusion criterion applied.`}
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>

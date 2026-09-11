@@ -59,7 +59,7 @@ export interface TravelCoreConsultationSummary extends BaseSummary {
 
 /** PGD version strapline shown on the page and printed on the record. */
 export const TRAVEL_CORE_PGD_VERSION =
-  "Hepatitis A (Havrix/Avaxim), Typhoid (Typhim Vi) and Cholera (Dukoral) Travel Health PGD v004, issued 11 September 2026";
+  "Hepatitis A (Havrix/Avaxim), Typhoid (Typhim Vi) and Cholera (Dukoral) Travel Health PGD v005, issued 11 September 2026";
 
 export type HepAProduct = "havrix" | "avaxim" | "";
 export type HepADose = "primary" | "booster" | "";

@@ -3,7 +3,7 @@ import type { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/
 export interface SleepMelatoninAssessment {
   sleepOnsetIssue: boolean;
   sleepMaintenanceIssue: boolean;
-  // PGD v005: poor quality of sleep of at least 4 weeks' duration. Under 4
+  // PGD v006: poor quality of sleep of at least 4 weeks' duration. Under 4
   // weeks is an exclusion (give sleep hygiene advice and review).
   durationOfInsomnia: string; // "less4w", "4w-3m", "3-12m", "over12m"
   daytimeFunctioningAffected: boolean;
@@ -28,7 +28,7 @@ export interface SleepMelatoninAssessment {
 }
 
 /**
- * Secondary-cause history required by PGD v005. Each item must be asked and
+ * Secondary-cause history required by PGD v006. Each item must be asked and
  * recorded; any present means the insomnia is likely secondary: refer, do
  * not supply.
  */
@@ -50,7 +50,7 @@ export interface SleepMelatoninContraindications {
   hepaticImpairment: boolean;
   pregnancy: boolean;
   breastfeeding: boolean;
-  // PGD v005 exclusions
+  // PGD v006 exclusions
   hypersensitivity: boolean;
   fluvoxamine: boolean;
   hypnoticOrSedative: boolean;
@@ -77,7 +77,7 @@ export interface SleepMelatoninCounselling {
   sleepHygieneReinforcedFirstLine: boolean;
   avoidScreensAdvised: boolean;
   notASedativeExplained: boolean;
-  // PGD v005 counselling and required records
+  // PGD v006 counselling and required records
   takeAfterFoodSwallowWhole: boolean;
   drowsinessDrivingAdvised: boolean;
   alcoholAdvised: boolean;

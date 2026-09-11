@@ -3,7 +3,7 @@ import { PgdPageActions } from "@/components/PgdPageActions";
 
 export const metadata = {
   title: "Eczema and Dermatitis ePGD | GRH Pharmacy",
-  description: "Eczema and Dermatitis PGD v005: clobetasone butyrate 0.05% or betamethasone valerate 0.1%, 12 years and over",
+  description: "Eczema and Dermatitis PGD v006: clobetasone butyrate 0.05% or betamethasone valerate 0.1%, 12 years and over",
 };
 
 export default function EczemaPage() {

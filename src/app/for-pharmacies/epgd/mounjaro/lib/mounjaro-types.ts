@@ -9,11 +9,11 @@ export interface MounjaroWeightAssessment {
   bmiCategory: string; // "underweight" | "normal" | "overweight" | "obese"
   waistCircumference: number | null;
   comorbidities: string[]; // see COMORBIDITY_OPTIONS
-  // PGD v007 records row: "height, weight and BMI at this visit, and the target weight agreed"
+  // PGD v008 records row: "height, weight and BMI at this visit, and the target weight agreed"
   targetWeight: number | null;
-  // PGD v007 inclusion: willing to follow a reduced-calorie diet and increase physical activity
+  // PGD v008 inclusion: willing to follow a reduced-calorie diet and increase physical activity
   lifestylePlanAgreed: boolean;
-  // PGD v007 inclusion: initial assessment completed and documented (face to face)
+  // PGD v008 inclusion: initial assessment completed and documented (face to face)
   initialAssessmentCompleted: boolean;
   /** BMI at the start of treatment. The document's inclusion is an INITIAL
    *  BMI, reapplied only after a break of more than 2 months; a continuing
@@ -22,7 +22,7 @@ export interface MounjaroWeightAssessment {
 }
 
 export interface MounjaroMedicalHistory {
-  // Exclusions (PGD v007)
+  // Exclusions (PGD v008)
   personalMTCHistory: boolean;
   familyMTCHistory: boolean;
   men2: boolean;
@@ -58,7 +58,7 @@ export interface MounjaroMedicalHistory {
   activeEatingDisorder: boolean;
   // Not suitable in the clinical judgement of the healthcare professional
   notSuitableClinicalJudgement: boolean;
-  // Cautions (PGD v007)
+  // Cautions (PGD v008)
   // Mild to moderate renal impairment: monitor for dehydration
   renalImpairment: boolean;
   // History of suicidal ideation, or active severe mental illness
@@ -113,11 +113,11 @@ export interface MounjaroDoseSelection {
   injectionSite: string;
   // Nature of today's supply: new start, continuation, escalation, reduction or restart after a break
   supplyType: MounjaroSupplyType;
-  // More than 2 doses missed: reduce and re-escalate (PGD v007 dose row)
+  // More than 2 doses missed: reduce and re-escalate (PGD v008 dose row)
   missedMoreThanTwoDoses: boolean;
   // Restart after more than 2 months off treatment: BMI inclusion criteria must be reapplied
   breakOverTwoMonths: boolean;
-  // PGD v007 records row: name and brand of medication, and batch number
+  // PGD v008 records row: name and brand of medication, and batch number
   batchNumber: string;
   expiryDate: string;
   pharmacistOverride: boolean;
@@ -133,7 +133,7 @@ export interface MounjaroCounselling {
   pancreatitisWarning: boolean;
   gallbladderWarning: boolean;
   retinopathyWarning: boolean;
-  // Warning symptoms needing urgent attention (PGD v007 follow-up row)
+  // Warning symptoms needing urgent attention (PGD v008 follow-up row)
   warningSymptoms: boolean;
   // Reduced absorption of oral medicines, oral contraceptives and HRT
   oralMedicationAbsorption: boolean;
@@ -198,8 +198,8 @@ export const STEP_LABELS = [
 
 export const TOTAL_STEPS = STEP_LABELS.length;
 
-// PGD strapline (document wins): version 007, issued 11 September 2026
-export const PGD_VERSION_LABEL = "Mounjaro (tirzepatide) Injection for weight management PGD, version 007, issued 11 September 2026";
+// PGD strapline (document wins): version 008, issued 11 September 2026
+export const PGD_VERSION_LABEL = "Mounjaro (tirzepatide) Injection for weight management PGD, version 008, issued 11 September 2026";
 
 // Weight-related comorbidities named in the PGD indication and inclusion criteria
 export const COMORBIDITY_OPTIONS: { id: string; label: string }[] = [
@@ -211,7 +211,7 @@ export const COMORBIDITY_OPTIONS: { id: string; label: string }[] = [
   { id: "cvd", label: "Established cardiovascular disease" },
 ];
 
-// Mounjaro KwikPen strengths by titration stage (PGD v007 dose and frequency row)
+// Mounjaro KwikPen strengths by titration stage (PGD v008 dose and frequency row)
 export const STAGE_ORDER = ["init", "1", "2", "3", "4", "5"] as const;
 
 export const DOSE_BY_STAGE: Record<string, string> = {

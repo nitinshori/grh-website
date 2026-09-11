@@ -2,7 +2,7 @@
  * Smoking Cessation ePGD - Type Definitions
  * UK Pharmacy PGD Consultation Tool for Varenicline 0.5mg and 1mg tablets
  * (any UK-licensed generic; Champix is no longer marketed in the UK).
- * Aligned to PGD version 003, issued 11 September 2026.
+ * Aligned to PGD version 004, issued 11 September 2026.
  */
 
 export type AlertSeverity = "stop" | "caution" | "red-flag";
@@ -104,7 +104,7 @@ export interface SmokingCounselling {
   quitDatePlanning: boolean;
   returnIfWorsening: boolean;
   carbonMonoxideMonitoring: boolean;
-  // PGD v003 follow-up advice row
+  // PGD v004 follow-up advice row
   physicalSymptomsWarning: boolean;
   slipUpAdvice: boolean;
   followUpSchedule: boolean;

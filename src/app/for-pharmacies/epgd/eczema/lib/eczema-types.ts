@@ -2,7 +2,7 @@ import { BasePatientDetails, BaseConsent, BaseSummary, ClinicalAlert, DoseRecomm
 
 /**
  * Eczema and Dermatitis ePGD, aligned to the Eczema and Dermatitis PGD
- * version 005, issued 11 September 2026. Two arms, 12 years and over:
+ * version 006, issued 11 September 2026. Two arms, 12 years and over:
  *   Arm 1, clobetasone butyrate 0.05%: mild disease at any permitted site, and
  *     moderate disease on the face, flexures or genital skin (7 days maximum
  *     at those sites).
@@ -12,7 +12,7 @@ import { BasePatientDetails, BaseConsent, BaseSummary, ClinicalAlert, DoseRecomm
  * area in adult palms (15g, 30g, 60g); above ten palms (10% of body surface)
  * refer.
  */
-export const ECZEMA_PGD_VERSION = "Eczema and Dermatitis PGD, version 005, issued 11 September 2026";
+export const ECZEMA_PGD_VERSION = "Eczema and Dermatitis PGD, version 006, issued 11 September 2026";
 
 export interface EczemaPatientDetails extends BasePatientDetails {}
 

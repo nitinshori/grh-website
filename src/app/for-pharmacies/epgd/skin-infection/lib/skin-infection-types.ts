@@ -14,10 +14,10 @@ import {
  * penicillin-allergic, doxycycline (12+) as alternative.
  *
  * This client serves two different signed documents, selected by `variant`:
- *   "skin-infection": Skin and Soft Tissue Infection PGD v005 (11 September
+ *   "skin-infection": Skin and Soft Tissue Infection PGD v006 (11 September
  *     2026). Impetigo, folliculitis, infected eczema and infected wounds from
  *     2 years; cellulitis from 12 years. Age-banded observations (Appendix 1).
- *   "cellulitis": Cellulitis PGD v002 (11 September 2026). Adults 18 and over
+ *   "cellulitis": Cellulitis PGD v003 (11 September 2026). Adults 18 and over
  *     only, MILD cellulitis (Eron class I) of a limb or the trunk, with its
  *     own exclusion list and adult sepsis thresholds.
  */
@@ -202,8 +202,8 @@ export const TOTAL_STEPS = STEP_LABELS.length;
 /** Document strapline shown on the record, per variant. */
 export const PGD_VERSION_LABEL: Record<SkinInfectionVariant, string> = {
   "skin-infection":
-    "Skin and Soft Tissue Infection PGD, version 005, issued 11 September 2026",
-  cellulitis: "Cellulitis PGD, version 002, issued 11 September 2026",
+    "Skin and Soft Tissue Infection PGD, version 006, issued 11 September 2026",
+  cellulitis: "Cellulitis PGD, version 003, issued 11 September 2026",
 };
 
 export function createInitialConsultationState(

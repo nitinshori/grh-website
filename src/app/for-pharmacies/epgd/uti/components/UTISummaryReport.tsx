@@ -56,7 +56,7 @@ export function UTISummaryReport({ state, alerts }: UTISummaryReportProps) {
           Get Real Health, UTI Consultation Record
         </h1>
         <p className="text-sm text-gray-600 mt-1 print:text-xs">
-          Patient Group Direction: Urinary Tract Infection in Women aged 16 to 64 (nitrofurantoin first line, trimethoprim second line), version 005, issued 11 September 2026
+          Patient Group Direction: Urinary Tract Infection in Women aged 16 to 64 (nitrofurantoin first line, trimethoprim second line), version 006, issued 11 September 2026
         </p>
         <p className="text-xs text-gray-500 mt-1">
           Date: {state.summary.consultationDate} | Time: {state.summary.consultationTime}
@@ -238,7 +238,7 @@ export function UTISummaryReport({ state, alerts }: UTISummaryReportProps) {
         />
         <Row label="Form and route" value={isTrimethoprim ? "Tablet, oral" : "Modified release capsule, oral"} />
         <Row label="Date of supply" value={`${state.summary.consultationDate} ${state.summary.consultationTime}`.trim()} />
-        <Row label="Supplied under" value="UTI in Women aged 16 to 64 PGD v005, 11 September 2026" />
+        <Row label="Supplied under" value="UTI in Women aged 16 to 64 PGD v006, 11 September 2026" />
       </div>
       )}
 

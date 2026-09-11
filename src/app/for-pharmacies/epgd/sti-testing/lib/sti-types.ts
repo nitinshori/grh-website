@@ -6,7 +6,7 @@ import type { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/
 
 export interface STIPatientDetails extends BasePatientDetails {
   genderIdentity: string; // male, female, trans-male, trans-female, non-binary
-  // PGD v002 (11 September 2026): aged 13 to 15 only with recorded Fraser
+  // PGD v003 (11 September 2026): aged 13 to 15 only with recorded Fraser
   // competence and a safeguarding assessment with no concern. Under 13 is
   // never supplied.
   fraserCompetent: boolean; // derived: all five Fraser limbs recorded
@@ -150,7 +150,7 @@ export const TOTAL_STEPS = STEP_LABELS.length;
 
 // PGD strapline shown on the record
 export const PGD_VERSION_LABEL =
-  "Chlamydia treatment PGD (doxycycline 100 mg / azithromycin 500 mg), version 002, issued 11 September 2026";
+  "Chlamydia treatment PGD (doxycycline 100 mg / azithromycin 500 mg), version 003, issued 11 September 2026";
 
 // ─── Initial state ───
 

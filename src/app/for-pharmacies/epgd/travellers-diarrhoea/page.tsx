@@ -25,7 +25,7 @@ export default function TravellersDiarrhoeaPage() {
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-900">
                 This ePGD guides pharmacists through the Patient Group Direction for supply of
-                azithromycin 500 mg (version 003, issued 11 September 2026) as standby treatment
+                azithromycin 500 mg (version 004, issued 11 September 2026) as standby treatment
                 for moderate to severe travellers' diarrhoea, for adults to self-start if symptoms
                 develop during travel. Loperamide is not supplied under this PGD. Includes travel
                 assessment, medical history screening, drug interactions, and patient counselling

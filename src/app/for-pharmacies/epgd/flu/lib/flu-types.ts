@@ -1,13 +1,13 @@
 import { BasePatientDetails, BaseConsent, BaseSummary, ClinicalAlert } from '../../shared/types';
 
 // Aligned to the seasonal influenza vaccines PGD (IIVc, aIIV, IIVr, IIVe), 2026/27 season,
-// version 004, issued 11 September 2026.
+// version 005, issued 11 September 2026.
 
 export const FLU_SEASON = '2026/27';
 
 export type EggAllergySeverity = 'none' | 'mild' | 'severe' | '';
 
-/** Vaccine types covered by PGD v004. */
+/** Vaccine types covered by PGD v005. */
 export type FluVaccineType = '' | 'iivc' | 'aiiv' | 'iivr' | 'iive';
 
 export const FLU_VACCINES: Record<
@@ -81,7 +81,7 @@ export interface FluScreening {
   anticoagulated: boolean;
   previousGBS: boolean;
   temperature: number | null;
-  /** PGD v004 inclusion: NHS entitlement. */
+  /** PGD v005 inclusion: NHS entitlement. */
   nhsStatus: '' | 'not-eligible' | 'eligible-prefers-private';
 }
 
@@ -96,7 +96,7 @@ export interface FluContraindications {
   bleedingDisorderUnassessed: boolean;
 }
 
-/** PGD v004 consent block: under 16, who consented. */
+/** PGD v005 consent block: under 16, who consented. */
 export interface FluChildConsent {
   basis: '' | 'parental' | 'gillick';
   parentName: string;
@@ -107,7 +107,7 @@ export interface FluChildConsent {
 export interface FluVaccineAdministration {
   /** Vaccine type given (IIVc, aIIV, IIVr or IIVe). */
   vaccineName: FluVaccineType;
-  /** Brand name as on the pack (PGD v004 records row: name and brand, and the vaccine type). */
+  /** Brand name as on the pack (PGD v005 records row: name and brand, and the vaccine type). */
   brandName: string;
   batchNumber: string;
   expiryDate: string;
@@ -120,7 +120,7 @@ export interface FluVaccineAdministration {
   doseNumber: '' | '1' | '2';
   previousDoseDate: string;
   nextDoseDue: string;
-  /** Adrenaline 1 in 1,000 and a telephone immediately available (PGD v004 caution). */
+  /** Adrenaline 1 in 1,000 and a telephone immediately available (PGD v005 caution). */
   adrenalineAvailable: boolean;
   /** Other vaccine given at the same visit and its site. */
   coAdministeredVaccine: string;

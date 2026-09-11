@@ -95,7 +95,7 @@ export function validateMeningitisACWYContraindicationsStep(data: {
 }
 
 /**
- * Licensed minimum age per product, in months. PGD v006: Nimenrix from 6
+ * Licensed minimum age per product, in months. PGD v007: Nimenrix from 6
  * weeks, MenQuadfi from 12 months, Menveo from 2 years. Age below the licensed
  * minimum for the product held is an exclusion, so the tool refuses the
  * product rather than letting the pharmacist pick whatever is in the fridge.

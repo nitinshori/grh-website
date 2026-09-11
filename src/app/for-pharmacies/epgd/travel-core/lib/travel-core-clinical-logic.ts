@@ -61,7 +61,7 @@ export function addYears(n: number, from: Date = todayLocal()): string {
   return formatLocalDate(d);
 }
 
-// ─── Schedule intervals from the signed PGD (v004) ───
+// ─── Schedule intervals from the signed PGD (v005) ───
 
 /** Hepatitis A booster: 6 to 12 months after the primary dose (Avaxim SPC allows up to 36 months). */
 export const HEPA_BOOSTER_MIN_DAYS = 6 * 30;
@@ -103,7 +103,7 @@ export function getBoosterDueDates(v: TravelCoreVaccineAdministration): BoosterD
   return out;
 }
 
-/** Dose text per the signed PGD (v004). */
+/** Dose text per the signed PGD (v005). */
 export function getVaccineDoseText(v: TravelCoreVaccineAdministration): string[] {
   const lines: string[] = [];
   if (v.hepAGiven) {

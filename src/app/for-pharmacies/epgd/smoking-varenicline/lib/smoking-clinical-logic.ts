@@ -1,6 +1,6 @@
 /**
  * Smoking Cessation ePGD - Clinical Logic & Guidelines
- * Based on the Varenicline 0.5mg and 1mg tablets PGD (version 003, 11
+ * Based on the Varenicline 0.5mg and 1mg tablets PGD (version 004, 11
  * September 2026) and NICE Guidelines. Champix is no longer marketed in the
  * UK; any UK-licensed generic varenicline product is supplied.
  */

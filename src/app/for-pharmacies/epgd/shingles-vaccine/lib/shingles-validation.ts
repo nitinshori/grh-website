@@ -1,4 +1,4 @@
-// Aligned to the Shingrix PGD version 005, issued 11 September 2026.
+// Aligned to the Shingrix PGD version 006, issued 11 September 2026.
 import type { ShinglesConsultationState } from "./shingles-types";
 import { validatePatientStep, validateConsentStep, validateSummaryStep } from "../../shared/types";
 import { daysBetween, MIN_INTERVAL_DAYS, MAX_INTERVAL_DAYS } from "./shingles-clinical-logic";

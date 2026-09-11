@@ -22,7 +22,7 @@ export default function SleepMelatoninPage() {
             Sleep Support, Melatonin: PGD Consultation
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Circadin 2mg prolonged-release melatonin tablets, as monotherapy for the short-term treatment of primary insomnia in adults aged 55 and over. PGD version 005, issued 11 September 2026.
+            Circadin 2mg prolonged-release melatonin tablets, as monotherapy for the short-term treatment of primary insomnia in adults aged 55 and over. PGD version 006, issued 11 September 2026.
           </p>
         </div>
         <SleepMelatoninClient />

@@ -217,7 +217,7 @@ export function AntiMalarialsClient() {
     );
   }, [state.medicalHistory, state.medications, state.travelAssessment, state.medicineSelection.selectedMedicine]);
 
-  // PGD v008: only arms that are not excluded for this patient can be selected.
+  // PGD v009: only arms that are not excluded for this patient can be selected.
   const eligibleOptions = useMemo(() => {
     return getEligibleMedicineOptions(
       state.medicalHistory,

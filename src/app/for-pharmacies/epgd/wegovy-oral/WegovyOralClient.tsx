@@ -30,7 +30,7 @@ import type { ConsultationRecordData } from "../shared/hooks/useConsultationTrac
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 
 /** Strapline of the document this tool follows. */
-export const PGD_VERSION_LABEL = "Wegovy (semaglutide) Tablets PGD version 010, issued 11 September 2026";
+export const PGD_VERSION_LABEL = "Wegovy (semaglutide) Tablets PGD version 011, issued 11 September 2026";
 
 // ── State shape ────────────────────────────────────────────────
 
@@ -56,7 +56,7 @@ export interface WegovyOralState {
     age18To85: boolean;
     willingLifestyleChange: boolean;
     tried6MonthLifestyle: boolean;
-    // PGD v010: visit type, baseline weight and target weight. The 5% review
+    // PGD v011: visit type, baseline weight and target weight. The 5% review
     // rule is calculated from the recorded baseline, not the last visit.
     visitType: VisitType;
     /** Restart only: more than 2 months since stopping, so the BMI inclusion

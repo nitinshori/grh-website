@@ -8,9 +8,9 @@ interface EDMedicineSelectorProps {
   selection: MedicineSelection;
   recommendation: DoseRecommendation | null;
   onChange: (field: keyof MedicineSelection, value: MedicineSelection[keyof MedicineSelection]) => void;
-  /** PGD v006 arm exclusions (ritonavir/cobicistat bars sildenafil; doxazosin bars tadalafil). */
+  /** PGD v007 arm exclusions (ritonavir/cobicistat bars sildenafil; doxazosin bars tadalafil). */
   armAvailability?: ArmAvailability;
-  /** PGD v006 dose caps and starting-dose rules. */
+  /** PGD v007 dose caps and starting-dose rules. */
   caps?: DoseCaps;
 }
 
@@ -93,7 +93,7 @@ export function EDMedicineSelector({
         </label>
         {caps && caps.reasons.length > 0 && (
           <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-            <p className="font-semibold">Dose limits for this patient (PGD v006):</p>
+            <p className="font-semibold">Dose limits for this patient (PGD v007):</p>
             <ul className="list-disc pl-4 mt-1 space-y-0.5">
               {caps.reasons.map((r) => (
                 <li key={r}>{r}</li>

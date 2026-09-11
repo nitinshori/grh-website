@@ -53,7 +53,7 @@ export default function RSVSummaryReport({
       {/* Header with print styles */}
       <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50 print:bg-white print:border-0 print:pb-4">
         <h2 className="text-lg font-bold text-navy-900">Consultation Summary Report</h2>
-        <p className="text-sm text-gray-500 mt-1">RSV Vaccination ePGD (Abrysvo or Arexvy PGD v005)</p>
+        <p className="text-sm text-gray-500 mt-1">RSV Vaccination ePGD (Abrysvo or Arexvy PGD v006)</p>
       </div>
 
       {/* Report content */}
@@ -223,7 +223,7 @@ export default function RSVSummaryReport({
                 ? [['Understands ~6 months newborn protection', consent.understands6MonthsProtection || false] as [string, boolean]]
                 : []),
               ['Advised on side effects and when to seek medical attention', !!postVaccineAdvice.counselledReactions] as [string, boolean],
-              ['Follow-up advice given (PGD v005 list)', !!postVaccineAdvice.followUpAdviceGiven] as [string, boolean],
+              ['Follow-up advice given (PGD v006 list)', !!postVaccineAdvice.followUpAdviceGiven] as [string, boolean],
               ['Patient information leaflet supplied', !!postVaccineAdvice.pilSupplied] as [string, boolean],
               ['Understands one-time vaccination', !!postVaccineAdvice.counselledNoBooster] as [string, boolean],
             ]}
@@ -231,7 +231,7 @@ export default function RSVSummaryReport({
         </div>
 
         <p className="text-[10px] text-gray-500">
-          Patient Group Direction for Abrysvo or Arexvy (RSV), version 005, issued 11 September 2026.
+          Patient Group Direction for Abrysvo or Arexvy (RSV), version 006, issued 11 September 2026.
         </p>
 
         {/* Clinical Notes */}

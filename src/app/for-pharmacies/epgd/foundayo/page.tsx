@@ -35,7 +35,7 @@ export default async function FoundayoPage() {
                 Once-daily oral GLP-1 receptor agonist. Tablets of 0.8, 2.5,
                 5.5, 9, 14.5 and 17.2 mg. Adults aged 18 to 85 with BMI 30 or
                 above, or 27 or above with a weight-related comorbidity. Works
-                to PGD version 007, issued 11 September 2026.
+                to PGD version 008, issued 11 September 2026.
               </p>
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <p className="text-sm text-blue-900">

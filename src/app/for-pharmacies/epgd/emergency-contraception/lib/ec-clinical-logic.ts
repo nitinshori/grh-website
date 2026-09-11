@@ -4,7 +4,7 @@ import type {
   DoseRecommendation,
 } from "./ec-types";
 
-// Emergency Contraception PGD v003 (11 September 2026). Two arms:
+// Emergency Contraception PGD v004 (11 September 2026). Two arms:
 // levonorgestrel 1.5 mg (Levonelle) within 72 hours of UPSI, and ulipristal
 // acetate 30 mg (ellaOne) within 120 hours.
 

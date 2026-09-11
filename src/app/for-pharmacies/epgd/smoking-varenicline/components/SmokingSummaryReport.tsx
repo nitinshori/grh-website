@@ -39,7 +39,7 @@ export const SmokingSummaryReport: React.FC<SmokingSummaryReportProps> = ({
         {/* Header */}
         <div className="border-b-2 border-gray-300 pb-6 mb-6">
           <h1 className="text-3xl font-bold text-gray-900">
-            Varenicline 0.5mg and 1mg tablets PGD Consultation Record (version 003, 11 September 2026)
+            Varenicline 0.5mg and 1mg tablets PGD Consultation Record (version 004, 11 September 2026)
           </h1>
           <p className="text-gray-600 mt-2">
             UK Pharmacy Smoking Cessation ePGD
@@ -511,8 +511,8 @@ export const SmokingSummaryReport: React.FC<SmokingSummaryReportProps> = ({
           </h2>
           <p className="text-sm text-gray-700 mb-4">
             {notSupplied
-              ? "I confirm that this consultation was conducted under the Patient Group Direction for Varenicline (version 003, 11 September 2026), that an exclusion criterion applied, that varenicline was NOT supplied, and that the patient was advised on alternatives and referred as recorded."
-              : "I confirm that this consultation was conducted in accordance with the Patient Group Direction for Varenicline (version 003, 11 September 2026), that the patient met all inclusion criteria and no exclusion criteria applied, and that the medicine was supplied under this PGD."}
+              ? "I confirm that this consultation was conducted under the Patient Group Direction for Varenicline (version 004, 11 September 2026), that an exclusion criterion applied, that varenicline was NOT supplied, and that the patient was advised on alternatives and referred as recorded."
+              : "I confirm that this consultation was conducted in accordance with the Patient Group Direction for Varenicline (version 004, 11 September 2026), that the patient met all inclusion criteria and no exclusion criteria applied, and that the medicine was supplied under this PGD."}
           </p>
           <div className="grid grid-cols-2 gap-6">
             <div>

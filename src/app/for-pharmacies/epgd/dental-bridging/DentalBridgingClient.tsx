@@ -14,10 +14,10 @@ import { DentalBridgingSummaryReport } from "./components/DentalBridgingSummaryR
 
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 
-// Aligned to the signed PGD version 007, issued 11 September 2026:
+// Aligned to the signed PGD version 008, issued 11 September 2026:
 // amoxicillin 500mg capsules first line, metronidazole 200mg tablets for
 // penicillin allergy; adults 18 and over; spreading or systemic infection only.
-export const PGD_STRAPLINE = "Acute Dental Infection (bridging antibiotic) PGD version 007, issued 11 September 2026";
+export const PGD_STRAPLINE = "Acute Dental Infection (bridging antibiotic) PGD version 008, issued 11 September 2026";
 const COURSE_QUANTITY = 15;
 
 export const AMOXICILLIN_ARM = "Amoxicillin 500mg TDS";
@@ -299,7 +299,7 @@ export default function DentalBridgingClient() {
       });
     }
 
-    // Metronidazole arm exclusions. These are exclusions in v007, not
+    // Metronidazole arm exclusions. These are exclusions in v008, not
     // cautions: v003's tool listed warfarin as a caution to "inform the GP".
     if (a.penicillinAllergy && a.warfarin) {
       alerts.push({
@@ -400,7 +400,7 @@ export default function DentalBridgingClient() {
 
   const hasStopAlerts = clinicalAlerts.some(a => a.severity === "stop");
 
-  // Required records before leaving the assessment (PGD v007 inclusion
+  // Required records before leaving the assessment (PGD v008 inclusion
   // criteria and records to be kept).
   const assessmentError = useMemo<string | null>(() => {
     const a = state.assessment;

@@ -22,12 +22,12 @@ export interface WegovyWeightAssessment {
   previousAttemptDetails: string;
   weightRelatedComorbidities: WeightRelatedComorbidity[];
   targetWeightLoss: string;
-  // PGD v007 inclusion: initial face-to-face assessment completed and documented.
+  // PGD v008 inclusion: initial face-to-face assessment completed and documented.
   initialAssessmentCompleted: boolean;
-  // PGD v007 inclusion: willing to follow a reduced-calorie diet and increase
+  // PGD v008 inclusion: willing to follow a reduced-calorie diet and increase
   // physical activity in line with the agreed lifestyle plan.
   lifestylePlanAgreed: boolean;
-  // PGD v007 initial assessment: refer to the GP if a prescribed medicine is
+  // PGD v008 initial assessment: refer to the GP if a prescribed medicine is
   // causing the weight gain. Caution (refer).
   medicationInducedWeightGain: boolean;
 }
@@ -48,20 +48,20 @@ export interface WegovyMedicalHistory {
   familyMTCHistory: boolean;
   men2: boolean; // multiple endocrine neoplasia type 2
   severeGIDisease: boolean; // gastroparesis or severe persistent GI disorder. Exclusion.
-  pancreatitisHistory: boolean; // acute or chronic. Exclusion (PGD v007).
-  // Current cholelithiasis (gallstones) or cholecystitis. Exclusion (PGD v007).
+  pancreatitisHistory: boolean; // acute or chronic. Exclusion (PGD v008).
+  // Current cholelithiasis (gallstones) or cholecystitis. Exclusion (PGD v008).
   gallbladderDisease: boolean;
-  // Cholecystectomy within the last 3 months. Exclusion (PGD v007).
+  // Cholecystectomy within the last 3 months. Exclusion (PGD v008).
   recentCholecystectomy: boolean;
   // Heart failure with REDUCED ejection fraction (below 40%). Exclusion.
   // HFpEF (preserved EF) is NOT excluded; semaglutide / GLP-1 evidence
   // shows benefit in HFpEF (STEP-HFpEF trial). If EF unknown but under
   // cardiology review for "heart failure", refer to GP to clarify.
   heartFailureReducedEF: boolean;
-  diabeticRetinopathy: boolean; // Exclusion (PGD v007): defer or refer.
+  diabeticRetinopathy: boolean; // Exclusion (PGD v008): defer or refer.
   eatingDisorder: boolean;
   severeHepatic: boolean;
-  // Severe renal impairment (eGFR below 30) or end-stage renal disease. Exclusion (PGD v007).
+  // Severe renal impairment (eGFR below 30) or end-stage renal disease. Exclusion (PGD v008).
   severeRenal: boolean;
   // Mild to moderate renal impairment. Caution: monitor for dehydration.
   mildModerateRenal: boolean;
@@ -71,7 +71,7 @@ export interface WegovyMedicalHistory {
   pregnant: boolean;
   breastfeeding: boolean;
   planningPregnancy: boolean;
-  // History of suicidal ideation, or active severe mental illness. Caution (PGD v007).
+  // History of suicidal ideation, or active severe mental illness. Caution (PGD v008).
   depression: boolean;
   // Shown when `depression` is ticked. Do not supply where oversight is absent and concern exists.
   psychiatricOversightInPlace: boolean;
@@ -94,9 +94,9 @@ export interface WegovyMedicalHistory {
 // ─── Medications ───
 
 export interface WegovyMedications {
-  takesInsulin: boolean; // insulin-treated diabetes. Exclusion (PGD v007).
+  takesInsulin: boolean; // insulin-treated diabetes. Exclusion (PGD v008).
   insulinDetails: string;
-  takesSulphonylureas: boolean; // sulfonylurea or meglitinide. Exclusion (PGD v007).
+  takesSulphonylureas: boolean; // sulfonylurea or meglitinide. Exclusion (PGD v008).
   sulphonylureDetails: string;
   // Type 2 diabetes on metformin, an SGLT2 inhibitor or a DPP-4 inhibitor only. Caution: inform the GP.
   takesOtherDiabetesMeds: boolean;
@@ -135,14 +135,14 @@ export interface WegovyDoseSelection {
   injectionSite: string;
   pharmacistOverride: boolean;
   overrideReason: string;
-  // PGD v007: 7.2 mg only where the STARTING BMI was 30 or above.
+  // PGD v008: 7.2 mg only where the STARTING BMI was 30 or above.
   startingBMI: number | null;
-  // PGD v007: maximum 2 years of continuous treatment; 5% rule at 6 months.
+  // PGD v008: maximum 2 years of continuous treatment; 5% rule at 6 months.
   treatmentStartDate: string; // YYYY-MM-DD, blank for a new patient
   initialWeight: number | null; // kg at initiation, continuing patients
-  // PGD v007: recommencing after a break must titrate again from 0.25 mg.
+  // PGD v008: recommencing after a break must titrate again from 0.25 mg.
   recommencingAfterBreak: boolean;
-  // PGD v007 records: name and brand of medication, and batch number.
+  // PGD v008 records: name and brand of medication, and batch number.
   batchNumber: string;
 }
 
@@ -160,7 +160,7 @@ export interface WegovyCounselling {
   hypoglycaemiaRisk: boolean; // if on other diabetes medicines
   dietExerciseAdvice: boolean;
   followUpSchedule: boolean;
-  // PGD v007 additions
+  // PGD v008 additions
   urgentWarningSymptoms: boolean; // severe abdominal pain, persistent vomiting, jaundice, sudden visual loss, sustained rise in heart rate
   writtenInformationGiven: boolean; // PIL, written lifestyle advice, agreed target weight
   nhsRouteExplained: boolean; // patient told the NHS route exists and how to access it
@@ -267,7 +267,7 @@ export type WegovyAction =
 // ─── PGD version (document strapline) ───
 
 export const WEGOVY_PGD_VERSION =
-  "Wegovy (semaglutide) Injection PGD version 007, issued 11 September 2026";
+  "Wegovy (semaglutide) Injection PGD version 008, issued 11 September 2026";
 
 // ─── Step Labels ───
 

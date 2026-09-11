@@ -249,7 +249,7 @@ export function CovidBoosterSummaryReport({
       </p>
 
       <p className="text-[10px] text-gray-500 mt-4">
-        Administered under the COVID-19 Vaccination 2026/27 Season Patient Group Direction, version 006, issued 11 September 2026.
+        Administered under the COVID-19 Vaccination 2026/27 Season Patient Group Direction, version 007, issued 11 September 2026.
       </p>
 
       {hasStop ? (

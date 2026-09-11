@@ -5,7 +5,7 @@ import type {
 } from './meningitis-acwy-travel-types';
 
 /** PGD strapline shown wherever the tool cites its authority. */
-export const MENACWY_PGD_VERSION = 'Meningococcal ACWY (Travel and Hajj/Umrah) PGD v006, issued 11 September 2026';
+export const MENACWY_PGD_VERSION = 'Meningococcal ACWY (Travel and Hajj/Umrah) PGD v007, issued 11 September 2026';
 
 /** Whole months between the date of birth and today. Null when missing or invalid. */
 export function calculateAgeInMonths(dob: string): number | null {

@@ -14,7 +14,7 @@ export function validateStep(stepIndex: number, state: EczemaConsultationState):
 
   switch (stepIndex) {
     case 0:
-      // Eczema and Dermatitis PGD v005: 12 years and over.
+      // Eczema and Dermatitis PGD v006: 12 years and over.
       return validatePatientStep(state.patient, { minAge: 12 });
 
     case 1: {

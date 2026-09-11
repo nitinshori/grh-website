@@ -4,7 +4,7 @@ import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
 export function getAllAlerts(state: SmokingNRTConsultationState): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
 
-  // Hard stops. PGD v002 (11 September 2026): adults aged 18 years and over.
+  // Hard stops. PGD v003 (11 September 2026): adults aged 18 years and over.
   if (state.contraindications.childUnder12 || (state.patient.age !== null && state.patient.age < 18)) {
     alerts.push({
       severity: "stop",
@@ -53,7 +53,7 @@ export function getAllAlerts(state: SmokingNRTConsultationState): ClinicalAlert[
     });
   }
 
-  // Cautions (PGD v002)
+  // Cautions (PGD v003)
   if (state.medicalHistory.recentMI || state.medicalHistory.recentStroke || state.medicalHistory.unstableAngina || state.medicalHistory.cardiovascularDisease) {
     alerts.push({
       severity: "caution",

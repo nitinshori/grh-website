@@ -1,5 +1,5 @@
 // Shingles-specific types for PGD consultation
-// Aligned to the Shingles (Herpes Zoster) Treatment PGD, version 005,
+// Aligned to the Shingles (Herpes Zoster) Treatment PGD, version 006,
 // issued 11 September 2026 (aciclovir, valaciclovir or famciclovir).
 import { BasePatientDetails, BaseConsent, BaseSummary } from '../shared/types';
 
@@ -43,7 +43,7 @@ export interface ShinglesSymptoms {
   newVesiclesForming: boolean;
   /** High risk of severe shingles, for example severe atopic eczema: a 7-day window criterion. */
   highRiskSevereShingles: boolean;
-  // Red flags requiring urgent referral rather than supply (PGD v005)
+  // Red flags requiring urgent referral rather than supply (PGD v006)
   /** Any visual symptom, unexplained red eye, eye pain or Hutchinson's sign. */
   eyeSymptoms: boolean;
   /** Rash in or around the ear, hearing loss, vertigo, altered taste or facial weakness (Ramsay Hunt). */
@@ -84,7 +84,7 @@ export interface ShinglesMedicalHistory {
   organTransplant: boolean;
   currentMedications: string;
   allergies: string;
-  // Exclusions (PGD v005)
+  // Exclusions (PGD v006)
   allergyAciclovirValaciclovir: boolean;
   allergyFamciclovirPenciclovir: boolean;
   previousDress: boolean;
@@ -95,7 +95,7 @@ export interface ShinglesMedicalHistory {
   neurologicalCondition: boolean;
   dehydrationRisk: boolean;
   failedAntiviralThisEpisode: boolean;
-  // Cautions (PGD v005)
+  // Cautions (PGD v006)
   nephrotoxicMedicines: boolean;
   tenofovir: boolean;
   probenecidOrCimetidine: boolean;

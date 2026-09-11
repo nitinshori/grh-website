@@ -1,7 +1,7 @@
 import type { GonorrhoeaConsultationState } from "./gonorrhoea-types";
 import type { ClinicalAlert } from "../../shared/types";
 
-// Gonorrhoea Treatment PGD v003 (11 September 2026): ceftriaxone 1 g IM
+// Gonorrhoea Treatment PGD v004 (11 September 2026): ceftriaxone 1 g IM
 // reconstituted with 3.5 mL lidocaine 1%. Adults 18 and over.
 export function getAllAlerts(state: GonorrhoeaConsultationState): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];

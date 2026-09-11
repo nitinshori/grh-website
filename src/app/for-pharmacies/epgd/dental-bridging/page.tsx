@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import DentalBridgingClient from "./DentalBridgingClient";
 import { PgdPageActions } from "@/components/PgdPageActions";
-export const metadata: Metadata = { title: "Acute Dental Infection Bridging Antibiotic ePGD", description: "Digital consultation tool for the supply of a bridging antibiotic in acute dental infection under Patient Group Direction (version 007, 11 September 2026)." };
+export const metadata: Metadata = { title: "Acute Dental Infection Bridging Antibiotic ePGD", description: "Digital consultation tool for the supply of a bridging antibiotic in acute dental infection under Patient Group Direction (version 008, 11 September 2026)." };
 export default function Page() {
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -14,7 +14,7 @@ export default function Page() {
             <span className="text-navy-900 font-medium">Acute Dental Infection Bridging Antibiotic ePGD</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-navy-900">Acute Dental Infection, Bridging Antibiotic: PGD Consultation</h1>
-          <p className="text-sm text-gray-600 mt-1">Amoxicillin or metronidazole, adults 18 and over, spreading or systemic dental infection only. PGD version 007, issued 11 September 2026.</p>
+          <p className="text-sm text-gray-600 mt-1">Amoxicillin or metronidazole, adults 18 and over, spreading or systemic dental infection only. PGD version 008, issued 11 September 2026.</p>
         </div>
         <DentalBridgingClient />
         <div className="mt-8 text-center">

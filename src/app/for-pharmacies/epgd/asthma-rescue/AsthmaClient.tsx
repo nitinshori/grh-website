@@ -428,7 +428,7 @@ export default function AsthmaClient() {
               placeholder="e.g., hypertension, diabetes, cardiac conditions"
             />
             <div className="pt-2 border-t border-gray-200">
-              <p className="text-sm font-medium text-navy-900 mb-2">Salbutamol cautions (PGD v005)</p>
+              <p className="text-sm font-medium text-navy-900 mb-2">Salbutamol cautions (PGD v006)</p>
               <div className="space-y-2">
                 <Checkbox label="Cardiovascular disease" checked={state.medicalHistory.cardiovascularDisease} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "cardiovascularDisease", value: v })} description="Beta-2 agonists can increase heart rate and blood pressure" />
                 <Checkbox label="Diabetes mellitus" checked={state.medicalHistory.diabetes} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "diabetes", value: v })} description="Salbutamol: monitor blood glucose. Prednisolone: can increase blood glucose; monitor BM and adjust diabetes medication if needed" />
@@ -439,7 +439,7 @@ export default function AsthmaClient() {
               </div>
             </div>
             <div className="pt-2 border-t border-gray-200">
-              <p className="text-sm font-medium text-navy-900 mb-2">Prednisolone exclusions (PGD v005)</p>
+              <p className="text-sm font-medium text-navy-900 mb-2">Prednisolone exclusions (PGD v006)</p>
               <div className="space-y-2">
                 <Checkbox label="Systemic infection not treated with appropriate antimicrobials" checked={state.medicalHistory.systemicInfectionUntreated} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "systemicInfectionUntreated", value: v })} description="Exclusion for prednisolone" />
                 <Checkbox label="Vaccination with live vaccines during treatment" checked={state.medicalHistory.liveVaccineDuringTreatment} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "liveVaccineDuringTreatment", value: v })} description="Exclusion for prednisolone" />
@@ -448,7 +448,7 @@ export default function AsthmaClient() {
               </div>
             </div>
             <div className="pt-2 border-t border-gray-200">
-              <p className="text-sm font-medium text-navy-900 mb-2">Prednisolone cautions (PGD v005)</p>
+              <p className="text-sm font-medium text-navy-900 mb-2">Prednisolone cautions (PGD v006)</p>
               <div className="space-y-2">
                 <Checkbox label="Osteoporosis or risk factors" checked={state.medicalHistory.osteoporosis} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "osteoporosis", value: v })} description="Short-term treatment risk is low but inform patient" />
                 <Checkbox label="Peptic ulcer disease or GI upset" checked={state.medicalHistory.pepticUlcer} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "pepticUlcer", value: v })} description="Consider gastroprotection" />
@@ -983,7 +983,7 @@ export default function AsthmaClient() {
     };
   }, [state, hardStops, alerts, __pharmProfile]);
 
-  // Advice given and decision reached for an excluded patient (PGD v005:
+  // Advice given and decision reached for an excluded patient (PGD v006:
   // Actions if patient is excluded or declines treatment). Shown on any step
   // where a stop is present, alongside the Save as not supplied button.
   const exclusionOutcomeBlock = hardStops ? (

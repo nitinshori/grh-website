@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import WoundCareClient from "./WoundCareClient";
 import { PgdPageActions } from "@/components/PgdPageActions";
-export const metadata: Metadata = { title: "Minor Wound Care Consultation ePGD", description: "Minor Wound Care PGD v007: co-amoxiclav for infected bites and heavily contaminated wounds (12 and over), flucloxacillin for infected non-bite wounds (2 and over)." };
+export const metadata: Metadata = { title: "Minor Wound Care Consultation ePGD", description: "Minor Wound Care PGD v008: co-amoxiclav for infected bites and heavily contaminated wounds (12 and over), flucloxacillin for infected non-bite wounds (2 and over)." };
 export default function Page() {
   return (
     <div className="bg-gray-50 min-h-screen">

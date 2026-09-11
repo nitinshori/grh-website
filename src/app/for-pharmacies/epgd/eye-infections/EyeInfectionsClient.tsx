@@ -22,7 +22,7 @@ import {
 } from "./lib/eye-infections-state";
 
 // Aligned to the Chloramphenicol eye drops and eye ointment (Bacterial
-// Conjunctivitis) PGD, version 002, issued 11 September 2026.
+// Conjunctivitis) PGD, version 003, issued 11 September 2026.
 
 export default function EyeInfectionsClient() {
   const [currentStep, setCurrentStep] = useState(0);

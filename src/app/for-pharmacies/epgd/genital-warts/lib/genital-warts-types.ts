@@ -7,7 +7,7 @@ import type {
 /**
  * Genital warts ePGD: state shape.
  *
- * Aligned to the signed PGD version 003, issued 11 September 2026 (valid
+ * Aligned to the signed PGD version 004, issued 11 September 2026 (valid
  * to 31 July 2027), which is actually two PGDs in one
  * document: podophyllotoxin 0.5% solution / 0.15% cream, and imiquimod 5%
  * cream. They share most exclusions but differ on treatment area limits,
@@ -172,7 +172,7 @@ export const STEP_LABELS = [
 export const TOTAL_STEPS = STEP_LABELS.length;
 
 export const PGD_VERSION_LINE =
-  "Genital Warts PGD (podophyllotoxin and imiquimod), version 003, issued 11 September 2026";
+  "Genital Warts PGD (podophyllotoxin and imiquimod), version 004, issued 11 September 2026";
 
 export function createInitialConsultationState(): GenitalWartsConsultationState {
   return {

@@ -23,7 +23,7 @@ export default function GenitalWartsPage() {
             <p className="text-sm text-gray-600 mt-1">
               Treatment of visible external genital and perianal warts in
               adults aged 18 and over. Patient-applied podophyllotoxin or
-              imiquimod. PGD version 003, issued 11 September 2026.
+              imiquimod. PGD version 004, issued 11 September 2026.
             </p>
             <div className="mt-4 rounded-lg bg-purple-50 border border-purple-200 p-4">
               <p className="text-sm text-purple-900">

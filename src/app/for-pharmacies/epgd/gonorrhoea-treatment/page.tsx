@@ -3,7 +3,7 @@ import { PgdPageActions } from "@/components/PgdPageActions";
 
 export const metadata: Metadata = {
   title: "Gonorrhoea Treatment Consultation ePGD",
-  description: "Gonorrhoea Treatment Consultation ePGD - Coming Soon. Ceftriaxone 1 g IM (reconstituted with lidocaine 1%) under PGD version 003, issued 11 September 2026, for adults with a positive NAAT or strong clinical suspicion with a clear epidemiological link.",
+  description: "Gonorrhoea Treatment Consultation ePGD - Coming Soon. Ceftriaxone 1 g IM (reconstituted with lidocaine 1%) under PGD version 004, issued 11 September 2026, for adults with a positive NAAT or strong clinical suspicion with a clear epidemiological link.",
 };
 
 export default function GonorrhoeaToolPage() {
@@ -31,7 +31,7 @@ export default function GonorrhoeaToolPage() {
             <span className="text-navy-900 font-medium">Gonorrhoea Treatment Consultation ePGD</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-navy-900">Gonorrhoea Treatment Consultation</h1>
-          <p className="text-sm text-gray-600 mt-1">Ceftriaxone 1 g IM, reconstituted with 3.5 mL lidocaine 1%, under PGD version 003, issued 11 September 2026</p>
+          <p className="text-sm text-gray-600 mt-1">Ceftriaxone 1 g IM, reconstituted with 3.5 mL lidocaine 1%, under PGD version 004, issued 11 September 2026</p>
         </div>
 
         {/* Coming Soon Badge */}
@@ -101,7 +101,7 @@ export default function GonorrhoeaToolPage() {
 
         {/* Disclaimer */}
         <div className="mt-8 text-center">
-          <p className="text-[11px] text-gray-400 max-w-2xl mx-auto">This ePGD requires a positive NAAT for N. gonorrhoeae or strong clinical suspicion with a clear epidemiological link. Partner notification and test of cure at 2 weeks are essential components. PGD version 003, issued 11 September 2026.</p>
+          <p className="text-[11px] text-gray-400 max-w-2xl mx-auto">This ePGD requires a positive NAAT for N. gonorrhoeae or strong clinical suspicion with a clear epidemiological link. Partner notification and test of cure at 2 weeks are essential components. PGD version 004, issued 11 September 2026.</p>
         </div>
       </div>
     </div>

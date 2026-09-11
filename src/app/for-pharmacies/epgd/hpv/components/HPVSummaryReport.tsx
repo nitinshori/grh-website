@@ -36,7 +36,7 @@ export function HPVSummaryReport({
           {state.summary.consultationTime}
         </p>
         <p className="text-xs text-gray-500 mt-1">
-          Administered under the Get Real Health Gardasil 9 PGD, version 004, issued 11 September 2026.
+          Administered under the Get Real Health Gardasil 9 PGD, version 005, issued 11 September 2026.
         </p>
       </div>
 

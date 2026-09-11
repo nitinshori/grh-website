@@ -20,7 +20,7 @@ export default function FolicAcidPage(): React.ReactNode {
             </h1>
             <p className="text-gray-600 mb-4">
               Oral folic acid 5 mg once daily for confirmed folate deficiency
-              in adults aged 18 and over (PGD 3 of 3, version 008, issued 11
+              in adults aged 18 and over (PGD 3 of 3, version 009, issued 11
               September 2026).
             </p>
             <div className="bg-lime-50 border border-lime-200 rounded-lg p-4">

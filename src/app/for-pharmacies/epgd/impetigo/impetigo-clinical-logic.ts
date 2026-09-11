@@ -8,7 +8,7 @@ import {
 import { ClinicalAlert, AlertSeverity } from '../shared/types';
 
 /**
- * Clinical logic for the Impetigo ePGD, aligned to the Impetigo PGD v008
+ * Clinical logic for the Impetigo ePGD, aligned to the Impetigo PGD v009
  * (11 September 2026). Appendix 1 of the document, "Which arm, in order":
  *   1. Systemically unwell, or cellulitis: refer. Stop.
  *   2. Localised non-bullous: hydrogen peroxide 1% as a P sale first; if

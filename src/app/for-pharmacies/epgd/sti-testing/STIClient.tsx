@@ -819,7 +819,7 @@ export default function STIClient() {
           </div>
         );
 
-      case 5: // Treatment (chlamydia PGD v002: doxycycline first line, azithromycin where doxycycline unsuitable)
+      case 5: // Treatment (chlamydia PGD v003: doxycycline first line, azithromycin where doxycycline unsuitable)
         return (
           <div className="space-y-4">
             <Checkbox

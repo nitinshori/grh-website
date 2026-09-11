@@ -1,11 +1,11 @@
 // State shape and initial-state factory for the Chloramphenicol eye drops and
-// eye ointment (Bacterial Conjunctivitis) ePGD. Version 002, issued
+// eye ointment (Bacterial Conjunctivitis) ePGD. Version 003, issued
 // 11 September 2026. The clinical logic lives in EyeInfectionsClient.tsx.
 
 import type { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/types";
 
 export const PGD_STRAPLINE =
-  "Chloramphenicol eye drops and eye ointment (Bacterial Conjunctivitis) PGD, version 002, issued 11 September 2026";
+  "Chloramphenicol eye drops and eye ointment (Bacterial Conjunctivitis) PGD, version 003, issued 11 September 2026";
 
 export type ConsentBasis = "" | "patient" | "gillick" | "parental";
 

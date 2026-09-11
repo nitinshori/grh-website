@@ -10,7 +10,7 @@ import { getMedicineSupplyError, isBreastfeeding } from "./postnatal-contracepti
 
 export function validateStep(step: number, state: PostnatalContraceptionState): string | null {
   switch (step) {
-    case 0: // Patient Details. PGD v004: women 16 and over (Depo-Provera 18 and over, gated at supply)
+    case 0: // Patient Details. PGD v005: women 16 and over (Depo-Provera 18 and over, gated at supply)
       return validatePatientStep(state.patient, { minAge: 16 });
 
     case 1: // Consent

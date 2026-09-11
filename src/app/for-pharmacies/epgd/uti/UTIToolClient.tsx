@@ -617,7 +617,7 @@ export function UTIToolClient() {
                 required
               />
               <p className="text-xs text-gray-600">
-                PGD v005 renal row: YES or under renal follow-up, exclude. NO and aged 16 to 59, proceed. NO but aged 60 to 64, or does not know, exclude and refer for a renal function check first. The document gives no route back to supply on a seen result.
+                PGD v006 renal row: YES or under renal follow-up, exclude. NO and aged 16 to 59, proceed. NO but aged 60 to 64, or does not know, exclude and refer for a renal function check first. The document gives no route back to supply on a seen result.
               </p>
               <Checkbox
                 label="Known structural or functional abnormality of the urinary tract, or renal stones"

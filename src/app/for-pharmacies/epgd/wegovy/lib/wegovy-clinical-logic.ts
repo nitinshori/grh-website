@@ -99,7 +99,7 @@ function getHardStopAlerts(state: WegovyConsultationState): ClinicalAlert[] {
     });
   }
 
-  // Age over 75 (PGD v007 upper age limit)
+  // Age over 75 (PGD v008 upper age limit)
   if (state.patient.age !== null && state.patient.age > 75) {
     alerts.push({
       severity: "stop",
@@ -261,7 +261,7 @@ function getHardStopAlerts(state: WegovyConsultationState): ClinicalAlert[] {
     });
   }
 
-  // History of pancreatitis (acute or chronic): exclusion under PGD v007
+  // History of pancreatitis (acute or chronic): exclusion under PGD v008
   if (state.medicalHistory.pancreatitisHistory) {
     alerts.push({
       severity: "stop",
@@ -272,7 +272,7 @@ function getHardStopAlerts(state: WegovyConsultationState): ClinicalAlert[] {
     });
   }
 
-  // Current gallstones or cholecystitis: exclusion under PGD v007
+  // Current gallstones or cholecystitis: exclusion under PGD v008
   if (state.medicalHistory.gallbladderDisease) {
     alerts.push({
       severity: "stop",
@@ -282,7 +282,7 @@ function getHardStopAlerts(state: WegovyConsultationState): ClinicalAlert[] {
     });
   }
 
-  // Cholecystectomy within the last 3 months: exclusion under PGD v007
+  // Cholecystectomy within the last 3 months: exclusion under PGD v008
   if (state.medicalHistory.recentCholecystectomy) {
     alerts.push({
       severity: "stop",
@@ -292,7 +292,7 @@ function getHardStopAlerts(state: WegovyConsultationState): ClinicalAlert[] {
     });
   }
 
-  // Diabetic retinopathy: exclusion under PGD v007
+  // Diabetic retinopathy: exclusion under PGD v008
   if (state.medicalHistory.diabeticRetinopathy) {
     alerts.push({
       severity: "stop",
@@ -302,7 +302,7 @@ function getHardStopAlerts(state: WegovyConsultationState): ClinicalAlert[] {
     });
   }
 
-  // Severe renal impairment or end-stage renal disease: exclusion under PGD v007
+  // Severe renal impairment or end-stage renal disease: exclusion under PGD v008
   if (state.medicalHistory.severeRenal) {
     alerts.push({
       severity: "stop",
@@ -346,7 +346,7 @@ function getHardStopAlerts(state: WegovyConsultationState): ClinicalAlert[] {
   }
 
   // History of suicidal ideation or active severe mental illness where
-  // oversight is absent and concern exists: do not supply (PGD v007 caution wording)
+  // oversight is absent and concern exists: do not supply (PGD v008 caution wording)
   if (
     state.medicalHistory.depression &&
     state.medicalHistory.mentalHealthConcern &&
@@ -372,7 +372,7 @@ function getHardStopAlerts(state: WegovyConsultationState): ClinicalAlert[] {
     });
   }
 
-  // Sulfonylurea or meglitinide: exclusion under PGD v007 (no GP-monitored route)
+  // Sulfonylurea or meglitinide: exclusion under PGD v008 (no GP-monitored route)
   if (state.medications.takesSulphonylureas) {
     alerts.push({
       severity: "stop",
@@ -383,7 +383,7 @@ function getHardStopAlerts(state: WegovyConsultationState): ClinicalAlert[] {
     });
   }
 
-  // Insulin-treated diabetes: exclusion under PGD v007
+  // Insulin-treated diabetes: exclusion under PGD v008
   if (state.medications.takesInsulin) {
     alerts.push({
       severity: "stop",
@@ -409,7 +409,7 @@ function getHardStopAlerts(state: WegovyConsultationState): ClinicalAlert[] {
   return alerts;
 }
 
-// ─── Treatment duration helpers (PGD v007 maximum treatment period and 5% rule) ───
+// ─── Treatment duration helpers (PGD v008 maximum treatment period and 5% rule) ───
 
 export function getMonthsOnTreatment(state: WegovyConsultationState): number | null {
   const start = state.doseSelection.treatmentStartDate;
@@ -453,7 +453,7 @@ function getCautionAlerts(state: WegovyConsultationState): ClinicalAlert[] {
     });
   }
 
-  // History of suicidal ideation, or active severe mental illness (PGD v007 caution)
+  // History of suicidal ideation, or active severe mental illness (PGD v008 caution)
   if (state.medicalHistory.depression) {
     alerts.push({
       severity: "caution",
@@ -777,7 +777,7 @@ export function validateDoseSelectionStep(state: WegovyConsultationState): strin
     return "Maximum treatment period under this PGD is 2 years of continuous treatment. Refer to the GP or a specialist prescriber.";
   }
 
-  // 7.2 mg gate (PGD v007)
+  // 7.2 mg gate (PGD v008)
   if (ds.dose === "7.2mg") {
     if (ds.startingBMI === null) {
       return "Starting BMI (at initiation of treatment) is required before 7.2 mg can be supplied";

@@ -31,7 +31,7 @@ export default function PEToolPage() {
             Premature Ejaculation, Dapoxetine PGD Consultation
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Dapoxetine 30mg/60mg tablets (Priligy) for Premature Ejaculation PGD, version 003, issued 11 September 2026. Adult men aged 18 to 64.
+            Dapoxetine 30mg/60mg tablets (Priligy) for Premature Ejaculation PGD, version 004, issued 11 September 2026. Adult men aged 18 to 64.
           </p>
         </div>
 

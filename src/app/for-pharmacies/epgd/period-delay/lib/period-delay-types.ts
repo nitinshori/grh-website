@@ -20,13 +20,13 @@ export interface PeriodDelayAssessment {
   daysUntilExpected: number | null;
   previousUse: boolean;
   previousIssues: string;
-  /** PGD v008 records the dates the delay is needed for. */
+  /** PGD v009 records the dates the delay is needed for. */
   datesNeededFor: string;
-  /** PGD v008: previous supplies for period delay in the last 6 months.
+  /** PGD v009: previous supplies for period delay in the last 6 months.
    *  Twice already excludes; total treatment must not exceed 30 days in 6 months. */
   previousSuppliesLast6Months: "" | "0" | "1" | "2+";
   daysSuppliedLast6Months: number | null;
-  // Excluding pregnancy, PGD v008: the two questions, and the test where needed.
+  // Excluding pregnancy, PGD v009: the two questions, and the test where needed.
   lastPeriodNormalOnTime: boolean;
   noUnprotectedSexSince: boolean;
   pregnancyTestNegative: boolean;
@@ -102,7 +102,7 @@ export interface PeriodDelayMedicalHistory {
   hormonalContraception: boolean;
   hormonalContraceptionType: string;
   ageUnder16: boolean;
-  /** PGD v008 excludes male patients. */
+  /** PGD v009 excludes male patients. */
   femaleConfirmed: boolean;
   hypersensitivity: boolean;
   /** Liver dysfunction, active liver disease, jaundice in pregnancy, or a liver tumour. */

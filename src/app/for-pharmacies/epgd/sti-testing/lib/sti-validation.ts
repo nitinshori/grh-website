@@ -7,7 +7,7 @@ import { getAgeAlerts, getTreatmentAlerts } from "./sti-clinical-logic";
 export function validateStep(state: STIConsultationState, stepIndex: number): string | null {
   switch (stepIndex) {
     case 0: {
-      // Patient Details. PGD v002: 16 and over; 13 to 15 only with recorded
+      // Patient Details. PGD v003: 16 and over; 13 to 15 only with recorded
       // Fraser competence and a safeguarding assessment with no concern;
       // under 13 never supplied.
       const base = validatePatientStep(state.patient);

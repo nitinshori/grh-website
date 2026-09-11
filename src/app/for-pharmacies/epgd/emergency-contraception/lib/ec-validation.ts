@@ -24,7 +24,7 @@ export function validatePatientDetailsStep(
   if (!patient.femaleConfirmed)
     return "Please confirm the patient is female";
 
-  // Under 13 is not supplied through this tool. PGD v003 says supply "may
+  // Under 13 is not supplied through this tool. PGD v004 says supply "may
   // still be appropriate" with a mandatory safeguarding referral; the tool is
   // deliberately stricter: a child under 13 is a same-day referral to the GP
   // or sexual health service with a safeguarding referral, not a pharmacy

@@ -7,7 +7,7 @@ import { MAX_CAPSULES_PER_SUPPLY } from "./bph-clinical-logic";
 export function validateStep(state: BPHConsultationState, stepIndex: number): string | null {
   switch (stepIndex) {
     case 0: { // Patient Details
-      // PGD v002: inclusion 18 and over, but under 45 is an exclusion.
+      // PGD v003: inclusion 18 and over, but under 45 is an exclusion.
       const base = validatePatientStep(state.patient, {
         minAge: 45,
         requireGender: true,

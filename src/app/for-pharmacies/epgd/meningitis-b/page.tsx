@@ -10,7 +10,7 @@ export default function MeningitiBPage() {
           Meningitis B Vaccination (Bexsero and Trumenba)
         </h1>
         <p className="text-gray-600">
-          Patient Group Direction consultation tool for privately funded meningococcal group B vaccination: Bexsero from 2 months of age, Trumenba from 10 years. Not for travel (use the MenACWY PGD) and not a replacement for the NHS routine infant programme. Meningococcal group B vaccine (Bexsero and Trumenba) PGD v004, issued 11 September 2026.
+          Patient Group Direction consultation tool for privately funded meningococcal group B vaccination: Bexsero from 2 months of age, Trumenba from 10 years. Not for travel (use the MenACWY PGD) and not a replacement for the NHS routine infant programme. Meningococcal group B vaccine (Bexsero and Trumenba) PGD v005, issued 11 September 2026.
         </p>
       </div>
       <MeningitiBClient />

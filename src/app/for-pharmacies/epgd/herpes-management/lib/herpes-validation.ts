@@ -2,7 +2,7 @@ import type { HerpesConsultationState } from "./herpes-types";
 import { validatePatientStep, validateConsentStep, validateSummaryStep } from "../../shared/types";
 import { hasHardStops } from "./herpes-clinical-logic";
 
-// Aligned to the Genital Herpes Management PGD, version 003, issued 11 September 2026.
+// Aligned to the Genital Herpes Management PGD, version 004, issued 11 September 2026.
 export function validateStep(state: HerpesConsultationState, step: number): string | null {
   const a = state.assessment;
   switch (step) {

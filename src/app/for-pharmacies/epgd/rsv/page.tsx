@@ -18,7 +18,7 @@ export default function RSVPage() {
             <p className="text-gray-600 mb-4">PGD Consultation for UK Pharmacies</p>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-900">
-                This ePGD guides pharmacists in the administration of Abrysvo or Arexvy under the Patient Group Direction (version 005, issued 11 September 2026) to adults aged 60 years and over, and (Abrysvo only) pregnant women between 28 and 36 weeks of gestation. Single 0.5 mL intramuscular dose; one-time vaccination.
+                This ePGD guides pharmacists in the administration of Abrysvo or Arexvy under the Patient Group Direction (version 006, issued 11 September 2026) to adults aged 60 years and over, and (Abrysvo only) pregnant women between 28 and 36 weeks of gestation. Single 0.5 mL intramuscular dose; one-time vaccination.
               </p>
             </div>
           </div>

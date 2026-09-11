@@ -1,7 +1,7 @@
 import type { BVConsultationState } from "./bv-types";
 import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
 
-// Bacterial Vaginosis PGD v003 (11 September 2026). Two arms:
+// Bacterial Vaginosis PGD v004 (11 September 2026). Two arms:
 // oral metronidazole 400 mg tablets (women 16 to 65) and metronidazole 0.75%
 // vaginal gel, Zidoval (women 18 to 65). Both arms: non-pregnant women.
 

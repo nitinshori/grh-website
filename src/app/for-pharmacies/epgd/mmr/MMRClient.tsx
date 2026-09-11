@@ -937,7 +937,7 @@ export default function MMRClient() {
                 required={state.patient.age !== null && state.patient.age >= 12}
               />
 
-              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide pt-2">Counselling and follow-up (PGD v004)</p>
+              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide pt-2">Counselling and follow-up (PGD v005)</p>
 
               <Checkbox
                 label="Common side effects explained and when to seek further medical advice"
@@ -1301,7 +1301,7 @@ function MMRSummaryReport({
       />
 
       <p className="text-[10px] text-gray-500">
-        Patient Group Direction for MMRVaxPRO or Priorix (MMR), version 004, issued 11 September 2026.
+        Patient Group Direction for MMRVaxPRO or Priorix (MMR), version 005, issued 11 September 2026.
       </p>
 
       <PharmacistDeclaration

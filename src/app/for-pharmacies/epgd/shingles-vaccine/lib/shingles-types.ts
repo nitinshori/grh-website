@@ -1,9 +1,9 @@
 import { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/types";
 
-// Aligned to the Shingrix PGD version 005, issued 11 September 2026.
+// Aligned to the Shingrix PGD version 006, issued 11 September 2026.
 
 export interface ShinglesAssessment {
-  /** Aged 50 or older and eligible under national immunisation guidelines (PGD v005 inclusion). */
+  /** Aged 50 or older and eligible under national immunisation guidelines (PGD v006 inclusion). */
   ageEligible: boolean;
   immunosuppressed: boolean;
   /** Exclusion. Tri-state so the step cannot be passed without an explicit answer: "" (unanswered), "yes", "no". */
@@ -14,11 +14,11 @@ export interface ShinglesAssessment {
   pregnancyStatus: string;
   /** Dose 1 of Shingrix already given (here or elsewhere). */
   previousShingrix: boolean;
-  /** Date of dose 1, required when dose 2 is being given (PGD v005 inclusion: record the date of dose 1). */
+  /** Date of dose 1, required when dose 2 is being given (PGD v006 inclusion: record the date of dose 1). */
   previousShingrixDate: string;
   /** Exclusion: has already completed the two-dose course. */
   completedCourse: boolean;
-  /** Previous Zostavax is not an exclusion (PGD v005); recorded for the vaccine history. */
+  /** Previous Zostavax is not an exclusion (PGD v006); recorded for the vaccine history. */
   previousZostavax: boolean;
   /** Inclusion: no history of shingles in the past 12 months. Ticked means shingles within 12 months. */
   previousShinglesHistory: boolean;
@@ -45,12 +45,12 @@ export interface ShinglesSupply {
 export interface ShinglesCounselling {
   explainedDoseSchedule: boolean;
   explainedLocalReactions: boolean;
-  /** PGD v005 caution: systemic side effects are common and generally self-limiting. */
+  /** PGD v006 caution: systemic side effects are common and generally self-limiting. */
   explainedSystemicReactions: boolean;
   explainedEffectiveness: boolean;
   explainedNotLiveVaccine: boolean;
   offeredWrittenInfo: boolean;
-  /** PGD v005 follow-up advice given. */
+  /** PGD v006 follow-up advice given. */
   followUpAdviceGiven: boolean;
 }
 

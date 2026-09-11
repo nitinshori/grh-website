@@ -327,7 +327,7 @@ export default function PeriodDelayClient() {
         return (
           <StepWrapper title="Medical History" description="Screen for contraindications to norethisterone." currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={validationError} isBlocked={hasStops} getConsultationData={getConsultationData}>
             <div className="space-y-4">
-              <div className="border-b pb-3"><p className="text-sm font-semibold text-red-700">EXCLUSIONS (PGD v008). If any is present, do NOT supply. Refer.</p></div>
+              <div className="border-b pb-3"><p className="text-sm font-semibold text-red-700">EXCLUSIONS (PGD v009). If any is present, do NOT supply. Refer.</p></div>
               <Checkbox label="Known or suspected pregnancy" checked={state.medicalHistory.pregnancy} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "pregnancy", value: v })} description="Norethisterone is contraindicated in pregnancy. Pregnancy exclusion is recorded on the Assessment step." />
               <Checkbox label="Any hormone sensitive cancer, including breast cancer, current or past" checked={state.medicalHistory.activeBreastCancer} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "activeBreastCancer", value: v })} />
               <Checkbox label="Known BRCA1 or BRCA2 carrier status" checked={state.medicalHistory.brcaCarrier} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "brcaCarrier", value: v })} />
@@ -341,7 +341,7 @@ export default function PeriodDelayClient() {
               <YesNo label="Stroke or transient ischaemic attack (mini-stroke)" value={state.medicalHistory.appendix1.q1Stroke} onChange={(v) => dispatch({ type: "ANSWER_APPENDIX1", key: "q1Stroke", value: v })} />
               <YesNo label="Heart attack or any arterial disease" value={state.medicalHistory.appendix1.q1Arterial} onChange={(v) => dispatch({ type: "ANSWER_APPENDIX1", key: "q1Arterial", value: v })} />
               <YesNo label="2. Known thrombophilia, or anyone in the immediate family with a blood clot before the age of 45 or a clotting disorder" value={state.medicalHistory.appendix1.q2Thrombophilia} onChange={(v) => dispatch({ type: "ANSWER_APPENDIX1", key: "q2Thrombophilia", value: v })} />
-              <YesNo label="3. Currently smokes, any amount, any age" description="PGD v008 excludes all current smokers." value={state.medicalHistory.appendix1.q3CurrentSmoker} onChange={(v) => dispatch({ type: "ANSWER_APPENDIX1", key: "q3CurrentSmoker", value: v })} />
+              <YesNo label="3. Currently smokes, any amount, any age" description="PGD v009 excludes all current smokers." value={state.medicalHistory.appendix1.q3CurrentSmoker} onChange={(v) => dispatch({ type: "ANSWER_APPENDIX1", key: "q3CurrentSmoker", value: v })} />
               {state.medicalHistory.appendix1.q3CurrentSmoker === false && (
                 <YesNo label="Stopped smoking less than a year ago, any age" description="Ask this separately: a question that only asks whether she smokes misclassifies a recent quitter. Excludes." value={state.medicalHistory.appendix1.q3StoppedUnderOneYear} onChange={(v) => dispatch({ type: "ANSWER_APPENDIX1", key: "q3StoppedUnderOneYear", value: v })} />
               )}
@@ -409,7 +409,7 @@ export default function PeriodDelayClient() {
             <div className="space-y-4 mb-4">
               <Checkbox label="Taking anticoagulants (warfarin, DOACs)" checked={state.medications.anticoagulants} onChange={(v) => dispatch({ type: "UPDATE_MEDICATIONS", field: "anticoagulants", value: v })} />
               <Checkbox label="Taking antiepileptic medication" checked={state.medications.antiepileptics} onChange={(v) => dispatch({ type: "UPDATE_MEDICATIONS", field: "antiepileptics", value: v })} description="Enzyme inducers and lamotrigine monotherapy are exclusions (Medical History step)" />
-              <Checkbox label="Taking ciclosporin" checked={state.medications.ciclosporin} onChange={(v) => dispatch({ type: "UPDATE_MEDICATIONS", field: "ciclosporin", value: v })} description="Excluded under PGD v008" />
+              <Checkbox label="Taking ciclosporin" checked={state.medications.ciclosporin} onChange={(v) => dispatch({ type: "UPDATE_MEDICATIONS", field: "ciclosporin", value: v })} description="Excluded under PGD v009" />
               <TextArea label="Other current medications" value={state.medications.otherMedications} onChange={(v) => dispatch({ type: "UPDATE_MEDICATIONS", field: "otherMedications", value: v })} placeholder="List all current medications, including anything bought over the counter or online" />
               <TextInput label="Known allergies" value={state.medications.allergies} onChange={(v) => dispatch({ type: "UPDATE_MEDICATIONS", field: "allergies", value: v })} placeholder="e.g., norethisterone, progestogens" />
             </div>
@@ -422,7 +422,7 @@ export default function PeriodDelayClient() {
             <div className="space-y-4">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <p className="text-sm font-semibold text-blue-900 mb-1">Standard regimen</p>
-                <p className="text-sm text-blue-800">Norethisterone 5mg tablets. One 5mg tablet three times daily, starting 3 days before the expected onset of menstruation. All three doses are taken every day of the course. MAXIMUM 14 DAYS and MAXIMUM 42 TABLETS under PGD v008. No extension. Supply only the number of days actually needed; do not round up to a pack.</p>
+                <p className="text-sm text-blue-800">Norethisterone 5mg tablets. One 5mg tablet three times daily, starting 3 days before the expected onset of menstruation. All three doses are taken every day of the course. MAXIMUM 14 DAYS and MAXIMUM 42 TABLETS under PGD v009. No extension. Supply only the number of days actually needed; do not round up to a pack.</p>
                 <p className="text-xs text-blue-600 mt-2">A normal period should occur 2 to 3 days after the last tablet. Total norethisterone for period delay must not exceed 30 days in any 6 month period, and no patient may be supplied more than twice in 6 months.</p>
               </div>
               <NumberInput label="Number of days of treatment (from the start date to the last tablet, maximum 14)" value={state.medicineSelection.daysToDelay} onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "daysToDelay", value: v })} min={1} max={MAX_TREATMENT_DAYS} unit="days" required />

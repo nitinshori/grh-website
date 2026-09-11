@@ -509,7 +509,7 @@ export default function SleepMelatoninClient() {
         {state.currentStep === 4 && (
           <div className="space-y-4">
             <div className="space-y-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <h4 className="font-semibold text-sm text-blue-900">Supply details (PGD version 005, 11 September 2026)</h4>
+              <h4 className="font-semibold text-sm text-blue-900">Supply details (PGD version 006, 11 September 2026)</h4>
               <Row label="Product" value={state.prescription.product} />
               <Row label="Legal category" value="POM" />
               <Row label="Dose" value={state.prescription.dose} />

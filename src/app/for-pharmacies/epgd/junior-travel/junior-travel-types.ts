@@ -1,7 +1,7 @@
 // Shared types and constants for the Junior Travel Vaccines ePGD, kept out of
 // the client so the printed summary can import them without a cycle.
 
-export const PGD_VERSION = "Junior Travel Vaccines PGD v006, issued 11 September 2026";
+export const PGD_VERSION = "Junior Travel Vaccines PGD v007, issued 11 September 2026";
 
 export type ConsentBasis = "parental" | "gillick" | "self" | "";
 export type ExclusionReferral = "" | "gp-informed" | "gp-referred" | "specialist-travel-clinic" | "urgent-same-day" | "declined";

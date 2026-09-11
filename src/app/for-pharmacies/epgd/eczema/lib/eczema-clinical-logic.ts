@@ -3,7 +3,7 @@ import { QUANTITY_BY_AREA } from "./eczema-types";
 import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
 
 /**
- * Clinical logic for the Eczema and Dermatitis PGD v005 (11 September 2026).
+ * Clinical logic for the Eczema and Dermatitis PGD v006 (11 September 2026).
  * Severity AND site decide the arm: mild anywhere permitted, or moderate on
  * the face, flexures or genital skin (7 days maximum there): clobetasone
  * butyrate 0.05% (Arm 1). Moderate on the trunk or limbs: betamethasone

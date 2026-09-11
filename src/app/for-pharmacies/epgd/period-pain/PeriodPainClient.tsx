@@ -19,7 +19,7 @@ import { PeriodPainSummaryReport } from "./components/PeriodPainSummaryReport";
 
 /**
  * Period Pain ePGD, aligned to the Naproxen or Mefenamic acid for Period
- * Pain (Dysmenorrhoea) PGD, version 003, issued 11 September 2026:
+ * Pain (Dysmenorrhoea) PGD, version 004, issued 11 September 2026:
  * primary dysmenorrhoea in females aged 16+. NSAID exclusions enforced as
  * hard stops (ulcer/GI bleed history, NSAID/aspirin hypersensitivity,
  * severe hepatic/renal/cardiac impairment, other NSAIDs or anticoagulants,
@@ -28,7 +28,7 @@ import { PeriodPainSummaryReport } from "./components/PeriodPainSummaryReport";
  * per supply.
  */
 
-const PGD_STRAPLINE = "Naproxen or Mefenamic acid for Period Pain (Dysmenorrhoea) PGD, version 003, issued 11 September 2026";
+const PGD_STRAPLINE = "Naproxen or Mefenamic acid for Period Pain (Dysmenorrhoea) PGD, version 004, issued 11 September 2026";
 
 const STEP_LABELS = ["Patient Details", "Consent", "Assessment & History", "Treatment", "Counselling & Summary"] as const;
 

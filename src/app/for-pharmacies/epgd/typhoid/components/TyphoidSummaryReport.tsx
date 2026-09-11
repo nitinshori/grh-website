@@ -81,7 +81,7 @@ export default function TyphoidSummaryReport({
       {/* Header with print styles */}
       <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50 print:bg-white print:border-0 print:pb-4">
         <h2 className="text-lg font-bold text-navy-900">Consultation Record</h2>
-        <p className="text-sm text-gray-500 mt-1">Typhoid ePGD. Typhoid (Vi Polysaccharide Vaccine) PGD v005, issued 11 September 2026</p>
+        <p className="text-sm text-gray-500 mt-1">Typhoid ePGD. Typhoid (Vi Polysaccharide Vaccine) PGD v006, issued 11 September 2026</p>
         {isBlocked && (
           <p className="mt-2 text-sm font-semibold text-red-700">NOT SUPPLIED: exclusion criteria met. No vaccine was administered under this PGD.</p>
         )}

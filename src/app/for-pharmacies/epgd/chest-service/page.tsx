@@ -31,7 +31,7 @@ export default async function ChestServicePage() {
               <p className="text-gray-600 mb-4">
                 Acute bacterial bronchitis in patients aged 12 and over.
                 Doxycycline, amoxicillin or clarithromycin, per the signed PGD
-                (version 007, issued 11 September 2026).
+                (version 008, issued 11 September 2026).
               </p>
               <div className="bg-amber-50 border border-amber-300 rounded-lg p-4">
                 <p className="text-sm text-amber-900">

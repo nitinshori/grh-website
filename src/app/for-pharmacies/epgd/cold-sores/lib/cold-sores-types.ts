@@ -26,7 +26,7 @@ export interface ColdSoresMedicalHistory {
   renalFunction: string;
 }
 
-// Exclusions per the Cold Sores (Herpes Labialis) PGD v002, 11 September 2026.
+// Exclusions per the Cold Sores (Herpes Labialis) PGD v003, 11 September 2026.
 export interface ColdSoresContraindications {
   /** Exclusion: pregnancy (unless assessed as appropriate by a prescriber, which a PGD supply is not). */
   pregnant: boolean;
@@ -130,7 +130,7 @@ export const STEP_LABELS = [
 export const TOTAL_STEPS = STEP_LABELS.length;
 
 export const PGD_VERSION_LINE =
-  "Cold Sores (Herpes Labialis) PGD, aciclovir cream and tablets, version 002, issued 11 September 2026";
+  "Cold Sores (Herpes Labialis) PGD, aciclovir cream and tablets, version 003, issued 11 September 2026";
 
 export function createInitialConsultationState(): ColdSoresConsultationState {
   return {

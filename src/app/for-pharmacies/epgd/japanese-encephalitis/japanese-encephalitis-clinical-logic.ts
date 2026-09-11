@@ -5,7 +5,7 @@ import {
 } from './japanese-encephalitis-types';
 
 /** PGD strapline shown wherever the tool cites its authority. */
-export const JE_PGD_VERSION = 'Japanese Encephalitis Vaccine (Ixiaro) PGD v005, issued 11 September 2026';
+export const JE_PGD_VERSION = 'Japanese Encephalitis Vaccine (Ixiaro) PGD v006, issued 11 September 2026';
 
 /** Parse yyyy-mm-dd as local midnight. */
 export function parseLocalDate(iso: string): Date | null {

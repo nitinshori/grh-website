@@ -45,7 +45,7 @@ export function validateStep(
       if (!state.complaint.severity)
         return "Please select severity";
       if (!state.observations.exerciseTolerance)
-        return "The cardiovascular fitness question must be asked and the answer recorded (PGD v006 Appendix 1)";
+        return "The cardiovascular fitness question must be asked and the answer recorded (PGD v007 Appendix 1)";
       if (!state.observations.exerciseToleranceNotes.trim())
         return "Record the cardiovascular fitness answer in the patient's own terms (PGD records row)";
       if (state.complaint.previousTreatment) {

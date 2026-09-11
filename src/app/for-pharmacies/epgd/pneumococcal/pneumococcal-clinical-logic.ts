@@ -1,7 +1,7 @@
 /**
  * Pneumococcal clinical logic.
  *
- * Aligned to the Pneumovax 23 / Prevenar 13 PGD version 004, issued
+ * Aligned to the Pneumovax 23 / Prevenar 13 PGD version 005, issued
  * 11 September 2026. The document covers PCV13 (Prevenar 13) and PPV23
  * (Pneumovax 23) only; PCV20 appears only as prior exposure that counts
  * against revaccination. The document records that its guidance summary
@@ -17,7 +17,7 @@ export interface PneumococcalMedicalHistoryInput {
   /** Hypersensitivity to diphtheria toxoid (CRM197 carrier): Prevenar 13 exclusion. */
   diphtheriaToxoidHypersensitivity: boolean;
   severeFebrilleIllness: boolean;
-  /** Bleeding disorder: PGD v004 caution for both arms. */
+  /** Bleeding disorder: PGD v005 caution for both arms. */
   bleedingDisorder: boolean;
   previousPCV13: boolean;
   previousPCV13Date?: string;
@@ -51,7 +51,7 @@ export function revaccinationGroup(patient: PneumococcalPatientDetails): boolean
 
 /**
  * Most recent PPV23 or PCV20 dose in years, or null when neither was given.
- * Both count against PPV23 revaccination under PGD v004.
+ * Both count against PPV23 revaccination under PGD v005.
  */
 export function yearsSinceLastPolysaccharideOrPCV20(
   history: Pick<PneumococcalMedicalHistoryInput, 'previousPPV23' | 'previousPPV23Date' | 'previousPCV20' | 'previousPCV20Date'>
@@ -142,7 +142,7 @@ export function getPneumococcalClinicalAlerts(
     });
   }
 
-  // Conjugate vaccine interval: PPV23 at least 8 weeks after PCV13 (PGD v004 dose row)
+  // Conjugate vaccine interval: PPV23 at least 8 weeks after PCV13 (PGD v005 dose row)
   const weeksSincePCV13 = medicalHistory.previousPCV13 ? weeksSince(medicalHistory.previousPCV13Date) : null;
   if (weeksSincePCV13 !== null && weeksSincePCV13 < 8) {
     alerts.push({
@@ -163,7 +163,7 @@ export function getPneumococcalClinicalAlerts(
     });
   }
 
-  // PPV23 revaccination rule (PGD v004 Pneumovax 23 exclusion)
+  // PPV23 revaccination rule (PGD v005 Pneumovax 23 exclusion)
   const lastPolyYears = yearsSinceLastPolysaccharideOrPCV20(medicalHistory);
   if (medicalHistory.previousPPV23 || medicalHistory.previousPCV20) {
     if (!revaccinationGroup(patient)) {

@@ -1,5 +1,5 @@
 /**
- * Impetigo ePGD types, aligned to the Impetigo PGD version 008, issued
+ * Impetigo ePGD types, aligned to the Impetigo PGD version 009, issued
  * 11 September 2026. Three arms: fusidic acid 2% cream (localised
  * non-bullous), flucloxacillin 250mg/5ml oral suspension (children 3 months
  * to 17 years, not penicillin-allergic), and a macrolide (clarithromycin, or
@@ -8,7 +8,7 @@
  * a PGD arm. Courses are 5 days, extended to 7 only with the reason recorded.
  */
 
-export const IMPETIGO_PGD_VERSION = 'Impetigo PGD, version 008, issued 11 September 2026';
+export const IMPETIGO_PGD_VERSION = 'Impetigo PGD, version 009, issued 11 September 2026';
 
 export interface ImpetigoLesionAssessment {
   lesionType: 'non-bullous' | 'bullous' | '';

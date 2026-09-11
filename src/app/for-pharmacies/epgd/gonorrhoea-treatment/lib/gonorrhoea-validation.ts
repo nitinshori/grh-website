@@ -11,7 +11,7 @@ function firstStop(state: GonorrhoeaConsultationState): string | null {
 export function validateStep(state: GonorrhoeaConsultationState, step: number): string | null {
   switch (step) {
     case 0: // Patient Details
-      return validatePatientStep(state.patient, { minAge: 18 }); // PGD v003: adults aged 18 years or over
+      return validatePatientStep(state.patient, { minAge: 18 }); // PGD v004: adults aged 18 years or over
     case 1: // Consent, before anything is administered
       return validateConsentStep(state.consent);
     case 2: // Diagnostic Confirmation

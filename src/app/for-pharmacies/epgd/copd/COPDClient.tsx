@@ -376,7 +376,7 @@ export default function COPDClient() {
               placeholder="e.g., CVD, diabetes, osteoporosis"
             />
             <div className="pt-2 border-t border-gray-200">
-              <p className="text-sm font-medium text-navy-900 mb-2">Salbutamol cautions (PGD v002)</p>
+              <p className="text-sm font-medium text-navy-900 mb-2">Salbutamol cautions (PGD v003)</p>
               <div className="space-y-2">
                 <Checkbox label="Cardiovascular disease" checked={state.medicalHistory.cardiovascularDisease} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "cardiovascularDisease", value: v })} description="Salbutamol can increase heart rate and blood pressure; assess cardiac risk" />
                 <Checkbox label="Hypertension" checked={state.medicalHistory.hypertension} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "hypertension", value: v })} description="Monitor blood pressure; beta-2 agonists may worsen" />
@@ -387,7 +387,7 @@ export default function COPDClient() {
               </div>
             </div>
             <div className="pt-2 border-t border-gray-200">
-              <p className="text-sm font-medium text-navy-900 mb-2">Amoxicillin exclusions and cautions (PGD v002)</p>
+              <p className="text-sm font-medium text-navy-900 mb-2">Amoxicillin exclusions and cautions (PGD v003)</p>
               <div className="space-y-2">
                 <Checkbox label="Infectious mononucleosis" checked={state.medicalHistory.infectiousMononucleosis} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "infectiousMononucleosis", value: v })} description="Exclusion for amoxicillin: can precipitate severe rash" />
                 <Checkbox label="Severe renal impairment (eGFR below 30 mL/min/1.73m2)" checked={state.medicalHistory.severeRenalImpairment} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "severeRenalImpairment", value: v })} description="Exclusion for amoxicillin: dose adjustment needed" />
@@ -647,7 +647,7 @@ export default function COPDClient() {
               onChange={(v) =>
                 dispatch({ type: "UPDATE_COUNSELLING", field: "smokingCessationAdvised", value: v })
               }
-              description="Good practice; not a follow-up item in PGD v002"
+              description="Good practice; not a follow-up item in PGD v003"
             />
             <Checkbox
               label="Symptom management explained"
@@ -657,7 +657,7 @@ export default function COPDClient() {
               }
             />
             <div className="pt-2 border-t border-gray-200">
-              <p className="text-sm font-medium text-navy-900 mb-2">Follow-up advice (PGD v002)</p>
+              <p className="text-sm font-medium text-navy-900 mb-2">Follow-up advice (PGD v003)</p>
               <div className="space-y-2">
                 {state.medicineSupply.supplySalbutamol && (
                   <>
@@ -861,7 +861,7 @@ export default function COPDClient() {
     };
   }, [state, hardStops, alerts, __pharmProfile]);
 
-  // Advice given and decision reached for an excluded patient (PGD v002:
+  // Advice given and decision reached for an excluded patient (PGD v003:
   // Actions if patient is excluded or declines treatment). Shown on any step
   // where a stop is present, alongside the Save as not supplied button.
   const exclusionOutcomeBlock = hardStops ? (

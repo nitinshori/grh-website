@@ -13,7 +13,7 @@ export default function ThrushPage() {
         <PgdPageActions />
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-navy-900 mb-2">Vaginal Thrush Consultation</h1>
-          <p className="text-gray-600">Uncomplicated vulvovaginal candidiasis in non-pregnant women aged 16 to 60: fluconazole 150 mg capsule or clotrimazole 500 mg pessary. PGD version 003, issued 11 September 2026.</p>
+          <p className="text-gray-600">Uncomplicated vulvovaginal candidiasis in non-pregnant women aged 16 to 60: fluconazole 150 mg capsule or clotrimazole 500 mg pessary. PGD version 004, issued 11 September 2026.</p>
         </div>
         <ThrushClient />
       </div>

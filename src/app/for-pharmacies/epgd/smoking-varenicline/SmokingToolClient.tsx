@@ -292,7 +292,7 @@ export const SmokingToolClient: React.FC = () => {
             Smoking Cessation ePGD
           </h1>
           <p className="text-gray-600 mt-2">
-            Varenicline 0.5mg and 1mg tablets PGD consultation for UK pharmacies (any UK-licensed generic; Champix is no longer marketed). PGD version 003, issued 11 September 2026.
+            Varenicline 0.5mg and 1mg tablets PGD consultation for UK pharmacies (any UK-licensed generic; Champix is no longer marketed). PGD version 004, issued 11 September 2026.
           </p>
         </div>
 

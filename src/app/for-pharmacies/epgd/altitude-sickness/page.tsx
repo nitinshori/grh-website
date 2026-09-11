@@ -25,7 +25,7 @@ export default function AltitudeSicknessPage() {
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-900">
                 This ePGD guides pharmacists through the Patient Group Direction for supply of
-                acetazolamide 250 mg tablets (version 003, issued 11 September 2026) to adults
+                acetazolamide 250 mg tablets (version 004, issued 11 September 2026) to adults
                 travelling to, or at, altitudes above 2,500 metres, for prevention or symptomatic
                 treatment of acute mountain sickness (AMS). Use for AMS is off-label and the patient
                 must be told. Includes altitude assessment, medical history screening,

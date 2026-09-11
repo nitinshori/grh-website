@@ -1,4 +1,4 @@
-// Aligned to the Abrysvo / Arexvy RSV PGD version 005, issued 11 September 2026.
+// Aligned to the Abrysvo / Arexvy RSV PGD version 006, issued 11 September 2026.
 import type {
   RSVPatientDetails,
   RSVConsent,

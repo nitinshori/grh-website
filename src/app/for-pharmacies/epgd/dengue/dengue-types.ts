@@ -2,27 +2,27 @@ import { BasePatientDetails, BaseConsent, BaseSummary } from '../shared/types';
 
 export interface DengueScreening {
   destinationCountry: string;
-  endemicArea: boolean; // PGD v005 inclusion: travel to or residence in a dengue-endemic area
+  endemicArea: boolean; // PGD v006 inclusion: travel to or residence in a dengue-endemic area
   departureDate: string;
   travelDuration: string;
-  /** PGD v005 inclusion: willing to receive two doses, 3 months apart. */
+  /** PGD v006 inclusion: willing to receive two doses, 3 months apart. */
   willingTwoDoses: boolean;
   previousDengueInfection: boolean;
   dengueInfectionDetails: string;
-  currentIllness: boolean; // PGD v005 exclusion: acute fever or significant intercurrent illness
+  currentIllness: boolean; // PGD v006 exclusion: acute fever or significant intercurrent illness
   illnessDetails: string;
-  immunosuppressed: boolean; // PGD v005 exclusion: any congenital or acquired immune deficiency
+  immunosuppressed: boolean; // PGD v006 exclusion: any congenital or acquired immune deficiency
   immunosuppressedDetails: string;
   pregnant: boolean;
   breastfeeding: boolean;
   temperature: number | null;
-  /** PGD v005 exclusion: known hypersensitivity to any component of the vaccine. */
+  /** PGD v006 exclusion: known hypersensitivity to any component of the vaccine. */
   vaccineComponentAllergy: boolean;
-  /** PGD v005 exclusion: another live vaccine planned within 4 weeks before or after Qdenga. */
+  /** PGD v006 exclusion: another live vaccine planned within 4 weeks before or after Qdenga. */
   liveVaccineWithin4Weeks: boolean;
-  /** PGD v005 exclusion: history of Guillain-Barre syndrome following prior dengue vaccination. */
+  /** PGD v006 exclusion: history of Guillain-Barre syndrome following prior dengue vaccination. */
   gbsAfterDengueVaccine: boolean;
-  /** PGD v005 caution: anticoagulant therapy, assess bleeding risk. */
+  /** PGD v006 caution: anticoagulant therapy, assess bleeding risk. */
   anticoagulantTherapy: boolean;
 }
 
@@ -54,7 +54,7 @@ export interface DengueVaccineAdministration {
 
 export interface DenguePostVaccineObs {
   observationPeriod: '15-min' | '30-min' | '';
-  /** PGD v005: record that the seated observation period was completed. */
+  /** PGD v006: record that the seated observation period was completed. */
   observationCompleted: boolean;
   patientWell: boolean;
   adverseReaction: boolean;
@@ -69,9 +69,9 @@ export interface DengueAdvice {
   dengueSymptomsWarning: boolean;
   noOtherLiveVaccines: boolean;
   returnIfConcerned: boolean;
-  /** PGD v005: avoid pregnancy for at least 4 weeks after each dose. */
+  /** PGD v006: avoid pregnancy for at least 4 weeks after each dose. */
   avoidPregnancy4Weeks: boolean;
-  /** PGD v005: keep a record of vaccination dates and bring documentation when travelling. */
+  /** PGD v006: keep a record of vaccination dates and bring documentation when travelling. */
   keepVaccinationRecord: boolean;
 }
 

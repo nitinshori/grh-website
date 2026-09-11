@@ -26,7 +26,7 @@ import JuniorTravelSummaryReport from "./components/JuniorTravelSummaryReport";
 import { PGD_VERSION, type Clinical, type DoseEntry, type ConsentBasis, type ExclusionReferral } from "./junior-travel-types";
 
 /**
- * Junior Travel Vaccines ePGD, PGD version 006, issued 11 September 2026.
+ * Junior Travel Vaccines ePGD, PGD version 007, issued 11 September 2026.
  * Children and young people aged 12 months to 17 years inclusive. Each
  * vaccine carries its own licensed minimum age and dose, which the tool
  * enforces against the child's age (the HIGHER of 12 months and the

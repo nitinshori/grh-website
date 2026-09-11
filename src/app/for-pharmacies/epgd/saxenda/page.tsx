@@ -20,7 +20,7 @@ export default function SaxendaPage(): React.ReactNode {
             </h1>
             <p className="text-gray-600 mb-4">
               Daily subcutaneous liraglutide for weight management under the Patient
-              Group Direction (version 003, issued 11 September 2026). Adults aged 18
+              Group Direction (version 004, issued 11 September 2026). Adults aged 18
               years and over (aged 75 years or over excludes) with BMI ≥30, or ≥27 with
               at least one weight-related comorbidity, who are willing and motivated to
               undertake lifestyle modifications.
@@ -40,7 +40,7 @@ export default function SaxendaPage(): React.ReactNode {
         </div>
         <SaxendaClient />
         <div className="mt-8 text-center text-xs text-gray-500">
-          <p>Get Real Health ePGD: Saxenda (Liraglutide) PGD v003, issued 11 September 2026 | Confidential Patient Information</p>
+          <p>Get Real Health ePGD: Saxenda (Liraglutide) PGD v004, issued 11 September 2026 | Confidential Patient Information</p>
         </div>
       </div>
     </div>

@@ -46,7 +46,7 @@ import { YellowFeverSummaryReport } from "./components/YellowFeverSummaryReport"
  * a designated Yellow Fever Vaccination Centre, so the tool asks the
  * pharmacist to confirm designation before anything else.
  *
- * Aligned to PGD v004 (11 September 2026): pregnancy is an exclusion, any
+ * Aligned to PGD v005 (11 September 2026): pregnancy is an exclusion, any
  * immediate-type egg or component allergy excludes, 6 to 8 months is outside
  * the PGD, destinations where vaccination is neither recommended nor required
  * are outside the PGD, and a patient under the precautions cannot be
@@ -267,7 +267,7 @@ export function YellowFeverClient() {
         if (base) return base;
         // Never trust a stale age: recompute from the DOB here.
         if (calculateAge(patient.dateOfBirth) === null) return "Unable to calculate age from the date of birth";
-        // PGD v004 records: name, address, date of birth and GP with whom the individual is registered.
+        // PGD v005 records: name, address, date of birth and GP with whom the individual is registered.
         if (!patient.address.trim()) return "Patient address is required (the PGD requires it to be recorded)";
         if (!patient.gpPractice.trim() && !patient.gpName.trim()) return "The GP with whom the patient is registered is required: search for the practice, or enter \"Not registered\" as the GP name";
         return null;

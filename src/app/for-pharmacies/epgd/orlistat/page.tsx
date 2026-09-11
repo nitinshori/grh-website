@@ -19,7 +19,7 @@ export default function OrlistatPage() {
           <h1 className="text-3xl font-bold text-navy-900 mb-2">Orlistat Consultation</h1>
           <p className="text-gray-600">Lipase inhibitor for weight management</p>
           <p className="text-sm text-gray-500 mt-2">
-            This ePGD guides pharmacists through supply of Orlistat 120mg capsules under the Patient Group Direction (version 002, issued 11 September 2026) as an adjunct to a reduced-calorie diet and lifestyle changes for adults aged 18 years and over and under 75 years with BMI 30 kg/m² or more, or BMI 28 kg/m² or more with an obesity-related comorbidity. Up to 84 capsules (28-day supply); review at 12 weeks.
+            This ePGD guides pharmacists through supply of Orlistat 120mg capsules under the Patient Group Direction (version 003, issued 11 September 2026) as an adjunct to a reduced-calorie diet and lifestyle changes for adults aged 18 years and over and under 75 years with BMI 30 kg/m² or more, or BMI 28 kg/m² or more with an obesity-related comorbidity. Up to 84 capsules (28-day supply); review at 12 weeks.
           </p>
         </div>
         <OrlistatClient />

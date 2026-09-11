@@ -1,4 +1,4 @@
-// ─── Asthma Rescue Validation (PGD v005, 11 September 2026) ───
+// ─── Asthma Rescue Validation (PGD v006, 11 September 2026) ───
 
 import type { AsthmaConsultationState } from "./asthma-types";
 import {
@@ -112,7 +112,7 @@ export function validateStep(state: AsthmaConsultationState, step: number): stri
       const c = state.counselling;
       const ms = state.medicineSupply;
       // The document's follow-up advice, required for the arm supplied
-      // (PGD v005, Follow-up advice to be given to patient or carer).
+      // (PGD v006, Follow-up advice to be given to patient or carer).
       if (ms.salbutamol100mcgPMDI) {
         if (!c.relieverNotPreventer) return "Confirm the patient was told salbutamol is a reliever, not a preventer";
         if (!c.inhalerTechniqueDemonstration) return "Confirm inhaler technique was demonstrated and the technique sheet given (coordinate inhalation with actuation if no spacer)";

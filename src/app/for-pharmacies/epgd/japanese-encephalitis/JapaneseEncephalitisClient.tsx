@@ -139,7 +139,7 @@ export default function JapaneseEncephalitisClient({
     [state, live, nextDose.date]
   );
 
-  /** Generic setter for screening fields added for PGD v005. */
+  /** Generic setter for screening fields added for PGD v006. */
   const setScreening = useCallback(
     (patch: Partial<JapaneseEncephalitisScreening>): void => {
       setState((prev) => ({

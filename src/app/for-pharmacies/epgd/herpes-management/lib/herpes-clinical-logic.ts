@@ -1,7 +1,7 @@
 import type { HerpesConsultationState } from "./herpes-types";
 import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
 
-// Aligned to the Genital Herpes Management PGD, version 003, issued
+// Aligned to the Genital Herpes Management PGD, version 004, issued
 // 11 September 2026. Exclusions are hard stops; cautions are warnings.
 
 export function getAllAlerts(state: HerpesConsultationState): ClinicalAlert[] {

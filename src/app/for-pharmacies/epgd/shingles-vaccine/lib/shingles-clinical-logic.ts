@@ -1,4 +1,4 @@
-// Aligned to the Shingrix PGD version 005, issued 11 September 2026.
+// Aligned to the Shingrix PGD version 006, issued 11 September 2026.
 import type { ShinglesConsultationState } from "./shingles-types";
 import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
 
@@ -113,7 +113,7 @@ export function getAllAlerts(state: ShinglesConsultationState): ClinicalAlert[] 
     });
   }
 
-  // Dose 2 interval (PGD v005 dose row: second dose 2 to 6 months after the first)
+  // Dose 2 interval (PGD v006 dose row: second dose 2 to 6 months after the first)
   if (state.supply.doseNumber === "2" && state.assessment.previousShingrixDate && state.supply.vaccinationDate) {
     const days = daysBetween(state.assessment.previousShingrixDate, state.supply.vaccinationDate);
     if (days !== null && days > MAX_INTERVAL_DAYS) {
@@ -149,6 +149,6 @@ export function calculateDoseRecommendation(state: ShinglesConsultationState): D
     dosingRegimen: dose2
       ? `Dose 2 of 2 (dose 1 given ${state.assessment.previousShingrixDate || "date not recorded"}). Course complete.`
       : `Dose 1 of 2. Second dose 2 to 6 months after the first${state.supply.nextDoseDue ? `, due ${state.supply.nextDoseDue}` : ""}.`,
-    reason: `Aged ${state.patient.age} years, eligible under national immunisation guidelines; meets the Shingrix PGD v005 inclusion criteria.`,
+    reason: `Aged ${state.patient.age} years, eligible under national immunisation guidelines; meets the Shingrix PGD v006 inclusion criteria.`,
   };
 }

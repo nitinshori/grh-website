@@ -25,7 +25,7 @@ export interface TyphoidPatientDetails extends BasePatientDetails {
 
 export interface TyphoidConsent extends BaseConsent {
   /** Field name is historical. Records that the patient understands a
-   *  booster is needed every 3 YEARS (PGD v005), not 5. Kept for saved
+   *  booster is needed every 3 YEARS (PGD v006), not 5. Kept for saved
    *  records; do not read it as a 5 year validity. */
   understands5YearValidity: boolean;
   understandsTimingRequirement: boolean;

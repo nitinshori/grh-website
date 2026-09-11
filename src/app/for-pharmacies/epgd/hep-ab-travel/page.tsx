@@ -4,7 +4,7 @@ import { PgdPageActions } from "@/components/PgdPageActions";
 export const metadata = {
   title: 'Hepatitis A/B Travel ePGD | Pharmacy PGD',
   description:
-    'UK Pharmacy Patient Group Direction (PGD) consultation tool for hepatitis A and hepatitis B vaccination in travel and lifestyle-risk situations. Twinrix, Havrix, Avaxim and Engerix B with standard, accelerated and very rapid schedules. PGD v006, 11 September 2026.',
+    'UK Pharmacy Patient Group Direction (PGD) consultation tool for hepatitis A and hepatitis B vaccination in travel and lifestyle-risk situations. Twinrix, Havrix, Avaxim and Engerix B with standard, accelerated and very rapid schedules. PGD v007, 11 September 2026.',
 };
 
 export default function HepABPage() {
@@ -28,7 +28,7 @@ export default function HepABPage() {
                 (combined Hep A + Hep B), Havrix and Avaxim (Hep A) and
                 Engerix B (Hep B) to individuals aged 1 year and over at
                 increased risk through travel or lifestyle, in line with the
-                Hepatitis A and Hepatitis B Vaccination PGD v006, issued
+                Hepatitis A and Hepatitis B Vaccination PGD v007, issued
                 11 September 2026. Supports the standard (0, 1 and 6 months),
                 accelerated (0, 1 and 2 months plus 12 months) and very rapid
                 (0, 7 and 21 days plus 12 months; 18 and over) schedules, and

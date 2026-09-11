@@ -27,7 +27,7 @@ export function validateUTIConsentStep(consent: any): string | null {
 }
 
 export function validateUTISymptomStep(symptoms: UTISymptoms): string | null {
-  // PGD v005 inclusion: two or more of dysuria, new nocturia, frequency, urgency
+  // PGD v006 inclusion: two or more of dysuria, new nocturia, frequency, urgency
   const coreSymptomCount = [
     symptoms.dysuria,
     symptoms.nocturia,
@@ -47,12 +47,12 @@ export function validateUTISymptomStep(symptoms: UTISymptoms): string | null {
 }
 
 export function validateUTIMedicalHistoryStep(medicalHistory: UTIMedicalHistory): string | null {
-  // PGD v005 renal row: the question is asked in set terms and the answer
+  // PGD v006 renal row: the question is asked in set terms and the answer
   // recorded. No default: an unasked question is not a NO.
   if (!medicalHistory.renalImpairment && !medicalHistory.kidneyDisease) {
     return "Ask the kidney question in the PGD's words and record the answer (No / Does not know / Yes)";
   }
-  // PGD v005: ask both recurrent UTI questions and record both answers
+  // PGD v006: ask both recurrent UTI questions and record both answers
   if (!medicalHistory.utiEpisodesLast6Months) {
     return "Please record the number of UTI episodes in the last 6 months";
   }
@@ -69,7 +69,7 @@ export function validateUTIObservationsStep(): string | null {
 }
 
 export function validateUTIRedFlagsStep(symptoms: UTISymptoms): string | null {
-  // PGD v005: the record must show the Appendix 1 red flags were asked about
+  // PGD v006: the record must show the Appendix 1 red flags were asked about
   if (!symptoms.redFlagsAsked) {
     return "Confirm the Appendix 1 red flags have been asked about before supplying anything";
   }

@@ -1,5 +1,5 @@
 // ─── Postnatal Contraception Clinical Logic ───
-// Postnatal Contraception PGD v004 (11 September 2026): desogestrel 75
+// Postnatal Contraception PGD v005 (11 September 2026): desogestrel 75
 // microgram tablets and Depo-Provera 150 mg/mL injection.
 
 import type { PostnatalContraceptionState } from "./postnatal-contraception-types";

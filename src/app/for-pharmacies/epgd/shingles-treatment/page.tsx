@@ -283,7 +283,7 @@ export default function ShinglesTreatmentPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Shingles Acute Treatment ePGD</h1>
           <p className="text-gray-600 mt-2">
-            Aciclovir, valaciclovir or famciclovir for adults aged 18 and over. Shingles (Herpes Zoster) Treatment PGD, version 005, issued 11 September 2026.
+            Aciclovir, valaciclovir or famciclovir for adults aged 18 and over. Shingles (Herpes Zoster) Treatment PGD, version 006, issued 11 September 2026.
           </p>
         </div>
 

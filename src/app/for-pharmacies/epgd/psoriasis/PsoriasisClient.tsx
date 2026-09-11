@@ -18,7 +18,7 @@ import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 import { PsoriasisSummaryReport } from "./components/PsoriasisSummaryReport";
 
 /**
- * Plaque Psoriasis ePGD, aligned to the Plaque Psoriasis PGD version 004,
+ * Plaque Psoriasis ePGD, aligned to the Plaque Psoriasis PGD version 005,
  * issued 11 September 2026: calcipotriol 50 micrograms/g with betamethasone
  * (as dipropionate) 0.5 mg/g, as ointment, gel, cream or cutaneous foam,
  * once daily for up to 4 weeks, in adults aged 18 and over with STABLE plaque
@@ -27,7 +27,7 @@ import { PsoriasisSummaryReport } from "./components/PsoriasisSummaryReport";
  * course only after GP review; maximum three courses in any 12 months.
  * Erythrodermic, pustular, exfoliative and guttate psoriasis are excluded.
  */
-export const PSORIASIS_PGD_VERSION = "Plaque Psoriasis PGD, version 004, issued 11 September 2026";
+export const PSORIASIS_PGD_VERSION = "Plaque Psoriasis PGD, version 005, issued 11 September 2026";
 
 const STEP_LABELS = ["Patient Details", "Consent", "Assessment & History", "Treatment", "Counselling & Summary"] as const;
 

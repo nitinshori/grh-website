@@ -21,7 +21,7 @@ export default function RabiesPage(): React.ReactNode {
             <p className="text-gray-600 mb-4">PGD Consultation for UK Pharmacies</p>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-900">
-                This ePGD guides pharmacists through safe and effective administration of Rabipur or Verorab by the intramuscular route for pre-exposure prophylaxis against rabies. From age 2 years onwards for the conventional course (day 0, 7 and 28); the accelerated course (day 0, 3 and 7) is for adults 18 and over only and is off-label. Pre-exposure only: any exposure that has already occurred is a same-day medical emergency. Rabies Vaccine (Rabipur or Verorab) Pre-exposure Prophylaxis PGD v005, issued 11 September 2026.
+                This ePGD guides pharmacists through safe and effective administration of Rabipur or Verorab by the intramuscular route for pre-exposure prophylaxis against rabies. From age 2 years onwards for the conventional course (day 0, 7 and 28); the accelerated course (day 0, 3 and 7) is for adults 18 and over only and is off-label. Pre-exposure only: any exposure that has already occurred is a same-day medical emergency. Rabies Vaccine (Rabipur or Verorab) Pre-exposure Prophylaxis PGD v006, issued 11 September 2026.
               </p>
             </div>
           </div>

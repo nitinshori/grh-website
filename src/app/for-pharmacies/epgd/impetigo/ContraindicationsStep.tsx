@@ -63,7 +63,7 @@ export function ContraindicationsStep({ alerts, referralReasons }: Contraindicat
 
       {/* Information Panel */}
       <div className="bg-gray-50 border border-gray-200 rounded p-4">
-        <h3 className="font-semibold text-gray-900 mb-3">Refer, do not supply (Impetigo PGD v008)</h3>
+        <h3 className="font-semibold text-gray-900 mb-3">Refer, do not supply (Impetigo PGD v009)</h3>
         <ul className="space-y-2 text-sm text-gray-700">
           {[
             'Systemically unwell: fever, malaise, lymphadenopathy, or appearing unwell (same day)',

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import EarInfectionClient from "./EarInfectionClient";
 import { PgdPageActions } from "@/components/PgdPageActions";
-export const metadata: Metadata = { title: "Acute Otitis Externa ePGD Consultation", description: "Digital consultation tool for acute otitis externa: ciprofloxacin 2mg/ml ear drops or dexamethasone, neomycin and acetic acid ear spray under Patient Group Direction (version 005, 11 September 2026)." };
+export const metadata: Metadata = { title: "Acute Otitis Externa ePGD Consultation", description: "Digital consultation tool for acute otitis externa: ciprofloxacin 2mg/ml ear drops or dexamethasone, neomycin and acetic acid ear spray under Patient Group Direction (version 006, 11 September 2026)." };
 export default function Page() {
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -18,7 +18,7 @@ export default function Page() {
             For registered pharmacy professionals only
           </p>
           <h1 className="text-2xl sm:text-3xl font-bold text-navy-900">Acute Otitis Externa: PGD Consultation</h1>
-          <p className="text-sm text-gray-500 mt-1">Ciprofloxacin 2mg/ml single-dose ear drops, or dexamethasone with neomycin and acetic acid ear spray. Otitis externa only; otoscopy required. PGD version 005, issued 11 September 2026.</p>
+          <p className="text-sm text-gray-500 mt-1">Ciprofloxacin 2mg/ml single-dose ear drops, or dexamethasone with neomycin and acetic acid ear spray. Otitis externa only; otoscopy required. PGD version 006, issued 11 September 2026.</p>
         </div>
         <EarInfectionClient />
         <div className="mt-8 text-center">

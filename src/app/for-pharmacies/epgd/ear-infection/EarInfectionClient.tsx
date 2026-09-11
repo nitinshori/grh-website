@@ -24,13 +24,13 @@ function calculateAgeMonths(dob: string): number | null {
 
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 
-// Aligned to the signed PGD version 005, issued 11 September 2026: Acute
+// Aligned to the signed PGD version 006, issued 11 September 2026: Acute
 // Otitis Externa. Two products: ciprofloxacin 2mg/ml single-dose ear drops
 // (from 1 year, preferred) and dexamethasone with neomycin and acetic acid
 // ear spray (from 2 years, not in pregnancy). Otoscopy is required; the
 // tympanic membrane must be seen and recorded as intact before either is
 // supplied. One course per episode.
-const PGD_STRAPLINE = "Acute Otitis Externa PGD version 005, issued 11 September 2026";
+const PGD_STRAPLINE = "Acute Otitis Externa PGD version 006, issued 11 September 2026";
 
 type Product = "" | "ciprofloxacin" | "spray";
 

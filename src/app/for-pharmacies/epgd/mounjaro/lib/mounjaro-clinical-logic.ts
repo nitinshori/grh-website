@@ -3,7 +3,7 @@ import { DOSE_BY_STAGE } from "./mounjaro-types";
 import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
 
 // Alerts follow the Mounjaro (tirzepatide) Injection for weight management PGD,
-// version 007, issued 11 September 2026. "stop" = exclusion criterion (do not
+// version 008, issued 11 September 2026. "stop" = exclusion criterion (do not
 // supply, refer); "caution" = caution row; "red-flag" = monitoring point.
 
 export function getAllAlerts(state: MounjaroConsultationState): ClinicalAlert[] {
@@ -343,7 +343,7 @@ export function getAllAlerts(state: MounjaroConsultationState): ClinicalAlert[] 
       code: "LESS_THAN_5_PERCENT",
       message: "Less than 5% of initial body weight lost after 6 months on the maximum tolerated dose",
       detail:
-        "PGD v007 monitoring row: a decision is required on whether to continue treatment, taking into account the benefit-risk profile in this patient. Record the decision and the reasoning before any further supply.",
+        "PGD v008 monitoring row: a decision is required on whether to continue treatment, taking into account the benefit-risk profile in this patient. Record the decision and the reasoning before any further supply.",
     });
   }
 
@@ -412,7 +412,7 @@ export function hasHardStops(alerts: ClinicalAlert[]): boolean {
 }
 
 export function calculateDoseRecommendation(state: MounjaroConsultationState): DoseRecommendation | null {
-  // Mounjaro titration schedule (PGD v007): 2.5 mg for 4 weeks, then 5 mg; further
+  // Mounjaro titration schedule (PGD v008): 2.5 mg for 4 weeks, then 5 mg; further
   // 2.5 mg increases after a minimum of 4 weeks on the current dose if required
   // and tolerated. Maintenance doses 5 mg, 10 mg or 15 mg. Maximum 15 mg once weekly.
   const doseStages = [

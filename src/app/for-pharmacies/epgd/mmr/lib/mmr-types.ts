@@ -24,13 +24,13 @@ export interface MMREligibility {
   noPriorTwoDoses: boolean;
   healthcareWorker: boolean;
   travelToEndemicArea: boolean;
-  /** PGD v004: "or where protection is otherwise required" (students, outbreak contacts). */
+  /** PGD v005: "or where protection is otherwise required" (students, outbreak contacts). */
   protectionOtherwiseRequired: boolean;
-  /** PGD v004 inclusion: NHS-eligible children must be told the vaccine is free from their GP before any private supply; record that this was done. */
+  /** PGD v005 inclusion: NHS-eligible children must be told the vaccine is free from their GP before any private supply; record that this was done. */
   nhsFreeOfferTold: boolean;
 }
 
-/** PGD v004 consent block: under 16, record who consented and on what basis. */
+/** PGD v005 consent block: under 16, record who consented and on what basis. */
 export interface MMRConsentBasis {
   basis: "" | "parental" | "gillick";
   parentName: string;
@@ -44,23 +44,23 @@ export interface MMRMedicalHistory {
   anaphylaxisNeomycin: boolean;
   anaphylaxisGelatin: boolean;
   anaphylaxisEgg: boolean;
-  /** Known hypersensitivity to any other component of the vaccine (PGD v004 exclusion). */
+  /** Known hypersensitivity to any other component of the vaccine (PGD v005 exclusion). */
   hypersensitivityOtherComponent: boolean;
-  /** Anaphylaxis to a previous measles, mumps or rubella containing vaccine (PGD v004 exclusion). */
+  /** Anaphylaxis to a previous measles, mumps or rubella containing vaccine (PGD v005 exclusion). */
   anaphylaxisPreviousMMR: boolean;
-  /** Blood dyscrasias, leukaemia, lymphoma or other malignant neoplasm of the haematopoietic or lymphatic system (PGD v004 exclusion). */
+  /** Blood dyscrasias, leukaemia, lymphoma or other malignant neoplasm of the haematopoietic or lymphatic system (PGD v005 exclusion). */
   haematologicalMalignancy: boolean;
-  /** Family history of congenital or hereditary immunodeficiency, immune competence not demonstrated (PGD v004 exclusion). */
+  /** Family history of congenital or hereditary immunodeficiency, immune competence not demonstrated (PGD v005 exclusion). */
   familyImmunodeficiency: boolean;
-  /** Active untreated tuberculosis (PGD v004 exclusion). */
+  /** Active untreated tuberculosis (PGD v005 exclusion). */
   activeUntreatedTB: boolean;
-  /** Yellow fever or varicella vaccine within the previous 4 weeks (PGD v004 exclusion: defer). */
+  /** Yellow fever or varicella vaccine within the previous 4 weeks (PGD v005 exclusion: defer). */
   liveVaccineLast4Weeks: boolean;
   severeFebrilIllness: boolean;
   recentBloodProducts: boolean;
-  /** PGD v004 caution: record which applied when blood products or immunoglobulin were given in the previous 3 months. */
+  /** PGD v005 caution: record which applied when blood products or immunoglobulin were given in the previous 3 months. */
   bloodProductsAction: "" | "deferred" | "given-repeat-3-months";
-  /** PGD v004 caution: children with a history of thrombocytopenia or febrile seizures. */
+  /** PGD v005 caution: children with a history of thrombocytopenia or febrile seizures. */
   thrombocytopeniaOrFebrileSeizures: boolean;
 }
 
@@ -74,11 +74,11 @@ export interface MMRVaccineAdmin {
   /** Route actually used. The PGD authorises subcutaneous only. */
   route: "" | "subcutaneous" | "intramuscular";
   administeredBy: string;
-  /** Dose number (1 or 2), PGD v004 records row. */
+  /** Dose number (1 or 2), PGD v005 records row. */
   doseNumber: "" | "1" | "2";
   /** Date of the previous MMR dose, used to check the 4 week (3 month under 18 months) interval. */
   previousDoseDate: string;
-  /** Date the next dose is due, PGD v004 records row. */
+  /** Date the next dose is due, PGD v005 records row. */
   nextDoseDue: string;
 }
 
@@ -100,7 +100,7 @@ export interface MMRCounselling {
   autismMythDebunked: boolean;
   sideEffectsExplained: boolean;
   reviewScheduleAdvice: boolean;
-  /** Patient information leaflet supplied (PGD v004 patient information row). */
+  /** Patient information leaflet supplied (PGD v005 patient information row). */
   pilSupplied: boolean;
 }
 

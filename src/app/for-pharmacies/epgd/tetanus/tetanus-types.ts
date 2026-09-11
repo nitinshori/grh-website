@@ -1,6 +1,6 @@
 // Tetanus, Diphtheria and Polio ePGD: clinical state shared by the client and the printed record.
 
-export const PGD_VERSION = "Tetanus, Diphtheria and Polio (Revaxis, Td/IPV) PGD v008, issued 11 September 2026";
+export const PGD_VERSION = "Tetanus, Diphtheria and Polio (Revaxis, Td/IPV) PGD v009, issued 11 September 2026";
 
 export const STEP_LABELS = [
   "Patient Details",

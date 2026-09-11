@@ -15,7 +15,7 @@ import { ClinicalAlert } from '../../shared/types';
 import { calculateAge } from '../../shared/types';
 import { getTreatmentWindow, describeTreatmentWindow } from '../shingles-clinical-logic';
 
-const PGD_VERSION_LINE = 'Shingles (Herpes Zoster) Treatment PGD, version 005, issued 11 September 2026';
+const PGD_VERSION_LINE = 'Shingles (Herpes Zoster) Treatment PGD, version 006, issued 11 September 2026';
 
 interface SummaryStepProps {
   summary: ShinglesSummary;
@@ -273,7 +273,7 @@ export const SummaryStep: React.FC<SummaryStepProps> = ({
 
       {/* Safety netting and patient information, from the PGD */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 print:hidden">
-        <h3 className="font-semibold text-blue-900 mb-3">Safety netting and patient information (PGD v005)</h3>
+        <h3 className="font-semibold text-blue-900 mb-3">Safety netting and patient information (PGD v006)</h3>
         <ul className="text-sm text-blue-800 space-y-2 list-disc list-inside">
           <li>Give the patient the manufacturer&apos;s patient information leaflet.</li>
           <li>Explain the dosing schedule clearly and, for aciclovir, that five doses a day is demanding and the course will not work well if doses are missed.</li>

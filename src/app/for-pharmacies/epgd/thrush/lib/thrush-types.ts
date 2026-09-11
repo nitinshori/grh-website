@@ -73,7 +73,7 @@ export interface ThrushCounselling {
 }
 
 export const PGD_VERSION_LABEL =
-  "Vaginal Thrush PGD (fluconazole 150 mg capsule / clotrimazole 500 mg pessary), version 003, issued 11 September 2026";
+  "Vaginal Thrush PGD (fluconazole 150 mg capsule / clotrimazole 500 mg pessary), version 004, issued 11 September 2026";
 
 export interface ThrushConsultationState {
   currentStep: number;

@@ -1,4 +1,4 @@
-// ─── Asthma Rescue Clinical Logic (PGD v005, 11 September 2026) ───
+// ─── Asthma Rescue Clinical Logic (PGD v006, 11 September 2026) ───
 
 import type { AsthmaConsultationState } from "./asthma-types";
 import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";

@@ -30,7 +30,7 @@ export function PESummaryReport({ state, alerts }: PESummaryReportProps) {
           Premature Ejaculation, Dapoxetine Consultation
         </h2>
         <p className="text-xs text-gray-500 mt-1">
-          ePGD Consultation Record. Dapoxetine 30mg/60mg tablets (Priligy) for Premature Ejaculation PGD, version 003, issued 11 September 2026
+          ePGD Consultation Record. Dapoxetine 30mg/60mg tablets (Priligy) for Premature Ejaculation PGD, version 004, issued 11 September 2026
         </p>
       </div>
 
@@ -167,7 +167,7 @@ export function PESummaryReport({ state, alerts }: PESummaryReportProps) {
               label="30mg insufficient, 60mg permitted"
               value={state.medicineSupply.mayIncreaseTo60mg ? "Yes" : "No"}
             />
-            <Row label="Supplied under" value="Dapoxetine for Premature Ejaculation PGD v003, 11 September 2026" />
+            <Row label="Supplied under" value="Dapoxetine for Premature Ejaculation PGD v004, 11 September 2026" />
             <Row
               label="Patient understands usage"
               value={state.medicineSupply.understandsUsage ? "Yes" : "No"}
@@ -180,7 +180,7 @@ export function PESummaryReport({ state, alerts }: PESummaryReportProps) {
               label="Dapoxetine supplied"
               value={stopsExist ? "NOT SUPPLIED: exclusion criteria met (see clinical alerts above)" : "No"}
             />
-            <Row label="PGD" value="Dapoxetine for Premature Ejaculation PGD v003, 11 September 2026" />
+            <Row label="PGD" value="Dapoxetine for Premature Ejaculation PGD v004, 11 September 2026" />
           </>
         )}
       </div>

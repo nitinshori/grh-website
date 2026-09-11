@@ -10,7 +10,7 @@ import {
   type PneumococcalMedicalHistoryInput,
 } from './pneumococcal-clinical-logic';
 
-// Aligned to the Pneumovax 23 / Prevenar 13 PGD version 004, issued 11 September 2026.
+// Aligned to the Pneumovax 23 / Prevenar 13 PGD version 005, issued 11 September 2026.
 
 export function validatePneumococcalPatientStep(
   patient: PneumococcalPatientDetails
@@ -102,7 +102,7 @@ export function validatePneumococcalContraindicationsStep(data: {
 
 /**
  * Administration step. Enforces the product-specific exclusions and dose
- * rules in PGD v004 that depend on which vaccine is chosen:
+ * rules in PGD v005 that depend on which vaccine is chosen:
  * Prevenar 13: not after any conjugate vaccine, not with CRM197 hypersensitivity, IM only.
  * Pneumovax 23: at least 8 weeks after a conjugate vaccine; no revaccination
  * except asplenia, splenic dysfunction or CKD after 5 years.

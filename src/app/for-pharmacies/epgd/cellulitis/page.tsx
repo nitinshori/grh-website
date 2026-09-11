@@ -7,7 +7,7 @@ export const metadata = {
     "Patient Group Direction for mild cellulitis (Eron class I) of a limb or the trunk in adults aged 18 and over: flucloxacillin, clarithromycin or doxycycline",
 };
 
-// Dedicated Cellulitis entry for the Cellulitis PGD (version 002, issued
+// Dedicated Cellulitis entry for the Cellulitis PGD (version 003, issued
 // 11 September 2026). This is a DIFFERENT document from the Skin and Soft
 // Tissue Infection PGD: adults 18 and over only, MILD cellulitis (Eron
 // class I) of a limb or the trunk, its own exclusion list and adult sepsis

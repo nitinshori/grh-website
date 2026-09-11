@@ -34,7 +34,7 @@ export function validatePatientDetailsStep(
   if (age < 18)
     return 'This PGD applies to patients aged 18 years or older';
 
-  // PGD v003 records: name, address, date of birth and GP.
+  // PGD v004 records: name, address, date of birth and GP.
   if (!patient.address.trim()) return 'Patient address is required (the PGD requires it to be recorded)';
   if (!patient.gpPractice.trim() && !patient.gpName.trim())
     return 'The patient\'s GP is required: search for the practice, or enter "Not registered" as the GP name';

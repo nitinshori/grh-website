@@ -14,7 +14,7 @@ export default function Page() {
             <span className="text-navy-900 font-medium">Hepatitis B Occupational Vaccine Consultation ePGD</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-navy-900">Hepatitis B Occupational Vaccine, PGD Consultation</h1>
-          <p className="text-sm text-gray-500 mt-1">Engerix B 20 micrograms/1 mL or HBvaxPRO 10 micrograms/1 mL, individuals aged 16 years and over at occupational, travel or lifestyle risk. Hepatitis B (Engerix B / HBvaxPRO) PGD v004, issued 11 September 2026.</p>
+          <p className="text-sm text-gray-500 mt-1">Engerix B 20 micrograms/1 mL or HBvaxPRO 10 micrograms/1 mL, individuals aged 16 years and over at occupational, travel or lifestyle risk. Hepatitis B (Engerix B / HBvaxPRO) PGD v005, issued 11 September 2026.</p>
         </div>
         <HepBOccupationalClient />
         <div className="mt-8 text-center">

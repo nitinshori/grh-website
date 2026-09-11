@@ -30,7 +30,7 @@ export function isExpired(expiry: string): boolean {
   return d !== null && daysBetween(todayLocal(), d) < 0;
 }
 
-// ─── Schedules from the signed PGD (v004) ───
+// ─── Schedules from the signed PGD (v005) ───
 // Standard: 0, 1 and 6 months. Accelerated: 0, 1, 2 and 12 months. The
 // guidance summary adds a booster at 5 years for ongoing risk after a
 // standard course.

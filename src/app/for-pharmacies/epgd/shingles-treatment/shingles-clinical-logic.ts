@@ -1,5 +1,5 @@
 // Clinical logic and validation for shingles ePGD
-// Aligned to the Shingles (Herpes Zoster) Treatment PGD, version 005,
+// Aligned to the Shingles (Herpes Zoster) Treatment PGD, version 006,
 // issued 11 September 2026. Aciclovir, valaciclovir or famciclovir, adults
 // 18 and over, immunocompetent or non-severe immunosuppression.
 import { ClinicalAlert } from '../shared/types';
@@ -80,7 +80,7 @@ export function hasHutchinsonSignRisk(dermatome: RashDermatome): boolean {
 }
 
 /**
- * Head or neck involvement, including the face, scalp, ear or eye: refer (PGD v005 red flag).
+ * Head or neck involvement, including the face, scalp, ear or eye: refer (PGD v006 red flag).
  */
 export function isHeadOrNeck(dermatome: RashDermatome): boolean {
   return (

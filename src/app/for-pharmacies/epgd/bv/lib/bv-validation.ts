@@ -5,7 +5,7 @@ import { getMedicineSelectionError, isOralChoice } from "./bv-clinical-logic";
 export function validateStep(step: number, state: BVConsultationState): string | null {
   switch (step) {
     case 0:
-      // PGD v003: women aged 16 to 65 (oral arm); gel arm 18 to 65 is gated at medicine selection
+      // PGD v004: women aged 16 to 65 (oral arm); gel arm 18 to 65 is gated at medicine selection
       return validatePatientStep(state.patient, {
         minAge: 16,
         maxAge: 65,
@@ -31,7 +31,7 @@ export function validateStep(step: number, state: BVConsultationState): string |
     case 5:
       return getMedicineSelectionError(state);
     case 6: {
-      // The document's follow-up advice for the arm supplied (PGD v003,
+      // The document's follow-up advice for the arm supplied (PGD v004,
       // Follow-up advice to be given to patient or carer).
       const c = state.counselling;
       const oral = isOralChoice(state.medicineSelection.medicineChoice);

@@ -3,7 +3,7 @@
 import type { ClinicalAlert } from "../../shared/types";
 import type { STIConsultationState, STITreatmentMedicine } from "./sti-types";
 
-// ─── Age and safeguarding (PGD v002, both arms) ───
+// ─── Age and safeguarding (PGD v003, both arms) ───
 
 /** All five Fraser limbs recorded individually. */
 export function fraserAllLimbs(state: STIConsultationState): boolean {
@@ -63,7 +63,7 @@ export function getAgeAlerts(state: STIConsultationState): ClinicalAlert[] {
   return alerts;
 }
 
-// ─── Chlamydia treatment exclusions (PGD v002) ───
+// ─── Chlamydia treatment exclusions (PGD v003) ───
 
 export function getTreatmentAlerts(state: STIConsultationState): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];

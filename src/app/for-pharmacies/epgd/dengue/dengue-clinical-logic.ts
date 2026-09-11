@@ -1,11 +1,11 @@
-// Aligned to the Qdenga (TAK-003) Dengue PGD, version 005, issued 11 September 2026.
+// Aligned to the Qdenga (TAK-003) Dengue PGD, version 006, issued 11 September 2026.
 import { ClinicalAlert } from '../shared/types';
 import {
   DengueScreening,
   DengueContraindications,
 } from './dengue-types';
 
-export const DENGUE_PGD_VERSION = 'Qdenga (TAK-003) Dengue PGD v005, issued 11 September 2026';
+export const DENGUE_PGD_VERSION = 'Qdenga (TAK-003) Dengue PGD v006, issued 11 September 2026';
 
 /** Temperature at or above which the tool treats the patient as having an acute fever (exclusion). */
 export const FEVER_THRESHOLD_C = 38.0;
@@ -29,7 +29,7 @@ export function evaluateDengueContraindications(
     ageAppropriate: patientAge >= 18,
   };
 
-  // Hard stop: age under 18 (PGD v005 exclusion)
+  // Hard stop: age under 18 (PGD v006 exclusion)
   if (patientAge < 18) {
     alerts.push({
       severity: 'stop',
@@ -98,7 +98,7 @@ export function evaluateDengueContraindications(
     });
   }
 
-  // Hard stop: immune deficiency of any cause (PGD v005: no immunocompromised group is vaccinated under this PGD)
+  // Hard stop: immune deficiency of any cause (PGD v006: no immunocompromised group is vaccinated under this PGD)
   if (screening.immunosuppressed) {
     contraindications.immunosuppressed = true;
     alerts.push({

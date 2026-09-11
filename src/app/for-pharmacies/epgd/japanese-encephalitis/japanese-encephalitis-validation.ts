@@ -28,7 +28,7 @@ export function validatePatientDetails(
     errors.push('Date of birth is required');
   }
 
-  // Age gate per PGD v005: aged 2 months or over, no upper limit
+  // Age gate per PGD v006: aged 2 months or over, no upper limit
   const ageInMonths = calculateAgeInMonths(patient.dateOfBirth);
   if (ageInMonths !== null && ageInMonths < 2) {
     errors.push('This PGD applies to individuals aged 2 months or over');

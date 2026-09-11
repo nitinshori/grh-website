@@ -1,9 +1,9 @@
 // ─── Hair Loss (Finasteride) Clinical Logic ───
-// Aligned to the Finasteride (Androgenetic Alopecia) PGD, version 002,
+// Aligned to the Finasteride (Androgenetic Alopecia) PGD, version 003,
 // issued 11 September 2026. One document serves both the 'hair-loss' and
 // 'alopecia-minoxidil' catalogue entries.
 
-export const PGD_STRAPLINE = "Finasteride 1 mg (Androgenetic Alopecia) PGD, version 002, issued 11 September 2026";
+export const PGD_STRAPLINE = "Finasteride 1 mg (Androgenetic Alopecia) PGD, version 003, issued 11 September 2026";
 
 import type { ClinicalAlert, DoseRecommendation, AlertSeverity } from "../../shared/types";
 import type { HLConsultationState } from "./hair-loss-types";

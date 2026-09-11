@@ -7,7 +7,7 @@ import type { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/
 export interface ECPatientDetails extends BasePatientDetails {
   femaleConfirmed: boolean; // must confirm female
   fraserCompetent?: boolean; // required for ages 13-15
-  // PGD v003 (11 September 2026) safeguarding. Under 13: the document says
+  // PGD v004 (11 September 2026) safeguarding. Under 13: the document says
   // supply may still be appropriate with a mandatory safeguarding referral;
   // this tool refuses supply under 13 (Get Real Health service decision,
   // 11 September 2026) and records the same-day and safeguarding referrals.
@@ -21,7 +21,7 @@ export interface ECPatientDetails extends BasePatientDetails {
 }
 
 export const PGD_VERSION_LABEL =
-  "Emergency Contraception PGD (levonorgestrel 1.5 mg, Levonelle / ulipristal acetate 30 mg, ellaOne), version 003, issued 11 September 2026";
+  "Emergency Contraception PGD (levonorgestrel 1.5 mg, Levonelle / ulipristal acetate 30 mg, ellaOne), version 004, issued 11 September 2026";
 
 // ─── Clinical Assessment ───
 

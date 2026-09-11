@@ -35,7 +35,7 @@ import {
 // ─────────────────────────────────────────────────────────────────────────
 // Foundayo (orforglipron) consultation tool.
 //
-// Aligned to PGD v007, issued 11 September 2026 (v002 was reconciled
+// Aligned to PGD v008, issued 11 September 2026 (v002 was reconciled
 // against the UK SPC; v003 widened the concurrent GLP-1 exclusion to any
 // indication; v006 made any sulfonylurea, meglitinide or insulin a blanket
 // exclusion with no GP-monitored route). Two things in here exist because
@@ -69,7 +69,7 @@ const ABOVE_CEILING: string[] = ["14.5", "17.2"];
 
 /** Document: one month of treatment at the current strength per appointment. */
 const MAX_TABLETS_PER_SUPPLY = 30;
-const PGD_VERSION_LINE = "Foundayo PGD v007, issued 11 September 2026";
+const PGD_VERSION_LINE = "Foundayo PGD v008, issued 11 September 2026";
 
 interface FoundayoState {
   currentStep: number;
@@ -1658,7 +1658,7 @@ export function FoundayoClient() {
             <div className="border-t border-gray-200 pt-6">
               <p className="text-sm text-gray-600 mb-4">
                 Record will be saved with PGD slug <code>foundayo</code>, against
-                document version v007 (issued 11 September 2026). Supplied via PGD.
+                document version v008 (issued 11 September 2026). Supplied via PGD.
               </p>
               <div className="p-4 bg-gray-50 rounded-md text-xs space-y-2">
                 <div><strong>Patient:</strong> {state.patient.firstName} {state.patient.lastName} ({state.patient.dateOfBirth})</div>

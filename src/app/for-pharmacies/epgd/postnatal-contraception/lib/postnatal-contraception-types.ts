@@ -13,13 +13,13 @@ import {
 
 // ─── Postnatal Contraception-Specific Types ───
 
-// Postnatal Contraception PGD v004 (11 September 2026). Two arms:
+// Postnatal Contraception PGD v005 (11 September 2026). Two arms:
 // desogestrel 75 microgram tablets (women 16 and over, any time postpartum)
 // and medroxyprogesterone acetate 150 mg/mL injection, Depo-Provera (women
 // 18 and over; from 6 weeks if breastfeeding, from 21 days if not
 // breastfeeding and no additional VTE risk factor).
 export const PGD_VERSION_LABEL =
-  "Postnatal Contraception PGD (desogestrel 75 micrograms / Depo-Provera 150 mg), version 004, issued 11 September 2026";
+  "Postnatal Contraception PGD (desogestrel 75 micrograms / Depo-Provera 150 mg), version 005, issued 11 September 2026";
 
 export type PostnatalMedicineChoice = "" | "desogestrel" | "depo-provera";
 

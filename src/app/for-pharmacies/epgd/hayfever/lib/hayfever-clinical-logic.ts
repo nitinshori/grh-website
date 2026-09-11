@@ -1,6 +1,6 @@
 // ─── Hayfever Clinical Logic ───
 // Aligned to the Fexofenadine and/or Dymista Allergic Rhinitis PGD,
-// version 003, issued 11 September 2026.
+// version 004, issued 11 September 2026.
 
 import type { HayfeverConsultationState } from "./hayfever-types";
 import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";

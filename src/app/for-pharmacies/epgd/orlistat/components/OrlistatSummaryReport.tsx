@@ -21,7 +21,7 @@ export function OrlistatSummaryReport({ state }: { state: OrlistatConsultationSt
         </h2>
         <p className="text-xs text-gray-500">Lipase inhibitor for weight management</p>
         <p className="text-xs text-gray-500">
-          Orlistat 120mg capsules PGD, version 002, issued 11 September 2026
+          Orlistat 120mg capsules PGD, version 003, issued 11 September 2026
         </p>
       </div>
 

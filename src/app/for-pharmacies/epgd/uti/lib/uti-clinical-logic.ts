@@ -8,7 +8,7 @@ import type {
 } from "./uti-types";
 
 // ─── Clinical Logic for UTI Consultation ───
-// Aligned to the UTI in Women aged 16 to 64 PGD, version 005, issued
+// Aligned to the UTI in Women aged 16 to 64 PGD, version 006, issued
 // 11 September 2026. Nitrofurantoin is first line; trimethoprim only where
 // nitrofurantoin is unsuitable and the reason is recorded.
 
@@ -97,7 +97,7 @@ export function getUTIClinicalAlerts(
       code: "SINGLE_SYMPTOM",
       message: "Only one core urinary symptom present",
       detail:
-        "PGD v005 requires two or more of: dysuria, new nocturia, urinary frequency or urgency. Where only one symptom is present, refer rather than supply.",
+        "PGD v006 requires two or more of: dysuria, new nocturia, urinary frequency or urgency. Where only one symptom is present, refer rather than supply.",
     });
   }
 
@@ -167,7 +167,7 @@ export function getUTIClinicalAlerts(
     });
   }
 
-  // "Previous UTI within 4 weeks" is not an exclusion in PGD v005, which
+  // "Previous UTI within 4 weeks" is not an exclusion in PGD v006, which
   // defines recurrence by the 6 and 12 month counts. The answer is recorded
   // and shown as a caution so the pharmacist checks the counts, nothing more.
   if (medicalHistory.previousUTIWithin4Weeks) {
@@ -285,7 +285,7 @@ export function getUTIClinicalAlerts(
     });
   }
 
-  // Renal function under PGD v005.
+  // Renal function under PGD v006.
   //
   // The PGD asks a question that can be answered at the counter: "Have you
   // ever been told you have kidney disease, or that your kidneys do not work
@@ -328,14 +328,14 @@ export function getUTIClinicalAlerts(
       code: "RENAL_UNKNOWN_OLDER",
       message: "Aged 60 to 64: excluded by the renal row",
       detail:
-        "PGD v005: answer NO but aged 60 to 64, or the patient does not know: EXCLUDE. Refer for a renal function check first. The document gives no route back to pharmacy supply on a seen result.",
+        "PGD v006: answer NO but aged 60 to 64, or the patient does not know: EXCLUDE. Refer for a renal function check first. The document gives no route back to pharmacy supply on a seen result.",
     });
   } else if (patient.age !== null && patient.age < 60 && medicalHistory.renalImpairment === "unknown") {
     alerts.push({
       severity: "stop",
       code: "RENAL_UNKNOWN",
       message: "Patient does not know whether they have kidney disease",
-      detail: "PGD v005 renal row: the patient does not know: EXCLUDE. Refer for a renal function check first.",
+      detail: "PGD v006 renal row: the patient does not know: EXCLUDE. Refer for a renal function check first.",
     });
   }
 
@@ -489,7 +489,7 @@ export function getDoseRecommendation(
 }
 
 export function getMedicineQuantity(medicine: string, duration: string): number {
-  // PGD v005: one 3 day course, 6 capsules or 6 tablets. No repeat supply.
+  // PGD v006: one 3 day course, 6 capsules or 6 tablets. No repeat supply.
   void medicine;
   void duration;
   return 6;

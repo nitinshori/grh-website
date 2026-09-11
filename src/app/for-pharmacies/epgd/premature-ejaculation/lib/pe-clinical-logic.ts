@@ -54,7 +54,7 @@ export function getAllAlerts(state: PEConsultationState): ClinicalAlert[] {
       severity: "stop",
       code: "PE_QT",
       message: "Conduction abnormality or a condition that prolongs the QT interval is an exclusion",
-      detail: "PGD v003. Do not supply. Refer.",
+      detail: "PGD v004. Do not supply. Refer.",
     });
   }
 
@@ -63,7 +63,7 @@ export function getAllAlerts(state: PEConsultationState): ClinicalAlert[] {
       severity: "stop",
       code: "PE_IHD",
       message: "History of ischaemic heart disease is an exclusion",
-      detail: "PGD v003. Do not supply. Refer.",
+      detail: "PGD v004. Do not supply. Refer.",
     });
   }
 
@@ -92,7 +92,7 @@ export function getAllAlerts(state: PEConsultationState): ClinicalAlert[] {
       severity: "stop",
       code: "PE_RENAL",
       message: "Moderate or severe renal impairment is an exclusion",
-      detail: "PGD v003. Do not supply. Refer.",
+      detail: "PGD v004. Do not supply. Refer.",
     });
   }
 
@@ -101,7 +101,7 @@ export function getAllAlerts(state: PEConsultationState): ClinicalAlert[] {
       severity: "stop",
       code: "PE_BIPOLAR",
       message: "History of bipolar disorder or mania is an exclusion",
-      detail: "PGD v003. Do not supply. Refer.",
+      detail: "PGD v004. Do not supply. Refer.",
     });
   }
 
@@ -110,7 +110,7 @@ export function getAllAlerts(state: PEConsultationState): ClinicalAlert[] {
       severity: "stop",
       code: "PE_CYP3A4",
       message: "Concurrent potent CYP3A4 inhibitor (ketoconazole, ritonavir, etc.) is an exclusion",
-      detail: "PGD v003. Do not supply.",
+      detail: "PGD v004. Do not supply.",
     });
   }
 
@@ -144,7 +144,7 @@ export function getAllAlerts(state: PEConsultationState): ClinicalAlert[] {
     });
   }
 
-  // Cautions (PGD v003)
+  // Cautions (PGD v004)
   if (state.medicalHistory.mildHepaticImpairment) {
     alerts.push({ severity: "caution", code: "PE_LIVER_MILD", message: "Mild hepatic impairment (Child-Pugh class A): use with caution", detail: "Moderate or severe impairment excludes." });
   }
@@ -171,7 +171,7 @@ export function getAllAlerts(state: PEConsultationState): ClinicalAlert[] {
   }
 
   // Caution: a previous severe or sudden adverse reaction recorded on the
-  // Contraindications step. Not an exclusion in PGD v003, but it was a field
+  // Contraindications step. Not an exclusion in PGD v004, but it was a field
   // nothing read (adversarial review, 11 Sep 2026).
   if (state.contraindications.hadSevereOrSuddenAE) {
     alerts.push({

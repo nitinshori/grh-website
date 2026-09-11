@@ -877,7 +877,7 @@ export function EDToolClient() {
         )}
         <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-3 space-y-3">
             <div>
-              <p className="text-sm font-semibold text-amber-900">Cardiovascular fitness (PGD v006, Appendix 1). Complete for every patient, at every supply, and record the answers.</p>
+              <p className="text-sm font-semibold text-amber-900">Cardiovascular fitness (PGD v007, Appendix 1). Complete for every patient, at every supply, and record the answers.</p>
               <p className="text-xs text-amber-800 mt-1">Sexual activity carries a cardiac workload comparable to brisk walking or climbing two flights of stairs. Not done, failed, or does not know: do not supply.</p>
             </div>
             <SelectInput
@@ -1072,7 +1072,7 @@ export function EDToolClient() {
             label="🔴 Previous priapism, or an erection lasting more than 4 hours on any previous PDE5 inhibitor"
             checked={state.medicalHistory.priapismHistory}
             onChange={(v) => updateHistory("priapismHistory", v)}
-            description="EXCLUSION under PGD v006"
+            description="EXCLUSION under PGD v007"
           />
           <Checkbox
             label="Suspected hypogonadism"
@@ -1223,7 +1223,7 @@ export function EDToolClient() {
           label="🔴 Known hypersensitivity to sildenafil, tadalafil or any excipient"
           checked={state.medications.hypersensitivityPDE5}
           onChange={(v) => updateMeds("hypersensitivityPDE5", v)}
-          description="EXCLUSION in both arms of PGD v006."
+          description="EXCLUSION in both arms of PGD v007."
         />
       </div>
     );
@@ -1326,7 +1326,7 @@ export function EDToolClient() {
           label="🔴 Erectile dysfunction of sudden onset following trauma, surgery or a new medicine, or accompanied by penile pain or deformity"
           checked={state.redFlags.suddenOnsetSecondaryCause}
           onChange={(v) => updateRedFlags("suddenOnsetSecondaryCause", v)}
-          description="EXCLUSION under PGD v006. Refer for a diagnosis rather than treating the symptom."
+          description="EXCLUSION under PGD v007. Refer for a diagnosis rather than treating the symptom."
         />
         <Checkbox
           label="Pelvic or perineal trauma"

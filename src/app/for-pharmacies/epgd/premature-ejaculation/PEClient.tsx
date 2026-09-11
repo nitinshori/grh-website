@@ -250,7 +250,7 @@ export default function PEClient() {
               onChange={(v) =>
                 dispatch({ type: "UPDATE_CONSENT", field: "writtenConsentObtained", value: v })
               }
-              description="PGD v003 inclusion criterion: the patient has provided informed written consent. Verbal consent alone does not meet it."
+              description="PGD v004 inclusion criterion: the patient has provided informed written consent. Verbal consent alone does not meet it."
             />
           </div>
         );
@@ -326,7 +326,7 @@ export default function PEClient() {
       case 3: // Medical History
         return (
           <div className="space-y-4">
-            <p className="text-sm font-semibold text-red-700">Exclusions (PGD v003). Any one excludes; refer.</p>
+            <p className="text-sm font-semibold text-red-700">Exclusions (PGD v004). Any one excludes; refer.</p>
             <Checkbox
               label="Significant cardiac disorder: NYHA class II to IV heart failure, or significant valvular disease"
               checked={state.medicalHistory.cardiacDisorder}
@@ -406,7 +406,7 @@ export default function PEClient() {
                 })
               }
             />
-            <p className="text-sm font-semibold text-amber-700 pt-2">Cautions (PGD v003)</p>
+            <p className="text-sm font-semibold text-amber-700 pt-2">Cautions (PGD v004)</p>
             <Checkbox
               label="Mild hepatic impairment (Child-Pugh class A)"
               checked={state.medicalHistory.mildHepaticImpairment}
@@ -554,7 +554,7 @@ export default function PEClient() {
         return (
           <div className="space-y-4">
             <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-900">
-              <p className="font-semibold">Dapoxetine 30mg and 60mg tablets (Priligy). PGD v003, 11 September 2026.</p>
+              <p className="font-semibold">Dapoxetine 30mg and 60mg tablets (Priligy). PGD v004, 11 September 2026.</p>
               <p>Starting dose 30mg orally, 1 to 3 hours before anticipated sexual activity. May be increased to 60mg if 30mg is insufficient and well tolerated. Maximum one dose per 24 hours. Not daily. Swallow whole with water, with or without food.</p>
               <p>Up to 6 tablets per supply. Review efficacy and tolerability after 4 weeks (about 6 doses); reassess every 6 months if continuing. Inadequate response after 6 doses at the recommended dose: consider referral to GP or specialist.</p>
             </div>
@@ -672,7 +672,7 @@ export default function PEClient() {
               onChange={(v) =>
                 dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "pilSupplied", value: v })
               }
-              description="Written information row of PGD v003. Required."
+              description="Written information row of PGD v004. Required."
             />
           </div>
         );

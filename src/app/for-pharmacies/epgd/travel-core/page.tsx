@@ -37,7 +37,7 @@ export default function TravelCorePage() {
             Pre-travel risk assessment and administration of Hepatitis A (Havrix/Avaxim), Typhoid (Typhim Vi) and Cholera (Dukoral) vaccines to adults aged 18 and over, with malaria, bite avoidance and food and water advice
           </p>
           <p className="text-xs text-gray-500 mt-1">
-            Travel Health PGD v004, issued 11 September 2026
+            Travel Health PGD v005, issued 11 September 2026
           </p>
         </div>
 
@@ -48,7 +48,7 @@ export default function TravelCorePage() {
             This ePGD is provided as a clinical decision support aid and does
             not replace professional clinical judgement. The pharmacist retains
             full responsibility for each consultation. Based on the Get Real Health
-            Hepatitis A, Typhoid and Cholera Travel Health PGD v004, issued 11 September 2026.
+            Hepatitis A, Typhoid and Cholera Travel Health PGD v005, issued 11 September 2026.
           </p>
         </div>
       </div>

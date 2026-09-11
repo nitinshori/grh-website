@@ -4,7 +4,7 @@ import { bmiGateAppliesToday, isContinuingSupply, getAllowedStages, fivePercentR
 
 export function validateStep(step: number, state: MounjaroConsultationState): string | null {
   switch (step) {
-    case 0: { // Patient Details (PGD v007: adults aged 18 to 75 years inclusive)
+    case 0: { // Patient Details (PGD v008: adults aged 18 to 75 years inclusive)
       const base = validatePatientStep(state.patient, { minAge: 18, maxAge: 75 });
       if (base) return base;
       // Records row: name, address, date of birth and GP
@@ -93,7 +93,7 @@ export function validateStep(step: number, state: MounjaroConsultationState): st
       return null;
     }
 
-    case 7: { // Counselling (PGD v007 cautions, follow-up advice and written information rows)
+    case 7: { // Counselling (PGD v008 cautions, follow-up advice and written information rows)
       const c = state.counselling;
       // Every item that maps to a document row is required; a first
       // injectable supply could be recorded with no injection training

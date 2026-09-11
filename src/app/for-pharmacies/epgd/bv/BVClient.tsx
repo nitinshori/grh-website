@@ -174,7 +174,7 @@ export default function BVClient() {
     getConsultationData,
   };
 
-  // Advice given and decision reached for an excluded patient (PGD v003:
+  // Advice given and decision reached for an excluded patient (PGD v004:
   // Actions if patient is excluded or declines treatment).
   const exclusionOutcomeBlock = hasStops ? (
     <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-3 print:hidden">

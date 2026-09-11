@@ -79,7 +79,7 @@ export function HayfeverSummaryReport({
           Hayfever (Prescription Strength), Consultation Record
         </h2>
         <p className="text-gray-500">Get Real Health ePGD Consultation Tool</p>
-        <p className="text-gray-500">Fexofenadine and/or Dymista for Allergic Rhinitis PGD, version 003, issued 11 September 2026</p>
+        <p className="text-gray-500">Fexofenadine and/or Dymista for Allergic Rhinitis PGD, version 004, issued 11 September 2026</p>
       </div>
 
       {hasStops && (

@@ -39,7 +39,7 @@ import { HepBOccupationalSummaryReport } from "./components/HepBOccupationalSumm
 /**
  * Hepatitis B (Engerix B / HBvaxPRO) ePGD, aligned to the signed document
  * "Patient Group Direction for the administration of Engerix B for vaccination
- * against Hepatitis B" (two arms: Engerix B and HBvaxPRO), PGD version 004,
+ * against Hepatitis B" (two arms: Engerix B and HBvaxPRO), PGD version 005,
  * issued 11 September 2026. Individuals aged 16 years and over; under 16
  * refers. Standard (0, 1, 6 months) and accelerated (0, 1, 2, 12 months)
  * schedules only.

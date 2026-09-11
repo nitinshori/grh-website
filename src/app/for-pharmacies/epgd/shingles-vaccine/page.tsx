@@ -5,7 +5,7 @@ import { PgdPageActions } from "@/components/PgdPageActions";
 export const metadata: Metadata = {
   title: "Shingles Vaccination (Shingrix) Consultation ePGD",
   description:
-    "Digital consultation tool for Shingrix (recombinant zoster vaccine) under Patient Group Direction version 005. Screens for eligibility, assesses contraindications, and provides counselling for adults aged 50 and over.",
+    "Digital consultation tool for Shingrix (recombinant zoster vaccine) under Patient Group Direction version 006. Screens for eligibility, assesses contraindications, and provides counselling for adults aged 50 and over.",
 };
 
 export default function ShinglesToolPage() {
@@ -30,7 +30,7 @@ export default function ShinglesToolPage() {
             Shingles: Shingrix PGD Consultation
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Two doses of 0.5 mL, 2 to 6 months apart, for adults aged 50 and over under the Patient Group Direction (version 005, issued 11 September 2026)
+            Two doses of 0.5 mL, 2 to 6 months apart, for adults aged 50 and over under the Patient Group Direction (version 006, issued 11 September 2026)
           </p>
         </div>
 
@@ -41,7 +41,7 @@ export default function ShinglesToolPage() {
             This ePGD is provided as a clinical decision support aid and does
             not replace professional clinical judgement. The pharmacist retains
             full responsibility for each consultation. Based on UK medicines
-            guidance and the Get Real Health PGD for Shingles Vaccination (Shingrix), version 005, issued 11 September 2026.
+            guidance and the Get Real Health PGD for Shingles Vaccination (Shingrix), version 006, issued 11 September 2026.
           </p>
         </div>
       </div>

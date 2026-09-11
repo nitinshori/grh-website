@@ -4,7 +4,7 @@ import {
   BaseSummary,
 } from '../shared/types';
 
-// Aligned to the Abrysvo / Arexvy RSV PGD version 005, issued 11 September 2026.
+// Aligned to the Abrysvo / Arexvy RSV PGD version 006, issued 11 September 2026.
 
 export interface RSVPatientDetails extends BasePatientDetails {
   patientCategory: 'adult-60-plus' | 'pregnant-woman' | '';
@@ -23,14 +23,14 @@ export interface RSVConsent extends BaseConsent {
   understandsNoBooster: boolean;
   understandsAdverseEvents: boolean;
   understands6MonthsProtection?: boolean;
-  /** PGD v005 consent block, under 16 only: who gave consent. */
+  /** PGD v006 consent block, under 16 only: who gave consent. */
   consentBasis: '' | 'parental' | 'gillick';
   parentName: string;
   parentRelationship: string;
   gillickBasis: string;
 }
 
-/** PGD v005 medical history and exclusion flags. */
+/** PGD v006 medical history and exclusion flags. */
 export interface RSVMedicalHistory {
   anaphylaxisToVaccine: boolean;
   anaphylaxisToVaccineComponent: boolean;
@@ -54,7 +54,7 @@ export interface RSVSummary extends BaseSummary {
   clinicalAlertsCodes: string[];
 }
 
-/** Post-vaccination counselling, observation and adverse reaction record (PGD v005 cautions and records rows). */
+/** Post-vaccination counselling, observation and adverse reaction record (PGD v006 cautions and records rows). */
 export interface RSVPostVaccineAdvice {
   patientAdvised: boolean;
   counselledReactions: boolean;

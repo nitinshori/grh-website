@@ -12,8 +12,8 @@ import { calculateAge, validatePatientStep, validateConsentStep, validateSummary
 import { PrintedRecord } from "./components/PrintedRecord"
 
 // Aligned to: Mysimba (Naltrexone 8mg / Bupropion 90mg) prolonged-release
-// tablets PGD, version 003, issued 11 September 2026.
-const PGD_VERSION_LINE = "Mysimba PGD v003, issued 11 September 2026"
+// tablets PGD, version 004, issued 11 September 2026.
+const PGD_VERSION_LINE = "Mysimba PGD v004, issued 11 September 2026"
 const PRODUCT_NAME = "Mysimba (naltrexone hydrochloride 8 mg / bupropion hydrochloride 90 mg) prolonged-release tablets"
 const DOSE_STAGE_LABELS: Record<string, string> = {
   init: "Titration: week 1 one tablet morning; week 2 one morning and one evening; week 3 two morning and one evening; week 4 two twice daily",

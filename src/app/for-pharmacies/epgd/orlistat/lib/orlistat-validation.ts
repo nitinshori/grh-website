@@ -5,7 +5,7 @@ import { validatePatientStep, validateConsentStep, validateSummaryStep } from ".
 export function validateStep(step: number, state: OrlistatConsultationState): string | null {
   switch (step) {
     case 0:
-      // PGD v002: age 18 years and over and under 75 years.
+      // PGD v003: age 18 years and over and under 75 years.
       return validatePatientStep(state.patient, { minAge: 18, maxAge: 74 });
     case 1:
       return validateConsentStep(state.consent);

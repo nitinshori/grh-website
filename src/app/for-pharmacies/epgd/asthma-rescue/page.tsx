@@ -5,7 +5,7 @@ import { PgdPageActions } from "@/components/PgdPageActions";
 export const metadata: Metadata = {
   title: "Asthma Rescue Consultation ePGD",
   description:
-    "Digital consultation tool for the Asthma Rescue PGD (version 005, 11 September 2026). Guides pharmacists through asthma assessment, observations, acute severe asthma exclusion, and supply of salbutamol 100mcg MDI and prednisolone 5mg tablets for an acute exacerbation of diagnosed asthma under UK Patient Group Direction.",
+    "Digital consultation tool for the Asthma Rescue PGD (version 006, 11 September 2026). Guides pharmacists through asthma assessment, observations, acute severe asthma exclusion, and supply of salbutamol 100mcg MDI and prednisolone 5mg tablets for an acute exacerbation of diagnosed asthma under UK Patient Group Direction.",
 };
 
 export default function AsthmaToolPage() {
@@ -31,7 +31,7 @@ export default function AsthmaToolPage() {
             Asthma Rescue PGD Consultation
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Salbutamol 100mcg MDI and prednisolone 5mg tablets for an acute exacerbation of diagnosed asthma in adults. PGD version 005, issued 11 September 2026.
+            Salbutamol 100mcg MDI and prednisolone 5mg tablets for an acute exacerbation of diagnosed asthma in adults. PGD version 006, issued 11 September 2026.
           </p>
         </div>
 
@@ -44,7 +44,7 @@ export default function AsthmaToolPage() {
             This ePGD is provided as a clinical decision support aid and does
             not replace professional clinical judgement. The pharmacist retains
             full responsibility for each consultation. Based on UK medicines
-            guidance and the Get Real Health PGD for Asthma Rescue, version 005.
+            guidance and the Get Real Health PGD for Asthma Rescue, version 006.
           </p>
         </div>
       </div>

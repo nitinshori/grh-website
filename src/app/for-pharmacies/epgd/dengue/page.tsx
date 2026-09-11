@@ -21,7 +21,7 @@ export default function DenguePage(): React.ReactNode {
             <p className="text-gray-600 mb-4">PGD Consultation for UK Pharmacies</p>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-900">
-                This ePGD guides pharmacists through administration of Qdenga (TAK-003) dengue vaccination under the Patient Group Direction (version 005, issued 11 September 2026) for adults aged 18 years and over travelling to or residing in dengue-endemic areas. Two doses, 3 months apart, subcutaneously. Live vaccine: any immune deficiency, pregnancy and breastfeeding exclude.
+                This ePGD guides pharmacists through administration of Qdenga (TAK-003) dengue vaccination under the Patient Group Direction (version 006, issued 11 September 2026) for adults aged 18 years and over travelling to or residing in dengue-endemic areas. Two doses, 3 months apart, subcutaneously. Live vaccine: any immune deficiency, pregnancy and breastfeeding exclude.
               </p>
             </div>
           </div>

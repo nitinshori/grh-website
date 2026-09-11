@@ -5,7 +5,7 @@ import { FluVaccineAdministration, FluVaccineType, FLU_VACCINES } from '../lib/f
 import { TextInput, SelectInput, Checkbox } from '../../shared/components/FormInputs';
 
 // Aligned to the seasonal influenza vaccines PGD (IIVc, aIIV, IIVr, IIVe), 2026/27 season,
-// version 004, issued 11 September 2026.
+// version 005, issued 11 September 2026.
 
 const INJECTION_SITE_OPTIONS = [
   { value: 'left-deltoid', label: 'Left deltoid (upper arm)' },

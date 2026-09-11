@@ -133,7 +133,7 @@ export const TOTAL_STEPS = STEP_LABELS.length;
 
 /** PGD strapline shown wherever the tool cites its authority. */
 export const CHICKENPOX_PGD_VERSION =
-  "Varivax and Varilrix Chickenpox Vaccination PGD v004, issued 11 September 2026";
+  "Varivax and Varilrix Chickenpox Vaccination PGD v005, issued 11 September 2026";
 
 // ─── Initial State ───
 

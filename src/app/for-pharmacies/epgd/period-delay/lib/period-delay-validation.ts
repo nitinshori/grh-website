@@ -6,7 +6,7 @@ import type { Appendix1Key } from "./period-delay-types";
 export function validateStep(step: number, state: PeriodDelayConsultationState): string | null {
   switch (step) {
     case 0: {
-      // PGD v008: women aged 16 years and over.
+      // PGD v009: women aged 16 years and over.
       const base = validatePatientStep(state.patient, { minAge: 16 });
       if (base) return base;
       if (!state.medicalHistory.femaleConfirmed) return "Please confirm the patient is female";
@@ -55,7 +55,7 @@ export function validateStep(step: number, state: PeriodDelayConsultationState):
       }
       if (a.q3CurrentSmoker === false && a.q3StoppedUnderOneYear === null)
         return "Appendix 1 question 3: ask whether she stopped smoking less than a year ago and record the answer";
-      // PGD v008: measure or ask for height and weight; do not estimate.
+      // PGD v009: measure or ask for height and weight; do not estimate.
       if (state.medicalHistory.heightCm === null || state.medicalHistory.weightKg === null)
         return "Appendix 1 question 4: height and weight are required so that BMI can be calculated and recorded";
       // A blood pressure of 140/90 or above measured today is an exclusion.

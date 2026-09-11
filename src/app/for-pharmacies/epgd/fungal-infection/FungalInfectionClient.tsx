@@ -26,7 +26,7 @@ import { TextInput, Checkbox, SelectInput, TextArea } from "../shared/components
 
 /**
  * Fungal Skin Infection ePGD, aligned to the Miconazole 2% cream / Trimovate
- * cream PGD, version 003, issued 11 September 2026:
+ * cream PGD, version 004, issued 11 September 2026:
  * miconazole 2% cream (P) for superficial fungal skin infection (athlete's
  * foot, ringworm, candidal intertrigo) 16+; Trimovate cream (POM) for inflamed
  * intertrigo, infected eczema or seborrhoeic dermatitis with a suspected
@@ -34,7 +34,7 @@ import { TextInput, Checkbox, SelectInput, TextArea } from "../shared/components
  * is NOT a treatment for any primary fungal, bacterial or viral skin infection.
  */
 
-const PGD_STRAPLINE = "Miconazole 2% cream / Trimovate cream PGD, version 003, issued 11 September 2026";
+const PGD_STRAPLINE = "Miconazole 2% cream / Trimovate cream PGD, version 004, issued 11 September 2026";
 const PRIMARY_FUNGAL = new Set(["athletes-foot", "ringworm", "candidal-intertrigo", "other-superficial"]);
 
 const STEP_LABELS = ["Patient Details", "Consent", "Assessment & History", "Treatment", "Counselling & Summary"] as const;

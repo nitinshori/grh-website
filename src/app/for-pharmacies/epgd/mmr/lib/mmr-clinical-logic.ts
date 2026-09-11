@@ -1,5 +1,5 @@
 // ─── MMR Clinical Logic ───
-// Aligned to the MMRVaxPRO / Priorix PGD version 004, issued 11 September 2026.
+// Aligned to the MMRVaxPRO / Priorix PGD version 005, issued 11 September 2026.
 
 import type { MMRConsultationState } from "./mmr-types";
 import type { ClinicalAlert } from "../../shared/types";
@@ -21,7 +21,7 @@ export function ageInMonths(dob: string, reference?: string): number | null {
 export function getAllAlerts(state: MMRConsultationState): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
 
-  // Age: indicated from 12 months of age (PGD v004 inclusion)
+  // Age: indicated from 12 months of age (PGD v005 inclusion)
   const months = ageInMonths(state.patient.dateOfBirth);
   if (months !== null && months < 12) {
     alerts.push({
@@ -53,7 +53,7 @@ export function getAllAlerts(state: MMRConsultationState): ClinicalAlert[] {
     });
   }
 
-  // Haematological / lymphatic malignancy (PGD v004 exclusion)
+  // Haematological / lymphatic malignancy (PGD v005 exclusion)
   if (state.medicalHistory.haematologicalMalignancy) {
     alerts.push({
       severity: "stop",
@@ -63,7 +63,7 @@ export function getAllAlerts(state: MMRConsultationState): ClinicalAlert[] {
     });
   }
 
-  // Family history of immunodeficiency (PGD v004 exclusion)
+  // Family history of immunodeficiency (PGD v005 exclusion)
   if (state.medicalHistory.familyImmunodeficiency) {
     alerts.push({
       severity: "stop",
@@ -73,7 +73,7 @@ export function getAllAlerts(state: MMRConsultationState): ClinicalAlert[] {
     });
   }
 
-  // Active untreated tuberculosis (PGD v004 exclusion)
+  // Active untreated tuberculosis (PGD v005 exclusion)
   if (state.medicalHistory.activeUntreatedTB) {
     alerts.push({
       severity: "stop",
@@ -83,7 +83,7 @@ export function getAllAlerts(state: MMRConsultationState): ClinicalAlert[] {
     });
   }
 
-  // Yellow fever or varicella vaccine in the previous 4 weeks (PGD v004 exclusion: defer)
+  // Yellow fever or varicella vaccine in the previous 4 weeks (PGD v005 exclusion: defer)
   if (state.medicalHistory.liveVaccineLast4Weeks) {
     alerts.push({
       severity: "stop",
@@ -113,7 +113,7 @@ export function getAllAlerts(state: MMRConsultationState): ClinicalAlert[] {
     });
   }
 
-  // Hypersensitivity to any other component (PGD v004 exclusion)
+  // Hypersensitivity to any other component (PGD v005 exclusion)
   if (state.medicalHistory.hypersensitivityOtherComponent) {
     alerts.push({
       severity: "stop",
@@ -123,7 +123,7 @@ export function getAllAlerts(state: MMRConsultationState): ClinicalAlert[] {
     });
   }
 
-  // Anaphylaxis to a previous MMR-containing vaccine (PGD v004 exclusion)
+  // Anaphylaxis to a previous MMR-containing vaccine (PGD v005 exclusion)
   if (state.medicalHistory.anaphylaxisPreviousMMR) {
     alerts.push({
       severity: "stop",
@@ -157,7 +157,7 @@ export function getAllAlerts(state: MMRConsultationState): ClinicalAlert[] {
     });
   }
 
-  // Acute febrile illness (PGD v004 exclusion: postpone)
+  // Acute febrile illness (PGD v005 exclusion: postpone)
   if (state.medicalHistory.severeFebrilIllness) {
     alerts.push({
       severity: "stop",
@@ -167,7 +167,7 @@ export function getAllAlerts(state: MMRConsultationState): ClinicalAlert[] {
     });
   }
 
-  // Blood products or immunoglobulin in the previous 3 months (PGD v004 caution)
+  // Blood products or immunoglobulin in the previous 3 months (PGD v005 caution)
   if (state.medicalHistory.recentBloodProducts) {
     const which =
       state.medicalHistory.bloodProductsAction === "deferred"
@@ -184,7 +184,7 @@ export function getAllAlerts(state: MMRConsultationState): ClinicalAlert[] {
     });
   }
 
-  // Thrombocytopenia or febrile seizures (PGD v004 caution)
+  // Thrombocytopenia or febrile seizures (PGD v005 caution)
   if (state.medicalHistory.thrombocytopeniaOrFebrileSeizures) {
     alerts.push({
       severity: "caution",

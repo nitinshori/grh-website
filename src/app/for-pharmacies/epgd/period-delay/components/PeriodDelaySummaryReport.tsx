@@ -29,7 +29,7 @@ export function PeriodDelaySummaryReport({ state }: { state: PeriodDelayConsulta
     <div className="space-y-4 print:text-xs print:space-y-2">
       <div className="border-b-2 border-navy-900 pb-2 mb-4">
         <h2 className="text-lg font-bold text-navy-900 print:text-base">Period Delay ePGD Consultation Record</h2>
-        <p className="text-xs text-gray-500">Period Delay (Norethisterone) PGD, version 008, issued 11 September 2026. Norethisterone 5mg tablets, short-term delay of menstruation</p>
+        <p className="text-xs text-gray-500">Period Delay (Norethisterone) PGD, version 009, issued 11 September 2026. Norethisterone 5mg tablets, short-term delay of menstruation</p>
       </div>
       <SectionHeader>Patient Details</SectionHeader>
       <div className="space-y-1.5">
@@ -125,7 +125,7 @@ export function PeriodDelaySummaryReport({ state }: { state: PeriodDelayConsulta
           <Row label="Tablets supplied" value={days !== null ? `${Math.min(days, MAX_TREATMENT_DAYS) * 3} x norethisterone 5mg tablets` : "Not recorded"} />
           <Row label="Dosing Regimen" value={state.doseRecommendation.dosingRegimen || "Not recorded"} />
           <Row label="Date of supply" value={`${state.summary.consultationDate} ${state.summary.consultationTime}`.trim()} />
-          <Row label="Supplied under" value="Period Delay (Norethisterone) PGD v008, 11 September 2026" />
+          <Row label="Supplied under" value="Period Delay (Norethisterone) PGD v009, 11 September 2026" />
         </div>
       ) : (
         <div className="space-y-1.5">
@@ -154,7 +154,7 @@ export function PeriodDelaySummaryReport({ state }: { state: PeriodDelayConsulta
         </>
       )}
       {supplied ? (
-        <PharmacistDeclaration pgdName="Period Delay (Norethisterone) PGD v008" pharmacistName={state.summary.pharmacistName} pharmacistGPhC={state.summary.pharmacistGPhC} pharmacyName={state.summary.pharmacyName} />
+        <PharmacistDeclaration pgdName="Period Delay (Norethisterone) PGD v009" pharmacistName={state.summary.pharmacistName} pharmacistGPhC={state.summary.pharmacistGPhC} pharmacyName={state.summary.pharmacyName} />
       ) : (
         <>
           <SectionHeader>Practitioner</SectionHeader>
@@ -166,7 +166,7 @@ export function PeriodDelaySummaryReport({ state }: { state: PeriodDelayConsulta
           </div>
         </>
       )}
-      <ReportFooter pgdName="Period Delay (Norethisterone) v008" />
+      <ReportFooter pgdName="Period Delay (Norethisterone) v009" />
     </div>
   );
 }

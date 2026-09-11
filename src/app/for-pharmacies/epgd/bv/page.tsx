@@ -13,7 +13,7 @@ export default function BVPage() {
         <PgdPageActions />
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-navy-900 mb-2">Bacterial Vaginosis Consultation</h1>
-          <p className="text-gray-600">Treatment of uncomplicated bacterial vaginosis in non-pregnant women (oral metronidazole 400 mg, 16 to 65; metronidazole 0.75% vaginal gel, 18 to 65). PGD version 003, issued 11 September 2026.</p>
+          <p className="text-gray-600">Treatment of uncomplicated bacterial vaginosis in non-pregnant women (oral metronidazole 400 mg, 16 to 65; metronidazole 0.75% vaginal gel, 18 to 65). PGD version 004, issued 11 September 2026.</p>
         </div>
         <BVClient />
       </div>

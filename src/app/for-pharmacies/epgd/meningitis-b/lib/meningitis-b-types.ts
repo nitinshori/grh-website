@@ -14,7 +14,7 @@ import {
 // ─── Meningitis B-Specific Types ───
 
 /**
- * Indication and exclusion questions. PGD v004: the indications are missed
+ * Indication and exclusion questions. PGD v005: the indications are missed
  * routine doses or presenting outside the NHS programme, an adolescent or
  * student seeking protection, or an adult at increased risk. A case, contact
  * or outbreak is managed by the Health Protection Team and is an exclusion;
@@ -149,7 +149,7 @@ export const TOTAL_STEPS = STEP_LABELS.length;
 
 /** PGD strapline shown wherever the tool cites its authority. */
 export const MENB_PGD_VERSION =
-  "Meningococcal group B vaccine (Bexsero and Trumenba) PGD v004, issued 11 September 2026";
+  "Meningococcal group B vaccine (Bexsero and Trumenba) PGD v005, issued 11 September 2026";
 
 // ─── Initial State ───
 

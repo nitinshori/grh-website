@@ -1,10 +1,10 @@
 // Aligned to the Metronidazole gel or Azelaic acid (Rosacea) PGD,
-// version 003, issued 11 September 2026.
+// version 004, issued 11 September 2026.
 
 import type { ClinicalAlert } from "../../shared/types";
 import type { RosaceaAssessment, RosaceaContraindications, RosaceaTreatment } from "./rosacea-types";
 
-export const PGD_STRAPLINE = "Metronidazole gel or Azelaic acid (Rosacea) PGD, version 003, issued 11 September 2026";
+export const PGD_STRAPLINE = "Metronidazole gel or Azelaic acid (Rosacea) PGD, version 004, issued 11 September 2026";
 
 export const PRODUCT_DETAILS: Record<string, { label: string; strength: string; frequency: string; duration: string; quantity: string; maxSupplies: number; courseWeeks: number; brandExamples: string; notes: string[] }> = {
   metronidazole: {

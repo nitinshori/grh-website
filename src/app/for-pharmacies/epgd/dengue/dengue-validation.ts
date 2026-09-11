@@ -29,7 +29,7 @@ export function validatePatientDetails(
     errors.push('Date of birth is required');
   }
 
-  // Age gate per signed PGD (v005): adults 18+. Recomputed from the DOB so a
+  // Age gate per signed PGD (v006): adults 18+. Recomputed from the DOB so a
   // blank or stale age can never pass.
   const age = patient.dateOfBirth ? calculateAge(patient.dateOfBirth) : null;
   if (patient.dateOfBirth && age === null) {
@@ -41,7 +41,7 @@ export function validatePatientDetails(
   if (!patient.nhsNumber?.trim()) {
     errors.push('NHS number is required');
   }
-  // PGD v005 records: name, address, date of birth and GP.
+  // PGD v006 records: name, address, date of birth and GP.
   if (!patient.address?.trim()) {
     errors.push('Patient address is required (the PGD requires it to be recorded)');
   }

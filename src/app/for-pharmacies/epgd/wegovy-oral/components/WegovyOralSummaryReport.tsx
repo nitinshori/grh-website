@@ -18,7 +18,7 @@ import {
 // or "not supplied", batch, advice given, pharmacist and declaration.
 
 const PGD_VERSION_LABEL =
-  "Wegovy (semaglutide) Tablets PGD version 010, issued 11 September 2026";
+  "Wegovy (semaglutide) Tablets PGD version 011, issued 11 September 2026";
 
 const PRODUCT_LABEL: Record<string, string> = {
   "wegovy-oral-1.5": "Wegovy (semaglutide) 1.5 mg tablets",

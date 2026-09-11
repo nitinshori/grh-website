@@ -12,7 +12,7 @@ export interface HayfeverAssessment {
   seasonalOrPerennial: string; // "seasonal" | "perennial" | "both"
   previousOTCUse: string;
   symptomDuration: string;
-  /** PGD v003 fexofenadine inclusion: previous diagnosis of allergic rhinitis
+  /** PGD v004 fexofenadine inclusion: previous diagnosis of allergic rhinitis
    *  or recurrence of known symptoms. */
   previousDiagnosisOrRecurrence: boolean;
 }
@@ -20,9 +20,9 @@ export interface HayfeverAssessment {
 export interface HayfeverMedicalHistory {
   asthmaOrLrti: boolean;
   severeHepaticImpairment: boolean;
-  /** Severe renal impairment (fexofenadine exclusion, PGD v003). */
+  /** Severe renal impairment (fexofenadine exclusion, PGD v004). */
   renalImpairment: boolean;
-  /** Recent nasal surgery or trauma (Dymista exclusion, PGD v003). */
+  /** Recent nasal surgery or trauma (Dymista exclusion, PGD v004). */
   recentNasalSurgery: boolean;
   /** Untreated fungal, bacterial or viral nasal infection (Dymista exclusion). */
   untreatedNasalInfection: boolean;

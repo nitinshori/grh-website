@@ -12,7 +12,7 @@ import {
 } from "../../shared/components/SummaryReportShell";
 
 const PGD_NAME = "Fungal Skin Infection (Miconazole 2% cream / Trimovate cream)";
-const PGD_VERSION = "PGD version 003, issued 11 September 2026";
+const PGD_VERSION = "PGD version 004, issued 11 September 2026";
 
 const PRESENTATION_LABELS: Record<string, string> = {
   "athletes-foot": "Athlete's foot (tinea pedis)",

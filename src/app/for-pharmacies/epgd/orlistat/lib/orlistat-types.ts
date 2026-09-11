@@ -3,7 +3,7 @@ import type { BasePatientDetails, BaseConsent, BaseSummary, ClinicalAlert, DoseR
 export type OrlistatVisitType = "" | "initiation" | "continuation";
 
 export interface OrlistatWeightAssessment {
-  // PGD v002: review at 12 weeks from the start of treatment; continue only
+  // PGD v003: review at 12 weeks from the start of treatment; continue only
   // if at least 5% of body weight has been lost from baseline.
   visitType: OrlistatVisitType;
   treatmentStartDate: string;
@@ -14,43 +14,43 @@ export interface OrlistatWeightAssessment {
   bmiCategory: string;
   waistCircumference: number | null;
   comorbidities: string[];
-  // PGD v002 inclusion: motivated and committed to weight loss with a
+  // PGD v003 inclusion: motivated and committed to weight loss with a
   // structured reduced-calorie diet.
   motivatedStructuredDiet: boolean;
 }
 
 export interface OrlistatMedicalHistory {
-  // PGD v002 exclusion: cholestasis or severe hepatic impairment.
+  // PGD v003 exclusion: cholestasis or severe hepatic impairment.
   cholestasis: boolean;
   chronicMalabsorption: boolean;
   pregnant: boolean;
   breastfeeding: boolean;
   planningPregnancy: boolean;
-  // PGD v002 caution: gallstone disease.
+  // PGD v003 caution: gallstone disease.
   gallbladderDisease: boolean;
   severeGastrointestinal: boolean;
   chronic_diarrhea: boolean;
   // Chronic kidney disease / volume depletion, increased hyperoxaluria
   // and oxalate-nephropathy risk on orlistat. Caution.
   chronicKidneyDisease: boolean;
-  // PGD v002 exclusion: uncontrolled or newly diagnosed diabetes.
+  // PGD v003 exclusion: uncontrolled or newly diagnosed diabetes.
   uncontrolledOrNewDiabetes: boolean;
-  // PGD v002 exclusion: known hypersensitivity to orlistat or any component.
+  // PGD v003 exclusion: known hypersensitivity to orlistat or any component.
   hypersensitivityToOrlistat: boolean;
-  // PGD v002 caution: history of oxalate kidney stones.
+  // PGD v003 caution: history of oxalate kidney stones.
   oxalateKidneyStones: boolean;
-  // PGD v002 caution: chronic liver disease or elevated LFTs.
+  // PGD v003 caution: chronic liver disease or elevated LFTs.
   chronicLiverDisease: boolean;
 }
 
 export interface OrlistatMedications {
   takesWarfarin: boolean;
-  // PGD v002 caution: other anticoagulant (edoxaban, dabigatran, rivaroxaban).
+  // PGD v003 caution: other anticoagulant (edoxaban, dabigatran, rivaroxaban).
   takesOtherAnticoagulant: boolean;
   takesLevothyroxine: boolean;
   takesAntiEpileptics: boolean;
   takesCiclosporin: boolean;
-  // PGD v002 caution: bile acid sequestrants.
+  // PGD v003 caution: bile acid sequestrants.
   takesBileAcidSequestrants: boolean;
   takesOralContraceptives: boolean;
   // Antiretrovirals for HIV, orlistat may reduce their absorption and
@@ -77,13 +77,13 @@ export interface OrlistatObservations {
 export interface OrlistatMedicineSupply {
   dosage: string;
   quantity: number | null;
-  // PGD v002 records row: name and brand of medication.
+  // PGD v003 records row: name and brand of medication.
   brand: string;
   prescriptionType: string;
   refillSchedule: string;
 }
 
-// PGD v002: up to 84 capsules per patient (28-day supply at 3 capsules daily).
+// PGD v003: up to 84 capsules per patient (28-day supply at 3 capsules daily).
 export const ORLISTAT_MAX_QUANTITY = 84;
 
 export interface OrlistatCounselling {

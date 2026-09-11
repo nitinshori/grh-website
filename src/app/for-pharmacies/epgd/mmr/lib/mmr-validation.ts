@@ -1,5 +1,5 @@
 // ─── MMR Validation ───
-// Aligned to the MMRVaxPRO / Priorix PGD version 004, issued 11 September 2026.
+// Aligned to the MMRVaxPRO / Priorix PGD version 005, issued 11 September 2026.
 
 import type { MMRConsultationState } from "./mmr-types";
 import {

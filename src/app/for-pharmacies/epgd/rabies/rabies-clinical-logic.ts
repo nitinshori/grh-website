@@ -6,7 +6,7 @@ import {
 } from './rabies-types';
 
 /** PGD strapline shown wherever the tool cites its authority. */
-export const RABIES_PGD_VERSION = 'Rabies Vaccine (Rabipur or Verorab) Pre-exposure Prophylaxis PGD v005, issued 11 September 2026';
+export const RABIES_PGD_VERSION = 'Rabies Vaccine (Rabipur or Verorab) Pre-exposure Prophylaxis PGD v006, issued 11 September 2026';
 
 /** The dose volumes differ: 1.0 mL for Rabipur, 0.5 mL for Verorab. */
 export function getDoseVolume(product: RabiesVaccineAdministration['product']): string {
