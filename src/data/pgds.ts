@@ -736,18 +736,8 @@ export const pgds: PGD[] = [
       "Mupirocin and fusidic acid. Natural extension of pharmacy role. High footfall.",
     pharmadoctor: "Partial",
   },
-  {
-    id: "alopecia-minoxidil",
-    title: "Alopecia (Oral Minoxidil \u2014 Private)",
-    category: "Skin",
-    priority: 3,
-    isNew: true,
-    revenueEstimate: "\u00a330\u201360 per month",
-    consultTime: "15 min",
-    description:
-      "DIFFERENTIATION. Oral minoxidil (off-label use — licensed for hypertension only) is increasingly prescribed privately for hair loss. PGD pathway would be a first. Requires informed consent regarding off-label status.",
-    pharmadoctor: "No",
-  },
+  // alopecia-minoxidil withdrawn 11 Sep 2026: no minoxidil PGD exists; the
+  // entry served the finasteride document. See REBUILDING_SLUGS in pgd-access.ts.
 
   // ═══ RESPIRATORY ═══
   {

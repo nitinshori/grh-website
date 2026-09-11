@@ -302,15 +302,7 @@ export const SERVICE_COMPARISON: ServiceComparisonCategory[] = [
         pfs: YES("Skin infections via PFP"),
         wales: NO,
       },
-      {
-        pgdSlug: "alopecia-minoxidil",
-        condition: "Alopecia — oral minoxidil (off-label)",
-        grhDrugs: "Oral minoxidil 0.25–5 mg",
-        grhOffered: true,
-        pfe: NO,
-        pfs: NO,
-        wales: NO,
-      },
+      // alopecia-minoxidil row removed 11 Sep 2026: no minoxidil PGD exists.
       {
         pgdSlug: "hair-loss",
         condition: "Hair loss (androgenetic)",

@@ -328,7 +328,14 @@ export const PAUSED_SLUGS = new Set([
  * BEING REBUILT. Off now, expected back in a different form.
  */
 export const REBUILDING_SLUGS = new Set<string>([
-  // Empty as at 8 September 2026.
+  // alopecia-minoxidil, withdrawn 11 Sep 2026. The catalogue sold it as a
+  // minoxidil service (Female Pattern Hair Loss in one place, oral minoxidil
+  // off-label in another) but no minoxidil PGD has ever existed: the slug
+  // served the men-only finasteride document and re-used the finasteride
+  // tool. A pharmacy adopting it was told it held something it did not.
+  // Restore only when a signed minoxidil PGD exists, under its own title.
+  'alopecia-minoxidil',
+  //
   //
   // sleep-melatonin was here. Restored the same day at v002, rebuilt around
   // Circadin only. The unlicensed melatonin arm was removed rather than
@@ -437,7 +444,6 @@ export const REISSUED_PGDS: Record<string, { version: string; date: string }> = 
   // while aligning the consultation tools (tools/pgd-generator/fixes-round3.py
   // and fixes-round4.py list the per-document changes).
   acne: { version: 'v004', date: '11 September 2026' },
-  'alopecia-minoxidil': { version: 'v003', date: '11 September 2026' },
   'altitude-sickness': { version: 'v004', date: '11 September 2026' },
   'anti-malarials': { version: 'v009', date: '11 September 2026' },
   'anxiety-propranolol': { version: 'v005', date: '11 September 2026' },
