@@ -17,7 +17,6 @@ import {
   getAllAlerts,
   hasHardStops,
   calculateDoseRecommendation,
-  daysCovered,
 } from "./lib/anxiety-propranolol-clinical-logic";
 import { validateStep } from "./lib/anxiety-propranolol-validation";
 import { calculateAge } from "../shared/types";
@@ -158,7 +157,7 @@ export default function AnxietyPropranololClient() {
   // raised on. Falls back to the pharmacist profile if the Summary step has
   // not been reached.
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
-    const medicineChosen = !hasStops && !!state.medicineSupply.regimen && !!doseRecommendation;
+    const medicineChosen = !hasStops && !!doseRecommendation;
     return {
       patient: {
         firstName: state.patient.firstName,
@@ -570,22 +569,11 @@ export default function AnxietyPropranololClient() {
             <div className="space-y-4">
               <div className="p-3 bg-[color:var(--tenant-primary)]/10 rounded-lg border border-[color:var(--tenant-primary)]/30">
                 <p className="text-sm font-medium text-navy-900">Propranolol 10mg tablets (POM). Store below 25°C, protect from light.</p>
-                <p className="text-xs text-gray-600 mt-1">10 to 40mg taken 30 to 60 minutes before the anxiety-provoking situation, or 10 to 40mg two to three times daily for ongoing situational anxiety. Maximum 120mg daily. Review at 4 weeks; ongoing use should be reviewed regularly. Consider gradual dose reduction if discontinuing.</p>
+                <p className="text-xs text-gray-600 mt-1">10 to 40mg as a single dose, taken 30 to 60 minutes before the anxiety-provoking situation. As-required use only: regular daily dosing is not authorised under this PGD. One supply per situational event; review before any repeat supply, and in any case at 4 weeks.</p>
               </div>
 
               <SelectInput
-                label="Dosing regimen"
-                value={state.medicineSupply.regimen}
-                onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "regimen", value: v })}
-                options={[
-                  { value: "prn", label: "10 to 40mg, 30 to 60 minutes before the anxiety-provoking situation (PRN)" },
-                  { value: "regular", label: "10 to 40mg two to three times daily for ongoing situational anxiety (maximum 120mg daily)" },
-                ]}
-                required
-              />
-
-              <SelectInput
-                label="Dose advised (per administration)"
+                label="Dose advised (single dose before the situation)"
                 value={state.medicineSupply.propranololDose}
                 onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "propranololDose", value: v })}
                 options={[
@@ -596,19 +584,6 @@ export default function AnxietyPropranololClient() {
                 ]}
                 required
               />
-
-              {state.medicineSupply.regimen === "regular" && (
-                <SelectInput
-                  label="Frequency"
-                  value={state.medicineSupply.timesDaily}
-                  onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "timesDaily", value: v })}
-                  options={[
-                    { value: "2", label: "Twice daily" },
-                    { value: "3", label: "Three times daily" },
-                  ]}
-                  required
-                />
-              )}
 
               <NumberInput
                 label="Quantity to Supply"
@@ -621,13 +596,8 @@ export default function AnxietyPropranololClient() {
                 required
               />
               <p className="text-xs font-medium text-red-800">
-                Propranolol 10mg tablets only. Maximum 28 tablets, 280mg in total: the whole supply taken at once must stay below 320mg, because propranolol is cardiotoxic in overdose. The 40mg strength is not authorised. One supply per situational event or course; review before any repeat.
+                Propranolol 10mg tablets only. Maximum 28 tablets, 280mg in total: the whole supply taken at once must stay below 320mg, because propranolol is cardiotoxic in overdose. The 40mg strength is not authorised. One supply per situational event; review before any repeat.
               </p>
-              {daysCovered(state) !== null && (
-                <div className="p-3 rounded-lg border border-amber-300 bg-amber-50 text-xs text-amber-900">
-                  At this dose and frequency the {state.medicineSupply.quantity} tablets cover {daysCovered(state)} day{daysCovered(state) === 1 ? "" : "s"}. The PGD authorises one supply of up to 28 tablets per course and asks for review at 4 weeks: any further supply needs a review first, and the patient should be told how long this supply lasts.
-                </div>
-              )}
             </div>
           </StepWrapper>
         );
@@ -641,11 +611,7 @@ export default function AnxietyPropranololClient() {
             <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
               <p className="text-sm font-medium text-navy-900 mb-3">Confirm counselling covered:</p>
               <Checkbox
-                label={
-                  state.medicineSupply.regimen === "regular"
-                    ? `Take ${state.medicineSupply.propranololDose}mg ${state.medicineSupply.timesDaily === "3" ? "three times" : "twice"} daily, maximum 120mg daily; this supply lasts ${daysCovered(state) ?? "?"} days and a review is needed before any further supply`
-                    : `PRN use only: ${state.medicineSupply.propranololDose}mg 30 to 60 minutes before the situation, maximum 120mg daily, one supply per situational event`
-                }
+                label={`As-required use only: ${state.medicineSupply.propranololDose}mg as a single dose 30 to 60 minutes before the situation, not to be taken regularly; one supply per situational event, review before any repeat`}
                 checked={state.counselling.prnUseOnly}
                 onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "prnUseOnly", value: v })}
               />

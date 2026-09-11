@@ -365,7 +365,7 @@ export default function BPHClient() {
         return (
           <div className="space-y-4">
             <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-3 space-y-2">
-              <p className="text-sm font-semibold text-amber-900">Previous assessment (PGD v003)</p>
+              <p className="text-sm font-semibold text-amber-900">Previous assessment (PGD v004)</p>
               <Checkbox
                 label="Symptoms previously assessed by a GP or urologist"
                 checked={state.medicalHistory.previouslyAssessedByGp}
@@ -387,7 +387,7 @@ export default function BPHClient() {
                 </>
               )}
             </div>
-            <p className="text-sm font-semibold text-red-700">Exclusions (PGD v003). Any one excludes; refer.</p>
+            <p className="text-sm font-semibold text-red-700">Exclusions (PGD v004). Any one excludes; refer.</p>
             <Checkbox
               label="Known hypersensitivity to tamsulosin or any excipient in the formulation"
               checked={state.medicalHistory.hypersensitivity}
@@ -429,25 +429,63 @@ export default function BPHClient() {
               }
               description="Exclusion: risk of intraoperative floppy iris syndrome (IFIS)"
             />
-            <TextInput
-              label="Blood pressure today (record only, e.g. 138/86)"
-              value={state.medicalHistory.bloodPressure}
-              onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "bloodPressure", value: v })}
-              placeholder="mmHg"
-            />
-            <Checkbox
-              label="Uncontrolled hypertension"
-              checked={state.medicalHistory.uncontrolledHypertension}
-              onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "uncontrolledHypertension", value: v })}
-              description="Exclusion. Record the reading above so the answer has a basis on the record."
-            />
+            <div className="space-y-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <p className="text-sm font-semibold text-navy-900">Blood pressure, lying and standing (measured at every supply)</p>
+              <p className="text-xs text-gray-600">
+                Measure after the patient has been lying (or seated) for at least 5 minutes, then again after standing for 1 to 3 minutes. Exclusions: 160/100 mmHg or above in either position, or a fall in systolic pressure of 20 mmHg or more on standing. Both readings are recorded.
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <NumberInput
+                  label="Lying systolic"
+                  value={state.medicalHistory.lyingSystolic}
+                  onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "lyingSystolic", value: v })}
+                  min={50}
+                  max={260}
+                  unit="mmHg"
+                  required
+                />
+                <NumberInput
+                  label="Lying diastolic"
+                  value={state.medicalHistory.lyingDiastolic}
+                  onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "lyingDiastolic", value: v })}
+                  min={30}
+                  max={160}
+                  unit="mmHg"
+                  required
+                />
+                <NumberInput
+                  label="Standing systolic"
+                  value={state.medicalHistory.standingSystolic}
+                  onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "standingSystolic", value: v })}
+                  min={50}
+                  max={260}
+                  unit="mmHg"
+                  required
+                />
+                <NumberInput
+                  label="Standing diastolic"
+                  value={state.medicalHistory.standingDiastolic}
+                  onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "standingDiastolic", value: v })}
+                  min={30}
+                  max={160}
+                  unit="mmHg"
+                  required
+                />
+              </div>
+              {state.medicalHistory.lyingSystolic !== null && state.medicalHistory.standingSystolic !== null && (
+                <p className="text-xs text-gray-600">
+                  Postural change in systolic pressure: {state.medicalHistory.lyingSystolic - state.medicalHistory.standingSystolic} mmHg
+                  {state.medicalHistory.lyingSystolic - state.medicalHistory.standingSystolic >= 20 ? " (20 or more: excluded)" : ""}
+                </p>
+              )}
+            </div>
             <Checkbox
               label="Neurological disease affecting bladder function: multiple sclerosis, Parkinson's disease, spinal cord disease, diabetic neuropathy"
               checked={state.medicalHistory.neurologicalBladderDisease}
               onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "neurologicalBladderDisease", value: v })}
               description="Exclusion. Refer"
             />
-            <p className="text-sm font-semibold text-amber-700 pt-2">Cautions (PGD v003)</p>
+            <p className="text-sm font-semibold text-amber-700 pt-2">Cautions (PGD v004)</p>
             <Checkbox
               label="Mild to moderate hepatic impairment"
               checked={state.medicalHistory.mildModerateHepaticImpairment}
@@ -486,7 +524,7 @@ export default function BPHClient() {
           <div className="space-y-4">
             <div className="bg-red-50 border border-red-200 rounded p-4 mb-4">
               <p className="text-xs text-red-700 font-medium">
-                Red flags are exclusions under PGD v003: refer, do not supply medicine
+                Red flags are exclusions under PGD v004: refer, do not supply medicine
               </p>
             </div>
             <Checkbox
@@ -617,7 +655,7 @@ export default function BPHClient() {
         return (
           <div className="space-y-4">
             <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-900 space-y-1">
-              <p className="font-semibold">Tamsulosin 400 micrograms modified-release capsules. PGD v003, 11 September 2026.</p>
+              <p className="font-semibold">Tamsulosin 400 micrograms modified-release capsules. PGD v004, 11 September 2026.</p>
               <p>400 micrograms once daily, after food, preferably with breakfast. Swallow whole with water; do not crush, chew or open. Up to 28 capsules per supply.</p>
               <p>Maximum under this PGD: an initial supply of 4 weeks, then, where the IPSS has improved by 3 points or more at the 4 to 6 week review and the patient has been examined by the GP, further supplies to a maximum of 12 months&apos; continuous treatment, after which the GP takes over prescribing. No improvement at 4 to 6 weeks, or any new exclusion, ends supply under this PGD.</p>
             </div>
@@ -816,7 +854,7 @@ export default function BPHClient() {
               label="Patient information leaflet supplied with the product"
               checked={state.counselling.pilSupplied}
               onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "pilSupplied", value: v })}
-              description="Written information row of PGD v003. Required."
+              description="Written information row of PGD v004. Required."
             />
           </div>
         );

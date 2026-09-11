@@ -1,7 +1,7 @@
 import type { ThrushConsultationState } from "./thrush-types";
 import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
 
-// Vaginal Thrush PGD v004 (11 September 2026). Two arms: fluconazole 150 mg
+// Vaginal Thrush PGD v005 (11 September 2026). Two arms: fluconazole 150 mg
 // capsule and clotrimazole 500 mg vaginal pessary. Non-pregnant women aged 16
 // to 60 (the exclusion row governs; the inclusion row says 16 to 65, and the
 // tool shows that contradiction to the pharmacist on the patient step).
@@ -23,8 +23,23 @@ export function getAllAlerts(state: ThrushConsultationState): ClinicalAlert[] {
     alerts.push({ severity: "stop", code: "OFFENSIVE_SMELL", message: "Foul-smelling discharge", detail: "Exclusion. Not typical of thrush; may indicate BV or STI. Refer to GP." });
   }
 
-  if (state.assessment.fever || state.assessment.pelvicPain || state.assessment.dysuria || state.assessment.systemicUpset) {
-    alerts.push({ severity: "stop", code: "FEVER_PAIN", message: "Lower abdominal pain, dysuria, fever or systemic upset", detail: "Exclusion. Refer to GP for assessment." });
+  if (state.assessment.fever || state.assessment.pelvicPain || state.assessment.systemicUpset) {
+    alerts.push({ severity: "stop", code: "FEVER_PAIN", message: "Lower abdominal pain, fever or systemic upset", detail: "Exclusion. Refer to GP for assessment." });
+  }
+
+  // Dysuria (decision 40): internal dysuria, or dysuria of any kind with urinary
+  // frequency, urgency or fever, excludes (possible urinary tract infection).
+  // External dysuria alone, with the other features of thrush, does not.
+  if (state.assessment.dysuria) {
+    const a = state.assessment;
+    if (a.dysuriaType === "internal" || a.urinaryFrequencyOrUrgency || a.fever) {
+      alerts.push({
+        severity: "stop",
+        code: "DYSURIA_UTI",
+        message: a.dysuriaType === "internal" ? "Internal dysuria (pain inside the urethra or bladder on passing urine)" : "Dysuria with urinary frequency, urgency or fever",
+        detail: "Exclusion: possible urinary tract infection. Refer to GP for assessment.",
+      });
+    }
   }
 
   if ((age !== null && (age < 16 || age > 60)) || state.medicalHistory.ageUnder16 || state.medicalHistory.ageOver60) {

@@ -3,7 +3,7 @@
 // them without a cycle.
 
 export const PGD_VERSION =
-  "Hepatitis A and Hepatitis B Vaccination (Havrix, Avaxim, Engerix B and Twinrix) PGD v007, issued 11 September 2026"
+  "Hepatitis A and Hepatitis B Vaccination (Havrix, Avaxim, Engerix B and Twinrix) PGD v008, issued 11 September 2026"
 
 export const STEP_TITLES = [
   "Patient Details",
@@ -37,7 +37,10 @@ export type Schedule =
   | "accelerated-0-1-2-12m"
   | "rapid-0-7-21-12m"
 
-export type ConsentBasis = "" | "parental" | "self"
+/** Who gave consent. Under 16: a person with parental responsibility, or the
+ *  young person where assessed as Gillick competent (offered from 12 to 15 in
+ *  the tool); 16 and over: the patient. Decision 6, 11 September 2026. */
+export type ConsentBasis = "" | "parental" | "gillick" | "self"
 
 export const HEP_A_PRODUCTS: VaccineProduct[] = [
   "twinrix-adult", "twinrix-paediatric", "havrix-monodose", "havrix-junior", "avaxim-adult", "avaxim-junior",

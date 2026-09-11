@@ -127,7 +127,19 @@ export function getContraindicationAlerts(contraindications: SleepMelatoninContr
     alerts.push({ severity: "stop", code: "REPEAT_CI", message: "STOP: A previous course of Circadin supplied under this PGD in the last 6 months, or 13 weeks of treatment already completed", detail: "Refer for review rather than continuing. A patient still not sleeping at 13 weeks needs review, not a repeat." });
   }
   if (contraindications.cyp1a2Inhibitor) {
-    alerts.push({ severity: "caution", code: "CYP1A2_INHIBITOR", message: "Caution: cimetidine, oestrogens (including combined contraceptives and HRT) or a quinolone antibiotic", detail: "These raise melatonin levels by inhibiting its metabolism. Counsel on increased drowsiness and consider referral instead." });
+    if (cyp1a2InhibitorRefer(contraindications)) {
+      // Decision 56 (11 Sep 2026): refer, do not supply, where the patient on
+      // a CYP1A2 inhibitor is also at risk of falls or takes another sedating
+      // medicine.
+      alerts.push({
+        severity: "stop",
+        code: "CYP1A2_INHIBITOR_REFER",
+        message: `STOP: Taking cimetidine, an oestrogen or a quinolone and ${contraindications.cyp1a2InhibitorFallsRisk && contraindications.cyp1a2InhibitorOtherSedative ? "at risk of falls and taking another sedating medicine" : contraindications.cyp1a2InhibitorFallsRisk ? "at risk of falls" : "taking another sedating medicine"}`,
+        detail: "Cimetidine, oestrogens and quinolones raise melatonin levels by inhibiting its metabolism. Where the patient is also at risk of falls or takes another sedating medicine, the PGD directs referral instead of supply. Refer, do not supply.",
+      });
+    } else {
+      alerts.push({ severity: "caution", code: "CYP1A2_INHIBITOR", message: "Caution: cimetidine, oestrogens (including combined contraceptives and HRT) or a quinolone antibiotic", detail: "These raise melatonin levels by inhibiting its metabolism. Counsel on increased drowsiness. Supply may proceed unless the patient is also at risk of falls or takes another sedating medicine, in which case refer instead." });
+    }
   }
   if (contraindications.cyp1a2Inducer) {
     alerts.push({ severity: "caution", code: "CYP1A2_INDUCER", message: "Caution: carbamazepine, rifampicin or smoking", detail: "These lower melatonin levels and may make the treatment ineffective. Counsel." });
@@ -148,8 +160,21 @@ export function hasAssessmentStops(assessment: SleepMelatoninAssessment): boolea
   return getAssessmentAlerts(assessment).some((a) => a.severity === "stop");
 }
 
+/**
+ * Decision 56 (11 Sep 2026): a patient taking cimetidine, an oestrogen or a
+ * quinolone is referred where they are also at risk of falls or take another
+ * sedating medicine. Otherwise the caution stands and supply may proceed.
+ */
+export function cyp1a2InhibitorRefer(contraindications: SleepMelatoninContraindications): boolean {
+  return (
+    contraindications.cyp1a2Inhibitor &&
+    (contraindications.cyp1a2InhibitorFallsRisk || contraindications.cyp1a2InhibitorOtherSedative)
+  );
+}
+
 export function hasHardStops(contraindications: SleepMelatoninContraindications): boolean {
   return (
+    cyp1a2InhibitorRefer(contraindications) ||
     contraindications.hypersensitivity ||
     contraindications.autoimmuneDiseaseActive ||
     contraindications.hepaticImpairment ||

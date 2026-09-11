@@ -187,7 +187,7 @@ export default function MeningitiBClient() {
         !hasStops && productLabel
           ? {
               name: productLabel,
-              dose: `0.5 ml intramuscular, ${a.doseNumber === "booster-12-months" ? "booster at 12 months" : `${a.doseNumber} dose`}${a.product === "trumenba" ? `, ${a.trumenbaSchedule === "increased-risk" ? "3 dose" : "2 dose"} schedule` : ""}`,
+              dose: `0.5 ml intramuscular, ${a.doseNumber === "booster-12-months" ? "booster at 12 months" : a.doseNumber === "booster-after-toddler-course" ? "booster 12 to 23 months after the primary course" : `${a.doseNumber} dose`}${a.product === "trumenba" ? `, ${a.trumenbaSchedule === "increased-risk" ? "3 dose" : "2 dose"} schedule` : ""}`,
               duration: "Single dose this attendance",
               quantity: 1,
             }
@@ -614,9 +614,9 @@ export default function MeningitiBClient() {
                     dispatch({ type: "UPDATE_VACCINE_ADMIN", field: "dosesInFirstYear", value: v as MeningitiBVaccineAdmin["dosesInFirstYear"] })
                   }
                   options={[
-                    { value: "0", label: "None: 2 doses at least 4 weeks apart" },
-                    { value: "1", label: "One: 2 further doses at least 4 weeks apart" },
-                    { value: "2", label: "Two: booster at 12 months only" },
+                    { value: "0", label: "None: 2 doses at least 2 months apart, then a booster 12 to 23 months after the second dose" },
+                    { value: "1", label: "One: one further dose at least 2 months after it, then a booster 12 to 23 months after that dose" },
+                    { value: "2", label: "Two: a single booster, at least 2 months after the second primary dose and before the second birthday" },
                   ]}
                   required
                 />
@@ -632,7 +632,8 @@ export default function MeningitiBClient() {
                   { value: "1st", label: "1st dose" },
                   { value: "2nd", label: "2nd dose" },
                   { value: "3rd", label: "3rd dose (Trumenba increased-risk schedule only)" },
-                  { value: "booster-12-months", label: "Booster at 12 months (Bexsero infant course, 12 months to under 2 years)" },
+                  { value: "booster-12-months", label: "Booster at 12 months (Bexsero: two primary doses in the first year; given from 12 months, before the second birthday)" },
+                  { value: "booster-after-toddler-course", label: "Booster 12 to 23 months after a Bexsero primary course whose second dose was given at 12 to 23 months (from 2 years of age)" },
                 ]}
                 required
               />
@@ -1153,7 +1154,7 @@ function MeningitiBSummaryReport({
             : ""
         }
       />
-      <Row label="Dose in course" value={state.vaccineAdmin.doseNumber === "booster-12-months" ? "Booster at 12 months" : state.vaccineAdmin.doseNumber} />
+      <Row label="Dose in course" value={state.vaccineAdmin.doseNumber === "booster-12-months" ? "Booster at 12 months" : state.vaccineAdmin.doseNumber === "booster-after-toddler-course" ? "Booster 12 to 23 months after the primary course (given at 12 to 23 months)" : state.vaccineAdmin.doseNumber} />
       {state.vaccineAdmin.doseNumber && state.vaccineAdmin.doseNumber !== "1st" && (
         <Row label="Previous dose in this course" value={state.vaccineAdmin.previousDoseDate || "Not recorded"} />
       )}

@@ -99,7 +99,7 @@ function getHardStopAlerts(state: WegovyConsultationState): ClinicalAlert[] {
     });
   }
 
-  // Age over 75 (PGD v008 upper age limit)
+  // Age over 75 (PGD v009 upper age limit)
   if (state.patient.age !== null && state.patient.age > 75) {
     alerts.push({
       severity: "stop",
@@ -154,17 +154,6 @@ function getHardStopAlerts(state: WegovyConsultationState): ClinicalAlert[] {
       code: "HYPERSENSITIVITY",
       message: "Known hypersensitivity to semaglutide or to any of the excipients",
       detail: "Contraindicated. Do not supply.",
-    });
-  }
-
-  // Obesity caused by an endocrinological disorder
-  if (state.medicalHistory.endocrineObesity) {
-    alerts.push({
-      severity: "stop",
-      code: "ENDOCRINE_OBESITY",
-      message: "Obesity caused by an endocrinological disorder",
-      detail:
-        "Excluded under this PGD. If the patient was already overweight prior to that diagnosis this exclusion may not apply; untick and document the reasoning if so. Otherwise refer to the GP.",
     });
   }
 
@@ -261,7 +250,7 @@ function getHardStopAlerts(state: WegovyConsultationState): ClinicalAlert[] {
     });
   }
 
-  // History of pancreatitis (acute or chronic): exclusion under PGD v008
+  // History of pancreatitis (acute or chronic): exclusion under PGD v009
   if (state.medicalHistory.pancreatitisHistory) {
     alerts.push({
       severity: "stop",
@@ -272,7 +261,7 @@ function getHardStopAlerts(state: WegovyConsultationState): ClinicalAlert[] {
     });
   }
 
-  // Current gallstones or cholecystitis: exclusion under PGD v008
+  // Current gallstones or cholecystitis: exclusion under PGD v009
   if (state.medicalHistory.gallbladderDisease) {
     alerts.push({
       severity: "stop",
@@ -282,7 +271,7 @@ function getHardStopAlerts(state: WegovyConsultationState): ClinicalAlert[] {
     });
   }
 
-  // Cholecystectomy within the last 3 months: exclusion under PGD v008
+  // Cholecystectomy within the last 3 months: exclusion under PGD v009
   if (state.medicalHistory.recentCholecystectomy) {
     alerts.push({
       severity: "stop",
@@ -292,7 +281,7 @@ function getHardStopAlerts(state: WegovyConsultationState): ClinicalAlert[] {
     });
   }
 
-  // Diabetic retinopathy: exclusion under PGD v008
+  // Diabetic retinopathy: exclusion under PGD v009
   if (state.medicalHistory.diabeticRetinopathy) {
     alerts.push({
       severity: "stop",
@@ -302,7 +291,7 @@ function getHardStopAlerts(state: WegovyConsultationState): ClinicalAlert[] {
     });
   }
 
-  // Severe renal impairment or end-stage renal disease: exclusion under PGD v008
+  // Severe renal impairment or end-stage renal disease: exclusion under PGD v009
   if (state.medicalHistory.severeRenal) {
     alerts.push({
       severity: "stop",
@@ -346,7 +335,7 @@ function getHardStopAlerts(state: WegovyConsultationState): ClinicalAlert[] {
   }
 
   // History of suicidal ideation or active severe mental illness where
-  // oversight is absent and concern exists: do not supply (PGD v008 caution wording)
+  // oversight is absent and concern exists: do not supply (PGD v009 caution wording)
   if (
     state.medicalHistory.depression &&
     state.medicalHistory.mentalHealthConcern &&
@@ -372,7 +361,7 @@ function getHardStopAlerts(state: WegovyConsultationState): ClinicalAlert[] {
     });
   }
 
-  // Sulfonylurea or meglitinide: exclusion under PGD v008 (no GP-monitored route)
+  // Sulfonylurea or meglitinide: exclusion under PGD v009 (no GP-monitored route)
   if (state.medications.takesSulphonylureas) {
     alerts.push({
       severity: "stop",
@@ -383,7 +372,7 @@ function getHardStopAlerts(state: WegovyConsultationState): ClinicalAlert[] {
     });
   }
 
-  // Insulin-treated diabetes: exclusion under PGD v008
+  // Insulin-treated diabetes: exclusion under PGD v009
   if (state.medications.takesInsulin) {
     alerts.push({
       severity: "stop",
@@ -409,7 +398,7 @@ function getHardStopAlerts(state: WegovyConsultationState): ClinicalAlert[] {
   return alerts;
 }
 
-// ─── Treatment duration helpers (PGD v008 maximum treatment period and 5% rule) ───
+// ─── Treatment duration helpers (PGD v009 maximum treatment period and 5% rule) ───
 
 export function getMonthsOnTreatment(state: WegovyConsultationState): number | null {
   const start = state.doseSelection.treatmentStartDate;
@@ -453,7 +442,7 @@ function getCautionAlerts(state: WegovyConsultationState): ClinicalAlert[] {
     });
   }
 
-  // History of suicidal ideation, or active severe mental illness (PGD v008 caution)
+  // History of suicidal ideation, or active severe mental illness (PGD v009 caution)
   if (state.medicalHistory.depression) {
     alerts.push({
       severity: "caution",
@@ -537,6 +526,19 @@ function getCautionAlerts(state: WegovyConsultationState): ClinicalAlert[] {
       code: "RENAL_IMPAIRMENT",
       message: "Mild to moderate renal impairment",
       detail: "Monitor for dehydration secondary to gastrointestinal side effects.",
+    });
+  }
+
+  // Endocrine cause of obesity: a caution to inform the GP, not an exclusion
+  // (decision 48, 11 September 2026). Treated hypothyroidism or Cushing's
+  // syndrome is not a bar to supply.
+  if (state.medicalHistory.endocrineObesity) {
+    alerts.push({
+      severity: "caution",
+      code: "ENDOCRINE_OBESITY",
+      message: "Endocrine cause of obesity suspected but not yet assessed or treated",
+      detail:
+        "Caution, not an exclusion. Inform the GP so that the suspected endocrine cause can be investigated, and record this in the clinical notes. A patient whose endocrine condition is diagnosed and treated may be supplied.",
     });
   }
 
@@ -777,7 +779,7 @@ export function validateDoseSelectionStep(state: WegovyConsultationState): strin
     return "Maximum treatment period under this PGD is 2 years of continuous treatment. Refer to the GP or a specialist prescriber.";
   }
 
-  // 7.2 mg gate (PGD v008)
+  // 7.2 mg gate (PGD v009)
   if (ds.dose === "7.2mg") {
     if (ds.startingBMI === null) {
       return "Starting BMI (at initiation of treatment) is required before 7.2 mg can be supplied";

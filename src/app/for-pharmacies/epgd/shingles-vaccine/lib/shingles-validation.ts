@@ -1,12 +1,14 @@
-// Aligned to the Shingrix PGD version 006, issued 11 September 2026.
+// Aligned to the Shingrix PGD version 007, issued 11 September 2026, as amended by
+// the signatories' decisions 13, 14 and 15 of 11 September 2026.
 import type { ShinglesConsultationState } from "./shingles-types";
+import { SEVERE_IMMUNOSUPPRESSION_QUALIFYING } from "./shingles-types";
 import { validatePatientStep, validateConsentStep, validateSummaryStep } from "../../shared/types";
-import { daysBetween, MIN_INTERVAL_DAYS, MAX_INTERVAL_DAYS } from "./shingles-clinical-logic";
+import { daysBetween, getArm, nhsEligibleGroup, MIN_INTERVAL_DAYS, MAX_INTERVAL_DAYS } from "./shingles-clinical-logic";
 
 export function validateStep(state: ShinglesConsultationState, step: number): string | null {
   switch (step) {
     case 0: {
-      const base = validatePatientStep(state.patient, { minAge: 50 });
+      const base = validatePatientStep(state.patient, { minAge: 18 });
       if (base) return base;
       if (state.patient.age === null) return "Unable to calculate age from the date of birth";
       return null;
@@ -15,9 +17,35 @@ export function validateStep(state: ShinglesConsultationState, step: number): st
     case 1:
       return validateConsentStep(state.consent);
 
-    case 2:
+    case 2: {
+      const age = state.patient.age;
+      if (age !== null && age < 50) {
+        if (!state.assessment.immunosuppressed) {
+          return "Aged under 50: this PGD covers 18 to 49 year olds only where they are severely immunosuppressed (Arm 2). Tick the immunosuppression box if it applies, otherwise refer.";
+        }
+        if (!state.assessment.severeImmunosuppressionCategory) {
+          return "Select the Green Book chapter 28a Box 1 category that applies (Arm 2 inclusion)";
+        }
+        if (!SEVERE_IMMUNOSUPPRESSION_QUALIFYING.has(state.assessment.severeImmunosuppressionCategory)) {
+          return "The category selected does not meet the Arm 2 inclusion: refer";
+        }
+        if (!state.assessment.immunosuppressionDetail.trim()) {
+          return "Record the condition or therapy relied on and its dates (Arm 2 records requirement)";
+        }
+        if (!state.assessment.immunosuppressionDoubt) {
+          return "Record whether there was any doubt that the Box 1 definition is met, and if so that the specialist or GP confirmed it";
+        }
+      }
+      if (!getArm(state)) {
+        return "The patient does not fall within either arm of this PGD";
+      }
       if (!state.assessment.ageEligible) {
-        return "Please confirm the patient is aged 50 or older and eligible under national immunisation guidelines";
+        return age !== null && age >= 50
+          ? "Please confirm the patient is aged 50 or older, within the licensed indication (Arm 1)"
+          : "Please confirm the patient is aged 18 to 49 and severely immunosuppressed as defined in Green Book chapter 28a, Box 1 (Arm 2)";
+      }
+      if (nhsEligibleGroup(state) && !state.assessment.nhsEntitlementExplained) {
+        return "This patient is eligible for Shingrix on the NHS: confirm they have been told it is free of charge on the NHS before this private supply";
       }
       if (!state.assessment.pregnancyStatus) {
         return "Pregnancy or breastfeeding status must be specified";
@@ -26,6 +54,7 @@ export function validateStep(state: ShinglesConsultationState, step: number): st
         return "Record the date of dose 1 (the PGD requires it where dose 1 was given elsewhere)";
       }
       return null;
+    }
 
     case 3:
       if (!state.assessment.anaphylaxisToComponent) {
@@ -51,6 +80,9 @@ export function validateStep(state: ShinglesConsultationState, step: number): st
       return null;
 
     case 5: {
+      const arm = getArm(state);
+      const intervalText = arm === "18-49-immunosuppressed" ? "8 weeks to 6 months" : "2 to 6 months";
+      const minText = arm === "18-49-immunosuppressed" ? "8 weeks" : "2 months";
       if (!state.supply.doseNumber) return "Dose number (1 or 2) is required";
       if (state.supply.doseNumber === "2" && !state.assessment.previousShingrix) {
         return "Dose 2 selected but no previous Shingrix dose recorded on the eligibility step";
@@ -62,16 +94,21 @@ export function validateStep(state: ShinglesConsultationState, step: number): st
       if (state.supply.doseNumber === "2") {
         const days = daysBetween(state.assessment.previousShingrixDate, state.supply.vaccinationDate);
         if (days !== null && days < MIN_INTERVAL_DAYS) {
-          return "The second dose must be given at least 2 months after the first";
+          return `The second dose must be given at least ${minText} after the first`;
+        }
+        // Decision 13: a late second dose is given as soon as possible and the
+        // course is not restarted. The practitioner confirms the interval is recorded.
+        if (days !== null && days > MAX_INTERVAL_DAYS && !state.supply.lateDoseAcknowledged) {
+          return "More than 6 months since dose 1: confirm that dose 2 is being given as soon as possible without restarting the course, and that the interval has been recorded";
         }
       }
       if (state.supply.doseNumber === "1") {
         if (!state.supply.nextDoseDue) {
-          return "Record the date the second dose is due (2 to 6 months after today)";
+          return `Record the date the second dose is due (${intervalText} after today)`;
         }
         const gap = daysBetween(state.supply.vaccinationDate, state.supply.nextDoseDue);
         if (gap === null || gap < MIN_INTERVAL_DAYS || gap > MAX_INTERVAL_DAYS) {
-          return "The second dose due date must be 2 to 6 months after the vaccination date";
+          return `The second dose due date must be ${intervalText} after the vaccination date`;
         }
       }
       if (!state.supply.batchNumber.trim()) return "Batch number is required";

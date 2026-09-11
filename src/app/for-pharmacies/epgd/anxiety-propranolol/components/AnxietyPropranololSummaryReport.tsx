@@ -1,7 +1,7 @@
 "use client";
 
 import type { AnxietyPropranololConsultationState } from "../lib/anxiety-propranolol-types";
-import { doseAdvisedMg, daysCovered } from "../lib/anxiety-propranolol-clinical-logic";
+import { doseAdvisedMg } from "../lib/anxiety-propranolol-clinical-logic";
 import {
   SectionHeader,
   Row,
@@ -12,7 +12,7 @@ import {
 } from "../../shared/components/SummaryReportShell";
 
 const PGD_NAME = "Anxiety (Situational and Somatic Symptoms), Propranolol";
-const PGD_VERSION = "PGD version 005, issued 11 September 2026 (valid to 31 July 2027)";
+const PGD_VERSION = "PGD version 006, issued 11 September 2026 (valid to 31 July 2027)";
 
 interface AnxietyPropranololSummaryReportProps {
   state: AnxietyPropranololConsultationState;
@@ -64,7 +64,6 @@ export function AnxietyPropranololSummaryReport({ state }: AnxietyPropranololSum
   const { patient, consent, assessment, medicalHistory, contraindications, medicineSupply, counselling, summary, alerts } = state;
   const hasStops = alerts.some((a) => a.severity === "stop");
   const dose = doseAdvisedMg(state);
-  const days = daysCovered(state);
   const anxietyTypeLabel =
     assessment.anxietyType === "situational"
       ? "Situational / performance anxiety"
@@ -183,19 +182,12 @@ export function AnxietyPropranololSummaryReport({ state }: AnxietyPropranololSum
           <div className="space-y-2 text-xs print:space-y-1">
             <Row label="Medicine" value="Propranolol 10mg tablets (generic; brand as dispensed)" />
             <Row label="Form and route" value="Tablet, oral" />
-            <Row label="Dose advised" value={dose !== null ? `${dose}mg (${dose / 10} x 10mg tablet${dose > 10 ? "s" : ""}) per administration` : "Not recorded"} />
+            <Row label="Dose advised" value={dose !== null ? `${dose}mg (${dose / 10} x 10mg tablet${dose > 10 ? "s" : ""}) as a single dose` : "Not recorded"} />
             <Row
               label="Regimen"
-              value={
-                medicineSupply.regimen === "regular"
-                  ? `${medicineSupply.timesDaily === "3" ? "Three times" : medicineSupply.timesDaily === "2" ? "Twice" : "Two to three times"} daily for ongoing situational anxiety (maximum 120mg daily); review at 4 weeks`
-                  : medicineSupply.regimen === "prn"
-                    ? "PRN, 30 to 60 minutes before the anxiety-provoking situation (maximum 120mg daily)"
-                    : "Not recorded"
-              }
+              value="As required only: a single dose 30 to 60 minutes before the anxiety-provoking situation. Not for regular daily use. One supply per situational event; review before any repeat supply and in any case at 4 weeks"
             />
             <Row label="Quantity supplied" value={medicineSupply.quantity ? `${medicineSupply.quantity} tablets of 10mg (${medicineSupply.quantity * 10}mg in total)` : "Not specified"} />
-            {days !== null && <Row label="Supply covers" value={`${days} day${days === 1 ? "" : "s"} at the advised dose and frequency; review before any further supply`} />}
             <Row label="Date of supply" value={summary.consultationDate} />
           </div>
         )}
@@ -206,7 +198,7 @@ export function AnxietyPropranololSummaryReport({ state }: AnxietyPropranololSum
           <SectionHeader>Counselling Provided</SectionHeader>
           <CounsellingGrid
             items={[
-              [medicineSupply.regimen === "regular" ? "Regular dosing as advised, maximum 120mg daily, review before any further supply" : "PRN use only, 30 to 60 minutes before the situation", counselling.prnUseOnly],
+              ["As-required use only: a single dose 30 to 60 minutes before the situation, not to be taken regularly; review before any repeat", counselling.prnUseOnly],
               ["Reduces physical symptoms (tremor, palpitations, sweating)", counselling.physicalSymptoms],
               ["Not a cure for anxiety; consider psychological therapy", counselling.notACure],
               ["Does not cause dependence at PRN doses", counselling.noDependence],

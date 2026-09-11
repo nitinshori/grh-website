@@ -2,12 +2,14 @@ import type { HPVConsultationState } from "./hpv-types";
 import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
 
 // ─────────────────────────────────────────────────────────────────────────
-// Clinical logic for the HPV PGD, aligned to signed document v005
+// Clinical logic for the HPV PGD, aligned to signed document v006
 // (11 Sep 2026), Green Book chapter 18a (June 2023) and the Gardasil 9
 // SPC (text revised 13 Sep 2024).
 //
 // Schedule, which is chosen from age at first dose and immune status:
 //   immunosuppressed or known HIV positive, any age  -> 3 doses, 0/1/4-6 mo
+//                                                       (a dose before 25 is
+//                                                       counted, not complete)
 //   immunocompetent, under 25 at vaccination         -> 1 dose, course done
 //   immunocompetent, 25 and over                     -> 2 doses, 6-24 mo apart
 //                                                       (min 5 mo, Gardasil 9)
@@ -28,18 +30,25 @@ export interface HPVSchedule {
   basis: string;
 }
 
-/** Number of previous HPV vaccine doses recorded, 0 where none or unknown. */
+/**
+ * Number of previous HPV vaccine doses recorded, 0 where none or unknown.
+ * A dose recorded as given before the 25th birthday counts as at least one
+ * prior dose even where the dose history select was left at none or unknown.
+ */
 export function priorDoseCount(state: HPVConsultationState): number {
-  switch (state.assessment.priorDoses) {
-    case "one":
-      return 1;
-    case "two":
-      return 2;
-    case "three":
-      return 3;
-    default:
-      return 0;
-  }
+  const fromHistory = (() => {
+    switch (state.assessment.priorDoses) {
+      case "one":
+        return 1;
+      case "two":
+        return 2;
+      case "three":
+        return 3;
+      default:
+        return 0;
+    }
+  })();
+  return Math.max(fromHistory, state.assessment.doseBefore25 ? 1 : 0);
 }
 
 /** Selects the schedule. Returns null while age or immune status is unknown. */
@@ -47,21 +56,26 @@ export function selectSchedule(state: HPVConsultationState): HPVSchedule | null 
   const age = state.patient.age;
   if (age === null || age < 9) return null;
 
-  if (state.assessment.doseBefore25) {
+  // Decision 17 (11 Sep 2026): a single dose before the 25th birthday
+  // completes the course for an immunocompetent patient only. An
+  // immunosuppressed or HIV positive patient completes the three dose course
+  // whatever their age at the first dose; the earlier dose is counted, not
+  // repeated.
+  if (state.assessment.doseBefore25 && !state.assessment.immunosuppressedOrHIV) {
     return {
       key: "complete",
       doses: 0,
       label: "No further doses required",
       intervals:
-        "A single dose given before the 25th birthday completes the course, whatever the patient's age now.",
+        "A single dose given before the 25th birthday completes the course for an immunocompetent patient, whatever the patient's age now.",
       offLabel: false,
-      basis: "Green Book chapter 18a.",
+      basis: "Green Book chapter 18a; PGD exclusion (immunocompetent, single dose before 25).",
     };
   }
 
   const schedule = selectCourse(state, age);
 
-  // Exclusion (PGD v005): has already completed a full course of HPV vaccine
+  // Exclusion (PGD v006): has already completed a full course of HPV vaccine
   // appropriate to their age and immune status.
   if (priorDoseCount(state) >= schedule.doses) {
     return {
@@ -87,7 +101,7 @@ function selectCourse(state: HPVConsultationState, age: number): HPVSchedule {
       doses: 3,
       label: "Three doses",
       intervals:
-        "0, 1 month, and 4 to 6 months. All three ideally within 12 months. If the second dose is late and the patient is unlikely to return after three months, the third may be given at least one month after the second.",
+        "0, 1 month, and 4 to 6 months. All three ideally within 12 months. If the second dose is late and the patient is unlikely to return after three months, the third may be given at least one month after the second. This applies whatever the patient's age at the first dose: a single dose given before 25 is counted and the remaining doses are given.",
       offLabel: false,
       basis:
         "Immunosuppressed or known HIV positive. Green Book chapter 18a; within the Gardasil 9 SPC minimum intervals.",
@@ -132,7 +146,7 @@ export function daysBetween(from: string, to: string): number | null {
 
 /**
  * Minimum interval in days before the given dose number under the schedule
- * (PGD v005 guidance summary): two-dose course, dose 2 at least 5 months
+ * (PGD v006 guidance summary): two-dose course, dose 2 at least 5 months
  * after dose 1; three-dose course, dose 2 at least 1 month after dose 1 and
  * dose 3 at least 3 months after dose 2. Returns null where no interval applies.
  */
@@ -246,8 +260,11 @@ export function getAllAlerts(state: HPVConsultationState): ClinicalAlert[] {
       severity: "caution",
       code: "HPV_IMMUNOSUPPRESSION",
       message: "Immunosuppressed or HIV positive: three-dose schedule applies",
-      detail:
-        "Vaccinate. Eligible GBMSM known to be HIV positive should be offered the vaccine regardless of CD4 count, antiretroviral therapy or viral load. The response may be suboptimal; in transplant recipients additional doses after treatment are a specialist decision, not one for this PGD.",
+      detail: `Vaccinate. Eligible GBMSM known to be HIV positive should be offered the vaccine regardless of CD4 count, antiretroviral therapy or viral load. The three dose course applies whatever the patient's age at the first dose: a single dose given before 25 does not complete the course in this group.${
+        state.assessment.doseBefore25
+          ? " This patient had a dose before 25: it is counted as a prior dose and the remaining doses are given, not repeated."
+          : ""
+      } The response may be suboptimal; in transplant recipients additional doses after treatment are a specialist decision, not one for this PGD.`,
     });
   }
 

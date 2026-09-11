@@ -7,7 +7,7 @@ import type {
 /**
  * Genital warts ePGD: state shape.
  *
- * Aligned to the signed PGD version 004, issued 11 September 2026 (valid
+ * Aligned to the signed PGD version 005, issued 11 September 2026 (valid
  * to 31 July 2027), which is actually two PGDs in one
  * document: podophyllotoxin 0.5% solution / 0.15% cream, and imiquimod 5%
  * cream. They share most exclusions but differ on treatment area limits,
@@ -65,20 +65,23 @@ export type PriorReviewOutcome = "" | "persisting" | "cleared";
 
 export interface GenitalWartsTreatment {
   agent: WartAgent;
-  /** Podophyllotoxin only: "solution" (15 mL) or "cream" (5 g). */
+  /** Podophyllotoxin only: "solution" (Warticon 3 mL or Condyline 3.5 mL) or "cream" (Warticon 5 g). */
   podophyllotoxinForm: string;
   /** Record: name and brand of medication. */
   brand: string;
   /**
-   * Which supply this is in the current course. Podophyllotoxin: one bottle
-   * or tube per cycle, maximum 4 cycles. Imiquimod: 12 sachets per
-   * dispensing (4 weeks), maximum 4 dispensings (16 weeks).
+   * Which supply this is in the current course. Podophyllotoxin: one pack
+   * per course (the pack covers the licensed 4 weekly cycles); a second pack
+   * only at the review after 2 cycles where warts persist, so a maximum of
+   * 2 packs. Imiquimod: 12 sachets per dispensing (4 weeks), maximum 4
+   * dispensings (16 weeks).
    */
   supplyNumber: number | null;
   /**
    * Outcome of the PGD's mid-course review (podophyllotoxin after 2 cycles,
-   * imiquimod at 8 weeks). Required before the third supply; "cleared" means
-   * no further supply.
+   * imiquimod at 8 weeks). Required before the second podophyllotoxin pack
+   * and before the third imiquimod dispensing; "cleared" means no further
+   * supply.
    */
   priorReviewOutcome: PriorReviewOutcome;
   /** Derived from the agent and form: the document's fixed pack per supply. */
@@ -132,17 +135,23 @@ export interface GenitalWartsConsultationState {
 export function fixedQuantity(agent: WartAgent, podophyllotoxinForm: string): string {
   if (agent === "imiquimod") return "12 sachets (4 weeks at 3 times a week)";
   if (agent === "podophyllotoxin") {
-    if (podophyllotoxinForm === "solution") return "1 x 15 mL bottle of 0.5% solution (one treatment cycle)";
-    if (podophyllotoxinForm === "cream") return "1 x 5 g tube of 0.15% cream (one treatment cycle)";
+    if (podophyllotoxinForm === "solution") return "1 bottle of 0.5% solution (Warticon 3 mL or Condyline 3.5 mL): one pack per course";
+    if (podophyllotoxinForm === "cream") return "1 x 5 g tube of 0.15% cream (Warticon): one pack per course";
     return "";
   }
   return "";
 }
 
-/** Maximum supplies in a course: podophyllotoxin 4 cycles; imiquimod 4 dispensings (16 weeks). */
+/** Maximum supplies in a course: podophyllotoxin 2 packs (the second only at the review after 2 cycles); imiquimod 4 dispensings (16 weeks). */
 export const MAX_SUPPLIES: Record<Exclude<WartAgent, "">, number> = {
-  podophyllotoxin: 4,
+  podophyllotoxin: 2,
   imiquimod: 4,
+};
+
+/** The supply number from which the PGD's mid-course review outcome must be recorded first: podophyllotoxin pack 2 (review after 2 cycles); imiquimod dispensing 3 (8-week review). */
+export const REVIEW_BEFORE_SUPPLY: Record<Exclude<WartAgent, "">, number> = {
+  podophyllotoxin: 2,
+  imiquimod: 3,
 };
 
 /** Days from supply to the PGD review point: podophyllotoxin after 2 cycles (14 days); imiquimod at 8 weeks (56 days). */
@@ -172,7 +181,7 @@ export const STEP_LABELS = [
 export const TOTAL_STEPS = STEP_LABELS.length;
 
 export const PGD_VERSION_LINE =
-  "Genital Warts PGD (podophyllotoxin and imiquimod), version 004, issued 11 September 2026";
+  "Genital Warts PGD (podophyllotoxin and imiquimod), version 005, issued 11 September 2026";
 
 export function createInitialConsultationState(): GenitalWartsConsultationState {
   return {

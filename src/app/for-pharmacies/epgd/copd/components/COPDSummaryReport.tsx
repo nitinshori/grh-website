@@ -91,6 +91,7 @@ export function COPDSummaryReport({
       />
       <Row label="Purulent sputum" value={state.assessment.purulentSputum ? "Yes" : "No"} />
       <Row label="SpO2 on air" value={state.assessment.spo2 !== null ? `${state.assessment.spo2}%` : "Not recorded"} />
+      <Row label="Respiratory rate" value={state.assessment.respiratoryRate !== null ? `${state.assessment.respiratoryRate} breaths per minute` : "Not recorded"} />
       <Row
         label="Salbutamol supplies under this PGD in last 12 months"
         value={state.assessment.salbutamolSuppliesLast12Months !== null ? String(state.assessment.salbutamolSuppliesLast12Months) : "Not recorded"}
@@ -143,6 +144,7 @@ export function COPDSummaryReport({
 
       <SectionHeader>Exclusions and Red Flags</SectionHeader>
       <Row label="Severe hypoxia (SpO2 below 88%)" value={state.redFlags.severeHypoxia ? "Yes: STOP" : "No"} />
+      <Row label="Respiratory rate 25 or more" value={state.redFlags.highRespiratoryRate ? "Yes: STOP" : "No"} />
       <Row label="Acute distress / respiratory failure" value={state.redFlags.acuteDistress ? "Yes: STOP" : "No"} />
       <Row label="MRC Grade 5" value={state.redFlags.mrcGrade5 || state.assessment.mrcBreathlessnessScale === 5 ? "Yes: STOP" : "No"} />
       <Row label="New haemoptysis" value={state.redFlags.newHaemoptysis ? "Yes: Refer" : "No"} />

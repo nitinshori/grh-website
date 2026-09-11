@@ -26,12 +26,12 @@ export function validatePatientDetailsStep(
   const age = calculateAge(patient.dateOfBirth);
   if (age === null) return 'Unable to calculate age from the date of birth';
 
-  // PGD v004 inclusion: adults aged 18 years and over.
+  // PGD v005 inclusion: adults aged 18 years and over.
   if (age < 18) {
     return 'This PGD applies to adults aged 18 years and over';
   }
 
-  // PGD v004 records: name, address, date of birth and GP.
+  // PGD v005 records: name, address, date of birth and GP.
   if (!patient.address.trim()) return 'Patient address is required (the PGD requires it to be recorded)';
   if (!patient.gpPractice.trim() && !patient.gpName.trim())
     return 'The patient\'s GP is required: search for the practice, or enter "Not registered" as the GP name';

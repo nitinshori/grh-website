@@ -69,7 +69,7 @@ export function validateStep(
           return "Cellulitis: record the time the margin was marked";
         if (!a.reviewDateTime.trim())
           return cellulitisPgd
-            ? "Cellulitis: record the date and time of the booked 48-hour reassessment"
+            ? "Cellulitis: record the date and time of the 48-hour reassessment booked at this pharmacy (inclusion requirement)"
             : "Cellulitis: record the date and time of the booked in-person 48-hour review at this pharmacy";
         // The review is AT 48 hours: a booking outside 36 to 60 hours is not the document's review.
         const hours = hoursUntilReview(state.summary.consultationDate, state.summary.consultationTime, a.reviewDateTime);

@@ -1,5 +1,5 @@
 import type { GenitalWartsConsultationState } from "./genital-warts-types";
-import { MAX_SUPPLIES, REVIEW_INTERVAL_DAYS, addDays } from "./genital-warts-types";
+import { MAX_SUPPLIES, REVIEW_BEFORE_SUPPLY, REVIEW_INTERVAL_DAYS, addDays } from "./genital-warts-types";
 
 /**
  * Per-step validation. Returns the message to show, or null when the step is
@@ -53,15 +53,15 @@ export function validateStep(
       if (!treatment.brand.trim()) return "Record the brand supplied";
       if (treatment.supplyNumber === null || treatment.supplyNumber < 1)
         return treatment.agent === "podophyllotoxin"
-          ? "Record which treatment cycle this supply is for (1 to 4)"
+          ? "Record which pack this is in the course (1, or 2 only at the review after 2 cycles)"
           : "Record which dispensing this is in the course (1 to 4; 12 sachets each)";
       if (treatment.supplyNumber > MAX_SUPPLIES[treatment.agent])
         return treatment.agent === "podophyllotoxin"
-          ? "The PGD authorises a maximum of 4 podophyllotoxin cycles"
+          ? "The PGD authorises one podophyllotoxin pack per course and a second only at the review after 2 cycles (maximum 2 packs)"
           : "The PGD authorises a maximum of 16 weeks (4 dispensings) of imiquimod";
-      if (treatment.supplyNumber >= 3 && !treatment.priorReviewOutcome)
+      if (treatment.supplyNumber >= REVIEW_BEFORE_SUPPLY[treatment.agent] && !treatment.priorReviewOutcome)
         return treatment.agent === "podophyllotoxin"
-          ? "Record the outcome of the review after 2 cycles before supplying a third cycle"
+          ? "Record the outcome of the review after 2 cycles before supplying a second pack"
           : "Record the outcome of the 8-week review before the third dispensing";
       if (!treatment.quantitySupplied.trim()) return "Quantity is set by the PGD for the agent and form chosen";
       if (!treatment.batchNumber.trim()) return "Record the batch number";

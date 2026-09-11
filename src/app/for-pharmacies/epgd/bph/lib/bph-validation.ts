@@ -7,7 +7,7 @@ import { MAX_CAPSULES_PER_SUPPLY } from "./bph-clinical-logic";
 export function validateStep(state: BPHConsultationState, stepIndex: number): string | null {
   switch (stepIndex) {
     case 0: { // Patient Details
-      // PGD v003: inclusion 18 and over, but under 45 is an exclusion.
+      // PGD v004: inclusion 18 and over, but under 45 is an exclusion.
       const base = validatePatientStep(state.patient, {
         minAge: 45,
         requireGender: true,
@@ -54,6 +54,15 @@ export function validateStep(state: BPHConsultationState, stepIndex: number): st
       return null;
 
     case 3: // Medical History
+      // Decision 47: blood pressure lying and standing at every supply, both recorded.
+      if (
+        state.medicalHistory.lyingSystolic === null ||
+        state.medicalHistory.lyingDiastolic === null ||
+        state.medicalHistory.standingSystolic === null ||
+        state.medicalHistory.standingDiastolic === null
+      ) {
+        return "Measure and record blood pressure lying and standing (both readings) at every supply";
+      }
       if (!state.medicalHistory.previouslyAssessedByGp && !(state.medicalHistory.gpInformedToday && state.medicalHistory.patientAgreesGpWithin6Weeks)) {
         return "Symptoms not previously assessed by a GP or urologist: the GP must be informed today and the patient must agree to attend within 6 weeks";
       }

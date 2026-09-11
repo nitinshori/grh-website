@@ -80,7 +80,7 @@ export function HepABSummaryReport({ state, blocked, blockReason, nextDoseDueDat
         <div>
           <SectionHeader>Consent</SectionHeader>
           <div className="space-y-1.5">
-            <Row label="Consent given by" value={travel.consentBasis === "parental" ? `Person with parental responsibility: ${travel.consentGivenBy || "not recorded"}` : travel.consentBasis === "self" ? "The patient (16 and over)" : "Not recorded"} />
+            <Row label="Consent given by" value={travel.consentBasis === "parental" ? `Person with parental responsibility: ${travel.consentGivenBy || "not recorded"}` : travel.consentBasis === "gillick" ? `The young person, assessed as Gillick competent. Basis: ${travel.consentGivenBy || "not recorded"}` : travel.consentBasis === "self" ? "The patient (16 and over)" : "Not recorded"} />
           </div>
           <div className="mt-2">
             <CounsellingGrid items={[

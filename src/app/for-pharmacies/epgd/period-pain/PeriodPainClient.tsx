@@ -19,7 +19,7 @@ import { PeriodPainSummaryReport } from "./components/PeriodPainSummaryReport";
 
 /**
  * Period Pain ePGD, aligned to the Naproxen or Mefenamic acid for Period
- * Pain (Dysmenorrhoea) PGD, version 004, issued 11 September 2026:
+ * Pain (Dysmenorrhoea) PGD, version 005, issued 11 September 2026:
  * primary dysmenorrhoea in females aged 16+. NSAID exclusions enforced as
  * hard stops (ulcer/GI bleed history, NSAID/aspirin hypersensitivity,
  * severe hepatic/renal/cardiac impairment, other NSAIDs or anticoagulants,
@@ -28,13 +28,19 @@ import { PeriodPainSummaryReport } from "./components/PeriodPainSummaryReport";
  * per supply.
  */
 
-const PGD_STRAPLINE = "Naproxen or Mefenamic acid for Period Pain (Dysmenorrhoea) PGD, version 004, issued 11 September 2026";
+const PGD_STRAPLINE = "Naproxen or Mefenamic acid for Period Pain (Dysmenorrhoea) PGD, version 005, issued 11 September 2026";
 
 const STEP_LABELS = ["Patient Details", "Consent", "Assessment & History", "Treatment", "Counselling & Summary"] as const;
 
 interface Clinical {
   femaleConfirmed: boolean;
   primaryDysmenorrhoea: boolean;
+  /** Decision 44: inclusion criterion. Paracetamol or an antispasmodic has been
+   *  tried for at least one cycle and was insufficient, or is unsuitable for
+   *  this patient, with the answer recorded. "not-tried" fails the criterion. */
+  priorTreatment: "" | "tried-insufficient" | "unsuitable" | "not-tried";
+  /** What was tried and for how long, or why paracetamol and antispasmodics are unsuitable. */
+  priorTreatmentDetail: string;
   redFlagSymptoms: boolean; // abnormal bleeding, fever, suspected secondary cause
   pregnantOrSuspected: boolean;
   breastfeeding: boolean;
@@ -82,7 +88,7 @@ export default function PeriodPainClient() {
   const [summary, setSummary] = useState<BaseSummary>(initialSummary());
   const blank: Clinical = {
     femaleConfirmed: false,
-    primaryDysmenorrhoea: false, redFlagSymptoms: false, pregnantOrSuspected: false, breastfeeding: false,
+    primaryDysmenorrhoea: false, priorTreatment: "", priorTreatmentDetail: "", redFlagSymptoms: false, pregnantOrSuspected: false, breastfeeding: false,
     ulcerOrGIBleed: false, nsaidHypersensitivity: false, severeOrganImpairment: false,
     otherNsaidsOrAnticoagulants: false, coagulationDisorder: false, interactingMedicines: false,
     inflammatoryBowelDisease: false,
@@ -114,6 +120,8 @@ export default function PeriodPainClient() {
     const a: ClinicalAlert[] = [];
     if (patient.age !== null && patient.age < 16)
       a.push({ code: "under-16", severity: "stop", message: "Under 16, excluded from this PGD", detail: "Refer to the GP." });
+    if (c.priorTreatment === "not-tried")
+      a.push({ code: "prior-treatment", severity: "stop", message: "Paracetamol or an antispasmodic not yet tried, inclusion criterion not met", detail: "Decision 44: supply under this PGD requires that paracetamol or an antispasmodic has been tried for at least one cycle and was insufficient, or is unsuitable for this patient. Advise paracetamol or an antispasmodic (as a separate sale, subject to the usual checks) and review after one cycle." });
     if (c.redFlagSymptoms)
       a.push({ code: "red-flags", severity: "stop", message: "Features suggesting secondary dysmenorrhoea", detail: "Symptoms starting later in life; severe, progressive or unresponsive pain; intermenstrual or postcoital bleeding, dyspareunia or abnormal discharge need GP assessment, not PGD supply." });
     if (c.pregnantOrSuspected)
@@ -164,6 +172,8 @@ export default function PeriodPainClient() {
       case 1: return validateConsentStep(consent);
       case 2:
         if (!c.primaryDysmenorrhoea) return "Please confirm the presentation is primary dysmenorrhoea";
+        if (!c.priorTreatment) return "Record whether paracetamol or an antispasmodic has been tried for at least one cycle, or is unsuitable";
+        if ((c.priorTreatment === "tried-insufficient" || c.priorTreatment === "unsuitable") && !c.priorTreatmentDetail.trim()) return c.priorTreatment === "unsuitable" ? "Record why paracetamol and antispasmodics are unsuitable" : "Record what was tried and for how many cycles";
         if (!c.allergies.trim()) return "Please record allergy status (or NKDA)";
         if (c.previousSupply && (!c.lastSupplyDate || c.previousCycles === null)) return "Record the date of the last supply and the number of cycles already treated";
         return null;
@@ -241,7 +251,30 @@ export default function PeriodPainClient() {
         return (
           <div className="space-y-4">
             <AlertBanner alerts={alerts} />
-            <Checkbox label="Presentation consistent with primary dysmenorrhoea (cyclical crampy pain before or during menstruation, no red flags), where paracetamol or antispasmodics are insufficient" checked={c.primaryDysmenorrhoea} onChange={(v) => set({ primaryDysmenorrhoea: v })} />
+            <Checkbox label="Presentation consistent with primary dysmenorrhoea (cyclical crampy pain before or during menstruation, no red flags)" checked={c.primaryDysmenorrhoea} onChange={(v) => set({ primaryDysmenorrhoea: v })} />
+            <div className="space-y-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <p className="text-sm font-semibold text-navy-900">Paracetamol or an antispasmodic (inclusion criterion)</p>
+              <SelectInput
+                label="Has paracetamol or an antispasmodic been tried for at least one cycle?"
+                value={c.priorTreatment}
+                onChange={(v) => set({ priorTreatment: v as Clinical["priorTreatment"], ...(v === "not-tried" ? { priorTreatmentDetail: "" } : {}) })}
+                options={[
+                  { value: "tried-insufficient", label: "Tried for at least one cycle and insufficient" },
+                  { value: "unsuitable", label: "Unsuitable for this patient (record why)" },
+                  { value: "not-tried", label: "Not yet tried (inclusion criterion not met; advise and review after one cycle)" },
+                ]}
+                required
+              />
+              {(c.priorTreatment === "tried-insufficient" || c.priorTreatment === "unsuitable") && (
+                <TextInput
+                  label={c.priorTreatment === "unsuitable" ? "Why paracetamol and antispasmodics are unsuitable" : "What was tried, at what dose, and for how many cycles"}
+                  value={c.priorTreatmentDetail}
+                  onChange={(v) => set({ priorTreatmentDetail: v })}
+                  placeholder={c.priorTreatment === "unsuitable" ? "e.g. paracetamol hypersensitivity; hyoscine butylbromide contraindicated" : "e.g. paracetamol 1 g four times a day for two cycles, pain not controlled"}
+                  required
+                />
+              )}
+            </div>
             <TextInput label="Allergies" value={c.allergies} onChange={(v) => set({ allergies: v })} placeholder="Record allergies, or NKDA" required />
             <div className="space-y-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
               <p className="text-sm font-semibold text-navy-900">Previous treatment (one cycle per supply; short-term use only)</p>

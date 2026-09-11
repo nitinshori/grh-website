@@ -540,7 +540,25 @@ export default function PostnatalContraceptionClient() {
                     value: v,
                   })
                 }
-                description="Caution in both arms; specialist advice recommended if less than 5 years clear."
+                description="Desogestrel exclusion (UKMEC 3 for the progestogen-only pill). Depo-Provera caution; specialist advice recommended."
+              />
+              <Checkbox
+                label="Ischaemic heart disease (current or past), stroke or transient ischaemic attack"
+                checked={state.medicalHistory.ischaemicHeartDiseaseOrStroke}
+                onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "ischaemicHeartDiseaseOrStroke", value: v })}
+                description="Desogestrel exclusion (UKMEC 3 for continuing the progestogen-only pill)."
+              />
+              <Checkbox
+                label="Severe (decompensated) cirrhosis"
+                checked={state.medicalHistory.severeCirrhosis}
+                onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "severeCirrhosis", value: v })}
+                description="Desogestrel exclusion (UKMEC 3 for the progestogen-only pill)."
+              />
+              <Checkbox
+                label="Enzyme-inducing medicine now or in the last 28 days"
+                checked={state.medicalHistory.enzymeInducingMedicine}
+                onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "enzymeInducingMedicine", value: v })}
+                description="Rifampicin, rifabutin, carbamazepine, oxcarbazepine, eslicarbazepine, phenytoin, phenobarbital, primidone, topiramate, St John's wort, efavirenz, nevirapine, ritonavir-boosted protease inhibitors. Desogestrel exclusion (UKMEC 3 for the progestogen-only pill)."
               />
 
               <Checkbox
@@ -573,7 +591,7 @@ export default function PostnatalContraceptionClient() {
                     value: v,
                   })
                 }
-                description="Caution due to thrombotic risk."
+                description="Desogestrel exclusion (named in the UKMEC 3 or 4 list of the desogestrel arm)."
               />
 
               <div className="border-t pt-4">
@@ -812,7 +830,9 @@ export default function PostnatalContraceptionClient() {
                   label="UKMEC 2025 category 1 or 2 for the chosen method confirmed"
                   checked={state.medicineSupply.ukmecConfirmed}
                   onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "ukmecConfirmed", value: v })}
-                  description="Inclusion criterion in both arms of the PGD."
+                  description={state.medicineSupply.medicineChoice === "desogestrel"
+                    ? "Inclusion criterion: none of the progestogen-only pill category 3 or 4 conditions named in the desogestrel arm is present (current or past breast cancer, ischaemic heart disease or stroke, severe cirrhosis, liver tumours, enzyme-inducing medicines, SLE with antiphospholipid antibodies)."
+                    : "Inclusion criterion in both arms of the PGD."}
                   required
                 />
               )}
@@ -1150,13 +1170,18 @@ function PostnatalContraceptionSummaryReport({
       <Row label="Exclusions and cautions asked" value={state.medicalHistory.exclusionsAsked ? "Yes, all asked and recorded" : "Not confirmed"} />
       <Row label="Active thromboembolic disorder" value={state.medicalHistory.activeThromboembolicDisorder ? "Yes" : "No"} />
       <Row label="Liver tumours" value={state.medicalHistory.liverTumours ? "Yes" : "No"} />
+      <Row label="Past breast cancer, more than 5 years ago (desogestrel exclusion)" value={state.medicalHistory.pastBreastCancer ? "Yes" : "No"} />
+      <Row label="Ischaemic heart disease, stroke or TIA (desogestrel exclusion)" value={state.medicalHistory.ischaemicHeartDiseaseOrStroke ? "Yes" : "No"} />
+      <Row label="Severe cirrhosis (desogestrel exclusion)" value={state.medicalHistory.severeCirrhosis ? "Yes" : "No"} />
+      <Row label="Enzyme-inducing medicine, now or last 28 days (desogestrel exclusion)" value={state.medicalHistory.enzymeInducingMedicine ? "Yes" : "No"} />
+      <Row label="SLE with antiphospholipid antibodies (desogestrel exclusion)" value={state.medicalHistory.sleWithAntiphospholipidAntibodies ? "Yes" : "No"} />
       <Row label="Hypersensitivity (desogestrel / MPA)" value={`${state.medicalHistory.desogestrelHypersensitivity ? "Yes" : "No"} / ${state.medicalHistory.mpaHypersensitivity ? "Yes" : "No"}`} />
       <Row label="Severe cardiovascular disease" value={state.medicalHistory.severeCardiovascularDisease ? "Yes" : "No"} />
       <Row label="Meningioma (current or previous)" value={state.medicalHistory.meningioma ? "Yes" : "No"} />
       <Row
         label="Cautions"
         value={[
-          state.medicalHistory.pastBreastCancer && "breast cancer history",
+          state.medicalHistory.pastBreastCancer && "breast cancer history (Depo-Provera caution)",
           state.medicalHistory.functionalOvarianCysts && "functional ovarian cysts",
           state.medicalHistory.diabetes && "diabetes",
           state.medicalHistory.hypertension && "hypertension",

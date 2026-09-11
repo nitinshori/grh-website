@@ -14,7 +14,7 @@ export function getAllAlerts(state: AnxietyPropranololConsultationState): Clinic
     });
   }
 
-  // PGD v005 exclusions (11 September 2026)
+  // PGD v006 exclusions (11 September 2026)
   if (state.contraindications.cardiogenicShock) {
     alerts.push({
       severity: "stop",
@@ -270,7 +270,7 @@ export function getAllAlerts(state: AnxietyPropranololConsultationState): Clinic
       severity: "caution",
       code: "ANX_PORTAL",
       message: "Portal hypertension: caution",
-      detail: "Counsel and consider GP review if used regularly.",
+      detail: "Counsel and consider GP review.",
     });
   }
 
@@ -342,41 +342,21 @@ export function doseAdvisedMg(state: AnxietyPropranololConsultationState): numbe
 }
 
 /**
- * Regular regimen only: how many days the supply lasts at the advised dose
- * and frequency. The document asks for review at 4 weeks on a supply that is
- * capped at 28 x 10mg, which at 10mg three times daily is 9 days; the tool
- * shows the pharmacist the number rather than reproducing the contradiction
- * silently (adversarial review, 11 Sep 2026).
+ * As-required use only (decision 55, 11 September 2026): 10 to 40mg as a
+ * single dose 30 to 60 minutes before the anxiety-provoking situation. The
+ * regular two-to-three-times-daily regimen and the 120mg daily maximum are
+ * withdrawn from the document, so the tool no longer offers a regimen choice.
  */
-export function daysCovered(state: AnxietyPropranololConsultationState): number | null {
-  const dose = doseAdvisedMg(state);
-  const q = state.medicineSupply.quantity;
-  const times = parseInt(state.medicineSupply.timesDaily, 10);
-  if (state.medicineSupply.regimen !== "regular" || dose === null || !q || !times) return null;
-  return Math.floor((q * 10) / (dose * times));
-}
-
 export function calculateDoseRecommendation(state: AnxietyPropranololConsultationState): DoseRecommendation | null {
-  if (!state.medicineSupply.regimen) return null;
   const dose = doseAdvisedMg(state);
-  const doseText = dose !== null ? `${dose}mg (${dose / 10} x 10mg tablet${dose > 10 ? "s" : ""})` : "Dose not yet chosen";
-  if (state.medicineSupply.regimen === "regular") {
-    const times = state.medicineSupply.timesDaily === "3" ? "three times daily" : state.medicineSupply.timesDaily === "2" ? "twice daily" : "two to three times daily";
-    return {
-      medicine: "Propranolol 10mg tablets",
-      dose: doseText,
-      frequency: times.charAt(0).toUpperCase() + times.slice(1),
-      duration: "Ongoing situational anxiety; review at 4 weeks",
-      dosingRegimen: `${doseText} ${times} for ongoing situational anxiety. Maximum 120mg daily. Review at 4 weeks; consider gradual dose reduction if discontinuing. Do not stop abruptly.`,
-      reason: "Beta-blocker reduces physical anxiety symptoms (tremor, palpitations, sweating) in situational anxiety",
-    };
-  }
+  if (dose === null) return null;
+  const doseText = `${dose}mg (${dose / 10} x 10mg tablet${dose > 10 ? "s" : ""})`;
   return {
     medicine: "Propranolol 10mg tablets",
     dose: doseText,
-    frequency: "PRN (as needed)",
-    duration: "Single dose before anxiety-provoking situation",
-    dosingRegimen: `Take ${doseText} 30 to 60 minutes before the anticipated anxiety-provoking situation (exam, presentation, public speaking). Maximum 120mg daily.`,
+    frequency: "As required (PRN), a single dose before the situation",
+    duration: "One supply per situational event; review before any repeat supply and in any case at 4 weeks",
+    dosingRegimen: `Take ${doseText} as a single dose 30 to 60 minutes before the anticipated anxiety-provoking situation (exam, presentation, public speaking). As-required use only: regular daily dosing is not authorised under this PGD.`,
     reason: "Beta-blocker reduces physical anxiety symptoms (tremor, palpitations, sweating) in situational anxiety",
   };
 }

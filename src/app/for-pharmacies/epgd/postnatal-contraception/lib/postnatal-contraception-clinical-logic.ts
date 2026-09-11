@@ -1,5 +1,5 @@
 // ─── Postnatal Contraception Clinical Logic ───
-// Postnatal Contraception PGD v005 (11 September 2026): desogestrel 75
+// Postnatal Contraception PGD v006 (11 September 2026): desogestrel 75
 // microgram tablets and Depo-Provera 150 mg/mL injection.
 
 import type { PostnatalContraceptionState } from "./postnatal-contraception-types";
@@ -198,13 +198,39 @@ export function getAllAlerts(state: PostnatalContraceptionState): ClinicalAlert[
     });
   }
 
-  // Cautions
+  // UKMEC 2025 progestogen-only pill category 3 and 4 conditions are named
+  // exclusions in the desogestrel arm (decision 42). Each is a caution here
+  // and a hard gate in getMedicineSupplyError when desogestrel is chosen.
   if (h.pastBreastCancer) {
     alerts.push({
       severity: "caution",
       code: "PAST_BREAST_CANCER",
-      message: "History of breast cancer (more than 5 years ago)",
-      detail: "Caution in both arms. Specialist advice recommended if less than 5 years clear.",
+      message: "Past breast cancer (more than 5 years ago): desogestrel excluded",
+      detail: "UKMEC category 3 for the progestogen-only pill, a named exclusion in the desogestrel arm. Caution for Depo-Provera; specialist advice recommended.",
+    });
+  }
+  if (h.ischaemicHeartDiseaseOrStroke) {
+    alerts.push({
+      severity: "caution",
+      code: "IHD_STROKE",
+      message: "Ischaemic heart disease, stroke or TIA: desogestrel excluded",
+      detail: "UKMEC category 3 for continuing the progestogen-only pill; a named exclusion in the desogestrel arm. Refer to the GP or sexual health service.",
+    });
+  }
+  if (h.severeCirrhosis) {
+    alerts.push({
+      severity: "caution",
+      code: "SEVERE_CIRRHOSIS",
+      message: "Severe (decompensated) cirrhosis: desogestrel excluded",
+      detail: "UKMEC category 3 for the progestogen-only pill; a named exclusion in the desogestrel arm. Refer.",
+    });
+  }
+  if (h.enzymeInducingMedicine) {
+    alerts.push({
+      severity: "caution",
+      code: "ENZYME_INDUCER",
+      message: "Enzyme-inducing medicine now or in the last 28 days: desogestrel excluded",
+      detail: "UKMEC category 3 for the progestogen-only pill (rifampicin, rifabutin, carbamazepine, oxcarbazepine, eslicarbazepine, phenytoin, phenobarbital, primidone, topiramate, St John's wort, efavirenz, nevirapine, ritonavir-boosted protease inhibitors). Refer; Depo-Provera is unaffected by enzyme inducers.",
     });
   }
   if (h.functionalOvarianCysts) {
@@ -226,8 +252,8 @@ export function getAllAlerts(state: PostnatalContraceptionState): ClinicalAlert[
     alerts.push({
       severity: "caution",
       code: "SLE_ANTIPHOSPHOLIPID",
-      message: "SLE with antiphospholipid antibodies",
-      detail: "Caution due to thrombotic risk. Specialist evaluation recommended.",
+      message: "SLE with positive or unknown antiphospholipid antibodies: desogestrel excluded",
+      detail: "A named exclusion in the desogestrel arm (UKMEC 3 or 4 list). Specialist evaluation recommended.",
     });
   }
 
@@ -275,6 +301,12 @@ export function getMedicineSupplyError(state: PostnatalContraceptionState): stri
 
   if (m.medicineChoice === "desogestrel") {
     if (h.desogestrelHypersensitivity) return "Hypersensitivity to desogestrel or excipients: desogestrel cannot be supplied";
+    // Named UKMEC 2025 POP category 3 and 4 exclusions (decision 42)
+    if (h.pastBreastCancer) return "Past breast cancer (UKMEC 3 for the progestogen-only pill): desogestrel cannot be supplied";
+    if (h.ischaemicHeartDiseaseOrStroke) return "Ischaemic heart disease, stroke or TIA (UKMEC 3 for the progestogen-only pill): desogestrel cannot be supplied";
+    if (h.severeCirrhosis) return "Severe (decompensated) cirrhosis (UKMEC 3 for the progestogen-only pill): desogestrel cannot be supplied";
+    if (h.enzymeInducingMedicine) return "Enzyme-inducing medicine now or in the last 28 days (UKMEC 3 for the progestogen-only pill): desogestrel cannot be supplied";
+    if (h.sleWithAntiphospholipidAntibodies) return "SLE with antiphospholipid antibodies: a named exclusion in the desogestrel arm; desogestrel cannot be supplied";
     if (m.quantity <= 0) return "Number of tablets to supply is required";
     if (m.quantity > 84) return "Maximum supply is 3 months (3 x 28 = 84 tablets)";
     if (!m.startDate) return "Start date is required";

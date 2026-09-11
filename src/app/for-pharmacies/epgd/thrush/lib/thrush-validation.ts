@@ -5,7 +5,7 @@ import { getMedicineSelectionError } from "./thrush-clinical-logic";
 export function validateStep(step: number, state: ThrushConsultationState): string | null {
   switch (step) {
     case 0:
-      // PGD v004: women aged 16 to 60 (exclusion row: under 16 or over 60)
+      // PGD v005: women aged 16 to 60 (exclusion row: under 16 or over 60)
       return validatePatientStep(state.patient, {
         minAge: 16,
         maxAge: 60,
@@ -20,6 +20,7 @@ export function validateStep(step: number, state: ThrushConsultationState): stri
       const a = state.assessment;
       const symptomsCount = [a.vulvalItching, a.vulvalSoreness, a.thickWhiteDischarge, a.dyspareunia].filter(Boolean).length;
       if (symptomsCount === 0) return "At least one presenting symptom of vulvovaginal candidiasis must be selected";
+      if (a.dysuria && !a.dysuriaType) return "Dysuria recorded: state whether it is external (stinging as urine passes over the sore vulva) or internal (pain inside the urethra or bladder)";
       if (!a.exclusionsAsked) return "Confirm that every exclusion question above was asked and the answers recorded";
       return null;
     }

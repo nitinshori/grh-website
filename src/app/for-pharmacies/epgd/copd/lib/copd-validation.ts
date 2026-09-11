@@ -1,4 +1,4 @@
-// ─── COPD Validation (PGD v003, 11 September 2026) ───
+// ─── COPD Validation (PGD v004, 11 September 2026) ───
 
 import type { COPDConsultationState } from "./copd-types";
 import {
@@ -28,6 +28,9 @@ export function validateStep(state: COPDConsultationState, step: number): string
       }
       if (state.assessment.spo2 === null) {
         return "Record the oxygen saturation (SpO2 below 88% is an exclusion)";
+      }
+      if (state.assessment.respiratoryRate === null) {
+        return "Measure and record the respiratory rate (25 breaths per minute or more is an exclusion in both arms)";
       }
       if (state.assessment.salbutamolSuppliesLast12Months === null) {
         return "Record how many salbutamol supplies the patient has had under this PGD in the last 12 months";
@@ -88,7 +91,7 @@ export function validateStep(state: COPDConsultationState, step: number): string
         return "Please confirm counselling on non-replacement status";
       }
       // Every line of the document's follow-up advice is required for the
-      // arm supplied (PGD v003, Follow-up advice to be given to patient or carer).
+      // arm supplied (PGD v004, Follow-up advice to be given to patient or carer).
       if (ms.supplySalbutamol && !c.relieverUseAndLimits) {
         return "Confirm the reliever use limits were explained (maximum 8 puffs in 24 hours, referral and 999 thresholds)";
       }

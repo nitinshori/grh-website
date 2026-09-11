@@ -1199,7 +1199,7 @@ export function SoreThroatToolClient({
                           ? "twice daily, with or without food"
                           : "four times daily on an empty stomach (1 hour before or 2 hours after meals)",
                       });
-                      const duration = isClari ? "5 days" : "";
+                      const duration = "5 days";
                       dispatch({
                         type: "UPDATE_MEDICINE",
                         field: "duration",
@@ -1277,7 +1277,7 @@ export function SoreThroatToolClient({
                   />
 
                   <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                    <p className="text-xs font-medium text-gray-500">Quantity (from the document: four a day for phenoxymethylpenicillin, two a day for clarithromycin, for the course length chosen)</p>
+                    <p className="text-xs font-medium text-gray-500">Quantity (from the document: phenoxymethylpenicillin 20 tablets for the 5 day course, clarithromycin 10 tablets for the 5 day course)</p>
                     <p className="text-sm font-semibold text-navy-900">{state.medicine.quantity ? `${state.medicine.quantity} tablets` : "Select the duration"}</p>
                   </div>
 

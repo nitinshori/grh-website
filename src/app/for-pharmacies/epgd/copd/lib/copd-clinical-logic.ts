@@ -1,4 +1,4 @@
-// ─── COPD Management Clinical Logic (PGD v003, 11 September 2026) ───
+// ─── COPD Management Clinical Logic (PGD v004, 11 September 2026) ───
 
 import type { COPDConsultationState } from "./copd-types";
 import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
@@ -89,6 +89,17 @@ export function getAllAlerts(state: COPDConsultationState): ClinicalAlert[] {
         "Exclusion: requires emergency referral and oxygen therapy. Do not supply. Call 999 or arrange same-day emergency care.",
     });
   }
+  // Respiratory rate 25 or more: exclusion in both arms (PGD decision 36)
+  const rrHigh = a.respiratoryRate !== null && a.respiratoryRate >= 25;
+  if (r.highRespiratoryRate || rrHigh) {
+    alerts.push({
+      severity: "stop",
+      code: "HIGH_RESP_RATE",
+      message: "Respiratory rate 25 breaths per minute or more",
+      detail:
+        "Exclusion in both arms: a respiratory rate of 25 or more is a severity marker for hospital assessment. Do not supply salbutamol or amoxicillin. Emergency referral.",
+    });
+  }
   if (r.acuteDistress) {
     alerts.push({
       severity: "stop",
@@ -136,7 +147,7 @@ export function getAllAlerts(state: COPDConsultationState): ClinicalAlert[] {
     });
   }
 
-  // Salbutamol cautions (PGD v003)
+  // Salbutamol cautions (PGD v004)
   if (h.cardiovascularDisease || h.hypertension || h.coronaryDiseaseOrRecentMI) {
     alerts.push({
       severity: "caution",

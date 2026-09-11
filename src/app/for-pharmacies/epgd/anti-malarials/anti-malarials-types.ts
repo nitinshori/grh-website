@@ -13,13 +13,13 @@ export interface AMTravelAssessment {
   departureDate: string; // YYYY-MM-DD
   returnDate: string; // YYYY-MM-DD
   tripDuration: number | null; // calculated days
-  /** PGD v009: destination risk assessment from current NaTHNaC / TravelHealthPro guidance is an inclusion criterion. */
+  /** PGD v010: destination risk assessment from current NaTHNaC / TravelHealthPro guidance is an inclusion criterion. */
   riskAssessmentCompleted: boolean;
-  /** PGD v009 records: the source consulted for the destination recommendation. */
+  /** PGD v010 records: the source consulted for the destination recommendation. */
   riskAssessmentSource: string;
-  /** PGD v009: body weight in kg. Weight, not age, determines dose and product strength. */
+  /** PGD v010: body weight in kg. Weight, not age, determines dose and product strength. */
   weightKg: number | null;
-  /** PGD v009 inclusion: able and willing to complete the whole course including the post-travel tail. */
+  /** PGD v010 inclusion: able and willing to complete the whole course including the post-travel tail. */
   willingToCompleteCourse: boolean;
   previousMalariaProphylaxis: boolean;
   previousProphylaxisType: string; // if yes: which medicine?
@@ -33,9 +33,9 @@ export interface AMTravelAssessment {
 export interface AMMedicalHistory {
   /** The pharmacist confirms every question on the page was asked. Without this every exclusion defaulted to "absent" with no one having to read it. */
   allQuestionsAsked: boolean;
-  /** PGD v009: any febrile illness now, or presenting for treatment of suspected/confirmed malaria. Exclusion, refer same day. */
+  /** PGD v010: any febrile illness now, or presenting for treatment of suspected/confirmed malaria. Exclusion, refer same day. */
   currentFeverOrSuspectedMalaria: boolean;
-  /** PGD v009: fever within the last 12 months after travel to a malarious area, not investigated with a blood film. Exclusion. */
+  /** PGD v010: fever within the last 12 months after travel to a malarious area, not investigated with a blood film. Exclusion. */
   uninvestigatedPostTravelFever: boolean;
   severeRenalImpairment: boolean; // known severe renal impairment, kidney disease or dialysis: A/P excluded
   severeHepaticImpairment: boolean; // doxycycline and mefloquine excluded
@@ -76,8 +76,8 @@ export interface AMMedications {
 // ─── Medicine Selection ───
 
 export type AMMedicineChoice =
-  | 'malarone' // atovaquone 250mg / proguanil 100mg adult tablet, over 40kg
-  | 'malarone-paediatric' // atovaquone 62.5mg / proguanil 25mg paediatric tablet, 11 to 40kg
+  | 'malarone' // atovaquone 250mg / proguanil 100mg adult tablet, 40kg and over
+  | 'malarone-paediatric' // atovaquone 62.5mg / proguanil 25mg paediatric tablet, 11 to 39.9kg
   | 'doxycycline'
   | 'mefloquine'
   | '';
@@ -88,13 +88,13 @@ export interface AMMedicineSelection {
   dose: string;
   startTiming: string;
   continuationAfterReturn: string;
-  /** PGD v009 records: quantity supplied. Pre-filled from the calculated course and validated against it. */
+  /** PGD v010 records: quantity supplied. Pre-filled from the calculated course and validated against it. */
   quantity: number | null;
   /** The calculated course length including the tail, as text, set with the quantity. */
   courseCalculation: string;
-  /** PGD v009 mefloquine arm: a divided dose may only be supplied from a scored tablet. */
+  /** PGD v010 mefloquine arm: a divided dose may only be supplied from a scored tablet. */
   scoredTabletConfirmed: boolean;
-  /** PGD v009 records: batch number and expiry date. */
+  /** PGD v010 records: batch number and expiry date. */
   batchNumber: string;
   expiryDate: string;
   reason: string;
@@ -114,9 +114,9 @@ export interface AMCounselling {
   sideEffectsExplained: boolean;
   whenToSeekHelp: boolean;
   medicineCardProvided: boolean;
-  /** PGD v009: keep taking it for the post-travel tail (7 days A/P, 4 weeks doxycycline and mefloquine). */
+  /** PGD v010: keep taking it for the post-travel tail (7 days A/P, 4 weeks doxycycline and mefloquine). */
   completeCourseAdvised: boolean;
-  /** PGD v009 mefloquine: STOP and seek advice at the first neuropsychiatric symptom, including insomnia and abnormal dreams. */
+  /** PGD v010 mefloquine: STOP and seek advice at the first neuropsychiatric symptom, including insomnia and abnormal dreams. */
   mefloquineStopAdvice: boolean;
 }
 

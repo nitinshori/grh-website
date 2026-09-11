@@ -646,19 +646,6 @@ export function WegovyToolClient() {
               />
 
               <Checkbox
-                label="Obesity caused by an endocrinological disorder"
-                checked={state.medicalHistory.endocrineObesity}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_MEDICAL_HISTORY",
-                    field: "endocrineObesity",
-                    value: v,
-                  })
-                }
-                description="Exclusion. If the patient was already overweight prior to that diagnosis, this exclusion may not apply: leave unticked and document the reasoning in the clinical notes."
-              />
-
-              <Checkbox
                 label="Type 1 diabetes mellitus"
                 checked={state.medicalHistory.type1Diabetes}
                 onChange={(v) =>
@@ -817,6 +804,19 @@ export function WegovyToolClient() {
                   })
                 }
                 description="Monitor for dehydration secondary to gastrointestinal side effects"
+              />
+
+              <Checkbox
+                label="Endocrine cause of obesity suspected but not yet assessed or treated"
+                checked={state.medicalHistory.endocrineObesity}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "endocrineObesity",
+                    value: v,
+                  })
+                }
+                description="Caution, not an exclusion. An endocrine cause of obesity does not exclude; a patient with treated hypothyroidism or treated Cushing's syndrome may be supplied. Where an endocrine cause is suspected and has not been assessed or treated, inform the GP so that it can be investigated and record this in the clinical notes."
               />
 
               <Checkbox

@@ -284,7 +284,7 @@ export default function HPVClient() {
                   value: v,
                 })
               }
-              description="Under current UK policy a single dose given before the 25th birthday completes the course, whatever the patient's age now. If this applies, no further dose is required and none should be charged for."
+              description="For an immunocompetent patient a single dose given before the 25th birthday completes the course, whatever the patient's age now: no further dose is required and none should be charged for. For a patient who is immunosuppressed or HIV positive it does not complete the course: they complete the three dose course, with the earlier dose counted and the remaining doses given."
             />
             <SelectInput
               label="Pregnancy status"

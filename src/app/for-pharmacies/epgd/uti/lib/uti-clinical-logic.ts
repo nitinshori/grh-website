@@ -8,7 +8,7 @@ import type {
 } from "./uti-types";
 
 // ─── Clinical Logic for UTI Consultation ───
-// Aligned to the UTI in Women aged 16 to 64 PGD, version 006, issued
+// Aligned to the UTI in Women aged 16 to 64 PGD, version 007, issued
 // 11 September 2026. Nitrofurantoin is first line; trimethoprim only where
 // nitrofurantoin is unsuitable and the reason is recorded.
 
@@ -30,6 +30,42 @@ export function isNitrofurantoinContraindicated(medicalHistory: UTIMedicalHistor
     medicalHistory.previousNitrofurantoinReaction ||
     medicalHistory.acutePorphyria
   );
+}
+
+/** Decision 43: the eGFR result a woman aged 60 to 64 needs before supply.
+ *  45 mL/min or more, dated within the last 12 months of today. Returns the
+ *  reason it does not satisfy the renal row, or null where it does. */
+export function egfrResultShortfall(medicalHistory: UTIMedicalHistory): string | null {
+  if (!medicalHistory.egfrResultSeen) {
+    return "No eGFR result has been seen";
+  }
+  if (medicalHistory.egfrValue === null) {
+    return "The eGFR value seen has not been recorded";
+  }
+  if (medicalHistory.egfrValue < 45) {
+    return `The eGFR seen is ${medicalHistory.egfrValue} mL/min, below 45`;
+  }
+  if (!medicalHistory.egfrDate) {
+    return "The date of the eGFR result has not been recorded";
+  }
+  const resultDate = new Date(medicalHistory.egfrDate);
+  if (isNaN(resultDate.getTime())) {
+    return "The date of the eGFR result is not a valid date";
+  }
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (resultDate.getTime() > today.getTime()) {
+    return "The date of the eGFR result is in the future";
+  }
+  const twelveMonthsAgo = new Date(today);
+  twelveMonthsAgo.setFullYear(twelveMonthsAgo.getFullYear() - 1);
+  if (resultDate.getTime() < twelveMonthsAgo.getTime()) {
+    return "The eGFR result is more than 12 months old";
+  }
+  if (!medicalHistory.egfrSource.trim()) {
+    return "Where the result was seen has not been recorded";
+  }
+  return null;
 }
 
 /** Trimethoprim arm exclusions. */
@@ -97,7 +133,7 @@ export function getUTIClinicalAlerts(
       code: "SINGLE_SYMPTOM",
       message: "Only one core urinary symptom present",
       detail:
-        "PGD v006 requires two or more of: dysuria, new nocturia, urinary frequency or urgency. Where only one symptom is present, refer rather than supply.",
+        "PGD v007 requires two or more of: dysuria, new nocturia, urinary frequency or urgency. Where only one symptom is present, refer rather than supply.",
     });
   }
 
@@ -167,7 +203,7 @@ export function getUTIClinicalAlerts(
     });
   }
 
-  // "Previous UTI within 4 weeks" is not an exclusion in PGD v006, which
+  // "Previous UTI within 4 weeks" is not an exclusion in PGD v007, which
   // defines recurrence by the 6 and 12 month counts. The answer is recorded
   // and shown as a caution so the pharmacist checks the counts, nothing more.
   if (medicalHistory.previousUTIWithin4Weeks) {
@@ -285,7 +321,7 @@ export function getUTIClinicalAlerts(
     });
   }
 
-  // Renal function under PGD v006.
+  // Renal function under PGD v007.
   //
   // The PGD asks a question that can be answered at the counter: "Have you
   // ever been told you have kidney disease, or that your kidneys do not work
@@ -314,28 +350,35 @@ export function getUTIClinicalAlerts(
     });
   }
 
-  // Aged 60 to 64: a NO answer alone is not enough. The PGD excludes where
-  // renal function is unknown in this age band and refers for a renal
-  // function check first. Below 60, an unknown answer with no history is not
-  // a bar.
-  if (
-    patient.age !== null &&
-    patient.age >= 60 &&
-    (medicalHistory.renalImpairment === "unknown" || medicalHistory.renalImpairment === "none")
-  ) {
+  // Aged 60 to 64: a NO answer alone is not enough. Decision 43: the patient
+  // proceeds only where an eGFR of 45 mL/min or more, dated within the last
+  // 12 months, has been seen by the pharmacist and recorded. Where no such
+  // result can be seen, or the patient does not know, exclude and refer for
+  // a renal function check first. Below 60, a NO answer is enough.
+  if (patient.age !== null && patient.age >= 60 && medicalHistory.renalImpairment === "unknown") {
     alerts.push({
       severity: "stop",
       code: "RENAL_UNKNOWN_OLDER",
-      message: "Aged 60 to 64: excluded by the renal row",
+      message: "Aged 60 to 64: patient does not know whether they have kidney disease",
       detail:
-        "PGD v006: answer NO but aged 60 to 64, or the patient does not know: EXCLUDE. Refer for a renal function check first. The document gives no route back to pharmacy supply on a seen result.",
+        "Renal row: aged 60 to 64 and the patient does not know: EXCLUDE. Refer for a renal function check first.",
     });
+  } else if (patient.age !== null && patient.age >= 60 && medicalHistory.renalImpairment === "none") {
+    const shortfall = egfrResultShortfall(medicalHistory);
+    if (shortfall) {
+      alerts.push({
+        severity: "stop",
+        code: "RENAL_UNKNOWN_OLDER",
+        message: "Aged 60 to 64: no qualifying eGFR result seen",
+        detail: `${shortfall}. Renal row: a woman aged 60 to 64 proceeds only where an eGFR of 45 mL/min or more, dated within the last 12 months, has been seen by the pharmacist (NHS App, GP summary or a letter) and the result, its date and where it was seen are recorded. Otherwise EXCLUDE and refer for a renal function check first.`,
+      });
+    }
   } else if (patient.age !== null && patient.age < 60 && medicalHistory.renalImpairment === "unknown") {
     alerts.push({
       severity: "stop",
       code: "RENAL_UNKNOWN",
       message: "Patient does not know whether they have kidney disease",
-      detail: "PGD v006 renal row: the patient does not know: EXCLUDE. Refer for a renal function check first.",
+      detail: "PGD v007 renal row: the patient does not know: EXCLUDE. Refer for a renal function check first.",
     });
   }
 
@@ -489,7 +532,7 @@ export function getDoseRecommendation(
 }
 
 export function getMedicineQuantity(medicine: string, duration: string): number {
-  // PGD v006: one 3 day course, 6 capsules or 6 tablets. No repeat supply.
+  // PGD v007: one 3 day course, 6 capsules or 6 tablets. No repeat supply.
   void medicine;
   void duration;
   return 6;

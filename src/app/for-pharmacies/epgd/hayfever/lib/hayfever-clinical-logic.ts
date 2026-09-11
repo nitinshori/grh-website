@@ -1,6 +1,6 @@
 // ─── Hayfever Clinical Logic ───
 // Aligned to the Fexofenadine and/or Dymista Allergic Rhinitis PGD,
-// version 004, issued 11 September 2026.
+// version 005, issued 11 September 2026.
 
 import type { HayfeverConsultationState } from "./hayfever-types";
 import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
@@ -51,26 +51,27 @@ export function getAllAlerts(state: HayfeverConsultationState): ClinicalAlert[] 
     });
   }
 
-  // Pregnancy and breastfeeding are fexofenadine-arm exclusions in the
-  // document; the Dymista arm does not list them. Recent nasal surgery is a
-  // Dymista-arm exclusion. Each stops its own arm and is a caution otherwise.
+  // Pregnancy and breastfeeding exclude BOTH arms (decision 57, 11 Sep 2026:
+  // the Dymista arm now lists them alongside the fexofenadine arm), so each
+  // is a stop whatever medicine is chosen. Recent nasal surgery is a
+  // Dymista-arm exclusion: it stops that arm and is a caution otherwise.
   if (state.contraindications.pregnant) {
     alerts.push({
-      severity: fexofenadineSelected(state) ? "stop" : "caution",
+      severity: "stop",
       code: "PREGNANCY",
       message: "Patient is pregnant",
       detail:
-        "Exclusion for fexofenadine under this PGD: do not supply fexofenadine. Dymista is not excluded by the document in pregnancy; use clinical judgement and the SPC. Advise on alternative treatment options; inform or refer to the GP as appropriate.",
+        "Exclusion for both fexofenadine and Dymista under this PGD: do not supply either. Refer to the GP; advise on alternative treatment options and how these can be accessed.",
     });
   }
 
   if (state.contraindications.breastfeeding) {
     alerts.push({
-      severity: fexofenadineSelected(state) ? "stop" : "caution",
+      severity: "stop",
       code: "BREASTFEEDING",
       message: "Patient is breastfeeding",
       detail:
-        "Exclusion for fexofenadine under this PGD: do not supply fexofenadine. Dymista is not excluded by the document in breastfeeding; use clinical judgement and the SPC. Advise on alternative treatment options; inform or refer to the GP as appropriate.",
+        "Exclusion for both fexofenadine and Dymista under this PGD: do not supply either. Refer to the GP; advise on alternative treatment options and how these can be accessed.",
     });
   }
 
@@ -168,9 +169,10 @@ export function getAllAlerts(state: HayfeverConsultationState): ClinicalAlert[] 
   return alerts;
 }
 
-/** Stops that apply whatever medicine is chosen (or before one is chosen). */
+/** Stops that apply whatever medicine is chosen (or before one is chosen).
+ *  Pregnancy and breastfeeding exclude both arms (decision 57, 11 Sep 2026). */
 function hasGeneralHardStops(state: HayfeverConsultationState): boolean {
-  return isUnder12(state);
+  return isUnder12(state) || state.contraindications.pregnant || state.contraindications.breastfeeding;
 }
 
 /** Arm-specific exclusions, applied once a medicine has been selected. */
@@ -179,9 +181,7 @@ export function hasMedicineHardStops(state: HayfeverConsultationState): boolean 
     if (
       state.contraindications.hypersensitivityFexofenadine ||
       state.medicalHistory.severeHepaticImpairment ||
-      state.medicalHistory.renalImpairment ||
-      state.contraindications.pregnant ||
-      state.contraindications.breastfeeding
+      state.medicalHistory.renalImpairment
     ) {
       return true;
     }
@@ -219,7 +219,7 @@ export function calculateDoseRecommendation(
       medicine: `Fexofenadine 120 mg tablets, ${brand}`,
       dose: "120 mg once daily, oral administration with water before food",
       frequency: "Once daily",
-      duration: `${state.medicineSupply.fexofenadineQuantity ?? "?"} tablets supplied (document maximum 30, 1 month). As required for symptom control, typically seasonal use.`,
+      duration: `${state.medicineSupply.fexofenadineQuantity ?? "?"} tablets supplied (document maximum 30, 1 month). As required for symptom control, typically seasonal use. Refer if symptoms persist beyond one month of regular use or worsen.`,
       reason: "Symptomatic relief of allergic rhinitis, including seasonal hay fever, in adults and adolescents aged 12 years and over",
     },
     dymista: {

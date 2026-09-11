@@ -4,7 +4,7 @@ import {
   BaseSummary,
 } from '../shared/types';
 
-// Aligned to the Pneumovax 23 / Prevenar 13 PGD version 005, issued 11 September 2026.
+// Aligned to the Pneumovax 23 / Prevenar 13 PGD version 006, issued 11 September 2026.
 
 export type PneumococcalRiskCategory =
   | 'asplenia'
@@ -30,7 +30,7 @@ export interface PneumococcalConsent extends BaseConsent {
   understandsVaccineNeed: boolean;
   understandsSchedule: boolean;
   understandsSideEffects: boolean;
-  /** PGD v005 consent block, under 16 only: who gave consent. */
+  /** PGD v006 consent block, under 16 only: who gave consent. */
   consentBasis: '' | 'parental' | 'gillick';
   parentName: string;
   parentRelationship: string;

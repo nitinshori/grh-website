@@ -127,7 +127,7 @@ export function PsoriasisSummaryReport({ patient, consent, clinical: c, summary,
               <Row label="Formulation" value={c.formulation ? FORMULATION_LABEL[c.formulation] : "Not recorded"} />
               <Row label="Brand or generic" value={c.brand || "Not recorded"} />
               <Row label="Licensed for the site treated" value={c.licensedForSite ? "Confirmed" : "NOT confirmed"} />
-              <Row label="Dose and route" value="Topical. Apply once daily to affected skin only. Maximum 15g in any one day; not more than 30% of body surface." />
+              <Row label="Dose and route" value="Topical. Apply once daily to affected skin only. Maximum 15g in any one day; not more than 10% of body surface (the PGD ceiling)." />
               <Row label="Duration" value="4 weeks, then stop and review" />
               <Row label="Quantity" value={c.quantityGrams ? `${c.quantityGrams}g` : "Not recorded"} />
               <Row label="Batch / expiry" value={`${c.batchNumber || "not recorded"} / ${c.expiryDate || "not recorded"}`} />

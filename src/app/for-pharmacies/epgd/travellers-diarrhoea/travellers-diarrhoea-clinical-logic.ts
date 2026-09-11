@@ -1,5 +1,5 @@
 // ─── Travellers' Diarrhoea Clinical Logic ───
-// Aligned to the Azithromycin for Traveller's Diarrhoea PGD, version 004,
+// Aligned to the Azithromycin for Traveller's Diarrhoea PGD, version 005,
 // issued 11 September 2026. The PGD supplies azithromycin only.
 
 import type { ClinicalAlert } from '../shared/types';
@@ -9,7 +9,7 @@ import type {
   TDMedications,
 } from './travellers-diarrhoea-types';
 
-export const TD_PGD_VERSION = "Azithromycin for Traveller's Diarrhoea PGD v004, issued 11 September 2026";
+export const TD_PGD_VERSION = "Azithromycin for Traveller's Diarrhoea PGD v005, issued 11 September 2026";
 
 // ─── Generate clinical alerts ───
 
@@ -32,13 +32,13 @@ export function generateTDAlerts(
     });
   }
 
-  if (medical.feverAbove38_5C) {
+  if (medical.feverAtOrAbove38C) {
     alerts.push({
       severity: 'stop',
       code: 'HIGH_FEVER',
-      message: 'High fever: exclusion, refer for medical assessment',
+      message: 'High fever (temperature 38 C or above): exclusion, refer for medical assessment',
       detail:
-        'High fever is an exclusion under this PGD and suggests systemic infection. Refer to a doctor. Do not supply standby antibiotics.',
+        'High fever, defined in the PGD as a temperature of 38 C or above, is an exclusion and suggests systemic infection. Refer to a doctor. Do not supply standby antibiotics.',
     });
   }
 
@@ -216,10 +216,10 @@ export function recommendApproach(
   medical: TDMedicalHistory,
   medications: TDMedications
 ): TravellersDiarrhoeaRecommendation | null {
-  // Check if any hard stops exist (PGD v004 exclusion criteria)
+  // Check if any hard stops exist (PGD v005 exclusion criteria)
   if (
     medical.bloodInStool ||
-    medical.feverAbove38_5C ||
+    medical.feverAtOrAbove38C ||
     medical.systemicallyUnwell ||
     medical.symptomsOver72Hours ||
     medical.macrolideAllergy ||

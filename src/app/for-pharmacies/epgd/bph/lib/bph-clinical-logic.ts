@@ -1,14 +1,38 @@
 // ─── BPH (Tamsulosin) Clinical Logic ───
-// Aligned to the Tamsulosin 400mcg MR capsules for BPH PGD, version 003,
+// Aligned to the Tamsulosin 400mcg MR capsules for BPH PGD, version 004,
 // issued 11 September 2026.
 
 import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
-import type { BPHConsultationState } from "./bph-types";
+import type { BPHConsultationState, BPHMedicalHistory } from "./bph-types";
 
 export const MAX_CAPSULES_PER_SUPPLY = 28;
 export const MAX_MONTHS_CONTINUOUS = 12;
 
 // ─── Get all clinical alerts ───
+
+/** Decision 47: derive the blood pressure exclusions from the lying and
+ *  standing readings taken at this supply. */
+export function assessBloodPressure(mh: BPHMedicalHistory): {
+  complete: boolean;
+  hypertensive: boolean;
+  posturalDrop: boolean;
+  systolicDrop: number | null;
+  summary: string;
+} {
+  const { lyingSystolic, lyingDiastolic, standingSystolic, standingDiastolic } = mh;
+  const complete =
+    lyingSystolic !== null && lyingDiastolic !== null && standingSystolic !== null && standingDiastolic !== null;
+  const hypertensive =
+    (lyingSystolic !== null && lyingSystolic >= 160) ||
+    (lyingDiastolic !== null && lyingDiastolic >= 100) ||
+    (standingSystolic !== null && standingSystolic >= 160) ||
+    (standingDiastolic !== null && standingDiastolic >= 100);
+  const systolicDrop = lyingSystolic !== null && standingSystolic !== null ? lyingSystolic - standingSystolic : null;
+  const posturalDrop = systolicDrop !== null && systolicDrop >= 20;
+  const fmt = (s: number | null, d: number | null) => (s === null || d === null ? "not recorded" : `${s}/${d}`);
+  const summary = `lying ${fmt(lyingSystolic, lyingDiastolic)}, standing ${fmt(standingSystolic, standingDiastolic)} mmHg`;
+  return { complete, hypertensive, posturalDrop, systolicDrop, summary };
+}
 
 export function getAllAlerts(state: BPHConsultationState): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
@@ -34,7 +58,7 @@ export function getAllAlerts(state: BPHConsultationState): ClinicalAlert[] {
       severity: "stop",
       code: "BPH_AGE",
       message: "Aged under 45: lower urinary tract symptoms at this age are unlikely to be BPH",
-      detail: "Excluded under PGD v003. Refer to the GP for diagnosis.",
+      detail: "Excluded under PGD v004. Refer to the GP for diagnosis.",
     });
   }
 
@@ -55,7 +79,7 @@ export function getAllAlerts(state: BPHConsultationState): ClinicalAlert[] {
     });
   }
 
-  // ─── Exclusions (PGD v003) ───
+  // ─── Exclusions (PGD v004) ───
   if (mh.hypersensitivity) {
     alerts.push({ severity: "stop", code: "BPH_HYPERSENSITIVITY", message: "Known hypersensitivity to tamsulosin or any excipient", detail: "Excluded. Refer." });
   }
@@ -65,7 +89,7 @@ export function getAllAlerts(state: BPHConsultationState): ClinicalAlert[] {
       severity: "stop",
       code: "BPH_ORTHOSTASIS",
       message: "History of orthostatic hypotension (blood pressure drop on standing)",
-      detail: "Excluded under PGD v003. Tamsulosin can cause first-dose hypotension and syncope. Refer.",
+      detail: "Excluded under PGD v004. Tamsulosin can cause first-dose hypotension and syncope. Refer.",
     });
   }
 
@@ -82,12 +106,27 @@ export function getAllAlerts(state: BPHConsultationState): ClinicalAlert[] {
       severity: "stop",
       code: "BPH_CATARACT",
       message: "Planned cataract or glaucoma surgery",
-      detail: "Excluded under PGD v003 because of the risk of intraoperative floppy iris syndrome (IFIS). Refer to the GP; the surgeon must be told of any alpha-blocker use.",
+      detail: "Excluded under PGD v004 because of the risk of intraoperative floppy iris syndrome (IFIS). Refer to the GP; the surgeon must be told of any alpha-blocker use.",
     });
   }
 
-  if (mh.uncontrolledHypertension) {
-    alerts.push({ severity: "stop", code: "BPH_HYPERTENSION", message: "Uncontrolled hypertension", detail: "Excluded. Refer." });
+  // Decision 47: blood pressure measured lying and standing at every supply.
+  const bp = assessBloodPressure(mh);
+  if (bp.hypertensive) {
+    alerts.push({
+      severity: "stop",
+      code: "BPH_HYPERTENSION",
+      message: `Blood pressure 160/100 mmHg or above (${bp.summary})`,
+      detail: "Excluded: uncontrolled hypertension, defined as a systolic of 160 mmHg or above or a diastolic of 100 mmHg or above, lying or standing, at this consultation. Refer to the GP.",
+    });
+  }
+  if (bp.posturalDrop) {
+    alerts.push({
+      severity: "stop",
+      code: "BPH_POSTURAL_DROP",
+      message: `Postural drop in systolic blood pressure of ${bp.systolicDrop} mmHg (20 or more)`,
+      detail: "Excluded: orthostatic hypotension measured at this consultation. Tamsulosin's main risk is postural hypotension and syncope. Refer to the GP.",
+    });
   }
 
   // Red flags: all exclusions, refer
@@ -174,7 +213,7 @@ export function getAllAlerts(state: BPHConsultationState): ClinicalAlert[] {
     });
   }
 
-  // ─── Cautions (PGD v003) ───
+  // ─── Cautions (PGD v004) ───
   if (ci.takingAntihypertensives || (state.patient.age !== null && state.patient.age >= 65)) {
     alerts.push({
       severity: "caution",
@@ -227,7 +266,7 @@ export function getAllAlerts(state: BPHConsultationState): ClinicalAlert[] {
         severity: "stop",
         code: "BPH_GP_EXAM",
         message: "Continuation requires that the patient has been examined by the GP",
-        detail: "PGD v003 maximum treatment period. Do not continue supply until the GP has examined the patient.",
+        detail: "PGD v004 maximum treatment period. Do not continue supply until the GP has examined the patient.",
       });
     }
     if (ms.monthsOnTreatment !== null && ms.monthsOnTreatment >= MAX_MONTHS_CONTINUOUS) {

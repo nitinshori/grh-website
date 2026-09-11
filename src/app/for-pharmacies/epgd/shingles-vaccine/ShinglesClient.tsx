@@ -2,8 +2,8 @@
 
 import { useReducer, useMemo, useState, useCallback, useEffect } from "react";
 import type { ShinglesConsultationState, ShinglesAction } from "./lib/shingles-types";
-import { STEP_LABELS, TOTAL_STEPS, createInitialConsultationState } from "./lib/shingles-types";
-import { getAllAlerts, hasHardStops, calculateDoseRecommendation } from "./lib/shingles-clinical-logic";
+import { STEP_LABELS, TOTAL_STEPS, SEVERE_IMMUNOSUPPRESSION_OPTIONS, createInitialConsultationState } from "./lib/shingles-types";
+import { getAllAlerts, hasHardStops, calculateDoseRecommendation, getArm, nhsEligibleGroup, daysBetween, MAX_INTERVAL_DAYS } from "./lib/shingles-clinical-logic";
 import { validateStep } from "./lib/shingles-validation";
 import { calculateAge } from "../shared/types";
 import { ProgressBar } from "../shared/components/ProgressBar";
@@ -140,7 +140,7 @@ export default function ShinglesClient() {
           ? {
               name: "Shingrix",
               dose: "0.5 mL intramuscular",
-              quantity: `dose ${state.supply.doseNumber} of 2`,
+              quantity: `dose ${state.supply.doseNumber} of 2 (${getArm(state) === "18-49-immunosuppressed" ? "Arm 2, 18 to 49 severely immunosuppressed" : "Arm 1, 50 and over"})`,
             }
           : undefined,
       summary: {
@@ -176,21 +176,20 @@ export default function ShinglesClient() {
           />
         );
 
-      case 2:
+      case 2: {
+        const under50 = state.patient.age !== null && state.patient.age < 50;
+        const nhsGroup = nhsEligibleGroup(state);
         return (
           <div className="space-y-4">
-            <Checkbox
-              label="Aged 50 years or older and eligible under national immunisation guidelines"
-              checked={state.assessment.ageEligible}
-              onChange={(v) =>
-                dispatch({
-                  type: "UPDATE_ASSESSMENT",
-                  field: "ageEligible",
-                  value: v,
-                })
-              }
-              description="This PGD covers individuals aged 50 and over only. An immunosuppressed adult aged 18 to 49 is not covered: refer."
-            />
+            <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-700">
+              <p className="font-semibold">Two arms under this PGD</p>
+              <p className="mt-1">Arm 1: adults aged 50 years and over, within the licensed indication. NHS eligibility is not required.</p>
+              <p className="mt-1">Arm 2: adults aged 18 to 49 who are severely immunosuppressed as defined in Green Book chapter 28a, Box 1. Two doses 8 weeks to 6 months apart.</p>
+              <p className="mt-1">
+                Patient age: {state.patient.age !== null ? `${state.patient.age} years` : "not calculated"}
+                {state.patient.age !== null ? (under50 ? " (Arm 2 applies only if severely immunosuppressed)" : " (Arm 1)") : ""}
+              </p>
+            </div>
             <Checkbox
               label="Patient is immunosuppressed"
               checked={state.assessment.immunosuppressed}
@@ -201,8 +200,96 @@ export default function ShinglesClient() {
                   value: v,
                 })
               }
-              description="HIV, cancer treatment, organ transplant, immunosuppressive therapy. Shingrix (non-live) is the preferred vaccine; must still be aged 50 or over."
+              description={
+                under50
+                  ? "Required for Arm 2. Select the Green Book Box 1 category below; immunosuppression outside Box 1 is a referral."
+                  : "HIV, cancer treatment, organ transplant, immunosuppressive therapy. Shingrix (non-live) is the preferred vaccine. Severely immunosuppressed adults are NHS-eligible at any age."
+              }
             />
+            {state.assessment.immunosuppressed && (
+              <>
+                <SelectInput
+                  label={under50 ? "Green Book chapter 28a Box 1 category (Arm 2 inclusion)" : "Green Book chapter 28a Box 1 category, where it applies (used to identify NHS eligibility)"}
+                  value={state.assessment.severeImmunosuppressionCategory}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_ASSESSMENT",
+                      field: "severeImmunosuppressionCategory",
+                      value: v,
+                    })
+                  }
+                  options={SEVERE_IMMUNOSUPPRESSION_OPTIONS}
+                  required={under50}
+                />
+                <TextInput
+                  label="Condition or therapy relied on, and its dates"
+                  value={state.assessment.immunosuppressionDetail}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_ASSESSMENT",
+                      field: "immunosuppressionDetail",
+                      value: v,
+                    })
+                  }
+                  placeholder="e.g. rituximab for rheumatoid arthritis, last infusion 14 July 2026"
+                  required={under50}
+                />
+                {under50 && (
+                  <SelectInput
+                    label="Any doubt whether the Box 1 definition is met?"
+                    value={state.assessment.immunosuppressionDoubt}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_ASSESSMENT",
+                        field: "immunosuppressionDoubt",
+                        value: v,
+                      })
+                    }
+                    options={[
+                      { value: "no-doubt", label: "No doubt: the category clearly applies from the documented condition or therapy" },
+                      { value: "confirmed", label: "There was doubt and the treating specialist or GP has confirmed the patient is severely immunosuppressed (record who and when in the notes)" },
+                      { value: "unresolved", label: "There is doubt and it has not been resolved (refer)" },
+                    ]}
+                    required
+                  />
+                )}
+              </>
+            )}
+            <Checkbox
+              label={
+                under50
+                  ? "Aged 18 to 49 and severely immunosuppressed as defined in Green Book chapter 28a, Box 1 (Arm 2)"
+                  : "Aged 50 years or older, within the licensed indication (Arm 1)"
+              }
+              checked={state.assessment.ageEligible}
+              onChange={(v) =>
+                dispatch({
+                  type: "UPDATE_ASSESSMENT",
+                  field: "ageEligible",
+                  value: v,
+                })
+              }
+              description="The licensed indication is adults aged 50 and over, and adults aged 18 and over at increased risk of shingles. NHS eligibility is not a condition of supply, but an NHS-eligible patient must be told before a private supply."
+            />
+            {nhsGroup ? (
+              <Checkbox
+                label="Patient is eligible for Shingrix on the NHS and has been told it is free of charge on the NHS before this private supply"
+                checked={state.assessment.nhsEntitlementExplained}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_ASSESSMENT",
+                    field: "nhsEntitlementExplained",
+                    value: v,
+                  })
+                }
+                description={`NHS-eligible group: ${nhsGroup}. Required before a private supply (PGD inclusion). The patient may still choose to be vaccinated privately.`}
+                required
+              />
+            ) : (
+              <p className="text-xs text-gray-600">
+                Not in an NHS-eligible group on the details entered (NHS eligibility: aged 65 to 79, or severely immunosuppressed and aged 18 or over). Private supply within the licence.
+              </p>
+            )}
             <SelectInput
               label="Pregnancy or breastfeeding status"
               value={state.assessment.pregnancyStatus}
@@ -300,6 +387,7 @@ export default function ShinglesClient() {
             />
           </div>
         );
+      }
 
       case 3:
         return (
@@ -358,7 +446,11 @@ export default function ShinglesClient() {
                   value: v,
                 })
               }
-              description="Two doses of 0.5 mL, the second 2 to 6 months after the first"
+              description={
+                getArm(state) === "18-49-immunosuppressed"
+                  ? "Two doses of 0.5 mL, the second 8 weeks to 6 months after the first (Arm 2). A late second dose is still given as soon as possible; the course is not restarted."
+                  : "Two doses of 0.5 mL, the second 2 to 6 months after the first (Arm 1). A late second dose is still given as soon as possible; the course is not restarted."
+              }
             />
             <Checkbox
               label="Discussed local injection reactions"
@@ -382,7 +474,7 @@ export default function ShinglesClient() {
                   value: v,
                 })
               }
-              description="Fatigue, headache, myalgia, shivering, fever, gastrointestinal symptoms (PGD v006 caution)"
+              description="Fatigue, headache, myalgia, shivering, fever, gastrointestinal symptoms (PGD v007 caution)"
             />
             <Checkbox
               label="Explained effectiveness"
@@ -430,23 +522,31 @@ export default function ShinglesClient() {
                   value: v,
                 })
               }
-              description="Seek medical advice if symptoms worsen rapidly or significantly, do not improve in 3 to 4 weeks, or they become systemically very unwell"
+              description="Seek medical advice if side effects are severe or last more than a few days, and urgent help for any sign of an allergic reaction. Remind the patient of the date the second dose is due, and that a late second dose should still be given as soon as possible without restarting the course."
             />
           </div>
         );
 
-      case 5:
+      case 5: {
+        const arm = getArm(state);
+        const intervalText = arm === "18-49-immunosuppressed" ? "8 weeks to 6 months" : "2 to 6 months";
+        const daysSinceDose1 =
+          state.supply.doseNumber === "2"
+            ? daysBetween(state.assessment.previousShingrixDate, state.supply.vaccinationDate)
+            : null;
+        const lateDose = daysSinceDose1 !== null && daysSinceDose1 > MAX_INTERVAL_DAYS;
         return (
           <div className="space-y-4">
             <div className="p-3 bg-[color:var(--tenant-primary)]/10 border border-[color:var(--tenant-primary)]/30 rounded-lg">
               <p className="text-sm font-medium text-[color:var(--tenant-primary)]">
                 Shingrix (recombinant zoster vaccine, non-live)
+                {arm === "18-49-immunosuppressed" ? ": Arm 2, aged 18 to 49 severely immunosuppressed" : arm === "50-plus" ? ": Arm 1, aged 50 and over" : ""}
               </p>
               <p className="text-xs text-[color:var(--tenant-primary)] mt-1">
                 0.5 mL intramuscular injection, preferably in the deltoid muscle
               </p>
               <p className="text-xs text-[color:var(--tenant-primary)] mt-2">
-                Two doses of 0.5 mL, the second 2 to 6 months after the first. Record date, site, batch number and brand.
+                Two doses of 0.5 mL, the second {intervalText} after the first. Where more than 6 months have elapsed, give dose 2 as soon as possible and do not restart the course (Green Book). Record date, site, batch number, expiry and brand.
               </p>
             </div>
             <SelectInput
@@ -455,7 +555,7 @@ export default function ShinglesClient() {
               onChange={(v) => dispatch({ type: "UPDATE_SUPPLY", field: "doseNumber", value: v })}
               options={[
                 { value: "1", label: "Dose 1 of 2" },
-                { value: "2", label: "Dose 2 of 2 (2 to 6 months after dose 1)" },
+                { value: "2", label: `Dose 2 of 2 (${intervalText} after dose 1; later doses still given, course not restarted)` },
               ]}
               required
             />
@@ -468,10 +568,19 @@ export default function ShinglesClient() {
             />
             {state.supply.doseNumber === "1" && (
               <TextInput
-                label="Second dose due (2 to 6 months after today)"
+                label={`Second dose due (${intervalText} after today)`}
                 value={state.supply.nextDoseDue}
                 onChange={(v) => dispatch({ type: "UPDATE_SUPPLY", field: "nextDoseDue", value: v })}
                 type="date"
+                required
+              />
+            )}
+            {lateDose && (
+              <Checkbox
+                label={`More than 6 months since dose 1 (${daysSinceDose1} days): dose 2 is being given as soon as possible, the course is not restarted, and the interval is recorded`}
+                checked={state.supply.lateDoseAcknowledged}
+                onChange={(v) => dispatch({ type: "UPDATE_SUPPLY", field: "lateDoseAcknowledged", value: v })}
+                description="Green Book chapter 28a: if the course is interrupted or delayed it is resumed as soon as possible and the first dose is not repeated (signatories' decision 13, 11 September 2026)."
                 required
               />
             )}
@@ -502,7 +611,7 @@ export default function ShinglesClient() {
               required
             />
             <div className="border-t pt-4 space-y-4">
-              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Observation and adverse reactions (PGD v006 safety block)</p>
+              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Observation and adverse reactions (PGD v007 safety block)</p>
               <Checkbox
                 label="Patient observed, seated, for 15 minutes after vaccination and the observation period has been completed"
                 checked={state.supply.observedFifteenMinutes}
@@ -554,6 +663,7 @@ export default function ShinglesClient() {
             />
           </div>
         );
+      }
 
       case 6:
         return (

@@ -18,7 +18,7 @@ export default function PneumococcalPage() {
             <p className="text-gray-600 mb-4">PGD Consultation for UK Pharmacies</p>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-900">
-                This ePGD guides pharmacists in the administration of Pneumovax 23 (PPV23) or Prevenar 13 (PCV13) under the Patient Group Direction (version 005, issued 11 September 2026) to individuals aged 2 years and over eligible under national guidance. Single 0.5 mL dose; PPV23 revaccination every 5 years only for asplenia, splenic dysfunction or chronic kidney disease.
+                This ePGD guides pharmacists in the administration of Pneumovax 23 (PPV23) or Prevenar 13 (PCV13) under the Patient Group Direction (version 006, issued 11 September 2026) to individuals aged 2 years and over eligible under national guidance. Single 0.5 mL dose; PPV23 revaccination every 5 years only for asplenia, splenic dysfunction or chronic kidney disease.
               </p>
             </div>
           </div>

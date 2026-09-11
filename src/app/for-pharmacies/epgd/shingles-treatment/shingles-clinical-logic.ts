@@ -1,5 +1,5 @@
 // Clinical logic and validation for shingles ePGD
-// Aligned to the Shingles (Herpes Zoster) Treatment PGD, version 006,
+// Aligned to the Shingles (Herpes Zoster) Treatment PGD, version 007,
 // issued 11 September 2026. Aciclovir, valaciclovir or famciclovir, adults
 // 18 and over, immunocompetent or non-severe immunosuppression.
 import { ClinicalAlert } from '../shared/types';
@@ -12,10 +12,14 @@ import {
   Medicine,
 } from './shingles-types';
 
-/** Pain score bands on the 1 to 10 scale used by the tool. */
+/**
+ * Pain score bands on the 0 to 10 scale the PGD requires (decision 19,
+ * 11 Sep 2026): 4 or more is moderate or severe pain (72 hour criterion);
+ * 7 or more is severe pain (7 day criterion).
+ */
 export const MODERATE_PAIN_THRESHOLD = 4;
 export const SEVERE_PAIN_THRESHOLD = 7;
-/** Age from which the PGD treats a patient as elderly for renal and neurological cautions. */
+/** The PGD defines elderly as 65 years and over (decision 19, 11 Sep 2026). */
 export const ELDERLY_AGE = 65;
 
 /**
@@ -80,7 +84,7 @@ export function hasHutchinsonSignRisk(dermatome: RashDermatome): boolean {
 }
 
 /**
- * Head or neck involvement, including the face, scalp, ear or eye: refer (PGD v006 red flag).
+ * Head or neck involvement, including the face, scalp, ear or eye: refer (PGD v007 red flag).
  */
 export function isHeadOrNeck(dermatome: RashDermatome): boolean {
   return (
@@ -91,7 +95,11 @@ export function isHeadOrNeck(dermatome: RashDermatome): boolean {
   );
 }
 
-/** Non-truncal involvement of the limbs or perineum (72 hour window criterion). */
+/**
+ * Non-truncal involvement of the limbs or perineum (72 hour window criterion).
+ * Sacral dermatomes, including the buttocks, count as truncal (decision 20,
+ * 11 Sep 2026), so sacral involvement does not meet this criterion.
+ */
 export function isNonTruncal(dermatome: RashDermatome): boolean {
   return dermatome === 'upper-limb' || dermatome === 'lower-limb' || dermatome === 'perineum';
 }
@@ -127,7 +135,7 @@ export type TreatmentWindow = 'within-72h' | 'within-7-days' | 'outside' | 'not-
 
 export function meets72HourCriteria(symptoms: ShinglesSymptoms, age: number | null): boolean {
   return (
-    // NICE CKS, quoted in the PGD's guidance summary: people aged 50 years and over.
+    // PGD inclusion (decision 18, 11 Sep 2026): aged 50 years or over.
     (age !== null && age >= 50) ||
     isNonTruncal(symptoms.dermatome) ||
     (symptoms.painLevel !== null && symptoms.painLevel >= MODERATE_PAIN_THRESHOLD) ||
@@ -160,9 +168,9 @@ export function getTreatmentWindow(symptoms: ShinglesSymptoms, age: number | nul
 export function describeTreatmentWindow(window: TreatmentWindow): string {
   switch (window) {
     case 'within-72h':
-      return 'Rash onset within 72 hours with a qualifying criterion (age 50 or over, non-truncal involvement, moderate or severe pain, or moderate or severe rash)';
+      return 'Rash onset within 72 hours with a qualifying criterion (aged 50 or over, non-truncal involvement of the limbs or perineum, pain 4 or more on the 0 to 10 scale, or moderate or severe rash)';
     case 'within-7-days':
-      return 'Rash onset within 7 days with a qualifying criterion (new vesicles forming, severe pain, age 70 or over, or high risk of severe shingles)';
+      return 'Rash onset within 7 days with a qualifying criterion (new vesicles forming, pain 7 or more on the 0 to 10 scale, age 70 or over, or high risk of severe shingles)';
     case 'outside':
       return 'Rash onset more than 7 days ago: excluded, refer to a prescriber';
     case 'not-met':
@@ -303,8 +311,8 @@ export function generateClinicalAlerts(
       code: 'window-criteria-not-met',
       message: 'No treatment window inclusion criterion is met. Refer to a prescriber.',
       detail: isWithinTreatmentWindow(symptoms.hoursSinceOnset)
-        ? 'Within 72 hours, supply requires at least one of: age 50 or over; non-truncal involvement of the limbs or perineum; moderate or severe pain; or moderate or severe rash with confluent lesions.'
-        : 'Between 72 hours and 7 days, supply requires at least one of: continued formation of new vesicles; severe pain; age 70 or over; or a high risk of severe shingles (for example severe atopic eczema).',
+        ? 'Within 72 hours, supply requires at least one of: aged 50 or over; non-truncal involvement of the limbs or perineum (sacral dermatomes count as truncal); moderate or severe pain (4 or more on the 0 to 10 scale); or moderate or severe rash with confluent lesions.'
+        : 'Between 72 hours and 7 days, supply requires at least one of: continued formation of new vesicles; severe pain (7 or more on the 0 to 10 scale); age 70 or over; or a high risk of severe shingles (for example severe atopic eczema).',
       severity: 'stop',
     });
   }
@@ -330,11 +338,12 @@ export function generateClinicalAlerts(
     });
   }
 
-  if (medicalHistory.breastfeeding && medicalHistory.breastLesions) {
+  if (medicalHistory.breastfeeding) {
     alerts.push({
-      code: 'breastfeeding-breast-lesions',
-      message: 'Breastfeeding with shingles lesions on the breast. Excluded: refer.',
-      detail: 'Sores elsewhere are a caution rather than an exclusion.',
+      code: 'breastfeeding',
+      message: 'Breastfeeding. Excluded: refer to a prescriber.',
+      detail:
+        'NICE CKS advises specialist advice before antiviral treatment in a breastfeeding woman. Not for supply under this PGD.',
       severity: 'stop',
     });
   }
@@ -359,8 +368,8 @@ export function generateClinicalAlerts(
   if (medicalHistory.renalImpairment === 'unknown' && renalRiskFactors) {
     alerts.push({
       code: 'renal-unknown-risk',
-      message: 'Renal function unknown in a patient who is elderly or has risk factors for renal impairment. Refer rather than assume.',
-      detail: 'The PGD requires renal function to be checked before supply in elderly patients and where risk factors are present.',
+      message: 'Renal function unknown in a patient who is elderly (65 or over) or has risk factors for renal impairment. Refer rather than assume.',
+      detail: 'The PGD requires renal function to be checked before supply in elderly patients (65 years and over) and where risk factors are present.',
       severity: 'stop',
     });
   }
@@ -517,7 +526,7 @@ export function generateClinicalAlerts(
     alerts.push({
       code: 'renal-unknown',
       message: 'Renal function not established.',
-      detail: 'Record how renal function was assessed. Where the patient is elderly or has risk factors for renal impairment, refer rather than assume.',
+      detail: 'Record how renal function was assessed. Where the patient is elderly (65 or over) or has risk factors for renal impairment, refer rather than assume.',
       severity: 'caution',
     });
   }
@@ -525,7 +534,7 @@ export function generateClinicalAlerts(
   if (age !== null && age >= ELDERLY_AGE) {
     alerts.push({
       code: 'elderly',
-      message: 'Elderly patient: check renal function before supply.',
+      message: 'Elderly patient (65 years or over): check renal function before supply.',
       detail:
         'Renal function declines with age, often without a diagnosis of chronic kidney disease, and all three antivirals carry a higher risk of neurological adverse effects (confusion, hallucinations, somnolence) in this group.',
       severity: 'caution',
@@ -592,17 +601,6 @@ export function generateClinicalAlerts(
       code: 'hepatic-impairment',
       message: 'Mild to moderate hepatic impairment noted.',
       detail: 'No dose modification is required in mild or moderate cirrhosis (valaciclovir SmPC). Monitor for side effects.',
-      severity: 'caution',
-    });
-  }
-
-  // Breastfeeding without breast lesions
-  if (medicalHistory.breastfeeding && !medicalHistory.breastLesions) {
-    alerts.push({
-      code: 'breastfeeding',
-      message: 'Breastfeeding: caution, not an exclusion where there are no sores on the breast.',
-      detail:
-        'Aciclovir is detected in breast milk; valaciclovir should be used with caution and only when clinically indicated (SmPCs). Sores on the breast would be an exclusion.',
       severity: 'caution',
     });
   }
@@ -744,8 +742,8 @@ export function validateSymptomStep(symptoms: ShinglesSymptoms): string | null {
   if (!symptoms.rashSeverity) {
     return 'Rash severity must be recorded';
   }
-  if (symptoms.painLevel === null || symptoms.painLevel < 1 || symptoms.painLevel > 10) {
-    return 'Pain level must be between 1 and 10';
+  if (symptoms.painLevel === null || symptoms.painLevel < 0 || symptoms.painLevel > 10) {
+    return 'Pain score must be recorded on the 0 to 10 scale';
   }
   if (!symptoms.painType) {
     return 'Pain type must be selected';

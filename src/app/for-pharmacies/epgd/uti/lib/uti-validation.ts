@@ -27,7 +27,7 @@ export function validateUTIConsentStep(consent: any): string | null {
 }
 
 export function validateUTISymptomStep(symptoms: UTISymptoms): string | null {
-  // PGD v006 inclusion: two or more of dysuria, new nocturia, frequency, urgency
+  // PGD v007 inclusion: two or more of dysuria, new nocturia, frequency, urgency
   const coreSymptomCount = [
     symptoms.dysuria,
     symptoms.nocturia,
@@ -46,13 +46,35 @@ export function validateUTISymptomStep(symptoms: UTISymptoms): string | null {
   return null;
 }
 
-export function validateUTIMedicalHistoryStep(medicalHistory: UTIMedicalHistory): string | null {
-  // PGD v006 renal row: the question is asked in set terms and the answer
+export function validateUTIMedicalHistoryStep(
+  medicalHistory: UTIMedicalHistory,
+  age: number | null = null
+): string | null {
+  // PGD v007 renal row: the question is asked in set terms and the answer
   // recorded. No default: an unasked question is not a NO.
   if (!medicalHistory.renalImpairment && !medicalHistory.kidneyDisease) {
     return "Ask the kidney question in the PGD's words and record the answer (No / Does not know / Yes)";
   }
-  // PGD v006: ask both recurrent UTI questions and record both answers
+  // Decision 43: aged 60 to 64 with a NO answer, the eGFR result relied on
+  // must be recorded in full (value, date, where seen) before moving on. The
+  // clinical logic raises the stop where it does not qualify.
+  if (
+    age !== null &&
+    age >= 60 &&
+    medicalHistory.renalImpairment === "none" &&
+    medicalHistory.egfrResultSeen
+  ) {
+    if (medicalHistory.egfrValue === null) {
+      return "Record the eGFR value seen (mL/min)";
+    }
+    if (!medicalHistory.egfrDate) {
+      return "Record the date of the eGFR result seen";
+    }
+    if (!medicalHistory.egfrSource.trim()) {
+      return "Record where the eGFR result was seen (NHS App, GP summary or letter)";
+    }
+  }
+  // PGD v007: ask both recurrent UTI questions and record both answers
   if (!medicalHistory.utiEpisodesLast6Months) {
     return "Please record the number of UTI episodes in the last 6 months";
   }
@@ -69,7 +91,7 @@ export function validateUTIObservationsStep(): string | null {
 }
 
 export function validateUTIRedFlagsStep(symptoms: UTISymptoms): string | null {
-  // PGD v006: the record must show the Appendix 1 red flags were asked about
+  // PGD v007: the record must show the Appendix 1 red flags were asked about
   if (!symptoms.redFlagsAsked) {
     return "Confirm the Appendix 1 red flags have been asked about before supplying anything";
   }
@@ -167,7 +189,7 @@ export function validateUTIStep(
     case 2:
       return validateUTISymptomStep(state.symptoms);
     case 3:
-      return validateUTIMedicalHistoryStep(state.medicalHistory);
+      return validateUTIMedicalHistoryStep(state.medicalHistory, state.patient.age);
     case 4:
       return validateUTIObservationsStep();
     case 5:

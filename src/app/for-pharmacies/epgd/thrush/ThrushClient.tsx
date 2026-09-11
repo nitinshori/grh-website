@@ -207,13 +207,19 @@ export default function ThrushClient() {
               <Checkbox label="Vulval soreness" checked={state.assessment.vulvalSoreness} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "vulvalSoreness", value: v })} />
               <Checkbox label="Thick white discharge" checked={state.assessment.thickWhiteDischarge} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "thickWhiteDischarge", value: v })} />
               <Checkbox label="Dyspareunia (pain on intercourse)" checked={state.assessment.dyspareunia} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "dyspareunia", value: v })} />
+              <Checkbox label="Dysuria (pain passing urine)" checked={state.assessment.dysuria} onChange={(v) => { dispatch({ type: "UPDATE_ASSESSMENT", field: "dysuria", value: v }); if (!v) { dispatch({ type: "UPDATE_ASSESSMENT", field: "dysuriaType", value: "" }); dispatch({ type: "UPDATE_ASSESSMENT", field: "urinaryFrequencyOrUrgency", value: false }); } }} description="External dysuria alone (stinging as urine passes over the sore vulva) is a symptom of thrush. Internal dysuria, or dysuria with urinary frequency, urgency or fever, is an exclusion (possible urinary tract infection)" />
+              {state.assessment.dysuria && (
+                <div className="ml-6 space-y-3">
+                  <SelectInput label="Type of dysuria" value={state.assessment.dysuriaType} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "dysuriaType", value: v })} options={[{ value: "external", label: "External: stinging as urine passes over the sore vulval skin" }, { value: "internal", label: "Internal: pain inside the urethra or bladder on passing urine (exclusion)" }]} required />
+                  <Checkbox label="Urinary frequency or urgency" checked={state.assessment.urinaryFrequencyOrUrgency} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "urinaryFrequencyOrUrgency", value: v })} description="Dysuria with frequency, urgency or fever is an exclusion" />
+                </div>
+              )}
               <div className="border-t pt-4"><p className="text-sm font-semibold text-red-700 mb-3">EXCLUSIONS - If any present, refer to GP:</p></div>
               <Checkbox label="Abnormal or blood-stained vaginal bleeding" checked={state.assessment.bloodStainedDischarge} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "bloodStainedDischarge", value: v })} description="Exclusion" />
               <Checkbox label="Vulval ulcers, sores or blisters" checked={state.assessment.vulvalUlcers} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "vulvalUlcers", value: v })} description="Exclusion" />
               <Checkbox label="Foul-smelling discharge" checked={state.assessment.offensiveSmell} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "offensiveSmell", value: v })} description="Exclusion; may indicate BV or STI" />
-              <Checkbox label="Dysuria (pain passing urine)" checked={state.assessment.dysuria} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "dysuria", value: v })} description="Exclusion under this PGD" />
               <Checkbox label="Lower abdominal pain" checked={state.assessment.pelvicPain} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "pelvicPain", value: v })} description="Exclusion" />
-              <Checkbox label="Fever" checked={state.assessment.fever} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "fever", value: v })} description="Exclusion" />
+              <Checkbox label="Fever" checked={state.assessment.fever} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "fever", value: v })} description="Exclusion (and any dysuria with fever is an exclusion)" />
               <Checkbox label="Systemic upset" checked={state.assessment.systemicUpset} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "systemicUpset", value: v })} description="Exclusion" />
               <NumberInput label="Number of episodes in the last 12 months" value={state.assessment.recurrentEpisodes} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "recurrentEpisodes", value: v })} min={0} max={20} />
               <div className="border-t pt-4">

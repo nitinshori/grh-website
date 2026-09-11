@@ -4,7 +4,9 @@ export interface ThrushAssessment {
   vulvalItching: boolean;
   vulvalSoreness: boolean;
   thickWhiteDischarge: boolean;
-  dysuria: boolean;
+  dysuria: boolean; // any pain passing urine
+  dysuriaType: "" | "external" | "internal"; // external: stinging as urine passes over the sore vulva (a thrush symptom); internal: pain inside the urethra or bladder (exclusion)
+  urinaryFrequencyOrUrgency: boolean; // dysuria with frequency, urgency or fever is an exclusion (possible UTI)
   dyspareunia: boolean;
   bloodStainedDischarge: boolean;
   offensiveSmell: boolean;
@@ -73,7 +75,7 @@ export interface ThrushCounselling {
 }
 
 export const PGD_VERSION_LABEL =
-  "Vaginal Thrush PGD (fluconazole 150 mg capsule / clotrimazole 500 mg pessary), version 004, issued 11 September 2026";
+  "Vaginal Thrush PGD (fluconazole 150 mg capsule / clotrimazole 500 mg pessary), version 005, issued 11 September 2026";
 
 export interface ThrushConsultationState {
   currentStep: number;
@@ -111,7 +113,7 @@ export function createInitialConsultationState(): ThrushConsultationState {
     currentStep: 0,
     patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", gpAddress: "", gpPhone: "", gpEmail: "", gpOdsCode: "", nhsNumber: "", address: "", phone: "", email: "" },
     consent: { informedConsentGiven: false, idVerified: false, idType: "", patientAwarePrivateService: false },
-    assessment: { vulvalItching: false, vulvalSoreness: false, thickWhiteDischarge: false, dysuria: false, dyspareunia: false, bloodStainedDischarge: false, offensiveSmell: false, fever: false, pelvicPain: false, vulvalUlcers: false, systemicUpset: false, recurrentEpisodes: null, exclusionsAsked: false },
+    assessment: { vulvalItching: false, vulvalSoreness: false, thickWhiteDischarge: false, dysuria: false, dysuriaType: "", urinaryFrequencyOrUrgency: false, dyspareunia: false, bloodStainedDischarge: false, offensiveSmell: false, fever: false, pelvicPain: false, vulvalUlcers: false, systemicUpset: false, recurrentEpisodes: null, exclusionsAsked: false },
     medicalHistory: { femaleConfirmed: false, diabetes: false, diabetesPoorlyControlled: false, pregnancy: false, breastfeeding: false, immunocompromised: false, ageUnder16: false, ageOver60: false, firstEpisode: false, recurrentThrush: false, stiExposure: false, azoleHypersensitivity: false, imidazoleHypersensitivity: false, severeHepatic: false, severeRenal: false, mildModerateHepatic: false, mildModerateRenal: false, qtHistory: false, cannotRetainPessary: false, exclusionsAsked: false },
     medications: { warfarin: false, qtDrugs: false, statins: false, phenytoin: false, rifampicin: false, otherMedications: "", allergies: "" },
     medicineSelection: { medicineChoice: "", dose: "", frequency: "", brand: "", abilityConfirmed: false },

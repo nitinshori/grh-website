@@ -1,6 +1,6 @@
 // ─── Hayfever Validation ───
 // Aligned to the Fexofenadine and/or Dymista Allergic Rhinitis PGD,
-// version 004, issued 11 September 2026.
+// version 005, issued 11 September 2026.
 
 import type { HayfeverConsultationState } from "./hayfever-types";
 import {
@@ -89,7 +89,7 @@ export function validateStep(state: HayfeverConsultationState, step: number): st
         return "Please confirm counselling on possible side effects and the need for ongoing review if Dymista is used long-term";
       }
       if (!state.counselling.followUpAdvice) {
-        return "Please confirm follow-up advice has been given (seek medical advice if symptoms worsen rapidly or significantly, do not improve in 3 to 4 weeks, or the patient becomes systemically very unwell)";
+        return "Please confirm follow-up advice has been given (seek medical advice if symptoms worsen rapidly or significantly, persist beyond one month of regular use despite fexofenadine, do not improve after 2 to 4 weeks of regular Dymista use, or the patient becomes systemically very unwell)";
       }
       if (!state.counselling.pilSupplied) {
         return "Please confirm the patient information leaflet has been supplied";

@@ -14,7 +14,7 @@ import {
 interface SymptomAssessmentStepProps {
   symptoms: ShinglesSymptoms;
   onChange: (symptoms: ShinglesSymptoms) => void;
-  /** Patient age, used for the treatment window criteria (age over 50; age 70 or over). */
+  /** Patient age, used for the treatment window criteria (aged 50 or over; age 70 or over). */
   age?: number | null;
 }
 
@@ -80,12 +80,12 @@ export const SymptomAssessmentStep: React.FC<SymptomAssessmentStepProps> = ({
                 </p>
                 {withinWindow && (
                   <p className="text-sm mt-1">
-                    Within 72 hours. Supply requires at least one of: age over 50; non-truncal involvement of the limbs or perineum; moderate or severe pain; or moderate or severe rash with confluent lesions.
+                    Within 72 hours. Supply requires at least one of: aged 50 or over; non-truncal involvement of the limbs or perineum (sacral dermatomes count as truncal); moderate or severe pain (4 or more on the 0 to 10 scale); or moderate or severe rash with confluent lesions.
                   </p>
                 )}
                 {!withinWindow && withinSevenDays && (
                   <p className="text-sm mt-1">
-                    Between 72 hours and 7 days. Supply requires at least one of: continued formation of new vesicles; severe pain; age 70 or over; or a high risk of severe shingles (for example severe atopic eczema).
+                    Between 72 hours and 7 days. Supply requires at least one of: continued formation of new vesicles; severe pain (7 or more on the 0 to 10 scale); age 70 or over; or a high risk of severe shingles (for example severe atopic eczema).
                   </p>
                 )}
                 {!withinSevenDays && (
@@ -146,7 +146,7 @@ export const SymptomAssessmentStep: React.FC<SymptomAssessmentStepProps> = ({
                 { value: '', label: 'Select dermatome...' },
                 { value: 'thoracic', label: 'Thoracic (chest / trunk), most common' },
                 { value: 'lumbar', label: 'Lumbar (lower back / abdomen)' },
-                { value: 'sacral', label: 'Sacral (buttocks)' },
+                { value: 'sacral', label: 'Sacral (buttocks), counts as truncal' },
                 { value: 'upper-limb', label: 'Upper limb (arm or hand), non-truncal' },
                 { value: 'lower-limb', label: 'Lower limb (leg or foot), non-truncal' },
                 { value: 'perineum', label: 'Perineum or genitals, non-truncal' },
@@ -265,14 +265,14 @@ export const SymptomAssessmentStep: React.FC<SymptomAssessmentStepProps> = ({
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Pain Level (1-10 scale) *
+                Pain score (0 to 10 scale) *
               </label>
               <div className="flex items-center gap-4">
                 <input
                   type="range"
-                  min="1"
+                  min="0"
                   max="10"
-                  value={symptoms.painLevel || 5}
+                  value={symptoms.painLevel ?? 5}
                   onChange={(e) => handleChange('painLevel', parseInt(e.target.value))}
                   className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                 />
@@ -283,11 +283,11 @@ export const SymptomAssessmentStep: React.FC<SymptomAssessmentStepProps> = ({
                     ? 'text-orange-600'
                     : 'text-green-600'
                 }`}>
-                  {symptoms.painLevel || '?'}/10
+                  {symptoms.painLevel ?? '?'}/10
                 </span>
               </div>
               <p className="text-xs text-gray-600 mt-1">
-                1 to 3 mild; 4 to 6 moderate; 7 to 10 severe. Moderate or severe pain is a 72 hour window criterion; severe pain is a 7 day window criterion.
+                0 no pain; 1 to 3 mild; 4 to 6 moderate; 7 to 10 severe. Moderate or severe pain (4 or more) is a 72 hour window criterion; severe pain (7 or more) is a 7 day window criterion. Record the score on a validated 0 to 10 scale.
               </p>
               {symptoms.painLevel && symptoms.painLevel >= 7 && (
                 <p className="text-sm text-red-600 mt-2">

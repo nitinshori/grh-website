@@ -725,12 +725,12 @@ export default function TravelCoreClient() {
               <Checkbox label="Pregnant (seek specialist advice)" checked={state.vaccines.pregnant} onChange={(v) => setVaccine("pregnant", v)} />
               <p className="text-sm font-semibold text-red-800 pt-2">Dukoral only</p>
               <Checkbox label="Acute gastrointestinal symptoms (defer until recovered)" checked={state.vaccines.giSymptoms} onChange={(v) => setVaccine("giSymptoms", v)} />
-              <Checkbox label="Severe immunocompromise" checked={state.vaccines.severeImmunocompromise} onChange={(v) => setVaccine("severeImmunocompromise", v)} />
+              <Checkbox label="Severe immunocompromise: current chemotherapy or other immunosuppressive therapy for malignancy; solid organ or bone marrow transplant within the previous 6 months; or systemic corticosteroids at 20 mg/day prednisolone (or 2 mg/kg/day) or more for 2 weeks or longer within the previous 4 weeks" checked={state.vaccines.severeImmunocompromise} onChange={(v) => setVaccine("severeImmunocompromise", v)} description="Exclusion for Dukoral. The vaccine is inactivated but the response is likely to be inadequate: refer for specialist advice." />
             </div>
 
             <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
               <p className="text-sm font-semibold text-gray-700">Cautions</p>
-              <Checkbox label="Immunocompromised (may have reduced response; seek specialist advice)" checked={state.vaccines.immunocompromised} onChange={(v) => setVaccine("immunocompromised", v)} />
+              <Checkbox label="Other immunosuppression below the Dukoral exclusion threshold (for example HIV infection, immunosuppressive medicines at a lower dose, or a transplant more than 6 months ago): may have reduced response; seek specialist advice" checked={state.vaccines.immunocompromised} onChange={(v) => setVaccine("immunocompromised", v)} />
               <Checkbox label="Thrombocytopenia, bleeding disorder or anticoagulation (fine needle, firm pressure 2 minutes)" checked={state.vaccines.bleedingDisorder} onChange={(v) => setVaccine("bleedingDisorder", v)} />
               <Checkbox label="Recent antibiotics for enteric infection (may reduce Dukoral effectiveness)" checked={state.vaccines.recentAntibiotics} onChange={(v) => setVaccine("recentAntibiotics", v)} />
             </div>

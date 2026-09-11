@@ -165,6 +165,18 @@ export function WoundCareSummaryReport({ state, alerts, band, doseText, quantity
           <Row label="Immunisation status" value={TETANUS_LABEL[a.tetanusStatus] || "Not recorded"} />
           <Row label="Action taken" value={a.tetanusAction || "Not recorded"} />
           {a.htigNotIndicatedReason && <Row label="Immunoglobulin not indicated because" value={a.htigNotIndicatedReason} />}
+          {a.arm1TetanusManagement && (
+            <Row
+              label="Arm 1 tetanus management"
+              value={
+                a.arm1TetanusManagement === "completed-and-recorded"
+                  ? `Completed and recorded: ${a.arm1TetanusManagementDetails || "details not recorded"}`
+                  : a.arm1TetanusManagement === "not-tetanus-prone"
+                    ? "Wound not tetanus-prone"
+                    : "NOT completed: referred the same day"
+              }
+            />
+          )}
           {t.tetanusReferralGenerated && <Row label="Vaccine" value="Tetanus referral or Td/IPV supply arranged" />}
         </div>
       </div>
@@ -193,7 +205,7 @@ export function WoundCareSummaryReport({ state, alerts, band, doseText, quantity
             <>
               <Row label="Outcome" value={`Supplied under the ${WOUND_CARE_PGD_VERSION}`} />
               <Row label="Medicine" value={doseText.medicine} />
-              <Row label="Form" value={t.formulation === "tablets" ? "Tablets" : t.formulation === "capsules" ? "Capsules" : t.formulation === "suspension" ? "250mg/5mL oral suspension" : "Not recorded"} />
+              <Row label="Form" value={t.formulation === "tablets" ? "Tablets" : t.formulation === "capsules" ? "Capsules" : t.formulation === "suspension" ? "250mg/5mL oral suspension" : t.formulation === "suspension-500" ? "250mg/5mL oral suspension (500mg dose, 10 mL four times daily)" : "Not recorded"} />
               <Row label="Dose and route" value={`${doseText.dose}. Oral.`} />
               <Row label="Duration" value={t.courseDays ? `${t.courseDays} days (maximum 7; one course per episode)` : "Not recorded"} />
               <Row label="Quantity" value={quantitySupplied || "Not recorded"} />

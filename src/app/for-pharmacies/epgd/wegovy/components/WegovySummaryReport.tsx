@@ -239,7 +239,7 @@ export function WegovySummaryReport({ state }: { state: WegovyConsultationState 
           value={state.medicalHistory.recentCholecystectomy ? "Yes" : "No"}
         />
         <Row
-          label="Obesity Caused by Endocrinological Disorder"
+          label="Untreated or Unassessed Endocrine Cause of Obesity (caution: GP informed)"
           value={state.medicalHistory.endocrineObesity ? "Yes" : "No"}
         />
         <Row

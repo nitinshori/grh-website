@@ -31,7 +31,7 @@ export default function BPHToolPage() {
             Benign Prostatic Hyperplasia, Tamsulosin PGD Consultation
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Tamsulosin 400mcg MR capsules for Benign Prostatic Hyperplasia PGD, version 003, issued 11 September 2026. Men aged 45 and over with an IPSS of 8 or more.
+            Tamsulosin 400mcg MR capsules for Benign Prostatic Hyperplasia PGD, version 004, issued 11 September 2026. Men aged 45 and over with an IPSS of 8 or more.
           </p>
         </div>
 

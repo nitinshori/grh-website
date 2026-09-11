@@ -92,7 +92,6 @@ export function MounjaroSummaryReport({ state }: { state: MounjaroConsultationSt
             ["Severe GI disease / gastroparesis", state.medicalHistory.severeGIDisease],
             ["Current cholelithiasis or cholecystitis", state.medicalHistory.gallbladderDisease],
             ["Cholecystectomy within 3 months", state.medicalHistory.recentCholecystectomy],
-            ["Obesity caused by endocrine disorder", state.medicalHistory.endocrineObesity],
             ["Type 1 diabetes", state.medicalHistory.type1Diabetes],
             ["Diabetic retinopathy", state.medicalHistory.diabeticRetinopathy],
             ["Severe renal impairment / ESRD", state.medicalHistory.severeRenalImpairment],
@@ -110,6 +109,7 @@ export function MounjaroSummaryReport({ state }: { state: MounjaroConsultationSt
         <CounsellingGrid
           items={[
             ["Mild to moderate renal impairment", state.medicalHistory.renalImpairment],
+            ["Untreated or unassessed endocrine cause of obesity (caution: GP informed)", state.medicalHistory.endocrineObesity],
             ["Suicidal ideation / severe mental illness", state.medicalHistory.depression],
             ["Psychiatric oversight absent with concern", state.medicalHistory.mentalHealthOversightAbsent],
             ["Pre-existing increased heart rate", state.medicalHistory.preExistingTachycardia],
@@ -218,7 +218,7 @@ export function MounjaroSummaryReport({ state }: { state: MounjaroConsultationSt
         items={[
           ["Injection technique explained", state.counselling.injectionTechnique],
           ["Injection site rotation", state.counselling.injectionSiteRotation],
-          ["Storage: refrigerate 2 to 8°C; 21 days unrefrigerated below 30°C", state.counselling.storageRefrigeration],
+          ["Storage: refrigerate 2 to 8°C; after first use up to 30 days unrefrigerated at not above 30°C, then discard", state.counselling.storageRefrigeration],
           ["Missed dose protocol", state.counselling.missedDoseProtocol],
           ["GI side effects and fluid intake discussed", state.counselling.giSideEffects],
           ["Warning symptoms needing urgent attention", state.counselling.warningSymptoms],

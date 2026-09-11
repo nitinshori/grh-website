@@ -14,6 +14,8 @@ import {
 export interface PeriodPainReportClinical {
   femaleConfirmed: boolean;
   primaryDysmenorrhoea: boolean;
+  priorTreatment: "" | "tried-insufficient" | "unsuitable" | "not-tried";
+  priorTreatmentDetail: string;
   redFlagSymptoms: boolean;
   pregnantOrSuspected: boolean;
   breastfeeding: boolean;
@@ -100,6 +102,18 @@ export function PeriodPainSummaryReport({
       <SectionHeader>Assessment</SectionHeader>
       <div className="space-y-1.5">
         <Row label="Primary dysmenorrhoea confirmed" value={c.primaryDysmenorrhoea ? "Yes" : "No"} />
+        <Row
+          label="Paracetamol or antispasmodic tried for at least one cycle (inclusion criterion)"
+          value={
+            c.priorTreatment === "tried-insufficient"
+              ? `Tried and insufficient: ${c.priorTreatmentDetail || "details not recorded"}`
+              : c.priorTreatment === "unsuitable"
+                ? `Unsuitable: ${c.priorTreatmentDetail || "reason not recorded"}`
+                : c.priorTreatment === "not-tried"
+                  ? "Not yet tried (inclusion criterion not met; advised and review after one cycle)"
+                  : dash
+          }
+        />
         <Row label="Allergies" value={c.allergies || dash} />
         <Row label="Previous supply under this PGD" value={c.previousSupply ? `Yes: last supply ${c.lastSupplyDate || "date not recorded"}, ${c.previousCycles ?? "unknown number of"} previous cycle(s)` : "No"} />
         <Row label="Not responding after 3 to 6 months of treatment" value={c.notRespondingToTreatment ? "Yes (referred)" : "No"} />

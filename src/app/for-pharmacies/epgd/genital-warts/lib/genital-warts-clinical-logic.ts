@@ -1,11 +1,11 @@
 import type { GenitalWartsConsultationState } from "./genital-warts-types";
-import { MAX_SUPPLIES } from "./genital-warts-types";
+import { MAX_SUPPLIES, REVIEW_BEFORE_SUPPLY } from "./genital-warts-types";
 import type { ClinicalAlert } from "../../shared/types";
 
 /**
  * Clinical logic for the genital warts ePGD.
  *
- * Every rule here traces to the signed PGD version 004 (11 September 2026),
+ * Every rule here traces to the signed PGD version 005 (11 September 2026),
  * which carries separate inclusion and exclusion criteria for podophyllotoxin and
  * for imiquimod. Where they differ, the rule is scoped to the chosen agent.
  *
@@ -20,7 +20,7 @@ import type { ClinicalAlert } from "../../shared/types";
 /**
  * Podophyllotoxin: the Warticon SmPC limits unsupervised application to a
  * total treatment area of 4 cm2 and treatment to 4 weekly cycles (PGD v002
- * correction, carried in v004). The earlier 50-wart figure had no source and
+ * correction, carried in v005). The earlier 50-wart figure had no source and
  * was removed from the document.
  */
 const PODO_MAX_AREA_CM2 = 4;
@@ -110,31 +110,32 @@ export function getAllAlerts(
     });
   }
 
-  // Course limits, both agents: podophyllotoxin 4 cycles; imiquimod 4
-  // dispensings (16 weeks). Beyond that the PGD authorises nothing.
+  // Course limits, both agents: podophyllotoxin 2 packs (one per course, a
+  // second only at the review after 2 cycles); imiquimod 4 dispensings
+  // (16 weeks). Beyond that the PGD authorises nothing.
   if (agent && state.treatment.supplyNumber !== null && state.treatment.supplyNumber > MAX_SUPPLIES[agent]) {
     alerts.push({
       severity: "stop",
       code: "WARTS_COURSE_LIMIT",
       message:
         agent === "podophyllotoxin"
-          ? "More than 4 podophyllotoxin cycles: outside the PGD"
+          ? "More than 2 podophyllotoxin packs: outside the PGD"
           : "More than 4 imiquimod dispensings (16 weeks): outside the PGD",
       detail:
         agent === "podophyllotoxin"
-          ? "The PGD authorises up to 4 cycles (4 weeks, the licensed maximum). Refer to the GP or a sexual health service."
+          ? "The PGD authorises one pack per course, with a second only at the review after 2 cycles; the course is 4 cycles (4 weeks, the licensed maximum). Refer to the GP or a sexual health service."
           : "The PGD authorises up to 16 weeks of imiquimod. Refer to the GP or a sexual health service.",
     });
   }
 
-  if (agent && state.treatment.supplyNumber !== null && state.treatment.supplyNumber >= 3 && state.treatment.priorReviewOutcome === "cleared") {
+  if (agent && state.treatment.supplyNumber !== null && state.treatment.supplyNumber >= REVIEW_BEFORE_SUPPLY[agent] && state.treatment.priorReviewOutcome === "cleared") {
     alerts.push({
       severity: "stop",
       code: "WARTS_CLEARED",
       message: "Warts cleared at review: no further supply",
       detail:
         agent === "podophyllotoxin"
-          ? "The PGD repeats treatment only if warts persist after 2 cycles."
+          ? "The PGD repeats treatment, and supplies a second pack, only if warts persist at the review after 2 cycles."
           : "The PGD: if complete clearance at the 8-week review, stop treatment.",
     });
   }
@@ -276,8 +277,8 @@ export function doseSchedule(agent: string): {
         "Apply a thin layer to the warts twice daily for 3 consecutive days, then 4 days with no treatment.",
       course: `Repeat the 3-days-on, 4-days-off cycle for up to ${PODO_MAX_CYCLES} cycles (4 weeks total treatment, the licensed maximum).`,
       review:
-        "Review progress after 2 cycles. If warts persist, repeat for an additional 2 cycles.",
-      quantity: "1 bottle of solution (15 mL) or 1 tube of cream (5 g) per treatment cycle. Total treatment area up to and including 4 cm2.",
+        "Review progress after 2 cycles. If warts persist, repeat for an additional 2 cycles; a second pack may be supplied at this review only.",
+      quantity: "One pack per course: 1 bottle of 0.5% solution (Warticon 3 mL or Condyline 3.5 mL) or 1 tube of 0.15% cream (Warticon 5 g). One pack covers the licensed course of up to 4 weekly cycles; a second pack only at the review after 2 cycles where warts persist, and no more than 2 packs per course. Total treatment area up to and including 4 cm2.",
     };
   }
 

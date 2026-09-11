@@ -20,7 +20,7 @@ export interface BPHLutsAssessment {
 }
 
 export interface BPHMedicalHistory {
-  /** PGD v003 exclusion: history of orthostatic hypotension. */
+  /** PGD v004 exclusion: history of orthostatic hypotension. */
   orthostasisHistory: boolean;
   /** Exclusion: severe hepatic impairment (Child-Pugh C). */
   severeHepaticImpairment: boolean;
@@ -29,10 +29,14 @@ export interface BPHMedicalHistory {
   /** Exclusion: planned cataract or glaucoma surgery (IFIS). */
   plannedCataractSurgery: boolean;
   hypersensitivity: boolean;
-  uncontrolledHypertension: boolean;
-  /** Blood pressure reading, record only (the document sets no threshold),
-   *  so the "uncontrolled hypertension" answer has a basis on the record. */
-  bloodPressure: string;
+  /** Decision 47: blood pressure is measured lying and standing at every
+   *  supply and both readings recorded. Exclusions are derived from the
+   *  readings: 160/100 mmHg or above (either reading), or a postural drop in
+   *  systolic pressure of 20 mmHg or more. */
+  lyingSystolic: number | null;
+  lyingDiastolic: number | null;
+  standingSystolic: number | null;
+  standingDiastolic: number | null;
   /** Exclusion: MS, Parkinson's, spinal cord disease, diabetic neuropathy. */
   neurologicalBladderDisease: boolean;
   /** Caution: history of syncope or fainting. */
@@ -78,7 +82,7 @@ export interface BPHMedicineSupply {
   supplyType: "" | "initial" | "continuation";
   quantity: number | null;
   brand: string;
-  // Continuation gate (PGD v003 maximum treatment period)
+  // Continuation gate (PGD v004 maximum treatment period)
   previousIpss: number | null;
   gpExaminedSinceStart: boolean;
   monthsOnTreatment: number | null;
@@ -186,8 +190,10 @@ gpEmail: "",
       mildModerateHepaticImpairment: false,
       plannedCataractSurgery: false,
       hypersensitivity: false,
-      uncontrolledHypertension: false,
-      bloodPressure: "",
+      lyingSystolic: null,
+      lyingDiastolic: null,
+      standingSystolic: null,
+      standingDiastolic: null,
       neurologicalBladderDisease: false,
       syncopeHistory: false,
       severeRenalImpairment: false,

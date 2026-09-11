@@ -7,11 +7,13 @@ export const metadata = {
     "Patient Group Direction for mild cellulitis (Eron class I) of a limb or the trunk in adults aged 18 and over: flucloxacillin, clarithromycin or doxycycline",
 };
 
-// Dedicated Cellulitis entry for the Cellulitis PGD (version 003, issued
+// Dedicated Cellulitis entry for the Cellulitis PGD (version 004, issued
 // 11 September 2026). This is a DIFFERENT document from the Skin and Soft
 // Tissue Infection PGD: adults 18 and over only, MILD cellulitis (Eron
 // class I) of a limb or the trunk, its own exclusion list and adult sepsis
-// thresholds, and pregnancy or breastfeeding excludes all three arms. The
+// thresholds; pregnancy or breastfeeding excludes the clarithromycin and
+// doxycycline arms (flucloxacillin may be supplied where clinically
+// indicated), and a 48-hour reassessment at the pharmacy is booked. The
 // consultation client is shared; variant="cellulitis" switches every gate,
 // dose and counselling item to the cellulitis document.
 export default function CellulitisPage() {

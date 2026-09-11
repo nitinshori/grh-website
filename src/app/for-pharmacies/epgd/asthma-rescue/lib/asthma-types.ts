@@ -1,11 +1,11 @@
 // ─── Asthma Rescue ePGD Types ───
-// Aligned to the signed PGD version 006, issued 11 September 2026:
+// Aligned to the signed PGD version 007, issued 11 September 2026:
 // salbutamol 100mcg MDI and prednisolone 5mg tablets, adults 18 and over,
 // acute exacerbation of diagnosed asthma.
 
 import type { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/types";
 
-export const PGD_STRAPLINE = "Asthma Rescue PGD version 006, issued 11 September 2026";
+export const PGD_STRAPLINE = "Asthma Rescue PGD version 007, issued 11 September 2026";
 
 // ─── Extended types for Asthma Rescue PGD ───
 
@@ -83,20 +83,21 @@ export interface AsthmaRedFlags {
   prednisoloneAllergy: boolean;
 }
 
-export type PrednisoloneDose = "" | "40" | "50";
-export type PrednisoloneDays = "" | "5" | "6" | "7";
+// One regimen only (decision 38): 40mg once daily for 5 days, 40 tablets of 5mg
+export type PrednisoloneDose = "" | "40";
+export type PrednisoloneDays = "" | "5";
 
 export interface AsthmaMedicineSupply {
   salbutamol100mcgPMDI: boolean;
   salbutamolBrand: string;
   twoAsDoseUnit: boolean;
-  maxEightPuffsDailyUnderstood: boolean;
+  maxEightPuffsDailyUnderstood: boolean; // 8 puffs in 24 hours maximum, 4-hourly / most days is same-day GP, 10 puffs via spacer without relief is 999
   spacerRecommended: boolean;
   prednisolone5mg: boolean;
   prednisoloneBrand: string;
   prednisoloneDoseMg: PrednisoloneDose;
   prednisoloneDays: PrednisoloneDays;
-  prednisoloneTablets: number | null; // computed from dose and days, max 70
+  prednisoloneTablets: number | null; // 40 tablets of 5mg (40mg daily for 5 days), the only quantity
   tabletCountChecked: boolean; // pharmacist checked the arithmetic against the dose before supply
   salbutamolPilSupplied: boolean;
   prednisolonePilSupplied: boolean;
@@ -107,8 +108,9 @@ export interface AsthmaCounselling {
   inhalerTechniqueDemonstration: boolean;
   spacerUse: boolean;
   seekUrgentCareIfNotResolving: boolean;
-  // PGD v006 follow-up advice
+  // PGD v007 follow-up advice
   emergencyIfNoImprovement: boolean; // no improvement within 15 to 30 minutes of salbutamol
+  salbutamolLimits: boolean; // 8 puffs in 24 hours maximum; more often than 4-hourly or on most days is same-day GP; 10 puffs via spacer without relief is 999
   prednisoloneFullCourse: boolean;
   prednisoloneWithFood: boolean;
   prednisoloneDiabetes: boolean;
@@ -278,6 +280,7 @@ export function createInitialConsultationState(): AsthmaConsultationState {
       spacerUse: false,
       seekUrgentCareIfNotResolving: false,
       emergencyIfNoImprovement: false,
+      salbutamolLimits: false,
       prednisoloneFullCourse: false,
       prednisoloneWithFood: false,
       prednisoloneDiabetes: false,

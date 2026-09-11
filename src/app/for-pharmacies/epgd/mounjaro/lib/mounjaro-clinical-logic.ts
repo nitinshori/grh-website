@@ -3,7 +3,7 @@ import { DOSE_BY_STAGE } from "./mounjaro-types";
 import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
 
 // Alerts follow the Mounjaro (tirzepatide) Injection for weight management PGD,
-// version 008, issued 11 September 2026. "stop" = exclusion criterion (do not
+// version 009, issued 11 September 2026. "stop" = exclusion criterion (do not
 // supply, refer); "caution" = caution row; "red-flag" = monitoring point.
 
 export function getAllAlerts(state: MounjaroConsultationState): ClinicalAlert[] {
@@ -99,16 +99,6 @@ export function getAllAlerts(state: MounjaroConsultationState): ClinicalAlert[] 
       code: "RECENT_CHOLECYSTECTOMY",
       message: "Cholecystectomy within the last 3 months",
       detail: "Exclusion. Do not supply until more than 3 months have passed since the cholecystectomy.",
-    });
-  }
-
-  if (state.medicalHistory.endocrineObesity) {
-    alerts.push({
-      severity: "stop",
-      code: "ENDOCRINE_OBESITY",
-      message: "Obesity caused by an endocrinological disorder",
-      detail:
-        "Exclusion. Refer to the GP. If the patient was already overweight before that diagnosis this exclusion may not apply: untick and document the reasoning in the clinical notes.",
     });
   }
 
@@ -266,6 +256,19 @@ export function getAllAlerts(state: MounjaroConsultationState): ClinicalAlert[] 
     });
   }
 
+  // Endocrine cause of obesity: a caution to inform the GP, not an exclusion
+  // (decision 48, 11 September 2026). Treated hypothyroidism or Cushing's
+  // syndrome is not a bar to supply.
+  if (state.medicalHistory.endocrineObesity) {
+    alerts.push({
+      severity: "caution",
+      code: "ENDOCRINE_OBESITY",
+      message: "Endocrine cause of obesity suspected but not yet assessed or treated",
+      detail:
+        "Caution, not an exclusion. Inform the GP so that the suspected endocrine cause can be investigated, and record this in the clinical notes. A patient whose endocrine condition is diagnosed and treated may be supplied.",
+    });
+  }
+
   if (state.medicalHistory.preExistingTachycardia) {
     alerts.push({
       severity: "caution",
@@ -343,7 +346,7 @@ export function getAllAlerts(state: MounjaroConsultationState): ClinicalAlert[] 
       code: "LESS_THAN_5_PERCENT",
       message: "Less than 5% of initial body weight lost after 6 months on the maximum tolerated dose",
       detail:
-        "PGD v008 monitoring row: a decision is required on whether to continue treatment, taking into account the benefit-risk profile in this patient. Record the decision and the reasoning before any further supply.",
+        "PGD v009 monitoring row: a decision is required on whether to continue treatment, taking into account the benefit-risk profile in this patient. Record the decision and the reasoning before any further supply.",
     });
   }
 
@@ -412,7 +415,7 @@ export function hasHardStops(alerts: ClinicalAlert[]): boolean {
 }
 
 export function calculateDoseRecommendation(state: MounjaroConsultationState): DoseRecommendation | null {
-  // Mounjaro titration schedule (PGD v008): 2.5 mg for 4 weeks, then 5 mg; further
+  // Mounjaro titration schedule (PGD v009): 2.5 mg for 4 weeks, then 5 mg; further
   // 2.5 mg increases after a minimum of 4 weeks on the current dose if required
   // and tolerated. Maintenance doses 5 mg, 10 mg or 15 mg. Maximum 15 mg once weekly.
   const doseStages = [

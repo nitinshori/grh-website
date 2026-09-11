@@ -33,7 +33,12 @@ export interface HPVVaccineAssessment {
   immunosuppressedOrHIV: boolean;
   /** Prior HPV vaccine history. */
   priorDoses: string;
-  /** A single dose before the 25th birthday completes the course. */
+  /**
+   * A single dose before the 25th birthday completes the course for an
+   * immunocompetent patient only (decision 17, 11 Sep 2026). For an
+   * immunosuppressed or HIV positive patient it counts as a prior dose of the
+   * three dose course.
+   */
   doseBefore25: boolean;
   /**
    * Exclusions asked as explicit yes/no answers. They were booleans
@@ -44,7 +49,7 @@ export interface HPVVaccineAssessment {
   anaphylaxisToComponent: "" | "yes" | "no";
   /** Bleeding disorder / anticoagulation: technique caution, not a stop. */
   bleedingDisorderOrAnticoagulated: boolean;
-  /** Immunoglobulin or blood products in the previous three months: not a contraindication, record it (PGD v005 cautions). */
+  /** Immunoglobulin or blood products in the previous three months: not a contraindication, record it (PGD v006 cautions). */
   bloodProductsLast3Months: boolean;
   /** Told whether they could have this free on the NHS. */
   nhsEligibilityDiscussed: boolean;
@@ -80,7 +85,7 @@ export interface HPVAdministration {
   /** Date of the previous dose in this course; required for dose 2 or 3 so the minimum interval can be checked. */
   previousDoseDate: string;
   nextDoseDue: string;
-  /** Where another vaccine was given at the same visit, its name and site (PGD v005 records row). */
+  /** Where another vaccine was given at the same visit, its name and site (PGD v006 records row). */
   otherVaccineSameVisit: string;
   adrenalineAvailable: boolean;
   observedFifteenMinutes: boolean;

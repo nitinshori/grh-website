@@ -2,7 +2,7 @@ import type { CovidBoosterConsultationState } from "./covid-booster-types";
 import { COVID_PRODUCTS } from "./covid-booster-types";
 import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
 
-// Aligned to the COVID-19 Vaccination 2026/27 PGD version 007, issued 11 September 2026.
+// Aligned to the COVID-19 Vaccination 2026/27 PGD version 008, issued 11 September 2026.
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** Minimum interval between COVID-19 vaccine doses: 3 months, operationalised as 91 days (13 weeks) as in the NHS programme. */
@@ -23,7 +23,7 @@ export function intervalTooShort(state: CovidBoosterConsultationState): boolean 
   return d !== null && d < MIN_INTERVAL_DAYS;
 }
 
-/** NHS-eligible cohorts for autumn 2026 (PGD v007 guideline summary). */
+/** NHS-eligible cohorts for autumn 2026 (PGD v008 guideline summary). */
 export function nhsEligible(state: CovidBoosterConsultationState): boolean {
   const age = state.patient.age;
   return (
@@ -130,15 +130,28 @@ export function getAllAlerts(state: CovidBoosterConsultationState): ClinicalAler
     });
   }
 
-  // Caution: pregnancy
+  // Pregnancy. Signatories' decision 16 (11 Sep 2026): pregnancy is not itself
+  // an eligible group; a pregnant individual is vaccinated under this PGD only
+  // where they are in an NHS-eligible group (75 and over, care home resident,
+  // immunosuppressed). Otherwise refer, do not vaccinate.
   if (state.assessment.pregnant) {
-    alerts.push({
-      severity: "caution",
-      code: "COVID_PREGNANCY",
-      message: "Patient is pregnant",
-      detail:
-        "COVID-19 vaccination is recommended in pregnancy for those in an eligible group and is safe while breastfeeding. Confirm the vaccine and indication against current national guidance before proceeding.",
-    });
+    if (nhsEligible(state)) {
+      alerts.push({
+        severity: "caution",
+        code: "COVID_PREGNANCY",
+        message: "Pregnant and in an NHS-eligible group",
+        detail:
+          "The Green Book supports COVID-19 vaccination in pregnancy where the individual is otherwise eligible. Tell the patient of their NHS entitlement, give an mRNA vaccine (Comirnaty XFG in preference; Nuvaxovid is not selected in pregnancy under this tool), and record the eligible group that applies.",
+      });
+    } else {
+      alerts.push({
+        severity: "stop",
+        code: "COVID_PREGNANCY_NOT_ELIGIBLE",
+        message: "Pregnant and not in an NHS-eligible group",
+        detail:
+          "Pregnancy is not itself an eligible group in the 2026/27 programme. A pregnant individual who is not aged 75 or over, a care home resident or immunosuppressed is excluded under this PGD: refer to the GP or maternity service. Do not vaccinate.",
+      });
+    }
   }
 
   // Caution: capillary leak syndrome (Spikevax)
@@ -202,7 +215,7 @@ export function getAllAlerts(state: CovidBoosterConsultationState): ClinicalAler
       code: "COVID_LP81_HIGH_RISK",
       message: "Comirnaty LP.8.1 selected for a high-risk patient",
       detail:
-        "PGD v007 requires Comirnaty XFG, the current 2026/27 formulation, for anyone immunosuppressed or aged 75 and over. Use XFG stock, or rebook rather than substitute.",
+        "PGD v008 requires Comirnaty XFG, the current 2026/27 formulation, for anyone immunosuppressed or aged 75 and over. Use XFG stock, or rebook rather than substitute.",
     });
   }
 
@@ -212,7 +225,7 @@ export function getAllAlerts(state: CovidBoosterConsultationState): ClinicalAler
       code: "COVID_LP81_RUNOUT",
       message: "Comirnaty LP.8.1 is the previous seasonal formulation",
       detail:
-        "Permitted under PGD v007 from existing stock only, until that stock is used up or reaches its expiry date. Tell the patient this is the previous formulation and that XFG is the current one, and record that you did. Check the variant printed on the syringe label before injecting.",
+        "Permitted under PGD v008 from existing stock only, until that stock is used up or reaches its expiry date. Tell the patient this is the previous formulation and that XFG is the current one, and record that you did. Check the variant printed on the syringe label before injecting.",
     });
   }
 
@@ -255,7 +268,7 @@ export function calculateDoseRecommendation(state: CovidBoosterConsultationState
       frequency: "Single dose",
       duration: "One dose for the 2026/27 season",
       reason:
-        "Comirnaty XFG is the vaccine of choice under PGD v007. Comirnaty LP.8.1 may be used from existing stock only, and not for patients who are immunosuppressed or aged 75 and over. Spikevax LP.8.1 where Comirnaty is unavailable; Nuvaxovid JN.1 where the mRNA vaccines are unavailable or unsuitable.",
+        "Comirnaty XFG is the vaccine of choice under PGD v008. Comirnaty LP.8.1 may be used from existing stock only, and not for patients who are immunosuppressed or aged 75 and over. Spikevax LP.8.1 where Comirnaty is unavailable; Nuvaxovid JN.1 where the mRNA vaccines are unavailable or unsuitable.",
     };
   }
 
@@ -267,7 +280,7 @@ export function calculateDoseRecommendation(state: CovidBoosterConsultationState
     duration: "One dose for the 2026/27 season",
     reason:
       chosen === "comirnaty-lp81"
-        ? "Existing stock of the previous seasonal formulation. Permitted under PGD v007 until stock is exhausted or expires. The patient must be told."
-        : "Administered under COVID-19 PGD v007, 2026/27 season.",
+        ? "Existing stock of the previous seasonal formulation. Permitted under PGD v008 until stock is exhausted or expires. The patient must be told."
+        : "Administered under COVID-19 PGD v008, 2026/27 season.",
   };
 }

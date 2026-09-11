@@ -31,7 +31,7 @@ export default function HayfeverToolPage() {
           </h1>
           <p className="text-sm text-gray-500 mt-1">
             Fexofenadine 120 mg tablets and/or Dymista nasal spray for allergic rhinitis in patients aged 12 years and over.
-            PGD version 004, issued 11 September 2026.
+            PGD version 005, issued 11 September 2026.
           </p>
         </div>
 
@@ -42,7 +42,7 @@ export default function HayfeverToolPage() {
             This ePGD is provided as a clinical decision support aid and does
             not replace professional clinical judgement. The pharmacist retains
             full responsibility for each consultation. Based on UK medicines
-            guidance and the Get Real Health PGD for Fexofenadine and/or Dymista (Allergic Rhinitis), version 004, 11 September 2026.
+            guidance and the Get Real Health PGD for Fexofenadine and/or Dymista (Allergic Rhinitis), version 005, 11 September 2026.
           </p>
         </div>
       </div>

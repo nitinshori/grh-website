@@ -4,7 +4,7 @@ import type { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/
 
 export interface UTISymptoms {
   dysuria: boolean;
-  /** PGD v006 inclusion: two or more of dysuria, new nocturia, frequency, urgency. */
+  /** PGD v007 inclusion: two or more of dysuria, new nocturia, frequency, urgency. */
   nocturia: boolean;
   frequency: boolean;
   urgency: boolean;
@@ -12,13 +12,13 @@ export interface UTISymptoms {
   haematuria: boolean;
   vaginalDischarge: boolean;
   /** Pelvic pain, intermenstrual or post-coital bleeding, or a new or recent
-   *  sexual partner: PGD v006 excludes and refers for STI testing. */
+   *  sexual partner: PGD v007 excludes and refers for STI testing. */
   pelvicPain: boolean;
   abnormalBleeding: boolean;
   stiHistory: boolean;
   duration: string; // "< 3 days" | "3-7 days" | "> 7 days" | "unknown"
   additionalNotes: string;
-  // Appendix 1 red flags (PGD v006). Every one is a stop.
+  // Appendix 1 red flags (PGD v007). Every one is a stop.
   redFlagsAsked: boolean;
   feverRigors: boolean;
   loinFlankPain: boolean;
@@ -34,28 +34,39 @@ export interface UTIMedicalHistory {
   /** Indwelling catheter, or a catheter removed within the last 7 days. */
   catheterised: boolean;
   previousUTIWithin4Weeks: boolean;
-  /** PGD v006: an antibiotic already taken for this same episode, from anyone. */
+  /** PGD v007: an antibiotic already taken for this same episode, from anyone. */
   antibioticThisEpisode: boolean;
-  /** PGD v006 records both answers: episodes in the last 6 and last 12 months.
+  /** PGD v007 records both answers: episodes in the last 6 and last 12 months.
    *  Recurrent UTI (2 or more in 6 months, or 3 or more in 12 months) is derived. */
   utiEpisodesLast6Months: "" | "0" | "1" | "2+";
   utiEpisodesLast12Months: "" | "0" | "1" | "2" | "3+";
   kidneyDisease: boolean;
   /** The document's renal row, answered in its own terms, with no default:
    *  "" is unanswered and blocks Next. "unknown" is a real answer at a
-   *  pharmacy counter and the PGD acts on it (exclude). There is no
-   *  "result seen" route for 60 to 64 year olds: the document excludes them. */
+   *  pharmacy counter and the PGD acts on it (exclude). Aged 60 to 64 with a
+   *  NO answer, supply proceeds only on a seen eGFR result (Decision 43). */
   renalImpairment: "" | "none" | "moderate" | "severe" | "unknown";
+  /** Decision 43 (PGD reissue, September 2026): a woman aged 60 to 64 who
+   *  answers NO proceeds only where an eGFR of 45 mL/min or more, dated within
+   *  the last 12 months, has been seen by the pharmacist (NHS App, GP summary
+   *  or a letter) and the result, its date and where it was seen are recorded. */
+  egfrResultSeen: boolean;
+  /** The eGFR value seen, in mL/min. */
+  egfrValue: number | null;
+  /** Date of the eGFR result seen (ISO yyyy-mm-dd). */
+  egfrDate: string;
+  /** Where the result was seen: NHS App, GP summary, letter, or other. */
+  egfrSource: string;
   /** Diabetes, or any condition causing peripheral neuropathy (nitrofurantoin caution). */
   diabetesUncontrolled: boolean;
   immunosuppressed: boolean;
   knownAbnormalUrinaryTract: boolean;
-  // Nitrofurantoin arm exclusions (PGD v006)
+  // Nitrofurantoin arm exclusions (PGD v007)
   nitrofurantoinHypersensitivity: boolean;
   g6pdDeficiency: boolean;
   previousNitrofurantoinReaction: boolean;
   acutePorphyria: boolean;
-  // Trimethoprim arm exclusions (PGD v006)
+  // Trimethoprim arm exclusions (PGD v007)
   trimethoprimHypersensitivity: boolean;
   trimethoprimLast3Months: boolean;
   folateDeficiencyOrBloodDyscrasia: boolean;
@@ -80,7 +91,7 @@ export interface UTIMedicineSelection {
   dose: string;
   duration: string;
   quantity: number;
-  /** PGD v006 gate on the trimethoprim arm: the reason nitrofurantoin is
+  /** PGD v007 gate on the trimethoprim arm: the reason nitrofurantoin is
    *  unsuitable must be one of these and must be recorded. */
   trimethoprimReason: "" | "contraindicated" | "intolerance" | "unavailable";
 }
@@ -159,6 +170,10 @@ export const initialUTIMedicalHistory: UTIMedicalHistory = {
   utiEpisodesLast12Months: "",
   kidneyDisease: false,
   renalImpairment: "",
+  egfrResultSeen: false,
+  egfrValue: null,
+  egfrDate: "",
+  egfrSource: "",
   diabetesUncontrolled: false,
   immunosuppressed: false,
   knownAbnormalUrinaryTract: false,

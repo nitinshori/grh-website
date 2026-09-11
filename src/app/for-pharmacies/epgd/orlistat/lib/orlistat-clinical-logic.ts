@@ -1,7 +1,7 @@
 import type { OrlistatConsultationState } from "./orlistat-types";
 import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
 
-// PGD v003: review at 12 weeks from the start of treatment; continue only if
+// PGD v004: review at 12 weeks from the start of treatment; continue only if
 // at least 5% of body weight has been lost from baseline.
 export const ORLISTAT_REVIEW_WEEKS = 12;
 export const ORLISTAT_MIN_LOSS_PERCENT = 5;
@@ -163,7 +163,7 @@ export function getAllAlerts(state: OrlistatConsultationState): ClinicalAlert[] 
     });
   }
 
-  // PGD v003: concurrent ciclosporin therapy is an exclusion, not a caution.
+  // PGD v004: concurrent ciclosporin therapy is an exclusion, not a caution.
   if (state.medications.takesCiclosporin) {
     alerts.push({
       severity: "stop",
@@ -194,39 +194,47 @@ export function getAllAlerts(state: OrlistatConsultationState): ClinicalAlert[] 
     });
   }
 
-  // Antiretrovirals, orlistat may reduce absorption.
-  if (state.medications.takesHIVAntiretrovirals) {
+  // Interaction exclusion (PGD exclusion criteria, decision 54, 11 September
+  // 2026): antiepileptic medicines, antiretroviral medicines for HIV,
+  // amiodarone, or any other medicine with an SmPC interaction that cannot be
+  // managed in a pharmacy setting. Refer to the GP or specialist.
+  if (state.medications.takesAntiEpileptics) {
     alerts.push({
-      severity: "caution",
-      code: "ANTIRETROVIRALS",
-      message: "Concurrent HIV antiretroviral therapy",
+      severity: "stop",
+      code: "ANTIEPILEPTICS",
+      message: "Concurrent antiepileptic therapy",
       detail:
-        "Orlistat may reduce absorption of HIV antiretroviral medications and could negatively affect their efficacy. Discuss with HIV specialist team before initiating.",
+        "Excluded under this PGD. Orlistat may reduce the absorption of antiepileptic medicines and unbalance treatment, leading to convulsions. Do not supply; refer to the GP or specialist.",
     });
   }
 
-  // Other clinically significant drug interaction, exclusion per Janey.
+  if (state.medications.takesHIVAntiretrovirals) {
+    alerts.push({
+      severity: "stop",
+      code: "ANTIRETROVIRALS",
+      message: "Concurrent HIV antiretroviral therapy",
+      detail:
+        "Excluded under this PGD. Orlistat may reduce the absorption of antiretroviral medicines and lead to loss of virological control. Do not supply; refer to the GP or HIV specialist team.",
+    });
+  }
+
+  if (state.medications.takesAmiodarone) {
+    alerts.push({
+      severity: "stop",
+      code: "AMIODARONE",
+      message: "Concurrent amiodarone therapy",
+      detail:
+        "Excluded under this PGD. Orlistat may reduce amiodarone plasma levels, with a clinical effect that cannot be monitored in a pharmacy setting. Do not supply; refer to the GP or specialist.",
+    });
+  }
+
   if (state.medications.otherSignificantInteraction) {
     alerts.push({
       severity: "stop",
       code: "DRUG_INTERACTION",
-      message: "Clinically significant drug interaction",
+      message: "Other medicine with an SmPC interaction that cannot be managed in a pharmacy setting",
       detail:
-        "Excluded under this PGD. Refer to GP for medicines reconciliation before considering orlistat.",
-    });
-  }
-
-  // Antiepileptic interaction, promote to a more visible caution (orlistat
-  // may unbalance anticonvulsant treatment by reducing absorption →
-  // convulsions). The existing takesAntiEpileptics field is already
-  // captured in medications; add an explicit alert here.
-  if (state.medications.takesAntiEpileptics) {
-    alerts.push({
-      severity: "caution",
-      code: "ANTIEPILEPTICS",
-      message: "Concurrent antiepileptic therapy",
-      detail:
-        "Orlistat may decrease absorption of antiepileptic drugs and unbalance treatment, leading to convulsions. Counsel patient; if poorly controlled epilepsy, refer to GP.",
+        "Excluded under this PGD. Refer to the GP for medicines reconciliation before considering orlistat.",
     });
   }
 

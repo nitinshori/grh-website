@@ -4,7 +4,7 @@ import { validatePatientStep, validateConsentStep, validateSummaryStep } from ".
 export function validateStep(stepIndex: number, state: AnxietyPropranololConsultationState): string | null {
   switch (stepIndex) {
     case 0:
-      // PGD v005: adults aged 18 years and over.
+      // PGD v006: adults aged 18 years and over.
       return validatePatientStep(state.patient, { minAge: 18 });
 
     case 1:
@@ -39,11 +39,10 @@ export function validateStep(stepIndex: number, state: AnxietyPropranololConsult
     }
 
     case 6: {
-      if (!state.medicineSupply.regimen) return "Please select the dosing regimen";
+      // Decision 55 (11 Sep 2026): as-required use only, a single dose before
+      // the situation. There is no regimen choice and no daily maximum.
       if (!["10", "20", "30", "40"].includes(state.medicineSupply.propranololDose))
-        return "Select the dose advised (10, 20, 30 or 40mg)";
-      if (state.medicineSupply.regimen === "regular" && !["2", "3"].includes(state.medicineSupply.timesDaily))
-        return "Select how many times daily (two or three) for the regular regimen";
+        return "Select the dose advised (10, 20, 30 or 40mg as a single dose)";
       const q = state.medicineSupply.quantity;
       if (q === null) return "Please enter quantity to supply";
       if (q < 1) return "Please enter quantity to supply";

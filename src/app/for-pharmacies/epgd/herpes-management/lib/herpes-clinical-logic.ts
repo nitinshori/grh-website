@@ -1,7 +1,7 @@
 import type { HerpesConsultationState } from "./herpes-types";
 import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
 
-// Aligned to the Genital Herpes Management PGD, version 004, issued
+// Aligned to the Genital Herpes Management PGD, version 005, issued
 // 11 September 2026. Exclusions are hard stops; cautions are warnings.
 
 export function getAllAlerts(state: HerpesConsultationState): ClinicalAlert[] {
@@ -215,9 +215,8 @@ export function calculateDoseRecommendation(state: HerpesConsultationState): Dos
       return {
         medicine: "Valaciclovir 500 mg tablets",
         dose: "500 mg twice daily",
-        dosingRegimen: a.recurrentCourseDays
-          ? `${a.recurrentCourseDays} days: ${a.recurrentCourseDays * 2} tablets, starting within 48 hours of symptom onset`
-          : "Select 3, 4 or 5 days (6, 8 or 10 tablets), starting within 48 hours of symptom onset",
+        // Decision 24 (11 Sep 2026): the recurrent course is fixed at 5 days, 10 tablets.
+        dosingRegimen: "5 days: 10 tablets, starting within 48 hours of symptom onset",
         reason: "Recurrent episode.",
       };
     case "suppressive":

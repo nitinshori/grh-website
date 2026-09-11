@@ -169,12 +169,12 @@ export function GenitalWartsSummaryReport({ state, alerts }: GenitalWartsSummary
               value={
                 treatment.supplyNumber !== null
                   ? isPodo
-                    ? `Cycle ${treatment.supplyNumber} of a maximum of 4`
+                    ? `Pack ${treatment.supplyNumber} of a maximum of 2 (one pack per course; a second only at the review after 2 cycles)`
                     : `Dispensing ${treatment.supplyNumber} of a maximum of 4 (16 weeks)`
                   : "Not recorded"
               }
             />
-            {treatment.supplyNumber !== null && treatment.supplyNumber >= 3 && (
+            {treatment.supplyNumber !== null && treatment.supplyNumber >= (isPodo ? 2 : 3) && (
               <Row
                 label={isPodo ? "Review after 2 cycles" : "8-week review"}
                 value={treatment.priorReviewOutcome === "persisting" ? "Warts persist: treatment continued" : treatment.priorReviewOutcome === "cleared" ? "Cleared" : "Not recorded"}

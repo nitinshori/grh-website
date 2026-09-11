@@ -2,7 +2,7 @@ import type { HerpesConsultationState } from "./herpes-types";
 import { validatePatientStep, validateConsentStep, validateSummaryStep } from "../../shared/types";
 import { hasHardStops } from "./herpes-clinical-logic";
 
-// Aligned to the Genital Herpes Management PGD, version 004, issued 11 September 2026.
+// Aligned to the Genital Herpes Management PGD, version 005, issued 11 September 2026.
 export function validateStep(state: HerpesConsultationState, step: number): string | null {
   const a = state.assessment;
   switch (step) {
@@ -43,7 +43,6 @@ export function validateStep(state: HerpesConsultationState, step: number): stri
     }
     case 5:
       if (!a.medicine) return "Select aciclovir 400 mg tablets or valaciclovir 500 mg tablets";
-      if (a.medicine === "valaciclovir" && a.episodeType === "recurrent" && a.recurrentCourseDays === null) return "Select the valaciclovir recurrent course length: 3, 4 or 5 days (6, 8 or 10 tablets)";
       return null;
     case 6:
       return validateConsentStep(state.consent) || validateSummaryStep(state.summary);

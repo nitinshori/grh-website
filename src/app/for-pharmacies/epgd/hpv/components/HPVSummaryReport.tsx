@@ -36,7 +36,7 @@ export function HPVSummaryReport({
           {state.summary.consultationTime}
         </p>
         <p className="text-xs text-gray-500 mt-1">
-          Administered under the Get Real Health Gardasil 9 PGD, version 005, issued 11 September 2026.
+          Administered under the Get Real Health Gardasil 9 PGD, version 006, issued 11 September 2026.
         </p>
       </div>
 
@@ -62,7 +62,7 @@ export function HPVSummaryReport({
         <Row label="Sex (record only, all sexes eligible)" value={state.patient.sex || "Not recorded"} />
         <Row label="Immunosuppressed or HIV positive" value={state.assessment.immunosuppressedOrHIV ? "Yes: three-dose schedule" : "No"} />
         <Row label="Previous HPV vaccine doses" value={state.assessment.priorDoses || "Not recorded"} />
-        <Row label="Dose received before 25th birthday" value={state.assessment.doseBefore25 ? "Yes: course complete, no further dose" : "No"} />
+        <Row label="Dose received before 25th birthday" value={state.assessment.doseBefore25 ? (state.assessment.immunosuppressedOrHIV ? "Yes: counted as a prior dose; immunosuppressed or HIV positive, so the three dose course is completed" : "Yes: immunocompetent, course complete, no further dose") : "No"} />
         <Row label="Pregnancy status" value={state.assessment.pregnancyStatus || "Not recorded"} />
         <Row label="Acute febrile illness" value={state.assessment.currentFebrileIllness ? "Yes" : "No"} />
         <Row label="Bleeding disorder or anticoagulated" value={state.assessment.bleedingDisorderOrAnticoagulated ? "Yes: technique adjusted" : "No"} />

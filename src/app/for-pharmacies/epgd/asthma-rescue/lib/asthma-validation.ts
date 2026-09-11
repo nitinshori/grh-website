@@ -1,4 +1,4 @@
-// ─── Asthma Rescue Validation (PGD v006, 11 September 2026) ───
+// ─── Asthma Rescue Validation (PGD v007, 11 September 2026) ───
 
 import type { AsthmaConsultationState } from "./asthma-types";
 import {
@@ -80,7 +80,7 @@ export function validateStep(state: AsthmaConsultationState, step: number): stri
           return "Please confirm the salbutamol dose (2 to 4 puffs, may repeat after 15 to 30 minutes)";
         }
         if (!ms.maxEightPuffsDailyUnderstood) {
-          return "Patient understanding of when to seek emergency care must be confirmed";
+          return "Confirm the salbutamol limits were explained: maximum 8 puffs in 24 hours; more often than every 4 hours or on most days is a same-day GP referral; 10 puffs through a spacer with no relief is 999";
         }
         if (!ms.salbutamolPilSupplied) {
           return "Confirm the patient information leaflet was supplied with the salbutamol inhaler";
@@ -89,14 +89,15 @@ export function validateStep(state: AsthmaConsultationState, step: number): stri
       if (ms.prednisolone5mg) {
         const blockers = prednisoloneArmBlockers(state);
         if (blockers.length > 0) return "Prednisolone is excluded for this patient: " + blockers.join("; ");
-        if (!ms.prednisoloneDoseMg) return "Select the prednisolone daily dose (40mg or 50mg)";
-        if (!ms.prednisoloneDays) return "Select the prednisolone course length (5 to 7 days)";
+        if (ms.prednisoloneDoseMg !== "40" || ms.prednisoloneDays !== "5") {
+          return "Prednisolone under this PGD is 40mg once daily for 5 days only";
+        }
         const expected = prednisoloneTabletCount(ms.prednisoloneDoseMg, ms.prednisoloneDays);
         if (expected === null || ms.prednisoloneTablets !== expected) {
-          return `Quantity must be ${expected ?? "?"} tablets of 5mg for ${ms.prednisoloneDoseMg}mg daily for ${ms.prednisoloneDays} days. Check the arithmetic against the dose before supply.`;
+          return `Quantity must be ${expected ?? "?"} tablets of 5mg (40mg daily, eight tablets a day, for 5 days). Check the arithmetic against the dose before supply.`;
         }
         if (expected > MAX_PREDNISOLONE_TABLETS) {
-          return `Maximum ${MAX_PREDNISOLONE_TABLETS} tablets (50mg daily for 7 days)`;
+          return `Maximum ${MAX_PREDNISOLONE_TABLETS} tablets (40mg daily for 5 days)`;
         }
         if (!ms.tabletCountChecked) {
           return "Confirm the tablet count was checked against the dose before supply";
@@ -112,7 +113,7 @@ export function validateStep(state: AsthmaConsultationState, step: number): stri
       const c = state.counselling;
       const ms = state.medicineSupply;
       // The document's follow-up advice, required for the arm supplied
-      // (PGD v006, Follow-up advice to be given to patient or carer).
+      // (PGD v007, Follow-up advice to be given to patient or carer).
       if (ms.salbutamol100mcgPMDI) {
         if (!c.relieverNotPreventer) return "Confirm the patient was told salbutamol is a reliever, not a preventer";
         if (!c.inhalerTechniqueDemonstration) return "Confirm inhaler technique was demonstrated and the technique sheet given (coordinate inhalation with actuation if no spacer)";
@@ -120,10 +121,13 @@ export function validateStep(state: AsthmaConsultationState, step: number): stri
         if (!c.emergencyIfNoImprovement) {
           return "Confirm the patient was told to seek emergency medical attention if symptoms do not improve within 15 to 30 minutes of salbutamol use";
         }
+        if (!c.salbutamolLimits) {
+          return "Confirm the patient was told: no more than 8 puffs in 24 hours; if needed more often than every 4 hours or on most days, see the GP the same day; in an attack up to 10 puffs through a spacer, and if 10 puffs give no relief call 999";
+        }
       }
       if (ms.prednisolone5mg) {
         if (!c.prednisoloneFullCourse || !c.prednisoloneWithFood) {
-          return "Confirm the prednisolone counselling: take the full course, do not stop abruptly, take with food if stomach upset";
+          return "Confirm the prednisolone counselling: take the full 5 day course (eight 5mg tablets each morning), do not stop abruptly, take with food if stomach upset";
         }
         if (!c.prednisoloneDiabetes) return "Confirm the blood glucose advice was given (if diabetic, monitor more frequently and inform the GP)";
         if (!c.prednisoloneOtherMedicines) return "Confirm the patient was told to inform their healthcare providers of steroid use";

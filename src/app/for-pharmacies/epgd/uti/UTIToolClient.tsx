@@ -609,7 +609,7 @@ export function UTIToolClient() {
                   })
                 }
                 options={[
-                  { value: "none", label: "Answer NO: no known kidney disease (aged 16 to 59: proceed; aged 60 to 64: exclude)" },
+                  { value: "none", label: "Answer NO: no known kidney disease (aged 16 to 59: proceed; aged 60 to 64: proceed only on a seen eGFR of 45 or more within 12 months)" },
                   { value: "unknown", label: "Patient does not know (exclude; refer for a renal function check first)" },
                   { value: "moderate", label: "Answer YES: moderate impairment (eGFR 30 to 44) (exclude)" },
                   { value: "severe", label: "Answer YES: severe impairment (eGFR under 30) (exclude)" },
@@ -617,8 +617,75 @@ export function UTIToolClient() {
                 required
               />
               <p className="text-xs text-gray-600">
-                PGD v006 renal row: YES or under renal follow-up, exclude. NO and aged 16 to 59, proceed. NO but aged 60 to 64, or does not know, exclude and refer for a renal function check first. The document gives no route back to supply on a seen result.
+                Renal row: YES or under renal follow-up, exclude. NO and aged 16 to 59, proceed. NO and aged 60 to 64, proceed only where an eGFR of 45 mL/min or more, dated within the last 12 months, has been seen by the pharmacist (NHS App, GP summary or a letter) and the result, its date and where it was seen are recorded; otherwise exclude and refer for a renal function check first. Patient does not know, exclude and refer for a renal function check first.
               </p>
+              {state.patient.age !== null && state.patient.age >= 60 && state.medicalHistory.renalImpairment === "none" && (
+                <div className="space-y-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+                  <p className="text-sm font-medium text-navy-900">Aged 60 to 64: eGFR result seen by the pharmacist</p>
+                  <Checkbox
+                    label="I have seen an eGFR result for this patient (NHS App, GP summary or a letter)"
+                    checked={state.medicalHistory.egfrResultSeen}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_MEDICAL_HISTORY",
+                        payload: v
+                          ? { egfrResultSeen: true }
+                          : { egfrResultSeen: false, egfrValue: null, egfrDate: "", egfrSource: "" },
+                      })
+                    }
+                  />
+                  {state.medicalHistory.egfrResultSeen && (
+                    <div className="grid sm:grid-cols-3 gap-4">
+                      <NumberInput
+                        label="eGFR value seen"
+                        value={state.medicalHistory.egfrValue}
+                        onChange={(v) =>
+                          dispatch({
+                            type: "UPDATE_MEDICAL_HISTORY",
+                            payload: { egfrValue: v },
+                          })
+                        }
+                        min={0}
+                        max={150}
+                        unit="mL/min"
+                        placeholder="e.g. 72"
+                        required
+                      />
+                      <TextInput
+                        label="Date of the result"
+                        type="date"
+                        value={state.medicalHistory.egfrDate}
+                        onChange={(v) =>
+                          dispatch({
+                            type: "UPDATE_MEDICAL_HISTORY",
+                            payload: { egfrDate: v },
+                          })
+                        }
+                        required
+                      />
+                      <SelectInput
+                        label="Where the result was seen"
+                        value={state.medicalHistory.egfrSource}
+                        onChange={(v) =>
+                          dispatch({
+                            type: "UPDATE_MEDICAL_HISTORY",
+                            payload: { egfrSource: v },
+                          })
+                        }
+                        options={[
+                          { value: "NHS App", label: "NHS App" },
+                          { value: "GP summary", label: "GP summary record" },
+                          { value: "Letter", label: "Letter or printed result" },
+                        ]}
+                        required
+                      />
+                    </div>
+                  )}
+                  <p className="text-xs text-gray-600">
+                    Supply proceeds only where the result seen is 45 mL/min or more and dated within the last 12 months. Where no result can be seen, exclude and refer for a renal function check first.
+                  </p>
+                </div>
+              )}
               <Checkbox
                 label="Known structural or functional abnormality of the urinary tract, or renal stones"
                 checked={state.medicalHistory.knownAbnormalUrinaryTract}

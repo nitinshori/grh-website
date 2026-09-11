@@ -56,7 +56,7 @@ export function UTISummaryReport({ state, alerts }: UTISummaryReportProps) {
           Get Real Health, UTI Consultation Record
         </h1>
         <p className="text-sm text-gray-600 mt-1 print:text-xs">
-          Patient Group Direction: Urinary Tract Infection in Women aged 16 to 64 (nitrofurantoin first line, trimethoprim second line), version 006, issued 11 September 2026
+          Patient Group Direction: Urinary Tract Infection in Women aged 16 to 64 (nitrofurantoin first line, trimethoprim second line), version 007, issued 11 September 2026
         </p>
         <p className="text-xs text-gray-500 mt-1">
           Date: {state.summary.consultationDate} | Time: {state.summary.consultationTime}
@@ -144,6 +144,16 @@ export function UTISummaryReport({ state, alerts }: UTISummaryReportProps) {
         <Row label="UTI episodes in last 12 months" value={state.medicalHistory.utiEpisodesLast12Months || "Not recorded"} />
         <Row label="Known kidney disease (answer given)" value={state.medicalHistory.kidneyDisease ? "Yes" : "No"} />
         <Row label="Renal function" value={renalFunctionLabel(state.medicalHistory.renalImpairment)} />
+        {state.patient.age !== null && state.patient.age >= 60 && (
+          <Row
+            label="Aged 60 to 64: eGFR result seen (Decision 43)"
+            value={
+              state.medicalHistory.egfrResultSeen
+                ? `${state.medicalHistory.egfrValue ?? "value not recorded"} mL/min, dated ${state.medicalHistory.egfrDate || "not recorded"}, seen in ${state.medicalHistory.egfrSource || "source not recorded"}`
+                : "No eGFR result seen (excluded; refer for a renal function check first)"
+            }
+          />
+        )}
         <Row label="Abnormal Urinary Tract or Renal Stones" value={state.medicalHistory.knownAbnormalUrinaryTract ? "Yes" : "No"} />
         <Row label="Diabetes or Peripheral Neuropathy Risk" value={state.medicalHistory.diabetesUncontrolled ? "Yes" : "No"} />
         <Row label="Immunosuppressed" value={state.medicalHistory.immunosuppressed ? "Yes" : "No"} />
@@ -238,7 +248,7 @@ export function UTISummaryReport({ state, alerts }: UTISummaryReportProps) {
         />
         <Row label="Form and route" value={isTrimethoprim ? "Tablet, oral" : "Modified release capsule, oral"} />
         <Row label="Date of supply" value={`${state.summary.consultationDate} ${state.summary.consultationTime}`.trim()} />
-        <Row label="Supplied under" value="UTI in Women aged 16 to 64 PGD v006, 11 September 2026" />
+        <Row label="Supplied under" value="UTI in Women aged 16 to 64 PGD v007, 11 September 2026" />
       </div>
       )}
 

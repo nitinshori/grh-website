@@ -54,7 +54,7 @@ export function getAllAlerts(state: PEConsultationState): ClinicalAlert[] {
       severity: "stop",
       code: "PE_QT",
       message: "Conduction abnormality or a condition that prolongs the QT interval is an exclusion",
-      detail: "PGD v004. Do not supply. Refer.",
+      detail: "PGD v005. Do not supply. Refer.",
     });
   }
 
@@ -63,7 +63,7 @@ export function getAllAlerts(state: PEConsultationState): ClinicalAlert[] {
       severity: "stop",
       code: "PE_IHD",
       message: "History of ischaemic heart disease is an exclusion",
-      detail: "PGD v004. Do not supply. Refer.",
+      detail: "PGD v005. Do not supply. Refer.",
     });
   }
 
@@ -92,7 +92,7 @@ export function getAllAlerts(state: PEConsultationState): ClinicalAlert[] {
       severity: "stop",
       code: "PE_RENAL",
       message: "Moderate or severe renal impairment is an exclusion",
-      detail: "PGD v004. Do not supply. Refer.",
+      detail: "PGD v005. Do not supply. Refer.",
     });
   }
 
@@ -101,7 +101,42 @@ export function getAllAlerts(state: PEConsultationState): ClinicalAlert[] {
       severity: "stop",
       code: "PE_BIPOLAR",
       message: "History of bipolar disorder or mania is an exclusion",
-      detail: "PGD v004. Do not supply. Refer.",
+      detail: "PGD v005. Do not supply. Refer.",
+    });
+  }
+
+  // Decision 46: the guidance summary red flags are exclusions. A plausible
+  // organic cause needs a diagnosis before an SSRI is supplied.
+  if (state.medicalHistory.prostatitisSymptoms) {
+    alerts.push({
+      severity: "stop",
+      code: "PE_RED_FLAG_PROSTATITIS",
+      message: "Symptoms suggesting prostatitis are an exclusion",
+      detail: "Refer to the GP or urology for a diagnosis before any SSRI is supplied. Do not supply.",
+    });
+  }
+  if (state.medicalHistory.thyroidSymptoms) {
+    alerts.push({
+      severity: "stop",
+      code: "PE_RED_FLAG_THYROID",
+      message: "Symptoms suggesting thyroid dysfunction are an exclusion",
+      detail: "Refer to the GP for thyroid function tests and a diagnosis before any SSRI is supplied. Do not supply.",
+    });
+  }
+  if (state.medicalHistory.neurologicalSymptoms) {
+    alerts.push({
+      severity: "stop",
+      code: "PE_RED_FLAG_NEURO",
+      message: "Symptoms suggesting a neurological cause are an exclusion",
+      detail: "Refer to the GP, and on to a specialist if suspected, for a diagnosis before any SSRI is supplied. Do not supply.",
+    });
+  }
+  if (state.medicalHistory.recentOnsetWithNewSymptom) {
+    alerts.push({
+      severity: "stop",
+      code: "PE_RED_FLAG_RECENT_ONSET",
+      message: "Premature ejaculation of recent onset with another new symptom is an exclusion",
+      detail: "Acquired premature ejaculation with a plausible organic cause needs a diagnosis before an SSRI. Refer to the GP. Do not supply.",
     });
   }
 
@@ -110,7 +145,7 @@ export function getAllAlerts(state: PEConsultationState): ClinicalAlert[] {
       severity: "stop",
       code: "PE_CYP3A4",
       message: "Concurrent potent CYP3A4 inhibitor (ketoconazole, ritonavir, etc.) is an exclusion",
-      detail: "PGD v004. Do not supply.",
+      detail: "PGD v005. Do not supply.",
     });
   }
 
@@ -144,7 +179,7 @@ export function getAllAlerts(state: PEConsultationState): ClinicalAlert[] {
     });
   }
 
-  // Cautions (PGD v004)
+  // Cautions (PGD v005)
   if (state.medicalHistory.mildHepaticImpairment) {
     alerts.push({ severity: "caution", code: "PE_LIVER_MILD", message: "Mild hepatic impairment (Child-Pugh class A): use with caution", detail: "Moderate or severe impairment excludes." });
   }
@@ -171,7 +206,7 @@ export function getAllAlerts(state: PEConsultationState): ClinicalAlert[] {
   }
 
   // Caution: a previous severe or sudden adverse reaction recorded on the
-  // Contraindications step. Not an exclusion in PGD v004, but it was a field
+  // Contraindications step. Not an exclusion in PGD v005, but it was a field
   // nothing read (adversarial review, 11 Sep 2026).
   if (state.contraindications.hadSevereOrSuddenAE) {
     alerts.push({

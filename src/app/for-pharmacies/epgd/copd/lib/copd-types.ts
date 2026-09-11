@@ -1,11 +1,11 @@
 // ─── COPD Management ePGD Types ───
-// Aligned to the signed PGD version 003, issued 11 September 2026:
+// Aligned to the signed PGD version 004, issued 11 September 2026:
 // salbutamol 100mcg MDI (acute symptom relief) and amoxicillin 500mg capsules
 // (infective exacerbation with purulent sputum), adults 18 and over.
 
 import type { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/types";
 
-export const PGD_STRAPLINE = "COPD Management PGD version 003, issued 11 September 2026";
+export const PGD_STRAPLINE = "COPD Management PGD version 004, issued 11 September 2026";
 
 export type COPDPatientDetails = BasePatientDetails;
 
@@ -17,6 +17,7 @@ export interface COPDAssessment {
   presentation: COPDPresentation; // acute exacerbation, or breathlessness requiring symptom relief
   purulentSputum: boolean; // yellow/green: infective exacerbation (amoxicillin arm)
   spo2: number | null; // % on air; below 88 is an exclusion
+  respiratoryRate: number | null; // breaths per minute, measured and recorded before supply; 25 or more is an exclusion in both arms
   salbutamolSuppliesLast12Months: number | null; // max 2 supplies in 12 months under this PGD (as told by the patient)
   platformSalbutamolSupplies12Months: number | null; // counted from this pharmacy's saved COPD records
   canUseInhalerOrSpacer: boolean; // inclusion, salbutamol arm
@@ -31,7 +32,7 @@ export interface COPDMedicalHistory {
   smokingStatus: string; // "current" | "former" | "never"
   otherRespiratoryConditions: string;
   otherConditions: string;
-  // Salbutamol cautions (PGD v003)
+  // Salbutamol cautions (PGD v004)
   cardiovascularDisease: boolean;
   hypertension: boolean;
   coronaryDiseaseOrRecentMI: boolean;
@@ -59,6 +60,7 @@ export interface COPDCurrentMedications {
 export interface COPDRedFlags {
   mrcGrade5: boolean;
   severeHypoxia: boolean; // SpO2 below 88%: emergency referral and oxygen
+  highRespiratoryRate: boolean; // respiratory rate 25 or more: exclusion in both arms, emergency referral
   acuteDistress: boolean; // inability to speak, cyanosis, signs of respiratory failure
   newHaemoptysis: boolean;
   weightLoss: boolean;
@@ -83,7 +85,7 @@ export interface COPDCounselling {
   inhalerTechniqueShown: boolean;
   smokingCessationAdvised: boolean;
   symptomMgmtExplained: boolean;
-  // PGD v003 follow-up advice
+  // PGD v004 follow-up advice
   relieverUseAndLimits: boolean; // as needed; max 8 puffs in 24 hours; referral and 999 thresholds
   spacerAdvice: boolean;
   completeCourse: boolean;
@@ -176,6 +178,7 @@ export function createInitialConsultationState(): COPDConsultationState {
       presentation: "",
       purulentSputum: false,
       spo2: null,
+      respiratoryRate: null,
       salbutamolSuppliesLast12Months: null,
       platformSalbutamolSupplies12Months: null,
       canUseInhalerOrSpacer: false,
@@ -213,6 +216,7 @@ export function createInitialConsultationState(): COPDConsultationState {
     redFlags: {
       mrcGrade5: false,
       severeHypoxia: false,
+      highRespiratoryRate: false,
       acuteDistress: false,
       newHaemoptysis: false,
       weightLoss: false,

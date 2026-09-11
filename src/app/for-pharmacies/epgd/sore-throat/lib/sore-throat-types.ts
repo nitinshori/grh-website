@@ -13,12 +13,12 @@ export interface SoreThroatSymptoms {
   trismus: boolean; // difficulty opening mouth
   muffledVoice: boolean; // hot potato voice
   unilateralSwelling: boolean;
-  // PGD v004 red flags (airway compromise, quinsy or epiglottitis): any one excludes
+  // PGD v005 red flags (airway compromise, quinsy or epiglottitis): any one excludes
   stridor: boolean;
   difficultyBreathing: boolean;
   unableToSwallowSaliva: boolean;
   uvulaDeviation: boolean;
-  // PGD v004: possible malignancy pathway, refer to GP
+  // PGD v005: possible malignancy pathway, refer to GP
   persistentNeckLumpOrHoarseness: boolean;
   additionalNotes: string;
 }
@@ -41,7 +41,7 @@ export interface SoreThroatExamination {
   tonsillarAppearance: "normal" | "erythematous" | "exudate" | "abscess" | "";
   cervicalLymphadenopathy: boolean;
   temperature: number | null;
-  // PGD v004 sepsis screen: temperature 38 or above together with any of these
+  // PGD v005 sepsis screen: temperature 38 or above together with any of these
   heartRate: number | null;
   respiratoryRate: number | null;
   systolicBP: number | null;

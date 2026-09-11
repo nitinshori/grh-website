@@ -1,6 +1,6 @@
 // ─── Anti-malarials Clinical Logic ───
 //
-// Aligned to the Malaria Chemoprophylaxis PGD, version 009, issued
+// Aligned to the Malaria Chemoprophylaxis PGD, version 010, issued
 // 11 September 2026. Three arms: atovaquone/proguanil, doxycycline,
 // mefloquine. Arm-level exclusions remove that arm from the medicine
 // selector; a hard stop is raised when the whole PGD excludes the
@@ -15,7 +15,7 @@ import type {
   AMMedicineChoice,
 } from './anti-malarials-types';
 
-export const AM_PGD_VERSION = 'Malaria Chemoprophylaxis PGD v009, issued 11 September 2026';
+export const AM_PGD_VERSION = 'Malaria Chemoprophylaxis PGD v010, issued 11 September 2026';
 
 // ─── Calculate trip duration ───
 //
@@ -57,19 +57,18 @@ export function calculateDaysUntilDeparture(departureDate: string): number | nul
   return Math.round((departure.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-// ─── Atovaquone/proguanil weight band (PGD v009 Appendix 1) ───
+// ─── Atovaquone/proguanil weight band (PGD Appendix 1, UKMEAG Table 5) ───
 //
-// Fractional weights: the document's bands are written in whole kilograms
-// (11 to 20, 21 to 30, 31 to 40, over 40). A weight above the top of a band
-// is read as "over" that band and moves into the next one, so 20.5 kg is
-// dosed as 21 to 30 kg and 40.5 kg as over 40 kg. This matches the
-// document's own "over 40kg" wording and UKMEAG's "to x.9" convention at
-// every boundary except exactly 20.0, 30.0 and 40.0 kg, where the document's
-// whole-kg table is followed. The convention is stated on screen.
+// Decision 1 (11 September 2026): the bands are the UKMEAG bands with
+// decimal boundaries (x to y.9 kg) and the adult tablet from 40 kg. Every
+// weight therefore has exactly one band: 19.9 kg is one paediatric tablet,
+// 20.0 kg is two; 39.9 kg is three paediatric tablets, 40.0 kg is the adult
+// tablet. The PGD's lower limit for this arm stays at 11 kg (the licensed
+// minimum for the paediatric tablet).
 
 export const WEIGHT_BAND_CONVENTION =
-  'Weights are read against the PGD bands as written: a weight above the top of a band moves into the next band ' +
-  '(20.5 kg is dosed as 21 to 30 kg; 40.5 kg as over 40 kg; 45.5 kg as over 45 kg).';
+  'Weights are read against the UKMEAG bands in the PGD, which run to x.9 kg: 19.9 kg is dosed as 11 to 19.9 kg and ' +
+  '20.0 kg as 20 to 29.9 kg; the adult tablet is used from 40 kg, and one mefloquine tablet from 45 kg.';
 
 export interface APWeightBand {
   label: string;
@@ -80,39 +79,43 @@ export interface APWeightBand {
 
 export function getAtovaquoneProguanilBand(weightKg: number | null): APWeightBand | null {
   if (weightKg === null || weightKg < 11) return null;
-  if (weightKg <= 20) {
+  if (weightKg < 20) {
     return {
-      label: '11 to 20 kg',
+      label: '11 to 19.9 kg',
       product: 'malarone-paediatric',
       productName: 'Malarone Paediatric (atovaquone 62.5mg / proguanil 25mg) tablets',
       tabletsPerDay: 1,
     };
   }
-  if (weightKg <= 30) {
+  if (weightKg < 30) {
     return {
-      label: '21 to 30 kg',
+      label: '20 to 29.9 kg',
       product: 'malarone-paediatric',
       productName: 'Malarone Paediatric (atovaquone 62.5mg / proguanil 25mg) tablets',
       tabletsPerDay: 2,
     };
   }
-  if (weightKg <= 40) {
+  if (weightKg < 40) {
     return {
-      label: '31 to 40 kg',
+      label: '30 to 39.9 kg',
       product: 'malarone-paediatric',
       productName: 'Malarone Paediatric (atovaquone 62.5mg / proguanil 25mg) tablets',
       tabletsPerDay: 3,
     };
   }
   return {
-    label: 'Over 40 kg',
+    label: '40 kg and over',
     product: 'malarone',
     productName: 'Malarone (atovaquone 250mg / proguanil 100mg) tablets, adult strength',
     tabletsPerDay: 1,
   };
 }
 
-// ─── Mefloquine weight band (PGD v009 Arm 3 dose table) ───
+// ─── Mefloquine weight band (PGD Arm 3 dose table, UKMEAG Table 3) ───
+//
+// Decision 1: UKMEAG bands with decimal boundaries. 5 to 15.9 kg a quarter
+// tablet, 16 to 24.9 kg half, 25 to 44.9 kg three quarters, 45 kg and over
+// one tablet.
 
 export interface MefloquineWeightBand {
   label: string;
@@ -122,10 +125,10 @@ export interface MefloquineWeightBand {
 
 export function getMefloquineBand(weightKg: number | null): MefloquineWeightBand | null {
   if (weightKg === null || weightKg < 5) return null;
-  if (weightKg <= 20) return { label: '5 to 20 kg', tabletFraction: 0.25, doseText: 'ONE QUARTER of a 250mg tablet once weekly' };
-  if (weightKg <= 30) return { label: '21 to 30 kg', tabletFraction: 0.5, doseText: 'HALF a 250mg tablet once weekly' };
-  if (weightKg <= 45) return { label: '31 to 45 kg', tabletFraction: 0.75, doseText: 'THREE QUARTERS of a 250mg tablet once weekly' };
-  return { label: 'Over 45 kg', tabletFraction: 1, doseText: 'ONE 250mg tablet once weekly' };
+  if (weightKg < 16) return { label: '5 to 15.9 kg', tabletFraction: 0.25, doseText: 'ONE QUARTER of a 250mg tablet once weekly' };
+  if (weightKg < 25) return { label: '16 to 24.9 kg', tabletFraction: 0.5, doseText: 'HALF a 250mg tablet once weekly' };
+  if (weightKg < 45) return { label: '25 to 44.9 kg', tabletFraction: 0.75, doseText: 'THREE QUARTERS of a 250mg tablet once weekly' };
+  return { label: '45 kg and over', tabletFraction: 1, doseText: 'ONE 250mg tablet once weekly' };
 }
 
 // ─── Generate clinical alerts ───
@@ -140,7 +143,7 @@ export function generateAMAlerts(
 
   // ─── Paediatric hard stop (tool is stricter than the PGD) ─────────
   //
-  // The PGD (v009) covers children by weight band. This tool is kept
+  // The PGD (v010) covers children by weight band. This tool is kept
   // adult-only: anyone under 18 is referred rather than dosed here.
   // Remove this stop only when parental consent capture and the
   // under-12 doxycycline exclusion are built into the tool.
@@ -151,8 +154,8 @@ export function generateAMAlerts(
       message: 'This tool does not supply to anyone under 18',
       detail:
         'Malaria chemoprophylaxis in children is dosed by body weight. Work from Appendix 1 of the Malaria ' +
-        'Chemoprophylaxis PGD (v009, 11 September 2026): one Malarone Paediatric 62.5mg/25mg tablet daily for 11 to 20kg, ' +
-        'two for 21 to 30kg, three for 31 to 40kg, and one adult 250mg/100mg tablet only above 40kg. Doxycycline is not ' +
+        'Chemoprophylaxis PGD (v010, 11 September 2026): one Malarone Paediatric 62.5mg/25mg tablet daily for 11 to 19.9kg, ' +
+        'two for 20 to 29.9kg, three for 30 to 39.9kg, and one adult 250mg/100mg tablet from 40kg. Doxycycline is not ' +
         'for under 12s. Weigh the child; do not estimate from age.',
     });
   }
@@ -626,9 +629,9 @@ export function getEligibleMedicineOptions(
 
   if (!ci.malarone && apBand) {
     if (apBand.product === 'malarone') {
-      options.push({ value: 'malarone', label: 'Atovaquone/Proguanil (Malarone) 250mg/100mg adult tablets, over 40kg' });
+      options.push({ value: 'malarone', label: 'Atovaquone/Proguanil (Malarone) 250mg/100mg adult tablets, 40kg and over' });
     } else {
-      options.push({ value: 'malarone-paediatric', label: 'Atovaquone/Proguanil (Malarone Paediatric) 62.5mg/25mg tablets, 11 to 40kg' });
+      options.push({ value: 'malarone-paediatric', label: 'Atovaquone/Proguanil (Malarone Paediatric) 62.5mg/25mg tablets, 11 to 39.9kg' });
     }
   }
   if (!ci.doxycycline) {

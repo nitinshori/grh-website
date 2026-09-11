@@ -61,7 +61,7 @@ export function addYears(n: number, from: Date = todayLocal()): string {
   return formatLocalDate(d);
 }
 
-// ─── Schedule intervals from the signed PGD (v005) ───
+// ─── Schedule intervals from the signed PGD (v006) ───
 
 /** Hepatitis A booster: 6 to 12 months after the primary dose (Avaxim SPC allows up to 36 months). */
 export const HEPA_BOOSTER_MIN_DAYS = 6 * 30;
@@ -103,7 +103,7 @@ export function getBoosterDueDates(v: TravelCoreVaccineAdministration): BoosterD
   return out;
 }
 
-/** Dose text per the signed PGD (v005). */
+/** Dose text per the signed PGD (v006). */
 export function getVaccineDoseText(v: TravelCoreVaccineAdministration): string[] {
   const lines: string[] = [];
   if (v.hepAGiven) {
@@ -184,7 +184,7 @@ export function getVaccineAlerts(
       severity: "stop",
       code: "CHOLERA_IMMUNO",
       message: "Severe immunocompromise: Dukoral excluded",
-      detail: "Severe immunocompromise is an exclusion for Dukoral under this PGD (though the vaccine is inactivated). Seek specialist advice.",
+      detail: "Severe immunocompromise (current chemotherapy or other immunosuppressive therapy for malignancy; solid organ or bone marrow transplant within the previous 6 months; or systemic corticosteroids at 20 mg/day prednisolone or 2 mg/kg/day or more for 2 weeks or longer within the previous 4 weeks) is an exclusion for Dukoral under this PGD. The vaccine is inactivated but the response is likely to be inadequate: refer for specialist advice.",
     });
   }
 
@@ -315,8 +315,8 @@ export function getVaccineAlerts(
     alerts.push({
       severity: "caution",
       code: "VACC_IMMUNOCOMPROMISED",
-      message: "Immunocompromised: reduced response possible",
-      detail: "Caution: may have reduced response; seek specialist advice. (Severe immunocompromise excludes Dukoral.)",
+      message: "Immunosuppression below the exclusion threshold: reduced response possible",
+      detail: "Caution: the vaccines may be given but the response may be reduced; seek specialist advice where the degree of immunosuppression is uncertain, and advise that food and water precautions remain essential. (Severe immunocompromise, as defined in the exclusion list, excludes Dukoral.)",
     });
   }
   if (injectable && v.bleedingDisorder) {

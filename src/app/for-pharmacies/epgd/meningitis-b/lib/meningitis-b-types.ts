@@ -14,7 +14,7 @@ import {
 // ─── Meningitis B-Specific Types ───
 
 /**
- * Indication and exclusion questions. PGD v005: the indications are missed
+ * Indication and exclusion questions. PGD v006: the indications are missed
  * routine doses or presenting outside the NHS programme, an adolescent or
  * student seeking protection, or an adult at increased risk. A case, contact
  * or outbreak is managed by the Health Protection Team and is an exclusion;
@@ -57,13 +57,15 @@ export interface MeningitiBMedicalHistory {
 
 export interface MeningitiBVaccineAdmin {
   product: "bexsero" | "trumenba" | "";
-  /** Which dose in the course this administration represents. */
-  doseNumber: "1st" | "2nd" | "3rd" | "booster-12-months" | "";
+  /** Which dose in the course this administration represents.
+   *  booster-12-months: the Bexsero infant course booster (two doses in the first year), given from 12 months and before the second birthday.
+   *  booster-after-toddler-course: the Bexsero booster 12 to 23 months after a primary course whose second dose was given at 12 to 23 months of age (SmPC Table 1; decision 9, 11 September 2026). */
+  doseNumber: "1st" | "2nd" | "3rd" | "booster-12-months" | "booster-after-toddler-course" | "";
   /** Trumenba only: routine 2 dose (0 and 6 months) or increased risk 3 dose (0, 1 to 2 and 6 months). */
   trumenbaSchedule: "routine" | "increased-risk" | "";
   /** Date of the previous dose in this course. Required for every dose other than the first. */
   previousDoseDate: string;
-  /** Bexsero, 12 months to under 2 years: how many doses were given in the first year (PGD schedule row). */
+  /** Bexsero, 12 months to under 2 years: how many doses were given in the first year. Drives the SmPC schedule for that band (decision 9): none, 2 doses at least 2 months apart then a booster 12 to 23 months after the second; one, one further dose at least 2 months after it then the same booster; two, a single booster. */
   dosesInFirstYear: "0" | "1" | "2" | "";
   /** Date of this dose. */
   vaccinationDate1: string;
@@ -149,7 +151,7 @@ export const TOTAL_STEPS = STEP_LABELS.length;
 
 /** PGD strapline shown wherever the tool cites its authority. */
 export const MENB_PGD_VERSION =
-  "Meningococcal group B vaccine (Bexsero and Trumenba) PGD v005, issued 11 September 2026";
+  "Meningococcal group B vaccine (Bexsero and Trumenba) PGD v006, issued 11 September 2026";
 
 // ─── Initial State ───
 

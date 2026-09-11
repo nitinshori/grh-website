@@ -97,7 +97,7 @@ export function validateStep(state: HPVConsultationState, step: number): string 
       if (!a.doseNumber.trim()) {
         return "Dose number in the course could not be determined: record the prior dose history on the assessment step";
       }
-      // Minimum intervals (PGD v005): a dose given early must be discounted
+      // Minimum intervals (PGD v006): a dose given early must be discounted
       // and repeated, so it is refused here rather than recorded.
       const minDays = minimumIntervalDays(schedule, a.doseNumber);
       if (minDays !== null) {

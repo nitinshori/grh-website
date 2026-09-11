@@ -535,7 +535,7 @@ export default function MounjaroClient() {
         return (
           <StepWrapper
             title="Medical History"
-            description="Identify exclusion criteria and cautions relevant to Mounjaro use (PGD v008)."
+            description="Identify exclusion criteria and cautions relevant to Mounjaro use (PGD v009)."
             currentStep={state.currentStep}
             totalSteps={TOTAL_STEPS}
             onNext={handleNext}
@@ -652,19 +652,6 @@ export default function MounjaroClient() {
                   })
                 }
                 description="Exclusion under this PGD."
-              />
-
-              <Checkbox
-                label="Obesity caused by an endocrinological disorder"
-                checked={state.medicalHistory.endocrineObesity}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_MEDICAL_HISTORY",
-                    field: "endocrineObesity",
-                    value: v,
-                  })
-                }
-                description="Exclusion. If the patient was already overweight prior to that diagnosis, this exclusion may not apply: leave unticked and document the reasoning in the clinical notes."
               />
 
               <Checkbox
@@ -827,6 +814,19 @@ export default function MounjaroClient() {
                   })
                 }
                 description="Caution. Monitor for dehydration secondary to gastrointestinal side effects. Severe renal impairment (eGFR below 30) or end-stage renal disease excludes (see above)."
+              />
+
+              <Checkbox
+                label="Endocrine cause of obesity suspected but not yet assessed or treated"
+                checked={state.medicalHistory.endocrineObesity}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "endocrineObesity",
+                    value: v,
+                  })
+                }
+                description="Caution, not an exclusion. An endocrine cause of obesity does not exclude; a patient with treated hypothyroidism or treated Cushing's syndrome may be supplied. Where an endocrine cause is suspected and has not been assessed or treated, inform the GP so that it can be investigated and record this in the clinical notes."
               />
 
               <Checkbox
@@ -1199,7 +1199,7 @@ export default function MounjaroClient() {
                         Less than 5% of initial body weight lost after 6 months on the maximum tolerated dose
                       </p>
                       <p className="text-xs text-red-800">
-                        PGD v008: a decision is required on whether to continue treatment, taking into account the benefit-risk profile in this patient. Record it before any further supply.
+                        PGD v009: a decision is required on whether to continue treatment, taking into account the benefit-risk profile in this patient. Record it before any further supply.
                       </p>
                       <TextArea
                         label="Decision on continuation and reasoning"
@@ -1350,7 +1350,7 @@ export default function MounjaroClient() {
                     value: v,
                   })
                 }
-                description="Store in a refrigerator (2°C to 8°C). Do not freeze; discard if frozen. Once removed from refrigeration, may be stored unrefrigerated below 30°C for up to 21 days, then discard. Keep the pen in the outer carton to protect from light. Travel: carry pens in hand luggage when flying, not in checked baggage; a travel letter may be required."
+                description="Store in a refrigerator (2°C to 8°C). Do not freeze; a pen that has been frozen must not be used. After first use the KwikPen may be stored unrefrigerated at not above 30°C for up to 30 days and must then be discarded (SmPC section 6.4). Before first use keep it in the refrigerator and do not use it after the expiry date on the label. Inspect the solution before each use and do not use it if it contains particles or is discoloured; discard any solution left after the fourth dose. Travel: carry pens in hand luggage when flying, not in checked baggage; a travel letter may be required."
               />
 
               <Checkbox

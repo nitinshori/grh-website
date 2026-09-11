@@ -24,7 +24,7 @@ export interface PEClinicalAssessment {
 export interface PEMedicalHistory {
   cardiacDisorder: boolean; // NYHA II-IV heart failure, significant valvular disease
   cardiacDisorderDetail: string;
-  /** PGD v004 exclusions: conduction abnormality or QT-prolonging condition; history of IHD. */
+  /** PGD v005 exclusions: conduction abnormality or QT-prolonging condition; history of IHD. */
   conductionOrQT: boolean;
   ischaemicHeartDisease: boolean;
   /** History of syncope or orthostatic hypotension (exclusion). */
@@ -37,8 +37,20 @@ export interface PEMedicalHistory {
   renalImpairment: boolean;
   /** History of bipolar disorder or mania (exclusion). */
   bipolarOrMania: boolean;
+  /** Decision 46 exclusions: red flags that need a diagnosis before an SSRI.
+   *  Symptoms suggesting prostatitis (perineal, pelvic or genital pain, painful
+   *  ejaculation, dysuria or lower urinary tract symptoms). */
+  prostatitisSymptoms: boolean;
+  /** Symptoms suggesting thyroid dysfunction (weight change, heat or cold
+   *  intolerance, palpitations, tremor, marked fatigue). */
+  thyroidSymptoms: boolean;
+  /** Symptoms suggesting a neurological cause (new numbness, weakness, or
+   *  bladder or bowel symptoms). */
+  neurologicalSymptoms: boolean;
+  /** Premature ejaculation of recent onset together with another new symptom. */
+  recentOnsetWithNewSymptom: boolean;
   uncontrolledEpilepsy: boolean;
-  // Cautions (PGD v004)
+  // Cautions (PGD v005)
   seizureHistory: boolean;
   bleedingDisorderOrAnticoagulant: boolean;
   orthostaticRiskFactors: boolean;
@@ -72,7 +84,7 @@ export interface PEMedicineSupply {
   mayIncreaseTo60mg: boolean;
   /** Strength supplied: 30mg starting dose; 60mg only where 30mg was insufficient and well tolerated. */
   strengthSupplied: "" | "30mg" | "60mg";
-  /** Up to 6 tablets per supply (PGD v004). */
+  /** Up to 6 tablets per supply (PGD v005). */
   quantity: number | null;
   brand: string;
   understandsUsage: boolean; // 1-3 hours before, max once per 24h, take with water
@@ -183,6 +195,10 @@ gpEmail: "",
       mildHepaticImpairment: false,
       renalImpairment: false,
       bipolarOrMania: false,
+      prostatitisSymptoms: false,
+      thyroidSymptoms: false,
+      neurologicalSymptoms: false,
+      recentOnsetWithNewSymptom: false,
       uncontrolledEpilepsy: false,
       seizureHistory: false,
       bleedingDisorderOrAnticoagulant: false,

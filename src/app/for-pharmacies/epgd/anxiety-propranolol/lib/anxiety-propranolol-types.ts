@@ -26,7 +26,7 @@ export interface AnxietyMedicalHistory {
   currentMedications: string;
   raynauds: boolean;
   hepaticImpairment: boolean;
-  // PGD v005 cautions (11 September 2026)
+  // PGD v006 cautions (11 September 2026)
   firstDegreeHeartBlock: boolean;
   portalHypertension: boolean;
   mildPeripheralVascularDisease: boolean;
@@ -53,7 +53,7 @@ export interface AnxietyContraindications {
   substanceOrAlcoholMisuse: boolean;
   otherBetaBlocker: boolean;
   verapamilOrDiltiazem: boolean;
-  // PGD v003/v005 exclusions (SmPC contraindications, pregnancy and
+  // PGD v003/v006 exclusions (SmPC contraindications, pregnancy and
   // breastfeeding) that the tool did not ask.
   cardiogenicShock: boolean;
   hypotension: boolean;
@@ -85,15 +85,13 @@ export interface AnxietyMedicineSupply {
    * 320mg, because propranolol is cardiotoxic in overdose.
    */
   quantity: number | null;
-  timing: string;
   /**
-   * PGD dose row: 10-40mg 30-60 minutes before the anxiety-provoking
-   * situation, or 10-40mg two to three times daily for ongoing situational
-   * anxiety, maximum 120mg daily.
+   * PGD dose row (decision 55, 11 September 2026): 10 to 40mg as a single
+   * dose, 30 to 60 minutes before the anxiety-provoking situation. As-required
+   * use only; the regular two-to-three-times-daily regimen and the 120mg daily
+   * maximum are withdrawn from the document and are not offered here.
    */
-  regimen: "" | "prn" | "regular";
-  /** Regular regimen only: two or three times daily (document wording). */
-  timesDaily: "" | "2" | "3";
+  timing: string;
 }
 
 export interface AnxietyCounselling {
@@ -228,9 +226,7 @@ gpEmail: "",
     medicineSupply: {
       propranololDose: "",
       quantity: null,
-      timing: "PRN 30-60 minutes before anxiety-provoking situation",
-      regimen: "",
-      timesDaily: "",
+      timing: "As required: a single dose 30 to 60 minutes before the anxiety-provoking situation",
     },
     counselling: {
       prnUseOnly: false,

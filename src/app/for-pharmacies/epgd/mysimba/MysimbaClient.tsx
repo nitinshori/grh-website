@@ -12,8 +12,8 @@ import { calculateAge, validatePatientStep, validateConsentStep, validateSummary
 import { PrintedRecord } from "./components/PrintedRecord"
 
 // Aligned to: Mysimba (Naltrexone 8mg / Bupropion 90mg) prolonged-release
-// tablets PGD, version 004, issued 11 September 2026.
-const PGD_VERSION_LINE = "Mysimba PGD v004, issued 11 September 2026"
+// tablets PGD, version 005, issued 11 September 2026.
+const PGD_VERSION_LINE = "Mysimba PGD v005, issued 11 September 2026"
 const PRODUCT_NAME = "Mysimba (naltrexone hydrochloride 8 mg / bupropion hydrochloride 90 mg) prolonged-release tablets"
 const DOSE_STAGE_LABELS: Record<string, string> = {
   init: "Titration: week 1 one tablet morning; week 2 one morning and one evening; week 3 two morning and one evening; week 4 two twice daily",
@@ -101,6 +101,7 @@ export function MysimbaClient() {
       uncontrolledHypertension: false,
       cardiovascularDisease: false,
       seizureDisorder: false,
+      headTraumaLocWithin12Months: false,
       cnsTumour: false,
       acuteAlcoholOrBenzodiazepineWithdrawal: false,
       bipolarHistory: false,
@@ -109,7 +110,7 @@ export function MysimbaClient() {
       opioidUse: false,
       maoiUse: false,
       severeHepatic: false,
-      endStageRenal: false,
+      renalEgfrBelow60: false,
       angleClosureGlaucoma: false,
       pregnant: false,
       breastfeeding: false,
@@ -209,9 +210,12 @@ export function MysimbaClient() {
     setState((prev) => ({ ...prev, counselling: { ...prev.counselling, [field]: value } }))
   }
 
-  // Step 0: inclusion "Age 18 years and over" (age is calculated from DOB below)
-  const patientError = validatePatientStep(state.patient, { minAge: 18 })
+  // Step 0: inclusion "Age 18 to 74 years (inclusive)" (age is calculated
+  // from DOB below). Age 75 and over is an exclusion (decision 51: the SmPC
+  // does not recommend Mysimba over 75).
+  const patientError = validatePatientStep(state.patient, { minAge: 18, maxAge: 74 })
   const ageUnder18 = state.patient.age !== null && state.patient.age < 18
+  const ageOver74 = state.patient.age !== null && state.patient.age >= 75
 
   // Step 1: inclusion "Able to provide informed written consent"
   const consentError = validateConsentStep(state.consent) ?? (state.writtenConsentObtained ? null : "Written consent must be obtained and filed (inclusion criterion: able to provide informed written consent)")
@@ -235,13 +239,13 @@ export function MysimbaClient() {
   // Any exclusion = stop
   const e = state.eligibility
   const anyExclusion =
-    ageUnder18 ||
+    ageUnder18 || ageOver74 ||
     e.hypersensitivityNaltrexone || e.hypersensitivityBupropion || e.hypersensitivityExcipients ||
     e.concomitantNaltrexone || e.concomitantBupropion ||
-    e.uncontrolledHypertension || e.cardiovascularDisease || e.seizureDisorder || e.cnsTumour ||
+    e.uncontrolledHypertension || e.cardiovascularDisease || e.seizureDisorder || e.headTraumaLocWithin12Months || e.cnsTumour ||
     e.acuteAlcoholOrBenzodiazepineWithdrawal || e.bipolarHistory || e.currentDepressionOrSuicidality ||
     e.bulimiaAnorexiaHistory || e.opioidUse || e.maoiUse ||
-    e.severeHepatic || e.endStageRenal || e.angleClosureGlaucoma ||
+    e.severeHepatic || e.renalEgfrBelow60 || e.angleClosureGlaucoma ||
     e.pregnant || e.breastfeeding || e.planningPregnancy ||
     e.galactoseIntolerance || e.clinicallySignificantInteraction ||
     e.reportsMoodChange || e.reportsSuicidalThoughts || e.reportsSeizure || e.reportsRaisedBpSymptoms
@@ -317,7 +321,7 @@ export function MysimbaClient() {
   const sixteenWeeksReached = weeksSinceStart !== null && weeksSinceStart >= MAX_TREATMENT_WEEKS
   const hasStop = anyExclusion || (!!bmi && !bmiEligible) || (bpEntered && !bpAcceptable) || sixteenWeeksReached
   const stopReason: string | null = anyExclusion
-    ? (ageUnder18 ? "Patient is under 18" : "Exclusion criteria met")
+    ? (ageUnder18 ? "Patient is under 18" : ageOver74 ? "Patient is aged 75 or over" : "Exclusion criteria met")
     : !!bmi && !bmiEligible ? "BMI does not meet the inclusion criteria"
     : bpEntered && !bpAcceptable ? "Resting blood pressure 140/90 mmHg or above"
     : sixteenWeeksReached ? "16 week maximum treatment period reached"
@@ -458,9 +462,12 @@ export function MysimbaClient() {
 
             <p className="text-sm font-semibold text-navy-900">Demographics</p>
             {ageUnder18 && (
-              <p className="text-sm font-medium text-red-700">Patient is under 18 (calculated from date of birth): excluded. Inclusion is age 18 years and over.</p>
+              <p className="text-sm font-medium text-red-700">Patient is under 18 (calculated from date of birth): excluded. Inclusion is age 18 to 74 years.</p>
             )}
-            <p className="text-xs text-gray-600">Elderly patients are a caution under this PGD (tick below), not an exclusion.</p>
+            {ageOver74 && (
+              <p className="text-sm font-medium text-red-700">Patient is aged 75 or over (calculated from date of birth): excluded. The SmPC does not recommend Mysimba in patients over 75; refer to the GP.</p>
+            )}
+            <p className="text-xs text-gray-600">Age 75 and over is an exclusion. Patients aged 65 to 74 are a caution under this PGD (tick below).</p>
 
             <p className="text-sm font-semibold text-navy-900 mt-4">Hypersensitivity / concomitant therapy</p>
             <Checkbox label="Known hypersensitivity to naltrexone" checked={e.hypersensitivityNaltrexone} onChange={(v) => updateEligibility("hypersensitivityNaltrexone", v)} />
@@ -473,7 +480,8 @@ export function MysimbaClient() {
             <Checkbox label="Clinically significant drug interaction with current medication" checked={e.clinicallySignificantInteraction} onChange={(v) => updateEligibility("clinicallySignificantInteraction", v)} />
 
             <p className="text-sm font-semibold text-navy-900 mt-4">CNS / seizure risk</p>
-            <Checkbox label="Seizure disorder, history of seizures, or head trauma with loss of consciousness" checked={e.seizureDisorder} onChange={(v) => updateEligibility("seizureDisorder", v)} />
+            <Checkbox label="Seizure disorder or any history of seizures" checked={e.seizureDisorder} onChange={(v) => updateEligibility("seizureDisorder", v)} />
+            <Checkbox label="Head trauma with loss of consciousness within the last 12 months" checked={e.headTraumaLocWithin12Months} onChange={(v) => updateEligibility("headTraumaLocWithin12Months", v)} description="Head trauma with loss of consciousness more than 12 months ago is a caution (tick below), not an exclusion." />
             <Checkbox label="CNS tumour or history of CNS tumour" checked={e.cnsTumour} onChange={(v) => updateEligibility("cnsTumour", v)} />
             <Checkbox label="Abrupt discontinuation of alcohol or benzodiazepines, alcohol withdrawal, or concurrent use of benzodiazepines" checked={e.acuteAlcoholOrBenzodiazepineWithdrawal} onChange={(v) => updateEligibility("acuteAlcoholOrBenzodiazepineWithdrawal", v)} />
 
@@ -486,7 +494,7 @@ export function MysimbaClient() {
             <Checkbox label="Uncontrolled hypertension (blood pressure 140/90 mmHg or above)" checked={e.uncontrolledHypertension} onChange={(v) => updateEligibility("uncontrolledHypertension", v)} description="Refer to the GP for management before initiating Mysimba." />
             <Checkbox label="History of significant cardiovascular disease" checked={e.cardiovascularDisease} onChange={(v) => updateEligibility("cardiovascularDisease", v)} />
             <Checkbox label="Severe hepatic impairment (Child-Pugh Class C)" checked={e.severeHepatic} onChange={(v) => updateEligibility("severeHepatic", v)} />
-            <Checkbox label="End-stage renal failure (eGFR below 15 mL/min/1.73m²)" checked={e.endStageRenal} onChange={(v) => updateEligibility("endStageRenal", v)} />
+            <Checkbox label="Moderate or severe renal impairment, or end-stage renal failure (eGFR below 60 mL/min/1.73m²)" checked={e.renalEgfrBelow60} onChange={(v) => updateEligibility("renalEgfrBelow60", v)} description="Refer to the GP. The reduced dose the SmPC gives for eGFR 15 to 59 is a prescriber decision and is not supplied under this PGD." />
             <Checkbox label="Angle-closure glaucoma" checked={e.angleClosureGlaucoma} onChange={(v) => updateEligibility("angleClosureGlaucoma", v)} />
 
             <p className="text-sm font-semibold text-navy-900 mt-4">Reproductive / metabolic</p>
@@ -509,14 +517,14 @@ export function MysimbaClient() {
               <p className="text-sm font-semibold text-navy-900">Cautions: proceed with extra counselling and monitoring</p>
               <Checkbox label="Age under 25 (higher monitoring threshold for mood changes)" checked={e.ageUnder25} onChange={(v) => updateEligibility("ageUnder25", v)} description="Patients/carers should monitor for and report worsening mood, suicidal thoughts, or unusual behaviour." />
               <Checkbox label="Past history of depression, now resolved (not current, no suicide attempt)" checked={e.depressionHistory} onChange={(v) => updateEligibility("depressionHistory", v)} description="Monitor for mood changes, depression, anxiety and suicidal thoughts, particularly in the first weeks of treatment and following any dose adjustment. Stop immediately if any new or worsening symptoms." />
-              <Checkbox label="Elderly patient (including aged 75 and over)" checked={e.elderly} onChange={(v) => updateEligibility("elderly", v)} description="PGD caution: use with caution; dose adjustment may be necessary due to age-related changes in metabolism. The SmPC does not recommend use over 75: record the rationale in the clinical notes." />
+              <Checkbox label="Elderly patient aged 65 to 74" checked={e.elderly} onChange={(v) => updateEligibility("elderly", v)} description="Use with caution, as the SmPC advises: more sensitive to adverse effects and more likely to have reduced renal function (see the renal caution). Age 75 and over is an exclusion." />
               <Checkbox label="Known Brugada syndrome" checked={e.brugadaSyndrome} onChange={(v) => updateEligibility("brugadaSyndrome", v)} description="Bupropion may unmask Brugada syndrome, risk of cardiac arrest / sudden death." />
               <Checkbox label="Family history of cardiac arrest or sudden death" checked={e.brugadaFamilyHistory} onChange={(v) => updateEligibility("brugadaFamilyHistory", v)} description="Consider screening before initiation." />
               <Checkbox label="Mild to moderate hepatic impairment" checked={e.hepaticImpairment} onChange={(v) => updateEligibility("hepaticImpairment", v)} description="Use with caution in mild to moderate hepatic impairment; avoid in severe impairment. Dose adjustment may be required, see SmPC." />
-              <Checkbox label="Moderate to severe renal impairment (not end-stage)" checked={e.renalImpairment} onChange={(v) => updateEligibility("renalImpairment", v)} description="Use with caution; dose adjustment may be required, see SmPC." />
+              <Checkbox label="Mild renal impairment (eGFR 60 to 89 mL/min/1.73m²), or renal impairment suspected with no eGFR result available" checked={e.renalImpairment} onChange={(v) => updateEligibility("renalImpairment", v)} description="Mild impairment needs no dose adjustment; use with caution. Where the patient has a condition that affects the kidneys (for example diabetes or hypertension) or reports kidney disease and no eGFR result is available, obtain one from the GP before supply. eGFR below 60 excludes (see above)." />
               <Checkbox label="Controlled hypertension" checked={e.hypertensionControlled} onChange={(v) => updateEligibility("hypertensionControlled", v)} description="Monitor blood pressure regularly (at least monthly initially). Bupropion may elevate blood pressure; discontinue if sustained elevation occurs." />
               <Checkbox label="Diabetes" checked={e.diabetes} onChange={(v) => updateEligibility("diabetes", v)} description="May affect glucose control; monitor blood glucose closely and adjust antidiabetic medication if necessary." />
-              <Checkbox label="Taking medicines that lower the seizure threshold, or other CNS condition" checked={e.seizureThresholdMedicines} onChange={(v) => updateEligibility("seizureThresholdMedicines", v)} description="Bupropion lowers the seizure threshold; avoid concurrent use of medications that lower the seizure threshold. Caution in patients with CNS conditions." />
+              <Checkbox label="Taking medicines that lower the seizure threshold, other CNS condition, or head trauma with loss of consciousness more than 12 months ago" checked={e.seizureThresholdMedicines} onChange={(v) => updateEligibility("seizureThresholdMedicines", v)} description="Bupropion lowers the seizure threshold; avoid concurrent use of medications that lower the seizure threshold. Caution in patients with CNS conditions and where there was head trauma with loss of consciousness more than 12 months ago (within 12 months excludes, see above)." />
               <Checkbox label="Taking medicines metabolised by CYP2D6, antidepressants, or other CNS-active drugs" checked={e.interactingMedicines} onChange={(v) => updateEligibility("interactingMedicines", v)} description="Potential for drug interactions; review all medications before initiating." />
               <Checkbox label="At risk of angle-closure glaucoma" checked={e.glaucomaRisk} onChange={(v) => updateEligibility("glaucomaRisk", v)} description="Bupropion may increase intraocular pressure." />
               <Checkbox label="Patient drives or operates hazardous machinery" checked={e.drivingMachinery} onChange={(v) => updateEligibility("drivingMachinery", v)} description="Counsel: Mysimba may cause dizziness/somnolence/loss of consciousness/seizure, caution required." />

@@ -714,7 +714,7 @@ export default function OrlistatClient() {
               />
 
               <Checkbox
-                label="Taking anti-epileptic medications"
+                label="Taking antiepileptic medicines"
                 checked={state.medications.takesAntiEpileptics}
                 onChange={(v) =>
                   dispatch({
@@ -723,7 +723,7 @@ export default function OrlistatClient() {
                     value: v,
                   })
                 }
-                description="Risk of reduced absorption"
+                description="EXCLUSION. Orlistat may reduce absorption and unbalance treatment, leading to convulsions. Refer to the GP or specialist."
               />
 
               <Checkbox
@@ -766,7 +766,7 @@ export default function OrlistatClient() {
               />
 
               <Checkbox
-                label="Taking antiretroviral therapy for HIV"
+                label="Taking antiretroviral medicines for HIV"
                 checked={state.medications.takesHIVAntiretrovirals}
                 onChange={(v) =>
                   dispatch({
@@ -775,11 +775,24 @@ export default function OrlistatClient() {
                     value: v,
                   })
                 }
-                description="Orlistat may reduce absorption; discuss with HIV specialist team before initiating."
+                description="EXCLUSION. Orlistat may reduce absorption and lead to loss of virological control. Refer to the GP or HIV specialist team."
               />
 
               <Checkbox
-                label="Taking any other medication with a clinically significant drug interaction"
+                label="Taking amiodarone"
+                checked={state.medications.takesAmiodarone}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICATIONS",
+                    field: "takesAmiodarone",
+                    value: v,
+                  })
+                }
+                description="EXCLUSION. Orlistat may reduce amiodarone plasma levels. Refer to the GP or specialist."
+              />
+
+              <Checkbox
+                label="Taking any other medicine with an SmPC interaction that cannot be managed in a pharmacy setting"
                 checked={state.medications.otherSignificantInteraction}
                 onChange={(v) =>
                   dispatch({
@@ -788,7 +801,7 @@ export default function OrlistatClient() {
                     value: v,
                   })
                 }
-                description="EXCLUSION. Refer to GP for medicines reconciliation."
+                description="EXCLUSION. Refer to the GP for medicines reconciliation."
               />
 
               <TextArea

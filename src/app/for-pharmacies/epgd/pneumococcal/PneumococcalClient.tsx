@@ -404,7 +404,7 @@ export function PneumococcalClient() {
                   handlePatientDetailsChange('otherEligibilityReason', v)
                 }
                 required
-                placeholder="e.g., occupational exposure to metal fumes (welders)"
+                placeholder="e.g., occupational exposure to metal fumes (welders); people experiencing homelessness (JCVI June 2024)"
               />
             )}
 
@@ -945,7 +945,7 @@ export function PneumococcalClient() {
         >
           <div className="space-y-4">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm font-semibold text-blue-900">Possible side effects to advise the patient about (PGD v005):</p>
+              <p className="text-sm font-semibold text-blue-900">Possible side effects to advise the patient about (PGD v006):</p>
               <ul className="text-xs text-blue-800 mt-2 space-y-1 list-disc list-inside">
                 <li>Injection site pain, redness or swelling</li>
                 <li>Fever, fatigue, headache</li>

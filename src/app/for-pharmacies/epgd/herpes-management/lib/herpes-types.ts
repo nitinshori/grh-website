@@ -1,6 +1,6 @@
 import { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/types";
 
-// Aligned to the Genital Herpes Management PGD, version 004, issued
+// Aligned to the Genital Herpes Management PGD, version 005, issued
 // 11 September 2026 (aciclovir 400 mg tablets; valaciclovir 500 mg tablets).
 // Note: the consultation client for this slug has not been built; page.tsx is
 // a "Coming Soon" placeholder. These types and the logic in
@@ -54,8 +54,6 @@ export interface HerpesAssessment {
   firstEpisodeSupply: HerpesFirstEpisodeSupply;
   /** Day 5 review only: new lesions are still forming (the sole ground for the extension). */
   newLesionsAtDay5: boolean;
-  /** Valaciclovir recurrent episode: the document authorises 3, 4 or 5 days (6 to 10 tablets). */
-  recurrentCourseDays: 3 | 4 | 5 | null;
   medicine: HerpesMedicine;
 }
 
@@ -91,7 +89,7 @@ export interface HerpesConsultationState {
   currentStep: number;
 }
 
-export const PGD_VERSION_LINE = "Genital Herpes Management PGD, version 004, issued 11 September 2026";
+export const PGD_VERSION_LINE = "Genital Herpes Management PGD, version 005, issued 11 September 2026";
 
 export const STEP_LABELS = ["Patient Details", "Herpes Assessment", "Episode Type", "Contraindications", "Counselling", "Treatment", "Summary", "Review"];
 export const TOTAL_STEPS = STEP_LABELS.length;
@@ -124,7 +122,6 @@ export function createInitialConsultationState(): HerpesConsultationState {
       hoursFromOnset: null,
       firstEpisodeSupply: "",
       newLesionsAtDay5: false,
-      recurrentCourseDays: null,
       medicine: "",
     },
     counselling: {

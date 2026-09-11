@@ -2,6 +2,7 @@
 
 import type { CovidBoosterConsultationState } from "../lib/covid-booster-types";
 import { COVID_PRODUCTS } from "../lib/covid-booster-types";
+import { nhsEligible } from "../lib/covid-booster-clinical-logic";
 import type { ClinicalAlert } from "../../shared/types";
 import {
   SectionHeader,
@@ -212,7 +213,16 @@ export function CovidBoosterSummaryReport({
             }
           />
           <Row label="Anticoagulants" value={state.assessment.onAnticoagulants ? "Yes (caution)" : "No"} />
-          <Row label="Pregnant" value={state.assessment.pregnant ? "Yes (caution)" : "No"} />
+          <Row
+            label="Pregnant"
+            value={
+              state.assessment.pregnant
+                ? nhsEligible(state)
+                  ? "Yes, in an NHS-eligible group: vaccinated per Green Book, mRNA vaccine, NHS entitlement explained"
+                  : "Yes, not in an NHS-eligible group (excluded: referred)"
+                : "No"
+            }
+          />
           <Row label="Capillary leak syndrome history" value={state.assessment.capillaryLeakHistory ? "Yes (caution)" : "No"} />
         </div>
       </div>
@@ -249,7 +259,7 @@ export function CovidBoosterSummaryReport({
       </p>
 
       <p className="text-[10px] text-gray-500 mt-4">
-        Administered under the COVID-19 Vaccination 2026/27 Season Patient Group Direction, version 007, issued 11 September 2026.
+        Administered under the COVID-19 Vaccination 2026/27 Season Patient Group Direction, version 008, issued 11 September 2026.
       </p>
 
       {hasStop ? (

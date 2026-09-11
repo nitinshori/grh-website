@@ -5,7 +5,7 @@ import { PgdPageActions } from "@/components/PgdPageActions";
 export const metadata: Metadata = {
   title: "COPD Management Consultation ePGD",
   description:
-    "Digital consultation tool for the COPD Management PGD (version 003, 11 September 2026). Guides pharmacists through COPD assessment, exacerbation review, red flag identification, and supply of salbutamol 100mcg MDI or amoxicillin 500mg capsules under UK Patient Group Direction.",
+    "Digital consultation tool for the COPD Management PGD (version 004, 11 September 2026). Guides pharmacists through COPD assessment, exacerbation review, red flag identification, and supply of salbutamol 100mcg MDI or amoxicillin 500mg capsules under UK Patient Group Direction.",
 };
 
 export default function COPDToolPage() {
@@ -30,7 +30,7 @@ export default function COPDToolPage() {
             COPD Management PGD Consultation
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Salbutamol 100mcg MDI for acute symptom relief, and amoxicillin 500mg capsules for infective exacerbation with purulent sputum, in adults with confirmed COPD. PGD version 003, issued 11 September 2026.
+            Salbutamol 100mcg MDI for acute symptom relief, and amoxicillin 500mg capsules for infective exacerbation with purulent sputum, in adults with confirmed COPD. PGD version 004, issued 11 September 2026.
           </p>
         </div>
 
@@ -41,7 +41,7 @@ export default function COPDToolPage() {
             This ePGD is provided as a clinical decision support aid and does
             not replace professional clinical judgement. The pharmacist retains
             full responsibility for each consultation. Based on UK medicines
-            guidance and the Get Real Health PGD for COPD Management, version 003.
+            guidance and the Get Real Health PGD for COPD Management, version 004.
           </p>
         </div>
       </div>

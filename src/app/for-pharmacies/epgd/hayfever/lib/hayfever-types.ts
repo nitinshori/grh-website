@@ -12,7 +12,7 @@ export interface HayfeverAssessment {
   seasonalOrPerennial: string; // "seasonal" | "perennial" | "both"
   previousOTCUse: string;
   symptomDuration: string;
-  /** PGD v004 fexofenadine inclusion: previous diagnosis of allergic rhinitis
+  /** PGD v005 fexofenadine inclusion: previous diagnosis of allergic rhinitis
    *  or recurrence of known symptoms. */
   previousDiagnosisOrRecurrence: boolean;
 }
@@ -20,9 +20,9 @@ export interface HayfeverAssessment {
 export interface HayfeverMedicalHistory {
   asthmaOrLrti: boolean;
   severeHepaticImpairment: boolean;
-  /** Severe renal impairment (fexofenadine exclusion, PGD v004). */
+  /** Severe renal impairment (fexofenadine exclusion, PGD v005). */
   renalImpairment: boolean;
-  /** Recent nasal surgery or trauma (Dymista exclusion, PGD v004). */
+  /** Recent nasal surgery or trauma (Dymista exclusion, PGD v005). */
   recentNasalSurgery: boolean;
   /** Untreated fungal, bacterial or viral nasal infection (Dymista exclusion). */
   untreatedNasalInfection: boolean;
@@ -76,8 +76,10 @@ export interface HayfeverCounselling {
   drowsinessAdvice: boolean;
   /** Dymista: possible side effects and need for ongoing review if used long-term. */
   sideEffectsAdvice: boolean;
-  /** Seek medical advice if symptoms worsen rapidly or significantly, do not
-   *  improve in 3 to 4 weeks, or the patient becomes systemically very unwell. */
+  /** Seek medical advice if symptoms worsen rapidly or significantly, persist
+   *  beyond one month of regular use (fexofenadine) or do not improve after 2 to
+   *  4 weeks of regular use (Dymista), or the patient becomes systemically very
+   *  unwell. */
   followUpAdvice: boolean;
   /** Patient information leaflet supplied with the medication. */
   pilSupplied: boolean;

@@ -18,16 +18,16 @@ import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 import { PsoriasisSummaryReport } from "./components/PsoriasisSummaryReport";
 
 /**
- * Plaque Psoriasis ePGD, aligned to the Plaque Psoriasis PGD version 005,
+ * Plaque Psoriasis ePGD, aligned to the Plaque Psoriasis PGD version 006,
  * issued 11 September 2026: calcipotriol 50 micrograms/g with betamethasone
  * (as dipropionate) 0.5 mg/g, as ointment, gel, cream or cutaneous foam,
  * once daily for up to 4 weeks, in adults aged 18 and over with STABLE plaque
  * psoriasis of the trunk, limbs or scalp. Maximum 15g in any one day, maximum
- * 30% of body surface, up to 100g per week. One 4 week course; a further
+ * 10% of body surface (decision 32, 11 September 2026; the 30% calcipotriol licence limit is not the PGD ceiling), up to 100g per week. One 4 week course; a further
  * course only after GP review; maximum three courses in any 12 months.
  * Erythrodermic, pustular, exfoliative and guttate psoriasis are excluded.
  */
-export const PSORIASIS_PGD_VERSION = "Plaque Psoriasis PGD, version 005, issued 11 September 2026";
+export const PSORIASIS_PGD_VERSION = "Plaque Psoriasis PGD, version 006, issued 11 September 2026";
 
 const STEP_LABELS = ["Patient Details", "Consent", "Assessment & History", "Treatment", "Counselling & Summary"] as const;
 
@@ -164,8 +164,8 @@ export default function PsoriasisClient() {
       a.push({ code: "unstable", severity: "stop", message: "Unstable or rapidly worsening psoriasis: refer", detail: "This PGD is for STABLE plaque psoriasis only." });
     if (c.faceGenitalFlexural)
       a.push({ code: "site-excluded", severity: "stop", message: "Facial, genital or flexural psoriasis: excluded", detail: "The skin at those sites is very sensitive to corticosteroids and the SPC says the product should not be used there. Refer." });
-    if (!isNaN(extent) && extent > 30)
-      a.push({ code: "extent", severity: "stop", message: "More than 30% of body surface affected: refer", detail: "The 30% limit exists because of calcipotriol and the risk of hypercalcaemia. Do not supply and advise partial use; refer to the GP." });
+    if (!isNaN(extent) && extent > 10)
+      a.push({ code: "extent", severity: "stop", message: "More than 10% of body surface affected: refer", detail: "The PGD ceiling is 10% of body surface, NICE's threshold for extensive psoriasis, where topical treatment alone is unlikely to give satisfactory control and specialist referral should be considered. Do not supply and advise partial use; refer to the GP." });
     if (c.over15gPerDay)
       a.push({ code: "over-15g", severity: "stop", message: "Would need more than 15g in a day: refer", detail: "Maximum 15g in any one day is the SPC limit that protects against hypercalcaemia." });
     if (c.extensiveNeedsSystemic)
@@ -285,7 +285,7 @@ export default function PsoriasisClient() {
       !hasStops && c.product
         ? {
             name: `Calcipotriol 50 micrograms/g with betamethasone (as dipropionate) 0.5 mg/g ${c.formulation}${c.brand ? ` (${c.brand})` : ""}`.trim(),
-            dose: "Apply once daily to affected areas; maximum 15g in any one day; not more than 30% of body surface",
+            dose: "Apply once daily to affected areas; maximum 15g in any one day; not more than 10% of body surface (the PGD ceiling)",
             duration: "4 weeks",
             quantity: c.quantityGrams ? `${c.quantityGrams}g` : undefined,
           }
@@ -342,7 +342,7 @@ export default function PsoriasisClient() {
               <TextInput label="Body surface area affected (%)" value={c.extentPercent} onChange={(v) => set({ extentPercent: v })} placeholder="e.g. 3" type="number" required />
               <TextInput label="How it was estimated" value={c.extentEstimatedHow} onChange={(v) => set({ extentEstimatedHow: v })} placeholder="e.g. palm method, about 3 palms" required />
             </div>
-            <p className="text-xs text-gray-600">The patient's whole palm including the fingers is roughly 1% of body surface. 30% is roughly thirty palms; above that, refer. Record the estimate as a percentage.</p>
+            <p className="text-xs text-gray-600">The patient's whole palm including the fingers is roughly 1% of body surface. 10% is roughly ten palms, about one arm's worth of skin; above that, refer. Record the estimate as a percentage.</p>
             <div className="grid sm:grid-cols-2 gap-3">
               <SelectInput label="Course" value={c.courseType} onChange={(v) => set({ courseType: v as Clinical["courseType"] })}
                 options={[
@@ -404,7 +404,7 @@ export default function PsoriasisClient() {
             <p className="text-xs text-gray-600">Xamiol gel is discontinued and must not be ordered.</p>
             <Checkbox label="The formulation supplied is licensed for the site being treated" checked={c.licensedForSite} onChange={(v) => set({ licensedForSite: v })} required />
             <div className="p-4 bg-[color:var(--tenant-primary)]/10 rounded-lg border border-[color:var(--tenant-primary)]/30 text-sm">
-              Apply once daily to affected areas. MAXIMUM 15g IN ANY ONE DAY. Body surface treated must not exceed 30%. Up to 100g per week, within the 15g daily maximum and appropriate to the area treated: supply enough for the 4 WEEK course and no more. Then stop and review. Continuing or restarting beyond 4 weeks requires GP review; maximum three courses in any 12 months.
+              Apply once daily to affected areas. MAXIMUM 15g IN ANY ONE DAY. Body surface treated must not exceed 10% (the PGD ceiling; the calcipotriol licence limit is 30%). Up to 100g per week, within the 15g daily maximum and appropriate to the area treated: supply enough for the 4 WEEK course and no more. Then stop and review. Continuing or restarting beyond 4 weeks requires GP review; maximum three courses in any 12 months.
             </div>
             <TextInput label={`Quantity supplied in grams (maximum ${MAX_COURSE_GRAMS}g: 100g per week for 4 weeks; enough for the course and no more)`} type="number" value={c.quantityGrams} onChange={(v) => set({ quantityGrams: v })} placeholder="e.g. 60" required />
             {!isNaN(extent) && extent > 0 && (
@@ -424,7 +424,7 @@ export default function PsoriasisClient() {
             <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
               <p className="text-sm font-medium text-navy-900">Confirm counselling covered:</p>
               <Checkbox label="Once a day, to the patchy areas only. Not on your face, genitals or in skin folds" checked={c.applicationAdvice} onChange={(v) => set({ applicationAdvice: v })} />
-              <Checkbox label="No more than one 15g tube-worth in a day, and not on more than about a third of your body. Your palm is roughly 1% of your skin" checked={c.maxDoseAdvice} onChange={(v) => set({ maxDoseAdvice: v })} />
+              <Checkbox label="No more than one 15g tube-worth in a day, and not on more than about one tenth of your body (about ten palms). Your palm is roughly 1% of your skin" checked={c.maxDoseAdvice} onChange={(v) => set({ maxDoseAdvice: v })} />
               <Checkbox label="Wash your hands thoroughly afterwards so none reaches your face or eyes. Do not cover the treated area with a dressing or wrap. Do not shower or bathe straight after putting it on" checked={c.handsDressingShowerAdvice} onChange={(v) => set({ handsDressingShowerAdvice: v })} />
               <Checkbox label="Keep using your emollients. They are the foundation and you should not stop them" checked={c.emollientAdvice} onChange={(v) => set({ emollientAdvice: v })} />
               <Checkbox label={`FIRE RISK from emollients and paraffin-based ointments (including paraffin-free products): they soak into clothing, bedding and dressings and make them catch fire more easily. Do not smoke, use a naked flame or go near anything burning; wash clothing and bedding often, knowing washing may not remove the residue completely${c.formulation === "foam" ? ". Enstilar foam is an extremely flammable aerosol: keep away from flames, sparks and heat, do not pierce or burn the can" : ""}`} checked={c.fireRiskAdvice} onChange={(v) => set({ fireRiskAdvice: v })} />

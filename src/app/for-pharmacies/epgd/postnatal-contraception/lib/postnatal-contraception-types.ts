@@ -13,13 +13,13 @@ import {
 
 // ─── Postnatal Contraception-Specific Types ───
 
-// Postnatal Contraception PGD v005 (11 September 2026). Two arms:
+// Postnatal Contraception PGD v006 (11 September 2026). Two arms:
 // desogestrel 75 microgram tablets (women 16 and over, any time postpartum)
 // and medroxyprogesterone acetate 150 mg/mL injection, Depo-Provera (women
 // 18 and over; from 6 weeks if breastfeeding, from 21 days if not
 // breastfeeding and no additional VTE risk factor).
 export const PGD_VERSION_LABEL =
-  "Postnatal Contraception PGD (desogestrel 75 micrograms / Depo-Provera 150 mg), version 005, issued 11 September 2026";
+  "Postnatal Contraception PGD (desogestrel 75 micrograms / Depo-Provera 150 mg), version 006, issued 11 September 2026";
 
 export type PostnatalMedicineChoice = "" | "desogestrel" | "depo-provera";
 
@@ -50,10 +50,13 @@ export interface PostnatalMedicalHistory {
   severeLiverDisease: boolean; // exclusion, both arms
   unexplainedVaginalBleeding: boolean; // exclusion, both arms
   porphyria: boolean; // not in the PGD: caution only
-  pastBreastCancer: boolean; // caution (more than 5 years ago)
+  pastBreastCancer: boolean; // past breast cancer more than 5 years ago: UKMEC 3 for the POP, desogestrel exclusion (decision 42); Depo-Provera caution
   breastCancerWithin5Years: boolean; // past breast cancer treated within the last 5 years: UKMEC 3, refer
   liverTumours: boolean; // desogestrel exclusion
-  sleWithAntiphospholipidAntibodies: boolean;
+  sleWithAntiphospholipidAntibodies: boolean; // desogestrel exclusion (named UKMEC 3 or 4 list, decision 42)
+  ischaemicHeartDiseaseOrStroke: boolean; // ischaemic heart disease (current or past), stroke or TIA: UKMEC 3 for POP continuation; desogestrel exclusion
+  severeCirrhosis: boolean; // severe (decompensated) cirrhosis: UKMEC 3; desogestrel exclusion
+  enzymeInducingMedicine: boolean; // enzyme-inducing medicine now or in the last 28 days: UKMEC 3; desogestrel exclusion
   activeThromboembolicDisorder: boolean; // desogestrel exclusion
   desogestrelHypersensitivity: boolean; // desogestrel exclusion
   mpaHypersensitivity: boolean; // Depo-Provera exclusion
@@ -178,6 +181,9 @@ export function createInitialPostnatalContraceptionState(): PostnatalContracepti
       breastCancerWithin5Years: false,
       liverTumours: false,
       sleWithAntiphospholipidAntibodies: false,
+      ischaemicHeartDiseaseOrStroke: false,
+      severeCirrhosis: false,
+      enzymeInducingMedicine: false,
       activeThromboembolicDisorder: false,
       desogestrelHypersensitivity: false,
       mpaHypersensitivity: false,

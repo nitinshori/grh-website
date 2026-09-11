@@ -15,7 +15,7 @@ import { ClinicalAlert } from '../../shared/types';
 import { calculateAge } from '../../shared/types';
 import { getTreatmentWindow, describeTreatmentWindow } from '../shingles-clinical-logic';
 
-const PGD_VERSION_LINE = 'Shingles (Herpes Zoster) Treatment PGD, version 006, issued 11 September 2026';
+const PGD_VERSION_LINE = 'Shingles (Herpes Zoster) Treatment PGD, version 007, issued 11 September 2026';
 
 interface SummaryStepProps {
   summary: ShinglesSummary;
@@ -132,7 +132,7 @@ export const SummaryStep: React.FC<SummaryStepProps> = ({
             <Row label="Rash severity" value={summary.symptoms.rashSeverity || 'Not recorded'} />
             <Row label="New vesicles forming" value={summary.symptoms.newVesiclesForming ? 'Yes' : 'No'} />
             <Row label="Dermatome location" value={summary.symptoms.dermatome || 'Not recorded'} />
-            <Row label="Pain score" value={`${summary.symptoms.painLevel}/10 (${summary.symptoms.painType})`} />
+            <Row label="Pain score (0 to 10 scale)" value={`${summary.symptoms.painLevel}/10 (${summary.symptoms.painType})`} />
             <Row
               label="Unilateral, dermatomal, not crossing midline"
               value={summary.symptoms.unilateral === 'yes' ? 'Confirmed' : summary.symptoms.unilateral === 'no' ? 'NO: not dermatomal, refer' : 'NOT ANSWERED'}
@@ -156,11 +156,7 @@ export const SummaryStep: React.FC<SummaryStepProps> = ({
             <Row
               label="Breastfeeding"
               value={
-                summary.medicalHistory.breastfeeding
-                  ? summary.medicalHistory.breastLesions
-                    ? 'Yes, with lesions on the breast (excluded)'
-                    : 'Yes, no lesions on the breast (caution)'
-                  : 'No'
+                summary.medicalHistory.breastfeeding ? 'Yes (excluded, refer)' : 'No'
               }
             />
             <Row
@@ -273,7 +269,7 @@ export const SummaryStep: React.FC<SummaryStepProps> = ({
 
       {/* Safety netting and patient information, from the PGD */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 print:hidden">
-        <h3 className="font-semibold text-blue-900 mb-3">Safety netting and patient information (PGD v006)</h3>
+        <h3 className="font-semibold text-blue-900 mb-3">Safety netting and patient information (PGD v007)</h3>
         <ul className="text-sm text-blue-800 space-y-2 list-disc list-inside">
           <li>Give the patient the manufacturer&apos;s patient information leaflet.</li>
           <li>Explain the dosing schedule clearly and, for aciclovir, that five doses a day is demanding and the course will not work well if doses are missed.</li>

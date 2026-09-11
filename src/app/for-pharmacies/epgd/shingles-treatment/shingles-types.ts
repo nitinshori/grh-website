@@ -1,5 +1,5 @@
 // Shingles-specific types for PGD consultation
-// Aligned to the Shingles (Herpes Zoster) Treatment PGD, version 006,
+// Aligned to the Shingles (Herpes Zoster) Treatment PGD, version 007,
 // issued 11 September 2026 (aciclovir, valaciclovir or famciclovir).
 import { BasePatientDetails, BaseConsent, BaseSummary } from '../shared/types';
 
@@ -32,7 +32,7 @@ export interface ShinglesSymptoms {
   hoursSinceOnset: number | null; // calculated automatically
   rashStage: RashStage;
   dermatome: RashDermatome;
-  painLevel: number | null; // 1-10 scale
+  painLevel: number | null; // 0 to 10 scale (PGD: 4 or more is moderate or severe; 7 or more is severe)
   painType: PainType;
   /** Inclusion: unilateral, dermatomal rash that does not cross the midline. Explicit answer: "" unanswered, "yes", "no". */
   unilateral: '' | 'yes' | 'no';
@@ -43,7 +43,7 @@ export interface ShinglesSymptoms {
   newVesiclesForming: boolean;
   /** High risk of severe shingles, for example severe atopic eczema: a 7-day window criterion. */
   highRiskSevereShingles: boolean;
-  // Red flags requiring urgent referral rather than supply (PGD v006)
+  // Red flags requiring urgent referral rather than supply (PGD v007)
   /** Any visual symptom, unexplained red eye, eye pain or Hutchinson's sign. */
   eyeSymptoms: boolean;
   /** Rash in or around the ear, hearing loss, vertigo, altered taste or facial weakness (Ramsay Hunt). */
@@ -71,9 +71,8 @@ export interface ShinglesMedicalHistory {
   immunosuppressionSeverity: ImmunosuppressionSeverity;
   /** Known or suspected. */
   pregnant: boolean;
+  /** Breastfeeding is an exclusion: refer to a prescriber (decision 22, 11 Sep 2026). */
   breastfeeding: boolean;
-  /** Breastfeeding with sores on the breast is an exclusion; sores elsewhere are a caution. */
-  breastLesions: boolean;
   renalImpairment: RenalStatus;
   /** Record: how renal function was established (result, date, source). */
   renalFunctionSource: string;
@@ -84,7 +83,7 @@ export interface ShinglesMedicalHistory {
   organTransplant: boolean;
   currentMedications: string;
   allergies: string;
-  // Exclusions (PGD v006)
+  // Exclusions (PGD v007)
   allergyAciclovirValaciclovir: boolean;
   allergyFamciclovirPenciclovir: boolean;
   previousDress: boolean;
@@ -95,7 +94,7 @@ export interface ShinglesMedicalHistory {
   neurologicalCondition: boolean;
   dehydrationRisk: boolean;
   failedAntiviralThisEpisode: boolean;
-  // Cautions (PGD v006)
+  // Cautions (PGD v007)
   nephrotoxicMedicines: boolean;
   tenofovir: boolean;
   probenecidOrCimetidine: boolean;
@@ -176,7 +175,6 @@ export const initialShinglesMedicalHistory = (): ShinglesMedicalHistory => ({
   immunosuppressionSeverity: '',
   pregnant: false,
   breastfeeding: false,
-  breastLesions: false,
   renalImpairment: 'unknown',
   renalFunctionSource: '',
   hepaticImpairment: 'none',

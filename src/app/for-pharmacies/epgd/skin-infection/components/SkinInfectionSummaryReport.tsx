@@ -119,7 +119,7 @@ export function SkinInfectionSummaryReport({ state }: SkinInfectionSummaryReport
           Cellulitis: {cellulitisPgd ? "adult 18 or over" : "patient 12 or over"}. Margins marked:{" "}
           {a.marginsMarked ? "yes" : "NO"}
           {cellulitisPgd
-            ? `. Time marked: ${a.marginMarkedTime || "not recorded"}. 48-hour reassessment booked for: ${a.reviewDateTime || "not recorded"}`
+            ? `. Time marked: ${a.marginMarkedTime || "not recorded"}. 48-hour reassessment at this pharmacy booked for: ${a.reviewDateTime || "not recorded"}`
             : `. In-person 48-hour review at this pharmacy booked for: ${a.reviewDateTime || "not recorded"}`}
           .
         </p>

@@ -30,7 +30,7 @@ export function PESummaryReport({ state, alerts }: PESummaryReportProps) {
           Premature Ejaculation, Dapoxetine Consultation
         </h2>
         <p className="text-xs text-gray-500 mt-1">
-          ePGD Consultation Record. Dapoxetine 30mg/60mg tablets (Priligy) for Premature Ejaculation PGD, version 004, issued 11 September 2026
+          ePGD Consultation Record. Dapoxetine 30mg/60mg tablets (Priligy) for Premature Ejaculation PGD, version 005, issued 11 September 2026
         </p>
       </div>
 
@@ -92,6 +92,10 @@ export function PESummaryReport({ state, alerts }: PESummaryReportProps) {
         <Row label="Mild hepatic impairment (Child-Pugh A)" value={state.medicalHistory.mildHepaticImpairment ? "Yes" : "No"} />
         <Row label="Moderate or severe renal impairment" value={state.medicalHistory.renalImpairment ? "Yes" : "No"} />
         <Row label="Bipolar disorder or mania" value={state.medicalHistory.bipolarOrMania ? "Yes" : "No"} />
+        <Row label="Symptoms suggesting prostatitis (exclusion)" value={state.medicalHistory.prostatitisSymptoms ? "Yes (referred)" : "No"} />
+        <Row label="Symptoms suggesting thyroid dysfunction (exclusion)" value={state.medicalHistory.thyroidSymptoms ? "Yes (referred)" : "No"} />
+        <Row label="Symptoms suggesting a neurological cause (exclusion)" value={state.medicalHistory.neurologicalSymptoms ? "Yes (referred)" : "No"} />
+        <Row label="Recent onset with another new symptom (exclusion)" value={state.medicalHistory.recentOnsetWithNewSymptom ? "Yes (referred)" : "No"} />
         <Row
           label="Uncontrolled epilepsy"
           value={state.medicalHistory.uncontrolledEpilepsy ? "Yes" : "No"}
@@ -167,7 +171,7 @@ export function PESummaryReport({ state, alerts }: PESummaryReportProps) {
               label="30mg insufficient, 60mg permitted"
               value={state.medicineSupply.mayIncreaseTo60mg ? "Yes" : "No"}
             />
-            <Row label="Supplied under" value="Dapoxetine for Premature Ejaculation PGD v004, 11 September 2026" />
+            <Row label="Supplied under" value="Dapoxetine for Premature Ejaculation PGD v005, 11 September 2026" />
             <Row
               label="Patient understands usage"
               value={state.medicineSupply.understandsUsage ? "Yes" : "No"}
@@ -180,7 +184,7 @@ export function PESummaryReport({ state, alerts }: PESummaryReportProps) {
               label="Dapoxetine supplied"
               value={stopsExist ? "NOT SUPPLIED: exclusion criteria met (see clinical alerts above)" : "No"}
             />
-            <Row label="PGD" value="Dapoxetine for Premature Ejaculation PGD v004, 11 September 2026" />
+            <Row label="PGD" value="Dapoxetine for Premature Ejaculation PGD v005, 11 September 2026" />
           </>
         )}
       </div>

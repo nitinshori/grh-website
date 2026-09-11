@@ -1,6 +1,8 @@
 "use client";
 
 import type { ShinglesConsultationState } from "../lib/shingles-types";
+import { SEVERE_IMMUNOSUPPRESSION_OPTIONS } from "../lib/shingles-types";
+import { getArm, nhsEligibleGroup, daysBetween, MAX_INTERVAL_DAYS } from "../lib/shingles-clinical-logic";
 import type { ClinicalAlert } from "../../shared/types";
 import {
   SectionHeader,
@@ -23,6 +25,12 @@ export function ShinglesSummaryReport({
   doseRecommendation,
 }: ShinglesSummaryReportProps) {
   const hasStop = alerts.some((a) => a.severity === "stop");
+  const arm = getArm(state);
+  const nhsGroup = nhsEligibleGroup(state);
+  const intervalText = arm === "18-49-immunosuppressed" ? "8 weeks to 6 months" : "2 to 6 months";
+  const daysSinceDose1 =
+    state.supply.doseNumber === "2" ? daysBetween(state.assessment.previousShingrixDate, state.supply.vaccinationDate) : null;
+  const lateDose = daysSinceDose1 !== null && daysSinceDose1 > MAX_INTERVAL_DAYS;
   return (
     <div className="max-w-4xl mx-auto bg-white p-6 rounded-lg border border-gray-200 print:border-0 print:shadow-none print:p-0">
       <div className="border-b border-gray-300 pb-4 mb-6">
@@ -60,8 +68,52 @@ export function ShinglesSummaryReport({
 
       <SectionHeader>Eligibility Assessment</SectionHeader>
       <div className="space-y-0.5">
-        <Row label="Aged 50 or older, eligible under national guidelines" value={state.assessment.ageEligible ? "Yes" : "No"} />
+        <Row
+          label="PGD arm"
+          value={
+            arm === "50-plus"
+              ? "Arm 1: aged 50 and over, within the licensed indication"
+              : arm === "18-49-immunosuppressed"
+                ? "Arm 2: aged 18 to 49, severely immunosuppressed (Green Book chapter 28a, Box 1)"
+                : "Neither arm applies"
+          }
+        />
+        <Row label="Inclusion confirmed" value={state.assessment.ageEligible ? "Yes" : "No"} />
         <Row label="Immunosuppressed" value={state.assessment.immunosuppressed ? "Yes" : "No"} />
+        {state.assessment.immunosuppressed && (
+          <>
+            <Row
+              label="Green Book Box 1 category"
+              value={
+                SEVERE_IMMUNOSUPPRESSION_OPTIONS.find((o) => o.value === state.assessment.severeImmunosuppressionCategory)?.label ||
+                "Not recorded"
+              }
+            />
+            <Row label="Condition or therapy relied on" value={state.assessment.immunosuppressionDetail || "Not recorded"} />
+            {arm === "18-49-immunosuppressed" && (
+              <Row
+                label="Doubt whether Box 1 met"
+                value={
+                  state.assessment.immunosuppressionDoubt === "no-doubt"
+                    ? "No doubt"
+                    : state.assessment.immunosuppressionDoubt === "confirmed"
+                      ? "Doubt resolved: confirmed by the treating specialist or GP"
+                      : state.assessment.immunosuppressionDoubt === "unresolved"
+                        ? "Unresolved (referred)"
+                        : "Not recorded"
+                }
+              />
+            )}
+          </>
+        )}
+        <Row
+          label="NHS entitlement"
+          value={
+            nhsGroup
+              ? `NHS-eligible (${nhsGroup}); told Shingrix is free on the NHS before this private supply: ${state.assessment.nhsEntitlementExplained ? "Yes" : "NO"}`
+              : "Not in an NHS-eligible group; private supply within the licence"
+          }
+        />
         <Row
           label="Pregnancy or breastfeeding"
           value={
@@ -119,7 +171,7 @@ export function ShinglesSummaryReport({
       <SectionHeader>Counselling Provided</SectionHeader>
       <CounsellingGrid
         items={[
-          ["Explained 2-dose schedule (second dose 2 to 6 months after the first)", state.counselling.explainedDoseSchedule],
+          [`Explained 2-dose schedule (second dose ${intervalText} after the first; a late dose is given without restarting)`, state.counselling.explainedDoseSchedule],
           ["Discussed local injection reactions", state.counselling.explainedLocalReactions],
           ["Systemic side effects common and self-limiting", state.counselling.explainedSystemicReactions],
           ["Explained vaccine effectiveness (over 90% protection)", state.counselling.explainedEffectiveness],
@@ -147,7 +199,17 @@ export function ShinglesSummaryReport({
           <Row label="Dose number" value={state.supply.doseNumber ? `${state.supply.doseNumber} of 2` : "Not recorded"} />
           <Row label="Vaccination date" value={state.supply.vaccinationDate || "Not recorded"} />
           {state.supply.doseNumber === "1" && (
-            <Row label="Second dose due" value={state.supply.nextDoseDue || "Not recorded"} />
+            <Row label="Second dose due" value={`${state.supply.nextDoseDue || "Not recorded"} (${intervalText} after dose 1)`} />
+          )}
+          {state.supply.doseNumber === "2" && daysSinceDose1 !== null && (
+            <Row
+              label="Interval since dose 1"
+              value={
+                lateDose
+                  ? `${daysSinceDose1} days: more than 6 months. Given as soon as possible, course not restarted (Green Book); acknowledged: ${state.supply.lateDoseAcknowledged ? "Yes" : "NO"}`
+                  : `${daysSinceDose1} days`
+              }
+            />
           )}
           <Row label="Batch number" value={state.supply.batchNumber || "Not recorded"} />
           <Row label="Expiry date" value={state.supply.expiryDate || "Not recorded"} />
@@ -184,7 +246,7 @@ export function ShinglesSummaryReport({
       </p>
 
       <p className="text-[10px] text-gray-500 mt-4">
-        Patient Group Direction for Shingrix (prevention of shingles), version 006, issued 11 September 2026.
+        Patient Group Direction for Shingrix (prevention of shingles), version 007, issued 11 September 2026.
       </p>
 
       {hasStop ? (

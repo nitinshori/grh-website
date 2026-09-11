@@ -20,7 +20,7 @@ export function generateExclusionAlerts(
 ): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
 
-  // Age exclusion: under 18 years (PGD v004: adults aged 18 years and over)
+  // Age exclusion: under 18 years (PGD v005: adults aged 18 years and over)
   if (age !== null && age < 18) {
     alerts.push({
       severity: "stop",
@@ -431,7 +431,7 @@ export function recommendMedicine(
   // Determine if antibiotic is indicated
   let shouldPrescribe = false;
 
-  // PGD v004 inclusion: FeverPAIN 4 or more, OR positive RAST. A history of
+  // PGD v005 inclusion: FeverPAIN 4 or more, OR positive RAST. A history of
   // rheumatic fever does not lower the threshold under this PGD.
   void rheumaticFeverHistory;
   void age;
@@ -468,17 +468,17 @@ export function recommendMedicine(
   return {
     shouldPrescribe: true,
     recommendation:
-      "Phenoxymethylpenicillin 500mg tablets, one tablet four times daily on an empty stomach for 5-10 days (20-40 tablets).",
+      "Phenoxymethylpenicillin 500mg tablets, one tablet four times daily on an empty stomach for 5 days (20 tablets).",
     medicine: "phenoxymethylpenicillin",
     dose: "500 mg",
     frequency: "four times daily",
-    duration: "5-10 days",
+    duration: "5 days",
   };
 }
 
-// ─── Fixed regimens (PGD v004) ───
+// ─── Fixed regimens (PGD: one course length per arm, 5 days) ───
 
-export const PEN_V_DURATIONS = ["5 days", "6 days", "7 days", "8 days", "9 days", "10 days"] as const;
+export const PEN_V_DURATIONS = ["5 days"] as const;
 export const CLARI_DURATIONS = ["5 days"] as const;
 
 export function expectedQuantity(

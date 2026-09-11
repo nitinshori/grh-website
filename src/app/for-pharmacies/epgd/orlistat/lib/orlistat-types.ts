@@ -3,7 +3,7 @@ import type { BasePatientDetails, BaseConsent, BaseSummary, ClinicalAlert, DoseR
 export type OrlistatVisitType = "" | "initiation" | "continuation";
 
 export interface OrlistatWeightAssessment {
-  // PGD v003: review at 12 weeks from the start of treatment; continue only
+  // PGD v004: review at 12 weeks from the start of treatment; continue only
   // if at least 5% of body weight has been lost from baseline.
   visitType: OrlistatVisitType;
   treatmentStartDate: string;
@@ -14,50 +14,53 @@ export interface OrlistatWeightAssessment {
   bmiCategory: string;
   waistCircumference: number | null;
   comorbidities: string[];
-  // PGD v003 inclusion: motivated and committed to weight loss with a
+  // PGD v004 inclusion: motivated and committed to weight loss with a
   // structured reduced-calorie diet.
   motivatedStructuredDiet: boolean;
 }
 
 export interface OrlistatMedicalHistory {
-  // PGD v003 exclusion: cholestasis or severe hepatic impairment.
+  // PGD v004 exclusion: cholestasis or severe hepatic impairment.
   cholestasis: boolean;
   chronicMalabsorption: boolean;
   pregnant: boolean;
   breastfeeding: boolean;
   planningPregnancy: boolean;
-  // PGD v003 caution: gallstone disease.
+  // PGD v004 caution: gallstone disease.
   gallbladderDisease: boolean;
   severeGastrointestinal: boolean;
   chronic_diarrhea: boolean;
   // Chronic kidney disease / volume depletion, increased hyperoxaluria
   // and oxalate-nephropathy risk on orlistat. Caution.
   chronicKidneyDisease: boolean;
-  // PGD v003 exclusion: uncontrolled or newly diagnosed diabetes.
+  // PGD v004 exclusion: uncontrolled or newly diagnosed diabetes.
   uncontrolledOrNewDiabetes: boolean;
-  // PGD v003 exclusion: known hypersensitivity to orlistat or any component.
+  // PGD v004 exclusion: known hypersensitivity to orlistat or any component.
   hypersensitivityToOrlistat: boolean;
-  // PGD v003 caution: history of oxalate kidney stones.
+  // PGD v004 caution: history of oxalate kidney stones.
   oxalateKidneyStones: boolean;
-  // PGD v003 caution: chronic liver disease or elevated LFTs.
+  // PGD v004 caution: chronic liver disease or elevated LFTs.
   chronicLiverDisease: boolean;
 }
 
 export interface OrlistatMedications {
   takesWarfarin: boolean;
-  // PGD v003 caution: other anticoagulant (edoxaban, dabigatran, rivaroxaban).
+  // PGD v004 caution: other anticoagulant (edoxaban, dabigatran, rivaroxaban).
   takesOtherAnticoagulant: boolean;
   takesLevothyroxine: boolean;
+  // Antiepileptic medicines: exclusion (decision 54, 11 September 2026).
   takesAntiEpileptics: boolean;
   takesCiclosporin: boolean;
-  // PGD v003 caution: bile acid sequestrants.
+  // PGD v004 caution: bile acid sequestrants.
   takesBileAcidSequestrants: boolean;
   takesOralContraceptives: boolean;
   // Antiretrovirals for HIV, orlistat may reduce their absorption and
-  // efficacy. Caution.
+  // efficacy. Exclusion (decision 54).
   takesHIVAntiretrovirals: boolean;
-  // Any other clinically significant drug interaction. Exclusion under
-  // Janey's amendment, refer to GP for medicines reconciliation.
+  // Amiodarone: orlistat may reduce plasma levels. Exclusion (decision 54).
+  takesAmiodarone: boolean;
+  // Any other medicine with an SmPC interaction that cannot be managed in a
+  // pharmacy setting. Exclusion, refer to GP for medicines reconciliation.
   otherSignificantInteraction: boolean;
   otherMedications: string;
   allergies: string;
@@ -77,13 +80,13 @@ export interface OrlistatObservations {
 export interface OrlistatMedicineSupply {
   dosage: string;
   quantity: number | null;
-  // PGD v003 records row: name and brand of medication.
+  // PGD v004 records row: name and brand of medication.
   brand: string;
   prescriptionType: string;
   refillSchedule: string;
 }
 
-// PGD v003: up to 84 capsules per patient (28-day supply at 3 capsules daily).
+// PGD v004: up to 84 capsules per patient (28-day supply at 3 capsules daily).
 export const ORLISTAT_MAX_QUANTITY = 84;
 
 export interface OrlistatCounselling {
@@ -212,6 +215,7 @@ gpEmail: "",
       takesBileAcidSequestrants: false,
       takesOralContraceptives: false,
       takesHIVAntiretrovirals: false,
+      takesAmiodarone: false,
       otherSignificantInteraction: false,
       otherMedications: "",
       allergies: "",

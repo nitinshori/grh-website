@@ -299,7 +299,7 @@ export default function HayfeverClient() {
               onChange={(v) =>
                 dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "pregnant", value: v })
               }
-              description="Exclusion for fexofenadine under this PGD. Inform or refer to the GP as appropriate."
+              description="Exclusion for both fexofenadine and Dymista under this PGD. Refer to the GP."
             />
             <Checkbox
               label="Patient is breastfeeding"
@@ -307,7 +307,7 @@ export default function HayfeverClient() {
               onChange={(v) =>
                 dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "breastfeeding", value: v })
               }
-              description="Exclusion for fexofenadine under this PGD. Inform or refer to the GP as appropriate."
+              description="Exclusion for both fexofenadine and Dymista under this PGD. Refer to the GP."
             />
             <Checkbox
               label="Patient is under 12 years"
@@ -458,7 +458,7 @@ export default function HayfeverClient() {
               onChange={(v) =>
                 dispatch({ type: "UPDATE_COUNSELLING", field: "effectivenessTimeline", value: v })
               }
-              description="Dymista: assess effectiveness after 2 to 4 weeks; reassess need for continued treatment if symptoms persist beyond 4 weeks. Fexofenadine: if symptoms persist beyond 7 days or worsen, refer to a healthcare provider."
+              description="Dymista: assess effectiveness after 2 to 4 weeks; reassess need for continued treatment if symptoms persist beyond 4 weeks. Fexofenadine: if symptoms persist beyond one month of regular use or worsen, refer to a healthcare provider."
             />
             <Checkbox
               label="Combination therapy rationale explained"
@@ -496,7 +496,7 @@ export default function HayfeverClient() {
               onChange={(v) =>
                 dispatch({ type: "UPDATE_COUNSELLING", field: "followUpAdvice", value: v })
               }
-              description="Seek medical advice if symptoms worsen rapidly or significantly, do not improve in 3 to 4 weeks, or the patient becomes systemically very unwell."
+              description="Seek medical advice if symptoms worsen rapidly or significantly, persist beyond one month of regular use despite fexofenadine, do not improve after 2 to 4 weeks of regular Dymista use, or the patient becomes systemically very unwell."
               required
             />
             <Checkbox

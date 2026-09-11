@@ -567,11 +567,37 @@ def normalise(doc, version, date, supersedes):
     return consolidate_change_records(doc)
 
 
-def reissue(slug, src, out, version, supersedes, date, changes, edits=(), publish_to=None, remove=None):
+def keep_last_practitioner_section(doc):
+    """Multi-arm HubRx-era documents carry an 'Agreement to practise' page,
+    a premises block, a practitioner table, an adoption block and a change
+    history after EVERY arm. One set per document: the last one stays, the
+    earlier ones go (from the agreement heading up to the next arm's
+    'Patient Group Direction' heading). Decision 5, 11 September 2026."""
+    body = doc.element.body
+    kids = list(body.iterchildren())
+    starts = [i for i, c in enumerate(kids)
+              if c.tag.endswith("}p") and _elem_text(c).strip().startswith("Agreement to practise by the Registered Healthcare Professional")]
+    if len(starts) < 2:
+        return
+    removed = 0
+    for st in starts[:-1]:
+        j = st + 1
+        while j < len(kids):
+            if kids[j].tag.endswith("}p") and _elem_text(kids[j]).strip() == "Patient Group Direction":
+                break
+            j += 1
+        for k in range(st, j):
+            body.remove(kids[k]); removed += 1
+    print(f"  practitioner sections: {len(starts) - 1} duplicate set(s) removed ({removed} elements)")
+
+
+def reissue(slug, src, out, version, supersedes, date, changes, edits=(), publish_to=None, remove=None, hooks=()):
     if not os.path.exists(src):
         raise SystemExit(f"{slug}: source missing: {src}")
     d = docx.Document(src)
     apply_edits(d, list(edits), slug)
+    for h in hooks:
+        h(d)
     prev = "v" + re.search(r"Version (\d{3})", supersedes).group(1)
     bump_version(d, version, prev, date, supersedes)
     harmonise_expiry(d, date)

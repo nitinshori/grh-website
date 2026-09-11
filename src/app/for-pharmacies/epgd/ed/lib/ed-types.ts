@@ -55,13 +55,13 @@ export interface MedicalHistory {
   bleedingDisorders: boolean;
   penileDeformity: boolean; // Peyronie's, angulation, fibrosis
   penileDeformityDetails: string;
-  /** PGD v007: previous priapism, or an erection over 4 hours on any PDE5 inhibitor, excludes. */
+  /** PGD v008: previous priapism, or an erection over 4 hours on any PDE5 inhibitor, excludes. */
   priapismHistory: boolean;
   unstableAngina: boolean;
-  /** PGD v007: heart failure of NYHA class 2 or greater in the last 6 months. */
+  /** PGD v008: heart failure of NYHA class 2 or greater in the last 6 months. */
   severeHeartFailure: boolean;
   uncontrolledArrhythmias: boolean;
-  /** PGD v007: hypertrophic cardiomyopathy, significant aortic stenosis or other
+  /** PGD v008: hypertrophic cardiomyopathy, significant aortic stenosis or other
    *  moderate to severe valve disease, or a murmur of unknown cause. */
   structuralHeartDisease: boolean;
   recentMIOrStroke: boolean; // within 6 months
@@ -84,15 +84,15 @@ export interface CurrentMedications {
    */
   takesNicorandil: boolean;
   usesPoppers: boolean; // HARD STOP - absolute contraindication
-  /** PGD v007: the direct question about poppers must be asked and the answer recorded. */
+  /** PGD v008: the direct question about poppers must be asked and the answer recorded. */
   poppersQuestionAsked: boolean;
   nitrateDetails: string;
   takesRiociguat: boolean; // HARD STOP
-  /** PGD v007: excludes the sildenafil arm (25mg in 48 hours cap cannot be titrated). */
+  /** PGD v008: excludes the sildenafil arm (25mg in 48 hours cap cannot be titrated). */
   takesRitonavirOrCobicistat: boolean;
-  /** PGD v007: excludes the tadalafil arm (combination not recommended in the SmPC). */
+  /** PGD v008: excludes the tadalafil arm (combination not recommended in the SmPC). */
   takesDoxazosin: boolean;
-  /** PGD v007: already taking any other PDE5 inhibitor, including one obtained online. */
+  /** PGD v008: already taking any other PDE5 inhibitor, including one obtained online. */
   takesOtherPDE5Inhibitor: boolean;
   takesAlphaBlockers: boolean; // caution - start 25mg
   alphaBlockerStable: boolean; // must be stable on alpha-blocker
@@ -119,7 +119,7 @@ export interface Observations {
 }
 
 export interface RedFlagsChecklist {
-  /** PGD v007 exclusion: ED of sudden onset following trauma, surgery or a new
+  /** PGD v008 exclusion: ED of sudden onset following trauma, surgery or a new
    *  medicine, or accompanied by penile pain or deformity. Refer for a diagnosis. */
   suddenOnsetSecondaryCause: boolean;
   pelvicPerinealTrauma: boolean;
@@ -136,7 +136,7 @@ export interface MedicineSelection {
   dosingRegimen: DosingRegimen; // tadalafil only: on-demand vs daily
   dose: string; // e.g. "25mg", "50mg", "100mg" for sildenafil; "2.5mg", "5mg", "10mg", "20mg" for tadalafil
   quantity: number; // tablets supplied
-  /** Brand supplied (PGD v007 records: name, brand, form, strength). */
+  /** Brand supplied (PGD v008 records: name, brand, form, strength). */
   brand: string;
   pharmacistOverride: boolean; // pharmacist overrode auto-recommendation
   overrideReason: string;

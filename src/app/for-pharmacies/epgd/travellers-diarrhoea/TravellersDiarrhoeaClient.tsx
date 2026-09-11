@@ -523,10 +523,10 @@ export function TravellersDiarrhoeaClient() {
               description="Exclusion. Refer for medical assessment."
             />
             <Checkbox
-              label="High fever"
-              checked={state.medicalHistory.feverAbove38_5C}
-              onChange={(v) => handleMedicalChange('feverAbove38_5C', v)}
-              description="Exclusion. Refer for medical assessment."
+              label="High fever (temperature 38 C or above)"
+              checked={state.medicalHistory.feverAtOrAbove38C}
+              onChange={(v) => handleMedicalChange('feverAtOrAbove38C', v)}
+              description="Exclusion. The PGD defines high fever as a temperature of 38 C or above. Refer for medical assessment."
             />
             <Checkbox
               label="Signs of systemic illness"
@@ -854,7 +854,7 @@ export function TravellersDiarrhoeaClient() {
                   onChange={(v) =>
                     handleCounsellingChange('azithromycinAdvice', v)
                   }
-                  description="500 mg once daily for 1 to 3 days depending on severity; maximum 3 days. Do not use for bloody diarrhoea or high fever: seek medical help instead"
+                  description="500 mg once daily for 1 to 3 days depending on severity; maximum 3 days. Do not use for bloody diarrhoea or high fever (temperature 38 C or above): seek medical help instead"
                 />
               </>
             )}

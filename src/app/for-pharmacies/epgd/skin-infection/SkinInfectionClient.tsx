@@ -459,7 +459,7 @@ export default function SkinInfectionClient({ variant = "skin-infection" }: { va
                       ? "Refer if respiratory rate 40 or above, pulse above 140, temperature 38C or above, oxygen saturation below 94% on air at rest, capillary refill more than 2 seconds, or any new drowsiness, floppiness or not responding normally. DO NOT apply an adult blood pressure threshold in this band."
                       : band === "5-11"
                         ? "Refer if respiratory rate 25 or above, pulse above 120, temperature 38C or above, oxygen saturation below 94% on air at rest, capillary refill more than 2 seconds, or any new confusion or drowsiness. Blood pressure is not required unless a paediatric cuff and reference range are available."
-                        : "Refer if respiratory rate 22 or above, pulse above 110 at rest, temperature 38C or above, systolic below 100, oxygen saturation below 94% on air at rest, or any new confusion or drowsiness."}
+                        : "Refer if respiratory rate 22 or above, pulse above 90 at rest, temperature 38C or above, systolic below 100, oxygen saturation below 94% on air at rest, or any new confusion or drowsiness."}
                 </p>
                 <div className="grid sm:grid-cols-2 gap-3">
                   <TextInput
@@ -647,7 +647,7 @@ export default function SkinInfectionClient({ variant = "skin-infection" }: { va
                   <TextInput
                     label={
                       cellulitisPgd
-                        ? "48-hour reassessment: booked date and time (between 36 and 60 hours from now)"
+                        ? "48-hour reassessment at this pharmacy, in person: booked date and time (between 36 and 60 hours from now)"
                         : "In-person 48-hour review at this pharmacy: booked date and time (between 36 and 60 hours from now)"
                     }
                     value={a.reviewDateTime}
@@ -1018,7 +1018,7 @@ export default function SkinInfectionClient({ variant = "skin-infection" }: { va
                 <Checkbox
                   label={
                     cellulitisPgd
-                      ? `We have marked the edge of the redness and booked your 48-hour reassessment${a.reviewDateTime ? ` for ${a.reviewDateTime.replace("T", " at ")}` : ""}. Come to that appointment. If the redness passes the mark before then, seek help the same day`
+                      ? `We have marked the edge of the redness and booked your 48-hour reassessment at this pharmacy${a.reviewDateTime ? ` for ${a.reviewDateTime.replace("T", " at ")}` : ""}. Come to that appointment. If the redness passes the mark before then, seek help the same day`
                       : "We have marked the edge of the redness and booked you back in 48 hours. Come to that appointment. If the redness passes the mark before then, seek help the same day"
                   }
                   checked={state.counselling.cellulitisReviewAdvice}

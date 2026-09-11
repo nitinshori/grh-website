@@ -16,7 +16,7 @@ import { WoundCareSummaryReport } from "./components/WoundCareSummaryReport";
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 
 /**
- * Minor Wound Care ePGD, aligned to the Minor Wound Care PGD version 008,
+ * Minor Wound Care ePGD, aligned to the Minor Wound Care PGD version 009,
  * issued 11 September 2026. Two arms, chosen on the mechanism of the wound:
  *   Arm 1, co-amoxiclav 500/125mg tablets: infected bite wounds and heavily
  *     contaminated wounds, 12 years and over.
@@ -26,7 +26,7 @@ import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
  * tetanus status is established and recorded for every patient; both arms are
  * beta-lactams so penicillin allergy is a referral with the alternative named.
  */
-export const WOUND_CARE_PGD_VERSION = "Minor Wound Care PGD, version 008, issued 11 September 2026";
+export const WOUND_CARE_PGD_VERSION = "Minor Wound Care PGD, version 009, issued 11 September 2026";
 
 export type AgeBand = "2-4" | "5-11" | "12+" | null;
 export function getAgeBand(age: number | null): AgeBand {
@@ -49,13 +49,18 @@ export function hoursSinceInjury(timeOfInjury: string): number | null {
   return (Date.now() - t) / (1000 * 60 * 60);
 }
 
-export type WoundFormulation = "" | "tablets" | "capsules" | "suspension";
+export type WoundFormulation = "" | "tablets" | "capsules" | "suspension" | "suspension-500";
 
 /** The formulations the document names for this arm and age. */
 export function allowedFormulations(antibiotic: WoundState["treatment"]["antibiotic"], age: number | null): { value: WoundFormulation; label: string }[] {
   if (antibiotic === "co-amoxiclav") return [{ value: "tablets", label: "Co-amoxiclav 500/125mg tablets" }];
   if (antibiotic === "flucloxacillin") {
     if (age !== null && age >= 2 && age <= 9) return [{ value: "suspension", label: "Flucloxacillin 250mg/5mL oral suspension (2 to 9 years: 5 mL four times daily)" }];
+    if (age !== null && age >= 10 && age < 18)
+      return [
+        { value: "capsules", label: "Flucloxacillin 500mg capsules (10 years and over)" },
+        { value: "suspension-500", label: "Flucloxacillin 250mg/5mL oral suspension, 500mg dose (10 to 17 years unable to swallow capsules: 10 mL four times daily)" },
+      ];
     return [{ value: "capsules", label: "Flucloxacillin 500mg capsules (10 years and over)" }];
   }
   return [];
@@ -66,8 +71,16 @@ export function documentQuantity(formulation: WoundFormulation, courseDays: "" |
   if (!formulation || !courseDays) return "";
   if (formulation === "tablets") return courseDays === "5" ? "15 tablets" : "21 tablets";
   if (formulation === "capsules") return courseDays === "5" ? "20 capsules" : "28 capsules";
+  if (formulation === "suspension-500") return courseDays === "5" ? "200 mL" : "280 mL";
   return courseDays === "5" ? "100 mL" : "140 mL";
 }
+
+/**
+ * Decision 29 (11 September 2026): Arm 1 (co-amoxiclav) applies only where
+ * tetanus management for the wound, including any HTIG, has been completed
+ * and is recorded, or the wound is not tetanus-prone; otherwise refer.
+ */
+export type Arm1TetanusManagement = "" | "not-tetanus-prone" | "completed-and-recorded" | "not-completed";
 
 export interface WoundState {
   patient: { firstName: string; lastName: string; dateOfBirth: string; age: number | null; gpName: string; gpPractice: string; gpAddress: string; gpPhone: string; gpEmail: string; gpOdsCode: string; nhsNumber: string; address: string; phone: string; email: string };
@@ -116,9 +129,16 @@ export interface WoundState {
     capillaryRefill: "" | "2s-or-less" | "over-2s";
     alteredConsciousness: boolean;
     /** Why human tetanus immunoglobulin is NOT indicated where the document
-     *  lists the finding (heavy contamination, more than 6 hours) under the
-     *  HTIG exclusion. Required before supply in either case. */
+     *  lists the finding (more than 6 hours) under the HTIG exclusion.
+     *  Required before supply. */
     htigNotIndicatedReason: string;
+    /** Arm 1 only (bite or heavily contaminated wound): tetanus management
+     *  for this wound, including any HTIG, completed and recorded; or the
+     *  wound is not tetanus-prone; otherwise refer (decision 29). */
+    arm1TetanusManagement: Arm1TetanusManagement;
+    /** Where, when and what was given (HTIG, Td/IPV) when management is
+     *  recorded as completed. */
+    arm1TetanusManagementDetails: string;
     /** Advice given where the patient is excluded (document record item). */
     exclusionAdvice: string;
   };
@@ -209,6 +229,8 @@ function createInitialState(): WoundState {
       capillaryRefill: "",
       alteredConsciousness: false,
       htigNotIndicatedReason: "",
+      arm1TetanusManagement: "",
+      arm1TetanusManagementDetails: "",
       exclusionAdvice: "",
     },
     treatment: {
@@ -325,12 +347,21 @@ function computeAlerts(state: WoundState): ClinicalAlert[] {
   if (a.spreadingCellulitis) {
     newAlerts.push({ severity: "stop", code: "SPREADING", message: "Spreading cellulitis, or erythema extending well beyond the wound margin", detail: "Referral trigger (Appendix 1). Refer." });
   }
-  if (a.highRiskTetanusWound) {
+  const arm1Route = arm === "co-amoxiclav";
+  const arm1TetanusComplete = arm1Route && a.arm1TetanusManagement === "completed-and-recorded";
+  if (a.highRiskTetanusWound && !arm1TetanusComplete) {
     newAlerts.push({
       severity: "stop",
       code: "HTIG",
       message: "High-risk tetanus-prone wound: immunoglobulin may be indicated. Refer the same day",
-      detail: "Heavy contamination, devitalised tissue, burns, sepsis, or more than 6 hours to treatment. Human tetanus immunoglobulin is not covered by this or any GRH PGD.",
+      detail: "Heavy contamination, devitalised tissue, burns, sepsis, or more than 6 hours to treatment. Human tetanus immunoglobulin is not covered by this or any GRH PGD. Under Arm 1 only, a wound whose tetanus management, including any HTIG, has already been completed and recorded may be treated; record that management below.",
+    });
+  } else if (a.highRiskTetanusWound && arm1TetanusComplete) {
+    newAlerts.push({
+      severity: "caution",
+      code: "HTIG_COMPLETED",
+      message: "High-risk tetanus-prone wound: tetanus management including HTIG recorded as completed. Arm 1 may be used if otherwise eligible",
+      detail: "Confirm the record of where and when HTIG and any vaccine dose were given. If tetanus management has not in fact been completed, change the answer below and refer the same day.",
     });
   }
   if (a.woundType === "burn") {
@@ -412,18 +443,34 @@ function computeAlerts(state: WoundState): ClinicalAlert[] {
     }
   }
 
-  // Heavy contamination is the indication for Arm 1 AND a listed feature of a
-  // high-risk tetanus-prone wound where HTIG may be indicated (an exclusion
-  // in both arms). The document contradicts itself; the tool says so on
-  // screen and requires the pharmacist to record why immunoglobulin is not
-  // indicated before any supply (adversarial review, 11 Sep 2026).
-  if (a.heavilyContaminated && !a.highRiskTetanusWound) {
-    newAlerts.push({
-      severity: "caution",
-      code: "HEAVY_CONTAMINATION_HTIG",
-      message: "Heavily contaminated wound: the document lists heavy contamination under the HTIG exclusion as well as under the co-amoxiclav indication",
-      detail: "Exclusion (both arms): \"High-risk tetanus-prone wound where human tetanus immunoglobulin may be indicated (heavy contamination, devitalised tissue, burns, sepsis, or more than 6 hours to treatment). Refer the same day.\" Before supplying, assess whether immunoglobulin is indicated and record why it is not. If it may be, tick the high-risk tetanus-prone wound box and refer the same day.",
-    });
+  // Decision 29 (11 September 2026): Arm 1 applies where tetanus management
+  // for the wound, including any HTIG, has been completed and recorded, or
+  // the wound is not tetanus-prone; otherwise refer. A heavily contaminated
+  // wound is tetanus-prone (UKHSA), so "not tetanus-prone" cannot be chosen
+  // for it.
+  if (arm1Route) {
+    if (a.arm1TetanusManagement === "not-completed") {
+      newAlerts.push({
+        severity: "stop",
+        code: "ARM1_TETANUS_NOT_COMPLETED",
+        message: "Arm 1: tetanus management for this wound (including any HTIG) has not been completed. Refer the same day",
+        detail: "Arm 1 applies only where tetanus management, including any human tetanus immunoglobulin, was completed and is recorded, or the wound is not tetanus-prone. HTIG is not covered by this or any GRH PGD. Where only a vaccine dose is needed and the patient is 10 or over, give it under the Tetanus (Td/IPV) PGD and record it; then Arm 1 may be used.",
+      });
+    } else if (a.arm1TetanusManagement === "not-tetanus-prone" && a.heavilyContaminated) {
+      newAlerts.push({
+        severity: "stop",
+        code: "ARM1_CONTAMINATED_IS_TETANUS_PRONE",
+        message: "A heavily contaminated wound is tetanus-prone (UKHSA): 'not tetanus-prone' cannot apply",
+        detail: "Wounds contaminated with soil or manure are tetanus-prone by definition, and heavy contamination by material likely to contain tetanus spores makes the wound high-risk, where HTIG may be indicated. Record tetanus management as completed and recorded (with where and when HTIG and any dose were given), or refer the same day.",
+      });
+    } else if (!a.arm1TetanusManagement) {
+      newAlerts.push({
+        severity: "caution",
+        code: "ARM1_TETANUS_REQUIRED",
+        message: "Arm 1 (bite or heavily contaminated wound): record the tetanus management status for this wound before any supply",
+        detail: "Arm 1 applies where tetanus management including any HTIG was completed and recorded, or the wound is not tetanus-prone; otherwise refer.",
+      });
+    }
   }
 
   const hoursOld = hoursSinceInjury(a.timeOfInjury);
@@ -491,6 +538,12 @@ export default function WoundCareClient() {
           dose: "250mg four times daily, which is 5 mL of the 250mg/5mL suspension four times daily. CHECK THE VOLUME AGAINST THE STRENGTH: 50mg per mL",
           quantity: "Suspension: 100mL for 5 days, 140mL for 7 days",
         };
+      if (t.formulation === "suspension-500" && age !== null && age >= 10 && age < 18)
+        return {
+          medicine: "Flucloxacillin 250mg/5mL oral suspension (500mg dose, 10 to 17 years unable to swallow capsules)",
+          dose: "500mg four times daily, which is 10 mL of the 250mg/5mL suspension four times daily. CHECK THE VOLUME AGAINST THE STRENGTH: 50mg per mL. On an empty stomach, one hour before or two hours after food",
+          quantity: "Suspension (500mg dose): 200mL for 5 days, 280mL for 7 days",
+        };
       return {
         medicine: "Flucloxacillin 500mg capsules",
         dose: "500mg four times daily, on an empty stomach, one hour before or two hours after food",
@@ -498,12 +551,12 @@ export default function WoundCareClient() {
       };
     }
     return null;
-  }, [t.antibiotic, age]);
+  }, [t.antibiotic, t.formulation, age]);
 
   const formulationOptions = useMemo(() => allowedFormulations(t.antibiotic, age), [t.antibiotic, age]);
   const quantitySupplied = documentQuantity(t.formulation, t.courseDays);
   const hoursOld = hoursSinceInjury(a.timeOfInjury);
-  const htigReasonRequired = (a.heavilyContaminated || (hoursOld !== null && hoursOld > 6)) && !a.highRiskTetanusWound;
+  const htigReasonRequired = hoursOld !== null && hoursOld > 6 && !a.highRiskTetanusWound && !(arm === "co-amoxiclav" && a.arm1TetanusManagement === "completed-and-recorded");
 
   const assessmentError = useCallback((): string | null => {
     // Never assess against a missing age: every threshold in Appendix 1 is
@@ -527,8 +580,12 @@ export default function WoundCareClient() {
     if (!a.tetanusAction.trim()) return "Record the tetanus action taken";
     if (htigReasonRequired && !a.htigNotIndicatedReason.trim())
       return "The document lists this finding under the HTIG exclusion: record why immunoglobulin is not indicated, or tick the high-risk tetanus-prone wound box and refer";
+    if (arm === "co-amoxiclav" && !a.arm1TetanusManagement)
+      return "Arm 1: record whether tetanus management for this wound (including any HTIG) was completed and recorded, or the wound is not tetanus-prone";
+    if (arm === "co-amoxiclav" && a.arm1TetanusManagement === "completed-and-recorded" && !a.arm1TetanusManagementDetails.trim())
+      return "Arm 1: record where and when tetanus management was completed and what was given (HTIG, Td/IPV, or nothing further indicated)";
     return null;
-  }, [a, band, age, hoursOld, htigReasonRequired]);
+  }, [a, band, age, arm, hoursOld, htigReasonRequired]);
 
   const treatmentError = useCallback((): string | null => {
     if (t.patientDeclined) {
@@ -799,13 +856,36 @@ export default function WoundCareClient() {
               label="Heavily contaminated with soil or organic material (co-amoxiclav arm, 12 and over)"
               checked={a.heavilyContaminated}
               onChange={(v) => setA({ heavilyContaminated: v })}
-              description="The document also lists heavy contamination among the high-risk tetanus-prone features where immunoglobulin may be indicated (same-day referral). Assess and record below."
+              description="A heavily contaminated wound is tetanus-prone and usually high-risk (HTIG may be indicated). Arm 1 applies only where tetanus management for this wound, including any HTIG, has been completed and recorded; otherwise refer. Record below."
             />
+            {arm === "co-amoxiclav" && (
+              <div className="p-4 bg-amber-50 rounded-lg border border-amber-200 space-y-2">
+                <p className="text-sm font-medium text-navy-900">Arm 1 tetanus management (required before supply)</p>
+                <p className="text-xs text-gray-700">
+                  Arm 1 (co-amoxiclav: bite or heavily contaminated wound) applies where tetanus management for this wound, including any human tetanus immunoglobulin (HTIG), was completed and is recorded, or the wound is not tetanus-prone. Otherwise refer the same day: HTIG is not covered by this or any GRH PGD.
+                </p>
+                <SelectInput
+                  label="Tetanus management for this wound"
+                  value={a.arm1TetanusManagement}
+                  onChange={(v) => setA({ arm1TetanusManagement: v as Arm1TetanusManagement })}
+                  options={[
+                    { value: "", label: "Select" },
+                    { value: "completed-and-recorded", label: "Completed and recorded: immunisation up to date with nothing further indicated, or any indicated Td/IPV dose and any HTIG already given and recorded (for example Td/IPV under the Tetanus PGD today, or HTIG at an emergency department at the time of injury)" },
+                    { value: "not-tetanus-prone", label: "Not a tetanus-prone wound (UKHSA: no puncture, no soil or manure contamination, no devitalised tissue, not a burn, no systemic sepsis, presented within 6 hours)" },
+                    { value: "not-completed", label: "Tetanus management indicated but not completed (HTIG or a vaccine dose still needed): refer the same day" },
+                  ]}
+                  required
+                />
+                {a.arm1TetanusManagement === "completed-and-recorded" && (
+                  <TextArea label="Where and when tetanus management was completed, and what was given" value={a.arm1TetanusManagementDetails} onChange={(v) => setA({ arm1TetanusManagementDetails: v })} rows={2} required placeholder="e.g. HTIG 250 IU and Td/IPV given at ED on the day of injury, recorded in discharge summary; or immunisation up to date, no further dose indicated" />
+                )}
+              </div>
+            )}
             {htigReasonRequired && (
               <div className="p-4 bg-amber-50 rounded-lg border border-amber-200 space-y-2">
                 <p className="text-sm font-medium text-navy-900">Tetanus immunoglobulin assessment (required before supply)</p>
                 <p className="text-xs text-gray-700">
-                  {a.heavilyContaminated ? "Heavy contamination" : "More than 6 hours since injury"} appears in the document's HTIG exclusion: "High-risk tetanus-prone wound where human tetanus immunoglobulin may be indicated (heavy contamination, devitalised tissue, burns, sepsis, or more than 6 hours to treatment). Refer the same day." Record why immunoglobulin is not indicated for this wound. If it may be, tick the high-risk box below and refer the same day.
+                  More than 6 hours since injury appears in the document's HTIG exclusion: "High-risk tetanus-prone wound where human tetanus immunoglobulin may be indicated (heavy contamination, devitalised tissue, burns, sepsis, or more than 6 hours to treatment). Refer the same day." Record why immunoglobulin is not indicated for this wound. If it may be, tick the high-risk box below and refer the same day.
                 </p>
                 <TextArea label="Why human tetanus immunoglobulin is not indicated" value={a.htigNotIndicatedReason} onChange={(v) => setA({ htigNotIndicatedReason: v })} rows={2} required placeholder="e.g. superficial graze, thoroughly irrigated, no devitalised tissue, immunisation up to date" />
               </div>
@@ -998,7 +1078,7 @@ export default function WoundCareClient() {
               />
             </div>
             {t.antibiotic === "flucloxacillin" && age !== null && age >= 10 && age < 18 && (
-              <p className="text-xs text-gray-600">The document states suspension quantities (100 mL, 140 mL) for the 2 to 9 year dose only. A patient of 10 or over who cannot swallow capsules has no stated quantity under this PGD: refer.</p>
+              <p className="text-xs text-gray-600">A patient aged 10 to 17 who cannot swallow capsules takes the same 500mg dose as 10 mL of the 250mg/5mL suspension four times daily: 200 mL for 5 days, 280 mL for 7 days. Check the volume against the strength before supply (50mg per mL).</p>
             )}
             <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
               <p className="text-xs font-medium text-gray-500">Quantity supplied (from the document's quantity row; nothing else can be recorded)</p>
@@ -1081,7 +1161,7 @@ export default function WoundCareClient() {
               <p>Outcome: {hasStopAlerts ? "NOT SUPPLIED, exclusion criteria met; patient referred" : t.patientDeclined ? "NOT SUPPLIED, patient declined" : `Supplied ${doseText?.medicine || t.antibiotic}, ${t.formulation || ""} ${t.courseDays ? `${t.courseDays} days` : ""}, quantity ${quantitySupplied || "not recorded"}, oral. Batch ${t.suppliedItemBatch || "not recorded"}, expiry ${t.suppliedItemExpiry || "not recorded"}.`}</p>
               <p>Wound: {a.woundType || "not recorded"}{isBite ? " (bite)" : ""}{a.heavilyContaminated ? ", heavily contaminated" : ""}; site {a.woundLocation || "not recorded"}; extent {a.woundSize || "not recorded"}; depth {a.woundDepth || "not recorded"}; injury {a.timeOfInjury || "not recorded"}. Signs of infection: {a.signsOfInfection.join(", ") || "none"}.</p>
               <p>Observations: temperature {a.temperature || "?"} C, pulse {a.pulse || "?"}, RR {a.respiratoryRate || "?"}, SpO2 {a.oxygenSaturation || "?"}%{band === "12+" ? `, systolic ${a.systolicBP || "?"}` : `, capillary refill ${a.capillaryRefill === "over-2s" ? "over 2 s" : a.capillaryRefill === "2s-or-less" ? "2 s or less" : "not measured"}`}, {a.alteredConsciousness ? "altered consciousness" : "alert"}.</p>
-              <p>Tetanus: {a.tetanusStatus || "not recorded"}; action: {a.tetanusAction || "not recorded"}.{a.htigNotIndicatedReason ? ` HTIG not indicated: ${a.htigNotIndicatedReason}.` : ""}</p>
+              <p>Tetanus: {a.tetanusStatus || "not recorded"}; action: {a.tetanusAction || "not recorded"}.{a.htigNotIndicatedReason ? ` HTIG not indicated: ${a.htigNotIndicatedReason}.` : ""}{arm === "co-amoxiclav" ? ` Arm 1 tetanus management: ${a.arm1TetanusManagement === "completed-and-recorded" ? `completed and recorded (${a.arm1TetanusManagementDetails || "details not recorded"})` : a.arm1TetanusManagement === "not-tetanus-prone" ? "wound not tetanus-prone" : a.arm1TetanusManagement === "not-completed" ? "NOT completed: referred" : "not recorded"}.` : ""}</p>
               <p>Antibiotic chosen and why: {t.antibioticRationale || "not recorded"}</p>
               {age !== null && age < 16 && (
                 <p>Consent from person with parental responsibility: {state.consentDetails.parentName || "not recorded"} ({state.consentDetails.parentRelationship || "not recorded"}).</p>

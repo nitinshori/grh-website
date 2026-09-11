@@ -29,7 +29,7 @@ export function BPHSummaryReport({ state, alerts }: BPHSummaryReportProps) {
           BPH, Tamsulosin Consultation
         </h2>
         <p className="text-xs text-gray-500 mt-1">
-          ePGD Consultation Record. Tamsulosin 400mcg MR capsules for Benign Prostatic Hyperplasia PGD, version 003, issued 11 September 2026
+          ePGD Consultation Record. Tamsulosin 400mcg MR capsules for Benign Prostatic Hyperplasia PGD, version 004, issued 11 September 2026
         </p>
       </div>
 
@@ -109,8 +109,41 @@ export function BPHSummaryReport({ state, alerts }: BPHSummaryReportProps) {
           value={state.medicalHistory.plannedCataractSurgery ? "Yes" : "No"}
         />
         <Row label="Hypersensitivity to tamsulosin" value={state.medicalHistory.hypersensitivity ? "Yes" : "No"} />
-        <Row label="Blood pressure today" value={state.medicalHistory.bloodPressure || "Not recorded"} />
-        <Row label="Uncontrolled hypertension" value={state.medicalHistory.uncontrolledHypertension ? "Yes" : "No"} />
+        <Row
+          label="Blood pressure lying (this supply)"
+          value={
+            state.medicalHistory.lyingSystolic !== null && state.medicalHistory.lyingDiastolic !== null
+              ? `${state.medicalHistory.lyingSystolic}/${state.medicalHistory.lyingDiastolic} mmHg`
+              : "Not recorded"
+          }
+        />
+        <Row
+          label="Blood pressure standing (this supply)"
+          value={
+            state.medicalHistory.standingSystolic !== null && state.medicalHistory.standingDiastolic !== null
+              ? `${state.medicalHistory.standingSystolic}/${state.medicalHistory.standingDiastolic} mmHg`
+              : "Not recorded"
+          }
+        />
+        <Row
+          label="Postural change in systolic pressure"
+          value={
+            state.medicalHistory.lyingSystolic !== null && state.medicalHistory.standingSystolic !== null
+              ? `${state.medicalHistory.lyingSystolic - state.medicalHistory.standingSystolic} mmHg${state.medicalHistory.lyingSystolic - state.medicalHistory.standingSystolic >= 20 ? " (20 or more: excluded)" : ""}`
+              : "Not recorded"
+          }
+        />
+        <Row
+          label="Blood pressure 160/100 or above (exclusion)"
+          value={
+            (state.medicalHistory.lyingSystolic !== null && state.medicalHistory.lyingSystolic >= 160) ||
+            (state.medicalHistory.lyingDiastolic !== null && state.medicalHistory.lyingDiastolic >= 100) ||
+            (state.medicalHistory.standingSystolic !== null && state.medicalHistory.standingSystolic >= 160) ||
+            (state.medicalHistory.standingDiastolic !== null && state.medicalHistory.standingDiastolic >= 100)
+              ? "Yes (excluded)"
+              : "No"
+          }
+        />
         <Row label="Neurological disease affecting bladder" value={state.medicalHistory.neurologicalBladderDisease ? "Yes" : "No"} />
         <Row label="History of syncope" value={state.medicalHistory.syncopeHistory ? "Yes" : "No"} />
         <Row label="Renal impairment (eGFR below 10)" value={state.medicalHistory.severeRenalImpairment ? "Yes" : "No"} />
@@ -181,7 +214,7 @@ export function BPHSummaryReport({ state, alerts }: BPHSummaryReportProps) {
                     : "Not recorded"
               }
             />
-            <Row label="Supplied under" value="Tamsulosin for BPH PGD v003, 11 September 2026" />
+            <Row label="Supplied under" value="Tamsulosin for BPH PGD v004, 11 September 2026" />
             <Row
               label="After food, preferably breakfast"
               value={state.medicineSupply.afterFood30mins ? "Yes" : "No"}
@@ -201,7 +234,7 @@ export function BPHSummaryReport({ state, alerts }: BPHSummaryReportProps) {
               label="Tamsulosin supplied"
               value={stopsExist ? "NOT SUPPLIED: exclusion criteria met (see clinical alerts above)" : "No"}
             />
-            <Row label="PGD" value="Tamsulosin for BPH PGD v003, 11 September 2026" />
+            <Row label="PGD" value="Tamsulosin for BPH PGD v004, 11 September 2026" />
           </>
         )}
       </div>

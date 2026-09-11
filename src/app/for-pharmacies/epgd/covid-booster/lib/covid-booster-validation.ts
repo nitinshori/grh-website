@@ -2,11 +2,11 @@ import type { CovidBoosterConsultationState } from "./covid-booster-types";
 import { validatePatientStep, validateConsentStep, validateSummaryStep } from "../../shared/types";
 import { intervalTooShort, nhsEligible } from "./covid-booster-clinical-logic";
 
-// Aligned to the COVID-19 Vaccination 2026/27 PGD version 007, issued 11 September 2026.
+// Aligned to the COVID-19 Vaccination 2026/27 PGD version 008, issued 11 September 2026.
 
 export function validateStep(state: CovidBoosterConsultationState, step: number): string | null {
   switch (step) {
-    // PGD v007 covers 12 years and over. This tool previously enforced 18,
+    // PGD v008 covers 12 years and over. This tool previously enforced 18,
     // which turned away patients the PGD authorises.
     case 0: {
       const base = validatePatientStep(state.patient, { minAge: 12 });
@@ -76,6 +76,9 @@ export function validateStep(state: CovidBoosterConsultationState, step: number)
         return "Answer whether there is a known hypersensitivity to polysorbate 80";
       if (!state.assessment.severeFebrilIllness)
         return "Answer whether the patient has an acute severe febrile illness today";
+      if (state.assessment.pregnant && !nhsEligible(state)) {
+        return "Pregnant and not in an NHS-eligible group (75 and over, care home resident or immunosuppressed): excluded under this PGD. Refer to the GP or maternity service.";
+      }
       return null;
 
     case 4:
@@ -106,6 +109,9 @@ export function validateStep(state: CovidBoosterConsultationState, step: number)
         (s.vaccineProduct === "comirnaty-xfg" || s.vaccineProduct === "comirnaty-lp81" || s.vaccineProduct === "spikevax-lp81")
       ) {
         return "Myocarditis or pericarditis after a previous mRNA dose: do not give a further mRNA dose under this PGD";
+      }
+      if (state.assessment.pregnant && s.vaccineProduct === "nuvaxovid-jn1") {
+        return "Pregnant: give an mRNA vaccine (Comirnaty XFG in preference). Nuvaxovid is not selected in pregnancy under this tool.";
       }
       if (state.assessment.capillaryLeakHistory && s.vaccineProduct === "spikevax-lp81") {
         return "History of capillary leak syndrome: Spikevax vaccination must be planned with appropriate medical experts, not given under this tool";

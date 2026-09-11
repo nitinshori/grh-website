@@ -16,7 +16,7 @@ import { HepABSummaryReport } from "./components/HepABSummaryReport"
 //
 // Aligned to the signed document: Hepatitis A and Hepatitis B Vaccination
 // (Havrix, Avaxim, Engerix B and Twinrix, for travel and lifestyle risk),
-// PGD version 007, issued 11 September 2026. Individuals aged 1 year and over.
+// PGD version 008, issued 11 September 2026. Individuals aged 1 year and over.
 //
 //   • Twinrix Adult (combined Hep A + Hep B, 16y and over)
 //   • Twinrix Paediatric (combined, 1 to 15y; standard schedule only)
@@ -129,6 +129,11 @@ export function HepABClient() {
   // ── Eligibility gating ─────────────────────────────────────────────
   const age = state.patient.age
   const isUnder16 = age !== null && age < 16
+  /** Gillick competence is offered as a consent basis from 12 to 15 years, as
+   *  in the other vaccine tools; below 12 the parental route is the only one
+   *  offered. The document sets no lower age for a Gillick assessment. */
+  const GILLICK_MIN_AGE = 12
+  const gillickOffered = age !== null && age >= GILLICK_MIN_AGE && age < 16
   const choice = state.eligibility.vaccineChoice
   const choiceHasHepA = HEP_A_PRODUCTS.includes(choice)
   const choiceHasHepB = HEP_B_PRODUCTS.includes(choice)
@@ -314,8 +319,12 @@ export function HepABClient() {
     const base = validateConsentStep(state.consent)
     if (base) return base
     if (isUnder16) {
-      if (state.travel.consentBasis !== "parental") return "Under 16: consent must be obtained from a person with parental responsibility"
-      if (!state.travel.consentGivenBy.trim()) return "Record the name and relationship of the person with parental responsibility who consented"
+      if (state.travel.consentBasis === "gillick" && !gillickOffered) return `Gillick competence is offered from ${GILLICK_MIN_AGE} years to 15 years; record consent from a person with parental responsibility for this child`
+      if (state.travel.consentBasis !== "parental" && state.travel.consentBasis !== "gillick") return "Under 16: consent must come from a person with parental responsibility, or from the young person where assessed as Gillick competent"
+      if (state.travel.consentBasis === "parental" && !state.travel.consentGivenBy.trim()) return "Record the name and relationship of the person with parental responsibility who consented"
+      if (state.travel.consentBasis === "gillick" && !state.travel.consentGivenBy.trim()) return "Record the basis of the Gillick competence assessment"
+    } else if (state.travel.consentBasis === "gillick") {
+      return "Aged 16 or over: the patient consents in their own right"
     } else if (!state.travel.consentBasis) {
       return "Record who gave consent"
     }
@@ -483,18 +492,24 @@ export function HepABClient() {
                 onChange={(v) => updateTravel("consentBasis", v as ConsentBasis)}
                 options={[
                   ...(isUnder16 ? [] : [{ value: "self", label: "The patient (16 and over)" }]),
-                  { value: "parental", label: "A person with parental responsibility (patient is a child)" },
+                  { value: "parental", label: "A person with parental responsibility (patient is under 16)" },
+                  ...(gillickOffered ? [{ value: "gillick", label: "The young person, assessed as Gillick competent (12 to 15 years)" }] : []),
                 ]}
                 required
               />
-              {state.travel.consentBasis === "parental" && (
+              {(state.travel.consentBasis === "parental" || state.travel.consentBasis === "gillick") && (
                 <TextInput
-                  label="Name and relationship of the person with parental responsibility"
+                  label={state.travel.consentBasis === "gillick" ? "Basis of the Gillick competence assessment" : "Name and relationship of the person with parental responsibility"}
                   value={state.travel.consentGivenBy}
                   onChange={(v) => updateTravel("consentGivenBy", v)}
-                  placeholder="e.g. Jane Smith, mother"
+                  placeholder={state.travel.consentBasis === "gillick" ? "Why the young person was judged competent" : "e.g. Jane Smith, mother. A parent accompanying a child does not automatically hold parental responsibility. Ask."}
                   required
                 />
+              )}
+              {isUnder16 && (
+                <p className="text-xs text-amber-900">
+                  Under 16: valid consent must come from a person with parental responsibility, or from the young person where you assess them as Gillick competent. Record which of the two applied.
+                </p>
               )}
               <p className="text-xs text-amber-900">
                 The patient (or parent) understands this is a private service and what it costs.

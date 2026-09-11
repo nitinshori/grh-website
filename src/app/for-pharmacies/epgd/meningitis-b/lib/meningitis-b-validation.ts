@@ -6,7 +6,7 @@ import {
   validateConsentStep,
   validateSummaryStep,
 } from "../../shared/types";
-import { calculateAgeInMonths, hasIndication, daysSince, isIncreasedRisk, minimumIntervalDays } from "./meningitis-b-clinical-logic";
+import { calculateAgeInMonths, hasIndication, daysSince, isIncreasedRisk, minimumIntervalDays, monthsBetween } from "./meningitis-b-clinical-logic";
 
 export function validateStep(step: number, state: MeningitiBConsultationState): string | null {
   const ageMonths = calculateAgeInMonths(state.patient.dateOfBirth);
@@ -72,30 +72,36 @@ export function validateStep(step: number, state: MeningitiBConsultationState): 
       if (!a.doseNumber) {
         return "Record which dose in the course this administration represents";
       }
-      if (a.product === "trumenba" && a.doseNumber === "booster-12-months") {
-        return "Booster at 12 months applies to the Bexsero infant course only";
+      if (a.product === "trumenba" && (a.doseNumber === "booster-12-months" || a.doseNumber === "booster-after-toddler-course")) {
+        return "Bexsero boosters do not apply to Trumenba: the routine schedule is 2 doses at 0 and 6 months, the increased-risk schedule 3 doses";
       }
       if (a.product === "trumenba" && a.trumenbaSchedule === "routine" && a.doseNumber === "3rd") {
         return "Trumenba routine schedule is 2 doses at 0 and 6 months";
       }
       if (a.product === "bexsero" && a.doseNumber === "3rd") {
-        return "Bexsero courses are 2 doses (plus a booster at 12 months for the infant course); select 1st, 2nd or Booster at 12 months";
+        return "Bexsero primary courses are 2 doses (plus a booster for a course started under 2 years); select 1st, 2nd or a booster";
       }
       if (a.product === "bexsero" && a.doseNumber === "booster-12-months" && ageMonths !== null && ageMonths < 12) {
-        return "The Bexsero booster is given at 12 months of age";
+        return "The Bexsero infant course booster is given from 12 months of age";
       }
       if (a.product === "bexsero" && a.doseNumber === "booster-12-months" && ageMonths !== null && ageMonths >= 24) {
-        return "Booster at 12 months is the Bexsero infant course booster (12 months to under 2 years). Aged 2 years and over: 2 doses at least 1 month apart; select 1st or 2nd dose.";
+        return "Booster at 12 months is the Bexsero infant course booster, given before the second birthday. Aged 2 years and over: 2 doses at least 1 month apart (1st or 2nd dose), or the booster 12 to 23 months after a primary course given at 12 to 23 months.";
+      }
+      if (a.product === "bexsero" && a.doseNumber === "booster-after-toddler-course" && ageMonths !== null && ageMonths < 24) {
+        return "The booster after a primary course given at 12 to 23 months is due 12 to 23 months after the second primary dose, so it falls from 2 years of age. Under 2 years, record the doses given in the first year and select the dose that completes the course.";
       }
       if (a.product === "bexsero" && ageMonths !== null && ageMonths >= 12 && ageMonths < 24) {
         if (!a.dosesInFirstYear) {
           return "Bexsero, 12 months to under 2 years: record how many doses were given in the first year";
         }
         if (a.dosesInFirstYear === "2" && a.doseNumber !== "booster-12-months") {
-          return "Two doses in the first year: this child needs the booster at 12 months only; select Booster at 12 months";
+          return "Two doses in the first year: this child needs a single booster (at least 2 months after the second primary dose, before the second birthday); select Booster at 12 months";
         }
-        if (a.dosesInFirstYear !== "2" && a.doseNumber === "booster-12-months") {
-          return "Fewer than 2 doses in the first year: 2 further doses at least 4 weeks apart; select 1st or 2nd dose";
+        if (a.dosesInFirstYear === "1" && a.doseNumber !== "2nd") {
+          return "One dose in the first year: one further dose at least 2 months after it completes the primary course (select 2nd dose); the booster follows 12 to 23 months after that dose";
+        }
+        if (a.dosesInFirstYear === "0" && a.doseNumber !== "1st" && a.doseNumber !== "2nd") {
+          return "No doses in the first year: 2 doses at least 2 months apart (select 1st or 2nd dose); the booster follows 12 to 23 months after the second dose";
         }
       }
       // Interval since the previous dose.
@@ -106,9 +112,28 @@ export function validateStep(step: number, state: MeningitiBConsultationState): 
         const since = daysSince(a.previousDoseDate);
         if (since === null) return "Previous dose date is not a valid date";
         if (since < 0) return "Previous dose date cannot be in the future";
-        const min = minimumIntervalDays(a.product, a.trumenbaSchedule, a.doseNumber);
+        const min = minimumIntervalDays(a.product, a.trumenbaSchedule, a.doseNumber, ageMonths);
         if (min && since < min.days) {
           return `Too soon: this dose is due ${min.label}. The previous dose was ${since} days ago; not before ${min.days} days.`;
+        }
+        if (a.product === "bexsero" && a.doseNumber === "booster-after-toddler-course") {
+          const ageAtPrevious = monthsBetween(state.patient.dateOfBirth, a.previousDoseDate);
+          if (ageAtPrevious !== null && (ageAtPrevious < 12 || ageAtPrevious >= 24)) {
+            return "This booster is for a child whose second primary dose was given at 12 to 23 months of age (Bexsero SmPC Table 1). The previous dose date puts that dose outside 12 to 23 months: check the history, or select Booster at 12 months for an infant course.";
+          }
+          const monthsSincePrevious = monthsBetween(a.previousDoseDate, new Date().toISOString().slice(0, 10));
+          if (monthsSincePrevious !== null && monthsSincePrevious > 23) {
+            return "More than 23 months have passed since the second primary dose, which is outside the SmPC booster interval of 12 to 23 months. This PGD does not authorise off-label use: refer to the GP or specialist.";
+          }
+        }
+        if (a.product === "bexsero" && a.doseNumber === "booster-12-months" && ageMonths !== null && ageMonths >= 12 && ageMonths < 24) {
+          const ageAtPrevious = monthsBetween(state.patient.dateOfBirth, a.previousDoseDate);
+          if (ageAtPrevious !== null && ageAtPrevious >= 12) {
+            return "Booster at 12 months is for two primary doses given in the first year. A second primary dose given at 12 months or later has its booster 12 to 23 months afterwards; select that booster from 2 years of age.";
+          }
+          if (ageAtPrevious !== null && ageAtPrevious < 6 && since < 183) {
+            return "Where the primary course was given at 2 to 5 months of age the booster is due at 12 to 15 months, at least 6 months after the second primary dose (Bexsero SmPC Table 1). Not before 183 days.";
+          }
         }
       }
       if (!a.vaccinationDate1) {
@@ -133,6 +158,12 @@ export function validateStep(step: number, state: MeningitiBConsultationState): 
         const exp = daysSince(a.expiryDate);
         if (exp === null) return "Expiry date is not a valid date";
         if (exp > 0) return "This batch has expired. Do not use it.";
+      }
+      if (a.product === "bexsero" && a.courseComplete && ageMonths !== null && ageMonths >= 12 && ageMonths < 24 && a.doseNumber === "2nd") {
+        return "A Bexsero primary course completed at 12 to 23 months is not complete with this dose: a booster is due 12 to 23 months after it (SmPC Table 1). Record the booster due date.";
+      }
+      if (a.product === "bexsero" && a.courseComplete && ageMonths !== null && ageMonths >= 12 && ageMonths < 24 && a.doseNumber === "1st") {
+        return "This is the first dose of a 2 dose primary course: the second dose is due at least 2 months after it. Record the next dose date.";
       }
       if (!a.courseComplete && !a.vaccinationDate2) {
         return "Book the next dose in the course at this appointment and record when it is due (or mark the course complete)";

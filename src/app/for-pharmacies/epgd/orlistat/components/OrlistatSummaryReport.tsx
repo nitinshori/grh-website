@@ -21,7 +21,7 @@ export function OrlistatSummaryReport({ state }: { state: OrlistatConsultationSt
         </h2>
         <p className="text-xs text-gray-500">Lipase inhibitor for weight management</p>
         <p className="text-xs text-gray-500">
-          Orlistat 120mg capsules PGD, version 003, issued 11 September 2026
+          Orlistat 120mg capsules PGD, version 004, issued 11 September 2026
         </p>
       </div>
 
@@ -93,12 +93,13 @@ export function OrlistatSummaryReport({ state }: { state: OrlistatConsultationSt
         <Row label="Warfarin" value={state.medications.takesWarfarin ? "Yes" : "No"} />
         <Row label="Other anticoagulant" value={state.medications.takesOtherAnticoagulant ? "Yes" : "No"} />
         <Row label="Levothyroxine" value={state.medications.takesLevothyroxine ? "Yes" : "No"} />
-        <Row label="Anti-epileptic medications" value={state.medications.takesAntiEpileptics ? "Yes" : "No"} />
+        <Row label="Antiepileptic medicines (exclusion)" value={state.medications.takesAntiEpileptics ? "Yes" : "No"} />
         <Row label="Ciclosporin" value={state.medications.takesCiclosporin ? "Yes" : "No"} />
         <Row label="Bile acid sequestrant" value={state.medications.takesBileAcidSequestrants ? "Yes" : "No"} />
         <Row label="Oral contraceptives" value={state.medications.takesOralContraceptives ? "Yes" : "No"} />
-        <Row label="HIV antiretrovirals" value={state.medications.takesHIVAntiretrovirals ? "Yes" : "No"} />
-        <Row label="Other significant interaction" value={state.medications.otherSignificantInteraction ? "Yes" : "No"} />
+        <Row label="HIV antiretrovirals (exclusion)" value={state.medications.takesHIVAntiretrovirals ? "Yes" : "No"} />
+        <Row label="Amiodarone (exclusion)" value={state.medications.takesAmiodarone ? "Yes" : "No"} />
+        <Row label="Other unmanageable SmPC interaction (exclusion)" value={state.medications.otherSignificantInteraction ? "Yes" : "No"} />
         <Row label="Other medications" value={state.medications.otherMedications || "None recorded"} />
         <Row label="Allergies" value={state.medications.allergies.trim() ? state.medications.allergies : state.medications.nkda ? "No known drug allergies (confirmed)" : NOT_RECORDED} />
       </div>

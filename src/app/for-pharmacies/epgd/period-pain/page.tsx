@@ -3,7 +3,7 @@ import { PgdPageActions } from "@/components/PgdPageActions";
 
 export const metadata = {
   title: "Period Pain ePGD | GRH Pharmacy",
-  description: "Patient Group Direction for primary dysmenorrhoea, naproxen or mefenamic acid, version 004, issued 11 September 2026",
+  description: "Patient Group Direction for primary dysmenorrhoea, naproxen or mefenamic acid, version 005, issued 11 September 2026",
 };
 
 export default function PeriodPainPage() {
@@ -16,7 +16,7 @@ export default function PeriodPainPage() {
             For registered pharmacy professionals only
           </p>
           <h1 className="text-3xl font-bold text-navy-900 mb-2">Period Pain Consultation</h1>
-          <p className="text-gray-600">Naproxen or Mefenamic acid for Period Pain (Dysmenorrhoea) PGD, version 004, issued 11 September 2026. Females aged 16 years and older; one cycle per supply.</p>
+          <p className="text-gray-600">Naproxen or Mefenamic acid for Period Pain (Dysmenorrhoea) PGD, version 005, issued 11 September 2026. Females aged 16 years and older; one cycle per supply.</p>
         </div>
       </div>
       <PeriodPainClient />

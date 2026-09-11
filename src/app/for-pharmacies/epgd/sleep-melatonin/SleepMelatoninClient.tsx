@@ -490,9 +490,32 @@ export default function SleepMelatoninClient() {
                 <Checkbox
                   label="Taking cimetidine, oestrogens (including combined contraceptives and HRT), or a quinolone antibiotic"
                   checked={state.contraindications.cyp1a2Inhibitor}
-                  onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "cyp1a2Inhibitor", value: v })}
-                  description="These raise melatonin levels. Counsel on increased drowsiness and consider referral instead."
+                  onChange={(v) => {
+                    dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "cyp1a2Inhibitor", value: v });
+                    if (!v) {
+                      dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "cyp1a2InhibitorFallsRisk", value: false });
+                      dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "cyp1a2InhibitorOtherSedative", value: false });
+                    }
+                  }}
+                  description="These raise melatonin levels. Counsel on increased drowsiness. Refer instead of supplying where either of the two points below also applies; otherwise supply may proceed with that counselling."
                 />
+                {state.contraindications.cyp1a2Inhibitor && (
+                  <div className="ml-6 space-y-3 border-l-2 border-blue-300 pl-4">
+                    <p className="text-xs font-semibold text-blue-900">Ask both. Either one means refer, do not supply.</p>
+                    <Checkbox
+                      label="At risk of falls"
+                      checked={state.contraindications.cyp1a2InhibitorFallsRisk}
+                      onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "cyp1a2InhibitorFallsRisk", value: v })}
+                      description="For example a fall in the last year, unsteadiness, or a walking aid. Refer."
+                    />
+                    <Checkbox
+                      label="Takes another sedating medicine"
+                      checked={state.contraindications.cyp1a2InhibitorOtherSedative}
+                      onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "cyp1a2InhibitorOtherSedative", value: v })}
+                      description="For example an opioid, a sedating antihistamine, a tricyclic antidepressant or a gabapentinoid. (A benzodiazepine, Z-drug or other hypnotic is already an exclusion above.) Refer."
+                    />
+                  </div>
+                )}
                 <Checkbox
                   label="Taking carbamazepine or rifampicin, or smokes"
                   checked={state.contraindications.cyp1a2Inducer}
@@ -509,7 +532,7 @@ export default function SleepMelatoninClient() {
         {state.currentStep === 4 && (
           <div className="space-y-4">
             <div className="space-y-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <h4 className="font-semibold text-sm text-blue-900">Supply details (PGD version 006, 11 September 2026)</h4>
+              <h4 className="font-semibold text-sm text-blue-900">Supply details (PGD version 007, 11 September 2026)</h4>
               <Row label="Product" value={state.prescription.product} />
               <Row label="Legal category" value="POM" />
               <Row label="Dose" value={state.prescription.dose} />

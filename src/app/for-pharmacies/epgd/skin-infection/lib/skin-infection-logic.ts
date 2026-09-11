@@ -8,13 +8,16 @@ import type {
  * Clinical decision logic for the Skin Infection ePGD.
  *
  * Two documents are enforced here, selected by state.variant:
- *   "skin-infection": Skin and Soft Tissue Infection PGD v006, issued
+ *   "skin-infection": Skin and Soft Tissue Infection PGD v007, issued
  *     11 September 2026. From 2 years; cellulitis from 12 years. Observations
  *     are AGE-BANDED (Appendix 1). Flucloxacillin may be supplied in pregnancy
  *     and breastfeeding; clarithromycin and doxycycline may not.
- *   "cellulitis": Cellulitis PGD v003, issued 11 September 2026. Adults 18 and
+ *   "cellulitis": Cellulitis PGD v004, issued 11 September 2026. Adults 18 and
  *     over, MILD cellulitis (Eron class I) of a limb or the trunk only. Adult
- *     sepsis thresholds. Pregnancy and breastfeeding exclude ALL THREE arms.
+ *     sepsis thresholds. Flucloxacillin may be supplied in pregnancy and
+ *     breastfeeding (decision 26, 11 September 2026); clarithromycin and
+ *     doxycycline may not. A 48-hour reassessment at the supplying pharmacy
+ *     is booked before the patient leaves (decision 28).
  */
 
 export function isCellulitisPgd(state: SkinInfectionConsultationState): boolean {
@@ -85,7 +88,7 @@ export function getObservationBreaches(state: SkinInfectionConsultationState): s
     if (a.alteredConsciousness) breaches.push("new confusion or drowsiness");
   } else {
     if (rr !== null && rr >= 22) breaches.push("respiratory rate 22 or above");
-    if (hr !== null && hr > 110) breaches.push("pulse above 110 at rest");
+    if (hr !== null && hr > 90) breaches.push("pulse above 90 at rest");
     if (sbp !== null && sbp < 100) breaches.push("systolic blood pressure below 100");
     if (a.alteredConsciousness) breaches.push("new confusion or drowsiness");
   }
@@ -381,18 +384,11 @@ export function getAllAlerts(state: SkinInfectionConsultationState): ClinicalAle
   }
 
   // ── Pregnancy and breastfeeding ──────────────────────────────────
-  if (cellulitisPgd) {
-    if (mh.pregnant || mh.breastfeeding) {
-      alerts.push({
-        code: "pregnancy-breastfeeding",
-        severity: "stop",
-        message: "Pregnancy or breastfeeding: excluded from the Cellulitis PGD",
-        detail: "All three arms of the Cellulitis PGD exclude pregnant and breastfeeding individuals. Refer.",
-      });
-    }
-  } else if (mh.pregnant || mh.breastfeeding) {
-    // Arm-specific under the skin-infection document: flucloxacillin MAY be
-    // supplied in pregnancy and breastfeeding; clarithromycin and doxycycline may not.
+  // Both documents: flucloxacillin MAY be supplied in pregnancy and
+  // breastfeeding where clinically indicated (Cellulitis PGD from decision 26,
+  // 11 September 2026, matching the Skin and Soft Tissue Infection PGD);
+  // clarithromycin and doxycycline may not.
+  if (mh.pregnant || mh.breastfeeding) {
     const which = [mh.pregnant ? "Pregnancy" : "", mh.breastfeeding ? "breastfeeding" : ""]
       .filter(Boolean)
       .join(" and ");
@@ -401,16 +397,18 @@ export function getAllAlerts(state: SkinInfectionConsultationState): ClinicalAle
         code: "pregnancy-arm",
         severity: "stop",
         message: `${which}: this arm is excluded. Refer`,
-        detail:
-          "Clarithromycin and doxycycline are excluded in pregnancy and breastfeeding. Flucloxacillin may be supplied in pregnancy and breastfeeding where clinically indicated. If the patient is penicillin allergic, refer.",
+        detail: cellulitisPgd
+          ? "The clarithromycin and doxycycline arms of the Cellulitis PGD exclude pregnant and breastfeeding individuals. Flucloxacillin may be supplied in pregnancy and breastfeeding where clinically indicated and there is no penicillin allergy. If the patient is penicillin allergic, refer."
+          : "Clarithromycin and doxycycline are excluded in pregnancy and breastfeeding. Flucloxacillin may be supplied in pregnancy and breastfeeding where clinically indicated. If the patient is penicillin allergic, refer.",
       });
     } else {
       alerts.push({
         code: "pregnancy-fluclox-ok",
         severity: "caution",
         message: `${which}: flucloxacillin may be supplied where clinically indicated`,
-        detail:
-          "The document permits flucloxacillin in pregnancy and breastfeeding where clinically indicated, in line with the Wound Care PGD. Clarithromycin and doxycycline are excluded in pregnancy and breastfeeding.",
+        detail: cellulitisPgd
+          ? "The Cellulitis PGD permits flucloxacillin in pregnancy and breastfeeding where clinically indicated (NICE NG141 first line in pregnancy; SmPC), matching the Skin and Soft Tissue Infection PGD. Record that the patient is pregnant or breastfeeding and the indication. Clarithromycin and doxycycline are excluded in pregnancy and breastfeeding."
+          : "The document permits flucloxacillin in pregnancy and breastfeeding where clinically indicated, in line with the Wound Care PGD. Clarithromycin and doxycycline are excluded in pregnancy and breastfeeding.",
       });
     }
   }
@@ -430,10 +428,10 @@ export function getAllAlerts(state: SkinInfectionConsultationState): ClinicalAle
       code: "cellulitis-review",
       severity: "caution",
       message: cellulitisPgd
-        ? "Mark the margin of the erythema and record the time"
+        ? "Mark the margin, record the time, and book the 48-hour reassessment at this pharmacy before the patient leaves"
         : "Mark the margins and book the in-person 48-hour review before the patient leaves",
       detail: cellulitisPgd
-        ? "Marking the margin and recording the time is an inclusion requirement, so that spread can be judged at review. Reassess within 48 hours; refer or escalate on no improvement, deterioration or unclear diagnosis."
+        ? "Marking the margin and recording the time, and booking a reassessment at 48 hours at the supplying pharmacy before the patient leaves, are inclusion requirements. The reassessment is in person, by a pharmacist at this pharmacy: a phone call is not sufficient. Record at the reassessment whether the erythema is within or beyond the mark, the temperature, whether pain has improved, and the decision. Spread beyond the mark, no improvement, deterioration or an unclear diagnosis is a same-day referral. If the patient does not attend, contact them the same day; if they cannot be reached, record the attempt and inform the GP."
         : "Mark the edge of the erythema with a skin-safe pen and record that you did. The review at 48 hours is in person, by a pharmacist at this pharmacy, booked as an appointment before the patient leaves: a phone call is not sufficient. Record at the review whether the erythema is inside or beyond the mark, the temperature, whether pain has improved, and the decision. Spread beyond the mark is a same-day referral, not a change of antibiotic. If the patient does not attend, contact them the same day; if you cannot reach them, record the attempt and inform the GP.",
     });
   }
@@ -684,7 +682,7 @@ export function calculateDoseRecommendation(
   const extensive = isMoreExtensiveInfection(a);
   const weight = num(a.weightKg);
 
-  // ── Cellulitis PGD v003: adults, mild cellulitis of a limb or the trunk ──
+  // ── Cellulitis PGD v004: adults, mild cellulitis of a limb or the trunk ──
   if (cellulitisPgd) {
     if (choice === "flucloxacillin")
       return {
@@ -718,7 +716,7 @@ export function calculateDoseRecommendation(
     };
   }
 
-  // ── Skin and Soft Tissue Infection PGD v006 ──────────────────────
+  // ── Skin and Soft Tissue Infection PGD v007 ──────────────────────
   if (choice === "flucloxacillin") {
     // The document states single doses, not ranges: 250mg four times daily
     // for ages 2 to 9 (5 mL of the 250mg/5mL suspension) and 500mg four

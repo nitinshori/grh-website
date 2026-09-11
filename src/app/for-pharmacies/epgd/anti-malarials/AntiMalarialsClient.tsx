@@ -217,7 +217,7 @@ export function AntiMalarialsClient() {
     );
   }, [state.medicalHistory, state.medications, state.travelAssessment, state.medicineSelection.selectedMedicine]);
 
-  // PGD v009: only arms that are not excluded for this patient can be selected.
+  // PGD v010: only arms that are not excluded for this patient can be selected.
   const eligibleOptions = useMemo(() => {
     return getEligibleMedicineOptions(
       state.medicalHistory,
@@ -475,9 +475,9 @@ export function AntiMalarialsClient() {
               required
             />
             <p className="text-xs text-gray-600">
-              Weight determines the product strength and dose: atovaquone/proguanil adult tablet only over 40kg
-              (paediatric 62.5mg/25mg tablets from 11 to 40kg); mefloquine one tablet weekly over 45kg, with divided
-              doses below that. Decimals are accepted (for example 40.5). {WEIGHT_BAND_CONVENTION}
+              Weight determines the product strength and dose: atovaquone/proguanil adult tablet from 40kg
+              (paediatric 62.5mg/25mg tablets from 11 to 39.9kg); mefloquine one tablet weekly from 45kg, with divided
+              doses below that. Decimals are accepted (for example 39.5). {WEIGHT_BAND_CONVENTION}
             </p>
 
             <Checkbox

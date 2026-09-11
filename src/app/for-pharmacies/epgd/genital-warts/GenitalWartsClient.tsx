@@ -23,6 +23,8 @@ import {
   fixedQuantity,
   addDays,
   REVIEW_INTERVAL_DAYS,
+  MAX_SUPPLIES,
+  REVIEW_BEFORE_SUPPLY,
   type GenitalWartsConsultationState,
 } from "./lib/genital-warts-types";
 import {
@@ -470,8 +472,8 @@ export function GenitalWartsClient() {
                   }))
                 }
                 options={[
-                  { value: "solution", label: "0.5% solution, 15 mL bottle" },
-                  { value: "cream", label: "0.15% cream, 5 g tube" },
+                  { value: "solution", label: "0.5% solution, 3 mL bottle (Warticon) or 3.5 mL bottle (Condyline)" },
+                  { value: "cream", label: "0.15% cream, 5 g tube (Warticon)" },
                 ]}
                 required
               />
@@ -501,14 +503,14 @@ export function GenitalWartsClient() {
 
             <div className="grid sm:grid-cols-2 gap-4">
               <NumberInput
-                label={isPodo ? "Treatment cycle this supply is for (1 to 4)" : "Dispensing number in this course (1 to 4)"}
+                label={isPodo ? "Pack number in this course (1 covers the course; 2 only at the review after 2 cycles)" : "Dispensing number in this course (1 to 4)"}
                 value={state.treatment.supplyNumber}
                 onChange={(v) => updateTreatment("supplyNumber", v)}
                 min={1}
-                max={4}
+                max={isPodo ? MAX_SUPPLIES.podophyllotoxin : MAX_SUPPLIES.imiquimod}
                 required
               />
-              {state.treatment.supplyNumber !== null && state.treatment.supplyNumber >= 3 && (
+              {state.treatment.agent && state.treatment.supplyNumber !== null && state.treatment.supplyNumber >= REVIEW_BEFORE_SUPPLY[state.treatment.agent] && (
                 <SelectInput
                   label={isPodo ? "Outcome of the review after 2 cycles" : "Outcome of the 8-week review"}
                   value={state.treatment.priorReviewOutcome}
@@ -519,7 +521,7 @@ export function GenitalWartsClient() {
                     )
                   }
                   options={[
-                    { value: "persisting", label: "Warts persist: continue treatment" },
+                    { value: "persisting", label: isPodo ? "Warts persist: continue treatment (second pack supplied at this review)" : "Warts persist: continue treatment" },
                     { value: "cleared", label: "Complete clearance: stop treatment (no supply)" },
                   ]}
                   required

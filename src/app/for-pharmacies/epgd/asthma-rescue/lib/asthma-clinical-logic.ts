@@ -1,9 +1,9 @@
-// ─── Asthma Rescue Clinical Logic (PGD v006, 11 September 2026) ───
+// ─── Asthma Rescue Clinical Logic (PGD v007, 11 September 2026) ───
 
 import type { AsthmaConsultationState } from "./asthma-types";
 import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
 
-export const MAX_PREDNISOLONE_TABLETS = 70;
+export const MAX_PREDNISOLONE_TABLETS = 40; // 40mg daily (eight 5mg tablets) for 5 days: the only regimen under the PGD
 
 /** Acute severe or life-threatening features (both arms): any one excludes. */
 export function acuteSevereFeatures(state: AsthmaConsultationState): string[] {
@@ -314,8 +314,8 @@ export function prednisoloneTabletCount(doseMg: string, days: string): number | 
 export const SALBUTAMOL_RECOMMENDATION: DoseRecommendation = {
   medicine: "Salbutamol 100mcg metered-dose inhaler (MDI), inhalation with or without spacer",
   dose: "2 to 4 puffs as required for acute symptom relief; initial dose 2 to 4 puffs inhaled immediately",
-  frequency: "May repeat after 15 to 30 minutes if inadequate response. Use a spacer in less experienced patients.",
-  duration: "1 MDI inhaler (200 doses). As needed during the acute exacerbation.",
+  frequency: "May repeat after 15 to 30 minutes if inadequate response. Use a spacer in less experienced patients. Maximum 8 puffs in 24 hours under this PGD; a need for more than this, for relief more often than every 4 hours, or for the reliever on most days is a same-day GP or urgent care referral. In an acute attack up to 10 puffs through a spacer, one puff at a time, may be taken while help is sought; 10 puffs through a spacer with no relief is an emergency: call 999.",
+  duration: "1 MDI inhaler (200 doses). As needed during the acute exacerbation, within the 8 puffs in 24 hours maximum; no more than one rescue course in any 12 months under this PGD.",
   reason: "Acute symptom relief in an acute exacerbation of diagnosed asthma",
 };
 
@@ -339,12 +339,12 @@ export function prednisoloneRecommendation(state: AsthmaConsultationState): Dose
   return {
     medicine: "Prednisolone 5mg tablets, oral",
     dose: ms.prednisoloneDoseMg
-      ? `${ms.prednisoloneDoseMg}mg daily (${perDay} tablets a day) as a single dose or in divided doses`
-      : "40 to 50mg daily as a single dose or in divided doses",
+      ? `${ms.prednisoloneDoseMg}mg once daily (${perDay} tablets a day), taken as a single dose in the morning`
+      : "40mg once daily (eight 5mg tablets), taken as a single dose in the morning",
     frequency: "May be taken with food to reduce GI upset",
     duration: ms.prednisoloneDays
       ? `${ms.prednisoloneDays} days; ${tablets ?? "?"} tablets of 5mg`
-      : "5 to 7 days for acute exacerbation",
+      : "5 days; 40 tablets of 5mg",
     reason: "Moderate exacerbation with incomplete response to salbutamol",
   };
 }

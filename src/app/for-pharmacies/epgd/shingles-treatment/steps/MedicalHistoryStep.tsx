@@ -110,17 +110,8 @@ export const MedicalHistoryStep: React.FC<MedicalHistoryStepProps> = ({
               label="Patient is breastfeeding"
               checked={medicalHistory.breastfeeding}
               onChange={(v) => handleChange('breastfeeding', v)}
-              description="Caution where sores are elsewhere than the breast; exclusion where there are sores on the breast."
+              description="Excluded: refer to a prescriber. NICE CKS advises specialist advice before antiviral treatment in a breastfeeding woman."
             />
-
-            {medicalHistory.breastfeeding && (
-              <Checkbox
-                label="Shingles lesions on the breast"
-                checked={medicalHistory.breastLesions}
-                onChange={(v) => handleChange('breastLesions', v)}
-                description="Excluded: refer."
-              />
-            )}
           </div>
         </div>
 
@@ -128,7 +119,7 @@ export const MedicalHistoryStep: React.FC<MedicalHistoryStepProps> = ({
         <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-4">
           <h3 className="font-semibold text-yellow-900 mb-1">Renal and hepatic function</h3>
           <p className="text-xs text-yellow-900 mb-3">
-            The PGD does not operate a renal dosing ladder. Aciclovir: not below eGFR 30. Valaciclovir and famciclovir: not below eGFR 60. Below the threshold, refer. Where renal function is unknown and the patient is elderly or has risk factors, refer rather than assume.
+            The PGD does not operate a renal dosing ladder. Aciclovir: not below eGFR 30. Valaciclovir and famciclovir: not below eGFR 60. Below the threshold, refer. Where renal function is unknown and the patient is elderly (65 or over) or has risk factors, refer rather than assume.
           </p>
 
           <div className="space-y-4">

@@ -33,7 +33,7 @@ export default function HerpesToolPage() {
           <h1 className="text-2xl sm:text-3xl font-bold text-navy-900">Herpes Management</h1>
           <p className="text-sm text-gray-600 mt-1">
             Aciclovir 400 mg tablets or valaciclovir 500 mg tablets for genital herpes (HSV-1 and HSV-2), patients aged 16 and over.
-            Genital Herpes Management PGD, version 004, issued 11 September 2026.
+            Genital Herpes Management PGD, version 005, issued 11 September 2026.
           </p>
         </div>
 
@@ -82,13 +82,13 @@ export default function HerpesToolPage() {
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
           <h3 className="font-semibold text-amber-900 mb-2">In the meantime</h3>
           <p className="text-amber-900 text-sm">
-            Please refer to the signed Genital Herpes Management PGD (version 004, issued 11 September 2026) for clinical guidance and supply under it on paper.
+            Please refer to the signed Genital Herpes Management PGD (version 005, issued 11 September 2026) for clinical guidance and supply under it on paper.
           </p>
         </div>
 
         {/* Disclaimer */}
         <div className="mt-8 text-center">
-          <p className="text-[11px] text-gray-400 max-w-2xl mx-auto">No electronic consultation tool exists yet for this PGD. Any supply of aciclovir or valaciclovir for genital herpes must be made on paper under the signed Genital Herpes Management PGD (version 004).</p>
+          <p className="text-[11px] text-gray-400 max-w-2xl mx-auto">No electronic consultation tool exists yet for this PGD. Any supply of aciclovir or valaciclovir for genital herpes must be made on paper under the signed Genital Herpes Management PGD (version 005).</p>
         </div>
       </div>
     </div>

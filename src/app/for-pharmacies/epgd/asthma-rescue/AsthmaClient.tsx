@@ -428,7 +428,7 @@ export default function AsthmaClient() {
               placeholder="e.g., hypertension, diabetes, cardiac conditions"
             />
             <div className="pt-2 border-t border-gray-200">
-              <p className="text-sm font-medium text-navy-900 mb-2">Salbutamol cautions (PGD v006)</p>
+              <p className="text-sm font-medium text-navy-900 mb-2">Salbutamol cautions (PGD v007)</p>
               <div className="space-y-2">
                 <Checkbox label="Cardiovascular disease" checked={state.medicalHistory.cardiovascularDisease} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "cardiovascularDisease", value: v })} description="Beta-2 agonists can increase heart rate and blood pressure" />
                 <Checkbox label="Diabetes mellitus" checked={state.medicalHistory.diabetes} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "diabetes", value: v })} description="Salbutamol: monitor blood glucose. Prednisolone: can increase blood glucose; monitor BM and adjust diabetes medication if needed" />
@@ -439,7 +439,7 @@ export default function AsthmaClient() {
               </div>
             </div>
             <div className="pt-2 border-t border-gray-200">
-              <p className="text-sm font-medium text-navy-900 mb-2">Prednisolone exclusions (PGD v006)</p>
+              <p className="text-sm font-medium text-navy-900 mb-2">Prednisolone exclusions (PGD v007)</p>
               <div className="space-y-2">
                 <Checkbox label="Systemic infection not treated with appropriate antimicrobials" checked={state.medicalHistory.systemicInfectionUntreated} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "systemicInfectionUntreated", value: v })} description="Exclusion for prednisolone" />
                 <Checkbox label="Vaccination with live vaccines during treatment" checked={state.medicalHistory.liveVaccineDuringTreatment} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "liveVaccineDuringTreatment", value: v })} description="Exclusion for prednisolone" />
@@ -448,7 +448,7 @@ export default function AsthmaClient() {
               </div>
             </div>
             <div className="pt-2 border-t border-gray-200">
-              <p className="text-sm font-medium text-navy-900 mb-2">Prednisolone cautions (PGD v006)</p>
+              <p className="text-sm font-medium text-navy-900 mb-2">Prednisolone cautions (PGD v007)</p>
               <div className="space-y-2">
                 <Checkbox label="Osteoporosis or risk factors" checked={state.medicalHistory.osteoporosis} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "osteoporosis", value: v })} description="Short-term treatment risk is low but inform patient" />
                 <Checkbox label="Peptic ulcer disease or GI upset" checked={state.medicalHistory.pepticUlcer} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "pepticUlcer", value: v })} description="Consider gastroprotection" />
@@ -604,7 +604,7 @@ export default function AsthmaClient() {
                     value: v,
                   })
                 }
-                description="Inhalation via MDI, with or without spacer. As needed during the acute exacerbation."
+                description="Inhalation via MDI, with or without spacer. As needed during the acute exacerbation, maximum 8 puffs in 24 hours under this PGD."
               />
               {ms.salbutamol100mcgPMDI && (
                 <div className="ml-6 space-y-2">
@@ -627,7 +627,7 @@ export default function AsthmaClient() {
                     }
                   />
                   <Checkbox
-                    label="Patient understands: if symptoms do not improve within 15 to 30 minutes of salbutamol use, seek emergency medical attention"
+                    label="Salbutamol limits explained: maximum 8 puffs in 24 hours under this PGD; a need for more than this, for relief more often than every 4 hours, or for the reliever on most days is a same-day GP or urgent care referral. In an acute attack up to 10 puffs through a spacer, one puff at a time, while help is sought; 10 puffs through a spacer with no relief is 999"
                     checked={ms.maxEightPuffsDailyUnderstood}
                     onChange={(v) =>
                       dispatch({
@@ -662,10 +662,14 @@ export default function AsthmaClient() {
               <Checkbox
                 label="Supply Prednisolone 5mg tablets"
                 checked={ms.prednisolone5mg}
-                onChange={(v) =>
-                  dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "prednisolone5mg", value: v })
-                }
-                description="Moderate exacerbation with incomplete response to salbutamol only. Oral; may be taken with food to reduce GI upset."
+                onChange={(v) => {
+                  dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "prednisolone5mg", value: v });
+                  // One regimen under the PGD: 40mg once daily for 5 days, 40 tablets of 5mg
+                  dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "prednisoloneDoseMg", value: v ? "40" : "" });
+                  dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "prednisoloneDays", value: v ? "5" : "" });
+                  dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "prednisoloneTablets", value: v ? prednisoloneTabletCount("40", "5") : null });
+                }}
+                description="Moderate exacerbation with incomplete response to salbutamol only. Oral; 40mg once daily as a single morning dose for 5 days; may be taken with food to reduce GI upset."
               />
               {ms.prednisolone5mg && (
                 <div className="ml-6 space-y-3">
@@ -677,8 +681,7 @@ export default function AsthmaClient() {
                       dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "prednisoloneTablets", value: prednisoloneTabletCount(v, ms.prednisoloneDays) });
                     }}
                     options={[
-                      { value: "40", label: "40mg daily (EIGHT tablets a day), typical" },
-                      { value: "50", label: "50mg daily (TEN tablets a day)" },
+                      { value: "40", label: "40mg once daily, single morning dose (EIGHT tablets a day): the only dose under this PGD" },
                     ]}
                     required
                   />
@@ -690,9 +693,7 @@ export default function AsthmaClient() {
                       dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "prednisoloneTablets", value: prednisoloneTabletCount(ms.prednisoloneDoseMg, v) });
                     }}
                     options={[
-                      { value: "5", label: "5 days" },
-                      { value: "6", label: "6 days" },
-                      { value: "7", label: "7 days" },
+                      { value: "5", label: "5 days: the only course length under this PGD" },
                     ]}
                     required
                   />
@@ -701,8 +702,8 @@ export default function AsthmaClient() {
                     value={ms.prednisoloneTablets}
                     onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "prednisoloneTablets", value: v })}
                     min={1}
-                    max={70}
-                    unit={tablets !== null ? `(course needs ${tablets}; maximum 70. Eight to ten tablets is one day, not a course)` : "(maximum 70: 50mg daily for 7 days)"}
+                    max={40}
+                    unit="(40 tablets: 40mg daily is eight tablets a day, for 5 days. Eight tablets is one day, not a course)"
                     required
                   />
                   <TextInput
@@ -776,10 +777,16 @@ export default function AsthmaClient() {
               onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "emergencyIfNoImprovement", value: v })}
               required
             />
+            <Checkbox
+              label="Do not use more than 8 puffs in 24 hours. If you need it more often than every 4 hours, or on most days, see your GP the same day. In an asthma attack take up to ten puffs through a spacer, one puff at a time, while help is sought; if ten puffs give no relief, call 999"
+              checked={state.counselling.salbutamolLimits}
+              onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "salbutamolLimits", value: v })}
+              required={state.medicineSupply.salbutamol100mcgPMDI}
+            />
             {state.medicineSupply.prednisolone5mg && (
               <>
                 <Checkbox
-                  label="Take the full course of prednisolone as prescribed, even if symptoms improve; do not stop prednisolone abruptly"
+                  label="Take the full 5 day course of prednisolone (eight 5mg tablets once each morning), even if symptoms improve; do not stop prednisolone abruptly"
                   checked={state.counselling.prednisoloneFullCourse}
                   onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "prednisoloneFullCourse", value: v })}
                   required
@@ -983,7 +990,7 @@ export default function AsthmaClient() {
     };
   }, [state, hardStops, alerts, __pharmProfile]);
 
-  // Advice given and decision reached for an excluded patient (PGD v006:
+  // Advice given and decision reached for an excluded patient (PGD v007:
   // Actions if patient is excluded or declines treatment). Shown on any step
   // where a stop is present, alongside the Save as not supplied button.
   const exclusionOutcomeBlock = hardStops ? (

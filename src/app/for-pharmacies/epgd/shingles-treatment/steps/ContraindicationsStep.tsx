@@ -109,13 +109,13 @@ export const ContraindicationsStep: React.FC<ContraindicationsStepProps> = ({
         {/* Clinical Decision Support */}
         {blockingAlerts.length === 0 && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 className="font-semibold text-blue-900 mb-3">Refer rather than supply (PGD v006):</h3>
+            <h3 className="font-semibold text-blue-900 mb-3">Refer rather than supply (PGD v007):</h3>
             <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
               <li>Ophthalmic involvement: same day ophthalmology. Head or neck involvement: same day referral or specialist advice</li>
               <li>Ramsay Hunt features, meningitis, encephalitis or myelitis signs, sepsis, systemic illness</li>
               <li>Disseminated rash or rash crossing the midline</li>
               <li>Severe immunosuppression (Green Book chapter 28a)</li>
-              <li>Pregnancy known or suspected; breastfeeding with sores on the breast</li>
+              <li>Pregnancy known or suspected; breastfeeding</li>
               <li>Rash onset more than 7 days ago, or no treatment window criterion met</li>
               <li>eGFR below the threshold for the agent (aciclovir 30; valaciclovir and famciclovir 60), or unknown with risk factors</li>
               <li>Hypersensitivity, previous DRESS, excluded interacting medicines, unable to swallow, antiviral prophylaxis, neurological condition, dehydration risk, failed antiviral this episode</li>

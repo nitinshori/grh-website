@@ -79,7 +79,7 @@ export function HayfeverSummaryReport({
           Hayfever (Prescription Strength), Consultation Record
         </h2>
         <p className="text-gray-500">Get Real Health ePGD Consultation Tool</p>
-        <p className="text-gray-500">Fexofenadine and/or Dymista for Allergic Rhinitis PGD, version 004, issued 11 September 2026</p>
+        <p className="text-gray-500">Fexofenadine and/or Dymista for Allergic Rhinitis PGD, version 005, issued 11 September 2026</p>
       </div>
 
       {hasStops && (
@@ -200,14 +200,14 @@ export function HayfeverSummaryReport({
         items={[
           ["Allergen avoidance measures discussed", state.counselling.allergenAvoidance],
           ["Correct nasal spray technique advised (Dymista)", state.counselling.nasalSprayTechnique],
-          ["Effectiveness timeline explained (Dymista: assess after 2 to 4 weeks; fexofenadine: refer if persisting beyond 7 days or worsening)", state.counselling.effectivenessTimeline],
+          ["Effectiveness timeline explained (Dymista: assess after 2 to 4 weeks; fexofenadine: refer if persisting beyond one month of regular use or worsening)", state.counselling.effectivenessTimeline],
           ["Combination therapy rationale explained", state.counselling.combinationRationale],
           ["Wraparound sunglasses recommended", state.counselling.wrapsunglasses],
           ["Pollen forecast checking advised", state.counselling.pollenForecastAdvice],
           ["Avoid alcohol and other sedating antihistamines (fexofenadine)", state.counselling.alcoholSedatingAdvice],
           ["Non-sedating but occasional drowsiness may still occur (fexofenadine)", state.counselling.drowsinessAdvice],
           ["Possible side effects and ongoing review if used long-term (Dymista)", state.counselling.sideEffectsAdvice],
-          ["Follow-up advice: seek medical advice if symptoms worsen rapidly or significantly, do not improve in 3 to 4 weeks, or systemically very unwell", state.counselling.followUpAdvice],
+          ["Follow-up advice: seek medical advice if symptoms worsen rapidly or significantly, persist beyond one month of regular use (fexofenadine) or do not improve after 2 to 4 weeks of regular use (Dymista), or systemically very unwell", state.counselling.followUpAdvice],
           ["Patient information leaflet supplied", state.counselling.pilSupplied],
         ]}
       />

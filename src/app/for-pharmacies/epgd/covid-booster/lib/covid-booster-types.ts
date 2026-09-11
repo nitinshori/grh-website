@@ -1,17 +1,17 @@
 import { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/types";
 
 export interface CovidBoosterAssessment {
-  /** PGD v007 covers 12 years and over, not 18 and over. */
+  /** PGD v008 covers 12 years and over, not 18 and over. */
   ageConfirmed: boolean;
   previousCovidVaccine: boolean;
-  /** Date of the previous COVID-19 vaccine dose, where known (PGD v007 records row). */
+  /** Date of the previous COVID-19 vaccine dose, where known (PGD v008 records row). */
   previousDoseDate: string;
   /** Date not known: the individual states the last dose was more than 3 months ago. Printed on the record. */
   previousDoseDateUnknown: boolean;
   timelinessEligible: boolean;
   /** Under 3 months since the last dose but a shorter interval is specifically advised in national guidance for this individual. */
   shorterIntervalNationalGuidance: boolean;
-  /** PGD v007 inclusion: NHS entitlement. */
+  /** PGD v008 inclusion: NHS entitlement. */
   nhsStatus: '' | 'not-eligible' | 'eligible-prefers-private';
   /** Resident in a care home for older adults (NHS-eligible cohort). */
   careHomeResident: boolean;
@@ -36,7 +36,7 @@ export interface CovidBoosterAssessment {
   /** Caution: history of capillary leak syndrome (Spikevax). */
   capillaryLeakHistory: boolean;
   /**
-   * Needed for two separate rules in PGD v007: a primary course in someone
+   * Needed for two separate rules in PGD v008: a primary course in someone
    * unvaccinated AND immunosuppressed is excluded, and Comirnaty XFG must be
    * given in preference to LP.8.1 for anyone immunosuppressed or aged 75+.
    */
@@ -47,7 +47,7 @@ export interface CovidBoosterAssessment {
  * The product actually given. v003 of this tool recorded none of this: no
  * product, no batch number, no expiry, no site. A recall could not have been
  * actioned from these records, and nothing distinguished Comirnaty XFG from
- * Comirnaty LP.8.1, which is the whole point of the v004 to v007 changeover.
+ * Comirnaty LP.8.1, which is the whole point of the v004 to v008 changeover.
  */
 export type CovidVaccineProduct =
   | ''
@@ -64,7 +64,7 @@ export interface CovidBoosterSupply {
   administrationTime: string;
   /** Required when Comirnaty LP.8.1 is given in place of XFG. */
   lp81FormulationExplained: boolean;
-  /** Other vaccine given at the same visit and its site (PGD v007: record the site of each). */
+  /** Other vaccine given at the same visit and its site (PGD v008: record the site of each). */
   coAdministeredVaccine: string;
   /** Observed for 15 minutes after vaccination (required by the PGD where there is a history of allergy or previous vaccine reaction). */
   observedFifteenMinutes: boolean;
@@ -72,7 +72,7 @@ export interface CovidBoosterSupply {
   adverseReaction: string;
   adverseReactionAction: string;
   yellowCardSubmitted: boolean;
-  /** PGD v007 consent block, under 16 only. */
+  /** PGD v008 consent block, under 16 only. */
   consentBasis: '' | 'parental' | 'gillick';
   parentName: string;
   parentRelationship: string;
@@ -112,7 +112,7 @@ export interface CovidBoosterCounselling {
   explainedObservationPeriod: boolean;
   discussedSeriousReactions: boolean;
   providedWrittenInfo: boolean;
-  /** PGD v007 counselling: report any suspected side effect via the Yellow Card scheme. */
+  /** PGD v008 counselling: report any suspected side effect via the Yellow Card scheme. */
   explainedYellowCard: boolean;
 }
 

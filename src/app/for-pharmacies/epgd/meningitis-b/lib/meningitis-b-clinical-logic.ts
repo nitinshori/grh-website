@@ -14,6 +14,17 @@ export function calculateAgeInMonths(dob: string): number | null {
   return months;
 }
 
+/** Whole months between two ISO dates (from -> to). Null when either is blank or invalid. */
+export function monthsBetween(fromIso: string, toIso: string): number | null {
+  if (!fromIso || !toIso) return null;
+  const a = new Date(fromIso);
+  const b = new Date(toIso);
+  if (isNaN(a.getTime()) || isNaN(b.getTime())) return null;
+  let months = (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth());
+  if (b.getDate() < a.getDate()) months--;
+  return months;
+}
+
 /** Whole days since an ISO date. Null when blank or invalid. */
 export function daysSince(iso: string): number | null {
   if (!iso) return null;
@@ -39,11 +50,18 @@ export function isIncreasedRisk(state: MeningitiBConsultationState): boolean {
 export function minimumIntervalDays(
   product: "bexsero" | "trumenba" | "",
   trumenbaSchedule: "routine" | "increased-risk" | "",
-  doseNumber: "1st" | "2nd" | "3rd" | "booster-12-months" | ""
+  doseNumber: "1st" | "2nd" | "3rd" | "booster-12-months" | "booster-after-toddler-course" | "",
+  ageMonths: number | null = null
 ): { days: number; label: string } | null {
   if (product === "bexsero") {
-    if (doseNumber === "2nd") return { days: 28, label: "at least 4 weeks (1 month) after the 1st dose" };
+    if (doseNumber === "2nd") {
+      // Bexsero SmPC Table 1: primary doses not less than 2 months apart at 12 to 23 months; the PGD's
+      // infant row and the 2 years and over row use at least 4 weeks / 1 month.
+      if (ageMonths !== null && ageMonths >= 12 && ageMonths < 24) return { days: 61, label: "at least 2 months after the 1st dose (Bexsero SmPC, 12 to 23 months)" };
+      return { days: 28, label: "at least 4 weeks (1 month) after the 1st dose" };
+    }
     if (doseNumber === "booster-12-months") return { days: 61, label: "at least 2 months after the last primary dose, at 12 months of age" };
+    if (doseNumber === "booster-after-toddler-course") return { days: 365, label: "12 to 23 months after the second primary dose (Bexsero SmPC, primary course given at 12 to 23 months)" };
     return null;
   }
   if (product === "trumenba") {
@@ -80,9 +98,9 @@ export function getScheduleText(product: "bexsero" | "trumenba" | "", ageMonths:
       return "Bexsero, infant under 12 months outside the NHS programme: 2 doses at least 4 weeks apart, followed by a booster at 12 months. 0.5 mL intramuscular into the anterolateral thigh.";
     }
     if (ageMonths < 24) {
-      return "Bexsero, 12 months to under 2 years who had fewer than 2 doses in the first year: 2 further doses at least 4 weeks apart. 0.5 mL intramuscular; anterolateral thigh at 1 year and under, deltoid thereafter.";
+      return "Bexsero, 12 months to under 2 years (SmPC Table 1), according to the doses given in the first year: none, 2 doses at least 2 months apart followed by a booster 12 to 23 months after the second dose; one, one further dose at least 2 months after it to complete the primary course, followed by the same booster 12 to 23 months after that dose; two, a single booster dose at least 2 months after the second primary dose and before the second birthday. 0.5 mL intramuscular; anterolateral thigh at 1 year and under, deltoid thereafter.";
     }
-    return "Bexsero, aged 2 years and over including adolescents and adults: 2 doses at least 1 month apart. 0.5 mL intramuscular, deltoid.";
+    return "Bexsero, aged 2 years and over including adolescents and adults: 2 doses at least 1 month apart. A child whose 2 dose primary course was completed at 12 to 23 months of age has a booster 12 to 23 months after the second primary dose. 0.5 mL intramuscular, deltoid.";
   }
   return "Choose the product first, then follow that product's schedule. Do not mix schedules between products. Where a course has been started with one product, complete it with the same product wherever possible.";
 }
