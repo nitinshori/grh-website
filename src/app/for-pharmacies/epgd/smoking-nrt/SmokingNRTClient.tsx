@@ -278,7 +278,7 @@ export default function SmokingNRTClient() {
               />
 
               <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <label className="block text-sm font-medium text-navy-900 mb-2">Set Quit Date</label>
+                <label className="block text-sm font-medium text-navy-900 mb-2">Quit date (today or later; the PGD guidance is 1 to 2 weeks from assessment) <span className="text-red-400">*</span></label>
                 <input
                   type="date"
                   value={state.assessment.quitDate}
@@ -296,7 +296,8 @@ export default function SmokingNRTClient() {
                 label="Motivated to quit smoking and has set a quit date"
                 checked={state.assessment.motivated}
                 onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "motivated", value: v })}
-                description="PGD inclusion criterion. Non-smokers and occasional smokers are excluded (contraindications step)."
+                description="Required: PGD inclusion criterion. Non-smokers and occasional smokers are excluded (contraindications step)."
+                required
               />
             </div>
           </StepWrapper>
@@ -308,7 +309,9 @@ export default function SmokingNRTClient() {
             title="Medical History"
             {...wrapperProps}
           >
+            <AlertBanner alerts={alerts.filter((a) => a.severity === "caution")} />
             <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+              <p className="text-xs text-gray-600">Tick each condition the patient has. These are PGD cautions: supply may proceed with the benefit and risk assessed and counselling given. Leave every box unticked if none apply.</p>
               <Checkbox
                 label="Recent MI (myocardial infarction), within 4 weeks"
                 checked={state.medicalHistory.recentMI}
@@ -415,6 +418,7 @@ export default function SmokingNRTClient() {
           >
             <AlertBanner alerts={alerts} />
             <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+              <p className="text-xs text-gray-600">Tick any exclusion that applies. Each one stops supply. Leave every box unticked if none apply.</p>
               <Checkbox
                 label="Patient under 18 years old"
                 checked={state.contraindications.childUnder12}
@@ -573,10 +577,11 @@ export default function SmokingNRTClient() {
               />
 
               <Checkbox
-                label="Behavioral/psychological support arranged"
+                label="Behavioural/psychological support arranged"
                 checked={state.nrtSelection.behavioralSupport}
                 onChange={(v) => dispatch({ type: "UPDATE_NRT_SELECTION", field: "behavioralSupport", value: v })}
-                description="Essential for quit success"
+                description="Required. Essential for quit success"
+                required
               />
             </div>
           </StepWrapper>
@@ -589,7 +594,7 @@ export default function SmokingNRTClient() {
             {...wrapperProps}
           >
             <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
-              <p className="text-sm font-medium text-navy-900 mb-3">Confirm counselling covered:</p>
+              <p className="text-sm font-medium text-navy-900 mb-3">Confirm counselling covered (tick every point) <span className="text-red-400">*</span></p>
               <Checkbox
                 label="Combination therapy is more effective than single NRT form"
                 checked={state.counselling.combinationBetter}
@@ -601,7 +606,7 @@ export default function SmokingNRTClient() {
                 onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "quitDate", value: v })}
               />
               <Checkbox
-                label="Behavioral/psychological support offered alongside NRT"
+                label="Behavioural/psychological support offered alongside NRT"
                 checked={state.counselling.behavioralSupport}
                 onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "behavioralSupport", value: v })}
               />

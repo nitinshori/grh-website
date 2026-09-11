@@ -77,6 +77,11 @@ export interface ThrushCounselling {
 export const PGD_VERSION_LABEL =
   "Vaginal Thrush PGD (fluconazole 150 mg capsule / clotrimazole 500 mg pessary), version 005, issued 11 September 2026";
 
+export interface ThrushExclusionOutcome {
+  adviceGiven: string; // advice given and decision reached when excluded or declines
+  referredTo: string; // "" | "gp" | "sexual-health" | "other"
+}
+
 export interface ThrushConsultationState {
   currentStep: number;
   patient: BasePatientDetails;
@@ -86,6 +91,7 @@ export interface ThrushConsultationState {
   medications: ThrushMedications;
   medicineSelection: ThrushMedicineSelection;
   counselling: ThrushCounselling;
+  exclusionOutcome: ThrushExclusionOutcome;
   summary: BaseSummary;
   alerts: ClinicalAlert[];
   doseRecommendation: DoseRecommendation | null;
@@ -100,6 +106,7 @@ export type ThrushAction =
   | { type: "UPDATE_MEDICINE_SELECTION"; field: string; value: any }
   | { type: "UPDATE_COUNSELLING"; field: string; value: any }
   | { type: "UPDATE_SUMMARY"; field: string; value: any }
+  | { type: "UPDATE_EXCLUSION_OUTCOME"; field: keyof ThrushExclusionOutcome; value: any }
   | { type: "SET_STEP"; step: number }
   | { type: "NEXT_STEP" }
   | { type: "PREV_STEP" }
@@ -118,6 +125,7 @@ export function createInitialConsultationState(): ThrushConsultationState {
     medications: { warfarin: false, qtDrugs: false, statins: false, phenytoin: false, rifampicin: false, otherMedications: "", allergies: "" },
     medicineSelection: { medicineChoice: "", dose: "", frequency: "", brand: "", abilityConfirmed: false },
     counselling: { typicalSymptoms: false, avoidPerfumedProducts: false, cottonUnderwear: false, completesTreatment: false, timelineToRelief: false, recurrenceAdvice: false, avoidIntercourse: false, insertWithFingers: false, yellowCardAdvice: false, pilSupplied: false },
+    exclusionOutcome: { adviceGiven: "", referredTo: "" },
     summary: { pharmacistName: "", pharmacistGPhC: "", pharmacyName: "", pharmacyAddress: "", consultationDate: new Date().toISOString().split("T")[0], consultationTime: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }), clinicalNotes: "" },
     alerts: [],
     doseRecommendation: null,

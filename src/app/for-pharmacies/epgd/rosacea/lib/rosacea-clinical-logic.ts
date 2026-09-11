@@ -41,6 +41,14 @@ export const PRODUCT_DETAILS: Record<string, { label: string; strength: string; 
   },
 };
 
+/** The pharmacist has answered No to "Are papules or pustules present?" and
+ *  the subtype is not papulopustular: neither arm is indicated. A blank
+ *  answer is "not yet answered" and never raises the stop (stop audit,
+ *  11 Sep 2026). */
+export function lacksInflammatoryLesions(assessment: RosaceaAssessment): boolean {
+  return assessment.subtype !== "papulopustular" && assessment.papulesPostules === "no";
+}
+
 export function getSubtypeAlerts(assessment: RosaceaAssessment): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
   if (assessment.subtype === "phymatous") {
@@ -50,6 +58,9 @@ export function getSubtypeAlerts(assessment: RosaceaAssessment): ClinicalAlert[]
   }
   if (assessment.ocularSymptoms) {
     alerts.push({ severity: "red-flag", code: "OCULAR_REFER", message: "Ocular symptoms reported, refer for the eyes", detail: "Neither arm treats ocular rosacea. Advise artificial tears and refer to the GP; refer to ophthalmology if severe or vision is affected." });
+  }
+  if (lacksInflammatoryLesions(assessment)) {
+    alerts.push({ severity: "stop", code: "NO_INFLAMMATORY_LESIONS", message: "No papules or pustules present: neither product is indicated", detail: "Metronidazole gel is for rosacea with inflammatory lesions and azelaic acid gel is for papulopustular rosacea. Advise on alternative options and refer to the GP." });
   }
   if (assessment.severity === "severe") {
     alerts.push({ severity: "stop", code: "SEVERE_SYSTEMIC", message: "Severe rosacea requiring systemic treatment, excluded", detail: "Both arms are for mild to moderate rosacea. Advise on alternative options; inform or refer to the GP as appropriate." });
@@ -96,7 +107,8 @@ export function hasHardStops(contraindications: RosaceaContraindications, assess
     contraindications.underEighteen ||
     contraindications.brokenOrEczematousSkin ||
     assessment?.severity === "severe" ||
-    assessment?.subtype === "phymatous"
+    assessment?.subtype === "phymatous" ||
+    (assessment !== undefined && lacksInflammatoryLesions(assessment))
   );
 }
 

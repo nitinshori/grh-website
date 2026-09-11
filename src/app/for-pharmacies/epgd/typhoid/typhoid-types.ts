@@ -13,11 +13,17 @@ export interface TyphoidPatientDetails extends BasePatientDetails {
   departureDate: string;
   itinerary: string;
   recommendationSource: string;
+  /** Inclusion question as answered: '' until asked. A "no" is a stop. */
+  recommendedAnswer: '' | 'yes' | 'no';
   previousTyphoidDose: boolean;
   previousDoseDate?: string;
   /** Document exception to the 3-year exclusion: returning to a risk area and
    *  the previous dose is due for renewal. Free text reason, recorded. */
   previousDoseRenewalReason: string;
+  /** The document-exception question as answered when the previous dose is within 6 months of
+   *  its renewal date: '' until asked. A "no" is the stop; before this the stop fired because the
+   *  free-text reason was blank (stop audit, 11 Sep 2026). */
+  previousDoseRenewalAnswer: '' | 'yes' | 'no';
   knownAllergies: string;
   consentBasis: TyphoidConsentBasis;
   consentDetail: string;
@@ -71,9 +77,11 @@ gpOdsCode: '',
   departureDate: '',
   itinerary: '',
   recommendationSource: '',
+  recommendedAnswer: '',
   previousTyphoidDose: false,
   previousDoseDate: '',
   previousDoseRenewalReason: '',
+  previousDoseRenewalAnswer: '',
   knownAllergies: '',
   consentBasis: '',
   consentDetail: '',

@@ -45,15 +45,10 @@ export function getRSVClinicalAlerts(
   }
 
   // Pregnant women: PGD inclusion is 28 to 36 weeks; Abrysvo should not be used under 28 weeks; after 36 weeks refer to the maternity service
-  if (patient.patientCategory === 'pregnant-woman') {
-    if (patient.pregnancyWeeks === undefined || patient.pregnancyWeeks === null) {
-      alerts.push({
-        severity: 'caution',
-        code: 'PREGNANCY_WEEKS_MISSING',
-        message: 'Gestation not specified',
-        detail: 'Abrysvo under this PGD is for pregnant women between 28 and 36 weeks of gestation. Confirm gestational age.',
-      });
-    } else if (patient.pregnancyWeeks < 28) {
+  // A blank gestation is "not yet answered": the Patient Details validation
+  // names the control. Only an entered value outside 28 to 36 weeks stops.
+  if (patient.patientCategory === 'pregnant-woman' && patient.pregnancyWeeks !== undefined && patient.pregnancyWeeks !== null) {
+    if (patient.pregnancyWeeks < 28) {
       alerts.push({
         severity: 'stop',
         code: 'UNDER_28_WEEKS',
@@ -131,14 +126,8 @@ export function getRSVClinicalAlerts(
     });
   }
 
-  if (!patient.patientCategory) {
-    alerts.push({
-      severity: 'caution',
-      code: 'NO_CATEGORY',
-      message: 'Patient category not specified',
-      detail: 'Confirm the patient is an adult aged 60 years or over, or a pregnant woman at 28 to 36 weeks of gestation.',
-    });
-  }
+  // A blank patient category is "not yet answered", not a clinical alert:
+  // the Patient Details validation names the control (stop audit, 11 Sep 2026).
 
   return alerts;
 }

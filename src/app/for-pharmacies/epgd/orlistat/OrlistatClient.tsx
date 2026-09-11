@@ -16,6 +16,7 @@ import {
   weeksSinceStart,
   weightLossPercent,
   ORLISTAT_REVIEW_WEEKS,
+  bmiForInclusion,
 } from "./lib/orlistat-clinical-logic";
 import { validateStep, calculateBMI } from "./lib/orlistat-validation";
 import { calculateAge } from "../shared/types";
@@ -381,6 +382,7 @@ export default function OrlistatClient() {
                   min={100}
                   max={220}
                   unit="cm"
+                  required
                 />
                 <NumberInput
                   label={state.weightAssessment.visitType === "continuation" ? "Weight today" : "Baseline weight"}
@@ -391,11 +393,12 @@ export default function OrlistatClient() {
                   min={30}
                   max={300}
                   unit="kg"
+                  required
                 />
               </div>
 
               <NumberInput
-                label="Baseline waist circumference"
+                label={state.weightAssessment.visitType === "continuation" ? "Waist circumference today" : "Baseline waist circumference"}
                 value={state.weightAssessment.waistCircumference}
                 onChange={(v) =>
                   dispatch({ type: "UPDATE_WEIGHT_ASSESSMENT", field: "waistCircumference", value: v })
@@ -410,6 +413,9 @@ export default function OrlistatClient() {
                 <div className="p-3 bg-[color:var(--tenant-primary)]/10 border border-[color:var(--tenant-primary)]/30 rounded">
                   <p className="text-sm font-semibold text-[color:var(--tenant-primary)]">
                     BMI: {state.weightAssessment.bmi} kg/m² ({state.weightAssessment.bmiCategory})
+                  </p>
+                  <p className="text-xs text-[color:var(--tenant-primary)] mt-1">
+                    Inclusion: BMI 30 or more, or BMI 28 or more with at least one weight-related comorbidity (tick below).
                   </p>
                 </div>
               )}
@@ -446,6 +452,28 @@ export default function OrlistatClient() {
                     />
                   ))}
                 </div>
+                {(() => {
+                  const b = bmiForInclusion(state);
+                  return b !== null && b >= 28 && b < 30;
+                })() && (
+                  <div className="mt-4">
+                    <SelectInput
+                      label="Does the patient have at least one obesity-related comorbidity?"
+                      value={state.weightAssessment.hasComorbidity}
+                      onChange={(v) =>
+                        dispatch({ type: "UPDATE_WEIGHT_ASSESSMENT", field: "hasComorbidity", value: v })
+                      }
+                      options={[
+                        { value: "yes", label: "Yes (tick the comorbidity above)" },
+                        { value: "no", label: "No" },
+                      ]}
+                      required
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      {state.weightAssessment.visitType === "continuation" ? "Baseline BMI" : "BMI"} 28 to 29.9: the PGD requires at least one obesity-related comorbidity. Answer No only where the patient has none; No excludes.
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="border-t pt-4">
@@ -482,9 +510,12 @@ export default function OrlistatClient() {
             getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
-              <div className="p-3 bg-red-50 border border-red-200 rounded">
-                <p className="text-xs font-semibold text-red-700 mb-2">
-                  Exclusion Criteria (do not supply)
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded">
+                <p className="text-xs font-semibold text-amber-800 mb-2">
+                  Exclusion Criteria
+                </p>
+                <p className="text-xs text-amber-800">
+                  Tick only what applies to this patient. A ticked exclusion stops the supply; leaving every box unticked records that none applies.
                 </p>
               </div>
 
@@ -859,7 +890,7 @@ export default function OrlistatClient() {
             canProceed={!hasStops}
             validationError={
               hasStops
-                ? "Exclusion criteria met, cannot proceed."
+                ? `Excluded: ${stopSummary}. Orlistat cannot be supplied under this PGD; record the advice given above and use "Save as not supplied".`
                 : null
             }
             isBlocked={hasStops}
@@ -967,7 +998,7 @@ export default function OrlistatClient() {
         return (
           <StepWrapper
             title="Counselling & Patient Education"
-            description="Confirm counselling points discussed with patient."
+            description="Tick each counselling point once discussed with the patient. Every item is required except those marked optional."
             currentStep={state.currentStep}
             totalSteps={TOTAL_STEPS}
             onNext={handleNext}
@@ -1007,7 +1038,7 @@ export default function OrlistatClient() {
               />
 
               <Checkbox
-                label="Steatorrhoea discussed (oily stools if high-fat meals)"
+                label="Steatorrhoea discussed (oily stools if high-fat meals) (optional)"
                 checked={state.counselling.steatorrhoea}
                 onChange={(v) =>
                   dispatch({
@@ -1019,7 +1050,7 @@ export default function OrlistatClient() {
               />
 
               <Checkbox
-                label="Fat-soluble vitamins (A, D, E, K) absorption counselled"
+                label="Fat-soluble vitamins (A, D, E, K) absorption counselled (optional)"
                 checked={state.counselling.fatSolubleVitamins}
                 onChange={(v) =>
                   dispatch({
@@ -1066,7 +1097,7 @@ export default function OrlistatClient() {
                     value: v,
                   })
                 }
-                description="Required when the patient takes levothyroxine."
+                description={state.medications.takesLevothyroxine ? "Required: the patient takes levothyroxine." : "Optional: only required when the patient takes levothyroxine."}
                 required={state.medications.takesLevothyroxine}
               />
 
@@ -1106,7 +1137,7 @@ export default function OrlistatClient() {
                     value: v,
                   })
                 }
-                description="Required when type 2 diabetes is recorded as a comorbidity."
+                description={state.weightAssessment.comorbidities.includes("type2diabetes") ? "Required: type 2 diabetes is recorded as a comorbidity." : "Optional: only required when type 2 diabetes is recorded as a comorbidity."}
                 required={state.weightAssessment.comorbidities.includes("type2diabetes")}
               />
 
@@ -1120,7 +1151,7 @@ export default function OrlistatClient() {
                     value: v,
                   })
                 }
-                description="Required when the patient takes an anticoagulant. Warfarin itself is an exclusion."
+                description={state.medications.takesOtherAnticoagulant ? "Required: the patient takes an anticoagulant." : "Optional: only required when the patient takes an anticoagulant. Warfarin itself is an exclusion."}
                 required={state.medications.takesOtherAnticoagulant}
               />
 
@@ -1151,7 +1182,7 @@ export default function OrlistatClient() {
               />
 
               <Checkbox
-                label="Follow-up protocol explained (discontinue and refer to GP if less than 5% loss at 12 weeks)"
+                label="Follow-up protocol explained (discontinue and refer to GP if less than 5% loss at 12 weeks) (optional)"
                 checked={state.counselling.followUpProtocol}
                 onChange={(v) =>
                   dispatch({

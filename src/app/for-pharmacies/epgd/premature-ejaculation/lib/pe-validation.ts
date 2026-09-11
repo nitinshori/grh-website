@@ -6,13 +6,17 @@ import { validatePatientStep, validateConsentStep, validateSummaryStep } from ".
 export function validateStep(state: PEConsultationState, stepIndex: number): string | null {
   switch (stepIndex) {
     case 0: { // Patient Details
+      if (state.patient.dateOfBirth && state.patient.dateOfBirth > new Date().toISOString().split("T")[0])
+        return "Date of birth cannot be in the future: check the date";
       const base = validatePatientStep(state.patient, {
         minAge: 18,
         maxAge: 64,
-        requireGender: true,
-        genderConfirmed: state.patient.maleConfirmed,
       });
       if (base) return base;
+      // Unanswered is "not yet answered": a message naming the control. The
+      // "No" answer is a stop in the clinical logic (stop audit, 11 Sep 2026).
+      if (!state.patient.sexAnswered)
+        return "Select Yes or No to 'Is the patient male?' (this PGD is for male patients only)";
       // Records row: name, address, date of birth and GP
       if (!state.patient.address.trim()) return "Patient address is required (PGD records row)";
       if (!state.patient.gpName.trim() && !state.patient.gpPractice.trim())
@@ -24,7 +28,7 @@ export function validateStep(state: PEConsultationState, stepIndex: number): str
       const base = validateConsentStep(state.consent);
       if (base) return base;
       if (!state.consent.writtenConsentObtained)
-        return "Inclusion requires informed WRITTEN consent: confirm it has been obtained and filed";
+        return "Tick 'Informed WRITTEN consent obtained and filed' (inclusion criterion: verbal consent alone does not meet it)";
       return null;
     }
 
@@ -33,13 +37,16 @@ export function validateStep(state: PEConsultationState, stepIndex: number): str
         return "PE type (lifelong or acquired) is required";
       }
       if (state.clinicalAssessment.ieltMinutes === null) {
-        return "IELT (intravaginal ejaculation latency time) is required";
+        return "Enter the IELT in minutes";
+      }
+      if (state.clinicalAssessment.ieltMinutes < 0) {
+        return "IELT cannot be negative: check the figure";
       }
       if (state.clinicalAssessment.ieltMinutes >= 2) {
-        return "IELT must be under 2 minutes for PE diagnosis";
+        return "IELT must be under 2 minutes for the PE diagnosis (inclusion criterion): if it is 2 minutes or more the patient is not eligible";
       }
       if (!state.clinicalAssessment.psychologicalDistress) {
-        return "Inclusion requires premature ejaculation causing significant personal distress";
+        return "Tick 'Premature ejaculation causes significant personal distress' (inclusion criterion). If it does not, the patient is not eligible";
       }
       return null;
 
@@ -54,7 +61,7 @@ export function validateStep(state: PEConsultationState, stepIndex: number): str
 
     case 6: // Medicine Supply
       if (!state.medicineSupply.dapoxetine30mgSupplied) {
-        return "Please confirm dapoxetine supply";
+        return "Tick 'Dapoxetine supplied under this PGD'";
       }
       if (!state.medicineSupply.strengthSupplied) {
         return "Select the strength supplied (30mg starting dose; 60mg only where 30mg was insufficient and well tolerated)";
@@ -74,19 +81,22 @@ export function validateStep(state: PEConsultationState, stepIndex: number): str
         return "Quantity must be between 1 and 6 tablets per supply";
       }
       if (!state.medicineSupply.brand.trim()) {
-        return "Record the brand supplied";
+        return "Type the 'Brand supplied'";
       }
       if (!state.medicineSupply.understandsUsage) {
-        return "Please confirm patient understands usage instructions";
+        return "Tick 'Patient understands usage'";
       }
       if (!state.summary.lyingBP.trim() || !state.summary.standingBP.trim()) {
-        return "Record the lying and standing blood pressure";
+        return "Enter both 'Lying BP' and 'Standing BP' as systolic/diastolic, e.g. 120/80";
+      }
+      if (!/^\s*\d{2,3}\s*\/\s*\d{2,3}\s*$/.test(state.summary.lyingBP) || !/^\s*\d{2,3}\s*\/\s*\d{2,3}\s*$/.test(state.summary.standingBP)) {
+        return "'Lying BP' and 'Standing BP' must be written as systolic/diastolic in mmHg, e.g. 120/80";
       }
       if (!state.medicineSupply.understandsOrthostatic) {
-        return "Please confirm orthostatic hypotension assessment done";
+        return "Tick 'Orthostatic hypotension assessment completed'";
       }
       if (!state.medicineSupply.pilSupplied) {
-        return "Confirm the patient information leaflet was supplied";
+        return "Tick 'Patient information leaflet (PIL) supplied with Priligy'";
       }
       return null;
 
@@ -106,7 +116,7 @@ export function validateStep(state: PEConsultationState, stepIndex: number): str
         !state.counselling.notForDaily ||
         !state.counselling.review4weeks
       ) {
-        return "All counselling points must be covered";
+        return "Tick every counselling point on this page (each one must be covered with the patient)";
       }
       return null;
 

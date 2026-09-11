@@ -171,9 +171,11 @@ export function RSVClient() {
     consentValidationError,
     eligibilityValidationError,
     null,
-    !contraIndicationsReviewed.confirmedNoAbsoluteContraindications
-      ? 'You must confirm review before proceeding'
-      : null,
+    isBlocked
+      ? 'Excluded: the patient cannot be vaccinated under this PGD. Record the advice given, then use "Save as not supplied".'
+      : !contraIndicationsReviewed.confirmedNoAbsoluteContraindications
+        ? 'Tick "I confirm no absolute contraindications are present and vaccination can proceed"'
+        : null,
     administrationValidationError,
     postVaccineValidationError,
     summaryValidationError,
@@ -306,6 +308,26 @@ export function RSVClient() {
         getConsultationData={getConsultationData}
         onNewConsultation={handleNewConsultation}
       >
+
+      {/* The PGD requires the advice given to an excluded patient to be recorded.
+          A stop disables Next, so the clinical notes box on the Summary step could
+          never be reached; the printed record then filled the "Advice given" row
+          with a canned sentence (walkthrough review, 11 Sep 2026). */}
+      {isBlocked && currentStep < 7 && (
+        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 space-y-3">
+          <p className="text-red-700 text-sm font-semibold">
+            Excluded: the patient cannot be vaccinated under this PGD. Refer to the GP as appropriate and document the advice given and the decision reached.
+          </p>
+          <TextArea
+            label="Advice given and decision reached (saved with the exclusion record)"
+            value={summary.clinicalNotes}
+            onChange={(v) => setSummary({ ...summary, clinicalNotes: v })}
+            placeholder="e.g., Already had an RSV vaccine: explained no further dose is needed; no supply made."
+            rows={3}
+          />
+          <p className="text-xs text-red-700">Then use "Save as not supplied" below to record the consultation.</p>
+        </div>
+      )}
 
       {/* Step 0: Patient Details */}
       {currentStep === 0 && (
@@ -539,12 +561,17 @@ export function RSVClient() {
             />
 
             <Checkbox
-              label="Risk factors reviewed (if applicable)"
+              label="Risk factors reviewed"
               checked={eligibilityAssessment.riskFactorsReviewed}
               onChange={(v) =>
                 setEligibilityAssessment({ ...eligibilityAssessment, riskFactorsReviewed: v })
               }
-              description="For adults 60+, assess any additional risk factors for severe RSV disease"
+              description={
+                patientDetails.patientCategory === 'pregnant-woman'
+                  ? 'Tick once you have asked about any additional risk factors for severe RSV disease, or confirmed that none apply. Required for every patient.'
+                  : 'Tick once you have asked about any additional risk factors for severe RSV disease (chronic heart or lung disease, diabetes, immunosuppression). Required for every patient.'
+              }
+              required
             />
 
             {patientDetails.patientCategory === 'adult-60-plus' && rsvSeasonStatus && (
@@ -660,15 +687,6 @@ export function RSVClient() {
       {currentStep === 4 && (
         <>
           <div className="space-y-4">
-            {isBlocked && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <p className="text-red-700 text-sm font-semibold">
-                  Absolute contraindication identified. Consultation cannot proceed. Patient
-                  should be referred to their GP.
-                </p>
-              </div>
-            )}
-
             {clinicalAlerts.length === 0 && !isBlocked && (
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                 <p className="text-green-700 text-sm font-semibold">

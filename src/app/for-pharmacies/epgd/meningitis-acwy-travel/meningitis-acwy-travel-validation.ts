@@ -41,7 +41,7 @@ export function validateMeningitisACWYTravelStep(
   }
 ): string | null {
   if (!patient.travelDestination.trim()) return 'Travel destination is required';
-  if (!patient.travelReason) return 'Travel reason must be selected';
+  if (!patient.travelReason) return 'Select the reason for travel';
   if (!patient.departureDate) return 'Departure date is required';
   if (patient.previousMenACWYDose && !patient.previousDoseDate) {
     return 'Record the date of the previous MenACWY dose';
@@ -53,9 +53,9 @@ export function validateMeningitisACWYTravelStep(
     const ageAt = ageInMonthsAt(patient.dateOfBirth, patient.previousDoseDate);
     if (ageAt !== null && ageAt < 0) return 'Previous dose date is before the date of birth';
   }
-  if (!travelAssessment.travelDestinationConfirmed) return 'Please confirm travel destination';
-  if (!travelAssessment.travelReasonConfirmed) return 'Please confirm travel reason';
-  if (!travelAssessment.timingConfirmed) return 'Please confirm departure timing';
+  if (!travelAssessment.travelDestinationConfirmed) return 'Tick "Travel destination confirmed"';
+  if (!travelAssessment.travelReasonConfirmed) return 'Tick "Travel reason confirmed"';
+  if (!travelAssessment.timingConfirmed) return 'Tick "Departure timing confirmed"';
   return null;
 }
 
@@ -74,9 +74,9 @@ export function validateMeningitisACWYConsentStep(
       return 'Under 16: record the consent giver\'s name and relationship, or the basis of the Gillick competence assessment';
   }
   if (!consent.understands5YearValidity)
-    return 'Patient must confirm understanding that a conjugate vaccine certificate is accepted for 5 years';
+    return 'Tick "Patient told a conjugate vaccine certificate is accepted for 5 years"';
   if (!consent.understandsTimingRequirement)
-    return 'Patient must confirm understanding of timing requirement (at least 10 days before arrival in Saudi Arabia)';
+    return 'Tick "Patient told the timing requirement (at least 10 days before arrival in Saudi Arabia)"';
   return null;
 }
 
@@ -90,7 +90,7 @@ export function validateMeningitisACWYContraindicationsStep(data: {
   confirmedNoAbsoluteContraindications: boolean;
 }): string | null {
   if (!data.confirmedNoAbsoluteContraindications)
-    return 'Please confirm there are no absolute contraindications';
+    return 'Tick "I confirm no absolute contraindications are present and vaccination can proceed"';
   return null;
 }
 
@@ -117,7 +117,7 @@ export function validateMeningitisACWYAdministrationStep(
   patient: MeningitisACWYPatientDetails,
   medicalHistory: MeningitisACWYMedicalHistory
 ): string | null {
-  if (!summary.vaccineType) return 'Vaccine type must be selected';
+  if (!summary.vaccineType) return 'Select the vaccine type';
   const ageDays = calculateAgeInDays(patient.dateOfBirth);
   const ageMonths = calculateAgeInMonths(patient.dateOfBirth);
   const min = MENACWY_MIN_AGE_MONTHS[summary.vaccineType];
@@ -132,7 +132,7 @@ export function validateMeningitisACWYAdministrationStep(
   }
   if (!summary.batchNumber?.trim()) return 'Batch number is required';
   if (!summary.expiryDate) return 'Expiry date is required';
-  if (!summary.administrationSite) return 'Administration site must be selected';
+  if (!summary.administrationSite) return 'Select the administration site';
   const isThigh = summary.administrationSite === 'left-thigh' || summary.administrationSite === 'right-thigh';
   if (ageMonths !== null && ageMonths < 12 && !isThigh) {
     return 'Under 1 year: give into the anterolateral thigh';
@@ -140,7 +140,7 @@ export function validateMeningitisACWYAdministrationStep(
   if (ageMonths !== null && ageMonths >= 12 && isThigh) {
     return 'From 1 year of age and in adults: give into the deltoid';
   }
-  if (!summary.doseNumber) return 'Dose number must be selected';
+  if (!summary.doseNumber) return 'Select the dose number';
   if (!summary.expiryDate) return 'Expiry date is required';
   {
     const exp = daysFromToday(summary.expiryDate);
@@ -223,7 +223,7 @@ export function validateMeningitisACWYAdministrationStep(
       return 'Repeat for certificate: authorised only where a valid certificate is required for travel to Saudi Arabia. Routine boosters are not recommended for other travellers.';
     }
     if (!patient.repeatDoseReason.trim()) {
-      return 'Repeat for certificate: record the reason for the repeat';
+      return 'Repeat for certificate: complete "Reason for the repeat dose" on the Travel Assessment step';
     }
   }
   const courseContinues =
@@ -231,21 +231,23 @@ export function validateMeningitisACWYAdministrationStep(
     (summary.doseNumber === 'single' && ageMonths !== null && ageMonths < 12) ||
     (summary.doseNumber === '2nd' && ageMonths !== null && ageMonths < 12);
   if (courseContinues && !summary.nextDueDate) {
-    return 'Where a course is involved, record the date the next dose is due and book it at this appointment';
+    return 'A course is involved: complete "Date the next dose is due" and book it at this appointment';
   }
-  if (!summary.administrationTime) return 'Administration time is required';
+  if (!summary.administrationTime) return 'Time of administration is required';
   return null;
 }
 
-export function validateMeningitisACWYPostVaccineStep(data: MeningitisACWYPostVaccineAdvice): string | null {
-  if (!data.leafletGiven) return 'Supply the patient information leaflet for the product given';
-  if (!data.counselledReactions) return 'Advise the patient of the common reactions';
-  if (!data.counselledNotMenB) return 'Tell the patient this vaccine does not protect against group B meningococcal disease';
-  if (!data.counselledMeningitisSigns) return 'Counsel the signs of meningitis and septicaemia';
-  if (!data.counselledConjugateCertificate) return 'Counsel the certificate requirements (conjugate vaccine stated; 10 days before arrival)';
-  if (!data.observationCompleted) return 'Record that the 15 minute observation period was completed';
-  if (!data.patientAdvised)
-    return 'Patient must be advised of common reactions and given safety information';
+export function validateMeningitisACWYPostVaccineStep(data: MeningitisACWYPostVaccineAdvice, courseInvolved: boolean = false): string | null {
+  if (!data.leafletGiven) return 'Tick "Patient information leaflet for the product given supplied"';
+  if (!data.counselledReactions) return 'Tick "Patient has been advised of common reactions"';
+  if (!data.counselledValidity) return 'Tick "Patient understands a conjugate vaccine certificate is accepted for 5 years"';
+  if (!data.counselledConjugateCertificate) return 'Tick "Certificate counselling: given at least 10 days before arrival; certificate states CONJUGATE vaccine"';
+  if (!data.counselledNotMenB) return 'Tick "Patient told this vaccine does not protect against group B meningococcal disease"';
+  if (!data.counselledMeningitisSigns) return 'Tick "Signs of meningitis and septicaemia counselled"';
+  if (courseInvolved && !data.nextDoseBooked) return 'Tick "Next dose of the course booked at this appointment"';
+  if (!data.counselledCertificate) return 'Tick "Patient advised to report serious adverse events"';
+  if (!data.observationCompleted) return 'Tick "15 minute observation period completed, patient vaccinated seated"';
+  if (!data.patientAdvised) return 'Tick "All counselling completed and documented"';
   return null;
 }
 

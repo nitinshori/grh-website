@@ -24,85 +24,95 @@ export function validateStep(stepIndex: number, state: AcneConsultationState): s
         // Under-16s: the record must say who consented.
         if (state.patient.age !== null && state.patient.age < 16) {
           if (!state.consent.consentBasis || state.consent.consentBasis === "patient") {
-            return "For a patient under 16, record whether the child is Gillick competent or a person with parental responsibility gave consent";
+            return "Consent basis: for a patient under 16, select whether the child was Gillick competent or a person with parental responsibility gave consent";
           }
           if (state.consent.consentBasis === "parental") {
-            if (!state.consent.consentGivenByName.trim()) return "Record the name of the person with parental responsibility who gave consent";
-            if (!state.consent.consentGivenByRelationship.trim()) return "Record the relationship of the person who gave consent to the patient";
+            if (!state.consent.consentGivenByName.trim()) return "Name of person with parental responsibility: record who gave consent";
+            if (!state.consent.consentGivenByRelationship.trim()) return "Relationship to patient: record the relationship of the person who gave consent";
           }
         }
         return null;
       }
 
     case 2: // Acne Assessment
-      if (!state.assessment.severity) return "Please select acne severity";
+      if (!state.assessment.severity) return "Acne Severity: select mild, moderate or severe";
       if (
         !state.assessment.comedones &&
         !state.assessment.inflammatoryPapules &&
         !state.assessment.pustules &&
         !state.assessment.nodalCystic
       ) {
-        return "Please select at least one acne manifestation";
+        return "Acne manifestations: tick at least one (comedones, inflammatory papules, pustules or nodular/cystic lesions)";
       }
-      if (!state.assessment.affectedArea.trim()) return "Please describe affected area";
+      if (!state.assessment.affectedArea.trim()) return "Affected Area: describe the location and extent";
       return null;
 
     case 3: // Medical History
-      if (!state.medicalHistory.allergies.trim()) return "Please record allergy status";
+      if (!state.medicalHistory.allergies.trim()) return "Allergies and sensitivities: record the allergy status (write NKDA if none known)";
       return null;
 
     case 4: // Contraindications
       if (!state.contraindications.questionsAsked) {
-        return "Confirm that each of the exclusion questions above has been put to the patient";
+        return "Tick the confirmation at the bottom: I have asked the patient every question above (ticked boxes are Yes, unticked boxes are No)";
       }
       return null;
 
     case 5: // Medicine Selection
-      if (!choice) return "Please select a medicine";
+      if (!choice) return "Medicine Choice: select the product to supply";
       if (choice === "duac-5" && !state.medicineSelection.strengthRationale) {
-        return "Please record the clinical reason for choosing the 10 mg/g + 50 mg/g strength";
+        return "Clinical reason for the 10 mg/g + 50 mg/g strength: select the reason for choosing this strength";
       }
       if (state.medicineSelection.repeatCourse) {
+        const today = new Date().toISOString().split("T")[0];
         if (!state.medicineSelection.previousCourseStartDate) {
-          return "Record the date the previous course started";
+          return "Previous course started: record the date the previous course started";
+        }
+        if (state.medicineSelection.previousCourseStartDate > today) {
+          return "Previous course started: this date is in the future; check the date entered";
         }
         if (!state.medicineSelection.previousCourseEndDate) {
-          return "Record the date the previous course ended (or the date of the last supply)";
+          return "Previous course ended / last supply: record the date the previous course ended (or the date of the last supply)";
+        }
+        if (state.medicineSelection.previousCourseEndDate > today) {
+          return "Previous course ended / last supply: this date is in the future; check the date entered";
         }
         if (state.medicineSelection.previousCourseEndDate < state.medicineSelection.previousCourseStartDate) {
-          return "The previous course cannot end before it started";
+          return "Previous course ended / last supply: the previous course cannot end before it started";
         }
         if (!state.medicineSelection.repeatCourseReviewed) {
-          return "A review is required for repeat courses (maximum 12 weeks continuous use). Please confirm the review has been completed.";
+          return "Tick Review completed before this repeat course: a review is required for repeat courses (maximum 12 weeks continuous use)";
         }
       }
       if (!state.medicineSelection.quantitySupplied) {
-        return "Record the quantity supplied";
+        return "Quantity supplied: select the quantity";
       }
       return null;
 
     case 6: // Counselling
-      if (
-        !state.counselling.improvementTimeline ||
-        !state.counselling.photosensitivity ||
-        !state.counselling.washingAdvice ||
-        !state.counselling.productAdvice ||
-        !state.counselling.courseCompletion ||
-        !state.counselling.applicationAdvice ||
-        !state.counselling.irritationAdvice ||
-        !state.counselling.followUpAdvice ||
-        !state.counselling.scarringAdvice
-      ) {
-        return "Please confirm all counselling points have been covered";
+      {
+        const c = state.counselling;
+        const points: [boolean, string][] = [
+          [c.improvementTimeline, "Improvement is not expected before 6 to 8 weeks"],
+          [c.applicationAdvice, "Application: thin layer once daily in the evening"],
+          [c.photosensitivity, "Use sunscreen and limit sun exposure"],
+          [c.irritationAdvice, "Irritation: reduce frequency or interrupt"],
+          [c.washingAdvice, "Avoid over-cleaning"],
+          [c.productAdvice, "Avoid oil-based comedogenic skin care products"],
+          [c.scarringAdvice, "Persistent picking or scratching of lesions"],
+          [c.courseCompletion, "Treatment period: maximum 12 weeks continuous use"],
+          [c.followUpAdvice, "Follow-up: seek advice if the skin reaction is severe"],
+        ];
+        const missing = points.find(([done]) => !done);
+        if (missing) return `Counselling point not yet ticked: "${missing[1]}". Tick each point once it has been covered with the patient.`;
       }
       if (isDuac(choice) && !state.counselling.storageAdvice) {
-        return "Please confirm storage advice for benzoyl peroxide / clindamycin gel (store below 25 C once dispensed, use within 2 months)";
+        return "Counselling point not yet ticked: Storage (store below 25 C once dispensed, use within 2 months) for benzoyl peroxide / clindamycin gel";
       }
       if (isEpiduo(choice) && !state.counselling.bleachingAdvice) {
-        return "Please confirm bleaching and cosmetics advice for adapalene / benzoyl peroxide gel";
+        return "Counselling point not yet ticked: Avoid contact with coloured material (bleaching) and cosmetics advice for adapalene / benzoyl peroxide gel";
       }
       if (!state.counselling.pilSupplied) {
-        return "Please confirm the patient information leaflet has been supplied";
+        return "Tick Patient information leaflet (PIL) supplied with the medication";
       }
       return null;
 

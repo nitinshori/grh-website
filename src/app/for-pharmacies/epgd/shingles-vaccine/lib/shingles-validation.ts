@@ -20,8 +20,11 @@ export function validateStep(state: ShinglesConsultationState, step: number): st
     case 2: {
       const age = state.patient.age;
       if (age !== null && age < 50) {
-        if (!state.assessment.immunosuppressed) {
-          return "Aged under 50: this PGD covers 18 to 49 year olds only where they are severely immunosuppressed (Arm 2). Tick the immunosuppression box if it applies, otherwise refer.";
+        if (!state.assessment.under50ImmunosuppressionAnswer) {
+          return "Answer \"Is the patient severely immunosuppressed as defined in Green Book chapter 28a, Box 1?\" (Arm 2 covers 18 to 49 year olds only where they are)";
+        }
+        if (state.assessment.under50ImmunosuppressionAnswer === "no") {
+          return "Aged 18 to 49 and not severely immunosuppressed: not covered by either arm of this PGD. Refer, and save as not supplied.";
         }
         if (!state.assessment.severeImmunosuppressionCategory) {
           return "Select the Green Book chapter 28a Box 1 category that applies (Arm 2 inclusion)";
@@ -45,10 +48,10 @@ export function validateStep(state: ShinglesConsultationState, step: number): st
           : "Please confirm the patient is aged 18 to 49 and severely immunosuppressed as defined in Green Book chapter 28a, Box 1 (Arm 2)";
       }
       if (nhsEligibleGroup(state) && !state.assessment.nhsEntitlementExplained) {
-        return "This patient is eligible for Shingrix on the NHS: confirm they have been told it is free of charge on the NHS before this private supply";
+        return "Tick \"Patient is eligible for Shingrix on the NHS and has been told it is free of charge on the NHS before this private supply\"";
       }
       if (!state.assessment.pregnancyStatus) {
-        return "Pregnancy or breastfeeding status must be specified";
+        return "Select the pregnancy or breastfeeding status";
       }
       if (state.assessment.previousShingrix && !state.assessment.previousShingrixDate) {
         return "Record the date of dose 1 (the PGD requires it where dose 1 was given elsewhere)";
@@ -65,19 +68,17 @@ export function validateStep(state: ShinglesConsultationState, step: number): st
       }
       return null;
 
-    case 4:
-      if (
-        !state.counselling.explainedDoseSchedule ||
-        !state.counselling.explainedLocalReactions ||
-        !state.counselling.explainedSystemicReactions ||
-        !state.counselling.explainedEffectiveness ||
-        !state.counselling.explainedNotLiveVaccine ||
-        !state.counselling.offeredWrittenInfo ||
-        !state.counselling.followUpAdviceGiven
-      ) {
-        return "All counselling items, the patient information leaflet and the follow-up advice must be completed";
-      }
+    case 4: {
+      const c = state.counselling;
+      if (!c.explainedDoseSchedule) return "Tick \"Explained the 2-dose schedule\"";
+      if (!c.explainedLocalReactions) return "Tick \"Discussed local injection reactions\"";
+      if (!c.explainedSystemicReactions) return "Tick \"Counselled that systemic side effects are common and generally self-limiting\"";
+      if (!c.explainedEffectiveness) return "Tick \"Explained effectiveness\"";
+      if (!c.explainedNotLiveVaccine) return "Tick \"Clarified NOT a live vaccine\"";
+      if (!c.offeredWrittenInfo) return "Tick \"Patient information leaflet (PIL) supplied\"";
+      if (!c.followUpAdviceGiven) return "Tick \"Follow-up advice given\"";
       return null;
+    }
 
     case 5: {
       const arm = getArm(state);
@@ -91,6 +92,9 @@ export function validateStep(state: ShinglesConsultationState, step: number): st
         return "A previous Shingrix dose is recorded: this should be dose 2";
       }
       if (!state.supply.vaccinationDate) return "Vaccination date is required";
+      if (state.supply.vaccinationDate > new Date().toISOString().split("T")[0]) {
+        return "Vaccination date cannot be in the future";
+      }
       if (state.supply.doseNumber === "2") {
         const days = daysBetween(state.assessment.previousShingrixDate, state.supply.vaccinationDate);
         if (days !== null && days < MIN_INTERVAL_DAYS) {
@@ -116,7 +120,7 @@ export function validateStep(state: ShinglesConsultationState, step: number): st
       if (state.supply.expiryDate < state.supply.vaccinationDate) return "This vaccine has expired: do not administer";
       if (!state.supply.site) return "Anatomical site is required";
       if (!state.supply.observedFifteenMinutes) {
-        return "Confirm the 15 minute observation period has been completed (PGD safety block)";
+        return "Tick \"Patient observed, seated, for 15 minutes after vaccination\" once the observation period has been completed";
       }
       if (state.supply.adverseReaction.trim() && !state.supply.adverseReactionAction.trim()) {
         return "Record the action taken for the adverse reaction";

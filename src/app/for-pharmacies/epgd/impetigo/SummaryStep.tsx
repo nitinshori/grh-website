@@ -35,6 +35,7 @@ export function SummaryStep({ data, summary, onSummaryChange, alerts }: SummaryS
     });
   };
 
+  const isTopicalArm = data.treatmentSelection.treatment === 'fusidic-acid' || data.treatmentSelection.treatment === 'hydrogen-peroxide';
   const counsellingItems: [string, boolean][] = [
     ['Hygiene advice: do not share towels, flannels or bedding', data.counselling.hygieneAdvice],
     ['Hand washing after touching lesions or applying cream', data.counselling.handwashing],
@@ -43,7 +44,8 @@ export function SummaryStep({ data, summary, onSummaryChange, alerts }: SummaryS
     ['Told topical and oral treatment are not combined', data.counselling.noCombination],
     [drugSpecificAdviceLabel(data.treatmentSelection.treatment), data.counselling.drugSpecificAdvice],
     ['Complete the course', data.counselling.completeCourse],
-    ['Application technique for topical treatment', data.counselling.applicationAdvice],
+    // Topical arms only: an oral arm has no application technique to record.
+    ...(isTopicalArm ? [['Application technique for topical treatment', data.counselling.applicationAdvice] as [string, boolean]] : []),
     ['Return if no improvement, spreading, or unwell', data.counselling.returnIfWorsening],
     ['Contagion period explained', data.counselling.contagionPeriod],
   ];
@@ -138,7 +140,7 @@ export function SummaryStep({ data, summary, onSummaryChange, alerts }: SummaryS
         )}
         <Row
           label="Penicillin allergy history"
-          value={`${data.medicalHistory.penicillinAllergy ? 'Penicillin-allergic' : 'Not penicillin-allergic'}. ${data.medicalHistory.penicillinAllergyHistory || ''}`.trim()}
+          value={`${data.medicalHistory.penicillinAllergy === 'yes' ? 'Penicillin-allergic' : data.medicalHistory.penicillinAllergy === 'no' ? 'Not penicillin-allergic' : 'Penicillin allergy not asked (topical arm)'}. ${data.medicalHistory.penicillinAllergyHistory || ''}`.trim()}
         />
         {age !== null && age < 18 && isMacrolide && (
           <Row
@@ -155,7 +157,7 @@ export function SummaryStep({ data, summary, onSummaryChange, alerts }: SummaryS
             label="Pregnancy / breastfeeding"
             value={`${data.medicalHistory.pregnant ? `Pregnant (${data.medicalHistory.pregnancyEstablishedHow || 'how established: not recorded'})` : ''}${
               data.medicalHistory.breastfeeding
-                ? `${data.medicalHistory.pregnant ? '; ' : ''}Breastfeeding${data.medicalHistory.breastfeedingDiscussed ? ', macrolide choice discussed and recorded' : ''}`
+                ? `${data.medicalHistory.pregnant ? '; ' : ''}Breastfeeding${data.medicalHistory.breastfeedingDiscussed === 'yes' ? ', macrolide choice discussed and recorded' : data.medicalHistory.breastfeedingDiscussed === 'no' ? ', macrolide choice NOT discussed' : ''}`
                 : ''
             }`}
           />

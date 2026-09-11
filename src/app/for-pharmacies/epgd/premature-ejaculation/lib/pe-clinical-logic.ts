@@ -8,10 +8,10 @@ import type { PEConsultationState } from "./pe-types";
 export function getAllAlerts(state: PEConsultationState): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
 
-  // Hard stop: Not male. Raised once the patient step has been left; on
-  // step 0 the shared validation asks for the confirmation instead, so a
-  // blank form does not open with an exclusion on screen.
-  if (!state.patient.maleConfirmed && state.currentStep > 0) {
+  // Hard stop: Not male. Raised only on an explicit "No" to "Is the patient
+  // male?". An unanswered question is a validation message on the patient
+  // step, never a stop (stop audit, 11 Sep 2026).
+  if (state.patient.sexAnswered && !state.patient.maleConfirmed) {
     alerts.push({
       severity: "stop",
       code: "PE_GENDER",

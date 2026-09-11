@@ -17,8 +17,11 @@ export function validateStep(state: HPVConsultationState, step: number): string 
     }
 
     case 1: // Vaccine Assessment
+      if (!state.assessment.immuneStatusAnswer) {
+        return "Answer whether the patient is immunosuppressed, or known to be living with HIV (it decides the schedule)";
+      }
       if (!state.assessment.pregnancyStatus.trim()) {
-        return "Pregnancy status must be specified";
+        return "Pregnancy status must be selected";
       }
       if (!state.assessment.priorDoses.trim()) {
         return "Prior HPV vaccine history must be recorded: it determines the schedule";
@@ -40,8 +43,11 @@ export function validateStep(state: HPVConsultationState, step: number): string 
     case 3: {
       // Schedule & Consent
       const schedule = selectSchedule(state);
+      if (schedule?.offLabel && !state.consent16.offLabelExplained) {
+        return "Tick \"Explained the off-label position to the patient\" once that explanation has been given";
+      }
       if (schedule?.offLabel && !state.consent16.offLabelConsentGiven) {
-        return "Consent to the off-label schedule must be explained and recorded before proceeding";
+        return "Tick \"Consent to off-label use given and recorded\" once the patient has consented to the named schedule";
       }
       if (age !== null && age < 16) {
         if (!state.consent16.basis) {
@@ -62,18 +68,21 @@ export function validateStep(state: HPVConsultationState, step: number): string 
       return validateConsentStep(state.consent);
     }
 
-    case 4: // Counselling
-      if (
-        !state.counselling.explainedDoseSchedule ||
-        !state.counselling.explainedProtection ||
-        !state.counselling.discussedCommonReactions ||
-        !state.counselling.explainedNotTreatment ||
-        !state.counselling.explainedScreeningStillNeeded ||
-        !state.counselling.offeredWrittenInfo
-      ) {
-        return "All counselling items, including the written information, must be completed";
-      }
+    case 4: {
+      // Counselling: name the first item still unticked, in the label's own words.
+      const c = state.counselling;
+      const points: [boolean, string][] = [
+        [c.explainedDoseSchedule, "Explained the schedule that applies to this patient"],
+        [c.explainedProtection, "Explained protection against HPV types"],
+        [c.discussedCommonReactions, "Discussed common reactions"],
+        [c.explainedNotTreatment, "Clarified this is not a treatment for an existing infection"],
+        [c.explainedScreeningStillNeeded, "Explained that cervical screening is still needed, and barrier protection still matters"],
+        [c.offeredWrittenInfo, "Offered written information"],
+      ];
+      const missing = points.find(([done]) => !done);
+      if (missing) return `Tick "${missing[1]}" once it has been covered (every counselling item is required)`;
       return null;
+    }
 
     case 5: {
       // Administration
@@ -106,6 +115,7 @@ export function validateStep(state: HPVConsultationState, step: number): string 
         }
         const gap = daysBetween(a.previousDoseDate, state.summary.consultationDate);
         if (gap === null) return "The previous dose date is not a valid date";
+        if (gap < 0) return "Date of the previous dose cannot be after today";
         if (gap < minDays) {
           return `Too early: dose ${a.doseNumber} must be at least ${minimumIntervalLabel(schedule, a.doseNumber)} after the previous dose (given ${a.previousDoseDate}). Do not give today; rebook.`;
         }

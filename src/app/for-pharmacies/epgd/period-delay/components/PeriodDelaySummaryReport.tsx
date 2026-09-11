@@ -36,7 +36,7 @@ export function PeriodDelaySummaryReport({ state }: { state: PeriodDelayConsulta
         <Row label="Full Name" value={`${state.patient.firstName} ${state.patient.lastName}`} />
         <Row label="Date of Birth" value={state.patient.dateOfBirth || "Not recorded"} />
         <Row label="Age" value={state.patient.age ? `${state.patient.age} years` : "Not recorded"} />
-        <Row label="Female confirmed" value={state.medicalHistory.femaleConfirmed ? "Yes" : "No"} />
+        <Row label="Female confirmed" value={state.medicalHistory.femaleConfirmed === null ? "Not answered" : state.medicalHistory.femaleConfirmed ? "Yes" : "No"} />
         <Row label="Address" value={state.patient.address || "Not recorded"} />
         <Row label="NHS Number" value={state.patient.nhsNumber || "Not recorded"} />
         <Row label="GP" value={state.patient.gpName || state.patient.gpPractice ? `${state.patient.gpName} ${state.patient.gpPractice}`.trim() : "Not recorded"} />
@@ -47,10 +47,10 @@ export function PeriodDelaySummaryReport({ state }: { state: PeriodDelayConsulta
         <Row label="Reason for delay" value={`${state.assessment.reasonForDelay || "Not recorded"}${state.assessment.reasonDetails ? `: ${state.assessment.reasonDetails}` : ""}`} />
         <Row label="Dates needed for" value={state.assessment.datesNeededFor || "Not recorded"} />
         <Row label="Last period started" value={state.assessment.lastPeriodDate || "Not recorded"} />
-        <Row label="Regular, predictable cycle" value={state.assessment.cycleRegular ? "Yes" : "No"} />
+        <Row label="Regular, predictable cycle" value={state.assessment.cycleRegular === null ? "Not asked" : state.assessment.cycleRegular ? "Yes" : "No"} />
         <Row label="Next period due" value={state.assessment.expectedPeriodDate || "Not recorded"} />
         <Row label="Days until expected period" value={state.assessment.daysUntilExpected?.toString() || "Not recorded"} />
-        <Row label="How pregnancy was excluded" value={isPregnancyExcluded(state) ? pregnancyExcludedBy : "Not excluded"} />
+        <Row label="How pregnancy was excluded" value={isPregnancyExcluded(state) === true ? pregnancyExcludedBy : isPregnancyExcluded(state) === "unanswered" ? "Not yet answered" : "Not excluded"} />
         <Row label="Previous use of norethisterone" value={state.assessment.previousUse ? `Yes${state.assessment.previousIssues ? `: ${state.assessment.previousIssues}` : ""}` : "No"} />
         <Row label="Previous supplies for period delay in last 6 months" value={state.assessment.previousSuppliesLast6Months || "Not recorded"} />
         {state.assessment.daysSuppliedLast6Months !== null && (

@@ -219,15 +219,10 @@ export function getAllAlerts(state: MeningitiBConsultationState): ClinicalAlert[
     });
   }
 
-  // Indication missing
-  if (!hasIndication(state)) {
-    alerts.push({
-      severity: "red-flag",
-      code: "NO_INDICATION",
-      message: "No PGD indication recorded",
-      detail: "Inclusion requires protection against meningococcal group B disease: routine doses missed or presenting outside the NHS programme, an adolescent or student seeking protection, or an adult at increased risk.",
-    });
-  }
+  // A missing indication is "not yet answered", not a clinical alert: it used
+  // to raise a "RED FLAG: CONSIDER REFERRAL" card on the patient details step
+  // of every fresh consultation, before the indication step had been reached
+  // (stop audit, 11 Sep 2026). The indication step's validator asks for it.
 
   return alerts;
 }

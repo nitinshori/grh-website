@@ -291,7 +291,7 @@ export function WegovySummaryReport({ state }: { state: WegovyConsultationState 
           <>
             <Row
               label="Psychiatric Oversight in Place"
-              value={state.medicalHistory.psychiatricOversightInPlace ? "Yes" : "No"}
+              value={state.medicalHistory.psychiatricOversightInPlace === "yes" ? "Yes" : state.medicalHistory.psychiatricOversightInPlace === "no" ? "No" : "Not answered"}
             />
             <Row
               label="Concern About Current Mental State"

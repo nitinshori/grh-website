@@ -287,7 +287,10 @@ export function createDefaultFormData(): SmokingToolFormData {
 
   pharmacistName: "",
   pharmacistGPhC: "",
-  consultationDate: "",
+  // Today by default: the date was required on the Summary step but
+  // started blank, so every consultation needed it typed (walkthrough
+  // review, 11 Sep 2026).
+  consultationDate: new Date().toISOString().split("T")[0],
   pharmacyName: "",
   pharmacyAddressLine1: "",
   pharmacyAddressLine2: "",

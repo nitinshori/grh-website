@@ -378,6 +378,7 @@ export default function ColdSoresClient() {
                   max={240}
                   placeholder="e.g., 6"
                   unit="hours"
+                  required
                 />
               )}
               <p className="text-xs text-gray-600">
@@ -428,7 +429,7 @@ export default function ColdSoresClient() {
                   label="Renal Function Status (eGFR/creatinine)"
                   value={state.medicalHistory.renalFunction}
                   onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "renalFunction", value: v })}
-                  placeholder="e.g., eGFR 35 mL/min (mild–moderate impairment); creatinine 1.5× baseline"
+                  placeholder="e.g., eGFR 35 mL/min (mild to moderate impairment); creatinine 1.5 times baseline"
                   required
                 />
               )}
@@ -489,11 +490,9 @@ export default function ColdSoresClient() {
                 description="Excluded unless assessed as appropriate by a prescriber: refer to the GP."
               />
 
-              <Checkbox
-                label="Patient is under 12 years old"
-                checked={state.contraindications.childUnder12}
-                onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "childUnder12", value: v })}
-              />
+              <p className="text-xs text-gray-600">
+                Age from the date of birth: {state.patient.age !== null ? `${state.patient.age} years` : "not recorded"}. The PGD covers patients aged 12 years and over; an under-12 is stopped from the date of birth on the Patient Details step.
+              </p>
 
             </div>
             <div className="mt-4 space-y-2 p-4 bg-amber-50 rounded-lg border border-amber-200">

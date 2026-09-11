@@ -482,6 +482,29 @@ export default function MounjaroClient() {
                     />
                   ))}
                 </div>
+                {(() => {
+                  const gateToday = bmiGateAppliesToday(state);
+                  const gb = gateToday ? state.weightAssessment.bmi : state.weightAssessment.startingBMI;
+                  return gb !== null && gb >= 27 && gb < 30;
+                })() && (
+                  <div className="mt-4">
+                    <SelectInput
+                      label="Does the patient have at least one weight-related comorbidity?"
+                      value={state.weightAssessment.hasComorbidity}
+                      onChange={(v) =>
+                        dispatch({ type: "UPDATE_WEIGHT_ASSESSMENT", field: "hasComorbidity", value: v })
+                      }
+                      options={[
+                        { value: "yes", label: "Yes (tick the comorbidity above)" },
+                        { value: "no", label: "No" },
+                      ]}
+                      required
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      {bmiGateAppliesToday(state) ? "BMI" : "Starting BMI"} 27 to below 30: the PGD requires at least one weight-related comorbidity. Answer No only where the patient has none; No excludes.
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="border-t pt-4">
@@ -546,12 +569,12 @@ export default function MounjaroClient() {
             getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
-              <div className="p-3 bg-red-50 border border-red-200 rounded">
-                <p className="text-xs font-semibold text-red-700 mb-2">
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded">
+                <p className="text-xs font-semibold text-amber-800 mb-2">
                   Exclusion Criteria
                 </p>
-                <p className="text-xs text-red-600 mb-3">
-                  Check the following carefully. If any are present the patient cannot be supplied under this PGD.
+                <p className="text-xs text-amber-800 mb-3">
+                  Tick only what applies to this patient. A ticked exclusion stops the supply; leaving every box unticked records that none applies.
                 </p>
               </div>
 
@@ -1303,7 +1326,7 @@ export default function MounjaroClient() {
         return (
           <StepWrapper
             title="Counselling & Patient Education"
-            description="Confirm counselling points discussed with patient."
+            description="Tick each point as it is given. Every point is required before Next unless its label says otherwise."
             currentStep={state.currentStep}
             totalSteps={TOTAL_STEPS}
             onNext={handleNext}
@@ -1421,7 +1444,7 @@ export default function MounjaroClient() {
               />
 
               <Checkbox
-                label="Retinopathy monitoring discussed"
+                label={state.weightAssessment.comorbidities.includes("type2diabetes") ? "Retinopathy monitoring discussed (required: type 2 diabetes)" : "Retinopathy monitoring discussed (required only where the patient has type 2 diabetes)"}
                 checked={state.counselling.retinopathyWarning}
                 onChange={(v) =>
                   dispatch({

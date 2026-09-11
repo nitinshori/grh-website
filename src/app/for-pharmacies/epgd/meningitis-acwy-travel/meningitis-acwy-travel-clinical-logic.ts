@@ -173,8 +173,11 @@ export function getMeningitisACWYClinicalAlerts(
   // month old whose primary dose was given under 12 months (booster at 12 months).
   if (patient.previousMenACWYDose && (ageMonths === null || ageMonths >= 12) && !isInfantBoosterCandidate(patient)) {
     if (!patient.previousDoseDate) {
+      // A caution, not a stop: the travel step already refuses Next until
+      // the date is typed, and a stop here put "exclusion criteria met" on
+      // screen while the pharmacist was still mid-entry.
       alerts.push({
-        severity: 'stop',
+        severity: 'caution',
         code: 'PREVIOUS_DOSE_DATE_MISSING',
         message: 'Previous MenACWY dose: date not recorded',
         detail: 'Record the date of the previous dose. A repeat is authorised only where it was more than 5 years ago and a valid certificate is required for travel to Saudi Arabia.',
@@ -192,6 +195,10 @@ export function getMeningitisACWYClinicalAlerts(
           detail:
             'Routine boosters are not recommended for most travellers, and a repeat is authorised under this PGD only where the previous dose was more than 5 years ago and a valid certificate is required. A conjugate vaccine given within the last 5 years is accepted for Hajj and Umrah. JCVI has not determined boosters for at-risk groups; do not invent an interval, assess individually and refer where there is doubt.',
         });
+      } else if (!patient.travelReason && !isSaudiTravel(patient)) {
+        // Reason for travel not yet selected: the answer that decides between
+        // the stop and the caution has not been given. No alert; the travel
+        // step's validator asks for the reason (stop audit, 11 Sep 2026).
       } else if (!isSaudiTravel(patient)) {
         alerts.push({
           severity: 'stop',

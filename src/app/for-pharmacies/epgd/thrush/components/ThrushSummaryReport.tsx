@@ -10,6 +10,12 @@ function formatDate(iso: string): string {
   return isNaN(d.getTime()) ? iso : d.toLocaleDateString("en-GB");
 }
 
+const REFERRED_LABELS: Record<string, string> = {
+  gp: "GP",
+  "sexual-health": "Sexual health service",
+  other: "Other",
+};
+
 export function ThrushSummaryReport({ state }: { state: ThrushConsultationState }) {
   const stopped = state.alerts.some((a) => a.severity === "stop");
   const supply = getSupplyDetails(state.medicineSelection.medicineChoice);
@@ -55,6 +61,12 @@ export function ThrushSummaryReport({ state }: { state: ThrushConsultationState 
       {stopped || !state.doseRecommendation || !supply ? (
         <div className="space-y-1.5">
           <Row label="Outcome" value={stopped ? "NOT SUPPLIED: exclusion criteria met. Patient advised and referred as recorded." : "No medicine selected"} />
+          {stopped && (
+            <>
+              <Row label="Referred to" value={REFERRED_LABELS[state.exclusionOutcome.referredTo] || dash} />
+              <Row label="Advice given and decision reached" value={state.exclusionOutcome.adviceGiven || dash} />
+            </>
+          )}
         </div>
       ) : (
         <div className="space-y-1.5">

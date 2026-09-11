@@ -270,11 +270,11 @@ export const VACCINES: VaccineDef[] = [
 const emptyDose: DoseEntry = { doseNumber: "", previousDoseDate: "", batchNumber: "", expiryDate: "", site: "" };
 
 const emptyClinical = (): Clinical => ({
-  destination: "", departureDate: "", itinerary: "", recommendedForDestination: false,
+  destination: "", departureDate: "", itinerary: "", recommendedForDestination: false, recommendedAnswer: "",
   routineUpToDate: false, catchUpPlanDiscussed: false, selected: [], doses: {}, twinrixCoAdminReason: "",
   anaphylaxisComponent: false, acuteFebrileIllness: false, immunosuppressed: false,
   pregnant: false, bleedingDisorder: false, postExposure: false, clinicalUncertainty: false,
-  chronicConditionOrRemote: false, parentPresent: false, parentPresentDetail: "", consentBasis: "", consentDetail: "",
+  chronicConditionOrRemote: false, parentPresent: false, parentPresentAnswer: "", parentPresentDetail: "", consentBasis: "", consentDetail: "",
   allergies: "", anaphylaxisKit: false, observationCompleted: false,
   scheduleAdvice: false, sideEffectAdvice: false, bitesAndFoodAdvice: false, rabiesAdvice: false,
   adverseReaction: false, adverseReactionDetails: "", gpInformed: false,
@@ -417,6 +417,13 @@ export default function JuniorTravelClient() {
         message: "Under 12 months is excluded from this PGD",
         detail: "Refer to the GP or a specialist travel health service.",
       });
+    if (c.recommendedAnswer === "no")
+      a.push({
+        code: "not-recommended",
+        severity: "stop",
+        message: "No travel vaccine in this PGD is recommended for this destination, and the child is not otherwise at risk",
+        detail: "Inclusion requires travel to, or residence in, an area where the vaccine is recommended by NaTHNaC / TravelHealthPro, or an occupational or lifestyle risk described in the Green Book. Outside that, do not vaccinate under this PGD: advise, and refer to the GP or a travel clinic if vaccination is still wanted.",
+      });
     if (age !== null && age >= 18)
       a.push({
         code: "adult",
@@ -533,21 +540,24 @@ export default function JuniorTravelClient() {
     // The inclusion criterion is unconditional for every child under 16: a
     // person with parental responsibility, or a suitable adult authorised by
     // them, must be present. Gillick competence is a basis for consent, not a
-    // substitute for an adult being present. Gated on the eligibility step
-    // being reached, where the box is ticked.
-    if (step > 4 && !c.parentPresent && age !== null && age < 16)
+    // substitute for an adult being present. The stop fires only on an
+    // answered "No" on the eligibility step; the unanswered question is a
+    // validation message there (stop audit, 11 Sep 2026).
+    if (c.parentPresentAnswer === "no" && age !== null && age < 16)
       a.push({
         code: "no-parent",
         severity: "stop",
         message: "No person with parental responsibility (or authorised adult) present",
-        detail: "Go back to the Eligibility step. A child under 16 cannot be vaccinated under this PGD unless a person with parental responsibility, or a suitable adult authorised by them, is present.",
+        detail: "A child under 16 cannot be vaccinated under this PGD unless a person with parental responsibility, or a suitable adult authorised by them, is present. Record the advice given and save as not supplied, or rebook with an adult present.",
       });
 
-    if (!c.routineUpToDate && !c.catchUpPlanDiscussed)
+    // Shown once the answer is in (not up to date, catch-up discussed); before
+    // that it appeared on landing, before the question had been asked.
+    if (!c.routineUpToDate && c.catchUpPlanDiscussed)
       a.push({
         code: "routine-catchup",
         severity: "caution",
-        message: "Routine UK immunisations not confirmed up to date",
+        message: "Routine UK immunisations not up to date: catch-up plan discussed",
         detail: "Inclusion requires the routine schedule to be up to date, or a catch-up plan discussed and the GP informed. Catch-up is a priority before travel-specific vaccines.",
       });
     if (c.selected.includes("twinrix-paed") && c.selected.length > 1)
@@ -609,16 +619,12 @@ export default function JuniorTravelClient() {
       }
     }
 
-    if (!c.anaphylaxisKit && step >= 5)
-      a.push({
-        code: "no-kit",
-        severity: "red-flag",
-        message: "Anaphylaxis kit not confirmed",
-        detail: "Adrenaline 1 in 1,000 injection and a telephone must be immediately available before any vaccine is given.",
-      });
+    // The anaphylaxis facilities confirmation is a required tick on the
+    // administration step (validation names the control); it no longer
+    // raises a red flag simply because the box has not been reached yet.
 
     return a;
-  }, [patient.age, ageMonths, planned, c, step, daysToDeparture]);
+  }, [patient.age, ageMonths, planned, c, daysToDeparture]);
 
   const hasStops = alerts.some((x) => x.severity === "stop");
   const isUnder16 = patient.age !== null && patient.age < 16;
@@ -626,13 +632,18 @@ export default function JuniorTravelClient() {
 
   const validationError = useMemo(() => {
     switch (step) {
-      case 0: return validatePatientStep(patient, { minAge: 1 });
+      case 0: {
+        const base = validatePatientStep(patient);
+        if (base) return base;
+        if (ageMonths !== null && ageMonths < 12) return "Under 12 months: outside this PGD (see the exclusion above)";
+        return null;
+      }
       case 1: return validateConsentStep(consent);
       case 2:
         if (!c.destination.trim()) return "Please record the destination";
         if (!c.departureDate.trim() || !parseLocalDate(c.departureDate)) return "Please record the departure date";
-        if (!c.recommendedForDestination) return "Confirm the vaccine is recommended by NaTHNaC / TravelHealthPro for the destination, or the child is otherwise at risk as described in the Green Book";
-        if (!c.routineUpToDate && !c.catchUpPlanDiscussed) return "Confirm routine UK childhood immunisations are up to date, or that a catch-up plan has been discussed and the GP informed";
+        if (!c.recommendedAnswer) return "Answer \"Is a vaccine in this PGD recommended for this destination, or is the child otherwise at risk?\" (Yes or No)";
+        if (!c.routineUpToDate && !c.catchUpPlanDiscussed) return "Tick \"Routine UK childhood immunisations confirmed up to date\", or tick \"Routine immunisations not up to date: a catch-up plan has been discussed and the GP informed\"";
         return null;
       case 3:
         if (c.selected.length === 0) return "Please select at least one vaccine";
@@ -644,17 +655,17 @@ export default function JuniorTravelClient() {
         if (c.selected.includes("twinrix-paed") && c.selected.length > 1 && !c.twinrixCoAdminReason.trim()) return "Twinrix Paediatric with another vaccine today: record the reason for same-day co-administration, or give separately";
         return null;
       case 4:
-        if (!c.allergies.trim()) return "Please record allergy status (or NKDA)";
-        if (isUnder16 && !c.parentPresent) return "Under 16: a person with parental responsibility, or a suitable adult authorised by them, must be present for the vaccination";
+        if (!c.allergies.trim()) return "\"Allergies\" is required: record allergies, or NKDA";
+        if (isUnder16 && !c.parentPresentAnswer) return "Answer \"Is a person with parental responsibility, or a suitable adult authorised by them, present for the vaccination?\" (Yes or No)";
         if (isUnder16 && c.parentPresent && !c.parentPresentDetail.trim()) return "Record who is present and their relationship to the child";
-        if (!c.consentBasis) return "Record who gave consent";
+        if (!c.consentBasis) return "Select \"Consent given by\"";
         if (isUnder16 && c.consentBasis === "self") return "Under 16: consent must come from a person with parental responsibility, or the young person must be assessed as Gillick competent";
         if (c.consentBasis === "gillick" && !gillickOffered) return `Gillick competence is offered from ${GILLICK_MIN_AGE} years to 15 years; record parental consent for this child`;
         if (!isUnder16 && c.consentBasis === "gillick") return "Aged 16 or 17: the young person consents in their own right";
         if ((c.consentBasis === "parental" || c.consentBasis === "gillick") && !c.consentDetail.trim()) return c.consentBasis === "parental" ? "Record the relationship of the person with parental responsibility to the child" : "Record the basis of the Gillick competence assessment";
         return null;
       case 5:
-        if (!c.anaphylaxisKit) return "Confirm anaphylaxis facilities and adrenaline 1 in 1,000 are immediately available";
+        if (!c.anaphylaxisKit) return "Tick \"Facilities and trained staff for anaphylaxis are available...\"";
         for (const p of planned) {
           if (!p.entry.batchNumber.trim()) return `${p.def.name}: record the batch number`;
           if (!parseLocalDate(p.entry.expiryDate)) return `${p.def.name}: record the expiry date`;
@@ -664,13 +675,16 @@ export default function JuniorTravelClient() {
         }
         return null;
       case 6:
-        if (!c.observationCompleted) return "Confirm the 15 minute seated observation period was completed";
-        if (!c.scheduleAdvice || !c.sideEffectAdvice || !c.bitesAndFoodAdvice || !c.rabiesAdvice) return "Please confirm all counselling points";
-        if (c.adverseReaction && !c.adverseReactionDetails.trim()) return "Record the adverse reaction and the action taken";
+        if (!c.observationCompleted) return "Tick \"Observed for 15 minutes after vaccination...\" once the 15 minutes have elapsed";
+        if (!c.scheduleAdvice) return "Tick \"PIL offered for each vaccine; written record...\" once done";
+        if (!c.sideEffectAdvice) return "Tick \"Side effects and their management explained...\" once the advice has been given";
+        if (!c.bitesAndFoodAdvice) return "Tick \"Destination-specific written advice given...\" once the advice has been given";
+        if (!c.rabiesAdvice) return "Tick \"Advised that any animal bite, scratch or lick...\" once the advice has been given";
+        if (c.adverseReaction && !c.adverseReactionDetails.trim()) return "\"Adverse reaction and action taken\" is required when \"Adverse reaction observed\" is ticked";
         return validateSummaryStep(summary);
       default: return null;
     }
-  }, [step, patient, consent, c, summary, planned, isUnder16, gillickOffered]);
+  }, [step, patient, consent, c, summary, planned, isUnder16, gillickOffered, ageMonths, daysToDeparture]);
 
   // A stop anywhere disables Next on every step. The only way past a stop is
   // to resolve it or to save the consultation as not supplied.
@@ -776,6 +790,7 @@ export default function JuniorTravelClient() {
           <div className="space-y-4">
             {hasStops && <AlertBanner alerts={alerts} />}
             {exclusionOutcome}
+            <p className="text-xs text-gray-600">Children and young people aged 12 months to 17 years inclusive.</p>
             <PatientDetailsStep patient={patient} onChange={onPatientChange} requireAdult={false} />
           </div>
         );
@@ -799,8 +814,18 @@ export default function JuniorTravelClient() {
             )}
             <TextArea label="Itinerary, duration and planned activities" value={c.itinerary} onChange={(v) => set({ itinerary: v })} placeholder="Rural or urban, length of stay, animal contact, accommodation, season" />
             <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
-              <Checkbox label="Travelling to, or residing in, an area where the vaccine is recommended by NaTHNaC / TravelHealthPro (checked at this consultation), or otherwise at occupational or lifestyle risk as described in the relevant Green Book chapter" checked={c.recommendedForDestination} onChange={(v) => set({ recommendedForDestination: v })} />
-              <Checkbox label="Routine UK childhood immunisations confirmed up to date" checked={c.routineUpToDate} onChange={(v) => set({ routineUpToDate: v })} />
+              <SelectInput
+                label="Is a vaccine in this PGD recommended for this destination, or is the child otherwise at risk?"
+                value={c.recommendedAnswer}
+                onChange={(v) => set({ recommendedAnswer: v as Clinical["recommendedAnswer"], recommendedForDestination: v === "yes" })}
+                options={[
+                  { value: "yes", label: "Yes: recommended by NaTHNaC / TravelHealthPro for the destination (checked at this consultation), or at occupational or lifestyle risk as described in the Green Book" },
+                  { value: "no", label: "No: not recommended and not otherwise at risk (outside this PGD: the tool will stop)" },
+                ]}
+                required
+              />
+              <p className="text-xs text-gray-600">Routine immunisations: tick one of the two boxes below (required).</p>
+              <Checkbox label="Routine UK childhood immunisations confirmed up to date" checked={c.routineUpToDate} onChange={(v) => set({ routineUpToDate: v, ...(v ? { catchUpPlanDiscussed: false } : {}) })} />
               {!c.routineUpToDate && (
                 <Checkbox label="Routine immunisations not up to date: a catch-up plan has been discussed and the GP informed" checked={c.catchUpPlanDiscussed} onChange={(v) => set({ catchUpPlanDiscussed: v })} />
               )}
@@ -880,7 +905,17 @@ export default function JuniorTravelClient() {
             </div>
             <div className="space-y-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
               <p className="text-sm font-semibold text-amber-800">Presence of an adult (required for every child under 16)</p>
-              <Checkbox label="A person with parental responsibility, or a suitable adult authorised by them, is present for the vaccination" checked={c.parentPresent} onChange={(v) => set({ parentPresent: v })} description={isUnder16 ? "Inclusion criterion. This is required for every child under 16 whatever the consent basis; a Gillick-competent young person under 16 must still be accompanied." : "Not required at 16 or 17."} />
+              <SelectInput
+                label="Is a person with parental responsibility, or a suitable adult authorised by them, present for the vaccination?"
+                value={c.parentPresentAnswer}
+                onChange={(v) => set({ parentPresentAnswer: v as Clinical["parentPresentAnswer"], parentPresent: v === "yes", parentPresentDetail: v === "yes" ? c.parentPresentDetail : "" })}
+                options={[
+                  { value: "yes", label: "Yes: present" },
+                  { value: "no", label: isUnder16 ? "No: nobody present (under 16: the child cannot be vaccinated today; the tool will stop)" : "No: not present (not required at 16 or 17)" },
+                ]}
+                required={isUnder16}
+              />
+              <p className="text-xs text-amber-900">{isUnder16 ? "Inclusion criterion. This is required for every child under 16 whatever the consent basis; a Gillick-competent young person under 16 must still be accompanied." : "Not required at 16 or 17."}</p>
               {c.parentPresent && (
                 <TextInput label="Who is present and their relationship to the child" value={c.parentPresentDetail} onChange={(v) => set({ parentPresentDetail: v })} placeholder="e.g. mother; or aunt, authorised by the mother" required={isUnder16} />
               )}
@@ -910,7 +945,7 @@ export default function JuniorTravelClient() {
           <div className="space-y-4">
             <AlertBanner alerts={alerts} />
             {exclusionOutcome}
-            <Checkbox label="Facilities and trained staff for anaphylaxis are available, with immediate access to adrenaline (epinephrine) 1 in 1,000 injection and a telephone" checked={c.anaphylaxisKit} onChange={(v) => set({ anaphylaxisKit: v })} />
+            <Checkbox label="Facilities and trained staff for anaphylaxis are available, with immediate access to adrenaline (epinephrine) 1 in 1,000 injection and a telephone" checked={c.anaphylaxisKit} onChange={(v) => set({ anaphylaxisKit: v })} required />
             {ageMonths !== null && planned.length > 0 && (
               <div className="space-y-4">
                 <p className="text-sm text-gray-700">Intramuscular injection into the deltoid, or the anterolateral thigh in younger children where deltoid bulk is insufficient. Use separate sites, preferably different limbs, or at least 2.5 cm apart in the same limb. Record the site of each. Inspect each vaccine visually and do not use if the appearance differs from the SPC. Vaccinate seated and observe for 15 minutes.</p>
@@ -937,11 +972,12 @@ export default function JuniorTravelClient() {
               <AlertBanner alerts={alerts} />
               {exclusionOutcome}
               <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
-                <Checkbox label="Observed for 15 minutes after vaccination, seated, and the observation period completed" checked={c.observationCompleted} onChange={(v) => set({ observationCompleted: v })} />
-                <Checkbox label="PIL offered for each vaccine; written record of vaccines given with dates provided; remaining doses and dates explained, and that the course should be completed even if travel has taken place" checked={c.scheduleAdvice} onChange={(v) => set({ scheduleAdvice: v })} />
-                <Checkbox label="Side effects and their management explained; advised to seek medical advice for an adverse reaction and to report it via the Yellow Card scheme" checked={c.sideEffectAdvice} onChange={(v) => set({ sideEffectAdvice: v })} />
-                <Checkbox label="Destination-specific written advice given on food and water hygiene, insect bite avoidance, animal avoidance and rabies risk, and malaria prevention where indicated; advised that any fever during or after travel to a malarial area needs urgent medical assessment" checked={c.bitesAndFoodAdvice} onChange={(v) => set({ bitesAndFoodAdvice: v })} />
-                <Checkbox label="Advised that any animal bite, scratch or lick to broken skin abroad needs immediate wound washing and urgent medical attention regardless of rabies vaccination status" checked={c.rabiesAdvice} onChange={(v) => set({ rabiesAdvice: v })} />
+                <p className="text-xs text-gray-600">Tick each item once it has been done or the advice given (all are required).</p>
+                <Checkbox label="Observed for 15 minutes after vaccination, seated, and the observation period completed" checked={c.observationCompleted} onChange={(v) => set({ observationCompleted: v })} required />
+                <Checkbox label="PIL offered for each vaccine; written record of vaccines given with dates provided; remaining doses and dates explained, and that the course should be completed even if travel has taken place" checked={c.scheduleAdvice} onChange={(v) => set({ scheduleAdvice: v })} required />
+                <Checkbox label="Side effects and their management explained; advised to seek medical advice for an adverse reaction and to report it via the Yellow Card scheme" checked={c.sideEffectAdvice} onChange={(v) => set({ sideEffectAdvice: v })} required />
+                <Checkbox label="Destination-specific written advice given on food and water hygiene, insect bite avoidance, animal avoidance and rabies risk, and malaria prevention where indicated; advised that any fever during or after travel to a malarial area needs urgent medical assessment" checked={c.bitesAndFoodAdvice} onChange={(v) => set({ bitesAndFoodAdvice: v })} required />
+                <Checkbox label="Advised that any animal bite, scratch or lick to broken skin abroad needs immediate wound washing and urgent medical attention regardless of rabies vaccination status" checked={c.rabiesAdvice} onChange={(v) => set({ rabiesAdvice: v })} required />
               </div>
               <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
                 <Checkbox label="Adverse reaction observed during or after vaccination" checked={c.adverseReaction} onChange={(v) => set({ adverseReaction: v, ...(v ? {} : { adverseReactionDetails: "" }) })} />
@@ -976,7 +1012,7 @@ export default function JuniorTravelClient() {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-6xl mx-auto px-4">
         <div className="space-y-6">
-          <ProgressBar stepLabels={STEP_LABELS} currentStep={step} onStepClick={(s) => { if (s < step) setStep(s); }} completedSteps={completed} hasErrors={!!validationError} />
+          <ProgressBar stepLabels={STEP_LABELS} currentStep={step} onStepClick={(s) => { if (s < step) setStep(s); }} completedSteps={completed} hasErrors={hasStops} />
           <StepWrapper
             title={STEP_LABELS[step]}
             currentStep={step}

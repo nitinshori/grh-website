@@ -62,7 +62,7 @@ function reducer(
         newState.assessment.weeksPostpartum = days === null ? 0 : Math.floor(days / 7);
       }
       if (action.field === "unprotectedSexSinceDay21" && action.value !== true) {
-        newState.assessment.negativeTest21DaysAfterLastUpsi = false;
+        newState.assessment.negativeTest21DaysAfterLastUpsi = null;
       }
       break;
 
@@ -92,6 +92,9 @@ function reducer(
 
     case "UPDATE_SUMMARY":
       newState.summary = { ...newState.summary, [action.field]: action.value };
+      break;
+    case "UPDATE_EXCLUSION_OUTCOME":
+      newState.exclusionOutcome = { ...newState.exclusionOutcome, [action.field]: action.value };
       break;
 
     case "SET_STEP":
@@ -230,6 +233,38 @@ export default function PostnatalContraceptionClient() {
       consent: { notifyGp: state.consent.notifyGp },
     };
   }, [state, updatedState, hasStops, __pharmProfile]);
+
+  // Advice given and decision reached for an excluded patient (PGD: advise on
+  // alternative options and how to access them; document the advice and the
+  // decision; inform or refer to the GP). Shown on any step with a stop, next
+  // to Save as not supplied, so the record holds the advice.
+  const exclusionOutcomeBlock = hasStops ? (
+    <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-3 print:hidden">
+      <p className="text-sm font-semibold text-red-800">
+        Patient excluded: do not supply. Record who the patient was referred to and the advice given, then use Save as not supplied.
+      </p>
+      <SelectInput
+        label="Referred to"
+        value={state.exclusionOutcome.referredTo}
+        onChange={(v) => dispatch({ type: "UPDATE_EXCLUSION_OUTCOME", field: "referredTo", value: v })}
+        options={[
+          { value: "gp", label: "GP" },
+          { value: "sexual-health", label: "Sexual health or contraception service" },
+          { value: "midwife", label: "Midwife or maternity service" },
+          { value: "other", label: "Other (state in advice given)" },
+        ]}
+        required
+      />
+      <TextArea
+        label="Advice given and decision reached"
+        value={state.exclusionOutcome.adviceGiven}
+        onChange={(v) => dispatch({ type: "UPDATE_EXCLUSION_OUTCOME", field: "adviceGiven", value: v })}
+        placeholder="Alternative contraceptive options advised and how to access them; who the patient was referred to; whether the GP was informed"
+        rows={3}
+        required
+      />
+    </div>
+  ) : null;
 
   const handleNewConsultation = useCallback(() => {
     dispatch({ type: "RESET" });
@@ -388,7 +423,16 @@ export default function PostnatalContraceptionClient() {
                     required
                   />
                   {state.assessment.unprotectedSexSinceDay21 === true && (
-                    <Checkbox label="Negative pregnancy test 21 days after the last episode" checked={state.assessment.negativeTest21DaysAfterLastUpsi} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "negativeTest21DaysAfterLastUpsi", value: v })} description="Without this, pregnancy is not reasonably excluded and supply is refused." />
+                    <SelectInput
+                      label="Was there a negative pregnancy test 21 days after the last episode?"
+                      value={state.assessment.negativeTest21DaysAfterLastUpsi === null ? "" : state.assessment.negativeTest21DaysAfterLastUpsi ? "yes" : "no"}
+                      onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "negativeTest21DaysAfterLastUpsi", value: v === "" ? null : v === "yes" })}
+                      options={[
+                        { value: "yes", label: "Yes: negative test 21 days after the last episode, pregnancy reasonably excluded" },
+                        { value: "no", label: "No: pregnancy not reasonably excluded, supply is refused" },
+                      ]}
+                      required
+                    />
                   )}
                 </>
               )}
@@ -582,7 +626,7 @@ export default function PostnatalContraceptionClient() {
               <Checkbox label="Depression" checked={state.medicalHistory.depression} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "depression", value: v })} description="Caution, both arms." />
 
               <Checkbox
-                label="SLE with antiphospholipid antibodies"
+                label="SLE (systemic lupus erythematosus) with antiphospholipid antibodies"
                 checked={state.medicalHistory.sleWithAntiphospholipidAntibodies}
                 onChange={(v) =>
                   dispatch({
@@ -633,10 +677,10 @@ export default function PostnatalContraceptionClient() {
             {hasStops && (
               <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded">
                 <p className="text-sm font-semibold text-red-700 mb-2">
-                  Hard Stop — Cannot Supply
+                  Hard stop: cannot supply
                 </p>
                 <p className="text-sm text-red-600">
-                  Based on the identified exclusions, neither desogestrel nor Depo-Provera can be supplied under this PGD. Advise on alternative options and how to access them; document the advice and the decision; inform or refer to the GP as appropriate.
+                  Based on the identified exclusions, neither desogestrel nor Depo-Provera can be supplied under this PGD. Advise on alternative options and how to access them; record the advice and the decision in the red box above; inform or refer to the GP as appropriate.
                 </p>
               </div>
             )}
@@ -827,7 +871,7 @@ export default function PostnatalContraceptionClient() {
 
               {state.medicineSupply.medicineChoice && (
                 <Checkbox
-                  label="UKMEC 2025 category 1 or 2 for the chosen method confirmed"
+                  label="UKMEC 2025 (UK Medical Eligibility Criteria for contraceptive use) category 1 or 2 for the chosen method confirmed"
                   checked={state.medicineSupply.ukmecConfirmed}
                   onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "ukmecConfirmed", value: v })}
                   description={state.medicineSupply.medicineChoice === "desogestrel"
@@ -1090,6 +1134,7 @@ export default function PostnatalContraceptionClient() {
       {alerts.length > 0 && state.currentStep < 5 && (
         <AlertBanner alerts={alerts} />
       )}
+      {exclusionOutcomeBlock}
 
       {renderStep()}
     </div>
@@ -1141,9 +1186,11 @@ function PostnatalContraceptionSummaryReport({
               ? "Not answered"
               : state.assessment.unprotectedSexSinceDay21 === false
                 ? "Yes: no unprotected intercourse since day 21"
-                : state.assessment.negativeTest21DaysAfterLastUpsi
-                  ? "Yes: negative test 21 days after the last episode"
-                  : "No"
+                : state.assessment.negativeTest21DaysAfterLastUpsi === null
+                  ? "Not answered"
+                  : state.assessment.negativeTest21DaysAfterLastUpsi
+                    ? "Yes: negative test 21 days after the last episode"
+                    : "No"
           }
         />
       )}
@@ -1194,7 +1241,15 @@ function PostnatalContraceptionSummaryReport({
 
       <SectionHeader>Medicine Supply</SectionHeader>
       {!supplied ? (
-        <Row label="Outcome" value={stopped ? "NOT SUPPLIED: exclusion criteria met. Patient advised and referred as recorded." : "No medicine selected"} />
+        <>
+          <Row label="Outcome" value={stopped ? "NOT SUPPLIED: exclusion criteria met. Patient advised and referred as recorded." : "No medicine selected"} />
+          {stopped && (
+            <>
+              <Row label="Referred to" value={({ gp: "GP", "sexual-health": "Sexual health or contraception service", midwife: "Midwife or maternity service", other: "Other" } as Record<string, string>)[state.exclusionOutcome.referredTo] || "Not recorded"} />
+              <Row label="Advice given and decision reached" value={state.exclusionOutcome.adviceGiven || "Not recorded"} />
+            </>
+          )}
+        </>
       ) : (
         <>
           <Row label="Medicine" value={state.medicineSupply.medicine || "None supplied"} />

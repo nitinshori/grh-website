@@ -234,13 +234,15 @@ export default function PeriodDelayClient() {
               patient={state.patient}
               onChange={(field, value) => dispatch({ type: "UPDATE_PATIENT", field, value })}
               requireAdult={false}
-              genderOption={{
-                label: "Patient is female",
-                description: "This PGD covers women aged 16 and over. Male is an exclusion.",
-                checked: state.medicalHistory.femaleConfirmed,
-                onToggle: (v: boolean) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "femaleConfirmed", value: v }),
-              }}
             />
+            <div className="mt-4">
+              <YesNo
+                label="Patient is female"
+                description="This PGD covers women aged 16 and over. No is an exclusion: save as not supplied and refer."
+                value={state.medicalHistory.femaleConfirmed}
+                onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "femaleConfirmed", value: v })}
+              />
+            </div>
           </StepWrapper>
         );
       case 1:
@@ -259,7 +261,7 @@ export default function PeriodDelayClient() {
               )}
               <TextInput label="Dates the delay is needed for" value={state.assessment.datesNeededFor} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "datesNeededFor", value: v })} placeholder="e.g. 14/10/2026 to 21/10/2026" required />
               <TextInput label="Date of last menstrual period (first day)" value={state.assessment.lastPeriodDate} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "lastPeriodDate", value: v })} placeholder="DD/MM/YYYY" required />
-              <Checkbox label="Patient has a regular, predictable menstrual cycle" checked={state.assessment.cycleRegular} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "cycleRegular", value: v })} description="An irregular or unpredictable cycle is an exclusion: the start date cannot be calculated." />
+              <YesNo label="Patient has a regular, predictable menstrual cycle" value={state.assessment.cycleRegular} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "cycleRegular", value: v })} description="No is an exclusion: with an irregular or unpredictable cycle the start date cannot be calculated." />
               <TextInput label="When is the next period due? (first day)" value={state.assessment.expectedPeriodDate} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "expectedPeriodDate", value: v })} placeholder="DD/MM/YYYY" required />
               {state.assessment.expectedPeriodDate !== "" && state.assessment.daysUntilExpected === null && (
                 <p className="text-sm text-red-700">Enter the date as DD/MM/YYYY.</p>
@@ -283,13 +285,15 @@ export default function PeriodDelayClient() {
               <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-3 space-y-2">
                 <p className="text-sm font-semibold text-amber-900">Excluding pregnancy (required before any supply)</p>
                 <p className="text-xs text-amber-800">Ask, in these terms: &quot;When did your last period start, and was it normal for you?&quot; and &quot;Have you had sex without contraception, or had a contraceptive failure, since that period?&quot;</p>
-                <Checkbox label="Last period was normal for her and on time" checked={state.assessment.lastPeriodNormalOnTime} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "lastPeriodNormalOnTime", value: v })} />
-                <Checkbox label="No unprotected sex or contraceptive failure since that period" checked={state.assessment.noUnprotectedSexSince} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "noUnprotectedSexSince", value: v })} />
-                {!(state.assessment.lastPeriodNormalOnTime && state.assessment.noUnprotectedSexSince) && (
+                <YesNo label="Last period was normal for her and on time" value={state.assessment.lastPeriodNormalOnTime} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "lastPeriodNormalOnTime", value: v })} />
+                <YesNo label="No unprotected sex or contraceptive failure since that period" description="Yes means there has been none." value={state.assessment.noUnprotectedSexSince} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "noUnprotectedSexSince", value: v })} />
+                {(state.assessment.lastPeriodNormalOnTime === false || state.assessment.noUnprotectedSexSince === false) && (
                   <div className="space-y-2 pt-1">
                     <p className="text-xs text-amber-800">Pregnancy cannot be excluded on history. Do not supply until a pregnancy test taken no earlier than 21 days after the last unprotected sex is negative. Record the date and result.</p>
                     <TextInput label="Date of the last unprotected sex or contraceptive failure" value={state.assessment.lastUpsiDate} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "lastUpsiDate", value: v })} placeholder="DD/MM/YYYY" required />
-                    <Checkbox label="Pregnancy test negative, taken no earlier than 21 days after the last unprotected sex" checked={state.assessment.pregnancyTestNegative} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "pregnancyTestNegative", value: v })} />
+                    <YesNo label="Pregnancy test negative, taken no earlier than 21 days after the last unprotected sex" description="No means pregnancy has not been excluded: do not supply." value={state.assessment.pregnancyTestNegative} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "pregnancyTestNegative", value: v })} />
+                    {state.assessment.pregnancyTestNegative === true && (
+                    <>
                     <TextInput label="Date of pregnancy test" value={state.assessment.pregnancyTestDate} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "pregnancyTestDate", value: v })} placeholder="DD/MM/YYYY" required />
                     {(() => {
                       const interval = daysBetweenUk(state.assessment.lastUpsiDate, state.assessment.pregnancyTestDate);
@@ -299,6 +303,8 @@ export default function PeriodDelayClient() {
                         </p>
                       ) : null;
                     })()}
+                    </>
+                    )}
                   </div>
                 )}
               </div>

@@ -329,7 +329,7 @@ export function TravellersDiarrhoeaClient() {
           currentStep={state.currentStep}
           onStepClick={handleStepClick}
           completedSteps={completedSteps}
-          hasErrors={!!validationError}
+          hasErrors={isBlocked}
         />
         {alerts.length > 0 && (
           <AlertBanner alerts={alerts} />
@@ -410,20 +410,22 @@ export function TravellersDiarrhoeaClient() {
               type="date"
               value={state.travelAssessment.departureDate}
               onChange={(v) => handleTravelChange('departureDate', v)}
+              required
             />
             <TextInput
               label="Return Date"
               type="date"
               value={state.travelAssessment.returnDate}
               onChange={(v) => handleTravelChange('returnDate', v)}
+              required
             />
 
             <SelectInput
               label="Travel Type"
               value={state.travelAssessment.travelType}
               onChange={(v) => handleTravelChange('travelType', v)}
+              required
               options={[
-                { value: '', label: 'Select travel type...' },
                 { value: 'backpacking', label: 'Backpacking' },
                 { value: 'business', label: 'Business travel' },
                 { value: 'cruise', label: 'Cruise' },
@@ -731,7 +733,6 @@ export function TravellersDiarrhoeaClient() {
               value={state.medicineSelection.selectedApproach}
               onChange={(v) => handleMedicineChange('selectedApproach', v)}
               options={[
-                { value: '', label: 'Select...' },
                 { value: 'standby', label: 'Supply standby treatment' },
                 { value: 'not-supplied', label: 'Not supplied (refer patient)' },
               ]}
@@ -776,14 +777,13 @@ export function TravellersDiarrhoeaClient() {
                 />
 
                 <SelectInput
-                  label="Indication confirmed"
+                  label="Indication confirmed with the patient (what the tablets are for)"
                   value={state.medicineSelection.selectedForCriteria}
                   onChange={(v) =>
                     handleMedicineChange('selectedForCriteria', v)
                   }
                   options={[
-                    { value: '', label: 'Select...' },
-                    { value: 'moderate-severe', label: 'Self-start for moderate to severe traveller\'s diarrhoea (PGD indication)' },
+                    { value: 'moderate-severe', label: 'Patient understands: self-start only for moderate to severe traveller\'s diarrhoea (PGD indication)' },
                   ]}
                   required
                 />

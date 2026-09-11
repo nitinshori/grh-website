@@ -70,7 +70,7 @@ export function validateStep(step: number, state: MeningitiBConsultationState): 
         return "Trumenba 3 dose schedule is for individuals at increased risk: asplenia, a complement disorder, complement inhibitor therapy or laboratory staff must be recorded on the indication step. Otherwise use the routine 2 dose schedule.";
       }
       if (!a.doseNumber) {
-        return "Record which dose in the course this administration represents";
+        return "Select \"Which dose in the course this represents\"";
       }
       if (a.product === "trumenba" && (a.doseNumber === "booster-12-months" || a.doseNumber === "booster-after-toddler-course")) {
         return "Bexsero boosters do not apply to Trumenba: the routine schedule is 2 doses at 0 and 6 months, the increased-risk schedule 3 doses";
@@ -107,7 +107,7 @@ export function validateStep(step: number, state: MeningitiBConsultationState): 
       // Interval since the previous dose.
       if (a.doseNumber && a.doseNumber !== "1st") {
         if (!a.previousDoseDate) {
-          return "Record the date of the previous dose in this course";
+          return "Complete \"Date of the previous dose in this course\"";
         }
         const since = daysSince(a.previousDoseDate);
         if (since === null) return "Previous dose date is not a valid date";
@@ -137,7 +137,7 @@ export function validateStep(step: number, state: MeningitiBConsultationState): 
         }
       }
       if (!a.vaccinationDate1) {
-        return "Date of administration is required";
+        return "Date of administration is required (today's date for this dose)";
       }
       if (!a.injectionSite1.trim()) {
         return "Anatomical site is required";
@@ -166,7 +166,7 @@ export function validateStep(step: number, state: MeningitiBConsultationState): 
         return "This is the first dose of a 2 dose primary course: the second dose is due at least 2 months after it. Record the next dose date.";
       }
       if (!a.courseComplete && !a.vaccinationDate2) {
-        return "Book the next dose in the course at this appointment and record when it is due (or mark the course complete)";
+        return "Complete \"Date the next dose is due\" (book it at this appointment), or tick \"Course complete with this dose\"";
       }
       if (!a.administeredBy.trim()) {
         return "Name of immuniser is required";
@@ -178,25 +178,28 @@ export function validateStep(step: number, state: MeningitiBConsultationState): 
       const p = state.postVaccine;
       const c = state.counselling;
       if (!p.observationCompleted) {
-        return "Record that the 15 minute seated observation period was completed";
+        return "Tick \"Observed for 15 minutes after vaccination, seated, and the observation period completed\"";
       }
       if (!p.writtenRecordGiven) {
-        return "Offer the patient information leaflet and a written record showing the product, the date and when the next dose is due";
+        return "Tick \"Patient information leaflet offered and written record given\"";
       }
       if (state.vaccineAdmin.product === "bexsero" && ageMonths !== null && ageMonths < 12 && !p.paracetamolAdvice) {
-        return "Infant under one year given Bexsero: give the paracetamol schedule and written paracetamol advice";
+        return "Infant under one year given Bexsero: tick \"paracetamol schedule explained and written paracetamol advice given\"";
       }
       if (!c.doseScheduleAdvice) {
-        return "Explain that the course must be completed for full protection and confirm when the next dose is due";
+        return "Tick \"Course must be completed for full protection; next dose date confirmed\"";
       }
-      if (!c.commonReactionsAdvice || !c.sideEffectsExplained) {
-        return "Counsel on expected side effects and their management";
+      if (!c.commonReactionsAdvice) {
+        return "Tick \"Expected side effects and their management explained\"";
       }
-      if (!p.yellowCardAdvice) {
-        return "Counsel on Yellow Card reporting";
+      if (!c.sideEffectsExplained || !p.yellowCardAdvice) {
+        return "Tick \"Side effects explained and Yellow Card reporting counselled\"";
       }
       if (!c.meningitisWarningSignsAdvice || !p.meningitisSignsAdvice) {
-        return "Explain that the vaccine does not protect against all causes of meningitis and septicaemia, and the signs to seek urgent help for";
+        return "Tick \"Vaccine does not protect against all causes of meningitis and septicaemia; signs of meningococcal disease explained\"";
+      }
+      if (!state.vaccineAdmin.courseComplete && !p.reviewScheduleAdvice) {
+        return "Tick \"Next dose in the course booked\" (the next dose date was recorded on the administration step; book it now)";
       }
       return null;
     }

@@ -163,7 +163,7 @@ export default function RSVSummaryReport({
               <Row label="Outcome" value="NOT SUPPLIED: exclusion criteria met (see clinical alerts above)" />
               <Row
                 label="Advice given"
-                value={summary.clinicalNotes || 'Advised on alternative options and how to access them; informed or referred to the GP as appropriate'}
+                value={summary.clinicalNotes || 'Not recorded'}
               />
             </div>
           ) : (

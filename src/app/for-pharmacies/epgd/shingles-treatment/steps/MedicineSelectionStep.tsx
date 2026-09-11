@@ -100,7 +100,6 @@ export const MedicineSelectionStep: React.FC<MedicineSelectionStepProps> = ({
             value={medicine.medicine}
             onChange={(v) => handleChange('medicine', v as ShinglesMedicineSelection['medicine'])}
             options={[
-              { value: '', label: 'Select medicine...' },
               ...availability.map((a) => ({
                 value: a.medicine,
                 label: a.available
@@ -167,6 +166,7 @@ export const MedicineSelectionStep: React.FC<MedicineSelectionStepProps> = ({
                 value={medicine.brand}
                 onChange={(v) => handleChange('brand', v)}
                 placeholder="e.g. Wockhardt aciclovir 800 mg; Valtrex 500 mg"
+                required
               />
               <TextInput
                 label="Batch number"

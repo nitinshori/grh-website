@@ -116,8 +116,11 @@ export function VaccineSafetyChecks({ slug }: { slug: string }) {
         Pre-vaccination safety checks
       </p>
       <p className="mt-1 text-xs text-red-900">
-        Required by every vaccination PGD in this estate. Tick the box below to
-        confirm adrenaline is on site: the Next button stays locked until you do.
+        Required by every vaccination PGD. Tick the box below to confirm
+        adrenaline is on site: the Next button stays locked until you do. The
+        observation tick, batch number, expiry date and site are completed on
+        the final step, after the vaccine has been given; they stay on screen
+        as you move between steps.
       </p>
 
       <label className="mt-3 flex items-start gap-3 rounded-md border-2 border-red-500 bg-white p-3 text-sm text-red-900 print:border-gray-400">
@@ -153,7 +156,7 @@ export function VaccineSafetyChecks({ slug }: { slug: string }) {
 
       <div className="mt-3 grid gap-3 sm:grid-cols-3">
         <label className="text-xs text-gray-700">
-          Batch number
+          Batch number (from the vial or syringe label)
           <input
             type="text"
             value={state.batchNumber}
@@ -163,7 +166,7 @@ export function VaccineSafetyChecks({ slug }: { slug: string }) {
           />
         </label>
         <label className="text-xs text-gray-700">
-          Expiry date
+          Expiry date (month / year, as printed on the pack)
           <input
             type="text"
             value={state.expiryDate}
@@ -173,7 +176,7 @@ export function VaccineSafetyChecks({ slug }: { slug: string }) {
           />
         </label>
         <label className="text-xs text-gray-700">
-          Anatomical site
+          Injection site (where the vaccine was given)
           <select
             value={state.site}
             onChange={(e) => set("site", e.target.value)}
@@ -188,8 +191,8 @@ export function VaccineSafetyChecks({ slug }: { slug: string }) {
         </label>
       </div>
       <p className="mt-2 text-[11px] text-gray-600">
-        The batch number is what makes a recall actionable. Two vaccination
-        tools recorded none at all until this was added.
+        Record the batch number and expiry date from the vial or syringe before
+        saving: the batch number is what makes a recall actionable.
       </p>
     </div>
   );

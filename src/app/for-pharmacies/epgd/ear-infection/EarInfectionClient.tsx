@@ -126,7 +126,8 @@ function initialState() {
       alreadyTreatedThisEpisode: false,
     },
     treatment: {
-      product: "ciprofloxacin" as Product,
+      // Chosen by the pharmacist, with the reason recorded: not pre-selected.
+      product: "" as Product,
       productReason: "",
       batchNumber: "",
       expiryDate: "",
@@ -204,16 +205,19 @@ export default function EarInfectionClient() {
     }
 
     // ── Otoscopy is a required step ──────────────────────────────────────
-    if (a.tympanicMembrane !== "intact") {
+    // The stop fires only on a recorded adverse finding (perforated, or not
+    // seen). A blank finding is "not yet answered": a validation message on
+    // the Assessment step and on every step after it (productGateError), so
+    // nothing can be supplied without the drum recorded as intact, and no
+    // stop is raised from an unvisited step (stop audit, 11 Sep 2026).
+    if (a.tympanicMembrane === "perforated" || a.tympanicMembrane === "not-seen") {
       issues.push({
         severity: "stop",
         code: "OTOSCOPY_REQUIRED",
         message:
-          a.tympanicMembrane === ""
-            ? "Otoscopy not recorded"
-            : a.tympanicMembrane === "perforated"
-              ? "Tympanic membrane perforated or perforation suspected"
-              : "Tympanic membrane could not be visualised",
+          a.tympanicMembrane === "perforated"
+            ? "Tympanic membrane perforated or perforation suspected"
+            : "Tympanic membrane could not be visualised",
         detail:
           "The tympanic membrane must be visualised and recorded as intact before either product is supplied. If you cannot see the drum, you cannot use this PGD. Refer. Never supply the neomycin spray where the drum is not seen or is perforated.",
       });
@@ -397,15 +401,11 @@ export default function EarInfectionClient() {
         detail: "This product is not recommended in pregnancy; use the ciprofloxacin arm.",
       });
     }
-    if (product === "spray" && a.breastfeeding && !a.breastfeedingDecisionRecorded.trim()) {
-      issues.push({
-        severity: "stop",
-        code: "SPRAY_BREASTFEEDING",
-        message: "Breastfeeding: spray excluded unless a decision is recorded",
-        detail:
-          "Excluded unless a decision has been made and recorded about whether to continue breastfeeding or the treatment. The ciprofloxacin arm avoids the question.",
-      });
-    }
+    // Breastfeeding with the spray: the document excludes the spray unless a
+    // decision is recorded. A blank decision is a missing record, so it is a
+    // validation message on the Treatment step and every step after it
+    // (productGateError), not a stop; the spray is also withheld from the
+    // product list until the decision is recorded (sprayAllowed).
 
     // ── Cautions ─────────────────────────────────────────────────────────
     if (a.immunosuppressed && !a.severeUnremittingPain) {
@@ -459,6 +459,20 @@ export default function EarInfectionClient() {
     !state.assessment.neomycinOrSprayAllergy;
 
 
+  // Records the supply depends on, re-checked on the Treatment step and
+  // every step after it so a gap opened by going back is caught before
+  // Save & Print. Each is a missing record, worded as the control's label.
+  const productGateError = useMemo<string | null>(() => {
+    const a = state.assessment;
+    const t = state.treatment;
+    if (!a.tympanicMembrane) return "Record the otoscopy finding (Tympanic membrane on otoscopy) on the Assessment step: the drum must be seen and intact before either product is supplied";
+    if (!t.product) return "Select the product supplied";
+    if (t.product === "spray" && a.breastfeeding && !a.breastfeedingDecisionRecorded.trim())
+      return "Breastfeeding: record the decision about continuing breastfeeding or the treatment on the Assessment step before the spray is supplied, or select the ciprofloxacin drops";
+    if (t.product === "spray" && !sprayAllowed) return "The ear spray cannot be supplied to this patient: select the ciprofloxacin drops";
+    return null;
+  }, [state.assessment, state.treatment, sprayAllowed]);
+
   const stepError = useMemo<string | null>(() => {
     const a = state.assessment;
     switch (currentStep) {
@@ -485,42 +499,51 @@ export default function EarInfectionClient() {
         if (!a.earPain && !a.discharge && !a.itching && !a.canalSwollenOrRed)
           return "Record at least one clinical sign or symptom of acute otitis externa (pain or tenderness, discharge, itch, or a swollen or red canal)";
         if (!a.tympanicMembrane) return "Record the otoscopy finding";
-        if (!a.canalFindings.trim()) return "Record the otoscopy finding in terms: the state of the canal";
-        if (!a.redFlagsAllAsked) return "Confirm that every Appendix 1 red flag was asked about or looked for";
-        if (!a.previousEpisodes12m) return "Record any previous episode in the last 12 months";
+        if (!a.canalFindings.trim()) return "Otoscopy finding: record the state of the canal";
+        if (!a.redFlagsAllAsked) return "Tick 'Every Appendix 1 red flag above was asked about or looked for'";
+        if (!a.previousEpisodes12m) return "Episodes of this in the last 12 months: select an option";
         return null;
       case 3:
         // Stops are re-checked on every later step: a stop that only bit on
         // step 2 could be raised afterwards and carried to a printed supply.
         if (hasStopAlerts) return "Cannot proceed: exclusion criteria present";
-        if (!state.treatment.product) return "Select the product supplied";
-        if (state.treatment.product === "spray" && !sprayAllowed) return "The ear spray cannot be supplied to this patient: select the ciprofloxacin drops";
+        if (productGateError) return productGateError;
         if (!state.treatment.productReason.trim()) return "Record which product was supplied and why";
         if (!state.treatment.batchNumber.trim()) return "Record the batch number";
         if (!state.treatment.expiryDate) return "Record the expiry date";
         if (state.treatment.expiryDate < state.summary.consultationDate) return "The expiry date is before today: do not supply this pack";
-        if (!state.treatment.pilSupplied) return "Confirm the patient information leaflet was supplied with the product";
+        if (!state.treatment.pilSupplied) return "Tick 'Patient information leaflet supplied with the product'";
         return null;
       case 4: {
         if (hasStopAlerts) return "Cannot proceed: exclusion criteria present";
+        if (productGateError) return productGateError;
         const c = state.counselling;
-        if (state.treatment.product === "ciprofloxacin" && (!c.warmDrops || !c.liedPosition || !c.instilTechnique || !c.completeCourse))
-          return "Confirm the ciprofloxacin administration counselling";
-        if (state.treatment.product === "spray" && (!c.sprayTechnique || !c.sprayStopIfIrritation))
-          return "Confirm the spray counselling";
-        if (!c.avoidWater || !c.nothingInEar) return "Confirm the water-avoidance and nothing-in-the-ear advice";
-        if (!c.seekAdvice || !c.noSecondCourse) return "Confirm the same-day help advice and that no second course is to be started";
-        if (!c.disposalAdvice) return "Confirm the disposal advice was given (return unused ampoules or product to a pharmacy)";
+        if (state.treatment.product === "ciprofloxacin") {
+          if (!c.warmDrops) return "Tick 'Warm the ampoule in your hand first'";
+          if (!c.liedPosition) return "Tick 'Lie with the sore ear facing up...'";
+          if (!c.instilTechnique) return "Tick 'Use a new ampoule each time...'";
+          if (!c.completeCourse) return "Tick 'Twice a day for 7 days'";
+        }
+        if (state.treatment.product === "spray") {
+          if (!c.sprayTechnique) return "Tick 'Shake the bottle well; prime before first use...'";
+          if (!c.sprayStopIfIrritation) return "Tick 'Stop and tell us if the ear becomes more irritated...'";
+        }
+        if (!c.avoidWater) return "Tick 'Keep water out of the ear...'";
+        if (!c.nothingInEar) return "Tick 'Nothing goes in the ear...'";
+        if (!c.seekAdvice) return "Tick 'Seek help the SAME DAY if...'";
+        if (!c.noSecondCourse) return "Tick 'If no better after finishing the 7 days, go to your GP. Do not start a second course.'";
+        if (!c.disposalAdvice) return "Tick 'Return any unused ampoules or product to a pharmacy for disposal'";
         return null;
       }
       case 5:
       case 6:
         if (hasStopAlerts) return "Cannot proceed: exclusion criteria present";
+        if (productGateError) return productGateError;
         return validateSummaryStep(state.summary);
       default:
         return null;
     }
-  }, [currentStep, state, age, under16, hasStopAlerts, sprayAllowed]);
+  }, [currentStep, state, age, under16, hasStopAlerts, productGateError]);
 
   const handleNext = useCallback(() => {
     if (stepError || hasStopAlerts) return;
@@ -761,7 +784,6 @@ export default function EarInfectionClient() {
                 value={state.assessment.earAffected}
                 onChange={(v) => setA({ earAffected: v as any })}
                 options={[
-                  { value: "", label: "Select..." },
                   { value: "left", label: "Left" },
                   { value: "right", label: "Right" },
                   { value: "both", label: "Both" },
@@ -783,7 +805,6 @@ export default function EarInfectionClient() {
                 value={state.assessment.symptomDuration}
                 onChange={(v) => setA({ symptomDuration: v as any })}
                 options={[
-                  { value: "", label: "Select..." },
                   { value: "<48h", label: "Less than 48 hours" },
                   { value: "2-7d", label: "2-7 days" },
                   { value: ">7d", label: "7-14 days" },
@@ -825,10 +846,10 @@ export default function EarInfectionClient() {
                 <p className="text-xs text-blue-900 mt-2">At least one of pain or tenderness, discharge, itch, or a swollen or red canal is required (inclusion criterion).</p>
               </div>
 
-              <div className="mb-4 rounded-lg border border-red-300 bg-red-50 px-3 py-3 space-y-3">
+              <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-3 space-y-3">
                 <div>
-                  <p className="text-sm font-semibold text-red-900">Otoscopy (required)</p>
-                  <p className="text-xs text-red-800 mt-1">The tympanic membrane must be visualised and recorded as intact before either product is supplied. If you cannot see the drum, you cannot use this PGD. Where discharge or debris obstructs the canal, refer for aural toilet; do not attempt to clear the canal in the pharmacy.</p>
+                  <p className="text-sm font-semibold text-amber-900">Otoscopy (required)</p>
+                  <p className="text-xs text-amber-900 mt-1">The tympanic membrane must be visualised and recorded as intact before either product is supplied. If you cannot see the drum, you cannot use this PGD. Where discharge or debris obstructs the canal, refer for aural toilet; do not attempt to clear the canal in the pharmacy.</p>
                 </div>
                 <SelectInput
                   label="Tympanic membrane on otoscopy"
@@ -842,7 +863,7 @@ export default function EarInfectionClient() {
                   required
                 />
                 <TextArea
-                  label="Otoscopy finding in terms: state of the canal (and what was done where the drum could not be seen)"
+                  label="Otoscopy finding: state of the canal (and what was done where the drum could not be seen)"
                   value={state.assessment.canalFindings}
                   onChange={(v) => setA({ canalFindings: v })}
                   placeholder="e.g. right canal red and oedematous with scant discharge, drum seen, intact, no debris"
@@ -851,9 +872,9 @@ export default function EarInfectionClient() {
                 />
               </div>
 
-              <div className="mb-4 rounded-lg border border-red-300 bg-red-50 px-3 py-3 space-y-3">
+              <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-3 space-y-3">
                 <div>
-                  <p className="text-sm font-semibold text-red-900">Appendix 1 red flags: ask and look for these before supplying anything. Any one excludes; the first three are emergencies.</p>
+                  <p className="text-sm font-semibold text-amber-900">Appendix 1 red flags: ask and look for these before supplying anything. Any one excludes; the first three are emergencies.</p>
                 </div>
                 <Checkbox label="Patient has diabetes" checked={state.assessment.diabetes} onChange={(v) => setA({ diabetes: v })} />
                 <Checkbox label="Patient is immunosuppressed" checked={state.assessment.immunosuppressed} onChange={(v) => setA({ immunosuppressed: v })} />
@@ -1009,8 +1030,8 @@ export default function EarInfectionClient() {
         {currentStep === 4 && (
           <div className="space-y-4">
             <p className="text-sm text-gray-600 mb-4">
-              Confirm that the following counselling points have been provided
-              to the patient. Supply the patient information leaflet provided with the product.
+              Tick each counselling point as it is given to the patient. Every item except pain relief
+              is required before Next. Supply the patient information leaflet provided with the product.
             </p>
             <div className="space-y-3">
               {state.treatment.product === "ciprofloxacin" && (

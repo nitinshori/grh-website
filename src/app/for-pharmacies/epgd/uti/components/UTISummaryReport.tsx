@@ -16,12 +16,18 @@ interface UTISummaryReportProps {
   alerts: ClinicalAlert[];
 }
 
+function yesNo(value: boolean | null): string {
+  return value === null ? "Not answered" : value ? "Yes" : "No";
+}
+
 function renalFunctionLabel(value: UTIConsultationState["medicalHistory"]["renalImpairment"]): string {
   switch (value) {
     case "none":
-      return "Answer NO: no known kidney disease (patient's answer)";
+      return "No: no known kidney disease (patient's answer)";
     case "unknown":
       return "Patient does not know";
+    case "known":
+      return "Yes: known kidney disease or under renal follow-up, eGFR not known";
     case "moderate":
       return "Moderate impairment (eGFR 30 to 44)";
     case "severe":
@@ -101,10 +107,10 @@ export function UTISummaryReport({ state, alerts }: UTISummaryReportProps) {
       {/* Symptoms */}
       <SectionHeader>Symptom Assessment</SectionHeader>
       <div className="space-y-1 mb-4">
-        <Row label="Dysuria" value={state.symptoms.dysuria ? "Yes" : "No"} />
-        <Row label="New Nocturia" value={state.symptoms.nocturia ? "Yes" : "No"} />
-        <Row label="Frequency" value={state.symptoms.frequency ? "Yes" : "No"} />
-        <Row label="Urgency" value={state.symptoms.urgency ? "Yes" : "No"} />
+        <Row label="Dysuria" value={yesNo(state.symptoms.dysuria)} />
+        <Row label="New Nocturia" value={yesNo(state.symptoms.nocturia)} />
+        <Row label="Frequency" value={yesNo(state.symptoms.frequency)} />
+        <Row label="Urgency" value={yesNo(state.symptoms.urgency)} />
         <Row label="Suprapubic Pain" value={state.symptoms.suprapubicPain ? "Yes" : "No"} />
         <Row label="Vaginal Discharge" value={state.symptoms.vaginalDischarge ? "Yes" : "No"} />
         <Row label="Pelvic Pain" value={state.symptoms.pelvicPain ? "Yes" : "No"} />
@@ -148,9 +154,11 @@ export function UTISummaryReport({ state, alerts }: UTISummaryReportProps) {
           <Row
             label="Aged 60 to 64: eGFR result seen (Decision 43)"
             value={
-              state.medicalHistory.egfrResultSeen
+              state.medicalHistory.egfrResultSeen === true
                 ? `${state.medicalHistory.egfrValue ?? "value not recorded"} mL/min, dated ${state.medicalHistory.egfrDate || "not recorded"}, seen in ${state.medicalHistory.egfrSource || "source not recorded"}`
-                : "No eGFR result seen (excluded; refer for a renal function check first)"
+                : state.medicalHistory.egfrResultSeen === false
+                  ? "No eGFR result seen (excluded; refer for a renal function check first)"
+                  : "Not answered"
             }
           />
         )}
@@ -171,9 +179,11 @@ export function UTISummaryReport({ state, alerts }: UTISummaryReportProps) {
           label="Warfarin or Coumarin"
           value={
             state.medicalHistory.takingWarfarin
-              ? state.medicalHistory.anticoagulationServiceConsulted
+              ? state.medicalHistory.anticoagulationServiceConsulted === true
                 ? "Yes, anticoagulation service consulted"
-                : "Yes"
+                : state.medicalHistory.anticoagulationServiceConsulted === false
+                  ? "Yes, anticoagulation service not consulted"
+                  : "Yes, anticoagulation service question not answered"
               : "No"
           }
         />

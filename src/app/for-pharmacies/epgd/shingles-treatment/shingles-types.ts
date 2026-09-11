@@ -19,8 +19,8 @@ export type RashDermatome =
 export type PainType = 'burning' | 'stabbing' | 'aching' | 'itching' | '';
 export type RashSeverity = 'mild' | 'moderate' | 'severe' | '';
 /** eGFR band. The PGD does not operate a renal dosing ladder: below the threshold for the agent, refer. */
-export type RenalStatus = 'none' | 'moderate' | 'severe' | 'unknown';
-export type HepaticStatus = 'none' | 'mild-moderate' | 'severe';
+export type RenalStatus = '' | 'none' | 'moderate' | 'severe' | 'unknown';
+export type HepaticStatus = '' | 'none' | 'mild-moderate' | 'severe';
 /** Green Book chapter 28a: severe immunosuppression is excluded; non-severe changes the agent. */
 export type ImmunosuppressionSeverity = 'non-severe' | 'severe' | '';
 export type Medicine = 'valaciclovir' | 'aciclovir' | 'famciclovir' | '';
@@ -39,10 +39,10 @@ export interface ShinglesSymptoms {
   rashDescription: string;
   /** Moderate or severe rash with confluent lesions is a 72-hour window criterion. */
   rashSeverity: RashSeverity;
-  /** Continued formation of new vesicles: a 7-day window criterion. */
-  newVesiclesForming: boolean;
-  /** High risk of severe shingles, for example severe atopic eczema: a 7-day window criterion. */
-  highRiskSevereShingles: boolean;
+  /** Continued formation of new vesicles: a 7-day window criterion. Explicit answer: "" unanswered, "yes", "no". */
+  newVesiclesForming: '' | 'yes' | 'no';
+  /** High risk of severe shingles, for example severe atopic eczema: a 7-day window criterion. Explicit answer: "" unanswered, "yes", "no". */
+  highRiskSevereShingles: '' | 'yes' | 'no';
   // Red flags requiring urgent referral rather than supply (PGD v007)
   /** Any visual symptom, unexplained red eye, eye pain or Hutchinson's sign. */
   eyeSymptoms: boolean;
@@ -156,8 +156,8 @@ export const initialShinglesSymptoms = (): ShinglesSymptoms => ({
   unilateral: '',
   rashDescription: '',
   rashSeverity: '',
-  newVesiclesForming: false,
-  highRiskSevereShingles: false,
+  newVesiclesForming: '',
+  highRiskSevereShingles: '',
   eyeSymptoms: false,
   earOrFacialSymptoms: false,
   meningitisSigns: false,
@@ -175,9 +175,11 @@ export const initialShinglesMedicalHistory = (): ShinglesMedicalHistory => ({
   immunosuppressionSeverity: '',
   pregnant: false,
   breastfeeding: false,
-  renalImpairment: 'unknown',
+  // Unanswered until the pharmacist selects a band; "unknown" is an answer
+  // the pharmacist gives, not the default (stop audit, 11 Sep 2026).
+  renalImpairment: '',
   renalFunctionSource: '',
-  hepaticImpairment: 'none',
+  hepaticImpairment: '',
   hivPositive: false,
   previousShingles: false,
   cancerActive: false,

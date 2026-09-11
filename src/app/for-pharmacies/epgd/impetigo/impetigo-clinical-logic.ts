@@ -109,7 +109,11 @@ export function determineRoute(
 ): ImpetigoRoute {
   if (!lesionAssessment.lesionType || !lesionAssessment.extent) return 'incomplete';
   if (!needsOralRoute(lesionAssessment)) return 'topical';
-  if (medicalHistory.penicillinAllergy) return 'macrolide';
+  // The oral arm turns on the penicillin allergy answer. Until it has been
+  // answered the route is incomplete: no arm-specific stop (in particular the
+  // adult no-flucloxacillin stop) may fire from an unanswered question.
+  if (medicalHistory.penicillinAllergy === '') return 'incomplete';
+  if (medicalHistory.penicillinAllergy === 'yes') return 'macrolide';
   if (age < 18 && medicalHistory.flucloxSuspensionRefused) return 'macrolide';
   return 'flucloxacillin';
 }
@@ -531,10 +535,11 @@ export function evaluateReferralCriteria(
         });
       }
     }
-    if (medicalHistory.breastfeeding && !medicalHistory.breastfeedingDiscussed) {
+    // Fires only on an explicit "No": a blank answer is validation, not a stop.
+    if (medicalHistory.breastfeeding && medicalHistory.breastfeedingDiscussed === 'no') {
       referrals.push({
         shouldRefer: true,
-        reason: 'Breastfeeding: a macrolide may be supplied only where the choice has been discussed and recorded. Record the discussion, or refer.',
+        reason: 'Breastfeeding: a macrolide may be supplied only where the choice has been discussed with the patient and recorded. The pharmacist has recorded that it was not. Refer.',
       });
     }
   }

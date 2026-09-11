@@ -150,9 +150,11 @@ export function BPHSummaryReport({ state, alerts }: BPHSummaryReportProps) {
         <Row
           label="Symptoms previously assessed by GP or urologist"
           value={
-            state.medicalHistory.previouslyAssessedByGp
+            state.medicalHistory.previouslyAssessedByGp === "yes"
               ? "Yes"
-              : `No. GP informed today: ${state.medicalHistory.gpInformedToday ? "yes" : "no"}; patient agrees to attend GP within 6 weeks: ${state.medicalHistory.patientAgreesGpWithin6Weeks ? "yes" : "no"}`
+              : state.medicalHistory.previouslyAssessedByGp === "no"
+                ? `No. GP informed today: ${state.medicalHistory.gpInformedToday ? "yes" : "no"}; patient agrees to attend GP within 6 weeks: ${state.medicalHistory.patientAgreesGpWithin6Weeks ? "yes" : "no"}`
+                : "Not asked"
           }
         />
         {state.medicalHistory.otherConditions && (
@@ -210,7 +212,7 @@ export function BPHSummaryReport({ state, alerts }: BPHSummaryReportProps) {
                 state.medicineSupply.supplyType === "initial"
                   ? "Initial 4-week supply"
                   : state.medicineSupply.supplyType === "continuation"
-                    ? `Continuation: IPSS at start ${state.medicineSupply.previousIpss ?? "not recorded"}, GP examined ${state.medicineSupply.gpExaminedSinceStart ? "yes" : "no"}, ${state.medicineSupply.monthsOnTreatment ?? "?"} months on treatment`
+                    ? `Continuation: IPSS at start ${state.medicineSupply.previousIpss ?? "not recorded"}, GP examined since starting ${state.medicineSupply.gpExaminedSinceStart === "yes" ? "yes" : state.medicineSupply.gpExaminedSinceStart === "no" ? "no" : "not asked"}, ${state.medicineSupply.monthsOnTreatment ?? "?"} months on treatment`
                     : "Not recorded"
               }
             />

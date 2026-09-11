@@ -83,7 +83,7 @@ export function getAllAlerts(state: ShinglesConsultationState): ClinicalAlert[] 
   }
 
   if (age !== null && age >= 18 && age < 50) {
-    if (!state.assessment.immunosuppressed) {
+    if (state.assessment.under50ImmunosuppressionAnswer === "no") {
       alerts.push({
         severity: "stop",
         code: "SHINGLES_UNDER_50_NOT_IMMUNOSUPPRESSED",
@@ -118,13 +118,20 @@ export function getAllAlerts(state: ShinglesConsultationState): ClinicalAlert[] 
     }
   }
 
+  // NHS entitlement. A caution, not a stop: the Eligibility step refuses Next
+  // until the "told" box is ticked, which is the gate. As a stop it fired from
+  // the Patient Details step for every 65 to 79 year old, with "exclusion
+  // criteria met" and no control on that screen to clear it (walkthrough
+  // review, 11 Sep 2026). The note is derived from the age and immunosuppression
+  // answers only; it no longer reads the unticked box on a step not yet reached
+  // (stop audit, 11 Sep 2026).
   const nhsGroup = nhsEligibleGroup(state);
-  if (nhsGroup && !state.assessment.nhsEntitlementExplained) {
+  if (nhsGroup) {
     alerts.push({
-      severity: "stop",
+      severity: "caution",
       code: "SHINGLES_NHS_ENTITLEMENT",
-      message: "Patient is eligible for Shingrix on the NHS and has not yet been told",
-      detail: `This patient is NHS-eligible (${nhsGroup}). The PGD requires that they are told Shingrix is free of charge on the NHS before any private supply proceeds, and that this is recorded.`,
+      message: "Patient is eligible for Shingrix on the NHS: tell them before any private supply",
+      detail: `This patient is NHS-eligible (${nhsGroup}). The PGD requires that they are told Shingrix is free of charge on the NHS before any private supply proceeds, and that this is recorded on the Eligibility step.${state.assessment.nhsEntitlementExplained ? " Recorded: told before this private supply." : ""}`,
     });
   }
 

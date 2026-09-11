@@ -209,6 +209,30 @@ export default function ChickenpoxClient() {
   }, []);
 
 
+  // The PGD requires the advice given to an excluded patient to be recorded.
+  // A stop raised on the Eligibility or Medical History step disables Next,
+  // so the advice box that lived only on the Contraindications step could
+  // never be reached for those patients (walkthrough review, 11 Sep 2026).
+  const exclusionNotes = hasStops ? (
+    <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded">
+      <p className="text-sm font-semibold text-red-700 mb-2">
+        Excluded: do not vaccinate under this PGD
+      </p>
+      <p className="text-sm text-red-600">
+        Advise on alternative treatment options and how these can be accessed. Document any advice given and the decision reached. Inform or refer to the GP as appropriate.
+      </p>
+      <div className="mt-3">
+        <TextArea
+          label="Advice given and decision reached (saved with the exclusion record)"
+          value={state.summary.clinicalNotes}
+          onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "clinicalNotes", value: v })}
+          placeholder="e.g., History of chickenpox: vaccination not needed; explained and no supply made."
+        />
+        <p className="text-xs text-red-700 mt-1">Then use "Save as not supplied" below to record the consultation.</p>
+      </div>
+    </div>
+  ) : null;
+
   // ─── Step Content Renderers ───
 
   const renderStep = () => {
@@ -299,27 +323,26 @@ export default function ChickenpoxClient() {
             getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
-              <Checkbox
-                label="No history of chickenpox infection (inclusion criterion)"
-                checked={state.eligibility.noPriorVaricella}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_ELIGIBILITY",
-                    field: "noPriorVaricella",
-                    value: v,
-                  })
+              <SelectInput
+                label="Has the patient had chickenpox before?"
+                value={
+                  state.eligibility.historyOfChickenpox
+                    ? "yes"
+                    : state.eligibility.noPriorVaricella
+                      ? "no"
+                      : ""
                 }
-                description="Susceptible: no reliable history of chickenpox or no evidence of immunity. Consider prior immunity testing in adults if uncertain."
+                onChange={(v) => {
+                  dispatch({ type: "UPDATE_ELIGIBILITY", field: "historyOfChickenpox", value: v === "yes" });
+                  dispatch({ type: "UPDATE_ELIGIBILITY", field: "noPriorVaricella", value: v === "no" });
+                }}
+                options={[
+                  { value: "no", label: "No, or no reliable history: susceptible (inclusion criterion)" },
+                  { value: "yes", label: "Yes: history of chickenpox infection (exclusion)" },
+                ]}
                 required
               />
-              <Checkbox
-                label="History of chickenpox infection"
-                checked={state.eligibility.historyOfChickenpox}
-                onChange={(v) =>
-                  dispatch({ type: "UPDATE_ELIGIBILITY", field: "historyOfChickenpox", value: v })
-                }
-                description="Exclusion"
-              />
+              <p className="text-xs text-gray-500">Susceptible means no reliable history of chickenpox and no evidence of immunity. Consider prior immunity testing in adults if uncertain.</p>
               <Checkbox
                 label="Has already completed a two-dose varicella course"
                 checked={state.eligibility.completedTwoDoseCourse}
@@ -403,6 +426,7 @@ export default function ChickenpoxClient() {
                 }
               />
             </div>
+            {exclusionNotes}
           </StepWrapper>
         );
 
@@ -535,6 +559,7 @@ export default function ChickenpoxClient() {
                 />
               )}
             </div>
+            {exclusionNotes}
           </StepWrapper>
         );
 
@@ -562,25 +587,7 @@ export default function ChickenpoxClient() {
               <p className="text-sm text-gray-600">No alerts identified.</p>
             )}
 
-            {hasStops && (
-              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded">
-                <p className="text-sm font-semibold text-red-700 mb-2">
-                  Excluded: do not vaccinate under this PGD
-                </p>
-                <p className="text-sm text-red-600">
-                  Advise on alternative treatment options and how these can be accessed. Document any advice given and the decision reached. Inform or refer to the GP as appropriate.
-                </p>
-                <div className="mt-3">
-                  <TextArea
-                    label="Advice given and decision reached (saved with the exclusion record)"
-                    value={state.summary.clinicalNotes}
-                    onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "clinicalNotes", value: v })}
-                    placeholder="e.g., History of chickenpox: vaccination not needed; explained and no supply made."
-                  />
-                  <p className="text-xs text-red-700 mt-1">Then use "Save as not supplied" below to record the consultation.</p>
-                </div>
-              </div>
-            )}
+            {exclusionNotes}
           </StepWrapper>
         );
 
@@ -782,6 +789,16 @@ export default function ChickenpoxClient() {
                 }
                 description="e.g. redness, swelling at injection site"
               />
+              {state.postVaccine.reactionsObserved && (
+                <TextArea
+                  label="Reaction observed and action taken"
+                  value={state.postVaccine.reactionDetails}
+                  onChange={(v) => dispatch({ type: "UPDATE_POST_VACCINE", field: "reactionDetails", value: v })}
+                  placeholder="Describe the reaction, when it started, treatment given, and whether it was reported via the Yellow Card scheme"
+                  rows={2}
+                  required
+                />
+              )}
 
               <p className="text-sm font-semibold text-navy-900 pt-2">Counselling and written information (PGD)</p>
 
@@ -816,7 +833,7 @@ export default function ChickenpoxClient() {
               />
 
               <Checkbox
-                label="Pregnancy must be avoided for one month post-vaccination"
+                label="Advised that pregnancy must be avoided for one month after vaccination (tick as not applicable for a child or a male patient)"
                 checked={state.postVaccine.pregnancyAdviceGiven && state.counselling.pregnancyAvoidanceAdvice}
                 onChange={(v) => {
                   dispatch({ type: "UPDATE_POST_VACCINE", field: "pregnancyAdviceGiven", value: v });
@@ -1002,12 +1019,14 @@ function ChickenpoxSummaryReport({
 
       <SectionHeader>Eligibility</SectionHeader>
       <Row
-        label="No history of chickenpox infection"
-        value={state.eligibility.noPriorVaricella ? "Yes" : "No"}
-      />
-      <Row
-        label="History of chickenpox (exclusion)"
-        value={state.eligibility.historyOfChickenpox ? "Yes" : "No"}
+        label="Has the patient had chickenpox before?"
+        value={
+          state.eligibility.historyOfChickenpox
+            ? "Yes: history of chickenpox infection (exclusion)"
+            : state.eligibility.noPriorVaricella
+              ? "No, or no reliable history: susceptible (inclusion criterion met)"
+              : "Not recorded"
+        }
       />
       <Row
         label="Completed two-dose course (exclusion)"
@@ -1075,6 +1094,10 @@ function ChickenpoxSummaryReport({
       {state.vaccineAdmin.intervalReason && <Row label="Reason for 4 to 6 week interval (Varilrix)" value={state.vaccineAdmin.intervalReason} />}
       <Row label="Administered by" value={state.vaccineAdmin.administeredBy} />
       <Row label="15 minute observation completed" value={state.postVaccine.observationCompleted ? "Yes" : "No"} />
+      <Row
+        label="Immediate reaction observed"
+        value={state.postVaccine.reactionsObserved ? `Yes: ${state.postVaccine.reactionDetails || "details not recorded"}` : "None observed"}
+      />
       <Row label="Administered via PGD" value={`Yes, ${CHICKENPOX_PGD_VERSION}`} />
       </>
       )}

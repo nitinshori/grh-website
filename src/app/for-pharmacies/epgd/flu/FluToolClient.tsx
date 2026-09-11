@@ -1,9 +1,14 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-// Mounted directly: this tool does not use the shared StepWrapper,
-// which is where the other fifteen vaccination tools pick this up.
-import { VaccineSafetyChecks, getVaccineSafety, clearVaccineSafety } from "../shared/components/VaccineSafetyChecks";
+// The shared VaccineSafetyChecks panel is NOT mounted here. This tool has
+// its own adrenaline gate, batch, expiry and site (Vaccine Administration)
+// and its own observation record (Post-vaccine Observations); mounting the
+// shared panel as well put a second batch number, expiry, site and
+// observation tick above the page title on every step, including Patient
+// Details (walkthrough review, 11 Sep 2026). The record still carries a
+// vaccineSafetyChecks block in the shared shape, built from these fields.
+import type { VaccineSafetyState } from "../shared/components/VaccineSafetyChecks";
 import {
   FluConsultationState,
   FluScreening,
@@ -121,6 +126,18 @@ gpOdsCode: '',
     if ((state as any).summary?.pharmacistName || (state as any).summary?.pharmacistGPhC) return;
     setState((prev: any) => ({ ...prev, summary: { ...(prev.summary || {}), pharmacistName: __pharmProfile.name, pharmacistGPhC: __pharmProfile.gphcNumber, pharmacyName: __pharmProfile.pharmacyName, pharmacyAddress: __pharmProfile.pharmacyAddress } }));
   }, [__pharmProfile, (state as any).summary?.pharmacistName, (state as any).summary?.pharmacistGPhC]);
+
+  // "Administered by" on the administration step was typed by hand and then
+  // the immuniser's name typed again on the summary step. Prefill it from the
+  // profile; it stays editable for the case where someone else vaccinated.
+  useEffect(() => {
+    if (!__pharmProfile?.name) return;
+    setState((prev) =>
+      prev.administration.administeredBy
+        ? prev
+        : { ...prev, administration: { ...prev.administration, administeredBy: __pharmProfile.name } }
+    );
+  }, [__pharmProfile]);
 
 
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(
@@ -647,8 +664,14 @@ gpOdsCode: '',
       },
       clinicalData: {
         ...(state as unknown as Record<string, unknown>),
-        // The shared safety panel is mounted on this page; attach what it captured.
-        vaccineSafetyChecks: getVaccineSafety('flu'),
+        // Same shape as the shared safety panel writes, built from this tool's own fields.
+        vaccineSafetyChecks: {
+          adrenalineAvailable: state.administration.adrenalineAvailable,
+          observedFifteenMinutes: state.postVaccineObs.observationCompleted,
+          batchNumber: state.administration.batchNumber,
+          expiryDate: state.administration.expiryDate,
+          site: state.administration.injectionSite,
+        } satisfies VaccineSafetyState,
       },
       outcome: stop ? 'not_supplied' : 'completed',
       medicine:
@@ -699,7 +722,6 @@ gpOdsCode: '',
     // Forget the saved consultation, or the next patient's save is skipped
     // and reported as saved (adversarial review, 11 Sep 2026).
     resetTracking();
-    clearVaccineSafety('flu');
     setState({
       patient: {
         firstName: '',
@@ -747,7 +769,12 @@ gpOdsCode: '',
 
   const getStepAlerts = useCallback((): React.ReactNode => {
     const stepAlerts = state.alerts.filter((alert: ClinicalAlert) => {
-      // Route alerts based on step
+      // A stop is shown on whatever step the pharmacist is on: it disables
+      // Next everywhere, so it must be visible everywhere (walkthrough
+      // review, 11 Sep 2026: an under-2 date of birth or "already vaccinated
+      // this season" greyed Next with no reason on screen).
+      if (alert.severity === 'stop') return true;
+      // Route the rest based on step
       if (alert.code === 'ACUTE_FEBRILE_ILLNESS' || alert.code === 'CURRENT_ILLNESS') return state.step === 2;
       if (alert.code === 'BLEEDING_DISORDER') return state.step === 4;
       if (alert.code === 'TWO_DOSE_CHILD' || alert.code === 'CHILD_IIVC_ONLY') return state.step === 3 || state.step === 4;
@@ -766,7 +793,6 @@ gpOdsCode: '',
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
-      <VaccineSafetyChecks slug="flu" />
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -821,6 +847,13 @@ gpOdsCode: '',
 
           {/* Step Alerts */}
           {getStepAlerts()}
+          {hardStops && (
+            <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-lg">
+              <p className="text-red-900 font-semibold">
+                Vaccination is contraindicated: see the alert above. Next is locked. Refer the patient to the GP or specialist as needed and use "Save as not supplied" to record the consultation.
+              </p>
+            </div>
+          )}
 
           {/* Step Content */}
           {state.step === 0 && (
@@ -829,12 +862,14 @@ gpOdsCode: '',
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <TextInput
                   label="First Name"
+                  required
                   value={state.patient.firstName}
                   onChange={handleFirstNameChange}
                   placeholder="John"
                 />
                 <TextInput
                   label="Last Name"
+                  required
                   value={state.patient.lastName}
                   onChange={handleLastNameChange}
                   placeholder="Smith"
@@ -844,11 +879,13 @@ gpOdsCode: '',
                 <TextInput
                   label="Date of Birth"
                   type="date"
+                  required
                   value={state.patient.dateOfBirth}
                   onChange={handleDOBChange}
                 />
                 <TextInput
                   label="NHS Number"
+                  required
                   value={state.patient.nhsNumber}
                   onChange={handleNHSNumberChange}
                   placeholder="XXX XXX XXXX"
@@ -948,6 +985,7 @@ gpOdsCode: '',
                       value={state.childConsent.gillickBasis}
                       onChange={(v) => setChildConsentField('gillickBasis', v)}
                       placeholder="What the young person understood about the vaccine, its benefits and risks, and the decision being made."
+                      required
                     />
                   )}
                 </div>
@@ -1000,6 +1038,7 @@ gpOdsCode: '',
                           value={state.screening.reactionDetails}
                           onChange={handleReactionDetailsChange}
                           placeholder="e.g., Mild fever, arm soreness, anaphylaxis..."
+                          required
                         />
                       </>
                     )}
@@ -1072,6 +1111,7 @@ gpOdsCode: '',
                         { value: 'mild', label: 'Mild (oral itching)' },
                         { value: 'severe', label: 'Severe (anaphylaxis risk)' },
                       ]}
+                      required
                     />
                   </div>
                 )}
@@ -1087,6 +1127,10 @@ gpOdsCode: '',
                     value={state.screening.temperature}
                     onChange={handleTemperatureChange}
                     placeholder="36.5"
+                    unit="°C (38.0 or above is an acute febrile illness: postpone)"
+                    min={30}
+                    max={45}
+                    required
                   />
                   <Checkbox
                     label="Currently unwell"
@@ -1100,6 +1144,7 @@ gpOdsCode: '',
                       value={state.screening.illnessDetails}
                       onChange={handleIllnessDetailsChange}
                       placeholder="e.g., Cough, cold, sore throat..."
+                      required
                     />
                   )}
                 </div>
@@ -1122,6 +1167,7 @@ gpOdsCode: '',
                       value={state.screening.immunosuppressedDetails}
                       onChange={handleImmunosuppressedDetailsChange}
                       placeholder="e.g., HIV, chemotherapy, immunosuppressant medication..."
+                      required
                     />
                   )}
                   <Checkbox
@@ -1152,11 +1198,23 @@ gpOdsCode: '',
                   />
                   {state.screening.bleedingDisorder && (
                     <div className="ml-6">
-                      <Checkbox
+                      <SelectInput
                         label="Intramuscular injection assessed as safe by a clinician familiar with the bleeding risk"
-                        checked={state.screening.bleedingDisorderAssessedSafe}
-                        onChange={(v) => setScreeningField('bleedingDisorderAssessedSafe', v)}
-                        description="Record who assessed it in the clinical notes."
+                        value={
+                          state.screening.bleedingDisorderAssessedSafe === null
+                            ? ''
+                            : state.screening.bleedingDisorderAssessedSafe
+                              ? 'yes'
+                              : 'no'
+                        }
+                        onChange={(v) =>
+                          setScreeningField('bleedingDisorderAssessedSafe', v === '' ? null : v === 'yes')
+                        }
+                        options={[
+                          { value: 'yes', label: 'Yes, assessed as safe (record who assessed it in the clinical notes)' },
+                          { value: 'no', label: 'No, not assessed (exclusion: refer)' },
+                        ]}
+                        required
                       />
                     </div>
                   )}
@@ -1267,14 +1325,6 @@ gpOdsCode: '',
                 </div>
               </div>
 
-              {!canProceedFromStep() && (
-                <div className="p-4 bg-red-50 border-2 border-red-200 rounded-lg">
-                  <p className="text-red-900 font-semibold">
-                    Vaccination is contraindicated. Do not proceed with vaccination.
-                    Refer patient to GP or specialist as needed.
-                  </p>
-                </div>
-              )}
             </div>
           )}
 
@@ -1316,19 +1366,33 @@ gpOdsCode: '',
                 </p>
               </div>
               <SelectInput
-                label="Observation period"
+                label="Observation period (pre-set from the screening answers; change it if a different period was observed)"
                 value={state.postVaccineObs.observationPeriod}
                 onChange={handleObservationPeriodChange}
                 options={[
                   { value: '15-min', label: '15 minutes' },
                   { value: '30-min', label: '30 minutes' },
                 ]}
+                required
+              />
+              <Checkbox
+                label="Observation period completed: the patient stayed seated for the period recorded above"
+                checked={state.postVaccineObs.observationCompleted}
+                onChange={(v) =>
+                  setState((prev) => ({
+                    ...prev,
+                    postVaccineObs: { ...prev.postVaccineObs, observationCompleted: v },
+                  }))
+                }
+                description="Tick only once the period has actually been completed."
+                required
               />
               <Checkbox
                 label="Anaphylaxis kit checked"
                 checked={state.postVaccineObs.anaphylaxisKitChecked}
                 onChange={handleAnaphylaxisKitChange}
                 description="Confirm anaphylaxis emergency kit is available and ready"
+                required
               />
               <Checkbox
                 label="Patient is well"

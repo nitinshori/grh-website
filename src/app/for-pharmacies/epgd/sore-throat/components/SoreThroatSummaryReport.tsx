@@ -321,7 +321,7 @@ export function SoreThroatSummaryReport({
             items={[
               ["Able to take oral medication", history.ableToTakeOralMedication],
               ["Recent antibiotic for this illness", history.recentAntibioticForThisIllness],
-              ["Penicillin or beta-lactam allergy", history.penicillinAllergy],
+              ["Penicillin or beta-lactam allergy", history.penicillinAllergy === "yes"],
               ["Immunosuppressed", history.immunosuppressed],
               ["Neutropenia-risk medicine", history.neutropeniaRiskMedicine],
               ["Severe hepatic or renal dysfunction", history.severeHepaticOrRenalDysfunction],

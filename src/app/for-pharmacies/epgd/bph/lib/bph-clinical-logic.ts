@@ -40,10 +40,10 @@ export function getAllAlerts(state: BPHConsultationState): ClinicalAlert[] {
   const rf = state.redFlags;
   const ci = state.contraindications;
 
-  // Hard stop: Not male. Raised once step 0 has been left; on step 0 the
-  // shared validation asks for the confirmation, so a blank form does not
-  // open with an exclusion on screen.
-  if (!state.patient.maleConfirmed && state.currentStep > 0) {
+  // Hard stop: Not male. Raised only on an explicit "No" to "Is the patient
+  // male?". An unanswered question is a validation message on the patient
+  // step, never a stop (stop audit, 11 Sep 2026).
+  if (state.patient.sexAnswered && !state.patient.maleConfirmed) {
     alerts.push({
       severity: "stop",
       code: "BPH_GENDER",
@@ -203,7 +203,8 @@ export function getAllAlerts(state: BPHConsultationState): ClinicalAlert[] {
   }
 
   // Symptoms never assessed by a GP or urologist
-  if (state.currentStep >= 3 && !mh.previouslyAssessedByGp && !(mh.gpInformedToday && mh.patientAgreesGpWithin6Weeks)) {
+  // Raised on the answer "No", never on the blank default (walkthrough review, 11 Sep 2026).
+  if (mh.previouslyAssessedByGp === "no" && !(mh.gpInformedToday && mh.patientAgreesGpWithin6Weeks)) {
     alerts.push({
       severity: "stop",
       code: "BPH_NOT_ASSESSED",
@@ -261,7 +262,7 @@ export function getAllAlerts(state: BPHConsultationState): ClinicalAlert[] {
         detail: "No improvement at the 4 to 6 week review ends supply under this PGD. Refer to the GP.",
       });
     }
-    if (!ms.gpExaminedSinceStart) {
+    if (ms.gpExaminedSinceStart === "no") {
       alerts.push({
         severity: "stop",
         code: "BPH_GP_EXAM",

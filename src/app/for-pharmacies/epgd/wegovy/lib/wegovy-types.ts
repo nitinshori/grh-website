@@ -21,6 +21,10 @@ export interface WegovyWeightAssessment {
   previousWeightLossAttempts: boolean;
   previousAttemptDetails: string;
   weightRelatedComorbidities: WeightRelatedComorbidity[];
+  /** Asked only where the gating BMI is 27 to below 30. "" not yet answered;
+   *  "no" is the adverse answer that raises BMI_27_NO_COMORBIDITY. An empty
+   *  comorbidity list on its own never stops (stop audit, 11 Sep 2026). */
+  hasWeightRelatedComorbidity: "" | "yes" | "no";
   targetWeightLoss: string;
   // PGD v009 inclusion: initial face-to-face assessment completed and documented.
   initialAssessmentCompleted: boolean;
@@ -74,7 +78,8 @@ export interface WegovyMedicalHistory {
   // History of suicidal ideation, or active severe mental illness. Caution (PGD v009).
   depression: boolean;
   // Shown when `depression` is ticked. Do not supply where oversight is absent and concern exists.
-  psychiatricOversightInPlace: boolean;
+  // "" not yet answered; only "no" (with concern) raises the stop (stop audit, 11 Sep 2026).
+  psychiatricOversightInPlace: "" | "yes" | "no";
   mentalHealthConcern: boolean;
   // Current suicidal ideation. Tool keeps this as a stop (stricter than the PGD caution).
   suicidalIdeation: boolean;
@@ -323,6 +328,7 @@ gpEmail: "",
       previousWeightLossAttempts: false,
       previousAttemptDetails: "",
       weightRelatedComorbidities: [],
+      hasWeightRelatedComorbidity: "",
       targetWeightLoss: "",
       initialAssessmentCompleted: false,
       lifestylePlanAgreed: false,
@@ -347,7 +353,7 @@ gpEmail: "",
       breastfeeding: false,
       planningPregnancy: false,
       depression: false,
-      psychiatricOversightInPlace: false,
+      psychiatricOversightInPlace: "",
       mentalHealthConcern: false,
       suicidalIdeation: false,
       thyroidDisease: false,

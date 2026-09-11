@@ -279,6 +279,51 @@ export default function EczemaClient() {
     </>
   );
 
+  // Secondary infection: the concurrent-supply route that clears the stop.
+  // Rendered on the Assessment step as well as the Contraindications step,
+  // because ticking "Oozing/weeping" on Assessment raises the stop there and
+  // Next is disabled while it stands (walkthrough review, 11 Sep 2026).
+  const concurrentInfectionPanel = (
+    <div className="space-y-3 p-3 bg-white rounded-lg border border-gray-200">
+      <p className="text-sm font-medium text-navy-900">Secondary bacterial infection: the only route to supply</p>
+      <p className="text-xs text-gray-600">A steroid is not supplied on infected eczema unless the infection is MILD and LOCALISED and is treated at this visit under the Skin and Soft Tissue Infection PGD. Answer how the infection is managed; for the concurrent route, tick both boxes and record the antibiotic.</p>
+      <SelectInput
+        label="Secondary bacterial infection: how is it managed?"
+        value={state.contraindications.infectionManagement}
+        onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "infectionManagement", value: v })}
+        options={[
+          { value: "concurrent", label: "Mild and localised: treated at this visit under the Skin and Soft Tissue Infection PGD (record below)" },
+          { value: "refer", label: "Not mild and localised, or a red flag from the infection PGD: refer and supply neither" },
+        ]}
+        required
+      />
+      {state.contraindications.infectionManagement === "concurrent" && (
+        <>
+      <Checkbox
+        label="The infection is MILD and LOCALISED, with no red flag from the Skin and Soft Tissue Infection PGD (widespread or systemic infection: refer and supply neither)"
+        checked={state.contraindications.concurrentInfectionMildLocalised}
+        onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "concurrentInfectionMildLocalised", value: v })}
+      />
+      <Checkbox
+        label="Concurrent supply: an oral antibiotic is supplied at this consultation under the Skin and Soft Tissue Infection PGD, recorded below so that both supplies are in this one consultation record"
+        checked={state.contraindications.concurrentAntibioticSupplied}
+        onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "concurrentAntibioticSupplied", value: v })}
+      />
+        </>
+      )}
+      {state.contraindications.infectionManagement === "concurrent" && state.contraindications.concurrentAntibioticSupplied && (
+        <div className="grid sm:grid-cols-2 gap-3">
+          <TextInput label="Antibiotic supplied (name and strength)" value={state.contraindications.concurrentAntibioticName} onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "concurrentAntibioticName", value: v })} required placeholder="e.g. flucloxacillin 500mg capsules" />
+          <TextInput label="Dose and duration" value={state.contraindications.concurrentAntibioticDose} onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "concurrentAntibioticDose", value: v })} required placeholder="e.g. 500mg four times daily for 5 days" />
+          <TextInput label="Quantity" value={state.contraindications.concurrentAntibioticQuantity} onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "concurrentAntibioticQuantity", value: v })} required placeholder="e.g. 20 capsules" />
+          <TextInput label="Batch number" value={state.contraindications.concurrentAntibioticBatch} onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "concurrentAntibioticBatch", value: v })} required />
+          <TextInput label="Expiry date" type="date" value={state.contraindications.concurrentAntibioticExpiry} onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "concurrentAntibioticExpiry", value: v })} required />
+          <TextInput label="Skin infection consultation reference (if saved separately)" value={state.contraindications.concurrentConsultationRef} onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "concurrentConsultationRef", value: v })} />
+        </div>
+      )}
+    </div>
+  );
+
   const renderCurrentStep = () => {
     switch (state.currentStep) {
       case 0:
@@ -377,10 +422,11 @@ export default function EczemaClient() {
                     onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "isCracked", value: v })}
                   />
                   <Checkbox
-                    label="Oozing/weeping"
+                    label="Oozing/weeping (a sign of secondary bacterial infection: see the box that appears below)"
                     checked={state.assessment.isOozing}
                     onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "isOozing", value: v })}
                   />
+                  {state.assessment.isOozing && concurrentInfectionPanel}
                 </div>
               )}
 
@@ -466,12 +512,19 @@ export default function EczemaClient() {
                 required
               />
               {state.medicalHistory.coursesLast12Months === "3-or-more" && (
-                <Checkbox
-                  label="The GP has reviewed the patient since the last course"
-                  checked={state.medicalHistory.gpReviewSinceLastCourse}
-                  onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "gpReviewSinceLastCourse", value: v })}
-                  description="Exclusion: three or more courses in the last 12 months WITHOUT GP review. With a GP review since the last course, supply is permitted; record the review in the clinical notes."
-                />
+                <div className="space-y-1">
+                  <SelectInput
+                    label="Has the GP reviewed the patient since the last course?"
+                    value={state.medicalHistory.gpReviewSinceLastCourse}
+                    onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "gpReviewSinceLastCourse", value: v })}
+                    options={[
+                      { value: "yes", label: "Yes: GP review since the last course (supply permitted; record the review in the clinical notes)" },
+                      { value: "no", label: "No: no GP review since the last course (exclusion: refer)" },
+                    ]}
+                    required
+                  />
+                  <p className="text-xs text-gray-500">Exclusion: three or more courses in the last 12 months WITHOUT GP review.</p>
+                </div>
               )}
               {state.medicalHistory.coursesLast12Months && state.medicalHistory.coursesLast12Months !== "0" && (
                 <TextInput
@@ -522,30 +575,7 @@ export default function EczemaClient() {
                 onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "bacterialInfection", value: v })}
                 description="Excluded unless the infection is MILD and LOCALISED and is treated at this visit under the Skin and Soft Tissue Infection PGD. Otherwise refer and supply neither."
               />
-              {(state.contraindications.bacterialInfection || state.assessment.isOozing) && (
-                <div className="space-y-3 p-3 bg-white rounded-lg border border-gray-200">
-                  <Checkbox
-                    label="The infection is MILD and LOCALISED, with no red flag from the Skin and Soft Tissue Infection PGD (widespread or systemic infection: refer and supply neither)"
-                    checked={state.contraindications.concurrentInfectionMildLocalised}
-                    onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "concurrentInfectionMildLocalised", value: v })}
-                  />
-                  <Checkbox
-                    label="Concurrent supply: an oral antibiotic is supplied at this consultation under the Skin and Soft Tissue Infection PGD, recorded below so that both supplies are in this one consultation record"
-                    checked={state.contraindications.concurrentAntibioticSupplied}
-                    onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "concurrentAntibioticSupplied", value: v })}
-                  />
-                  {state.contraindications.concurrentAntibioticSupplied && (
-                    <div className="grid sm:grid-cols-2 gap-3">
-                      <TextInput label="Antibiotic supplied (name and strength)" value={state.contraindications.concurrentAntibioticName} onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "concurrentAntibioticName", value: v })} required placeholder="e.g. flucloxacillin 500mg capsules" />
-                      <TextInput label="Dose and duration" value={state.contraindications.concurrentAntibioticDose} onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "concurrentAntibioticDose", value: v })} required placeholder="e.g. 500mg four times daily for 5 days" />
-                      <TextInput label="Quantity" value={state.contraindications.concurrentAntibioticQuantity} onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "concurrentAntibioticQuantity", value: v })} required placeholder="e.g. 20 capsules" />
-                      <TextInput label="Batch number" value={state.contraindications.concurrentAntibioticBatch} onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "concurrentAntibioticBatch", value: v })} required />
-                      <TextInput label="Expiry date" type="date" value={state.contraindications.concurrentAntibioticExpiry} onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "concurrentAntibioticExpiry", value: v })} required />
-                      <TextInput label="Skin infection consultation reference (if saved separately)" value={state.contraindications.concurrentConsultationRef} onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "concurrentConsultationRef", value: v })} />
-                    </div>
-                  )}
-                </div>
-              )}
+              {(state.contraindications.bacterialInfection || state.assessment.isOozing) && concurrentInfectionPanel}
 
               <Checkbox
                 label="Suspected eczema herpeticum: rapidly worsening, painful, punched-out or clustered vesicular lesions, or systemically unwell (EMERGENCY)"
@@ -663,7 +693,7 @@ export default function EczemaClient() {
           >
             {alertsAndExclusion}
             <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
-              <p className="text-sm font-medium text-navy-900 mb-3">Confirm counselling covered (supply the patient information leaflet):</p>
+              <p className="text-sm font-medium text-navy-900 mb-3">Confirm counselling covered (supply the patient information leaflet; every item shown is required before Next):</p>
               <Checkbox
                 label="Apply the steroid FIRST, in a thin layer, to the affected skin only. WAIT AT LEAST 30 MINUTES, then apply the emollient. Do not put emollient straight over a freshly applied steroid"
                 checked={state.counselling.applyThinly}

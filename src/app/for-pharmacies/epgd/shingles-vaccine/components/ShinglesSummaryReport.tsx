@@ -187,7 +187,7 @@ export function ShinglesSummaryReport({
           <Row label="Outcome" value="NOT SUPPLIED: exclusion criteria met (see clinical alerts above)" />
           <Row
             label="Advice given"
-            value={state.summary.clinicalNotes || "Advised on alternative options and how to access them; informed or referred to the GP as appropriate"}
+            value={state.summary.clinicalNotes || "Not recorded"}
           />
         </div>
       ) : doseRecommendation ? (

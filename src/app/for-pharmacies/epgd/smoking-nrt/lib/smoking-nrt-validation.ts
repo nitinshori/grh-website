@@ -14,14 +14,14 @@ export function validateStep(stepIndex: number, state: SmokingNRTConsultationSta
     case 2: {
       const cigs = state.assessment.cigarettesPerDay;
       if (cigs === null) return "Please enter cigarettes per day";
-      if (cigs < 1) return "Non-smokers are excluded under this PGD: record at least 1 cigarette a day, or tick the exclusion and advise on alternatives";
-      if (!state.assessment.timeToFirstCigarette) return "Please select time to first cigarette";
-      if (!state.assessment.quitDate) return "Please set a quit date";
+      if (cigs < 1) return "Non-smokers are excluded under this PGD. Record at least 1 cigarette a day, or advise on alternatives and use 'Save as not supplied'";
+      if (!state.assessment.timeToFirstCigarette) return "Select the time to first cigarette after waking";
+      if (!state.assessment.quitDate) return "Enter the quit date";
       const qd = new Date(state.assessment.quitDate);
       const today = new Date(new Date().toISOString().split("T")[0]);
       if (isNaN(qd.getTime())) return "Enter a valid quit date";
       if (qd.getTime() < today.getTime()) return "The quit date must be today or later";
-      if (!state.assessment.motivated) return "The PGD requires the patient to be motivated to quit smoking and to have set a quit date";
+      if (!state.assessment.motivated) return "Tick 'Motivated to quit smoking and has set a quit date': an inclusion criterion of the PGD";
       return null;
     }
 
@@ -39,7 +39,7 @@ export function validateStep(stepIndex: number, state: SmokingNRTConsultationSta
     case 6: {
       const sel = state.nrtSelection;
       if (!sel.usePatches && !sel.useOralForm) {
-        return "Please select at least one form of NRT";
+        return "Tick at least one form of NRT to supply: 24-hour patches, oral NRT, or both";
       }
       if (sel.usePatches) {
         if (state.contraindications.generalisedSkinDisorder) {
@@ -76,31 +76,31 @@ export function validateStep(stepIndex: number, state: SmokingNRTConsultationSta
         if (sel.oralQuantity > 120) return "Maximum 120 pieces (up to 4-week supply) under this PGD";
       }
       if (!sel.behavioralSupport) {
-        return "Please confirm behavioural support arranged";
+        return "Tick 'Behavioural/psychological support arranged'";
       }
       return null;
     }
 
     case 7: {
+      // Name the unticked points in the words of their labels (walkthrough
+      // review, 11 Sep 2026).
       const c = state.counselling;
-      if (
-        !c.combinationBetter ||
-        !c.quitDate ||
-        !c.behavioralSupport ||
-        !c.sideEffects ||
-        !c.courseDuration ||
-        !c.correctTechnique ||
-        !c.useEnough ||
-        !c.doNotSmoke ||
-        !c.withdrawalSymptoms ||
-        !c.drivingWarning ||
-        !c.cardiovascularSymptoms ||
-        !c.reportReactions ||
-        !c.pregnancyAdvice ||
-        !c.followUpSchedule
-      ) {
-        return "Please confirm all counselling points have been covered";
-      }
+      const missing: string[] = [];
+      if (!c.combinationBetter) missing.push("Combination therapy is more effective");
+      if (!c.quitDate) missing.push("Quit date set and discussed");
+      if (!c.behavioralSupport) missing.push("Behavioural/psychological support offered");
+      if (!c.sideEffects) missing.push("Common side effects explained");
+      if (!c.courseDuration) missing.push("Continue NRT for the full 8 to 12 weeks");
+      if (!c.correctTechnique) missing.push("Correct technique explained");
+      if (!c.useEnough) missing.push("Use enough NRT");
+      if (!c.doNotSmoke) missing.push("Do not smoke while using NRT");
+      if (!c.withdrawalSymptoms) missing.push("Expect cravings and withdrawal symptoms");
+      if (!c.drivingWarning) missing.push("Avoid driving if dizzy; blood glucose if diabetic");
+      if (!c.cardiovascularSymptoms) missing.push("Seek immediate medical attention for chest pain");
+      if (!c.reportReactions) missing.push("Report severe skin reactions or oral irritation");
+      if (!c.pregnancyAdvice) missing.push("Inform if pregnant or planning pregnancy");
+      if (!c.followUpSchedule) missing.push("Follow-up appointments; PIL supplied");
+      if (missing.length) return `Tick every counselling point. Not yet ticked: ${missing.join("; ")}`;
       return null;
     }
 

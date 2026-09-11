@@ -7,13 +7,17 @@ import { MAX_CAPSULES_PER_SUPPLY } from "./bph-clinical-logic";
 export function validateStep(state: BPHConsultationState, stepIndex: number): string | null {
   switch (stepIndex) {
     case 0: { // Patient Details
+      if (state.patient.dateOfBirth && state.patient.dateOfBirth > new Date().toISOString().split("T")[0])
+        return "Date of birth cannot be in the future: check the date";
       // PGD v004: inclusion 18 and over, but under 45 is an exclusion.
       const base = validatePatientStep(state.patient, {
         minAge: 45,
-        requireGender: true,
-        genderConfirmed: state.patient.maleConfirmed,
       });
       if (base) return base;
+      // Unanswered is "not yet answered": a message naming the control. The
+      // "No" answer is a stop in the clinical logic (stop audit, 11 Sep 2026).
+      if (!state.patient.sexAnswered)
+        return "Select Yes or No to 'Is the patient male?' (this PGD is for male patients only)";
       // Records row: name, address, date of birth and GP. The GP is
       // load-bearing here (informed on the day, examines before continuation).
       if (!state.patient.address.trim()) return "Patient address is required (PGD records row)";
@@ -27,10 +31,10 @@ export function validateStep(state: BPHConsultationState, stepIndex: number): st
 
     case 2: // LUTS Assessment
       if (!state.medicineSupply.supplyType) {
-        return "Select whether this is the initial supply or a continuation after the 4 to 6 week review";
+        return "Select the 'Supply type': initial supply, or continuation after the 4 to 6 week review";
       }
       if (state.lutsAssessment.ipssScore === null) {
-        return "IPSS score is required";
+        return "Enter the 'IPSS score' (0 to 35)";
       }
       if (state.lutsAssessment.ipssScore < 0 || state.lutsAssessment.ipssScore > 35 || !Number.isInteger(state.lutsAssessment.ipssScore)) {
         return "IPSS must be a whole number from 0 to 35";
@@ -46,10 +50,24 @@ export function validateStep(state: BPHConsultationState, stepIndex: number): st
       ].filter(Boolean).length;
 
       if (symptomsCount === 0) {
-        return "At least one LUTS symptom should be documented";
+        return "Tick at least one symptom the patient has (Frequency, Urgency, Nocturia, Weak stream, Hesitancy or Incomplete emptying)";
       }
       if (state.medicineSupply.supplyType === "initial" && state.lutsAssessment.ipssScore < 8) {
         return "Inclusion requires an IPSS of 8 or more (moderate severity or above) to start treatment";
+      }
+      if (state.medicineSupply.supplyType === "continuation") {
+        if (state.medicineSupply.previousIpss === null) {
+          return "Enter the 'IPSS at the start of treatment' so that improvement can be assessed";
+        }
+        if (state.medicineSupply.previousIpss < 0 || state.medicineSupply.previousIpss > 35 || !Number.isInteger(state.medicineSupply.previousIpss)) {
+          return "'IPSS at the start of treatment' must be a whole number from 0 to 35";
+        }
+        if (!state.medicineSupply.gpExaminedSinceStart) {
+          return "Select Yes or No to 'Has the patient been examined by the GP since starting treatment?'";
+        }
+        if (state.medicineSupply.monthsOnTreatment === null || state.medicineSupply.monthsOnTreatment < 0) {
+          return "Enter the 'Months of continuous treatment so far'";
+        }
       }
       return null;
 
@@ -61,10 +79,13 @@ export function validateStep(state: BPHConsultationState, stepIndex: number): st
         state.medicalHistory.standingSystolic === null ||
         state.medicalHistory.standingDiastolic === null
       ) {
-        return "Measure and record blood pressure lying and standing (both readings) at every supply";
+        return "Enter all four blood pressure figures: 'Lying systolic', 'Lying diastolic', 'Standing systolic' and 'Standing diastolic' (measured at every supply)";
       }
-      if (!state.medicalHistory.previouslyAssessedByGp && !(state.medicalHistory.gpInformedToday && state.medicalHistory.patientAgreesGpWithin6Weeks)) {
-        return "Symptoms not previously assessed by a GP or urologist: the GP must be informed today and the patient must agree to attend within 6 weeks";
+      if (!state.medicalHistory.previouslyAssessedByGp) {
+        return "Select Yes or No to 'Have these symptoms been assessed before by a GP or urologist?'";
+      }
+      if (state.medicalHistory.previouslyAssessedByGp === "no" && !(state.medicalHistory.gpInformedToday && state.medicalHistory.patientAgreesGpWithin6Weeks)) {
+        return "Symptoms not previously assessed by a GP or urologist: tick both 'GP informed on the day of supply' and 'Patient agrees to attend the GP within 6 weeks', or the patient is excluded";
       }
       return null;
 
@@ -73,36 +94,39 @@ export function validateStep(state: BPHConsultationState, stepIndex: number): st
 
     case 5: // Medicine Supply
       if (!state.medicineSupply.tamsulosin400mcgMrOd) {
-        return "Please confirm tamsulosin supply";
+        return "Tick 'Supply tamsulosin 400 micrograms MR capsules, once daily'";
       }
       if (!state.medicineSupply.supplyType) {
-        return "Select whether this is the initial 4-week supply or a continuation supply";
+        return "The 'Supply type' is chosen on the LUTS Assessment step: go back and select it";
       }
       if (state.medicineSupply.supplyType === "continuation") {
         if (state.medicineSupply.previousIpss === null) {
-          return "Record the IPSS at the start of treatment so that improvement can be assessed";
+          return "'IPSS at the start of treatment' is missing: go back to the LUTS Assessment step";
         }
         if (state.medicineSupply.previousIpss < 0 || state.medicineSupply.previousIpss > 35 || !Number.isInteger(state.medicineSupply.previousIpss)) {
-          return "IPSS at the start of treatment must be a whole number from 0 to 35";
+          return "'IPSS at the start of treatment' must be a whole number from 0 to 35 (LUTS Assessment step)";
+        }
+        if (!state.medicineSupply.gpExaminedSinceStart) {
+          return "'Has the patient been examined by the GP since starting treatment?' is unanswered: go back to the LUTS Assessment step";
         }
         if (state.medicineSupply.monthsOnTreatment === null || state.medicineSupply.monthsOnTreatment < 0) {
-          return "Record how many months of continuous treatment the patient has had";
+          return "'Months of continuous treatment so far' is missing: go back to the LUTS Assessment step";
         }
       }
       if (state.medicineSupply.quantity === null || state.medicineSupply.quantity < 1 || state.medicineSupply.quantity > MAX_CAPSULES_PER_SUPPLY) {
-        return "Quantity must be between 1 and 28 capsules per supply";
+        return "'Quantity supplied' must be between 1 and 28 capsules per supply";
       }
       if (!state.medicineSupply.brand.trim()) {
-        return "Record the brand supplied";
+        return "Type the 'Brand supplied'";
       }
       if (!state.medicineSupply.afterFood30mins) {
-        return "Please confirm patient will take medicine after food, preferably with breakfast";
+        return "Tick 'Patient will take after food, preferably with breakfast'";
       }
       if (!state.medicineSupply.sameTimeDaily) {
-        return "Please confirm patient will take at same time daily";
+        return "Tick 'Patient will take at same time daily'";
       }
       if (!state.medicineSupply.firstDoseHypotension) {
-        return "Please confirm patient is aware of first-dose hypotension risk";
+        return "Tick 'Patient is aware of first-dose hypotension risk'";
       }
       return null;
 
@@ -120,7 +144,7 @@ export function validateStep(state: BPHConsultationState, stepIndex: number): st
         !state.counselling.reviewAt4To6Weeks ||
         !state.counselling.pilSupplied
       ) {
-        return "All counselling points must be covered";
+        return "Tick every counselling point on this page (each one must be covered with the patient)";
       }
       return null;
 

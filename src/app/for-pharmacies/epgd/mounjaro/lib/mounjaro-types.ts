@@ -9,6 +9,10 @@ export interface MounjaroWeightAssessment {
   bmiCategory: string; // "underweight" | "normal" | "overweight" | "obese"
   waistCircumference: number | null;
   comorbidities: string[]; // see COMORBIDITY_OPTIONS
+  /** Asked where the gating BMI is 27 to below 30. "" not yet answered;
+   *  only "no" raises BMI_27_TO_30_NO_COMORBIDITY. An empty tick list on its
+   *  own never stops (stop audit, 11 Sep 2026). */
+  hasComorbidity: "" | "yes" | "no";
   // PGD v009 records row: "height, weight and BMI at this visit, and the target weight agreed"
   targetWeight: number | null;
   // PGD v009 inclusion: willing to follow a reduced-calorie diet and increase physical activity
@@ -257,6 +261,7 @@ gpEmail: "",
       bmiCategory: "",
       waistCircumference: null,
       comorbidities: [],
+      hasComorbidity: "",
       targetWeight: null,
       lifestylePlanAgreed: false,
       initialAssessmentCompleted: false,

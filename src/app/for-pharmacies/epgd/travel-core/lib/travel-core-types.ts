@@ -13,6 +13,9 @@ export interface TravelCoreDestinationAssessment {
   sunExposureRisk: "low" | "moderate" | "high";
 }
 
+/** A question put to the patient or checked by the pharmacist: '' until answered. */
+export type YesNoAnswer = "" | "yes" | "no";
+
 export type ChemoprophylaxisPlan =
   | ""
   | "not-required"
@@ -89,6 +92,10 @@ export interface TravelCoreVaccineAdministration {
   hepAGiven: boolean;
   /** Inclusion: destination has high or intermediate hepatitis A prevalence (TravelHealthPro). */
   hepAInclusionMet: boolean;
+  /** The inclusion question as answered ('' until asked); hepAInclusionMet is derived from it.
+   *  Before this, selecting a vaccine raised the "inclusion not confirmed" stop and the red
+   *  exclusion panel at once, before the question beneath had been answered (walkthrough, 11 Sep 2026). */
+  hepAInclusionAnswer: YesNoAnswer;
   hepAProduct: HepAProduct;
   hepADose: HepADose;
   /** Booster only: date and product of the primary dose. */
@@ -103,6 +110,7 @@ export interface TravelCoreVaccineAdministration {
   typhoidGiven: boolean;
   /** Inclusion: destination has high or intermediate typhoid prevalence (TravelHealthPro). */
   typhoidInclusionMet: boolean;
+  typhoidInclusionAnswer: YesNoAnswer;
   typhoidPreviousDose: boolean;
   typhoidPreviousDoseDate: string;
   typhoidBatch: string;
@@ -111,6 +119,7 @@ export interface TravelCoreVaccineAdministration {
   // Cholera
   choleraGiven: boolean;
   choleraRiskCriteriaMet: boolean;
+  choleraInclusionAnswer: YesNoAnswer;
   choleraDose: CholeraDose;
   /** Dose 2 only: date of dose 1 (must be 1 to 6 weeks earlier). */
   choleraDose1Date: string;
@@ -180,6 +189,7 @@ export function createInitialVaccineAdministration(): TravelCoreVaccineAdministr
     recentAntibiotics: false,
     hepAGiven: false,
     hepAInclusionMet: false,
+    hepAInclusionAnswer: "",
     hepAProduct: "",
     hepADose: "",
     hepAPrimaryDoseDate: "",
@@ -191,6 +201,7 @@ export function createInitialVaccineAdministration(): TravelCoreVaccineAdministr
     hepASite: "",
     typhoidGiven: false,
     typhoidInclusionMet: false,
+    typhoidInclusionAnswer: "",
     typhoidPreviousDose: false,
     typhoidPreviousDoseDate: "",
     typhoidBatch: "",
@@ -198,6 +209,7 @@ export function createInitialVaccineAdministration(): TravelCoreVaccineAdministr
     typhoidSite: "",
     choleraGiven: false,
     choleraRiskCriteriaMet: false,
+    choleraInclusionAnswer: "",
     choleraDose: "",
     choleraDose1Date: "",
     choleraLastCourseDate: "",

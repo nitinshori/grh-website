@@ -128,10 +128,14 @@ export function HLSummaryReport({ state, alerts, hasStops }: HLSummaryReportProp
               label="Details"
               value={state.contraindications.depressiveMoodDetail || "Not recorded"}
             />
-            <Row
-              label="Reason for proceeding"
-              value={state.contraindications.moodProceedReason || "Not recorded"}
-            />
+            {state.contraindications.moodReferred ? (
+              <Row label="Decision" value="Not supplied: referred for medical review of mood symptoms" />
+            ) : (
+              <Row
+                label="Reason for proceeding"
+                value={state.contraindications.moodProceedReason || "Not recorded"}
+              />
+            )}
           </>
         )}
         <Row label="Current suicidal ideation" value={state.contraindications.suicidalIdeation ? "Yes (stop, referred)" : "No"} />

@@ -13,18 +13,25 @@ export type AsthmaPatientDetails = BasePatientDetails;
 
 export type DiagnosisEvidence = "" | "gp-record" | "repeat-prescription" | "action-plan" | "none";
 
+export type YesNoAnswer = "" | "yes" | "no";
+
 export interface AsthmaAssessment {
-  hasExistingDiagnosis: boolean;
+  hasExistingDiagnosis: boolean; // derived from diagnosisEvidence (any documented source)
   diagnosisEvidence: DiagnosisEvidence; // GP record, repeat prescription for an asthma inhaler, or an asthma action plan
   normallyUsesSABA: boolean;
-  onPreventer: boolean; // current inhaled corticosteroid therapy asked about and recorded
+  preventerAnswer: YesNoAnswer; // the patient's answer: on a preventer? "no" is a stop
+  onPreventer: boolean; // true when preventerAnswer is "yes"
   preventerDetails: string;
   rescueCoursesLast12Months: number | null; // any source; more than one (2 or more): refer to GP
   pgdRescueCoursesLast12Months: number | null; // under this PGD; no more than one in 12 months is supplied (1 or more: stop)
-  acuteExacerbation: boolean; // wheezing, breathlessness, chest tightness
-  canUseInhalerOrSpacer: boolean;
-  ableToTakeOralMedication: boolean;
-  incompleteResponseToSalbutamol: boolean; // prednisolone arm entry
+  exacerbationAnswer: YesNoAnswer; // acute exacerbation with bronchospasm? "no" is a stop
+  acuteExacerbation: boolean; // true when exacerbationAnswer is "yes"
+  inhalerAbilityAnswer: YesNoAnswer;
+  canUseInhalerOrSpacer: boolean; // true when inhalerAbilityAnswer is "yes"
+  oralAbilityAnswer: YesNoAnswer;
+  ableToTakeOralMedication: boolean; // true when oralAbilityAnswer is "yes"
+  incompleteResponseAnswer: YesNoAnswer; // moderate exacerbation with incomplete response to salbutamol? "no" excludes the prednisolone arm
+  incompleteResponseToSalbutamol: boolean; // true when incompleteResponseAnswer is "yes"
   frequentUse: boolean; // >3 days/week
   nocturnalSymptoms: boolean;
   activityLimitation: boolean;
@@ -38,7 +45,8 @@ export interface AsthmaObservations {
   heartRate: number | null; // 110 or more: acute severe
   pefMeasured: boolean; // where a peak flow meter is available
   pefPercentBest: number | null; // 33 to 50: acute severe; over 50 required for prednisolone
-  canCompleteSentences: boolean; // required
+  sentencesAnswer: YesNoAnswer; // can the patient complete sentences in one breath? "no" is acute severe
+  canCompleteSentences: boolean; // true when sentencesAnswer is "yes"
   silentChest: boolean;
   cyanosis: boolean;
   exhaustion: boolean;
@@ -200,13 +208,18 @@ export function createInitialConsultationState(): AsthmaConsultationState {
       hasExistingDiagnosis: false,
       diagnosisEvidence: "",
       normallyUsesSABA: false,
+      preventerAnswer: "",
       onPreventer: false,
       preventerDetails: "",
       rescueCoursesLast12Months: null,
       pgdRescueCoursesLast12Months: null,
+      exacerbationAnswer: "",
       acuteExacerbation: false,
+      inhalerAbilityAnswer: "",
       canUseInhalerOrSpacer: false,
+      oralAbilityAnswer: "",
       ableToTakeOralMedication: false,
+      incompleteResponseAnswer: "",
       incompleteResponseToSalbutamol: false,
       frequentUse: false,
       nocturnalSymptoms: false,
@@ -220,6 +233,7 @@ export function createInitialConsultationState(): AsthmaConsultationState {
       heartRate: null,
       pefMeasured: false,
       pefPercentBest: null,
+      sentencesAnswer: "",
       canCompleteSentences: false,
       silentChest: false,
       cyanosis: false,

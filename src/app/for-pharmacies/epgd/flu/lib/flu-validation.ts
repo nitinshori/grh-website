@@ -88,7 +88,9 @@ export function validateScreening(screening: FluScreening, patientAge?: number):
   const errors: string[] = [];
 
   if (screening.temperature === null || screening.temperature === undefined) {
-    errors.push('Temperature must be recorded');
+    errors.push('Body temperature (°C) must be recorded');
+  } else if (screening.temperature < 30 || screening.temperature > 45) {
+    errors.push('Body temperature (°C): enter a value between 30 and 45');
   }
 
   if (
@@ -119,6 +121,10 @@ export function validateScreening(screening: FluScreening, patientAge?: number):
 
   if (screening.immunosuppressed && !screening.immunosuppressedDetails?.trim()) {
     errors.push('Please specify reason for immunosuppression');
+  }
+
+  if (screening.bleedingDisorder && screening.bleedingDisorderAssessedSafe === null) {
+    errors.push('Answer "Intramuscular injection assessed as safe by a clinician familiar with the bleeding risk": Yes or No');
   }
 
   if (!screening.nhsStatus) {
@@ -240,8 +246,11 @@ export function validatePostVaccineObs(
   if (!postVaccineObs.observationPeriod) {
     errors.push('Observation period must be specified');
   }
+  if (postVaccineObs.observationPeriod && !postVaccineObs.observationCompleted) {
+    errors.push('Tick "Observation period completed" once the patient has been observed, seated, for the period recorded');
+  }
   if (!postVaccineObs.anaphylaxisKitChecked) {
-    errors.push('Anaphylaxis kit must be checked');
+    errors.push('Anaphylaxis kit checked: confirm the anaphylaxis kit is available and ready');
   }
 
   if (postVaccineObs.adverseReaction && !postVaccineObs.reactionDetails?.trim()) {
@@ -261,16 +270,18 @@ export function validateSummary(summary: { pharmacistName: string; pharmacistGPh
 export function validateAdvice(advice: FluAdvice, secondDoseDue?: boolean): ValidationResult {
   const errors: string[] = [];
 
-  if (
-    !advice.commonReactions ||
-    !advice.seriousReactions ||
-    !advice.paracetamolAdvice ||
-    !advice.returnIfConcerned ||
-    !advice.annualRevaccination ||
-    !advice.cannotCauseFlu ||
-    !advice.pilAndRecordGiven
-  ) {
-    errors.push('All advice points must be acknowledged');
+  // Name each point still unticked, in the label's own words.
+  const points: [boolean, string][] = [
+    [advice.commonReactions, 'Possible side effects and their management'],
+    [advice.seriousReactions, 'Serious side effects and Yellow Card reporting'],
+    [advice.paracetamolAdvice, 'Pain relief advice'],
+    [advice.returnIfConcerned, 'When to seek help'],
+    [advice.annualRevaccination, 'Protection develops over 10 to 14 days, lasts for the season; revaccination every year'],
+    [advice.cannotCauseFlu, 'Vaccine cannot cause influenza; does not protect against other respiratory infections; not 100% protection'],
+    [advice.pilAndRecordGiven, 'Patient information leaflet and written record of the vaccine given offered'],
+  ];
+  for (const [done, label] of points) {
+    if (!done) errors.push(`Tick "${label}" once it has been given (every advice point is required)`);
   }
   if (secondDoseDue && !advice.secondDoseDateGiven) {
     errors.push('Give written confirmation of the date the second dose is due');

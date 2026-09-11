@@ -64,6 +64,10 @@ export function getSuspectedPregnancyReason(state: ECConsultationState): string 
   if (medicalHistory.pregnancyTestResult === "positive") return "positive pregnancy test";
   if (medicalHistory.currentlyPregnant) return "known or suspected pregnancy recorded";
   if (medicalHistory.pregnancyTestResult === "negative") return null;
+  // A blank test result is "not yet answered", not "not done": the validator
+  // asks for it, and the suspicion is only raised once the pharmacist has
+  // recorded that no test was done (stop audit, 11 September 2026).
+  if (medicalHistory.pregnancyTestResult !== "not-done") return null;
   if (clinicalAssessment.currentPregnancySymptoms) return "pregnancy-like symptoms reported and no negative pregnancy test";
   const days = daysSinceLmp(clinicalAssessment.lastMenstrualPeriod);
   if (days !== null && days > 35) return `last menstrual period ${days} days ago (more than 5 weeks) and no negative pregnancy test`;
@@ -389,6 +393,25 @@ export function checkRedFlags(state: ECConsultationState): ClinicalAlert[] {
       message: "Aged 13 to 15: Fraser competence and safeguarding assessment required",
       detail:
         "Assess and record Fraser competence, ask about coercion, the age of the partner and any safeguarding concern, and follow the local safeguarding pathway. Record the assessment.",
+    });
+  }
+
+  if (patient.age !== null && patient.age >= 13 && patient.age <= 15 && patient.fraserOutcome === "not-competent") {
+    alerts.push({
+      severity: "stop",
+      code: "FRASER_NOT_COMPETENT",
+      message: "Aged 13 to 15 and not Fraser competent: do not supply",
+      detail:
+        "Supply under this PGD requires Fraser competence. Refer to the GP or sexual health service, follow the local safeguarding pathway, and record the advice given.",
+    });
+  }
+
+  if (patient.coercionReported === "yes") {
+    alerts.push({
+      severity: "red-flag",
+      code: "COERCION_REPORTED",
+      message: "Coercion reported",
+      detail: "Follow the local safeguarding pathway and record the action taken.",
     });
   }
 

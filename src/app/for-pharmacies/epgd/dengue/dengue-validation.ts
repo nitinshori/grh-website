@@ -39,14 +39,14 @@ export function validatePatientDetails(
     errors.push('This PGD applies to adults aged 18 years and over');
   }
   if (!patient.nhsNumber?.trim()) {
-    errors.push('NHS number is required');
+    errors.push('NHS number: required on this tool, although the field is marked optional. Enter it in "NHS number"');
   }
   // PGD v006 records: name, address, date of birth and GP.
   if (!patient.address?.trim()) {
-    errors.push('Patient address is required (the PGD requires it to be recorded)');
+    errors.push('Patient address: required on this tool (the PGD requires it to be recorded). Enter it in "Patient address"');
   }
   if (!patient.gpPractice?.trim() && !patient.gpName?.trim()) {
-    errors.push('The patient\'s GP is required: search for the practice, or enter "Not registered" as the GP name');
+    errors.push('GP: required on this tool. Search for the practice under "GP practice", or enter "Not registered" in "GP name (the doctor)"');
   }
 
   return { isValid: errors.length === 0, errors };
@@ -56,10 +56,10 @@ export function validateConsent(consent: BaseConsent): ValidationResult {
   const errors: string[] = [];
 
   if (!consent.informedConsentGiven) {
-    errors.push('Patient consent is required');
+    errors.push('Tick "Informed consent obtained" (required)');
   }
   if (!consent.idVerified) {
-    errors.push('Patient ID must be verified');
+    errors.push('Tick "ID verification completed" (required)');
   }
 
   return { isValid: errors.length === 0, errors };
@@ -82,14 +82,14 @@ export function validateTravel(screening: DengueScreening): ValidationResult {
   if (!screening.travelDuration?.trim()) {
     errors.push('Travel duration is required');
   }
-  if (!screening.endemicArea) {
-    errors.push('This PGD covers travel to or residence in a dengue-endemic area only');
+  if (!screening.endemicAreaAnswer) {
+    errors.push('Answer "Is the patient travelling to, or living in, a dengue-endemic area?" (Yes or No)');
   }
-  if (!screening.willingTwoDoses) {
-    errors.push('Patient must be willing to receive two doses, 3 months apart');
+  if (!screening.willingTwoDosesAnswer) {
+    errors.push('Answer "Is the patient willing to receive two doses, 3 months apart?" (Yes or No)');
   }
   if (screening.previousDengueInfection && !screening.dengueInfectionDetails?.trim()) {
-    errors.push('Please describe previous dengue infection');
+    errors.push('"Describe previous infection" is required when "Previous dengue infection" is ticked');
   }
 
   return { isValid: errors.length === 0, errors };
@@ -100,15 +100,15 @@ export function validateMedicalHistory(screening: DengueScreening): ValidationRe
   const errors: string[] = [];
 
   if (screening.temperature === null || screening.temperature === undefined) {
-    errors.push('Temperature must be recorded');
+    errors.push('"Body temperature" is required');
   } else if (screening.temperature < 30 || screening.temperature > 45) {
     errors.push('Temperature must be a body temperature in degrees Celsius (30 to 45)');
   }
   if (screening.currentIllness && !screening.illnessDetails?.trim()) {
-    errors.push('Please describe current illness');
+    errors.push('"Describe current illness" is required when "Acute fever or significant intercurrent illness" is ticked');
   }
   if (screening.immunosuppressed && !screening.immunosuppressedDetails?.trim()) {
-    errors.push('Please specify reason for immunosuppression');
+    errors.push('"Details of immunosuppression" is required when "Immune deficiency of any cause" is ticked');
   }
 
   return { isValid: errors.length === 0, errors };
@@ -142,7 +142,7 @@ export function validateAdministration(
   // Adrenaline must be in place before the vaccine is given, so it is
   // confirmed on this step, before the batch is recorded.
   if (!administration.adrenalineConfirmed) {
-    errors.push('Confirm adrenaline 1 in 1,000 is immediately available, in date, with a telephone, BEFORE vaccinating');
+    errors.push('Tick "Adrenaline 1 in 1,000 immediately available, checked BEFORE vaccinating"');
   }
   if (!administration.batchNumber?.trim()) {
     errors.push('Batch number is required');
@@ -159,19 +159,19 @@ export function validateAdministration(
   }
 
   if (!administration.injectionSite) {
-    errors.push('Injection site must be selected');
+    errors.push('Select the "Injection site"');
   }
   if (!administration.doseNumber) {
-    errors.push('Dose number must be selected');
+    errors.push('Select the "Dose number"');
   }
   if (!administration.administeredBy?.trim()) {
-    errors.push('Administrator name is required');
+    errors.push('"Administered by (name)" is required');
   }
   if (!administration.timeAdministered?.trim()) {
-    errors.push('Time of administration is required');
+    errors.push('"Time administered" is required');
   }
   if (administration.doseNumber === '1st' && !administration.nextDueDate?.trim()) {
-    errors.push('Next dose due date is required for first dose');
+    errors.push('"Next dose due date" is required for a first dose');
   }
   if (administration.doseNumber === '2nd') {
     // The schedule is a second dose 3 months after the first. A second dose
@@ -194,14 +194,20 @@ export function validatePostVaccineObs(
   const errors: string[] = [];
 
   if (!postVaccineObs.observationPeriod) {
-    errors.push('Observation period must be specified');
+    errors.push('Select the "Observation period"');
   }
   if (!postVaccineObs.observationCompleted) {
-    errors.push('Record that the seated observation period (15 minutes) was completed');
+    errors.push('Tick "Observation period completed, seated" once the 15 minutes have elapsed');
+  }
+  // The printed record says "Patient well post-vaccination: No" when neither
+  // box is ticked, which is not what the pharmacist meant. One of the two
+  // must be recorded.
+  if (!postVaccineObs.patientWell && !postVaccineObs.adverseReaction) {
+    errors.push('Record the outcome of the observation: tick "Patient is well after vaccination" or "Adverse reaction observed"');
   }
 
   if (postVaccineObs.adverseReaction && !postVaccineObs.reactionDetails?.trim()) {
-    errors.push('Please describe the adverse reaction');
+    errors.push('"Describe adverse reaction" is required when "Adverse reaction observed" is ticked');
   }
 
   return { isValid: errors.length === 0, errors };
@@ -221,7 +227,7 @@ export function validateAdvice(advice: DengueAdvice): ValidationResult {
     !advice.avoidPregnancy4Weeks ||
     !advice.keepVaccinationRecord
   ) {
-    errors.push('All advice points must be acknowledged');
+    errors.push('Tick every advice point under "Counselling Given" once it has been given');
   }
 
   return { isValid: errors.length === 0, errors };

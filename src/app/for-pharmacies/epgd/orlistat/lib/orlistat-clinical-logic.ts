@@ -18,19 +18,65 @@ export function weightLossPercent(baseline: number | null, current: number | nul
   return Math.round(((baseline - current) / baseline) * 1000) / 10;
 }
 
+/** BMI used for the inclusion test: baseline BMI on a continuation, today's BMI otherwise. */
+export function bmiForInclusion(state: OrlistatConsultationState): number | null {
+  const w = state.weightAssessment;
+  if (w.visitType === "continuation" && w.baselineWeight !== null && w.height) {
+    return Math.round((w.baselineWeight / Math.pow(w.height / 100, 2)) * 10) / 10;
+  }
+  return w.bmi;
+}
+
+export const COMORBIDITY_LABELS: Record<string, string> = {
+  type2diabetes: "Type 2 diabetes",
+  hypertension: "Hypertension",
+  dyslipidaemia: "Dyslipidaemia",
+  cvd: "Cardiovascular disease",
+};
+
 export function getAllAlerts(state: OrlistatConsultationState): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
+
+  // Inclusion BMI. A stop rather than a bare validation error, so a patient
+  // who does not meet the threshold can be saved as "not supplied" with the
+  // advice given, as the PGD records row requires (walkthrough review,
+  // 11 Sep 2026). BMI 28 to 29.9 stops only on the answer "No" to the
+  // comorbidity question; a blank answer is held by the Weight Assessment
+  // validator (stop audit, 11 Sep 2026).
+  const inclusionBmi = bmiForInclusion(state);
+  if (inclusionBmi !== null) {
+    const prefix = state.weightAssessment.visitType === "continuation" ? "Baseline BMI" : "BMI";
+    const noComorbidity = state.weightAssessment.hasComorbidity === "no";
+    if (inclusionBmi < 28) {
+      alerts.push({
+        severity: "stop",
+        code: "BMI_BELOW_28",
+        message: `${prefix} ${inclusionBmi} is below the inclusion threshold`,
+        detail: "Inclusion: BMI 30 or more, or BMI 28 or more with at least one obesity-related comorbidity. Not eligible under this PGD. Advise on alternatives and refer to the GP or NHS weight management as appropriate.",
+      });
+    } else if (inclusionBmi < 30 && noComorbidity) {
+      alerts.push({
+        severity: "stop",
+        code: "BMI_28_NO_COMORBIDITY",
+        message: `${prefix} ${inclusionBmi} is between 28 and 29.9 and the patient has no weight-related comorbidity`,
+        detail: "Eligible only with an obesity-related comorbidity, and the patient has none, so is not eligible under this PGD. Advise on alternatives and refer to the GP or NHS weight management as appropriate.",
+      });
+    }
+  }
 
   // 12 week review on a continuation visit: less than 5% lost from baseline
   // means discontinue and refer, not another 84 capsules.
   if (state.weightAssessment.visitType === "continuation") {
     const weeks = weeksSinceStart(state.weightAssessment.treatmentStartDate);
     const loss = weightLossPercent(state.weightAssessment.baselineWeight, state.weightAssessment.weight);
-    if (weeks !== null && weeks >= ORLISTAT_REVIEW_WEEKS && (loss === null || loss < ORLISTAT_MIN_LOSS_PERCENT)) {
+    // Fires only on a recorded loss below 5%. A missing baseline or today's
+    // weight is held by the Weight Assessment validator, never a stop
+    // (stop audit, 11 Sep 2026).
+    if (weeks !== null && weeks >= ORLISTAT_REVIEW_WEEKS && loss !== null && loss < ORLISTAT_MIN_LOSS_PERCENT) {
       alerts.push({
         severity: "stop",
         code: "REVIEW_12_WEEKS",
-        message: `12 week review: ${loss === null ? "weight loss not calculable" : `${loss}% body weight lost`} (target at least ${ORLISTAT_MIN_LOSS_PERCENT}%)`,
+        message: `12 week review: ${loss}% body weight lost (target at least ${ORLISTAT_MIN_LOSS_PERCENT}%)`,
         detail:
           "PGD maximum treatment period: continue only if the patient has achieved at least a 5% reduction in body weight from baseline at 12 weeks. Discontinue orlistat and refer to the GP. Do not supply.",
       });

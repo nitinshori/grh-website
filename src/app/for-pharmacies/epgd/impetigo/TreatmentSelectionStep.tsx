@@ -88,7 +88,6 @@ export function TreatmentSelectionStep({
   // ineffective: where it was sold as a P medicine, there is no PGD supply.
   const fusidicAllowed = hydrogenPeroxide === 'unsuitable' || hydrogenPeroxide === 'ineffective';
   const treatmentOptions = [
-    { value: '', label: 'Select treatment...' },
     ...(route === 'topical'
       ? [
           ...(hydrogenPeroxide === 'offered-p-sale' || !fusidicAllowed
@@ -164,7 +163,7 @@ export function TreatmentSelectionStep({
           label="Formulation"
           value={treatment.formulation}
           onChange={(v) => onChange({ ...treatment, formulation: v as ImpetigoFormulation })}
-          options={[{ value: '', label: 'Select formulation...' }, ...formulations]}
+          options={formulations}
           required
         />
       )}
@@ -179,7 +178,7 @@ export function TreatmentSelectionStep({
             value={treatment.doseValue}
             onChange={(v) => onChange({ ...treatment, doseValue: v, severeDoseReason: v === 'clari-500' ? treatment.severeDoseReason : '' })}
             options={[
-              { value: '', label: doseOptions.length ? 'Select dose...' : 'No dose is stated in the document for this patient: refer' },
+              ...(doseOptions.length ? [] : [{ value: '', label: 'No dose is stated in the document for this patient: refer' }]),
               ...doseOptions.map((d) => ({ value: d.value, label: d.label })),
             ]}
             required
@@ -213,7 +212,6 @@ export function TreatmentSelectionStep({
           value={treatment.duration}
           onChange={(v) => onChange({ ...treatment, duration: v as ImpetigoTreatmentSelection['duration'], extensionReason: v === '7 days' ? treatment.extensionReason : '' })}
           options={[
-            { value: '', label: 'Select duration...' },
             { value: '5 days', label: '5 days (standard course)' },
             { value: '7 days', label: '7 days (clinical judgement only, lesions severe or numerous; reason required)' },
           ]}

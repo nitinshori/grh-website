@@ -211,6 +211,30 @@ export default function MMRClient() {
   }, []);
 
 
+  // The PGD requires the advice given to an excluded patient to be recorded.
+  // A stop raised on the Eligibility or Medical History step disables Next,
+  // so the advice box that lived only on the Contraindications step could
+  // never be reached for those patients (walkthrough review, 11 Sep 2026).
+  const exclusionNotes = hasStops ? (
+    <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded">
+      <p className="text-sm font-semibold text-red-700 mb-2">
+        Excluded: MMR cannot be given under this PGD
+      </p>
+      <p className="text-sm text-red-600">
+        Refer the patient to their GP or specialist clinic for further advice. Document the advice given and the decision reached.
+      </p>
+      <div className="mt-3">
+        <TextArea
+          label="Advice given and decision reached (saved with the exclusion record)"
+          value={state.summary.clinicalNotes}
+          onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "clinicalNotes", value: v })}
+          placeholder="e.g., Pregnant: advised to attend the GP after delivery; no supply made."
+        />
+        <p className="text-xs text-red-700 mt-1">Then use "Save as not supplied" below to record the consultation.</p>
+      </div>
+    </div>
+  ) : null;
+
   // ─── Step Content Renderers ───
 
   const renderStep = () => {
@@ -323,7 +347,7 @@ export default function MMRClient() {
         return (
           <StepWrapper
             title="Eligibility Assessment"
-            description="Individuals aged 12 months and over without two documented doses of MMR, or where protection is otherwise required. Confirm at least one criterion."
+            description="Individuals aged 12 months and over without two documented doses of MMR, or where protection is otherwise required. Record the documented doses, then tick any reason for vaccination that applies (for the record)."
             currentStep={state.currentStep}
             totalSteps={TOTAL_STEPS}
             onNext={handleNext}
@@ -352,6 +376,7 @@ export default function MMRClient() {
               />
               <p className="text-xs text-gray-600">Inclusion criterion: individuals aged 12 months and over without two documented doses. Doses given before the first birthday do not count.</p>
 
+              <p className="text-sm font-semibold text-navy-900 pt-2">Reason for vaccination (tick any that apply, for the record)</p>
               <Checkbox
                 label="Born after 1970 without documented 2 doses"
                 checked={state.eligibility.bornAfter1970}
@@ -381,17 +406,6 @@ export default function MMRClient() {
                   dispatch({
                     type: "UPDATE_ELIGIBILITY",
                     field: "travelToEndemicArea",
-                    value: v,
-                  })
-                }
-              />
-              <Checkbox
-                label="No documented prior 2 doses of MMR (catch-up, students, outbreak contacts)"
-                checked={state.eligibility.noPriorTwoDoses}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_ELIGIBILITY",
-                    field: "noPriorTwoDoses",
                     value: v,
                   })
                 }
@@ -427,6 +441,7 @@ export default function MMRClient() {
                 </div>
               )}
             </div>
+            {exclusionNotes}
           </StepWrapper>
         );
 
@@ -600,7 +615,7 @@ export default function MMRClient() {
                     value: v,
                   })
                 }
-                description="Egg allergy is not a contraindication to MMR (Green Book). This tool will not give MMRVaxPro after egg anaphylaxis; select Priorix (egg-free)."
+                description="Not an exclusion: egg allergy, including anaphylaxis, is not a contraindication to MMR (Green Book chapter 21). Either product may be given. Recorded for the note only."
               />
 
               <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide pt-2">Cautions</p>
@@ -620,7 +635,7 @@ export default function MMRClient() {
 
               {state.medicalHistory.recentBloodProducts && (
                 <SelectInput
-                  label="Which applied"
+                  label="Which applied? (Deferred means no vaccine today: the consultation is saved as not supplied)"
                   value={state.medicalHistory.bloodProductsAction}
                   onChange={(v) =>
                     dispatch({
@@ -650,6 +665,7 @@ export default function MMRClient() {
                 description="Use caution in children with a history of thrombocytopenia or febrile seizures."
               />
             </div>
+            {exclusionNotes}
           </StepWrapper>
         );
 
@@ -677,27 +693,7 @@ export default function MMRClient() {
               <p className="text-sm text-gray-600">No alerts identified.</p>
             )}
 
-            {hasStops && (
-              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded">
-                <p className="text-sm font-semibold text-red-700 mb-2">
-                  Hard Stop: Cannot Vaccinate
-                </p>
-                <p className="text-sm text-red-600">
-                  Based on the identified contraindications, MMR vaccination cannot be
-                  administered. Refer the patient to their GP or specialist clinic for further
-                  advice. Document the advice given and the decision reached.
-                </p>
-                <div className="mt-3">
-                  <TextArea
-                    label="Advice given and decision reached (saved with the exclusion record)"
-                    value={state.summary.clinicalNotes}
-                    onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "clinicalNotes", value: v })}
-                    placeholder="e.g., Pregnant: advised to attend the GP after delivery; no supply made."
-                  />
-                  <p className="text-xs text-red-700 mt-1">Then use "Save as not supplied" below to record the consultation.</p>
-                </div>
-              </div>
-            )}
+            {exclusionNotes}
           </StepWrapper>
         );
 
@@ -902,6 +898,16 @@ export default function MMRClient() {
                 }
                 description="e.g. redness, swelling at injection site"
               />
+              {state.postVaccine.reactionsObserved && (
+                <TextArea
+                  label="Reaction observed and action taken"
+                  value={state.postVaccine.reactionDetails}
+                  onChange={(v) => dispatch({ type: "UPDATE_POST_VACCINE", field: "reactionDetails", value: v })}
+                  placeholder="Describe the reaction, when it started, treatment given, and whether it was reported via the Yellow Card scheme"
+                  rows={2}
+                  required
+                />
+              )}
 
               {/* Fever and rash at 7 to 12 days cannot be observed at the
                   consultation and are counselled below, not recorded here. */}
@@ -1009,7 +1015,7 @@ export default function MMRClient() {
               />
 
               <Checkbox
-                label="MMR is not linked to autism"
+                label="Explained that MMR is not linked to autism (where the question was raised)"
                 checked={state.counselling.autismMythDebunked}
                 onChange={(v) =>
                   dispatch({
@@ -1181,10 +1187,6 @@ function MMRSummaryReport({
         value={state.eligibility.bornAfter1970 ? "Yes" : "No"}
       />
       <Row
-        label="No documented 2 doses"
-        value={state.eligibility.noPriorTwoDoses ? "Yes" : "No"}
-      />
-      <Row
         label="Healthcare worker"
         value={state.eligibility.healthcareWorker ? "Yes" : "No"}
       />
@@ -1281,6 +1283,10 @@ function MMRSummaryReport({
       <Row label="Expiry date" value={state.vaccineAdmin.expiryDate} />
       <Row label="Administered by" value={state.vaccineAdmin.administeredBy} />
       <Row label="15 minute observation completed" value={state.postVaccine.observationCompleted ? "Yes" : "No"} />
+      <Row
+        label="Immediate reaction observed"
+        value={state.postVaccine.reactionsObserved ? `Yes: ${state.postVaccine.reactionDetails || "details not recorded"}` : "None observed"}
+      />
       </>
       )}
 

@@ -171,24 +171,36 @@ export default function PeriodPainClient() {
       case 0: return validatePatientStep(patient, { minAge: 16, requireFemale: true, femaleConfirmed: c.femaleConfirmed });
       case 1: return validateConsentStep(consent);
       case 2:
-        if (!c.primaryDysmenorrhoea) return "Please confirm the presentation is primary dysmenorrhoea";
-        if (!c.priorTreatment) return "Record whether paracetamol or an antispasmodic has been tried for at least one cycle, or is unsuitable";
-        if ((c.priorTreatment === "tried-insufficient" || c.priorTreatment === "unsuitable") && !c.priorTreatmentDetail.trim()) return c.priorTreatment === "unsuitable" ? "Record why paracetamol and antispasmodics are unsuitable" : "Record what was tried and for how many cycles";
-        if (!c.allergies.trim()) return "Please record allergy status (or NKDA)";
-        if (c.previousSupply && (!c.lastSupplyDate || c.previousCycles === null)) return "Record the date of the last supply and the number of cycles already treated";
+        if (!c.primaryDysmenorrhoea) return "Tick \"Presentation consistent with primary dysmenorrhoea\" (if it is not, tick the exclusion that applies and save as not supplied)";
+        if (!c.priorTreatment) return "Answer \"Has paracetamol or an antispasmodic been tried for at least one cycle?\"";
+        if ((c.priorTreatment === "tried-insufficient" || c.priorTreatment === "unsuitable") && !c.priorTreatmentDetail.trim()) return c.priorTreatment === "unsuitable" ? "Enter Why paracetamol and antispasmodics are unsuitable" : "Enter What was tried, at what dose, and for how many cycles";
+        if (!c.allergies.trim()) return "Enter Allergies (or NKDA)";
+        if (c.previousSupply && !c.lastSupplyDate) return "Enter the Date of last supply";
+        if (c.previousSupply && c.lastSupplyDate > new Date().toISOString().slice(0, 10)) return "The Date of last supply is in the future";
+        if (c.previousSupply && c.previousCycles === null) return "Enter Cycles already treated";
         return null;
       case 3:
-        if (!c.product) return "Please select the treatment";
-        if (!c.quantity.trim()) return "Please select the quantity supplied (one cycle per supply)";
-        if (!c.brand.trim()) return "Please record the brand of medication supplied";
+        if (!c.product) return "Select the Treatment";
+        if (!c.quantity.trim()) return "Select the Quantity supplied (one cycle per supply)";
+        if (!c.brand.trim()) return "Enter the Brand of medication supplied";
         return null;
-      case 4:
-        if (
-          !c.withFoodAdvice || !c.maxDoseAdvice || !c.reviewAdvice || !c.avoidAlcoholAdvice ||
-          !c.noOtherNsaidsAdvice || !c.stopIfReactionAdvice || !c.nonDrugAdvice || !c.contraceptionAlternativeAdvice
-        ) return "Please confirm all counselling points";
-        if (!c.pilSupplied) return "Confirm the patient information leaflet was supplied";
+      case 4: {
+        // Name the first unticked point in its label's own words.
+        const points: [boolean, string][] = [
+          [c.withFoodAdvice, "Take with or after food"],
+          [c.maxDoseAdvice, "Maximum dose explained"],
+          [c.avoidAlcoholAdvice, "Avoid alcohol while taking"],
+          [c.noOtherNsaidsAdvice, "Avoid taking two or more NSAIDs (including aspirin) together"],
+          [c.stopIfReactionAdvice, "Stop immediately and seek advice for rash, mouth ulcers"],
+          [c.reviewAdvice, "Seek medical advice if symptoms worsen rapidly or significantly"],
+          [c.nonDrugAdvice, "Local heat (hot water bottle or heat patch) and TENS may help reduce pain"],
+          [c.contraceptionAlternativeAdvice, "For women who do not wish to conceive, hormonal contraception is an alternative first-line treatment"],
+          [c.pilSupplied, "Patient information leaflet (PIL) supplied with the medication"],
+        ];
+        const missing = points.find(([done]) => !done);
+        if (missing) return `Tick "${missing[1]}" once it has been given. Every counselling point is required`;
         return validateSummaryStep(summary);
+      }
       default: return null;
     }
   }, [step, patient, consent, c, summary]);
@@ -234,6 +246,10 @@ export default function PeriodPainClient() {
     switch (step) {
       case 0:
         return (
+          <div className="space-y-4">
+          {/* The under-16 stop is raised here; without the banner the footer
+              said "exclusion criteria met" with no reason on screen. */}
+          <AlertBanner alerts={alerts} />
           <PatientDetailsStep
             patient={patient}
             onChange={onPatientChange}
@@ -245,13 +261,14 @@ export default function PeriodPainClient() {
               onToggle: (v: boolean) => set({ femaleConfirmed: v }),
             }}
           />
+          </div>
         );
       case 1: return <ConsentStep consent={consent} onChange={(f, v) => setConsent((p) => ({ ...p, [f]: v }))} />;
       case 2:
         return (
           <div className="space-y-4">
             <AlertBanner alerts={alerts} />
-            <Checkbox label="Presentation consistent with primary dysmenorrhoea (cyclical crampy pain before or during menstruation, no red flags)" checked={c.primaryDysmenorrhoea} onChange={(v) => set({ primaryDysmenorrhoea: v })} />
+            <Checkbox label="Presentation consistent with primary dysmenorrhoea (cyclical crampy pain before or during menstruation, no red flags)" checked={c.primaryDysmenorrhoea} onChange={(v) => set({ primaryDysmenorrhoea: v })} required description="Required before Next." />
             <div className="space-y-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
               <p className="text-sm font-semibold text-navy-900">Paracetamol or an antispasmodic (inclusion criterion)</p>
               <SelectInput
@@ -287,8 +304,8 @@ export default function PeriodPainClient() {
               )}
               <Checkbox label="Symptoms have not responded to first-line treatment over 3 to 6 months" description="Failure of first-line treatment is a referral trigger: refer rather than supply again." checked={c.notRespondingToTreatment} onChange={(v) => set({ notRespondingToTreatment: v })} />
             </div>
-            <div className="space-y-3 p-4 bg-red-50 rounded-lg border border-red-200">
-              <p className="text-sm font-semibold text-red-800">Exclusions. Any one excludes; refer.</p>
+            <div className="space-y-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <p className="text-sm font-semibold text-navy-900">Exclusions. Tick only those present; any one excludes and the tool then stops.</p>
               <Checkbox label="Features suggesting a secondary cause: symptoms starting later in life; severe, progressively worsening or unresponsive pain; intermenstrual or postcoital bleeding, dyspareunia or abnormal discharge; fever" checked={c.redFlagSymptoms} onChange={(v) => set({ redFlagSymptoms: v })} />
               <Checkbox label="Known or suspected pregnancy" checked={c.pregnantOrSuspected} onChange={(v) => set({ pregnantOrSuspected: v })} />
               <Checkbox label="Breastfeeding" checked={c.breastfeeding} onChange={(v) => set({ breastfeeding: v })} />

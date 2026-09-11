@@ -71,17 +71,21 @@ export function evaluateFluContraindications(
   patientAge: number
 ): { contraindications: FluContraindications; alerts: ClinicalAlert[] } {
   const alerts: ClinicalAlert[] = [];
+  // A blank or unparseable date of birth is "not yet answered": the Patient
+  // Details validation asks for it. Only an entered date of birth that gives an
+  // age under 2 raises the stop (stop audit, 11 Sep 2026).
+  const ageKnown = Number.isFinite(patientAge) && patientAge >= 0;
   const contraindications: FluContraindications = {
     anaphylaxisToPreviousDose: false,
     severeEggAllergy: false,
     acuteFebrileIllness: false,
-    ageAppropriate: patientAge >= 2,
+    ageAppropriate: !(ageKnown && patientAge < 2),
     hypersensitivityToComponent: false,
     alreadyVaccinatedThisSeason: false,
     bleedingDisorderUnassessed: false,
   };
 
-  if (patientAge < 2) {
+  if (ageKnown && patientAge < 2) {
     alerts.push({
       severity: 'stop',
       code: 'UNDER_2',
@@ -192,8 +196,9 @@ export function evaluateFluContraindications(
     });
   }
 
-  // Bleeding disorder: exclusion unless IM assessed as safe
-  if (screening.bleedingDisorder && !screening.bleedingDisorderAssessedSafe) {
+  // Bleeding disorder: exclusion unless IM assessed as safe. The stop fires on
+  // an answered "No" only; an unanswered assessment is a validation message.
+  if (screening.bleedingDisorder && screening.bleedingDisorderAssessedSafe === false) {
     contraindications.bleedingDisorderUnassessed = true;
     alerts.push({
       severity: 'stop',
@@ -204,7 +209,7 @@ export function evaluateFluContraindications(
     });
   }
 
-  if ((screening.bleedingDisorder && screening.bleedingDisorderAssessedSafe) || screening.anticoagulated) {
+  if ((screening.bleedingDisorder && screening.bleedingDisorderAssessedSafe === true) || screening.anticoagulated) {
     alerts.push({
       severity: 'red-flag',
       code: 'BLEEDING_DISORDER',

@@ -13,48 +13,55 @@ export function validatePatient(patient: BasePatientDetails): string | null {
 }
 
 export function validateAssessment(assessment: RosaceaAssessment): string | null {
-  if (!assessment.subtype) return "Rosacea subtype must be identified";
-  if (!assessment.severity) return "Please record severity (both arms are for mild to moderate rosacea)";
+  if (!assessment.subtype) return "Rosacea subtype: select the subtype";
+  if (!assessment.severity) return "Severity: select mild, moderate or severe (both arms are for mild to moderate rosacea)";
+  if (!assessment.papulesPostules) return "Are papules or pustules (inflammatory lesions) present? Select Yes or No";
+  if (assessment.papulesPostules === "no" && assessment.subtype !== "papulopustular") {
+    return "No papules or pustules: neither product can be supplied without inflammatory lesions (metronidazole gel is for rosacea with inflammatory lesions; azelaic acid gel is for papulopustular rosacea). Use Save as not supplied and refer.";
+  }
   return null;
 }
 
 export function validateContraindications(contraindications: RosaceaContraindications): string | null {
-  if (contraindications.contraindicated) return "Patient meets exclusion criteria, cannot proceed";
-  if (!contraindications.questionsAsked) return "Confirm that each of the exclusion questions above has been put to the patient";
+  if (contraindications.contraindicated) return "Patient meets exclusion criteria, cannot proceed. Record the advice given in the box above and use Save as not supplied.";
+  if (!contraindications.questionsAsked) return "Tick the confirmation at the bottom: I have asked the patient every question above (ticked boxes are Yes, unticked boxes are No)";
   return null;
 }
 
 export function validateTreatment(treatment: RosaceaTreatment, assessment: RosaceaAssessment): string | null {
-  if (!treatment.product) return "Please select the product to supply";
-  if (!(assessment.papulesPostules || assessment.subtype === "papulopustular")) {
-    return "Both arms require inflammatory lesions: metronidazole gel is for rosacea with inflammatory lesions and azelaic acid gel for papulopustular rosacea. Record papules/pustules on the assessment step or refer.";
+  if (!treatment.product) return "Treatment product: select the product to supply";
+  if (!(assessment.papulesPostules === "yes" || assessment.subtype === "papulopustular")) {
+    return "Both arms require inflammatory lesions: metronidazole gel is for rosacea with inflammatory lesions and azelaic acid gel for papulopustular rosacea. Go back to Rosacea Assessment and answer Are papules or pustules present?, or refer.";
   }
-  if (!treatment.supplyNumber) return "Please record which supply of the course this is (each supply is one 30 g tube)";
+  if (!treatment.supplyNumber) return "Supply number within this course: select which supply this is (each supply is one 30 g tube)";
   const max = PRODUCT_DETAILS[treatment.product]?.maxSupplies ?? 1;
   if (Number(treatment.supplyNumber) > max) return `Maximum ${max} x 30 g per course for this product; further supply needs a review`;
   if (Number(treatment.supplyNumber) > 1) {
-    if (!treatment.courseStartDate) return "Record the date this course started (required from the second supply)";
-    if (!treatment.previousSupplyDate) return "Record the date of the previous supply in this course";
-    if (treatment.previousSupplyDate < treatment.courseStartDate) return "The previous supply cannot be before the course start date";
+    const today = new Date().toISOString().split("T")[0];
+    if (!treatment.courseStartDate) return "Date this course started: required from the second supply";
+    if (treatment.courseStartDate > today) return "Date this course started: this date is in the future; check the date entered";
+    if (!treatment.previousSupplyDate) return "Date of previous supply: record the date of the previous supply in this course";
+    if (treatment.previousSupplyDate > today) return "Date of previous supply: this date is in the future; check the date entered";
+    if (treatment.previousSupplyDate < treatment.courseStartDate) return "Date of previous supply: the previous supply cannot be before the date this course started";
     const courseWeeks = PRODUCT_DETAILS[treatment.product]?.courseWeeks ?? 8;
     const weeksSinceStart = (Date.now() - new Date(treatment.courseStartDate).getTime()) / (7 * 24 * 3600 * 1000);
     if (weeksSinceStart > courseWeeks + 4) {
       return `This course started more than ${courseWeeks + 4} weeks ago; the ${courseWeeks}-week course window has passed. Review the patient and start a new course (supply 1) rather than continuing this one.`;
     }
   }
-  if (!treatment.brand.trim()) return "Record the brand dispensed (the PGD record requires name and brand)";
+  if (!treatment.brand.trim()) return "Brand dispensed: record the brand (the PGD record requires name and brand)";
   return null;
 }
 
 export function validateCounselling(c: RosaceaCounselling): string | null {
-  if (!c.applicationAdvised) return "Please confirm application advice has been given";
-  if (!c.sunProtectionAdvised) return "Please confirm sun protection advice (and avoiding sunbeds) has been given";
-  if (!c.triggerAvoidanceAdvised) return "Please confirm trigger avoidance has been discussed";
-  if (!c.diaryAdvised) return "Please confirm a trigger diary has been suggested";
-  if (!c.skinCareAdvised) return "Please confirm emollient and camouflage cosmetic advice has been given";
-  if (!c.reviewAdvised) return "Please confirm the review interval and treatment period have been explained";
-  if (!c.followUpAdvised) return "Please confirm follow-up advice has been given";
-  if (!c.pilSupplied) return "Please confirm the patient information leaflet has been supplied";
+  if (!c.applicationAdvised) return "Tick Application advice given once it has been covered";
+  if (!c.sunProtectionAdvised) return "Tick Effective sun protection advised; avoid sunbeds once it has been covered";
+  if (!c.triggerAvoidanceAdvised) return "Tick Importance of avoiding trigger factors discussed once it has been covered";
+  if (!c.diaryAdvised) return "Tick Trigger diary suggested once it has been covered";
+  if (!c.skinCareAdvised) return "Tick Regular non-oily emollients / tinted cosmetics once it has been covered";
+  if (!c.reviewAdvised) return "Tick Review interval and treatment period explained once it has been covered";
+  if (!c.followUpAdvised) return "Tick Follow-up advice given once it has been covered";
+  if (!c.pilSupplied) return "Tick Patient information leaflet (PIL) supplied with the medication";
   return null;
 }
 

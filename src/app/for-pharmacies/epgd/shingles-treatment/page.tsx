@@ -6,6 +6,7 @@ import { ProgressBar } from '../shared/components/ProgressBar';
 import { StepWrapper } from '../shared/components/StepWrapper';
 import type { ConsultationRecordData } from '../shared/hooks/useConsultationTracking';
 import { AlertBanner } from '../shared/components/AlertBanner';
+import { TextArea } from '../shared/components/FormInputs';
 import { PatientDetailsStep } from '../shared/steps/PatientDetailsStep';
 import { ConsentStep } from '../shared/steps/ConsentStep';
 import { SymptomAssessmentStep } from './steps/SymptomAssessmentStep';
@@ -99,6 +100,11 @@ export default function ShinglesTreatmentPage() {
 
   // Declaration tick on the summary step
   const [agreed, setAgreed] = useState(false);
+
+  // Advice given to an excluded patient (PGD records requirement). Until this
+  // existed the printed record invented a sentence of advice the pharmacist
+  // never entered (walkthrough review, 11 Sep 2026).
+  const [referralAdvice, setReferralAdvice] = useState('');
 
   // Derived state
   const [alerts, setAlerts] = useState<ClinicalAlert[]>([]);
@@ -210,6 +216,7 @@ export default function ShinglesTreatmentPage() {
     pharmacistGPhC,
     pharmacyName: pharmacistProfile?.pharmacyName ?? '',
     pharmacyAddress: pharmacistProfile?.pharmacyAddress ?? '',
+    clinicalNotes: isBlocked && referralAdvice.trim() ? `Advice given on referral: ${referralAdvice.trim()}` : '',
     patientDetails,
     consent,
     symptoms,
@@ -258,6 +265,7 @@ export default function ShinglesTreatmentPage() {
         pharmacyAddress: summary.pharmacyAddress,
         consultationDate: summary.consultationDate,
         consultationTime: summary.consultationTime,
+        clinicalNotes: summary.clinicalNotes,
       },
       consent: { notifyGp: consent.notifyGp },
     };
@@ -273,6 +281,7 @@ export default function ShinglesTreatmentPage() {
     setMedicineSelection(initialShinglesMedicineSelection());
     setCounselling(initialShinglesCounselling());
     setAgreed(false);
+    setReferralAdvice('');
   }, []);
 
   return (
@@ -320,6 +329,22 @@ export default function ShinglesTreatmentPage() {
           getConsultationData={getConsultationData}
           onNewConsultation={handleNewConsultation}
         >
+          {isBlocked && (
+            <div className="mb-6 p-4 bg-red-50 rounded-lg border border-red-200 space-y-2">
+              <p className="text-sm font-medium text-red-800">
+                Not supplied under this PGD. Record the advice given and the referral made, then use "Save as not supplied".
+              </p>
+              <TextArea
+                label="Advice given and decision reached (PGD records requirement)"
+                value={referralAdvice}
+                onChange={setReferralAdvice}
+                placeholder="e.g. Referred to the GP the same day for a prescriber decision; analgesia and rash care advice given"
+                rows={2}
+                required
+              />
+            </div>
+          )}
+
           {currentStep === 0 && (
             <PatientDetailsStep
               patient={patientDetails}

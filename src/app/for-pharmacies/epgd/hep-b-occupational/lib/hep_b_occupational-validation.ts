@@ -5,16 +5,21 @@ import { getDoseRule, parseLocalDate, isExpired } from "./hep_b_occupational-cli
 
 export function validateAssessment(state: HepBState, alerts: ClinicalAlert[]): string | null {
   const { assessment } = state;
-  if (!assessment.reasonForVaccination) return "Select the reason for vaccination";
-  if (assessment.previousVaccination === "") return "Record previous hepatitis B vaccination";
-  if (!assessment.eligibleUnderGuidance) return "Confirm the individual is eligible under national immunisation or occupational health guidance";
+  // The stop comes first: once an exclusion is on screen the pharmacist is
+  // saving as not supplied, not filling in the rest of the step.
   const stop = alerts.find((a) => a.severity === "stop");
   if (stop) return `Exclusion present: ${stop.message}. Record the advice given and save as not supplied.`;
+  if (!assessment.reasonForVaccination) return "Select the reason for vaccination";
+  if (assessment.previousVaccination === "") return "Select an option under \"Previous Hepatitis B Vaccination\" (None, Partial course or Full course)";
+  if (assessment.previousVaccination === "full-course" && assessment.antiHBsLevelChecked && !assessment.antiHBsLevel) return "\"Anti-HBs level checked\" is ticked: select the \"Anti-HBs Level\"";
+  if (!assessment.eligibleUnderGuidance) return "Tick \"Eligible under national immunisation (Green Book chapter 18) or occupational health guidance\"";
   return null;
 }
 
 export function validateTreatment(state: HepBState, alerts: ClinicalAlert[]): string | null {
   const t = state.treatment;
+  const stopFirst = alerts.find((a) => a.severity === "stop");
+  if (stopFirst) return `Exclusion present: ${stopFirst.message}. Record the advice given and save as not supplied.`;
   if (!t.adrenalineAvailable) return "Confirm adrenaline 1 in 1,000 is immediately available in the room, in date, with a telephone and a written anaphylaxis protocol";
   if (!t.vaccine) return "Select the vaccine (the brand given is what a recall is searched on)";
   if (!t.schedule) return "Select the schedule";
@@ -34,11 +39,11 @@ export function validateTreatment(state: HepBState, alerts: ClinicalAlert[]): st
 
 export function validateCounselling(state: HepBState): string | null {
   const c = state.counselling;
-  if (!c.pilSupplied) return "Confirm the patient information leaflet was supplied";
-  if (!c.followUpAdviceGiven) return "Confirm the follow-up advice was given";
-  if (!c.counsellingProvided) return "Confirm counselling was provided";
-  if (!c.gpInformed) return "Record whether the GP is being informed, or that the patient declined";
-  if (!c.counsellingNotes.trim()) return "Record counselling notes";
+  if (!c.counsellingProvided) return "Tick \"Counselling provided to patient\"";
+  if (!c.pilSupplied) return "Tick \"Patient information leaflet (PIL) supplied\"";
+  if (!c.followUpAdviceGiven) return "Tick \"Follow-up advice given\"";
+  if (!c.gpInformed) return "Select an option under \"GP informed\": GP informed, or patient declined GP notification";
+  if (!c.counsellingNotes.trim()) return "Complete \"Counselling Notes\" (a line or two on what was discussed)";
   return null;
 }
 

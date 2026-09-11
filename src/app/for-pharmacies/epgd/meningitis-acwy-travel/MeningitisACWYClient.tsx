@@ -209,15 +209,15 @@ export function MeningitisACWYClient() {
     return validateMeningitisACWYAdministrationStep(summary, patientDetails, medicalHistory);
   }, [summary, patientDetails, medicalHistory]);
 
-  const postVaccineValidationError = useMemo(() => {
-    return validateMeningitisACWYPostVaccineStep(postVaccineAdvice);
-  }, [postVaccineAdvice]);
-
   const underSixteen = patientDetails.age !== null && patientDetails.age < 16;
   const ageMonths = calculateAgeInMonths(patientDetails.dateOfBirth);
   const courseInvolved =
     summary.doseNumber === '1st' ||
     (ageMonths !== null && ageMonths < 12 && (summary.doseNumber === 'single' || summary.doseNumber === '2nd'));
+
+  const postVaccineValidationError = useMemo(() => {
+    return validateMeningitisACWYPostVaccineStep(postVaccineAdvice, courseInvolved);
+  }, [postVaccineAdvice, courseInvolved]);
 
   const summaryValidationError = useMemo(() => {
     return validateMeningitisACWYSummaryStep(summary);
@@ -319,6 +319,27 @@ export function MeningitisACWYClient() {
       consent: { notifyGp: consent.notifyGp },
     };
   }, [patientDetails, consent, travelAssessment, medicalHistory, contraIndicationsReviewed, postVaccineAdvice, summary, clinicalAlerts, profile]);
+
+  // Shown on every step where a stop is on screen, so the advice given and
+  // the decision reached can be recorded where the stop is raised (the
+  // travel step raises one for a repeat dose inside 5 years) and saved with
+  // "Save as not supplied" in the footer.
+  const exclusionBlock = isBlocked ? (
+    <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-3 print:hidden">
+      <p className="text-red-700 text-sm font-semibold">
+        Exclusion identified. Refer, do not vaccinate. Explain why vaccination cannot be given today and what the alternative is. Where it is acute febrile illness, arrange to vaccinate after recovery and, if travel is imminent, say plainly that protection may not be achieved in time. Where outbreak or contact management is involved, refer to the GP or the UKHSA Health Protection Team. Document the advice and the decision.
+      </p>
+      <TextArea
+        label="Advice given and decision reached (saved with the exclusion record)"
+        value={contraIndicationsReviewed.exclusionAdvice ?? ''}
+        onChange={(v) => setContraIndicationsReviewed({ ...contraIndicationsReviewed, exclusionAdvice: v })}
+        placeholder="e.g., Febrile illness today: advised to return once recovered; travel in 3 weeks, told protection may not be achieved in time."
+        rows={3}
+        required
+      />
+      <p className="text-xs text-red-700">Then use &quot;Save as not supplied&quot; in the step footer to record the consultation.</p>
+    </div>
+  ) : null;
 
   const handleNewConsultation = useCallback(() => {
     setCurrentStep(0);
@@ -424,19 +445,19 @@ export function MeningitisACWYClient() {
           )}
           <div className="mt-6 space-y-3 border-t pt-6">
             <Checkbox
-              label="Patient understands a conjugate vaccine certificate is accepted for 5 years"
+              label="Patient told a conjugate vaccine certificate is accepted for 5 years (required)"
               checked={consent.understands5YearValidity}
               onChange={(v) => setConsent({ ...consent, understands5YearValidity: v })}
-              description="Saudi Arabia accepts a conjugate vaccine given within the last 5 years (a polysaccharide vaccine within 3 years). Routine boosters are not recommended for most travellers."
+              description="Tick once explained. Saudi Arabia accepts a conjugate vaccine given within the last 5 years (a polysaccharide vaccine within 3 years). Routine boosters are not recommended for most travellers."
             />
             <Checkbox
-              label="Patient understands timing requirement (at least 10 days before arrival in Saudi Arabia)"
+              label="Patient told the timing requirement (at least 10 days before arrival in Saudi Arabia) (required)"
               checked={consent.understandsTimingRequirement}
               onChange={(v) => setConsent({ ...consent, understandsTimingRequirement: v })}
-              description="For Hajj or Umrah the dose must be given at least 10 days before arrival. Book accordingly."
+              description="Tick once explained. For Hajj or Umrah the dose must be given at least 10 days before arrival; book accordingly. For other destinations, tick once the patient has been told it does not apply to them."
             />
             <Checkbox
-              label="Patient aware certificate may be required for travel"
+              label="Patient aware certificate may be required for travel (optional)"
               checked={consent.certificateRequirement}
               onChange={(v) => setConsent({ ...consent, certificateRequirement: v })}
               description="Proof of MenACWY vaccination is a visa entry requirement for Hajj, and for Umrah at any time of year. The certificate must state the vaccine was a conjugate vaccine."
@@ -460,6 +481,7 @@ export function MeningitisACWYClient() {
           getConsultationData={getConsultationData}
         >
           <div className="space-y-4">
+            {exclusionBlock}
             {/* Almost every MenACWY patient is travelling to Saudi Arabia for
                 Hajj or Umrah, often as a family group booked one after another
                 (Moin, Aug 2026: "it makes it a little bit difficult to have to
@@ -515,7 +537,7 @@ export function MeningitisACWYClient() {
 
             <div>
               <TextInput
-                label="Passport number"
+                label="Passport number (optional)"
                 value={patientDetails.passportNumber}
                 onChange={(v) => handlePatientDetailsChange('passportNumber', v)}
                 placeholder="e.g., 123456789"
@@ -578,7 +600,7 @@ export function MeningitisACWYClient() {
                   required
                 />
                 <TextInput
-                  label="Reason for the repeat dose (recorded where a repeat is given for certificate purposes)"
+                  label="Reason for the repeat dose (required where a repeat is given for certificate purposes)"
                   value={patientDetails.repeatDoseReason}
                   onChange={(v) => handlePatientDetailsChange('repeatDoseReason', v)}
                   placeholder="e.g. previous dose 2019, valid certificate required for Hajj 2027"
@@ -587,7 +609,7 @@ export function MeningitisACWYClient() {
             )}
 
             <Checkbox
-              label="Travel destination confirmed"
+              label="Travel destination confirmed (required)"
               checked={travelAssessment.travelDestinationConfirmed}
               onChange={(v) =>
                 setTravelAssessment({ ...travelAssessment, travelDestinationConfirmed: v })
@@ -596,7 +618,7 @@ export function MeningitisACWYClient() {
             />
 
             <Checkbox
-              label="Travel reason confirmed"
+              label="Travel reason confirmed (required)"
               checked={travelAssessment.travelReasonConfirmed}
               onChange={(v) =>
                 setTravelAssessment({ ...travelAssessment, travelReasonConfirmed: v })
@@ -605,7 +627,7 @@ export function MeningitisACWYClient() {
             />
 
             <Checkbox
-              label="Departure timing confirmed"
+              label="Departure timing confirmed (required)"
               checked={travelAssessment.timingConfirmed}
               onChange={(v) => setTravelAssessment({ ...travelAssessment, timingConfirmed: v })}
               description="For Hajj or Umrah the dose must be given at least 10 days before arrival in Saudi Arabia"
@@ -629,6 +651,8 @@ export function MeningitisACWYClient() {
           getConsultationData={getConsultationData}
         >
           <div className="space-y-4">
+            {exclusionBlock}
+            <p className="text-sm text-gray-600">Ask each question. Tick the box where the answer is yes; leave it unticked where the answer is no. A patient with nothing to tick can go straight to Next.</p>
             <Checkbox
               label="Confirmed anaphylactic reaction to a previous dose of the same vaccine"
               checked={medicalHistory.anaphylaxisToVaccine}
@@ -724,29 +748,17 @@ export function MeningitisACWYClient() {
           onPrev={handlePrev}
           canProceed={canProceedStep4}
           validationError={
-            !contraIndicationsReviewed.confirmedNoAbsoluteContraindications
-              ? 'You must confirm review before proceeding'
+            isBlocked
+              ? 'Exclusion criteria met: record the advice given and use "Save as not supplied"'
+              : !contraIndicationsReviewed.confirmedNoAbsoluteContraindications
+              ? 'Tick "I confirm no absolute contraindications are present and vaccination can proceed"'
               : null
           }
           isBlocked={isBlocked}
           getConsultationData={getConsultationData}
         >
           <div className="space-y-4">
-            {isBlocked && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-3">
-                <p className="text-red-700 text-sm font-semibold">
-                  Exclusion identified. Refer, do not vaccinate. Explain why vaccination cannot be given today and what the alternative is. Where it is acute febrile illness, arrange to vaccinate after recovery and, if travel is imminent, say plainly that protection may not be achieved in time. Where outbreak or contact management is involved, refer to the GP or the UKHSA Health Protection Team. Document the advice and the decision.
-                </p>
-                <TextArea
-                  label="Advice given and decision reached (saved with the exclusion record)"
-                  value={contraIndicationsReviewed.exclusionAdvice ?? ''}
-                  onChange={(v) => setContraIndicationsReviewed({ ...contraIndicationsReviewed, exclusionAdvice: v })}
-                  placeholder="e.g., Febrile illness today: advised to return once recovered; travel in 3 weeks, told protection may not be achieved in time."
-                  rows={3}
-                />
-                <p className="text-xs text-red-700">Then use "Save as not supplied" below to record the consultation.</p>
-              </div>
-            )}
+            {exclusionBlock}
 
             {clinicalAlerts.length === 0 && !isBlocked && (
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
@@ -786,7 +798,7 @@ export function MeningitisACWYClient() {
                     confirmedNoAbsoluteContraindications: v,
                   })
                 }
-                description="Pharmacist declaration"
+                description="Pharmacist declaration (required)"
               />
             )}
           </div>
@@ -808,6 +820,7 @@ export function MeningitisACWYClient() {
           getConsultationData={getConsultationData}
         >
           <div className="space-y-4">
+            {exclusionBlock}
             <SelectInput
               label="Vaccine type"
               value={summary.vaccineType}
@@ -954,6 +967,7 @@ export function MeningitisACWYClient() {
           getConsultationData={getConsultationData}
         >
           <div className="space-y-4">
+            {exclusionBlock}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm font-semibold text-blue-900">Adverse effects to advise the patient about:</p>
               <ul className="text-xs text-blue-800 mt-2 space-y-1 list-disc list-inside">
@@ -977,6 +991,7 @@ export function MeningitisACWYClient() {
               </ul>
             </div>
 
+            <p className="text-sm text-gray-600">Tick each item once it has been done. Every item on this step is required.</p>
             <Checkbox
               label="Patient information leaflet for the product given supplied"
               checked={postVaccineAdvice.leafletGiven}
@@ -1085,6 +1100,7 @@ export function MeningitisACWYClient() {
           onNewConsultation={handleNewConsultation}
         >
           <div className="space-y-4 print:hidden">
+            {exclusionBlock}
             <TextInput
               label="Pharmacist name"
               value={summary.pharmacistName}
@@ -1226,6 +1242,7 @@ export function MeningitisACWYClient() {
               clinicalAlerts={clinicalAlerts}
               postVaccineAdvice={postVaccineAdvice}
               pgdVersion={MENACWY_PGD_VERSION}
+              exclusionAdvice={contraIndicationsReviewed.exclusionAdvice}
               embedded
             />
           </div>

@@ -70,7 +70,6 @@ export const MedicalHistoryStep: React.FC<MedicalHistoryStepProps> = ({
                   )
                 }
                 options={[
-                  { value: '', label: 'Select...' },
                   { value: 'non-severe', label: 'Non-severe (mild or moderate): valaciclovir or famciclovir only' },
                   { value: 'severe', label: 'Severe as defined in Green Book chapter 28a: EXCLUDED, refer' },
                 ]}
@@ -152,10 +151,11 @@ export const MedicalHistoryStep: React.FC<MedicalHistoryStepProps> = ({
                 value={medicalHistory.hepaticImpairment}
                 onChange={(v) => handleChange('hepaticImpairment', v as ShinglesMedicalHistory['hepaticImpairment'])}
                 options={[
-                  { value: 'none', label: 'None / Normal' },
-                  { value: 'mild-moderate', label: 'Mild-moderate' },
-                  { value: 'severe', label: 'Severe' },
+                  { value: 'none', label: 'None / normal' },
+                  { value: 'mild-moderate', label: 'Mild to moderate (caution)' },
+                  { value: 'severe', label: 'Severe (EXCLUDED, refer)' },
                 ]}
+                required
               />
               {medicalHistory.hepaticImpairment === 'severe' && (
                 <p className="text-sm text-red-700 mt-2 bg-red-100 p-2 rounded">
@@ -272,16 +272,12 @@ export const MedicalHistoryStep: React.FC<MedicalHistoryStepProps> = ({
 
         {/* Current Medications & Allergies */}
         <div className="bg-gray-50 border border-gray-300 rounded-lg p-4">
-          <h3 className="font-semibold text-gray-900 mb-3">Medications & Allergies</h3>
+          <h3 className="font-semibold text-gray-900 mb-3">Allergies</h3>
 
           <div className="space-y-4">
-            <TextArea
-              label="Current medications (including herbal, OTC)"
-              value={medicalHistory.currentMedications}
-              onChange={(v) => handleChange('currentMedications', v)}
-              placeholder="List all medications patient is currently taking..."
-              rows={3}
-            />
+            <p className="text-xs text-gray-600">
+              Current medications are listed on the next step (Medications), where the full list is required.
+            </p>
 
             <TextArea
               label="Known allergies (including drug allergies)"

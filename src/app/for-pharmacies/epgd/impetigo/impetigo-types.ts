@@ -35,7 +35,8 @@ export interface ImpetigoMedicalHistory {
   eczema: boolean;
   recurrentImpetigo: boolean;
   mrsaSuspected: boolean;
-  penicillinAllergy: boolean;
+  /** Yes/No with no default: the oral arm turns on it, so it must be answered, not assumed from an unticked box. */
+  penicillinAllergy: '' | 'yes' | 'no';
   penicillinAllergyHistory: string; // in the patient's own terms
   cephalosporinAllergyHighRisk: boolean; // cephalosporin allergy with high risk of cross-reactivity
   flucloxCholestasisHistory: boolean; // previous cholestasis or jaundice with flucloxacillin
@@ -49,7 +50,8 @@ export interface ImpetigoMedicalHistory {
   pregnant: boolean;
   pregnancyEstablishedHow: string;
   breastfeeding: boolean;
-  breastfeedingDiscussed: boolean; // macrolide in breastfeeding: choice discussed and recorded
+  /** Macrolide in breastfeeding: Yes/No with no default. "no" stops; blank is "not yet answered". */
+  breastfeedingDiscussed: '' | 'yes' | 'no';
   weightKg: string; // child: weighed today, in kilograms
   cannotBeWeighed: boolean;
   takesSimvastatinOrLovastatin: boolean;

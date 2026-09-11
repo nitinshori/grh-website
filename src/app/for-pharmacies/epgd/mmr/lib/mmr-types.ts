@@ -84,6 +84,8 @@ export interface MMRVaccineAdmin {
 
 export interface MMRPostVaccine {
   reactionsObserved: boolean;
+  /** What was observed and the action taken, where an immediate reaction is ticked. */
+  reactionDetails: string;
   feverDeveloped: boolean;
   feverOnset: string;
   rashObserved: boolean;
@@ -202,6 +204,7 @@ export function createInitialMMRState(): MMRConsultationState {
     },
     postVaccine: {
       reactionsObserved: false,
+      reactionDetails: "",
       feverDeveloped: false,
       feverOnset: "",
       rashObserved: false,

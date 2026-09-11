@@ -210,25 +210,13 @@ export default function AsthmaClient() {
       case 2: // Asthma Assessment
         return (
           <div className="space-y-4">
-            <Checkbox
-              label="Confirmed diagnosis of asthma"
-              checked={state.assessment.hasExistingDiagnosis}
-              onChange={(v) =>
-                dispatch({
-                  type: "UPDATE_ASSESSMENT",
-                  field: "hasExistingDiagnosis",
-                  value: v,
-                })
-              }
-              description="Must be DOCUMENTED. Previous inhaler use on its own is not confirmation."
-              required
-            />
             <SelectInput
-              label="How the diagnosis is documented"
+              label="Confirmed diagnosis of asthma: how is the diagnosis documented?"
               value={state.assessment.diagnosisEvidence}
-              onChange={(v) =>
-                dispatch({ type: "UPDATE_ASSESSMENT", field: "diagnosisEvidence", value: v })
-              }
+              onChange={(v) => {
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "diagnosisEvidence", value: v });
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "hasExistingDiagnosis", value: v !== "" && v !== "none" });
+              }}
               options={[
                 { value: "gp-record", label: "GP record" },
                 { value: "repeat-prescription", label: "Repeat prescription for an asthma inhaler" },
@@ -237,8 +225,9 @@ export default function AsthmaClient() {
               ]}
               required
             />
+            <p className="text-xs text-gray-500">The diagnosis must be DOCUMENTED. Previous inhaler use on its own is not confirmation.</p>
             <Checkbox
-              label="Patient normally uses a SABA reliever"
+              label="Patient normally uses a SABA (short-acting beta-2 agonist, e.g. salbutamol) reliever"
               checked={state.assessment.normallyUsesSABA}
               onChange={(v) =>
                 dispatch({
@@ -261,13 +250,17 @@ export default function AsthmaClient() {
               }
               placeholder="e.g., Salbutamol inhaler, Ventolin"
             />
-            <Checkbox
-              label="Current preventer (inhaled corticosteroid) therapy asked about: patient is on a preventer"
-              checked={state.assessment.onPreventer}
-              onChange={(v) =>
-                dispatch({ type: "UPDATE_ASSESSMENT", field: "onPreventer", value: v })
-              }
-              description="A patient with no preventer is referred to the GP for review; do not supply."
+            <SelectInput
+              label="Current preventer (inhaled corticosteroid) therapy: is the patient on a preventer?"
+              value={state.assessment.preventerAnswer}
+              onChange={(v) => {
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "preventerAnswer", value: v });
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "onPreventer", value: v === "yes" });
+              }}
+              options={[
+                { value: "yes", label: "Yes: on a preventer (record the details below)" },
+                { value: "no", label: "No preventer (exclusion: refer to the GP for review, do not supply)" },
+              ]}
               required
             />
             <TextInput
@@ -300,39 +293,62 @@ export default function AsthmaClient() {
               unit="(no more than one rescue course in 12 months is supplied under this PGD: 1 or more means do not supply)"
               required
             />
-            <Checkbox
-              label="Acute exacerbation with symptoms of bronchospasm (wheezing, breathlessness, chest tightness)"
-              checked={state.assessment.acuteExacerbation}
-              onChange={(v) =>
-                dispatch({ type: "UPDATE_ASSESSMENT", field: "acuteExacerbation", value: v })
-              }
-              description="Inclusion criterion"
+            <SelectInput
+              label="Acute exacerbation with symptoms of bronchospasm (wheezing, breathlessness, chest tightness)?"
+              value={state.assessment.exacerbationAnswer}
+              onChange={(v) => {
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "exacerbationAnswer", value: v });
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "acuteExacerbation", value: v === "yes" });
+              }}
+              options={[
+                { value: "yes", label: "Yes" },
+                { value: "no", label: "No (not covered by this PGD: refer)" },
+              ]}
               required
             />
-            <Checkbox
-              label="Capable of using an inhaler device, or willing to use a spacer"
-              checked={state.assessment.canUseInhalerOrSpacer}
-              onChange={(v) =>
-                dispatch({ type: "UPDATE_ASSESSMENT", field: "canUseInhalerOrSpacer", value: v })
-              }
-              description="Inclusion criterion for the salbutamol arm"
+            <p className="text-xs text-gray-500">Inclusion criterion.</p>
+            <SelectInput
+              label="Capable of using an inhaler device, or willing to use a spacer?"
+              value={state.assessment.inhalerAbilityAnswer}
+              onChange={(v) => {
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "inhalerAbilityAnswer", value: v });
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "canUseInhalerOrSpacer", value: v === "yes" });
+              }}
+              options={[
+                { value: "yes", label: "Yes" },
+                { value: "no", label: "No (salbutamol arm not available)" },
+              ]}
+              required
             />
-            <Checkbox
-              label="Moderate exacerbation with incomplete response to salbutamol"
-              checked={state.assessment.incompleteResponseToSalbutamol}
-              onChange={(v) =>
-                dispatch({ type: "UPDATE_ASSESSMENT", field: "incompleteResponseToSalbutamol", value: v })
-              }
-              description="Entry criterion for the prednisolone arm. Any acute severe or life-threatening feature is an emergency referral, not a prednisolone supply."
+            <p className="text-xs text-gray-500">Inclusion criterion for the salbutamol arm.</p>
+            <SelectInput
+              label="Moderate exacerbation with incomplete response to salbutamol?"
+              value={state.assessment.incompleteResponseAnswer}
+              onChange={(v) => {
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "incompleteResponseAnswer", value: v });
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "incompleteResponseToSalbutamol", value: v === "yes" });
+              }}
+              options={[
+                { value: "yes", label: "Yes: moderate exacerbation, incomplete response to salbutamol (prednisolone arm available)" },
+                { value: "no", label: "No (prednisolone arm not available)" },
+              ]}
+              required
             />
-            <Checkbox
-              label="Able to take oral medication"
-              checked={state.assessment.ableToTakeOralMedication}
-              onChange={(v) =>
-                dispatch({ type: "UPDATE_ASSESSMENT", field: "ableToTakeOralMedication", value: v })
-              }
-              description="Inclusion criterion for the prednisolone arm"
+            <p className="text-xs text-gray-500">Entry criterion for the prednisolone arm. Any acute severe or life-threatening feature is an emergency referral, not a prednisolone supply.</p>
+            <SelectInput
+              label="Able to take oral medication?"
+              value={state.assessment.oralAbilityAnswer}
+              onChange={(v) => {
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "oralAbilityAnswer", value: v });
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "ableToTakeOralMedication", value: v === "yes" });
+              }}
+              options={[
+                { value: "yes", label: "Yes" },
+                { value: "no", label: "No (prednisolone arm not available)" },
+              ]}
+              required
             />
+            <p className="text-xs text-gray-500">Inclusion criterion for the prednisolone arm.</p>
             <SelectInput
               label="Reason for supply"
               value={state.assessment.reasonForSupply}
@@ -351,7 +367,7 @@ export default function AsthmaClient() {
               required
             />
             <Checkbox
-              label="Frequent use (>3 days per week)"
+              label="Frequent reliever use (more than 3 days per week)"
               checked={state.assessment.frequentUse}
               onChange={(v) =>
                 dispatch({
@@ -475,8 +491,8 @@ export default function AsthmaClient() {
         const severe = acuteSevereFeatures(state);
         return (
           <div className="space-y-4">
-            <div className="bg-red-50 border border-red-200 rounded p-4 mb-4">
-              <p className="text-xs text-red-700 font-medium">
+            <div className="bg-amber-50 border border-amber-200 rounded p-4 mb-4">
+              <p className="text-xs text-amber-900 font-medium">
                 Pulse oximetry, respiratory rate and pulse must be measured and recorded before any
                 supply; where a peak flow meter is available, record PEF. If any observation is
                 missing, do not supply. Any acute severe or life-threatening feature: refer for
@@ -492,7 +508,19 @@ export default function AsthmaClient() {
             {o.pefMeasured && (
               <NumberInput label="PEF as % of best or predicted" value={o.pefPercentBest} onChange={(v) => dispatch({ type: "UPDATE_OBSERVATIONS", field: "pefPercentBest", value: v === null ? null : Math.round(v) })} min={5} max={150} unit="% (33 to 50: acute severe; below 33: life-threatening; over 50 required for prednisolone)" required />
             )}
-            <Checkbox label="Able to complete sentences in one breath" checked={o.canCompleteSentences} onChange={(v) => dispatch({ type: "UPDATE_OBSERVATIONS", field: "canCompleteSentences", value: v })} description="Unable to complete sentences is acute severe asthma: do not supply" required />
+            <SelectInput
+              label="Able to complete sentences in one breath?"
+              value={o.sentencesAnswer}
+              onChange={(v) => {
+                dispatch({ type: "UPDATE_OBSERVATIONS", field: "sentencesAnswer", value: v });
+                dispatch({ type: "UPDATE_OBSERVATIONS", field: "canCompleteSentences", value: v === "yes" });
+              }}
+              options={[
+                { value: "yes", label: "Yes" },
+                { value: "no", label: "No: unable to complete sentences (acute severe asthma, do not supply)" },
+              ]}
+              required
+            />
             <p className="text-sm font-medium text-navy-900 pt-2">Life-threatening features</p>
             <Checkbox label="Silent chest" checked={o.silentChest} onChange={(v) => dispatch({ type: "UPDATE_OBSERVATIONS", field: "silentChest", value: v })} />
             <Checkbox label="Cyanosis" checked={o.cyanosis} onChange={(v) => dispatch({ type: "UPDATE_OBSERVATIONS", field: "cyanosis", value: v })} />

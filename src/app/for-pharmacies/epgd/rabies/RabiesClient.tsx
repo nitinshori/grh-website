@@ -112,6 +112,15 @@ export default function RabiesClient({
   const underSixteen = patientAge !== null && patientAge < 16;
   const underEighteen = patientAge !== null && patientAge < 18;
 
+  // Contraindications and alerts are kept live from what is on screen, so a
+  // stop (a bite already sustained, ticked on the travel step) is shown and
+  // enforced on the step where it is raised, not two steps later on the
+  // review (walkthrough review, 11 Sep 2026).
+  useEffect(() => {
+    const { contraindications, alerts } = evaluateRabiesContraindications(state.screening, patientAge);
+    setState((prev) => ({ ...prev, contraindications, alerts }));
+  }, [state.screening, patientAge]);
+
   /** Generic setters for fields added for PGD v006. */
   const setScreening = useCallback(
     (patch: Partial<RabiesScreening>): void => {
@@ -501,21 +510,6 @@ export default function RabiesClient({
       return;
     }
 
-    // Evaluate contraindications on leaving Travel Assessment (step 2) and
-    // again on leaving Medical History (step 3), once allergy, pregnancy,
-    // immunosuppression and temperature have been entered.
-    if (state.step === 2 || state.step === 3) {
-      const { contraindications, alerts } = evaluateRabiesContraindications(
-        state.screening,
-        patientAge
-      );
-      setState((prev) => ({
-        ...prev,
-        contraindications,
-        alerts,
-      }));
-    }
-
     // On step 5 (Administration), set recommended observation period
     if (state.step === 5) {
       const recommendedPeriod = getObservationPeriodRecommendation(
@@ -611,26 +605,26 @@ export default function RabiesClient({
   const handleSaveExclusion = useCallback(async (): Promise<void> => {
     const result = validateExclusionRecord(state.screening);
     if (!result.isValid) {
-      setValidationErrors((prev) => new Map(prev).set(4, result.errors));
+      setValidationErrors((prev) => new Map(prev).set(state.step, result.errors));
       return;
     }
     setValidationErrors((prev) => {
       const next = new Map(prev);
-      next.delete(4);
+      next.delete(state.step);
       return next;
     });
     markComplete();
     setSaveStatus('saving');
     const data = getConsultationData();
     data.outcome = state.contraindications.priorExposure ? 'referred' : 'not_supplied';
-    (data.clinicalData as Record<string, unknown>).stoppedAtStep = 4;
+    (data.clinicalData as Record<string, unknown>).stoppedAtStep = state.step;
     (data.clinicalData as Record<string, unknown>).stopReason = state.alerts
       .filter((a) => a.severity === 'stop')
       .map((a) => a.message)
       .join('; ');
     const success = await saveRecord(data);
     setSaveStatus(success ? 'saved' : 'error');
-  }, [state.screening, state.contraindications, state.alerts, markComplete, saveRecord, getConsultationData]);
+  }, [state.screening, state.contraindications, state.alerts, state.step, markComplete, saveRecord, getConsultationData]);
 
   const handleNewConsultation = useCallback((): void => {
     if (!window.confirm('Start a new consultation? The current consultation data will be cleared.')) return;
@@ -658,9 +652,11 @@ export default function RabiesClient({
   const getStepAlerts = useCallback((): React.ReactNode => {
     const travelCodes = ['LIMITED_PEP_ACCESS', 'PRIOR_EXPOSURE_RABIES', 'AGE_UNDER_2_RABIES'];
     const stepAlerts = state.alerts.filter((alert: ClinicalAlert) => {
-      // Travel and age alerts (raised on leaving step 2) show on the medical
-      // history step; every alert shows on the contraindications review.
-      if (state.step === 4) return true;
+      // A stop shows on every step. Travel and age cautions show on the
+      // medical history step; every alert shows on the contraindications
+      // review and after.
+      if (alert.severity === 'stop') return true;
+      if (state.step >= 4) return true;
       if (state.step === 3) return travelCodes.includes(alert.code);
       return false;
     });
@@ -670,17 +666,56 @@ export default function RabiesClient({
     return <AlertBanner alerts={stepAlerts} />;
   }, [state.alerts, state.step]);
 
-  // A stop raised on the contraindications review blocks Next on that step
-  // and on every step after it.
-  const canProceedFromStep = useCallback((): boolean => {
-    if (state.step >= 4 && hasHardStopContraindications(state.contraindications)) {
-      return false;
-    }
-    return true;
-  }, [state.step, state.contraindications]);
+  // A stop anywhere blocks Next on every step; the only route out is the
+  // exclusion record below.
+  const canProceedFromStep = useCallback((): boolean => !hasStop, [hasStop]);
 
   const daysToDeparture = daysFromToday(state.screening.departureDate);
   const isTravelIndication = state.screening.indication !== 'occupational-uk';
+
+  const exclusionOutcomeBlock = hasStop && state.step < 7 ? (
+                <div className="p-4 bg-red-50 border-2 border-red-200 rounded-lg">
+                  <p className="text-red-900 font-semibold">
+                    Vaccination is excluded under this PGD. Do not proceed: Next is locked until the exclusion is recorded below.
+                  </p>
+                  <p className="text-sm text-red-800 mt-2">
+                    Discuss the reason for exclusion with the patient and make sure they understand it. Advise on alternative options: the GP, a travel clinic, or a specialist service. Where the exclusion is a possible exposure that has already occurred, make the urgency explicit: that patient needs assessment today, not an appointment. Document the reason for exclusion, the advice given and the decision reached. Inform or refer to the GP as appropriate.
+                  </p>
+                  <div className="mt-4 space-y-3">
+                    <TextArea
+                      label="Advice given and decision reached (recorded with the exclusion)"
+                      value={state.screening.exclusionAdviceGiven}
+                      onChange={(v) => setScreening({ exclusionAdviceGiven: v })}
+                      placeholder="e.g., Advised same-day attendance at the emergency department for post-exposure assessment; GP informed."
+                      required
+                    />
+                    {saveStatus !== 'saved' ? (
+                      <button
+                        type="button"
+                        onClick={handleSaveExclusion}
+                        disabled={saveStatus === 'saving'}
+                        className="px-4 py-2.5 rounded-lg text-sm font-semibold border border-red-300 text-red-700 hover:bg-red-100 transition-colors disabled:opacity-50"
+                      >
+                        {saveStatus === 'saving' ? 'Saving...' : 'Record exclusion and finish (save as not supplied)'}
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm text-green-700">Exclusion recorded. No vaccine supplied.</span>
+                        <button
+                          type="button"
+                          onClick={handleNewConsultation}
+                          className="px-4 py-2 rounded-lg text-sm font-medium text-[color:var(--tenant-primary)] border border-[color:var(--tenant-primary)]/30 hover:bg-[color:var(--tenant-primary)]/10 transition-colors"
+                        >
+                          New Consultation
+                        </button>
+                      </div>
+                    )}
+                    {saveStatus === 'error' && (
+                      <p className="text-sm text-red-700">Could not save the exclusion record. Check the connection and try again.</p>
+                    )}
+                  </div>
+                </div>
+  ) : null;
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
@@ -723,6 +758,7 @@ export default function RabiesClient({
           )}
 
           {getStepAlerts()}
+          {exclusionOutcomeBlock}
 
           {state.step === 0 && (
             <PatientDetailsStep
@@ -811,7 +847,7 @@ export default function RabiesClient({
                         </p>
                       )}
                       <Checkbox
-                        label="Sufficient time before travel to complete the chosen course"
+                        label="Sufficient time before travel to complete the chosen course (required)"
                         checked={state.screening.sufficientTimeBeforeTravel}
                         onChange={(v) => setScreening({ sufficientTimeBeforeTravel: v })}
                         description="Inclusion criterion. Conventional course day 0, 7 and 28 (third dose may be brought forward to day 21). Accelerated course day 0, 3 and 7 is for adults 18 and over only, off-label, and only where there is genuinely insufficient time for the conventional course. The administration step checks the departure date against the chosen course."
@@ -850,10 +886,11 @@ export default function RabiesClient({
                   ))}
                 </div>
                 <TextArea
-                  label="Other activities, exposure risks or occupational indication"
+                  label={isTravelIndication ? "Other activities, exposure risks or occupational indication (required where none of the boxes above is ticked)" : "Other activities, exposure risks or occupational indication"}
                   value={state.screening.otherActivities}
                   onChange={handleOtherActivitiesChange}
                   placeholder="e.g., bat handling, quarantine premises, laboratory work with rabies virus, veterinary work..."
+                  required={!isTravelIndication}
                 />
               </div>
 
@@ -882,13 +919,18 @@ export default function RabiesClient({
           {state.step === 3 && (
             <div className="space-y-6">
               <h2 className="text-2xl font-bold text-gray-900">Medical History</h2>
+              <p className="text-sm text-gray-600">Ask each question. Tick the box where the answer is yes; leave it unticked where the answer is no. Only the temperature is required for every patient.</p>
 
               <div className="space-y-4">
                 <NumberInput
-                  label="Body temperature (°C)"
+                  label="Body temperature"
                   value={state.screening.temperature}
                   onChange={handleTemperatureChange}
                   placeholder="36.5"
+                  unit="°C (38.5 or above counts as acute febrile illness)"
+                  min={30}
+                  max={45}
+                  required
                 />
 
                 <Checkbox
@@ -910,6 +952,7 @@ export default function RabiesClient({
                     value={state.screening.illnessDetails}
                     onChange={handleIllnessDetailsChange}
                     placeholder="e.g., Fever, cough, sore throat..."
+                    required
                   />
                 )}
 
@@ -925,6 +968,7 @@ export default function RabiesClient({
                     value={state.screening.immunosuppressedDetails}
                     onChange={handleImmunosuppressedDetailsChange}
                     placeholder="e.g., HIV, chemotherapy, immunosuppressant medication..."
+                    required
                   />
                 )}
 
@@ -982,6 +1026,7 @@ export default function RabiesClient({
                       { value: 'mild', label: 'Mild (not severe)' },
                       { value: 'severe', label: 'Severe (Rabipur excluded)' },
                     ]}
+                    required
                   />
                 )}
 
@@ -1019,6 +1064,7 @@ export default function RabiesClient({
               <h2 className="text-2xl font-bold text-gray-900">
                 Contraindications Review
               </h2>
+              <p className="text-sm text-gray-600">Read-only summary of what was recorded on the earlier steps. Go back to change an answer.</p>
               <div className="bg-gray-50 p-4 rounded-lg space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-700">Age appropriate (2 years and over):</span>
@@ -1090,49 +1136,6 @@ export default function RabiesClient({
                 )}
               </div>
 
-              {!canProceedFromStep() && (
-                <div className="p-4 bg-red-50 border-2 border-red-200 rounded-lg">
-                  <p className="text-red-900 font-semibold">
-                    Vaccination is excluded under this PGD. Do not proceed.
-                  </p>
-                  <p className="text-sm text-red-800 mt-2">
-                    Discuss the reason for exclusion with the patient and make sure they understand it. Advise on alternative options: the GP, a travel clinic, or a specialist service. Where the exclusion is a possible exposure that has already occurred, make the urgency explicit: that patient needs assessment today, not an appointment. Document the reason for exclusion, the advice given and the decision reached. Inform or refer to the GP as appropriate.
-                  </p>
-                  <div className="mt-4 space-y-3">
-                    <TextArea
-                      label="Advice given and decision reached (recorded with the exclusion)"
-                      value={state.screening.exclusionAdviceGiven}
-                      onChange={(v) => setScreening({ exclusionAdviceGiven: v })}
-                      placeholder="e.g., Advised same-day attendance at the emergency department for post-exposure assessment; GP informed."
-                      required
-                    />
-                    {saveStatus !== 'saved' ? (
-                      <button
-                        type="button"
-                        onClick={handleSaveExclusion}
-                        disabled={saveStatus === 'saving'}
-                        className="px-4 py-2.5 rounded-lg text-sm font-semibold border border-red-300 text-red-700 hover:bg-red-100 transition-colors disabled:opacity-50"
-                      >
-                        {saveStatus === 'saving' ? 'Saving...' : 'Record exclusion and finish (save as not supplied)'}
-                      </button>
-                    ) : (
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm text-green-700">Exclusion recorded. No vaccine supplied.</span>
-                        <button
-                          type="button"
-                          onClick={handleNewConsultation}
-                          className="px-4 py-2 rounded-lg text-sm font-medium text-[color:var(--tenant-primary)] border border-[color:var(--tenant-primary)]/30 hover:bg-[color:var(--tenant-primary)]/10 transition-colors"
-                        >
-                          New Consultation
-                        </button>
-                      </div>
-                    )}
-                    {saveStatus === 'error' && (
-                      <p className="text-sm text-red-700">Could not save the exclusion record. Check the connection and try again.</p>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
@@ -1159,7 +1162,7 @@ export default function RabiesClient({
 
                 <div className="p-4 rounded-lg border-2 border-red-400 bg-red-50">
                   <Checkbox
-                    label="Adrenaline (epinephrine) 1 in 1,000 injection is immediately available in this room, in date, with a written anaphylaxis protocol and a telephone"
+                    label="Adrenaline (epinephrine) 1 in 1,000 injection is immediately available in this room, in date, with a written anaphylaxis protocol and a telephone (required)"
                     checked={state.postVaccineObs.anaphylaxisKitChecked}
                     onChange={handleAnaphylaxisKitChange}
                     description="Required whenever a vaccine is administered under this PGD (protocol consistent with current Resuscitation Council UK guidance). Confirm before drawing up: the administration cannot be recorded until this is ticked."
@@ -1195,6 +1198,7 @@ export default function RabiesClient({
                   value={state.administration.batchNumber}
                   onChange={handleBatchChange}
                   placeholder="e.g., ABC123456"
+                  required
                 />
 
                 <TextInput
@@ -1202,6 +1206,7 @@ export default function RabiesClient({
                   type="date"
                   value={state.administration.expiryDate}
                   onChange={handleExpiryChange}
+                  required
                 />
 
                 <SelectInput
@@ -1214,6 +1219,7 @@ export default function RabiesClient({
                     { value: 'left-thigh', label: 'Left anterolateral thigh' },
                     { value: 'right-thigh', label: 'Right anterolateral thigh' },
                   ]}
+                  required
                 />
 
                 <SelectInput
@@ -1308,6 +1314,7 @@ export default function RabiesClient({
                   value={state.administration.administeredBy}
                   onChange={handleAdministeredByChange}
                   placeholder="Pharmacist name"
+                  required
                 />
 
                 <TextInput
@@ -1315,6 +1322,7 @@ export default function RabiesClient({
                   type="time"
                   value={state.administration.timeAdministered}
                   onChange={handleTimeChange}
+                  required
                 />
               </div>
             </div>
@@ -1332,7 +1340,7 @@ export default function RabiesClient({
                 </h3>
                 <div className="space-y-4">
                   <Checkbox
-                    label="15 minute observation period completed"
+                    label="15 minute observation period completed (required)"
                     checked={state.postVaccineObs.observationCompleted}
                     onChange={(v) => setState((prev) => ({ ...prev, postVaccineObs: { ...prev.postVaccineObs, observationCompleted: v } }))}
                     description="Observe every patient for 15 minutes after vaccination. Vaccinate seated. Procedures in place to prevent injury from a faint."
@@ -1343,7 +1351,7 @@ export default function RabiesClient({
                     label="Patient is well after vaccination"
                     checked={state.postVaccineObs.patientWell}
                     onChange={handlePatientWellChange}
-                    description="Patient is comfortable with no symptoms"
+                    description="Patient is comfortable with no symptoms. Tick this, or tick the adverse reaction box below and describe it."
                   />
 
                   <Checkbox
@@ -1359,6 +1367,7 @@ export default function RabiesClient({
                       value={state.postVaccineObs.reactionDetails}
                       onChange={handleReactionDetailsChange}
                       placeholder="e.g., Rash, swelling, difficulty breathing..."
+                      required
                     />
                   )}
                 </div>
@@ -1369,7 +1378,7 @@ export default function RabiesClient({
                   Counselling Given
                 </h3>
                 <p className="text-gray-600 mb-4">
-                  Confirm all advice points have been provided to patient:
+                  Tick each advice point once it has been given. All are required.
                 </p>
                 <div className="space-y-4">
                   <Checkbox

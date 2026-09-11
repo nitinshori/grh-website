@@ -299,9 +299,10 @@ export default function AnxietyPropranololClient() {
             title="Medical History"
             {...wrapperProps}
           >
+            <AlertBanner alerts={alerts.filter((a) => a.severity === "caution")} />
             <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
               <p className="text-xs text-gray-600">
-                The exclusions (asthma or bronchospasm, heart block, bradycardia, hypotension, heart failure, Prinzmetal&apos;s angina, phaeochromocytoma and the rest) are asked once, on the Contraindications step, where each one stops supply. This step records the PGD cautions.
+                The exclusions (asthma or bronchospasm, heart block, bradycardia, hypotension, heart failure, Prinzmetal&apos;s angina, phaeochromocytoma and the rest) are asked once, on the Contraindications step, where each one stops supply. This step records the PGD cautions: tick each one the patient has. Leave every box unticked if the patient has none.
               </p>
               <p className="pt-2 text-xs font-semibold uppercase tracking-wide text-amber-800">
                 PGD cautions (supply may proceed with counselling)
@@ -609,7 +610,7 @@ export default function AnxietyPropranololClient() {
             {...wrapperProps}
           >
             <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
-              <p className="text-sm font-medium text-navy-900 mb-3">Confirm counselling covered:</p>
+              <p className="text-sm font-medium text-navy-900 mb-3">Confirm counselling covered (tick every point) <span className="text-red-400">*</span></p>
               <Checkbox
                 label={`As-required use only: ${state.medicineSupply.propranololDose}mg as a single dose 30 to 60 minutes before the situation, not to be taken regularly; one supply per situational event, review before any repeat`}
                 checked={state.counselling.prnUseOnly}
@@ -631,7 +632,7 @@ export default function AnxietyPropranololClient() {
                 onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "noDependence", value: v })}
               />
               <Checkbox
-                label="Do NOT stop suddenly if used regularly (gradual dose reduction if discontinuing)"
+                label="This supply is for as-required use only; if propranolol has ever been taken regularly (for example on prescription), it must not be stopped suddenly"
                 checked={state.counselling.noSuddenWithdrawal}
                 onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "noSuddenWithdrawal", value: v })}
               />

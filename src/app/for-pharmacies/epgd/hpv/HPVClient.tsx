@@ -243,28 +243,36 @@ export default function HPVClient() {
                 { value: "other", label: "Other / prefer to self-describe" },
               ]}
             />
-            <Checkbox
-              label="Immunosuppressed, or known to be living with HIV"
-              checked={state.assessment.immunosuppressedOrHIV}
-              onChange={(v) =>
-                dispatch({
-                  type: "UPDATE_ASSESSMENT",
-                  field: "immunosuppressedOrHIV",
-                  value: v,
-                })
-              }
-              description="This is the question that decides the schedule: a three-dose course at 0, 1 and 4 to 6 months. Ask it directly. Vaccinate regardless of CD4 count, antiretroviral therapy or viral load."
+            <SelectInput
+              label="Is the patient immunosuppressed, or known to be living with HIV?"
+              value={state.assessment.immuneStatusAnswer}
+              onChange={(v) => {
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "immuneStatusAnswer", value: v });
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "immunosuppressedOrHIV", value: v === "yes" });
+              }}
+              options={[
+                { value: "no", label: "No" },
+                { value: "yes", label: "Yes: immunosuppressed or living with HIV (three-dose schedule)" },
+              ]}
+              required
             />
+            <p className="text-xs text-gray-600">
+              This is the question that decides the schedule: a three-dose course at 0, 1 and 4 to 6 months. Ask it directly and record the answer. Vaccinate regardless of CD4 count, antiretroviral therapy or viral load.
+            </p>
             <SelectInput
               label="Previous HPV vaccine doses"
               value={state.assessment.priorDoses}
-              onChange={(v) =>
+              onChange={(v) => {
                 dispatch({
                   type: "UPDATE_ASSESSMENT",
                   field: "priorDoses",
                   value: v,
-                })
-              }
+                });
+                // No previous dose means no dose before 25 either.
+                if (v === "none") {
+                  dispatch({ type: "UPDATE_ASSESSMENT", field: "doseBefore25", value: false });
+                }
+              }}
               options={[
                 { value: "none", label: "None" },
                 { value: "one", label: "One dose" },
@@ -274,6 +282,7 @@ export default function HPVClient() {
               ]}
               required
             />
+            {state.assessment.priorDoses && state.assessment.priorDoses !== "none" && (
             <Checkbox
               label="Received at least one HPV vaccine dose BEFORE their 25th birthday"
               checked={state.assessment.doseBefore25}
@@ -286,6 +295,7 @@ export default function HPVClient() {
               }
               description="For an immunocompetent patient a single dose given before the 25th birthday completes the course, whatever the patient's age now: no further dose is required and none should be charged for. For a patient who is immunosuppressed or HIV positive it does not complete the course: they complete the three dose course, with the earlier dose counted and the remaining doses given."
             />
+            )}
             <SelectInput
               label="Pregnancy status"
               value={state.assessment.pregnancyStatus}
@@ -464,6 +474,7 @@ export default function HPVClient() {
                     })
                   }
                   description="That the number of doses follows current UK national recommendations; that this differs from the manufacturer's licence, which specifies more doses; that the recommendation reflects evidence published since the licence was granted; and that they may choose the licensed schedule instead."
+                  required
                 />
                 <Checkbox
                   label={`Consent to off-label use given and recorded (${schedule.label})`}
@@ -476,6 +487,7 @@ export default function HPVClient() {
                     })
                   }
                   description="A general consent to vaccination is not sufficient. The consent must name the schedule."
+                  required
                 />
               </div>
             )}
@@ -642,6 +654,9 @@ export default function HPVClient() {
       case 5:
         return (
           <div className="space-y-4">
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900">
+              The fields on this step are the vaccination record for this PGD. The red "Pre-vaccination safety checks" box under every step is the estate-wide adrenaline lock: its adrenaline tick must also be ticked before Next will work; its batch, expiry and site fields are optional copies of the ones here.
+            </div>
             <div className="p-3 bg-[color:var(--tenant-primary)]/10 border border-[color:var(--tenant-primary)]/30 rounded-lg">
               <p className="text-sm font-medium text-[color:var(--tenant-primary)]">
                 Gardasil 9, 0.5 mL intramuscular

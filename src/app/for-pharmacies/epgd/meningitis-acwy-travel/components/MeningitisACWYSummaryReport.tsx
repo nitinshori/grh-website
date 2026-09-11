@@ -45,6 +45,8 @@ interface MeningitisACWYSummaryReportProps {
   onBack?: () => void;
   /** Rendered inside the summary step, where StepWrapper owns Save & Print. */
   embedded?: boolean;
+  /** Advice given and decision reached where the patient was excluded. */
+  exclusionAdvice?: string;
 }
 
 export default function MeningitisACWYSummaryReport({
@@ -57,6 +59,7 @@ export default function MeningitisACWYSummaryReport({
   pgdVersion,
   onBack,
   embedded = false,
+  exclusionAdvice,
 }: MeningitisACWYSummaryReportProps) {
   const underSixteen = patientDetails.age !== null && patientDetails.age < 16;
   const stopped = clinicalAlerts.some((a) => a.severity === 'stop');
@@ -149,6 +152,7 @@ export default function MeningitisACWYSummaryReport({
               <p className="text-red-800 text-xs mt-1">
                 {clinicalAlerts.filter((a) => a.severity === 'stop').map((a) => a.message).join('; ')}
               </p>
+              <p className="text-red-800 text-xs mt-1">Advice given and decision reached: {exclusionAdvice?.trim() || 'Not recorded'}</p>
             </div>
           </div>
         ) : (

@@ -53,23 +53,34 @@ export function calculateBmi(heightCm: number | null, weightKg: number | null): 
 /** PGD v009: pregnancy can be excluded on history where the last period was
  *  normal, on time, and there has been no unprotected sex since. Otherwise a
  *  negative test taken no earlier than 21 days after the last unprotected sex. */
-export function isPregnancyExcluded(state: PeriodDelayConsultationState): boolean {
+export function isPregnancyExcluded(state: PeriodDelayConsultationState): boolean | "unanswered" {
   const a = state.assessment;
-  if (a.lastPeriodNormalOnTime && a.noUnprotectedSexSince) return true;
-  if (!a.pregnancyTestNegative) return false;
+  if (a.lastPeriodNormalOnTime === null || a.noUnprotectedSexSince === null) return "unanswered";
+  if (a.lastPeriodNormalOnTime === true && a.noUnprotectedSexSince === true) return true;
+  // Pregnancy cannot be excluded on history. The test question is a Yes/No
+  // with no default: a blank is "unanswered" (the validator asks), only an
+  // explicit No, or a test taken too early, is adverse (stop audit, 11
+  // September 2026).
+  if (a.pregnancyTestNegative === null) return "unanswered";
+  if (a.pregnancyTestNegative === false) return false;
   // The test must be a real date, no earlier than 21 days after the last
-  // unprotected sex, and not in the future.
+  // unprotected sex, and not in the future. Missing or unparseable dates are
+  // validation matters; a future date is corrected, not a stop.
   const test = parseUkDate(a.pregnancyTestDate);
-  if (!test || daysFromToday(test) > 0) return false;
+  if (!test || daysFromToday(test) > 0) return "unanswered";
   const interval = daysBetweenUk(a.lastUpsiDate, a.pregnancyTestDate);
-  return interval !== null && interval >= 21;
+  if (interval === null) return "unanswered";
+  return interval >= 21;
 }
 
 /** Why pregnancy is not yet excluded, for the validator. */
 export function getPregnancyExclusionError(state: PeriodDelayConsultationState): string | null {
   const a = state.assessment;
+  if (a.lastPeriodNormalOnTime === null) return "Answer \"Last period was normal for her and on time\" (Yes or No)";
+  if (a.noUnprotectedSexSince === null) return "Answer \"No unprotected sex or contraceptive failure since that period\" (Yes or No)";
   if (a.lastPeriodNormalOnTime && a.noUnprotectedSexSince) return null;
-  if (!a.pregnancyTestNegative) return "Pregnancy cannot be excluded on history: a negative pregnancy test, taken no earlier than 21 days after the last unprotected sex, is required before supply";
+  if (a.pregnancyTestNegative === null) return "Pregnancy cannot be excluded on history. Answer \"Pregnancy test negative, taken no earlier than 21 days after the last unprotected sex\" (Yes or No)";
+  if (a.pregnancyTestNegative === false) return "No negative pregnancy test: pregnancy has not been excluded. Do not supply; save as not supplied";
   if (!parseUkDate(a.lastUpsiDate)) return "Enter the date of the last unprotected sex as DD/MM/YYYY";
   const test = parseUkDate(a.pregnancyTestDate);
   if (!test) return "Enter the date of the pregnancy test as DD/MM/YYYY";
@@ -89,8 +100,9 @@ export function getAllAlerts(state: PeriodDelayConsultationState): ClinicalAlert
     alerts.push({ severity: "stop", code: "PREGNANCY", message: "Known or suspected pregnancy, or pregnancy cannot be excluded", detail: "Norethisterone is contraindicated in pregnancy. Excluded. Refer." });
   }
 
-  // Pregnancy exclusion is asked on the Assessment step; only raise once it has been reached.
-  if (step >= 2 && !mh.pregnancy && !isPregnancyExcluded(state)) {
+  // Pregnancy exclusion is asked on the Assessment step; raise only once both
+  // history questions have been answered, so an unasked question is not a stop.
+  if (step >= 2 && !mh.pregnancy && isPregnancyExcluded(state) === false) {
     alerts.push({
       severity: "stop",
       code: "PREGNANCY_NOT_EXCLUDED",
@@ -297,23 +309,20 @@ export function getAllAlerts(state: PeriodDelayConsultationState): ClinicalAlert
         message: "Safeguarding concern recorded in a patient under 18",
         detail: "Do not supply. Follow the local safeguarding route today and record what was done.",
       });
-    } else if (step >= 3 && (!mh.under18AssessmentDone || mh.under18AssessmentNotes.trim() === "")) {
-      alerts.push({
-        severity: "stop",
-        code: "UNDER18_ASSESSMENT_REQUIRED",
-        message: "Competence and safeguarding assessment required, and recorded in full",
-        detail:
-          "Every supply to a patient aged 16 or 17 requires a recorded competence assessment and a recorded safeguarding consideration, including who suggested the delay and why. Record the assessment, not just its conclusion.",
-      });
     }
+    // The competence and safeguarding record itself is required by the
+    // Medical History step validator (Next stays off until it is done). It is
+    // not an exclusion, so it is not raised as a stop.
   }
 
   if (mh.ageUnder16 || (age !== null && age < 16)) {
     alerts.push({ severity: "stop", code: "AGE", message: "Patient under 16 years", detail: "Outside the scope of this PGD. Refer to GP." });
   }
 
-  if (!mh.femaleConfirmed) {
-    alerts.push({ severity: "stop", code: "MALE", message: "Patient not confirmed as female", detail: "This PGD covers women only. Male is an exclusion." });
+  // Raised only on an explicit "No" to "Patient is female". An unanswered
+  // question is a validation message, never a stop.
+  if (mh.femaleConfirmed === false) {
+    alerts.push({ severity: "stop", code: "MALE", message: "Patient is not female", detail: "This PGD covers women only. Save as not supplied and refer." });
   }
 
   if (mh.breastfeeding) {
@@ -331,7 +340,7 @@ export function getAllAlerts(state: PeriodDelayConsultationState): ClinicalAlert
   }
 
   // Cycle and timing (Assessment step)
-  if (step >= 2 && !state.assessment.cycleRegular) {
+  if (state.assessment.cycleRegular === false) {
     alerts.push({ severity: "stop", code: "IRREGULAR_CYCLE", message: "Irregular or unpredictable menstrual cycle", detail: "Inclusion requires a regular, predictable cycle so that the start date can be calculated. Excluded. Refer." });
   }
 

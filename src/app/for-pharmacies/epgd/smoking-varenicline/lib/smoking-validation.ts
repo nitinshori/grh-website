@@ -159,7 +159,7 @@ export function validateSmokingAssessment(
   if (!assessment.motivationLevel) {
     errors.push({
       field: "assessment.motivationLevel",
-      message: "Motivation level is required",
+      message: "Select the motivation to quit",
     });
   }
 
@@ -195,28 +195,28 @@ export function validateSmokingAssessment(
   if (!assessment.readyToQuit) {
     errors.push({
       field: "assessment.readyToQuit",
-      message: "The PGD requires the patient to be motivated and ready to quit",
+      message: "Tick the 'motivated and ready to quit' box: an inclusion criterion of the PGD",
     });
   }
 
   if (!assessment.timeToFirstCigarette) {
     errors.push({
       field: "assessment.timeToFirstCigarette",
-      message: "Time to first cigarette is required for Fagerström Test",
+      message: "Answer Fagerström question 1: 'How soon after waking do you smoke your first cigarette?'",
     });
   }
 
   if (!assessment.whichCigaretteMostHateToGiveUp) {
     errors.push({
       field: "assessment.whichCigaretteMostHateToGiveUp",
-      message: "Please answer the Fagerström Test question",
+      message: "Answer Fagerström question 3: 'Which cigarette would be most difficult to give up?'",
     });
   }
 
   if (!assessment.howManyPerDay) {
     errors.push({
       field: "assessment.howManyPerDay",
-      message: "Please answer the Fagerström Test question",
+      message: "Answer Fagerström question 4: 'How many cigarettes per day do you smoke?'",
     });
   }
 
@@ -242,14 +242,14 @@ export function validateMedicalHistory(
   if (!medicalHistory.renalImpairment) {
     errors.push({
       field: "medicalHistory.renalImpairment",
-      message: "Renal function status is required",
+      message: "Select the renal (kidney) function",
     });
   }
 
   if (!medicalHistory.hepaticImpairment) {
     errors.push({
       field: "medicalHistory.hepaticImpairment",
-      message: "Hepatic function status is required",
+      message: "Select the hepatic (liver) function",
     });
   }
 
@@ -268,14 +268,14 @@ export function validateMedications(
   if (!medications.currentMedications.trim()) {
     errors.push({
       field: "medications.currentMedications",
-      message: "Current medications list is required (enter 'none' if not taking any)",
+      message: "List all current medications (enter 'none' if not taking any)",
     });
   }
 
   if (!medications.allergies.trim()) {
     errors.push({
       field: "medications.allergies",
-      message: "Allergies field is required (enter 'none' if not known)",
+      message: "Enter known allergies (enter 'none known' if there are none)",
     });
   }
 
@@ -293,14 +293,14 @@ export function validateContraindications(
   if (!formData.contradicationsReviewed) {
     errors.push({
       field: "contradicationsReviewed",
-      message: "Contraindications must be reviewed before continuing",
+      message: "Tick 'I have reviewed all contraindications and cautions above'",
     });
   }
 
   if (!formData.pharmacistApproves) {
     errors.push({
       field: "pharmacistApproves",
-      message: "Pharmacist approval is required",
+      message: "Tick 'I (the pharmacist) approve treatment with varenicline for this patient'",
     });
   }
 
@@ -328,14 +328,14 @@ export function validateDosePlan(
   if (!dosePlan.startDate) {
     errors.push({
       field: "dosePlan.startDate",
-      message: "Varenicline start date is required",
+      message: "Enter the varenicline start date",
     });
   }
 
   if (!dosePlan.quitDate) {
     errors.push({
       field: "dosePlan.quitDate",
-      message: "Target quit date is required",
+      message: "Enter the quit date",
     });
   } else if (dosePlan.startDate) {
     // PGD: quit date should be on day 8-14 of treatment (when 1mg twice
@@ -352,7 +352,7 @@ export function validateDosePlan(
   if (!dosePlan.treatmentDuration) {
     errors.push({
       field: "dosePlan.treatmentDuration",
-      message: "Treatment duration is required",
+      message: "Select the treatment duration",
     });
   }
 
@@ -446,28 +446,30 @@ export function validateCounselling(
   const errors: ValidationError[] = [];
   const { counselling } = formData;
 
-  const requiredFields: Array<keyof typeof counselling> = [
-    "neuropsychiatricWarning",
-    "drivingWarning",
-    "alcoholWarning",
-    "nauseaManagement",
-    "vividDreams",
-    "completeCourseAdvice",
-    "behaviouralSupport",
-    "quitDatePlanning",
-    "returnIfWorsening",
-    "physicalSymptomsWarning",
-    "slipUpAdvice",
-    "followUpSchedule",
-    "pregnancyAdvice",
-    "doNotStopSuddenly",
+  // Each unticked point is named in the words of its label, so the list of
+  // errors says which boxes are still empty (walkthrough review, 11 Sep 2026).
+  const requiredFields: Array<[keyof typeof counselling, string]> = [
+    ["neuropsychiatricWarning", "neuropsychiatric warnings"],
+    ["drivingWarning", "driving warning"],
+    ["alcoholWarning", "alcohol interaction"],
+    ["nauseaManagement", "nausea management"],
+    ["vividDreams", "vivid dreams"],
+    ["completeCourseAdvice", "complete the full 12-week course"],
+    ["behaviouralSupport", "referred to local stop smoking service"],
+    ["quitDatePlanning", "quit date planning"],
+    ["returnIfWorsening", "report any mood changes"],
+    ["physicalSymptomsWarning", "contact the GP if chest pain, shortness of breath or severe headaches"],
+    ["slipUpAdvice", "continue varenicline after a slip-up"],
+    ["followUpSchedule", "follow-up appointments arranged"],
+    ["pregnancyAdvice", "inform the GP immediately if they become pregnant"],
+    ["doNotStopSuddenly", "not to stop varenicline suddenly; leaflet supplied"],
   ];
 
-  requiredFields.forEach((field) => {
+  requiredFields.forEach(([field, label]) => {
     if (!counselling[field]) {
       errors.push({
         field: `counselling.${field}`,
-        message: "All counselling advice must be acknowledged",
+        message: `Not yet ticked: ${label}`,
       });
     }
   });

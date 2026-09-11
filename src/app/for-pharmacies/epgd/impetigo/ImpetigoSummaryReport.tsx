@@ -60,7 +60,10 @@ export function ImpetigoSummaryReport({ data, alerts, referralReasons, stopped }
     ['Told topical and oral treatment are not combined', counselling.noCombination],
     [drugSpecificAdviceLabel(treatmentSelection.treatment), counselling.drugSpecificAdvice],
     ['Complete the course', counselling.completeCourse],
-    ['Application technique for topical treatment', counselling.applicationAdvice],
+    // Topical arms only: an oral arm has no application technique to record.
+    ...((treatmentSelection.treatment === 'fusidic-acid' || treatmentSelection.treatment === 'hydrogen-peroxide')
+      ? [['Application technique for topical treatment', counselling.applicationAdvice] as [string, boolean]]
+      : []),
     ['Return if no improvement, spreading, or unwell', counselling.returnIfWorsening],
     ['Contagion period explained', counselling.contagionPeriod],
   ];
@@ -122,7 +125,7 @@ export function ImpetigoSummaryReport({ data, alerts, referralReasons, stopped }
           )}
           <Row
             label="Penicillin allergy"
-            value={`${medicalHistory.penicillinAllergy ? 'Penicillin-allergic' : 'Not penicillin-allergic'}. ${medicalHistory.penicillinAllergyHistory || ''}`.trim()}
+            value={`${medicalHistory.penicillinAllergy === 'yes' ? 'Penicillin-allergic' : medicalHistory.penicillinAllergy === 'no' ? 'Not penicillin-allergic' : 'Penicillin allergy not asked (topical arm)'}. ${medicalHistory.penicillinAllergyHistory || ''}`.trim()}
           />
           <Row label="Allergies" value={medicalHistory.allergies || 'Not recorded'} />
           {age !== null && age < 18 && isMacrolide && (
@@ -140,7 +143,7 @@ export function ImpetigoSummaryReport({ data, alerts, referralReasons, stopped }
               label="Pregnancy / breastfeeding"
               value={`${medicalHistory.pregnant ? `Pregnant (${medicalHistory.pregnancyEstablishedHow || 'how established: not recorded'})` : ''}${
                 medicalHistory.breastfeeding
-                  ? `${medicalHistory.pregnant ? '; ' : ''}Breastfeeding${medicalHistory.breastfeedingDiscussed ? ', macrolide choice discussed and recorded' : ''}`
+                  ? `${medicalHistory.pregnant ? '; ' : ''}Breastfeeding${medicalHistory.breastfeedingDiscussed === 'yes' ? ', macrolide choice discussed and recorded' : medicalHistory.breastfeedingDiscussed === 'no' ? ', macrolide choice NOT discussed' : ''}`
                   : ''
               }`}
             />

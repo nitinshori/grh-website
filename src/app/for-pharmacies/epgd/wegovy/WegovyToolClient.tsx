@@ -29,6 +29,7 @@ import {
   getAllowedDoses,
   fivePercentRuleApplies,
   doseIndex,
+  getGatingBMI,
 } from "./lib/wegovy-clinical-logic";
 import { validateStep } from "./lib/wegovy-validation";
 import { calculateAge } from "../shared/types";
@@ -436,6 +437,33 @@ export function WegovyToolClient() {
               }}
             />
 
+            {(() => {
+              const gb = getGatingBMI(state);
+              return gb !== null && gb >= 27 && gb < 30;
+            })() && (
+              <div className="mt-4">
+                <SelectInput
+                  label="Does the patient have at least one weight-related comorbidity?"
+                  value={state.weightAssessment.hasWeightRelatedComorbidity}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_WEIGHT_ASSESSMENT",
+                      field: "hasWeightRelatedComorbidity",
+                      value: v as "" | "yes" | "no",
+                    })
+                  }
+                  options={[
+                    { value: "yes", label: "Yes (tick the comorbidity above)" },
+                    { value: "no", label: "No" },
+                  ]}
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  {isContinuingVisit(state) ? "Starting BMI" : "BMI"} 27 to below 30: the PGD requires at least one weight-related comorbidity. Answer No only where the patient has none; No excludes.
+                </p>
+              </div>
+            )}
+
             <div className="mt-6 space-y-4">
               <Checkbox
                 label="Previous weight loss attempts"
@@ -537,12 +565,12 @@ export function WegovyToolClient() {
             getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
-              <div className="p-3 bg-red-50 border border-red-200 rounded">
-                <p className="text-xs font-semibold text-red-700 mb-2">
-                  Absolute Contraindications
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded">
+                <p className="text-xs font-semibold text-amber-800 mb-2">
+                  Exclusions under this PGD
                 </p>
-                <p className="text-xs text-red-600 mb-3">
-                  Check the following carefully. If any are present, patient cannot proceed.
+                <p className="text-xs text-amber-800 mb-3">
+                  Tick only what applies to this patient. A ticked exclusion stops the supply; leaving every box unticked records that none applies.
                 </p>
               </div>
 
@@ -767,16 +795,21 @@ export function WegovyToolClient() {
 
               {state.medicalHistory.depression && (
                 <div className="ml-6 space-y-3">
-                  <Checkbox
-                    label="Appropriate psychiatric oversight is in place"
-                    checked={state.medicalHistory.psychiatricOversightInPlace}
+                  <SelectInput
+                    label="Is appropriate psychiatric oversight in place?"
+                    value={state.medicalHistory.psychiatricOversightInPlace}
                     onChange={(v) =>
                       dispatch({
                         type: "UPDATE_MEDICAL_HISTORY",
                         field: "psychiatricOversightInPlace",
-                        value: v,
+                        value: v as "" | "yes" | "no",
                       })
                     }
+                    options={[
+                      { value: "yes", label: "Yes" },
+                      { value: "no", label: "No" },
+                    ]}
+                    required
                   />
                   <Checkbox
                     label="There is concern about the patient's current mental state"
@@ -927,8 +960,8 @@ export function WegovyToolClient() {
             getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
-              <div className="p-3 bg-red-50 border border-red-200 rounded">
-                <p className="text-xs text-red-700">
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded">
+                <p className="text-xs text-amber-800">
                   Ask specifically about medicines taken for diabetes and name the products:
                   oral or injectable semaglutide, tirzepatide, orforglipron, liraglutide,
                   dulaglutide, exenatide, and the sulfonylureas and meglitinides. Patients do
@@ -1081,7 +1114,7 @@ export function WegovyToolClient() {
         return (
           <StepWrapper
             title="Clinical Observations"
-            description="Record vital signs and anthropometric measurements."
+            description="Blood pressure and heart rate are required. Weight and height here are optional (today's weight is already recorded on the Weight Assessment step)."
             currentStep={state.currentStep}
             totalSteps={TOTAL_STEPS}
             onNext={handleNext}
@@ -1094,6 +1127,7 @@ export function WegovyToolClient() {
             <div className="grid sm:grid-cols-2 gap-4">
               <NumberInput
                 label="Systolic blood pressure"
+                required
                 value={state.observations.systolicBP}
                 onChange={(v) =>
                   dispatch({
@@ -1108,6 +1142,7 @@ export function WegovyToolClient() {
               />
               <NumberInput
                 label="Diastolic blood pressure"
+                required
                 value={state.observations.diastolicBP}
                 onChange={(v) =>
                   dispatch({
@@ -1122,6 +1157,7 @@ export function WegovyToolClient() {
               />
               <NumberInput
                 label="Heart rate"
+                required
                 value={state.observations.heartRate}
                 onChange={(v) =>
                   dispatch({
@@ -1378,7 +1414,7 @@ export function WegovyToolClient() {
                     value: v,
                   })
                 }
-                placeholder="Record the name and brand of medication, and batch number"
+                placeholder="e.g. AB1234 (the product and strength are recorded from the dose selected)"
                 required
               />
 
@@ -1420,7 +1456,7 @@ export function WegovyToolClient() {
         return (
           <StepWrapper
             title="Counselling & Patient Education"
-            description="Confirm counselling points discussed with patient."
+            description="Tick each point as it is given. Every point shown is required before Next."
             currentStep={state.currentStep}
             totalSteps={TOTAL_STEPS}
             onNext={handleNext}

@@ -138,19 +138,27 @@ export default function FungalInfectionClient() {
       case 0: return validatePatientStep(patient, { minAge: 16 });
       case 1: return validateConsentStep(consent);
       case 2:
-        if (!c.presentation) return "Please select the presentation";
-        if (!c.site.trim()) return "Please describe the affected site";
-        if (!c.allergies.trim()) return "Please record allergy status (or NKDA)";
+        if (!c.presentation) return "Select the presentation";
+        if (!c.site.trim()) return "Describe the affected site";
+        if (!c.allergies.trim()) return "Record the allergies (enter 'NKDA' for no known drug allergies)";
         return null;
       case 3:
-        if (!c.product) return "Please select the treatment";
+        if (!c.product) return "Select the treatment";
         if (c.product === "miconazole" && c.presentation === "inflamed-mixed") return "Miconazole requires a diagnosis of superficial fungal skin infection. For inflamed intertrigo or infected eczema with a suspected secondary component, select Trimovate (18+) or refer.";
         if (!c.brand.trim()) return "Record the brand supplied (PGD record: name and brand of medication)";
-        if (!c.quantity.trim()) return "Please record the quantity supplied";
+        if (!c.quantity.trim()) return "Select the quantity supplied (one 30 g tube)";
         return null;
       case 4:
-        if (!c.completeCourse || !c.applicationAdvice || !c.reviewAdvice || !c.hygieneAdvice) return "Please confirm all counselling points";
-        if (!c.pilSupplied) return "Please confirm the patient information leaflet has been supplied";
+        {
+          // Name the unticked points (walkthrough review, 11 Sep 2026).
+          const missing: string[] = [];
+          if (!c.completeCourse) missing.push(c.product === "trimovate" ? "Treatment period explained" : "Complete the course");
+          if (!c.applicationAdvice) missing.push("Application advice given");
+          if (!c.reviewAdvice) missing.push("Follow-up advice given");
+          if (!c.hygieneAdvice) missing.push("Hygiene advice given");
+          if (!c.pilSupplied) missing.push("Patient information leaflet (PIL) supplied");
+          if (missing.length) return `Tick every counselling point. Not yet ticked: ${missing.join("; ")}`;
+        }
         return validateSummaryStep(effectiveSummary);
       default: return null;
     }
@@ -226,8 +234,9 @@ export default function FungalInfectionClient() {
                 { value: "inflamed-mixed", label: "Inflamed intertrigo, infected eczema or seborrhoeic dermatitis with suspected secondary bacterial or candidal component (Trimovate arm, 18+)" },
               ]} required />
             <TextInput label="Affected site" value={c.site} onChange={(v) => set({ site: v })} placeholder="e.g. web spaces both feet" required />
-            <TextInput label="Allergies" value={c.allergies} onChange={(v) => set({ allergies: v })} placeholder="Record allergies, or NKDA" required />
+            <TextInput label="Allergies" value={c.allergies} onChange={(v) => set({ allergies: v })} placeholder="Record allergies, or NKDA (no known drug allergies)" required />
             <div className="space-y-3 p-4 bg-red-50 rounded-lg border border-red-200">
+              <p className="text-xs font-semibold uppercase tracking-wide text-red-800">Exclusions: tick any that apply (each one stops supply). Leave every box unticked if none apply.</p>
               <Checkbox label="Nail or scalp involvement" checked={c.nailOrScalp} onChange={(v) => set({ nailOrScalp: v })} description="Requires systemic or alternative treatment" />
               <Checkbox label="Infected, broken, ulcerated, oozing or weeping skin" checked={c.brokenOozing} onChange={(v) => set({ brokenOozing: v })} />
               <Checkbox label="Signs of systemic infection / patient unwell" checked={c.systemic} onChange={(v) => set({ systemic: v })} />
@@ -239,6 +248,7 @@ export default function FungalInfectionClient() {
               <Checkbox label="Hypersensitivity to corticosteroids, nystatin, oxytetracycline or any excipient" checked={c.steroidOrTrimovateAllergy} onChange={(v) => set({ steroidOrTrimovateAllergy: v })} />
             </div>
             <div className="space-y-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
+              <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">Cautions: supply may proceed with counselling</p>
               <Checkbox label="Taking warfarin or another vitamin K antagonist" checked={c.warfarin} onChange={(v) => set({ warfarin: v })} description="Miconazole caution: anticoagulant effect should be monitored" />
               <Checkbox label="Blurred vision or other visual disturbance" checked={c.visualDisturbance} onChange={(v) => set({ visualDisturbance: v })} description="Trimovate caution: consider referral to an ophthalmologist" />
             </div>
@@ -278,6 +288,7 @@ export default function FungalInfectionClient() {
           <div className="space-y-4">
             <AlertBanner alerts={alerts} />
             <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
+              <p className="text-sm font-medium text-navy-900">Confirm counselling covered (tick every point) <span className="text-red-400">*</span></p>
               <Checkbox label={c.product === "trimovate" ? "Treatment period explained: maximum 7 to 10 days continuous use without review; re-evaluate if not improved within seven days or if worsening" : "Complete the course: continue miconazole for at least one week after all signs and symptoms disappear; minimum 2 weeks, maximum 4 weeks"} checked={c.completeCourse} onChange={(v) => set({ completeCourse: v })} />
               <Checkbox label={c.product === "trimovate" ? "Application advice given (apply thinly once or twice daily, wash hands after applying, avoid eyes and mucous membranes, no occlusion, allow absorption before emollient)" : "Application advice given (apply thinly twice daily to clean, dry skin, wash hands before and after, avoid eyes and mucous membranes)"} checked={c.applicationAdvice} onChange={(v) => set({ applicationAdvice: v })} />
               <Checkbox label="Follow-up advice given: seek medical advice if symptoms worsen rapidly or significantly, do not improve in 3 to 4 weeks, or the patient becomes systemically very unwell" checked={c.reviewAdvice} onChange={(v) => set({ reviewAdvice: v })} />

@@ -266,18 +266,20 @@ export default function CovidBoosterClient() {
               }
               description="This PGD covers 12 years and over, with no upper age limit. Under 12s need age-specific presentations and dose volumes and must be referred."
             />
-            <Checkbox
-              label="Previous COVID-19 vaccination received"
-              checked={state.assessment.previousCovidVaccine}
-              onChange={(v) =>
-                dispatch({
-                  type: "UPDATE_ASSESSMENT",
-                  field: "previousCovidVaccine",
-                  value: v,
-                })
-              }
-              description="A previous dose is not required. Leave unticked for a first dose. The PGD only excludes a primary course where the patient is also immunosuppressed."
+            <SelectInput
+              label="Has the patient received a COVID-19 vaccine before?"
+              value={state.assessment.previousCovidVaccineAnswer}
+              onChange={(v) => {
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "previousCovidVaccineAnswer", value: v });
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "previousCovidVaccine", value: v === "yes" });
+              }}
+              options={[
+                { value: "yes", label: "Yes: previously vaccinated (record the date of the last dose below)" },
+                { value: "no", label: "No: this is a first dose (a previous dose is not required)" },
+              ]}
+              required
             />
+            <p className="text-xs text-gray-600">A previous dose is not required. The PGD only excludes a primary course where the patient is also immunosuppressed.</p>
             {state.assessment.previousCovidVaccine && (
               <div className="pl-6 space-y-3">
                 <TextInput
@@ -453,28 +455,28 @@ export default function CovidBoosterClient() {
             <Checkbox
               label="Bleeding disorder"
               checked={state.assessment.bleedingDisorder}
-              onChange={(v) =>
-                dispatch({
-                  type: "UPDATE_ASSESSMENT",
-                  field: "bleedingDisorder",
-                  value: v,
-                })
-              }
+              onChange={(v) => {
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "bleedingDisorder", value: v });
+                // The assessment question is asked afresh each time the box is ticked.
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "bleedingDisorderAssessedAnswer", value: "" });
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "bleedingDisorderAssessedSafe", value: false });
+              }}
               description="Exclusion unless intramuscular injection has been assessed as safe by a clinician familiar with the individual's bleeding risk."
             />
             {state.assessment.bleedingDisorder && (
               <div className="pl-6">
-                <Checkbox
-                  label="Intramuscular injection assessed as safe by a clinician familiar with the bleeding risk"
-                  checked={state.assessment.bleedingDisorderAssessedSafe}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_ASSESSMENT",
-                      field: "bleedingDisorderAssessedSafe",
-                      value: v,
-                    })
-                  }
-                  description="Record who assessed it in the clinical notes."
+                <SelectInput
+                  label="Has intramuscular injection been assessed as safe by a clinician familiar with the bleeding risk?"
+                  value={state.assessment.bleedingDisorderAssessedAnswer}
+                  onChange={(v) => {
+                    dispatch({ type: "UPDATE_ASSESSMENT", field: "bleedingDisorderAssessedAnswer", value: v });
+                    dispatch({ type: "UPDATE_ASSESSMENT", field: "bleedingDisorderAssessedSafe", value: v === "yes" });
+                  }}
+                  options={[
+                    { value: "yes", label: "Yes: assessed as safe (record who assessed it in the clinical notes)" },
+                    { value: "no", label: "No: not assessed (excluded; refer)" },
+                  ]}
+                  required
                 />
               </div>
             )}
@@ -628,6 +630,7 @@ export default function CovidBoosterClient() {
                 { value: "spikevax-lp81", label: COVID_PRODUCTS["spikevax-lp81"].label },
                 { value: "nuvaxovid-jn1", label: COVID_PRODUCTS["nuvaxovid-jn1"].label },
               ]}
+              required
             />
 
             {state.supply.vaccineProduct && (
@@ -648,7 +651,7 @@ export default function CovidBoosterClient() {
 
             {state.supply.vaccineProduct === "comirnaty-lp81" && (
               <Checkbox
-                label="Patient told this is the previous seasonal formulation"
+                label="Patient told this is the previous seasonal formulation and that Comirnaty XFG is the current one"
                 checked={state.supply.lp81FormulationExplained}
                 onChange={(v) =>
                   dispatch({
@@ -669,6 +672,7 @@ export default function CovidBoosterClient() {
                   dispatch({ type: "UPDATE_SUPPLY", field: "batchNumber", value: v })
                 }
                 placeholder="As printed on the syringe or vial"
+                required
               />
               <TextInput
                 label="Vaccine expiry date"
@@ -677,6 +681,7 @@ export default function CovidBoosterClient() {
                 onChange={(v) =>
                   dispatch({ type: "UPDATE_SUPPLY", field: "expiryDate", value: v })
                 }
+                required
               />
               <SelectInput
                 label="Administration site"
@@ -692,6 +697,7 @@ export default function CovidBoosterClient() {
                   { value: "left-deltoid", label: "Left deltoid" },
                   { value: "right-deltoid", label: "Right deltoid" },
                 ]}
+                required
               />
               <TextInput
                 label="Time administered"
@@ -700,6 +706,7 @@ export default function CovidBoosterClient() {
                 onChange={(v) =>
                   dispatch({ type: "UPDATE_SUPPLY", field: "administrationTime", value: v })
                 }
+                required
               />
             </div>
 
@@ -870,6 +877,26 @@ export default function CovidBoosterClient() {
         onNewConsultation={handleNewConsultation}
       >
         {renderStep()}
+        {/* The PGD requires the advice given to an excluded patient to be
+            recorded. A stop disables Next, so the clinical notes box on the
+            Vaccine Supply step could never be reached and the printed record
+            filled "Advice given" with a canned sentence (walkthrough review,
+            11 Sep 2026). */}
+        {hardStops && state.currentStep < 5 && (
+          <div className="mt-6 bg-red-50 border border-red-200 rounded-lg p-4 space-y-3">
+            <p className="text-red-700 text-sm font-semibold">
+              Excluded: the vaccine cannot be given under this PGD. Refer as appropriate and document the advice given and the decision reached.
+            </p>
+            <TextArea
+              label="Advice given and decision reached (saved with the exclusion record)"
+              value={state.summary.clinicalNotes}
+              onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "clinicalNotes", value: v })}
+              placeholder="e.g., Last dose 6 weeks ago: advised to return after the 3 month interval; no supply made."
+              rows={3}
+            />
+            <p className="text-xs text-red-700">Then use "Save as not supplied" below to record the consultation.</p>
+          </div>
+        )}
       </StepWrapper>
     </div>
   );

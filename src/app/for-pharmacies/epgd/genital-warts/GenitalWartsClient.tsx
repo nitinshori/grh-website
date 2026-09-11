@@ -267,6 +267,8 @@ export function GenitalWartsClient() {
               label="Visible external genital warts confirmed on examination"
               checked={state.assessment.externalWartsConfirmed}
               onChange={(v) => updateAssessment("externalWartsConfirmed", v)}
+              description="PGD inclusion criterion: required before supply."
+              required
             />
             <Checkbox
               label="External perianal warts present"
@@ -311,11 +313,15 @@ export function GenitalWartsClient() {
                 label="Sexual history taken (partners, barrier use, concurrent STIs)"
                 checked={state.assessment.sexualHistoryTaken}
                 onChange={(v) => updateAssessment("sexualHistoryTaken", v)}
+                description="Required before supply."
+                required
               />
               <Checkbox
                 label="Full STI screening offered or signposted"
                 checked={state.assessment.stiScreeningOffered}
                 onChange={(v) => updateAssessment("stiScreeningOffered", v)}
+                description="Required before supply."
+                required
               />
               <Checkbox
                 label="Cervical screening confirmed up to date (where applicable)"
@@ -332,7 +338,8 @@ export function GenitalWartsClient() {
           <div className="space-y-5">
             <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-900">
               <p className="font-semibold">
-                Hard exclusions. Any of these and the PGD cannot be used.
+                Hard exclusions. Any of these and the PGD cannot be used
+                (the two hypersensitivity items exclude that agent only).
               </p>
             </div>
 

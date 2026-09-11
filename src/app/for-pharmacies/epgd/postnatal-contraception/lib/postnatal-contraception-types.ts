@@ -41,7 +41,7 @@ export interface PostnatalAssessment {
   // From day 21 pregnancy must be reasonably excluded. Asked as yes/no with
   // no default: an unanswered question is not a "no".
   unprotectedSexSinceDay21: boolean | null;
-  negativeTest21DaysAfterLastUpsi: boolean;
+  negativeTest21DaysAfterLastUpsi: boolean | null; // yes/no with no default; only asked when there has been UPSI since day 21
 }
 
 export interface PostnatalMedicalHistory {
@@ -106,6 +106,11 @@ export interface PostnatalCounselling {
   depoRepeatAdvice: boolean; // repeat injection every 12 weeks
 }
 
+export interface PostnatalExclusionOutcome {
+  adviceGiven: string; // advice given and decision reached when excluded or declines
+  referredTo: string; // "" | "gp" | "sexual-health" | "midwife" | "other"
+}
+
 export interface PostnatalContraceptionState {
   currentStep: number;
   patient: BasePatientDetails;
@@ -114,6 +119,7 @@ export interface PostnatalContraceptionState {
   medicalHistory: PostnatalMedicalHistory;
   medicineSupply: PostnatalMedicineSupply;
   counselling: PostnatalCounselling;
+  exclusionOutcome: PostnatalExclusionOutcome;
   summary: BaseSummary;
   alerts: ClinicalAlert[];
   doseRecommendation: DoseRecommendation | null;
@@ -127,6 +133,7 @@ export type PostnatalContraceptionAction =
   | { type: "UPDATE_MEDICINE_SUPPLY"; field: keyof PostnatalMedicineSupply; value: unknown }
   | { type: "UPDATE_COUNSELLING"; field: keyof PostnatalCounselling; value: unknown }
   | { type: "UPDATE_SUMMARY"; field: keyof BaseSummary; value: unknown }
+  | { type: "UPDATE_EXCLUSION_OUTCOME"; field: keyof PostnatalExclusionOutcome; value: unknown }
   | { type: "SET_STEP"; step: number }
   | { type: "NEXT_STEP" }
   | { type: "PREV_STEP" }
@@ -169,7 +176,7 @@ export function createInitialPostnatalContraceptionState(): PostnatalContracepti
       preEclampsia: false,
       smoking: false,
       unprotectedSexSinceDay21: null,
-      negativeTest21DaysAfterLastUpsi: false,
+      negativeTest21DaysAfterLastUpsi: null,
     },
     medicalHistory: {
       knownOrSuspectedPregnancy: false,
@@ -229,6 +236,7 @@ export function createInitialPostnatalContraceptionState(): PostnatalContracepti
       depoFertilityAdvice: false,
       depoRepeatAdvice: false,
     },
+    exclusionOutcome: { adviceGiven: "", referredTo: "" },
     summary: initialSummary(),
     alerts: [],
     doseRecommendation: null,

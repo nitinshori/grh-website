@@ -155,7 +155,9 @@ export const initialRabiesContraindications = (): RabiesContraindications => ({
   antibioticHypersensitivity: false,
   neomycinHypersensitivity: false,
   acuteFebrileIllness: false,
-  ageAppropriate: false,
+  // Unknown age (no date of birth yet) is not "under 2": the stop fires only
+  // once a date of birth giving an age under 2 has been entered.
+  ageAppropriate: true,
 });
 
 export const initialRabiesVaccineAdministration = (): RabiesVaccineAdministration => ({

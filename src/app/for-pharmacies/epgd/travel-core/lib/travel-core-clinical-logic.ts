@@ -189,12 +189,12 @@ export function getVaccineAlerts(
   }
 
   // Hepatitis A inclusion and schedule
-  if (v.hepAGiven && !v.hepAInclusionMet) {
+  if (v.hepAGiven && v.hepAInclusionAnswer === "no") {
     alerts.push({
       severity: "stop",
       code: "HEPA_NO_INDICATION",
-      message: "Hepatitis A inclusion criteria not confirmed",
-      detail: "Inclusion requires travel to an area of high or intermediate hepatitis A prevalence on current TravelHealthPro guidance. Confirm the criterion or do not give.",
+      message: "Hepatitis A inclusion criteria not met",
+      detail: "Inclusion requires travel to an area of high or intermediate hepatitis A prevalence on current TravelHealthPro guidance. Do not give hepatitis A vaccine under this PGD: deselect it, or record the advice given and save as not supplied.",
     });
   }
   if (v.hepAGiven && v.hepAPreviousCompleteCourse) {
@@ -240,12 +240,12 @@ export function getVaccineAlerts(
   }
 
   // Typhoid inclusion and revaccination interval
-  if (v.typhoidGiven && !v.typhoidInclusionMet) {
+  if (v.typhoidGiven && v.typhoidInclusionAnswer === "no") {
     alerts.push({
       severity: "stop",
       code: "TYPHOID_NO_INDICATION",
-      message: "Typhoid inclusion criteria not confirmed",
-      detail: "Inclusion requires travel to an area of high or intermediate typhoid prevalence (South Asia, Southeast Asia, Africa, Central or South America) on current TravelHealthPro guidance. Confirm the criterion or do not give.",
+      message: "Typhoid inclusion criteria not met",
+      detail: "Inclusion requires travel to an area of high or intermediate typhoid prevalence (South Asia, Southeast Asia, Africa, Central or South America) on current TravelHealthPro guidance. Do not give typhoid vaccine under this PGD: deselect it, or record the advice given and save as not supplied.",
     });
   }
   if (v.typhoidGiven && v.typhoidPreviousDose) {
@@ -261,12 +261,12 @@ export function getVaccineAlerts(
   }
 
   // Cholera inclusion and schedule
-  if (v.choleraGiven && !v.choleraRiskCriteriaMet) {
+  if (v.choleraGiven && v.choleraInclusionAnswer === "no") {
     alerts.push({
       severity: "stop",
       code: "CHOLERA_NO_INDICATION",
-      message: "Cholera inclusion criteria not confirmed",
-      detail: "Dukoral is for travel to areas with active cholera transmission or at high risk, humanitarian, healthcare or occupational exposure, or planned extended stays in endemic areas with poor sanitation. Confirm the criterion or do not give.",
+      message: "Cholera inclusion criteria not met",
+      detail: "Dukoral is for travel to areas with active cholera transmission or at high risk, humanitarian, healthcare or occupational exposure, or planned extended stays in endemic areas with poor sanitation. Do not give Dukoral under this PGD: deselect it, or record the advice given and save as not supplied.",
     });
   }
   if (v.choleraGiven && v.choleraDose === "2") {
@@ -404,14 +404,10 @@ export function getMalariaRiskAlerts(
 ): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
 
-  if (malariaRisk.malariaZone && !malariaRisk.chemoprophylaxisPlan) {
-    alerts.push({
-      severity: "red-flag",
-      code: "MALARIA_PLAN_MISSING",
-      message: "Malaria zone identified: record the chemoprophylaxis plan",
-      detail: "Chemoprophylaxis is outside this PGD. Record whether it was supplied under the anti-malarials PGD, referred, not required per TravelHealthPro, or declined.",
-    });
-  }
+  // An unanswered chemoprophylaxis plan is a validation message on the
+  // malaria step (validateMalariaRisk names the control), not a red flag
+  // raised from a select still at its default (stop audit, 11 Sep 2026).
+  void malariaRisk;
 
   return alerts;
 }

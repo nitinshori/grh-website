@@ -52,12 +52,14 @@ export function FolicAcidClient() {
     patient: { firstName: "", lastName: "", dateOfBirth: "", age: null as number | null, gpName: "", gpPractice: "", gpAddress: "", gpPhone: "", gpEmail: "", gpOdsCode: "", nhsNumber: "", address: "", phone: "", email: "" },
     consent: { informedConsentGiven: false, idVerified: false, idType: "", patientAwarePrivateService: false, notifyGp: false } as { informedConsentGiven: boolean; idVerified: boolean; idType: string; patientAwarePrivateService: boolean; notifyGp?: boolean },
     eligibility: {
-      confirmedFolateDeficiency: false,
+      // The answer, not a tick: "no" is a stop (refer for work-up) so the
+      // referral can be saved (walkthrough review, 11 Sep 2026).
+      confirmedFolateDeficiency: "" as "" | "yes" | "no",
       serumFolateResult: "",
       serumFolateDate: "",
       // FBC and blood film reviewed; abnormal picture beyond macrocytic
       // anaemia, or unexplained anaemia, is an exclusion (PGD v009).
-      fbcReviewed: false,
+      fbcReviewed: "" as "" | "yes" | "no",
       abnormalBloodPicture: false,
       // CRITICAL: B12 must be checked before folate replacement. PGD v009:
       // B12 deficiency excluded, OR present and hydroxocobalamin started
@@ -85,7 +87,9 @@ export function FolicAcidClient() {
       // Exclusions
       hypersensitivity: false,
       malignancy: false,
-      malignancySpecialistAgrees: false,
+      // Asked only when malignancy is ticked: "no" is the stop, blank is
+      // "not yet answered".
+      malignancySpecialistAgrees: "" as "" | "yes" | "no",
       pregnant: false,
       antifolateOrAntiepileptic: false,
     },
@@ -153,41 +157,58 @@ export function FolicAcidClient() {
     state.eligibility.cause === "other" ||
     state.eligibility.cause === "malabsorption" ||
     state.eligibility.cause === "pregnancy"
+  const tickedExclusions: string[] = [
+    ...(state.eligibility.hypersensitivity ? ["Known hypersensitivity to folic acid or to any excipient"] : []),
+    ...(state.eligibility.malignancy && state.eligibility.malignancySpecialistAgrees === "no" ? ["Known or suspected malignancy without documented specialist agreement"] : []),
+    ...(state.eligibility.pregnant ? ["Pregnant or planning pregnancy"] : []),
+    ...(state.eligibility.antifolateOrAntiepileptic ? ["Taking methotrexate, phenytoin, phenobarbital, primidone or another antifolate or antiepileptic"] : []),
+    ...(state.eligibility.abnormalBloodPicture ? ["Unexplained anaemia or abnormal blood picture beyond macrocytic anaemia"] : []),
+  ]
   const exclusionTicked =
-    state.eligibility.hypersensitivity ||
-    (state.eligibility.malignancy && !state.eligibility.malignancySpecialistAgrees) ||
-    state.eligibility.pregnant ||
-    state.eligibility.antifolateOrAntiepileptic ||
-    state.eligibility.abnormalBloodPicture ||
+    tickedExclusions.length > 0 ||
     el.b12Status === "untreated" ||
     el.b12Status === "unknown" ||
     b12NotExcluded ||
     causeRequiresReferral
+  const CAUSE_LABELS: Record<string, string> = {
+    dietary: "Poor diet (low intake)",
+    alcohol: "Alcohol excess",
+    drugs: "Drug-induced",
+    haemolysis: "Haemolysis",
+    malabsorption: "Malabsorption including coeliac disease",
+    pregnancy: "Pregnancy",
+    other: "Cause unclear",
+  }
   const stopReason: string | null = ageUnder18
     ? "Patient is under 18"
     : el.b12Status === "untreated" || el.b12Status === "unknown"
       ? "Vitamin B12 status unknown, or B12 deficiency present and untreated"
     : b12NotExcluded
       ? `B12 not excluded on testing (${b12Class === "deficient" ? "confirmed deficiency" : "indeterminate result"}): start hydroxocobalamin first or at the same time under PGD 1 of 3, or refer`
-    : causeRequiresReferral ? "Cause of folate deficiency requires referral"
-    : exclusionTicked ? "Exclusion criteria met"
+    : el.confirmedFolateDeficiency === "no" ? "Folate deficiency not documented on blood testing: refer to the GP for testing"
+    : el.fbcReviewed === "no" ? "Full blood count and blood film not reviewed alongside the folate result: refer to the GP for the full work-up"
+    : causeRequiresReferral ? `Cause of folate deficiency requires referral (${CAUSE_LABELS[el.cause] ?? el.cause})`
+    : exclusionTicked ? `Exclusion ticked: ${tickedExclusions.join("; ")}`
     : null
   const hasStop = stopReason !== null
   const eligibilityError: string | null =
     hasStop ? `${stopReason}. Do not supply folic acid under this PGD; refer to the GP and document the advice given.`
-    : !el.b12Status ? "Vitamin B12 status is required"
-    : !b12ResultRecorded ? "Record the B12 result relied on (test type, value, date and laboratory or device)"
-    : !el.confirmedFolateDeficiency ? "Documented folate deficiency is an inclusion criterion"
-    : !el.serumFolateResult || !el.serumFolateDate ? "Serum folate result and test date are required"
-    : !el.fbcReviewed ? "Confirm the full blood count and blood film were reviewed alongside the folate result"
-    : !el.cause ? "Cause of deficiency is required"
-    : el.cause === "drugs" && !el.interactingMedicine.trim() ? "Name the interacting medicine (for example trimethoprim or sulfasalazine) and inform the GP"
+    : el.malignancy && !el.malignancySpecialistAgrees ? "Known or suspected malignancy: has folate deficiency been confirmed and does the treating specialist agree to folic acid? Select Yes or No"
+    : !el.b12Status ? "Vitamin B12 status: select an option"
+    : !b12ResultRecorded ? (el.b12Status === "treated" ? "B12 test date and Laboratory or device used are required" : "B12 test, Result, B12 test date and Laboratory or device used are required")
+    : !el.confirmedFolateDeficiency ? "Has folate deficiency been documented on blood testing? Select Yes or No"
+    : !el.serumFolateResult ? "Serum folate result is required"
+    : !el.serumFolateDate ? "Folate test date is required"
+    : el.serumFolateDate > today ? "Folate test date cannot be in the future"
+    : !el.fbcReviewed ? "Were the full blood count and blood film reviewed alongside the folate result? Select Yes or No"
+    : !el.cause ? "Cause of deficiency: select an option"
+    : el.cause === "drugs" && !el.interactingMedicine.trim() ? "Interacting medicine: name it (for example trimethoprim or sulfasalazine) and inform the GP"
     : null
 
   const tr = state.treatment
   const treatmentError: string | null =
-    !tr.durationMonths ? "Select the supply"
-    : tr.durationMonths === "shorter" && !tr.durationReason.trim() ? "Record the reason for a shorter supply and the planned review"
+    !tr.durationMonths ? "Supply: select 4 months or a shorter supply"
+    : tr.durationMonths === "shorter" && !tr.durationReason.trim() ? "Reason for the shorter supply and planned review is required"
     : !tr.quantityTablets || tr.quantityTablets < 1 ? "Quantity supplied (tablets) is required"
     : tr.quantityTablets > MAX_TABLETS ? `Maximum supply under this PGD is ${MAX_TABLETS} tablets (4 months, one daily)`
     : tr.durationMonths === "shorter" && tr.quantityTablets >= MAX_TABLETS ? "A shorter supply must be fewer than 120 tablets"
@@ -195,20 +216,21 @@ export function FolicAcidClient() {
     : !tr.expiryDate ? "Expiry date of the pack supplied is required"
     : tr.expiryDate < today ? "Expiry date is in the past: do not supply this pack"
     : !tr.nextReviewDate ? "Review date (repeat full blood count and folate) is required"
+    : tr.nextReviewDate < today ? "Review date cannot be in the past"
     : null
 
   const cs = state.counselling
   const counsellingError: string | null =
-    !cs.pilSupplied ? "Confirm the patient information leaflet was supplied"
-    : !cs.writtenDietaryAdvice ? "Confirm written dietary advice was given"
-    : !cs.fullCourseAdherence ? "Confirm the patient was told to take one tablet daily for the full course"
-    : !cs.dietarySources ? "Confirm dietary sources of folate were discussed"
-    : !cs.repeatBloodTest ? "Confirm the repeat blood test at the end of the course was explained"
-    : !cs.neurologicalWarning ? "Confirm the patient was told to seek prompt advice for numbness, tingling or unsteadiness"
-    : !cs.seekAdviceIfWorse ? "Confirm the patient was told to seek advice if symptoms persist or worsen"
+    !cs.pilSupplied ? "Tick \"Patient information leaflet (PIL) supplied with the medicine\" once supplied"
+    : !cs.writtenDietaryAdvice ? "Tick \"Written dietary advice given\" once given"
+    : !cs.fullCourseAdherence ? "Tick \"Take one tablet daily for the full course\" once explained"
+    : !cs.dietarySources ? "Tick \"Good dietary sources of folate discussed\" once discussed"
+    : !cs.repeatBloodTest ? "Tick \"Attend for a repeat blood test at the end of the course\" once explained"
+    : !cs.neurologicalWarning ? "Tick \"Seek medical advice promptly for any new numbness, tingling or unsteadiness\" once explained"
+    : !cs.seekAdviceIfWorse ? "Tick \"Seek medical advice if symptoms persist or worsen\" once explained"
     : null
 
-  const summaryError = validateSummaryStep(state.summary) ?? (state.summary.gpInformed ? null : "Confirm the GP has been informed of the supply (or a referral made)")
+  const summaryError = validateSummaryStep(state.summary) ?? (state.summary.gpInformed ? null : "Tick \"GP informed of the supply under this PGD (or referral made)\" once done")
 
   const stepErrors: (string | null)[] = [patientError, consentError, eligibilityError, treatmentError, counsellingError, summaryError, null]
   // A stop anywhere blocks Next on that step and on every later step.
@@ -219,7 +241,9 @@ export function FolicAcidClient() {
     ? "B12 deficiency present; hydroxocobalamin started first or at the same time under PGD 1 of 3"
     : el.b12Status === "tested" && el.b12Value !== null
       ? `${el.b12TestType === "active" ? "Active B12" : "Total B12"} ${el.b12Value} ${el.b12TestType === "active" ? "pmol/L" : el.b12Unit}${b12Class ? ` (${b12Class === "excluded" ? "deficiency unlikely, excluded on testing" : b12Class})` : ""}`
-      : el.b12Status || "Not recorded"
+      : el.b12Status === "untreated" ? "B12 deficiency present and NOT yet treated"
+      : el.b12Status === "unknown" ? "B12 status unknown or not tested"
+      : "Not recorded"
 
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
     return {
@@ -319,7 +343,7 @@ export function FolicAcidClient() {
                 onChange={(e) => updateEligibility("b12Status", e.target.value as typeof state.eligibility.b12Status)}
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
               >
-                <option value="">select</option>
+                <option value="">Select</option>
                 <option value="tested">B12 tested: enter the result below (excluded only if total B12 above 350 ng/L or active B12 above 70 pmol/L)</option>
                 <option value="treated">B12 deficiency present and hydroxocobalamin started first or at the same time under PGD 1 of 3</option>
                 <option value="untreated">B12 deficiency present and NOT yet treated</option>
@@ -379,27 +403,35 @@ export function FolicAcidClient() {
             )}
 
             <div className="border-t border-gray-200 pt-4">
-              <Checkbox
-                label="Documented folate deficiency"
-                checked={state.eligibility.confirmedFolateDeficiency}
-                onChange={(v) => updateEligibility("confirmedFolateDeficiency", v)}
+              <SelectInput
+                label="Has folate deficiency been documented on blood testing?"
+                value={state.eligibility.confirmedFolateDeficiency}
+                onChange={(v) => updateEligibility("confirmedFolateDeficiency", v as typeof state.eligibility.confirmedFolateDeficiency)}
+                options={[
+                  { value: "yes", label: "Yes, documented on blood testing" },
+                  { value: "no", label: "No, not tested or not confirmed (refer to GP)" },
+                ]}
                 required
-                description="Serum folate below 7 nanomol/L (3 micrograms/L), or 7 to 10 nanomol/L with supporting clinical features, interpreted with the full blood count and blood film."
               />
-              {state.eligibility.confirmedFolateDeficiency && (
+              <p className="text-xs text-gray-500 mt-1">Serum folate below 7 nanomol/L (3 micrograms/L), or 7 to 10 nanomol/L with supporting clinical features, interpreted with the full blood count and blood film.</p>
+              {state.eligibility.confirmedFolateDeficiency === "yes" && (
                 <div className="grid sm:grid-cols-2 gap-4 mt-3">
                   <TextInput label="Serum folate result" value={state.eligibility.serumFolateResult} onChange={(v) => updateEligibility("serumFolateResult", v)} placeholder="e.g. 5.2 nmol/L" required />
                   <div>
                     <label className="block text-sm font-medium text-navy-900 mb-1">Folate test date <span className="text-red-400">*</span></label>
-                    <input type="date" value={state.eligibility.serumFolateDate} onChange={(e) => updateEligibility("serumFolateDate", e.target.value)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
+                    <input type="date" value={state.eligibility.serumFolateDate} onChange={(e) => updateEligibility("serumFolateDate", e.target.value)} max={today} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
                   </div>
                 </div>
               )}
               <div className="mt-3 space-y-2">
-                <Checkbox
-                  label="Full blood count and blood film reviewed alongside the folate result"
-                  checked={state.eligibility.fbcReviewed}
-                  onChange={(v) => updateEligibility("fbcReviewed", v)}
+                <SelectInput
+                  label="Were the full blood count and blood film reviewed alongside the folate result?"
+                  value={state.eligibility.fbcReviewed}
+                  onChange={(v) => updateEligibility("fbcReviewed", v as typeof state.eligibility.fbcReviewed)}
+                  options={[
+                    { value: "yes", label: "Yes, reviewed" },
+                    { value: "no", label: "No, not available (refer to GP)" },
+                  ]}
                   required
                 />
                 <Checkbox
@@ -420,7 +452,7 @@ export function FolicAcidClient() {
                 onChange={(e) => updateEligibility("cause", e.target.value as typeof state.eligibility.cause)}
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
               >
-                <option value="">select</option>
+                <option value="">Select</option>
                 <option value="dietary">Poor diet (low intake)</option>
                 <option value="alcohol">Alcohol excess</option>
                 <option value="drugs">Drug-induced (e.g. trimethoprim, sulfasalazine); methotrexate and antiepileptics are excluded below</option>
@@ -471,10 +503,15 @@ export function FolicAcidClient() {
                 />
                 {state.eligibility.malignancy && (
                   <div className="ml-7">
-                    <Checkbox
-                      label="Folate deficiency confirmed and the treating specialist agrees to folic acid (documented)"
-                      checked={state.eligibility.malignancySpecialistAgrees}
-                      onChange={(v) => updateEligibility("malignancySpecialistAgrees", v)}
+                    <SelectInput
+                      label="Has folate deficiency been confirmed and does the treating specialist agree to folic acid (documented)?"
+                      value={state.eligibility.malignancySpecialistAgrees}
+                      onChange={(v) => updateEligibility("malignancySpecialistAgrees", v as typeof state.eligibility.malignancySpecialistAgrees)}
+                      options={[
+                        { value: "yes", label: "Yes, documented specialist agreement" },
+                        { value: "no", label: "No (refer)" },
+                      ]}
+                      required
                     />
                   </div>
                 )}
@@ -523,7 +560,7 @@ export function FolicAcidClient() {
                 onChange={(e) => updateTreatment("durationMonths", e.target.value as typeof state.treatment.durationMonths)}
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
               >
-                <option value="">select</option>
+                <option value="">Select</option>
                 <option value="4">4 months supply (usual course, maximum under this PGD)</option>
                 <option value="shorter">Shorter supply with planned review before further supply</option>
               </select>
@@ -627,8 +664,8 @@ export function FolicAcidClient() {
                 ["GP", [state.patient.gpName, state.patient.gpPractice].filter(Boolean).join(", ") || "Not recorded"],
                 ["Consent", state.consent.informedConsentGiven ? "Valid informed consent obtained; private service explained" : "Not recorded"],
                 ["B12 status checked", `${b12ResultText}; sampled ${el.b12Date || "-"}; ${el.labDevice || "-"}`],
-                ["Serum folate", `${el.serumFolateResult || "-"} on ${el.serumFolateDate || "-"}; FBC and film ${el.fbcReviewed ? "reviewed" : "not reviewed"}`],
-                ["Cause", `${el.cause || "-"}${el.cause === "other" && el.causeOther ? `: ${el.causeOther}` : ""}${el.cause === "drugs" && el.interactingMedicine ? `: ${el.interactingMedicine}` : ""}`],
+                ["Serum folate", `${el.confirmedFolateDeficiency === "no" ? "Folate deficiency not documented on testing" : `${el.serumFolateResult || "-"} on ${el.serumFolateDate || "-"}`}; FBC and film ${el.fbcReviewed === "yes" ? "reviewed" : el.fbcReviewed === "no" ? "NOT reviewed" : "not recorded"}`],
+                ["Cause", `${el.cause ? (CAUSE_LABELS[el.cause] ?? el.cause) : "-"}${el.cause === "other" && el.causeOther ? `: ${el.causeOther}` : ""}${el.cause === "drugs" && el.interactingMedicine ? `: ${el.interactingMedicine}` : ""}`],
                 ["Outcome", hasStop ? `NOT SUPPLIED, REFERRED: ${stopReason}` : "Supplied via PGD"],
                 ["Medicine", hasStop ? "Not supplied" : `${PRODUCT_NAME}, oral`],
                 ["Dose", hasStop ? "Not supplied" : "5 mg once daily"],

@@ -88,7 +88,7 @@ export default function JuniorTravelSummaryReport({
             <Row label="Destination" value={c.destination || "Not recorded"} />
             <Row label="Departure date" value={c.departureDate ? `${c.departureDate}${daysToDeparture !== null ? ` (${daysToDeparture} days from consultation)` : ""}` : "Not recorded"} />
             <Row label="Itinerary" value={c.itinerary || "Not recorded"} />
-            <Row label="Recommended for destination (NaTHNaC / TravelHealthPro) or Green Book risk" value={c.recommendedForDestination ? "Confirmed" : "Not confirmed"} />
+            <Row label="Recommended for destination (NaTHNaC / TravelHealthPro) or Green Book risk" value={c.recommendedAnswer === "yes" ? "Yes" : c.recommendedAnswer === "no" ? "No (outside the PGD)" : "Not recorded"} />
             <Row label="Routine UK immunisations" value={c.routineUpToDate ? "Up to date" : c.catchUpPlanDiscussed ? "Not up to date; catch-up plan discussed and GP informed" : "Not confirmed"} />
           </div>
         </div>

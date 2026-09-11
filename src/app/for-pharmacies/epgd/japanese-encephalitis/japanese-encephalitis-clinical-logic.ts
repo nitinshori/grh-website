@@ -67,11 +67,14 @@ export function evaluateJapaneseEncephalitisContraindications(
     hypersensitivityAfterFirstDose: false,
     pregnancy: false,
     lowRiskItinerary: false,
-    ageAppropriate: ageInMonths !== null && ageInMonths >= 2,
+    // Before a date of birth is entered the age is unknown, not "under 2
+    // months": the stop used to fire on a blank form (walkthrough review,
+    // 11 Sep 2026). The date of birth is required on the first step.
+    ageAppropriate: ageInMonths === null || ageInMonths >= 2,
   };
 
   // Exclusion: under 2 months of age
-  if (!contraindications.ageAppropriate) {
+  if (ageInMonths !== null && ageInMonths < 2) {
     alerts.push({
       severity: 'stop',
       code: 'AGE_UNDER_2_MONTHS_JE',

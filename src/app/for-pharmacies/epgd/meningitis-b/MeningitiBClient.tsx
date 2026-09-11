@@ -211,6 +211,31 @@ export default function MeningitiBClient() {
   }, []);
 
 
+  // Shown on every step where a stop is on screen, so the advice given and
+  // the decision reached can be recorded where the stop is raised (a travel
+  // request on the indication step, an infant under 2 months on the first
+  // step) and saved with "Save as not supplied" in the footer.
+  const exclusionBlock = hasStops ? (
+    <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded print:hidden">
+      <p className="text-sm font-semibold text-red-700 mb-2">
+        Excluded: do not vaccinate under this PGD
+      </p>
+      <p className="text-sm text-red-600">
+        Advise on alternative options and how these can be accessed, including the NHS routine programme for infants, their GP practice, and the MenACWY PGD where the request is travel related. Explain the risks of meningococcal disease and the benefit of vaccination. Document any advice given and the decision reached. Inform or refer to the GP as appropriate. Where the individual is at increased risk through asplenia, a complement disorder or complement inhibitor therapy, make the referral clear and timely.
+      </p>
+      <div className="mt-3">
+        <TextArea
+          label="Advice given and decision reached (saved with the exclusion record)"
+          value={state.summary.clinicalNotes}
+          onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "clinicalNotes", value: v })}
+          placeholder="e.g., Travel request: directed to the MenACWY PGD; GP informed."
+          required
+        />
+        <p className="text-xs text-red-700 mt-1">Then use &quot;Save as not supplied&quot; in the step footer to record the consultation.</p>
+      </div>
+    </div>
+  ) : null;
+
   // ─── Step Content Renderers ───
 
   const renderStep = () => {
@@ -229,6 +254,7 @@ export default function MeningitiBClient() {
             isBlocked={hasStops}
             getConsultationData={getConsultationData}
           >
+            {exclusionBlock}
             <PatientDetailsStep
               patient={state.patient}
               onChange={(field, value) =>
@@ -253,6 +279,7 @@ export default function MeningitiBClient() {
             isBlocked={hasStops}
             getConsultationData={getConsultationData}
           >
+            {exclusionBlock}
             <ConsentStep
               consent={state.consent}
               onChange={(field, value) =>
@@ -283,7 +310,7 @@ export default function MeningitiBClient() {
                   required
                 />
                 <Checkbox
-                  label="A person with parental responsibility, or a suitable adult authorised by them, is present for the vaccination"
+                  label="A person with parental responsibility, or a suitable adult authorised by them, is present for the vaccination (required)"
                   checked={state.medicalHistory.parentPresent}
                   onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "parentPresent", value: v })}
                   description="Inclusion criterion for a child under 16 years"
@@ -309,7 +336,8 @@ export default function MeningitiBClient() {
             getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
-              <p className="text-sm font-semibold text-navy-900">PGD indications (tick all that apply)</p>
+              {exclusionBlock}
+              <p className="text-sm font-semibold text-navy-900">PGD indications (tick all that apply; at least one is required)</p>
               <Checkbox
                 label="Routine doses missed, or presenting outside the NHS programme"
                 checked={state.riskAssessment.missedRoutineDoses}
@@ -379,7 +407,7 @@ export default function MeningitiBClient() {
                 placeholder="Indication in accordance with Green Book chapter 22"
               />
 
-              <p className="text-sm font-semibold text-red-800 pt-2">Requests this PGD does not cover (exclusions)</p>
+              <p className="text-sm font-semibold text-red-800 pt-2">Requests this PGD does not cover (exclusions): tick only where it applies</p>
               <Checkbox
                 label="Request is for travel purposes"
                 checked={state.riskAssessment.hyperendemicArea}
@@ -423,6 +451,8 @@ export default function MeningitiBClient() {
             getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
+              {exclusionBlock}
+              <p className="text-sm text-gray-600">Ask each question. Tick the box where the answer is yes; leave it unticked where the answer is no. A patient with nothing to tick can go straight to Next.</p>
               <Checkbox
                 label="Confirmed anaphylactic reaction to a previous dose of the same vaccine, to any component, or to any residue from the manufacturing process"
                 checked={state.medicalHistory.anaphylaxisHistory}
@@ -517,7 +547,7 @@ export default function MeningitiBClient() {
             canProceed={!hasStops}
             validationError={
               hasStops
-                ? "Exclusion present: cannot proceed to vaccine administration."
+                ? "Exclusion present: record the advice given and use \"Save as not supplied\". Vaccine administration cannot be reached."
                 : null
             }
             isBlocked={hasStops}
@@ -529,25 +559,7 @@ export default function MeningitiBClient() {
               <p className="text-sm text-gray-600">No alerts identified.</p>
             )}
 
-            {hasStops && (
-              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded">
-                <p className="text-sm font-semibold text-red-700 mb-2">
-                  Excluded: do not vaccinate under this PGD
-                </p>
-                <p className="text-sm text-red-600">
-                  Advise on alternative options and how these can be accessed, including the NHS routine programme for infants, their GP practice, and the MenACWY PGD where the request is travel related. Explain the risks of meningococcal disease and the benefit of vaccination. Document any advice given and the decision reached. Inform or refer to the GP as appropriate. Where the individual is at increased risk through asplenia, a complement disorder or complement inhibitor therapy, make the referral clear and timely.
-                </p>
-                <div className="mt-3">
-                  <TextArea
-                    label="Advice given and decision reached (saved with the exclusion record)"
-                    value={state.summary.clinicalNotes}
-                    onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "clinicalNotes", value: v })}
-                    placeholder="e.g., Travel request: directed to the MenACWY PGD; GP informed."
-                  />
-                  <p className="text-xs text-red-700 mt-1">Then use "Save as not supplied" below to record the consultation.</p>
-                </div>
-              </div>
-            )}
+            <div className="mt-4">{exclusionBlock}</div>
           </StepWrapper>
         );
 
@@ -566,6 +578,7 @@ export default function MeningitiBClient() {
             getConsultationData={getConsultationData}
           >
             <div className="space-y-6">
+              {exclusionBlock}
               <SelectInput
                 label="Product"
                 value={state.vaccineAdmin.product}
@@ -773,8 +786,10 @@ export default function MeningitiBClient() {
             getConsultationData={getConsultationData}
           >
             <div className="space-y-4">
+              {exclusionBlock}
+              <p className="text-sm text-gray-600">Tick each item once it has been done. Items marked required must be ticked before Next.</p>
               <Checkbox
-                label="Observed for 15 minutes after vaccination, seated, and the observation period completed"
+                label="Observed for 15 minutes after vaccination, seated, and the observation period completed (required)"
                 checked={state.postVaccine.observationCompleted}
                 onChange={(v) =>
                   dispatch({ type: "UPDATE_POST_VACCINE", field: "observationCompleted", value: v })
@@ -783,7 +798,7 @@ export default function MeningitiBClient() {
                 required
               />
 
-              <p className="text-sm font-semibold text-navy-900 pt-2">Reactions observed during the observation period</p>
+              <p className="text-sm font-semibold text-navy-900 pt-2">Reactions observed during the observation period (tick any seen; none is a valid answer)</p>
 
               <Checkbox
                 label="Injection site reaction observed"
@@ -837,7 +852,7 @@ export default function MeningitiBClient() {
               <p className="text-sm font-semibold text-navy-900 pt-2">Counselling and written information (PGD)</p>
 
               <Checkbox
-                label="Patient information leaflet offered and written record given (product, date, and when the next dose is due)"
+                label="Patient information leaflet offered and written record given (product, date, and when the next dose is due) (required)"
                 checked={state.postVaccine.writtenRecordGiven}
                 onChange={(v) =>
                   dispatch({ type: "UPDATE_POST_VACCINE", field: "writtenRecordGiven", value: v })
@@ -846,7 +861,7 @@ export default function MeningitiBClient() {
               />
 
               <Checkbox
-                label="Course must be completed for full protection; next dose date confirmed"
+                label="Course must be completed for full protection; next dose date confirmed (required)"
                 checked={state.counselling.doseScheduleAdvice}
                 onChange={(v) =>
                   dispatch({ type: "UPDATE_COUNSELLING", field: "doseScheduleAdvice", value: v })
@@ -856,7 +871,7 @@ export default function MeningitiBClient() {
               />
 
               <Checkbox
-                label="Expected side effects and their management explained"
+                label="Expected side effects and their management explained (required)"
                 checked={state.counselling.commonReactionsAdvice}
                 onChange={(v) =>
                   dispatch({ type: "UPDATE_COUNSELLING", field: "commonReactionsAdvice", value: v })
@@ -870,7 +885,7 @@ export default function MeningitiBClient() {
               />
 
               <Checkbox
-                label="Injection site reactions explained"
+                label="Injection site reactions explained (optional)"
                 checked={state.counselling.injectionSiteAdvice}
                 onChange={(v) =>
                   dispatch({ type: "UPDATE_COUNSELLING", field: "injectionSiteAdvice", value: v })
@@ -878,7 +893,7 @@ export default function MeningitiBClient() {
               />
 
               <Checkbox
-                label="Side effects explained and Yellow Card reporting counselled"
+                label="Side effects explained and Yellow Card reporting counselled (required)"
                 checked={state.counselling.sideEffectsExplained && state.postVaccine.yellowCardAdvice}
                 onChange={(v) => {
                   dispatch({ type: "UPDATE_COUNSELLING", field: "sideEffectsExplained", value: v });
@@ -890,7 +905,7 @@ export default function MeningitiBClient() {
 
               {infantUnderOne && state.vaccineAdmin.product === "bexsero" && (
                 <Checkbox
-                  label="Infant under one year: paracetamol schedule explained and written paracetamol advice given"
+                  label="Infant under one year: paracetamol schedule explained and written paracetamol advice given (required)"
                   checked={state.postVaccine.paracetamolAdvice}
                   onChange={(v) =>
                     dispatch({
@@ -905,7 +920,7 @@ export default function MeningitiBClient() {
               )}
               {!(infantUnderOne && state.vaccineAdmin.product === "bexsero") && (
                 <Checkbox
-                  label="Paracetamol advice given (if needed)"
+                  label="Paracetamol advice given (optional at this age)"
                   checked={state.postVaccine.paracetamolAdvice}
                   onChange={(v) =>
                     dispatch({
@@ -919,7 +934,7 @@ export default function MeningitiBClient() {
               )}
 
               <Checkbox
-                label="Vaccine does not protect against all causes of meningitis and septicaemia; signs of meningococcal disease explained"
+                label="Vaccine does not protect against all causes of meningitis and septicaemia; signs of meningococcal disease explained (required)"
                 checked={state.postVaccine.meningitisSignsAdvice && state.counselling.meningitisWarningSignsAdvice}
                 onChange={(v) => {
                   dispatch({ type: "UPDATE_POST_VACCINE", field: "meningitisSignsAdvice", value: v });
@@ -930,7 +945,7 @@ export default function MeningitiBClient() {
               />
 
               <Checkbox
-                label="Next dose in the course booked"
+                label={state.vaccineAdmin.courseComplete ? "Next dose in the course booked (not needed: course complete with this dose)" : "Next dose in the course booked (required)"}
                 checked={state.postVaccine.reviewScheduleAdvice}
                 onChange={(v) =>
                   dispatch({
@@ -961,6 +976,7 @@ export default function MeningitiBClient() {
             onNewConsultation={handleNewConsultation}
           >
             <div className="space-y-4 mb-6 print:hidden">
+              {exclusionBlock}
               <TextInput
                 label="Pharmacist name"
                 value={state.summary.pharmacistName}
@@ -1199,7 +1215,7 @@ function MeningitiBSummaryReport({
 
       {state.summary.clinicalNotes && (
         <>
-          <SectionHeader>Additional Notes</SectionHeader>
+          <SectionHeader>{hasHardStops(state.alerts) ? "Advice Given and Decision Reached" : "Additional Notes"}</SectionHeader>
           <p className="text-xs text-gray-700 whitespace-pre-wrap">
             {state.summary.clinicalNotes}
           </p>

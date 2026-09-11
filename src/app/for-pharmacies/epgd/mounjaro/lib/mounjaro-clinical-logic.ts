@@ -234,6 +234,33 @@ export function getAllAlerts(state: MounjaroConsultationState): ClinicalAlert[] 
     });
   }
 
+  // Inclusion BMI. Previously only the Weight Assessment validator refused
+  // Next, so an excluded patient had no "Save as not supplied" and no stop on
+  // screen. Judged on today's BMI for a new start or a restart after more than
+  // 2 months, otherwise on the starting BMI.
+  {
+    const gateToday = bmiGateAppliesToday(state);
+    const gatingBmi = gateToday ? state.weightAssessment.bmi : state.weightAssessment.startingBMI;
+    const which = gateToday ? "BMI" : "Starting BMI";
+    if (gatingBmi !== null && gatingBmi < 27) {
+      alerts.push({
+        severity: "stop",
+        code: "BMI_BELOW_THRESHOLD",
+        message: `${which} ${gatingBmi.toFixed(1)} is below 27`,
+        detail: "Exclusion. Inclusion needs a BMI of 30 or above, or 27 or above with at least one weight-related comorbidity. Refer.",
+      });
+    } else if (gatingBmi !== null && gatingBmi < 30 && state.weightAssessment.hasComorbidity === "no") {
+      // Fires only on the pharmacist's answer "No"; a blank answer or an
+      // empty tick list is held by the Weight Assessment validator.
+      alerts.push({
+        severity: "stop",
+        code: "BMI_27_TO_30_NO_COMORBIDITY",
+        message: `${which} ${gatingBmi.toFixed(1)} (27 to below 30) and the patient has no weight-related comorbidity`,
+        detail: "Inclusion at BMI 27 to below 30 needs at least one weight-related comorbidity (hypertension, type 2 diabetes, pre-diabetes, dyslipidaemia, OSA, established cardiovascular disease). The patient has none, so is excluded. Refer.",
+      });
+    }
+  }
+
   // ─── CAUTION Alerts (cautions row) ───
 
   if (state.medicalHistory.depression && !state.medicalHistory.mentalHealthOversightAbsent) {

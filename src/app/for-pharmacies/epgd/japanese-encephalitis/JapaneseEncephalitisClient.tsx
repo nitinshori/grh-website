@@ -451,7 +451,9 @@ export default function JapaneseEncephalitisClient({
         break;
       }
       case 4: {
-        const result = validateContraindications(state.contraindications);
+        // Live values: the copy held in state was never updated, so this
+        // step could not be passed at all (walkthrough review, 11 Sep 2026).
+        const result = validateContraindications(live.contraindications);
         errors.push(...result.errors);
         break;
       }
@@ -496,7 +498,7 @@ export default function JapaneseEncephalitisClient({
       return newErrors;
     });
     return true;
-  }, [state, validationErrors, patientAge, live.alerts]);
+  }, [state, validationErrors, patientAge, live.alerts, live.contraindications]);
 
   const handleNextStep = useCallback((): void => {
     if (!validateStep(state.step)) {
@@ -812,12 +814,14 @@ export default function JapaneseEncephalitisClient({
                     value={state.screening.destinationCountry}
                     onChange={handleDestinationChange}
                     placeholder="e.g., Thailand, Cambodia, Indonesia"
+                    required
                   />
                   <TextInput
                     label="Risk area (rural/urban, rice paddies, etc)"
                     value={state.screening.riskArea}
                     onChange={handleRiskAreaChange}
                     placeholder="e.g., Rural areas, rice farming region"
+                    required
                   />
                   <SelectInput
                     label="Green Book risk category (PGD inclusion and exclusion criteria)"
@@ -835,7 +839,7 @@ export default function JapaneseEncephalitisClient({
                     required
                   />
                   <SelectInput
-                    label="Season of travel"
+                    label="Season of travel (optional)"
                     value={state.screening.seasonOfTravel}
                     onChange={handleSeasonChange}
                     options={[
@@ -850,19 +854,21 @@ export default function JapaneseEncephalitisClient({
                     type="date"
                     value={state.screening.departureDate}
                     onChange={handleDepartureDateChange}
+                    required
                   />
                   <TextInput
                     label="Duration of travel"
                     value={state.screening.travelDuration}
                     onChange={handleTravelDurationChange}
                     placeholder="e.g., 2 weeks, 1 month"
+                    required
                   />
                   {daysToDeparture !== null && (
                     <p className="text-xs text-gray-600">{daysToDeparture < 0 ? `Departure date is ${-daysToDeparture} days in the past: check the dates` : `${daysToDeparture} days to departure`}</p>
                   )}
                   {latePresenter ? (
                     <Checkbox
-                      label="Insufficient time to complete the primary course before travel: risk assessed, patient told protection will be incomplete, course to be completed on return"
+                      label="Insufficient time to complete the primary course before travel: risk assessed, patient told protection will be incomplete, course to be completed on return (required)"
                       checked={state.screening.insufficientTimeAcknowledged}
                       onChange={(v) => setScreening({ insufficientTimeAcknowledged: v, sufficientTimeBeforeTravel: false })}
                       description="Under 14 days to departure: even the rapid course (day 0 and day 7) cannot be completed a week before exposure. The second dose may still be given before exposure and the course should be completed rather than abandoned."
@@ -871,8 +877,8 @@ export default function JapaneseEncephalitisClient({
                   ) : (
                     <Checkbox
                       label={daysToDeparture !== null && daysToDeparture < 35
-                        ? "Sufficient time before travel to complete the primary course using the rapid course (day 0 and day 7)"
-                        : "Sufficient time before travel to complete the primary course"}
+                        ? "Sufficient time before travel to complete the primary course using the rapid course (day 0 and day 7) (required)"
+                        : "Sufficient time before travel to complete the primary course (required)"}
                       checked={state.screening.sufficientTimeBeforeTravel}
                       onChange={(v) => setScreening({ sufficientTimeBeforeTravel: v, insufficientTimeAcknowledged: false })}
                       description={daysToDeparture !== null && daysToDeparture < 35
@@ -900,6 +906,7 @@ export default function JapaneseEncephalitisClient({
                     value={state.screening.activitiesDetails}
                     onChange={handleActivitiesDetailsChange}
                     placeholder="e.g., Rice farming, cycling, hiking, evening activities"
+                    required
                   />
                 )}
 
@@ -916,6 +923,7 @@ export default function JapaneseEncephalitisClient({
           {state.step === 3 && (
             <div className="space-y-6">
               <h2 className="text-2xl font-bold text-gray-900">Medical History</h2>
+              <p className="text-sm text-gray-600">Ask each question. Tick the box where the answer is yes; leave it unticked where the answer is no. A patient with nothing to tick can go straight to Next.</p>
 
               <div className="space-y-4">
                 <NumberInput
@@ -965,6 +973,7 @@ export default function JapaneseEncephalitisClient({
                     value={state.screening.illnessDetails}
                     onChange={handleIllnessDetailsChange}
                     placeholder="e.g., Cough, cold, sore throat..."
+                    required
                   />
                 )}
 
@@ -980,6 +989,7 @@ export default function JapaneseEncephalitisClient({
                     value={state.screening.immunosuppressedDetails}
                     onChange={handleImmunosuppressedDetailsChange}
                     placeholder="e.g., HIV, cancer treatment, immunosuppressant medication..."
+                    required
                   />
                 )}
 
@@ -1014,55 +1024,56 @@ export default function JapaneseEncephalitisClient({
               <h2 className="text-2xl font-bold text-gray-900">
                 Contraindications Review
               </h2>
+              <p className="text-sm text-gray-600">Read-only summary of what was recorded on the earlier steps. Go back to change an answer.</p>
               <div className="bg-gray-50 p-4 rounded-lg space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-700">Age appropriate (2+ months):</span>
                   <span
                     className={`font-semibold ${
-                      state.contraindications.ageAppropriate
+                      live.contraindications.ageAppropriate
                         ? 'text-green-600'
                         : 'text-red-600'
                     }`}
                   >
-                    {state.contraindications.ageAppropriate ? 'OK' : 'NOT OK'}
+                    {live.contraindications.ageAppropriate ? 'OK' : 'NOT OK'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-700">Acute severe febrile illness:</span>
                   <span
                     className={`font-semibold ${
-                      state.contraindications.severeFebrileIllness
+                      live.contraindications.severeFebrileIllness
                         ? 'text-red-600'
                         : 'text-green-600'
                     }`}
                   >
-                    {state.contraindications.severeFebrileIllness
+                    {live.contraindications.severeFebrileIllness
                       ? 'POSTPONE'
                       : 'OK'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-700">Anaphylaxis to Ixiaro or a component:</span>
-                  <span className={`font-semibold ${state.contraindications.severeAllergy ? 'text-red-600' : 'text-green-600'}`}>
-                    {state.contraindications.severeAllergy ? 'EXCLUDED' : 'OK'}
+                  <span className={`font-semibold ${live.contraindications.severeAllergy ? 'text-red-600' : 'text-green-600'}`}>
+                    {live.contraindications.severeAllergy ? 'EXCLUDED' : 'OK'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-700">Hypersensitivity after first dose:</span>
-                  <span className={`font-semibold ${state.contraindications.hypersensitivityAfterFirstDose ? 'text-red-600' : 'text-green-600'}`}>
-                    {state.contraindications.hypersensitivityAfterFirstDose ? 'EXCLUDED, REFER' : 'OK'}
+                  <span className={`font-semibold ${live.contraindications.hypersensitivityAfterFirstDose ? 'text-red-600' : 'text-green-600'}`}>
+                    {live.contraindications.hypersensitivityAfterFirstDose ? 'EXCLUDED, REFER' : 'OK'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-700">Pregnancy:</span>
-                  <span className={`font-semibold ${state.contraindications.pregnancy ? 'text-red-600' : 'text-green-600'}`}>
-                    {state.contraindications.pregnancy ? 'EXCLUDED, REFER' : 'OK'}
+                  <span className={`font-semibold ${live.contraindications.pregnancy ? 'text-red-600' : 'text-green-600'}`}>
+                    {live.contraindications.pregnancy ? 'EXCLUDED, REFER' : 'OK'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-700">Low risk itinerary (vaccination not recommended):</span>
-                  <span className={`font-semibold ${state.contraindications.lowRiskItinerary ? 'text-red-600' : 'text-green-600'}`}>
-                    {state.contraindications.lowRiskItinerary ? 'EXCLUDED' : 'OK'}
+                  <span className={`font-semibold ${live.contraindications.lowRiskItinerary ? 'text-red-600' : 'text-green-600'}`}>
+                    {live.contraindications.lowRiskItinerary ? 'EXCLUDED' : 'OK'}
                   </span>
                 </div>
               </div>
@@ -1092,7 +1103,7 @@ export default function JapaneseEncephalitisClient({
                 </div>
 
                 <Checkbox
-                  label="Adrenaline 1:1000 injection immediately available, with a written anaphylaxis protocol, BEFORE the vaccine is given"
+                  label="Adrenaline 1:1000 injection immediately available, with a written anaphylaxis protocol, BEFORE the vaccine is given (required)"
                   checked={state.administration.anaphylaxisKitChecked}
                   onChange={handleAnaphylaxisKitChange}
                   description="Required whenever a vaccine is administered under this PGD; protocol consistent with current Resuscitation Council UK guidance. Confirmed here, before the batch is drawn up, not retrospectively."
@@ -1100,11 +1111,12 @@ export default function JapaneseEncephalitisClient({
                 />
 
                 <TextInput
-                  label="Batch number"
+                  label={state.administration.anaphylaxisKitChecked ? "Batch number" : "Batch number (locked until adrenaline is confirmed above)"}
                   value={state.administration.batchNumber}
                   onChange={handleBatchChange}
                   placeholder="e.g., ABC123456"
                   disabled={!state.administration.anaphylaxisKitChecked}
+                  required
                 />
 
                 <TextInput
@@ -1112,6 +1124,7 @@ export default function JapaneseEncephalitisClient({
                   type="date"
                   value={state.administration.expiryDate}
                   onChange={handleExpiryChange}
+                  required
                 />
 
                 <SelectInput
@@ -1124,6 +1137,7 @@ export default function JapaneseEncephalitisClient({
                     { value: 'left-thigh', label: 'Left anterolateral thigh' },
                     { value: 'right-thigh', label: 'Right anterolateral thigh' },
                   ]}
+                  required
                 />
 
                 <SelectInput
@@ -1145,6 +1159,7 @@ export default function JapaneseEncephalitisClient({
 
                 <SelectInput
                   label="Dose number"
+                  required
                   value={state.administration.doseNumber}
                   onChange={handleDoseNumberChange}
                   options={[
@@ -1156,13 +1171,14 @@ export default function JapaneseEncephalitisClient({
                 />
 
                 <SelectInput
-                  label="Schedule"
+                  label="Schedule (for a booster, select the schedule used for the primary course)"
                   value={state.administration.schedule}
                   onChange={handleScheduleChange}
                   options={[
                     { value: 'standard', label: 'Conventional (day 0 and day 28)' },
                     { value: 'accelerated', label: 'Rapid (day 0 and day 7), licensed for adults 18 to 64 only' },
                   ]}
+                  required
                 />
                 {state.administration.schedule === 'accelerated' && rapidOffLabel && (
                   <div className="p-3 rounded-lg border border-amber-300 bg-amber-50">
@@ -1188,6 +1204,7 @@ export default function JapaneseEncephalitisClient({
                   value={state.administration.administeredBy}
                   onChange={handleAdministeredByChange}
                   placeholder="Pharmacist name"
+                  required
                 />
 
                 <TextInput
@@ -1195,6 +1212,7 @@ export default function JapaneseEncephalitisClient({
                   type="time"
                   value={state.administration.timeAdministered}
                   onChange={handleTimeChange}
+                  required
                 />
               </div>
             </div>
@@ -1213,6 +1231,7 @@ export default function JapaneseEncephalitisClient({
                 <div className="space-y-4">
                   <SelectInput
                     label="Observation period"
+                    required
                     value={state.postVaccineObs.observationPeriod}
                     onChange={handleObservationPeriodChange}
                     options={[
@@ -1222,7 +1241,7 @@ export default function JapaneseEncephalitisClient({
                   />
 
                   <Checkbox
-                    label="Observation period completed, patient seated"
+                    label="Observation period completed, patient seated (required)"
                     checked={state.postVaccineObs.observationCompleted}
                     onChange={handleObservationCompletedChange}
                     description="Observe every patient for 15 minutes after vaccination, seated, and record that the observation period was completed. Procedures in place to prevent injury from a vasovagal faint."
@@ -1233,7 +1252,7 @@ export default function JapaneseEncephalitisClient({
                     label="Patient is well after vaccination"
                     checked={state.postVaccineObs.patientWell}
                     onChange={handlePatientWellChange}
-                    description="Patient is comfortable with no symptoms"
+                    description="Patient is comfortable with no symptoms. Tick this, or tick the adverse reaction box below and describe it."
                   />
 
                   <Checkbox
@@ -1249,6 +1268,7 @@ export default function JapaneseEncephalitisClient({
                       value={state.postVaccineObs.reactionDetails}
                       onChange={handleReactionDetailsChange}
                       placeholder="e.g., Rash, swelling, difficulty breathing..."
+                      required
                     />
                   )}
                 </div>
@@ -1259,7 +1279,7 @@ export default function JapaneseEncephalitisClient({
                   Counselling Given
                 </h3>
                 <p className="text-gray-600 mb-4">
-                  Confirm all advice points have been provided to patient:
+                  Tick each advice point once it has been given. All are required.
                 </p>
                 <div className="space-y-4">
                   <Checkbox
@@ -1330,6 +1350,17 @@ export default function JapaneseEncephalitisClient({
 
           {state.step === 7 && (
             <>
+              <div className="mb-6 space-y-4 p-4 rounded-lg border border-gray-200 bg-gray-50 print:hidden">
+                <p className="text-sm font-semibold text-gray-900">Pharmacist declaration</p>
+                <p className="text-xs text-gray-600">Filled from your profile where available. Name and GPhC number are required before the record can be saved.</p>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <TextInput label="Pharmacist name" value={state.summary.pharmacistName} onChange={(v) => handleSummaryChange('pharmacistName', v)} required />
+                  <TextInput label="GPhC registration number" value={state.summary.pharmacistGPhC} onChange={(v) => handleSummaryChange('pharmacistGPhC', v)} required />
+                  <TextInput label="Pharmacy name" value={state.summary.pharmacyName} onChange={(v) => handleSummaryChange('pharmacyName', v)} />
+                  <TextInput label="Pharmacy address" value={state.summary.pharmacyAddress} onChange={(v) => handleSummaryChange('pharmacyAddress', v)} />
+                </div>
+                <TextArea label="Clinical notes (optional)" value={state.summary.clinicalNotes} onChange={(v) => handleSummaryChange('clinicalNotes', v)} rows={3} placeholder="Anything else worth recording" />
+              </div>
               <JapaneseEncephalitisSummaryReport state={recordState} onPrint={handlePrint} blocked={hasStops} nextDoseNote={nextDose.note} />
               {hasStops && !excludedRecord && (
                 <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg print:hidden">

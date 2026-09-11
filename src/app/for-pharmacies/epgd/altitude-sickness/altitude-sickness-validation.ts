@@ -64,31 +64,38 @@ export function validateTravelAssessmentStep(
   travel: ASTravelAssessment
 ): string | null {
   if (!travel.destinationCountry.trim())
-    return 'Destination country is required';
+    return "Type the 'Destination Country'";
   if (!travel.destinationAltitude)
-    return 'Destination altitude (in metres) is required';
+    return "Enter the 'Destination Altitude (metres)'";
   if (travel.destinationAltitude <= 2500)
-    return 'This PGD covers altitudes above 2,500 metres only';
+    return "'Destination Altitude' must be above 2,500 metres: this PGD covers altitudes above 2,500 metres only";
+  if (travel.destinationAltitude > 9000)
+    return "'Destination Altitude' above 9,000 metres cannot be right: check the figure";
   if (!travel.purpose)
-    return 'Confirm whether the patient is requesting prevention or symptomatic treatment of AMS';
-  if (!travel.departureDate) return 'Departure date is required';
+    return "Select the 'Reason for request': prevention, or symptomatic treatment of AMS";
+  if (!travel.departureDate) return "Enter the 'Departure Date'";
+  {
+    const today = new Date().toISOString().split('T')[0];
+    if (travel.purpose === 'prevention' && travel.departureDate < today)
+      return "'Departure Date' is in the past: prevention starts 1 to 2 days before ascent. Check the date";
+  }
   if (!travel.ascentRate)
-    return 'Ascent rate (slow/moderate/rapid) is required';
+    return "Select the 'Ascent Rate' (slow, moderate or rapid)";
 
   if (travel.purpose === 'prevention') {
     if (travel.leadInDays === null)
-      return 'Lead-in days before ascent (1 or 2) are required to calculate the prevention course';
+      return "Select the 'Lead-in days before ascent' (1 or 2) to calculate the prevention course";
     if (travel.daysAscending === null || travel.daysAscending <= 0)
-      return 'Days ascending are required to calculate the prevention course';
+      return "Enter the 'Days ascending' to calculate the prevention course";
     if (travel.leadInDays + travel.daysAscending + 2 > 14)
       return 'The prevention course would exceed the PGD maximum of 14 days per supply without review. Refer, or supply for the first 14 days only and arrange review';
   }
 
   if (travel.acclimatisationPlan && !travel.acclimatisationDays)
-    return 'If acclimatisation plan exists, specify number of days';
+    return "'Acclimatisation Plan' is ticked: enter the 'Days at Intermediate Altitude'";
 
   if (travel.previousAltitudeSickness && !travel.previousSicknessDetails)
-    return 'If previous altitude sickness, provide details';
+    return "'Previous Altitude Sickness' is ticked: type the 'Details of Previous Illness'";
 
   return null;
 }
@@ -101,7 +108,7 @@ export function validateMedicalHistoryStep(
   // Every exclusion on this page defaults to absent, so the pharmacist must
   // confirm every question was actually asked.
   if (!medical.allQuestionsAsked)
-    return 'Confirm that every question on this page was asked and that none applies unless ticked';
+    return "Tick 'I have asked the patient every question on this page' at the bottom of the page";
   return null;
 }
 
@@ -111,9 +118,9 @@ export function validateMedicationsStep(
   medications: ASMedications
 ): string | null {
   if (medications.takesOtherDrugs && !medications.otherDrugsDetails.trim())
-    return 'Please specify other medications being taken';
+    return "'Other Medications' is ticked: type them in 'Please Specify Other Medications'";
   if (!medications.allQuestionsAsked)
-    return 'Confirm that every medicine on this page was asked about and that none applies unless ticked';
+    return "Tick 'I have asked about every medicine on this page' at the bottom of the page";
 
   return null;
 }
@@ -127,9 +134,9 @@ export function validateMedicineSelectionStep(
   medications: ASMedications
 ): string | null {
   if (!medicine.selectedMedicine)
-    return 'Please confirm acetazolamide selection';
+    return "Select 'Medicine Choice': acetazolamide 250 mg tablets";
   if (!medicine.brand.trim())
-    return 'Name and brand of the product supplied is required (PGD records list)';
+    return "Type the 'Brand supplied' (name and brand of the product, PGD records list)";
 
   // Dose, start and continuation are the document's for the purpose; they
   // are set when the medicine is chosen and must still match.
@@ -143,7 +150,7 @@ export function validateMedicineSelectionStep(
     return 'The recorded regimen no longer matches the PGD for this purpose (the reason for request changed): re-select the medicine';
 
   if (medicine.quantityTablets === null || medicine.quantityTablets <= 0)
-    return 'Quantity supplied (tablets) is required';
+    return "Enter the 'Quantity supplied (tablets)'";
   const purpose = travel.purpose;
   const max = maxQuantityTablets(purpose, medicine.includeTreatmentCourse);
   if (purpose === 'treatment' && medicine.includeTreatmentCourse)
@@ -157,9 +164,9 @@ export function validateMedicineSelectionStep(
   if (medicine.quantityTablets < calc.total)
     return `Quantity supplied (${medicine.quantityTablets}) is below the calculated course of ${calc.total} tablets`;
   if (!medicine.offLabelExplained)
-    return 'Confirm the patient was told that use for AMS is outside the marketing authorisation (off-label)';
+    return "Tick 'Off-label use explained and consented'";
   if (!medicine.reason.trim())
-    return 'Clinical reason for selection is required';
+    return "Type the 'Clinical Reason for Selection'";
 
   return null;
 }
@@ -181,7 +188,7 @@ export function validateCounsellingStep(
     !counselling.descentAdvice ||
     !counselling.medicineCardProvided
   ) {
-    return 'All counselling points must be addressed and confirmed';
+    return "Tick every counselling point on this page (each one must be discussed with the patient)";
   }
 
   return null;
@@ -193,10 +200,10 @@ export function validateSummaryStep(
   summary: ASConsultationSummary
 ): string | null {
   if (!summary.pharmacistName.trim())
-    return 'Pharmacist name is required';
+    return "Type the 'Pharmacist Name'";
   if (!summary.pharmacistGPhC.trim())
-    return 'GPhC registration number is required';
-  if (!summary.pharmacyName.trim()) return 'Pharmacy name is required';
+    return "Type the 'GPhC Registration Number'";
+  if (!summary.pharmacyName.trim()) return "Type the 'Pharmacy Name'";
 
   return null;
 }

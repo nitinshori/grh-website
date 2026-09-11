@@ -167,14 +167,25 @@ export function getAllAlerts(state: MMRConsultationState): ClinicalAlert[] {
     });
   }
 
+  // Blood products or immunoglobulin in the previous 3 months, recorded as
+  // deferred: no vaccine is given today. Before this the tool carried a
+  // "deferred" patient straight through to vaccine administration
+  // (walkthrough review, 11 Sep 2026).
+  if (state.medicalHistory.recentBloodProducts && state.medicalHistory.bloodProductsAction === "deferred") {
+    alerts.push({
+      severity: "stop",
+      code: "BLOOD_PRODUCTS_DEFERRED",
+      message: "Vaccination deferred: blood products or immunoglobulin in the previous 3 months",
+      detail: "Recorded as deferred until 3 months after the blood product or immunoglobulin. No vaccine today; save the consultation as not supplied and advise when to return.",
+    });
+  }
+
   // Blood products or immunoglobulin in the previous 3 months (PGD v005 caution)
-  if (state.medicalHistory.recentBloodProducts) {
+  if (state.medicalHistory.recentBloodProducts && state.medicalHistory.bloodProductsAction !== "deferred") {
     const which =
-      state.medicalHistory.bloodProductsAction === "deferred"
-        ? " Recorded: deferred."
-        : state.medicalHistory.bloodProductsAction === "given-repeat-3-months"
-          ? " Recorded: protection needed now, given and to be repeated after 3 months."
-          : " Record which applied.";
+      state.medicalHistory.bloodProductsAction === "given-repeat-3-months"
+        ? " Recorded: protection needed now, given and to be repeated after 3 months."
+        : " Record which applied.";
     alerts.push({
       severity: "caution",
       code: "RECENT_BLOOD_PRODUCTS",

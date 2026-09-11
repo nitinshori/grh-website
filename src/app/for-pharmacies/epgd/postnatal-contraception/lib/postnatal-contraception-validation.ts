@@ -32,6 +32,9 @@ export function validateStep(step: number, state: PostnatalContraceptionState): 
       if (state.assessment.daysPostpartum > 21 && state.assessment.unprotectedSexSinceDay21 === null) {
         return "Answer whether there has been unprotected intercourse since day 21 (required from day 21)";
       }
+      if (state.assessment.unprotectedSexSinceDay21 === true && state.assessment.negativeTest21DaysAfterLastUpsi === null) {
+        return "Answer whether there was a negative pregnancy test 21 days after the last episode of unprotected intercourse";
+      }
       return null;
 
     case 3: // Medical History

@@ -116,7 +116,8 @@ export interface ChestState {
   };
   presentation: {
     coughDurationDays: number | null;
-    purulentSputum: boolean;
+    /** Yes/No with no default: the inclusion turns on it, so it is answered, never assumed from an unticked box. */
+    purulentSputum: "" | "yes" | "no";
     fever: boolean;
     breathless: boolean;
     wheeze: boolean;
@@ -184,7 +185,9 @@ export interface ChestState {
     onWarfarin: boolean;
     onDoac: boolean;
     renalFunctionAsked: boolean;
-    renalFunctionAnswer: string;
+    /** The patient's answer about kidney function (select), plus free-text detail. */
+    renalFunctionAnswer: "" | "No known kidney problems" | "Patient does not know; no reason to suspect impairment" | "Known kidney impairment (see detail)";
+    renalFunctionDetail: string;
     other: string;
   };
   treatment: {
@@ -240,7 +243,7 @@ function initialState(): ChestState {
     consent16: { basis: "", detail: "" },
     presentation: {
       coughDurationDays: null,
-      purulentSputum: false,
+      purulentSputum: "",
       fever: false,
       breathless: false,
       wheeze: false,
@@ -304,6 +307,7 @@ function initialState(): ChestState {
       onDoac: false,
       renalFunctionAsked: false,
       renalFunctionAnswer: "",
+      renalFunctionDetail: "",
       other: "",
     },
     treatment: { antibiotic: "", firstLineUnsuitableReason: "", batch: "", expiry: "" },
@@ -389,7 +393,8 @@ export interface Alert {
   detail: string;
 }
 
-const RED_FLAG_LABELS: [keyof ChestState["redFlags"], string, string][] = [
+export const RED_FLAG_LABELS: [keyof ChestState["redFlags"], string, string][] = [
+  // (label, referral detail)
   ["focalChestSigns", "Focal chest signs on examination (dull percussion note, bronchial breathing, coarse crackles that do not clear with coughing)", "Focal signs suggest pneumonia rather than bronchitis. Refer the same day for medical assessment."],
   ["suspectedPneumonia", "Suspected pneumonia: focal chest signs with any systemic feature", "Pneumonia is not covered by this PGD. Refer the same day."],
   ["sepsisFeatures", "Any feature of sepsis", "Refer immediately. Call 999 if the patient looks seriously unwell."],
@@ -407,6 +412,20 @@ const RED_FLAG_LABELS: [keyof ChestState["redFlags"], string, string][] = [
   ["persistentVomiting", "Persistent vomiting", "Refer, and note that oral antibiotics may not be retained."],
   ["smokerNewOrChangedCough", "Current or former smoker with a cough over 3 weeks, or a smoker over 45 with a new or changed cough or voice change", "Exclusion. Refer in line with the lung cancer referral guidance."],
 ];
+
+export const EXCLUSION_LABELS: Record<keyof ChestState["exclusions"], string> = {
+  pregnancy: "Pregnant",
+  breastfeeding: "Breastfeeding",
+  antibioticAlreadyTaken: "An antibiotic already taken for this episode",
+  hypersensitivityToChosenAgent: "Hypersensitivity to the intended agent or its excipients",
+  unableToTakeOral: "Unable to take or retain oral medication",
+  severeHepaticImpairment: "Known severe hepatic impairment",
+  significantRenalImpairment: "Known significant renal impairment",
+  isotretinoin: "Concurrent isotretinoin",
+  mononucleosisOrALL: "Infectious mononucleosis or acute lymphoblastic leukaemia",
+  qtProlongation: "Known QT prolongation, or concurrent QT-prolonging medicines",
+  electrolyteDisturbance: "Known electrolyte disturbance",
+};
 
 const isClari = (a: Antibiotic) => a === "clarithromycin";
 
@@ -483,7 +502,7 @@ export function ChestServiceClient() {
     const p = state.presentation;
     const comorbidityMet = comorbidities.length > 0;
     const durationMet = p.coughDurationDays !== null && p.coughDurationDays > 14;
-    const met = p.purulentSputum && (comorbidityMet || durationMet);
+    const met = p.purulentSputum === "yes" && (comorbidityMet || durationMet);
     const feature = !met
       ? "Not met"
       : comorbidityMet && durationMet
@@ -628,10 +647,13 @@ export function ChestServiceClient() {
     }
 
     // ── Inclusion criteria. Recorded, not assumed. Raised on the
-    // Presentation step itself once its required fields are in, and enforced
-    // on every later step.
+    // Presentation step itself once every inclusion question has been
+    // answered (sputum Yes/No, duration, comorbidities or none confirmed),
+    // and enforced on every later step. A blank answer never raises it.
     const presentationEntered =
-      presentation.coughDurationDays !== null && (presentation.noComorbidity || presentation.comorbidities.length > 0 || isOver65);
+      presentation.purulentSputum !== "" &&
+      presentation.coughDurationDays !== null &&
+      (presentation.noComorbidity || presentation.comorbidities.length > 0 || isOver65);
     if ((state.currentStep > STEP_PRESENTATION || presentationEntered) && !inclusion.met) {
       out.push({
         code: "inclusion",
@@ -641,20 +663,9 @@ export function ChestServiceClient() {
           "This PGD requires PURULENT SPUTUM (yellow or green) AND EITHER a higher-risk comorbidity (chronic lung disease including COPD and asthma, heart failure, diabetes, chronic kidney or liver disease, immunosuppression, or age 65 and over) OR symptoms persisting beyond 14 days. Most acute cough is viral: give self-care and safety-netting advice, which is a legitimate and common outcome for this service.",
       });
     }
-    // Driven by the calculated age, not by which comorbidity was picked.
-    if (
-      (state.currentStep > STEP_PRESENTATION || presentationEntered) &&
-      isOver65 &&
-      !presentation.lowerThresholdOver65Considered
-    ) {
-      out.push({
-        code: "over65",
-        severity: "stop",
-        message: "Age 65 and over: record that the lower referral threshold was considered",
-        detail:
-          "In any patient 65 or over, have a lower threshold for referral, take the whole picture into account rather than the numbers alone, and refer if anything about the presentation is not straightforward. Record that you considered it.",
-      });
-    }
+    // The "lower referral threshold considered" record for a patient of 65
+    // or over is enforced by the Presentation step validator (a missing
+    // record is not an exclusion, so it is not shown as one).
 
     // ── Arm rules versus chosen agent. ──────────────────────────────
     const abx = treatment.antibiotic;
@@ -681,9 +692,8 @@ export function ChestServiceClient() {
       }
     }
     if (abx === "amoxicillin") {
-      if (age !== null && age >= 18 && !exclusions.pregnancy && !treatment.firstLineUnsuitableReason.trim()) {
-        out.push({ code: "amox-reason", severity: "stop", message: "Amoxicillin in an adult: record why doxycycline is unsuitable", detail: "Arm 2 covers adults 18 and over only where doxycycline is unsuitable, with the specific reason recorded." });
-      }
+      // "Reason doxycycline is unsuitable" is a required record, enforced by
+      // the Antibiotic step validator rather than shown as an exclusion.
       if (exclusions.mononucleosisOrALL) {
         out.push({ code: "amox-mono", severity: "stop", message: "Infectious mononucleosis or acute lymphoblastic leukaemia", detail: "Exclusion for amoxicillin because of the risk of a widespread rash. Refer." });
       }
@@ -695,15 +705,9 @@ export function ChestServiceClient() {
       if (!medicines.penicillinAllergy) {
         out.push({ code: "clari-arm", severity: "stop", message: "Clarithromycin arm requires penicillin allergy", detail: "Arm 3 is for patients who are penicillin-allergic and for whom the first-line agent is unsuitable or unavailable. Use the first-line arm." });
       }
-      if (age !== null && age >= 18 && !treatment.firstLineUnsuitableReason.trim()) {
-        out.push({ code: "clari-reason", severity: "stop", message: "Record why doxycycline is unsuitable or unavailable", detail: "For an adult, the first-line agent is doxycycline; record the reason it was not used. For a patient aged 12 to 17 the penicillin allergy alone satisfies this." });
-      }
-      if (!medicines.penicillinAllergyHistory.trim()) {
-        out.push({ code: "clari-history", severity: "stop", message: "Record the penicillin allergy history in the patient's own terms", detail: "Required record for the clarithromycin arm." });
-      }
-      if (!medicines.renalFunctionAsked) {
-        out.push({ code: "clari-renal-ask", severity: "stop", message: "Ask about renal function before supply and record the answer", detail: "Where the patient does not know and there is no reason to suspect impairment, supply and record that you asked." });
-      }
+      // The first-line reason, the penicillin allergy history and the renal
+      // function answer are required records, enforced by the Antibiotic
+      // step validator rather than shown as exclusions.
       if (exclusions.significantRenalImpairment) {
         out.push({ code: "clari-renal", severity: "stop", message: "Known renal impairment (creatinine clearance below 30 mL/min, or unknown severity with reason to suspect it is significant)", detail: "Exclusion for clarithromycin. Refer." });
       }
@@ -723,17 +727,8 @@ export function ChestServiceClient() {
         out.push({ code: "clari-colchicine", severity: "stop", message: "Taking colchicine", detail: "Risk of toxicity with clarithromycin. Refer rather than supply." });
       }
     }
-    if (
-      state.currentStep > STEP_ANTIBIOTIC &&
-      !abx
-    ) {
-      out.push({
-        code: "no-agent",
-        severity: "stop",
-        message: "No antibiotic selected",
-        detail: "Select the arm that applies, or refer to the GP if no arm covers this patient.",
-      });
-    }
+    // A blank antibiotic is a validation message on the Antibiotic step
+    // ("Select the antibiotic"), never a stop (stop audit, 11 Sep 2026).
     if (
       state.currentStep >= STEP_ANTIBIOTIC &&
       !armsAvailable.doxycycline &&
@@ -749,6 +744,15 @@ export function ChestServiceClient() {
     }
 
     // ── Cautions. ───────────────────────────────────────────────────
+    if (medicines.renalFunctionAnswer === "Known kidney impairment (see detail)" && !exclusions.significantRenalImpairment) {
+      out.push({
+        code: "renal-known",
+        severity: "caution",
+        message: "Known kidney impairment recorded",
+        detail:
+          "If the creatinine clearance is below 30 mL/min, or the severity is unknown and there is reason to suspect it is significant, tick Known significant renal impairment on the Exclusions step (excludes amoxicillin and clarithromycin).",
+      });
+    }
     if (medicines.onWarfarin && abx === "amoxicillin") {
       out.push({
         code: "warfarin",
@@ -794,11 +798,14 @@ export function ChestServiceClient() {
     };
     const presentationStep = (): string | null => {
       if (presentation.coughDurationDays === null) return "Record how many days the cough has lasted";
+      if (!presentation.purulentSputum) return "Answer 'Purulent sputum (yellow or green)': Yes or No (inclusion criterion)";
       if (!presentation.smokingStatus) return "Record the smoking status (the 3 week exclusion applies to current and former smokers)";
       if (!presentation.noComorbidity && presentation.comorbidities.filter((c) => c !== "age-65").length === 0 && !isOver65)
         return "Record the higher-risk comorbidities present, or confirm there are none";
       if (presentation.noComorbidity && presentation.comorbidities.filter((c) => c !== "age-65").length > 0)
         return "Either confirm no comorbidity or select the comorbidities present, not both";
+      if (isOver65 && !presentation.lowerThresholdOver65Considered)
+        return "Patient is 65 or over: tick Lower referral threshold for a patient aged 65 and over considered";
       return null;
     };
     const observationsStep = (): string | null => {
@@ -812,12 +819,30 @@ export function ChestServiceClient() {
     const medicinesStep = (): string | null => {
       if (medicines.penicillinAllergy && !medicines.penicillinAllergyHistory.trim())
         return "Record the penicillin allergy history in the patient's own terms";
+      if (medicines.renalFunctionAnswer === "Known kidney impairment (see detail)" && !medicines.renalFunctionDetail.trim())
+        return "Renal function: record the detail of the known kidney impairment";
       return null;
     };
     const antibioticStep = (): string | null => {
-      if (!treatment.antibiotic) return "Select the antibiotic arm";
+      const abx = treatment.antibiotic;
+      if (!abx) return "Select the antibiotic";
+      const adult = patient.age !== null && patient.age >= 18;
+      if (abx === "amoxicillin" && adult && !state.exclusions.pregnancy && !treatment.firstLineUnsuitableReason.trim())
+        return "Amoxicillin in an adult: record the reason doxycycline is unsuitable for this adult";
+      if (abx === "clarithromycin") {
+        if (adult && !treatment.firstLineUnsuitableReason.trim())
+          return "Clarithromycin in an adult: record the reason doxycycline (first-line agent) is unsuitable or unavailable";
+        if (!medicines.penicillinAllergyHistory.trim())
+          return "Clarithromycin: record the penicillin allergy history in the patient's own terms (Allergies & Current Medicines step)";
+        if (!medicines.renalFunctionAsked || !medicines.renalFunctionAnswer)
+          return "Clarithromycin: record the patient's answer under Renal function (Allergies & Current Medicines step)";
+        if (medicines.renalFunctionAnswer === "Known kidney impairment (see detail)" && !medicines.renalFunctionDetail.trim())
+          return "Renal function: record the detail of the known kidney impairment (Allergies & Current Medicines step)";
+      }
       if (!treatment.batch.trim()) return "Record the batch number";
       if (!treatment.expiry) return "Record the expiry date";
+      if (treatment.expiry < new Date().toISOString().split("T")[0])
+        return "Expiry date is in the past: this pack cannot be supplied";
       return null;
     };
     const counsellingStep = (): string | null => {
@@ -984,7 +1009,11 @@ export function ChestServiceClient() {
             <PatientDetailsStep
               patient={state.patient}
               onChange={(field, value) => dispatch({ type: "UPDATE_PATIENT", field, value })}
+              requireAdult={false}
             />
+            {state.patient.age !== null && state.patient.age < 12 && (
+              <p className="mt-2 text-xs text-red-600 font-medium">This PGD covers patients aged 12 and over.</p>
+            )}
           </StepWrapper>
         );
 
@@ -1061,7 +1090,6 @@ export function ChestServiceClient() {
                 value={state.presentation.smokingStatus}
                 onChange={(v) => dispatch({ type: "UPDATE_PRESENTATION", field: "smokingStatus", value: v as SmokingStatus })}
                 options={[
-                  { value: "", label: "Select..." },
                   { value: "never", label: "Never smoked" },
                   { value: "former", label: "Former smoker" },
                   { value: "current", label: "Current smoker" },
@@ -1070,7 +1098,19 @@ export function ChestServiceClient() {
               />
 
               <p className="text-sm font-semibold text-navy-900 pt-2">Symptoms</p>
-              <Checkbox label="Purulent sputum (yellow or green)" checked={state.presentation.purulentSputum} onChange={(v) => dispatch({ type: "UPDATE_PRESENTATION", field: "purulentSputum", value: v })} description="Required for inclusion. Purulent sputum on its own does not indicate a bacterial infection needing an antibiotic." />
+              <div className="space-y-1">
+                <SelectInput
+                  label="Purulent sputum (yellow or green)"
+                  value={state.presentation.purulentSputum}
+                  onChange={(v) => dispatch({ type: "UPDATE_PRESENTATION", field: "purulentSputum", value: v })}
+                  options={[
+                    { value: "yes", label: "Yes: purulent (yellow or green) sputum" },
+                    { value: "no", label: "No: sputum clear, or no sputum (inclusion not met)" },
+                  ]}
+                  required
+                />
+                <p className="text-xs text-gray-500">Required for inclusion. Purulent sputum on its own does not indicate a bacterial infection needing an antibiotic.</p>
+              </div>
               <Checkbox label="Fever" checked={state.presentation.fever} onChange={(v) => dispatch({ type: "UPDATE_PRESENTATION", field: "fever", value: v })} />
               <Checkbox label="Breathlessness" checked={state.presentation.breathless} onChange={(v) => dispatch({ type: "UPDATE_PRESENTATION", field: "breathless", value: v })} />
               <Checkbox label="Wheeze" checked={state.presentation.wheeze} onChange={(v) => dispatch({ type: "UPDATE_PRESENTATION", field: "wheeze", value: v })} />
@@ -1232,8 +1272,28 @@ export function ChestServiceClient() {
               <Checkbox label="Taking warfarin" checked={state.medicines.onWarfarin} onChange={(v) => dispatch({ type: "UPDATE_MEDICINE", field: "onWarfarin", value: v })} description="Doxycycline: refer rather than supply. Clarithromycin: exclusion. Amoxicillin: advise INR check." />
               <Checkbox label="Taking a DOAC (apixaban, rivaroxaban, edoxaban, dabigatran)" checked={state.medicines.onDoac} onChange={(v) => dispatch({ type: "UPDATE_MEDICINE", field: "onDoac", value: v })} description="Excludes clarithromycin" />
               <div className="pt-2 border-t border-gray-200 space-y-2">
-                <Checkbox label="Renal function asked about" checked={state.medicines.renalFunctionAsked} onChange={(v) => dispatch({ type: "UPDATE_MEDICINE", field: "renalFunctionAsked", value: v })} description="Required before a clarithromycin supply. Where the patient does not know and there is no reason to suspect impairment, supply and record that you asked." />
-                <TextInput label="Answer given about renal function" value={state.medicines.renalFunctionAnswer} onChange={(v) => dispatch({ type: "UPDATE_MEDICINE", field: "renalFunctionAnswer", value: v })} placeholder="e.g. no known kidney problems; or eGFR 45 at last blood test" />
+                <SelectInput
+                  label="Renal function: ask the patient about their kidney function and record the answer"
+                  value={state.medicines.renalFunctionAnswer}
+                  onChange={(v) => {
+                    dispatch({ type: "UPDATE_MEDICINE", field: "renalFunctionAnswer", value: v });
+                    dispatch({ type: "UPDATE_MEDICINE", field: "renalFunctionAsked", value: v !== "" });
+                  }}
+                  options={[
+                    { value: "No known kidney problems", label: "No known kidney problems" },
+                    { value: "Patient does not know; no reason to suspect impairment", label: "Patient does not know; no reason to suspect impairment" },
+                    { value: "Known kidney impairment (see detail)", label: "Known kidney impairment (record the detail below)" },
+                  ]}
+                  required={state.medicines.penicillinAllergy}
+                />
+                <p className="text-xs text-gray-500">Required before a clarithromycin supply. Where the patient does not know and there is no reason to suspect impairment, supply and record the answer.</p>
+                <TextInput
+                  label={state.medicines.renalFunctionAnswer === "Known kidney impairment (see detail)" ? "Renal function detail" : "Renal function detail (optional)"}
+                  value={state.medicines.renalFunctionDetail}
+                  onChange={(v) => dispatch({ type: "UPDATE_MEDICINE", field: "renalFunctionDetail", value: v })}
+                  placeholder="e.g. eGFR 45 at last blood test; CKD stage 3"
+                  required={state.medicines.renalFunctionAnswer === "Known kidney impairment (see detail)"}
+                />
               </div>
               <TextArea label="Other current medicines" value={state.medicines.other} onChange={(v) => dispatch({ type: "UPDATE_MEDICINE", field: "other", value: v })} />
             </div>
@@ -1271,7 +1331,7 @@ export function ChestServiceClient() {
                 label="Antibiotic"
                 value={abx}
                 onChange={(v) => dispatch({ type: "UPDATE_TREATMENT", field: "antibiotic", value: v as Antibiotic })}
-                options={[{ value: "", label: "Select..." }, ...options]}
+                options={options}
                 required
               />
               {abx && (
@@ -1374,7 +1434,7 @@ export function ChestServiceClient() {
                 )}
                 <div><strong>Penicillin allergy:</strong> {state.medicines.penicillinAllergy ? `Yes: ${state.medicines.penicillinAllergyHistory || "history not recorded"}` : "None recorded"}</div>
                 {isClari(abx) && (
-                  <div><strong>Renal function asked:</strong> {state.medicines.renalFunctionAsked ? "yes" : "no"}{state.medicines.renalFunctionAnswer ? `; answer: ${state.medicines.renalFunctionAnswer}` : ""}</div>
+                  <div><strong>Renal function:</strong> {state.medicines.renalFunctionAnswer || "not asked"}{state.medicines.renalFunctionDetail ? ` (${state.medicines.renalFunctionDetail})` : ""}</div>
                 )}
                 <div><strong>Batch / expiry:</strong> {state.treatment.batch || "not recorded"} / {state.treatment.expiry || "not recorded"}</div>
                 <div><strong>Counselling:</strong> {[state.counselling.courseCompletion && "course completion", state.counselling.viralExplanation && "three week cough explained", state.counselling.sideEffects && "side effects", state.counselling.selfCare && "self-care", state.counselling.safetyNetting && "same-day safety netting", state.counselling.followUp && "follow-up", state.counselling.pilSupplied && "PIL supplied"].filter(Boolean).join(", ") || "none recorded"}</div>

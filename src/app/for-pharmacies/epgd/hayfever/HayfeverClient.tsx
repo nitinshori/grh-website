@@ -199,7 +199,7 @@ export default function HayfeverClient() {
               onChange={(v) =>
                 dispatch({ type: "UPDATE_ASSESSMENT", field: "previousDiagnosisOrRecurrence", value: v })
               }
-              description="Inclusion criterion for fexofenadine 120 mg under this PGD."
+              description="Inclusion criterion for fexofenadine 120 mg under this PGD: tick it if it applies, or fexofenadine cannot be selected on the Medicine step. Not needed for Dymista alone."
             />
           </div>
         );
@@ -208,7 +208,7 @@ export default function HayfeverClient() {
         return (
           <div className="space-y-4">
             <Checkbox
-              label="Co-existing asthma or LRTI history (red flag: refer)"
+              label="Co-existing asthma, or a history of lower respiratory tract infection (LRTI) (red flag: refer)"
               checked={state.medicalHistory.asthmaOrLrti}
               onChange={(v) =>
                 dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "asthmaOrLrti", value: v })
@@ -429,20 +429,27 @@ export default function HayfeverClient() {
               onChange={(v) =>
                 dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "dosageConfirmed", value: v })
               }
+              description="Required."
+              required
             />
           </div>
         );
 
-      case 6:
+      case 6: {
+        const med = state.medicineSupply.medicineSelected;
+        const fexSelected = med === "fexofenadine" || med === "combination";
+        const dymSelected = med === "dymista" || med === "combination";
         return (
           <div className="space-y-4">
+            <p className="text-xs text-gray-600">Required points are marked. The points marked (fexofenadine) or (Dymista) are required only when that medicine is being supplied.</p>
             <Checkbox
               label="Allergen avoidance measures discussed"
               checked={state.counselling.allergenAvoidance}
               onChange={(v) =>
                 dispatch({ type: "UPDATE_COUNSELLING", field: "allergenAvoidance", value: v })
               }
-              description="Keeping windows closed, avoiding outdoor activities during high pollen counts"
+              description="Required. Keeping windows closed, avoiding outdoor activities during high pollen counts"
+              required
             />
             <Checkbox
               label="Correct nasal spray technique advised (Dymista)"
@@ -451,6 +458,7 @@ export default function HayfeverClient() {
                 dispatch({ type: "UPDATE_COUNSELLING", field: "nasalSprayTechnique", value: v })
               }
               description="Advise on correct nasal spray technique to optimise efficacy and reduce side effects. Spray directed away from the nasal septum."
+              required={dymSelected}
             />
             <Checkbox
               label="Effectiveness timeline explained"
@@ -474,6 +482,7 @@ export default function HayfeverClient() {
               onChange={(v) =>
                 dispatch({ type: "UPDATE_COUNSELLING", field: "alcoholSedatingAdvice", value: v })
               }
+              required={fexSelected}
             />
             <Checkbox
               label="Non-sedating antihistamine, but occasional drowsiness may still occur (fexofenadine)"
@@ -481,6 +490,7 @@ export default function HayfeverClient() {
               onChange={(v) =>
                 dispatch({ type: "UPDATE_COUNSELLING", field: "drowsinessAdvice", value: v })
               }
+              required={fexSelected}
             />
             <Checkbox
               label="Possible side effects and need for ongoing review if used long-term (Dymista)"
@@ -489,6 +499,7 @@ export default function HayfeverClient() {
                 dispatch({ type: "UPDATE_COUNSELLING", field: "sideEffectsAdvice", value: v })
               }
               description="Nasal irritation, headache, epistaxis (nosebleeds), bitter taste, somnolence. Rare: hypersensitivity reactions."
+              required={dymSelected}
             />
             <Checkbox
               label="Follow-up advice given"
@@ -524,6 +535,7 @@ export default function HayfeverClient() {
             />
           </div>
         );
+      }
 
       case 7:
         return (

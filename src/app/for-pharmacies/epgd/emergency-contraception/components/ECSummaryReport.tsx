@@ -39,8 +39,8 @@ export function ECSummaryReport({ state }: ECSummaryReportProps) {
       <SectionHeader>Patient Details</SectionHeader>
       <div className="grid grid-cols-2 gap-4 mb-4">
         <Row label="Name" value={`${patient.firstName} ${patient.lastName}`} />
-        <Row label="Age" value={patient.age ? `${patient.age} years` : "—"} />
-        <Row label="Date of birth" value={patient.dateOfBirth || "—"} />
+        <Row label="Age" value={patient.age ? `${patient.age} years` : "Not recorded"} />
+        <Row label="Date of birth" value={patient.dateOfBirth || "Not recorded"} />
         <Row label="Address" value={patient.address || "Not provided"} />
         <Row
           label="NHS number"
@@ -62,8 +62,8 @@ export function ECSummaryReport({ state }: ECSummaryReportProps) {
               </>
             ) : (
               <>
-                <Row label="Fraser competence" value={patient.fraserCompetent ? "Assessed and recorded" : "Not established"} />
-                <Row label="Coercion asked about" value={patient.coercionAsked ? "Yes" : "No"} />
+                <Row label="Fraser competence" value={patient.fraserOutcome === "competent" ? "Competent (all criteria met)" : patient.fraserOutcome === "not-competent" ? "Not competent: not supplied" : "Not recorded"} />
+                <Row label="Coercion" value={patient.coercionReported === "yes" ? "Yes, reported (safeguarding pathway)" : patient.coercionReported === "no" ? "None reported (asked)" : "Not asked"} />
                 <Row label="Partner age" value={patient.partnerAge || "Not recorded"} />
                 <Row label="Safeguarding concern" value={patient.safeguardingConcern ? "Yes, local pathway followed" : "None identified"} />
               </>
@@ -78,13 +78,13 @@ export function ECSummaryReport({ state }: ECSummaryReportProps) {
       <div className="grid grid-cols-2 gap-4 mb-4">
         <Row
           label="Consultation date"
-          value={summary.consultationDate || "—"}
+          value={summary.consultationDate || "Not recorded"}
         />
         <Row
           label="Consultation time"
-          value={summary.consultationTime || "—"}
+          value={summary.consultationTime || "Not recorded"}
         />
-        <Row label="Pharmacy" value={summary.pharmacyName || "—"} />
+        <Row label="Pharmacy" value={summary.pharmacyName || "Not recorded"} />
         <Row label="Valid informed consent given" value={state.consent.informedConsentGiven ? "Yes" : "No"} />
       </div>
 
@@ -93,29 +93,29 @@ export function ECSummaryReport({ state }: ECSummaryReportProps) {
       <div className="grid grid-cols-2 gap-4 mb-4">
         <Row
           label="Date of UPSI"
-          value={clinicalAssessment.upsiDate || "—"}
+          value={clinicalAssessment.upsiDate || "Not recorded"}
         />
         <Row
           label="Time of UPSI"
-          value={clinicalAssessment.upsiTime || "—"}
+          value={clinicalAssessment.upsiTime || "Not recorded"}
         />
         <Row
           label="Hours since UPSI"
           value={
             clinicalAssessment.hoursSinceUPSI !== null
               ? `${Math.round(clinicalAssessment.hoursSinceUPSI * 10) / 10} hours`
-              : "—"
+              : "Not recorded"
           }
         />
         <Row
           label="Last menstrual period"
-          value={clinicalAssessment.lastMenstrualPeriod || "—"}
+          value={clinicalAssessment.lastMenstrualPeriod || "Not recorded"}
         />
         <Row
           label="Menstrual cycle"
           value={
             clinicalAssessment.cycleRegular
-              ? `Regular (${clinicalAssessment.cycleLength ?? "—"} days)`
+              ? `Regular (${clinicalAssessment.cycleLength ?? "Not recorded"} days)`
               : "Irregular"
           }
         />
@@ -126,7 +126,7 @@ export function ECSummaryReport({ state }: ECSummaryReportProps) {
         {clinicalAssessment.regularContraception && (
           <Row
             label="Contraception failure type"
-            value={clinicalAssessment.contraceptionFailureType || "—"}
+            value={clinicalAssessment.contraceptionFailureType || "Not recorded"}
           />
         )}
         <Row
@@ -243,7 +243,7 @@ export function ECSummaryReport({ state }: ECSummaryReportProps) {
                 : "Ulipristal acetate 30mg tablet (ellaOne)"
             }
           />
-          <Row label="Dose" value={medicineSelection.dose || "—"} />
+          <Row label="Dose" value={medicineSelection.dose || "Not recorded"} />
           <Row label="Form and route" value="Tablet, oral (swallowed whole with water)" />
           <Row
             label="Quantity supplied"
@@ -278,9 +278,10 @@ export function ECSummaryReport({ state }: ECSummaryReportProps) {
                   : "No medicine selected."
             }
           />
-          {medicineSelection.notSuppliedReason && (
-            <Row label="Advice given and decision reached" value={medicineSelection.notSuppliedReason} />
+          {stopped && (
+            <Row label="Referred to" value={({ "sexual-health": "Sexual health service", gp: "GP", other: "Other" } as Record<string, string>)[medicineSelection.referredTo] || "Not recorded"} />
           )}
+          <Row label="Advice given and decision reached" value={medicineSelection.notSuppliedReason || "Not recorded"} />
         </div>
       )}
 
@@ -299,7 +300,7 @@ export function ECSummaryReport({ state }: ECSummaryReportProps) {
           ["When to take the medicine", counselling.timingAdvice],
           ["What to do if vomiting occurs", counselling.vomitingAdvice],
           [
-            "Advised not 100% effective — backup contraception needed",
+            "Advised not 100% effective: backup contraception needed",
             counselling.notGuaranteed,
           ],
           [

@@ -2,7 +2,7 @@
 
 import type { STIConsultationState } from "./sti-types";
 import { validatePatientStep, validateConsentStep, validateSummaryStep } from "../../shared/types";
-import { getAgeAlerts, getTreatmentAlerts } from "./sti-clinical-logic";
+import { getAgeAlerts, getTreatmentAlerts, treatmentGateError, patientGateError } from "./sti-clinical-logic";
 
 export function validateStep(state: STIConsultationState, stepIndex: number): string | null {
   switch (stepIndex) {
@@ -12,12 +12,10 @@ export function validateStep(state: STIConsultationState, stepIndex: number): st
       // under 13 never supplied.
       const base = validatePatientStep(state.patient);
       if (base) return base;
+      if (!state.patient.genderIdentity) return "Select the patient's gender identity";
       const ageStop = getAgeAlerts(state).find((a) => a.severity === "stop");
       if (ageStop) return ageStop.message;
-      if (state.patient.age !== null && state.patient.age <= 15 && !state.patient.safeguardingNotes.trim()) {
-        return "Record the safeguarding assessment (partner age, coercion, exploitation indicators)";
-      }
-      return null;
+      return patientGateError(state);
     }
 
     case 1: // Consent
@@ -48,7 +46,7 @@ export function validateStep(state: STIConsultationState, stepIndex: number): st
       ].filter(Boolean).length;
 
       if (testCount === 0 && !state.treatment.treatUnderPgd) {
-        return "At least one test must be selected (or tick treatment under the PGD on the next step)";
+        return "Select at least one test, or tick \"No tests today: treatment-only consultation\" below";
       }
 
       if (state.testSelection.ctGc && !state.testSelection.ctGcSampleType) {
@@ -78,9 +76,8 @@ export function validateStep(state: STIConsultationState, stepIndex: number): st
       if (t.doxycyclineUnsuitable && !t.doxycyclineUnsuitableReason.trim()) {
         return "Record why doxycycline is unsuitable or contraindicated";
       }
-      if (!t.medicine) {
-        return "Select the medicine to supply (doxycycline first line; azithromycin only where doxycycline is unsuitable)";
-      }
+      const gate = treatmentGateError(state);
+      if (gate) return gate;
       const stop = getTreatmentAlerts(state).find((a) => a.severity === "stop");
       if (stop) return stop.message;
       return null;
@@ -88,21 +85,25 @@ export function validateStep(state: STIConsultationState, stepIndex: number): st
 
     case 6: {
       // Counselling
-      if (
-        !state.counselling.windowPeriods ||
-        !state.counselling.partnerNotification ||
-        !state.counselling.safeSex ||
-        !state.counselling.resultsTimeline ||
-        !state.counselling.positiveTestMeaning ||
-        !state.counselling.followUp
-      ) {
-        return "All counselling points must be covered";
+      {
+        const gate = treatmentGateError(state);
+        if (gate) return gate;
+      }
+      {
+        const c = state.counselling;
+        if (!c.windowPeriods) return "Tick \"Window period information provided\"";
+        if (!c.partnerNotification) return "Tick \"Partner notification discussed\"";
+        if (!c.safeSex) return "Tick \"Safe sex practices advised\"";
+        if (!c.resultsTimeline) return "Tick \"Results timeline explained\"";
+        if (!c.positiveTestMeaning) return "Tick \"Positive test meaning explained\"";
+        if (!c.followUp) return "Tick \"Follow-up procedures explained\"";
       }
       if (state.treatment.treatUnderPgd && state.treatment.medicine) {
         const c = state.counselling;
-        if (!c.medicineAdvice || !c.abstinenceAdvice || !c.worseningAdvice || !c.pilSupplied) {
-          return "All treatment counselling points must be covered and the PIL supplied";
-        }
+        if (!c.medicineAdvice) return "Treatment counselling: tick the medicine-taking advice (first item under Treatment counselling)";
+        if (!c.abstinenceAdvice) return "Treatment counselling: tick the abstinence advice";
+        if (!c.worseningAdvice) return "Treatment counselling: tick \"Seek medical advice if symptoms worsen...\"";
+        if (!c.pilSupplied) return "Treatment counselling: tick \"Patient information leaflet (PIL) supplied with the medication\"";
         if (!c.retestAdvice) {
           return "Advise retesting at 3 months to detect reinfection (and a test of cure at least 3 weeks after treatment where required)";
         }
@@ -116,8 +117,8 @@ export function validateStep(state: STIConsultationState, stepIndex: number): st
       return null;
     }
 
-    case 7: // Summary
-      return validateSummaryStep(state.summary);
+    case 7: // Summary: the gates are re-checked before Save and Print
+      return patientGateError(state) || treatmentGateError(state) || validateSummaryStep(state.summary);
 
     default:
       return null;

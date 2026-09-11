@@ -9,7 +9,7 @@ export function validateStep(state: HLConsultationState, stepIndex: number): str
       {
         const base = validatePatientStep(state.patient, { minAge: 18, maxAge: 65 });
         if (base) return base;
-        if (!state.patient.sexRecorded) return "Record the patient's sex (this PGD is for male patients only)";
+        if (!state.patient.sexRecorded) return "Patient sex: select Male, or Female or other (this PGD is for male patients only)";
         if (state.patient.sexRecorded !== "male") return "This PGD is for male patients only; finasteride 1 mg is not indicated for women";
         // The PGD record must contain name, address, date of birth and GP.
         if (!state.patient.address.trim()) return "Patient address is required for the PGD record";
@@ -24,90 +24,93 @@ export function validateStep(state: HLConsultationState, stepIndex: number): str
       {
         const n = state.clinicalAssessment.norwoodHamiltonScale;
         if (n === null || !Number.isInteger(n) || n < 1 || n > 7) {
-          return "Norwood-Hamilton Scale score is required and must be a whole number from 1 to 7";
+          return "Norwood-Hamilton Scale: select the stage (1 to 7) that best matches the pattern of hair loss";
         }
       }
       if (!state.clinicalAssessment.hasAndrogeneticAlopecia) {
-        return "Please confirm patient has androgenetic alopecia";
+        return "Tick Androgenetic alopecia (male-pattern baldness) confirmed: this PGD is only for male-pattern hair loss";
       }
       if (!state.clinicalAssessment.alopeciaOnset.trim()) {
-        return "Alopecia onset details are required";
+        return "Onset of alopecia: record the duration and pattern";
       }
       return null;
 
     case 3: // Medical History
       if (state.medicalHistory.prostateCancer && !state.medicalHistory.prostateCancerDetail.trim()) {
-        return "Record the prostate cancer details";
+        return "Prostate cancer details: record the diagnosis date, treatment and current status";
       }
       if (state.medicalHistory.psaAbnormalities && !state.medicalHistory.psaAbnormaltiesDetail.trim()) {
-        return "Record the PSA details";
+        return "PSA details: record the PSA value, date and GP action";
       }
       if (!state.medicalHistory.questionsAsked) {
-        return "Confirm that each of the exclusion questions above has been put to the patient";
+        return "Tick the confirmation at the bottom: I have asked the patient every question above (ticked boxes are Yes, unticked boxes are No)";
       }
       return null;
 
     case 4: // Contraindications
       if (state.contraindications.depressiveMood) {
-        if (!state.contraindications.depressiveMoodDetail.trim()) return "Record the details of the mood symptoms";
-        if (!state.contraindications.moodProceedReason.trim()) {
-          return "Record the clinical reason for proceeding despite current depression or mood symptoms (or refer)";
+        if (!state.contraindications.depressiveMoodDetail.trim()) return "Details of mood symptoms: record when, severity and current treatment";
+        if (!state.contraindications.moodReferred && !state.contraindications.moodProceedReason.trim()) {
+          return "Clinical reason for proceeding: record why supply is appropriate despite the mood symptoms, or tick Not supplying: referring the patient instead";
         }
       }
       if (!state.contraindications.questionsAsked) {
-        return "Confirm that the mood and suicidal ideation questions have been put to the patient";
+        return "Tick the confirmation at the bottom: I have asked the patient about mood, depression and suicidal ideation";
       }
       return null;
 
     case 5: // Medicine Supply
       if (!state.medicineSupply.finasteride1mgOd) {
-        return "Please confirm finasteride 1 mg once daily supply";
+        return "Tick Supply finasteride 1 mg tablets, 1 mg orally once daily";
       }
       if (!state.medicineSupply.quantityMonths) {
-        return "Please record the months of treatment supplied (3 to 12 months between reviews)";
+        return "Months of treatment supplied between reviews: select 3, 6, 9 or 12 months";
       }
       {
         const months = Number(state.medicineSupply.quantityMonths);
         const tablets = state.medicineSupply.tabletsSupplied;
         if (tablets === null || !Number.isInteger(tablets) || tablets <= 0) {
-          return "Record the number of tablets supplied";
+          return "Tablets supplied: select the number of tablets";
         }
         if (tablets < months * 28 || tablets > months * 31) {
-          return `${tablets} tablets does not match ${months} months at one tablet daily (expected ${months * 28} to ${months * 31})`;
+          return `Tablets supplied: ${tablets} tablets does not match ${months} months at one tablet daily (expected ${months * 28} to ${months * 31})`;
         }
       }
       if (!state.medicineSupply.brand.trim()) {
-        return "Record the brand dispensed (the PGD record requires name and brand)";
+        return "Brand dispensed: record the brand (the PGD record requires name and brand)";
       }
       if (!state.medicineSupply.partnerNotified) {
-        return "Please confirm the patient has been advised that tablets must not be handled by women who are or may become pregnant";
+        return "Tick Tablets must not be handled by women who are or may become pregnant once the patient has been advised";
       }
       if (!state.medicineSupply.condomAdvice) {
-        return "Please confirm condom advice has been given (if a female partner is pregnant or likely to become pregnant)";
+        return "Tick Condom recommended if a female partner is pregnant or likely to become pregnant once the patient has been advised";
       }
       if (!state.medicineSupply.willMonitorSE) {
-        return "Please confirm patient will monitor for side effects";
+        return "Tick Patient will monitor for sexual side effects once the patient has been advised";
       }
       if (!state.medicineSupply.understandsPSAEffect) {
-        return "Please confirm patient understands PSA effect";
+        return "Tick Patient understands finasteride can affect PSA levels once the patient has been advised";
       }
       return null;
 
     case 6: // Counselling
-      if (
-        !state.counselling.effectOnsetTime ||
-        !state.counselling.hairLossResumesStopped ||
-        !state.counselling.sexualSideEffects ||
-        !state.counselling.moodChanges ||
-        !state.counselling.annualReview ||
-        !state.counselling.reportChanges ||
-        !state.counselling.breastChanges ||
-        !state.counselling.expectations
-      ) {
-        return "All counselling points must be covered";
+      {
+        const c = state.counselling;
+        const points: [boolean, string][] = [
+          [c.effectOnsetTime, "Continuous use for 3 to 6 months before stabilisation"],
+          [c.hairLossResumesStopped, "If treatment is stopped, the beneficial effects begin to reverse"],
+          [c.sexualSideEffects, "Sexual side effects possible"],
+          [c.moodChanges, "Psychological side effects: report any mood changes"],
+          [c.breastChanges, "Promptly report any changes in breast tissue"],
+          [c.annualReview, "Review: first review after 3 to 6 months"],
+          [c.expectations, "Realistic expectations and safe use explained"],
+          [c.reportChanges, "Seek medical advice if adverse effects are experienced"],
+        ];
+        const missing = points.find(([done]) => !done);
+        if (missing) return `Counselling point not yet ticked: "${missing[1]}". Tick each point once it has been covered with the patient.`;
       }
       if (!state.counselling.pilAndCardSupplied) {
-        return "Please confirm the patient information leaflet and the patient card from the pack have been supplied";
+        return "Tick Patient information leaflet and the patient card included in the pack supplied";
       }
       return null;
 

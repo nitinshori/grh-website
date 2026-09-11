@@ -129,7 +129,7 @@ export function CovidBoosterSummaryReport({
           <Row label="Outcome" value="NOT ADMINISTERED: exclusion criteria met (see clinical alerts above)" />
           <Row
             label="Advice given"
-            value={state.summary.clinicalNotes || "Advised on alternative options and how to access them; informed or referred to the GP as appropriate"}
+            value={state.summary.clinicalNotes || "Not recorded"}
           />
         </div>
       ) : (
@@ -206,9 +206,11 @@ export function CovidBoosterSummaryReport({
             label="Bleeding disorder"
             value={
               state.assessment.bleedingDisorder
-                ? state.assessment.bleedingDisorderAssessedSafe
+                ? state.assessment.bleedingDisorderAssessedAnswer === "yes"
                   ? "Yes, IM assessed as safe by a clinician"
-                  : "Yes, not assessed (excluded)"
+                  : state.assessment.bleedingDisorderAssessedAnswer === "no"
+                    ? "Yes, IM injection not assessed as safe (excluded)"
+                    : "Yes, assessment not recorded"
                 : "No"
             }
           />

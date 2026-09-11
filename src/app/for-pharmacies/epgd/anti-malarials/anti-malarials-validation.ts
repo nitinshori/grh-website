@@ -75,39 +75,43 @@ export function validateTravelAssessmentStep(
   travel: AMTravelAssessment
 ): string | null {
   if (!travel.destinationCountry.trim())
-    return 'Destination country is required';
-  if (!travel.departureDate) return 'Departure date is required';
-  if (!travel.returnDate) return 'Return date is required';
+    return "Type the 'Destination Country'";
+  if (!travel.departureDate) return "Enter the 'Departure Date'";
+  if (!travel.returnDate) return "Enter the 'Return Date'";
 
   const tripDays = calculateTripDuration(travel.departureDate, travel.returnDate);
   if (!tripDays || tripDays <= 0)
-    return 'Return date must be on or after the departure date';
+    return "'Return Date' must be on or after the 'Departure Date'";
 
   // A departure in the past went straight through: mefloquine silently
   // dropped out and the other arms were offered with a lead-in that could
   // not happen (adversarial review, 11 Sep 2026).
   const daysUntilDeparture = calculateDaysUntilDeparture(travel.departureDate);
   if (daysUntilDeparture !== null && daysUntilDeparture < 0)
-    return 'Departure date is in the past. Prophylaxis must start before entering the malarious area; check the dates';
+    return "'Departure Date' is in the past. Prophylaxis must start before entering the malarious area; check the dates";
+  if (daysUntilDeparture !== null && daysUntilDeparture > 365)
+    return "'Departure Date' is more than a year away: check the date";
 
   if (travel.previousMalariaProphylaxis && !travel.previousProphylaxisType)
-    return 'If used prophylaxis before, specify which medicine';
+    return "'Previous Malaria Prophylaxis' is ticked: type 'Which Prophylaxis Was Used?'";
 
   // PGD v010: weight, measured and recorded, determines the dose and the
   // product strength; weight not obtainable is an exclusion.
   if (travel.weightKg === null || travel.weightKg <= 0)
-    return 'Body weight in kg is required (measured, not estimated)';
+    return "Enter the 'Body weight (kg)', measured today, not estimated";
+  if (travel.weightKg > 300)
+    return "'Body weight (kg)' above 300 cannot be right: check the figure";
 
   // PGD v010 inclusion: destination risk assessment from current NaTHNaC /
   // TravelHealthPro guidance, and the source consulted must be recorded.
   if (!travel.riskAssessmentCompleted)
-    return 'Confirm the destination risk assessment was carried out using current NaTHNaC / TravelHealthPro guidance and chemoprophylaxis is recommended';
+    return "Tick 'Destination risk assessment completed' once current NaTHNaC / TravelHealthPro guidance has been checked and chemoprophylaxis is recommended";
   if (!travel.riskAssessmentSource.trim())
-    return 'Record the source consulted for the destination recommendation';
+    return "Type the 'Source consulted for the destination recommendation'";
 
   // PGD v010 inclusion: able and willing to complete the whole course.
   if (!travel.willingToCompleteCourse)
-    return 'Patient must be able and willing to complete the full course including the post-travel tail';
+    return "Tick 'Able and willing to complete the full course' (inclusion criterion, including the post-travel tail)";
 
   return null;
 }
@@ -120,7 +124,7 @@ export function validateMedicalHistoryStep(
   // Every exclusion on this page is a box whose default is the safe answer,
   // so the pharmacist must confirm every question was actually asked.
   if (!medical.allQuestionsAsked)
-    return 'Confirm that every question on this page was asked and that none applies unless ticked';
+    return "Tick 'I have asked the patient every question on this page' at the bottom of the page";
   return null;
 }
 
@@ -130,9 +134,9 @@ export function validateMedicationsStep(
   medications: AMMedications
 ): string | null {
   if (medications.takesOtherDrugs && !medications.otherDrugsDetails.trim())
-    return 'Please specify other drugs being taken';
+    return "'Other Medications' is ticked: type them in 'Please Specify Other Medications'";
   if (!medications.allQuestionsAsked)
-    return 'Confirm that every medicine on this page was asked about and that none applies unless ticked';
+    return "Tick 'I have asked about every medicine on this page' at the bottom of the page";
 
   return null;
 }
@@ -146,7 +150,7 @@ export function validateMedicineSelectionStep(
   medications: AMMedications
 ): string | null {
   if (!medicine.selectedMedicine)
-    return 'Please select an antimalarial medicine';
+    return "Choose the 'Selected Medicine'";
 
   // The stored arm must still be eligible. Answers on earlier steps can
   // change after the arm was chosen; the selector only hides ineligible
@@ -180,10 +184,19 @@ export function validateMedicineSelectionStep(
     if (band && band.tabletFraction < 1 && !medicine.scoredTabletConfirmed)
       return 'A divided mefloquine dose may only be supplied from a scored tablet: confirm the product held is scored, or refer';
   }
-  if (!medicine.batchNumber.trim()) return 'Batch number is required';
-  if (!medicine.expiryDate.trim()) return 'Expiry date is required';
+  if (!medicine.batchNumber.trim()) return "Type the 'Batch number' from the pack";
+  if (!medicine.expiryDate.trim()) return "Enter the 'Expiry date' from the pack";
+  {
+    // A pack that expires before the course ends cannot be supplied
+    // (walkthrough review, 11 Sep 2026: any date was accepted).
+    const today = new Date().toISOString().split('T')[0];
+    if (medicine.expiryDate < today)
+      return "'Expiry date' is in the past: the pack has expired and cannot be supplied";
+    if (travel.returnDate && medicine.expiryDate < travel.returnDate)
+      return "'Expiry date' is before the 'Return Date': the pack would expire before the course ends (the tail runs on after return). Use a longer-dated pack";
+  }
   if (!medicine.reason.trim())
-    return 'Clinical reason for selection is required (including why any alternative was unsuitable)';
+    return "Type the 'Clinical Reason for Selection' (including why any alternative was unsuitable)";
 
   return null;
 }
@@ -205,18 +218,18 @@ export function validateCounsellingStep(
     !counselling.medicineCardProvided ||
     !counselling.completeCourseAdvised
   ) {
-    return 'All counselling points must be addressed and confirmed';
+    return "Tick every counselling point on this page (each one must be discussed with the patient)";
   }
 
   // Pregnancy: given, or recorded as not applicable (for example a male patient)
   if (!counselling.pregnancyAdvice && !counselling.pregnancyAdviceNotApplicable)
-    return 'Pregnancy / breastfeeding implications: confirm discussed, or tick not applicable';
+    return "Pregnancy / breastfeeding: tick 'Pregnancy / breastfeeding implications discussed', or 'Not applicable to this patient'";
 
   // Arm-specific items
   if (medicine && medicine.selectedMedicine === 'doxycycline' && !counselling.sunProtectionAdvice)
-    return 'Doxycycline: confirm sun protection advice was given';
+    return "Tick 'Sun protection advice (doxycycline)'";
   if (medicine && medicine.selectedMedicine === 'mefloquine' && !counselling.mefloquineStopAdvice)
-    return 'Mefloquine: confirm the patient was told to STOP and seek advice at the first neuropsychiatric symptom';
+    return "Tick 'Mefloquine: STOP at the first neuropsychiatric symptom'";
 
   return null;
 }
@@ -227,10 +240,10 @@ export function validateSummaryStep(
   summary: AMConsultationSummary
 ): string | null {
   if (!summary.pharmacistName.trim())
-    return 'Pharmacist name is required';
+    return "Type the 'Pharmacist Name'";
   if (!summary.pharmacistGPhC.trim())
-    return 'GPhC registration number is required';
-  if (!summary.pharmacyName.trim()) return 'Pharmacy name is required';
+    return "Type the 'GPhC Registration Number'";
+  if (!summary.pharmacyName.trim()) return "Type the 'Pharmacy Name'";
 
   return null;
 }

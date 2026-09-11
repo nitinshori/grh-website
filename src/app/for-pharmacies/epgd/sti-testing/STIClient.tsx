@@ -234,12 +234,24 @@ export default function STIClient() {
   // referral). Shown on any step where a stop is present, alongside the
   // Save as not supplied button.
   const isChildStop = alerts.some((a) => a.code === "STI_UNDER_13" || a.code === "STI_SAFEGUARDING_CONCERN");
+  // A 13 to 15 year old recorded as not Fraser competent (an explicit "No").
+  const isFraserNotEstablished = alerts.some((a) => a.code === "STI_FRASER_NOT_ESTABLISHED");
+  // Arm-specific stops: the other arm may still be supplied by changing
+  // "Medicine to supply", so the block must not say "patient excluded".
+  const ARM_STOPS = new Set(["STI_TETRACYCLINE_ALLERGY", "STI_DOXY_COMPLIANCE", "STI_DOXY_UNSUITABLE", "STI_MACROLIDE_ALLERGY", "STI_QT", "STI_ERGOT"]);
+  const isArmStopOnly = alerts.filter((a) => a.severity === "stop").every((a) => ARM_STOPS.has(a.code));
   const exclusionOutcomeBlock = hasStops ? (
     <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-3 print:hidden">
       <p className="text-sm font-semibold text-red-800">
         {isChildStop
           ? "Do not supply. Refer to the GP or sexual health service the same day and make a safeguarding referral. Record the referral, then use Save as not supplied."
-          : "Patient excluded: do not supply. Record the advice given and the decision reached, then use Save as not supplied."}
+          : isFraserNotEstablished
+            ? "Aged 13 to 15: Fraser competence not established. Do not supply: refer the same day, record the referral below, then use Save as not supplied."
+            : isArmStopOnly
+              ? state.treatment.medicine === "azithromycin"
+                ? "Azithromycin cannot be supplied to this patient. Change \"Medicine to supply\" to doxycycline if no doxycycline exclusion applies. If neither arm can be supplied, record the referral below and use Save as not supplied."
+                : "Doxycycline cannot be supplied to this patient. Change \"Medicine to supply\" to azithromycin if no azithromycin exclusion applies. If neither arm can be supplied, record the referral below and use Save as not supplied."
+              : "Patient excluded: do not supply. Record the advice given and the decision reached, then use Save as not supplied."}
       </p>
       <SelectInput
         label="Referred to"
@@ -343,6 +355,16 @@ export default function STIClient() {
                   Aged 13 to 15: supply only where Fraser competence is assessed and recorded and a
                   safeguarding assessment is completed with no concern
                 </p>
+                <SelectInput
+                  label="Fraser competence established?"
+                  value={state.patient.fraserAnswer}
+                  onChange={(v) => dispatch({ type: "UPDATE_PATIENT", field: "fraserAnswer", value: v })}
+                  options={[
+                    { value: "yes", label: "Yes: assessed and established (record each of the five criteria below)" },
+                    { value: "no", label: "No: not established (do not supply; refer the same day)" },
+                  ]}
+                  required
+                />
                 <p className="text-xs font-medium text-amber-900">Fraser competence: record each of the five criteria</p>
                 <Checkbox
                   label="The young person understands the advice given"
@@ -380,6 +402,7 @@ export default function STIClient() {
                   onChange={(v) =>
                     dispatch({ type: "UPDATE_PATIENT", field: "safeguardingAssessed", value: v })
                   }
+                  required
                 />
                 <Checkbox
                   label="Safeguarding concern identified (partner 18 or over, coercion, exploitation, learning disability)"
@@ -816,6 +839,14 @@ export default function STIClient() {
                 })
               }
             />
+            <div className="border-t pt-4">
+              <Checkbox
+                label="No tests today: treatment-only consultation (supply chlamydia treatment under this PGD on the next step)"
+                checked={state.treatment.treatUnderPgd}
+                onChange={(v) => dispatch({ type: "UPDATE_TREATMENT", field: "treatUnderPgd", value: v })}
+                description="Tick this when the patient has a confirmed or strongly suspected chlamydia diagnosis and no test is being taken. It is the same tick as on the Treatment step."
+              />
+            </div>
           </div>
         );
 

@@ -25,10 +25,10 @@ export function validateStep(state: HayfeverConsultationState, step: number): st
 
     case 2:
       if (!state.assessment.symptomSeverity) {
-        return "Please select symptom severity";
+        return "Select the symptom severity";
       }
       if (!state.assessment.seasonalOrPerennial) {
-        return "Please specify seasonal or perennial symptoms";
+        return "Select the temporal pattern (seasonal, perennial or both)";
       }
       return null;
 
@@ -40,19 +40,19 @@ export function validateStep(state: HayfeverConsultationState, step: number): st
 
     case 5:
       if (!medicine) {
-        return "Please select medicine to supply";
+        return "Select the medicine to supply";
       }
       if (fexofenadine && !state.assessment.previousDiagnosisOrRecurrence) {
-        return "Fexofenadine requires a previous diagnosis of allergic rhinitis or recurrence of known symptoms (inclusion criterion). Confirm this on the Symptom Assessment step or choose Dymista.";
+        return "Fexofenadine requires a previous diagnosis of allergic rhinitis or recurrence of known symptoms (inclusion criterion). Go back to the Symptom Assessment step and tick 'Previous diagnosis of allergic rhinitis, or recurrence of known symptoms', or choose Dymista.";
       }
       if (fexofenadine && !state.medicineSupply.fexofenadineBrand) {
-        return "Please record the fexofenadine brand supplied (Allevia, P, or generic, POM)";
+        return "Select the fexofenadine 120 mg brand supplied (Allevia or generic)";
       }
       if (dymista && state.assessment.symptomSeverity === "mild") {
         return "Dymista is for moderate to severe allergic rhinitis requiring dual therapy. Mild symptoms do not meet the inclusion criteria.";
       }
       if (dymista && !state.medicineSupply.dualTherapyRequired) {
-        return "Please confirm dual therapy is required (monotherapy with an intranasal antihistamine or corticosteroid is not sufficient)";
+        return "Tick 'Dual therapy required' (monotherapy with an intranasal antihistamine or corticosteroid is not sufficient). If dual therapy is not needed, Dymista does not meet its inclusion criteria";
       }
       // Quantity supplied is a required record; the tool used to print the
       // document's ceiling as prose instead (adversarial review, 11 Sep 2026).
@@ -68,31 +68,31 @@ export function validateStep(state: HayfeverConsultationState, step: number): st
         if (b > 1) return "This PGD authorises one Dymista bottle (23 g, approx. 120 sprays) per supply";
       }
       if (!state.medicineSupply.dosageConfirmed) {
-        return "Please confirm dosage with patient";
+        return "Tick 'Dosage confirmed with patient'";
       }
       return null;
 
     case 6:
       if (!state.counselling.allergenAvoidance) {
-        return "Please confirm allergen avoidance counselling";
+        return "Tick 'Allergen avoidance measures discussed'";
       }
       if (fexofenadine && !state.counselling.alcoholSedatingAdvice) {
-        return "Please confirm the patient has been advised to avoid alcohol and other sedating antihistamines";
+        return "Tick 'Avoid alcohol and other sedating antihistamines (fexofenadine)'";
       }
       if (fexofenadine && !state.counselling.drowsinessAdvice) {
-        return "Please confirm the patient is aware fexofenadine is non-sedating but occasional drowsiness may still occur";
+        return "Tick 'Non-sedating antihistamine, but occasional drowsiness may still occur (fexofenadine)'";
       }
       if (dymista && !state.counselling.nasalSprayTechnique) {
-        return "Please confirm correct nasal spray technique has been advised";
+        return "Tick 'Correct nasal spray technique advised (Dymista)'";
       }
       if (dymista && !state.counselling.sideEffectsAdvice) {
-        return "Please confirm counselling on possible side effects and the need for ongoing review if Dymista is used long-term";
+        return "Tick 'Possible side effects and need for ongoing review if used long-term (Dymista)'";
       }
       if (!state.counselling.followUpAdvice) {
-        return "Please confirm follow-up advice has been given (seek medical advice if symptoms worsen rapidly or significantly, persist beyond one month of regular use despite fexofenadine, do not improve after 2 to 4 weeks of regular Dymista use, or the patient becomes systemically very unwell)";
+        return "Tick 'Follow-up advice given'";
       }
       if (!state.counselling.pilSupplied) {
-        return "Please confirm the patient information leaflet has been supplied";
+        return "Tick 'Patient information leaflet (PIL) supplied with the medication'";
       }
       return null;
 

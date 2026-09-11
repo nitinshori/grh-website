@@ -123,8 +123,10 @@ function getHardStopAlerts(state: WegovyConsultationState): ClinicalAlert[] {
           "BMI below the PGD inclusion threshold. Wegovy is indicated for an initial BMI of 30 kg/m² or above, or 27 kg/m² or above with at least one weight-related comorbidity.",
       });
     } else if (bmi >= 27 && bmi < 30) {
-      // BMI 27-29.9: needs comorbidity
-      if (state.weightAssessment.weightRelatedComorbidities.length === 0) {
+      // BMI 27-29.9: needs comorbidity. Fires only on the pharmacist's
+      // answer "No"; a blank answer or an empty tick list is "not yet
+      // answered" and is a validation message (stop audit, 11 Sep 2026).
+      if (state.weightAssessment.hasWeightRelatedComorbidity === "no") {
         alerts.push({
           severity: "stop",
           code: "BMI_27_NO_COMORBIDITY",
@@ -339,7 +341,7 @@ function getHardStopAlerts(state: WegovyConsultationState): ClinicalAlert[] {
   if (
     state.medicalHistory.depression &&
     state.medicalHistory.mentalHealthConcern &&
-    !state.medicalHistory.psychiatricOversightInPlace
+    state.medicalHistory.psychiatricOversightInPlace === "no"
   ) {
     alerts.push({
       severity: "stop",
@@ -666,18 +668,24 @@ export function validateWeightAssessmentStep(state: WegovyConsultationState): st
     return `${which} is below the PGD inclusion threshold (30 or above, or 27 or above with a weight-related comorbidity)`;
   }
   if (bmi >= 27 && bmi < 30) {
+    const answer = state.weightAssessment.hasWeightRelatedComorbidity;
+    if (answer === "")
+      return "Answer \"Does the patient have at least one weight-related comorbidity?\" (Yes or No)";
+    if (answer === "no") {
+      return `For ${which.toLowerCase()} 27 to below 30, at least one weight-related comorbidity must be present; the patient has none`;
+    }
     if (state.weightAssessment.weightRelatedComorbidities.length === 0) {
-      return `For ${which.toLowerCase()} 27 to below 30, at least one weight-related comorbidity must be documented`;
+      return "Tick the weight-related comorbidity (or comorbidities) the patient has";
     }
   }
   if (!state.weightAssessment.initialAssessmentCompleted) {
-    return "Initial face-to-face assessment must be completed and documented";
+    return "Tick \"Initial face-to-face assessment completed and documented\"";
   }
   if (!state.weightAssessment.lifestylePlanAgreed) {
-    return "Patient must be willing to follow a reduced-calorie diet and increase physical activity in line with the agreed lifestyle plan";
+    return "Tick \"Patient is willing to follow a reduced-calorie diet and increase physical activity in line with the agreed lifestyle plan\"";
   }
   if (!state.weightAssessment.targetWeightLoss.trim()) {
-    return "A realistic target weight must be agreed and recorded";
+    return "Enter the Target weight agreed";
   }
 
   return null;
@@ -685,7 +693,9 @@ export function validateWeightAssessmentStep(state: WegovyConsultationState): st
 
 export function validateMedicalHistoryStep(state: WegovyConsultationState): string | null {
   if (!state.medicalHistory.childbearingPotential)
-    return "Record whether the patient is a woman of childbearing potential";
+    return "Answer \"Woman of childbearing potential?\" (Yes or No)";
+  if (state.medicalHistory.depression && !state.medicalHistory.psychiatricOversightInPlace)
+    return "Answer \"Is appropriate psychiatric oversight in place?\" (Yes or No)";
   return null;
 }
 
@@ -705,7 +715,7 @@ export function validateObservationsStep(state: WegovyConsultationState): string
     state.observations.diastolicBP === null ||
     state.observations.heartRate === null
   ) {
-    return "Blood pressure and heart rate are required";
+    return "Enter Systolic blood pressure, Diastolic blood pressure and Heart rate";
   }
   return null;
 }
@@ -723,11 +733,11 @@ export function validateDoseSelectionStep(state: WegovyConsultationState): strin
   const ds = state.doseSelection;
   const wa = state.weightAssessment;
   if (!wa.visitType) return "Go back to Weight Assessment and select the visit type";
-  if (!ds.dose) return "Dose must be selected";
+  if (!ds.dose) return "Select the Dose to supply this visit";
   if (stageForDose(ds.dose) !== ds.currentDoseStage)
-    return "The dose stage does not match the dose selected";
-  if (!ds.injectionSite) return "Injection site must be selected";
-  if (!ds.batchNumber.trim()) return "Batch number of the product supplied is required";
+    return "Re-select the Dose to supply this visit (the dose stage is set from it)";
+  if (!ds.injectionSite) return "Select the Injection site";
+  if (!ds.batchNumber.trim()) return "Enter the Batch number of the product supplied";
 
   const continuing = wa.visitType === "continuing";
 
@@ -743,15 +753,17 @@ export function validateDoseSelectionStep(state: WegovyConsultationState): strin
     // patient" used to remove the 2-year cap and the 5% rule
     // (adversarial review, 11 Sep 2026).
     if (!ds.previousDose || ds.previousDose === "none")
-      return "Record the dose the patient has been on";
+      return "Select the Dose the patient has been on";
     if (ds.weeksAtCurrentDose === null || ds.weeksAtCurrentDose < 0)
-      return "Record how many weeks the patient has been on the previous dose";
+      return "Enter Weeks on that dose";
     if (!ds.treatmentStartDate)
-      return "Treatment start date is required for a patient already on treatment";
+      return "Enter the Treatment start date (current course)";
+    if (ds.treatmentStartDate > new Date().toISOString().slice(0, 10))
+      return "The Treatment start date (current course) is in the future";
     if (ds.initialWeight === null)
-      return "Weight at initiation is required for a patient already on treatment";
+      return "Enter the Weight at initiation";
     if (ds.monthsOnMaxToleratedDose === null || ds.monthsOnMaxToleratedDose < 0)
-      return "Record how many months the patient has been on the maximum tolerated dose (0 if still titrating)";
+      return "Enter Months on the maximum tolerated dose (0 if still titrating)";
 
     const allowed = getAllowedDoses(state);
     if (!allowed.includes(ds.dose)) {
@@ -801,32 +813,37 @@ export function validateDoseSelectionStep(state: WegovyConsultationState): strin
 }
 
 export function validateCounsellingStep(state: WegovyConsultationState): string | null {
-  // All counselling points should be checked
-  const allChecked =
-    state.counselling.injectionTechnique &&
-    state.counselling.storageFridge &&
-    state.counselling.missedDose &&
-    state.counselling.giSideEffects &&
-    state.counselling.pancreatitisWarning &&
-    state.counselling.gallbladderWarning &&
-    state.counselling.suicidalIdeationWarning &&
-    (state.medicalHistory.childbearingPotential !== "yes" || state.counselling.contraceptionAdvice) &&
-    state.counselling.dietExerciseAdvice &&
-    state.counselling.followUpSchedule &&
-    state.counselling.urgentWarningSymptoms &&
-    state.counselling.writtenInformationGiven &&
-    state.counselling.nhsRouteExplained &&
-    state.counselling.gpInformed;
-
+  // Every point shown is required. The message names the first unticked
+  // point in the words of its label, so the pharmacist knows which box.
+  const c = state.counselling;
+  const points: [boolean, string][] = [
+    [c.injectionTechnique, "Injection technique explained"],
+    [c.storageFridge, "Storage instructions provided"],
+    [c.missedDose, "Missed dose protocol explained"],
+    [c.giSideEffects, "GI side effects and fluid intake discussed"],
+    [c.pancreatitisWarning, "Pancreatitis warning signs explained"],
+    [c.gallbladderWarning, "Gallbladder disease symptoms discussed"],
+    [c.urgentWarningSymptoms, "Urgent warning symptoms explained"],
+    [c.suicidalIdeationWarning, "Mood and mental health: when to seek help explained"],
+  ];
+  if (state.medicalHistory.childbearingPotential === "yes") {
+    points.push([c.contraceptionAdvice, "Contraception and pregnancy advice given"]);
+  }
   // Hypoglycaemia warning only required if on other diabetes medicines
   // (insulin and sulfonylureas are exclusions, so cannot reach this step)
   if (state.medications.takesOtherDiabetesMeds) {
-    return allChecked && state.counselling.hypoglycaemiaRisk
-      ? null
-      : "All counselling points must be confirmed";
+    points.push([c.hypoglycaemiaRisk, "Hypoglycaemia signs and symptoms explained (type 2 diabetes)"]);
   }
-
-  return allChecked ? null : "All counselling points must be confirmed";
+  points.push(
+    [c.dietExerciseAdvice, "Diet and physical activity advice provided"],
+    [c.writtenInformationGiven, "Written information given"],
+    [c.followUpSchedule, "Follow-up and review arranged"],
+    [c.nhsRouteExplained, "Patient told that the NHS route exists and how to access it"],
+    [c.gpInformed, "GP informed of this initiation or review"],
+  );
+  const missing = points.find(([done]) => !done);
+  if (missing) return `Tick "${missing[1]}" once done. Every point on this step is required`;
+  return null;
 }
 
 export function validateSummaryStep(state: WegovyConsultationState): string | null {

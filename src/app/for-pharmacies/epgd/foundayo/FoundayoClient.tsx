@@ -84,9 +84,10 @@ interface FoundayoState {
   };
   visit: {
     type: VisitType;
-    /** Restart only: more than 2 months since discontinuing, so the BMI
-     *  inclusion criteria apply again (PGD dose row). */
-    restartGapOver2Months: boolean;
+    /** Restart only: time since discontinuing. More than 2 months means the
+     *  BMI inclusion criteria apply again (PGD dose row). An answer, not a
+     *  pre-unticked box, so the gate is never skipped by default. */
+    restartGap: "" | "2-months-or-less" | "more-than-2-months";
   };
   eligibility: {
     heightCm: number | null;
@@ -95,7 +96,9 @@ interface FoundayoState {
     /** Weight at initiation, carried forward from the first record or
      *  entered by the pharmacist, so the 5% at 6 months figure exists. */
     initialWeightKg: number | null;
-    hasComorbidity: boolean;
+    /** "" not yet answered; only "no" (with BMI 27 to below 30) stops. An
+     *  unticked box never stops (stop audit, 11 Sep 2026). */
+    hasComorbidity: "" | "yes" | "no";
     comorbidities: string;
     targetWeightKg: number | null;
     willingLifestyleChange: boolean;
@@ -122,7 +125,8 @@ interface FoundayoState {
   };
   cautions: {
     mentalHealthHistory: boolean; // suicidal ideation history or active severe mental illness
-    psychiatricOversightInPlace: boolean;
+    /** "" not yet answered; only "no" (with concern) stops. */
+    psychiatricOversightInPlace: "" | "yes" | "no";
     mentalHealthConcern: boolean;
     mildModerateRenalImpairment: boolean;
     raisedRestingHeartRate: boolean;
@@ -139,7 +143,8 @@ interface FoundayoState {
     strongCyp3a4Inhibitor: boolean; // clarithromycin, ketoconazole, itraconazole
     oatp1bInhibitor: boolean; // ciclosporin
     simvastatin: boolean;
-    simvastatinPrescriberConfirmed: boolean;
+    /** "" not yet answered; "no" (prescriber has not confirmed) stops. */
+    simvastatinPrescriberConfirmed: "" | "yes" | "no";
     rosuvastatinOver20mg: boolean;
     oralTopotecan: boolean;
     warfarin: boolean;
@@ -223,13 +228,13 @@ function initialState(): FoundayoState {
       privateSupplyExplained: false,
       writtenConsentObtained: false,
     },
-    visit: { type: "", restartGapOver2Months: false },
+    visit: { type: "", restartGap: "" },
     eligibility: {
       heightCm: null,
       weightKg: null,
       bmi: null,
       initialWeightKg: null,
-      hasComorbidity: false,
+      hasComorbidity: "",
       comorbidities: "",
       targetWeightKg: null,
       willingLifestyleChange: false,
@@ -256,7 +261,7 @@ function initialState(): FoundayoState {
     },
     cautions: {
       mentalHealthHistory: false,
-      psychiatricOversightInPlace: false,
+      psychiatricOversightInPlace: "",
       mentalHealthConcern: false,
       mildModerateRenalImpairment: false,
       raisedRestingHeartRate: false,
@@ -272,7 +277,7 @@ function initialState(): FoundayoState {
       strongCyp3a4Inhibitor: false,
       oatp1bInhibitor: false,
       simvastatin: false,
-      simvastatinPrescriberConfirmed: false,
+      simvastatinPrescriberConfirmed: "",
       rosuvastatinOver20mg: false,
       oralTopotecan: false,
       warfarin: false,
@@ -330,7 +335,7 @@ type Action =
   | { type: "UPDATE_VISIT"; field: keyof FoundayoState["visit"]; value: unknown }
   | { type: "UPDATE_ELIGIBILITY"; field: keyof FoundayoState["eligibility"]; value: unknown }
   | { type: "UPDATE_EXCLUSION"; field: keyof FoundayoState["exclusions"]; value: boolean }
-  | { type: "UPDATE_CAUTION"; field: keyof FoundayoState["cautions"]; value: boolean }
+  | { type: "UPDATE_CAUTION"; field: keyof FoundayoState["cautions"]; value: FoundayoState["cautions"][keyof FoundayoState["cautions"]] }
   | { type: "UPDATE_INTERACTION"; field: keyof FoundayoState["interactions"]; value: unknown }
   | { type: "UPDATE_DOSE"; field: keyof FoundayoState["dose"]; value: unknown }
   | { type: "UPDATE_RECORD"; field: keyof FoundayoState["record"]; value: unknown }
@@ -509,7 +514,7 @@ export function FoundayoClient() {
     const bmiGateApplies =
       visit.type === "" ||
       visit.type === "initiation" ||
-      (visit.type === "restart" && visit.restartGapOver2Months);
+      (visit.type === "restart" && visit.restartGap === "more-than-2-months");
     if (bmiGateApplies && eligibility.bmi !== null && eligibility.bmi < 27) {
       out.push({
         code: "bmi",
@@ -523,13 +528,15 @@ export function FoundayoClient() {
       eligibility.bmi !== null &&
       eligibility.bmi >= 27 &&
       eligibility.bmi < 30 &&
-      !eligibility.hasComorbidity
+      eligibility.hasComorbidity === "no"
     ) {
+      // Fires only on the answer "No"; a blank answer is held by the
+      // Eligibility step validator (stop audit, 11 Sep 2026).
       out.push({
         code: "bmi-comorbidity",
         severity: "stop",
         message: "BMI 27 to 30 requires a comorbidity",
-        detail: "Record at least one weight-related comorbidity, or the patient is not eligible under this PGD.",
+        detail: `BMI ${eligibility.bmi}. Eligible only with a weight-related comorbidity, and the patient has none, so is not eligible under this PGD.`,
       });
     }
 
@@ -557,7 +564,8 @@ export function FoundayoClient() {
 
     // ── Mental health caution, with its conditional stop. ────────────
     if (cautions.mentalHealthHistory) {
-      if (cautions.mentalHealthConcern && !cautions.psychiatricOversightInPlace) {
+      // Two answers the pharmacist gave: concern ticked and oversight "No".
+      if (cautions.mentalHealthConcern && cautions.psychiatricOversightInPlace === "no") {
         out.push({
           code: "mh-stop",
           severity: "stop",
@@ -624,11 +632,12 @@ export function FoundayoClient() {
         detail: "Orforglipron increases rosuvastatin exposure. Refer to the prescriber before supplying.",
       });
     }
-    if (interactions.simvastatin && !interactions.simvastatinPrescriberConfirmed) {
+    // Fires only on the answer "No"; blank is held by the Medicines step validator.
+    if (interactions.simvastatin && interactions.simvastatinPrescriberConfirmed === "no") {
       out.push({
         code: "simva",
         severity: "stop",
-        message: "Simvastatin dose not yet confirmed with the prescriber",
+        message: "Simvastatin position not confirmed by the prescriber",
         detail: "The simvastatin dose must be halved when taken with orforglipron. Do not adjust it yourself. Refer to the prescriber and confirm before supply.",
       });
     }
@@ -724,63 +733,20 @@ export function FoundayoClient() {
         detail: "Leave the current dose blank when starting or recommencing, or change the visit type.",
       });
     }
-    if ((visit.type === "escalation" || visit.type === "continuation") && !dose.currentDose && dose.newDose) {
-      out.push({
-        code: "followup-current",
-        severity: "stop",
-        message: "Follow-up visit with no current dose recorded",
-        detail: "Record the dose the patient is currently taking, or change the visit type to initiation or recommencing.",
-      });
-    }
+    // A follow-up visit with the current dose still blank is "not yet
+    // answered": the Dose step validator asks for it. Never a stop
+    // (stop audit, 11 Sep 2026).
 
     // ── Contraception. The reason this tool exists. ─────────────────
     const isDoseIncrease =
       visit.type === "initiation" ||
       visit.type === "restart" ||
       (!!dose.currentDose && !!dose.newDose && dose.currentDose !== dose.newDose);
-    if (state.currentStep > STEP_CONTRACEPTION) {
-      if (!contraception.notApplicable && !contraception.usesOralHormonal) {
-        out.push({
-          code: "contra-unasked",
-          severity: "stop",
-          message: "Contraception not addressed",
-          detail: "Record either that oral hormonal contraception is in use, or that it is not applicable for this patient.",
-        });
-      }
-      if (contraception.usesOralHormonal && !contraception.advisedNonOralOrBarrier) {
-        out.push({
-          code: "contra-advice",
-          severity: "stop",
-          message: "Contraception advice not given",
-          detail: "Orforglipron may reduce the efficacy of oral hormonal contraceptives. Advise a non-oral method, or an added barrier method, for 30 days.",
-        });
-      }
-      if (
-        contraception.usesOralHormonal &&
-        isDoseIncrease &&
-        !contraception.advisedRepeatAfterEachIncrease
-      ) {
-        out.push({
-          code: "contra-escalation",
-          severity: "stop",
-          message: "Advice for the dose increase not recorded",
-          detail: "The 30 day window reopens after every dose increase, not only at initiation. Confirm the patient has been told this applies again now.",
-        });
-      }
-    }
-
-    // ── Written consent, gated the same way as the other tools. ─────
-    if (
-      state.currentStep > STEP_INFORMED_CONSENT &&
-      !state.informedConsent.writtenConsentObtained
-    ) {
-      out.push({
-        code: "consent",
-        severity: "stop",
-        message: "Written informed consent not yet obtained",
-        detail: "Go back to the Informed Consent step and confirm that written consent has been obtained and filed.",
-      });
-    }
+    // Contraception (asked, advice given, advice repeated at each increase)
+    // and written consent are unticked-box conditions, so they are never
+    // stops: the Contraception and Informed Consent step validators hold
+    // Next until they are answered (stop audit, 11 Sep 2026).
+    void isDoseIncrease;
 
     // ── Cautions. ──────────────────────────────────────────────────
     if (interactions.warfarin) {
@@ -869,25 +835,35 @@ export function FoundayoClient() {
       case STEP_ELIGIBILITY: {
         const missing: string[] = [];
         if (!visit.type) missing.push("type of visit");
-        if (eligibility.bmi === null) missing.push("height and weight (BMI must be calculated at this visit)");
+        if (visit.type === "restart" && !visit.restartGap) missing.push("time since treatment was discontinued (2 months or less, or more than 2 months)");
+        if (eligibility.bmi === null) missing.push("Height (cm) and Weight today (kg), so the BMI is calculated at this visit");
+        if (
+          eligibility.bmi !== null &&
+          eligibility.bmi >= 27 &&
+          eligibility.bmi < 30 &&
+          eligibility.hasComorbidity === ""
+        )
+          missing.push("answer \"Does the patient have at least one weight-related comorbidity?\" (Yes or No)");
         if (
           eligibility.bmi !== null &&
           eligibility.bmi < 30 &&
-          eligibility.hasComorbidity &&
+          eligibility.hasComorbidity === "yes" &&
           !eligibility.comorbidities.trim()
         )
           missing.push("the weight-related comorbidity relied on, named");
         if (visit.type !== "initiation" && visit.type !== "" && eligibility.initialWeightKg === null)
           missing.push("weight at initiation (for the 5% of initial body weight review)");
-        if (eligibility.targetWeightKg === null) missing.push("target weight agreed");
-        if (!eligibility.willingLifestyleChange) missing.push("willing to follow the reduced-calorie diet and increased physical activity");
-        if (!eligibility.initialAssessmentDone) missing.push("initial assessment completed and documented");
-        if (!eligibility.canSwallowOnceDaily) missing.push("able to take one tablet once daily, swallowed whole");
+        if (eligibility.targetWeightKg === null) missing.push("target weight agreed (kg)");
+        if (!eligibility.willingLifestyleChange) missing.push("tick \"Patient is willing to follow a reduced-calorie diet and increase physical activity\"");
+        if (!eligibility.initialAssessmentDone) missing.push("tick \"Initial assessment completed and documented, face to face\"");
+        if (!eligibility.canSwallowOnceDaily) missing.push("tick \"Patient is able to take one tablet once daily, swallowed whole\"");
         return missing.length ? `Inclusion criteria not yet confirmed: ${missing.join("; ")}.` : null;
       }
       case STEP_DOSE: {
         const missing: string[] = [];
         if (!dose.newDose) missing.push("dose to supply");
+        if ((visit.type === "escalation" || visit.type === "continuation") && !dose.currentDose)
+          missing.push("the Current dose (the dose the patient is taking now); or change the visit type to initiation or recommencing");
         if (visit.type === "escalation" && dose.daysAtCurrentDose === null) missing.push("days at the current dose");
         if (visit.type !== "initiation" && visit.type !== "restart" && !dose.reassessedAtVisit)
           missing.push("clinical benefit, tolerability and target weight reassessed at this visit");
@@ -895,31 +871,39 @@ export function FoundayoClient() {
         if (record.quantitySupplied === null || record.quantitySupplied < 1) missing.push("quantity supplied (tablets)");
         if (record.quantitySupplied !== null && record.quantitySupplied > MAX_TABLETS_PER_SUPPLY)
           missing.push(`no more than ${MAX_TABLETS_PER_SUPPLY} tablets (one month at the current strength; the PGD does not allow stocking up)`);
-        if (cautions.t2dmOnMetforminSglt2Dpp4 && !cautions.gpInformed) missing.push("GP informed (type 2 diabetes on metformin, SGLT2 or DPP-4 inhibitor)");
+        if (cautions.t2dmOnMetforminSglt2Dpp4 && !cautions.gpInformed) missing.push("\"GP informed of the supply\" (type 2 diabetes caution, Exclusions step)");
         return missing.length ? `Before continuing, record: ${missing.join("; ")}.` : null;
       }
+      case 4:
+        if (cautions.mentalHealthHistory && !cautions.psychiatricOversightInPlace)
+          return "Answer \"Is appropriate psychiatric oversight in place?\" (Yes or No).";
+        return cautions.t2dmOnMetforminSglt2Dpp4 && !cautions.gpInformed
+          ? "Type 2 diabetes caution: tick \"GP informed of the supply\" once the GP has been informed. The PGD requires the GP to be informed before supply."
+          : null;
       case STEP_MEDICINES:
+        if (interactions.simvastatin && !interactions.simvastatinPrescriberConfirmed)
+          return "Answer \"Has the prescriber been contacted and the simvastatin position confirmed?\" (Yes or No).";
         return interactions.medicationListReviewed
           ? null
-          : "Confirm the full medication list was reviewed at this visit, including over the counter products and St John's wort.";
+          : "Tick \"Full medication list reviewed at this visit\" once the list has been checked, including over the counter products and St John's wort.";
       case STEP_SUMMARY:
         return validateSummaryStep(state.summary);
       case STEP_CONTRACEPTION: {
         if (!contraception.notApplicable && !contraception.usesOralHormonal)
-          return "Record either that oral hormonal contraception is in use, or that it is not applicable for this patient.";
+          return "Does the patient use oral hormonal contraception? Select an answer (Yes, or Not applicable).";
         if (contraception.usesOralHormonal && !contraception.advisedNonOralOrBarrier)
-          return "Confirm the patient has been advised to switch to a non-oral method, or add a barrier method, for 30 days.";
+          return "Tick \"Advised to switch to a non-oral method, or to add a barrier method, for 30 days\" once the advice has been given.";
         const doseGoesUp =
           visit.type === "initiation" ||
           visit.type === "restart" ||
           (!!dose.currentDose && !!dose.newDose && dose.currentDose !== dose.newDose);
         if (contraception.usesOralHormonal && doseGoesUp && !contraception.advisedRepeatAfterEachIncrease)
-          return "Confirm the patient has been told the 30 day window applies again now and after every future dose increase.";
+          return "Tick \"Told that this applies again for 30 days after every dose increase\" once the patient has been told.";
         return null;
       }
       case STEP_COUNSELLING: {
         const unticked = COUNSELLING_KEYS.filter((k) => !counselling[k]).length;
-        return unticked ? `Confirm every counselling item before continuing (${unticked} outstanding). The PGD requires the advice given to be recorded.` : null;
+        return unticked ? `Tick every counselling item once discussed (${unticked} still unticked). The PGD requires the advice given to be recorded.` : null;
       }
       default:
         return null;
@@ -1123,7 +1107,6 @@ export function FoundayoClient() {
                 value={state.visit.type}
                 onChange={(v) => dispatch({ type: "UPDATE_VISIT", field: "type", value: v as VisitType })}
                 options={[
-                  { value: "", label: "Select" },
                   { value: "initiation", label: "Initiation, first supply of orforglipron" },
                   { value: "escalation", label: "Follow-up with a dose increase" },
                   { value: "continuation", label: "Follow-up continuing the same dose (or stepping down for tolerability)" },
@@ -1138,10 +1121,15 @@ export function FoundayoClient() {
                     0.8 mg. The BMI inclusion criteria for initiation must be applied if
                     more than 2 months have passed since discontinuing treatment.
                   </p>
-                  <Checkbox
-                    label="More than 2 months since treatment was discontinued (BMI inclusion criteria apply again)"
-                    checked={state.visit.restartGapOver2Months}
-                    onChange={(v) => dispatch({ type: "UPDATE_VISIT", field: "restartGapOver2Months", value: v })}
+                  <SelectInput
+                    label="How long since treatment was discontinued?"
+                    value={state.visit.restartGap}
+                    onChange={(v) => dispatch({ type: "UPDATE_VISIT", field: "restartGap", value: v as FoundayoState["visit"]["restartGap"] })}
+                    options={[
+                      { value: "2-months-or-less", label: "2 months or less (BMI inclusion criteria do not need to be re-applied)" },
+                      { value: "more-than-2-months", label: "More than 2 months (BMI inclusion criteria apply again)" },
+                    ]}
+                    required
                   />
                 </div>
               )}
@@ -1152,6 +1140,8 @@ export function FoundayoClient() {
                   onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "heightCm", value: v })}
                   min={100}
                   max={220}
+                  unit="cm"
+                  required
                 />
                 <NumberInput
                   label="Weight today (kg)"
@@ -1159,6 +1149,8 @@ export function FoundayoClient() {
                   onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "weightKg", value: v })}
                   min={30}
                   max={300}
+                  unit="kg"
+                  required
                 />
               </div>
               {state.visit.type !== "" && state.visit.type !== "initiation" && (
@@ -1183,7 +1175,7 @@ export function FoundayoClient() {
                 <div className="p-3 bg-[color:var(--tenant-primary)]/10 border border-[color:var(--tenant-primary)]/30 rounded-md">
                   <p className="text-sm text-[color:var(--tenant-primary)]">
                     <strong>BMI: {state.eligibility.bmi}</strong>
-                    {state.visit.type === "escalation" || state.visit.type === "continuation" || (state.visit.type === "restart" && !state.visit.restartGapOver2Months)
+                    {state.visit.type === "escalation" || state.visit.type === "continuation" || (state.visit.type === "restart" && state.visit.restartGap === "2-months-or-less")
                       ? " (recorded; the inclusion threshold applied at initiation)"
                       : ""}
                   </p>
@@ -1196,16 +1188,21 @@ export function FoundayoClient() {
                   </p>
                 </div>
               )}
-              <Checkbox
-                label="Has at least one weight-related comorbidity (hypertension, type 2 diabetes, dyslipidaemia, obstructive sleep apnoea, cardiovascular disease)"
-                checked={state.eligibility.hasComorbidity}
-                onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "hasComorbidity", value: v })}
+              <SelectInput
+                label="Does the patient have at least one weight-related comorbidity? (hypertension, type 2 diabetes, dyslipidaemia, obstructive sleep apnoea, cardiovascular disease)"
+                value={state.eligibility.hasComorbidity}
+                onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "hasComorbidity", value: v as "" | "yes" | "no" })}
+                options={[
+                  { value: "yes", label: "Yes (list below)" },
+                  { value: "no", label: "No" },
+                ]}
+                required={state.eligibility.bmi !== null && state.eligibility.bmi >= 27 && state.eligibility.bmi < 30}
               />
               <TextInput
                 label="List comorbidities"
                 value={state.eligibility.comorbidities}
                 onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "comorbidities", value: v })}
-                required={state.eligibility.hasComorbidity && state.eligibility.bmi !== null && state.eligibility.bmi < 30}
+                required={state.eligibility.hasComorbidity === "yes" && state.eligibility.bmi !== null && state.eligibility.bmi < 30}
               />
               <NumberInput
                 label="Target weight agreed (kg)"
@@ -1282,10 +1279,15 @@ export function FoundayoClient() {
               />
               {state.cautions.mentalHealthHistory && (
                 <div className="ml-6 space-y-1">
-                  <Checkbox
-                    label="Appropriate psychiatric oversight is in place"
-                    checked={state.cautions.psychiatricOversightInPlace}
-                    onChange={(v) => dispatch({ type: "UPDATE_CAUTION", field: "psychiatricOversightInPlace", value: v })}
+                  <SelectInput
+                    label="Is appropriate psychiatric oversight in place?"
+                    value={state.cautions.psychiatricOversightInPlace}
+                    onChange={(v) => dispatch({ type: "UPDATE_CAUTION", field: "psychiatricOversightInPlace", value: v as "" | "yes" | "no" })}
+                    options={[
+                      { value: "yes", label: "Yes" },
+                      { value: "no", label: "No" },
+                    ]}
+                    required
                   />
                   <Checkbox
                     label="There is a current concern about mood or mental state"
@@ -1384,10 +1386,15 @@ export function FoundayoClient() {
                     The simvastatin dose must be halved when taken with orforglipron.
                     That is the prescriber's decision, not yours.
                   </p>
-                  <Checkbox
-                    label="Prescriber contacted and the simvastatin position confirmed"
-                    checked={state.interactions.simvastatinPrescriberConfirmed}
-                    onChange={(v) => dispatch({ type: "UPDATE_INTERACTION", field: "simvastatinPrescriberConfirmed", value: v })}
+                  <SelectInput
+                    label="Has the prescriber been contacted and the simvastatin position confirmed?"
+                    value={state.interactions.simvastatinPrescriberConfirmed}
+                    onChange={(v) => dispatch({ type: "UPDATE_INTERACTION", field: "simvastatinPrescriberConfirmed", value: v as "" | "yes" | "no" })}
+                    options={[
+                      { value: "yes", label: "Yes, confirmed" },
+                      { value: "no", label: "No, not confirmed (do not supply)" },
+                    ]}
+                    required
                   />
                 </div>
               )}
@@ -1463,15 +1470,19 @@ export function FoundayoClient() {
                   blocked below.
                 </div>
               )}
-              <SelectInput
-                label="Current dose (leave blank if starting today)"
-                value={state.dose.currentDose}
-                onChange={(v) => dispatch({ type: "UPDATE_DOSE", field: "currentDose", value: v as Dose })}
-                options={[
-                  { value: "", label: "Not currently taking orforglipron" },
-                  ...DOSE_LADDER.map((d) => ({ value: d, label: `${d} mg once daily` })),
-                ]}
-              />
+              <div>
+                <label className="block text-sm font-medium text-navy-900 mb-1">Current dose (the dose the patient is taking now)</label>
+                <select
+                  value={state.dose.currentDose}
+                  onChange={(e) => dispatch({ type: "UPDATE_DOSE", field: "currentDose", value: e.target.value as Dose })}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent bg-white"
+                >
+                  <option value="">Not currently taking orforglipron (starting or recommencing today)</option>
+                  {DOSE_LADDER.map((d) => (
+                    <option key={d} value={d}>{d} mg once daily</option>
+                  ))}
+                </select>
+              </div>
               {state.visit.type === "escalation" && (
                 <NumberInput
                   label="Days at the current dose"
@@ -1496,7 +1507,6 @@ export function FoundayoClient() {
                 value={state.dose.newDose}
                 onChange={(v) => dispatch({ type: "UPDATE_DOSE", field: "newDose", value: v as Dose })}
                 options={[
-                  { value: "", label: "Select" },
                   ...DOSE_LADDER.filter((d) => !(ceiling && ABOVE_CEILING.includes(d))).map((d) => ({
                     value: d,
                     label:
@@ -1559,7 +1569,7 @@ export function FoundayoClient() {
             {...stepProps}
           >
             <div className="space-y-4">
-              <div className="p-4 rounded-md bg-red-50 border border-red-300 text-sm text-red-900">
+              <div className="p-4 rounded-md bg-amber-50 border border-amber-300 text-sm text-amber-900">
                 <strong>The 30 day window reopens after every dose increase.</strong>
                 <p className="mt-1">
                   A patient on the full titration will need this advice six separate
@@ -1567,15 +1577,18 @@ export function FoundayoClient() {
                   It is not a one-off conversation.
                 </p>
               </div>
-              <Checkbox
-                label="Not applicable (patient does not use oral hormonal contraception)"
-                checked={state.contraception.notApplicable}
-                onChange={(v) => dispatch({ type: "UPDATE_CONTRACEPTION", field: "notApplicable", value: v })}
-              />
-              <Checkbox
-                label="Patient uses oral hormonal contraception"
-                checked={state.contraception.usesOralHormonal}
-                onChange={(v) => dispatch({ type: "UPDATE_CONTRACEPTION", field: "usesOralHormonal", value: v })}
+              <SelectInput
+                label="Does the patient use oral hormonal contraception (combined or progestogen-only pill)?"
+                value={state.contraception.usesOralHormonal ? "yes" : state.contraception.notApplicable ? "na" : ""}
+                onChange={(v) => {
+                  dispatch({ type: "UPDATE_CONTRACEPTION", field: "usesOralHormonal", value: v === "yes" });
+                  dispatch({ type: "UPDATE_CONTRACEPTION", field: "notApplicable", value: v === "na" });
+                }}
+                options={[
+                  { value: "na", label: "No, or not applicable (no oral hormonal contraception in use)" },
+                  { value: "yes", label: "Yes, patient uses oral hormonal contraception" },
+                ]}
+                required
               />
               {state.contraception.usesOralHormonal && (
                 <div className="ml-6 space-y-2">

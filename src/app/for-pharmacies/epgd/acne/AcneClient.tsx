@@ -406,7 +406,7 @@ export default function AcneClient() {
 
               {state.assessment.severity && (
                 <div className="space-y-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <p className="text-sm font-medium text-navy-900">Acne Manifestations</p>
+                  <p className="text-sm font-medium text-navy-900">Acne manifestations (tick at least one) <span className="text-red-400">*</span></p>
                   <Checkbox
                     label="Comedones (blackheads/whiteheads)"
                     checked={state.assessment.comedones}
@@ -456,15 +456,18 @@ export default function AcneClient() {
           >
             <div className="space-y-4">
               <AlertBanner alerts={alerts} />
+              <p className="text-xs text-gray-600">
+                Ask the patient about each item below. Tick a box if the answer is Yes; leave it unticked if the answer is No. Unticked boxes are recorded as No.
+              </p>
               <TextArea
-                label="Previous acne treatments"
+                label="Previous acne treatments (optional)"
                 value={state.medicalHistory.previousTreatments}
                 onChange={(v) => handleMedicalHistoryChange("previousTreatments", v)}
                 placeholder="e.g., Topical benzoyl peroxide 2.5% (2021), no systemic treatments"
               />
 
               <TextArea
-                label="Allergies/Sensitivities"
+                label="Allergies and sensitivities (write NKDA if none known)"
                 value={state.medicalHistory.allergies}
                 onChange={(v) => handleMedicalHistoryChange("allergies", v)}
                 placeholder="e.g., NKDA, or penicillin allergy if considering antibiotics"
@@ -519,6 +522,9 @@ export default function AcneClient() {
             getConsultationData={getConsultationData}
           >
             <AlertBanner alerts={alerts} />
+            <p className="text-xs text-gray-600 mb-3">
+              Ask the patient each question below. Tick the box if the answer is Yes; leave it unticked if the answer is No. Unticked boxes are recorded as No. Then tick the confirmation at the bottom.
+            </p>
             <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
               <Checkbox
                 label="Patient is pregnant"
@@ -592,7 +598,7 @@ export default function AcneClient() {
             </div>
             <div className="mt-4">
               <Checkbox
-                label="I have asked the patient each of the questions above and recorded the answers"
+                label="I have asked the patient every question above; ticked boxes are Yes and unticked boxes are No (required)"
                 checked={state.contraindications.questionsAsked}
                 onChange={(v) => handleContraindicationsChange("questionsAsked", v)}
                 required
@@ -675,7 +681,7 @@ export default function AcneClient() {
                         />
                       </div>
                       <Checkbox
-                        label="Review completed before this repeat course"
+                        label="Review completed before this repeat course (required)"
                         checked={state.medicineSelection.repeatCourseReviewed}
                         onChange={(v) => handleMedicineSelectionChange("repeatCourseReviewed", v)}
                         required
@@ -711,7 +717,7 @@ export default function AcneClient() {
             getConsultationData={getConsultationData}
           >
             <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
-              <p className="text-sm font-medium text-navy-900 mb-3">Confirm counselling points covered:</p>
+              <p className="text-sm font-medium text-navy-900 mb-3">Tick each counselling point once it has been covered with the patient (all are required):</p>
               <Checkbox
                 label="Improvement is not expected before 6 to 8 weeks; treatments may irritate the skin, especially at the start"
                 checked={state.counselling.improvementTimeline}

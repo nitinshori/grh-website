@@ -113,7 +113,9 @@ export function generateExclusionAlerts(
   // of diagnosis, clarify before prescribing)". For a patient who is not
   // penicillin-allergic the only PGD medicine is phenoxymethylpenicillin, so
   // "avoid" means no supply under this PGD until the diagnosis is clarified.
-  if (history.suspectedMononucleosis && !history.penicillinAllergy) {
+  // Fires only on an explicit "No" to penicillin allergy: while the allergy
+  // question is unanswered the tick is a caution, not a stop (stop audit).
+  if (history.suspectedMononucleosis && history.penicillinAllergy === "no") {
     alerts.push({
       severity: "stop",
       code: "MONONUCLEOSIS_PEN_V",
@@ -155,7 +157,7 @@ export function generateExclusionAlerts(
   }
 
   // Clarithromycin arm exclusions: apply when penicillin allergic (no alternative arm)
-  if (history.penicillinAllergy) {
+  if (history.penicillinAllergy === "yes") {
     const clariExclusions: string[] = [];
     if (history.macrolideAllergy)
       clariExclusions.push("known hypersensitivity to macrolides (clarithromycin, erythromycin, azithromycin)");
@@ -193,7 +195,7 @@ export function generateCautionAlerts(
   const alerts: ClinicalAlert[] = [];
 
   // Penicillin or beta-lactam allergy
-  if (history.penicillinAllergy) {
+  if (history.penicillinAllergy === "yes") {
     alerts.push({
       severity: "caution",
       code: "PENICILLIN_ALLERGY",
@@ -231,7 +233,7 @@ export function generateCautionAlerts(
       severity: "caution",
       code: "PREGNANCY_BREASTFEEDING",
       message: "Patient is pregnant or breastfeeding",
-      detail: history.penicillinAllergy
+      detail: history.penicillinAllergy === "yes"
         ? "Clarithromycin: relatively safe but ensure informed consent; a small amount passes to breast milk."
         : "Penicillin V is generally safe; ensure informed consent.",
     });
@@ -239,7 +241,7 @@ export function generateCautionAlerts(
 
   // Mononucleosis (glandular fever) on the clarithromycin arm: caution only
   // (the phenoxymethylpenicillin arm is a stop, see generateExclusionAlerts)
-  if (history.suspectedMononucleosis && history.penicillinAllergy) {
+  if (history.suspectedMononucleosis && history.penicillinAllergy !== "no") {
     alerts.push({
       severity: "caution",
       code: "MONONUCLEOSIS",
@@ -250,7 +252,7 @@ export function generateCautionAlerts(
   }
 
   // Clarithromycin arm: QT baseline risk must be assessed and recorded
-  if (history.penicillinAllergy && !history.qtProlongationRisk && !history.qtBaselineRiskAssessed) {
+  if (history.penicillinAllergy === "yes" && !history.qtProlongationRisk && !history.qtBaselineRiskAssessed) {
     alerts.push({
       severity: "caution",
       code: "CLARI_QT_ASSESS",
@@ -272,7 +274,7 @@ export function generateCautionAlerts(
   }
 
   // Clarithromycin arm cautions
-  if (history.penicillinAllergy && history.renalImpairmentEgfrUnder30) {
+  if (history.penicillinAllergy === "yes" && history.renalImpairmentEgfrUnder30) {
     alerts.push({
       severity: "caution",
       code: "CLARI_RENAL",
@@ -281,7 +283,7 @@ export function generateCautionAlerts(
         "Clarithromycin: dose adjustment or alternative needed. Consider referral to GP.",
     });
   }
-  if (history.penicillinAllergy && history.warfarin) {
+  if (history.penicillinAllergy === "yes" && history.warfarin) {
     alerts.push({
       severity: "caution",
       code: "CLARI_WARFARIN",
@@ -512,9 +514,9 @@ export function validateExaminationStep(
   examination: SoreThroatExamination
 ): string | null {
   if (!examination.rapidStrepAResult)
-    return "Rapid Strep A test result is required";
+    return "Rapid Strep A test result is required (select Not performed if no test was done)";
   if (!examination.tonsillarAppearance)
-    return "Tonsillar appearance assessment is required";
+    return "Tonsillar appearance is required";
   // The sepsis exclusion is temperature 38 or above TOGETHER WITH heart
   // rate, respiratory rate, systolic BP, new confusion or looking unwell.
   // Every measured element is required, so a blank never passes the screen.
@@ -531,11 +533,13 @@ export function validateExaminationStep(
 
 export function validateHistoryStep(history: SoreThroatHistory): string | null {
   if (!history.ableToTakeOralMedication)
-    return "Confirm the patient is able to take oral medication";
+    return "Tick Able to take oral medication (inclusion criterion)";
   if (!history.allergies.trim())
-    return "Record allergy status (or NKDA)";
-  if (history.penicillinAllergy && !history.qtProlongationRisk && !history.qtBaselineRiskAssessed)
-    return "Clarithromycin arm: confirm the baseline QT risk has been assessed";
+    return "Known allergies: record the allergy status (or NKDA)";
+  if (!history.penicillinAllergy)
+    return "Answer 'Penicillin or beta-lactam allergy': Yes or No (it chooses the arm)";
+  if (history.penicillinAllergy === "yes" && !history.qtProlongationRisk && !history.qtBaselineRiskAssessed)
+    return "Clarithromycin arm: tick Baseline QT risk assessed (or QT prolongation or risk factors if present)";
   return null;
 }
 
@@ -543,10 +547,10 @@ export function validateMedicineStep(
   medicine: SoreThroatMedicine,
   opts?: { shouldPrescribe: boolean; penicillinAllergy: boolean }
 ): string | null {
-  if (!medicine.medicine) return "Medicine selection is required";
+  if (!medicine.medicine) return "Select the medicine (or select No antibiotic to confirm the outcome)";
   if (medicine.medicine !== "none") {
     if (opts && !opts.shouldPrescribe)
-      return "Antibiotics may only be supplied under this PGD with FeverPAIN 4 or more, or a positive RAST";
+      return "Antibiotics may only be supplied under this PGD with FeverPAIN 4 or more, or a positive rapid Strep A test";
     if (opts && opts.penicillinAllergy && medicine.medicine === "phenoxymethylpenicillin")
       return "Phenoxymethylpenicillin is excluded in penicillin or beta-lactam allergy; select clarithromycin";
     if (opts && !opts.penicillinAllergy && medicine.medicine === "clarithromycin")
@@ -570,18 +574,18 @@ export function validateCounsellingStep(
   // set of optional ticks (adversarial review, 11 Sep 2026).
   const supplied = !!opts && opts.medicine !== "" && opts.medicine !== "none";
   if (supplied) {
-    if (!counselling.completeCourse) return "Confirm the advice to complete the full course, even if symptoms improve within 2-3 days";
-    if (!counselling.howToTake) return "Confirm the advice on how to take the antibiotic";
+    if (!counselling.completeCourse) return "Tick Complete the full course of antibiotics";
+    if (!counselling.howToTake) return "Tick the advice on how to take the antibiotic (empty stomach for Pen V; with or without food for clarithromycin)";
     if (opts?.oralContraceptive && !counselling.contraceptionAdvice)
-      return "Oral contraception: confirm the additional contraception advice (during the course and for 7 days afterwards)";
-    if (!counselling.allergicReactionAdvice) return "Confirm the advice to report any allergic reaction (rash, facial swelling, breathing difficulties) immediately";
+      return "Patient uses oral contraception: tick the additional contraceptive methods advice";
+    if (!counselling.allergicReactionAdvice) return "Tick Report any allergic reactions immediately";
     if (opts?.medicine === "clarithromycin" && !counselling.clarithromycinAdvice)
-      return "Clarithromycin: confirm the persistent diarrhoea (C. difficile) and metallic taste advice";
-    if (!counselling.avoidAntibioticSharing) return "Confirm the advice not to share antibiotics";
-    if (!counselling.pilSupplied) return "Confirm the patient information leaflet provided with the medication was supplied";
+      return "Tick the clarithromycin advice (persistent diarrhoea, metallic taste)";
+    if (!counselling.avoidAntibioticSharing) return "Tick Do not share antibiotics with others";
+    if (!counselling.pilSupplied) return "Tick Patient information leaflet (PIL) provided";
   }
-  if (!counselling.painRelief) return "Confirm the pain relief advice (paracetamol or ibuprofen; improvement expected within 3-5 days)";
-  if (!counselling.fluidIntake) return "Confirm the hydration advice";
-  if (!counselling.returnIfWorsening) return "Confirm the advice to seek medical advice if symptoms worsen or do not improve after 3-5 days";
+  if (!counselling.painRelief) return "Tick Pain relief: paracetamol or ibuprofen";
+  if (!counselling.fluidIntake) return "Tick Stay hydrated";
+  if (!counselling.returnIfWorsening) return "Tick Seek medical advice if symptoms worsen or do not improve after 3-5 days";
   return null;
 }

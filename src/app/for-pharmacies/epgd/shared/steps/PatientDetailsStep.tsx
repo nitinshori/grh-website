@@ -132,6 +132,7 @@ export function PatientDetailsStep({ patient, onChange, genderOption, requireAdu
         <div>
           <label className="block text-sm font-medium text-navy-900 mb-1">
             Date of birth <span className="text-red-400">*</span>
+            <span className="ml-1 text-xs font-normal text-gray-500">(day / month / year; cannot be a future date)</span>
           </label>
           <input
             type="date"
@@ -149,14 +150,19 @@ export function PatientDetailsStep({ patient, onChange, genderOption, requireAdu
             {patient.age !== null ? (
               <>
                 {patient.age} years
-                {requireAdult && patient.age < 18 && (
+                {patient.age < 0 && (
                   <span className="ml-2 text-red-500 text-xs font-medium">
-                    Must be 18+
+                    Date of birth is in the future: check the date entered
+                  </span>
+                )}
+                {requireAdult && patient.age >= 0 && patient.age < 18 && (
+                  <span className="ml-2 text-red-500 text-xs font-medium">
+                    Under 18: this PGD is for adults aged 18 and over
                   </span>
                 )}
               </>
             ) : (
-              <span className="text-gray-400">Enter DOB above</span>
+              <span className="text-gray-400">Enter the date of birth to calculate</span>
             )}
           </div>
         </div>
@@ -172,6 +178,7 @@ export function PatientDetailsStep({ patient, onChange, genderOption, requireAdu
       <div>
         <label className="block text-sm font-medium text-navy-900 mb-1">
           GP practice
+          <span className="ml-1 text-xs font-normal text-gray-500">(search by practice name or postcode; required where the tool says the PGD record needs it)</span>
         </label>
         <GPPracticeSearch
           practice={patient.gpPractice}

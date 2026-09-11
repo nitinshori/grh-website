@@ -32,9 +32,9 @@ export function validatePatientDetails(
   if (patient.age !== null && patient.age < 2) {
     errors.push('This PGD covers patients from age 2 years onwards');
   }
-  if (!patient.nhsNumber?.trim()) {
-    errors.push('NHS number is required');
-  }
+  // NHS number is optional, as on every other tool and as the shared field is
+  // labelled: the validator used to demand it while the label said
+  // "(optional)", and a visitor without one could not be seen.
 
   return { isValid: errors.length === 0, errors };
 }
@@ -71,17 +71,17 @@ export function validateScreening(screening: RabiesScreening): ValidationResult 
     errors.push('Select the indication (travel or occupational) for pre-exposure vaccination');
   }
   if (screening.indication !== 'occupational-uk' && !screening.destinationCountry?.trim()) {
-    errors.push('Destination country is required');
+    errors.push('Destination country/region is required');
   }
   if (screening.indication === 'occupational-uk' && !screening.otherActivities?.trim()) {
-    errors.push('Record the occupational indication');
+    errors.push('UK occupational indication: record the occupation under "Other activities, exposure risks or occupational indication"');
   }
   if (screening.indication !== 'occupational-uk' && !screening.departureDate) {
     errors.push('Departure date is required');
   }
   if (screening.indication !== 'occupational-uk') {
     if (!screening.sufficientTimeBeforeTravel) {
-      errors.push('Confirm there is sufficient time before travel to complete the chosen course (inclusion criterion)');
+      errors.push('Tick "Sufficient time before travel to complete the chosen course" (inclusion criterion)');
     }
     const days = daysFromToday(screening.departureDate);
     if (days !== null && days < 0) {
@@ -89,7 +89,7 @@ export function validateScreening(screening: RabiesScreening): ValidationResult 
     }
   }
   if (screening.highRiskActivities.length === 0 && !screening.otherActivities?.trim()) {
-    errors.push('Select at least one activity category or describe the exposure risk');
+    errors.push('Tick at least one high-risk activity, or describe the exposure risk under "Other activities, exposure risks or occupational indication"');
   }
 
   return { isValid: errors.length === 0, errors };
@@ -99,25 +99,25 @@ export function validateMedicalHistory(screening: RabiesScreening): ValidationRe
   const errors: string[] = [];
 
   if (screening.temperature === null || screening.temperature === undefined) {
-    errors.push('Temperature must be recorded');
+    errors.push('Body temperature (°C) must be recorded');
   }
   if (screening.currentIllness && !screening.illnessDetails?.trim()) {
-    errors.push('Please describe current illness');
+    errors.push('Minor current illness is ticked: complete "Describe current illness"');
   }
   if (screening.immunosuppressed && !screening.immunosuppressedDetails?.trim()) {
-    errors.push('Please specify reason for immunosuppression');
+    errors.push('Immunosuppressed is ticked: complete "Details of immunosuppression"');
   }
   if (screening.eggAllergy && !screening.eggAllergySeverity?.trim()) {
-    errors.push('Please specify egg allergy severity');
+    errors.push('Egg allergy is ticked: select "Egg allergy severity"');
   }
   if (screening.antibioticHypersensitivity && !screening.hypersensitivityIncludesNeomycin) {
     errors.push('Antibiotic hypersensitivity: record whether it extends to neomycin (Rabipur contains traces of neomycin)');
   }
   if (screening.pregnant && !screening.pregnancyRiskAssessment?.trim()) {
-    errors.push('Pregnancy: record the risk assessment (PGD caution)');
+    errors.push('Pregnant is ticked: complete "Pregnancy risk assessment" (PGD caution)');
   }
   if (screening.breastfeeding && !screening.breastfeedingRiskAssessment?.trim()) {
-    errors.push('Breastfeeding: record the risk assessment (PGD caution)');
+    errors.push('Breastfeeding is ticked: complete "Breastfeeding risk assessment" (PGD caution)');
   }
 
   return { isValid: errors.length === 0, errors };
@@ -148,7 +148,7 @@ export function validateAdministration(
   // administered under this PGD: confirmed before the injection is recorded,
   // not on the advice step afterwards.
   if (!adrenalineConfirmed) {
-    errors.push('Confirm adrenaline 1 in 1,000, the written anaphylaxis protocol and a telephone are immediately available before administering');
+    errors.push('Tick "Adrenaline (epinephrine) 1 in 1,000 injection is immediately available" before administering');
   }
 
   if (!administration.product) {
@@ -171,27 +171,27 @@ export function validateAdministration(
   }
 
   if (administration.expiryDate?.trim()) {
-    const expiryDate = new Date(administration.expiryDate);
-    const today = new Date();
-    if (expiryDate < today) {
-      errors.push('Vaccine batch has expired');
+    // Calendar days: a batch expiring today is still in date today.
+    const d = daysFromToday(administration.expiryDate);
+    if (d !== null && d < 0) {
+      errors.push('Vaccine batch has expired: do not administer, quarantine the stock and select an in-date batch');
     }
   }
 
   if (!administration.injectionSite) {
-    errors.push('Injection site must be selected');
+    errors.push('Select the injection site');
   }
   if (!administration.route) {
-    errors.push('Route must be selected (intramuscular, or deep subcutaneous in bleeding disorders)');
+    errors.push('Select the route (intramuscular, or deep subcutaneous in bleeding disorders)');
   }
   if (screening.bleedingDisorder && administration.route === 'intramuscular') {
     errors.push('Bleeding disorder, thrombocytopenia or anticoagulation: give by deep subcutaneous injection, not intramuscularly');
   }
   if (!administration.doseNumber) {
-    errors.push('Dose number must be selected');
+    errors.push('Select the dose number');
   }
   if (!administration.schedule) {
-    errors.push('Schedule (conventional or accelerated) must be selected');
+    errors.push('Select the schedule (conventional or accelerated)');
   }
   if (administration.schedule === 'accelerated') {
     if (ageYears !== null && ageYears < 18) {
@@ -201,10 +201,10 @@ export function validateAdministration(
       errors.push('Immunosuppressed: the accelerated course is excluded. Use the conventional course and refer for post-course serology.');
     }
     if (!administration.scheduleReason?.trim()) {
-      errors.push('Accelerated course: record the reason the conventional course was not possible');
+      errors.push('Accelerated course: complete "Reason the conventional course was not possible"');
     }
     if (!administration.offLabelConsent) {
-      errors.push('Accelerated course is off-label: record that the consent script was given and consent to off-label use obtained, naming the day 0, 3 and 7 schedule');
+      errors.push('Accelerated course is off-label: tick "Consent script given and consent to off-label use recorded"');
     }
   }
 
@@ -256,7 +256,7 @@ export function validateAdministration(
   }
 
   if (!administration.administeredBy?.trim()) {
-    errors.push('Administrator name is required');
+    errors.push('Administered by (name) is required');
   }
   if (!administration.timeAdministered?.trim()) {
     errors.push('Time of administration is required');
@@ -274,14 +274,19 @@ export function validatePostVaccineObs(
   const errors: string[] = [];
 
   if (!postVaccineObs.observationCompleted) {
-    errors.push('Record that the 15 minute observation period was completed');
+    errors.push('Tick "15 minute observation period completed"');
   }
   if (!postVaccineObs.anaphylaxisKitChecked) {
-    errors.push('Confirm adrenaline 1 in 1,000, the written anaphylaxis protocol and a telephone are immediately available');
+    errors.push('Adrenaline was not confirmed on the Administration step: go back and tick "Adrenaline (epinephrine) 1 in 1,000 injection is immediately available"');
+  }
+  // The record prints "Patient well: No" for an unticked box, so it cannot be
+  // left unanswered: either the patient was well, or a reaction was observed.
+  if (!postVaccineObs.patientWell && !postVaccineObs.adverseReaction) {
+    errors.push('Tick "Patient is well after vaccination", or tick "Adverse reaction observed" and describe it');
   }
 
   if (postVaccineObs.adverseReaction && !postVaccineObs.reactionDetails?.trim()) {
-    errors.push('Please describe the adverse reaction');
+    errors.push('Adverse reaction observed is ticked: complete "Describe adverse reaction"');
   }
 
   return { isValid: errors.length === 0, errors };
@@ -290,19 +295,21 @@ export function validatePostVaccineObs(
 export function validateAdvice(advice: RabiesAdvice): ValidationResult {
   const errors: string[] = [];
 
-  if (
-    !advice.writtenRecordGiven ||
-    !advice.threeDozeSchedule ||
-    !advice.scheduleExplained ||
-    !advice.pEPSimplification ||
-    !advice.woundCleaning ||
-    !advice.stillNeedPEP ||
-    !advice.exposureWarning ||
-    !advice.avoidAnimals ||
-    !advice.returnIfConcerned ||
-    !advice.boosterInformation
-  ) {
-    errors.push('All advice points must be acknowledged');
+  const points: [boolean, string][] = [
+    [advice.writtenRecordGiven, 'Patient information leaflet and written vaccination record given'],
+    [advice.threeDozeSchedule, 'Three-dose course explained: come back for every dose'],
+    [advice.scheduleExplained, 'Schedule intervals'],
+    [advice.pEPSimplification, 'This does not make you immune to rabies'],
+    [advice.woundCleaning, 'Wound cleaning'],
+    [advice.stillNeedPEP, 'Post-exposure treatment still needed after any exposure'],
+    [advice.exposureWarning, 'Exposure warning'],
+    [advice.avoidAnimals, 'Avoid contact with animals while away'],
+    [advice.returnIfConcerned, 'Side effects and when to seek help'],
+    [advice.boosterInformation, 'Booster information'],
+  ];
+  const missing = points.filter(([done]) => !done).map(([, label]) => label);
+  if (missing.length > 0) {
+    errors.push(`Every advice point must be ticked once given. Still unticked: ${missing.map((m) => `"${m}"`).join(', ')}`);
   }
 
   return { isValid: errors.length === 0, errors };

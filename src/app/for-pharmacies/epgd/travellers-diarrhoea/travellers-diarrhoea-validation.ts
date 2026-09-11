@@ -60,15 +60,24 @@ export function validateTravelAssessmentStep(
   travel: TDTravelAssessment
 ): string | null {
   if (!travel.destinationCountry.trim())
-    return 'Destination country is required';
-  if (!travel.departureDate) return 'Departure date is required';
-  if (!travel.returnDate) return 'Return date is required';
-  if (!travel.travelType) return 'Travel type (backpacking, business, etc.) is required';
+    return "Type the 'Destination Country'";
+  if (!travel.departureDate) return "Enter the 'Departure Date'";
+  if (!travel.returnDate) return "Enter the 'Return Date'";
+  // Dates were accepted in any order (walkthrough review, 11 Sep 2026).
+  if (travel.returnDate < travel.departureDate)
+    return "'Return Date' must be on or after the 'Departure Date'";
+  {
+    const today = new Date();
+    const limit = new Date(today.getFullYear() + 1, today.getMonth(), today.getDate()).toISOString().split('T')[0];
+    if (travel.departureDate > limit)
+      return "'Departure Date' is more than a year away: check the date";
+  }
+  if (!travel.travelType) return "Select the 'Travel Type' (backpacking, business, cruise, resort or other)";
   if (!travel.highRiskRegionConfirmed)
-    return 'Confirm the destination is a high-risk region for traveller\'s diarrhoea, checked on TravelHealthPro (PGD inclusion criterion)';
+    return "Tick 'High-risk region confirmed on TravelHealthPro' (PGD inclusion criterion). If the destination is not high risk, do not supply";
 
   if (travel.previousDiarrhoeaEpisodes && !travel.previousEpisodeDetails)
-    return 'If previous episode, provide details';
+    return "'Previous Travellers' Diarrhoea' is ticked: type the 'Details of Previous Episode'";
 
   return null;
 }
@@ -81,7 +90,7 @@ export function validateMedicalHistoryStep(
   // Every exclusion on this page defaults to absent, so the pharmacist must
   // confirm every question was actually asked.
   if (!medical.allQuestionsAsked)
-    return 'Confirm that every question on this page was asked and that none applies unless ticked';
+    return "Tick 'I have asked the patient every question on this page' at the bottom of the page";
   return null;
 }
 
@@ -91,9 +100,9 @@ export function validateMedicationsStep(
   medications: TDMedications
 ): string | null {
   if (medications.takesOtherDrugs && !medications.otherDrugsDetails.trim())
-    return 'Please specify other medications being taken';
+    return "'Other Medications' is ticked: type them in 'Please Specify Other Medications'";
   if (!medications.allQuestionsAsked)
-    return 'Confirm that every medicine on this page was asked about and that none applies unless ticked';
+    return "Tick 'I have asked about every medicine on this page' at the bottom of the page";
 
   return null;
 }
@@ -104,10 +113,10 @@ export function validateMedicineSelectionStep(
   medicine: TDMedicineSelection
 ): string | null {
   if (!medicine.selectedApproach)
-    return 'Please confirm whether standby treatment will be supplied';
+    return "Select 'Standby Treatment Supply': supply standby treatment, or not supplied";
   if (medicine.selectedApproach === 'standby') {
     if (medicine.azithromycinDays === null)
-      return 'Select the course length (1 to 3 days, depending on clinical severity)';
+      return "Select the 'Course length' (1 to 3 days, depending on clinical severity)";
     if (medicine.azithromycinDose !== azithromycinDoseText(medicine.azithromycinDays))
       return 'The recorded dose does not match the PGD for the chosen course length: re-select the course length';
     if (medicine.azithromycinQuantity === null || medicine.azithromycinQuantity < 1)
@@ -117,12 +126,12 @@ export function validateMedicineSelectionStep(
     if (medicine.azithromycinQuantity !== medicine.azithromycinDays)
       return 'Quantity must equal the course length: one 500 mg tablet per day';
     if (!medicine.brand.trim())
-      return 'Name and brand of the azithromycin product supplied is required (PGD records list)';
+      return "Type the 'Brand supplied' (name and brand of the azithromycin product, PGD records list)";
     if (!medicine.selectedForCriteria)
-      return 'Confirm the patient understands azithromycin is for moderate to severe symptoms';
+      return "Select 'Indication confirmed with the patient': the patient understands azithromycin is for moderate to severe symptoms only";
   }
   if (!medicine.reason.trim())
-    return 'Clinical reason for selection is required';
+    return "Type the 'Clinical Reason'";
 
   return null;
 }
@@ -141,7 +150,7 @@ export function validateCounsellingStep(
     !counselling.waterSafety ||
     !counselling.whenToSeekHelp
   ) {
-    return 'All counselling points must be addressed and confirmed';
+    return "Tick every counselling point on this page (each one must be discussed with the patient)";
   }
   // Items that only make sense when azithromycin was supplied
   if (
@@ -152,11 +161,11 @@ export function validateCounsellingStep(
       !counselling.childrenUnderWarning ||
       !counselling.medicineCardProvided)
   ) {
-    return 'All counselling points for the medicine supplied must be addressed and confirmed';
+    return "Tick every counselling point for the medicine supplied (when to start, loperamide, azithromycin use, stop if side effects, leaflet)";
   }
   // Pregnancy: given, or recorded as not applicable
   if (!counselling.pregnancyAdvice && !counselling.pregnancyAdviceNotApplicable)
-    return 'Pregnancy implications: confirm discussed, or tick not applicable';
+    return "Pregnancy: tick 'Pregnancy implications discussed', or 'Not applicable to this patient'";
 
   return null;
 }
@@ -167,10 +176,10 @@ export function validateSummaryStep(
   summary: TDConsultationSummary
 ): string | null {
   if (!summary.pharmacistName.trim())
-    return 'Pharmacist name is required';
+    return "Type the 'Pharmacist Name'";
   if (!summary.pharmacistGPhC.trim())
-    return 'GPhC registration number is required';
-  if (!summary.pharmacyName.trim()) return 'Pharmacy name is required';
+    return "Type the 'GPhC Registration Number'";
+  if (!summary.pharmacyName.trim()) return "Type the 'Pharmacy Name'";
 
   return null;
 }

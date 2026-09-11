@@ -56,11 +56,11 @@ export function validatePneumococcalConsentStep(
       return 'Record the basis of the Gillick competence assessment';
   }
   if (!consent.understandsVaccineNeed)
-    return 'Patient must understand why pneumococcal vaccination is needed';
+    return 'Tick "Patient understands why pneumococcal vaccination is needed"';
   if (!consent.understandsSchedule)
-    return 'Patient must understand the vaccination schedule (may need 2 doses)';
+    return 'Tick "Patient understands the vaccination schedule"';
   if (!consent.understandsSideEffects)
-    return 'Patient must be aware of possible side effects';
+    return 'Tick "Patient is aware of possible side effects"';
   return null;
 }
 
@@ -74,12 +74,16 @@ export function validatePneumococcalRiskAssessmentStep(data: {
   previousPPV23: boolean;
   previousPPV23Date: string;
 }): string | null {
-  if (!data.confirmedRiskCategory) return 'Risk category must be confirmed';
-  if (data.previousPCV13 && !data.previousPCV13Date) return 'Enter the date of the previous PCV13 dose';
-  if (data.previousPCV20 && !data.previousPCV20Date) return 'Enter the date of the previous PCV20 dose';
-  if (data.previousPPV23 && !data.previousPPV23Date) return 'Enter the date of the previous PPV23 dose';
+  if (!data.confirmedRiskCategory) return 'Tick "Risk category confirmed as documented"';
+  const today = new Date().toISOString().split('T')[0];
+  if (data.previousPCV13 && !data.previousPCV13Date) return 'Enter the date of the PCV13 dose';
+  if (data.previousPCV13 && data.previousPCV13Date > today) return 'Date of PCV13 dose cannot be in the future';
+  if (data.previousPCV20 && !data.previousPCV20Date) return 'Enter the date of the PCV20 dose';
+  if (data.previousPCV20 && data.previousPCV20Date > today) return 'Date of PCV20 dose cannot be in the future';
+  if (data.previousPPV23 && !data.previousPPV23Date) return 'Enter the date of the PPV23 dose';
+  if (data.previousPPV23 && data.previousPPV23Date > today) return 'Date of PPV23 dose cannot be in the future';
   if (!data.reviewedVaccineHistory)
-    return 'Previous vaccine history must be reviewed';
+    return 'Tick "Vaccine history reviewed"';
   return null;
 }
 
@@ -96,7 +100,7 @@ export function validatePneumococcalContraindicationsStep(data: {
   confirmedNoAbsoluteContraindications: boolean;
 }): string | null {
   if (!data.confirmedNoAbsoluteContraindications)
-    return 'Please confirm there are no absolute contraindications';
+    return 'Tick "I confirm no absolute contraindications are present and vaccination can proceed"';
   return null;
 }
 
@@ -135,7 +139,7 @@ export function validatePneumococcalAdministrationStep(
       }
     }
   }
-  if (!summary.doseNumber) return 'Dose number must be specified';
+  if (!summary.doseNumber) return 'Select the dose number in sequence';
   if (!summary.batchNumber?.trim()) return 'Batch number is required';
   if (!summary.expiryDate) return 'Expiry date is required';
   {
@@ -157,7 +161,7 @@ export function validatePneumococcalAdministrationStep(
     if (isNaN(due.getTime())) return 'Next due date is not a valid date';
     if (due < earliest) return 'Pneumovax 23 must be at least 8 weeks (56 days) after Prevenar 13: choose a later date';
   }
-  if (!summary.administrationTime) return 'Administration time is required';
+  if (!summary.administrationTime) return 'Time of administration is required';
   return null;
 }
 

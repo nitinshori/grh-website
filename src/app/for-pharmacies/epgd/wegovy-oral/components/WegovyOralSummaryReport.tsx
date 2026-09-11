@@ -138,7 +138,7 @@ export function WegovyOralSummaryReport({
         <Row label="Agreed target weight" value={e.targetWeightKg !== null ? `${e.targetWeightKg} kg` : "Not recorded"} />
         <Row
           label="Weight-related comorbidity"
-          value={e.hasComorbidity ? `Yes${e.comorbidities ? `: ${e.comorbidities}` : ""}` : "No"}
+          value={e.hasComorbidity === "yes" ? `Yes${e.comorbidities ? `: ${e.comorbidities}` : ""}` : e.hasComorbidity === "no" ? "No" : "Not answered"}
         />
         <Row label="Initial assessment completed and documented" value={yesNo(e.initialAssessmentDone)} />
         <Row label="Able to follow empty-stomach administration" value={yesNo(e.ableEmptyStomach)} />
@@ -175,7 +175,7 @@ export function WegovyOralSummaryReport({
           label="History of suicidal ideation or severe mental illness"
           value={
             state.cautions.mentalHealthHistory
-              ? `Yes; psychiatric oversight: ${yesNo(state.cautions.psychiatricOversight)}; current concern: ${yesNo(state.cautions.mentalHealthConcern)}`
+              ? `Yes; psychiatric oversight: ${state.cautions.psychiatricOversight === "yes" ? "Yes" : state.cautions.psychiatricOversight === "no" ? "No" : "not answered"}; current concern: ${yesNo(state.cautions.mentalHealthConcern)}`
               : "No"
           }
         />

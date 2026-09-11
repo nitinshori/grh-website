@@ -113,7 +113,7 @@ export function AsthmaSummaryReport({
       />
       <Row
         label="Preventer (inhaled corticosteroid) therapy"
-        value={state.assessment.onPreventer ? `Yes${state.assessment.preventerDetails ? `: ${state.assessment.preventerDetails}` : ""}` : "None recorded"}
+        value={state.assessment.preventerAnswer === "yes" ? `Yes${state.assessment.preventerDetails ? `: ${state.assessment.preventerDetails}` : ""}` : state.assessment.preventerAnswer === "no" ? "No preventer (excluded)" : "Not recorded"}
       />
       <Row
         label="Rescue courses needed in last 12 months (any source)"
@@ -123,10 +123,10 @@ export function AsthmaSummaryReport({
         label="Rescue courses supplied under this PGD in last 12 months"
         value={state.assessment.pgdRescueCoursesLast12Months !== null ? String(state.assessment.pgdRescueCoursesLast12Months) : "Not recorded"}
       />
-      <Row label="Acute exacerbation with bronchospasm" value={state.assessment.acuteExacerbation ? "Yes" : "No"} />
-      <Row label="Can use inhaler or willing to use spacer" value={state.assessment.canUseInhalerOrSpacer ? "Yes" : "No"} />
-      <Row label="Incomplete response to salbutamol" value={state.assessment.incompleteResponseToSalbutamol ? "Yes" : "No"} />
-      <Row label="Able to take oral medication" value={state.assessment.ableToTakeOralMedication ? "Yes" : "No"} />
+      <Row label="Acute exacerbation with bronchospasm" value={state.assessment.exacerbationAnswer === "yes" ? "Yes" : state.assessment.exacerbationAnswer === "no" ? "No (excluded)" : "Not recorded"} />
+      <Row label="Can use inhaler or willing to use spacer" value={state.assessment.inhalerAbilityAnswer === "yes" ? "Yes" : state.assessment.inhalerAbilityAnswer === "no" ? "No" : "Not recorded"} />
+      <Row label="Incomplete response to salbutamol" value={state.assessment.incompleteResponseAnswer === "yes" ? "Yes" : state.assessment.incompleteResponseAnswer === "no" ? "No" : "Not recorded"} />
+      <Row label="Able to take oral medication" value={state.assessment.oralAbilityAnswer === "yes" ? "Yes" : state.assessment.oralAbilityAnswer === "no" ? "No" : "Not recorded"} />
       <Row label="Reason for supply" value={state.assessment.reasonForSupply || "Not recorded"} />
       <Row
         label="Frequent use (>3 days/week)"
@@ -147,7 +147,7 @@ export function AsthmaSummaryReport({
       <Row label="Respiratory rate" value={o.respiratoryRate !== null ? `${o.respiratoryRate}/min` : "Not recorded"} />
       <Row label="Heart rate" value={o.heartRate !== null ? `${o.heartRate}/min` : "Not recorded"} />
       <Row label="PEF (% of best or predicted)" value={o.pefMeasured ? (o.pefPercentBest !== null ? `${o.pefPercentBest}%` : "Not recorded") : "Peak flow meter not available"} />
-      <Row label="Able to complete sentences in one breath" value={o.canCompleteSentences ? "Yes" : "No"} />
+      <Row label="Able to complete sentences in one breath" value={o.sentencesAnswer === "yes" ? "Yes" : o.sentencesAnswer === "no" ? "No: acute severe" : "Not recorded"} />
       <Row label="Acute severe or life-threatening features" value={severe.length ? severe.join(", ") : "None"} />
 
       {/* Medical History */}

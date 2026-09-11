@@ -112,7 +112,7 @@ export function EczemaSummaryReport({ state }: EczemaSummaryReportProps) {
           <Row label="Allergies" value={medicalHistory.allergies.trim() || "Not recorded"} />
           <Row
             label="Courses in the last 12 months"
-            value={`${COURSES_LABEL[medicalHistory.coursesLast12Months] || "Not recorded"}${medicalHistory.coursesLast12Months === "3-or-more" ? (medicalHistory.gpReviewSinceLastCourse ? "; GP review since the last course recorded" : "; no GP review since the last course") : ""}${medicalHistory.lastCourseEndDate ? `; last course ended ${medicalHistory.lastCourseEndDate}` : ""}`}
+            value={`${COURSES_LABEL[medicalHistory.coursesLast12Months] || "Not recorded"}${medicalHistory.coursesLast12Months === "3-or-more" ? (medicalHistory.gpReviewSinceLastCourse === "yes" ? "; GP review since the last course recorded" : medicalHistory.gpReviewSinceLastCourse === "no" ? "; no GP review since the last course" : "; GP review since the last course not recorded") : ""}${medicalHistory.lastCourseEndDate ? `; last course ended ${medicalHistory.lastCourseEndDate}` : ""}`}
           />
           {medicalHistory.pregnantOrBreastfeeding && (
             <Row label="Pregnancy / breastfeeding" value={medicalHistory.treatmentToBreastArea ? "Treatment to breast or nipple area (excluded)" : "Yes; site treated recorded above"} />
@@ -121,7 +121,7 @@ export function EczemaSummaryReport({ state }: EczemaSummaryReportProps) {
             <Row
               label="Secondary infection"
               value={
-                contraindications.concurrentAntibioticSupplied && contraindications.concurrentInfectionMildLocalised
+                contraindications.infectionManagement === "concurrent" && contraindications.concurrentAntibioticSupplied && contraindications.concurrentInfectionMildLocalised
                   ? `Mild and localised, confirmed. Oral antibiotic supplied under the Skin and Soft Tissue Infection PGD at this consultation: ${contraindications.concurrentAntibioticName || "not recorded"}, ${contraindications.concurrentAntibioticDose || "dose not recorded"}, quantity ${contraindications.concurrentAntibioticQuantity || "not recorded"}, batch ${contraindications.concurrentAntibioticBatch || "not recorded"}, expiry ${contraindications.concurrentAntibioticExpiry || "not recorded"}${contraindications.concurrentConsultationRef ? `, skin infection consultation ${contraindications.concurrentConsultationRef}` : ""}. Both supplies are in this one record.`
                   : "Signs present, not treated concurrently under the Skin and Soft Tissue Infection PGD: referred."
               }

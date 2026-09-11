@@ -14,6 +14,10 @@ export interface OrlistatWeightAssessment {
   bmiCategory: string;
   waistCircumference: number | null;
   comorbidities: string[];
+  /** Asked where the inclusion BMI is 28 to below 30. "" not yet answered;
+   *  only "no" raises BMI_28_NO_COMORBIDITY. An empty tick list on its own
+   *  never stops (stop audit, 11 Sep 2026). */
+  hasComorbidity: "" | "yes" | "no";
   // PGD v004 inclusion: motivated and committed to weight loss with a
   // structured reduced-calorie diet.
   motivatedStructuredDiet: boolean;
@@ -189,6 +193,7 @@ gpEmail: "",
       bmiCategory: "",
       waistCircumference: null,
       comorbidities: [],
+      hasComorbidity: "",
       motivatedStructuredDiet: false,
     },
     medicalHistory: {

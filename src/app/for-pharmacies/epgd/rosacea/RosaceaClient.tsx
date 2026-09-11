@@ -195,7 +195,7 @@ export default function RosaceaClient() {
         onNext={handleNext}
         onPrev={handlePrev}
         canProceed={canProceed}
-        validationError={validationError ?? (state.currentStep === TOTAL_STEPS - 1 ? stepError : null)}
+        validationError={validationError ?? stepError}
         isBlocked={anyStop}
         getConsultationData={getConsultationData}
         onNewConsultation={handleNewConsultation}
@@ -203,7 +203,7 @@ export default function RosaceaClient() {
         {state.currentStep === 0 && (
           <div className="space-y-4">
             <PatientDetailsStep patient={state.patient} onChange={(field, value) => dispatch({ type: "UPDATE_PATIENT", field, value })} />
-            <p className="text-xs text-gray-500">Adults aged 18 years and over. Address and GP practice are required for the PGD record.</p>
+            <p className="text-xs text-gray-500">Adults aged 18 years and over. Patient address and GP practice are required for the PGD record, as well as the fields marked *.</p>
           </div>
         )}
 
@@ -219,9 +219,9 @@ export default function RosaceaClient() {
               onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "subtype", value: v })}
               required
               options={[
-                { value: "erythematotelangiectatic", label: "Erythematotelangiectatic (flushing &amp; redness)" },
-                { value: "papulopustular", label: "Papulopustular (bumps &amp; pustules)" },
-                { value: "phymatous", label: "Phymatous (thickened skin), REFER" },
+                { value: "erythematotelangiectatic", label: "Erythematotelangiectatic (flushing and redness)" },
+                { value: "papulopustular", label: "Papulopustular (bumps and pustules)" },
+                { value: "phymatous", label: "Phymatous (thickened skin): excluded, refer" },
               ]}
             />
             {state.assessment.subtype === "phymatous" && (
@@ -238,6 +238,7 @@ export default function RosaceaClient() {
                 { value: "severe", label: "Severe, requiring systemic treatment (excluded, refer)" },
               ]}
             />
+            <p className="text-xs text-gray-600">Tick each feature that is present on examination. Papules/pustules must be present for either product to be supplied.</p>
             <Checkbox
               label="Flushing present"
               checked={state.assessment.flushing}
@@ -248,12 +249,17 @@ export default function RosaceaClient() {
               checked={state.assessment.erythema}
               onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "erythema", value: v })}
             />
-            <Checkbox
-              label="Papules/pustules present (inflammatory lesions)"
-              checked={state.assessment.papulesPostules}
+            <SelectInput
+              label="Are papules or pustules (inflammatory lesions) present?"
+              value={state.assessment.papulesPostules}
               onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "papulesPostules", value: v })}
-              description="Required for both arms: metronidazole gel is for rosacea with inflammatory lesions; azelaic acid gel is for papulopustular rosacea."
+              options={[
+                { value: "yes", label: "Yes, papules or pustules present" },
+                { value: "no", label: "No (neither product is indicated: refer)" },
+              ]}
+              required
             />
+            <p className="text-xs text-gray-600">Required for both arms: metronidazole gel is for rosacea with inflammatory lesions; azelaic acid gel is for papulopustular rosacea.</p>
             <Checkbox
               label="Ocular symptoms (dry, sore or gritty eyes, blepharitis)"
               checked={state.assessment.ocularSymptoms}
@@ -261,7 +267,7 @@ export default function RosaceaClient() {
               description="Neither arm treats ocular rosacea: advise artificial tears and refer to the GP (ophthalmology if severe or vision affected)."
             />
             <TextInput
-              label="Known triggers"
+              label="Known triggers (optional)"
               value={state.assessment.triggersIdentified}
               onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "triggersIdentified", value: v })}
               placeholder="e.g., alcohol, spicy food, heat, stress"
@@ -271,7 +277,8 @@ export default function RosaceaClient() {
 
         {state.currentStep === 3 && (
           <div className="space-y-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-            <h4 className="font-semibold text-sm text-amber-900 mb-3">Contraindications</h4>
+            <h4 className="font-semibold text-sm text-amber-900 mb-1">Contraindications</h4>
+            <p className="text-xs text-amber-900 mb-3">Ask the patient each question below. Tick the box if the answer is Yes; leave it unticked if the answer is No. Unticked boxes are recorded as No. Then tick the confirmation at the bottom.</p>
             <Checkbox
               label="Pregnancy"
               checked={state.contraindications.pregnancy}
@@ -316,7 +323,7 @@ export default function RosaceaClient() {
             />
             <div className="pt-2 border-t border-amber-200">
               <Checkbox
-                label="I have asked the patient each of the questions above and recorded the answers"
+                label="I have asked the patient every question above; ticked boxes are Yes and unticked boxes are No (required)"
                 checked={state.contraindications.questionsAsked}
                 onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "questionsAsked", value: v })}
                 required
@@ -456,7 +463,7 @@ export default function RosaceaClient() {
               <TextInput label="Consultation date" type="date" value={state.summary.consultationDate} onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "consultationDate", value: v })} required />
               <TextInput label="Consultation time" type="time" value={state.summary.consultationTime} onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "consultationTime", value: v })} />
             </div>
-            <TextArea label="Clinical notes" value={state.summary.clinicalNotes} onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "clinicalNotes", value: v })} rows={3} />
+            <TextArea label="Clinical notes (optional)" value={state.summary.clinicalNotes} onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "clinicalNotes", value: v })} rows={3} />
             <p className="text-xs text-gray-500">Save &amp; Print Record saves the consultation and prints the record below.</p>
           </div>
         )}

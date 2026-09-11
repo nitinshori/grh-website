@@ -31,11 +31,21 @@ export const SmokingToolClient: React.FC = () => {
       pharmacistName: __pharmProfile.name,
       pharmacistGPhC: __pharmProfile.gphcNumber,
       pharmacyName: __pharmProfile.pharmacyName,
+      pharmacyAddressLine1: prev.pharmacyAddressLine1 || __pharmProfile.pharmacyAddress || "",
     }));
   }, [__pharmProfile, formData.pharmacistName, formData.pharmacistGPhC]);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [showSummary, setShowSummary] = useState<boolean>(false);
+
+  // The quit date is asked twice (Smoking Assessment, then Dose Plan). Carry
+  // the first answer into the second so it is not typed again or typed
+  // differently (walkthrough review, 11 Sep 2026).
+  useEffect(() => {
+    if (currentStep === 6 && !formData.dosePlan.quitDate && formData.assessment.quitDate) {
+      setFormData((prev) => ({ ...prev, dosePlan: { ...prev.dosePlan, quitDate: prev.assessment.quitDate } }));
+    }
+  }, [currentStep, formData.dosePlan.quitDate, formData.assessment.quitDate]);
 
   const handleInputChange = useCallback(
     (field: string, value: string | number | boolean | null): void => {
@@ -440,7 +450,6 @@ export const SmokingToolClient: React.FC = () => {
                 value={formData.gender}
                 onChange={(v) => handleInputChange("gender", v)}
                 options={[
-                  { value: "", label: "Select..." },
                   { value: "male", label: "Male" },
                   { value: "female", label: "Female" },
                   { value: "other", label: "Other" },
@@ -485,23 +494,25 @@ export const SmokingToolClient: React.FC = () => {
               </div>
 
               <Checkbox
-                label="I consent to varenicline consultation and treatment under the PGD"
+                label="Patient consents to the varenicline consultation and to treatment under the PGD"
                 checked={formData.consentToTreatment}
                 onChange={(v) => handleInputChange("consentToTreatment", v)}
-                description={getFieldError("consentToTreatment")}
+                description={getFieldError("consentToTreatment") || "Required."}
+                required
               />
 
               <Checkbox
-                label="I consent to my consultation being recorded for quality assurance and training purposes"
+                label="Patient consents to the consultation record being used for quality assurance and training (optional)"
                 checked={formData.consentToRecord}
                 onChange={(v) => handleInputChange("consentToRecord", v)}
               />
 
               <Checkbox
-                label="I confirm that my identity has been verified with photographic ID"
+                label="Patient identity verified"
                 checked={formData.identityVerified}
                 onChange={(v) => handleInputChange("identityVerified", v)}
-                description={getFieldError("identityVerified")}
+                description={getFieldError("identityVerified") || "Required. Record how below."}
+                required
               />
               {formData.identityVerified && (
                 <SelectInput
@@ -520,7 +531,8 @@ export const SmokingToolClient: React.FC = () => {
                 label="Patient aware this is a private service"
                 checked={formData.patientAwarePrivateService}
                 onChange={(v) => handleInputChange("patientAwarePrivateService", v)}
-                description={getFieldError("patientAwarePrivateService") || "The patient understands there is a consultation fee and the medicine is not supplied on NHS prescription through this service."}
+                description={getFieldError("patientAwarePrivateService") || "Required. The patient understands there is a consultation fee and the medicine is not supplied on NHS prescription through this service."}
+                required
               />
             </div>
           )}
@@ -548,6 +560,9 @@ export const SmokingToolClient: React.FC = () => {
                   value={formData.assessment.cigarettesPerDay}
                   onChange={(v) => handleInputChange("assessment.cigarettesPerDay", v)}
                   min={0}
+                  max={200}
+                  unit="per day"
+                  required
                 />
 
                 <NumberInput
@@ -555,6 +570,9 @@ export const SmokingToolClient: React.FC = () => {
                   value={formData.assessment.yearsSmoked}
                   onChange={(v) => handleInputChange("assessment.yearsSmoked", v)}
                   min={0}
+                  max={100}
+                  unit="years"
+                  required
                 />
 
                 <NumberInput
@@ -562,6 +580,8 @@ export const SmokingToolClient: React.FC = () => {
                   value={formData.assessment.previousQuitAttempts}
                   onChange={(v) => handleInputChange("assessment.previousQuitAttempts", v)}
                   min={0}
+                  placeholder="0 if none"
+                  required
                 />
 
                 <SelectInput
@@ -569,11 +589,11 @@ export const SmokingToolClient: React.FC = () => {
                   value={formData.assessment.motivationLevel}
                   onChange={(v) => handleInputChange("assessment.motivationLevel", v)}
                   options={[
-                    { value: "", label: "Select..." },
                     { value: "low", label: "Low" },
                     { value: "moderate", label: "Moderate" },
                     { value: "high", label: "High" },
                   ]}
+                  required
                 />
               </div>
 
@@ -629,10 +649,13 @@ export const SmokingToolClient: React.FC = () => {
               )}
 
               <Checkbox
-                label="Motivated and ready to quit smoking, with a quit date set within the next 1 to 2 weeks"
+                label={formData.assessment.consultationType === "continuation"
+                  ? "Patient remains motivated to stay stopped and is continuing the course"
+                  : "Patient is motivated and ready to quit smoking, with a quit date set within the next 1 to 2 weeks"}
                 checked={formData.assessment.readyToQuit}
                 onChange={(v) => handleInputChange("assessment.readyToQuit", v)}
-                description={getFieldError("assessment.readyToQuit") || getFieldError("assessment.quitDate")}
+                description={getFieldError("assessment.readyToQuit") || getFieldError("assessment.quitDate") || "Required: an inclusion criterion of the PGD."}
+                required
               />
 
               {/* Fagerström Test */}
@@ -690,8 +713,8 @@ export const SmokingToolClient: React.FC = () => {
                 label="Renal (kidney) function"
                 value={formData.medicalHistory.renalImpairment}
                 onChange={(v) => handleInputChange("medicalHistory.renalImpairment", v)}
+                required
                 options={[
-                  { value: "", label: "Select..." },
                   { value: "none", label: "Normal (eGFR above 50 mL/min/1.73m2)" },
                   { value: "moderate", label: "eGFR 30 to 50 mL/min/1.73m2 (caution: no dose adjustment; reduce to 1mg once daily if not tolerated)" },
                   { value: "severe", label: "eGFR below 30 mL/min/1.73m2 or end-stage renal disease (exclusion: refer to GP)" },
@@ -702,24 +725,29 @@ export const SmokingToolClient: React.FC = () => {
                 label="Hepatic (liver) function"
                 value={formData.medicalHistory.hepaticImpairment}
                 onChange={(v) => handleInputChange("medicalHistory.hepaticImpairment", v)}
+                required
                 options={[
-                  { value: "", label: "Select..." },
                   { value: "none", label: "Normal" },
-                  { value: "mild-moderate", label: "Mild to moderate impairment" },
-                  { value: "severe", label: "Severe impairment" },
+                  { value: "mild-moderate", label: "Mild to moderate impairment (caution)" },
+                  { value: "severe", label: "Severe impairment (exclusion: refer to GP)" },
                 ]}
               />
+              {(getFieldError("medicalHistory.renalImpairment") || getFieldError("medicalHistory.hepaticImpairment")) && (
+                <p className="text-xs text-red-700">{getFieldError("medicalHistory.renalImpairment") || getFieldError("medicalHistory.hepaticImpairment")}</p>
+              )}
 
               <Checkbox
                 label="Pregnant"
                 checked={formData.medicalHistory.pregnant}
                 onChange={(v) => handleInputChange("medicalHistory.pregnant", v)}
+                description="Exclusion: do not supply."
               />
 
               <Checkbox
                 label="Breastfeeding"
                 checked={formData.medicalHistory.breastfeeding}
                 onChange={(v) => handleInputChange("medicalHistory.breastfeeding", v)}
+                description="Exclusion: do not supply."
               />
 
               <Checkbox
@@ -767,17 +795,21 @@ export const SmokingToolClient: React.FC = () => {
                 label="List all current medications"
                 value={formData.medications.currentMedications}
                 onChange={(v) => handleInputChange("medications.currentMedications", v)}
-                placeholder="e.g., Lisinopril 10mg daily, Metformin 500mg BD..."
+                placeholder="e.g., Lisinopril 10mg daily, Metformin 500mg BD; or 'none'"
                 rows={4}
+                required
               />
+              {getFieldError("medications.currentMedications") && <p className="text-xs text-red-700">{getFieldError("medications.currentMedications")}</p>}
 
               <TextArea
                 label="Known allergies"
                 value={formData.medications.allergies}
                 onChange={(v) => handleInputChange("medications.allergies", v)}
-                placeholder="e.g., Penicillin, latex..."
+                placeholder="e.g., Penicillin, latex; or 'none known'"
                 rows={3}
+                required
               />
+              {getFieldError("medications.allergies") && <p className="text-xs text-red-700">{getFieldError("medications.allergies")}</p>}
 
               <h3 className="text-lg font-semibold text-gray-900 mt-8">
                 Specific medications to check
@@ -864,13 +896,16 @@ export const SmokingToolClient: React.FC = () => {
                 label="I have reviewed all contraindications and cautions above"
                 checked={formData.contradicationsReviewed}
                 onChange={(v) => handleInputChange("contradicationsReviewed", v)}
+                description={getFieldError("contradicationsReviewed") || "Required."}
+                required
               />
 
               <Checkbox
                 label="I (the pharmacist) approve treatment with varenicline for this patient"
                 checked={formData.pharmacistApproves}
                 onChange={(v) => handleInputChange("pharmacistApproves", v)}
-                description={getFieldError("hardStops")}
+                description={getFieldError("hardStops") || getFieldError("pharmacistApproves") || "Required."}
+                required
               />
             </div>
           )}
@@ -911,17 +946,23 @@ export const SmokingToolClient: React.FC = () => {
               )}
 
               <TextInput
-                label="Varenicline start date"
+                label={formData.assessment.consultationType === "continuation" ? "Varenicline start date (day 1 of this course)" : "Varenicline start date (day 1: usually today)"}
                 type="date"
                 value={formData.dosePlan.startDate}
                 onChange={(v) => handleInputChange("dosePlan.startDate", v)}
+                required
               />
+              {getFieldError("dosePlan.startDate") && (
+                <p className="text-xs text-red-700">{getFieldError("dosePlan.startDate")}</p>
+              )}
 
               <TextInput
-                label="Target quit date (day 8 to 14 of treatment)"
+                label="Quit date (day 8 to 14 of treatment, 7 to 13 days after the start date)"
                 type="date"
                 value={formData.dosePlan.quitDate}
                 onChange={(v) => handleInputChange("dosePlan.quitDate", v)}
+                placeholder="Copied from the Smoking Assessment step"
+                required
               />
               {getFieldError("dosePlan.quitDate") && (
                 <p className="text-xs text-red-700">{getFieldError("dosePlan.quitDate")}</p>
@@ -931,8 +972,8 @@ export const SmokingToolClient: React.FC = () => {
                 label="Treatment duration"
                 value={formData.dosePlan.treatmentDuration}
                 onChange={(v) => handleInputChange("dosePlan.treatmentDuration", v)}
+                required
                 options={[
-                  { value: "", label: "Select..." },
                   { value: "12-weeks", label: "12 weeks (standard)" },
                   {
                     value: "24-weeks-extended",
@@ -940,6 +981,9 @@ export const SmokingToolClient: React.FC = () => {
                   },
                 ]}
               />
+              {getFieldError("dosePlan.treatmentDuration") && (
+                <p className="text-xs text-red-700">{getFieldError("dosePlan.treatmentDuration")}</p>
+              )}
 
               <SelectInput
                 label="This supply"
@@ -1042,7 +1086,7 @@ export const SmokingToolClient: React.FC = () => {
               <div className="bg-blue-50 border border-blue-300 rounded-lg p-4">
                 <p className="text-sm text-blue-900">
                   Confirm that each of the following counselling points has been discussed
-                  with the patient.
+                  with the patient. Every box must be ticked <span className="text-red-400">*</span>
                 </p>
               </div>
 
@@ -1177,18 +1221,21 @@ export const SmokingToolClient: React.FC = () => {
                 type="date"
                 value={formData.consultationDate}
                 onChange={(v) => handleInputChange("consultationDate", v)}
+                required
               />
 
               <TextInput
                 label="Pharmacy name"
                 value={formData.pharmacyName}
                 onChange={(v) => handleInputChange("pharmacyName", v)}
+                required
               />
 
               <TextInput
                 label="Pharmacy address line 1"
                 value={formData.pharmacyAddressLine1}
                 onChange={(v) => handleInputChange("pharmacyAddressLine1", v)}
+                required
               />
 
               <TextInput
@@ -1201,6 +1248,7 @@ export const SmokingToolClient: React.FC = () => {
                 label="Pharmacy postcode"
                 value={formData.pharmacyPostcode}
                 onChange={(v) => handleInputChange("pharmacyPostcode", v)}
+                required
               />
             </div>
           )}

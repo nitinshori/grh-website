@@ -56,6 +56,9 @@ function reducer(state: ECConsultationState, action: ECAction): ECConsultationSt
       if (action.field === "dateOfBirth") {
         newState.patient.age = calculateAge(action.value as string);
       }
+      // The answers are recorded; "assessed" and "asked" follow from them.
+      newState.patient.fraserCompetent = newState.patient.fraserOutcome === "competent";
+      newState.patient.coercionAsked = newState.patient.coercionReported !== "";
       break;
 
     case "UPDATE_CONSENT":
@@ -288,6 +291,36 @@ export function ECToolClient() {
     };
   }, [state, updatedState, hasStops, __pharmProfile]);
 
+  // Advice given and decision reached for an excluded patient. Shown on any
+  // step where a stop is present, next to Save as not supplied, so the
+  // record holds the advice without reaching the medicine selection step.
+  const exclusionOutcomeBlock = hasStops ? (
+    <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-3 print:hidden">
+      <p className="text-sm font-semibold text-red-800">
+        Patient excluded: do not supply. Record who the patient was referred to and the advice given (including the copper IUD where within 5 days of UPSI), then use Save as not supplied.
+      </p>
+      <SelectInput
+        label="Referred to"
+        value={state.medicineSelection.referredTo}
+        onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "referredTo", value: v })}
+        options={[
+          { value: "sexual-health", label: "Sexual health service" },
+          { value: "gp", label: "GP" },
+          { value: "other", label: "Other (state in advice given)" },
+        ]}
+        required
+      />
+      <TextArea
+        label="Advice given and decision reached"
+        value={state.medicineSelection.notSuppliedReason}
+        onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "notSuppliedReason", value: v })}
+        placeholder="e.g. Referred to sexual health clinic today for copper IUD assessment; GP informed"
+        rows={3}
+        required
+      />
+    </div>
+  ) : null;
+
   const handleNewConsultation = useCallback(() => {
     dispatch({ type: "RESET" });
     setCompletedSteps(new Set());
@@ -360,22 +393,37 @@ export function ECToolClient() {
                   Aged 13 to 15: assess and record Fraser competence, ask about coercion, the age of the
                   partner and any safeguarding concern, and follow the local safeguarding pathway.
                 </p>
-                <Checkbox
-                  label="Fraser competence assessed and recorded"
-                  checked={state.patient.fraserCompetent ?? false}
+                <SelectInput
+                  label="Fraser competence (outcome of the assessment)"
+                  value={state.patient.fraserOutcome}
                   onChange={(v) =>
                     dispatch({
                       type: "UPDATE_PATIENT",
-                      field: "fraserCompetent",
-                      value: v,
+                      field: "fraserOutcome",
+                      value: v as ECPatientDetails["fraserOutcome"],
                     })
                   }
-                  description="The young person understands the advice, cannot be persuaded to involve a parent, is likely to continue having sex, and their best interests require supply."
+                  options={[
+                    { value: "competent", label: "Competent: understands the advice, cannot be persuaded to involve a parent, is likely to continue having sex, and their best interests require supply" },
+                    { value: "not-competent", label: "Not competent: do not supply, refer" },
+                  ]}
+                  required
                 />
-                <Checkbox
-                  label="Asked about coercion"
-                  checked={state.patient.coercionAsked}
-                  onChange={(v) => dispatch({ type: "UPDATE_PATIENT", field: "coercionAsked", value: v })}
+                <SelectInput
+                  label="Is there any coercion? (ask the young person)"
+                  value={state.patient.coercionReported}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_PATIENT",
+                      field: "coercionReported",
+                      value: v as ECPatientDetails["coercionReported"],
+                    })
+                  }
+                  options={[
+                    { value: "no", label: "No" },
+                    { value: "yes", label: "Yes: follow the local safeguarding pathway and record the action taken" },
+                  ]}
+                  required
                 />
                 <TextInput
                   label="Age of the partner"
@@ -502,6 +550,7 @@ export function ECToolClient() {
                       value: e.target.value,
                     })
                   }
+                  max={new Date().toISOString().split("T")[0]}
                   className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
                 />
               </div>
@@ -972,7 +1021,7 @@ export function ECToolClient() {
             {hasStops && (
               <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded">
                 <p className="text-sm font-semibold text-red-700 mb-2">
-                  Hard Stop — Cannot Supply
+                  Hard stop: cannot supply
                 </p>
                 <p className="text-sm text-red-600">
                   Based on the identified contraindications, emergency contraception cannot be
@@ -1349,6 +1398,7 @@ export function ECToolClient() {
       {alerts.length > 0 && state.currentStep < 6 && (
         <AlertBanner alerts={alerts} />
       )}
+      {exclusionOutcomeBlock}
 
       {/* Step Content */}
       {renderStep()}

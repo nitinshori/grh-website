@@ -100,7 +100,7 @@ export function TetanusSummaryReport({
         {c.primaryCourseContinuation && <Row label="Prior primary dose under this PGD" value={fmtDate(c.priorPrimaryDoseDate)} />}
         {c.indication === "wound" && (
           <>
-            <Row label="Wound tetanus-prone" value={c.woundProne ? "Yes" : "No"} />
+            <Row label="Wound tetanus-prone" value={c.woundProneAnswer === "yes" ? "Yes" : c.woundProneAnswer === "no" ? "No" : "Not recorded"} />
             <Row label="Wound high risk" value={c.woundHighRisk ? "Yes" : "No"} />
             <Row label="Priming status" value={c.priming === "adequate" ? "Adequately primed (3 or more documented doses)" : c.priming === "incomplete" ? "Not adequately primed, or history uncertain" : "Not recorded"} />
             <Row label="Assessment against table 30.1 and conclusion on immunoglobulin" value={c.woundAssessmentNote || "Not recorded"} />
@@ -156,7 +156,7 @@ export function TetanusSummaryReport({
             <CounsellingGrid
               items={[
                 ["Written record of the vaccine (date, brand, batch) and PIL supplied; told to keep the record", c.recordAdvice],
-                ["Next dose booked where a course is involved", c.courseAdvice],
+                ...(c.indication === "incomplete-history" ? ([["Next dose of the primary course booked", c.courseAdvice]] as [string, boolean][]) : []),
                 ["Common side effects and Yellow Card reporting explained", c.sideEffectAdvice],
                 ["Wound care advice: clean any dirty, puncture or contaminated wound and seek medical advice", c.woundAdvice],
               ]}

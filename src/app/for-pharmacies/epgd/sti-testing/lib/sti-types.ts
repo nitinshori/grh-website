@@ -9,6 +9,7 @@ export interface STIPatientDetails extends BasePatientDetails {
   // PGD v003 (11 September 2026): aged 13 to 15 only with recorded Fraser
   // competence and a safeguarding assessment with no concern. Under 13 is
   // never supplied.
+  fraserAnswer: "" | "yes" | "no"; // the pharmacist's assessment: Fraser competence established? "no" is a stop; blank is not yet answered
   fraserCompetent: boolean; // derived: all five Fraser limbs recorded
   // The five Fraser limbs, recorded individually
   fraserUnderstandsAdvice: boolean;
@@ -172,6 +173,7 @@ gpEmail: "",
       phone: "",
       email: "",
       genderIdentity: "",
+      fraserAnswer: "",
       fraserCompetent: false,
       fraserUnderstandsAdvice: false,
       fraserCannotBePersuaded: false,

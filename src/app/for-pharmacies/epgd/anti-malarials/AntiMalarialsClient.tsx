@@ -362,7 +362,7 @@ export function AntiMalarialsClient() {
           currentStep={state.currentStep}
           onStepClick={handleStepClick}
           completedSteps={completedSteps}
-          hasErrors={!!validationError}
+          hasErrors={isBlocked}
         />
         {alerts.length > 0 && (
           <AlertBanner alerts={alerts} />
@@ -429,18 +429,21 @@ export function AntiMalarialsClient() {
               value={state.travelAssessment.destinationCountry}
               onChange={(v) => handleTravelChange('destinationCountry', v)}
               placeholder="e.g. Kenya, Thailand"
+              required
             />
             <TextInput
-              label="Departure Date"
+              label="Departure Date (day of entry to the malarious area)"
               type="date"
               value={state.travelAssessment.departureDate}
               onChange={(v) => handleTravelChange('departureDate', v)}
+              required
             />
             <TextInput
-              label="Return Date"
+              label="Return Date (day of leaving the malarious area)"
               type="date"
               value={state.travelAssessment.returnDate}
               onChange={(v) => handleTravelChange('returnDate', v)}
+              required
             />
             {state.travelAssessment.tripDuration !== null && (
               <p className="text-xs text-gray-600">
@@ -872,10 +875,7 @@ export function AntiMalarialsClient() {
               label="Selected Medicine (name, form and strength)"
               value={state.medicineSelection.selectedMedicine}
               onChange={(v) => handleMedicineChange('selectedMedicine', v as AMMedicineSelection['selectedMedicine'])}
-              options={[
-                { value: '', label: 'Select a medicine...' },
-                ...eligibleOptions,
-              ]}
+              options={eligibleOptions}
               required
             />
 
@@ -947,7 +947,7 @@ export function AntiMalarialsClient() {
               required
             />
             <TextInput
-              label="Expiry date"
+              label="Expiry date (from the pack; must be after the end of the course)"
               type="date"
               value={state.medicineSelection.expiryDate}
               onChange={(v) => handleMedicineChange('expiryDate', v)}

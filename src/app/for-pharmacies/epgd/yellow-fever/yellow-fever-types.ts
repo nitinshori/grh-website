@@ -17,6 +17,9 @@ export const STEP_PRECAUTIONS = 4;
 export interface Clinical {
   // Designation
   yfvcDesignated: boolean;
+  /** The designation question as answered: '' until answered. yfvcDesignated is derived from it.
+   *  Before this the stop fired because a tick box was unticked (stop audit, 11 Sep 2026). */
+  yfvcDesignatedAnswer: "" | "yes" | "no";
   yfvcCode: string;
   administeringClinician: string;
   /** NaTHNaC conditions of designation: pharmacists only. Pharmacy technicians may not administer. */
@@ -48,6 +51,10 @@ export interface Clinical {
   hivPositive: boolean;
   lowDoseImmunomodulator: boolean;
   specialistAdviceObtained: boolean;
+  /** Whether specialist advice was obtained, as answered: '' until answered.
+   *  specialistAdviceObtained is derived from it. A "not-obtained" is the stop;
+   *  before this the stop fired from the unticked box (stop audit, 11 Sep 2026). */
+  specialistAdviceAnswer: "" | "obtained" | "not-obtained";
   specialistAdviceDetails: string;
   // Administration
   doseType: "first" | "reinforcing" | "booster" | "";
@@ -78,7 +85,7 @@ export interface Clinical {
 }
 
 export const emptyClinical: Clinical = {
-  yfvcDesignated: false, yfvcCode: "", administeringClinician: "", pharmacistNotTechnicianConfirmed: false,
+  yfvcDesignated: false, yfvcDesignatedAnswer: "", yfvcCode: "", administeringClinician: "", pharmacistNotTechnicianConfirmed: false,
   consentBasis: "", consentGiverDetails: "",
   destination: "", departureDate: "", certificateRequired: "",
   lateTravelAdviceGiven: false, mmrToday: false, mmrWithin28Days: false, mmrWithin28DaysReason: "",
@@ -87,7 +94,7 @@ export const emptyClinical: Clinical = {
   acuteFebrileIllness: false, pregnant: false,
   breastfeedingInfantUnder9m: false, hivPositive: false,
   lowDoseImmunomodulator: false,
-  specialistAdviceObtained: false, specialistAdviceDetails: "",
+  specialistAdviceObtained: false, specialistAdviceAnswer: "", specialistAdviceDetails: "",
   doseType: "", reinforcingReason: "",
   batchNumber: "", expiryDate: "", route: "", site: "", otherVaccinesSites: "", anaphylaxisKit: false,
   observationCompleted: false,

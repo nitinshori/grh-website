@@ -6,6 +6,10 @@ import type { BasePatientDetails, BaseConsent, BaseSummary, DoseRecommendation, 
 
 export interface PEPatientDetails extends BasePatientDetails {
   maleConfirmed: boolean;
+  /** True once "Is the patient male?" has been answered (Yes or No). The
+   *  stop is raised on "No", never on the question being unanswered
+   *  (stop audit, 11 Sep 2026). */
+  sexAnswered: boolean;
 }
 
 /** Inclusion criterion: "Patient has provided informed WRITTEN consent". The
@@ -171,6 +175,7 @@ gpEmail: "",
       phone: "",
       email: "",
       maleConfirmed: false,
+      sexAnswered: false,
     },
     consent: {
       informedConsentGiven: false,

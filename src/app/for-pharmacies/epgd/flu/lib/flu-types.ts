@@ -75,8 +75,12 @@ export interface FluScreening {
   breastfeeding: boolean;
   aspirinTherapy: boolean;
   bleedingDisorder: boolean;
-  /** Bleeding disorder: intramuscular injection assessed as safe by a clinician familiar with the bleeding risk. */
-  bleedingDisorderAssessedSafe: boolean;
+  /**
+   * Bleeding disorder: intramuscular injection assessed as safe by a clinician
+   * familiar with the bleeding risk. null = not yet answered (validation
+   * message), false = answered No (stop), true = answered Yes (caution).
+   */
+  bleedingDisorderAssessedSafe: boolean | null;
   /** Caution: stable anticoagulation (23 gauge or finer needle, firm pressure 2 minutes). */
   anticoagulated: boolean;
   previousGBS: boolean;
@@ -128,6 +132,8 @@ export interface FluVaccineAdministration {
 
 export interface FluPostVaccineObs {
   observationPeriod: '15-min' | '30-min' | '';
+  /** The observation period above was actually completed, patient seated (tick only once it has). */
+  observationCompleted: boolean;
   patientWell: boolean;
   adverseReaction: boolean;
   reactionDetails: string;
@@ -181,7 +187,7 @@ export const initialFluScreening = (): FluScreening => ({
   breastfeeding: false,
   aspirinTherapy: false,
   bleedingDisorder: false,
-  bleedingDisorderAssessedSafe: false,
+  bleedingDisorderAssessedSafe: null,
   anticoagulated: false,
   previousGBS: false,
   temperature: null,
@@ -192,7 +198,8 @@ export const initialFluContraindications = (): FluContraindications => ({
   anaphylaxisToPreviousDose: false,
   severeEggAllergy: false,
   acuteFebrileIllness: false,
-  ageAppropriate: false,
+  // Not known to be under 2 until a date of birth has been entered.
+  ageAppropriate: true,
   hypersensitivityToComponent: false,
   alreadyVaccinatedThisSeason: false,
   bleedingDisorderUnassessed: false,
@@ -224,6 +231,7 @@ export const initialFluVaccineAdministration = (): FluVaccineAdministration => (
 
 export const initialFluPostVaccineObs = (): FluPostVaccineObs => ({
   observationPeriod: '',
+  observationCompleted: false,
   patientWell: false,
   adverseReaction: false,
   reactionDetails: '',

@@ -19,6 +19,10 @@ export interface Clinical {
   departureDate: string;
   itinerary: string;
   recommendedForDestination: boolean;
+  /** The inclusion question as answered: '' until asked. recommendedForDestination is derived from it;
+   *  a "no" is a stop (outside the PGD), where before it was a tick the pharmacist simply could not
+   *  give and so could not move on or save (walkthrough review, 11 Sep 2026). */
+  recommendedAnswer: "" | "yes" | "no";
   routineUpToDate: boolean;
   catchUpPlanDiscussed: boolean;
   selected: string[];
@@ -33,6 +37,10 @@ export interface Clinical {
   clinicalUncertainty: boolean;
   chronicConditionOrRemote: boolean;
   parentPresent: boolean;
+  /** The presence question as answered: '' until asked. parentPresent is derived from it. For a
+   *  child under 16 a "no" is the stop; before this the stop fired from the unticked box
+   *  (stop audit, 11 Sep 2026). */
+  parentPresentAnswer: "" | "yes" | "no";
   parentPresentDetail: string;
   consentBasis: ConsentBasis;
   consentDetail: string;

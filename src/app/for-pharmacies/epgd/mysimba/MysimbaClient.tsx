@@ -6,7 +6,7 @@ import { StepWrapper } from "../shared/components/StepWrapper"
 import type { ConsultationRecordData } from "../shared/hooks/useConsultationTracking"
 import { PatientDetailsStep } from "../shared/steps/PatientDetailsStep"
 import { ConsentStep } from "../shared/steps/ConsentStep"
-import { TextInput, TextArea, Checkbox, NumberInput } from "../shared/components/FormInputs"
+import { TextInput, TextArea, Checkbox, NumberInput, SelectInput } from "../shared/components/FormInputs"
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile"
 import { calculateAge, validatePatientStep, validateConsentStep, validateSummaryStep } from "../shared/types"
 import { PrintedRecord } from "./components/PrintedRecord"
@@ -39,6 +39,93 @@ const DOSE_TITRATION = [
   { week: "Week 2", morning: "1 tablet", evening: "1 tablet" },
   { week: "Week 3", morning: "2 tablets", evening: "1 tablet" },
   { week: "Week 4 onwards (maintenance)", morning: "2 tablets", evening: "2 tablets" },
+]
+
+// Exclusion checkboxes on the eligibility step, grouped as shown. Kept as
+// data so the stop reason and the saved record name the exclusion(s) ticked.
+type ExclusionKey =
+  | "hypersensitivityNaltrexone" | "hypersensitivityBupropion" | "hypersensitivityExcipients"
+  | "concomitantNaltrexone" | "concomitantBupropion" | "maoiUse" | "opioidUse" | "clinicallySignificantInteraction"
+  | "seizureDisorder" | "headTraumaLocWithin12Months" | "cnsTumour" | "acuteAlcoholOrBenzodiazepineWithdrawal"
+  | "bipolarHistory" | "currentDepressionOrSuicidality" | "bulimiaAnorexiaHistory"
+  | "uncontrolledHypertension" | "cardiovascularDisease" | "severeHepatic" | "renalEgfrBelow60" | "angleClosureGlaucoma"
+  | "pregnant" | "breastfeeding" | "planningPregnancy" | "galactoseIntolerance"
+const EXCLUSION_GROUPS: { heading: string; items: { key: ExclusionKey; label: string; description?: string }[] }[] = [
+  { heading: "Hypersensitivity / concomitant therapy", items: [
+    { key: "hypersensitivityNaltrexone", label: "Known hypersensitivity to naltrexone" },
+    { key: "hypersensitivityBupropion", label: "Known hypersensitivity to bupropion" },
+    { key: "hypersensitivityExcipients", label: "Known hypersensitivity to any excipient (including lactose)" },
+    { key: "concomitantNaltrexone", label: "Currently taking any other product containing naltrexone" },
+    { key: "concomitantBupropion", label: "Currently taking any other product containing bupropion (for example Zyban)" },
+    { key: "maoiUse", label: "Use of a monoamine oxidase inhibitor (MAOI), or within 14 days of MAOI discontinuation" },
+    { key: "opioidUse", label: "Current opioid use or opioid dependence, or within 7 to 10 days of opioid discontinuation", description: "Includes opioid analgesics and opioid replacement therapy." },
+    { key: "clinicallySignificantInteraction", label: "Clinically significant drug interaction with current medication" },
+  ] },
+  { heading: "CNS / seizure risk", items: [
+    { key: "seizureDisorder", label: "Seizure disorder or any history of seizures" },
+    { key: "headTraumaLocWithin12Months", label: "Head trauma with loss of consciousness within the last 12 months", description: "Head trauma with loss of consciousness more than 12 months ago is a caution (tick below), not an exclusion." },
+    { key: "cnsTumour", label: "CNS tumour or history of CNS tumour" },
+    { key: "acuteAlcoholOrBenzodiazepineWithdrawal", label: "Abrupt discontinuation of alcohol or benzodiazepines, alcohol withdrawal, or concurrent use of benzodiazepines" },
+  ] },
+  { heading: "Mental health / eating disorders", items: [
+    { key: "bipolarHistory", label: "Any history of bipolar disorder" },
+    { key: "currentDepressionOrSuicidality", label: "Current depression, suicidal ideation, or any history of suicide attempt" },
+    { key: "bulimiaAnorexiaHistory", label: "History of eating disorders (bulimia nervosa or anorexia nervosa)" },
+  ] },
+  { heading: "Cardiovascular, organ function and eyes", items: [
+    { key: "uncontrolledHypertension", label: "Uncontrolled hypertension (blood pressure 140/90 mmHg or above)", description: "Refer to the GP for management before initiating Mysimba." },
+    { key: "cardiovascularDisease", label: "History of significant cardiovascular disease" },
+    { key: "severeHepatic", label: "Severe hepatic impairment (Child-Pugh Class C)" },
+    { key: "renalEgfrBelow60", label: "Moderate or severe renal impairment, or end-stage renal failure (eGFR below 60 mL/min/1.73m²)", description: "Refer to the GP. The reduced dose the SmPC gives for eGFR 15 to 59 is a prescriber decision and is not supplied under this PGD." },
+    { key: "angleClosureGlaucoma", label: "Angle-closure glaucoma" },
+  ] },
+  { heading: "Reproductive / metabolic", items: [
+    { key: "pregnant", label: "Currently pregnant" },
+    { key: "breastfeeding", label: "Breastfeeding" },
+    { key: "planningPregnancy", label: "Planning pregnancy", description: "Females of childbearing potential should use effective contraception (inclusion criterion)." },
+    { key: "galactoseIntolerance", label: "Rare hereditary galactose intolerance / total lactase deficiency / glucose-galactose malabsorption", description: "Mysimba tablets contain lactose." },
+  ] },
+]
+const EXCLUSION_ITEMS = EXCLUSION_GROUPS.flatMap((g) => g.items)
+
+// Follow-up questions asked at every supply (document follow-up row). Each
+// takes the patient's answer; "yes" to any is a stop.
+type FollowUpAnswer = "" | "no" | "yes" | "na"
+type FollowUpKey = "reportsMoodChange" | "reportsSuicidalThoughts" | "reportsSeizure" | "reportsRaisedBpSymptoms"
+const FOLLOW_UP_QUESTIONS: { key: FollowUpKey; label: string; short: string }[] = [
+  { key: "reportsMoodChange", label: "Since starting Mysimba (or since the last supply), has the patient had mood changes, depression, anxiety or unusual behaviour?", short: "mood changes" },
+  { key: "reportsSuicidalThoughts", label: "Since starting Mysimba (or since the last supply), has the patient had suicidal thoughts?", short: "suicidal thoughts" },
+  { key: "reportsSeizure", label: "Since starting Mysimba (or since the last supply), has the patient had a seizure?", short: "seizure" },
+  { key: "reportsRaisedBpSymptoms", label: "Since starting Mysimba (or since the last supply), has the patient had symptoms of raised blood pressure (for example severe headache, chest pain, palpitations, visual disturbance)?", short: "raised blood pressure symptoms" },
+]
+const FOLLOW_UP_ANSWER_LABELS: Record<FollowUpAnswer, string> = { "": "not answered", no: "No", yes: "YES", na: "Not applicable (first supply today)" }
+
+// Counselling items, in the order shown. Required items are named in the
+// validation message so the pharmacist knows which tick is missing.
+type CounsellingKey =
+  | "pilSupplied" | "adminText" | "tabletNotCrushedChewed" | "titrationScheduleExplained" | "persistenceAdvice"
+  | "lifestyleAdvice" | "withFood" | "sideEffectsDiscussed" | "suicidalIdeationCounselled" | "bpMonitoringAdvice"
+  | "hepatotoxicityWarning" | "drivingMachineryAdvice" | "noAlcoholAdvice" | "noAbruptStop" | "informProviders"
+  | "allergyChestPainAdvice" | "sixteenWeekReviewExplained" | "contraceptionAdvice"
+const COUNSELLING_ITEMS: { key: CounsellingKey; label: string; short: string; required: boolean; description?: string }[] = [
+  { key: "pilSupplied", label: "Patient information leaflet (PIL) supplied, with written information on the dose titration schedule, lifestyle modifications (reduced-calorie diet and physical activity) and emergency contact details", short: "PIL and written information", required: true },
+  { key: "adminText", label: "Method of administration: oral; swallow tablets whole with water; do not crush, chew or divide them", short: "administration", required: true },
+  { key: "tabletNotCrushedChewed", label: "Confirmed patient understands tablets must not be crushed, chewed or divided (optional)", short: "understanding of whole-tablet administration confirmed", required: false },
+  { key: "titrationScheduleExplained", label: "Follow the dose titration schedule carefully over the first 4 weeks; do not increase the dose faster than prescribed", short: "titration schedule", required: true },
+  { key: "persistenceAdvice", label: "Take the medication as prescribed even without immediate results; weight loss may take several weeks to become apparent", short: "persistence", required: true },
+  { key: "lifestyleAdvice", label: "Maintain a reduced-calorie diet and engage in regular physical activity as directed by the healthcare provider or dietitian", short: "lifestyle", required: true },
+  { key: "withFood", label: "Can be taken with or without food; avoid high-fat meals as they may affect absorption; take with water", short: "food", required: true },
+  { key: "sideEffectsDiscussed", label: "Side effects discussed: very common nausea, constipation, headache, insomnia; common vomiting, dry mouth, dizziness, anxiety, tremor, upper abdominal pain, tachycardia, hypertension, decreased appetite, rash, pruritus. If persistent insomnia, headache, nausea or constipation, discuss management options", short: "side effects", required: true },
+  { key: "suicidalIdeationCounselled", label: "Report any mood changes, depression, anxiety, suicidal thoughts or unusual behaviour immediately to the healthcare provider or emergency services (patient and carer; particularly under 25s, in the first weeks and after any dose change)", short: "mood and suicidal ideation", required: true },
+  { key: "bpMonitoringAdvice", label: "Monitor blood pressure regularly at home if possible; report any persistent elevation to the GP", short: "blood pressure", required: true },
+  { key: "hepatotoxicityWarning", label: "Hepatotoxicity warning: stop and seek medical advice if jaundice, dark urine, right upper abdominal pain or unusual fatigue (serious adverse effect: report immediately)", short: "hepatotoxicity", required: true },
+  { key: "drivingMachineryAdvice", label: "Driving / hazardous machinery: caution, Mysimba may cause dizziness, somnolence, loss of consciousness or seizure (optional: tick where applicable)", short: "driving and machinery", required: false },
+  { key: "noAlcoholAdvice", label: "Do not consume excessive alcohol as it may increase the risk of seizures and adverse effects", short: "alcohol", required: true, description: "Alcohol lowers the seizure threshold; combined with bupropion the risk is increased." },
+  { key: "noAbruptStop", label: "Do not stop the medication abruptly; discuss discontinuation with the healthcare provider", short: "no abrupt stop", required: true },
+  { key: "informProviders", label: "Inform all healthcare providers (including dentists) that you are taking Mysimba, as it may interact with other medications", short: "inform providers", required: true },
+  { key: "allergyChestPainAdvice", label: "Report any allergic reactions (rash, itching, swelling) or chest pain to the healthcare provider, or seek emergency care immediately", short: "allergy and chest pain", required: true },
+  { key: "sixteenWeekReviewExplained", label: "Attend all follow-up appointments as scheduled (4 weeks and 16 weeks), particularly the 16-week review of weight loss and tolerability; treatment is discontinued if less than 5% of initial body weight has been lost, and continuation beyond 16 weeks is by GP or specialist prescription", short: "16 week review", required: true },
+  { key: "contraceptionAdvice", label: "Female of childbearing potential: advised to use effective contraception; not to be used in pregnancy or breastfeeding (optional: tick where applicable)", short: "contraception", required: false },
 ]
 
 // Document: maximum treatment period under this PGD is 16 weeks (the
@@ -79,7 +166,9 @@ export function MysimbaClient() {
       heightCm: null as number | null,
       weightKg: null as number | null,
       bmi: null as number | null,
-      hasComorbidity: false,
+      // "" not yet answered; only "no" (with BMI 27 to 29.9) stops. An
+      // unticked box never stops (stop audit, 11 Sep 2026).
+      hasComorbidity: "" as "" | "yes" | "no",
       comorbidityDetails: "",
       // Inclusion: documented failed weight loss attempt through lifestyle
       // intervention for at least 3 months.
@@ -118,13 +207,12 @@ export function MysimbaClient() {
       galactoseIntolerance: false,
       clinicallySignificantInteraction: false,
       // Follow-up screen at every supply (document follow-up row): the four
-      // questions must be asked and the answers recorded; a "no" is only a
-      // "no" once the pharmacist confirms the questions were put.
-      followUpQuestionsAsked: false,
-      reportsMoodChange: false,
-      reportsSuicidalThoughts: false,
-      reportsSeizure: false,
-      reportsRaisedBpSymptoms: false,
+      // questions must be asked and each answer recorded (No / Yes / Not
+      // applicable on a first supply). A "yes" to any is a stop.
+      reportsMoodChange: "" as FollowUpAnswer,
+      reportsSuicidalThoughts: "" as FollowUpAnswer,
+      reportsSeizure: "" as FollowUpAnswer,
+      reportsRaisedBpSymptoms: "" as FollowUpAnswer,
       // Cautions: monitor closely
       ageUnder25: false,
       depressionHistory: false,
@@ -221,38 +309,43 @@ export function MysimbaClient() {
   const consentError = validateConsentStep(state.consent) ?? (state.writtenConsentObtained ? null : "Written consent must be obtained and filed (inclusion criterion: able to provide informed written consent)")
 
   const bmi = state.assessment.bmi
-  const bmiEligible = !!(bmi && (bmi >= 30 || (bmi >= 27 && state.assessment.hasComorbidity)))
+  const bmiEligible = !!(bmi && (bmi >= 30 || (bmi >= 27 && state.assessment.hasComorbidity === "yes")))
   const bpEntered = state.assessment.systolicBp !== null && state.assessment.diastolicBp !== null
   // Inclusion: resting blood pressure <140/90 mmHg; if 140/90 or above refer to GP
   const bpAcceptable = bpEntered && (state.assessment.systolicBp as number) < 140 && (state.assessment.diastolicBp as number) < 90
+  // BMI 27 to 29.9 with the comorbidity question not yet answered: a
+  // validation message naming the question, never a stop (stop audit,
+  // 11 Sep 2026). The stop fires only on the answer "No".
+  const bmiNeedsComorbidity = !!bmi && bmi >= 27 && bmi < 30 && state.assessment.hasComorbidity === ""
+  const bmiIneligible = !!bmi && !bmiEligible && !bmiNeedsComorbidity
+  const bmiStopReason = !!bmi && bmi >= 27
+    ? `BMI ${bmi} is between 27 and 29.9 and the patient has no weight-related comorbidity, so does not meet the inclusion criteria (30 or more, or 27 or more with a weight-related comorbidity)`
+    : `BMI ${bmi ?? "-"} is below 27 and does not meet the inclusion criteria (30 or more, or 27 or more with a weight-related comorbidity)`
   const assessmentError: string | null =
-    !state.assessment.heightCm || !state.assessment.weightKg || !bmi ? "Height and weight are required"
-    : !bmiEligible ? "BMI does not meet the inclusion criteria (30 or more, or 27 or more with a weight-related comorbidity)"
-    : bmi < 30 && state.assessment.hasComorbidity && !state.assessment.comorbidityDetails.trim() ? "Name the weight-related comorbidity relied on for BMI 27 to 29.9"
-    : !state.assessment.lifestyleAttemptDocumented ? "A documented failed weight loss attempt through lifestyle intervention for at least 3 months is an inclusion criterion"
-    : !state.assessment.previousWeightLossAttempts.trim() ? "Record the details of the failed weight loss attempt (what was tried, for how long, and the outcome)"
-    : !bpEntered ? "Resting blood pressure is required"
+    !state.assessment.heightCm || !state.assessment.weightKg || !bmi ? "Height (cm) and Weight (kg) are required"
+    : bmiNeedsComorbidity ? "Answer \"Does the patient have a weight-related comorbidity?\" (Yes or No): eligibility at BMI 27 to 29.9 depends on it"
+    : !bmiEligible ? bmiStopReason
+    : bmi < 30 && state.assessment.hasComorbidity === "yes" && !state.assessment.comorbidityDetails.trim() ? "Comorbidity details: name the weight-related comorbidity relied on for BMI 27 to 29.9"
+    : !state.assessment.lifestyleAttemptDocumented ? "Tick \"Documented failed weight loss attempt through lifestyle intervention for at least 3 months\" (inclusion criterion)"
+    : !state.assessment.previousWeightLossAttempts.trim() ? "Previous weight-loss attempts: record what was tried, for how long, and the outcome"
+    : !bpEntered ? "Systolic (mmHg) and Diastolic (mmHg) resting blood pressure are required"
     : !bpAcceptable ? "Blood pressure is 140/90 mmHg or above: refer to the GP for management before initiating Mysimba"
-    : state.assessment.pulse === null ? "Pulse (heart rate) is required"
+    : state.assessment.pulse === null ? "Pulse (bpm) is required"
     : null
 
   // Any exclusion = stop
   const e = state.eligibility
-  const anyExclusion =
-    ageUnder18 || ageOver74 ||
-    e.hypersensitivityNaltrexone || e.hypersensitivityBupropion || e.hypersensitivityExcipients ||
-    e.concomitantNaltrexone || e.concomitantBupropion ||
-    e.uncontrolledHypertension || e.cardiovascularDisease || e.seizureDisorder || e.headTraumaLocWithin12Months || e.cnsTumour ||
-    e.acuteAlcoholOrBenzodiazepineWithdrawal || e.bipolarHistory || e.currentDepressionOrSuicidality ||
-    e.bulimiaAnorexiaHistory || e.opioidUse || e.maoiUse ||
-    e.severeHepatic || e.renalEgfrBelow60 || e.angleClosureGlaucoma ||
-    e.pregnant || e.breastfeeding || e.planningPregnancy ||
-    e.galactoseIntolerance || e.clinicallySignificantInteraction ||
-    e.reportsMoodChange || e.reportsSuicidalThoughts || e.reportsSeizure || e.reportsRaisedBpSymptoms
+  const tickedExclusions: string[] = [
+    ...EXCLUSION_ITEMS.filter((item) => e[item.key]).map((item) => item.label),
+    ...FOLLOW_UP_QUESTIONS.filter((q) => e[q.key] === "yes").map((q) => `Reports ${q.short} since starting Mysimba`),
+  ]
+  const anyExclusion = ageUnder18 || ageOver74 || tickedExclusions.length > 0
+  const exclusionSummary = tickedExclusions.length > 0 ? `Exclusion ticked: ${tickedExclusions.join("; ")}` : "Exclusion criteria met"
+  const unansweredFollowUp = FOLLOW_UP_QUESTIONS.filter((q) => !e[q.key])
   const eligibilityError: string | null = anyExclusion
-    ? "An exclusion criterion applies: do not supply under this PGD. Record the advice given and inform or refer to the GP."
-    : !e.followUpQuestionsAsked
-      ? "Confirm the patient has been asked at this supply about mood, suicidal thoughts, seizures and symptoms of raised blood pressure"
+    ? `${exclusionSummary}: do not supply under this PGD. Record the advice given and inform or refer to the GP.`
+    : unansweredFollowUp.length > 0
+      ? `Ask at every supply: answer the question${unansweredFollowUp.length > 1 ? "s" : ""} on ${unansweredFollowUp.map((q) => q.short).join(", ")} (No, Yes, or Not applicable for a first supply)`
     : null
 
   const t = state.treatment
@@ -277,7 +370,7 @@ export function MysimbaClient() {
       ? Math.round(((t.initialWeightKg - currentWeight) / t.initialWeightKg) * 1000) / 10
       : null
   const treatmentError: string | null =
-    !t.doseStage ? "Select the dose stage for this consultation"
+    !t.doseStage ? "Dose stage at this consultation: select the stage"
     : !t.treatmentStartDate ? "Treatment start date is required"
     : weeksSinceStart !== null && weeksSinceStart < 0 ? "Treatment start date cannot be in the future"
     : weeksSinceStart !== null && weeksSinceStart >= MAX_TREATMENT_WEEKS
@@ -285,7 +378,7 @@ export function MysimbaClient() {
     : stageMismatch
       ? `Dose stage does not match the treatment start date: week ${(weeksSinceStart ?? 0) + 1} of treatment expects "${expectedStage === "init" ? "Initiation" : expectedStage === "4" ? "Maintenance supply" : `Week ${Number(expectedStage) + 1}`}". Correct the stage or the start date.`
     : isMaintenanceStage && !t.initialWeightKg ? "Initial body weight (at the start of treatment) is required for maintenance supplies"
-    : !t.quantityTablets || t.quantityTablets < 1 ? "Quantity supplied is required"
+    : !t.quantityTablets || t.quantityTablets < 1 ? "Quantity supplied (tablets) is required"
     : t.quantityTablets > MAX_TABLETS_PER_SUPPLY ? "Maximum quantity per supply under this PGD is 120 tablets"
     : t.quantityTablets > maxTabletsThisSupply
       ? `Only ${daysRemaining} day(s) of the 16 week maximum remain: supply no more than ${maxTabletsThisSupply} tablets so the course ends at 16 weeks`
@@ -297,32 +390,19 @@ export function MysimbaClient() {
     : null
 
   const c = state.counselling
-  const counsellingValid =
-    c.pilSupplied &&
-    c.adminText &&
-    c.titrationScheduleExplained &&
-    c.persistenceAdvice &&
-    c.lifestyleAdvice &&
-    c.withFood &&
-    c.sideEffectsDiscussed &&
-    c.suicidalIdeationCounselled &&
-    c.bpMonitoringAdvice &&
-    c.hepatotoxicityWarning &&
-    c.noAlcoholAdvice &&
-    c.noAbruptStop &&
-    c.informProviders &&
-    c.allergyChestPainAdvice &&
-    c.sixteenWeekReviewExplained
-  const counsellingError = counsellingValid ? null : "Tick every counselling item once discussed with the patient"
+  const missingCounselling = COUNSELLING_ITEMS.filter((item) => item.required && !c[item.key])
+  const counsellingError = missingCounselling.length === 0
+    ? null
+    : `Counselling item not ticked: ${missingCounselling.map((item) => item.short).join("; ")}. Tick each once discussed with the patient.`
 
   const summaryError = validateSummaryStep(state.summary)
 
   // A stop anywhere blocks Next on that step and on every later step.
   const sixteenWeeksReached = weeksSinceStart !== null && weeksSinceStart >= MAX_TREATMENT_WEEKS
-  const hasStop = anyExclusion || (!!bmi && !bmiEligible) || (bpEntered && !bpAcceptable) || sixteenWeeksReached
+  const hasStop = anyExclusion || bmiIneligible || (bpEntered && !bpAcceptable) || sixteenWeeksReached
   const stopReason: string | null = anyExclusion
-    ? (ageUnder18 ? "Patient is under 18" : ageOver74 ? "Patient is aged 75 or over" : "Exclusion criteria met")
-    : !!bmi && !bmiEligible ? "BMI does not meet the inclusion criteria"
+    ? (ageUnder18 ? "Patient is under 18" : ageOver74 ? "Patient is aged 75 or over" : exclusionSummary)
+    : bmiIneligible ? bmiStopReason
     : bpEntered && !bpAcceptable ? "Resting blood pressure 140/90 mmHg or above"
     : sixteenWeeksReached ? "16 week maximum treatment period reached"
     : null
@@ -426,13 +506,19 @@ export function MysimbaClient() {
               {bmi !== null && (
                 <p className="mt-1 text-xs text-gray-600">
                   Inclusion: BMI 30 or more, or 27 or more with at least one weight-related comorbidity.
-                  {bmiEligible ? " Eligible." : " Not eligible."}
+                  {bmiEligible ? " Eligible." : bmiNeedsComorbidity ? " Answer the comorbidity question below." : " Not eligible."}
                 </p>
               )}
             </div>
 
-            <Checkbox label="Weight-related comorbidity present" checked={state.assessment.hasComorbidity} onChange={(v) => updateAssessment("hasComorbidity", v)} description="Such as type 2 diabetes, hypertension (controlled, below 140/90), dyslipidaemia or sleep apnoea." />
-            {state.assessment.hasComorbidity && <TextInput label="Comorbidity details" value={state.assessment.comorbidityDetails} onChange={(v) => updateAssessment("comorbidityDetails", v)} />}
+            <SelectInput
+              label="Does the patient have a weight-related comorbidity? (such as type 2 diabetes, hypertension (controlled, below 140/90), dyslipidaemia or sleep apnoea)"
+              value={state.assessment.hasComorbidity}
+              onChange={(v) => updateAssessment("hasComorbidity", v as "" | "yes" | "no")}
+              options={[{ value: "yes", label: "Yes" }, { value: "no", label: "No" }]}
+              required={!!bmi && bmi >= 27 && bmi < 30}
+            />
+            {state.assessment.hasComorbidity === "yes" && <TextInput label="Comorbidity details" value={state.assessment.comorbidityDetails} onChange={(v) => updateAssessment("comorbidityDetails", v)} placeholder="e.g. type 2 diabetes, controlled hypertension" required={!!bmi && bmi < 30} />}
 
             <Checkbox label="Documented failed weight loss attempt through lifestyle intervention (reduced-calorie diet and physical activity) for at least 3 months" checked={state.assessment.lifestyleAttemptDocumented} onChange={(v) => updateAssessment("lifestyleAttemptDocumented", v)} description="Inclusion criterion. Record the details below." required />
             <TextArea label="Previous weight-loss attempts (what was tried, for how long, outcome)" value={state.assessment.previousWeightLossAttempts} onChange={(v) => updateAssessment("previousWeightLossAttempts", v)} rows={2} required />
@@ -455,9 +541,9 @@ export function MysimbaClient() {
 
         {currentStep === 3 && (
           <div className="space-y-5">
-            <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-900">
+            <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-900">
               <p className="font-semibold">Exclusion criteria</p>
-              <p>Any ticked item below blocks supply under this PGD. Advise on alternative treatment options and how these can be accessed, document the advice given and the decision reached, and inform or refer to the GP as appropriate.</p>
+              <p>Tick only what applies; leaving every box unticked records that none applies. A ticked item stops the supply under this PGD. Advise on alternative treatment options and how these can be accessed, document the advice given and the decision reached, and inform or refer to the GP as appropriate.</p>
             </div>
 
             <p className="text-sm font-semibold text-navy-900">Demographics</p>
@@ -469,55 +555,36 @@ export function MysimbaClient() {
             )}
             <p className="text-xs text-gray-600">Age 75 and over is an exclusion. Patients aged 65 to 74 are a caution under this PGD (tick below).</p>
 
-            <p className="text-sm font-semibold text-navy-900 mt-4">Hypersensitivity / concomitant therapy</p>
-            <Checkbox label="Known hypersensitivity to naltrexone" checked={e.hypersensitivityNaltrexone} onChange={(v) => updateEligibility("hypersensitivityNaltrexone", v)} />
-            <Checkbox label="Known hypersensitivity to bupropion" checked={e.hypersensitivityBupropion} onChange={(v) => updateEligibility("hypersensitivityBupropion", v)} />
-            <Checkbox label="Known hypersensitivity to any excipient (including lactose)" checked={e.hypersensitivityExcipients} onChange={(v) => updateEligibility("hypersensitivityExcipients", v)} />
-            <Checkbox label="Currently taking any other product containing naltrexone" checked={e.concomitantNaltrexone} onChange={(v) => updateEligibility("concomitantNaltrexone", v)} />
-            <Checkbox label="Currently taking any other product containing bupropion (for example Zyban)" checked={e.concomitantBupropion} onChange={(v) => updateEligibility("concomitantBupropion", v)} />
-            <Checkbox label="Use of a monoamine oxidase inhibitor (MAOI), or within 14 days of MAOI discontinuation" checked={e.maoiUse} onChange={(v) => updateEligibility("maoiUse", v)} />
-            <Checkbox label="Current opioid use or opioid dependence, or within 7 to 10 days of opioid discontinuation" checked={e.opioidUse} onChange={(v) => updateEligibility("opioidUse", v)} description="Includes opioid analgesics and opioid replacement therapy." />
-            <Checkbox label="Clinically significant drug interaction with current medication" checked={e.clinicallySignificantInteraction} onChange={(v) => updateEligibility("clinicallySignificantInteraction", v)} />
-
-            <p className="text-sm font-semibold text-navy-900 mt-4">CNS / seizure risk</p>
-            <Checkbox label="Seizure disorder or any history of seizures" checked={e.seizureDisorder} onChange={(v) => updateEligibility("seizureDisorder", v)} />
-            <Checkbox label="Head trauma with loss of consciousness within the last 12 months" checked={e.headTraumaLocWithin12Months} onChange={(v) => updateEligibility("headTraumaLocWithin12Months", v)} description="Head trauma with loss of consciousness more than 12 months ago is a caution (tick below), not an exclusion." />
-            <Checkbox label="CNS tumour or history of CNS tumour" checked={e.cnsTumour} onChange={(v) => updateEligibility("cnsTumour", v)} />
-            <Checkbox label="Abrupt discontinuation of alcohol or benzodiazepines, alcohol withdrawal, or concurrent use of benzodiazepines" checked={e.acuteAlcoholOrBenzodiazepineWithdrawal} onChange={(v) => updateEligibility("acuteAlcoholOrBenzodiazepineWithdrawal", v)} />
-
-            <p className="text-sm font-semibold text-navy-900 mt-4">Mental health / eating disorders</p>
-            <Checkbox label="Any history of bipolar disorder" checked={e.bipolarHistory} onChange={(v) => updateEligibility("bipolarHistory", v)} />
-            <Checkbox label="Current depression, suicidal ideation, or any history of suicide attempt" checked={e.currentDepressionOrSuicidality} onChange={(v) => updateEligibility("currentDepressionOrSuicidality", v)} />
-            <Checkbox label="History of eating disorders (bulimia nervosa or anorexia nervosa)" checked={e.bulimiaAnorexiaHistory} onChange={(v) => updateEligibility("bulimiaAnorexiaHistory", v)} />
-
-            <p className="text-sm font-semibold text-navy-900 mt-4">Cardiovascular, organ function and eyes</p>
-            <Checkbox label="Uncontrolled hypertension (blood pressure 140/90 mmHg or above)" checked={e.uncontrolledHypertension} onChange={(v) => updateEligibility("uncontrolledHypertension", v)} description="Refer to the GP for management before initiating Mysimba." />
-            <Checkbox label="History of significant cardiovascular disease" checked={e.cardiovascularDisease} onChange={(v) => updateEligibility("cardiovascularDisease", v)} />
-            <Checkbox label="Severe hepatic impairment (Child-Pugh Class C)" checked={e.severeHepatic} onChange={(v) => updateEligibility("severeHepatic", v)} />
-            <Checkbox label="Moderate or severe renal impairment, or end-stage renal failure (eGFR below 60 mL/min/1.73m²)" checked={e.renalEgfrBelow60} onChange={(v) => updateEligibility("renalEgfrBelow60", v)} description="Refer to the GP. The reduced dose the SmPC gives for eGFR 15 to 59 is a prescriber decision and is not supplied under this PGD." />
-            <Checkbox label="Angle-closure glaucoma" checked={e.angleClosureGlaucoma} onChange={(v) => updateEligibility("angleClosureGlaucoma", v)} />
-
-            <p className="text-sm font-semibold text-navy-900 mt-4">Reproductive / metabolic</p>
-            <Checkbox label="Currently pregnant" checked={e.pregnant} onChange={(v) => updateEligibility("pregnant", v)} />
-            <Checkbox label="Breastfeeding" checked={e.breastfeeding} onChange={(v) => updateEligibility("breastfeeding", v)} />
-            <Checkbox label="Planning pregnancy" checked={e.planningPregnancy} onChange={(v) => updateEligibility("planningPregnancy", v)} description="Females of childbearing potential should use effective contraception (inclusion criterion)." />
-            <Checkbox label="Rare hereditary galactose intolerance / total lactase deficiency / glucose-galactose malabsorption" checked={e.galactoseIntolerance} onChange={(v) => updateEligibility("galactoseIntolerance", v)} description="Mysimba tablets contain lactose." />
+            {EXCLUSION_GROUPS.map((group) => (
+              <div key={group.heading}>
+                <p className="text-sm font-semibold text-navy-900 mt-4">{group.heading}</p>
+                {group.items.map((item) => (
+                  <Checkbox key={item.key} label={item.label} checked={e[item.key]} onChange={(v) => updateEligibility(item.key, v)} description={item.description} />
+                ))}
+              </div>
+            ))}
 
             <div className="border-t border-gray-200 pt-4 space-y-2">
               <p className="text-sm font-semibold text-navy-900">Ask at every supply: stop and refer if any is present</p>
-              <Checkbox label="Asked at this supply about mood, suicidal thoughts, seizures and symptoms of raised blood pressure" checked={e.followUpQuestionsAsked} onChange={(v) => updateEligibility("followUpQuestionsAsked", v)} required description="Document follow-up row: ask at every supply. The four items below only count as absent once this is ticked." />
-              <p className="text-xs text-gray-600">Since starting Mysimba (or since the last supply) the patient reports:</p>
-              <Checkbox label="Mood changes, depression, anxiety or unusual behaviour" checked={e.reportsMoodChange} onChange={(v) => updateEligibility("reportsMoodChange", v)} />
-              <Checkbox label="Suicidal thoughts" checked={e.reportsSuicidalThoughts} onChange={(v) => updateEligibility("reportsSuicidalThoughts", v)} />
-              <Checkbox label="A seizure" checked={e.reportsSeizure} onChange={(v) => updateEligibility("reportsSeizure", v)} />
-              <Checkbox label="Symptoms of raised blood pressure (for example severe headache, chest pain, palpitations, visual disturbance)" checked={e.reportsRaisedBpSymptoms} onChange={(v) => updateEligibility("reportsRaisedBpSymptoms", v)} />
+              <p className="text-xs text-gray-600">Document follow-up row: ask these four questions at every supply and record each answer. Any "Yes" is a stop. On a first supply (patient has never taken Mysimba) answer "Not applicable".</p>
+              {FOLLOW_UP_QUESTIONS.map((q) => (
+                <div key={q.key}>
+                  <label className="block text-sm font-medium text-navy-900 mb-1">{q.label} <span className="text-red-400">*</span></label>
+                  <select value={e[q.key]} onChange={(ev) => updateEligibility(q.key, ev.target.value as FollowUpAnswer)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] bg-white">
+                    <option value="">Select the answer</option>
+                    <option value="no">No</option>
+                    <option value="yes">Yes</option>
+                    <option value="na">Not applicable (first supply today)</option>
+                  </select>
+                </div>
+              ))}
             </div>
 
             <div className="border-t border-gray-200 pt-4 space-y-2">
               <p className="text-sm font-semibold text-navy-900">Cautions: proceed with extra counselling and monitoring</p>
-              <Checkbox label="Age under 25 (higher monitoring threshold for mood changes)" checked={e.ageUnder25} onChange={(v) => updateEligibility("ageUnder25", v)} description="Patients/carers should monitor for and report worsening mood, suicidal thoughts, or unusual behaviour." />
+              <Checkbox label="Age under 25 (higher monitoring threshold for mood changes)" checked={e.ageUnder25} onChange={(v) => updateEligibility("ageUnder25", v)} description={`Calculated age from date of birth: ${state.patient.age ?? "not recorded"}${state.patient.age !== null && state.patient.age < 25 ? " (applies: tick)" : ""}. Patients/carers should monitor for and report worsening mood, suicidal thoughts, or unusual behaviour.`} />
               <Checkbox label="Past history of depression, now resolved (not current, no suicide attempt)" checked={e.depressionHistory} onChange={(v) => updateEligibility("depressionHistory", v)} description="Monitor for mood changes, depression, anxiety and suicidal thoughts, particularly in the first weeks of treatment and following any dose adjustment. Stop immediately if any new or worsening symptoms." />
-              <Checkbox label="Elderly patient aged 65 to 74" checked={e.elderly} onChange={(v) => updateEligibility("elderly", v)} description="Use with caution, as the SmPC advises: more sensitive to adverse effects and more likely to have reduced renal function (see the renal caution). Age 75 and over is an exclusion." />
+              <Checkbox label="Elderly patient aged 65 to 74" checked={e.elderly} onChange={(v) => updateEligibility("elderly", v)} description={`Calculated age from date of birth: ${state.patient.age ?? "not recorded"}${state.patient.age !== null && state.patient.age >= 65 && state.patient.age <= 74 ? " (applies: tick)" : ""}. Use with caution, as the SmPC advises: more sensitive to adverse effects and more likely to have reduced renal function (see the renal caution). Age 75 and over is an exclusion.`} />
               <Checkbox label="Known Brugada syndrome" checked={e.brugadaSyndrome} onChange={(v) => updateEligibility("brugadaSyndrome", v)} description="Bupropion may unmask Brugada syndrome, risk of cardiac arrest / sudden death." />
               <Checkbox label="Family history of cardiac arrest or sudden death" checked={e.brugadaFamilyHistory} onChange={(v) => updateEligibility("brugadaFamilyHistory", v)} description="Consider screening before initiation." />
               <Checkbox label="Mild to moderate hepatic impairment" checked={e.hepaticImpairment} onChange={(v) => updateEligibility("hepaticImpairment", v)} description="Use with caution in mild to moderate hepatic impairment; avoid in severe impairment. Dose adjustment may be required, see SmPC." />
@@ -554,7 +621,7 @@ export function MysimbaClient() {
             <div>
               <label className="block text-sm font-medium text-navy-900 mb-1">Dose stage at this consultation <span className="text-red-400">*</span></label>
               <select value={t.doseStage} onChange={(ev) => updateTreatment("doseStage", ev.target.value as typeof state.treatment.doseStage)} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]">
-                <option value="">select</option>
+                <option value="">Select the stage</option>
                 <option value="init">Initiation (titration month, weeks 1 to 4)</option>
                 <option value="1">Week 2 (1 morning + 1 evening)</option>
                 <option value="2">Week 3 (2 morning + 1 evening)</option>
@@ -607,25 +674,10 @@ export function MysimbaClient() {
 
         {currentStep === 5 && (
           <div className="space-y-3">
-            <p className="text-sm text-gray-600">Tick each item once discussed with the patient.</p>
-            <Checkbox label="Patient information leaflet (PIL) supplied, with written information on the dose titration schedule, lifestyle modifications (reduced-calorie diet and physical activity) and emergency contact details" checked={c.pilSupplied} onChange={(v) => updateCounselling("pilSupplied", v)} required />
-            <Checkbox label="Method of administration: oral; swallow tablets whole with water; do not crush, chew or divide them" checked={c.adminText} onChange={(v) => updateCounselling("adminText", v)} required />
-            <Checkbox label="Confirmed patient understands tablets must not be crushed, chewed or divided" checked={c.tabletNotCrushedChewed} onChange={(v) => updateCounselling("tabletNotCrushedChewed", v)} />
-            <Checkbox label="Follow the dose titration schedule carefully over the first 4 weeks; do not increase the dose faster than prescribed" checked={c.titrationScheduleExplained} onChange={(v) => updateCounselling("titrationScheduleExplained", v)} required />
-            <Checkbox label="Take the medication as prescribed even without immediate results; weight loss may take several weeks to become apparent" checked={c.persistenceAdvice} onChange={(v) => updateCounselling("persistenceAdvice", v)} required />
-            <Checkbox label="Maintain a reduced-calorie diet and engage in regular physical activity as directed by the healthcare provider or dietitian" checked={c.lifestyleAdvice} onChange={(v) => updateCounselling("lifestyleAdvice", v)} required />
-            <Checkbox label="Can be taken with or without food; avoid high-fat meals as they may affect absorption; take with water" checked={c.withFood} onChange={(v) => updateCounselling("withFood", v)} required />
-            <Checkbox label="Side effects discussed: very common nausea, constipation, headache, insomnia; common vomiting, dry mouth, dizziness, anxiety, tremor, upper abdominal pain, tachycardia, hypertension, decreased appetite, rash, pruritus. If persistent insomnia, headache, nausea or constipation, discuss management options" checked={c.sideEffectsDiscussed} onChange={(v) => updateCounselling("sideEffectsDiscussed", v)} required />
-            <Checkbox label="Report any mood changes, depression, anxiety, suicidal thoughts or unusual behaviour immediately to the healthcare provider or emergency services (patient and carer; particularly under 25s, in the first weeks and after any dose change)" checked={c.suicidalIdeationCounselled} onChange={(v) => updateCounselling("suicidalIdeationCounselled", v)} required />
-            <Checkbox label="Monitor blood pressure regularly at home if possible; report any persistent elevation to the GP" checked={c.bpMonitoringAdvice} onChange={(v) => updateCounselling("bpMonitoringAdvice", v)} required />
-            <Checkbox label="Hepatotoxicity warning: stop and seek medical advice if jaundice, dark urine, right upper abdominal pain or unusual fatigue (serious adverse effect: report immediately)" checked={c.hepatotoxicityWarning} onChange={(v) => updateCounselling("hepatotoxicityWarning", v)} required />
-            <Checkbox label="Driving / hazardous machinery: caution, Mysimba may cause dizziness, somnolence, loss of consciousness or seizure" checked={c.drivingMachineryAdvice} onChange={(v) => updateCounselling("drivingMachineryAdvice", v)} />
-            <Checkbox label="Do not consume excessive alcohol as it may increase the risk of seizures and adverse effects" checked={c.noAlcoholAdvice} onChange={(v) => updateCounselling("noAlcoholAdvice", v)} description="Alcohol lowers the seizure threshold; combined with bupropion the risk is increased." required />
-            <Checkbox label="Do not stop the medication abruptly; discuss discontinuation with the healthcare provider" checked={c.noAbruptStop} onChange={(v) => updateCounselling("noAbruptStop", v)} required />
-            <Checkbox label="Inform all healthcare providers (including dentists) that you are taking Mysimba, as it may interact with other medications" checked={c.informProviders} onChange={(v) => updateCounselling("informProviders", v)} required />
-            <Checkbox label="Report any allergic reactions (rash, itching, swelling) or chest pain to the healthcare provider, or seek emergency care immediately" checked={c.allergyChestPainAdvice} onChange={(v) => updateCounselling("allergyChestPainAdvice", v)} required />
-            <Checkbox label="Attend all follow-up appointments as scheduled (4 weeks and 16 weeks), particularly the 16-week review of weight loss and tolerability; treatment is discontinued if less than 5% of initial body weight has been lost, and continuation beyond 16 weeks is by GP or specialist prescription" checked={c.sixteenWeekReviewExplained} onChange={(v) => updateCounselling("sixteenWeekReviewExplained", v)} required />
-            <Checkbox label="Female of childbearing potential: advised to use effective contraception; not to be used in pregnancy or breastfeeding" checked={c.contraceptionAdvice} onChange={(v) => updateCounselling("contraceptionAdvice", v)} description="Tick where applicable." />
+            <p className="text-sm text-gray-600">Tick each item once discussed with the patient. Every item is required except the three marked optional.</p>
+            {COUNSELLING_ITEMS.map((item) => (
+              <Checkbox key={item.key} label={item.label} checked={c[item.key]} onChange={(v) => updateCounselling(item.key, v)} required={item.required} description={item.description} />
+            ))}
           </div>
         )}
 
@@ -658,15 +710,15 @@ export function MysimbaClient() {
                 ["Consent", state.writtenConsentObtained ? "Valid informed written consent obtained and filed; private service explained" : "Not recorded"],
                 ["Height, weight, BMI", `${state.assessment.heightCm ?? "-"} cm, ${state.assessment.weightKg ?? "-"} kg, BMI ${bmi ?? "-"}${t.initialWeightKg ? ` (initial weight ${t.initialWeightKg} kg${weightLossPercent !== null ? `, ${weightLossPercent}% lost` : ""})` : ""}`],
                 ["Blood pressure, pulse", `${state.assessment.systolicBp ?? "-"}/${state.assessment.diastolicBp ?? "-"} mmHg, ${state.assessment.pulse ?? "-"} bpm`],
-                ["Comorbidity", state.assessment.hasComorbidity ? (state.assessment.comorbidityDetails || "Yes") : "None recorded"],
-                ["Follow-up questions", e.followUpQuestionsAsked ? "Asked at this supply: mood, suicidal thoughts, seizures, raised blood pressure symptoms; none reported" : "Not recorded"],
+                ["Comorbidity", state.assessment.hasComorbidity === "yes" ? (state.assessment.comorbidityDetails || "Yes") : state.assessment.hasComorbidity === "no" ? "None" : "Not answered"],
+                ["Follow-up questions", FOLLOW_UP_QUESTIONS.map((q) => `${q.short}: ${FOLLOW_UP_ANSWER_LABELS[e[q.key]]}`).join("; ")],
                 ["Outcome", hasStop ? `NOT SUPPLIED: ${stopReason}` : "Supplied via PGD"],
                 ["Medicine", hasStop ? "Not supplied" : `${PRODUCT_NAME}, oral`],
                 ["Dose", hasStop ? "Not supplied" : (DOSE_STAGE_LABELS[t.doseStage] ?? "Not recorded")],
                 ["Quantity", hasStop ? "Not supplied" : `${t.quantityTablets ?? "-"} tablets`],
                 ["Batch and expiry", hasStop ? "Not applicable" : `${t.productBatch || "-"}, ${t.productExpiry || "-"}`],
                 ["Treatment start, review", `${t.treatmentStartDate || "-"}${weeksSinceStart !== null ? ` (week ${weeksSinceStart + 1})` : ""}; 16 week review ${t.sixteenWeekReviewDate || "-"}`],
-                ["Advice given", hasStop ? (e.exclusionAdvice || "Not recorded") : "PIL and written titration, lifestyle and emergency contact information supplied; administration, titration, persistence, lifestyle, food, side effects, mood and suicidal ideation, blood pressure, hepatotoxicity, alcohol, no abrupt stop, inform providers, allergy and chest pain, 16 week review"],
+                ["Advice given", hasStop ? (e.exclusionAdvice || "Not recorded") : (COUNSELLING_ITEMS.filter((item) => c[item.key]).map((item) => item.short).join("; ") || "None recorded")],
                 ["Adverse drug reactions", state.summary.adverseReactions || "None recorded"],
                 ["Clinical notes", state.summary.clinicalNotes || "None"],
                 ["Practitioner", `${state.summary.pharmacistName || "-"}, GPhC ${state.summary.pharmacistGPhC || "-"}${state.summary.pharmacyName ? `, ${state.summary.pharmacyName}` : ""}`],

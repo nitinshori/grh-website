@@ -72,8 +72,8 @@ export interface EczemaMedicalHistory {
   allergies: string;
   /** Courses of topical corticosteroid supplied in the last 12 months. */
   coursesLast12Months: "" | "0" | "1" | "2" | "3-or-more";
-  /** Three or more courses: has the GP reviewed the patient since the last course? */
-  gpReviewSinceLastCourse: boolean;
+  /** Three or more courses: has the GP reviewed the patient since the last course? Yes/No with no default; "no" stops. */
+  gpReviewSinceLastCourse: "" | "yes" | "no";
   /** When the last course ended (optional; used for the 4 week continuous ceiling). */
   lastCourseEndDate: string;
   currentlyUsingTopicalSteroid: boolean;
@@ -84,6 +84,10 @@ export interface EczemaMedicalHistory {
 
 export interface EczemaContraindications {
   bacterialInfection: boolean; // signs of secondary bacterial infection (weeping, crusting, sudden worsening)
+  /** Where signs of secondary infection are present: the pharmacist's answer on how it is managed.
+   *  "concurrent" = mild and localised, treated at this visit under the Skin and Soft Tissue Infection PGD;
+   *  "refer" = not mild and localised, or a red flag: refer and supply neither (stop). Blank is not yet answered. */
+  infectionManagement: "" | "concurrent" | "refer";
   concurrentAntibioticSupplied: boolean; // mild, localised, treated at this visit under the Skin and Soft Tissue Infection PGD
   /** Separate confirmation that the infection is MILD and LOCALISED (not widespread, no infection PGD red flag). */
   concurrentInfectionMildLocalised: boolean;
@@ -227,7 +231,7 @@ export function createInitialConsultationState(): EczemaConsultationState {
       previousTreatments: "",
       allergies: "",
       coursesLast12Months: "",
-      gpReviewSinceLastCourse: false,
+      gpReviewSinceLastCourse: "",
       lastCourseEndDate: "",
       currentlyUsingTopicalSteroid: false,
       productHypersensitivity: false,
@@ -236,6 +240,7 @@ export function createInitialConsultationState(): EczemaConsultationState {
     },
     contraindications: {
       bacterialInfection: false,
+      infectionManagement: "",
       concurrentAntibioticSupplied: false,
       concurrentInfectionMildLocalised: false,
       concurrentAntibioticName: "",

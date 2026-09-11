@@ -56,7 +56,11 @@ export function isPregnancyReasonablyExcluded(state: PostnatalContraceptionState
   const a = state.assessment;
   if (a.daysPostpartum === null || a.daysPostpartum <= 21) return true;
   if (a.unprotectedSexSinceDay21 === null) return "unanswered";
-  return !a.unprotectedSexSinceDay21 || a.negativeTest21DaysAfterLastUpsi;
+  if (!a.unprotectedSexSinceDay21) return true;
+  // The negative test is also a yes/no with no default: a blank is not a
+  // "no" and never raises the stop (stop audit, 11 September 2026).
+  if (a.negativeTest21DaysAfterLastUpsi === null) return "unanswered";
+  return a.negativeTest21DaysAfterLastUpsi;
 }
 
 /** Depo-Provera repeat: days since the last injection, or null for a first injection. */

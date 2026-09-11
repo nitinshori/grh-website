@@ -274,6 +274,8 @@ export default function BVClient() {
               <Checkbox label="Concurrent disulfiram therapy" checked={state.medications.disulfiram} onChange={(v) => dispatch({ type: "UPDATE_MEDICATIONS", field: "disulfiram", value: v })} description="Exclusion for oral metronidazole." />
               <Checkbox label="Taking warfarin" checked={state.medications.warfarin} onChange={(v) => dispatch({ type: "UPDATE_MEDICATIONS", field: "warfarin", value: v })} description="Increased anticoagulant effect; monitor INR." />
               <Checkbox label="Taking phenytoin" checked={state.medications.phenytoin} onChange={(v) => dispatch({ type: "UPDATE_MEDICATIONS", field: "phenytoin", value: v })} description="Increased phenytoin levels." />
+              <TextInput label="Other current medicines (optional)" value={state.medications.otherMedications} onChange={(v) => dispatch({ type: "UPDATE_MEDICATIONS", field: "otherMedications", value: v })} placeholder="Prescribed, bought or herbal; leave blank if none" />
+              <TextInput label="Other allergies (optional)" value={state.medications.allergies} onChange={(v) => dispatch({ type: "UPDATE_MEDICATIONS", field: "allergies", value: v })} placeholder="Leave blank if none known" />
               <div className="pt-2 border-t border-gray-200">
                 <Checkbox
                   label="Every exclusion and caution question on this step was asked and answered by the patient"

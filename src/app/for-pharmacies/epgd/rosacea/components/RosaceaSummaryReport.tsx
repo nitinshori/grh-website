@@ -96,7 +96,7 @@ export function RosaceaSummaryReport({ state, alerts, hasStops }: RosaceaSummary
               [
                 assessment.flushing && "Flushing",
                 assessment.erythema && "Erythema",
-                assessment.papulesPostules && "Papules / pustules",
+                assessment.papulesPostules === "yes" && "Papules / pustules",
                 assessment.ocularSymptoms && "Ocular symptoms",
               ]
                 .filter(Boolean)

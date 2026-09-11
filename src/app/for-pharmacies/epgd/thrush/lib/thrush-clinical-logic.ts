@@ -131,7 +131,7 @@ export function hasHardStops(alerts: ClinicalAlert[]): boolean {
 // Arm-specific gate applied when the medicine is chosen.
 export function getMedicineSelectionError(state: ThrushConsultationState): string | null {
   const choice = state.medicineSelection.medicineChoice;
-  if (!choice) return "Medicine must be selected";
+  if (!choice) return "Select a treatment";
   const h = state.medicalHistory;
   if (h.pregnancy) return "Pregnancy: outside the PGD indication (non-pregnant women). Refer to the GP.";
   if (choice === "fluconazole-oral") {

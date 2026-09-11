@@ -1,7 +1,7 @@
 'use client';
 
 import { ImpetigoMedicalHistory } from './impetigo-types';
-import { Checkbox, TextArea, TextInput } from '../shared/components/FormInputs';
+import { Checkbox, SelectInput, TextArea, TextInput } from '../shared/components/FormInputs';
 
 interface MedicalHistoryStepProps {
   medicalHistory: ImpetigoMedicalHistory;
@@ -10,9 +10,11 @@ interface MedicalHistoryStepProps {
   age: number | null;
   /** True where the lesion assessment sends the patient to an oral arm. */
   oralRoute: boolean;
+  /** True where the patient is routed to the macrolide arm, whose paediatric dose is by weight. */
+  macrolideRoute?: boolean;
 }
 
-export function MedicalHistoryStep({ medicalHistory, onChange, age, oralRoute }: MedicalHistoryStepProps) {
+export function MedicalHistoryStep({ medicalHistory, onChange, age, oralRoute, macrolideRoute = false }: MedicalHistoryStepProps) {
   const handleChange = (field: keyof ImpetigoMedicalHistory, value: unknown) => {
     onChange({
       ...medicalHistory,
@@ -73,19 +75,26 @@ export function MedicalHistoryStep({ medicalHistory, onChange, age, oralRoute }:
 
       {/* Penicillin Allergy */}
       <div className="border-l-4 border-blue-500 bg-blue-50 p-4 rounded space-y-3">
-        <Checkbox
+        <SelectInput
           label="Penicillin-allergic (true allergy or documented intolerance)"
-          checked={medicalHistory.penicillinAllergy}
-          onChange={(checked) => handleChange('penicillinAllergy', checked)}
-          description="Take a proper penicillin allergy history and distinguish a true allergy from an intolerance. Record what the patient describes; this is not the consultation in which to unpick a childhood label. A penicillin-allergic patient needing an oral antibiotic uses the macrolide arm."
+          value={medicalHistory.penicillinAllergy}
+          onChange={(value) => handleChange('penicillinAllergy', value)}
+          options={[
+            { value: 'no', label: 'No' },
+            { value: 'yes', label: 'Yes' },
+          ]}
+          required={oralRoute}
         />
+        <p className="text-xs text-gray-500">
+          Take a proper penicillin allergy history and distinguish a true allergy from an intolerance. Record what the patient describes; this is not the consultation in which to unpick a childhood label. A penicillin-allergic patient needing an oral antibiotic uses the macrolide arm.
+        </p>
         <TextArea
           label="Penicillin allergy history, in the patient's own terms"
           value={medicalHistory.penicillinAllergyHistory}
           onChange={(value) => handleChange('penicillinAllergyHistory', value)}
           placeholder="E.g. 'rash all over after amoxicillin as a child', 'none known'"
           rows={2}
-          required={medicalHistory.penicillinAllergy}
+          required={medicalHistory.penicillinAllergy === 'yes'}
         />
         <Checkbox
           label="Cephalosporin allergy with a high risk of cross-reactivity to penicillins"
@@ -129,7 +138,7 @@ export function MedicalHistoryStep({ medicalHistory, onChange, age, oralRoute }:
           checked={medicalHistory.severeRenalImpairment}
           onChange={(checked) => handleChange('severeRenalImpairment', checked)}
         />
-        {isChild && oralRoute && !medicalHistory.penicillinAllergy && (
+        {isChild && oralRoute && medicalHistory.penicillinAllergy === 'no' && (
           <Checkbox
             label="The child will not take the flucloxacillin suspension (unpalatable): use the macrolide arm on grounds of unsuitability"
             checked={medicalHistory.flucloxSuspensionRefused}
@@ -163,12 +172,19 @@ export function MedicalHistoryStep({ medicalHistory, onChange, age, oralRoute }:
           onChange={(checked) => handleChange('breastfeeding', checked)}
         />
         {medicalHistory.breastfeeding && (
-          <Checkbox
-            label="Macrolide in breastfeeding: the choice has been discussed with the patient and is recorded in the notes"
-            checked={medicalHistory.breastfeedingDiscussed}
-            onChange={(checked) => handleChange('breastfeedingDiscussed', checked)}
-            description="Breastfeeding excludes the macrolide arm unless the choice has been discussed and recorded."
-          />
+          <div className="space-y-1">
+            <SelectInput
+              label="Macrolide in breastfeeding: has the choice been discussed with the patient and recorded in the notes?"
+              value={medicalHistory.breastfeedingDiscussed}
+              onChange={(value) => handleChange('breastfeedingDiscussed', value)}
+              options={[
+                { value: 'yes', label: 'Yes: discussed and recorded' },
+                { value: 'no', label: 'No: not discussed (the macrolide arm is excluded; refer)' },
+              ]}
+              required={oralRoute && macrolideRoute}
+            />
+            <p className="text-xs text-gray-500">Breastfeeding excludes the macrolide arm unless the choice has been discussed and recorded. Required on the macrolide arm.</p>
+          </div>
         )}
       </div>
 
@@ -176,13 +192,20 @@ export function MedicalHistoryStep({ medicalHistory, onChange, age, oralRoute }:
       {isChild && (
         <div className="border-l-4 border-green-500 bg-green-50 p-4 rounded space-y-3">
           <p className="text-sm font-medium text-gray-900">Child: weight, measured today</p>
+          <p className="text-xs text-gray-600">
+            {oralRoute && macrolideRoute
+              ? 'Required: the macrolide dose is by weight.'
+              : oralRoute
+                ? 'Optional here: flucloxacillin is dosed by age. It becomes required if the child is moved to the macrolide arm (penicillin allergy, or will not take the suspension).'
+                : 'Optional for the topical arm.'}
+          </p>
           <TextInput
             label="Weight in kilograms, measured today"
             value={medicalHistory.weightKg}
             onChange={(value) => handleChange('weightKg', value)}
             placeholder="e.g. 14.5"
             type="number"
-            required={oralRoute && !medicalHistory.cannotBeWeighed}
+            required={oralRoute && macrolideRoute && !medicalHistory.cannotBeWeighed}
           />
           <Checkbox
             label="The child cannot be weighed today"
@@ -251,11 +274,12 @@ export function MedicalHistoryStep({ medicalHistory, onChange, age, oralRoute }:
         {medicalHistory.recentAntibioticUse && (
           <div className="mt-3">
             <TextArea
-              label="Details of Recent Antibiotics"
+              label="Details of recent antibiotics (what, when and what for)"
               value={medicalHistory.recentAntibioticDetails}
               onChange={(value) => handleChange('recentAntibioticDetails', value)}
               placeholder="E.g., Amoxicillin 500mg (2 weeks ago for UTI)..."
               rows={2}
+              required
             />
           </div>
         )}

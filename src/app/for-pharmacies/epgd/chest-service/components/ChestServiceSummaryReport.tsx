@@ -9,7 +9,7 @@ import {
   ReportFooter,
 } from "../../shared/components/SummaryReportShell";
 import type { ChestState, Alert, Comorbidity } from "../ChestServiceClient";
-import { PGD_STRAPLINE, ANTIBIOTIC_REGIMENS, comorbidityLabel } from "../ChestServiceClient";
+import { PGD_STRAPLINE, ANTIBIOTIC_REGIMENS, RED_FLAG_LABELS, EXCLUSION_LABELS, comorbidityLabel } from "../ChestServiceClient";
 
 interface Props {
   state: ChestState;
@@ -80,7 +80,7 @@ export function ChestServiceSummaryReport({ state, alerts, crbScore, inclusionFe
         <div className="space-y-1 text-xs">
           <Row label="Cough duration" value={p.coughDurationDays !== null ? `${p.coughDurationDays} days` : "Not recorded"} />
           <Row label="Smoking status" value={p.smokingStatus || "Not recorded"} />
-          <Row label="Symptoms" value={[p.purulentSputum && "purulent sputum", p.fever && "fever", p.breathless && "breathlessness", p.wheeze && "wheeze", p.chestPain && "chest pain"].filter(Boolean).join(", ") || "None recorded"} />
+          <Row label="Symptoms" value={[p.purulentSputum === "yes" && "purulent sputum", p.purulentSputum === "no" && "no purulent sputum", p.fever && "fever", p.breathless && "breathlessness", p.wheeze && "wheeze", p.chestPain && "chest pain"].filter(Boolean).join(", ") || "None recorded"} />
           <Row label="Higher-risk comorbidities" value={comorbidities.length > 0 ? comorbidities.map(comorbidityLabel).join(", ") : p.noComorbidity ? "None (confirmed)" : "Not recorded"} />
           {isOver65 && <Row label="Over 65: lower referral threshold considered" value={p.lowerThresholdOver65Considered ? "Yes" : "NOT recorded"} />}
           <Row label="Inclusion feature" value={inclusionFeature} />
@@ -105,12 +105,12 @@ export function ChestServiceSummaryReport({ state, alerts, crbScore, inclusionFe
       <div className="px-6 py-4 print:px-4 print:py-2">
         <SectionHeader>Red Flags, Exclusions and Medicines</SectionHeader>
         <div className="space-y-1 text-xs">
-          <Row label="Red flags" value={Object.entries(redFlags).filter(([, v]) => v).map(([k]) => k).join(", ") || "None recorded"} />
-          <Row label="Exclusions recorded" value={Object.entries(state.exclusions).filter(([, v]) => v).map(([k]) => k).join(", ") || "None recorded"} />
+          <Row label="Red flags" value={RED_FLAG_LABELS.filter(([k]) => redFlags[k]).map(([, label]) => label).join("; ") || "None recorded"} />
+          <Row label="Exclusions recorded" value={(Object.keys(state.exclusions) as Array<keyof typeof state.exclusions>).filter((k) => state.exclusions[k]).map((k) => EXCLUSION_LABELS[k]).join("; ") || "None recorded"} />
           <Row label="Penicillin allergy" value={m.penicillinAllergy ? `Yes: ${m.penicillinAllergyHistory || "history not recorded"}` : "None recorded"} />
           <Row label="Other allergies" value={[m.tetracyclineAllergy && "tetracycline", m.macrolideAllergy && "macrolide"].filter(Boolean).join(", ") || "None recorded"} />
           <Row label="Interacting medicines" value={[m.onSimvastatin && "simvastatin or lovastatin", m.onClarithromycinInteracting && "clarithromycin-contraindicated medicine", m.onColchicine && "colchicine", m.onWarfarin && "warfarin", m.onDoac && "DOAC"].filter(Boolean).join(", ") || "None recorded"} />
-          <Row label="Renal function asked" value={m.renalFunctionAsked ? `Yes${m.renalFunctionAnswer ? `: ${m.renalFunctionAnswer}` : ""}` : "No"} />
+          <Row label="Renal function" value={m.renalFunctionAnswer ? `${m.renalFunctionAnswer}${m.renalFunctionDetail ? ` (${m.renalFunctionDetail})` : ""}` : "Not asked"} />
           {m.other && <Row label="Other medicines" value={m.other} />}
         </div>
       </div>

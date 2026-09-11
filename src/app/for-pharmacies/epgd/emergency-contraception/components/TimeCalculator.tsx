@@ -48,7 +48,7 @@ export function TimeCalculator({ upsiDate, upsiTime }: TimeCalculatorProps) {
     <div className={`p-4 border rounded-lg ${status.color} space-y-3`}>
       <div>
         <p className="text-2xl font-bold text-navy-900">
-          {hours !== null ? `${Math.round(hours * 10) / 10} hours` : "—"}
+          {hours !== null ? `${Math.round(hours * 10) / 10} hours` : "Not recorded"}
         </p>
         <p className="text-xs text-gray-600 mt-1">since unprotected intercourse</p>
       </div>

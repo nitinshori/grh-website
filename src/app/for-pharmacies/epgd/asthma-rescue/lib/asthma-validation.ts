@@ -24,17 +24,14 @@ export function validateStep(state: AsthmaConsultationState, step: number): stri
 
     case 2: { // Asthma Assessment
       const a = state.assessment;
-      if (!a.hasExistingDiagnosis) {
-        return "Please confirm patient has a confirmed asthma diagnosis";
-      }
       if (!a.diagnosisEvidence) {
-        return "Record how the diagnosis is documented (GP record, repeat prescription for an asthma inhaler, or asthma action plan)";
+        return "How the asthma diagnosis is documented: select an option (GP record, repeat prescription, action plan, or none)";
       }
       if (a.diagnosisEvidence === "none") {
         return "Previous inhaler use on its own is not confirmation of diagnosis: refer for assessment";
       }
-      if (!a.onPreventer) {
-        return "Current preventer therapy must be asked about and recorded: a patient with no preventer is referred to the GP, do not supply";
+      if (!a.preventerAnswer) {
+        return "Current preventer (inhaled corticosteroid) therapy: select Yes or No";
       }
       if (a.rescueCoursesLast12Months === null) {
         return "Record the number of rescue courses in the last 12 months (any source)";
@@ -42,18 +39,27 @@ export function validateStep(state: AsthmaConsultationState, step: number): stri
       if (a.pgdRescueCoursesLast12Months === null) {
         return "Record the number of rescue courses supplied under this PGD in the last 12 months";
       }
-      if (!a.acuteExacerbation) {
-        return "This PGD is for an acute exacerbation with symptoms of bronchospasm (wheezing, breathlessness, chest tightness); record it or do not supply";
+      if (!a.exacerbationAnswer) {
+        return "Acute exacerbation with symptoms of bronchospasm: select Yes or No";
+      }
+      if (!a.inhalerAbilityAnswer) {
+        return "Capable of using an inhaler device, or willing to use a spacer: select Yes or No";
+      }
+      if (!a.incompleteResponseAnswer) {
+        return "Moderate exacerbation with incomplete response to salbutamol: select Yes or No";
+      }
+      if (!a.oralAbilityAnswer) {
+        return "Able to take oral medication: select Yes or No";
       }
       if (!a.reasonForSupply) {
-        return "Please specify reason for supply";
+        return "Reason for supply: select an option";
       }
       return null;
     }
 
     case 3: // Medical History
       if (!state.medicalHistory.exclusionsAskedAndAnswered) {
-        return "Confirm that the prednisolone exclusions and every caution on this step were asked and answered by the patient";
+        return "Tick 'The prednisolone exclusions and every caution on this step were asked and answered by the patient' (an unticked condition means the patient answered no)";
       }
       return null;
 
@@ -62,31 +68,40 @@ export function validateStep(state: AsthmaConsultationState, step: number): stri
       if (missing.length > 0) {
         return "Measure and record before any supply: " + missing.join(", ") + ". If any observation is missing, do not supply.";
       }
+      if (!state.observations.sentencesAnswer) {
+        return "Able to complete sentences in one breath: select Yes or No";
+      }
       if (!state.redFlags.allergyStatusConfirmed) {
-        return "Confirm the patient's allergy status (salbutamol and other beta-2 agonists; prednisolone and other corticosteroids) was asked and confirmed";
+        return "Tick 'Allergy status confirmed with the patient'";
       }
       return null;
     }
 
     case 5: { // Medicine Supply
       const ms = state.medicineSupply;
+      const a = state.assessment;
       if (!ms.salbutamol100mcgPMDI && !ms.prednisolone5mg) {
-        return "Select at least one medicine to supply (salbutamol and/or prednisolone)";
+        return "Tick at least one medicine to supply (Supply Salbutamol and/or Supply Prednisolone)";
       }
       if (ms.salbutamol100mcgPMDI) {
+        if (!a.exacerbationAnswer) return "Acute exacerbation with symptoms of bronchospasm: select Yes or No on the Asthma Assessment step";
+        if (!a.inhalerAbilityAnswer) return "Capable of using an inhaler device, or willing to use a spacer: select Yes or No on the Asthma Assessment step";
+        if (!a.preventerAnswer) return "Current preventer (inhaled corticosteroid) therapy: select Yes or No on the Asthma Assessment step";
         const blockers = salbutamolArmBlockers(state);
         if (blockers.length > 0) return "Salbutamol is excluded for this patient: " + blockers.join("; ");
         if (!ms.twoAsDoseUnit) {
-          return "Please confirm the salbutamol dose (2 to 4 puffs, may repeat after 15 to 30 minutes)";
+          return "Tick 'Confirm dosing: 2 to 4 puffs inhaled immediately...'";
         }
         if (!ms.maxEightPuffsDailyUnderstood) {
-          return "Confirm the salbutamol limits were explained: maximum 8 puffs in 24 hours; more often than every 4 hours or on most days is a same-day GP referral; 10 puffs through a spacer with no relief is 999";
+          return "Tick 'Salbutamol limits explained' (maximum 8 puffs in 24 hours; referral and 999 thresholds)";
         }
         if (!ms.salbutamolPilSupplied) {
-          return "Confirm the patient information leaflet was supplied with the salbutamol inhaler";
+          return "Tick 'Patient information leaflet supplied with the salbutamol inhaler'";
         }
       }
       if (ms.prednisolone5mg) {
+        if (!a.incompleteResponseAnswer) return "Moderate exacerbation with incomplete response to salbutamol: select Yes or No on the Asthma Assessment step";
+        if (!a.oralAbilityAnswer) return "Able to take oral medication: select Yes or No on the Asthma Assessment step";
         const blockers = prednisoloneArmBlockers(state);
         if (blockers.length > 0) return "Prednisolone is excluded for this patient: " + blockers.join("; ");
         if (ms.prednisoloneDoseMg !== "40" || ms.prednisoloneDays !== "5") {
@@ -100,10 +115,10 @@ export function validateStep(state: AsthmaConsultationState, step: number): stri
           return `Maximum ${MAX_PREDNISOLONE_TABLETS} tablets (40mg daily for 5 days)`;
         }
         if (!ms.tabletCountChecked) {
-          return "Confirm the tablet count was checked against the dose before supply";
+          return "Tick 'Tablet count checked against the dose before supply'";
         }
         if (!ms.prednisolonePilSupplied) {
-          return "Confirm the patient information leaflet was supplied with the prednisolone tablets";
+          return "Tick 'Patient information leaflet supplied with the prednisolone tablets'";
         }
       }
       return null;

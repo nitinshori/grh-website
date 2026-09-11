@@ -98,8 +98,8 @@ export function WoundCareSummaryReport({ state, alerts, band, doseText, quantity
           <Row label="Extent" value={a.woundSize || "Not recorded"} />
           <Row label="Depth" value={a.woundDepth || "Not recorded"} />
           <Row label="Time of injury" value={a.timeOfInjury ? a.timeOfInjury.replace("T", " ") : "Not recorded"} />
-          <Row label="Signs of infection" value={a.signsOfInfection.join(", ") || "None recorded"} />
-          <Row label="Active bleeding" value={a.activeBleedingControlled ? "Controlled" : "NOT controlled"} />
+          <Row label="Signs of infection" value={a.signsOfInfection.join(", ") || (a.noSignsOfInfection ? "None present (recorded)" : "None recorded")} />
+          <Row label="Active bleeding" value={a.activeBleeding === "none" ? "None" : a.activeBleeding === "controlled" ? "Controlled by pressure" : a.activeBleeding === "not-controlled" ? "NOT controlled" : "Not recorded"} />
           <Row
             label="Red flags"
             value={

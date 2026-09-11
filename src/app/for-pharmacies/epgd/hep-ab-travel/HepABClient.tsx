@@ -215,7 +215,9 @@ export function HepABClient() {
     if (!indicationMet) return choiceHasHepA && !(state.travel.hepARisk || state.travel.hepANonTravelRisk)
       ? "Hepatitis A inclusion not met: record travel to a moderate or high endemicity area, or a non-travel risk factor, on the Travel Risk Assessment step"
       : "Hepatitis B inclusion not met: record travel to an intermediate or high prevalence area with a risk factor, or a lifestyle risk factor, on the Travel Risk Assessment step"
-    if (!cautionsDocumented) return "Record the pregnancy risk assessment, breastfeeding decision, or the Twinrix Paediatric co-administration decision"
+    if (state.eligibility.pregnant && !state.eligibility.pregnancyRiskAssessment.trim()) return "Pregnant is ticked: complete \"Pregnancy: risk assessment documented\""
+    if (state.eligibility.breastfeeding && !state.eligibility.breastfeedingDecision.trim()) return "Breastfeeding is ticked: complete \"Breastfeeding: decision recorded\""
+    if (!cautionsDocumented) return "Other vaccines at the same visit with Twinrix Paediatric: either separate the visits (untick \"Other vaccines are being given at the same visit\") or tick the Twinrix Paediatric co-administration decision"
     return null
   })()
 
@@ -280,7 +282,8 @@ export function HepABClient() {
     if (batchExpired) return "Vaccine batch has expired: do not administer, quarantine the stock and select an in-date batch"
     if (!state.administration.injectionSite) return "Record the injection site"
     if (!state.administration.anaphylaxisKitChecked) return "Confirm adrenaline 1:1000 and the written anaphylaxis protocol are immediately available"
-    if (!state.administration.postObsMinutes || !state.administration.patientWell) return "Record that the 15 minute seated observation period was completed"
+    if (!state.administration.postObsMinutes) return "Select the post-administration observation period"
+    if (!state.administration.patientWell) return "Tick \"Observation period completed, seated, and patient remained well\" once the period has actually been completed"
     if (state.administration.adverseReaction && !state.administration.adverseReactionDetails.trim()) return "Record the adverse reaction and the action taken"
     return null
   })()
@@ -301,8 +304,16 @@ export function HepABClient() {
     (!givenHasHepB || state.advice.sexualHealthCounselling)
 
   const adviceError = (() => {
-    if (!state.advice.gpInformedDecision) return "Record whether the GP is being informed (the document: the individual's GP should be informed) or the patient declined"
-    if (!state.advice.yellowCardLeafletGiven) return "Confirm the Yellow Card scheme was discussed"
+    if (!state.advice.sideEffectsCounselled) return "Tick \"Common local and systemic reactions and their self-limiting nature counselled\""
+    if (!state.advice.pilGiven) return "Tick \"Manufacturer's patient information leaflet given\""
+    if (!state.advice.yellowCardLeafletGiven) return "Tick \"Yellow Card scheme leaflet given / discussed\""
+    if (!state.advice.vaccineRecordCardIssued) return "Tick \"Written record given (brand, strength, batch, date)\""
+    if (!state.advice.followUpScheduleAgreed) return "Tick \"Schedule given in writing with the date each remaining dose is due\""
+    if (!state.advice.protectionByTravelExplained) return "Tick \"Explicit about what protection the patient will and will not have by the time they travel\""
+    if (!state.advice.hepCNotCoveredExplained) return "Tick \"Explained that vaccination does not protect against hepatitis C\""
+    if (!state.advice.gpInformedDecision) return "Select an option under \"GP informed\": GP informed, or patient declined GP notification"
+    if (givenHasHepA && !state.advice.foodAndWaterHygieneCounselled) return "Tick \"Risk reduction advice, hepatitis A: food and water hygiene\" (required for the vaccine given)"
+    if (givenHasHepB && !state.advice.sexualHealthCounselling) return "Tick \"Risk reduction advice, hepatitis B\" (required for the vaccine given)"
     return "Please confirm every counselling point that applies to the vaccine given"
   })()
 
@@ -526,6 +537,7 @@ export function HepABClient() {
               onChange={(v) => updateTravel("destinations", v)}
               rows={2}
               placeholder="e.g. India (Delhi, Goa), 4 weeks; volunteering in rural areas"
+              required
             />
             <div className="grid sm:grid-cols-2 gap-4">
               <TextInput
@@ -533,9 +545,10 @@ export function HepABClient() {
                 type="date"
                 value={state.travel.departureDate}
                 onChange={(v) => updateTravel("departureDate", v)}
+                required
               />
               <TextInput
-                label="Duration (weeks)"
+                label="Duration (weeks, optional)"
                 type="number"
                 value={state.travel.durationWeeks}
                 onChange={(v) => updateTravel("durationWeeks", v)}
@@ -546,6 +559,9 @@ export function HepABClient() {
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
               <p className="text-sm font-semibold text-blue-900">
                 Risk factors driving vaccine choice
+              </p>
+              <p className="text-xs text-blue-900">
+                Tick every risk factor that applies. Leave a box unticked where the answer is no. At least one inclusion line must be ticked for the vaccine chosen on the next step.
               </p>
               <Checkbox
                 label="Hepatitis A inclusion: travel to an area of moderate or high hepatitis A endemicity (in practice anywhere outside northern and western Europe, North America, Australia and New Zealand)"
@@ -593,6 +609,9 @@ export function HepABClient() {
               <p className="text-sm font-semibold text-gray-900">
                 Prior vaccination history
               </p>
+              <p className="text-xs text-gray-600">
+                Ask about any previous hepatitis A or B vaccine. Leave both boxes unticked where the answer is no.
+              </p>
               <Checkbox
                 label="Previously vaccinated against Hepatitis A"
                 checked={state.travel.previousHepAVaccine}
@@ -628,7 +647,7 @@ export function HepABClient() {
                 />
               )}
               <Checkbox
-                label="Sufficient information is available about any previous hepatitis A or B vaccination (inclusion criterion)"
+                label="Sufficient information is available about any previous hepatitis A or B vaccination (inclusion criterion; required, tick this also when the patient has never been vaccinated)"
                 checked={state.travel.previousVaccinationInfoSufficient}
                 onChange={(v) => updateTravel("previousVaccinationInfoSufficient", v)}
               />
@@ -698,6 +717,9 @@ export function HepABClient() {
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-2">
               <p className="text-sm font-semibold text-red-900">
                 Contraindications: any tick here BLOCKS the consultation
+              </p>
+              <p className="text-xs text-red-900">
+                Ask each one. Leave the box unticked where the answer is no.
               </p>
               <Checkbox
                 label="Known hypersensitivity to this vaccine, any of its active substances, or excipients"
@@ -773,6 +795,7 @@ export function HepABClient() {
                   onChange={(v) => updateEligibility("pregnancyRiskAssessment", v)}
                   rows={2}
                   placeholder="Indication, product chosen and why, discussion with the patient"
+                  required
                 />
               )}
               <Checkbox
@@ -786,6 +809,7 @@ export function HepABClient() {
                   value={state.eligibility.breastfeedingDecision}
                   onChange={(v) => updateEligibility("breastfeedingDecision", v)}
                   placeholder="e.g. benefit outweighs unknown risk, patient wishes to proceed"
+                  required
                 />
               )}
               <Checkbox
@@ -957,12 +981,14 @@ export function HepABClient() {
                 label="Batch number"
                 value={state.administration.batchNumber}
                 onChange={(v) => updateAdmin("batchNumber", v)}
+                required
               />
               <TextInput
                 label="Expiry date"
                 type="date"
                 value={state.administration.expiryDate}
                 onChange={(v) => updateAdmin("expiryDate", v)}
+                required
               />
             </div>
 
@@ -1017,12 +1043,12 @@ export function HepABClient() {
             </div>
 
             <Checkbox
-              label="Observation period completed, seated, and patient remained well"
+              label="Observation period completed, seated, and patient remained well (required)"
               checked={state.administration.patientWell}
               onChange={(v) => updateAdmin("patientWell", v)}
             />
             <Checkbox
-              label="Adrenaline 1:1000 injection immediately available, in date, with a written anaphylaxis protocol consistent with Resuscitation Council UK guidance"
+              label="Adrenaline 1:1000 injection immediately available, in date, with a written anaphylaxis protocol consistent with Resuscitation Council UK guidance (required)"
               checked={state.administration.anaphylaxisKitChecked}
               onChange={(v) => updateAdmin("anaphylaxisKitChecked", v)}
             />
@@ -1052,6 +1078,9 @@ export function HepABClient() {
 
         {currentStep === 5 && (
           <div className="space-y-4">
+            <p className="text-xs text-gray-600">
+              Tick each item once it has been done. Every item on this step is required except where marked optional.
+            </p>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-900 font-semibold mb-1">
                 Counsel the patient on
@@ -1125,11 +1154,14 @@ export function HepABClient() {
               onChange={(v) => updateAdvice("hepCNotCoveredExplained", v)}
             />
             <SelectInput
-              label="GP informed (the document: the individual's GP should be informed)"
+              label="GP informed (the document says the individual's GP should be informed)"
               value={state.advice.gpInformedDecision}
               onChange={(v) => {
                 updateAdvice("gpInformedDecision", v as "" | "informed" | "declined")
                 updateAdvice("gpInformed", v === "informed")
+                // Keep the optional GP-copy tick on the Consent step in line
+                // with this answer, so the saved consent does not contradict it.
+                setState((prev) => ({ ...prev, consent: { ...prev.consent, notifyGp: v === "informed" } }))
               }}
               options={[
                 { value: "informed", label: "GP informed (with the patient's consent)" },
@@ -1138,7 +1170,7 @@ export function HepABClient() {
               required
             />
             <Checkbox
-              label="Wider travel health advice provided (TravelHealthPro signposted)"
+              label="Wider travel health advice provided (TravelHealthPro signposted) (optional)"
               checked={state.advice.travelHealthAdviceProvided}
               onChange={(v) => updateAdvice("travelHealthAdviceProvided", v)}
             />
@@ -1160,6 +1192,7 @@ export function HepABClient() {
             <div className="grid sm:grid-cols-2 gap-4">
               <TextInput
                 label="Pharmacist name"
+                required
                 value={state.summary.pharmacistName}
                 onChange={(v) =>
                   setState((prev) => ({
@@ -1170,6 +1203,7 @@ export function HepABClient() {
               />
               <TextInput
                 label="GPhC number"
+                required
                 value={state.summary.pharmacistGPhC}
                 onChange={(v) =>
                   setState((prev) => ({
@@ -1201,6 +1235,7 @@ export function HepABClient() {
               <TextInput
                 label="Consultation date"
                 type="date"
+                required
                 value={state.summary.consultationDate}
                 onChange={(v) =>
                   setState((prev) => ({
@@ -1210,7 +1245,8 @@ export function HepABClient() {
                 }
               />
               <TextInput
-                label="Consultation time"
+                label="Consultation time (HH:MM)"
+                required
                 value={state.summary.consultationTime}
                 onChange={(v) =>
                   setState((prev) => ({

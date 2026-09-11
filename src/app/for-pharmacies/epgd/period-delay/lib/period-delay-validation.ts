@@ -9,15 +9,16 @@ export function validateStep(step: number, state: PeriodDelayConsultationState):
       // PGD v009: women aged 16 years and over.
       const base = validatePatientStep(state.patient, { minAge: 16 });
       if (base) return base;
-      if (!state.medicalHistory.femaleConfirmed) return "Please confirm the patient is female";
+      if (state.medicalHistory.femaleConfirmed === null) return "Answer \"Patient is female\" (Yes or No)";
+      if (state.medicalHistory.femaleConfirmed === false) return "The patient is not female: this PGD covers women only. Save as not supplied and refer";
       return null;
     }
     case 1:
       return validateConsentStep(state.consent);
     case 2:
-      if (!state.assessment.reasonForDelay) return "Reason for period delay must be selected";
-      if (!state.assessment.datesNeededFor.trim()) return "Record the dates the delay is needed for";
-      if (!state.assessment.lastPeriodDate) return "Date of last period is required";
+      if (!state.assessment.reasonForDelay) return "Select the Reason for period delay";
+      if (!state.assessment.datesNeededFor.trim()) return "Enter the Dates the delay is needed for";
+      if (!state.assessment.lastPeriodDate) return "Enter the Date of last menstrual period (first day)";
       {
         const lmp = parseUkDate(state.assessment.lastPeriodDate);
         if (!lmp) return "Enter the date of the last period as DD/MM/YYYY";
@@ -25,14 +26,15 @@ export function validateStep(step: number, state: PeriodDelayConsultationState):
       }
       // The date the next period is due sets the start date, which is the
       // one thing that decides whether the course will work at all.
-      if (!state.assessment.expectedPeriodDate) return "The date the next period is due is required";
+      if (state.assessment.cycleRegular === null) return "Answer \"Patient has a regular, predictable menstrual cycle\" (Yes or No)";
+      if (!state.assessment.expectedPeriodDate) return "Enter When is the next period due? (first day)";
       if (state.assessment.daysUntilExpected === null) return "Enter the date the next period is due as DD/MM/YYYY";
-      if (!state.assessment.previousSuppliesLast6Months) return "Record any previous supply for period delay in the last 6 months";
+      if (!state.assessment.previousSuppliesLast6Months) return "Select Previous supplies of norethisterone for period delay in the last 6 months";
       if (
         state.assessment.previousSuppliesLast6Months !== "0" &&
         state.assessment.daysSuppliedLast6Months === null
       )
-        return "Record the number of days of norethisterone supplied in the last 6 months";
+        return "Enter Days of norethisterone supplied in the last 6 months";
       return getPregnancyExclusionError(state);
     case 3: {
       // Appendix 1: ask all eight; record the answers, not only the outcome.
@@ -60,7 +62,16 @@ export function validateStep(step: number, state: PeriodDelayConsultationState):
         return "Appendix 1 question 4: height and weight are required so that BMI can be calculated and recorded";
       // A blood pressure of 140/90 or above measured today is an exclusion.
       if (state.medicalHistory.systolicBP === null || state.medicalHistory.diastolicBP === null)
-        return "Record today's blood pressure";
+        return "Enter today's blood pressure (Systolic and Diastolic)";
+      // 16 and 17 year olds: the competence and safeguarding assessment must be
+      // recorded in full before supply. Not an exclusion, so a validator, not a stop.
+      const age = state.patient.age;
+      if (age !== null && age >= 16 && age < 18) {
+        if (!state.medicalHistory.under18AssessmentDone)
+          return "Patient is 16 or 17: tick \"Competence assessed and satisfied, and reason for the request explored with the patient alone\"";
+        if (state.medicalHistory.under18AssessmentNotes.trim() === "")
+          return "Patient is 16 or 17: write the Competence assessment and safeguarding consideration, in full";
+      }
       return null;
     }
     case 4:
@@ -71,11 +82,24 @@ export function validateStep(step: number, state: PeriodDelayConsultationState):
       if (state.medicineSelection.daysToDelay > MAX_TREATMENT_DAYS)
         return "Maximum treatment period is 14 days (42 tablets). No extension under this PGD";
       if (!state.medicineSelection.startDate) return "The start date could not be derived: check the date the next period is due on the Assessment step";
-      if (!state.medicineSelection.confirmed) return "Treatment must be confirmed";
+      if (!state.medicineSelection.confirmed) return "Tick \"I confirm this treatment is appropriate for this patient\"";
       return null;
     case 6: {
-      const allGiven = Object.values(state.counselling).every((v) => v === true);
-      if (!allGiven) return "Every counselling point must be given and confirmed";
+      const c = state.counselling;
+      const points: [boolean, string][] = [
+        [c.howToTake, "Take one tablet three times a day"],
+        [c.startThreeDaysBefore, "Start 3 days before your period is due"],
+        [c.maxDuration, "Maximum duration is 14 days and maximum quantity is 42 tablets"],
+        [c.periodReturnsAfter, "Your period will usually start 2 to 3 days after you take the last tablet"],
+        [c.notContraceptive, "THIS IS NOT CONTRACEPTION"],
+        [c.pregnancyTestIfNoPeriod, "If your period does not come within a few days of finishing, do a pregnancy test"],
+        [c.mobilityAndHydration, "Move around and keep well hydrated"],
+        [c.sideEffects, "Some nausea, headache, breast tenderness, mood change or spotting is common"],
+        [c.moodMonitoring, "Mood change is a recognised effect"],
+        [c.seekHelpIfUnwell, "Stop the tablets and get medical help the same day for"],
+      ];
+      const missing = points.find(([done]) => !done);
+      if (missing) return `Tick "${missing[1]}" once it has been given. Every point on this step is required`;
       return null;
     }
     case 7:

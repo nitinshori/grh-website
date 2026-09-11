@@ -47,9 +47,9 @@ export function BMICalculator({
       case "obese-i":
         return "bg-orange-50 border-orange-300 text-orange-700";
       case "obese-ii":
-        return "bg-red-50 border-red-300 text-red-700";
+        return "bg-orange-50 border-orange-300 text-orange-800";
       case "obese-iii":
-        return "bg-red-100 border-red-400 text-red-800";
+        return "bg-orange-100 border-orange-400 text-orange-900";
       default:
         return "bg-gray-50 border-gray-300 text-gray-600";
     }

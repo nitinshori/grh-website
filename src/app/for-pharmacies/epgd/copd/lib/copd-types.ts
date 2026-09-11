@@ -12,16 +12,21 @@ export type COPDPatientDetails = BasePatientDetails;
 export type COPDPresentation = "" | "exacerbation" | "breathlessness";
 
 export interface COPDAssessment {
-  hasExistingDiagnosis: boolean; // documented spirometry and GOLD classification
+  /** The answer to "confirmed diagnosis of COPD?": recorded, never assumed. "not-confirmed" is a stop. */
+  diagnosisStatus: "" | "confirmed" | "not-confirmed";
+  hasExistingDiagnosis: boolean; // documented spirometry and GOLD classification (true when diagnosisStatus is "confirmed")
   goldClassification: string; // "1" | "2" | "3" | "4" | ""
   presentation: COPDPresentation; // acute exacerbation, or breathlessness requiring symptom relief
-  purulentSputum: boolean; // yellow/green: infective exacerbation (amoxicillin arm)
+  purulentSputumAnswer: "" | "yes" | "no"; // the answer recorded: Yes or No, no default
+  purulentSputum: boolean; // yellow/green: infective exacerbation (amoxicillin arm); true when purulentSputumAnswer is "yes"
   spo2: number | null; // % on air; below 88 is an exclusion
   respiratoryRate: number | null; // breaths per minute, measured and recorded before supply; 25 or more is an exclusion in both arms
   salbutamolSuppliesLast12Months: number | null; // max 2 supplies in 12 months under this PGD (as told by the patient)
   platformSalbutamolSupplies12Months: number | null; // counted from this pharmacy's saved COPD records
-  canUseInhalerOrSpacer: boolean; // inclusion, salbutamol arm
-  ableToTakeOralMedication: boolean; // inclusion, amoxicillin arm
+  inhalerAbilityAnswer: "" | "yes" | "no"; // the patient's answer, recorded
+  canUseInhalerOrSpacer: boolean; // inclusion, salbutamol arm (true when inhalerAbilityAnswer is "yes")
+  oralAbilityAnswer: "" | "yes" | "no"; // the patient's answer, recorded
+  ableToTakeOralMedication: boolean; // inclusion, amoxicillin arm (true when oralAbilityAnswer is "yes")
   mrcBreathlessnessScale: number | null; // 1-5
   exacerbationFrequency: string; // "none" | "1-2" | "3-4" | "frequent"
   currentInhalerRegimen: string;
@@ -173,15 +178,19 @@ export function createInitialConsultationState(): COPDConsultationState {
       patientAwarePrivateService: false,
     },
     assessment: {
+      diagnosisStatus: "",
       hasExistingDiagnosis: false,
       goldClassification: "",
       presentation: "",
+      purulentSputumAnswer: "",
       purulentSputum: false,
       spo2: null,
       respiratoryRate: null,
       salbutamolSuppliesLast12Months: null,
       platformSalbutamolSupplies12Months: null,
+      inhalerAbilityAnswer: "",
       canUseInhalerOrSpacer: false,
+      oralAbilityAnswer: "",
       ableToTakeOralMedication: false,
       mrcBreathlessnessScale: null,
       exacerbationFrequency: "",

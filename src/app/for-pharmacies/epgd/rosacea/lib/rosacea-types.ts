@@ -5,7 +5,9 @@ export interface RosaceaAssessment {
   severity: string;
   flushing: boolean;
   erythema: boolean;
-  papulesPostules: boolean;
+  /** Answer to "Are papules or pustules present?": "no" is the stop, blank is
+   *  "not yet answered". */
+  papulesPostules: "" | "yes" | "no";
   /** Ocular symptoms (dry, sore, gritty eyes, blepharitis): neither arm treats
    *  ocular rosacea; refer for the eyes. */
   ocularSymptoms: boolean;
@@ -98,7 +100,7 @@ export function createInitialRosaceaState(): RosaceaConsultationState {
     currentStep: 0,
     patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", gpAddress: "", gpPhone: "", gpEmail: "", gpOdsCode: "", nhsNumber: "", address: "", phone: "", email: "" },
     consent: { informedConsentGiven: false, idVerified: false, idType: "", patientAwarePrivateService: false },
-    assessment: { subtype: "", severity: "", flushing: false, erythema: false, papulesPostules: false, ocularSymptoms: false, triggersIdentified: "" },
+    assessment: { subtype: "", severity: "", flushing: false, erythema: false, papulesPostules: "", ocularSymptoms: false, triggersIdentified: "" },
     contraindications: { pregnancy: false, breastfeeding: false, underEighteen: false, brokenOrEczematousSkin: false, hypersensitivityMetronidazole: false, hypersensitivityAzelaicAcid: false, asthma: false, questionsAsked: false, contraindicated: false },
     treatment: { product: "", strength: "", frequency: "", duration: "", supplyNumber: "", quantity: "", brand: "", courseStartDate: "", previousSupplyDate: "" },
     counselling: { sunProtectionAdvised: false, triggerAvoidanceAdvised: false, diaryAdvised: false, skinCareAdvised: false, applicationAdvised: false, reviewAdvised: false, followUpAdvised: false, pilSupplied: false },

@@ -195,15 +195,15 @@ export function PneumococcalClient() {
     postVaccineAdvice.pilSupplied &&
     postVaccineAdvice.followUpAdviceGiven;
   const postVaccineValidationError = !postVaccineAdvice.observationCompleted
-    ? 'Record that the 15 minute seated observation period was completed'
+    ? 'Tick "Observed for 15 minutes after vaccination" once the observation period has been completed'
     : !postVaccineAdvice.counselledReactions
-    ? 'Confirm the patient was informed of possible side effects and when to seek help'
+    ? 'Tick "Patient informed of possible side effects and when to seek help"'
     : !postVaccineAdvice.followUpAdviceGiven
-      ? 'Confirm the follow-up advice was given'
+      ? 'Tick "Follow-up advice given"'
       : !postVaccineAdvice.pilSupplied
-        ? 'Confirm the patient information leaflet was supplied'
+        ? 'Tick "Patient information leaflet (PIL) supplied"'
         : !postVaccineAdvice.patientAdvised
-          ? 'Patient must be advised'
+          ? 'Tick "All counselling completed and documented"'
           : null;
   const canProceedStep7 = summaryValidationError === null;
 
@@ -322,6 +322,26 @@ export function PneumococcalClient() {
     setSummary(initialPneumococcalSummary());
   }, []);
 
+  // The PGD requires the advice given to an excluded patient to be recorded.
+  // A stop raised on an earlier step disables Next, so the advice box that
+  // lived only on the Review Contraindications step could never be reached
+  // for those patients (walkthrough review, 11 Sep 2026).
+  const exclusionNotes = isBlocked ? (
+    <div className="mt-6 bg-red-50 border border-red-200 rounded-lg p-4 space-y-3">
+      <p className="text-red-700 text-sm font-semibold">
+        Excluded: the patient cannot be vaccinated under this PGD. Refer to the GP as appropriate and document the advice given and the decision reached.
+      </p>
+      <TextArea
+        label="Advice given and decision reached (saved with the exclusion record)"
+        value={contraIndicationsReviewed.exclusionAdvice ?? ''}
+        onChange={(v) => setContraIndicationsReviewed({ ...contraIndicationsReviewed, exclusionAdvice: v })}
+        placeholder="e.g., Febrile illness today: advised to return once recovered."
+        rows={3}
+      />
+      <p className="text-xs text-red-700">Then use "Save as not supplied" below to record the consultation.</p>
+    </div>
+  ) : null;
+
   return (
     <>
       <div className="mb-6">
@@ -427,6 +447,7 @@ export function PneumococcalClient() {
               placeholder="Enter any known allergies"
             />
           </div>
+          {exclusionNotes}
         </StepWrapper>
       )}
 
@@ -520,6 +541,7 @@ export function PneumococcalClient() {
               description="Injection site soreness, mild fever, fatigue"
             />
           </div>
+          {exclusionNotes}
         </StepWrapper>
       )}
 
@@ -667,6 +689,7 @@ export function PneumococcalClient() {
               </div>
             )}
           </div>
+          {exclusionNotes}
         </StepWrapper>
       )}
 
@@ -733,6 +756,7 @@ export function PneumococcalClient() {
               description="Caution: use with caution in individuals with bleeding disorders"
             />
           </div>
+          {exclusionNotes}
         </StepWrapper>
       )}
 
@@ -747,30 +771,17 @@ export function PneumococcalClient() {
           onPrev={handlePrev}
           canProceed={canProceedStep4}
           validationError={
-            !contraIndicationsReviewed.confirmedNoAbsoluteContraindications
-              ? 'You must confirm review before proceeding'
-              : null
+            isBlocked
+              ? 'Excluded: the patient cannot be vaccinated under this PGD. Record the advice given, then use "Save as not supplied".'
+              : !contraIndicationsReviewed.confirmedNoAbsoluteContraindications
+                ? 'Tick "I confirm no absolute contraindications are present and vaccination can proceed"'
+                : null
           }
           isBlocked={isBlocked}
           getConsultationData={getConsultationData}
         >
           <div className="space-y-4">
-            {isBlocked && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-3">
-                <p className="text-red-700 text-sm font-semibold">
-                  Absolute contraindication identified. Consultation cannot proceed. Patient
-                  should be referred to their GP. Document the advice given and the decision reached.
-                </p>
-                <TextArea
-                  label="Advice given and decision reached (saved with the exclusion record)"
-                  value={contraIndicationsReviewed.exclusionAdvice ?? ''}
-                  onChange={(v) => setContraIndicationsReviewed({ ...contraIndicationsReviewed, exclusionAdvice: v })}
-                  placeholder="e.g., Febrile illness today: advised to return once recovered."
-                  rows={3}
-                />
-                <p className="text-xs text-red-700">Then use "Save as not supplied" below to record the consultation.</p>
-              </div>
-            )}
+            {exclusionNotes}
 
             {clinicalAlerts.length === 0 && !isBlocked && (
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">

@@ -64,17 +64,21 @@ export function getAllAlerts(state: EczemaConsultationState): ClinicalAlert[] {
       detail: "The eyelids are excluded from both arms. Say plainly why a steroid is not the right treatment here and arrange review.",
     });
   }
-  const concurrentRouteMet = c.concurrentAntibioticSupplied && c.concurrentInfectionMildLocalised;
-  if ((c.bacterialInfection || a.isOozing) && !concurrentRouteMet) {
+  // The stop fires only on the pharmacist's explicit answer that the
+  // infection is not mild and localised (refer). A blank answer is a
+  // validation message, not a stop (stop audit, 11 Sep 2026).
+  const infectionSigns = c.bacterialInfection || a.isOozing;
+  const concurrentRouteMet = c.infectionManagement === "concurrent" && c.concurrentAntibioticSupplied && c.concurrentInfectionMildLocalised;
+  if (infectionSigns && c.infectionManagement === "refer") {
     alerts.push({
       severity: "stop",
       code: "ECZ_BACTERIAL",
       message: "Signs of secondary bacterial infection: refer, unless MILD and LOCALISED and treated concurrently under the Skin and Soft Tissue Infection PGD",
       detail:
-        "Weeping, crusting or sudden worsening suggests secondary bacterial infection. Where the infection is MILD and LOCALISED the patient may have the topical corticosteroid under this PGD and an oral antibiotic under the Skin and Soft Tissue Infection PGD at the same consultation, both recorded in one record: confirm both on the Contraindications step and record the antibiotic supplied. Where the infection is not mild and localised, or any red flag from the infection PGD is present, refer and supply neither.",
+        "Weeping, crusting or sudden worsening suggests secondary bacterial infection. Where the infection is MILD and LOCALISED the patient may have the topical corticosteroid under this PGD and an oral antibiotic under the Skin and Soft Tissue Infection PGD at the same consultation, both recorded in one record: select the concurrent route in the 'Secondary bacterial infection' panel, tick both boxes and record the antibiotic supplied. Where the infection is not mild and localised, or any red flag from the infection PGD is present, refer and supply neither.",
     });
   }
-  if ((c.bacterialInfection || a.isOozing) && concurrentRouteMet) {
+  if (infectionSigns && concurrentRouteMet) {
     alerts.push({
       severity: "caution",
       code: "ECZ_CONCURRENT",
@@ -107,7 +111,7 @@ export function getAllAlerts(state: EczemaConsultationState): ClinicalAlert[] {
       detail: "Refer to the GP for review rather than supplying.",
     });
   }
-  if (mh.coursesLast12Months === "3-or-more" && !mh.gpReviewSinceLastCourse) {
+  if (mh.coursesLast12Months === "3-or-more" && mh.gpReviewSinceLastCourse === "no") {
     alerts.push({
       severity: "stop",
       code: "ECZ_COURSES",
@@ -115,7 +119,7 @@ export function getAllAlerts(state: EczemaConsultationState): ClinicalAlert[] {
       detail: "Maximum three courses in any 12 months before GP review. Refer to the GP rather than supplying again. Where the GP has reviewed the patient since the last course, record that on the Medical History step.",
     });
   }
-  if (mh.coursesLast12Months === "3-or-more" && mh.gpReviewSinceLastCourse) {
+  if (mh.coursesLast12Months === "3-or-more" && mh.gpReviewSinceLastCourse === "yes") {
     alerts.push({
       severity: "caution",
       code: "ECZ_COURSES_REVIEWED",

@@ -21,9 +21,12 @@ export function validateVaccines(
   }
   const stops = getVaccineAlerts(v, age, departureDate).filter((a) => a.severity === "stop");
   if (stops.length > 0) return `Exclusion present: ${stops[0].message}. Record the advice given and save as not supplied, or resolve the exclusion.`;
-  if (!v.adrenalineAvailable) return "Confirm adrenaline 1 in 1,000 is immediately available, in date, with a telephone and a written anaphylaxis protocol";
+  if (v.hepAGiven && !v.hepAInclusionAnswer) return "Hepatitis A: answer \"Does the destination have high or intermediate hepatitis A prevalence...?\" (Yes or No)";
+  if (v.typhoidGiven && !v.typhoidInclusionAnswer) return "Typhoid: answer \"Does the destination have high or intermediate typhoid prevalence...?\" (Yes or No)";
+  if (v.choleraGiven && !v.choleraInclusionAnswer) return "Cholera: answer \"Does the traveller meet a Dukoral inclusion criterion...?\" (Yes or No)";
+  if (!v.adrenalineAvailable) return "Tick \"Adrenaline (epinephrine) 1 in 1,000 injection immediately available in the room...\"";
   if (v.hepAGiven) {
-    if (!v.hepAProduct) return "Select the hepatitis A product (Havrix or Avaxim)";
+    if (!v.hepAProduct) return "Select the hepatitis A \"Product\" (Havrix or Avaxim)";
     if (!v.hepADose) return "Record whether this is the hepatitis A primary dose or the 6 to 12 month booster";
     if (v.hepADose === "booster" && !parseLocalDate(v.hepAPrimaryDoseDate)) return "Record the date of the hepatitis A primary dose";
     if (v.hepADose === "booster" && !v.hepAPrimaryProduct) return "Record the product used for the hepatitis A primary dose";
@@ -44,10 +47,10 @@ export function validateVaccines(
     if (!v.choleraBatch.trim()) return "Record the Dukoral batch number";
     if (!parseLocalDate(v.choleraExpiry)) return "Record the Dukoral expiry date";
   }
-  if (!v.observationCompleted) return "Confirm the 15 minute seated observation period was completed";
-  if (v.adverseReaction && !v.adverseReactionDetails.trim()) return "Record the adverse reaction and the action taken";
-  if (!v.pilSupplied) return "Confirm the patient information leaflet was supplied and the booster schedule explained";
-  if (!v.followUpAdviceGiven) return "Confirm the follow-up advice was given";
+  if (!v.observationCompleted) return "Tick \"Observed for 15 minutes after vaccination...\" once the 15 minutes have elapsed";
+  if (v.adverseReaction && !v.adverseReactionDetails.trim()) return "\"Adverse reaction and action taken\" is required when \"Adverse reaction observed\" is ticked";
+  if (!v.pilSupplied) return "Tick \"Patient information leaflet supplied for each vaccine...\" once done";
+  if (!v.followUpAdviceGiven) return "Tick \"Follow-up advice given...\" once the advice has been given";
   return null;
 }
 

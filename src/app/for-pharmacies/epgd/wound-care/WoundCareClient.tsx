@@ -92,8 +92,11 @@ export interface WoundState {
     woundSize: string;
     woundDepth: string;
     timeOfInjury: string;
-    activeBleedingControlled: boolean;
+    /** Answered, never defaulted: "" until the pharmacist records it. "not-controlled" is an emergency stop. */
+    activeBleeding: "" | "none" | "controlled" | "not-controlled";
     signsOfInfection: string[];
+    /** Explicit answer that the wound shows NO sign of infection: an antibiotic is then not authorised (stop). */
+    noSignsOfInfection: boolean;
     redTrackingLines: boolean;
     spreadingCellulitis: boolean;
     necrotisingFeatures: boolean;
@@ -194,8 +197,9 @@ function createInitialState(): WoundState {
       woundSize: "",
       woundDepth: "",
       timeOfInjury: "",
-      activeBleedingControlled: true,
+      activeBleeding: "",
       signsOfInfection: [],
+      noSignsOfInfection: false,
       redTrackingLines: false,
       spreadingCellulitis: false,
       necrotisingFeatures: false,
@@ -313,7 +317,7 @@ function computeAlerts(state: WoundState): ClinicalAlert[] {
   const isBite = BITE_TYPES.has(a.woundType);
   const newAlerts: ClinicalAlert[] = [];
 
-  if (!a.activeBleedingControlled) {
+  if (a.activeBleeding === "not-controlled") {
     newAlerts.push({ severity: "stop", code: "ACTIVE_BLEEDING", message: "Active bleeding not controlled", detail: "Emergency referral required. Patient needs urgent attention." });
   }
   if (a.necrotisingFeatures) {
@@ -333,11 +337,15 @@ function computeAlerts(state: WoundState): ClinicalAlert[] {
       detail: `Breached: ${breaches.join("; ")}. Any observation outside the Appendix 1 thresholds, or any sign of systemic illness or sepsis, excludes supply.`,
     });
   }
-  if (a.signsOfInfection.length === 0 && a.woundType) {
+  // The stop is raised on the pharmacist's explicit answer, not on an
+  // untouched checklist: before this it fired the moment a wound type was
+  // chosen, above a section the pharmacist had not yet reached (walkthrough
+  // review, 11 Sep 2026). A blank checklist is a validation message instead.
+  if (a.noSignsOfInfection) {
     newAlerts.push({
       severity: "stop",
       code: "NOT_INFECTED",
-      message: "No signs of infection recorded: an antibiotic is not authorised",
+      message: "No signs of infection: an antibiotic is not authorised",
       detail: "This PGD supplies an oral antibiotic for an INFECTED wound (erythema, warmth, swelling, tenderness or purulent discharge). Give wound care and tetanus advice; do not supply an antibiotic.",
     });
   }
@@ -349,7 +357,12 @@ function computeAlerts(state: WoundState): ClinicalAlert[] {
   }
   const arm1Route = arm === "co-amoxiclav";
   const arm1TetanusComplete = arm1Route && a.arm1TetanusManagement === "completed-and-recorded";
-  if (a.highRiskTetanusWound && !arm1TetanusComplete) {
+  // Under Arm 1 the tetanus management answer can lift this stop, so while
+  // that answer is still blank the stop is not raised: the blank is a
+  // validation message on Next (stop audit, 11 Sep 2026). Outside Arm 1 the
+  // tick alone is the adverse answer and stops at once.
+  const arm1TetanusUnanswered = arm1Route && a.arm1TetanusManagement === "";
+  if (a.highRiskTetanusWound && !arm1TetanusComplete && !arm1TetanusUnanswered) {
     newAlerts.push({
       severity: "stop",
       code: "HTIG",
@@ -563,62 +576,70 @@ export default function WoundCareClient() {
     // banded, and a null band used to switch every observation check off.
     if (age === null) return "The patient's age is not known: enter the date of birth on the Patient Details step";
     if (!band) return "This PGD is for patients aged 2 years and over";
-    if (!a.woundType) return "Select the wound type (mechanism)";
-    if (!a.woundLocation) return "Select the wound location";
-    if (!a.woundSize) return "Select the wound size (extent)";
-    if (!a.woundDepth) return "Select the wound depth";
-    if (!a.timeOfInjury) return "Record the time of injury";
+    if (!a.woundType) return "Select the 'Wound type (mechanism)'";
+    if (!a.woundLocation) return "Select the 'Wound location (site)'";
+    if (!a.woundSize) return "Select the 'Wound size (extent)'";
+    if (!a.woundDepth) return "Select the 'Wound depth'";
+    if (!a.timeOfInjury) return "Complete 'Time of injury'";
     if (hoursOld === null) return "The time of injury is not a valid date and time";
     if (hoursOld < 0) return "The time of injury is in the future";
-    if (!a.temperature.trim()) return "Record the temperature";
-    if (!a.pulse.trim()) return "Record the pulse";
-    if (!a.respiratoryRate.trim()) return "Record the respiratory rate";
-    if (!a.oxygenSaturation.trim()) return "Record the oxygen saturation on air at rest";
-    if (band === "12+" && !a.systolicBP.trim()) return "Record the systolic blood pressure (required from age 12)";
-    if (band !== "12+" && !a.capillaryRefill) return "Under 12: measure and record the capillary refill time";
-    if (!a.tetanusStatus) return "Establish and record the tetanus immunisation status";
-    if (!a.tetanusAction.trim()) return "Record the tetanus action taken";
+    if (!a.activeBleeding) return "Answer 'Active bleeding' (none, controlled by pressure, or not controlled)";
+    if (a.signsOfInfection.length === 0 && !a.noSignsOfInfection)
+      return "Signs of infection: tick every sign present, or tick 'No signs of infection present' if the wound is not infected";
+    if (a.signsOfInfection.length > 0 && a.noSignsOfInfection)
+      return "Signs of infection: 'No signs of infection present' is ticked together with a sign of infection; untick one";
+    if (!a.temperature.trim()) return "Complete 'Temperature (C)' under Observations before supply";
+    if (!a.pulse.trim()) return "Complete 'Pulse (per minute)' under Observations before supply";
+    if (!a.respiratoryRate.trim()) return "Complete 'Respiratory rate (per minute)' under Observations before supply";
+    if (!a.oxygenSaturation.trim()) return "Complete 'Oxygen saturation on air at rest (%)' under Observations before supply";
+    if (band === "12+" && !a.systolicBP.trim()) return "Complete 'Systolic blood pressure (mmHg)' under Observations before supply (required from age 12)";
+    if (band !== "12+" && !a.capillaryRefill) return "Under 12: measure and select the 'Capillary refill time (measured)'";
+    if (!a.tetanusStatus) return "Select the 'Tetanus status'";
+    if (!a.tetanusAction.trim()) return "Complete 'Tetanus action taken'";
     if (htigReasonRequired && !a.htigNotIndicatedReason.trim())
-      return "The document lists this finding under the HTIG exclusion: record why immunoglobulin is not indicated, or tick the high-risk tetanus-prone wound box and refer";
+      return "The document lists this finding under the HTIG exclusion: complete 'Why human tetanus immunoglobulin is not indicated', or tick the high-risk tetanus-prone wound box and refer";
     if (arm === "co-amoxiclav" && !a.arm1TetanusManagement)
-      return "Arm 1: record whether tetanus management for this wound (including any HTIG) was completed and recorded, or the wound is not tetanus-prone";
+      return "Arm 1: select the 'Tetanus management for this wound' (completed and recorded, not tetanus-prone, or not completed)";
     if (arm === "co-amoxiclav" && a.arm1TetanusManagement === "completed-and-recorded" && !a.arm1TetanusManagementDetails.trim())
-      return "Arm 1: record where and when tetanus management was completed and what was given (HTIG, Td/IPV, or nothing further indicated)";
+      return "Arm 1: complete 'Where and when tetanus management was completed, and what was given'";
     return null;
   }, [a, band, age, arm, hoursOld, htigReasonRequired]);
 
   const treatmentError = useCallback((): string | null => {
     if (t.patientDeclined) {
-      if (!t.declinedAdvice.trim()) return "Record the advice given to the patient who declined treatment";
+      if (!t.declinedAdvice.trim()) return "Complete 'Advice given to the patient who declined'";
       return null;
     }
-    if (!t.antibiotic) return "Select the antibiotic arm";
+    if (!t.antibiotic) return "Select the 'Antibiotic arm'";
     if (arm && t.antibiotic !== arm)
       return arm === "co-amoxiclav"
         ? "A bite or heavily contaminated wound is treated with co-amoxiclav (Arm 1), not flucloxacillin"
         : "A non-bite wound is treated with flucloxacillin (Arm 2); co-amoxiclav is for bites and heavily contaminated wounds";
-    if (!t.formulation) return "Select the formulation supplied";
+    if (!t.formulation) return "Select the 'Formulation supplied'";
     if (!formulationOptions.some((f) => f.value === t.formulation))
       return "That formulation is not the one the document names for this arm and age";
-    if (!t.courseDays) return "Select the course length (5 or 7 days)";
+    if (!t.courseDays) return "Select the 'Course length' (5 or 7 days)";
     if (!quantitySupplied) return "The quantity could not be derived from the formulation and course length";
-    if (!t.antibioticRationale.trim()) return "Record which antibiotic was chosen and why";
-    if (!t.suppliedItemBatch.trim()) return "Record the batch number";
-    if (!t.suppliedItemExpiry) return "Record the expiry date";
+    if (!t.antibioticRationale.trim()) return "Complete 'Which antibiotic was chosen and why'";
+    if (!t.suppliedItemBatch.trim()) return "Complete 'Batch number'";
+    if (!t.suppliedItemExpiry) return "Complete 'Expiry date'";
     return null;
   }, [t, arm, formulationOptions, quantitySupplied]);
 
   const counsellingError = useCallback((): string | null => {
     const c = state.counselling;
-    if (!c.administrationAdvice) return "Confirm the administration advice for the antibiotic supplied";
-    if (!c.sameDayWarningSigns) return "Confirm the same-day warning-sign advice";
-    if (!c.redStreaks) return "Confirm the advice about red streaks tracking from the wound";
-    if (!c.seriousReaction) return "Confirm the serious reaction advice (rash, wheeze, lip or tongue swelling)";
-    if (!c.hepaticAdvice) return "Confirm the jaundice / dark urine advice";
-    if (!c.woundCareAndReview) return "Confirm the wound care and 2 to 3 day review advice";
-    if (!c.counsellingProvided) return "Confirm counselling was provided";
+    if (!c.administrationAdvice)
+      return t.antibiotic === "co-amoxiclav"
+        ? "Tick 'Take one tablet three times a day at the start of a meal' once given"
+        : "Tick 'Take on an empty stomach, an hour before food or two hours after' once given";
+    if (!c.sameDayWarningSigns) return "Tick 'Seek help THE SAME DAY if the pain becomes severe' once given";
+    if (!c.redStreaks) return "Tick 'Seek help if you see red streaks tracking away from the wound' once given";
+    if (!c.seriousReaction) return "Tick 'Stop and seek urgent help if you develop a rash, wheeze, or swelling of the lips or tongue' once given";
+    if (!c.hepaticAdvice) return "Tick 'Report yellowing of the eyes or skin, or dark urine' once given";
+    if (!c.woundCareAndReview) return "Tick 'Keep the wound clean and dry. Come back if it is no better in 2 to 3 days' once given";
+    if (!c.counsellingProvided) return "Tick 'Counselling provided to patient and the patient information leaflet supplied'";
     return null;
-  }, [state.counselling]);
+  }, [state.counselling, t.antibiotic]);
 
   const consentError = useCallback((): string | null => {
     const base = validateConsent(state.consent);
@@ -655,7 +676,10 @@ export default function WoundCareClient() {
   // A stop raised on the assessment step blocks Next on that step and every
   // later one; a patient who declines is blocked from the treatment step on.
   // Either can be saved from the blocked step with "Save as not supplied".
-  const isBlocked = (hasStopAlerts && currentStep >= 2) || (t.patientDeclined && currentStep >= 3);
+  // An age exclusion is known on the first step, so that step offers
+  // "Save as not supplied" too rather than a dead end at the date of birth.
+  const ageStop = age !== null && age < 2;
+  const isBlocked = (hasStopAlerts && currentStep >= 2) || (ageStop && currentStep === 0) || (t.patientDeclined && currentStep >= 3);
   const canProceed = !validationError && !isBlocked;
 
   const handleNext = useCallback(() => {
@@ -738,6 +762,15 @@ export default function WoundCareClient() {
         getConsultationData={getConsultationData}
         onNewConsultation={handleNewConsultation}
       >
+        {currentStep === 0 && ageStop && (
+          <div className="space-y-4 mb-4">
+            <AlertBanner alerts={alerts.filter((x) => x.code === "UNDER_2")} />
+            <div className="p-4 bg-red-50 rounded-lg border border-red-200 space-y-2">
+              <p className="text-sm font-medium text-navy-900">Excluded (under 2 years): record the advice given and the decision, then use Save as not supplied</p>
+              <TextArea label="Advice given and decision reached" value={a.exclusionAdvice} onChange={(v) => setA({ exclusionAdvice: v })} rows={2} placeholder="e.g. referred to GP the same day; wound cleaned and dressed; parent advised on signs of spreading infection" />
+            </div>
+          </div>
+        )}
         {currentStep === 0 && (
           <PatientDetailsStep
             patient={state.patient}
@@ -891,11 +924,21 @@ export default function WoundCareClient() {
               </div>
             )}
 
-            <Checkbox label="Active bleeding controlled by pressure" checked={a.activeBleedingControlled} onChange={(v) => setA({ activeBleedingControlled: v })} />
+            <SelectInput
+              label="Active bleeding"
+              value={a.activeBleeding}
+              onChange={(v) => setA({ activeBleeding: v as WoundState["assessment"]["activeBleeding"] })}
+              options={[
+                { value: "none", label: "No active bleeding" },
+                { value: "controlled", label: "Bleeding, controlled by pressure" },
+                { value: "not-controlled", label: "Bleeding NOT controlled (emergency: refer)" },
+              ]}
+              required
+            />
 
             <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-              <p className="text-sm font-semibold text-blue-900 mb-1">Signs of infection (inclusion: at least one)</p>
-              <p className="text-xs text-blue-900 mb-3">Erythema, warmth, swelling, tenderness or purulent discharge.</p>
+              <p className="text-sm font-semibold text-blue-900 mb-1">Signs of infection (inclusion: at least one) *</p>
+              <p className="text-xs text-blue-900 mb-3">Erythema, warmth, swelling, tenderness or purulent discharge. Tick every sign present. If none is present, tick the last box: an antibiotic is then not authorised.</p>
               <div className="space-y-2">
                 {["Erythema (redness)", "Warmth at wound site", "Swelling", "Tenderness", "Purulent discharge (pus)"].map((sign) => (
                   <Checkbox
@@ -903,11 +946,16 @@ export default function WoundCareClient() {
                     label={sign}
                     checked={a.signsOfInfection.includes(sign)}
                     onChange={(checked) => {
-                      if (checked) setA({ signsOfInfection: [...a.signsOfInfection, sign] });
+                      if (checked) setA({ signsOfInfection: [...a.signsOfInfection, sign], noSignsOfInfection: false });
                       else setA({ signsOfInfection: a.signsOfInfection.filter((s) => s !== sign) });
                     }}
                   />
                 ))}
+                <Checkbox
+                  label="No signs of infection present (an antibiotic is not authorised: wound care and tetanus advice only)"
+                  checked={a.noSignsOfInfection}
+                  onChange={(v) => setA({ noSignsOfInfection: v, ...(v ? { signsOfInfection: [] } : {}) })}
+                />
               </div>
             </div>
 
@@ -1121,7 +1169,7 @@ export default function WoundCareClient() {
 
         {currentStep === 4 && (
           <div className="space-y-4">
-            <p className="text-sm font-medium text-navy-900">Confirm counselling covered (document counselling row):</p>
+            <p className="text-sm font-medium text-navy-900">Confirm counselling covered (document counselling row; every item is required before Next):</p>
             <Checkbox
               label={
                 t.antibiotic === "co-amoxiclav"

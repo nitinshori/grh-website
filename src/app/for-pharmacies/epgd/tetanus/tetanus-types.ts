@@ -25,11 +25,19 @@ export interface Clinical {
   dosesReceived: string;
   dosesSource: string;
   primaryCourseContinuation: boolean;
+  /** The 12-month exception question as answered: '' until answered. primaryCourseContinuation is
+   *  derived from it. The "dose within 12 months" stop fires on an answered No (or on any other
+   *  indication), never on the unanswered question (stop audit, 11 Sep 2026). */
+  primaryCourseContinuationAnswer: "" | "yes" | "no";
   /** For the 12-month exception: the date of the prior primary-course dose given under this PGD (about a month ago). */
   priorPrimaryDoseDate: string;
   consentBasis: ConsentBasis;
   parentName: string;
   woundProne: boolean;
+  /** The answer as given on the assessment step: '' until answered. woundProne is derived from it.
+   *  Before this, "wound" as the indication raised the "not tetanus-prone" stop on the indication
+   *  step, before the assessment step where the question is asked (walkthrough review, 11 Sep 2026). */
+  woundProneAnswer: "" | "yes" | "no";
   woundHighRisk: boolean;
   priming: Priming;
   woundAssessmentNote: string;
@@ -64,8 +72,8 @@ export interface Clinical {
 
 export const emptyClinical: Clinical = {
   indication: "", destination: "", lastDose: "", lastDoseDate: "", dosesReceived: "", dosesSource: "",
-  primaryCourseContinuation: false, priorPrimaryDoseDate: "", consentBasis: "", parentName: "",
-  woundProne: false, woundHighRisk: false, priming: "", woundAssessmentNote: "", outbreakContact: false,
+  primaryCourseContinuation: false, primaryCourseContinuationAnswer: "", priorPrimaryDoseDate: "", consentBasis: "", parentName: "",
+  woundProne: false, woundProneAnswer: "", woundHighRisk: false, priming: "", woundAssessmentNote: "", outbreakContact: false,
   anaphylaxisPreviousDose: false, anaphylaxisComponent: false, acuteFebrileIllness: false,
   pregnant: false, neurologicalDeterioration: false, neuroComplicationsPrevious: false,
   immunosuppressed: false, bleedingDisorder: false,

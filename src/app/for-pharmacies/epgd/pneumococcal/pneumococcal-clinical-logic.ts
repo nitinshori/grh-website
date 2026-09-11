@@ -136,15 +136,8 @@ export function getPneumococcalClinicalAlerts(
     });
   }
 
-  if (!patient.riskCategory) {
-    alerts.push({
-      severity: 'caution',
-      code: 'NO_RISK_CATEGORY',
-      message: 'No eligibility group identified',
-      detail:
-        'Pneumococcal vaccination under this PGD is for individuals eligible under national guidance. Confirm the clinical indication before proceeding.',
-    });
-  }
+  // A blank eligibility group is "not yet answered", not a clinical alert:
+  // the Patient Details validation names the control (stop audit, 11 Sep 2026).
 
   // Conjugate vaccine interval: PPV23 at least 8 weeks after PCV13 (PGD v006 dose row)
   const weeksSincePCV13 = medicalHistory.previousPCV13 ? weeksSince(medicalHistory.previousPCV13Date) : null;
@@ -184,6 +177,45 @@ export function getPneumococcalClinicalAlerts(
         code: 'PPV23_BOOSTER_SOON',
         message: 'PPV23 revaccination not yet due',
         detail: `${Math.floor(lastPolyYears)} years since the last PPV23 or PCV20. For asplenia, splenic dysfunction or chronic kidney disease revaccination is every 5 years and never within 3 years; Pneumovax 23 cannot be selected yet.`,
+      });
+    }
+  }
+
+  // No product can be given today. Each product-specific rule above is a
+  // caution ("cannot be selected"), so a patient who is blocked from both
+  // Prevenar 13 (previous conjugate vaccine) and Pneumovax 23 (previous
+  // PPV23 or PCV20 outside the revaccination groups, or not yet 5 years, or
+  // less than 8 weeks after the conjugate vaccine) reached the administration
+  // step with nothing selectable, no stop and no way to save the referral.
+  // Anyone who has had Prevenar 20 under the NHS adult programme is in this
+  // position (walkthrough review, 11 Sep 2026).
+  {
+    const pcv13Possible =
+      !medicalHistory.diphtheriaToxoidHypersensitivity &&
+      !medicalHistory.previousPCV13 &&
+      !medicalHistory.previousPCV20;
+    let ppv23Possible = true;
+    let ppv23Reason = '';
+    if (weeksSincePCV13 !== null && weeksSincePCV13 < 8) {
+      ppv23Possible = false;
+      ppv23Reason = `Pneumovax 23 is not due until 8 weeks after the conjugate vaccine (${Math.floor(weeksSincePCV13)} weeks so far)`;
+    }
+    if (medicalHistory.previousPPV23 || medicalHistory.previousPCV20) {
+      if (!revaccinationGroup(patient)) {
+        ppv23Possible = false;
+        ppv23Reason = 'PPV23 or PCV20 has already been given and revaccination is only for asplenia, splenic dysfunction or chronic kidney disease';
+      } else if (lastPolyYears !== null && lastPolyYears < 5) {
+        ppv23Possible = false;
+        ppv23Reason = `PPV23 or PCV20 was given ${Math.floor(lastPolyYears)} years ago and revaccination is not due until 5 years have elapsed`;
+      }
+    }
+    if (!pcv13Possible && !ppv23Possible) {
+      alerts.push({
+        severity: 'stop',
+        code: 'NO_PRODUCT_AVAILABLE',
+        message: 'No pneumococcal vaccine can be given under this PGD today',
+        detail:
+          `Prevenar 13 cannot be given (${medicalHistory.diphtheriaToxoidHypersensitivity ? 'hypersensitivity to diphtheria toxoid' : 'a pneumococcal conjugate vaccine has already been received'}) and ${ppv23Reason}. Explain this to the patient, advise when a further dose may be due if at all, and refer to the GP if there is doubt about the records.`,
       });
     }
   }

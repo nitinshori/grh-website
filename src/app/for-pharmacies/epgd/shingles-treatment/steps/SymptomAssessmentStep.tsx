@@ -97,17 +97,25 @@ export const SymptomAssessmentStep: React.FC<SymptomAssessmentStepProps> = ({
             )}
 
             <div className="grid sm:grid-cols-2 gap-3">
-              <Checkbox
+              <SelectInput
                 label="New vesicles are still forming"
-                checked={symptoms.newVesiclesForming}
-                onChange={(v) => handleChange('newVesiclesForming', v)}
-                description="7 day window criterion."
+                value={symptoms.newVesiclesForming}
+                onChange={(v) => handleChange('newVesiclesForming', v as ShinglesSymptoms['newVesiclesForming'])}
+                options={[
+                  { value: 'yes', label: 'Yes (7 day window criterion)' },
+                  { value: 'no', label: 'No' },
+                ]}
+                required
               />
-              <Checkbox
+              <SelectInput
                 label="High risk of severe shingles (for example severe atopic eczema)"
-                checked={symptoms.highRiskSevereShingles}
-                onChange={(v) => handleChange('highRiskSevereShingles', v)}
-                description="7 day window criterion."
+                value={symptoms.highRiskSevereShingles}
+                onChange={(v) => handleChange('highRiskSevereShingles', v as ShinglesSymptoms['highRiskSevereShingles'])}
+                options={[
+                  { value: 'yes', label: 'Yes (7 day window criterion)' },
+                  { value: 'no', label: 'No' },
+                ]}
+                required
               />
             </div>
 
@@ -129,7 +137,6 @@ export const SymptomAssessmentStep: React.FC<SymptomAssessmentStepProps> = ({
               value={symptoms.rashStage}
               onChange={(v) => handleChange('rashStage', v as ShinglesSymptoms['rashStage'])}
               options={[
-                { value: '', label: 'Select rash stage...' },
                 { value: 'prodromal', label: 'Prodromal (pain/burning before rash)' },
                 { value: 'vesicular', label: 'Vesicular (clear fluid-filled blisters)' },
                 { value: 'pustular', label: 'Pustular (cloudy/pus-filled blisters)' },
@@ -143,7 +150,6 @@ export const SymptomAssessmentStep: React.FC<SymptomAssessmentStepProps> = ({
               value={symptoms.dermatome}
               onChange={(v) => handleChange('dermatome', v as ShinglesSymptoms['dermatome'])}
               options={[
-                { value: '', label: 'Select dermatome...' },
                 { value: 'thoracic', label: 'Thoracic (chest / trunk), most common' },
                 { value: 'lumbar', label: 'Lumbar (lower back / abdomen)' },
                 { value: 'sacral', label: 'Sacral (buttocks), counts as truncal' },
@@ -163,7 +169,6 @@ export const SymptomAssessmentStep: React.FC<SymptomAssessmentStepProps> = ({
               value={symptoms.rashSeverity}
               onChange={(v) => handleChange('rashSeverity', v as ShinglesSymptoms['rashSeverity'])}
               options={[
-                { value: '', label: 'Select rash severity...' },
                 { value: 'mild', label: 'Mild (scattered lesions)' },
                 { value: 'moderate', label: 'Moderate (confluent lesions)' },
                 { value: 'severe', label: 'Severe (extensive confluent lesions)' },
@@ -185,7 +190,6 @@ export const SymptomAssessmentStep: React.FC<SymptomAssessmentStepProps> = ({
               value={symptoms.unilateral}
               onChange={(v) => handleChange('unilateral', v as ShinglesSymptoms['unilateral'])}
               options={[
-                { value: '', label: 'Select...' },
                 { value: 'yes', label: 'Yes: unilateral, dermatomal, does not cross the midline (inclusion criterion met)' },
                 { value: 'no', label: 'No: disseminated, widespread or crossing the midline (refer, do not supply)' },
               ]}
@@ -265,31 +269,43 @@ export const SymptomAssessmentStep: React.FC<SymptomAssessmentStepProps> = ({
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Pain score (0 to 10 scale) *
+                Pain score (0 to 10 scale) <span className="text-red-400">*</span>
               </label>
-              <div className="flex items-center gap-4">
-                <input
-                  type="range"
-                  min="0"
-                  max="10"
-                  value={symptoms.painLevel ?? 5}
-                  onChange={(e) => handleChange('painLevel', parseInt(e.target.value))}
-                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                />
-                <span className={`text-2xl font-bold ${
-                  symptoms.painLevel && symptoms.painLevel >= 8
-                    ? 'text-red-600'
-                    : symptoms.painLevel && symptoms.painLevel >= 5
-                    ? 'text-orange-600'
-                    : 'text-green-600'
-                }`}>
-                  {symptoms.painLevel ?? '?'}/10
+              <p className="text-xs text-gray-600 mb-2">
+                Ask the patient to rate the pain from 0 (no pain) to 10 (worst imaginable) and press that number. Nothing is recorded until a number is pressed.
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                {Array.from({ length: 11 }, (_, n) => n).map((n) => {
+                  const selected = symptoms.painLevel === n;
+                  const tone = n >= 7 ? 'red' : n >= 4 ? 'orange' : 'green';
+                  return (
+                    <button
+                      key={n}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => handleChange('painLevel', n)}
+                      className={`h-10 w-10 rounded-lg border text-sm font-semibold transition-colors ${
+                        selected
+                          ? tone === 'red'
+                            ? 'bg-red-600 border-red-600 text-white'
+                            : tone === 'orange'
+                            ? 'bg-orange-500 border-orange-500 text-white'
+                            : 'bg-green-600 border-green-600 text-white'
+                          : 'bg-white border-gray-300 text-gray-800 hover:bg-gray-100'
+                      }`}
+                    >
+                      {n}
+                    </button>
+                  );
+                })}
+                <span className="ml-2 text-lg font-bold text-gray-900">
+                  {symptoms.painLevel !== null ? `${symptoms.painLevel}/10` : 'Not yet recorded'}
                 </span>
               </div>
               <p className="text-xs text-gray-600 mt-1">
                 0 no pain; 1 to 3 mild; 4 to 6 moderate; 7 to 10 severe. Moderate or severe pain (4 or more) is a 72 hour window criterion; severe pain (7 or more) is a 7 day window criterion. Record the score on a validated 0 to 10 scale.
               </p>
-              {symptoms.painLevel && symptoms.painLevel >= 7 && (
+              {symptoms.painLevel !== null && symptoms.painLevel >= 7 && (
                 <p className="text-sm text-red-600 mt-2">
                   Severe pain noted. Refer urgently to a prescriber if not controlled by over-the-counter analgesia.
                 </p>
@@ -301,7 +317,6 @@ export const SymptomAssessmentStep: React.FC<SymptomAssessmentStepProps> = ({
               value={symptoms.painType}
               onChange={(v) => handleChange('painType', v as ShinglesSymptoms['painType'])}
               options={[
-                { value: '', label: 'Select pain type...' },
                 { value: 'burning', label: 'Burning' },
                 { value: 'stabbing', label: 'Stabbing/sharp' },
                 { value: 'aching', label: 'Aching' },

@@ -414,7 +414,7 @@ export function TyphoidClient() {
             if (step < currentStep) setCurrentStep(step);
           }}
           completedSteps={completedSteps}
-          hasErrors={completedSteps.size > 0 && (patientValidationError !== null || consentValidationError !== null)}
+          hasErrors={isBlocked}
         />
       </div>
 
@@ -434,6 +434,7 @@ export function TyphoidClient() {
           validationError={patientValidationError}
           {...wrapperShared}
         >
+          <p className="mb-4 text-xs text-gray-600">Travellers aged 2 years and over.</p>
           <PatientDetailsStep
             patient={patientDetails}
             onChange={handlePatientDetailsChange}
@@ -496,18 +497,21 @@ export function TyphoidClient() {
               checked={consent.understands5YearValidity}
               onChange={(v) => setConsent({ ...consent, understands5YearValidity: v })}
               description="Confirm patient is aware of duration of protection"
+              required
             />
             <Checkbox
               label="Patient understands the vaccine takes about 2 weeks to work and should be given at least 2 weeks before travel"
               checked={consent.understandsTimingRequirement}
               onChange={(v) => setConsent({ ...consent, understandsTimingRequirement: v })}
               description="Where travel is sooner, vaccination may still be given but protection may be incomplete"
+              required
             />
             <Checkbox
               label="Patient understands the vaccine is about 70 to 80% effective, does not protect against paratyphoid, and that food and water precautions remain the main protection"
               checked={consent.certificateRequirement}
               onChange={(v) => setConsent({ ...consent, certificateRequirement: v })}
               description="It reduces the risk; it does not remove it"
+              required
             />
           </div>
         </StepWrapper>
@@ -561,6 +565,11 @@ export function TyphoidClient() {
                 onChange={(e) => handlePatientDetailsChange('departureDate', e.target.value)}
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
               />
+              {daysToDeparture !== null && (
+                <p className={`text-xs mt-1 ${daysToDeparture < 0 ? 'text-amber-700' : 'text-gray-500'}`}>
+                  {daysToDeparture < 0 ? `Departure date is ${-daysToDeparture} days in the past: check the date` : `${daysToDeparture} days to departure`}
+                </p>
+              )}
             </div>
 
             <TextArea
@@ -569,6 +578,7 @@ export function TyphoidClient() {
               onChange={(v) => handlePatientDetailsChange('itinerary', v)}
               placeholder="Areas visited, duration, style of travel (e.g. visiting friends and relatives, rural stay)"
               rows={2}
+              required
             />
 
             <TextInput
@@ -579,37 +589,35 @@ export function TyphoidClient() {
               placeholder="e.g. TravelHealthPro country page, checked today"
             />
 
-            <Checkbox
-              label="Typhoid vaccination is recommended for this destination on current NaTHNaC / TravelHealthPro guidance"
-              checked={travelAssessment.travelDestinationConfirmed}
-              onChange={(v) =>
-                setTravelAssessment({ ...travelAssessment, travelDestinationConfirmed: v })
-              }
-              description="Inclusion criterion: established from current guidance and recorded"
+            <SelectInput
+              label="Is typhoid vaccination recommended for this destination on current NaTHNaC / TravelHealthPro guidance?"
+              value={patientDetails.recommendedAnswer}
+              onChange={(v) => {
+                handlePatientDetailsChange('recommendedAnswer', v as TyphoidPatientDetails['recommendedAnswer']);
+                setTravelAssessment({ ...travelAssessment, travelDestinationConfirmed: v === 'yes' });
+              }}
+              options={[
+                { value: 'yes', label: 'Yes: recommended (inclusion criterion met)' },
+                { value: 'no', label: 'No: not recommended (outside this PGD: the tool will stop)' },
+              ]}
+              required
             />
 
-            <Checkbox
-              label="Risk region confirmed"
-              checked={travelAssessment.travelReasonConfirmed}
-              onChange={(v) =>
-                setTravelAssessment({ ...travelAssessment, travelReasonConfirmed: v })
-              }
-              description="Confirm the risk region recorded above"
-            />
-
-            <Checkbox
-              label="Departure timing confirmed"
-              checked={travelAssessment.timingConfirmed}
-              onChange={(v) => setTravelAssessment({ ...travelAssessment, timingConfirmed: v })}
-              description="At least 2 weeks before departure so that protection can develop"
-            />
-
-            {daysToDeparture !== null && daysToDeparture < 14 && (
+            {daysToDeparture !== null && daysToDeparture < 14 ? (
               <Checkbox
                 label="Travel is sooner than 2 weeks: the traveller has been told protection may be incomplete, and this is recorded"
                 checked={travelAssessment.shortNoticeAdvised}
                 onChange={(v) => setTravelAssessment({ ...travelAssessment, shortNoticeAdvised: v })}
                 description="Vaccination may still be given"
+                required
+              />
+            ) : (
+              <Checkbox
+                label="Departure is at least 2 weeks away, so protection can develop"
+                checked={travelAssessment.timingConfirmed}
+                onChange={(v) => setTravelAssessment({ ...travelAssessment, timingConfirmed: v })}
+                description="Confirmed against the departure date above"
+                required
               />
             )}
 
@@ -634,12 +642,30 @@ export function TyphoidClient() {
                     />
                   </div>
                   {renewalWindow && (
-                    <TextInput
-                      label="Previous dose is within 6 months of its 3 year renewal date: record that the traveller is returning to a risk area and why the dose is due for renewal"
-                      value={patientDetails.previousDoseRenewalReason}
-                      onChange={(v) => handlePatientDetailsChange('previousDoseRenewalReason', v)}
-                      placeholder="e.g. returning to rural Bangladesh for 3 months, previous dose 2 years 8 months ago, renewal due before return"
-                    />
+                    <>
+                      <SelectInput
+                        label="Is the traveller returning to a risk area, with the previous dose due for renewal? (Previous dose is within 6 months of its 3 year renewal date: the document's exception to the 3 year exclusion)"
+                        value={patientDetails.previousDoseRenewalAnswer}
+                        onChange={(v) => {
+                          handlePatientDetailsChange('previousDoseRenewalAnswer', v as TyphoidPatientDetails['previousDoseRenewalAnswer']);
+                          if (v !== 'yes') handlePatientDetailsChange('previousDoseRenewalReason', '');
+                        }}
+                        options={[
+                          { value: 'yes', label: 'Yes: returning to a risk area and the dose is due for renewal (exception applies)' },
+                          { value: 'no', label: 'No (a dose within 3 years excludes: the tool will stop)' },
+                        ]}
+                        required
+                      />
+                      {patientDetails.previousDoseRenewalAnswer === 'yes' && (
+                        <TextInput
+                          label="Returning to a risk area: reason the dose is due for renewal"
+                          value={patientDetails.previousDoseRenewalReason}
+                          onChange={(v) => handlePatientDetailsChange('previousDoseRenewalReason', v)}
+                          placeholder="e.g. returning to rural Bangladesh for 3 months, previous dose 2 years 8 months ago, renewal due before return"
+                          required
+                        />
+                      )}
+                    </>
                   )}
                   {yearsSincePrevious !== null && yearsSincePrevious >= 0 && yearsSincePrevious < RENEWAL_WINDOW_YEARS && (
                     <p className="text-xs text-red-700">Previous dose {yearsSincePrevious.toFixed(1)} years ago: not yet due for renewal, so the document&apos;s exception does not apply. Excluded.</p>
@@ -760,7 +786,7 @@ export function TyphoidClient() {
             isBlocked
               ? 'Exclusion criteria met: record the advice given and save as not supplied'
               : !contraIndicationsReviewed.confirmedNoAbsoluteContraindications
-              ? 'You must confirm review before proceeding'
+              ? 'Tick "I confirm no absolute contraindications are present and vaccination can proceed"'
               : null
           }
           {...wrapperShared}
@@ -813,6 +839,7 @@ export function TyphoidClient() {
                   })
                 }
                 description="Pharmacist declaration"
+                required
               />
             )}
           </div>
@@ -838,6 +865,7 @@ export function TyphoidClient() {
               checked={summary.adrenalineAvailable}
               onChange={(v) => setSummary({ ...summary, adrenalineAvailable: v })}
               description="Required before any vaccine is administered under this PGD. Vaccinate seated and observe for 15 minutes"
+              required
             />
 
             <SelectInput
@@ -996,6 +1024,7 @@ export function TyphoidClient() {
                 setPostVaccineAdvice({ ...postVaccineAdvice, observationCompleted: v })
               }
               description="Record that the observation period was completed"
+              required
             />
 
             <Checkbox
@@ -1005,6 +1034,7 @@ export function TyphoidClient() {
                 setPostVaccineAdvice({ ...postVaccineAdvice, counselledFoodWater: v })
               }
               description="Not optional: the main protection regardless of vaccination. Vaccine about 70 to 80% effective; no protection against paratyphoid"
+              required
             />
 
             <Checkbox
@@ -1014,6 +1044,7 @@ export function TyphoidClient() {
                 setPostVaccineAdvice({ ...postVaccineAdvice, counselledFeverWarning: v })
               }
               description="Typhoid can present one to three weeks after return"
+              required
             />
 
             <Checkbox
@@ -1023,6 +1054,7 @@ export function TyphoidClient() {
                 setPostVaccineAdvice({ ...postVaccineAdvice, counselledReactions: v })
               }
               description="Confirm patient is aware of expected side effects"
+              required
             />
 
             <Checkbox
@@ -1032,6 +1064,7 @@ export function TyphoidClient() {
                 setPostVaccineAdvice({ ...postVaccineAdvice, counselledValidity: v })
               }
               description="No routine follow-up; return in 3 years for a booster"
+              required
             />
 
             <Checkbox
@@ -1041,6 +1074,7 @@ export function TyphoidClient() {
                 setPostVaccineAdvice({ ...postVaccineAdvice, counselledCertificate: v })
               }
               description="Suspected adverse reactions: yellowcard.mhra.gov.uk; inform the GP"
+              required
             />
 
             <Checkbox
@@ -1068,6 +1102,7 @@ export function TyphoidClient() {
                 setPostVaccineAdvice({ ...postVaccineAdvice, patientAdvised: v })
               }
               description="Confirm pharmacist has completed patient consultation"
+              required
             />
           </div>
         </StepWrapper>

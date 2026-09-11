@@ -6,6 +6,10 @@ import type { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/
 
 export interface BPHPatientDetails extends BasePatientDetails {
   maleConfirmed: boolean;
+  /** True once "Is the patient male?" has been answered (Yes or No). The
+   *  stop is raised on "No", never on the question being unanswered
+   *  (stop audit, 11 Sep 2026). */
+  sexAnswered: boolean;
 }
 
 export interface BPHLutsAssessment {
@@ -45,7 +49,7 @@ export interface BPHMedicalHistory {
   severeRenalImpairment: boolean;
   /** Symptoms previously assessed by a GP or urologist. If not, the GP must be
    *  informed on the day and the patient must agree to attend within 6 weeks. */
-  previouslyAssessedByGp: boolean;
+  previouslyAssessedByGp: "" | "yes" | "no";
   gpInformedToday: boolean;
   patientAgreesGpWithin6Weeks: boolean;
   otherConditions: string;
@@ -84,7 +88,7 @@ export interface BPHMedicineSupply {
   brand: string;
   // Continuation gate (PGD v004 maximum treatment period)
   previousIpss: number | null;
-  gpExaminedSinceStart: boolean;
+  gpExaminedSinceStart: "" | "yes" | "no";
   monthsOnTreatment: number | null;
   afterFood30mins: boolean;
   sameTimeDaily: boolean;
@@ -167,6 +171,7 @@ gpEmail: "",
       phone: "",
       email: "",
       maleConfirmed: false,
+      sexAnswered: false,
     },
     consent: {
       informedConsentGiven: false,
@@ -197,7 +202,7 @@ gpEmail: "",
       neurologicalBladderDisease: false,
       syncopeHistory: false,
       severeRenalImpairment: false,
-      previouslyAssessedByGp: false,
+      previouslyAssessedByGp: "",
       gpInformedToday: false,
       patientAgreesGpWithin6Weeks: false,
       otherConditions: "",
@@ -225,7 +230,7 @@ gpEmail: "",
       quantity: null,
       brand: "",
       previousIpss: null,
-      gpExaminedSinceStart: false,
+      gpExaminedSinceStart: "",
       monthsOnTreatment: null,
       afterFood30mins: false,
       sameTimeDaily: false,

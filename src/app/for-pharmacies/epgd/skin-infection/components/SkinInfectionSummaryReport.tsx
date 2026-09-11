@@ -20,7 +20,7 @@ const INFECTION_LABEL: Record<string, string> = {
   folliculitis: "Folliculitis",
   "infected-eczema": "Infected eczema",
   "infected-wound": "Infected wound",
-  cellulitis: "Cellulitis (mild)",
+  cellulitis: "Cellulitis",
 };
 
 const ANTIBIOTIC_LABEL: Record<string, string> = {

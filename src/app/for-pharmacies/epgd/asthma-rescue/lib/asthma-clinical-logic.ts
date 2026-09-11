@@ -9,7 +9,8 @@ export const MAX_PREDNISOLONE_TABLETS = 40; // 40mg daily (eight 5mg tablets) fo
 export function acuteSevereFeatures(state: AsthmaConsultationState): string[] {
   const o = state.observations;
   const out: string[] = [];
-  if (!o.canCompleteSentences) out.push("unable to complete sentences in one breath");
+  // "" means not yet answered (the Observations step validator requires the answer before Next).
+  if (o.sentencesAnswer === "no") out.push("unable to complete sentences in one breath");
   if (o.respiratoryRate !== null && o.respiratoryRate >= 25) out.push("respiratory rate 25/min or more");
   if (o.heartRate !== null && o.heartRate >= 110) out.push("heart rate 110/min or more");
   if (o.pefMeasured && o.pefPercentBest !== null && o.pefPercentBest <= 50)
@@ -59,11 +60,14 @@ export function salbutamolArmBlockers(state: AsthmaConsultationState): string[] 
   const out: string[] = [];
   if (state.redFlags.salbutamolAllergy)
     out.push("known hypersensitivity to salbutamol or other beta-2 agonists");
-  if (!a.acuteExacerbation)
-    out.push("no acute exacerbation with symptoms of bronchospasm recorded");
-  if (!a.canUseInhalerOrSpacer)
-    out.push("not capable of using an inhaler device or willing to use a spacer");
-  if (!a.onPreventer)
+  // Each fires only on the recorded answer "No"; a blank answer is a
+  // validation message on the step that asks it, never a stop (stop audit,
+  // 11 Sep 2026).
+  if (a.exacerbationAnswer === "no")
+    out.push("no acute exacerbation with symptoms of bronchospasm (answer on the Asthma Assessment step)");
+  if (a.inhalerAbilityAnswer === "no")
+    out.push("not capable of using an inhaler device or willing to use a spacer (answer on the Asthma Assessment step)");
+  if (a.preventerAnswer === "no")
     out.push("no current preventer (inhaled corticosteroid) therapy: refer to the GP for review");
   if (a.pgdRescueCoursesLast12Months !== null && a.pgdRescueCoursesLast12Months >= 1)
     out.push(
@@ -83,11 +87,11 @@ export function prednisoloneArmBlockers(state: AsthmaConsultationState): string[
   const out: string[] = [];
   if (state.redFlags.prednisoloneAllergy)
     out.push("known hypersensitivity to prednisolone or other corticosteroids");
-  if (!a.incompleteResponseToSalbutamol)
-    out.push("moderate exacerbation with incomplete response to salbutamol not recorded");
+  if (a.incompleteResponseAnswer === "no")
+    out.push("no moderate exacerbation with incomplete response to salbutamol (answer on the Asthma Assessment step)");
   if (o.pefMeasured && o.pefPercentBest !== null && o.pefPercentBest <= 50)
     out.push("PEF not over 50% of best or predicted");
-  if (!a.ableToTakeOralMedication) out.push("not able to take oral medication");
+  if (a.oralAbilityAnswer === "no") out.push("not able to take oral medication (answer on the Asthma Assessment step)");
   if (h.systemicInfectionUntreated)
     out.push("systemic infection not treated with appropriate antimicrobials");
   if (h.liveVaccineDuringTreatment) out.push("vaccination with live vaccines during treatment");
@@ -128,8 +132,10 @@ export function getAllAlerts(state: AsthmaConsultationState): ClinicalAlert[] {
     });
   }
 
+  // Fires on a recorded adverse observation wherever the consultation is;
+  // every feature is an explicit value or tick, so no step gate is needed.
   const severe = acuteSevereFeatures(state);
-  if (state.currentStep >= 4 && severe.length > 0) {
+  if (severe.length > 0) {
     alerts.push({
       severity: "stop",
       code: "ACUTE_SEVERE",
@@ -139,7 +145,18 @@ export function getAllAlerts(state: AsthmaConsultationState): ClinicalAlert[] {
     });
   }
 
-  if (state.currentStep > 2 && a.onPreventer === false) {
+  if (a.exacerbationAnswer === "no") {
+    alerts.push({
+      severity: "stop",
+      code: "NO_EXACERBATION",
+      message: "No acute exacerbation with symptoms of bronchospasm",
+      detail:
+        "This PGD is for rescue treatment of an acute exacerbation (wheezing, breathlessness, chest tightness). A replacement or spare inhaler outside an exacerbation is not covered: refer to the GP or the patient's usual prescriber.",
+    });
+  }
+
+  // Only the recorded answer "No"; an unvisited step is never a stop.
+  if (a.preventerAnswer === "no") {
     alerts.push({
       severity: "stop",
       code: "NO_PREVENTER",

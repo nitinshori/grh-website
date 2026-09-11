@@ -33,7 +33,7 @@ export function validateRSVPatientStep(
       return 'Beyond 36 weeks of gestation: refer to the maternity service (PGD inclusion is 28 to 36 weeks)';
     }
     if (!patient.femaleConfirmed) {
-      return 'Please confirm patient is female for pregnancy assessment';
+      return 'Tick "Patient is female (pregnant)"';
     }
   }
 
@@ -60,11 +60,11 @@ export function validateRSVConsentStep(
       return 'Record the basis of the Gillick competence assessment';
   }
   if (!consent.understandsVaccineProtection)
-    return 'Patient must understand vaccine protection against RSV disease';
+    return 'Tick "Patient understands vaccine protects against severe RSV disease"';
   if (!consent.understandsNoBooster)
-    return 'Patient must understand this is a one-time vaccination per current guidance';
+    return 'Tick "Patient understands this is a one-time vaccination"';
   if (!consent.understandsAdverseEvents)
-    return 'Patient must be aware of possible adverse events';
+    return 'Tick "Patient is aware of possible adverse events"';
   return null;
 }
 
@@ -75,9 +75,9 @@ export function validateRSVEligibilityAssessmentStep(data: {
 }): string | null {
   if (!data.nhsStatus)
     return 'Record whether the patient does not qualify for a free NHS RSV vaccination, or qualifies but prefers to have it privately';
-  if (!data.confirmEligible) return 'Eligibility must be confirmed to proceed';
+  if (!data.confirmEligible) return 'Tick "Patient meets eligibility criteria for RSV vaccination"';
   if (!data.riskFactorsReviewed)
-    return 'Risk factors must be reviewed';
+    return 'Tick "Risk factors reviewed"';
   return null;
 }
 
@@ -95,8 +95,14 @@ export function validateRSVAdministrationStep(
   }
   if (!summary.batchNumber?.trim()) return 'Batch number is required';
   if (!summary.expiryDate) return 'Expiry date is required';
+  {
+    const exp = new Date(summary.expiryDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (!isNaN(exp.getTime()) && exp < today) return 'This batch has expired. Do not use it.';
+  }
   if (!summary.administrationSite) return 'Administration site must be selected';
-  if (!summary.administrationTime) return 'Administration time is required';
+  if (!summary.administrationTime) return 'Time of administration is required';
   return null;
 }
 
@@ -104,14 +110,14 @@ export function validateRSVPostVaccineStep(
   advice: RSVPostVaccineAdvice
 ): string | null {
   if (!advice.counselledReactions)
-    return 'Confirm the patient was advised on possible side effects and when to seek medical attention';
-  if (!advice.followUpAdviceGiven) return 'Confirm the follow-up advice was given';
-  if (!advice.pilSupplied) return 'Confirm the patient information leaflet was supplied';
+    return 'Tick "Patient advised on possible side effects and when to seek medical attention"';
+  if (!advice.followUpAdviceGiven) return 'Tick "Follow-up advice given as listed above"';
+  if (!advice.pilSupplied) return 'Tick "Patient information leaflet (PIL) supplied"';
   if (!advice.observedFifteenMinutes)
-    return 'Confirm the 15 minute post-vaccination observation period has been completed (PGD cautions row)';
+    return 'Tick "Patient observed for 15 minutes after vaccination" once the observation period has been completed';
   if (advice.adverseReaction.trim() && !advice.adverseReactionAction.trim())
     return 'Record the action taken for the adverse reaction (PGD records row)';
-  if (!advice.patientAdvised) return 'Confirm all counselling has been completed and documented';
+  if (!advice.patientAdvised) return 'Tick "All counselling completed and documented"';
   return null;
 }
 

@@ -220,19 +220,31 @@ export default function BPHClient() {
     switch (state.currentStep) {
       case 0: // Patient Details
         return (
-          <PatientDetailsStep
-            patient={state.patient}
-            onChange={(field, value) =>
-              dispatch({ type: "UPDATE_PATIENT", field: field as keyof BPHPatientDetails, value })
-            }
-            genderOption={{
-              label: "Confirm patient is male",
-              description: "This PGD is for male patients only.",
-              checked: state.patient.maleConfirmed,
-              onToggle: (v) =>
-                dispatch({ type: "UPDATE_PATIENT", field: "maleConfirmed", value: v }),
-            }}
-          />
+          <div className="space-y-4">
+            <PatientDetailsStep
+              patient={state.patient}
+              onChange={(field, value) =>
+                dispatch({ type: "UPDATE_PATIENT", field: field as keyof BPHPatientDetails, value })
+              }
+            />
+            {/* Yes/No with no default: "No" is the exclusion, blank is a
+                validation message (stop audit, 11 Sep 2026). */}
+            <SelectInput
+              label="Is the patient male? (this PGD is for male patients only)"
+              value={
+                !state.patient.sexAnswered ? "" : state.patient.maleConfirmed ? "yes" : "no"
+              }
+              onChange={(v) => {
+                dispatch({ type: "UPDATE_PATIENT", field: "sexAnswered", value: v !== "" });
+                dispatch({ type: "UPDATE_PATIENT", field: "maleConfirmed", value: v === "yes" });
+              }}
+              options={[
+                { value: "yes", label: "Yes" },
+                { value: "no", label: "No (exclusion: tamsulosin under this PGD is for BPH in men)" },
+              ]}
+              required
+            />
+          </div>
         );
 
       case 1: // Consent
@@ -258,8 +270,40 @@ export default function BPHClient() {
                 { value: "continuation", label: "Continuation after the 4 to 6 week review: IPSS must have improved by 3 or more" },
               ]}
             />
+            {state.medicineSupply.supplyType === "continuation" && (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-3 space-y-3">
+                <p className="text-xs text-amber-800">Continuation requires all three: IPSS improved by 3 or more since the start of treatment (enter today's IPSS below), the patient examined by the GP since starting, and fewer than 12 months of continuous treatment.</p>
+                <NumberInput
+                  label="IPSS at the start of treatment"
+                  value={state.medicineSupply.previousIpss}
+                  onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "previousIpss", value: v })}
+                  min={0}
+                  max={35}
+                  required
+                />
+                <SelectInput
+                  label="Has the patient been examined by the GP since starting treatment?"
+                  value={state.medicineSupply.gpExaminedSinceStart}
+                  onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "gpExaminedSinceStart", value: v })}
+                  required
+                  options={[
+                    { value: "yes", label: "Yes" },
+                    { value: "no", label: "No (continuation cannot be supplied until the GP has examined him)" },
+                  ]}
+                />
+                <NumberInput
+                  label="Months of continuous treatment so far"
+                  value={state.medicineSupply.monthsOnTreatment}
+                  onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "monthsOnTreatment", value: v })}
+                  min={0}
+                  max={24}
+                  unit="months"
+                  required
+                />
+              </div>
+            )}
             <NumberInput
-              label="IPSS Score (0-35)"
+              label={state.medicineSupply.supplyType === "continuation" ? "IPSS score today (0 to 35)" : "IPSS score (0 to 35)"}
               value={state.lutsAssessment.ipssScore}
               onChange={(v) =>
                 dispatch({
@@ -272,6 +316,14 @@ export default function BPHClient() {
               max={35}
               required
             />
+            <p className="text-xs text-gray-600">
+              IPSS is the International Prostate Symptom Score: the patient answers 7 questions about the last month
+              (incomplete emptying, frequency, intermittency, urgency, weak stream, straining, nocturia), each scored 0
+              to 5, and the total is 0 to 35. Use the printed IPSS questionnaire; 0 to 7 mild, 8 to 19 moderate, 20 to 35 severe.
+            </p>
+            {state.medicineSupply.supplyType === "continuation" && state.medicineSupply.previousIpss !== null && state.lutsAssessment.ipssScore !== null && (
+              <p className="text-sm text-navy-900">Improvement: {state.medicineSupply.previousIpss - state.lutsAssessment.ipssScore} points since the start of treatment (3 or more required)</p>
+            )}
             {state.lutsAssessment.ipssScore !== null && (
               <div className="bg-blue-50 border border-blue-200 rounded p-3">
                 <p className="text-xs text-blue-800">
@@ -366,12 +418,17 @@ export default function BPHClient() {
           <div className="space-y-4">
             <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-3 space-y-2">
               <p className="text-sm font-semibold text-amber-900">Previous assessment (PGD v004)</p>
-              <Checkbox
-                label="Symptoms previously assessed by a GP or urologist"
-                checked={state.medicalHistory.previouslyAssessedByGp}
+              <SelectInput
+                label="Have these symptoms been assessed before by a GP or urologist?"
+                value={state.medicalHistory.previouslyAssessedByGp}
                 onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "previouslyAssessedByGp", value: v })}
+                required
+                options={[
+                  { value: "yes", label: "Yes" },
+                  { value: "no", label: "No, never assessed" },
+                ]}
               />
-              {!state.medicalHistory.previouslyAssessedByGp && (
+              {state.medicalHistory.previouslyAssessedByGp === "no" && (
                 <>
                   <p className="text-xs text-amber-800">Symptoms never assessed by a GP or urologist are an exclusion unless BOTH of the following apply and are recorded.</p>
                   <Checkbox
@@ -660,7 +717,7 @@ export default function BPHClient() {
               <p>Maximum under this PGD: an initial supply of 4 weeks, then, where the IPSS has improved by 3 points or more at the 4 to 6 week review and the patient has been examined by the GP, further supplies to a maximum of 12 months&apos; continuous treatment, after which the GP takes over prescribing. No improvement at 4 to 6 weeks, or any new exclusion, ends supply under this PGD.</p>
             </div>
             <Checkbox
-              label="Supply tamsulosin 400 micrograms MR capsules, once daily"
+              label="Supply tamsulosin 400 micrograms MR capsules, once daily *"
               checked={state.medicineSupply.tamsulosin400mcgMrOd}
               onChange={(v) =>
                 dispatch({
@@ -671,46 +728,16 @@ export default function BPHClient() {
               }
               description="Modified-release formulation"
             />
-            <SelectInput
-              label="Supply type"
-              value={state.medicineSupply.supplyType}
-              onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "supplyType", value: v })}
-              required
-              options={[
-                { value: "initial", label: "Initial supply (4 weeks), review at 4 to 6 weeks" },
-                { value: "continuation", label: "Continuation after the 4 to 6 week review" },
-              ]}
-            />
-            {state.medicineSupply.supplyType === "continuation" && (
-              <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-3 space-y-3">
-                <p className="text-xs text-amber-800">Continuation requires all three: IPSS improved by 3 or more since the start of treatment (current IPSS is recorded on the LUTS step), GP examination completed, and fewer than 12 months of continuous treatment.</p>
-                <NumberInput
-                  label="IPSS at the start of treatment"
-                  value={state.medicineSupply.previousIpss}
-                  onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "previousIpss", value: v })}
-                  min={0}
-                  max={35}
-                  required
-                />
-                {state.medicineSupply.previousIpss !== null && state.lutsAssessment.ipssScore !== null && (
-                  <p className="text-sm text-navy-900">Improvement: {state.medicineSupply.previousIpss - state.lutsAssessment.ipssScore} points (current IPSS {state.lutsAssessment.ipssScore})</p>
-                )}
-                <Checkbox
-                  label="Patient has been examined by the GP since starting treatment"
-                  checked={state.medicineSupply.gpExaminedSinceStart}
-                  onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "gpExaminedSinceStart", value: v })}
-                />
-                <NumberInput
-                  label="Months of continuous treatment so far"
-                  value={state.medicineSupply.monthsOnTreatment}
-                  onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "monthsOnTreatment", value: v })}
-                  min={0}
-                  max={24}
-                  unit="months"
-                  required
-                />
-              </div>
-            )}
+            <p className="text-sm text-gray-700">
+              Supply type (chosen on the LUTS Assessment step):{" "}
+              <span className="font-medium text-navy-900">
+                {state.medicineSupply.supplyType === "initial"
+                  ? "Initial supply (4 weeks), review at 4 to 6 weeks"
+                  : state.medicineSupply.supplyType === "continuation"
+                    ? `Continuation after the 4 to 6 week review (IPSS at start ${state.medicineSupply.previousIpss ?? "?"}, today ${state.lutsAssessment.ipssScore ?? "?"}; ${state.medicineSupply.monthsOnTreatment ?? "?"} months on treatment)`
+                    : "not selected"}
+              </span>
+            </p>
             <NumberInput
               label="Quantity supplied (capsules, maximum 28)"
               value={state.medicineSupply.quantity}
@@ -728,7 +755,7 @@ export default function BPHClient() {
               required
             />
             <Checkbox
-              label="Patient will take after food, preferably with breakfast"
+              label="Patient will take after food, preferably with breakfast *"
               checked={state.medicineSupply.afterFood30mins}
               onChange={(v) =>
                 dispatch({
@@ -739,7 +766,7 @@ export default function BPHClient() {
               }
             />
             <Checkbox
-              label="Patient will take at same time daily"
+              label="Patient will take at same time daily *"
               checked={state.medicineSupply.sameTimeDaily}
               onChange={(v) =>
                 dispatch({
@@ -750,7 +777,7 @@ export default function BPHClient() {
               }
             />
             <Checkbox
-              label="Patient is aware of first-dose hypotension risk"
+              label="Patient is aware of first-dose hypotension risk *"
               checked={state.medicineSupply.firstDoseHypotension}
               onChange={(v) =>
                 dispatch({
@@ -923,7 +950,7 @@ export default function BPHClient() {
         currentStep={state.currentStep}
         onStepClick={handleStepClick}
         completedSteps={completedSteps}
-        hasErrors={!!validationError}
+        hasErrors={hardStops}
       />
 
       {alerts.length > 0 && (

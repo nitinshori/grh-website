@@ -130,7 +130,8 @@ export const SummaryStep: React.FC<SummaryStepProps> = ({
             <Row label="Treatment window" value={describeTreatmentWindow(treatmentWindow)} />
             <Row label="Rash stage" value={summary.symptoms.rashStage} />
             <Row label="Rash severity" value={summary.symptoms.rashSeverity || 'Not recorded'} />
-            <Row label="New vesicles forming" value={summary.symptoms.newVesiclesForming ? 'Yes' : 'No'} />
+            <Row label="New vesicles forming" value={summary.symptoms.newVesiclesForming === 'yes' ? 'Yes' : summary.symptoms.newVesiclesForming === 'no' ? 'No' : 'Not recorded'} />
+            <Row label="High risk of severe shingles" value={summary.symptoms.highRiskSevereShingles === 'yes' ? 'Yes' : summary.symptoms.highRiskSevereShingles === 'no' ? 'No' : 'Not recorded'} />
             <Row label="Dermatome location" value={summary.symptoms.dermatome || 'Not recorded'} />
             <Row label="Pain score (0 to 10 scale)" value={`${summary.symptoms.painLevel}/10 (${summary.symptoms.painType})`} />
             <Row
@@ -168,11 +169,13 @@ export const SummaryStep: React.FC<SummaryStepProps> = ({
                   ? 'eGFR 30 to 59'
                   : summary.medicalHistory.renalImpairment === 'severe'
                   ? 'eGFR below 30'
-                  : 'Not established'
+                  : summary.medicalHistory.renalImpairment === 'unknown'
+                  ? 'Not established'
+                  : 'Not recorded'
               }
             />
             <Row label="How renal function was established" value={summary.medicalHistory.renalFunctionSource || 'Not recorded'} />
-            <Row label="Hepatic impairment" value={summary.medicalHistory.hepaticImpairment} />
+            <Row label="Hepatic impairment" value={summary.medicalHistory.hepaticImpairment || 'Not recorded'} />
             <Row label="HIV positive" value={summary.medicalHistory.hivPositive ? 'Yes' : 'No'} />
             <Row label="Previous shingles" value={summary.medicalHistory.previousShingles ? 'Yes' : 'No'} />
             <Row label="Active cancer" value={summary.medicalHistory.cancerActive ? 'Yes' : 'No'} />
@@ -192,7 +195,7 @@ export const SummaryStep: React.FC<SummaryStepProps> = ({
                 <Row label="Medicine" value="NOT SUPPLIED: exclusion criteria or red flags present (see clinical alerts above)" />
                 <Row
                   label="Advice given"
-                  value={summary.clinicalNotes || 'Referred as directed by the alerts above; advised on alternative options and how to access them; GP informed or referred as appropriate'}
+                  value={summary.clinicalNotes || 'Not recorded'}
                 />
               </div>
             </>

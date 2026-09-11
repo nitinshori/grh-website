@@ -3,6 +3,14 @@ import { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/types
 export interface CovidBoosterAssessment {
   /** PGD v008 covers 12 years and over, not 18 and over. */
   ageConfirmed: boolean;
+  /**
+   * Explicit answer to "Has the patient received a COVID-19 vaccine before?".
+   * previousCovidVaccine is derived from it. As an unticked box, "no previous
+   * vaccine" was the default, so the primary-course stop fired the moment
+   * "Immunosuppressed" was ticked, before the question had been answered
+   * (stop audit, 11 Sep 2026).
+   */
+  previousCovidVaccineAnswer: "" | "yes" | "no";
   previousCovidVaccine: boolean;
   /** Date of the previous COVID-19 vaccine dose, where known (PGD v008 records row). */
   previousDoseDate: string;
@@ -29,6 +37,13 @@ export interface CovidBoosterAssessment {
   onAnticoagulants: boolean;
   /** Bleeding disorder (exclusion unless IM injection assessed as safe by a clinician familiar with the bleeding risk). */
   bleedingDisorder: boolean;
+  /**
+   * Explicit answer to "Has intramuscular injection been assessed as safe by a
+   * clinician familiar with the bleeding risk?". bleedingDisorderAssessedSafe
+   * is derived from it. The stop fires only on "no"; blank is a validation
+   * message (stop audit, 11 Sep 2026).
+   */
+  bleedingDisorderAssessedAnswer: "" | "yes" | "no";
   bleedingDisorderAssessedSafe: boolean;
   myocarditisHistory: boolean;
   /** Caution: pregnancy, confirm vaccine and indication against national guidance. */
@@ -176,6 +191,7 @@ gpEmail: "",
     },
     assessment: {
       ageConfirmed: false,
+      previousCovidVaccineAnswer: "",
       previousCovidVaccine: false,
       previousDoseDate: "",
       previousDoseDateUnknown: false,
@@ -190,6 +206,7 @@ gpEmail: "",
       currentCovidInfection: false,
       onAnticoagulants: false,
       bleedingDisorder: false,
+      bleedingDisorderAssessedAnswer: "",
       bleedingDisorderAssessedSafe: false,
       myocarditisHistory: false,
       pregnant: false,

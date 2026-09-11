@@ -74,7 +74,6 @@ export function LesionAssessmentStep({ lesionAssessment, onChange }: LesionAsses
           value={lesionAssessment.lesionType}
           onChange={(value) => handleChange('lesionType', value)}
           options={[
-            { value: '', label: 'Select lesion type...' },
             { value: 'non-bullous', label: 'Non-bullous (thin-walled vesicles or pustules that rupture, golden-brown crust)' },
             { value: 'bullous', label: 'Bullous (fluid-filled vesicles and blisters, often over 1cm, thin flat yellow-brown crust)' },
           ]}
@@ -92,7 +91,6 @@ export function LesionAssessmentStep({ lesionAssessment, onChange }: LesionAsses
           value={lesionAssessment.extent}
           onChange={(value) => handleChange('extent', value)}
           options={[
-            { value: '', label: 'Select extent...' },
             { value: 'localised', label: 'Localised: typically fewer than 5 lesions, or confined to an area under about 5cm' },
             { value: 'widespread', label: 'Widespread: more than about 5 lesions, or covering more than about 5cm' },
           ]}
@@ -109,7 +107,6 @@ export function LesionAssessmentStep({ lesionAssessment, onChange }: LesionAsses
           value={lesionAssessment.numberOfLesions}
           onChange={(value) => handleChange('numberOfLesions', value)}
           options={[
-            { value: '', label: 'Select number...' },
             { value: '1-2', label: '1 to 2 lesions' },
             { value: '3-5', label: '3 to 5 lesions' },
             { value: '>5', label: 'More than 5 lesions (widespread)' },
@@ -177,7 +174,6 @@ export function LesionAssessmentStep({ lesionAssessment, onChange }: LesionAsses
             value={lesionAssessment.hydrogenPeroxide}
             onChange={(value) => handleChange('hydrogenPeroxide', value)}
             options={[
-              { value: '', label: 'Select...' },
               { value: 'offered-p-sale', label: 'Offered as a P sale first (record that you did); fusidic acid not supplied' },
               { value: 'unsuitable', label: 'Unsuitable (for example around the eyes): fusidic acid 2% cream under this PGD' },
               { value: 'ineffective', label: 'Already tried and ineffective: fusidic acid 2% cream under this PGD' },
@@ -197,7 +193,6 @@ export function LesionAssessmentStep({ lesionAssessment, onChange }: LesionAsses
           value={lesionAssessment.duration}
           onChange={(value) => handleChange('duration', value)}
           options={[
-            { value: '', label: 'Select duration...' },
             { value: '<48hrs', label: 'Less than 48 hours' },
             { value: '2-7 days', label: '2 to 7 days' },
             { value: '>7 days', label: 'More than 7 days' },

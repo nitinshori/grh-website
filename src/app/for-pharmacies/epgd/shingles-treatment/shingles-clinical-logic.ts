@@ -146,10 +146,26 @@ export function meets72HourCriteria(symptoms: ShinglesSymptoms, age: number | nu
 
 export function meetsSevenDayCriteria(symptoms: ShinglesSymptoms, age: number | null): boolean {
   return (
-    symptoms.newVesiclesForming ||
+    symptoms.newVesiclesForming === 'yes' ||
     (symptoms.painLevel !== null && symptoms.painLevel >= SEVERE_PAIN_THRESHOLD) ||
     (age !== null && age >= 70) ||
-    symptoms.highRiskSevereShingles
+    symptoms.highRiskSevereShingles === 'yes'
+  );
+}
+
+/**
+ * Every input the window criteria read has been answered. Until then the
+ * window is "not established", never "not met": a stop may only follow an
+ * answer the pharmacist has given (stop audit, 11 Sep 2026).
+ */
+export function windowCriteriaAnswered(symptoms: ShinglesSymptoms, age: number | null): boolean {
+  return (
+    age !== null &&
+    symptoms.dermatome !== '' &&
+    symptoms.painLevel !== null &&
+    symptoms.rashSeverity !== '' &&
+    symptoms.newVesiclesForming !== '' &&
+    symptoms.highRiskSevereShingles !== ''
   );
 }
 
@@ -160,9 +176,10 @@ export function getTreatmentWindow(symptoms: ShinglesSymptoms, age: number | nul
   if (isWithinTreatmentWindow(hours)) {
     if (meets72HourCriteria(symptoms, age)) return 'within-72h';
     if (meetsSevenDayCriteria(symptoms, age)) return 'within-7-days';
-    return 'not-met';
+    return windowCriteriaAnswered(symptoms, age) ? 'not-met' : 'unknown';
   }
-  return meetsSevenDayCriteria(symptoms, age) ? 'within-7-days' : 'not-met';
+  if (meetsSevenDayCriteria(symptoms, age)) return 'within-7-days';
+  return windowCriteriaAnswered(symptoms, age) ? 'not-met' : 'unknown';
 }
 
 export function describeTreatmentWindow(window: TreatmentWindow): string {
@@ -731,7 +748,10 @@ export function getRecommendedDose(
  */
 export function validateSymptomStep(symptoms: ShinglesSymptoms): string | null {
   if (!symptoms.rashOnsetDate) {
-    return 'Rash onset date is required';
+    return 'Date of rash onset is required';
+  }
+  if (calculateHoursSinceOnset(symptoms.rashOnsetDate, symptoms.rashOnsetTime) === null) {
+    return 'Date of rash onset: the date (and time, if entered) cannot be in the future. Check the date';
   }
   if (!symptoms.rashStage) {
     return 'Rash stage must be selected';
@@ -747,6 +767,12 @@ export function validateSymptomStep(symptoms: ShinglesSymptoms): string | null {
   }
   if (!symptoms.painType) {
     return 'Pain type must be selected';
+  }
+  if (!symptoms.newVesiclesForming) {
+    return 'Answer "New vesicles are still forming": Yes or No';
+  }
+  if (!symptoms.highRiskSevereShingles) {
+    return 'Answer "High risk of severe shingles (for example severe atopic eczema)": Yes or No';
   }
   if (!symptoms.rashDescription.trim()) {
     return 'Rash description is required';
@@ -776,8 +802,14 @@ export function validateMedicalHistoryStep(medicalHistory: ShinglesMedicalHistor
   ) {
     return 'Classify the immunosuppression as severe or non-severe (Green Book chapter 28a)';
   }
+  if (!medicalHistory.renalImpairment) {
+    return 'Renal function (eGFR, mL/min/1.73m2): select a band, or "Not known / not established"';
+  }
   if (!medicalHistory.renalFunctionSource.trim()) {
     return 'Record renal function and how it was established (PGD records requirement)';
+  }
+  if (!medicalHistory.hepaticImpairment) {
+    return 'Hepatic impairment: select none, mild to moderate, or severe';
   }
   return null;
 }
@@ -814,6 +846,9 @@ export function validateMedicineSelectionStep(
   if (!selection.dose || !selection.frequency || !selection.duration || selection.quantity <= 0) {
     return 'The PGD regimen could not be determined for the selected agent';
   }
+  if (!selection.brand.trim()) {
+    return 'Brand / manufacturer supplied must be recorded (PGD records requirement: name and brand of the medicine)';
+  }
   if (!selection.batchNumber.trim()) {
     return 'Batch number must be recorded (PGD records requirement)';
   }
@@ -824,22 +859,23 @@ export function validateMedicineSelectionStep(
  * Validate counselling
  */
 export function validateCounsellingStep(counselling: ShinglesCounselling): string | null {
-  const requiredItems: (keyof ShinglesCounselling)[] = [
-    'completeCourse',
-    'painManagement',
-    'rashCare',
-    'contagiousPeriod',
-    'pregnancyExposure',
-    'PHNRisk',
-    'returnIfWorsening',
-    'vaccinationAdvice',
-    'leafletAndDosing',
-    'hydration',
+  // Name the first item still unticked, in the label's own words.
+  const requiredItems: [keyof ShinglesCounselling, string][] = [
+    ['completeCourse', 'Counselled patient on completing the full course'],
+    ['leafletAndDosing', 'Leaflet given, dosing schedule explained, and return of unused medicine advised'],
+    ['hydration', 'Counselled on maintaining a good fluid intake throughout the course'],
+    ['painManagement', 'Counselled on pain management'],
+    ['rashCare', 'Counselled on rash care'],
+    ['contagiousPeriod', 'Counselled on the infectious period'],
+    ['pregnancyExposure', 'Counselled to avoid pregnant women who have not had chickenpox, babies under one month, and immunosuppressed people'],
+    ['PHNRisk', 'Explained post-herpetic neuralgia'],
+    ['returnIfWorsening', 'Safety netting advice given'],
+    ['vaccinationAdvice', 'Advised to discuss the shingles vaccine with the GP practice once recovered'],
   ];
 
-  for (const item of requiredItems) {
+  for (const [item, label] of requiredItems) {
     if (counselling[item] !== true) {
-      return `All counselling items must be confirmed`;
+      return `Tick "${label}" once it has been covered (every counselling item is required)`;
     }
   }
   return null;

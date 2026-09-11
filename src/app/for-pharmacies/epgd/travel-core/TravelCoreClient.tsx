@@ -18,6 +18,7 @@ import {
   type InjectionSite,
   type ChemoprophylaxisPlan,
   type ExclusionReferral,
+  type YesNoAnswer,
 } from "./lib/travel-core-types";
 import {
   getAllAlerts,
@@ -344,13 +345,16 @@ export default function TravelCoreClient() {
       >
         {state.currentStep !== 6 && exclusionOutcomeBlock}
         {state.currentStep === 0 && (
-          <PatientDetailsStep
-            patient={state.patient}
-            onChange={(field, value) =>
-              dispatch({ type: "UPDATE_PATIENT", field, value })
-            }
-            requireAdult={false}
-          />
+          <>
+            <p className="mb-4 text-xs text-gray-600">Adults aged 18 years and over.</p>
+            <PatientDetailsStep
+              patient={state.patient}
+              onChange={(field, value) =>
+                dispatch({ type: "UPDATE_PATIENT", field, value })
+              }
+              requireAdult
+            />
+          </>
         )}
 
         {state.currentStep === 1 && (
@@ -739,7 +743,16 @@ export default function TravelCoreClient() {
               <Checkbox label="Hepatitis A vaccine (Havrix Monodose 1440 EL.U/1.0 mL or Avaxim 160 U/0.5 mL), intramuscular, deltoid" checked={state.vaccines.hepAGiven} onChange={(v) => setVaccine("hepAGiven", v)} description="Inclusion: travelling to an area of high or intermediate hepatitis A prevalence; no previous complete course; no documented immunity" />
               {state.vaccines.hepAGiven && (
                 <div className="space-y-3 pl-2 border-l-2 border-gray-200">
-                  <Checkbox label="Inclusion met: destination has high or intermediate hepatitis A prevalence on current TravelHealthPro guidance (checked at this consultation)" checked={state.vaccines.hepAInclusionMet} onChange={(v) => setVaccine("hepAInclusionMet", v)} />
+                  <SelectInput
+                    label="Does the destination have high or intermediate hepatitis A prevalence on current TravelHealthPro guidance (checked at this consultation)?"
+                    value={state.vaccines.hepAInclusionAnswer}
+                    onChange={(v) => { setVaccine("hepAInclusionAnswer", v as YesNoAnswer); setVaccine("hepAInclusionMet", v === "yes"); }}
+                    options={[
+                      { value: "yes", label: "Yes: inclusion criterion met" },
+                      { value: "no", label: "No: outside this PGD for hepatitis A (the tool will stop)" },
+                    ]}
+                    required
+                  />
                   <Checkbox label="Previous complete Hepatitis A vaccination course (primary dose plus booster): excluded" checked={state.vaccines.hepAPreviousCompleteCourse} onChange={(v) => setVaccine("hepAPreviousCompleteCourse", v)} />
                   <Checkbox label="Documented evidence of Hepatitis A immunity: excluded" checked={state.vaccines.hepAImmunityDocumented} onChange={(v) => setVaccine("hepAImmunityDocumented", v)} />
                   <SelectInput label="Product" value={state.vaccines.hepAProduct} onChange={(v) => setVaccine("hepAProduct", v as HepAProduct)} options={[
@@ -775,7 +788,16 @@ export default function TravelCoreClient() {
               <Checkbox label="Typhoid vaccine (Typhim Vi 25 mcg/0.5 mL), 0.5 mL intramuscular, deltoid" checked={state.vaccines.typhoidGiven} onChange={(v) => setVaccine("typhoidGiven", v)} description="Inclusion: travelling to an area of high or intermediate typhoid prevalence (South Asia, Southeast Asia, Africa, Central/South America). Revaccination every 3 years if continuing risk" />
               {state.vaccines.typhoidGiven && (
                 <div className="space-y-3 pl-2 border-l-2 border-gray-200">
-                  <Checkbox label="Inclusion met: destination has high or intermediate typhoid prevalence on current TravelHealthPro guidance (checked at this consultation)" checked={state.vaccines.typhoidInclusionMet} onChange={(v) => setVaccine("typhoidInclusionMet", v)} />
+                  <SelectInput
+                    label="Does the destination have high or intermediate typhoid prevalence on current TravelHealthPro guidance (checked at this consultation)?"
+                    value={state.vaccines.typhoidInclusionAnswer}
+                    onChange={(v) => { setVaccine("typhoidInclusionAnswer", v as YesNoAnswer); setVaccine("typhoidInclusionMet", v === "yes"); }}
+                    options={[
+                      { value: "yes", label: "Yes: inclusion criterion met" },
+                      { value: "no", label: "No: outside this PGD for typhoid (the tool will stop)" },
+                    ]}
+                    required
+                  />
                   <Checkbox label="Previous typhoid Vi vaccine dose (revaccination is every 3 years)" checked={state.vaccines.typhoidPreviousDose} onChange={(v) => setVaccine("typhoidPreviousDose", v)} />
                   {state.vaccines.typhoidPreviousDose && (
                     <TextInput label="Date of the previous typhoid dose" type="date" value={state.vaccines.typhoidPreviousDoseDate} onChange={(v) => setVaccine("typhoidPreviousDoseDate", v)} required />
@@ -796,7 +818,16 @@ export default function TravelCoreClient() {
               <Checkbox label="Cholera vaccine (Dukoral), oral" checked={state.vaccines.choleraGiven} onChange={(v) => setVaccine("choleraGiven", v)} description="Primary course 2 doses 1 to 6 weeks apart; booster every 2 years if continuing risk. Buffer in about 150 mL cool water, whole 3 mL vial, drink within 2 hours; nothing by mouth for 1 hour either side" />
               {state.vaccines.choleraGiven && (
                 <div className="space-y-3 pl-2 border-l-2 border-gray-200">
-                  <Checkbox label="Inclusion met: travel to an area with active cholera transmission or high risk; humanitarian, healthcare or occupational exposure; or planned extended stay in an endemic area with poor sanitation" checked={state.vaccines.choleraRiskCriteriaMet} onChange={(v) => setVaccine("choleraRiskCriteriaMet", v)} />
+                  <SelectInput
+                    label="Does the traveller meet a Dukoral inclusion criterion: travel to an area with active cholera transmission or high risk; humanitarian, healthcare or occupational exposure; or a planned extended stay in an endemic area with poor sanitation?"
+                    value={state.vaccines.choleraInclusionAnswer}
+                    onChange={(v) => { setVaccine("choleraInclusionAnswer", v as YesNoAnswer); setVaccine("choleraRiskCriteriaMet", v === "yes"); }}
+                    options={[
+                      { value: "yes", label: "Yes: inclusion criterion met" },
+                      { value: "no", label: "No: outside this PGD for cholera (the tool will stop)" },
+                    ]}
+                    required
+                  />
                   <SelectInput label="Dose" value={state.vaccines.choleraDose} onChange={(v) => setVaccine("choleraDose", v as CholeraDose)} options={[
                     { value: "1", label: "Primary course, dose 1 of 2" },
                     { value: "2", label: "Primary course, dose 2 of 2 (1 to 6 weeks after dose 1)" },
@@ -843,14 +874,15 @@ export default function TravelCoreClient() {
             {anyVaccineGiven && (
               <div className="space-y-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
                 <p className="text-sm font-semibold text-amber-800">Before and after administration</p>
-                <Checkbox label="Adrenaline (epinephrine) 1 in 1,000 injection immediately available in the room, in date, with a telephone and a written anaphylaxis protocol (Resuscitation Council UK)" checked={state.vaccines.adrenalineAvailable} onChange={(v) => setVaccine("adrenalineAvailable", v)} />
-                <Checkbox label="Observed for 15 minutes after vaccination, seated, and the observation period completed" checked={state.vaccines.observationCompleted} onChange={(v) => setVaccine("observationCompleted", v)} />
+                <p className="text-xs text-amber-800">Tick each item once it has been done or the advice given (all are required).</p>
+                <Checkbox label="Adrenaline (epinephrine) 1 in 1,000 injection immediately available in the room, in date, with a telephone and a written anaphylaxis protocol (Resuscitation Council UK)" checked={state.vaccines.adrenalineAvailable} onChange={(v) => setVaccine("adrenalineAvailable", v)} required />
+                <Checkbox label="Observed for 15 minutes after vaccination, seated, and the observation period completed" checked={state.vaccines.observationCompleted} onChange={(v) => setVaccine("observationCompleted", v)} required />
                 <Checkbox label="Adverse reaction observed during or after vaccination" checked={state.vaccines.adverseReaction} onChange={(v) => { setVaccine("adverseReaction", v); if (!v) setVaccine("adverseReactionDetails", ""); }} />
                 {state.vaccines.adverseReaction && (
                   <TextArea label="Adverse reaction and action taken (report via Yellow Card and inform the GP)" value={state.vaccines.adverseReactionDetails} onChange={(v) => setVaccine("adverseReactionDetails", v)} rows={2} required />
                 )}
-                <Checkbox label="Patient information leaflet supplied for each vaccine; importance of completing the course and the booster schedule explained (Hepatitis A at 6 to 12 months; Typhoid every 3 years; Cholera every 2 years)" checked={state.vaccines.pilSupplied} onChange={(v) => setVaccine("pilSupplied", v)} />
-                <Checkbox label="Follow-up advice given: report serious side effects; food and water hygiene; travel insurance covering medical evacuation for remote areas; report symptoms of hepatitis A, typhoid or cholera (fever, diarrhoea, jaundice) immediately; if pregnant or planning pregnancy discuss timing with the GP" checked={state.vaccines.followUpAdviceGiven} onChange={(v) => setVaccine("followUpAdviceGiven", v)} />
+                <Checkbox label="Patient information leaflet supplied for each vaccine; importance of completing the course and the booster schedule explained (Hepatitis A at 6 to 12 months; Typhoid every 3 years; Cholera every 2 years)" checked={state.vaccines.pilSupplied} onChange={(v) => setVaccine("pilSupplied", v)} required />
+                <Checkbox label="Follow-up advice given: report serious side effects; food and water hygiene; travel insurance covering medical evacuation for remote areas; report symptoms of hepatitis A, typhoid or cholera (fever, diarrhoea, jaundice) immediately; if pregnant or planning pregnancy discuss timing with the GP" checked={state.vaccines.followUpAdviceGiven} onChange={(v) => setVaccine("followUpAdviceGiven", v)} required />
               </div>
             )}
           </div>

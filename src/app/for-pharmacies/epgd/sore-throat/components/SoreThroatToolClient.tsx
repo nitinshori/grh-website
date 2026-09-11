@@ -236,7 +236,7 @@ export function SoreThroatToolClient({
       updatedFeverPain.totalScore,
       state.examination.rapidStrepAResult,
       age,
-      state.history.penicillinAllergy,
+      state.history.penicillinAllergy === "yes",
       state.history.rheumaticFeverHistory
     );
   }, [updatedFeverPain.totalScore, state.examination.rapidStrepAResult, age, state.history]);
@@ -252,7 +252,7 @@ export function SoreThroatToolClient({
       5: validateHistoryStep(state.history),
       6: validateMedicineStep(state.medicine, {
         shouldPrescribe: medicineRecommendation.shouldPrescribe,
-        penicillinAllergy: state.history.penicillinAllergy,
+        penicillinAllergy: state.history.penicillinAllergy === "yes",
       }),
       7: validateCounsellingStep(state.counselling, {
         medicine: state.medicine.medicine,
@@ -363,6 +363,10 @@ export function SoreThroatToolClient({
       />
     </div>
   ) : null;
+
+  // Antibiotic counselling items only apply where an antibiotic is supplied.
+  const antibioticSupplied =
+    !isBlocked && state.medicine.medicine !== "" && state.medicine.medicine !== "none";
 
   // ─── Render Step Content ───
 
@@ -736,7 +740,8 @@ export function SoreThroatToolClient({
                 </p>
                 <p className="text-xs text-gray-500 mb-3">
                   Temperature 38°C or above together with any of the following is an exclusion:
-                  emergency referral.
+                  emergency referral. Heart rate, respiratory rate and systolic BP must all be
+                  measured and recorded before Next.
                 </p>
                 <div className="grid sm:grid-cols-3 gap-4">
                   <NumberInput
@@ -751,6 +756,7 @@ export function SoreThroatToolClient({
                     }
                     unit="bpm"
                     placeholder="e.g. 80"
+                    required
                     min={20}
                     max={250}
                   />
@@ -766,6 +772,7 @@ export function SoreThroatToolClient({
                     }
                     unit="/min"
                     placeholder="e.g. 16"
+                    required
                     min={4}
                     max={80}
                   />
@@ -781,6 +788,7 @@ export function SoreThroatToolClient({
                     }
                     unit="mmHg"
                     placeholder="e.g. 120"
+                    required
                     min={40}
                     max={260}
                   />
@@ -855,18 +863,25 @@ export function SoreThroatToolClient({
                 description="Exclusion: the PGD requires no recent antibiotic use for this illness"
               />
 
-              <Checkbox
-                label="Penicillin or beta-lactam allergy"
-                checked={state.history.penicillinAllergy}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_HISTORY",
-                    field: "penicillinAllergy",
-                    value: v,
-                  })
-                }
-                description="Phenoxymethylpenicillin excluded; clarithromycin arm applies (non-anaphylaxis history preferred for macrolide use)"
-              />
+              <div className="space-y-1">
+                <SelectInput
+                  label="Penicillin or beta-lactam allergy"
+                  value={state.history.penicillinAllergy}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_HISTORY",
+                      field: "penicillinAllergy",
+                      value: v,
+                    })
+                  }
+                  options={[
+                    { value: "no", label: "No: phenoxymethylpenicillin arm" },
+                    { value: "yes", label: "Yes: phenoxymethylpenicillin excluded; clarithromycin arm applies" },
+                  ]}
+                  required
+                />
+                <p className="text-xs text-gray-500">Chooses the arm. Non-anaphylaxis history preferred for macrolide use.</p>
+              </div>
 
               <Checkbox
                 label="Immunosuppressed"
@@ -930,7 +945,7 @@ export function SoreThroatToolClient({
                     value: v,
                   })
                 }
-                description="Caution: avoid phenoxymethylpenicillin due to risk of rash; clarify diagnosis if uncertain"
+                description="Phenoxymethylpenicillin is avoided (risk of rash). With no penicillin allergy this is a stop: no PGD antibiotic until the diagnosis is clarified. With a penicillin allergy the clarithromycin arm applies (caution)"
               />
 
               <Checkbox
@@ -946,7 +961,7 @@ export function SoreThroatToolClient({
                 description="Caution: advise additional contraception during the course and for 7 days afterwards"
               />
 
-              {state.history.penicillinAllergy && (
+              {state.history.penicillinAllergy === "yes" && (
                 <div className="border border-amber-200 bg-amber-50 rounded-lg p-3 space-y-2">
                   <p className="text-xs font-semibold text-amber-800">
                     Clarithromycin arm: exclusions and cautions (check every current medicine
@@ -1158,7 +1173,7 @@ export function SoreThroatToolClient({
                   ? "bg-green-50 border-green-200"
                   : feverPainInterpretation.riskLevel === "moderate"
                     ? "bg-amber-50 border-amber-200"
-                    : "bg-red-50 border-red-200"
+                    : "bg-blue-50 border-blue-200"
               }`}>
                 <p className="text-sm font-semibold">
                   {feverPainInterpretation.label}
@@ -1212,7 +1227,7 @@ export function SoreThroatToolClient({
                       });
                     }}
                     options={
-                      state.history.penicillinAllergy
+                      state.history.penicillinAllergy === "yes"
                         ? [{ value: "clarithromycin", label: "Clarithromycin 250mg tablets" }]
                         : [
                             {
@@ -1303,13 +1318,14 @@ export function SoreThroatToolClient({
                     </p>
                     <p className="text-xs text-green-600 mt-1">
                       Antibiotics may only be supplied with FeverPAIN 4 or more, or a positive
-                      RAST. Recommend self-care management and monitor symptoms. Document the
-                      advice given; inform or refer to the GP as appropriate.
+                      rapid Strep A test (RAST). Recommend self-care management and monitor symptoms.
+                      Document the advice given; inform or refer to the GP as appropriate.
+                      Select &quot;No antibiotic&quot; below to confirm the outcome.
                     </p>
                   </div>
 
                   <SelectInput
-                    label="Medicine"
+                    label="Outcome (select No antibiotic to confirm)"
                     value={state.medicine.medicine}
                     onChange={(v) =>
                       dispatch({
@@ -1336,12 +1352,16 @@ export function SoreThroatToolClient({
             <div className="space-y-4">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
                 <p className="text-xs text-blue-700">
-                  <span className="font-semibold">Counselling:</span> Confirm all
-                  relevant advice has been given to the patient.
+                  <span className="font-semibold">Counselling:</span> Tick each item as it is
+                  given. Items under &quot;Required advice&quot; must all be ticked before Next;
+                  the &quot;Additional advice&quot; items are optional.
                 </p>
               </div>
 
               <div className="space-y-3">
+                <p className="text-sm font-semibold text-navy-900">Required advice <span className="text-red-400">*</span></p>
+                {antibioticSupplied && (
+                <>
                 <Checkbox
                   label="Complete the full course of antibiotics, even if symptoms improve within 2-3 days"
                   checked={state.counselling.completeCourse}
@@ -1371,7 +1391,11 @@ export function SoreThroatToolClient({
                 />
 
                 <Checkbox
-                  label="If using oral contraception, use additional contraceptive methods during the antibiotic course and for 7 days afterwards"
+                  label={
+                    state.history.oralContraceptive
+                      ? "Patient uses oral contraception: use additional contraceptive methods during the antibiotic course and for 7 days afterwards (required)"
+                      : "If using oral contraception, use additional contraceptive methods during the antibiotic course and for 7 days afterwards"
+                  }
                   checked={state.counselling.contraceptionAdvice}
                   onChange={(v) =>
                     dispatch({
@@ -1381,6 +1405,8 @@ export function SoreThroatToolClient({
                     })
                   }
                 />
+                </>
+                )}
 
                 <Checkbox
                   label="Pain relief: paracetamol or ibuprofen as directed; a sore throat should improve within 3-5 days"
@@ -1407,30 +1433,6 @@ export function SoreThroatToolClient({
                 />
 
                 <Checkbox
-                  label="Throat lozenges or warm salt water gargles for comfort (not part of medical treatment)"
-                  checked={state.counselling.lozengesGargles}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_COUNSELLING",
-                      field: "lozengesGargles",
-                      value: v,
-                    })
-                  }
-                />
-
-                <Checkbox
-                  label="Soft foods and adequate nutrition"
-                  checked={state.counselling.softFoods}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_COUNSELLING",
-                      field: "softFoods",
-                      value: v,
-                    })
-                  }
-                />
-
-                <Checkbox
                   label="Seek medical advice if symptoms worsen or do not improve after 3-5 days of treatment"
                   checked={state.counselling.returnIfWorsening}
                   onChange={(v) =>
@@ -1442,18 +1444,8 @@ export function SoreThroatToolClient({
                   }
                 />
 
-                <Checkbox
-                  label="Red flag symptoms (difficulty breathing, unable to swallow)"
-                  checked={state.counselling.redFlagSymptoms}
-                  onChange={(v) =>
-                    dispatch({
-                      type: "UPDATE_COUNSELLING",
-                      field: "redFlagSymptoms",
-                      value: v,
-                    })
-                  }
-                />
-
+                {antibioticSupplied && (
+                <>
                 <Checkbox
                   label="Report any allergic reactions (rash, facial swelling, breathing difficulties) immediately"
                   checked={state.counselling.allergicReactionAdvice}
@@ -1493,6 +1485,57 @@ export function SoreThroatToolClient({
                 />
 
                 <Checkbox
+                  label="Patient information leaflet (PIL) provided with the medication supplied"
+                  checked={state.counselling.pilSupplied}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_COUNSELLING",
+                      field: "pilSupplied",
+                      value: v,
+                    })
+                  }
+                />
+                </>
+                )}
+
+                <p className="text-sm font-semibold text-navy-900 pt-2">Additional advice (optional)</p>
+                <Checkbox
+                  label="Throat lozenges or warm salt water gargles for comfort (not part of medical treatment)"
+                  checked={state.counselling.lozengesGargles}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_COUNSELLING",
+                      field: "lozengesGargles",
+                      value: v,
+                    })
+                  }
+                />
+
+                <Checkbox
+                  label="Soft foods and adequate nutrition"
+                  checked={state.counselling.softFoods}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_COUNSELLING",
+                      field: "softFoods",
+                      value: v,
+                    })
+                  }
+                />
+
+                <Checkbox
+                  label="Red flag symptoms (difficulty breathing, unable to swallow)"
+                  checked={state.counselling.redFlagSymptoms}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_COUNSELLING",
+                      field: "redFlagSymptoms",
+                      value: v,
+                    })
+                  }
+                />
+
+                <Checkbox
                   label="When safe to return to school/work"
                   checked={state.counselling.schoolWorkAdvice}
                   onChange={(v) =>
@@ -1503,20 +1546,6 @@ export function SoreThroatToolClient({
                     })
                   }
                 />
-
-                {state.medicine.medicine !== "none" && state.medicine.medicine !== "" && (
-                  <Checkbox
-                    label="Patient information leaflet (PIL) provided with the medication supplied"
-                    checked={state.counselling.pilSupplied}
-                    onChange={(v) =>
-                      dispatch({
-                        type: "UPDATE_COUNSELLING",
-                        field: "pilSupplied",
-                        value: v,
-                      })
-                    }
-                  />
-                )}
 
                 <TextArea
                   label="Adverse drug reactions and actions taken (report via Yellow Card, https://yellowcard.mhra.gov.uk)"

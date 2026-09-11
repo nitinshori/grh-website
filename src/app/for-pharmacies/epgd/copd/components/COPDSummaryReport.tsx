@@ -77,7 +77,7 @@ export function COPDSummaryReport({
       <AlertSummary alerts={alerts} />
 
       <SectionHeader>COPD Assessment</SectionHeader>
-      <Row label="Confirmed COPD diagnosis (spirometry and GOLD)" value={state.assessment.hasExistingDiagnosis ? "Yes" : "No"} />
+      <Row label="Confirmed COPD diagnosis (spirometry and GOLD)" value={state.assessment.diagnosisStatus === "confirmed" ? "Yes" : state.assessment.diagnosisStatus === "not-confirmed" ? "No (excluded)" : "Not recorded"} />
       <Row label="GOLD classification" value={state.assessment.goldClassification ? `GOLD ${state.assessment.goldClassification}` : "Not recorded"} />
       <Row
         label="Presentation"
@@ -89,15 +89,15 @@ export function COPDSummaryReport({
               : "Not recorded"
         }
       />
-      <Row label="Purulent sputum" value={state.assessment.purulentSputum ? "Yes" : "No"} />
+      <Row label="Purulent sputum" value={state.assessment.purulentSputumAnswer === "yes" ? "Yes" : state.assessment.purulentSputumAnswer === "no" ? "No" : "Not recorded"} />
       <Row label="SpO2 on air" value={state.assessment.spo2 !== null ? `${state.assessment.spo2}%` : "Not recorded"} />
       <Row label="Respiratory rate" value={state.assessment.respiratoryRate !== null ? `${state.assessment.respiratoryRate} breaths per minute` : "Not recorded"} />
       <Row
         label="Salbutamol supplies under this PGD in last 12 months"
         value={state.assessment.salbutamolSuppliesLast12Months !== null ? String(state.assessment.salbutamolSuppliesLast12Months) : "Not recorded"}
       />
-      <Row label="Can use inhaler or willing to use spacer" value={state.assessment.canUseInhalerOrSpacer ? "Yes" : "No"} />
-      <Row label="Able to take oral medication" value={state.assessment.ableToTakeOralMedication ? "Yes" : "No"} />
+      <Row label="Can use inhaler or willing to use spacer" value={state.assessment.inhalerAbilityAnswer === "yes" ? "Yes" : state.assessment.inhalerAbilityAnswer === "no" ? "No" : "Not recorded"} />
+      <Row label="Able to take oral medication" value={state.assessment.oralAbilityAnswer === "yes" ? "Yes" : state.assessment.oralAbilityAnswer === "no" ? "No" : "Not recorded"} />
       <Row
         label="MRC breathlessness scale"
         value={state.assessment.mrcBreathlessnessScale ? `Grade ${state.assessment.mrcBreathlessnessScale}` : "Not recorded"}

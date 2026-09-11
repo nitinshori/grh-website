@@ -158,9 +158,11 @@ export default function FluSummaryReport({
               <span className="text-gray-600">Bleeding disorder:</span>
               <span className="font-medium text-gray-900">
                 {state.screening.bleedingDisorder
-                  ? state.screening.bleedingDisorderAssessedSafe
+                  ? state.screening.bleedingDisorderAssessedSafe === true
                     ? 'Yes, IM assessed as safe by a clinician'
-                    : 'Yes, not assessed'
+                    : state.screening.bleedingDisorderAssessedSafe === false
+                      ? 'Yes, not assessed'
+                      : 'Yes, assessment not recorded'
                   : 'No'}
               </span>
             </div>
@@ -386,6 +388,12 @@ export default function FluSummaryReport({
               <span className="text-gray-600">Observation period:</span>
               <span className="font-medium text-gray-900">
                 {state.postVaccineObs.observationPeriod}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Observation period completed, patient seated:</span>
+              <span className="font-medium text-gray-900">
+                {state.postVaccineObs.observationCompleted ? 'Yes' : 'No'}
               </span>
             </div>
             <div className="flex justify-between">

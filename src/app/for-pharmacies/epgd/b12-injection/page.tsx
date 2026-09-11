@@ -58,7 +58,7 @@ export default function B12InjectionPage(): React.ReactNode {
                     <strong>FBC:</strong> high MCV (&gt;100 fL) suggests
                     macrocytosis but MCV may be normal in concurrent iron
                     deficiency or rapid-onset anaemia. A normal MCV does
-                    NOT exclude B12 deficiency — 25% of neuro cases have
+                    NOT exclude B12 deficiency: 25% of neuro cases have
                     normal MCV.
                   </p>
                   <p>
@@ -71,7 +71,7 @@ export default function B12InjectionPage(): React.ReactNode {
                   <p>
                     <strong>Note:</strong> people of Black ethnicity may
                     have a higher normal range for serum B12. Pregnant
-                    women have physiologically lower B12 levels — less
+                    women have physiologically lower B12 levels, so results are less
                     reliable in pregnancy. People on oral contraceptives
                     may show decreased B12 due to reduced carrier protein
                     (not necessarily deficient).
@@ -83,7 +83,7 @@ export default function B12InjectionPage(): React.ReactNode {
         </div>
         <B12InjectionClient />
         <div className="mt-8 text-center text-xs text-gray-500">
-          <p>Get Real Health ePGD — Vitamin B12 Injection | Confidential Patient Information</p>
+          <p>Get Real Health ePGD: Vitamin B12 Injection | Confidential Patient Information</p>
         </div>
       </div>
     </div>

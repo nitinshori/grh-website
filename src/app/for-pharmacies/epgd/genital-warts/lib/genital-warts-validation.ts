@@ -66,6 +66,8 @@ export function validateStep(
       if (!treatment.quantitySupplied.trim()) return "Quantity is set by the PGD for the agent and form chosen";
       if (!treatment.batchNumber.trim()) return "Record the batch number";
       if (!treatment.expiryDate) return "Record the expiry date";
+      if (treatment.expiryDate < state.summary.consultationDate)
+        return "Expiry date: this pack has passed its expiry date. Do not supply it; select an in-date pack";
       if (!treatment.reviewDate) return "Record the review date";
       const consultationDate = state.summary.consultationDate;
       const latest = addDays(consultationDate, REVIEW_INTERVAL_DAYS[treatment.agent]);
@@ -80,21 +82,24 @@ export function validateStep(
     // Counselling. Contraception and flammability are podophyllotoxin-only,
     // so they are required only when that agent has been chosen.
     case 5: {
-      const core =
-        counselling.applicationTechniqueExplained &&
-        counselling.barrierProtectionExplained &&
-        counselling.localReactionsDiscussed &&
-        counselling.avoidSexualContactWhileApplied &&
-        counselling.condomsCounselled &&
-        counselling.partnerNotificationDiscussed &&
-        counselling.completeCourseAdvised &&
-        counselling.handWashingAdvised &&
-        counselling.hpvVaccinationDiscussed &&
-        counselling.yellowCardExplained &&
-        counselling.pilSupplied &&
-        counselling.safetyNettingGiven &&
-        counselling.followUpAndScreeningAdvised;
-      if (!core) return "Confirm every counselling point in the PGD has been covered (including HPV vaccination)";
+      // Name the first point still unticked, in the label's own words.
+      const points: [boolean, string][] = [
+        [counselling.applicationTechniqueExplained, "Application technique explained"],
+        [counselling.barrierProtectionExplained, "Petroleum jelly as a barrier on surrounding healthy skin explained"],
+        [counselling.localReactionsDiscussed, "Local reactions discussed"],
+        [counselling.avoidSexualContactWhileApplied, "Avoid all sexual contact while the treatment is on the skin"],
+        [counselling.condomsCounselled, "Consistent condom use counselled at other times"],
+        [counselling.partnerNotificationDiscussed, "Partner notification discussed"],
+        [counselling.completeCourseAdvised, "Advised to complete the full course"],
+        [counselling.handWashingAdvised, "Hand washing after application emphasised"],
+        [counselling.hpvVaccinationDiscussed, "HPV vaccination discussed"],
+        [counselling.yellowCardExplained, "Yellow Card scheme explained"],
+        [counselling.pilSupplied, "Patient information leaflet supplied"],
+        [counselling.safetyNettingGiven, "Safety netting"],
+        [counselling.followUpAndScreeningAdvised, "Attend the follow-up appointment"],
+      ];
+      const missing = points.find(([done]) => !done);
+      if (missing) return `Tick the counselling point "${missing[1]}" once it has been covered (every point in the PGD is required)`;
 
       if (treatment.agent === "podophyllotoxin") {
         if (!counselling.contraceptionCounselled) return "Podophyllotoxin: teratogenicity and contraception must be counselled";

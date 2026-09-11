@@ -190,22 +190,34 @@ export default function ShinglesClient() {
                 {state.patient.age !== null ? (under50 ? " (Arm 2 applies only if severely immunosuppressed)" : " (Arm 1)") : ""}
               </p>
             </div>
-            <Checkbox
-              label="Patient is immunosuppressed"
-              checked={state.assessment.immunosuppressed}
-              onChange={(v) =>
-                dispatch({
-                  type: "UPDATE_ASSESSMENT",
-                  field: "immunosuppressed",
-                  value: v,
-                })
-              }
-              description={
-                under50
-                  ? "Required for Arm 2. Select the Green Book Box 1 category below; immunosuppression outside Box 1 is a referral."
-                  : "HIV, cancer treatment, organ transplant, immunosuppressive therapy. Shingrix (non-live) is the preferred vaccine. Severely immunosuppressed adults are NHS-eligible at any age."
-              }
-            />
+            {under50 ? (
+              <SelectInput
+                label="Is the patient severely immunosuppressed as defined in Green Book chapter 28a, Box 1?"
+                value={state.assessment.under50ImmunosuppressionAnswer}
+                onChange={(v) => {
+                  dispatch({ type: "UPDATE_ASSESSMENT", field: "under50ImmunosuppressionAnswer", value: v });
+                  dispatch({ type: "UPDATE_ASSESSMENT", field: "immunosuppressed", value: v === "yes" });
+                }}
+                options={[
+                  { value: "yes", label: "Yes: select the Box 1 category below (Arm 2)" },
+                  { value: "no", label: "No: not covered by this PGD under 50 (refer)" },
+                ]}
+                required
+              />
+            ) : (
+              <Checkbox
+                label="Patient is immunosuppressed"
+                checked={state.assessment.immunosuppressed}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_ASSESSMENT",
+                    field: "immunosuppressed",
+                    value: v,
+                  })
+                }
+                description="HIV, cancer treatment, organ transplant, immunosuppressive therapy. Shingrix (non-live) is the preferred vaccine. Severely immunosuppressed adults are NHS-eligible at any age."
+              />
+            )}
             {state.assessment.immunosuppressed && (
               <>
                 <SelectInput
@@ -779,6 +791,26 @@ export default function ShinglesClient() {
         onNewConsultation={handleNewConsultation}
       >
         {renderStep()}
+        {/* The PGD requires the advice given to an excluded patient to be
+            recorded. A stop disables Next, so the clinical notes box on the
+            Vaccine Supply step could never be reached and the printed record
+            filled "Advice given" with a canned sentence (walkthrough review,
+            11 Sep 2026). */}
+        {hardStops && state.currentStep < 5 && (
+          <div className="mt-6 bg-red-50 border border-red-200 rounded-lg p-4 space-y-3">
+            <p className="text-red-700 text-sm font-semibold">
+              Excluded: Shingrix cannot be given under this PGD. Refer to the GP as appropriate and document the advice given and the decision reached.
+            </p>
+            <TextArea
+              label="Advice given and decision reached (saved with the exclusion record)"
+              value={state.summary.clinicalNotes}
+              onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "clinicalNotes", value: v })}
+              placeholder="e.g., Shingles 4 months ago: advised to return once 12 months have passed; no supply made."
+              rows={3}
+            />
+            <p className="text-xs text-red-700">Then use "Save as not supplied" below to record the consultation.</p>
+          </div>
+        )}
       </StepWrapper>
     </div>
   );

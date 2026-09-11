@@ -43,6 +43,9 @@ function reducer(state: ThrushConsultationState, action: ThrushAction): ThrushCo
     case "UPDATE_SUMMARY":
       newState.summary = { ...newState.summary, [action.field]: action.value };
       break;
+    case "UPDATE_EXCLUSION_OUTCOME":
+      newState.exclusionOutcome = { ...newState.exclusionOutcome, [action.field]: action.value };
+      break;
     case "SET_STEP":
       newState.currentStep = action.step;
       break;
@@ -163,6 +166,37 @@ export default function ThrushClient() {
       consent: { notifyGp: state.consent.notifyGp },
     };
   }, [state, updatedState, hasStops, doseRecommendation, __pharmProfile]);
+
+  // Advice given and decision reached for an excluded patient (PGD: actions
+  // if the patient is excluded or declines treatment). Shown on any step
+  // where a stop is present, next to the Save as not supplied button, so the
+  // record can hold the advice without reaching the summary step.
+  const exclusionOutcomeBlock = hasStops ? (
+    <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-3 print:hidden">
+      <p className="text-sm font-semibold text-red-800">
+        Patient excluded: do not supply. Record who the patient was referred to and the advice given, then use Save as not supplied.
+      </p>
+      <SelectInput
+        label="Referred to"
+        value={state.exclusionOutcome.referredTo}
+        onChange={(v) => dispatch({ type: "UPDATE_EXCLUSION_OUTCOME", field: "referredTo", value: v })}
+        options={[
+          { value: "gp", label: "GP" },
+          { value: "sexual-health", label: "Sexual health service" },
+          { value: "other", label: "Other (state in advice given)" },
+        ]}
+        required
+      />
+      <TextArea
+        label="Advice given and decision reached"
+        value={state.exclusionOutcome.adviceGiven}
+        onChange={(v) => dispatch({ type: "UPDATE_EXCLUSION_OUTCOME", field: "adviceGiven", value: v })}
+        placeholder="Alternative treatment options advised and how to access them; who the patient was referred to; whether the GP was informed"
+        rows={3}
+        required
+      />
+    </div>
+  ) : null;
 
   const handleNewConsultation = useCallback(() => {
     dispatch({ type: "RESET" });
@@ -346,6 +380,7 @@ export default function ThrushClient() {
     <div className="space-y-6">
       <ProgressBar stepLabels={STEP_LABELS} currentStep={state.currentStep} onStepClick={handleStepClick} completedSteps={completedSteps} hasErrors={Boolean(validationError)} />
       {alerts.length > 0 && state.currentStep < 4 && <AlertBanner alerts={alerts} />}
+      {exclusionOutcomeBlock}
       {renderStep()}
     </div>
   );

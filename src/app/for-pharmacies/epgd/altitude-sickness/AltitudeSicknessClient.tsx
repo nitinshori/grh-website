@@ -334,7 +334,7 @@ export function AltitudeSicknessClient() {
           currentStep={state.currentStep}
           onStepClick={handleStepClick}
           completedSteps={completedSteps}
-          hasErrors={!!validationError}
+          hasErrors={isBlocked}
         />
         {alerts.length > 0 && (
           <AlertBanner alerts={alerts} />
@@ -401,6 +401,7 @@ export function AltitudeSicknessClient() {
               value={state.travelAssessment.destinationCountry}
               onChange={(v) => handleTravelChange('destinationCountry', v)}
               placeholder="e.g. Peru, Nepal, Ecuador"
+              required
             />
             <NumberInput
               label="Destination Altitude (metres)"
@@ -418,7 +419,6 @@ export function AltitudeSicknessClient() {
               value={state.travelAssessment.purpose}
               onChange={(v) => handleTravelChange('purpose', v)}
               options={[
-                { value: '', label: 'Select...' },
                 { value: 'prevention', label: 'Prevention of AMS (started before ascent)' },
                 { value: 'treatment', label: 'Symptomatic treatment of AMS (started at symptom onset)' },
               ]}
@@ -454,24 +454,26 @@ export function AltitudeSicknessClient() {
               </div>
             )}
             <NumberInput
-              label="Current Altitude (meters)"
+              label="Current Altitude (metres, optional)"
               value={state.travelAssessment.currentAltitude}
               onChange={(v) => handleTravelChange('currentAltitude', v)}
               placeholder="e.g. sea level = 0"
+              unit="m"
             />
             <TextInput
               label="Departure Date"
               type="date"
               value={state.travelAssessment.departureDate}
               onChange={(v) => handleTravelChange('departureDate', v)}
+              required
             />
 
             <SelectInput
               label="Ascent Rate"
               value={state.travelAssessment.ascentRate}
               onChange={(v) => handleTravelChange('ascentRate', v)}
+              required
               options={[
-                { value: '', label: 'Select ascent rate...' },
                 { value: 'slow', label: 'Slow (gradual, allow acclimatisation)' },
                 { value: 'moderate', label: 'Moderate (some acclimatisation planned)' },
                 { value: 'rapid', label: 'Rapid (fast ascent, high AMS risk)' },
@@ -814,7 +816,6 @@ export function AltitudeSicknessClient() {
               value={state.medicineSelection.selectedMedicine}
               onChange={(v) => handleMedicineChange('selectedMedicine', v)}
               options={[
-                { value: '', label: 'Select...' },
                 { value: 'acetazolamide', label: 'Acetazolamide 250 mg tablets (scored)' },
               ]}
               required

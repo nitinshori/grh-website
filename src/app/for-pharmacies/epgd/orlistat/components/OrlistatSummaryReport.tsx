@@ -1,6 +1,7 @@
 "use client";
 
 import type { OrlistatConsultationState } from "../lib/orlistat-types";
+import { COMORBIDITY_LABELS } from "../lib/orlistat-clinical-logic";
 import {
   SectionHeader,
   Row,
@@ -50,7 +51,7 @@ export function OrlistatSummaryReport({ state }: { state: OrlistatConsultationSt
         <Row label="BMI" value={state.weightAssessment.bmi ? `${state.weightAssessment.bmi} kg/m²` : NOT_RECORDED} />
         <Row label="BMI Category" value={state.weightAssessment.bmiCategory || NOT_RECORDED} />
         <Row
-          label="Baseline Waist Circumference"
+          label={state.weightAssessment.visitType === "continuation" ? "Waist Circumference (this visit)" : "Baseline Waist Circumference"}
           value={
             state.weightAssessment.waistCircumference
               ? `${state.weightAssessment.waistCircumference} cm`
@@ -61,7 +62,7 @@ export function OrlistatSummaryReport({ state }: { state: OrlistatConsultationSt
           label="Weight-Related Comorbidities"
           value={
             state.weightAssessment.comorbidities.length > 0
-              ? state.weightAssessment.comorbidities.join(", ")
+              ? state.weightAssessment.comorbidities.map((c) => COMORBIDITY_LABELS[c] ?? c).join(", ")
               : "None"
           }
         />
@@ -78,6 +79,8 @@ export function OrlistatSummaryReport({ state }: { state: OrlistatConsultationSt
           ["Chronic malabsorption syndrome", state.medicalHistory.chronicMalabsorption],
           ["Currently pregnant", state.medicalHistory.pregnant],
           ["Currently breastfeeding", state.medicalHistory.breastfeeding],
+          ["Planning pregnancy within 2 months", state.medicalHistory.planningPregnancy],
+          ["Severe gastrointestinal disease", state.medicalHistory.severeGastrointestinal],
           ["Hypersensitivity to orlistat or any component", state.medicalHistory.hypersensitivityToOrlistat],
           ["Uncontrolled or newly diagnosed diabetes", state.medicalHistory.uncontrolledOrNewDiabetes],
           ["Gallstone disease", state.medicalHistory.gallbladderDisease],

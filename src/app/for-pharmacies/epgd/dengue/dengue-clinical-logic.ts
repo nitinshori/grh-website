@@ -15,9 +15,12 @@ export const DOSE_INTERVAL_MONTHS = 3;
 
 export function evaluateDengueContraindications(
   screening: DengueScreening,
-  patientAge: number
+  patientAge: number | null
 ): { contraindications: DengueContraindications; alerts: ClinicalAlert[] } {
   const alerts: ClinicalAlert[] = [];
+  // A null age is "date of birth not yet entered", which the patient step
+  // asks for: it is not an age under 18 and must not raise the age stop
+  // (stop audit, 11 Sep 2026). The stop fires only on an actual age below 18.
   const contraindications: DengueContraindications = {
     severeAllergy: false,
     immunosuppressed: false,
@@ -26,11 +29,35 @@ export function evaluateDengueContraindications(
     acuteFebrileIllness: false,
     liveVaccineInterval: false,
     gbsHistory: false,
-    ageAppropriate: patientAge >= 18,
+    ageAppropriate: patientAge === null || patientAge >= 18,
+    inclusionNotMet: false,
   };
 
+  // Hard stop: an inclusion criterion answered No. Before this the two
+  // inclusion questions were tick boxes, and a patient who said No simply
+  // could not get past the travel step: no stop, no reason, no way to save
+  // the consultation (walkthrough review, 11 Sep 2026).
+  if (screening.endemicAreaAnswer === 'no') {
+    contraindications.inclusionNotMet = true;
+    alerts.push({
+      severity: 'stop',
+      code: 'NOT_ENDEMIC_AREA_DENGUE',
+      message: 'Not travelling to or living in a dengue-endemic area',
+      detail: 'This PGD covers travel to or residence in a dengue-endemic area only (inclusion criterion). Do not vaccinate under this PGD; advise the patient and refer to a travel clinic or the GP if vaccination is still wanted.',
+    });
+  }
+  if (screening.willingTwoDosesAnswer === 'no') {
+    contraindications.inclusionNotMet = true;
+    alerts.push({
+      severity: 'stop',
+      code: 'NOT_WILLING_TWO_DOSES_DENGUE',
+      message: 'Patient not willing to receive two doses, 3 months apart',
+      detail: 'Willingness to complete the two-dose course is an inclusion criterion. A single dose does not complete the course. Do not vaccinate under this PGD; advise the patient and refer if appropriate.',
+    });
+  }
+
   // Hard stop: age under 18 (PGD v006 exclusion)
-  if (patientAge < 18) {
+  if (patientAge !== null && patientAge < 18) {
     alerts.push({
       severity: 'stop',
       code: 'AGE_UNDER_18_DENGUE',
@@ -176,7 +203,8 @@ export function hasHardStopContraindications(
     contraindications.acuteFebrileIllness ||
     contraindications.immunosuppressed ||
     contraindications.liveVaccineInterval ||
-    contraindications.gbsHistory
+    contraindications.gbsHistory ||
+    contraindications.inclusionNotMet
   );
 }
 

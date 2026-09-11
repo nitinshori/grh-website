@@ -32,7 +32,7 @@ export function validateStep(stepIndex: number, state: ColdSoresConsultationStat
         return "Please describe current symptoms";
       }
       if (state.symptomAssessment.prodromeSigns && state.symptomAssessment.hoursFromProdrome === null) {
-        return "Please enter hours since prodrome";
+        return "Enter the hours since prodrome onset";
       }
       return null;
 
@@ -65,22 +65,25 @@ export function validateStep(stepIndex: number, state: ColdSoresConsultationStat
       if (!state.medicineSupply.brand.trim()) return "Record the brand of the product supplied (PGD records requirement)";
       return null;
 
-    case 6: // Counselling
-      if (
-        !state.counselling.startASAP ||
-        !state.counselling.completeCourse ||
-        !state.counselling.contagious ||
-        !state.counselling.avoidSharing ||
-        !state.counselling.sunExposure ||
-        !state.counselling.safetyNetting ||
-        !state.counselling.symptomRelief ||
-        !state.counselling.hygieneMeasures ||
-        !state.counselling.providedPIL ||
-        !state.counselling.yellowCard
-      ) {
-        return "Please confirm all counselling points have been covered";
-      }
+    case 6: {
+      // Counselling: name the first point still unticked, in the label's own words.
+      const c = state.counselling;
+      const points: [boolean, string][] = [
+        [c.startASAP, "Start treatment at the first sign of symptoms"],
+        [c.completeCourse, "Complete the 5-day course"],
+        [c.contagious, "Herpes simplex is easily transmitted"],
+        [c.avoidSharing, "Do not share items that touch the lesions"],
+        [c.hygieneMeasures, "Hygiene"],
+        [c.symptomRelief, "Symptom relief"],
+        [c.safetyNetting, "Seek medical advice if symptoms worsen"],
+        [c.sunExposure, "Avoid triggers where possible"],
+        [c.providedPIL, "Patient information leaflet supplied with the medication"],
+        [c.yellowCard, "Report suspected adverse effects via Yellow Card"],
+      ];
+      const missing = points.find(([done]) => !done);
+      if (missing) return `Tick the counselling point "${missing[1]}" once it has been covered (all points are required)`;
       return null;
+    }
 
     case 7: // Summary
       return validateSummaryStep(state.summary);

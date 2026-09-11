@@ -32,17 +32,21 @@ export function validateTyphoidStep(
     shortNoticeAdvised: boolean;
   }
 ): string | null {
-  if (!patient.travelDestination.trim()) return 'Travel destination is required';
-  if (!patient.travelReason) return 'Risk region must be selected';
-  if (!patient.departureDate) return 'Departure date is required';
-  if (!patient.itinerary.trim()) return 'Itinerary is required (the record must carry destination, itinerary and departure date)';
-  if (!patient.recommendationSource.trim()) return 'Record the source consulted for the recommendation (NaTHNaC / TravelHealthPro, with the date checked)';
-  if (!travelAssessment.travelDestinationConfirmed) return 'Confirm typhoid vaccination is recommended for this destination on current NaTHNaC / TravelHealthPro guidance';
-  if (!travelAssessment.travelReasonConfirmed) return 'Please confirm the risk region';
-  if (!travelAssessment.timingConfirmed) return 'Please confirm departure timing';
+  if (!patient.travelDestination.trim()) return '"Travel destination" is required';
+  if (!patient.travelReason) return 'Select the "Risk region"';
+  if (!patient.departureDate) return '"Departure date" is required';
+  if (!patient.itinerary.trim()) return '"Itinerary" is required (the record must carry destination, itinerary and departure date)';
+  if (!patient.recommendationSource.trim()) return '"Source consulted for the recommendation" is required (NaTHNaC / TravelHealthPro, with the date checked)';
+  if (!patient.recommendedAnswer) return 'Answer "Is typhoid vaccination recommended for this destination on current NaTHNaC / TravelHealthPro guidance?" (Yes or No)';
   const days = daysUntilDeparture(patient.departureDate);
-  if (days !== null && days < 14 && !travelAssessment.shortNoticeAdvised)
-    return 'Departure is less than 2 weeks away: confirm the traveller has been told protection may be incomplete';
+  // Under 2 weeks to departure the short-notice tick replaces the timing tick:
+  // the two used to be required together, and the timing tick read "at least
+  // 2 weeks before departure", which a short-notice traveller cannot meet.
+  if (days !== null && days < 14) {
+    if (!travelAssessment.shortNoticeAdvised) return 'Departure is less than 2 weeks away: tick "Travel is sooner than 2 weeks: the traveller has been told protection may be incomplete, and this is recorded"';
+  } else if (!travelAssessment.timingConfirmed) {
+    return 'Tick "Departure is at least 2 weeks away, so protection can develop"';
+  }
   if (patient.previousTyphoidDose && !patient.previousDoseDate)
     return 'Record the date of the previous typhoid dose';
   const years = yearsSincePreviousDose(patient.previousDoseDate);
@@ -50,8 +54,10 @@ export function validateTyphoidStep(
     return 'The previous dose date is in the future: check the date';
   if (patient.previousTyphoidDose && years !== null && years < RENEWAL_WINDOW_YEARS)
     return 'A dose within the last 3 years that is not yet due for renewal excludes: record the advice given and save as not supplied';
-  if (patient.previousTyphoidDose && years !== null && years < 3 && !patient.previousDoseRenewalReason.trim())
-    return 'Previous dose is within 6 months of its renewal date: record that the traveller is returning to a risk area and why the dose is due for renewal, or save as not supplied and refer';
+  if (patient.previousTyphoidDose && years !== null && years < 3 && !patient.previousDoseRenewalAnswer)
+    return 'Answer "Is the traveller returning to a risk area, with the previous dose due for renewal?" (Yes or No)';
+  if (patient.previousTyphoidDose && years !== null && years < 3 && patient.previousDoseRenewalAnswer === 'yes' && !patient.previousDoseRenewalReason.trim())
+    return 'Record why the previous dose is due for renewal in "Returning to a risk area: reason the dose is due for renewal"';
   return null;
 }
 
@@ -78,11 +84,11 @@ export function validateTyphoidConsentStep(
       return 'Record the basis of the Gillick competence assessment';
   }
   if (!consent.understands5YearValidity)
-    return 'Patient must confirm understanding that a booster is needed every 3 years if travel to risk areas continues';
+    return 'Tick "Patient understands a booster is needed every 3 years..." once explained';
   if (!consent.understandsTimingRequirement)
-    return 'Patient must confirm understanding of timing (at least 2 weeks before travel)';
+    return 'Tick "Patient understands the vaccine takes about 2 weeks to work..." once explained';
   if (!consent.certificateRequirement)
-    return 'Patient must confirm understanding that the vaccine is about 70 to 80% effective, does not cover paratyphoid, and that food and water precautions remain the main protection';
+    return 'Tick "Patient understands the vaccine is about 70 to 80% effective..." once explained';
   return null;
 }
 
@@ -91,7 +97,7 @@ export function validateTyphoidMedicalHistoryStep(data: {
   pregnancyDecision: string;
 }): string | null {
   if (data.pregnantOrBreastfeeding && !data.pregnancyDecision.trim())
-    return 'Pregnancy or breastfeeding: discuss and record the decision';
+    return '"Pregnancy or breastfeeding: decision recorded" is required when "Pregnant or breastfeeding" is ticked';
   return null;
 }
 
@@ -106,15 +112,15 @@ export function validateTyphoidContraindicationsStep(data: {
 export function validateTyphoidAdministrationStep(
   summary: Partial<TyphoidSummary>
 ): string | null {
-  if (!summary.adrenalineAvailable) return 'Confirm adrenaline 1 in 1,000, a written anaphylaxis protocol and a telephone are immediately available';
-  if (!summary.vaccineType) return 'Vaccine must be selected';
+  if (!summary.adrenalineAvailable) return 'Tick "Adrenaline (epinephrine) 1 in 1,000 injection is immediately available..."';
+  if (!summary.vaccineType) return 'Select the "Vaccine"';
   if (summary.vaccineType === 'other-vi' && !summary.vaccineBrand?.trim()) return 'Record the brand of the Vi polysaccharide vaccine given';
   if (!summary.batchNumber?.trim()) return 'Batch number is required';
   if (!summary.expiryDate) return 'Expiry date is required';
   if (isExpired(summary.expiryDate)) return 'Vaccine batch has expired: do not administer, quarantine the stock and select an in-date batch';
-  if (!summary.administrationSite) return 'Administration site must be selected';
-  if (!summary.administrationTime) return 'Administration time is required';
-  if (!summary.nextBoosterDue) return 'Record the date the next booster is due';
+  if (!summary.administrationSite) return 'Select the "Administration site"';
+  if (!summary.administrationTime) return '"Time of administration" is required';
+  if (!summary.nextBoosterDue) return '"Next booster due (3 years)" is required';
   return null;
 }
 
@@ -130,17 +136,21 @@ export function validateTyphoidPostVaccineStep(data: {
   adverseReactionDetails: string;
 }): string | null {
   if (!data.observationCompleted)
-    return 'Confirm the 15 minute observation period was completed';
+    return 'Tick "Observed for 15 minutes after vaccination..." once the 15 minutes have elapsed';
   if (data.adverseReaction && !data.adverseReactionDetails.trim())
-    return 'Record the adverse reaction and the action taken';
+    return '"Adverse reaction and action taken" is required when "Adverse reaction observed" is ticked';
   if (!data.counselledFoodWater)
-    return 'Food and water hygiene advice must be given and recorded in every case';
+    return 'Tick "Food and water hygiene advice given..." (required in every case)';
   if (!data.counselledFeverWarning)
-    return 'The post-travel fever warning must be given and recorded';
-  if (!data.counselledReactions || !data.counselledValidity || !data.counselledCertificate)
-    return 'Please confirm all counselling points';
+    return 'Tick "Post-travel fever warning given..." once the warning has been given';
+  if (!data.counselledReactions)
+    return 'Tick "Patient has been advised of common reactions..." once done';
+  if (!data.counselledValidity)
+    return 'Tick "Patient understands a booster is needed every 3 years..." once explained';
+  if (!data.counselledCertificate)
+    return 'Tick "Patient advised to seek medical attention for a serious adverse reaction..." once explained';
   if (!data.patientAdvised)
-    return 'Patient must be advised of common reactions and given safety information';
+    return 'Tick "All counselling completed and documented"';
   return null;
 }
 

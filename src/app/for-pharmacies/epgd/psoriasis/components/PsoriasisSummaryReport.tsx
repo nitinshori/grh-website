@@ -73,7 +73,7 @@ export function PsoriasisSummaryReport({ patient, consent, clinical: c, summary,
           <Row label="Body surface affected" value={c.extentPercent ? `${c.extentPercent}% (${c.extentEstimatedHow || "method not recorded"})` : "Not recorded"} />
           <Row label="Sites treated" value={`${c.sites || "Not recorded"}${c.scalpInvolved ? "; scalp involved" : ""}`} />
           <Row label="Face, genitals, flexures" value={c.faceGenitalFlexural ? "INVOLVED (excluded)" : "Not involved"} />
-          <Row label="Course" value={c.courseType === "repeat" ? `Repeat. Last course ended ${c.lastCourseEndDate || "not recorded"}; GP review agreeing continuation on ${c.gpReviewDate || "not recorded"}` : c.courseType === "first" ? "First course under this PGD" : "Not recorded"} />
+          <Row label="Course" value={c.courseType === "repeat" ? `Repeat. Last course ended ${c.lastCourseEndDate || "not recorded"}; GP review since the last course: ${c.gpReviewedSinceLastCourse === "yes" ? `yes, continuation agreed on ${c.gpReviewDate || "date not recorded"}` : c.gpReviewedSinceLastCourse === "no" ? "NO (excluded)" : "not recorded"}` : c.courseType === "first" ? "First course under this PGD" : "Not recorded"} />
           <Row label="Courses in the last 12 months" value={COURSES_LABEL[c.coursesLast12Months] || "Not recorded"} />
           <Row label="Allergies" value={c.allergies.trim() || "Not recorded"} />
           <Row

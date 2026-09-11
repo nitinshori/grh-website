@@ -67,6 +67,8 @@ export interface ChickenpoxVaccineAdmin {
 
 export interface ChickenpoxPostVaccine {
   reactionsObserved: boolean;
+  /** What was observed and the action taken, where an immediate reaction is ticked. */
+  reactionDetails: string;
   rashDeveloped: boolean;
   rashOnset: string;
   contactWithImmunosuppressed: boolean;
@@ -182,6 +184,7 @@ export function createInitialChickenpoxState(): ChickenpoxConsultationState {
     },
     postVaccine: {
       reactionsObserved: false,
+      reactionDetails: "",
       rashDeveloped: false,
       rashOnset: "",
       contactWithImmunosuppressed: false,

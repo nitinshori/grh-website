@@ -22,8 +22,10 @@ export function salbutamolArmBlockers(state: COPDConsultationState): string[] {
   const a = state.assessment;
   if (state.currentMedications.salbutamolAllergy)
     out.push("known hypersensitivity to salbutamol or other beta-2 agonists");
-  if (!a.canUseInhalerOrSpacer)
-    out.push("not capable of using an inhaler device or willing to use a spacer");
+  // Only the recorded answer "No" excludes; a blank answer is a validation
+  // message on the assessment step, never a stop (stop audit, 11 Sep 2026).
+  if (a.inhalerAbilityAnswer === "no")
+    out.push("not capable of using an inhaler device or willing to use a spacer (answer recorded on the COPD Assessment step)");
   if (effectiveSalbutamolSupplies12Months(state) >= MAX_SALBUTAMOL_SUPPLIES_12_MONTHS)
     out.push(
       "already had 2 supplies in the last 12 months under this PGD: a third request is a GP review of the patient's COPD, not a further supply"
@@ -35,9 +37,14 @@ export function amoxicillinArmBlockers(state: COPDConsultationState): string[] {
   const out: string[] = [];
   const a = state.assessment;
   const h = state.medicalHistory;
-  if (a.presentation !== "exacerbation" || !a.purulentSputum)
-    out.push("no acute exacerbation with purulent (yellow/green) sputum recorded");
-  if (!a.ableToTakeOralMedication) out.push("not able to take oral medication");
+  // Each of these fires only on an answer the pharmacist recorded (a
+  // presentation other than exacerbation, or an explicit "No"); a blank
+  // answer is a validation message, never a stop (stop audit, 11 Sep 2026).
+  if (a.presentation && a.presentation !== "exacerbation")
+    out.push("presentation recorded as breathlessness, not an acute exacerbation");
+  if (a.purulentSputumAnswer === "no")
+    out.push("purulent (yellow/green) sputum recorded as absent");
+  if (a.oralAbilityAnswer === "no") out.push("not able to take oral medication (answer recorded on the COPD Assessment step)");
   if (state.currentMedications.penicillinAllergy)
     out.push("known penicillin or beta-lactam allergy");
   if (h.infectiousMononucleosis)
@@ -55,28 +62,20 @@ export function getAllAlerts(state: COPDConsultationState): ClinicalAlert[] {
   const h = state.medicalHistory;
   const r = state.redFlags;
 
-  // Only assert this once the pharmacist has worked past the assessment
-  // step where the box is ticked. Before then the consultation has not
-  // reached the question, and firing a hard stop on step 0 blocked the
-  // tool outright (pattern reported by Rachel on Wegovy tablets, Aug 2026).
-  if (state.currentStep > 2 && !a.hasExistingDiagnosis) {
+  // Fires only on the recorded answer "No". A blank answer is a validation
+  // message on the assessment step; an unvisited step is never a stop
+  // (stop audit, 11 Sep 2026).
+  if (a.diagnosisStatus === "not-confirmed") {
     alerts.push({
       severity: "stop",
       code: "NO_COPD_DX",
-      message: "No confirmed COPD diagnosis recorded",
+      message: "No confirmed COPD diagnosis",
       detail:
-        "Inclusion requires a confirmed diagnosis of COPD with documented spirometry and GOLD classification. Refer to GP.",
+        "Inclusion requires a confirmed diagnosis of COPD with documented spirometry and GOLD classification. Do not supply; refer to the GP for assessment.",
     });
   }
-  if (state.currentStep > 2 && !a.presentation) {
-    alerts.push({
-      severity: "stop",
-      code: "NO_INDICATION",
-      message: "No acute exacerbation or breathlessness recorded",
-      detail:
-        "This PGD is for acute symptom relief in an acute exacerbation or an episode of breathlessness requiring symptom relief. Record the presentation or do not supply.",
-    });
-  }
+  // A blank presentation is a validation message on the assessment step
+  // (and again at medicine supply), not a stop (stop audit, 11 Sep 2026).
 
   // Severe exacerbation with hypoxia: emergency referral and oxygen therapy
   const spo2Low = a.spo2 !== null && a.spo2 < 88;

@@ -382,8 +382,8 @@ export default function SkinInfectionClient({ variant = "skin-infection" }: { va
                       ]
                     : [
                         { value: "mild", label: "Mild: localised, patient well" },
-                        { value: "moderate", label: "Moderate: larger area, patient well" },
-                        { value: "severe", label: "Severe: extensive or patient unwell (refer)" },
+                        { value: "moderate", label: "Moderate: larger area or more than one body region (the Appendix 2 'more extensive' definition below), patient well" },
+                        { value: "severe", label: "Severe: patient unwell, or beyond the Appendix 2 definition (refer)" },
                       ]
                 }
                 required
@@ -415,7 +415,7 @@ export default function SkinInfectionClient({ variant = "skin-infection" }: { va
                       required
                     />
                     <TextInput
-                      label="Number of body regions involved"
+                      label="Number of body regions involved (a region is one limb, the trunk, or the head and neck: 1 if the infection is in a single area)"
                       value={a.bodyRegionCount}
                       onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "bodyRegionCount", value: v })}
                       type="number"
@@ -854,6 +854,23 @@ export default function SkinInfectionClient({ variant = "skin-infection" }: { va
                 ]}
                 required
               />
+              {choice === "clarithromycin" && !mh.renalFunction && (
+                <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
+                  <SelectInput
+                    label="Renal function (ask before supply; required for the clarithromycin arm)"
+                    value={mh.renalFunction}
+                    onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "renalFunction", value: v })}
+                    options={[
+                      { value: "not-known-no-concern", label: "Not known, and no reason to suspect impairment" },
+                      { value: "known-crcl-30-or-above", label: "Known impairment, creatinine clearance 30 mL/min or above" },
+                      { value: "crcl-below-30-or-suspected", label: "Creatinine clearance below 30 mL/min, or unknown severity with reason to suspect it is significant" },
+                      { value: "crcl-below-10", label: "Creatinine clearance below 10 mL/min" },
+                    ]}
+                    required
+                  />
+                  <p className="text-xs text-gray-600 mt-1">Not answered on the Medical History step. Answer it here; the same answer is recorded there.</p>
+                </div>
+              )}
               {doseRecommendation && (
                 <div className="p-4 bg-[color:var(--tenant-primary)]/10 rounded-lg border border-[color:var(--tenant-primary)]/30">
                   <p className="text-sm font-semibold text-navy-900">{doseRecommendation.medicine}</p>
@@ -960,7 +977,7 @@ export default function SkinInfectionClient({ variant = "skin-infection" }: { va
           >
             {stopPanel}
             <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
-              <p className="text-sm font-medium text-navy-900 mb-3">Confirm counselling covered:</p>
+              <p className="text-sm font-medium text-navy-900 mb-3">Confirm counselling covered (every item shown is required before Next):</p>
               <Checkbox
                 label="Finish the course, even if symptoms resolve earlier"
                 checked={state.counselling.completeCourse}
@@ -993,7 +1010,7 @@ export default function SkinInfectionClient({ variant = "skin-infection" }: { va
               />
               <Checkbox
                 label="Stop and seek urgent help if you develop a rash, wheeze, or swelling of the lips or tongue. Call 999 for any difficulty breathing"
-                description={cellulitisPgd ? "Cellulitis PGD cautions: anaphylaxis with beta-lactams, AGEP and severe cutaneous reactions" : undefined}
+                description={cellulitisPgd ? "Cellulitis PGD cautions: anaphylaxis with beta-lactams, acute generalised exanthematous pustulosis (AGEP) and other severe cutaneous reactions" : undefined}
                 checked={state.counselling.seriousReactionAdvice}
                 onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "seriousReactionAdvice", value: v })}
               />
@@ -1050,7 +1067,7 @@ export default function SkinInfectionClient({ variant = "skin-infection" }: { va
               )}
               {cellulitisPgd && (
                 <Checkbox
-                  label="Self-care: paracetamol or ibuprofen for pain and fever if appropriate (not if at risk of HAGMA with flucloxacillin); drink adequate fluids; elevate the leg; avoid compression garments during acute cellulitis; manage comorbidities such as diabetes; prevention advice (weight loss where applicable, emollients for dry or cracking skin)"
+                  label="Self-care: paracetamol or ibuprofen for pain and fever if appropriate (avoid regular paracetamol with flucloxacillin where there is a risk of high anion gap metabolic acidosis, HAGMA: sepsis, renal impairment, malnutrition, older age); drink adequate fluids; elevate the leg; avoid compression garments during acute cellulitis; manage comorbidities such as diabetes; prevention advice (weight loss where applicable, emollients for dry or cracking skin)"
                   checked={state.counselling.selfCareAdvice}
                   onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "selfCareAdvice", value: v })}
                 />

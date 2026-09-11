@@ -77,7 +77,7 @@ export function validateStep(step: number, state: MMRConsultationState): string 
 
     case 3: // Medical History
       if (state.medicalHistory.recentBloodProducts && !state.medicalHistory.bloodProductsAction) {
-        return "Blood products or immunoglobulin in the previous 3 months: record whether vaccination was deferred or given now to be repeated after 3 months";
+        return "Blood products or immunoglobulin in the previous 3 months: answer \"Which applied?\" (deferred, or given now to be repeated after 3 months)";
       }
       return null;
 
@@ -87,7 +87,7 @@ export function validateStep(step: number, state: MMRConsultationState): string 
     case 5: {
       // Vaccine Admin
       if (!state.vaccineAdmin.vaccine.trim()) {
-        return "Vaccine type must be specified";
+        return "Select the vaccine";
       }
       if (!state.vaccineAdmin.doseNumber) {
         return "Dose number (1 or 2) is required";
@@ -99,13 +99,19 @@ export function validateStep(step: number, state: MMRConsultationState): string 
         return "One documented dose recorded on the eligibility step: this administration is dose 2";
       }
       if (!state.vaccineAdmin.route) {
-        return "Record the route";
+        return "Select the route";
       }
       if (state.vaccineAdmin.route !== "subcutaneous") {
-        return "This PGD authorises the subcutaneous route only (preferably the upper arm or thigh)";
+        return "Route: this PGD authorises the subcutaneous route only (preferably the upper arm or thigh); select Subcutaneous";
       }
       if (!state.vaccineAdmin.vaccinationDate) {
         return "Vaccination date is required";
+      }
+      {
+        const ahead = daysBetween(new Date().toISOString().split("T")[0], state.vaccineAdmin.vaccinationDate);
+        if (ahead !== null && ahead > 0) {
+          return "Vaccination date cannot be in the future";
+        }
       }
       if (state.vaccineAdmin.doseNumber === "2") {
         if (!state.vaccineAdmin.previousDoseDate) {
@@ -139,8 +145,18 @@ export function validateStep(step: number, state: MMRConsultationState): string 
       if (state.vaccineAdmin.doseNumber === "1" && !state.vaccineAdmin.nextDoseDue) {
         return "Record the date the next dose is due";
       }
+      if (state.vaccineAdmin.doseNumber === "1" && state.vaccineAdmin.nextDoseDue) {
+        const gap = daysBetween(state.vaccineAdmin.vaccinationDate, state.vaccineAdmin.nextDoseDue);
+        const monthsAtNext = ageInMonths(state.patient.dateOfBirth, state.vaccineAdmin.nextDoseDue);
+        const minimum = monthsAtNext !== null && monthsAtNext < 18 ? 90 : 28;
+        if (gap !== null && gap < minimum) {
+          return minimum === 90
+            ? "Date the next dose is due: at least 3 months after this dose where both doses are given under 18 months of age"
+            : "Date the next dose is due: at least 4 weeks after this dose";
+        }
+      }
       if (!state.vaccineAdmin.injectionSite.trim()) {
-        return "Injection site is required";
+        return "Injection site (anatomical site) is required";
       }
       if (!state.vaccineAdmin.lotNumber.trim()) {
         return "Batch number is required";
@@ -156,26 +172,29 @@ export function validateStep(step: number, state: MMRConsultationState): string 
         }
       }
       if (!state.vaccineAdmin.administeredBy.trim()) {
-        return "Administered by (name/credentials) is required";
+        return "Administered by (name and credentials) is required";
       }
       return null;
     }
 
     case 6: // Post-Vaccine and counselling
       if (!state.postVaccine.observationCompleted) {
-        return "Record that the 15 minute seated observation period was completed";
+        return "Tick \"Observed for 15 minutes after vaccination\" once the observation period has been completed";
+      }
+      if (state.postVaccine.reactionsObserved && !state.postVaccine.reactionDetails.trim()) {
+        return "Immediate reaction ticked: record the reaction observed and the action taken";
       }
       if (age !== null && age >= 12 && (!state.postVaccine.pregnancyAdviceGiven || !state.counselling.pregnancyAvoidanceAdvice)) {
-        return "Advise that pregnancy must be avoided for one month after vaccination and record that this was done";
+        return "Tick \"Pregnancy avoidance advice given\": required for every patient aged 12 and over";
       }
       if (!state.counselling.sideEffectsExplained) {
-        return "Confirm information on common side effects and when to seek further medical advice was provided";
+        return "Tick \"Common side effects explained and when to seek further medical advice\"";
       }
       if (!state.counselling.pilSupplied) {
-        return "Confirm the patient information leaflet was supplied";
+        return "Tick \"Patient information leaflet (PIL) supplied\"";
       }
       if (state.vaccineAdmin.doseNumber === "1" && !state.counselling.reviewScheduleAdvice) {
-        return "Confirm the patient was told when the second dose is due";
+        return "Tick \"Told when the next dose is due\"";
       }
       return null;
 

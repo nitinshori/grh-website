@@ -43,6 +43,9 @@ export interface HLContraindications {
   depressiveMoodDetail: string;
   /** Documented reason for proceeding despite current depression or mood symptoms. */
   moodProceedReason: string;
+  /** Pharmacist has decided not to supply because of the mood symptoms and
+   *  is referring instead: a stop, so the referral can be saved as not supplied. */
+  moodReferred: boolean;
   /** Current suicidal ideation: stop and refer. */
   suicidalIdeation: boolean;
   /** Attestation that the mood questions were put to the patient. */
@@ -173,6 +176,7 @@ export function createInitialConsultationState(): HLConsultationState {
       depressiveMood: false,
       depressiveMoodDetail: "",
       moodProceedReason: "",
+      moodReferred: false,
       suicidalIdeation: false,
       questionsAsked: false,
     },

@@ -196,49 +196,60 @@ export default function EyeInfectionsClient() {
         if (base) return base;
         if (state.patient.age !== null && state.patient.age < 16) {
           if (!state.consent.consentBasis || state.consent.consentBasis === "patient") {
-            return "For a patient under 16, record whether the child is Gillick competent or a person with parental responsibility gave consent";
+            return "Consent basis: for a patient under 16, select whether the child was Gillick competent or a person with parental responsibility gave consent";
           }
           if (state.consent.consentBasis === "parental") {
-            if (!state.consent.consentGivenByName.trim()) return "Record the name of the person with parental responsibility who gave consent";
-            if (!state.consent.consentGivenByRelationship.trim()) return "Record the relationship of the person who gave consent to the patient";
+            if (!state.consent.consentGivenByName.trim()) return "Name of person with parental responsibility: record who gave consent";
+            if (!state.consent.consentGivenByRelationship.trim()) return "Relationship to patient: record the relationship of the person who gave consent";
           }
         }
         return null;
       }
       case 2: {
         if (hasStopAlerts) return "Patient meets exclusion criteria. Advise on alternative options; record the advice given and the decision reached in the box above; inform or refer to the GP as appropriate. Use Save as not supplied.";
-        if (!state.assessment.eyeAffected) return "Please record which eye is affected";
-        if (!state.assessment.durationSymptoms) return "Please record the duration of symptoms";
-        if (!state.assessment.redEye || !state.assessment.stickyDischarge) return "Clinical diagnosis of bacterial conjunctivitis requires conjunctival injection (red eye) and purulent discharge (inclusion criterion)";
-        if (!state.assessment.ableToInstil) return "Please confirm the patient is able to instil drops / apply ointment, or have this done by a carer (inclusion criterion)";
-        if (!state.assessment.questionsAsked) return "Confirm that each of the exclusion and red-flag questions has been put to the patient";
+        if (!state.assessment.eyeAffected) return "Eye Affected: select left, right or both";
+        if (!state.assessment.durationSymptoms) return "Duration of Symptoms: select how long the symptoms have been present";
+        if (!state.assessment.redEye || !state.assessment.stickyDischarge) return "Both Purulent discharge and Red eye / conjunctival injection must be ticked: a clinical diagnosis of bacterial conjunctivitis needs both (inclusion criterion). If either is absent, the diagnosis is not met; refer.";
+        if (!state.assessment.ableToInstil) return "Tick Able to instil drops / apply ointment, or have this done by a carer (inclusion criterion)";
+        if (!state.assessment.questionsAsked) return "Tick the confirmation at the bottom: I have asked the patient every question above (ticked boxes are Yes, unticked boxes are No)";
         return null;
       }
       case 3: {
         const f = state.treatment.formulation;
         const t = state.treatment;
-        if (!f) return "Please select the formulation supplied";
+        if (!f) return "Formulation: select the formulation supplied";
         if (f === "drops" || f === "both") {
-          if (!t.dropsBrand.trim()) return "Please record the brand of eye drops dispensed";
-          if (!t.dropsBatchNumber.trim()) return "Please record the eye drops batch number";
-          if (!t.dropsExpiry) return "Please record the eye drops expiry date";
-          if (t.dropsExpiry < today) return "The eye drops expiry date is before today; do not supply an expired product";
+          if (!t.dropsBrand.trim()) return "Eye drops, Brand dispensed: record the brand of eye drops dispensed";
+          if (!t.dropsBatchNumber.trim()) return "Eye drops, Batch Number: record the batch number from the bottle or carton";
+          if (!t.dropsExpiry) return "Eye drops, Expiry Date: record the expiry date from the bottle or carton";
+          if (t.dropsExpiry < today) return "Eye drops, Expiry Date: this date is before today; do not supply an expired product";
         }
         if (f === "ointment" || f === "both") {
-          if (!t.ointmentBrand.trim()) return "Please record the brand of eye ointment dispensed";
-          if (!t.ointmentBatchNumber.trim()) return "Please record the eye ointment batch number";
-          if (!t.ointmentExpiry) return "Please record the eye ointment expiry date";
-          if (t.ointmentExpiry < today) return "The eye ointment expiry date is before today; do not supply an expired product";
+          if (!t.ointmentBrand.trim()) return "Eye ointment, Brand dispensed: record the brand of eye ointment dispensed";
+          if (!t.ointmentBatchNumber.trim()) return "Eye ointment, Batch Number: record the batch number from the tube or carton";
+          if (!t.ointmentExpiry) return "Eye ointment, Expiry Date: record the expiry date from the tube or carton";
+          if (t.ointmentExpiry < today) return "Eye ointment, Expiry Date: this date is before today; do not supply an expired product";
         }
         return null;
       }
       case 4: {
         const c = state.counselling;
-        if (!c.handsBeforeAfter || !c.noSharing || !c.completeCourse || !c.returnIfWorse || !c.urgentSymptoms || !c.reportAdverse || !c.blurredVisionWarning) return "Please confirm all counselling points";
-        if (state.assessment.contactLensWearer && !c.discardContactLenses) return "Please confirm contact lens advice (remove during treatment and for 48 hours after completion)";
-        if ((state.treatment.formulation === "drops" || state.treatment.formulation === "both") && !c.innerCanthusPressure) return "Please confirm inner canthus pressure advice for drops";
-        if (state.assessment.pregnantOrBreastfeeding && !c.pregnancyInform) return "Please confirm pregnancy advice";
-        if (!c.pilSupplied) return "Please confirm the patient information leaflet has been supplied";
+        const points: [boolean, string][] = [
+          [c.handsBeforeAfter, "Wash hands before and after applying drops/ointment"],
+          [c.noSharing, "Do not share towels, pillows, or cosmetics during treatment"],
+          [c.completeCourse, "Complete the full 5-day course"],
+          [c.discard28Days, "Discard remaining drops/ointment 28 days after opening"],
+          [c.returnIfWorse, "Symptoms should improve within 48 hours"],
+          [c.urgentSymptoms, "If symptoms worsen, or eye pain, photophobia or vision changes develop, seek immediate medical advice"],
+          [c.blurredVisionWarning, "Informed of temporary blurred vision"],
+          [c.reportAdverse, "Report any adverse reactions or unexpected effects"],
+        ];
+        const missing = points.find(([done]) => !done);
+        if (missing) return `Counselling point not yet ticked: "${missing[1]}". Tick each point once it has been covered with the patient.`;
+        if (state.assessment.contactLensWearer && !c.discardContactLenses) return "Counselling point not yet ticked: Contact lens wearers (this patient wears contact lenses): remove lenses during treatment and for 48 hours after completion";
+        if ((state.treatment.formulation === "drops" || state.treatment.formulation === "both") && !c.innerCanthusPressure) return "Counselling point not yet ticked: Drops: apply pressure to the inner canthus (drops are being supplied)";
+        if (state.assessment.pregnantOrBreastfeeding && !c.pregnancyInform) return "Counselling point not yet ticked: If pregnancy is discovered during treatment, inform a healthcare provider (this patient is pregnant or breastfeeding)";
+        if (!c.pilSupplied) return "Tick Patient information leaflet (PIL) supplied with the chloramphenicol drops/ointment";
         return null;
       }
       case 5: {
@@ -333,7 +344,7 @@ export default function EyeInfectionsClient() {
               onChange={(field, value) => setState(prev => ({ ...prev, patient: { ...prev.patient, [field]: value, ...(field === "dateOfBirth" ? { age: calculateAge(String(value)) } : {}) } }))}
               requireAdult={false}
             />
-            <p className="text-xs text-gray-500">Adults and children aged 2 years and over. Address and GP practice are required for the PGD record.</p>
+            <p className="text-xs text-gray-500">Adults and children aged 2 years and over. Patient address and GP practice are required for the PGD record, as well as the fields marked *.</p>
           </div>
         )}
 
@@ -412,7 +423,7 @@ export default function EyeInfectionsClient() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-3">Symptoms (select all that apply)</label>
+              <label className="block text-sm font-medium text-gray-900 mb-3">Symptoms (tick all that apply; the first two are both required for the diagnosis)</label>
               <div className="space-y-2">
                 <Checkbox
                   label="Purulent discharge (required for diagnosis)"
@@ -442,7 +453,7 @@ export default function EyeInfectionsClient() {
               </div>
               <div className="mt-3">
                 <Checkbox
-                  label="Able to instil drops / apply ointment, or have this done by a carer"
+                  label="Able to instil drops / apply ointment, or have this done by a carer (required)"
                   checked={state.assessment.ableToInstil}
                   onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, ableToInstil: v } }))}
                   description="Inclusion criterion, both arms"
@@ -452,7 +463,8 @@ export default function EyeInfectionsClient() {
             </div>
 
             <div className="border-t pt-6">
-              <label className="block text-sm font-medium text-gray-900 mb-3">Risk Factors & Contraindications</label>
+              <label className="block text-sm font-medium text-gray-900 mb-1">Risk factors and contraindications</label>
+              <p className="text-xs text-gray-600 mb-3">Ask the patient each question in this section and the Red Flags section below. Tick the box if the answer is Yes; leave it unticked if the answer is No. Unticked boxes are recorded as No. Then tick the confirmation at the bottom.</p>
               <div className="space-y-2">
                 <Checkbox
                   label="Contact lens wearer"
@@ -541,7 +553,7 @@ export default function EyeInfectionsClient() {
 
             <div className="border-t pt-4">
               <Checkbox
-                label="I have asked the patient each of the exclusion and red-flag questions above and recorded the answers"
+                label="I have asked the patient every exclusion and red-flag question above; ticked boxes are Yes and unticked boxes are No (required)"
                 checked={state.assessment.questionsAsked}
                 onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, questionsAsked: v } }))}
                 required
@@ -643,7 +655,8 @@ export default function EyeInfectionsClient() {
         {currentStep === 4 && (
           <div className="space-y-6">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm font-medium text-gray-900 mb-4">Patient Counselling Checklist</p>
+              <p className="text-sm font-medium text-gray-900 mb-1">Patient Counselling Checklist</p>
+              <p className="text-xs text-gray-600 mb-4">Tick each point once it has been covered with the patient. All are required, except the contact lens and pregnancy points, which are required only where they apply to this patient.</p>
               <div className="space-y-3">
                 <Checkbox
                   label="Wash hands before and after applying drops/ointment"
@@ -656,12 +669,12 @@ export default function EyeInfectionsClient() {
                   onChange={v => setState(prev => ({ ...prev, counselling: { ...prev.counselling, noSharing: v } }))}
                 />
                 <Checkbox
-                  label="Contact lens wearers: remove lenses during treatment and do not reinsert for 48 hours after completion; do not use drops with lenses in; ointment may damage or coat lenses"
+                  label={`Contact lens wearers (${state.assessment.contactLensWearer ? "applies to this patient" : "not recorded for this patient, optional"}): remove lenses during treatment and do not reinsert for 48 hours after completion; do not use drops with lenses in; ointment may damage or coat lenses`}
                   checked={state.counselling.discardContactLenses}
                   onChange={v => setState(prev => ({ ...prev, counselling: { ...prev.counselling, discardContactLenses: v } }))}
                 />
                 <Checkbox
-                  label="Drops: apply pressure to the inner canthus (lacrimal duct area) for 1 to 2 minutes after instillation to reduce systemic absorption and improve local effect"
+                  label={`Drops (${state.treatment.formulation === "ointment" ? "not being supplied, optional" : "being supplied"}): apply pressure to the inner canthus (the corner of the eye next to the nose) for 1 to 2 minutes after instillation to reduce systemic absorption and improve local effect`}
                   checked={state.counselling.innerCanthusPressure}
                   onChange={v => setState(prev => ({ ...prev, counselling: { ...prev.counselling, innerCanthusPressure: v } }))}
                 />
@@ -698,7 +711,7 @@ export default function EyeInfectionsClient() {
                   onChange={v => setState(prev => ({ ...prev, counselling: { ...prev.counselling, reportAdverse: v } }))}
                 />
                 <Checkbox
-                  label="If pregnancy is discovered during treatment, inform a healthcare provider (topical use is low-risk)"
+                  label={`Pregnancy or breastfeeding (${state.assessment.pregnantOrBreastfeeding ? "applies to this patient" : "not recorded for this patient, optional"}): if pregnancy is discovered during treatment, inform a healthcare provider (topical use is low-risk)`}
                   checked={state.counselling.pregnancyInform}
                   onChange={v => setState(prev => ({ ...prev, counselling: { ...prev.counselling, pregnancyInform: v } }))}
                 />
@@ -753,7 +766,7 @@ export default function EyeInfectionsClient() {
               />
             </div>
             <TextArea
-              label="Clinical Notes"
+              label="Clinical Notes (optional)"
               value={state.summary.clinicalNotes}
               onChange={v => setState(prev => ({ ...prev, summary: { ...prev.summary, clinicalNotes: v } }))}
               rows={4}

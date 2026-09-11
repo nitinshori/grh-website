@@ -17,14 +17,14 @@ export function validatePatient(patient: BasePatientDetails, ageConfirmed: boole
 }
 
 export function validateAssessment(assessment: SleepMelatoninAssessment, secondaryCauses: SleepMelatoninSecondaryCauses): string | null {
-  if (!assessment.ageConfirmed) return "Please confirm patient is 55 years or older";
-  if (!assessment.sleepOnsetIssue && !assessment.sleepMaintenanceIssue) return "Sleep issue must be documented";
-  if (!assessment.durationOfInsomnia) return "Duration of insomnia must be specified";
+  if (!assessment.ageConfirmed) return "Tick 'Age 55 years or older, confirmed'";
+  if (!assessment.sleepOnsetIssue && !assessment.sleepMaintenanceIssue) return "Tick the type of sleep difficulty: 'Sleep onset difficulty' or 'Sleep maintenance difficulty' (at least one)";
+  if (!assessment.durationOfInsomnia) return "Select the duration of insomnia";
   if (assessment.durationOfInsomnia === "less4w") return "Insomnia present for less than 4 weeks is excluded. Give sleep hygiene advice and review; do not supply";
-  if (!assessment.daytimeFunctioningAffected) return "The PGD requires poor quality of sleep affecting daytime functioning";
-  if (!assessment.daytimeImpact.trim()) return "Record how the insomnia affects daytime functioning (required record)";
-  if (!assessment.sleepHygieneAdviceGiven) return "Sleep hygiene advice (Appendix 1) must be given before supply";
-  if (!secondaryCauses.historyTaken) return "Confirm the secondary-cause history has been taken (mood, pain, snoring and daytime sleepiness, restless legs, nocturia, shift work, alcohol, caffeine, full medicine list)";
+  if (!assessment.daytimeFunctioningAffected) return "Tick 'Poor quality of sleep is affecting daytime functioning'. If daytime functioning is not affected the patient is outside this PGD: do not supply";
+  if (!assessment.daytimeImpact.trim()) return "Complete 'How the insomnia affects daytime functioning' (required record)";
+  if (!assessment.sleepHygieneAdviceGiven) return "Tick 'Sleep hygiene advice given (Appendix 1)': it must be given before supply";
+  if (!secondaryCauses.historyTaken) return "Tick 'History taken covering mood, pain, snoring ... no secondary cause apparent' once each secondary cause has been asked about";
   if (hasSecondaryCause(secondaryCauses)) return "A secondary cause is apparent. Refer, do not supply";
   if (assessment.previousCircadin) {
     if (!assessment.weeksTreatedToDate.trim()) return "Record the total weeks of Circadin treatment to date";
@@ -55,8 +55,24 @@ export function validatePrescription(prescription: SleepMelatoninPrescription, a
   return null;
 }
 
+const COUNSELLING_LABELS: Record<keyof SleepMelatoninCounselling, string> = {
+  takeAfterFoodSwallowWhole: "One tablet a day, 1 to 2 hours before bed, after food; swallow whole",
+  drowsinessDrivingAdvised: "Drowsiness and driving advised",
+  alcoholAdvised: "Alcohol advised",
+  notASedativeExplained: "Not a sleeping tablet in the usual sense",
+  sleepHygieneReinforcedFirstLine: "Sleep hygiene reinforced",
+  avoidScreensAdvised: "Avoid screens before bed",
+  shortCourse13Weeks: "Short course, up to 13 weeks",
+  whenToSeekAdvice: "When to see the GP rather than continuing",
+};
+
 export function validateCounselling(counselling: SleepMelatoninCounselling): string | null {
-  if (!Object.values(counselling).every((v) => v === true)) return "All counselling points must be covered";
+  // Name the unticked points in the words of their labels (walkthrough
+  // review, 11 Sep 2026).
+  const missing = (Object.keys(COUNSELLING_LABELS) as (keyof SleepMelatoninCounselling)[])
+    .filter((k) => counselling[k] !== true)
+    .map((k) => COUNSELLING_LABELS[k]);
+  if (missing.length) return `Tick every counselling point. Not yet ticked: ${missing.join("; ")}`;
   return null;
 }
 

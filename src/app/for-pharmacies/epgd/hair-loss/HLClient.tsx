@@ -17,6 +17,7 @@ import {
   hasHardStops,
   calculateDoseRecommendation,
   PGD_STRAPLINE,
+  NORWOOD_STAGES,
 } from "./lib/hair-loss-clinical-logic";
 import { validateStep } from "./lib/hair-loss-validation";
 import { calculateAge } from "../shared/types";
@@ -270,7 +271,7 @@ export default function HLClient() {
         return (
           <div className="space-y-4">
             <SelectInput
-              label="Norwood-Hamilton Scale (1 to 7)"
+              label="Norwood-Hamilton Scale (stage of male-pattern hair loss, 1 to 7)"
               value={state.clinicalAssessment.norwoodHamiltonScale === null ? "" : String(state.clinicalAssessment.norwoodHamiltonScale)}
               onChange={(v) =>
                 dispatch({
@@ -279,11 +280,14 @@ export default function HLClient() {
                   value: v === "" ? null : Number(v),
                 })
               }
-              options={[1, 2, 3, 4, 5, 6, 7].map((n) => ({ value: String(n), label: `Stage ${n}` }))}
+              options={NORWOOD_STAGES.map(([n, text]) => ({ value: String(n), label: `Stage ${n}: ${text}` }))}
               required
             />
+            <p className="text-xs text-gray-500">
+              The Norwood-Hamilton scale is the standard picture chart for male-pattern hair loss: 1 is no visible recession and 7 is hair only around the sides and back. Choose the stage that best matches the patient.
+            </p>
             <Checkbox
-              label="Androgenetic alopecia (male-pattern baldness) confirmed"
+              label="Androgenetic alopecia (male-pattern baldness) confirmed (required)"
               checked={state.clinicalAssessment.hasAndrogeneticAlopecia}
               onChange={(v) =>
                 dispatch({
@@ -308,7 +312,7 @@ export default function HLClient() {
               required
             />
             <Checkbox
-              label="Family history of male-pattern baldness"
+              label="Family history of male-pattern baldness (optional)"
               checked={state.clinicalAssessment.familyHistory}
               onChange={(v) =>
                 dispatch({
@@ -325,6 +329,9 @@ export default function HLClient() {
       case 3: // Medical History
         return (
           <div className="space-y-4">
+            <p className="text-xs text-gray-600">
+              Ask the patient each question below. Tick the box if the answer is Yes; leave it unticked if the answer is No. Unticked boxes are recorded as No. Then tick the confirmation at the bottom.
+            </p>
             <Checkbox
               label="Liver disease"
               checked={state.medicalHistory.liverDisease}
@@ -351,7 +358,7 @@ export default function HLClient() {
             />
             {state.medicalHistory.prostateCancer && (
               <TextInput
-                label="Details"
+                label="Prostate cancer details"
                 value={state.medicalHistory.prostateCancerDetail}
                 onChange={(v) =>
                   dispatch({
@@ -377,7 +384,7 @@ export default function HLClient() {
             />
             {state.medicalHistory.psaAbnormalities && (
               <TextInput
-                label="Details"
+                label="PSA details"
                 value={state.medicalHistory.psaAbnormaltiesDetail}
                 onChange={(v) =>
                   dispatch({
@@ -438,7 +445,7 @@ export default function HLClient() {
             />
             <div className="pt-3 border-t border-gray-200">
               <Checkbox
-                label="I have asked the patient each of the questions above and recorded the answers"
+                label="I have asked the patient every question above; ticked boxes are Yes and unticked boxes are No (required)"
                 checked={state.medicalHistory.questionsAsked}
                 onChange={(v) =>
                   dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "questionsAsked", value: v })
@@ -452,6 +459,9 @@ export default function HLClient() {
       case 4: // Contraindications
         return (
           <div className="space-y-4">
+            <p className="text-xs text-gray-600">
+              Ask the patient about mood, depression and suicidal thoughts. Tick a box if the answer is Yes; leave it unticked if the answer is No. Then tick the confirmation at the bottom.
+            </p>
             <Checkbox
               label="Patient reports depression or mood changes"
               checked={state.contraindications.depressiveMood}
@@ -479,8 +489,17 @@ export default function HLClient() {
                   placeholder="When, severity, current treatment"
                   required
                 />
+                <Checkbox
+                  label="Not supplying: referring the patient for medical review of their mood symptoms instead"
+                  checked={state.contraindications.moodReferred}
+                  onChange={(v) =>
+                    dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "moodReferred", value: v })
+                  }
+                  description="Tick this to record a referral instead of a supply. The consultation can then be saved as not supplied."
+                />
+                {!state.contraindications.moodReferred && (
                 <TextArea
-                  label="Clinical reason for proceeding despite current depression or mood symptoms (or refer)"
+                  label="Clinical reason for proceeding despite current depression or mood symptoms (required if supplying)"
                   value={state.contraindications.moodProceedReason}
                   onChange={(v) =>
                     dispatch({
@@ -493,6 +512,7 @@ export default function HLClient() {
                   rows={2}
                   required
                 />
+                )}
               </div>
             )}
             <Checkbox
@@ -509,7 +529,7 @@ export default function HLClient() {
             />
             <div className="pt-3 border-t border-gray-200">
               <Checkbox
-                label="I have asked the patient about mood, depression and suicidal ideation and recorded the answers"
+                label="I have asked the patient about mood, depression and suicidal ideation; ticked boxes are Yes and unticked boxes are No (required)"
                 checked={state.contraindications.questionsAsked}
                 onChange={(v) =>
                   dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "questionsAsked", value: v })
@@ -524,7 +544,7 @@ export default function HLClient() {
         return (
           <div className="space-y-4">
             <Checkbox
-              label="Supply finasteride 1 mg tablets, 1 mg orally once daily, with or without food"
+              label="Supply finasteride 1 mg tablets, 1 mg orally once daily, with or without food (required)"
               checked={state.medicineSupply.finasteride1mgOd}
               onChange={(v) =>
                 dispatch({
@@ -587,7 +607,7 @@ export default function HLClient() {
               />
             </div>
             <Checkbox
-              label="Tablets must not be handled by women who are or may become pregnant (risk of fetal harm); partner informed if applicable"
+              label="Advised: tablets must not be handled by women who are or may become pregnant (risk of fetal harm); partner informed if applicable (required)"
               checked={state.medicineSupply.partnerNotified}
               onChange={(v) =>
                 dispatch({
@@ -598,7 +618,7 @@ export default function HLClient() {
               }
             />
             <Checkbox
-              label="Condom recommended if a female partner is pregnant or likely to become pregnant"
+              label="Advised: condom recommended if a female partner is pregnant or likely to become pregnant (required)"
               checked={state.medicineSupply.condomAdvice}
               onChange={(v) =>
                 dispatch({
@@ -610,7 +630,7 @@ export default function HLClient() {
               description="Finasteride is excreted in semen; it is not known whether a male fetus may be affected if its mother is exposed to the semen of a treated man."
             />
             <Checkbox
-              label="Patient will monitor for sexual side effects"
+              label="Patient will monitor for sexual side effects (required)"
               checked={state.medicineSupply.willMonitorSE}
               onChange={(v) =>
                 dispatch({
@@ -622,7 +642,7 @@ export default function HLClient() {
               description="Reduced libido, erectile dysfunction, ejaculation disorders; post-marketing reports of infertility and/or poor seminal quality, with normalisation reported after discontinuation."
             />
             <Checkbox
-              label="Patient understands finasteride can affect PSA levels"
+              label="Patient understands finasteride can affect PSA levels (required)"
               checked={state.medicineSupply.understandsPSAEffect}
               onChange={(v) =>
                 dispatch({
@@ -639,6 +659,7 @@ export default function HLClient() {
       case 6: // Counselling
         return (
           <div className="space-y-4">
+            <p className="text-xs text-gray-600">Tick each counselling point once it has been covered with the patient. All are required.</p>
             <Checkbox
               label="Continuous use for 3 to 6 months before stabilisation of hair loss can be expected; peak hair growth after 2 years; treatment must continue to maintain results"
               checked={state.counselling.effectOnsetTime}

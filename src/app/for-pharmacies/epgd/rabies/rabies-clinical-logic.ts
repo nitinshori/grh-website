@@ -34,10 +34,12 @@ export function evaluateRabiesContraindications(
     neomycinHypersensitivity: false,
     acuteFebrileIllness: false,
     // Cover of the PGD: from age 2 years onwards; children under 2 are not covered.
-    ageAppropriate: patientAge !== null && patientAge >= 2,
+    // Unknown age (no date of birth yet) is not "under 2": the date of birth
+    // is required on the first step, so this only matters before it is typed.
+    ageAppropriate: patientAge === null || patientAge >= 2,
   };
 
-  if (!contraindications.ageAppropriate) {
+  if (patientAge !== null && patientAge < 2) {
     alerts.push({
       severity: 'stop',
       code: 'AGE_UNDER_2_RABIES',
@@ -86,8 +88,13 @@ export function evaluateRabiesContraindications(
   // neomycin it is a component of the product to be used and Rabipur is excluded too.
   if (screening.antibioticHypersensitivity) {
     contraindications.antibioticHypersensitivity = true;
-    contraindications.neomycinHypersensitivity = screening.hypersensitivityIncludesNeomycin !== 'no';
-    if (contraindications.neomycinHypersensitivity) {
+    // The neomycin stop fires only on the answer "Yes, or not known" that the
+    // pharmacist has actually selected. While the select is still blank the
+    // answer is not yet given: Verorab is excluded (caution) and the
+    // validator asks for the neomycin answer (stop audit, 11 Sep 2026).
+    const neomycin = screening.hypersensitivityIncludesNeomycin;
+    contraindications.neomycinHypersensitivity = neomycin === 'yes';
+    if (neomycin === 'yes') {
       alerts.push({
         severity: 'stop',
         code: 'NEOMYCIN_HYPERSENSITIVITY_RABIES',
@@ -100,8 +107,9 @@ export function evaluateRabiesContraindications(
         severity: contraindications.severeEggAllergy ? 'stop' : 'caution',
         code: 'ANTIBIOTIC_HYPERSENSITIVITY_RABIES',
         message: 'Hypersensitivity to polymyxin B or streptomycin: Verorab excluded',
-        detail:
-          'Verorab may contain traces of polymyxin B, streptomycin and neomycin and must not be used. The hypersensitivity has been recorded as not extending to neomycin, so Rabipur (traces of neomycin, chlortetracycline and amphotericin B) may be used.',
+        detail: neomycin === 'no'
+          ? 'Verorab may contain traces of polymyxin B, streptomycin and neomycin and must not be used. The hypersensitivity has been recorded as not extending to neomycin, so Rabipur (traces of neomycin, chlortetracycline and amphotericin B) may be used.'
+          : 'Verorab may contain traces of polymyxin B, streptomycin and neomycin and must not be used. Answer "Does the hypersensitivity extend to neomycin?": if it does, or is not known, Rabipur is excluded too.',
       });
     }
   }

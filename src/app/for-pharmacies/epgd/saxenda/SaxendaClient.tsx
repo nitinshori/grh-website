@@ -6,7 +6,7 @@ import { StepWrapper } from "../shared/components/StepWrapper"
 import type { ConsultationRecordData } from "../shared/hooks/useConsultationTracking"
 import { PatientDetailsStep } from "../shared/steps/PatientDetailsStep"
 import { ConsentStep } from "../shared/steps/ConsentStep"
-import { TextInput, TextArea, Checkbox, NumberInput } from "../shared/components/FormInputs"
+import { TextInput, TextArea, Checkbox, NumberInput, SelectInput } from "../shared/components/FormInputs"
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile"
 import { usePreviousWeightConsultation, describePrevious } from "../shared/hooks/usePreviousWeightConsultation"
 import { calculateAge, validatePatientStep, validateConsentStep, validateSummaryStep } from "../shared/types"
@@ -36,9 +36,62 @@ const DOSE_STAGE_LABELS: Record<string, string> = {
   "1": "1.2 mg once daily (week 2)",
   "2": "1.8 mg once daily (week 3)",
   "3": "2.4 mg once daily (week 4)",
-  "4": "3.0 mg once daily (week 5 onwards, maintenance)",
-  "5": "3.0 mg once daily (maintenance refill)",
+  "4": "3.0 mg once daily (week 5, first maintenance supply)",
+  "5": "3.0 mg once daily (maintenance continuation, already on 3.0 mg)",
 }
+
+// Exclusion checkboxes on the eligibility step, in the order they are shown.
+// Kept as data so the stop reason and the saved record can name the
+// exclusion(s) ticked rather than saying only "exclusion criteria met".
+type ExclusionKey =
+  | "hypersensitivity" | "mtcHistory" | "men2" | "pregnant" | "breastfeeding"
+  | "planningPregnancyWithin2Months" | "severeHeartFailure" | "severeHepatic" | "severeRenal"
+  | "pancreatitisHistory" | "acuteIllness" | "severeGiDisease" | "type1Diabetes"
+  | "diabeticRetinopathy" | "eatingDisorder" | "concurrentGlp1" | "otherWeightManagementMedicine"
+  | "secondaryObesity"
+const EXCLUSION_ITEMS: { key: ExclusionKey; label: string; description?: string }[] = [
+  { key: "hypersensitivity", label: "Known hypersensitivity to liraglutide or any component of the product" },
+  { key: "mtcHistory", label: "Personal or family history of medullary thyroid carcinoma (MTC)" },
+  { key: "men2", label: "Personal or family history of Multiple Endocrine Neoplasia syndrome type 2 (MEN 2)" },
+  { key: "pregnant", label: "Pregnant" },
+  { key: "breastfeeding", label: "Breastfeeding" },
+  { key: "planningPregnancyWithin2Months", label: "Planning pregnancy in the next 2 months (effective contraception required; discontinue at least 2 months before planned conception)" },
+  { key: "severeHeartFailure", label: "Severe heart failure (NYHA class IV)" },
+  { key: "severeHepatic", label: "Severe hepatic impairment (Child-Pugh score C or equivalent)" },
+  { key: "severeRenal", label: "Severe renal impairment (eGFR below 30 mL/min/1.73m²)" },
+  { key: "pancreatitisHistory", label: "History of pancreatitis (acute or chronic)", description: "PGD excludes: any pancreatitis while taking a GLP-1 receptor agonist; acute pancreatitis within 3 months; chronic pancreatitis with ongoing risk factors. This tool excludes any pancreatitis history." },
+  { key: "acuteIllness", label: "Acute illness or recent surgery" },
+  { key: "severeGiDisease", label: "Inflammatory bowel disease, or gastroparesis (use not recommended, SmPC)", description: "Includes diabetic gastroparesis. Other gastrointestinal disorders are a caution (below)." },
+  { key: "type1Diabetes", label: "Type 1 diabetes, or insulin-treated diabetes. Refer." },
+  { key: "diabeticRetinopathy", label: "Diabetic retinopathy requiring treatment", description: "Rapid weight loss may transiently worsen retinopathy." },
+  { key: "eatingDisorder", label: "Current or previous eating disorder", description: "e.g. anorexia nervosa, bulimia, binge-eating disorder, at any time." },
+  { key: "concurrentGlp1", label: "Concurrent use of another GLP-1 receptor agonist", description: "Includes semaglutide, tirzepatide, dulaglutide, exenatide and orforglipron for any indication. Sulfonylureas are a caution (below), not an exclusion." },
+  { key: "otherWeightManagementMedicine", label: "Any other weight-management medicine, current: tirzepatide, semaglutide, orlistat or naltrexone/bupropion" },
+  { key: "secondaryObesity", label: "Obesity secondary to an endocrine disorder, or to a medicine that causes weight gain" },
+]
+
+// Counselling items, in the order shown. Required items are named in the
+// validation message so the pharmacist knows which tick is missing.
+type CounsellingKey =
+  | "pilSupplied" | "injectionTechnique" | "siteRotation" | "storageInstructions" | "missedDoseProtocol"
+  | "dietExercise" | "sideEffectsDiscussed" | "pancreatitisWarning" | "dehydrationWarning"
+  | "hypoglycaemiaWarning" | "thyroidMoodWarning" | "contraception" | "twelveWeekReviewExplained" | "doNotShare"
+const COUNSELLING_ITEMS: { key: CounsellingKey; label: string; short: string; required: boolean; description?: string }[] = [
+  { key: "pilSupplied", label: "Patient information leaflet (PIL) provided with Saxenda supplied", short: "PIL supplied", required: true, description: "Ensure the patient understands the injection technique, storage requirements, and when to seek medical advice." },
+  { key: "injectionTechnique", label: "Injection technique demonstrated and patient confident with the pen (correct subcutaneous technique)", short: "injection technique", required: true },
+  { key: "siteRotation", label: "Rotate injection sites to avoid lipohypertrophy; dispose of used needles safely in a sharps container", short: "site rotation and sharps", required: true },
+  { key: "storageInstructions", label: "Storage: before first use store at 2 to 8°C in a refrigerator; after first use store below 30°C for up to 30 days; do not freeze; protect from light; do not use if discoloured or contains particles", short: "storage", required: true },
+  { key: "missedDoseProtocol", label: "Missed dose: take when remembered if within 12 hours; otherwise skip and continue next day (optional)", short: "missed dose", required: false },
+  { key: "dietExercise", label: "Take the injection at the same time each day for consistency; continue with a reduced-calorie diet and increase physical activity as advised (Saxenda is an adjunct, not a replacement)", short: "diet and activity", required: true },
+  { key: "sideEffectsDiscussed", label: "Expect initial GI side effects (nausea, vomiting, diarrhoea, constipation) which typically improve over the first few weeks; take with food if nausea is problematic", short: "GI side effects", required: true },
+  { key: "pancreatitisWarning", label: "Report persistent or severe abdominal pain immediately, as this may indicate pancreatitis", short: "pancreatitis warning", required: true },
+  { key: "dehydrationWarning", label: "Stay well-hydrated; dehydration counselling on GI side effects", short: "hydration", required: true },
+  { key: "hypoglycaemiaWarning", label: "Hypoglycaemia signs (shakiness, sweating, confusion, rapid heartbeat): inform GP or healthcare provider, particularly if taking insulin or sulfonylureas, as dose adjustment may be needed", short: "hypoglycaemia", required: true },
+  { key: "thyroidMoodWarning", label: "Inform healthcare provider of symptoms of thyroiditis (neck pain, swelling, difficulty swallowing) or depression/mood changes", short: "thyroiditis and mood", required: true },
+  { key: "contraception", label: "Contraception advice given (optional: only if applicable to this patient)", short: "contraception", required: false },
+  { key: "twelveWeekReviewExplained", label: "Attend all review appointments: weight loss monitored at 12 weeks on the 3.0 mg maintenance dose; treatment discontinued if less than 5% body weight loss achieved; if continued, review at least every 6 months", short: "12 week review", required: true },
+  { key: "doNotShare", label: "Do not share the medication with others; Saxenda is supplied specifically for this patient based on their medical history and BMI", short: "do not share", required: true },
+]
 
 const STEP_TITLES = [
   "Patient Details",
@@ -69,7 +122,9 @@ export function SaxendaClient() {
       heightCm: null as number | null,
       weightKg: null as number | null,
       bmi: null as number | null,
-      hasComorbidity: false,
+      // "" not yet answered; only "no" (with BMI 27 to 29.9) stops. An
+      // unticked box never stops (stop audit, 11 Sep 2026).
+      hasComorbidity: "" as "" | "yes" | "no",
       comorbidityDetails: "",
       lifestyleCommitment: false,
       previousWeightLossAttempts: "",
@@ -211,52 +266,48 @@ export function SaxendaClient() {
       ? Math.round((a.initialWeightKg / Math.pow(a.heightCm / 100, 2)) * 10) / 10
       : null
   const bmiForEligibility = a.continuingTreatment ? initialBmi : bmi
-  const bmiEligible = !!(bmiForEligibility && (bmiForEligibility >= 30 || (bmiForEligibility >= 27 && a.hasComorbidity)))
-  const bmiIneligible = bmiForEligibility !== null && !bmiEligible
-  const comorbidityDetailsMissing = !!bmiForEligibility && bmiForEligibility < 30 && a.hasComorbidity && !a.comorbidityDetails.trim()
+  const bmiEligible = !!(bmiForEligibility && (bmiForEligibility >= 30 || (bmiForEligibility >= 27 && a.hasComorbidity === "yes")))
+  // BMI 27 to 29.9 with the comorbidity question not yet answered: not a
+  // stop, a validation message that names the question (stop audit, 11 Sep
+  // 2026). The stop fires only on the answer "No".
+  const bmiNeedsComorbidity = bmiForEligibility !== null && bmiForEligibility >= 27 && bmiForEligibility < 30 && a.hasComorbidity === ""
+  const bmiIneligible = bmiForEligibility !== null && !bmiEligible && !bmiNeedsComorbidity
+  const bmiLabel = a.continuingTreatment ? "Initial BMI" : "BMI"
+  const bmiStopReason = bmiForEligibility !== null && bmiForEligibility >= 27
+    ? `${bmiLabel} ${bmiForEligibility} is between 27 and 29.9 and the patient has no weight-related comorbidity, so does not meet the inclusion criteria (BMI 30 or above, or 27 or above with a weight-related comorbidity)`
+    : `${bmiLabel} ${bmiForEligibility ?? "-"} is below 27 and does not meet the inclusion criteria (BMI 30 or above, or 27 or above with a weight-related comorbidity)`
+  const comorbidityDetailsMissing = !!bmiForEligibility && bmiForEligibility < 30 && a.hasComorbidity === "yes" && !a.comorbidityDetails.trim()
   const daysSinceStart = a.continuingTreatment ? daysBetween(a.treatmentStartDate, today) : null
   const assessmentError: string | null =
-    !bmi || !a.heightCm || !a.weightKg ? "Height and weight are required"
+    !bmi || !a.heightCm || !a.weightKg ? "Height (cm) and Weight today (kg) are required"
     : a.continuingTreatment && !a.treatmentStartDate ? "Treatment start date (first Saxenda supply) is required for a continuing patient"
     : a.continuingTreatment && daysSinceStart !== null && daysSinceStart < 0 ? "Treatment start date cannot be in the future"
-    : a.continuingTreatment && !a.initialWeightKg ? "Initial body weight (at the start of treatment) is required for a continuing patient"
+    : a.continuingTreatment && !a.initialWeightKg ? "Initial body weight at start of treatment (kg) is required for a continuing patient"
+    : bmiNeedsComorbidity ? "Answer \"Does the patient have a weight-related comorbidity?\" (Yes or No): eligibility at BMI 27 to 29.9 depends on it"
     : !bmiEligible
-      ? `${a.continuingTreatment ? "Initial BMI" : "BMI"} does not meet the inclusion criteria (BMI 30 or above, or 27 or above with a weight-related comorbidity). This PGD cannot proceed.`
-    : comorbidityDetailsMissing ? "Name the weight-related comorbidity relied on for BMI 27 to 29.9"
-    : !a.lifestyleCommitment ? "Confirm the patient is willing and motivated to undertake lifestyle modifications"
+      ? `${bmiStopReason}. This PGD cannot proceed.`
+    : comorbidityDetailsMissing ? "Comorbidity details: name the weight-related comorbidity relied on for BMI 27 to 29.9"
+    : !a.lifestyleCommitment ? "Tick \"Patient is willing and motivated to undertake lifestyle modifications\" (inclusion criterion)"
     : null
 
   // Age from date of birth: under 18, or 75 years or over, excludes regardless of the manual tick
   const computedAge = state.patient.age
   const ageExcluded = computedAge !== null && (computedAge < PGD_MIN_AGE || computedAge > PGD_MAX_AGE)
 
-  // Eligibility valid: no exclusions ticked
-  const anyExclusion =
-    ageExcluded ||
-    state.eligibility.ageUnder18 ||
-    state.eligibility.ageOver75 ||
-    state.eligibility.hypersensitivity ||
-    state.eligibility.mtcHistory ||
-    state.eligibility.men2 ||
-    state.eligibility.pregnant ||
-    state.eligibility.breastfeeding ||
-    state.eligibility.planningPregnancyWithin2Months ||
-    state.eligibility.severeHeartFailure ||
-    state.eligibility.severeHepatic ||
-    state.eligibility.severeRenal ||
-    state.eligibility.pancreatitisHistory ||
-    state.eligibility.acuteIllness ||
-    state.eligibility.severeGiDisease ||
-    state.eligibility.type1Diabetes ||
-    state.eligibility.diabeticRetinopathy ||
-    state.eligibility.eatingDisorder ||
-    state.eligibility.concurrentGlp1 ||
-    state.eligibility.otherWeightManagementMedicine ||
-    state.eligibility.secondaryObesity
+  // Eligibility valid: no exclusions ticked. The ticked exclusions are named
+  // in the stop reason and the saved record.
+  const tickedExclusions: string[] = [
+    ...(state.eligibility.ageUnder18 || state.eligibility.ageOver75 ? ["Aged under 18, or aged 75 years or over"] : []),
+    ...EXCLUSION_ITEMS.filter((item) => state.eligibility[item.key]).map((item) => item.label),
+  ]
+  const anyExclusion = ageExcluded || tickedExclusions.length > 0
+  const exclusionSummary = tickedExclusions.length > 0
+    ? `Exclusion ticked: ${tickedExclusions.join("; ")}`
+    : "Exclusion criteria met"
   const eligibilityError: string | null = anyExclusion
-    ? "Exclusion criteria met: this PGD cannot proceed. Advise on alternative treatment options, document the advice given and the decision reached, and inform or refer to the GP as appropriate."
+    ? `${exclusionSummary}: this PGD cannot proceed. Advise on alternative treatment options, document the advice given and the decision reached, and inform or refer to the GP as appropriate.`
     : state.eligibility.sulfonylurea && !state.eligibility.sulfonylureaPrescriberInformed
-      ? "Sulfonylurea is a caution under this PGD (hypoglycaemia risk): confirm the prescriber has been informed"
+      ? "Sulfonylurea is a caution under this PGD (hypoglycaemia risk): tick \"Prescriber informed of the Saxenda supply\" once the prescriber has been informed"
       : null
 
   // Treatment: only the document's regimens. Stage must match the
@@ -272,42 +323,43 @@ export function SaxendaClient() {
     a.continuingTreatment && a.initialWeightKg && a.weightKg && a.initialWeightKg > 0
       ? Math.round(((a.initialWeightKg - a.weightKg) / a.initialWeightKg) * 1000) / 10
       : null
+  // Fires only on a recorded weight loss below 5%. A missing initial weight
+  // is held by the assessment step validator, never a stop (stop audit,
+  // 11 Sep 2026).
   const maintenanceReviewFailed =
     t.doseStage === "5" &&
     weeksOnMaintenance !== null &&
     weeksOnMaintenance >= MAINTENANCE_REVIEW_WEEKS &&
-    (weightLossPercent === null || weightLossPercent < MIN_WEIGHT_LOSS_PERCENT)
+    weightLossPercent !== null &&
+    weightLossPercent < MIN_WEIGHT_LOSS_PERCENT
   const expiryInPast = !!t.expiryDate && t.expiryDate < today
+  const nextReviewInPast = !!t.nextReviewDate && t.nextReviewDate < today
   const treatmentError: string | null =
-    !t.doseStage ? "Select the dose stage for this consultation"
-    : t.doseStage === "init" && a.continuingTreatment ? "Initiation selected for a patient recorded as continuing treatment: go back and correct the assessment, or select the matching stage"
-    : t.doseStage !== "init" && !a.continuingTreatment ? "A titration or maintenance stage needs the treatment start date and initial weight: go back to the assessment and tick continuing treatment"
-    : t.doseStage === "5" && !t.maintenanceStartDate ? "Date the 3.0 mg maintenance dose was reached is required for a maintenance refill"
-    : t.doseStage === "5" && t.maintenanceStartDate < a.treatmentStartDate ? "Maintenance start date cannot be before the treatment start date"
+    !t.doseStage ? "Dose stage at this consultation: select the stage"
+    : t.doseStage === "init" && a.continuingTreatment ? "Initiation selected for a patient recorded as continuing treatment: go back and untick \"Continuing treatment\" on the assessment step, or select the matching stage"
+    : t.doseStage !== "init" && !a.continuingTreatment ? "A titration or maintenance stage needs the treatment start date and initial weight: go back to the assessment step and tick \"Continuing treatment\""
+    : t.doseStage === "5" && !t.maintenanceStartDate ? "Date the 3.0 mg maintenance dose was reached is required for a maintenance continuation"
+    : t.doseStage === "5" && t.maintenanceStartDate < a.treatmentStartDate ? "Date the 3.0 mg maintenance dose was reached cannot be before the treatment start date"
+    : t.doseStage === "5" && weeksOnMaintenance !== null && weeksOnMaintenance >= MAINTENANCE_REVIEW_WEEKS && weightLossPercent === null
+      ? "12 weeks on the maintenance dose reached: go back to the assessment step and enter the Initial body weight at start of treatment (kg) so the 5% weight loss can be calculated"
     : maintenanceReviewFailed
       ? `12 weeks on the maintenance dose reached with ${weightLossPercent === null ? "no" : `${weightLossPercent}%`} body weight loss (less than ${MIN_WEIGHT_LOSS_PERCENT}%): discontinue under this PGD. Record the advice given and inform or refer to the GP.`
-    : !t.injectionSite ? "Injection site is required"
+    : !t.injectionSite ? "Preferred injection site: select the site"
     : !t.batchNumber ? "Pen batch number is required"
     : !t.expiryDate ? "Pen expiry date is required"
     : expiryInPast ? "Pen expiry date is in the past: do not supply this pen"
-    : !t.pensSupplied ? "Number of pens supplied is required"
+    : !t.pensSupplied ? "Number of pre-filled pens supplied: select the number"
+    : nextReviewInPast ? "Next review date cannot be in the past"
     : null
 
-  // Every item in the document's follow-up advice row is required.
+  // Every item in the document's follow-up advice row is required; the
+  // missed dose and contraception items are optional and say so.
   const c = state.counselling
-  const counsellingValid =
-    c.pilSupplied &&
-    c.injectionTechnique &&
-    c.siteRotation &&
-    c.storageInstructions &&
-    c.dietExercise &&
-    c.sideEffectsDiscussed &&
-    c.pancreatitisWarning &&
-    c.dehydrationWarning &&
-    c.hypoglycaemiaWarning &&
-    c.thyroidMoodWarning &&
-    c.twelveWeekReviewExplained &&
-    c.doNotShare
+  const missingCounselling = COUNSELLING_ITEMS.filter((item) => item.required && !c[item.key])
+  const counsellingValid = missingCounselling.length === 0
+  const counsellingError = counsellingValid
+    ? null
+    : `Counselling item not ticked: ${missingCounselling.map((item) => item.short).join("; ")}. Tick each once discussed with the patient.`
 
   const summaryError = validateSummaryStep(state.summary)
 
@@ -315,8 +367,8 @@ export function SaxendaClient() {
   const hasStop = ageExcluded || bmiIneligible || anyExclusion || maintenanceReviewFailed
   const stopReason: string | null = ageExcluded
     ? `Calculated age ${computedAge} years is outside this PGD (18 to 74 years)`
-    : anyExclusion ? "Exclusion criteria met"
-    : bmiIneligible ? "BMI does not meet the inclusion criteria"
+    : anyExclusion ? exclusionSummary
+    : bmiIneligible ? bmiStopReason
     : maintenanceReviewFailed ? "Less than 5% body weight loss at 12 weeks on the maintenance dose"
     : null
 
@@ -326,7 +378,7 @@ export function SaxendaClient() {
     assessmentError,
     eligibilityError,
     treatmentError,
-    counsellingValid ? null : "Tick every counselling item once discussed with the patient",
+    counsellingError,
     summaryError,
     null,
   ]
@@ -471,13 +523,19 @@ export function SaxendaClient() {
               {bmiForEligibility !== null && (
                 <p className="mt-1 text-xs text-gray-600">
                   Eligibility ({state.assessment.continuingTreatment ? `initial BMI ${bmiForEligibility}` : `BMI ${bmiForEligibility}`}): BMI 30 or above, OR 27 or above with at least one weight-related comorbidity
-                  {bmiEligible ? ": ELIGIBLE" : ": NOT ELIGIBLE under this PGD"}.
+                  {bmiEligible ? ": ELIGIBLE" : bmiNeedsComorbidity ? ": answer the comorbidity question below" : ": NOT ELIGIBLE under this PGD"}.
                 </p>
               )}
             </div>
 
-            <Checkbox label="Patient has a weight-related comorbidity" checked={state.assessment.hasComorbidity} onChange={(v) => updateAssessment("hasComorbidity", v)} description="e.g. dysglycaemia (pre-diabetes / T2DM), hypertension, dyslipidaemia, obstructive sleep apnoea." />
-            {state.assessment.hasComorbidity && <TextInput label="Comorbidity details" value={state.assessment.comorbidityDetails} onChange={(v) => updateAssessment("comorbidityDetails", v)} placeholder="e.g. hypertension, OSA" required={!!bmiForEligibility && bmiForEligibility < 30} />}
+            <SelectInput
+              label="Does the patient have a weight-related comorbidity? (e.g. dysglycaemia (pre-diabetes / T2DM), hypertension, dyslipidaemia, obstructive sleep apnoea)"
+              value={state.assessment.hasComorbidity}
+              onChange={(v) => updateAssessment("hasComorbidity", v as "" | "yes" | "no")}
+              options={[{ value: "yes", label: "Yes" }, { value: "no", label: "No" }]}
+              required={!!bmiForEligibility && bmiForEligibility >= 27 && bmiForEligibility < 30}
+            />
+            {state.assessment.hasComorbidity === "yes" && <TextInput label="Comorbidity details" value={state.assessment.comorbidityDetails} onChange={(v) => updateAssessment("comorbidityDetails", v)} placeholder="e.g. hypertension, OSA" required={!!bmiForEligibility && bmiForEligibility < 30} />}
 
             <Checkbox label="Patient is willing and motivated to undertake lifestyle modifications (reduced-calorie diet and increased physical activity)" checked={state.assessment.lifestyleCommitment} onChange={(v) => updateAssessment("lifestyleCommitment", v)} required description="Inclusion criterion. Saxenda is an adjunct to lifestyle modification; do not supply without this commitment." />
 
@@ -488,9 +546,9 @@ export function SaxendaClient() {
 
         {currentStep === 3 && (
           <div className="space-y-5">
-            <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-900">
+            <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-900">
               <p className="font-semibold">Exclusion criteria: tick any that apply</p>
-              <p>If any of these are ticked, this PGD cannot proceed. Advise on alternative treatment options and how these can be accessed. Document any advice given and the decision reached. Inform or refer to the GP as appropriate.</p>
+              <p>A ticked exclusion stops the supply; leaving every box unticked records that none applies. Where one applies, advise on alternative treatment options and how these can be accessed, document the advice given and the decision reached, and inform or refer to the GP as appropriate.</p>
             </div>
             {ageExcluded && (
               <div className="rounded-lg bg-red-100 border border-red-300 p-3 text-sm text-red-900">
@@ -498,24 +556,9 @@ export function SaxendaClient() {
               </div>
             )}
             <Checkbox label="Aged under 18, or aged 75 years or over" checked={state.eligibility.ageUnder18 || state.eligibility.ageOver75} onChange={(v) => { updateEligibility("ageUnder18", v); updateEligibility("ageOver75", v); }} description="Inclusion: age 18 years and over. Exclusion: aged 75 years or over (use not recommended, SmPC). Refer outside this range." />
-            <Checkbox label="Known hypersensitivity to liraglutide or any component of the product" checked={state.eligibility.hypersensitivity} onChange={(v) => updateEligibility("hypersensitivity", v)} />
-            <Checkbox label="Personal or family history of medullary thyroid carcinoma (MTC)" checked={state.eligibility.mtcHistory} onChange={(v) => updateEligibility("mtcHistory", v)} />
-            <Checkbox label="Personal or family history of Multiple Endocrine Neoplasia syndrome type 2 (MEN 2)" checked={state.eligibility.men2} onChange={(v) => updateEligibility("men2", v)} />
-            <Checkbox label="Pregnant" checked={state.eligibility.pregnant} onChange={(v) => updateEligibility("pregnant", v)} />
-            <Checkbox label="Breastfeeding" checked={state.eligibility.breastfeeding} onChange={(v) => updateEligibility("breastfeeding", v)} />
-            <Checkbox label="Planning pregnancy in the next 2 months (effective contraception required; discontinue ≥2 months before planned conception)" checked={state.eligibility.planningPregnancyWithin2Months} onChange={(v) => updateEligibility("planningPregnancyWithin2Months", v)} />
-            <Checkbox label="Severe heart failure (NYHA class IV)" checked={state.eligibility.severeHeartFailure} onChange={(v) => updateEligibility("severeHeartFailure", v)} />
-            <Checkbox label="Severe hepatic impairment (Child-Pugh score C or equivalent)" checked={state.eligibility.severeHepatic} onChange={(v) => updateEligibility("severeHepatic", v)} />
-            <Checkbox label="Severe renal impairment (eGFR <30 mL/min/1.73m²)" checked={state.eligibility.severeRenal} onChange={(v) => updateEligibility("severeRenal", v)} />
-            <Checkbox label="History of pancreatitis (acute or chronic)" checked={state.eligibility.pancreatitisHistory} onChange={(v) => updateEligibility("pancreatitisHistory", v)} description="PGD excludes: any pancreatitis while taking a GLP-1 receptor agonist; acute pancreatitis within 3 months; chronic pancreatitis with ongoing risk factors. This tool excludes any pancreatitis history." />
-            <Checkbox label="Acute illness or recent surgery" checked={state.eligibility.acuteIllness} onChange={(v) => updateEligibility("acuteIllness", v)} />
-            <Checkbox label="Inflammatory bowel disease, or gastroparesis (use not recommended, SmPC)" checked={state.eligibility.severeGiDisease} onChange={(v) => updateEligibility("severeGiDisease", v)} description="Includes diabetic gastroparesis. Other gastrointestinal disorders are a caution (below)." />
-            <Checkbox label="Type 1 diabetes, or insulin-treated diabetes. Refer." checked={state.eligibility.type1Diabetes} onChange={(v) => updateEligibility("type1Diabetes", v)} />
-            <Checkbox label="Diabetic retinopathy requiring treatment" checked={state.eligibility.diabeticRetinopathy} onChange={(v) => updateEligibility("diabeticRetinopathy", v)} description="Rapid weight loss may transiently worsen retinopathy." />
-            <Checkbox label="Current or previous eating disorder" checked={state.eligibility.eatingDisorder} onChange={(v) => updateEligibility("eatingDisorder", v)} description="e.g. anorexia nervosa, bulimia, binge-eating disorder, at any time." />
-            <Checkbox label="Concurrent use of another GLP-1 receptor agonist" checked={state.eligibility.concurrentGlp1} onChange={(v) => updateEligibility("concurrentGlp1", v)} description="Includes semaglutide, tirzepatide, dulaglutide, exenatide and orforglipron for any indication. Sulfonylureas are a caution (below), not an exclusion." />
-            <Checkbox label="Any other weight-management medicine, current: tirzepatide, semaglutide, orlistat or naltrexone/bupropion" checked={state.eligibility.otherWeightManagementMedicine} onChange={(v) => updateEligibility("otherWeightManagementMedicine", v)} />
-            <Checkbox label="Obesity secondary to an endocrine disorder, or to a medicine that causes weight gain" checked={state.eligibility.secondaryObesity} onChange={(v) => updateEligibility("secondaryObesity", v)} />
+            {EXCLUSION_ITEMS.map((item) => (
+              <Checkbox key={item.key} label={item.label} checked={state.eligibility[item.key]} onChange={(v) => updateEligibility(item.key, v)} description={item.description} />
+            ))}
 
             <div className="border-t border-gray-200 pt-4 space-y-2">
               <p className="text-sm font-semibold text-navy-900">Cautions (continue with extra counselling)</p>
@@ -564,13 +607,13 @@ export function SaxendaClient() {
                 <option value="1">Week 2: 1.2 mg once daily</option>
                 <option value="2">Week 3: 1.8 mg once daily</option>
                 <option value="3">Week 4: 2.4 mg once daily</option>
-                <option value="4">Week 5 onwards, maintenance: 3.0 mg once daily</option>
-                <option value="5">Maintenance refill: 3.0 mg once daily</option>
+                <option value="4">Week 5: first 3.0 mg maintenance supply</option>
+                <option value="5">Maintenance continuation: patient already on 3.0 mg once daily</option>
               </select>
               <p className="mt-1 text-xs text-gray-500">
                 {state.assessment.continuingTreatment
-                  ? `Continuing patient: treatment started ${state.assessment.treatmentStartDate || "(date not recorded)"}${daysSinceStart !== null ? `, week ${Math.floor(daysSinceStart / 7) + 1} of treatment` : ""}.`
-                  : "New patient: select Initiation. Tick continuing treatment on the assessment step for any later stage."}
+                  ? `Continuing patient: treatment started ${state.assessment.treatmentStartDate || "(date not recorded)"}${daysSinceStart !== null ? `, week ${Math.floor(daysSinceStart / 7) + 1} of treatment` : ""}. Choose "first 3.0 mg maintenance supply" only for the patient's first pen at 3.0 mg; every later 3.0 mg supply is a "maintenance continuation" and needs the date the 3.0 mg dose was reached, so the 12 week review can be applied.`
+                  : "New patient: select Initiation. Tick \"Continuing treatment\" on the assessment step for any later stage."}
               </p>
             </div>
 
@@ -650,21 +693,10 @@ export function SaxendaClient() {
 
         {currentStep === 5 && (
           <div className="space-y-3">
-            <p className="text-sm text-gray-600">Tick each item once discussed with the patient.</p>
-            <Checkbox label="Patient information leaflet (PIL) provided with Saxenda supplied" checked={state.counselling.pilSupplied} onChange={(v) => updateCounselling("pilSupplied", v)} required description="Ensure the patient understands the injection technique, storage requirements, and when to seek medical advice." />
-            <Checkbox label="Injection technique demonstrated and patient confident with the pen (correct subcutaneous technique)" checked={state.counselling.injectionTechnique} onChange={(v) => updateCounselling("injectionTechnique", v)} required />
-            <Checkbox label="Rotate injection sites to avoid lipohypertrophy; dispose of used needles safely in a sharps container" checked={state.counselling.siteRotation} onChange={(v) => updateCounselling("siteRotation", v)} required />
-            <Checkbox label="Storage: before first use store at 2 to 8°C in a refrigerator; after first use store below 30°C for up to 30 days; do not freeze; protect from light; do not use if discoloured or contains particles" checked={state.counselling.storageInstructions} onChange={(v) => updateCounselling("storageInstructions", v)} required />
-            <Checkbox label="Missed dose: take when remembered if within 12 hours; otherwise skip and continue next day" checked={state.counselling.missedDoseProtocol} onChange={(v) => updateCounselling("missedDoseProtocol", v)} />
-            <Checkbox label="Take the injection at the same time each day for consistency; continue with a reduced-calorie diet and increase physical activity as advised (Saxenda is an adjunct, not a replacement)" checked={state.counselling.dietExercise} onChange={(v) => updateCounselling("dietExercise", v)} required />
-            <Checkbox label="Expect initial GI side effects (nausea, vomiting, diarrhoea, constipation) which typically improve over the first few weeks; take with food if nausea is problematic" checked={state.counselling.sideEffectsDiscussed} onChange={(v) => updateCounselling("sideEffectsDiscussed", v)} required />
-            <Checkbox label="Report persistent or severe abdominal pain immediately, as this may indicate pancreatitis" checked={state.counselling.pancreatitisWarning} onChange={(v) => updateCounselling("pancreatitisWarning", v)} required />
-            <Checkbox label="Stay well-hydrated; dehydration counselling on GI side effects" checked={state.counselling.dehydrationWarning} onChange={(v) => updateCounselling("dehydrationWarning", v)} required />
-            <Checkbox label="Hypoglycaemia signs (shakiness, sweating, confusion, rapid heartbeat): inform GP or healthcare provider, particularly if taking insulin or sulfonylureas, as dose adjustment may be needed" checked={state.counselling.hypoglycaemiaWarning} onChange={(v) => updateCounselling("hypoglycaemiaWarning", v)} required />
-            <Checkbox label="Inform healthcare provider of symptoms of thyroiditis (neck pain, swelling, difficulty swallowing) or depression/mood changes" checked={state.counselling.thyroidMoodWarning} onChange={(v) => updateCounselling("thyroidMoodWarning", v)} required />
-            <Checkbox label="Contraception advice given (if applicable)" checked={state.counselling.contraception} onChange={(v) => updateCounselling("contraception", v)} />
-            <Checkbox label="Attend all review appointments: weight loss monitored at 12 weeks on the 3.0 mg maintenance dose; treatment discontinued if <5% body weight loss achieved; if continued, review at least every 6 months" checked={state.counselling.twelveWeekReviewExplained} onChange={(v) => updateCounselling("twelveWeekReviewExplained", v)} required />
-            <Checkbox label="Do not share the medication with others; Saxenda is supplied specifically for this patient based on their medical history and BMI" checked={state.counselling.doNotShare} onChange={(v) => updateCounselling("doNotShare", v)} required />
+            <p className="text-sm text-gray-600">Tick each item once discussed with the patient. Every item is required except the two marked optional.</p>
+            {COUNSELLING_ITEMS.map((item) => (
+              <Checkbox key={item.key} label={item.label} checked={state.counselling[item.key]} onChange={(v) => updateCounselling(item.key, v)} required={item.required} description={item.description} />
+            ))}
           </div>
         )}
 
@@ -695,7 +727,7 @@ export function SaxendaClient() {
                 ["GP", [state.patient.gpName, state.patient.gpPractice].filter(Boolean).join(", ") || "Not recorded"],
                 ["Consent", state.consent.informedConsentGiven ? `Valid informed consent obtained${state.consent.idVerified ? `; identity verified (${state.consent.idType || "ID seen"})` : ""}; private service explained` : "Not recorded"],
                 ["Height, weight, BMI", `${a.heightCm ?? "-"} cm, ${a.weightKg ?? "-"} kg, BMI ${bmi ?? "-"}${initialBmi !== null ? ` (initial BMI ${initialBmi}, initial weight ${a.initialWeightKg} kg, started ${a.treatmentStartDate})` : ""}`],
-                ["Comorbidity", a.hasComorbidity ? (a.comorbidityDetails || "Yes") : "None recorded"],
+                ["Comorbidity", a.hasComorbidity === "yes" ? (a.comorbidityDetails || "Yes") : a.hasComorbidity === "no" ? "None" : "Not answered"],
                 ["Outcome", hasStop ? `NOT SUPPLIED: ${stopReason}` : "Supplied via PGD"],
                 ["Medicine", hasStop ? "Not supplied" : `${PRODUCT_NAME}, subcutaneous injection`],
                 ["Dose", hasStop ? "Not supplied" : DOSE_STAGE_LABELS[t.doseStage] ?? "Not recorded"],
@@ -714,7 +746,7 @@ export function SaxendaClient() {
                   state.eligibility.narrowTherapeuticIndexDrug ? "narrow therapeutic index medicine" : "",
                   state.eligibility.gallbladderDisease ? "gallbladder disease" : "",
                 ].filter(Boolean).join("; ") || "None"],
-                ["Advice given", hasStop ? (state.eligibility.exclusionAdvice || "Not recorded") : "PIL supplied; injection technique, site rotation and sharps, storage, missed dose, diet and activity, GI effects and hydration, pancreatitis, hypoglycaemia, thyroiditis and mood, contraception where applicable, 12 week review, do not share"],
+                ["Advice given", hasStop ? (state.eligibility.exclusionAdvice || "Not recorded") : (COUNSELLING_ITEMS.filter((item) => c[item.key]).map((item) => item.short).join("; ") || "None recorded")],
                 ["Next review", t.nextReviewDate || "Not recorded"],
                 ["Adverse drug reactions", state.summary.adverseReactions || "None recorded"],
                 ["Clinical notes", state.summary.clinicalNotes || "None"],

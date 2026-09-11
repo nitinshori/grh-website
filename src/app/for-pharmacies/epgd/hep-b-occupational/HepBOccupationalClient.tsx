@@ -261,7 +261,7 @@ export default function HepBOccupationalClient() {
             />
 
             <Checkbox
-              label="Eligible under national immunisation (Green Book chapter 18) or occupational health guidance (inclusion criterion)"
+              label="Eligible under national immunisation (Green Book chapter 18) or occupational health guidance (inclusion criterion; required)"
               checked={state.assessment.eligibleUnderGuidance}
               onChange={(v) => setAssessment("eligibleUnderGuidance", v)}
               required
@@ -301,7 +301,8 @@ export default function HepBOccupationalClient() {
             )}
 
             <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-              <p className="text-sm font-semibold text-red-900 mb-3">Contraindications</p>
+              <p className="text-sm font-semibold text-red-900 mb-1">Contraindications: any tick here stops the consultation</p>
+              <p className="text-xs text-red-800 mb-3">Ask each one. Leave the box unticked where the answer is no.</p>
               <div className="space-y-2">
                 <Checkbox label="Known Hepatitis B Positive" checked={state.assessment.knownHBPositive} onChange={(v) => setAssessment("knownHBPositive", v)} />
                 <Checkbox label="Known hypersensitivity to the active substance or any excipient (including yeast)" checked={state.assessment.allergyVaccineComponent} onChange={(v) => setAssessment("allergyVaccineComponent", v)} />
@@ -313,6 +314,7 @@ export default function HepBOccupationalClient() {
               </div>
             </div>
 
+            <p className="text-sm font-semibold text-amber-900 -mb-3">Cautions: tick any that apply (none is a valid answer)</p>
             <Checkbox label="Known Hepatitis C Positive" checked={state.assessment.knownHCVPositive} onChange={(v) => setAssessment("knownHCVPositive", v)} />
             <Checkbox label="Known HIV Positive" checked={state.assessment.knownHIVPositive} onChange={(v) => setAssessment("knownHIVPositive", v)} />
             <Checkbox label="Immunosuppressed" checked={state.assessment.immunosuppressed} onChange={(v) => setAssessment("immunosuppressed", v)} />
@@ -327,7 +329,7 @@ export default function HepBOccupationalClient() {
             {exclusionOutcomeBlock}
 
             <Checkbox
-              label="Adrenaline (epinephrine) 1 in 1,000 injection immediately available in the room, in date, with a telephone and a written anaphylaxis protocol (Resuscitation Council UK)"
+              label="Adrenaline (epinephrine) 1 in 1,000 injection immediately available in the room, in date, with a telephone and a written anaphylaxis protocol (Resuscitation Council UK) (required)"
               checked={state.treatment.adrenalineAvailable}
               onChange={(v) => setTreatment("adrenalineAvailable", v)}
               required
@@ -405,7 +407,7 @@ export default function HepBOccupationalClient() {
             </div>
 
             <Checkbox
-              label="15-minute post-vaccination observation period completed"
+              label="15-minute post-vaccination observation period completed (required; tick only once the period has actually been completed)"
               checked={state.treatment.observationPeriodCompleted}
               onChange={(v) => setTreatment("observationPeriodCompleted", v)}
               required
@@ -446,10 +448,10 @@ export default function HepBOccupationalClient() {
               </ul>
             </div>
 
-            <Checkbox label="Counselling provided to patient (common side effects; complete the full vaccination schedule)" checked={state.counselling.counsellingProvided} onChange={(v) => setCounselling("counsellingProvided", v)} required />
-            <Checkbox label="Patient information leaflet (PIL) supplied" checked={state.counselling.pilSupplied} onChange={(v) => setCounselling("pilSupplied", v)} required />
+            <Checkbox label="Counselling provided to patient (common side effects; complete the full vaccination schedule) (required)" checked={state.counselling.counsellingProvided} onChange={(v) => setCounselling("counsellingProvided", v)} required />
+            <Checkbox label="Patient information leaflet (PIL) supplied (required)" checked={state.counselling.pilSupplied} onChange={(v) => setCounselling("pilSupplied", v)} required />
             <Checkbox
-              label="Follow-up advice given: seek medical advice if symptoms worsen rapidly or significantly, do not improve in 3 to 4 weeks, or they become systemically very unwell; report suspected adverse reactions via the Yellow Card scheme"
+              label="Follow-up advice given: seek medical advice if symptoms worsen rapidly or significantly, do not improve in 3 to 4 weeks, or they become systemically very unwell; report suspected adverse reactions via the Yellow Card scheme (required)"
               checked={state.counselling.followUpAdviceGiven}
               onChange={(v) => setCounselling("followUpAdviceGiven", v)}
               required
@@ -461,17 +463,17 @@ export default function HepBOccupationalClient() {
             </div>
 
             <Checkbox
-              label="Anti-HBs serology recommended 1 to 4 months after the final dose where high-risk (e.g. healthcare workers, immunocompromised); anti-HBs 10 mIU/mL or above is protective"
+              label="Anti-HBs serology recommended 1 to 4 months after the final dose where high-risk (e.g. healthcare workers, immunocompromised); anti-HBs 10 mIU/mL or above is protective (optional)"
               checked={state.counselling.serologyRecommended}
               onChange={(v) => setCounselling("serologyRecommended", v)}
             />
             <Checkbox
-              label="Post-exposure protocol explained (if occupational exposure before course complete)"
+              label="Post-exposure protocol explained (if occupational exposure before course complete) (optional)"
               checked={state.counselling.postExposureProtocolExplained}
               onChange={(v) => setCounselling("postExposureProtocolExplained", v)}
             />
             <SelectInput
-              label="GP informed (the document: inform the GP as appropriate)"
+              label="GP informed (the document says: inform the GP as appropriate)"
               value={state.counselling.gpInformed}
               onChange={(v) => setCounselling("gpInformed", v as HepBState["counselling"]["gpInformed"])}
               options={[
@@ -486,7 +488,7 @@ export default function HepBOccupationalClient() {
               value={state.counselling.counsellingNotes}
               onChange={(v) => setCounselling("counsellingNotes", v)}
               rows={3}
-              placeholder="Include protection minimum titre (10 mIU/ml) and any additional advice"
+              placeholder="What was discussed, in a line or two, e.g. side effects and schedule explained, next dose date given in writing, protective anti-HBs level (10 mIU/mL) explained"
               required
             />
           </div>

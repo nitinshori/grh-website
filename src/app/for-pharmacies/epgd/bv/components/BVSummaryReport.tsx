@@ -27,11 +27,11 @@ export function BVSummaryReport({ state }: { state: BVConsultationState }) {
       <div className="space-y-1.5">
         <Row label="Full Name" value={`${state.patient.firstName} ${state.patient.lastName}`} />
         <Row label="Date of Birth" value={state.patient.dateOfBirth || "Not recorded"} />
-        <Row label="Age" value={state.patient.age ? `${state.patient.age} years` : "—"} />
+        <Row label="Age" value={state.patient.age ? `${state.patient.age} years` : "Not recorded"} />
         <Row label="Address" value={state.patient.address || "Not recorded"} />
         <Row label="GP" value={state.patient.gpName ? `${state.patient.gpName}${state.patient.gpPractice ? `, ${state.patient.gpPractice}` : ""}` : "Not recorded"} />
         <Row label="Female confirmed" value={state.medicalHistory.femaleConfirmed ? "Yes" : "No"} />
-        <Row label="NHS Number" value={state.patient.nhsNumber || "—"} />
+        <Row label="NHS Number" value={state.patient.nhsNumber || "Not recorded"} />
       </div>
       <SectionHeader>Consultation Details</SectionHeader>
       <div className="space-y-1.5">
@@ -75,6 +75,10 @@ export function BVSummaryReport({ state }: { state: BVConsultationState }) {
           ["Phenytoin", state.medications.phenytoin],
         ]}
       />
+      <div className="space-y-1.5">
+        <Row label="Other current medicines" value={state.medications.otherMedications || "None recorded"} />
+        <Row label="Other allergies" value={state.medications.allergies || "None recorded"} />
+      </div>
       <SectionHeader>Clinical Alerts</SectionHeader>
       <AlertSummary alerts={state.alerts} />
       {hasStop && (
@@ -94,9 +98,9 @@ export function BVSummaryReport({ state }: { state: BVConsultationState }) {
             <Row label="Medicine" value={state.doseRecommendation.medicine} />
             <Row label="Brand" value={state.medicineSelection.brand || "Not recorded"} />
             <Row label="Dose" value={state.doseRecommendation.dose} />
-            <Row label="Frequency" value={state.doseRecommendation.frequency || "—"} />
-            <Row label="Duration" value={state.doseRecommendation.duration || "—"} />
-            <Row label="Dosing Regimen" value={state.doseRecommendation.dosingRegimen || "—"} />
+            <Row label="Frequency" value={state.doseRecommendation.frequency || "Not recorded"} />
+            <Row label="Duration" value={state.doseRecommendation.duration || "Not recorded"} />
+            <Row label="Dosing Regimen" value={state.doseRecommendation.dosingRegimen || "Not recorded"} />
             <Row label="Quantity supplied" value={quantitySupplied(state)} />
             <Row label="Ability confirmed" value={state.medicineSelection.abilityConfirmed ? (state.medicineSelection.medicineChoice === "metronidazole-gel" ? "Able to insert gel intravaginally" : "Able to swallow tablets") : "No"} />
             <Row label="Supplied under" value={PGD_VERSION_LABEL} />

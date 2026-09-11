@@ -31,14 +31,20 @@ export function validateStep(step: number, state: ChickenpoxConsultationState): 
 
     case 2: // Eligibility
       if (!state.eligibility.noPriorVaricella && !state.eligibility.historyOfChickenpox) {
-        return "Confirm that the patient has no history of chickenpox infection (inclusion criterion), or record a history of chickenpox (exclusion)";
+        return "Answer \"Has the patient had chickenpox before?\"";
       }
       if (state.eligibility.dose1GivenElsewhere) {
         if (!state.eligibility.dose1Where) {
-          return "Dose 1 already given: record where it was given (this pharmacy or elsewhere)";
+          return "Dose 1 already given: select where dose 1 was given (this pharmacy or elsewhere)";
         }
         if (!state.eligibility.dose1ElsewhereDate) {
           return "Dose 1 already given: record the date of dose 1";
+        }
+        {
+          const ahead = daysBetween(new Date().toISOString().split("T")[0], state.eligibility.dose1ElsewhereDate);
+          if (ahead !== null && ahead > 0) {
+            return "Date of dose 1 cannot be in the future";
+          }
         }
         if (!state.eligibility.dose1ElsewhereBrand.trim()) {
           return "Dose 1 already given: record the brand of dose 1";
@@ -58,7 +64,7 @@ export function validateStep(step: number, state: ChickenpoxConsultationState): 
     case 5: { // Vaccine Admin
       const a = state.vaccineAdmin;
       if (!a.vaccine.trim()) {
-        return "Vaccine type must be specified";
+        return "Select the vaccine";
       }
       if (!a.doseNumber) {
         return "Record whether this is dose 1 or dose 2 of the course";
@@ -70,13 +76,20 @@ export function validateStep(step: number, state: ChickenpoxConsultationState): 
         return "Dose 1 has already been given; this administration is dose 2";
       }
       if (!a.route) {
-        return "Route must be selected";
+        return "Select the route";
       }
       if (a.vaccine === "Varivax" && a.route === "intramuscular") {
-        return "Varivax: subcutaneous injection, usually in the upper arm";
+        return "Route: Varivax is given by subcutaneous injection (usually the upper arm); select Subcutaneous";
       }
       if (!a.dose1Date) {
         return "Date of administration is required";
+      }
+      {
+        const today = new Date().toISOString().split("T")[0];
+        const ahead = daysBetween(today, a.dose1Date);
+        if (ahead !== null && ahead > 0) {
+          return "Date of administration cannot be in the future";
+        }
       }
       if (a.doseNumber === "2nd") {
         const interval = daysBetween(state.eligibility.dose1ElsewhereDate, a.dose1Date);
@@ -88,7 +101,7 @@ export function validateStep(step: number, state: ChickenpoxConsultationState): 
         }
       }
       if (!a.dose1Site.trim()) {
-        return "Injection site is required";
+        return "Anatomical site is required";
       }
       if (!a.dose1Lot.trim()) {
         return "Batch number is required";
@@ -116,7 +129,7 @@ export function validateStep(step: number, state: ChickenpoxConsultationState): 
         }
       }
       if (!a.administeredBy.trim()) {
-        return "Administered by (name/credentials) is required";
+        return "Administered by (name and credentials) is required";
       }
       return null;
     }
@@ -125,7 +138,10 @@ export function validateStep(step: number, state: ChickenpoxConsultationState): 
       const p = state.postVaccine;
       const c = state.counselling;
       if (!p.observationCompleted) {
-        return "Record that the 15 minute seated observation period was completed";
+        return "Tick \"Observed for 15 minutes after vaccination\" once the observation period has been completed";
+      }
+      if (p.reactionsObserved && !p.reactionDetails.trim()) {
+        return "Immediate reaction ticked: record the reaction observed and the action taken";
       }
       if (!p.leafletGiven) {
         return "Supply the patient information leaflet provided with the medication";
@@ -134,7 +150,7 @@ export function validateStep(step: number, state: ChickenpoxConsultationState): 
         return "Explain the two-dose course and when dose 2 is due";
       }
       if (!c.pregnancyAvoidanceAdvice || !p.pregnancyAdviceGiven) {
-        return "Advise that pregnancy must be avoided for one month post-vaccination";
+        return "Tick \"Advised that pregnancy must be avoided for one month after vaccination\" (tick as not applicable for a child or a male patient)";
       }
       if (!c.immunosuppressedContactAdvice || !p.contactWithImmunosuppressed) {
         return "Advise avoiding contact with high-risk individuals for 4 to 6 weeks if a rash develops";

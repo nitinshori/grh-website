@@ -52,21 +52,24 @@ export function validateStep(stepIndex: number, state: AnxietyPropranololConsult
       return null;
     }
 
-    case 7:
-      if (
-        !state.counselling.prnUseOnly ||
-        !state.counselling.physicalSymptoms ||
-        !state.counselling.noDependence ||
-        !state.counselling.noSuddenWithdrawal ||
-        !state.counselling.avoidVerapamil ||
-        !state.counselling.reportWheeze ||
-        !state.counselling.coldExtremities ||
-        !state.counselling.notACure ||
-        !state.counselling.avoidAlcohol
-      ) {
-        return "Please confirm all counselling points have been covered";
-      }
+    case 7: {
+      // Name the unticked points in the words of their labels, so the
+      // pharmacist knows which box to tick (walkthrough review, 11 Sep 2026).
+      const c = state.counselling;
+      const missing: string[] = [];
+      if (!c.prnUseOnly) missing.push("As-required use only");
+      if (!c.physicalSymptoms) missing.push("Reduces physical anxiety symptoms");
+      if (!c.notACure) missing.push("Not a cure for anxiety");
+      if (!c.noDependence) missing.push("Does NOT cause dependence");
+      if (!c.noSuddenWithdrawal) missing.push("Must not be stopped suddenly if taken regularly");
+      if (!c.reportWheeze) missing.push("Report any breathlessness or wheeze");
+      if (!c.coldExtremities) missing.push("May cause cold hands and feet");
+      if (!c.avoidAlcohol) missing.push("Avoid alcohol");
+      if (!c.avoidVerapamil) missing.push("Do NOT use with verapamil or diltiazem");
+      if (missing.length)
+        return `Tick every counselling point. Not yet ticked: ${missing.join("; ")}`;
       return null;
+    }
 
     case 8:
       return validateSummaryStep(state.summary);

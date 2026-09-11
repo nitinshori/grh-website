@@ -3,11 +3,14 @@ import type { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/
 // ─── UTI-Specific Data Structures ───
 
 export interface UTISymptoms {
-  dysuria: boolean;
-  /** PGD v007 inclusion: two or more of dysuria, new nocturia, frequency, urgency. */
-  nocturia: boolean;
-  frequency: boolean;
-  urgency: boolean;
+  /** PGD v007 inclusion: two or more of dysuria, new nocturia, frequency,
+   *  urgency. Each is asked as Yes/No with no default (null is unanswered):
+   *  the stop is raised only once all four are answered and fewer than two
+   *  are Yes (stop audit, 11 September 2026). */
+  dysuria: boolean | null;
+  nocturia: boolean | null;
+  frequency: boolean | null;
+  urgency: boolean | null;
   suprapubicPain: boolean;
   haematuria: boolean;
   vaginalDischarge: boolean;
@@ -40,17 +43,20 @@ export interface UTIMedicalHistory {
    *  Recurrent UTI (2 or more in 6 months, or 3 or more in 12 months) is derived. */
   utiEpisodesLast6Months: "" | "0" | "1" | "2+";
   utiEpisodesLast12Months: "" | "0" | "1" | "2" | "3+";
+  /** Derived from renalImpairment: true for any YES answer ("known",
+   *  "moderate" or "severe"). Kept so the record and the stop logic read it. */
   kidneyDisease: boolean;
   /** The document's renal row, answered in its own terms, with no default:
    *  "" is unanswered and blocks Next. "unknown" is a real answer at a
-   *  pharmacy counter and the PGD acts on it (exclude). Aged 60 to 64 with a
-   *  NO answer, supply proceeds only on a seen eGFR result (Decision 43). */
-  renalImpairment: "" | "none" | "moderate" | "severe" | "unknown";
+   *  pharmacy counter and the PGD acts on it (exclude). "known" is a YES
+   *  answer where the eGFR band is not known (also exclude). Aged 60 to 64
+   *  with a NO answer, supply proceeds only on a seen eGFR result (Decision 43). */
+  renalImpairment: "" | "none" | "known" | "moderate" | "severe" | "unknown";
   /** Decision 43 (PGD reissue, September 2026): a woman aged 60 to 64 who
    *  answers NO proceeds only where an eGFR of 45 mL/min or more, dated within
    *  the last 12 months, has been seen by the pharmacist (NHS App, GP summary
    *  or a letter) and the result, its date and where it was seen are recorded. */
-  egfrResultSeen: boolean;
+  egfrResultSeen: boolean | null; // Yes/No with no default; No is the adverse answer
   /** The eGFR value seen, in mL/min. */
   egfrValue: number | null;
   /** Date of the eGFR result seen (ISO yyyy-mm-dd). */
@@ -74,7 +80,7 @@ export interface UTIMedicalHistory {
   takingPotassiumSparingAgent: boolean;
   takingInteractingMedicine: boolean;
   takingWarfarin: boolean;
-  anticoagulationServiceConsulted: boolean;
+  anticoagulationServiceConsulted: boolean | null; // asked only when warfarin is ticked; Yes/No with no default
   hepaticImpairment: boolean;
   allergies: string;
   currentMedications: string;
@@ -122,7 +128,9 @@ export interface UTICounselling {
 // ─── UTI Consultation State ───
 
 export interface UTIPatientDetails extends BasePatientDetails {
-  femaleConfirmed: boolean;
+  /** "Is the patient female?" asked as Yes/No with no default. Only an
+   *  explicit No raises the MALE_PATIENT stop; null is unanswered. */
+  femaleConfirmed: boolean | null;
 }
 
 export interface UTIConsultationState {
@@ -139,10 +147,10 @@ export interface UTIConsultationState {
 // ─── Initial Values ───
 
 export const initialUTISymptoms: UTISymptoms = {
-  dysuria: false,
-  frequency: false,
-  urgency: false,
-  nocturia: false,
+  dysuria: null,
+  frequency: null,
+  urgency: null,
+  nocturia: null,
   suprapubicPain: false,
   haematuria: false,
   vaginalDischarge: false,
@@ -170,7 +178,7 @@ export const initialUTIMedicalHistory: UTIMedicalHistory = {
   utiEpisodesLast12Months: "",
   kidneyDisease: false,
   renalImpairment: "",
-  egfrResultSeen: false,
+  egfrResultSeen: null,
   egfrValue: null,
   egfrDate: "",
   egfrSource: "",
@@ -188,7 +196,7 @@ export const initialUTIMedicalHistory: UTIMedicalHistory = {
   takingPotassiumSparingAgent: false,
   takingInteractingMedicine: false,
   takingWarfarin: false,
-  anticoagulationServiceConsulted: false,
+  anticoagulationServiceConsulted: null,
   hepaticImpairment: false,
   allergies: "",
   currentMedications: "",
@@ -238,5 +246,5 @@ export const initialUTIPatientDetails = (basePatient?: Partial<BasePatientDetail
   address: basePatient?.address || "",
   phone: basePatient?.phone || "",
   email: basePatient?.email || "",
-  femaleConfirmed: false,
+  femaleConfirmed: null,
 });

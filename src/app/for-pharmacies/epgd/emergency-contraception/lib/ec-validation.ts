@@ -40,10 +40,12 @@ export function validatePatientDetailsStep(
   // Aged 13 to 15: assess and record Fraser competence, ask about coercion,
   // the age of the partner and any safeguarding concern; record the assessment.
   if (patient.age >= 13 && patient.age <= 15) {
-    if (!patient.fraserCompetent)
-      return "Fraser competence must be assessed and recorded for patients aged 13 to 15";
-    if (!patient.coercionAsked)
-      return "Ask about coercion and record the answer for patients aged 13 to 15";
+    if (!patient.fraserOutcome)
+      return "Aged 13 to 15: record the outcome of the Fraser competence assessment (competent, or not competent)";
+    if (patient.fraserOutcome === "not-competent")
+      return "Not Fraser competent: do not supply. Refer, record the advice given, and save as not supplied.";
+    if (!patient.coercionReported)
+      return "Aged 13 to 15: record the answer to the coercion question (no, or yes)";
     if (!patient.partnerAge.trim())
       return "Record the age of the partner for patients aged 13 to 15";
     if (!patient.safeguardingNotes.trim())
@@ -82,6 +84,8 @@ export function validateClinicalAssessmentStep(
 
   if (!assessment.lastMenstrualPeriod)
     return "Last menstrual period date is required";
+  if (assessment.lastMenstrualPeriod > new Date().toISOString().split("T")[0])
+    return "Last menstrual period is in the future; check and correct the date";
 
   if (assessment.cycleRegular && assessment.cycleLength === null)
     return "Record the usual cycle length for a regular cycle";

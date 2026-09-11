@@ -206,7 +206,7 @@ export default function PneumococcalSummaryReport({
               label="Vaccine type"
               value={summary.vaccineType === 'pcv13' ? 'Prevenar 13 (PCV13)' : summary.vaccineType === 'ppv23' ? 'Pneumovax 23 (PPV23)' : 'Not recorded'}
             />
-            <Row label="Dose and route" value={summary.vaccineType === 'pcv13' ? '0.5 mL intramuscular' : '0.5 mL intramuscular or subcutaneous'} />
+            <Row label="Dose and route" value={`0.5 mL ${summary.administrationSite.endsWith('-sc') ? 'subcutaneous' : 'intramuscular'}`} />
             <Row
               label="Dose number"
               value={summary.doseNumber === '1' ? 'Dose 1' : 'Dose 2'}

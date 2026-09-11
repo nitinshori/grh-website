@@ -52,14 +52,14 @@ export function STISummaryReport({ state, alerts }: STISummaryReportProps) {
         <SectionHeader>Patient Details</SectionHeader>
         <Row label="Name" value={`${state.patient.firstName} ${state.patient.lastName}`} />
         <Row label="DOB" value={state.patient.dateOfBirth} />
-        <Row label="Age" value={state.patient.age ? `${state.patient.age} years` : "—"} />
-        <Row label="Gender Identity" value={state.patient.genderIdentity || "—"} />
+        <Row label="Age" value={state.patient.age ? `${state.patient.age} years` : "Not recorded"} />
+        <Row label="Gender Identity" value={state.patient.genderIdentity || "Not recorded"} />
         <Row label="Address" value={state.patient.address || "Not recorded"} />
-        <Row label="NHS Number" value={state.patient.nhsNumber || "—"} />
-        <Row label="GP" value={state.patient.gpName ? `${state.patient.gpName}, ${state.patient.gpPractice}` : "—"} />
+        <Row label="NHS Number" value={state.patient.nhsNumber || "Not recorded"} />
+        <Row label="GP" value={state.patient.gpName ? `${state.patient.gpName}, ${state.patient.gpPractice}` : "Not recorded"} />
         {isMinor && (
           <>
-            <Row label="Fraser competence" value={state.patient.fraserCompetent ? "All five criteria recorded" : "Not established"} />
+            <Row label="Fraser competence" value={state.patient.fraserAnswer === "no" ? "Not established (excluded)" : state.patient.fraserAnswer === "yes" && state.patient.fraserCompetent ? "Established: all five criteria recorded" : "Not recorded"} />
             <Row label="Understands the advice" value={state.patient.fraserUnderstandsAdvice ? "Yes" : "No"} />
             <Row label="Cannot be persuaded to inform parents" value={state.patient.fraserCannotBePersuaded ? "Yes" : "No"} />
             <Row label="Likely to continue intercourse regardless" value={state.patient.fraserLikelyToContinue ? "Yes" : "No"} />
@@ -96,25 +96,25 @@ export function STISummaryReport({ state, alerts }: STISummaryReportProps) {
         <SectionHeader>Risk Assessment</SectionHeader>
         <Row
           label="Number of sexual partners (3 months)"
-          value={state.riskAssessment.numberOfPartners !== null ? state.riskAssessment.numberOfPartners : "—"}
+          value={state.riskAssessment.numberOfPartners !== null ? state.riskAssessment.numberOfPartners : "Not recorded"}
         />
         <Row
           label="Condom usage"
-          value={state.riskAssessment.condomUsage ? state.riskAssessment.condomUsage.charAt(0).toUpperCase() + state.riskAssessment.condomUsage.slice(1) : "—"}
+          value={state.riskAssessment.condomUsage ? state.riskAssessment.condomUsage.charAt(0).toUpperCase() + state.riskAssessment.condomUsage.slice(1) : "Not recorded"}
         />
         <Row
           label="Previous STIs"
           value={state.riskAssessment.previousSTIs ? "Yes" : "No"}
         />
         {state.riskAssessment.previousSTIs && (
-          <Row label="Details" value={state.riskAssessment.previousStiDetail || "—"} />
+          <Row label="Details" value={state.riskAssessment.previousStiDetail || "Not recorded"} />
         )}
         <Row
           label="Current symptoms"
           value={state.riskAssessment.currentSymptoms ? "Yes" : "No"}
         />
         {state.riskAssessment.currentSymptoms && (
-          <Row label="Details" value={state.riskAssessment.symptomDetail || "—"} />
+          <Row label="Details" value={state.riskAssessment.symptomDetail || "Not recorded"} />
         )}
         <Row label="MSM status" value={state.riskAssessment.msmStatus ? "Yes" : "No"} />
         <Row label="Sex worker" value={state.riskAssessment.sexWorker ? "Yes" : "No"} />
@@ -145,7 +145,7 @@ export function STISummaryReport({ state, alerts }: STISummaryReportProps) {
           value={state.clinicalAssessment.systemicSymptoms ? "Yes" : "No"}
         />
         {state.clinicalAssessment.systemicSymptoms && (
-          <Row label="Details" value={state.clinicalAssessment.systemicDetail || "—"} />
+          <Row label="Details" value={state.clinicalAssessment.systemicDetail || "Not recorded"} />
         )}
       </div>
 
@@ -282,22 +282,22 @@ export function STISummaryReport({ state, alerts }: STISummaryReportProps) {
         <SectionHeader>Counselling Provided</SectionHeader>
         <div className="space-y-1.5 text-xs">
           <p>
-            {state.counselling.windowPeriods ? "✓" : "—"} Window period information explained
+            {state.counselling.windowPeriods ? "✓" : "✗"} Window period information explained
           </p>
           <p>
-            {state.counselling.partnerNotification ? "✓" : "—"} Partner notification discussed
+            {state.counselling.partnerNotification ? "✓" : "✗"} Partner notification discussed
           </p>
           <p>
-            {state.counselling.safeSex ? "✓" : "—"} Safe sex practices advised
+            {state.counselling.safeSex ? "✓" : "✗"} Safe sex practices advised
           </p>
           <p>
-            {state.counselling.resultsTimeline ? "✓" : "—"} Results timeline explained
+            {state.counselling.resultsTimeline ? "✓" : "✗"} Results timeline explained
           </p>
           <p>
-            {state.counselling.positiveTestMeaning ? "✓" : "—"} Positive test results explained
+            {state.counselling.positiveTestMeaning ? "✓" : "✗"} Positive test results explained
           </p>
           <p>
-            {state.counselling.followUp ? "✓" : "—"} Follow-up procedures explained
+            {state.counselling.followUp ? "✓" : "✗"} Follow-up procedures explained
           </p>
           {treatmentPlan && (
             <>

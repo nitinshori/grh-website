@@ -10,7 +10,7 @@ import {
   ReportFooter,
 } from "../../shared/components/SummaryReportShell";
 import type { DentalState } from "../DentalBridgingClient";
-import { PGD_STRAPLINE, METRONIDAZOLE_ARM } from "../DentalBridgingClient";
+import { PGD_STRAPLINE, METRONIDAZOLE_ARM, renalFunctionText } from "../DentalBridgingClient";
 
 interface Props {
   state: DentalState;
@@ -126,7 +126,7 @@ export function DentalBridgingSummaryReport({ state, alerts, outcome, fever, sel
             }
           />
           {a.penicillinAllergy && <Row label="Alcohol rule explained, patient can keep to it" value={a.alcoholCanAvoid === "yes" ? "Yes" : a.alcoholCanAvoid === "no" ? "No (excluded)" : "Not recorded"} />}
-          {!a.penicillinAllergy && <Row label="Renal function asked, no significant impairment" value={a.renalFunctionAsked ? "Yes" : "No"} />}
+          {!a.penicillinAllergy && <Row label="Renal function" value={renalFunctionText(a.renalFunctionAnswer, a.renalFunctionDetail)} />}
           <Row label="Dental care" value={`${a.urgentDentalAppointmentCommitted ? "Unable to obtain definitive treatment before worsening; willing and able to arrange an urgent appointment within 24 to 48 hours" : "Inclusion NOT confirmed"}${a.dentalAppointmentBooked ? `; appointment booked ${a.dentalAppointmentDate || "(date not recorded)"}` : ""}`} />
         </div>
       </div>

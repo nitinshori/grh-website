@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 import type { ClinicalAlert } from "../shared/types";
 import {
   calculateAge,
@@ -78,6 +79,26 @@ export function YellowFeverClient() {
   const [c, setC] = useState<Clinical>(createEmptyClinical());
   const set = (patch: Partial<Clinical>) => setC((prev) => ({ ...prev, ...patch }));
 
+  // Pharmacist name and GPhC number from the logged-in profile, as on the
+  // other tools; refires when blank (after "New Consultation").
+  const profile = usePharmacistProfile();
+  useEffect(() => {
+    if (!profile) return;
+    setSummary((p) => {
+      if (p.pharmacistName || p.pharmacistGPhC) return p;
+      return { ...p, pharmacistName: profile.name, pharmacistGPhC: profile.gphcNumber, pharmacyName: profile.pharmacyName, pharmacyAddress: profile.pharmacyAddress };
+    });
+  }, [profile, summary.pharmacistName, summary.pharmacistGPhC]);
+
+  /** Today plus n days as YYYY-MM-DD, local time. */
+  const plusDaysIso = (n: number): string => {
+    const d = new Date();
+    d.setDate(d.getDate() + n);
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${d.getFullYear()}-${m}-${day}`;
+  };
+
   // Age in months, so the 6 month and 9 month thresholds can be applied
   // exactly rather than rounded to whole years.
   const ageMonths = useMemo(() => {
@@ -95,7 +116,9 @@ export function YellowFeverClient() {
     const age = patient.age;
 
     // ── Designation ────────────────────────────────────────────────
-    if (step > 0 && !c.yfvcDesignated)
+    // Fires only on an answered "No". A blank answer is a validation
+    // message on the first step, not a stop (stop audit, 11 Sep 2026).
+    if (c.yfvcDesignatedAnswer === "no")
       a.push({
         code: "not-yfvc",
         severity: "stop",
@@ -232,7 +255,12 @@ export function YellowFeverClient() {
         detail: "Long term low dose therapy is not usually considered sufficiently immunosuppressive and these patients can generally receive live vaccines. Data are limited, so specialist advice may be sought.",
       });
 
-    if (hasSpecialistPrecaution(c) && !c.specialistAdviceObtained && step >= STEP_PRECAUTIONS)
+    // Fires only when the pharmacist has answered that advice was NOT
+    // obtained. Before this it fired from the unticked "advice obtained" box
+    // the moment a precaution was ticked, before the question could be
+    // answered (stop audit, 11 Sep 2026). A blank answer is a validation
+    // message on the precautions step.
+    if (hasSpecialistPrecaution(c) && c.specialistAdviceAnswer === "not-obtained")
       a.push({
         code: "no-specialist-advice",
         severity: "stop",
@@ -240,16 +268,12 @@ export function YellowFeverClient() {
         detail: "Any patient falling under the precautions where specialist advice cannot be obtained before vaccination is excluded. Call NaTHNaC on 020 7383 7474, record who gave the advice and when, or do not vaccinate.",
       });
 
-    if (!c.anaphylaxisKit && step >= 5)
-      a.push({
-        code: "no-kit",
-        severity: "red-flag",
-        message: "Anaphylaxis kit not confirmed",
-        detail: "Adrenaline 1 in 1,000 and a telephone must be immediately available before any vaccine is given.",
-      });
+    // The adrenaline confirmation is a required tick on the administration
+    // step (validation names the control); it no longer raises a red flag
+    // simply because the box has not been reached yet.
 
     return a;
-  }, [patient.age, ageMonths, c, step]);
+  }, [patient.age, ageMonths, c]);
 
   const hasStops = alerts.some((x) => x.severity === "stop");
   const lateTraveller = (() => { const d = daysUntil(c.departureDate); return c.certificateRequired === "required" && d !== null && d < 10; })();
@@ -260,7 +284,7 @@ export function YellowFeverClient() {
   const validationError = useMemo(() => {
     switch (step) {
       case 0: {
-        if (!c.yfvcDesignated) return "Confirm this is a designated Yellow Fever Vaccination Centre";
+        if (!c.yfvcDesignatedAnswer) return "Answer \"Is this pharmacy a designated Yellow Fever Vaccination Centre, and are you authorised to administer under its designation?\" (Yes or No)";
         if (!c.yfvcCode.trim()) return "Please record the YFVC designation number";
         if (!c.pharmacistNotTechnicianConfirmed) return "Confirm you are a registered pharmacist: pharmacy technicians may not administer yellow fever vaccine under the NaTHNaC conditions of designation";
         const base = validatePatientStep(patient);
@@ -283,14 +307,14 @@ export function YellowFeverClient() {
       case 2:
         if (!c.destination.trim()) return "Please record the destination";
         if (!c.departureDate.trim()) return "Please record the departure date";
-        if (!c.certificateRequired) return "Please record the certificate requirement for this destination";
+        if (!c.certificateRequired) return "Select the \"Certificate requirement for this destination\"";
         if (lateTraveller && !c.lateTravelAdviceGiven) return "Departure within 10 days: confirm the traveller was told the certificate will not be valid in time and that the advice was recorded";
         if (c.mmrWithin28Days && !c.mmrToday && !c.mmrWithin28DaysReason.trim()) return "MMR within 28 days: record why protection is needed rapidly enough to give at a shorter interval";
         return null;
       case 3: return null;
       case STEP_PRECAUTIONS:
-        if (hasSpecialistPrecaution(c) && !c.specialistAdviceObtained) return "Specialist advice must be obtained and recorded before vaccinating a patient under the precautions";
-        if (hasSpecialistPrecaution(c) && !c.specialistAdviceDetails.trim()) return "Record who gave the specialist advice and when";
+        if (hasSpecialistPrecaution(c) && !c.specialistAdviceAnswer) return "Answer \"Was specialist advice obtained before vaccinating?\" (Yes or No)";
+        if (hasSpecialistPrecaution(c) && c.specialistAdviceAnswer === "obtained" && !c.specialistAdviceDetails.trim()) return "Record who gave the specialist advice and when";
         return null;
       case 5:
         if (!c.anaphylaxisKit) return "Confirm adrenaline 1 in 1,000 and a telephone are immediately available";
@@ -304,8 +328,10 @@ export function YellowFeverClient() {
         return null;
       case 6:
         if (!c.observationCompleted) return "Record that the 15 minute seated observation period was completed";
-        if (!c.validFromExplained || !c.adverseEventAdvice || !c.biteAvoidanceAdvice || !c.pilOffered)
-          return "Please confirm all counselling points";
+        if (!c.validFromExplained) return "Tick \"Explained the certificate becomes valid 10 days after this dose...\" once the advice has been given";
+        if (!c.pilOffered) return "Tick \"Marketing authorisation holder's patient information leaflet offered\"";
+        if (!c.adverseEventAdvice) return "Tick \"Advised on possible adverse effects...\" once the advice has been given";
+        if (!c.biteAvoidanceAdvice) return "Tick \"Mosquito bite avoidance reinforced...\" once the advice has been given";
         if (!c.avoidPregnancyAdvice) return "Record whether the avoid-pregnancy-for-one-month advice was given, or that it was not applicable";
         if (c.certificateIssued && !c.certificateNumber.trim())
           return "Please record the certificate number";
@@ -313,7 +339,7 @@ export function YellowFeverClient() {
           return "Please record the date from which the certificate is valid";
         if (!c.certificateIssued && !c.certificateNotIssuedReason.trim())
           return "The PGD says to issue the ICVP: either record the certificate number, or record the reason it was not issued";
-        if (!c.gpInformed) return "Confirm the GP will be informed";
+        if (!c.gpInformed) return "Tick \"GP informed, or will be informed, of this vaccination and any adverse reaction\"";
         return validateSummaryStep(summary);
       default: return null;
     }
@@ -373,10 +399,15 @@ export function YellowFeverClient() {
                 working under that designation.
               </p>
             </div>
-            <Checkbox
-              label="I confirm this pharmacy is a designated Yellow Fever Vaccination Centre and I am authorised to administer under its designation"
-              checked={c.yfvcDesignated}
-              onChange={(v) => set({ yfvcDesignated: v })}
+            <SelectInput
+              label="Is this pharmacy a designated Yellow Fever Vaccination Centre, and are you authorised to administer under its designation?"
+              value={c.yfvcDesignatedAnswer}
+              onChange={(v) => set({ yfvcDesignatedAnswer: v as Clinical["yfvcDesignatedAnswer"], yfvcDesignated: v === "yes" })}
+              options={[
+                { value: "yes", label: "Yes: designated centre, and I am authorised under its designation" },
+                { value: "no", label: "No (yellow fever vaccine cannot be given here: the tool will stop)" },
+              ]}
+              required
             />
             <TextInput label="YFVC designation number" value={c.yfvcCode} onChange={(v) => set({ yfvcCode: v })} required />
             <Checkbox
@@ -387,6 +418,10 @@ export function YellowFeverClient() {
               required
             />
             <TextInput label="Administering clinician" value={c.administeringClinician} onChange={(v) => set({ administeringClinician: v })} placeholder="Name and role" />
+            <p className="text-xs text-gray-600">
+              Required on this tool as well as the starred fields: patient address, and the GP practice (or
+              &quot;Not registered&quot; as the GP name). From 9 months of age; no upper age limit.
+            </p>
             <PatientDetailsStep patient={patient} onChange={onPatientChange} requireAdult={false} />
           </div>
         );
@@ -402,7 +437,6 @@ export function YellowFeverClient() {
                   value={c.consentBasis}
                   onChange={(v) => set({ consentBasis: v as Clinical["consentBasis"] })}
                   options={[
-                    { value: "", label: "Select..." },
                     { value: "parental", label: "A person with parental responsibility" },
                     ...(gillickPossible ? [{ value: "gillick", label: "The young person, assessed as Gillick competent" }] : []),
                   ]}
@@ -425,6 +459,7 @@ export function YellowFeverClient() {
             <AlertBanner alerts={alerts} />
             <TextInput label="Destination" value={c.destination} onChange={(v) => set({ destination: v })} placeholder="e.g. Ghana, Brazil (Minas Gerais)" required />
             <TextInput label="Departure date" type="date" value={c.departureDate} onChange={(v) => set({ departureDate: v })} required />
+            {(() => { const d = daysUntil(c.departureDate); return d !== null && d < 0 ? <p className="text-xs text-amber-700">Departure date is in the past: check the date.</p> : null; })()}
             <SelectInput
               label="Certificate requirement for this destination"
               value={c.certificateRequired}
@@ -518,8 +553,19 @@ export function YellowFeverClient() {
                   cannot be obtained before vaccination is excluded. Call
                   NaTHNaC on 020 7383 7474.
                 </p>
-                <Checkbox label="Specialist advice obtained and supports vaccination" checked={c.specialistAdviceObtained} onChange={(v) => set({ specialistAdviceObtained: v })} required />
-                <TextInput label="Who gave the advice, and when" value={c.specialistAdviceDetails} onChange={(v) => set({ specialistAdviceDetails: v })} placeholder="e.g. NaTHNaC advice line, Dr X, 11/09/2026 14:20" required />
+                <SelectInput
+                  label="Was specialist advice obtained before vaccinating?"
+                  value={c.specialistAdviceAnswer}
+                  onChange={(v) => set({ specialistAdviceAnswer: v as Clinical["specialistAdviceAnswer"], specialistAdviceObtained: v === "obtained", specialistAdviceDetails: v === "obtained" ? c.specialistAdviceDetails : "" })}
+                  options={[
+                    { value: "obtained", label: "Yes: specialist advice obtained and supports vaccination" },
+                    { value: "not-obtained", label: "No: advice could not be obtained (excluded: the tool will stop)" },
+                  ]}
+                  required
+                />
+                {c.specialistAdviceAnswer === "obtained" && (
+                  <TextInput label="Who gave the advice, and when" value={c.specialistAdviceDetails} onChange={(v) => set({ specialistAdviceDetails: v })} placeholder="e.g. NaTHNaC advice line, Dr X, 11/09/2026 14:20" required />
+                )}
               </div>
             )}
           </div>
@@ -547,7 +593,6 @@ export function YellowFeverClient() {
               value={c.doseType}
               onChange={(v) => set({ doseType: v as Clinical["doseType"], reinforcingReason: v === "reinforcing" ? c.reinforcingReason : "" })}
               options={[
-                { value: "", label: "Select..." },
                 { value: "first", label: "First dose (single 0.5 ml dose; certificate then valid for life)" },
                 { value: "reinforcing", label: "Reinforcing dose (Green Book chapter 35 group)" },
                 { value: "booster", label: "Booster after 10 years for prolonged high-risk exposure" },
@@ -560,7 +605,6 @@ export function YellowFeverClient() {
                 value={c.reinforcingReason}
                 onChange={(v) => set({ reinforcingReason: v })}
                 options={[
-                  { value: "", label: "Select..." },
                   { value: "first-dose-under-2", label: "First dose given when aged under 2 years" },
                   { value: "first-dose-pregnancy", label: "First dose given during pregnancy" },
                   { value: "first-dose-hiv", label: "First dose given while infected with HIV" },
@@ -592,14 +636,15 @@ export function YellowFeverClient() {
             <div className="print:hidden"><AlertBanner alerts={alerts} /></div>
             <div className="space-y-3 p-4 bg-gray-50 rounded-lg print:hidden">
               <Checkbox label="Observed for 15 minutes after vaccination, seated, and the observation period completed" checked={c.observationCompleted} onChange={(v) => set({ observationCompleted: v })} required />
-              <Checkbox label="International Certificate of Vaccination or Prophylaxis (ICVP) issued, completed and signed in accordance with NaTHNaC requirements" checked={c.certificateIssued} onChange={(v) => set({ certificateIssued: v, certificateNotIssuedReason: v ? "" : c.certificateNotIssuedReason })} />
+              <p className="text-xs text-gray-600">Certificate: tick the box below if the ICVP was issued and record its number; if it was not issued, record the reason instead (one or the other is required).</p>
+              <Checkbox label="International Certificate of Vaccination or Prophylaxis (ICVP) issued, completed and signed in accordance with NaTHNaC requirements" checked={c.certificateIssued} onChange={(v) => set({ certificateIssued: v, certificateNotIssuedReason: v ? "" : c.certificateNotIssuedReason, certificateValidFrom: v && !c.certificateValidFrom ? plusDaysIso(10) : c.certificateValidFrom })} />
               {c.certificateIssued ? (
                 <>
                   <TextInput label="Certificate number" value={c.certificateNumber} onChange={(v) => set({ certificateNumber: v })} required />
-                  <TextInput label="Certificate valid from (10 days after this dose)" type="date" value={c.certificateValidFrom} onChange={(v) => set({ certificateValidFrom: v })} required />
+                  <TextInput label="Certificate valid from (10 days after this dose; filled in automatically, check it)" type="date" value={c.certificateValidFrom} onChange={(v) => set({ certificateValidFrom: v })} required />
                 </>
               ) : (
-                <TextInput label="Reason the certificate was not issued" value={c.certificateNotIssuedReason} onChange={(v) => set({ certificateNotIssuedReason: v })} placeholder="The PGD says to issue the ICVP. e.g. patient already holds a lifetime certificate; booster recorded on existing certificate" required />
+                <TextInput label="If the certificate was not issued: reason" value={c.certificateNotIssuedReason} onChange={(v) => set({ certificateNotIssuedReason: v })} placeholder="The PGD says to issue the ICVP. e.g. patient already holds a lifetime certificate; booster recorded on existing certificate" required />
               )}
               <Checkbox label="Explained the certificate becomes valid 10 days after this dose and then remains valid for life, and that a replacement can be obtained if lost" checked={c.validFromExplained} onChange={(v) => set({ validFromExplained: v })} />
               <Checkbox label="Marketing authorisation holder's patient information leaflet offered" checked={c.pilOffered} onChange={(v) => set({ pilOffered: v })} />
@@ -610,7 +655,6 @@ export function YellowFeverClient() {
                 value={c.avoidPregnancyAdvice}
                 onChange={(v) => set({ avoidPregnancyAdvice: v as Clinical["avoidPregnancyAdvice"] })}
                 options={[
-                  { value: "", label: "Select..." },
                   { value: "given", label: "Advice given and recorded" },
                   { value: "not-applicable", label: "Not applicable" },
                 ]}
@@ -638,7 +682,7 @@ export function YellowFeverClient() {
       <div className="max-w-6xl mx-auto px-4">
         <div className="space-y-6">
           <div className="print:hidden">
-            <ProgressBar stepLabels={STEP_LABELS} currentStep={step} onStepClick={(s) => { if (s < step) setStep(s); }} completedSteps={completed} hasErrors={!!validationError} />
+            <ProgressBar stepLabels={STEP_LABELS} currentStep={step} onStepClick={(s) => { if (s < step) setStep(s); }} completedSteps={completed} hasErrors={hasStops} />
           </div>
           <StepWrapper
             title={STEP_LABELS[step]}
@@ -657,7 +701,7 @@ export function YellowFeverClient() {
             }}
           >
             {stepBody()}
-            {hasStops && step > 0 && (
+            {hasStops && (
               <div className="mt-6 space-y-3 p-4 rounded-lg border border-red-300 bg-red-50">
                 <p className="text-sm font-semibold text-red-900">Not vaccinated: record the advice given</p>
                 <p className="text-xs text-red-900">

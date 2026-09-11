@@ -199,6 +199,17 @@ export function StepWrapper({
         </div>
       )}
 
+      {/* A tool can refuse Next without giving a reason (canProceed false,
+          validationError null). Never leave the pharmacist guessing: say
+          that something on this step is incomplete. */}
+      {hasAttemptedNext && !validationError && !canProceed && !isBlocked && vaccineSafetySatisfied(pgdSlug) && (
+        <div className="mx-6 mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-sm text-red-700">
+            This step is not complete. Check every field marked with a red asterisk (*) or labelled required on this step, then press Next again.
+          </p>
+        </div>
+      )}
+
       {/* Save status banner on final step, or after a not-supplied save */}
       {(isLastStep || isBlocked) && saveStatus !== "idle" && (
         <div

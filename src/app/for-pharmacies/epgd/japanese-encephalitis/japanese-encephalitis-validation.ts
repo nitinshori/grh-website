@@ -70,10 +70,10 @@ export function validateScreening(screening: JapaneseEncephalitisScreening): Val
   const errors: string[] = [];
 
   if (!screening.destinationCountry?.trim()) {
-    errors.push('Destination country is required');
+    errors.push('Destination country/region is required');
   }
   if (!screening.riskArea?.trim()) {
-    errors.push('Risk area description is required');
+    errors.push('Risk area (rural/urban, rice paddies, etc) is required');
   }
   if (!screening.riskCategory) {
     errors.push('Select the Green Book risk category that applies to this traveller');
@@ -82,7 +82,7 @@ export function validateScreening(screening: JapaneseEncephalitisScreening): Val
     errors.push('Departure date is required');
   }
   if (!screening.travelDuration?.trim()) {
-    errors.push('Travel duration is required');
+    errors.push('Duration of travel is required');
   }
   // Under 14 days to departure the course cannot be completed before travel,
   // so the inclusion tick would be a false statement in the record. The late
@@ -90,15 +90,15 @@ export function validateScreening(screening: JapaneseEncephalitisScreening): Val
   const days = daysUntil(screening.departureDate);
   if (days !== null && days >= 0 && days < 14) {
     if (!screening.insufficientTimeAcknowledged) {
-      errors.push('Under 14 days to departure: confirm the risk has been assessed, the patient told protection will be incomplete, and the course will be completed on return');
+      errors.push('Under 14 days to departure: tick "Insufficient time to complete the primary course before travel" once the risk has been assessed and the patient told protection will be incomplete');
     }
   } else if (!screening.sufficientTimeBeforeTravel) {
     errors.push(days !== null && days < 35
-      ? 'Confirm there is sufficient time before travel to complete the primary course: under 35 days only the rapid course (day 0 and day 7) can be completed a week before travel'
-      : 'Confirm there is sufficient time before travel to complete the primary course (inclusion criterion)');
+      ? 'Tick "Sufficient time before travel to complete the primary course using the rapid course": under 35 days only the rapid course (day 0 and day 7) can be completed a week before travel'
+      : 'Tick "Sufficient time before travel to complete the primary course" (inclusion criterion)');
   }
   if (screening.outdoorActivities && !screening.activitiesDetails?.trim()) {
-    errors.push('Please describe outdoor activities');
+    errors.push('Extended outdoor activities is ticked: complete "Describe activities"');
   }
 
   return { isValid: errors.length === 0, errors };
@@ -110,13 +110,13 @@ export function validateMedicalHistory(screening: JapaneseEncephalitisScreening)
   // Temperature is optional: the document's exclusion is the pharmacist's
   // assessment of acute severe febrile illness, with no threshold.
   if (screening.currentIllness && !screening.illnessDetails?.trim()) {
-    errors.push('Please describe current illness');
+    errors.push('Other current illness is ticked: complete "Describe current illness"');
   }
   if (screening.immunosuppressed && !screening.immunosuppressedDetails?.trim()) {
-    errors.push('Please specify reason for immunosuppression');
+    errors.push('Immunosuppressed is ticked: complete "Details of immunosuppression"');
   }
   if (screening.breastfeeding && !screening.breastfeedingRiskAssessment?.trim()) {
-    errors.push('Breastfeeding: record the risk assessment (PGD caution)');
+    errors.push('Breastfeeding is ticked: complete "Breastfeeding risk assessment" (PGD caution)');
   }
 
   return { isValid: errors.length === 0, errors };
@@ -144,7 +144,7 @@ export function validateAdministration(
   // Adrenaline must be confirmed BEFORE the vaccine is given, so it is
   // checked here on the administration step, not retrospectively.
   if (!administration.anaphylaxisKitChecked) {
-    errors.push('Confirm adrenaline 1:1000 and the written anaphylaxis protocol are immediately available before the vaccine is given');
+    errors.push('Tick "Adrenaline 1:1000 injection immediately available" before the vaccine is given (the batch number field is locked until this is ticked)');
   }
   if (!administration.batchNumber?.trim()) {
     errors.push('Batch number is required');
@@ -159,10 +159,10 @@ export function validateAdministration(
   }
 
   if (!administration.injectionSite) {
-    errors.push('Injection site must be selected');
+    errors.push('Select the injection site');
   }
   if (!administration.route) {
-    errors.push('Route must be selected');
+    errors.push('Select the route');
   }
   if (screening.bleedingDisorder && administration.route === 'intramuscular') {
     errors.push('Bleeding disorder, thrombocytopenia or anticoagulation: give by deep subcutaneous injection, not intramuscularly');
@@ -171,23 +171,23 @@ export function validateAdministration(
     errors.push('Deep subcutaneous is authorised only for bleeding disorders, thrombocytopenia or anticoagulation; otherwise give intramuscularly');
   }
   if (!administration.doseNumber) {
-    errors.push('Dose number must be selected');
+    errors.push('Select the dose number');
   }
   if (administration.doseNumber === 'second-booster' && !secondBoosterAllowed(ageYears)) {
     errors.push('The second booster is authorised for adults aged 18 to 64 only');
   }
   if (!administration.schedule) {
-    errors.push('Schedule must be selected');
+    errors.push('Select the schedule (for a booster, the schedule used for the primary course)');
   }
   if (
     administration.schedule === 'accelerated' &&
     isRapidScheduleOffLabel(ageYears) &&
     !administration.offLabelRapidConsent
   ) {
-    errors.push('Rapid schedule outside adults aged 18 to 64 is off-label: record that this was explained and explicit consent given');
+    errors.push('Rapid schedule outside adults aged 18 to 64 is off-label: tick "Off-label rapid schedule explained and explicit consent documented"');
   }
   if (!administration.administeredBy?.trim()) {
-    errors.push('Administrator name is required');
+    errors.push('Administered by (name) is required');
   }
   if (!administration.timeAdministered?.trim()) {
     errors.push('Time of administration is required');
@@ -204,14 +204,20 @@ export function validatePostVaccineObs(
   const errors: string[] = [];
 
   if (!postVaccineObs.observationPeriod) {
-    errors.push('Observation period must be specified');
+    errors.push('Select the observation period');
   }
   if (!postVaccineObs.observationCompleted) {
-    errors.push('Record that the observation period was completed (15 minutes minimum, seated)');
+    errors.push('Tick "Observation period completed, patient seated" (15 minutes minimum)');
+  }
+  // The record prints "Patient well: No" for an unticked box, so the box
+  // cannot be left unanswered: either the patient was well, or a reaction
+  // was observed and described.
+  if (!postVaccineObs.patientWell && !postVaccineObs.adverseReaction) {
+    errors.push('Tick "Patient is well after vaccination", or tick "Adverse reaction observed" and describe it');
   }
 
   if (postVaccineObs.adverseReaction && !postVaccineObs.reactionDetails?.trim()) {
-    errors.push('Please describe the adverse reaction');
+    errors.push('Adverse reaction observed is ticked: complete "Describe adverse reaction"');
   }
 
   return { isValid: errors.length === 0, errors };
@@ -227,18 +233,20 @@ export function validateSummary(summary: { pharmacistName: string; pharmacistGPh
 export function validateAdvice(advice: JapaneseEncephalitisAdvice): ValidationResult {
   const errors: string[] = [];
 
-  if (
-    !advice.leafletGiven ||
-    !advice.twoDozeSchedule ||
-    !advice.scheduleExplained ||
-    !advice.commonReactions ||
-    !advice.seriousReactions ||
-    !advice.mosquitoBitePrevention ||
-    !advice.duskDawnBiting ||
-    !advice.boosterInformation ||
-    !advice.returnIfConcerned
-  ) {
-    errors.push('All advice points must be acknowledged');
+  const points: [boolean, string][] = [
+    [advice.leafletGiven, "Manufacturer's patient information leaflet given"],
+    [advice.twoDozeSchedule, 'Two-dose primary course explained'],
+    [advice.scheduleExplained, 'Schedule and date of the second dose'],
+    [advice.commonReactions, 'Common local and systemic reactions'],
+    [advice.seriousReactions, 'Serious reactions and no vaccine is completely protective'],
+    [advice.mosquitoBitePrevention, 'Mosquito bite avoidance as the primary protection'],
+    [advice.duskDawnBiting, 'Dusk to dawn biting mosquitoes'],
+    [advice.boosterInformation, 'Booster information'],
+    [advice.returnIfConcerned, 'When to seek help'],
+  ];
+  const missing = points.filter(([done]) => !done).map(([, label]) => label);
+  if (missing.length > 0) {
+    errors.push(`Every advice point must be ticked once given. Still unticked: ${missing.map((m) => `"${m}"`).join(', ')}`);
   }
 
   return { isValid: errors.length === 0, errors };

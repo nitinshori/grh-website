@@ -108,8 +108,9 @@ export function getAllAlerts(state: CovidBoosterConsultationState): ClinicalAler
     }
   }
 
-  // Bleeding disorder not assessed as safe for IM injection
-  if (state.assessment.bleedingDisorder && !state.assessment.bleedingDisorderAssessedSafe) {
+  // Bleeding disorder and the clinician's assessment answered "no". A blank
+  // answer is a validation message, not a stop (stop audit, 11 Sep 2026).
+  if (state.assessment.bleedingDisorder && state.assessment.bleedingDisorderAssessedAnswer === "no") {
     alerts.push({
       severity: "stop",
       code: "COVID_BLEEDING_DISORDER",
@@ -194,7 +195,9 @@ export function getAllAlerts(state: CovidBoosterConsultationState): ClinicalAler
   }
 
   // Primary course in someone unvaccinated AND immunosuppressed is excluded.
-  if (!state.assessment.previousCovidVaccine && state.assessment.immunosuppressed) {
+  // "Unvaccinated" is the explicit "no" answer, not an unticked box (stop
+  // audit, 11 Sep 2026).
+  if (state.assessment.previousCovidVaccineAnswer === "no" && state.assessment.immunosuppressed) {
     alerts.push({
       severity: "stop",
       code: "COVID_PRIMARY_COURSE_IMMUNOSUPPRESSED",

@@ -5,6 +5,18 @@
 
 export const PGD_STRAPLINE = "Finasteride 1 mg (Androgenetic Alopecia) PGD, version 003, issued 11 September 2026";
 
+/** Plain-language descriptions of the Norwood-Hamilton stages, so a locum
+ *  who does not know the chart can still pick the right stage. */
+export const NORWOOD_STAGES: [number, string][] = [
+  [1, "no visible recession of the hairline"],
+  [2, "slight recession at the temples"],
+  [3, "deep recession at the temples (earliest stage of baldness), or thinning at the crown"],
+  [4, "temples and crown both thinning, with a band of hair between them"],
+  [5, "band of hair between temples and crown is narrowing"],
+  [6, "temples and crown have joined; band of hair gone"],
+  [7, "hair only around the sides and back of the head"],
+];
+
 import type { ClinicalAlert, DoseRecommendation, AlertSeverity } from "../../shared/types";
 import type { HLConsultationState } from "./hair-loss-types";
 
@@ -111,6 +123,18 @@ export function getAllAlerts(state: HLConsultationState): ClinicalAlert[] {
       code: "HL_SUICIDAL",
       message: "Current suicidal ideation reported",
       detail: "Suicidal ideation has been reported with finasteride 1 mg and the document requires discontinuation and medical advice if psychiatric symptoms occur. Do not start treatment; refer the patient for medical assessment today (GP, NHS 111, or emergency services if at immediate risk).",
+    });
+  }
+
+  // Stop: pharmacist has decided to refer rather than supply because of
+  // current mood symptoms. Without this the only way to record that
+  // decision was to carry on to a supply.
+  if (state.contraindications.depressiveMood && state.contraindications.moodReferred) {
+    alerts.push({
+      severity: "stop",
+      code: "HL_MOOD_REFER",
+      message: "Not supplied: referred because of current depression or mood symptoms",
+      detail: "The pharmacist has decided not to start finasteride and to refer the patient for medical review of their mood symptoms. Record the advice given and use Save as not supplied.",
     });
   }
 

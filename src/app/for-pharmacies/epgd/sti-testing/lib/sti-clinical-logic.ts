@@ -42,15 +42,19 @@ export function getAgeAlerts(state: STIConsultationState): ClinicalAlert[] {
         detail:
           "Partner 18 or over, coercion, exploitation or learning disability: refer and follow the local safeguarding pathway.",
       });
-    } else if (!fraserAllLimbs(state) || !state.patient.safeguardingAssessed) {
+    } else if (state.patient.fraserAnswer === "no") {
+      // Fires only on the recorded answer "No". Unticked Fraser limbs or an
+      // unticked safeguarding assessment are "not yet answered": validation
+      // messages on the Patient Details step (patientGateError), never a
+      // stop (stop audit, 11 Sep 2026).
       alerts.push({
         severity: "stop",
         code: "STI_FRASER_NOT_ESTABLISHED",
-        message: "Aged 13 to 15: Fraser competence and safeguarding assessment must be recorded",
+        message: "Aged 13 to 15: Fraser competence not established: do not supply",
         detail:
-          "Supply only where Fraser competence is assessed and recorded and a safeguarding assessment (partner age, coercion, exploitation indicators) is completed with no concern. Otherwise refer and follow the local safeguarding pathway.",
+          "Supply only where Fraser competence is assessed and recorded and a safeguarding assessment (partner age, coercion, exploitation indicators) is completed with no concern. Refer the same day and follow the local safeguarding pathway.",
       });
-    } else {
+    } else if (state.patient.fraserAnswer === "yes" && fraserAllLimbs(state) && state.patient.safeguardingAssessed) {
       alerts.push({
         severity: "red-flag",
         code: "STI_AGE_13_15",
@@ -97,8 +101,6 @@ export function getTreatmentAlerts(state: STIConsultationState): ClinicalAlert[]
     });
   }
 
-  const doxyBlocked = t.tetracyclineHypersensitivity || t.unableToComplyOrSwallow || t.doxycyclineUnsuitable;
-
   if (t.medicine === "doxycycline") {
     if (t.tetracyclineHypersensitivity) {
       alerts.push({
@@ -127,14 +129,9 @@ export function getTreatmentAlerts(state: STIConsultationState): ClinicalAlert[]
   }
 
   if (t.medicine === "azithromycin") {
-    if (!doxyBlocked) {
-      alerts.push({
-        severity: "stop",
-        code: "STI_AZITHRO_NOT_INDICATED",
-        message: "Azithromycin is only indicated where doxycycline is unsuitable or contraindicated",
-        detail: "Record why doxycycline is unsuitable (hypersensitivity, unable to comply with 7 days or swallow capsules, or another reason) or supply doxycycline.",
-      });
-    }
+    // Azithromycin chosen with no doxycycline exclusion ticked is a missing
+    // record, not an adverse answer: a validation message on the Treatment
+    // step and every step after it (treatmentGateError), never a stop.
     if (t.macrolideHypersensitivity) {
       alerts.push({
         severity: "stop",
@@ -162,6 +159,46 @@ export function getTreatmentAlerts(state: STIConsultationState): ClinicalAlert[]
   }
 
   return alerts;
+}
+
+/** Doxycycline is first line; azithromycin only where a doxycycline exclusion is recorded. */
+export function doxycyclineBlocked(state: STIConsultationState): boolean {
+  const t = state.treatment;
+  return t.tetracyclineHypersensitivity || t.unableToComplyOrSwallow || t.doxycyclineUnsuitable;
+}
+
+/**
+ * Records the treatment depends on. Re-checked on the Treatment step and
+ * every step after it, so a gap opened by going back is caught before Save
+ * and Print. Each is a missing record, worded as the control's label.
+ */
+export function treatmentGateError(state: STIConsultationState): string | null {
+  const t = state.treatment;
+  if (!t.treatUnderPgd) return null;
+  if (!t.medicine) return "Select the medicine to supply (doxycycline first line; azithromycin only where doxycycline is unsuitable)";
+  if (t.medicine === "azithromycin" && !doxycyclineBlocked(state))
+    return "Azithromycin is only indicated where doxycycline is unsuitable or contraindicated: tick the doxycycline exclusion that applies (hypersensitivity to tetracyclines; unable to comply with the 7-day regimen or to swallow capsules; otherwise unsuitable, with the reason), or change \"Medicine to supply\" to doxycycline";
+  return null;
+}
+
+/**
+ * Aged 13 to 15: the Fraser and safeguarding records the supply depends on.
+ * Checked on the Patient Details step and again before Save and Print.
+ */
+export function patientGateError(state: STIConsultationState): string | null {
+  const p = state.patient;
+  if (p.age === null || p.age < 13 || p.age > 15) return null;
+  if (!p.fraserAnswer) return "Fraser competence established? Select Yes or No";
+  if (p.fraserAnswer === "yes") {
+    if (!p.fraserUnderstandsAdvice) return "Tick 'The young person understands the advice given'";
+    if (!p.fraserCannotBePersuaded) return "Tick 'They cannot be persuaded to inform their parents, or to allow the pharmacist to inform them'";
+    if (!p.fraserLikelyToContinue) return "Tick 'They are likely to continue having sexual intercourse with or without treatment'";
+    if (!p.fraserHealthWouldSuffer) return "Tick 'Their physical or mental health is likely to suffer unless they receive treatment'";
+    if (!p.fraserBestInterests) return "Tick 'Their best interests require treatment without parental consent'";
+  }
+  if (!p.safeguardingAssessed) return "Tick 'Safeguarding assessment completed (partner age, coercion, exploitation indicators)'";
+  if (!p.safeguardingNotes.trim()) return "Record the safeguarding assessment (partner age, coercion, exploitation indicators)";
+  return null;
 }
 
 export function hasTreatmentStops(state: STIConsultationState): boolean {

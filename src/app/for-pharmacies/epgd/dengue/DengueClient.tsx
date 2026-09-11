@@ -15,6 +15,7 @@ import {
   DengueConsultationState,
   DengueScreening,
   DengueAdvice,
+  YesNoAnswer,
   initialDengueScreening,
   initialDengueVaccineAdministration,
   initialDenguePostVaccineObs,
@@ -52,6 +53,9 @@ import { calculateAge, initialPatientDetails, initialConsent, initialSummary } f
 import { useConsultationTracking, type ConsultationRecordData } from '../shared/hooks/useConsultationTracking';
 
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
+/** Step from which a stop is shown and enforced: the travel step, where an inclusion criterion can be answered No. */
+const STOP_FROM_STEP = 2;
+
 const STEP_LABELS = [
   'Patient Details',
   'Consent',
@@ -104,8 +108,11 @@ export default function DengueClient({
   // stop raised by going back and ticking an exclusion is enforced at once
   // on every later step (they used to be evaluated only on leaving steps 2
   // and 3 and enforced only on step 4).
+  // A null age (no date of birth yet) is passed through as null: it used to
+  // be coerced to 0, which made every fresh consultation "under 18" until
+  // the DOB was typed (stop audit, 11 Sep 2026).
   const evaluation = useMemo(
-    () => evaluateDengueContraindications(state.screening, patientAge ?? 0),
+    () => evaluateDengueContraindications(state.screening, patientAge),
     [state.screening, patientAge]
   );
   const hasStops = hasHardStopContraindications(evaluation.contraindications);
@@ -156,10 +163,21 @@ export default function DengueClient({
     }));
   }, []);
 
-  const handleEndemicAreaChange = useCallback((value: boolean): void => {
+  // The two inclusion questions take the patient's answer (Yes / No); the
+  // booleans the rest of the tool reads are derived from it.
+  const handleEndemicAreaChange = useCallback((value: string): void => {
+    const answer = value as YesNoAnswer;
     setState((prev) => ({
       ...prev,
-      screening: { ...prev.screening, endemicArea: value },
+      screening: { ...prev.screening, endemicAreaAnswer: answer, endemicArea: answer === 'yes' },
+    }));
+  }, []);
+
+  const handleWillingTwoDosesChange = useCallback((value: string): void => {
+    const answer = value as YesNoAnswer;
+    setState((prev) => ({
+      ...prev,
+      screening: { ...prev.screening, willingTwoDosesAnswer: answer, willingTwoDoses: answer === 'yes' },
     }));
   }, []);
 
@@ -427,8 +445,9 @@ export default function DengueClient({
       }
     }
 
-    // A stop anywhere blocks every step from the one it is raised on.
-    if (hasStops && stepNum >= 3) {
+    // A stop anywhere blocks every step from the one it is raised on. The
+    // earliest is the travel step (an inclusion criterion answered No).
+    if (hasStops && stepNum >= STOP_FROM_STEP) {
       errors.push('Exclusion criteria met: vaccination is contraindicated under this PGD. Record the advice given and save as not vaccinated.');
     }
     // Adrenaline confirmation on the shared safety panel locks Next on every
@@ -605,7 +624,7 @@ export default function DengueClient({
   const getStepAlerts = useCallback((): React.ReactNode => {
     const travelCodes = ['PREVIOUS_DENGUE_INFECTION', 'ENDEMIC_AREA_TRAVEL'];
     const stepAlerts = evaluation.alerts.filter((alert: ClinicalAlert) => {
-      if (alert.severity === 'stop') return state.step >= 3;
+      if (alert.severity === 'stop') return state.step >= STOP_FROM_STEP;
       if (travelCodes.includes(alert.code)) return state.step === 2 || state.step === 4;
       return state.step >= 3;
     });
@@ -616,7 +635,7 @@ export default function DengueClient({
   }, [evaluation.alerts, state.step]);
 
   const canProceedFromStep = useCallback((): boolean => {
-    if (hasStops && state.step >= 3) {
+    if (hasStops && state.step >= STOP_FROM_STEP) {
       return false;
     }
     return true;
@@ -668,11 +687,17 @@ export default function DengueClient({
           <div className="print:hidden">{getStepAlerts()}</div>
 
           {state.step === 0 && (
-            <PatientDetailsStep
-              patient={state.patient}
-              onChange={handlePatientChange}
-              requireAdult={false}
-          />
+            <>
+              <p className="mb-4 text-xs text-gray-600">
+                Required on this tool as well as the starred fields: patient address, GP practice (or
+                &quot;Not registered&quot; as the GP name) and NHS number. Adults aged 18 years and over only.
+              </p>
+              <PatientDetailsStep
+                patient={state.patient}
+                onChange={handlePatientChange}
+                requireAdult
+              />
+            </>
           )}
 
           {state.step === 1 && (
@@ -696,33 +721,53 @@ export default function DengueClient({
                     value={state.screening.destinationCountry}
                     onChange={handleDestinationChange}
                     placeholder="e.g., Thailand, Brazil, India"
-                  />
-                  <Checkbox
-                    label="Travel to or residence in a dengue-endemic area"
-                    checked={state.screening.endemicArea}
-                    onChange={handleEndemicAreaChange}
-                    description="PGD inclusion criterion. Check current NaTHNaC / TravelHealthPro country information."
                     required
                   />
+                  <SelectInput
+                    label="Is the patient travelling to, or living in, a dengue-endemic area?"
+                    value={state.screening.endemicAreaAnswer}
+                    onChange={handleEndemicAreaChange}
+                    options={[
+                      { value: 'yes', label: 'Yes' },
+                      { value: 'no', label: 'No (outside this PGD: the tool will stop)' },
+                    ]}
+                    required
+                  />
+                  <p className="text-xs text-gray-500 -mt-2">
+                    PGD inclusion criterion. Check current NaTHNaC / TravelHealthPro country information.
+                  </p>
                   <TextInput
                     label="Departure date"
                     type="date"
                     value={state.screening.departureDate}
                     onChange={handleDepartureDateChange}
+                    required
                   />
+                  {state.screening.departureDate && state.screening.departureDate < todayIso() && (
+                    <p className="text-xs text-amber-700 -mt-2">
+                      Departure date is in the past: check the date. (A second dose may be given after travel has started.)
+                    </p>
+                  )}
                   <TextInput
                     label="Travel duration"
                     value={state.screening.travelDuration}
                     onChange={handleTravelDurationChange}
                     placeholder="e.g., 2 weeks, 1 month"
-                  />
-                  <Checkbox
-                    label="Willing to receive two doses, 3 months apart"
-                    checked={state.screening.willingTwoDoses}
-                    onChange={(v) => handleScreeningFlagChange('willingTwoDoses', v)}
-                    description="PGD inclusion criterion. First dose at least 3 months before travel when possible."
                     required
                   />
+                  <SelectInput
+                    label="Is the patient willing to receive two doses, 3 months apart?"
+                    value={state.screening.willingTwoDosesAnswer}
+                    onChange={handleWillingTwoDosesChange}
+                    options={[
+                      { value: 'yes', label: 'Yes' },
+                      { value: 'no', label: 'No (outside this PGD: the tool will stop)' },
+                    ]}
+                    required
+                  />
+                  <p className="text-xs text-gray-500 -mt-2">
+                    PGD inclusion criterion. First dose at least 3 months before travel when possible.
+                  </p>
                 </div>
               </div>
 
@@ -890,6 +935,7 @@ export default function DengueClient({
                   </span>
                 </div>
                 {([
+                  ['Inclusion criteria (endemic area, two doses)', evaluation.contraindications.inclusionNotMet],
                   ['Breastfeeding', evaluation.contraindications.breastfeeding],
                   ['Immune deficiency of any cause', evaluation.contraindications.immunosuppressed],
                   ['Hypersensitivity to a vaccine component', evaluation.contraindications.severeAllergy],
@@ -899,7 +945,7 @@ export default function DengueClient({
                   <div key={label} className="flex justify-between items-center">
                     <span className="text-gray-700">{label}:</span>
                     <span className={`font-semibold ${flagged ? 'text-red-600' : 'text-green-600'}`}>
-                      {flagged ? 'CONTRAINDICATED' : 'OK'}
+                      {flagged ? (label.startsWith('Inclusion') ? 'NOT MET' : 'CONTRAINDICATED') : 'OK'}
                     </span>
                   </div>
                 ))}
@@ -955,6 +1001,7 @@ export default function DengueClient({
                   type="date"
                   value={state.administration.expiryDate}
                   onChange={handleExpiryChange}
+                  required
                 />
 
                 <SelectInput
@@ -967,6 +1014,7 @@ export default function DengueClient({
                     { value: 'left-thigh', label: 'Left anterolateral thigh' },
                     { value: 'right-thigh', label: 'Right anterolateral thigh' },
                   ]}
+                  required
                 />
 
                 <SelectInput
@@ -977,15 +1025,22 @@ export default function DengueClient({
                     { value: '1st', label: '1st dose' },
                     { value: '2nd', label: '2nd dose' },
                   ]}
+                  required
                 />
 
                 {state.administration.doseNumber === '1st' && (
-                  <TextInput
-                    label="Next dose due date (3 months later)"
-                    type="date"
-                    value={state.administration.nextDueDate}
-                    onChange={handleNextDueDateChange}
-                  />
+                  <div>
+                    <TextInput
+                      label="Next dose due date (3 months later)"
+                      type="date"
+                      value={state.administration.nextDueDate}
+                      onChange={handleNextDueDateChange}
+                      required
+                    />
+                    <p className="text-xs text-gray-600 mt-1">
+                      Filled in automatically as 3 months from today. Change it if a different date is agreed.
+                    </p>
+                  </div>
                 )}
 
                 {state.administration.doseNumber === '2nd' && (
@@ -1009,6 +1064,7 @@ export default function DengueClient({
                   value={state.administration.administeredBy}
                   onChange={handleAdministeredByChange}
                   placeholder="Pharmacist name"
+                  required
                 />
 
                 <TextInput
@@ -1016,6 +1072,7 @@ export default function DengueClient({
                   type="time"
                   value={state.administration.timeAdministered}
                   onChange={handleTimeChange}
+                  required
                 />
               </div>
             </div>
@@ -1040,7 +1097,11 @@ export default function DengueClient({
                       { value: '15-min', label: '15 minutes' },
                       { value: '30-min', label: '30 minutes' },
                     ]}
+                    required
                   />
+                  <p className="text-xs text-gray-500 -mt-2">
+                    Pre-set to the recommended period (15 minutes; 30 minutes where there is a relevant history). Change it if a longer observation was carried out.
+                  </p>
 
                   <Checkbox
                     label="Observation period completed, seated"
@@ -1050,6 +1111,7 @@ export default function DengueClient({
                     required
                   />
 
+                  <p className="text-xs text-gray-600">Record the outcome of the observation: tick one of the two boxes below (required).</p>
                   <Checkbox
                     label="Patient is well after vaccination"
                     checked={state.postVaccineObs.patientWell}
@@ -1061,7 +1123,7 @@ export default function DengueClient({
                     label="Adverse reaction observed"
                     checked={state.postVaccineObs.adverseReaction}
                     onChange={handleAdverseReactionChange}
-                    description="Any adverse reaction during observation?"
+                    description="Tick if any adverse reaction occurred during the observation, and describe it"
                   />
 
                   {state.postVaccineObs.adverseReaction && (
@@ -1080,7 +1142,7 @@ export default function DengueClient({
                   Counselling Given
                 </h3>
                 <p className="text-gray-600 mb-4">
-                  Confirm all advice points have been provided to patient:
+                  Tick each advice point once it has been given to the patient (all are required):
                 </p>
                 <div className="space-y-4">
                   <Checkbox
@@ -1218,7 +1280,7 @@ export default function DengueClient({
             </>
           )}
 
-          {hasStops && state.step >= 3 && state.step < STEP_LABELS.length - 1 && saveStatus !== 'idle' && (
+          {hasStops && state.step >= STOP_FROM_STEP && state.step < STEP_LABELS.length - 1 && saveStatus !== 'idle' && (
             <div className={`mt-6 px-4 py-3 rounded-lg print:hidden ${
               saveStatus === 'saving' ? 'bg-blue-50 border border-blue-200' :
               saveStatus === 'saved' ? 'bg-green-50 border border-green-200' :
@@ -1241,10 +1303,10 @@ export default function DengueClient({
               Previous
             </button>
             <div className="flex items-center gap-3">
-              {hasStops && state.step >= 3 && (
-                <span className="text-xs text-red-600 font-medium">Cannot proceed: exclusion criteria met</span>
+              {hasStops && state.step >= STOP_FROM_STEP && (
+                <span className="text-xs text-red-600 font-medium">Cannot proceed: exclusion criteria met (see the red banner above)</span>
               )}
-              {hasStops && state.step >= 3 && saveStatus !== 'saved' && (
+              {hasStops && state.step >= STOP_FROM_STEP && saveStatus !== 'saved' && (
                 <button
                   onClick={handleSaveNotVaccinated}
                   disabled={saveStatus === 'saving'}
@@ -1253,7 +1315,7 @@ export default function DengueClient({
                   {saveStatus === 'saving' ? 'Saving...' : 'Save as not vaccinated'}
                 </button>
               )}
-              {hasStops && state.step >= 3 && saveStatus === 'saved' && (
+              {hasStops && state.step >= STOP_FROM_STEP && saveStatus === 'saved' && (
                 <button
                   onClick={handleNewConsultation}
                   className="px-4 py-2 rounded-lg text-sm font-medium text-[color:var(--tenant-primary)] border border-[color:var(--tenant-primary)]/30 hover:bg-[color:var(--tenant-primary)]/10 transition"
@@ -1261,13 +1323,17 @@ export default function DengueClient({
                   New Consultation
                 </button>
               )}
-              <button
-                onClick={handleNextStep}
-                disabled={state.step === STEP_LABELS.length - 1 || !canProceedFromStep()}
-                className="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
-              >
-                {state.step === STEP_LABELS.length - 1 ? 'Complete' : 'Next'}
-              </button>
+              {state.step === STEP_LABELS.length - 1 ? (
+                <span className="text-xs text-gray-500">Use &quot;Save &amp; Print Record&quot; at the top of the summary to finish</span>
+              ) : (
+                <button
+                  onClick={handleNextStep}
+                  disabled={!canProceedFromStep()}
+                  className="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  Next
+                </button>
+              )}
             </div>
           </div>
         </div>

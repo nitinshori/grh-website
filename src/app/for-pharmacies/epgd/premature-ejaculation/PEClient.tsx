@@ -220,19 +220,31 @@ export default function PEClient() {
     switch (state.currentStep) {
       case 0: // Patient Details
         return (
-          <PatientDetailsStep
-            patient={state.patient}
-            onChange={(field, value) =>
-              dispatch({ type: "UPDATE_PATIENT", field: field as keyof PEPatientDetails, value })
-            }
-            genderOption={{
-              label: "Confirm patient is male",
-              description: "This PGD is for male patients only.",
-              checked: state.patient.maleConfirmed,
-              onToggle: (v) =>
-                dispatch({ type: "UPDATE_PATIENT", field: "maleConfirmed", value: v }),
-            }}
-          />
+          <div className="space-y-4">
+            <PatientDetailsStep
+              patient={state.patient}
+              onChange={(field, value) =>
+                dispatch({ type: "UPDATE_PATIENT", field: field as keyof PEPatientDetails, value })
+              }
+            />
+            {/* Yes/No with no default: "No" is the exclusion, blank is a
+                validation message (stop audit, 11 Sep 2026). */}
+            <SelectInput
+              label="Is the patient male? (this PGD is for male patients only)"
+              value={
+                !state.patient.sexAnswered ? "" : state.patient.maleConfirmed ? "yes" : "no"
+              }
+              onChange={(v) => {
+                dispatch({ type: "UPDATE_PATIENT", field: "sexAnswered", value: v !== "" });
+                dispatch({ type: "UPDATE_PATIENT", field: "maleConfirmed", value: v === "yes" });
+              }}
+              options={[
+                { value: "yes", label: "Yes" },
+                { value: "no", label: "No (exclusion: dapoxetine is not indicated in females)" },
+              ]}
+              required
+            />
+          </div>
         );
 
       case 1: // Consent
@@ -245,7 +257,7 @@ export default function PEClient() {
               }
             />
             <Checkbox
-              label="Informed WRITTEN consent obtained and filed"
+              label="Informed WRITTEN consent obtained and filed *"
               checked={state.consent.writtenConsentObtained}
               onChange={(v) =>
                 dispatch({ type: "UPDATE_CONSENT", field: "writtenConsentObtained", value: v })
@@ -278,7 +290,7 @@ export default function PEClient() {
               required
             />
             <NumberInput
-              label="IELT, Intravaginal Ejaculation Latency Time (minutes). Inclusion: under 2 minutes"
+              label="IELT (intravaginal ejaculation latency time): the patient's estimate of the time from penetration to ejaculation. Inclusion: under 2 minutes"
               value={state.clinicalAssessment.ieltMinutes}
               onChange={(v) =>
                 dispatch({
@@ -288,7 +300,9 @@ export default function PEClient() {
                 })
               }
               min={0}
-              placeholder="Enter time in minutes"
+              max={60}
+              unit="minutes (decimals allowed, e.g. 0.5)"
+              placeholder="e.g. 1"
               required
             />
             {state.clinicalAssessment.ieltMinutes !== null && state.clinicalAssessment.ieltMinutes >= 2 && (
@@ -310,7 +324,7 @@ export default function PEClient() {
               }
             />
             <Checkbox
-              label="Premature ejaculation causes significant personal distress (inclusion criterion)"
+              label="Premature ejaculation causes significant personal distress (inclusion criterion, required) *"
               checked={state.clinicalAssessment.psychologicalDistress}
               onChange={(v) =>
                 dispatch({
@@ -580,7 +594,7 @@ export default function PEClient() {
               <p>Up to 6 tablets per supply. Review efficacy and tolerability after 4 weeks (about 6 doses); reassess every 6 months if continuing. Inadequate response after 6 doses at the recommended dose: consider referral to GP or specialist.</p>
             </div>
             <Checkbox
-              label="Dapoxetine supplied under this PGD"
+              label="Dapoxetine supplied under this PGD *"
               checked={state.medicineSupply.dapoxetine30mgSupplied}
               onChange={(v) =>
                 dispatch({
@@ -639,7 +653,7 @@ export default function PEClient() {
               required
             />
             <Checkbox
-              label="Patient understands usage (1 to 3 hours before, maximum once per 24 hours, swallow whole with water, not daily)"
+              label="Patient understands usage (1 to 3 hours before, maximum once per 24 hours, swallow whole with water, not daily) *"
               checked={state.medicineSupply.understandsUsage}
               onChange={(v) =>
                 dispatch({
@@ -656,26 +670,26 @@ export default function PEClient() {
               </h4>
               <div className="grid sm:grid-cols-2 gap-4 mb-3">
                 <TextInput
-                  label="Lying BP (e.g. 120/80)"
+                  label="Lying BP, systolic/diastolic in mmHg"
                   value={state.summary.lyingBP}
                   onChange={(v) =>
                     dispatch({ type: "UPDATE_SUMMARY", field: "lyingBP", value: v })
                   }
-                  placeholder="mmHg"
+                  placeholder="e.g. 120/80"
                   required
                 />
                 <TextInput
-                  label="Standing BP (e.g. 118/78)"
+                  label="Standing BP, systolic/diastolic in mmHg"
                   value={state.summary.standingBP}
                   onChange={(v) =>
                     dispatch({ type: "UPDATE_SUMMARY", field: "standingBP", value: v })
                   }
-                  placeholder="mmHg"
+                  placeholder="e.g. 118/78"
                   required
                 />
               </div>
               <Checkbox
-                label="Orthostatic hypotension assessment completed"
+                label="Orthostatic hypotension assessment completed *"
                 checked={state.medicineSupply.understandsOrthostatic}
                 onChange={(v) =>
                   dispatch({
@@ -688,7 +702,7 @@ export default function PEClient() {
               />
             </div>
             <Checkbox
-              label="Patient information leaflet (PIL) supplied with Priligy"
+              label="Patient information leaflet (PIL) supplied with Priligy *"
               checked={state.medicineSupply.pilSupplied}
               onChange={(v) =>
                 dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "pilSupplied", value: v })
@@ -880,7 +894,7 @@ export default function PEClient() {
         currentStep={state.currentStep}
         onStepClick={handleStepClick}
         completedSteps={completedSteps}
-        hasErrors={!!validationError}
+        hasErrors={hardStops}
       />
 
       {alerts.length > 0 && (

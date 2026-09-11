@@ -44,8 +44,15 @@ export function createInitialState() {
       temperature: null as number | null,
       /** Positive confirmation that Appendix 1 was worked through, never inferred from untouched boxes. */
       redFlagsAssessed: false,
-      /** Positive confirmation that the signs of spread and systemic involvement were assessed. */
+      /** Positive confirmation that the signs of spread and systemic involvement were assessed (set when spreadPresent is answered). */
       spreadAssessed: false,
+      /**
+       * The pharmacist's answer to "is the infection spreading, or the patient
+       * systemically involved?". The localised, no-antibiotic outcome is a stop
+       * and fires only on an explicit "no", never because the sign boxes above
+       * were left unticked (stop audit, 11 Sep 2026).
+       */
+      spreadPresent: "" as "" | "yes" | "no",
       // ── Higher risk of complications even if localised (CKS) ──────────
       immunosuppressed: false,
       poorlyControlledDiabetes: false,
@@ -67,6 +74,9 @@ export function createInitialState() {
       courseAlreadySuppliedThisEpisode: false,
       // Amoxicillin arm exclusions
       renalFunctionAsked: false,
+      /** The patient's answer about kidney function, recorded as given. */
+      renalFunctionAnswer: "" as "" | "none-known" | "unknown-no-suspicion" | "known-impairment",
+      renalFunctionDetail: "",
       significantRenalImpairment: false,
       mononucleosisOrALL: false,
       // Metronidazole arm exclusions
@@ -123,6 +133,19 @@ export function createInitialState() {
 }
 
 export type DentalState = ReturnType<typeof createInitialState>;
+
+export function renalFunctionText(answer: DentalState["assessment"]["renalFunctionAnswer"], detail: string): string {
+  switch (answer) {
+    case "none-known":
+      return "Asked: no known kidney problems";
+    case "unknown-no-suspicion":
+      return "Asked: patient does not know; no reason to suspect impairment";
+    case "known-impairment":
+      return `Asked: known kidney impairment${detail ? ` (${detail})` : ""}`;
+    default:
+      return "Not asked";
+  }
+}
 
 export default function DentalBridgingClient() {
   const [currentStep, setCurrentStep] = useState(0);
@@ -256,9 +279,10 @@ export default function DentalBridgingClient() {
     }
 
     // ── Outcome 1: localised, no antibiotic indicated ───────────────────
-    // Raised once the pharmacist has confirmed the red flags and the signs of
-    // spread were assessed (not on the patient step before anything is known).
-    if (outcome === "no-antibiotic" && a.redFlagsAssessed && a.spreadAssessed) {
+    // Raised only on the pharmacist's explicit answer "No" to the spread
+    // question (a No to the inclusion), once the red flags are confirmed as
+    // assessed. Unticked sign boxes on their own never raise it.
+    if (outcome === "no-antibiotic" && a.redFlagsAssessed && a.spreadPresent === "no") {
       alerts.push({
         severity: "stop",
         code: "LOCALISED_NO_ANTIBIOTIC",
@@ -345,6 +369,15 @@ export default function DentalBridgingClient() {
         detail: "A short bridging course is not the place for a dose adjustment. Refer.",
       });
     }
+    if (!a.penicillinAllergy && a.renalFunctionAnswer === "known-impairment" && !a.significantRenalImpairment) {
+      alerts.push({
+        severity: "caution",
+        code: "AMOXICILLIN_RENAL_KNOWN",
+        message: "Known kidney impairment recorded",
+        detail:
+          "If the impairment is significant, tick Known significant renal impairment (exclusion for the amoxicillin arm) and refer. Mild impairment does not exclude a 5 day course.",
+      });
+    }
     if (!a.penicillinAllergy && a.mononucleosisOrALL) {
       alerts.push({
         severity: "stop",
@@ -405,17 +438,27 @@ export default function DentalBridgingClient() {
   const assessmentError = useMemo<string | null>(() => {
     const a = state.assessment;
     if (!a.redFlagsAssessed) return "Confirm that the Appendix 1 emergency red flags were assessed";
-    if (!a.spreadAssessed) return "Confirm that the signs of spread and systemic involvement were assessed";
-    if (!a.painType || !a.painDuration || !a.painSeverity) return "Complete the pain assessment fields";
     if (a.temperature === null) return "Record the temperature";
+    if (!a.spreadPresent) return "Answer: is the infection spreading, or is the patient systemically involved? (Yes or No)";
+    if (a.spreadPresent === "yes" && !spreadingOrSystemic)
+      return "You answered Yes to spread or systemic involvement but no sign is ticked and there is no fever: tick the sign that is present, or change the answer to No";
+    if (a.spreadPresent === "no" && spreadingOrSystemic)
+      return "You answered No to spread or systemic involvement but a sign is ticked or the temperature is 38 or above: untick the sign, or change the answer to Yes";
+    if (!a.painType) return "Pain assessment: select the type of dental pain";
+    if (!a.painDuration) return "Pain assessment: select the duration of symptoms";
+    if (!a.painSeverity) return "Pain assessment: select the severity of pain";
     if (higherRisk && !spreadingOrSystemic && !a.higherRiskReason.trim())
       return "Record which higher-risk factor applies and why you judged the risk higher";
     if (a.penicillinAllergy && !a.penicillinAllergyHistory.trim())
       return "Record the penicillin allergy history in the patient's own terms";
     if (a.penicillinAllergy && !a.alcoholCanAvoid)
       return "Ask directly whether the patient can avoid alcohol completely during the course and for 48 hours afterwards, and record the answer";
-    if (!a.penicillinAllergy && !a.renalFunctionAsked)
-      return "Ask about renal function and record that no significant impairment was reported";
+    if (!a.penicillinAllergy && (!a.renalFunctionAsked || !a.renalFunctionAnswer))
+      return "Renal function: ask the patient about their kidney function and select the answer given";
+    if (!a.penicillinAllergy && a.renalFunctionAnswer === "known-impairment" && !a.renalFunctionDetail.trim())
+      return "Renal function: record the detail of the known kidney impairment";
+    if (a.dentalAppointmentBooked && a.dentalAppointmentDate && a.dentalAppointmentDate < new Date().toISOString().split("T")[0])
+      return "Dental appointment date is in the past: check the date";
     if (!a.urgentDentalAppointmentCommitted)
       return "Confirm the patient is unable to obtain definitive dental treatment before the infection would worsen, and is willing and able to arrange an urgent dental appointment within 24 to 48 hours";
     return null;
@@ -434,6 +477,7 @@ export default function DentalBridgingClient() {
     if (t.quantity !== COURSE_QUANTITY) return `Quantity must be ${COURSE_QUANTITY}: supply the whole 5-day course, do not split it`;
     if (!t.batchNumber.trim()) return "Record the batch number";
     if (!t.expiryDate) return "Record the expiry date";
+    if (t.expiryDate < new Date().toISOString().split("T")[0]) return "Expiry date is in the past: this pack cannot be supplied";
     return null;
   }, [state.treatment, selectedAntibiotic]);
 
@@ -478,7 +522,9 @@ export default function DentalBridgingClient() {
   // Outcomes 1 (localised, no antibiotic) and 3 (emergency) are stops: they
   // block Next on the assessment step and every later one, and are saved
   // from the blocked step with "Save as not supplied".
-  const isBlocked = hasStopAlerts && currentStep >= 2;
+  // (The under-18 stop is raised on the Patient step, so the referral can be
+  // saved from there too.)
+  const isBlocked = hasStopAlerts;
 
   const handleNext = useCallback(() => {
     if (stepError || isBlocked) return;
@@ -558,7 +604,9 @@ export default function DentalBridgingClient() {
       {isBlocked && (
         <div className="p-4 bg-red-50 rounded-lg border border-red-200 space-y-2">
           <p className="text-sm font-medium text-navy-900">
-            {outcome === "emergency"
+            {age !== null && age < 18
+              ? "Under 18: this PGD is for adults. Refer for dental assessment. Record the advice given, then use Save as not supplied"
+              : outcome === "emergency"
               ? "Outcome 3, emergency: make the urgency explicit and act on it in front of the patient. Record the advice and action, then use Save as not supplied"
               : outcome === "no-antibiotic"
                 ? "Outcome 1, localised infection: no antibiotic. Say so plainly and explain why; offer analgesia advice and help with a dental appointment. Record the advice, then use Save as not supplied"
@@ -714,13 +762,19 @@ export default function DentalBridgingClient() {
                 onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, malaise: v } }))}
                 description="Rigors are NOT on this list: a rigor is a sepsis red flag (tick it above) and refers."
               />
-              <Checkbox
-                label="Signs of spread and systemic involvement assessed (temperature measured; facial swelling, lymphadenopathy, cellulitis and malaise looked for)"
-                checked={state.assessment.spreadAssessed}
-                onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, spreadAssessed: v } }))}
-                description="Required. The record states a sign is absent only when this is confirmed."
+              <SelectInput
+                label="Is the infection spreading, or is the patient systemically involved? (temperature measured; facial swelling, lymphadenopathy, cellulitis and malaise looked for)"
+                value={state.assessment.spreadPresent}
+                onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, spreadPresent: v as "" | "yes" | "no", spreadAssessed: v !== "" } }))}
+                options={[
+                  { value: "yes", label: "Yes: at least one sign above is present, or the temperature is 38 or above (antibiotic indicated)" },
+                  { value: "no", label: "No: none of the signs above is present and there is no fever (localised infection: no antibiotic unless higher risk)" },
+                ]}
                 required
               />
+              <p className="text-xs text-gray-500">
+                Required. The record states a sign is absent only when No is answered here; untouched boxes are not an answer.
+              </p>
             </div>
 
             <div className="space-y-3">
@@ -770,7 +824,6 @@ export default function DentalBridgingClient() {
                 value={state.assessment.painType}
                 onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, painType: v } }))}
                 options={[
-                  { value: "", label: "Select..." },
                   { value: "toothache", label: "Toothache" },
                   { value: "abscess", label: "Abscess" },
                   { value: "swelling", label: "Swelling of gum or face" },
@@ -784,7 +837,6 @@ export default function DentalBridgingClient() {
                 value={state.assessment.painDuration}
                 onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, painDuration: v } }))}
                 options={[
-                  { value: "", label: "Select..." },
                   { value: "<24h", label: "Less than 24 hours" },
                   { value: "1-3d", label: "1 to 3 days" },
                   { value: "3-7d", label: "3 to 7 days" },
@@ -797,7 +849,6 @@ export default function DentalBridgingClient() {
                 value={state.assessment.painSeverity}
                 onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, painSeverity: v } }))}
                 options={[
-                  { value: "", label: "Select..." },
                   { value: "mild", label: "Mild" },
                   { value: "moderate", label: "Moderate" },
                   { value: "severe", label: "Severe" },
@@ -862,13 +913,27 @@ export default function DentalBridgingClient() {
               )}
               {!state.assessment.penicillinAllergy && (
                 <>
-                  <Checkbox
-                    label="Renal function asked about, and no significant impairment reported"
-                    checked={state.assessment.renalFunctionAsked}
-                    onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, renalFunctionAsked: v } }))}
-                    description="Required record for the amoxicillin arm."
+                  <SelectInput
+                    label="Renal function: ask the patient about their kidney function and select the answer given"
+                    value={state.assessment.renalFunctionAnswer}
+                    onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, renalFunctionAnswer: v as "" | "none-known" | "unknown-no-suspicion" | "known-impairment", renalFunctionAsked: v !== "" } }))}
+                    options={[
+                      { value: "none-known", label: "No known kidney problems" },
+                      { value: "unknown-no-suspicion", label: "Patient does not know; no reason to suspect impairment" },
+                      { value: "known-impairment", label: "Known kidney impairment (record the detail below)" },
+                    ]}
                     required
                   />
+                  <p className="text-xs text-gray-500">Required record for the amoxicillin arm.</p>
+                  {state.assessment.renalFunctionAnswer === "known-impairment" && (
+                    <TextInput
+                      label="Renal function detail"
+                      value={state.assessment.renalFunctionDetail}
+                      onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, renalFunctionDetail: v } }))}
+                      placeholder="e.g. eGFR 45 at last blood test; CKD stage 3"
+                      required
+                    />
+                  )}
                   <Checkbox
                     label="Known significant renal impairment"
                     checked={state.assessment.significantRenalImpairment}
@@ -1104,10 +1169,10 @@ export default function DentalBridgingClient() {
               <div><strong>Temperature:</strong> {state.assessment.temperature ?? "not recorded"} C; facial swelling {state.assessment.spreadAssessed ? (state.assessment.facialSwelling ? "present" : "absent") : "not assessed"}; lymphadenopathy {state.assessment.spreadAssessed ? (state.assessment.lymphadenopathy ? "present" : "absent") : "not assessed"}</div>
               <div><strong>Arm:</strong> {selectedAntibiotic}{state.assessment.penicillinAllergy ? ` (penicillin allergy: ${state.assessment.penicillinAllergyHistory || "history not recorded"})` : " (first line, not penicillin-allergic)"}</div>
               {state.assessment.penicillinAllergy && (
-                <div><strong>Alcohol rule explained and patient confirmed they can keep to it:</strong> {state.assessment.alcoholCanAvoid === "yes" ? "Yes" : "No"}</div>
+                <div><strong>Alcohol rule explained and patient confirmed they can keep to it:</strong> {state.assessment.alcoholCanAvoid === "yes" ? "Yes" : state.assessment.alcoholCanAvoid === "no" ? "No (excluded)" : "Not recorded"}</div>
               )}
               {!state.assessment.penicillinAllergy && (
-                <div><strong>Renal function asked, no significant impairment reported:</strong> {state.assessment.renalFunctionAsked ? "Yes" : "No"}</div>
+                <div><strong>Renal function:</strong> {renalFunctionText(state.assessment.renalFunctionAnswer, state.assessment.renalFunctionDetail)}</div>
               )}
               <div><strong>Supply:</strong> {isMetronidazole ? "Metronidazole 200mg tablets, oral" : "Amoxicillin 500mg capsules, oral"}, 5 days, {state.treatment.quantity ?? "?"} supplied; batch {state.treatment.batchNumber || "not recorded"}, expiry {state.treatment.expiryDate || "not recorded"}</div>
               <div><strong>Told this is a bridge, dental appointment still needed:</strong> {state.counselling.bridgeNotCure ? "Yes" : "No"}</div>

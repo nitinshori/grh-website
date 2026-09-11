@@ -6,7 +6,9 @@ import type { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/
 
 export interface ECPatientDetails extends BasePatientDetails {
   femaleConfirmed: boolean; // must confirm female
-  fraserCompetent?: boolean; // required for ages 13-15
+  fraserCompetent?: boolean; // derived from fraserOutcome: true only when "competent"
+  fraserOutcome: "" | "competent" | "not-competent"; // 13 to 15: the answer, not only that it was assessed
+  coercionReported: "" | "no" | "yes"; // 13 to 15: the answer to the coercion question
   // PGD v004 (11 September 2026) safeguarding. Under 13: the document says
   // supply may still be appropriate with a mandatory safeguarding referral;
   // this tool refuses supply under 13 (Get Real Health service decision,
@@ -87,6 +89,7 @@ export interface ECMedicineSelection {
   offLabelExplained: boolean; // weight or BMI based 3 mg is off-label per FSRH: explain and record
   copperIudOffered: boolean; // enzyme inducers: offer a copper IUD first; LNG 3 mg if declined
   notSuppliedReason: string; // patient declined, or referred (for example copper IUD): the advice given and decision reached
+  referredTo: string; // excluded patient: "" | "gp" | "sexual-health" | "other"
 }
 
 // ─── Counselling & Follow-up ───
@@ -190,6 +193,8 @@ export function createInitialConsultationState(): ECConsultationState {
       dateOfBirth: "",
       age: null,
       femaleConfirmed: false,
+      fraserOutcome: "",
+      coercionReported: "",
       safeguardingReferralMade: false,
       coercionAsked: false,
       partnerAge: "",
@@ -259,6 +264,7 @@ gpEmail: "",
       offLabelExplained: false,
       copperIudOffered: false,
       notSuppliedReason: "",
+      referredTo: "",
     },
     counselling: {
       timingAdvice: false,

@@ -12,20 +12,20 @@ export function ConsentStep({ consent, onChange }: ConsentStepProps) {
   return (
     <div className="space-y-4">
       <Checkbox
-        label="Informed consent obtained"
+        label="Informed consent obtained (required)"
         checked={consent.informedConsentGiven}
         onChange={(v) => onChange("informedConsentGiven", v)}
         description="The patient has been informed about the treatment, including benefits, risks, and alternatives, and has given verbal or written consent."
       />
       <Checkbox
-        label="ID verification completed"
+        label="ID verification completed (required)"
         checked={consent.idVerified}
         onChange={(v) => onChange("idVerified", v)}
-        description="The patient's identity has been confirmed."
+        description="The patient's identity has been confirmed. Tick this, then choose how it was confirmed."
       />
       {consent.idVerified && (
         <SelectInput
-          label="ID type"
+          label="ID type (how identity was confirmed)"
           value={consent.idType}
           onChange={(v) => onChange("idType", v)}
           options={[
@@ -37,7 +37,7 @@ export function ConsentStep({ consent, onChange }: ConsentStepProps) {
         />
       )}
       <Checkbox
-        label="Patient aware this is a private service"
+        label="Patient aware this is a private service (required)"
         checked={consent.patientAwarePrivateService}
         onChange={(v) => onChange("patientAwarePrivateService", v)}
         description="The patient understands there will be a consultation fee and the medication is not available on NHS prescription through this service."

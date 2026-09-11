@@ -70,7 +70,7 @@ const INITIAL_MEDICAL_HISTORY: ImpetigoMedicalHistory = {
   eczema: false,
   recurrentImpetigo: false,
   mrsaSuspected: false,
-  penicillinAllergy: false,
+  penicillinAllergy: '',
   penicillinAllergyHistory: '',
   cephalosporinAllergyHighRisk: false,
   flucloxCholestasisHistory: false,
@@ -84,7 +84,7 @@ const INITIAL_MEDICAL_HISTORY: ImpetigoMedicalHistory = {
   pregnant: false,
   pregnancyEstablishedHow: '',
   breastfeeding: false,
-  breastfeedingDiscussed: false,
+  breastfeedingDiscussed: '',
   weightKg: '',
   cannotBeWeighed: false,
   takesSimvastatinOrLovastatin: false,
@@ -227,11 +227,11 @@ export function ImpetigoConsultationClient() {
     const c = data.consentDetails;
     if (!isUnder16) return '';
     if (!c.basis || c.basis === 'patient')
-      return 'Patient is under 16: record consent from a person with parental responsibility, or the young person assessed as Gillick competent';
+      return "Patient is under 16: select who consented under 'Consent obtained from' (a person with parental responsibility, or the young person assessed as Gillick competent)";
     if (c.basis === 'parental-responsibility' && (!c.personName.trim() || !c.relationship.trim()))
-      return 'Record the name and relationship of the person with parental responsibility';
+      return "Complete 'Name of the person with parental responsibility' and 'Relationship to the patient'";
     if (c.basis === 'gillick-competent' && !c.gillickBasis.trim())
-      return 'Record the basis of the Gillick assessment';
+      return "Complete 'Basis of the Gillick assessment'";
     return '';
   };
 
@@ -246,16 +246,16 @@ export function ImpetigoConsultationClient() {
 
   const lesionError = (): string => {
     const la = data.lesionAssessment;
-    if (!la.lesionType) return 'Lesion type is required';
-    if (!la.extent) return 'Extent is required';
-    if (!la.numberOfLesions) return 'Number of lesions is required';
-    if (!la.lesionSizeCm.trim()) return 'Record the size of the affected area (the number and size of lesions must be recorded)';
+    if (!la.lesionType) return "Select the 'Type of impetigo'";
+    if (!la.extent) return "Select the 'Extent'";
+    if (!la.numberOfLesions) return "Select the 'Number of lesions'";
+    if (!la.lesionSizeCm.trim()) return "Complete 'Size of the affected area (cm)' (the number and size of lesions must be recorded)";
     if (la.extent === 'localised' && la.numberOfLesions === '>5')
-      return 'More than 5 lesions is widespread by the document definition; change the extent';
+      return "More than 5 lesions is widespread by the document definition: change 'Extent' to widespread";
     if (la.extent === 'localised' && sizeIsWidespread(la))
-      return 'An affected area over about 5 cm is widespread by the document definition; change the extent to widespread (oral route)';
-    if (la.affectedAreas.length === 0) return 'At least one affected area required';
-    if (!la.duration) return 'Duration is required';
+      return "An affected area over about 5 cm is widespread by the document definition: change 'Extent' to widespread (oral route)";
+    if (la.affectedAreas.length === 0) return "Tick at least one box under 'Affected Areas'";
+    if (!la.duration) return "Select the 'Duration of lesions'";
     if (
       la.lesionType === 'non-bullous' &&
       la.extent === 'localised' &&
@@ -263,7 +263,7 @@ export function ImpetigoConsultationClient() {
       !la.brokenSkin &&
       !la.hydrogenPeroxide
     )
-      return 'Record whether hydrogen peroxide 1% was offered as a P sale first, or why it is unsuitable or ineffective';
+      return "Answer 'Hydrogen peroxide 1% cream': offered as a P sale first, unsuitable, or already tried and ineffective";
     return '';
   };
 
@@ -271,13 +271,17 @@ export function ImpetigoConsultationClient() {
 
   const medicalHistoryError = (): string => {
     const mh = data.medicalHistory;
-    if (mh.recentAntibioticUse && !mh.recentAntibioticDetails.trim()) return 'Details of recent antibiotics are required';
-    if (mh.penicillinAllergy && !mh.penicillinAllergyHistory.trim())
-      return 'Record the penicillin allergy history in the patient\'s own terms';
-    if (mh.pregnant && !mh.pregnancyEstablishedHow.trim()) return 'Record how pregnancy status was established';
+    if (mh.recentAntibioticUse && !mh.recentAntibioticDetails.trim()) return "Complete 'Details of recent antibiotics'";
+    if (oralRoute && mh.penicillinAllergy === '')
+      return "Answer 'Penicillin-allergic (true allergy or documented intolerance)': Yes or No. The oral arm turns on it";
+    if (mh.penicillinAllergy === 'yes' && !mh.penicillinAllergyHistory.trim())
+      return "Complete 'Penicillin allergy history, in the patient's own terms'";
+    if (mh.pregnant && !mh.pregnancyEstablishedHow.trim()) return "Complete 'How pregnancy status was established'";
+    if (clinicalAssessment.route === 'macrolide' && mh.breastfeeding && mh.breastfeedingDiscussed === '')
+      return "Answer 'Macrolide in breastfeeding: has the choice been discussed with the patient and recorded in the notes?': Yes or No";
     if (isChild && oralRoute && clinicalAssessment.route === 'macrolide' && !mh.cannotBeWeighed) {
       const w = parseFloat(mh.weightKg);
-      if (isNaN(w) || w <= 0) return 'Weigh the child today and record the weight in kilograms (macrolide dose is by weight)';
+      if (isNaN(w) || w <= 0) return "Complete 'Weight in kilograms, measured today' (the macrolide dose is by weight), or tick 'The child cannot be weighed today'";
     }
     return '';
   };
@@ -290,13 +294,13 @@ export function ImpetigoConsultationClient() {
 
   const treatmentError = (): string => {
     const t = data.treatmentSelection;
-    if (!t.treatment) return 'Treatment selection is required';
-    if (!t.formulation) return 'Select the formulation';
-    if (!t.doseValue) return 'Select the dose from the document\'s regimens for this arm, age and weight';
+    if (!t.treatment) return "Select the 'Selected treatment'";
+    if (!t.formulation) return "Select the 'Formulation'";
+    if (!t.doseValue) return "Select the 'Dose' from the document's regimens for this arm, age and weight";
     if (t.treatment === 'clarithromycin' && t.doseValue === 'clari-500' && !t.severeDoseReason.trim())
-      return 'Clarithromycin 500mg twice a day is for severe infection only: the document requires the reason recorded';
-    if (!t.duration) return 'Duration is required';
-    if (t.duration === '7 days' && !t.extensionReason.trim()) return 'A 7 day course is clinical judgement only: record the reason';
+      return "Clarithromycin 500mg twice a day is for severe infection only: complete 'Clarithromycin 500mg twice a day: reason'";
+    if (!t.duration) return "Select the 'Duration'";
+    if (t.duration === '7 days' && !t.extensionReason.trim()) return "A 7 day course is clinical judgement only: complete 'Reason for extending to 7 days'";
     if (t.quantity <= 0) return 'Quantity could not be computed: check the dose and duration';
     return '';
   };
@@ -306,14 +310,17 @@ export function ImpetigoConsultationClient() {
   const counsellingError = (): string => {
     const c = data.counselling;
     const t = data.treatmentSelection.treatment;
-    if (!c.hygieneAdvice || !c.handwashing || !c.schoolExclusion || !c.avoidTouching || !c.contagionPeriod)
-      return 'Give the full hygiene advice (towels and bedding, hand washing, school or nursery, covering and nails, contagion) and mark each item';
-    if (!c.noCombination) return 'Confirm the patient was told topical and oral treatment are not combined';
-    if (!c.drugSpecificAdvice) return 'Confirm the medicine-specific advice for the product supplied';
-    if (!c.completeCourse) return 'Confirm the patient was told to complete the course';
+    if (!c.hygieneAdvice) return "Tick 'Hygiene advice: do not share towels, flannels or bedding' once given";
+    if (!c.handwashing) return "Tick 'Wash hands after touching the lesions' once given";
+    if (!c.schoolExclusion) return "Tick 'Stay away from school or nursery' once given";
+    if (!c.avoidTouching) return "Tick 'Keep the lesions covered where practical' once given";
+    if (!c.contagionPeriod) return "Tick 'Infection is contagious until the lesions have crusted and dried' once given";
+    if (!c.noCombination) return "Tick 'Told that topical and oral treatment are not combined' once given";
+    if (!c.drugSpecificAdvice) return "Tick the medicine-specific advice item (the one starting with the name of the product supplied) once given";
+    if (!c.completeCourse) return "Tick 'Complete the course, even if improving' once given";
     if ((t === 'fusidic-acid' || t === 'hydrogen-peroxide') && !c.applicationAdvice)
-      return 'Confirm the application advice for the topical treatment';
-    if (!c.returnIfWorsening) return 'Confirm the follow-up advice';
+      return "Tick 'Application technique for topical treatment' once given";
+    if (!c.returnIfWorsening) return "Tick 'Come back if there is no improvement' once given";
     return '';
   };
 
@@ -581,7 +588,6 @@ export function ImpetigoConsultationClient() {
                         })
                       }
                       options={[
-                        { value: '', label: 'Select...' },
                         { value: 'parental-responsibility', label: 'A person with parental responsibility' },
                         { value: 'gillick-competent', label: 'The young person, assessed as Gillick competent' },
                       ]}
@@ -631,6 +637,7 @@ export function ImpetigoConsultationClient() {
                 onChange={(medicalHistory) => setData({ ...data, medicalHistory })}
                 age={patientAge}
                 oralRoute={oralRoute}
+                macrolideRoute={clinicalAssessment.route === 'macrolide'}
               />
             )}
 

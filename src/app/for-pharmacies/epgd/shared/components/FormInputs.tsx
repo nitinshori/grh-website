@@ -66,7 +66,9 @@ export function Checkbox({
         className="mt-0.5 rounded border-gray-300 text-[color:var(--tenant-primary)] focus:ring-[color:var(--tenant-primary)]"
       />
       <div>
-        <span className="text-sm text-navy-900">{label}</span>
+        <span className="text-sm text-navy-900">
+          {label} {required && <span className="text-red-400">*</span>}
+        </span>
         {description && (
           <p className="text-xs text-gray-500 mt-0.5">{description}</p>
         )}

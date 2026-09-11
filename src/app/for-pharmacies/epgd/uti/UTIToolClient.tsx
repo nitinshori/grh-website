@@ -136,13 +136,18 @@ export function UTIToolClient() {
 
     if (state.summary.pharmacistName || state.summary.pharmacistGPhC) return;
 
-    dispatch({ type: "UPDATE_SUMMARY", field: "pharmacistName", value: __pharmProfile.name } as any);
-
-    dispatch({ type: "UPDATE_SUMMARY", field: "pharmacistGPhC", value: __pharmProfile.gphcNumber } as any);
-
-    dispatch({ type: "UPDATE_SUMMARY", field: "pharmacyName", value: __pharmProfile.pharmacyName } as any);
-
-    dispatch({ type: "UPDATE_SUMMARY", field: "pharmacyAddress", value: __pharmProfile.pharmacyAddress } as any);
+    // This reducer takes a payload object; the field/value form used by the
+    // other tools was a silent no-op here, so the name and GPhC number never
+    // auto-filled and the summary step demanded them typed in again.
+    dispatch({
+      type: "UPDATE_SUMMARY",
+      payload: {
+        pharmacistName: __pharmProfile.name,
+        pharmacistGPhC: __pharmProfile.gphcNumber,
+        pharmacyName: __pharmProfile.pharmacyName,
+        pharmacyAddress: __pharmProfile.pharmacyAddress,
+      },
+    });
 
   }, [__pharmProfile, state.summary.pharmacistName, state.summary.pharmacistGPhC]);
 
@@ -291,16 +296,26 @@ export function UTIToolClient() {
       case 0:
         return (
           <div>
+            {/* An age or sex stop is raised on this step; without the banner the
+                footer said "exclusion criteria met" with no reason on screen. */}
+            <AlertBanner alerts={alerts} />
             <PatientDetailsStep
               patient={state.patient}
               onChange={handlePatientChange}
-              genderOption={{
-                label: "Patient is female",
-                description: "This PGD is for female patients only. Male patients must be referred to GP.",
-                checked: state.patient.femaleConfirmed,
-                onToggle: (v: boolean) => handlePatientChange("femaleConfirmed", v),
-              }}
             />
+            <div className="mt-4">
+              <SelectInput
+                label="Is the patient female?"
+                value={state.patient.femaleConfirmed === null ? "" : state.patient.femaleConfirmed ? "yes" : "no"}
+                onChange={(v) => handlePatientChange("femaleConfirmed", v === "" ? null : v === "yes")}
+                options={[
+                  { value: "yes", label: "Yes" },
+                  { value: "no", label: "No (excluded: this PGD is for women aged 16 to 64; refer)" },
+                ]}
+                required
+              />
+              <p className="text-xs text-gray-600 mt-1">This PGD is for female patients only. A UTI in a male patient is complicated by definition: save as not supplied and refer.</p>
+            </div>
           </div>
         );
 
@@ -324,49 +339,69 @@ export function UTIToolClient() {
             <AlertBanner alerts={alerts} />
             <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-4">
               <p className="text-sm text-blue-800">
-                Select the symptoms the patient is experiencing. Two or more of dysuria, new nocturia, frequency or urgency must be present. Where only one is present, refer rather than supply.
+                Answer each of the four inclusion symptoms. Two or more of dysuria, new nocturia, frequency or urgency must be present. Where fewer are present, refer rather than supply.
               </p>
             </div>
             <div className="space-y-3">
-              <Checkbox
+              <SelectInput
                 label="Dysuria (pain or burning on urination)"
-                checked={state.symptoms.dysuria}
+                value={state.symptoms.dysuria === null ? "" : state.symptoms.dysuria ? "yes" : "no"}
                 onChange={(v) =>
                   dispatch({
                     type: "UPDATE_SYMPTOMS",
-                    payload: { dysuria: v },
+                    payload: { dysuria: v === "" ? null : v === "yes" },
                   })
                 }
+                options={[
+                  { value: "yes", label: "Yes" },
+                  { value: "no", label: "No" },
+                ]}
+                required
               />
-              <Checkbox
+              <SelectInput
                 label="New nocturia (new need to pass urine at night)"
-                checked={state.symptoms.nocturia}
+                value={state.symptoms.nocturia === null ? "" : state.symptoms.nocturia ? "yes" : "no"}
                 onChange={(v) =>
                   dispatch({
                     type: "UPDATE_SYMPTOMS",
-                    payload: { nocturia: v },
+                    payload: { nocturia: v === "" ? null : v === "yes" },
                   })
                 }
+                options={[
+                  { value: "yes", label: "Yes" },
+                  { value: "no", label: "No" },
+                ]}
+                required
               />
-              <Checkbox
+              <SelectInput
                 label="Frequency (increased need to pass urine)"
-                checked={state.symptoms.frequency}
+                value={state.symptoms.frequency === null ? "" : state.symptoms.frequency ? "yes" : "no"}
                 onChange={(v) =>
                   dispatch({
                     type: "UPDATE_SYMPTOMS",
-                    payload: { frequency: v },
+                    payload: { frequency: v === "" ? null : v === "yes" },
                   })
                 }
+                options={[
+                  { value: "yes", label: "Yes" },
+                  { value: "no", label: "No" },
+                ]}
+                required
               />
-              <Checkbox
+              <SelectInput
                 label="Urgency (sudden, urgent need to pass urine)"
-                checked={state.symptoms.urgency}
+                value={state.symptoms.urgency === null ? "" : state.symptoms.urgency ? "yes" : "no"}
                 onChange={(v) =>
                   dispatch({
                     type: "UPDATE_SYMPTOMS",
-                    payload: { urgency: v },
+                    payload: { urgency: v === "" ? null : v === "yes" },
                   })
                 }
+                options={[
+                  { value: "yes", label: "Yes" },
+                  { value: "no", label: "No" },
+                ]}
+                required
               />
               <Checkbox
                 label="Suprapubic pain (pain above pubis)"
@@ -589,52 +624,52 @@ export function UTIToolClient() {
               <p className="text-xs text-gray-600">
                 Ask the patient directly: &quot;Have you ever been told you have kidney disease, or that your kidneys do not work as well as they should?&quot;
               </p>
-              <Checkbox
-                label="Answer YES: known kidney disease, or under any renal follow-up"
-                checked={state.medicalHistory.kidneyDisease}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_MEDICAL_HISTORY",
-                    payload: { kidneyDisease: v },
-                  })
-                }
-              />
               <SelectInput
-                label="Patient's answer to the kidney question (record the answer given)"
+                label="Patient's answer to the kidney question"
                 value={state.medicalHistory.renalImpairment}
-                onChange={(v) =>
+                onChange={(v) => {
+                  const answer = v as "" | "none" | "known" | "moderate" | "severe" | "unknown";
+                  const yes = answer === "known" || answer === "moderate" || answer === "severe";
                   dispatch({
                     type: "UPDATE_MEDICAL_HISTORY",
-                    payload: { renalImpairment: v as "" | "none" | "moderate" | "severe" | "unknown" },
-                  })
-                }
+                    payload: answer === "none"
+                      ? { renalImpairment: answer, kidneyDisease: false }
+                      : { renalImpairment: answer, kidneyDisease: yes, egfrResultSeen: null, egfrValue: null, egfrDate: "", egfrSource: "" },
+                  });
+                }}
                 options={[
-                  { value: "none", label: "Answer NO: no known kidney disease (aged 16 to 59: proceed; aged 60 to 64: proceed only on a seen eGFR of 45 or more within 12 months)" },
-                  { value: "unknown", label: "Patient does not know (exclude; refer for a renal function check first)" },
-                  { value: "moderate", label: "Answer YES: moderate impairment (eGFR 30 to 44) (exclude)" },
-                  { value: "severe", label: "Answer YES: severe impairment (eGFR under 30) (exclude)" },
+                  { value: "none", label: "No: no known kidney disease" },
+                  { value: "unknown", label: "Does not know (exclude, refer for a renal function check first)" },
+                  { value: "known", label: "Yes: known kidney disease or under renal follow-up, eGFR not known (exclude)" },
+                  { value: "moderate", label: "Yes: moderate impairment, eGFR 30 to 44 (exclude)" },
+                  { value: "severe", label: "Yes: severe impairment, eGFR under 30 (exclude)" },
                 ]}
                 required
               />
               <p className="text-xs text-gray-600">
-                Renal row: YES or under renal follow-up, exclude. NO and aged 16 to 59, proceed. NO and aged 60 to 64, proceed only where an eGFR of 45 mL/min or more, dated within the last 12 months, has been seen by the pharmacist (NHS App, GP summary or a letter) and the result, its date and where it was seen are recorded; otherwise exclude and refer for a renal function check first. Patient does not know, exclude and refer for a renal function check first.
+                Any Yes answer, or under renal follow-up: exclude. Does not know: exclude and refer for a renal function check first. No and aged 16 to 59: proceed. No and aged 60 to 64: proceed only where an eGFR of 45 mL/min or more, dated within the last 12 months, has been seen by the pharmacist (NHS App, GP summary or a letter) and recorded below.
               </p>
               {state.patient.age !== null && state.patient.age >= 60 && state.medicalHistory.renalImpairment === "none" && (
                 <div className="space-y-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
                   <p className="text-sm font-medium text-navy-900">Aged 60 to 64: eGFR result seen by the pharmacist</p>
-                  <Checkbox
-                    label="I have seen an eGFR result for this patient (NHS App, GP summary or a letter)"
-                    checked={state.medicalHistory.egfrResultSeen}
+                  <SelectInput
+                    label="Has an eGFR result for this patient been seen (NHS App, GP summary or a letter)?"
+                    value={state.medicalHistory.egfrResultSeen === null ? "" : state.medicalHistory.egfrResultSeen ? "yes" : "no"}
                     onChange={(v) =>
                       dispatch({
                         type: "UPDATE_MEDICAL_HISTORY",
-                        payload: v
+                        payload: v === "yes"
                           ? { egfrResultSeen: true }
-                          : { egfrResultSeen: false, egfrValue: null, egfrDate: "", egfrSource: "" },
+                          : { egfrResultSeen: v === "" ? null : false, egfrValue: null, egfrDate: "", egfrSource: "" },
                       })
                     }
+                    options={[
+                      { value: "yes", label: "Yes: I have seen the result and record it below" },
+                      { value: "no", label: "No: no result can be seen (exclude, refer for a renal function check first)" },
+                    ]}
+                    required
                   />
-                  {state.medicalHistory.egfrResultSeen && (
+                  {state.medicalHistory.egfrResultSeen === true && (
                     <div className="grid sm:grid-cols-3 gap-4">
                       <NumberInput
                         label="eGFR value seen"
@@ -842,21 +877,26 @@ export function UTIToolClient() {
                 onChange={(v) =>
                   dispatch({
                     type: "UPDATE_MEDICAL_HISTORY",
-                    payload: { takingWarfarin: v, anticoagulationServiceConsulted: v ? state.medicalHistory.anticoagulationServiceConsulted : false },
+                    payload: { takingWarfarin: v, anticoagulationServiceConsulted: v ? state.medicalHistory.anticoagulationServiceConsulted : null },
                   })
                 }
                 description="Trimethoprim raises the INR. Excluded unless the anticoagulation service has been consulted."
               />
               {state.medicalHistory.takingWarfarin && (
-                <Checkbox
-                  label="Anticoagulation service consulted and supply agreed"
-                  checked={state.medicalHistory.anticoagulationServiceConsulted}
+                <SelectInput
+                  label="Has the anticoagulation service been consulted and supply agreed?"
+                  value={state.medicalHistory.anticoagulationServiceConsulted === null ? "" : state.medicalHistory.anticoagulationServiceConsulted ? "yes" : "no"}
                   onChange={(v) =>
                     dispatch({
                       type: "UPDATE_MEDICAL_HISTORY",
-                      payload: { anticoagulationServiceConsulted: v },
+                      payload: { anticoagulationServiceConsulted: v === "" ? null : v === "yes" },
                     })
                   }
+                  options={[
+                    { value: "yes", label: "Yes: consulted and supply agreed" },
+                    { value: "no", label: "No: trimethoprim is excluded" },
+                  ]}
+                  required
                 />
               )}
               <Checkbox
@@ -1183,7 +1223,7 @@ export function UTIToolClient() {
             <AlertBanner alerts={alerts} />
             <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-4">
               <p className="text-sm text-blue-800">
-                Confirm counselling given on all topics before proceeding.
+                Tick each point as it is given. Every point without "(optional)" must be ticked before Next.
               </p>
             </div>
             <div className="space-y-3">
@@ -1281,7 +1321,7 @@ export function UTIToolClient() {
                 required
               />
               <Checkbox
-                label="Paracetamol or ibuprofen can be used for the pain if they suit you (separate pharmacy sale, subject to the usual checks)"
+                label="Paracetamol or ibuprofen can be used for the pain if they suit you (separate pharmacy sale, subject to the usual checks) (optional)"
                 checked={state.counselling.painRelief}
                 onChange={(v) =>
                   dispatch({
@@ -1291,7 +1331,7 @@ export function UTIToolClient() {
                 }
               />
               <Checkbox
-                label="Cranberry products are not evidence-based for treatment"
+                label="Cranberry products are not evidence-based for treatment (optional)"
                 checked={state.counselling.avoidCranberry}
                 onChange={(v) =>
                   dispatch({
@@ -1301,7 +1341,7 @@ export function UTIToolClient() {
                 }
               />
               <Checkbox
-                label="Avoid sexual activity until symptoms resolve"
+                label="Avoid sexual activity until symptoms resolve (optional)"
                 checked={state.counselling.sexualActivityAdvice}
                 onChange={(v) =>
                   dispatch({

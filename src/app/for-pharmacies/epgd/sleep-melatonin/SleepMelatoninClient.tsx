@@ -70,7 +70,6 @@ export default function SleepMelatoninClient() {
     dispatch({ type: "UPDATE_SUMMARY", field: "pharmacyAddress", value: __pharmProfile.pharmacyAddress } as any);
   }, [__pharmProfile, state.summary.pharmacistName, state.summary.pharmacistGPhC]);
 
-  const [validationError, setValidationError] = useState<string | null>(null);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const alerts = useMemo(() => getAllAlerts(state.assessment, state.secondaryCauses, state.contraindications), [state.assessment, state.secondaryCauses, state.contraindications]);
   const secondaryBlocked = hasSecondaryCause(state.secondaryCauses) || state.assessment.durationOfInsomnia === "less4w" || hasAssessmentStops(state.assessment);
@@ -78,43 +77,39 @@ export default function SleepMelatoninClient() {
   // raised on (adversarial review, 11 Sep 2026).
   const isBlocked = hasHardStops(state.contraindications) || secondaryBlocked;
 
-  const handleNext = useCallback(() => {
+  // The validation message is derived from the current state, not set inside
+  // handleNext: StepWrapper never calls onNext when canProceed is false, so a
+  // message set there was never shown and Next was greyed with no reason
+  // (walkthrough review, 11 Sep 2026).
+  const validationError = useMemo<string | null>(() => {
     if (state.currentStep === 2 && secondaryBlocked) {
-      setValidationError("Cannot proceed: a secondary cause is apparent, the insomnia has lasted less than 4 weeks, or the treatment limit is reached. Refer, do not supply");
-      return;
+      return "Cannot proceed: a secondary cause is ticked, the insomnia has lasted less than 4 weeks, or the treatment limit is reached. Refer, do not supply. Use 'Save as not supplied' to record the referral";
     }
-    if (isBlocked) {
-      setValidationError("Cannot proceed: patient meets exclusion criteria");
-      return;
-    }
-    const error = validateStep(state.currentStep, state);
-    if (error) {
-      setValidationError(error);
-      return;
-    }
-    setValidationError(null);
-    setCompletedSteps((prev) => new Set([...prev, state.currentStep]));
-    dispatch({ type: "SET_STEP", step: Math.min(state.currentStep + 1, TOTAL_STEPS - 1) });
+    if (isBlocked) return "Cannot proceed: patient meets exclusion criteria. Use 'Save as not supplied' to record the referral";
+    return validateStep(state.currentStep, state);
   }, [state, isBlocked, secondaryBlocked]);
 
+  const handleNext = useCallback(() => {
+    if (validationError) return;
+    setCompletedSteps((prev) => new Set([...prev, state.currentStep]));
+    dispatch({ type: "SET_STEP", step: Math.min(state.currentStep + 1, TOTAL_STEPS - 1) });
+  }, [state.currentStep, validationError]);
+
   const handlePrev = useCallback(() => {
-    setValidationError(null);
     dispatch({ type: "SET_STEP", step: Math.max(state.currentStep - 1, 0) });
-  }, []);
+  }, [state.currentStep]);
 
   const handleStepClick = useCallback((step: number) => {
     if (completedSteps.has(step) || step <= state.currentStep) {
-      setValidationError(null);
       dispatch({ type: "SET_STEP", step });
     }
   }, [completedSteps, state.currentStep]);
 
-  const canProceed = validateStep(state.currentStep, state) === null && !isBlocked;
+  const canProceed = validationError === null && !isBlocked;
 
   const handleNewConsultation = useCallback(() => {
     dispatch({ type: "RESET" });
     setCompletedSteps(new Set());
-    setValidationError(null);
   }, []);
 
   // ─── Consultation Record Data (for saving to database) ───
@@ -239,8 +234,10 @@ export default function SleepMelatoninClient() {
               label="Age 55 years or older, confirmed"
               checked={state.assessment.ageConfirmed}
               onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "ageConfirmed", value: v })}
-              description="Circadin is licensed only from 55 years. This PGD does not authorise supply below that age on any basis; a patient aged 18 to 54 who needs melatonin is a prescriber decision."
+              description="Required. Circadin is licensed only from 55 years. This PGD does not authorise supply below that age on any basis; a patient aged 18 to 54 who needs melatonin is a prescriber decision."
+              required
             />
+            <p className="text-sm font-medium text-navy-900">Type of sleep difficulty (tick at least one) <span className="text-red-400">*</span></p>
             <Checkbox
               label="Sleep onset difficulty"
               checked={state.assessment.sleepOnsetIssue}
@@ -558,6 +555,7 @@ export default function SleepMelatoninClient() {
 
         {state.currentStep === 5 && (
           <div className="space-y-4">
+            <p className="text-sm font-medium text-navy-900">Confirm counselling covered (tick every point) <span className="text-red-400">*</span></p>
             <Checkbox
               label="One tablet a day, 1 to 2 hours before bed, after food; swallow whole, do not crush, chew or break"
               checked={state.counselling.takeAfterFoodSwallowWhole}

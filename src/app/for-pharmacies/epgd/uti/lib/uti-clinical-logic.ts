@@ -36,22 +36,19 @@ export function isNitrofurantoinContraindicated(medicalHistory: UTIMedicalHistor
  *  45 mL/min or more, dated within the last 12 months of today. Returns the
  *  reason it does not satisfy the renal row, or null where it does. */
 export function egfrResultShortfall(medicalHistory: UTIMedicalHistory): string | null {
-  if (!medicalHistory.egfrResultSeen) {
+  // Only answers the pharmacist has given count. A blank Yes/No, a blank
+  // value or a blank date is "not yet answered" and is handled by the
+  // validator, not raised as a stop (stop audit, 11 September 2026).
+  if (medicalHistory.egfrResultSeen === false) {
     return "No eGFR result has been seen";
   }
-  if (medicalHistory.egfrValue === null) {
-    return "The eGFR value seen has not been recorded";
-  }
-  if (medicalHistory.egfrValue < 45) {
+  if (medicalHistory.egfrResultSeen !== true) return null;
+  if (medicalHistory.egfrValue !== null && medicalHistory.egfrValue < 45) {
     return `The eGFR seen is ${medicalHistory.egfrValue} mL/min, below 45`;
   }
-  if (!medicalHistory.egfrDate) {
-    return "The date of the eGFR result has not been recorded";
-  }
+  if (!medicalHistory.egfrDate) return null;
   const resultDate = new Date(medicalHistory.egfrDate);
-  if (isNaN(resultDate.getTime())) {
-    return "The date of the eGFR result is not a valid date";
-  }
+  if (isNaN(resultDate.getTime())) return null;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   if (resultDate.getTime() > today.getTime()) {
@@ -61,9 +58,6 @@ export function egfrResultShortfall(medicalHistory: UTIMedicalHistory): string |
   twelveMonthsAgo.setFullYear(twelveMonthsAgo.getFullYear() - 1);
   if (resultDate.getTime() < twelveMonthsAgo.getTime()) {
     return "The eGFR result is more than 12 months old";
-  }
-  if (!medicalHistory.egfrSource.trim()) {
-    return "Where the result was seen has not been recorded";
   }
   return null;
 }
@@ -77,7 +71,7 @@ export function isTrimethoprimContraindicated(medicalHistory: UTIMedicalHistory)
     medicalHistory.takingMethotrexate ||
     medicalHistory.takingPotassiumSparingAgent ||
     medicalHistory.takingInteractingMedicine ||
-    (medicalHistory.takingWarfarin && !medicalHistory.anticoagulationServiceConsulted) ||
+    (medicalHistory.takingWarfarin && medicalHistory.anticoagulationServiceConsulted === false) ||
     medicalHistory.hepaticImpairment
   );
 }
@@ -93,12 +87,14 @@ export function getUTIClinicalAlerts(
 
   // ─── EXCLUSION CRITERIA (STOP) ───
 
-  if (!patient.femaleConfirmed) {
+  // Raised only on an explicit "No" to "Is the patient female?". An
+  // unanswered question is a validation message, never a stop.
+  if (patient.femaleConfirmed === false) {
     alerts.push({
       severity: "stop",
       code: "MALE_PATIENT",
-      message: "Patient gender not confirmed as female",
-      detail: "UTI PGD is for females aged 16-64 only. Any UTI in a man is complicated by definition and needs assessment. Refer.",
+      message: "Patient is not female",
+      detail: "This PGD is for women aged 16 to 64 only. A UTI in a male patient is complicated by definition: save as not supplied and refer.",
     });
   }
 
@@ -121,19 +117,22 @@ export function getUTIClinicalAlerts(
   }
 
   // Inclusion: two or more of dysuria, new nocturia, frequency, urgency.
-  const coreSymptomCount = [
-    symptoms.dysuria,
-    symptoms.nocturia,
-    symptoms.frequency,
-    symptoms.urgency,
-  ].filter(Boolean).length;
-  if (coreSymptomCount === 1) {
+  const coreSymptoms = [symptoms.dysuria, symptoms.nocturia, symptoms.frequency, symptoms.urgency];
+  const coreSymptomCount = coreSymptoms.filter((s) => s === true).length;
+  const allCoreAnswered = coreSymptoms.every((s) => s !== null);
+  // Each of the four is a Yes/No with no default. The stop is raised only
+  // once all four have been answered and fewer than two are Yes; while any
+  // is unanswered the validator names it instead.
+  if (allCoreAnswered && coreSymptomCount < 2) {
     alerts.push({
       severity: "stop",
       code: "SINGLE_SYMPTOM",
-      message: "Only one core urinary symptom present",
+      message:
+        coreSymptomCount === 1
+          ? "Only one of dysuria, new nocturia, frequency or urgency is present"
+          : "None of dysuria, new nocturia, frequency or urgency is present",
       detail:
-        "PGD v007 requires two or more of: dysuria, new nocturia, urinary frequency or urgency. Where only one symptom is present, refer rather than supply.",
+        "PGD v007 requires two or more of: dysuria, new nocturia, urinary frequency or urgency. Where fewer are present, refer rather than supply.",
     });
   }
 
@@ -469,7 +468,7 @@ export function getUTIClinicalAlerts(
     });
   }
 
-  if (medicalHistory.takingWarfarin && medicalHistory.anticoagulationServiceConsulted) {
+  if (medicalHistory.takingWarfarin && medicalHistory.anticoagulationServiceConsulted === true) {
     alerts.push({
       severity: "caution",
       code: "WARFARIN_INR",

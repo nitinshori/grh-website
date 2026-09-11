@@ -29,8 +29,14 @@ export interface HPVPatientDetails extends BasePatientDetails {
 export interface HPVVaccineAssessment {
   pregnancyStatus: string;
   currentFebrileIllness: boolean;
-  /** Determines the schedule: three doses at 0, 1 and 4 to 6 months. */
+  /** Determines the schedule: three doses at 0, 1 and 4 to 6 months. Kept in step with immuneStatusAnswer. */
   immunosuppressedOrHIV: boolean;
+  /**
+   * The answer to "immunosuppressed, or known to be living with HIV?" as the
+   * pharmacist recorded it. It was a tick box, so "not asked" and "no" were
+   * the same thing (walkthrough review, 11 Sep 2026).
+   */
+  immuneStatusAnswer: "" | "yes" | "no";
   /** Prior HPV vaccine history. */
   priorDoses: string;
   /**
@@ -164,6 +170,7 @@ export function createInitialConsultationState(): HPVConsultationState {
       pregnancyStatus: "",
       currentFebrileIllness: false,
       immunosuppressedOrHIV: false,
+      immuneStatusAnswer: "",
       priorDoses: "",
       doseBefore25: false,
       anaphylaxisToPreviousDose: "",

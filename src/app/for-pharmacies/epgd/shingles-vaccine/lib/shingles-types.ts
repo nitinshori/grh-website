@@ -34,6 +34,14 @@ export interface ShinglesAssessment {
   /** Within the licensed indication and one of the two PGD arms: aged 50 or older (Arm 1), or aged 18 to 49 and severely immunosuppressed (Arm 2). */
   ageEligible: boolean;
   immunosuppressed: boolean;
+  /**
+   * Under 50 only: the explicit answer to "Is the patient severely
+   * immunosuppressed (Green Book chapter 28a, Box 1)?". The Arm 2 stop used to
+   * fire from the Patient Details step onward for every 18 to 49 year old,
+   * before the question had been asked, so Arm 2 patients could never reach
+   * the eligibility step (walkthrough review, 11 Sep 2026).
+   */
+  under50ImmunosuppressionAnswer: "" | "yes" | "no";
   /** Green Book chapter 28a Box 1 category. Required under 50 (Arm 2); optional information at 50 and over. */
   severeImmunosuppressionCategory: string;
   /** Arm 2: the condition or therapy relied on and its dates, as documented in the record. */
@@ -153,6 +161,7 @@ gpEmail: "",
     assessment: {
       ageEligible: false,
       immunosuppressed: false,
+      under50ImmunosuppressionAnswer: "",
       severeImmunosuppressionCategory: "",
       immunosuppressionDetail: "",
       immunosuppressionDoubt: "",

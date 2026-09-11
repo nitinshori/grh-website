@@ -4,7 +4,8 @@ export interface PeriodDelayAssessment {
   reasonForDelay: string; // "holiday" | "event" | "religious" | "other"
   reasonDetails: string;
   lastPeriodDate: string;
-  cycleRegular: boolean;
+  /** Yes / No, no default: an unasked question is not an irregular cycle. */
+  cycleRegular: boolean | null;
   /**
    * The date the next period is due, DD/MM/YYYY, as the patient gives it.
    *
@@ -27,9 +28,10 @@ export interface PeriodDelayAssessment {
   previousSuppliesLast6Months: "" | "0" | "1" | "2+";
   daysSuppliedLast6Months: number | null;
   // Excluding pregnancy, PGD v009: the two questions, and the test where needed.
-  lastPeriodNormalOnTime: boolean;
-  noUnprotectedSexSince: boolean;
-  pregnancyTestNegative: boolean;
+  /** Yes / No, no default. Either answered No opens the pregnancy test fields. */
+  lastPeriodNormalOnTime: boolean | null;
+  noUnprotectedSexSince: boolean | null;
+  pregnancyTestNegative: boolean | null; // Yes/No with no default; asked only when pregnancy cannot be excluded on history
   pregnancyTestDate: string;
   /** Date of the last unprotected sex, DD/MM/YYYY: the test must be no earlier than 21 days after it. */
   lastUpsiDate: string;
@@ -103,7 +105,7 @@ export interface PeriodDelayMedicalHistory {
   hormonalContraceptionType: string;
   ageUnder16: boolean;
   /** PGD v009 excludes male patients. */
-  femaleConfirmed: boolean;
+  femaleConfirmed: boolean | null; // "Patient is female" asked as Yes/No with no default; only No is the MALE stop
   hypersensitivity: boolean;
   /** Liver dysfunction, active liver disease, jaundice in pregnancy, or a liver tumour. */
   jaundiceInPregnancy: boolean;
@@ -233,8 +235,8 @@ export function createInitialConsultationState(): PeriodDelayConsultationState {
     currentStep: 0,
     patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", gpAddress: "", gpPhone: "", gpEmail: "", gpOdsCode: "", nhsNumber: "", address: "", phone: "", email: "" },
     consent: { informedConsentGiven: false, idVerified: false, idType: "", patientAwarePrivateService: false },
-    assessment: { reasonForDelay: "", reasonDetails: "", lastPeriodDate: "", cycleRegular: false, expectedPeriodDate: "", daysUntilExpected: null, previousUse: false, previousIssues: "", datesNeededFor: "", previousSuppliesLast6Months: "", daysSuppliedLast6Months: null, lastPeriodNormalOnTime: false, noUnprotectedSexSince: false, pregnancyTestNegative: false, pregnancyTestDate: "", lastUpsiDate: "" },
-    medicalHistory: { pregnancy: false, breastfeeding: false, liverDisease: false, historyOfDVT: false, historyOfPE: false, historyOfStroke: false, activeBreastCancer: false, severeArterialDisease: false, porphyria: false, abnormalVaginalBleeding: false, hormonalContraception: false, hormonalContraceptionType: "", ageUnder16: false, femaleConfirmed: false, hypersensitivity: false, jaundiceInPregnancy: false, severePruritusInPregnancy: false, diabetesWithVascularComplications: false, hypertension: false, systolicBP: null, diastolicBP: null, atrialFibrillationOrValvularDisease: false, sleOrAntiphospholipid: false, brcaCarrier: false, dyslipidaemiaWithRiskFactor: false, lamotrigineMonotherapy: false, ciclosporin: false, historyOfDepression: false, severeDepressionOrSuicidalIdeation: false, familyVteUnder45: false, currentSmoker: false, stoppedSmokingUnderOneYear: false, stoppedSmokingOverOneYear: false, cigarettesPerDay: null, heightCm: null, weightKg: null, longJourney: false, recentOrPlannedSurgery: false, immobility: false, activeOrRecentCancer: false, migraineWithAura: false, enzymeInducer: false, under18AssessmentDone: false, safeguardingConcern: false, under18AssessmentNotes: "", appendix1: createInitialAppendix1Answers() },
+    assessment: { reasonForDelay: "", reasonDetails: "", lastPeriodDate: "", cycleRegular: null, expectedPeriodDate: "", daysUntilExpected: null, previousUse: false, previousIssues: "", datesNeededFor: "", previousSuppliesLast6Months: "", daysSuppliedLast6Months: null, lastPeriodNormalOnTime: null, noUnprotectedSexSince: null, pregnancyTestNegative: null, pregnancyTestDate: "", lastUpsiDate: "" },
+    medicalHistory: { pregnancy: false, breastfeeding: false, liverDisease: false, historyOfDVT: false, historyOfPE: false, historyOfStroke: false, activeBreastCancer: false, severeArterialDisease: false, porphyria: false, abnormalVaginalBleeding: false, hormonalContraception: false, hormonalContraceptionType: "", ageUnder16: false, femaleConfirmed: null, hypersensitivity: false, jaundiceInPregnancy: false, severePruritusInPregnancy: false, diabetesWithVascularComplications: false, hypertension: false, systolicBP: null, diastolicBP: null, atrialFibrillationOrValvularDisease: false, sleOrAntiphospholipid: false, brcaCarrier: false, dyslipidaemiaWithRiskFactor: false, lamotrigineMonotherapy: false, ciclosporin: false, historyOfDepression: false, severeDepressionOrSuicidalIdeation: false, familyVteUnder45: false, currentSmoker: false, stoppedSmokingUnderOneYear: false, stoppedSmokingOverOneYear: false, cigarettesPerDay: null, heightCm: null, weightKg: null, longJourney: false, recentOrPlannedSurgery: false, immobility: false, activeOrRecentCancer: false, migraineWithAura: false, enzymeInducer: false, under18AssessmentDone: false, safeguardingConcern: false, under18AssessmentNotes: "", appendix1: createInitialAppendix1Answers() },
     medications: { anticoagulants: false, antiepileptics: false, ciclosporin: false, otherMedications: "", allergies: "" },
     medicineSelection: { confirmed: false, daysToDelay: null, startDate: "" },
     exclusionAdvice: { appendix2Given: false, adviceNotes: "" },

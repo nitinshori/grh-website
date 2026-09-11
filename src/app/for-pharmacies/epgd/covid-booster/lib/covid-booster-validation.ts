@@ -35,7 +35,7 @@ export function validateStep(state: CovidBoosterConsultationState, step: number)
 
     case 2:
       if (!state.assessment.ageConfirmed) {
-        return "Please confirm patient is 12 years or older";
+        return "Tick \"Confirmed aged 12 years or over\"";
       }
       if (!state.assessment.nhsStatus) {
         return "Record whether the patient does not qualify for NHS vaccination, or qualifies but prefers to be vaccinated privately having been told of their NHS entitlement";
@@ -46,7 +46,10 @@ export function validateStep(state: CovidBoosterConsultationState, step: number)
       // A previous dose is NOT required. The SPC states the vaccine is given
       // regardless of prior vaccination status, and the PGD only excludes a
       // primary course where the patient is ALSO immunosuppressed.
-      if (!state.assessment.previousCovidVaccine && state.assessment.immunosuppressed) {
+      if (!state.assessment.previousCovidVaccineAnswer) {
+        return "Answer \"Has the patient received a COVID-19 vaccine before?\"";
+      }
+      if (state.assessment.previousCovidVaccineAnswer === "no" && state.assessment.immunosuppressed) {
         return "Primary course in an unvaccinated, immunosuppressed patient is excluded by the PGD. Refer.";
       }
       // The 3 month minimum interval is an exclusion. It can only be checked
@@ -63,7 +66,7 @@ export function validateStep(state: CovidBoosterConsultationState, step: number)
         return "Less than 3 months (91 days) since the last COVID-19 vaccine dose: excluded unless a shorter interval is specifically advised in national guidance for this individual";
       }
       if (!state.assessment.timelinessEligible) {
-        return "Please confirm at least 3 months since the last COVID-19 vaccine dose, or that this is a first dose";
+        return "Tick \"At least 3 months since the last COVID-19 vaccine dose, or this is a first dose\"";
       }
       return null;
 
@@ -76,34 +79,36 @@ export function validateStep(state: CovidBoosterConsultationState, step: number)
         return "Answer whether there is a known hypersensitivity to polysorbate 80";
       if (!state.assessment.severeFebrilIllness)
         return "Answer whether the patient has an acute severe febrile illness today";
+      if (state.assessment.bleedingDisorder && !state.assessment.bleedingDisorderAssessedAnswer)
+        return "Bleeding disorder: answer \"Has intramuscular injection been assessed as safe by a clinician familiar with the bleeding risk?\"";
+      if (state.assessment.bleedingDisorder && state.assessment.bleedingDisorderAssessedAnswer === "no")
+        return "Bleeding disorder without a clinical assessment that intramuscular injection is safe: excluded under this PGD. Refer.";
       if (state.assessment.pregnant && !nhsEligible(state)) {
         return "Pregnant and not in an NHS-eligible group (75 and over, care home resident or immunosuppressed): excluded under this PGD. Refer to the GP or maternity service.";
       }
       return null;
 
-    case 4:
-      if (
-        !state.counselling.explainedBoosterRationale ||
-        !state.counselling.discussedCommonReactions ||
-        !state.counselling.explainedObservationPeriod ||
-        !state.counselling.discussedSeriousReactions ||
-        !state.counselling.providedWrittenInfo ||
-        !state.counselling.explainedYellowCard
-      ) {
-        return "All counselling items, including the cardiac warning signs, Yellow Card reporting and the written information, must be completed";
-      }
+    case 4: {
+      const c = state.counselling;
+      if (!c.explainedBoosterRationale) return "Tick \"Explained booster rationale\"";
+      if (!c.discussedCommonReactions) return "Tick \"Discussed common reactions\"";
+      if (!c.explainedObservationPeriod) return "Tick \"Explained 15-minute observation period\"";
+      if (!c.discussedSeriousReactions) return "Tick \"Discussed serious reactions and reporting\" (the cardiac warning signs)";
+      if (!c.explainedYellowCard) return "Tick \"Explained Yellow Card self-reporting\"";
+      if (!c.providedWrittenInfo) return "Tick \"Provided written information for the product and variant given\"";
       return null;
+    }
 
     case 5: {
       const s = state.supply;
-      if (!s.vaccineProduct) return "Select the vaccine product actually given";
+      if (!s.vaccineProduct) return "Select the vaccine product given";
       if (!s.batchNumber.trim()) return "Batch number is required. A recall cannot be actioned without it";
       if (!s.expiryDate) return "Vaccine expiry date is required";
       if (s.expiryDate < state.summary.consultationDate) {
         return "The stock held has passed its labelled expiry date. Do not administer; rebook rather than substitute";
       }
       if (!s.administrationSite) return "Administration site is required";
-      if (!s.administrationTime) return "Administration time is required";
+      if (!s.administrationTime) return "Time administered is required";
       if (
         state.assessment.myocarditisHistory &&
         (s.vaccineProduct === "comirnaty-xfg" || s.vaccineProduct === "comirnaty-lp81" || s.vaccineProduct === "spikevax-lp81")
@@ -122,7 +127,7 @@ export function validateStep(state: CovidBoosterConsultationState, step: number)
           return "Comirnaty XFG must be given in preference to LP.8.1 for patients who are immunosuppressed or aged 75 and over. Use XFG, or rebook.";
         }
         if (!s.lp81FormulationExplained) {
-          return "Confirm the patient was told this is the previous seasonal formulation and that XFG is the current one";
+          return "Tick \"Patient told this is the previous seasonal formulation and that Comirnaty XFG is the current one\"";
         }
       }
       if (s.adverseReaction.trim() && !s.adverseReactionAction.trim()) {

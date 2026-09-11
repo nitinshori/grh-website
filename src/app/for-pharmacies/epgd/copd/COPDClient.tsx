@@ -205,15 +205,20 @@ export default function COPDClient() {
       case 2:
         return (
           <div className="space-y-4">
-            <Checkbox
-              label="Confirmed diagnosis of COPD (documented spirometry and GOLD classification)"
-              checked={state.assessment.hasExistingDiagnosis}
-              onChange={(v) =>
-                dispatch({ type: "UPDATE_ASSESSMENT", field: "hasExistingDiagnosis", value: v })
-              }
-              description="Inclusion criterion: spirometry FEV1/FVC below 0.70 with a GOLD classification documented"
+            <SelectInput
+              label="Confirmed diagnosis of COPD (documented spirometry and GOLD classification)?"
+              value={state.assessment.diagnosisStatus}
+              onChange={(v) => {
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "diagnosisStatus", value: v });
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "hasExistingDiagnosis", value: v === "confirmed" });
+              }}
+              options={[
+                { value: "confirmed", label: "Yes: confirmed diagnosis, spirometry FEV1/FVC below 0.70 and GOLD classification documented" },
+                { value: "not-confirmed", label: "No: no confirmed diagnosis (exclusion: refer to GP)" },
+              ]}
               required
             />
+            <p className="text-xs text-gray-500">Inclusion criterion: spirometry FEV1/FVC below 0.70 with a GOLD classification documented.</p>
             <SelectInput
               label="GOLD classification"
               value={state.assessment.goldClassification}
@@ -240,14 +245,20 @@ export default function COPDClient() {
               ]}
               required
             />
-            <Checkbox
-              label="Purulent sputum (yellow/green), indicating bacterial infection"
-              checked={state.assessment.purulentSputum}
-              onChange={(v) =>
-                dispatch({ type: "UPDATE_ASSESSMENT", field: "purulentSputum", value: v })
-              }
-              description="Required for the amoxicillin arm (infective exacerbation)"
+            <SelectInput
+              label="Purulent sputum (yellow/green), indicating bacterial infection?"
+              value={state.assessment.purulentSputumAnswer}
+              onChange={(v) => {
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "purulentSputumAnswer", value: v });
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "purulentSputum", value: v === "yes" });
+              }}
+              options={[
+                { value: "yes", label: "Yes: purulent sputum (amoxicillin arm available if an acute exacerbation)" },
+                { value: "no", label: "No: sputum not purulent (amoxicillin arm not available)" },
+              ]}
+              required={state.assessment.presentation === "exacerbation"}
             />
+            <p className="text-xs text-gray-500">Required for the amoxicillin arm (infective exacerbation).</p>
             <NumberInput
               label="Oxygen saturation (SpO2) on air"
               value={state.assessment.spo2}
@@ -297,31 +308,49 @@ export default function COPDClient() {
                 recorded above is applied to the limit (currently {effectiveSalbutamolSupplies12Months(state)}).
               </div>
             )}
-            <Checkbox
-              label="Capable of using an inhaler device, or willing to use a spacer"
-              checked={state.assessment.canUseInhalerOrSpacer}
-              onChange={(v) =>
-                dispatch({ type: "UPDATE_ASSESSMENT", field: "canUseInhalerOrSpacer", value: v })
-              }
-              description="Inclusion criterion for the salbutamol arm"
-            />
-            <Checkbox
-              label="Able to take oral medication"
-              checked={state.assessment.ableToTakeOralMedication}
-              onChange={(v) =>
-                dispatch({ type: "UPDATE_ASSESSMENT", field: "ableToTakeOralMedication", value: v })
-              }
-              description="Inclusion criterion for the amoxicillin arm"
-            />
-            <NumberInput
-              label="MRC breathlessness scale (1-5)"
-              value={state.assessment.mrcBreathlessnessScale}
+            <SelectInput
+              label="Capable of using an inhaler device, or willing to use a spacer?"
+              value={state.assessment.inhalerAbilityAnswer}
               onChange={(v) => {
-                dispatch({ type: "UPDATE_ASSESSMENT", field: "mrcBreathlessnessScale", value: v });
-                dispatch({ type: "UPDATE_RED_FLAGS", field: "mrcGrade5", value: v === 5 });
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "inhalerAbilityAnswer", value: v });
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "canUseInhalerOrSpacer", value: v === "yes" });
               }}
-              min={1}
-              max={5}
+              options={[
+                { value: "yes", label: "Yes" },
+                { value: "no", label: "No (salbutamol arm not available)" },
+              ]}
+              required
+            />
+            <p className="text-xs text-gray-500">Inclusion criterion for the salbutamol arm.</p>
+            <SelectInput
+              label="Able to take oral medication?"
+              value={state.assessment.oralAbilityAnswer}
+              onChange={(v) => {
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "oralAbilityAnswer", value: v });
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "ableToTakeOralMedication", value: v === "yes" });
+              }}
+              options={[
+                { value: "yes", label: "Yes" },
+                { value: "no", label: "No (amoxicillin arm not available)" },
+              ]}
+              required
+            />
+            <p className="text-xs text-gray-500">Inclusion criterion for the amoxicillin arm.</p>
+            <SelectInput
+              label="MRC breathlessness scale (Medical Research Council dyspnoea grade)"
+              value={state.assessment.mrcBreathlessnessScale === null ? "" : String(state.assessment.mrcBreathlessnessScale)}
+              onChange={(v) => {
+                const n = v === "" ? null : parseInt(v, 10);
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "mrcBreathlessnessScale", value: n });
+                dispatch({ type: "UPDATE_RED_FLAGS", field: "mrcGrade5", value: n === 5 });
+              }}
+              options={[
+                { value: "1", label: "Grade 1: breathless only on strenuous exercise" },
+                { value: "2", label: "Grade 2: short of breath when hurrying on the level or walking up a slight hill" },
+                { value: "3", label: "Grade 3: walks slower than people of the same age on the level, or has to stop for breath at own pace" },
+                { value: "4", label: "Grade 4: stops for breath after about 100 metres or a few minutes on the level" },
+                { value: "5", label: "Grade 5: too breathless to leave the house, or breathless when dressing (exclusion: urgent referral)" },
+              ]}
               required
             />
             {state.assessment.mrcBreathlessnessScale === 5 && (
@@ -341,7 +370,7 @@ export default function COPDClient() {
                 { value: "none", label: "No recent exacerbations" },
                 { value: "1-2", label: "1-2 exacerbations per year" },
                 { value: "3-4", label: "3-4 exacerbations per year" },
-                { value: "frequent", label: "Frequent exacerbations (&gt;4/year)" },
+                { value: "frequent", label: "Frequent exacerbations (more than 4 per year)" },
               ]}
               required
             />
@@ -477,9 +506,9 @@ export default function COPDClient() {
       case 5:
         return (
           <div className="space-y-4">
-            <div className="bg-red-50 border border-red-200 rounded p-4 mb-4">
-              <p className="text-xs text-red-700 font-medium">
-                Exclusions require emergency referral; red flags require urgent referral
+            <div className="bg-amber-50 border border-amber-200 rounded p-4 mb-4">
+              <p className="text-xs text-amber-900 font-medium">
+                Tick only what is present. Exclusions require emergency referral; red flags require urgent referral.
               </p>
             </div>
             <Checkbox
@@ -541,22 +570,16 @@ export default function COPDClient() {
       case 6:
         return (
           <div className="space-y-4">
-            <Checkbox
-              label="Medicine to supply confirmed"
-              checked={state.medicineSupply.medicinePrescribed}
-              onChange={(v) =>
-                dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "medicinePrescribed", value: v })
-              }
-            />
-            {state.medicineSupply.medicinePrescribed && (
-              <>
+            <p className="text-sm font-medium text-navy-900">Medicine to supply: tick each arm supplied <span className="text-red-400">*</span></p>
+            <>
                 <div className="border border-gray-200 rounded-lg p-3 space-y-2">
                   <Checkbox
                     label="Salbutamol 100mcg metered-dose inhaler (MDI), 1 inhaler (200 doses)"
                     checked={state.medicineSupply.supplySalbutamol}
-                    onChange={(v) =>
-                      dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "supplySalbutamol", value: v })
-                    }
+                    onChange={(v) => {
+                      dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "supplySalbutamol", value: v });
+                      dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "medicinePrescribed", value: v || state.medicineSupply.supplyAmoxicillin });
+                    }}
                     description="Acute symptom relief in an acute exacerbation or breathlessness. Inhalation via MDI, with or without spacer."
                   />
                   {state.medicineSupply.supplySalbutamol && (
@@ -588,9 +611,10 @@ export default function COPDClient() {
                   <Checkbox
                     label="Amoxicillin 500mg capsules, 15 capsules (5-day course)"
                     checked={state.medicineSupply.supplyAmoxicillin}
-                    onChange={(v) =>
-                      dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "supplyAmoxicillin", value: v })
-                    }
+                    onChange={(v) => {
+                      dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "supplyAmoxicillin", value: v });
+                      dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "medicinePrescribed", value: v || state.medicineSupply.supplySalbutamol });
+                    }}
                     description="Infective acute exacerbation with purulent (yellow/green) sputum only. Oral."
                   />
                   {state.medicineSupply.supplyAmoxicillin && (
@@ -622,8 +646,7 @@ export default function COPDClient() {
                     dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "dosageConfirmed", value: v })
                   }
                 />
-              </>
-            )}
+            </>
             <Checkbox
               label="Patient understands not replacement for maintenance"
               checked={state.medicineSupply.notReplacementForMaintenance}

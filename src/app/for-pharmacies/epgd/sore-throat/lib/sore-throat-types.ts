@@ -52,7 +52,8 @@ export interface SoreThroatExamination {
 // ─── Medical History & Contraindications ───
 
 export interface SoreThroatHistory {
-  penicillinAllergy: boolean; // penicillin or beta-lactam allergy: clarithromycin arm
+  /** Penicillin or beta-lactam allergy: Yes/No with no default. It chooses the arm, so it is answered, never assumed from an unticked box. */
+  penicillinAllergy: "" | "yes" | "no";
   immunosuppressed: boolean;
   neutropeniaRiskMedicine: boolean; // chemotherapy, carbimazole, clozapine, methotrexate or other DMARDs
   recentAntibioticForThisIllness: boolean; // inclusion: no recent antibiotic use for this illness
@@ -169,7 +170,7 @@ export const initialSoreThroatExamination: SoreThroatExamination = {
 };
 
 export const initialSoreThroatHistory: SoreThroatHistory = {
-  penicillinAllergy: false,
+  penicillinAllergy: "",
   immunosuppressed: false,
   neutropeniaRiskMedicine: false,
   recentAntibioticForThisIllness: false,

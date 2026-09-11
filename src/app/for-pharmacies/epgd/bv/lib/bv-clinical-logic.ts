@@ -12,6 +12,18 @@ export function isOralChoice(choice: string): boolean {
 export function getAllAlerts(state: BVConsultationState): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
 
+  // Age is an exclusion, not only a validation message, so a woman outside
+  // 16 to 65 can be saved as not supplied from the patient step.
+  const age = state.patient.age;
+  if (age !== null && (age < 16 || age > 65)) {
+    alerts.push({
+      severity: "stop",
+      code: "AGE_RESTRICTION",
+      message: "Aged under 16 or over 65",
+      detail: "This PGD is for women aged 16 to 65. Refer to GP.",
+    });
+  }
+
   if (state.assessment.bloodStainedDischarge) {
     alerts.push({
       severity: "stop",
@@ -170,7 +182,7 @@ export function hasHardStops(alerts: ClinicalAlert[]): boolean {
 // Arm-specific gate applied when the medicine is chosen.
 export function getMedicineSelectionError(state: BVConsultationState): string | null {
   const choice = state.medicineSelection.medicineChoice;
-  if (!choice) return "Medicine must be selected";
+  if (!choice) return "Select a treatment";
   const age = state.patient.age;
   if (isOralChoice(choice)) {
     if (state.medications.alcohol) return "Current alcohol consumption excludes oral metronidazole (disulfiram-like reaction). Select the vaginal gel or refer.";

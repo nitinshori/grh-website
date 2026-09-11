@@ -1,12 +1,20 @@
 import { BasePatientDetails, BaseConsent, BaseSummary } from '../shared/types';
 
+/** A question put to the patient: '' until asked, then the answer. */
+export type YesNoAnswer = '' | 'yes' | 'no';
+
 export interface DengueScreening {
   destinationCountry: string;
   endemicArea: boolean; // PGD v006 inclusion: travel to or residence in a dengue-endemic area
+  /** The answer as given (Yes / No / not yet answered). endemicArea is
+   *  derived from it. A "No" is an inclusion criterion not met and stops. */
+  endemicAreaAnswer: YesNoAnswer;
   departureDate: string;
   travelDuration: string;
   /** PGD v006 inclusion: willing to receive two doses, 3 months apart. */
   willingTwoDoses: boolean;
+  /** The answer as given; willingTwoDoses is derived from it. */
+  willingTwoDosesAnswer: YesNoAnswer;
   previousDengueInfection: boolean;
   dengueInfectionDetails: string;
   currentIllness: boolean; // PGD v006 exclusion: acute fever or significant intercurrent illness
@@ -35,6 +43,8 @@ export interface DengueContraindications {
   liveVaccineInterval: boolean;
   gbsHistory: boolean;
   ageAppropriate: boolean;
+  /** An inclusion criterion answered No (not travelling to an endemic area, or not willing to have two doses). */
+  inclusionNotMet: boolean;
 }
 
 export interface DengueVaccineAdministration {
@@ -92,9 +102,11 @@ export interface DengueConsultationState {
 export const initialDengueScreening = (): DengueScreening => ({
   destinationCountry: '',
   endemicArea: false,
+  endemicAreaAnswer: '',
   departureDate: '',
   travelDuration: '',
   willingTwoDoses: false,
+  willingTwoDosesAnswer: '',
   previousDengueInfection: false,
   dengueInfectionDetails: '',
   currentIllness: false,
@@ -119,6 +131,7 @@ export const initialDengueContraindications = (): DengueContraindications => ({
   liveVaccineInterval: false,
   gbsHistory: false,
   ageAppropriate: false,
+  inclusionNotMet: false,
 });
 
 export const initialDengueVaccineAdministration = (): DengueVaccineAdministration => ({

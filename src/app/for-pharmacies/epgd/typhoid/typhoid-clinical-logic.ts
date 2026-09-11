@@ -129,16 +129,24 @@ export function getTyphoidClinicalAlerts(
     });
   }
 
-  const days = daysUntilDeparture(patient.departureDate);
-  if (days === null) {
+  // Inclusion criterion answered No: outside the PGD. Before this it was a
+  // tick the pharmacist could not give, with no stop and no way to save the
+  // consultation (walkthrough review, 11 Sep 2026).
+  if (patient.recommendedAnswer === 'no') {
     alerts.push({
-      severity: 'caution',
-      code: 'DEPARTURE_DATE_MISSING',
-      message: 'Departure date not confirmed',
+      severity: 'stop',
+      code: 'NOT_RECOMMENDED_DESTINATION',
+      message: 'Typhoid vaccination is not recommended for this destination',
       detail:
-        'The vaccine should be given at least 2 weeks before departure so that protection can develop. Confirm timing.',
+        'Inclusion requires travel to an area where typhoid vaccination is recommended on current NaTHNaC / TravelHealthPro guidance. Outside that, do not vaccinate under this PGD: give food and water hygiene advice, record the decision, and refer to a travel clinic or the GP if vaccination is still wanted.',
     });
-  } else {
+  }
+
+  // A blank departure date is "not yet entered": the travel step requires it
+  // (validation names the control), so it raises no alert here (stop audit,
+  // 11 Sep 2026).
+  const days = daysUntilDeparture(patient.departureDate);
+  if (days !== null) {
     if (days < 14 && days >= 0) {
       alerts.push({
         severity: 'caution',
@@ -185,21 +193,24 @@ export function getTyphoidClinicalAlerts(
         detail:
           `Excluded. The previous dose was ${yearsElapsed.toFixed(1)} years ago; protection should still be in place and additional doses do not boost levels further. The document's exception applies only where the previous dose is due for renewal (within 6 months of its 3 year renewal date). Record the advice given and the decision, and refer.`,
       });
-    } else if (patient.previousDoseRenewalReason.trim()) {
+    } else if (patient.previousDoseRenewalAnswer === 'yes') {
       alerts.push({
         severity: 'caution',
         code: 'RECENT_DOSE_RENEWAL',
         message: 'Previous dose within 6 months of its 3 year renewal date: document exception applied',
         detail:
-          `Recorded reason: ${patient.previousDoseRenewalReason.trim()}. Returning to a risk area and the previous dose is due for renewal.`,
+          `Recorded reason: ${patient.previousDoseRenewalReason.trim() || 'not yet recorded'}. Returning to a risk area and the previous dose is due for renewal.`,
       });
-    } else {
+    } else if (patient.previousDoseRenewalAnswer === 'no') {
+      // The stop fires only on the answered No. Before this it fired because
+      // the free-text reason was still blank (stop audit, 11 Sep 2026); a
+      // blank answer is a validation message on the travel step.
       alerts.push({
         severity: 'stop',
         code: 'RECENT_DOSE',
-        message: 'Typhoid Vi vaccine given within the last 3 years',
+        message: 'Typhoid Vi vaccine given within the last 3 years: not returning to a risk area with the dose due for renewal',
         detail:
-          'Excluded, unless the traveller is returning to a risk area and the previous dose is due for renewal (it is within 6 months of its renewal date: record the reason). Otherwise record the advice given and refer.',
+          'Excluded. The document\'s exception applies only where the traveller is returning to a risk area and the previous dose is due for renewal. Record the advice given and refer.',
       });
     }
   }

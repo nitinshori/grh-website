@@ -19,9 +19,9 @@ export function validateStep(step: number, state: MounjaroConsultationState): st
 
     case 2: { // Weight Assessment
       if (!state.doseSelection.supplyType) return "Select the nature of today's supply (new start, continuing, escalating, reducing or restart)";
-      if (state.weightAssessment.height === null) return "Height is required";
-      if (state.weightAssessment.weight === null) return "Weight is required";
-      if (state.weightAssessment.bmi === null) return "BMI must be calculated";
+      if (state.weightAssessment.height === null) return "Enter the Height";
+      if (state.weightAssessment.weight === null) return "Enter the Weight";
+      if (state.weightAssessment.bmi === null) return "BMI could not be calculated: check the Height and Weight";
       // The document's inclusion is an INITIAL BMI, reapplied only after a
       // break of more than 2 months. A continuing patient who has reached
       // BMI 26 is the licence's weight-maintenance use, not an exclusion
@@ -30,17 +30,25 @@ export function validateStep(step: number, state: MounjaroConsultationState): st
       if (!gateToday && state.weightAssessment.startingBMI === null)
         return "Record the patient's BMI at the start of treatment: eligibility for a continuing patient is judged on the starting BMI";
       const gatingBmi = gateToday ? state.weightAssessment.bmi : state.weightAssessment.startingBMI;
-      const meetsWeightCriteria =
-        gatingBmi !== null &&
-        (gatingBmi >= 30 || (gatingBmi >= 27 && state.weightAssessment.comorbidities.length > 0));
-      if (!meetsWeightCriteria)
-        return `Excluded: ${gateToday ? "BMI" : "starting BMI"} below the PGD inclusion threshold. Patient must have BMI 30 or above, or 27 or above with at least one weight-related comorbidity (hypertension, type 2 diabetes, pre-diabetes, dyslipidaemia, OSA, established cardiovascular disease)`;
+      if (gatingBmi === null || gatingBmi < 27)
+        return `Excluded: ${gateToday ? "BMI" : "starting BMI"} below the PGD inclusion threshold (30 or above, or 27 or above with at least one weight-related comorbidity). Save as not supplied and refer`;
+      if (gatingBmi < 30) {
+        // 27 to below 30: the comorbidity question must be answered. Blank is
+        // "not yet answered", never a stop (stop audit, 11 Sep 2026).
+        const answer = state.weightAssessment.hasComorbidity;
+        if (answer === "")
+          return "Answer \"Does the patient have at least one weight-related comorbidity?\" (Yes or No)";
+        if (answer === "no")
+          return `Excluded: ${gateToday ? "BMI" : "starting BMI"} 27 to below 30 with no weight-related comorbidity. Save as not supplied and refer`;
+        if (state.weightAssessment.comorbidities.length === 0)
+          return "Tick the weight-related comorbidity (or comorbidities) the patient has";
+      }
       if (state.weightAssessment.targetWeight === null)
-        return "A realistic target weight must be agreed and recorded";
+        return "Enter the Target weight agreed";
       if (!state.weightAssessment.initialAssessmentCompleted)
-        return "The face to face initial assessment must be completed and documented before supply";
+        return "Tick \"Face to face initial assessment completed and documented\"";
       if (!state.weightAssessment.lifestylePlanAgreed)
-        return "Patient must be willing to follow a reduced-calorie diet and increase physical activity in line with the agreed lifestyle plan";
+        return "Tick \"Patient is willing to follow a reduced-calorie diet and increase physical activity in line with the agreed lifestyle plan\"";
       return null;
     }
 
@@ -49,9 +57,9 @@ export function validateStep(step: number, state: MounjaroConsultationState): st
 
     case 4: // Current Medications
       if (state.medications.takesInsulin && !state.medications.insulinDetails.trim())
-        return "Insulin details are required";
+        return "Enter the Insulin details (type and dose)";
       if (state.medications.currentGLP1 && !state.medications.otherGLP1Details.trim())
-        return "Details of the current GLP-1 agonist or insulin secretagogue are required";
+        return "Enter the Details of current GLP-1 agonist or insulin secretagogue";
       return null;
 
     case 5: // Contraindications Review
@@ -61,15 +69,17 @@ export function validateStep(step: number, state: MounjaroConsultationState): st
       const ds = state.doseSelection;
       if (!ds.supplyType) return "Select the nature of today's supply";
       if (isContinuingSupply(state)) {
-        if (!ds.previousDose) return "Record the dose the patient has been on";
+        if (!ds.previousDose) return "Select the Dose the patient has been on";
         if (ds.weeksAtCurrentDose === null || ds.weeksAtCurrentDose < 0)
-          return "Record the number of weeks the patient has been on that dose";
-        if (ds.initialWeight === null) return "Record the weight at initiation, for the 5% rule";
-        if (!ds.treatmentStartDate) return "Record the treatment start date";
+          return "Enter Weeks on that dose";
+        if (ds.initialWeight === null) return "Enter the Weight at initiation (for the 5% rule)";
+        if (!ds.treatmentStartDate) return "Enter the Treatment start date";
+        if (ds.treatmentStartDate > new Date().toISOString().slice(0, 10))
+          return "The Treatment start date is in the future";
         if (ds.monthsOnMaxToleratedDose === null || ds.monthsOnMaxToleratedDose < 0)
-          return "Record how many months the patient has been on the maximum tolerated dose (0 if still titrating)";
+          return "Enter Months on the maximum tolerated dose (0 if still titrating)";
       }
-      if (!ds.currentDoseStage || !ds.dose) return "Dose selection is required";
+      if (!ds.currentDoseStage || !ds.dose) return "Select the Dose to supply (KwikPen strength)";
       const allowed = getAllowedStages(state);
       if (!allowed.includes(ds.currentDoseStage)) {
         if (ds.supplyType === "new-start" || ds.supplyType === "restart")
@@ -89,7 +99,9 @@ export function validateStep(step: number, state: MounjaroConsultationState): st
       }
       if (fivePercentRuleApplies(state) && !ds.continuationDecision.trim())
         return "Less than 5% of initial body weight lost after 6 months on the maximum tolerated dose: record the decision on continuation and the reasoning";
-      if (!ds.batchNumber.trim()) return "Batch number is required";
+      if (!ds.batchNumber.trim()) return "Enter the Batch number";
+      if (ds.expiryDate && ds.expiryDate < new Date().toISOString().slice(0, 10))
+        return "The Expiry date is in the past: this pen must not be supplied. Select another pen and enter its batch number and expiry date";
       return null;
     }
 
@@ -98,28 +110,33 @@ export function validateStep(step: number, state: MounjaroConsultationState): st
       // Every item that maps to a document row is required; a first
       // injectable supply could be recorded with no injection training
       // (adversarial review, 11 Sep 2026).
+      // Named in the words of each label, so the pharmacist knows which box.
       const required: [boolean, string][] = [
-        [c.injectionTechnique, "injection technique"],
-        [c.injectionSiteRotation, "injection site rotation"],
-        [c.penDeviceUse, "pen device use"],
-        [c.storageRefrigeration, "storage"],
-        [c.missedDoseProtocol, "missed dose protocol"],
-        [c.giSideEffects, "gastrointestinal side effects and fluid intake"],
-        [c.pancreatitisWarning, "signs and symptoms of pancreatitis"],
-        [c.gallbladderWarning, "gallbladder disease symptoms"],
-        [c.warningSymptoms, "warning symptoms needing urgent attention"],
-        [c.oralMedicationAbsorption, "reduced absorption of oral medicines, contraceptives and HRT"],
-        [c.anaesthesiaWarning, "general anaesthesia or deep sedation"],
-        [c.dietExerciseAdvice, "diet and exercise"],
-        [c.followUpSchedule, "review and the 6-month reassessment"],
-        [c.writtenInfoProvided, "PIL, written lifestyle advice and the agreed target weight"],
+        [c.injectionTechnique, "Injection technique explained"],
+        [c.injectionSiteRotation, "Injection site rotation explained"],
+        [c.storageRefrigeration, "Storage instructions provided"],
+        [c.missedDoseProtocol, "Missed dose protocol explained"],
+        [c.giSideEffects, "GI side effects, their management and adequate fluid intake discussed"],
+        [c.warningSymptoms, "Warning symptoms needing urgent attention explained"],
+        [c.pancreatitisWarning, "Pancreatitis warning signs explained"],
+        [c.gallbladderWarning, "Gallbladder disease symptoms discussed"],
       ];
-      const missing = required.filter(([done]) => !done).map(([, label]) => label);
-      if (missing.length > 0) return `Confirm the remaining counselling items: ${missing.join(", ")}`;
-      if (state.weightAssessment.comorbidities.includes("type2diabetes") && !c.retinopathyWarning)
-        return "Retinopathy monitoring must be discussed with a patient who has type 2 diabetes";
-      if (state.medications.t2dmOralAgents && !c.gpInformed)
-        return "The GP must be informed where the patient has type 2 diabetes on metformin, an SGLT2 inhibitor or a DPP-4 inhibitor";
+      if (state.weightAssessment.comorbidities.includes("type2diabetes")) {
+        required.push([c.retinopathyWarning, "Retinopathy monitoring discussed"]);
+      }
+      required.push(
+        [c.oralMedicationAbsorption, "Reduced absorption of oral medicines, oral contraceptives and HRT discussed"],
+        [c.anaesthesiaWarning, "General anaesthesia or deep sedation advice given"],
+        [c.penDeviceUse, "Pen device use explained"],
+        [c.dietExerciseAdvice, "Diet and exercise advice provided"],
+        [c.followUpSchedule, "Follow-up schedule arranged"],
+        [c.writtenInfoProvided, "Written information given"],
+      );
+      if (state.medications.t2dmOralAgents) {
+        required.push([c.gpInformed, "GP informed"]);
+      }
+      const missing = required.find(([done]) => !done);
+      if (missing) return `Tick "${missing[1]}" once done. Every point is required except where its label says otherwise`;
       return null;
     }
 
