@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useCallback, useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 
 /**
  * Data shape for saving a consultation record.
@@ -58,17 +58,60 @@ export interface ConsultationRecordData {
  * - Call markComplete() on the final step (e.g. when Print is clicked)
  * - Call saveRecord(data) to persist clinical data to the database
  */
+/**
+ * One consultation, one row.
+ *
+ * The tracking state lives in a module-level store keyed by PGD slug, not in
+ * the hook's own refs. Most tools render a SEPARATE <StepWrapper> per step,
+ * so moving to the next step unmounts one wrapper and mounts the next: with
+ * per-instance refs the hook was recreated at every step and posted another
+ * 'start'. One MenACWY consultation on 11 September 2026 wrote seven "started"
+ * rows seconds apart and completed the last, which is why the dashboard read
+ * 269 started against 43 completed (about one row per step) instead of the
+ * real figure of roughly 45 consultations, nearly all completed.
+ *
+ * Keyed by slug rather than by component instance so the state survives those
+ * remounts. reset() clears the entry, and StepWrapper calls it on New
+ * Consultation and when the flow returns to step 0, so the next patient gets
+ * a new row.
+ */
+interface TrackingEntry {
+  consultationId: string | null
+  started: boolean
+  completed: boolean
+  saved: boolean
+  saving: boolean
+}
+
+const store = new Map<string, TrackingEntry>()
+
+function entryFor(pgdSlug: string): TrackingEntry {
+  let e = store.get(pgdSlug)
+  if (!e) {
+    e = { consultationId: null, started: false, completed: false, saved: false, saving: false }
+    store.set(pgdSlug, e)
+  }
+  return e
+}
+
 export function useConsultationTracking(pgdSlug: string, currentStep: number) {
-  const consultationIdRef = useRef<string | null>(null)
-  const hasStartedRef = useRef(false)
-  const hasCompletedRef = useRef(false)
-  const hasSavedRef = useRef(false)
-  const isSavingRef = useRef(false)
+  // Back at step 0 after a consultation was completed or saved means the next
+  // patient, so the entry is cleared here rather than relying on the "New
+  // Consultation" button: in a tool with one StepWrapper per step, the button
+  // lives on an instance that is no longer mounted. Going back to step 0
+  // mid-consultation (nothing completed, nothing saved) keeps the same row.
+  useEffect(() => {
+    if (currentStep === 0) {
+      const entry = store.get(pgdSlug)
+      if (entry && (entry.completed || entry.saved)) store.delete(pgdSlug)
+    }
+  }, [currentStep, pgdSlug])
 
   // Record start when user advances past step 0
   useEffect(() => {
-    if (currentStep > 0 && !hasStartedRef.current) {
-      hasStartedRef.current = true
+    const entry = entryFor(pgdSlug)
+    if (currentStep > 0 && !entry.started) {
+      entry.started = true
 
       fetch('/api/analytics', {
         method: 'POST',
@@ -78,7 +121,7 @@ export function useConsultationTracking(pgdSlug: string, currentStep: number) {
         .then((res) => res.json())
         .then((data) => {
           if (data.consultationId) {
-            consultationIdRef.current = data.consultationId
+            entry.consultationId = data.consultationId
           }
         })
         .catch(() => {
@@ -88,9 +131,10 @@ export function useConsultationTracking(pgdSlug: string, currentStep: number) {
   }, [currentStep, pgdSlug])
 
   const markComplete = useCallback(() => {
-    if (hasCompletedRef.current || !consultationIdRef.current) return
+    const entry = entryFor(pgdSlug)
+    if (entry.completed || !entry.consultationId) return
 
-    hasCompletedRef.current = true
+    entry.completed = true
 
     fetch('/api/analytics', {
       method: 'POST',
@@ -98,7 +142,7 @@ export function useConsultationTracking(pgdSlug: string, currentStep: number) {
       body: JSON.stringify({
         pgdSlug,
         action: 'complete',
-        consultationId: consultationIdRef.current,
+        consultationId: entry.consultationId,
       }),
     }).catch(() => {
       // Silent fail — analytics should never block consultation workflow
@@ -111,15 +155,16 @@ export function useConsultationTracking(pgdSlug: string, currentStep: number) {
    */
   const saveRecord = useCallback(
     async (data: ConsultationRecordData): Promise<boolean> => {
-      if (hasSavedRef.current || isSavingRef.current) return hasSavedRef.current
-      isSavingRef.current = true
+      const entry = entryFor(pgdSlug)
+      if (entry.saved || entry.saving) return entry.saved
+      entry.saving = true
 
       try {
         const response = await fetch('/api/consultation-records', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            consultationId: consultationIdRef.current,
+            consultationId: entry.consultationId,
             pgdSlug,
             patient: data.patient,
             clinicalData: data.clinicalData,
@@ -131,7 +176,7 @@ export function useConsultationTracking(pgdSlug: string, currentStep: number) {
         })
 
         if (response.ok) {
-          hasSavedRef.current = true
+          entry.saved = true
           return true
         }
 
@@ -141,7 +186,7 @@ export function useConsultationTracking(pgdSlug: string, currentStep: number) {
         console.error('Error saving consultation record:', error)
         return false
       } finally {
-        isSavingRef.current = false
+        entry.saving = false
       }
     },
     [pgdSlug]
@@ -154,17 +199,13 @@ export function useConsultationTracking(pgdSlug: string, currentStep: number) {
    * (adversarial review, 11 Sep 2026).
    */
   const reset = useCallback(() => {
-    consultationIdRef.current = null
-    hasStartedRef.current = false
-    hasCompletedRef.current = false
-    hasSavedRef.current = false
-    isSavingRef.current = false
-  }, [])
+    store.delete(pgdSlug)
+  }, [pgdSlug])
 
   return {
     markComplete,
     saveRecord,
     reset,
-    consultationId: consultationIdRef.current,
+    consultationId: entryFor(pgdSlug).consultationId,
   }
 }
