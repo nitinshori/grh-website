@@ -1,0 +1,499 @@
+{
+ "anti-malarials": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/anti-malarials-v008-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/anti-malarials-v008-SIGNED.docx",
+  "pdf": "anti-malarials-v008.pdf",
+  "version": "v008",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/anti-malarials-v008.txt"
+ },
+ "tetanus": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/tetanus-v008-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/tetanus-v008-SIGNED.docx",
+  "pdf": "tetanus-v008.pdf",
+  "version": "v008",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/tetanus-v008.txt"
+ },
+ "herpes-management": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/herpes-management-v003-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/herpes-management-v003-SIGNED.docx",
+  "pdf": "herpes-management-v003.pdf",
+  "version": "v003",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/herpes-management-v003.txt"
+ },
+ "mysimba": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/mysimba-v003-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/mysimba-v003-SIGNED.docx",
+  "pdf": "mysimba-v003.pdf",
+  "version": "v003",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/mysimba-v003.txt"
+ },
+ "cellulitis": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/cellulitis-v002-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/cellulitis-v002-SIGNED.docx",
+  "pdf": "cellulitis-v002.pdf",
+  "version": "v002",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/cellulitis-v002.txt"
+ },
+ "sore-throat": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/sore-throat-v003-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/sore-throat-v003-SIGNED.docx",
+  "pdf": "sore-throat-v003.pdf",
+  "version": "v003",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/sore-throat-v003.txt"
+ },
+ "copd": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/copd-v002-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/copd-v002-SIGNED.docx",
+  "pdf": "copd-v002.pdf",
+  "version": "v002",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/copd-v002.txt"
+ },
+ "sti-testing": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/chlamydia-v002-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/chlamydia-v002-SIGNED.docx",
+  "pdf": "sti-testing-v002.pdf",
+  "version": "v002",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/sti-testing-v002.txt"
+ },
+ "travellers-diarrhoea": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/travellers-diarrhoea-v003-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/travellers-diarrhoea-v003-SIGNED.docx",
+  "pdf": "travellers-diarrhoea-v003.pdf",
+  "version": "v003",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/travellers-diarrhoea-v003.txt"
+ },
+ "period-delay": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/period-delay-v008-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/period-delay-v008-SIGNED.docx",
+  "pdf": "period-delay-v008.pdf",
+  "version": "v008",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/period-delay-v008.txt"
+ },
+ "b12-injection": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/b12-folate-v008-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/b12-folate-v008-SIGNED.docx",
+  "pdf": "b12-folate-v008.pdf",
+  "version": "v008",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/b12-folate-v008.txt"
+ },
+ "wegovy": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/wegovy-v007-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/wegovy-v007-SIGNED.docx",
+  "pdf": "wegovy-v007.pdf",
+  "version": "v007",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/wegovy-v007.txt"
+ },
+ "yellow-fever": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/yellow-fever-v004-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/yellow-fever-v004-SIGNED.docx",
+  "pdf": "yellow-fever-v004.pdf",
+  "version": "v004",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/yellow-fever-v004.txt"
+ },
+ "hayfever": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/hayfever-v003-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/hayfever-v003-SIGNED.docx",
+  "pdf": "hayfever-v003.pdf",
+  "version": "v003",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/hayfever-v003.txt"
+ },
+ "altitude-sickness": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/altitude-sickness-v003-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/altitude-sickness-v003-SIGNED.docx",
+  "pdf": "altitude-sickness-v003.pdf",
+  "version": "v003",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/altitude-sickness-v003.txt"
+ },
+ "bph": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/bph-v002-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/bph-v002-SIGNED.docx",
+  "pdf": "bph-v002.pdf",
+  "version": "v002",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/bph-v002.txt"
+ },
+ "meningitis-b": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/meningitis-b-v004-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/meningitis-b-v004-SIGNED.docx",
+  "pdf": "meningitis-b-v004.pdf",
+  "version": "v004",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/meningitis-b-v004.txt"
+ },
+ "smoking-varenicline": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/smoking-varenicline-v003-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/smoking-varenicline-v003-SIGNED.docx",
+  "pdf": "smoking-varenicline-v003.pdf",
+  "version": "v003",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/smoking-varenicline-v003.txt"
+ },
+ "smoking-nrt": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/smoking-nrt-v002-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/smoking-nrt-v002-SIGNED.docx",
+  "pdf": "smoking-nrt-v002.pdf",
+  "version": "v002",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/smoking-nrt-v002.txt"
+ },
+ "fungal-infection": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/fungal-infection-v003-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/fungal-infection-v003-SIGNED.docx",
+  "pdf": "fungal-infection-v003.pdf",
+  "version": "v003",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/fungal-infection-v003.txt"
+ },
+ "emergency-contraception": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/emergency-contraception-v003-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/emergency-contraception-v003-SIGNED.docx",
+  "pdf": "emergency-contraception-v003.pdf",
+  "version": "v003",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/emergency-contraception-v003.txt"
+ },
+ "cold-sores": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/cold-sores-v002-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/cold-sores-v002-SIGNED.docx",
+  "pdf": "cold-sores-v002.pdf",
+  "version": "v002",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/cold-sores-v002.txt"
+ },
+ "thrush": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/thrush-v003-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/thrush-v003-SIGNED.docx",
+  "pdf": "thrush-v003.pdf",
+  "version": "v003",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/thrush-v003.txt"
+ },
+ "dengue": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/dengue-v005-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/dengue-v005-SIGNED.docx",
+  "pdf": "dengue-v005.pdf",
+  "version": "v005",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/dengue-v005.txt"
+ },
+ "chickenpox": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/chickenpox-v004-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/chickenpox-v004-SIGNED.docx",
+  "pdf": "chickenpox-v004.pdf",
+  "version": "v004",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/chickenpox-v004.txt"
+ },
+ "rsv": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/rsv-v005-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/rsv-v005-SIGNED.docx",
+  "pdf": "rsv-v005.pdf",
+  "version": "v005",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/rsv-v005.txt"
+ },
+ "hep-b-occupational": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/hep-b-occupational-v004-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/hep-b-occupational-v004-SIGNED.docx",
+  "pdf": "hep-b-occupational-v004.pdf",
+  "version": "v004",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/hep-b-occupational-v004.txt"
+ },
+ "mmr": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/mmr-v004-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/mmr-v004-SIGNED.docx",
+  "pdf": "mmr-v004.pdf",
+  "version": "v004",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/mmr-v004.txt"
+ },
+ "pneumococcal": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/pneumococcal-v004-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/pneumococcal-v004-SIGNED.docx",
+  "pdf": "pneumococcal-v004.pdf",
+  "version": "v004",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/pneumococcal-v004.txt"
+ },
+ "shingles-vaccine": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/shingles-vaccine-v005-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/shingles-vaccine-v005-SIGNED.docx",
+  "pdf": "shingles-vaccine-v005.pdf",
+  "version": "v005",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/shingles-vaccine-v005.txt"
+ },
+ "travel-core": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/travel-core-v004-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/travel-core-v004-SIGNED.docx",
+  "pdf": "travel-core-v004.pdf",
+  "version": "v004",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/travel-core-v004.txt"
+ },
+ "postnatal-contraception": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/postnatal-contraception-v004-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/postnatal-contraception-v004-SIGNED.docx",
+  "pdf": "postnatal-contraception-v004.pdf",
+  "version": "v004",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/postnatal-contraception-v004.txt"
+ },
+ "premature-ejaculation": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/premature-ejaculation-v003-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/premature-ejaculation-v003-SIGNED.docx",
+  "pdf": "premature-ejaculation-v003.pdf",
+  "version": "v003",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/premature-ejaculation-v003.txt"
+ },
+ "acne": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/acne-v003-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/acne-v003-SIGNED.docx",
+  "pdf": "acne-v003.pdf",
+  "version": "v003",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/acne-v003.txt"
+ },
+ "alopecia-minoxidil": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/alopecia-v002-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/alopecia-v002-SIGNED.docx",
+  "pdf": "alopecia-minoxidil-v002.pdf",
+  "version": "v002",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/alopecia-minoxidil-v002.txt"
+ },
+ "anxiety-propranolol": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/anxiety-propranolol-v004-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/anxiety-propranolol-v004-SIGNED.docx",
+  "pdf": "anxiety-propranolol-v004.pdf",
+  "version": "v004",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/anxiety-propranolol-v004.txt"
+ },
+ "asthma-rescue": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/asthma-rescue-v005-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/asthma-rescue-v005-SIGNED.docx",
+  "pdf": "asthma-rescue-v005.pdf",
+  "version": "v005",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/asthma-rescue-v005.txt"
+ },
+ "bv": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/bv-v003-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/bv-v003-SIGNED.docx",
+  "pdf": "bv-v003.pdf",
+  "version": "v003",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/bv-v003.txt"
+ },
+ "chest-service": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/chest-v007-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/chest-v007-SIGNED.docx",
+  "pdf": "chest-service-v007.pdf",
+  "version": "v007",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/chest-service-v007.txt"
+ },
+ "covid-booster": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/covid-v006-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/covid-v006-SIGNED.docx",
+  "pdf": "covid-2026-27-v006.pdf",
+  "version": "v006",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/covid-2026-27-v006.txt"
+ },
+ "dental-bridging": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/dental-v007-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/dental-v007-SIGNED.docx",
+  "pdf": "dental-bridging-v007.pdf",
+  "version": "v007",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/dental-bridging-v007.txt"
+ },
+ "ear-infection": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/ear-infection-v005-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/ear-infection-v005-SIGNED.docx",
+  "pdf": "ear-infection-v005.pdf",
+  "version": "v005",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/ear-infection-v005.txt"
+ },
+ "eczema": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/eczema-v005-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/eczema-v005-SIGNED.docx",
+  "pdf": "eczema-v005.pdf",
+  "version": "v005",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/eczema-v005.txt"
+ },
+ "ed": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/ed-v006-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/ed-v006-SIGNED.docx",
+  "pdf": "ed-v006.pdf",
+  "version": "v006",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/ed-v006.txt"
+ },
+ "eye-infections": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/eye-infections-v002-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/eye-infections-v002-SIGNED.docx",
+  "pdf": "eye-infections-v002.pdf",
+  "version": "v002",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/eye-infections-v002.txt"
+ },
+ "flu": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/flu-v004-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/flu-v004-SIGNED.docx",
+  "pdf": "flu-2026-27-v004.pdf",
+  "version": "v004",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/flu-2026-27-v004.txt"
+ },
+ "foundayo": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/foundayo-v007-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/foundayo-v007-SIGNED.docx",
+  "pdf": "foundayo-v007.pdf",
+  "version": "v007",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/foundayo-v007.txt"
+ },
+ "genital-warts": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/genital-warts-v003-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/genital-warts-v003-SIGNED.docx",
+  "pdf": "genital-warts-v003.pdf",
+  "version": "v003",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/genital-warts-v003.txt"
+ },
+ "gonorrhoea-treatment": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/gonorrhoea-treatment-v003-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/gonorrhoea-treatment-v003-SIGNED.docx",
+  "pdf": "gonorrhoea-treatment-v003.pdf",
+  "version": "v003",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/gonorrhoea-treatment-v003.txt"
+ },
+ "hep-ab-travel": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/hep-ab-travel-v006-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/hep-ab-travel-v006-SIGNED.docx",
+  "pdf": "hep-ab-travel-v006.pdf",
+  "version": "v006",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/hep-ab-travel-v006.txt"
+ },
+ "hpv": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/hpv-v004-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/hpv-v004-SIGNED.docx",
+  "pdf": "hpv-v004.pdf",
+  "version": "v004",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/hpv-v004.txt"
+ },
+ "impetigo": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/impetigo-v008-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/impetigo-v008-SIGNED.docx",
+  "pdf": "impetigo-v008.pdf",
+  "version": "v008",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/impetigo-v008.txt"
+ },
+ "japanese-encephalitis": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/japanese-encephalitis-v005-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/japanese-encephalitis-v005-SIGNED.docx",
+  "pdf": "japanese-encephalitis-v005.pdf",
+  "version": "v005",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/japanese-encephalitis-v005.txt"
+ },
+ "junior-travel": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/junior-travel-v006-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/junior-travel-v006-SIGNED.docx",
+  "pdf": "junior-travel-v006.pdf",
+  "version": "v006",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/junior-travel-v006.txt"
+ },
+ "meningitis-acwy-travel": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/meningitis-acwy-travel-v006-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/meningitis-acwy-travel-v006-SIGNED.docx",
+  "pdf": "meningitis-acwy-travel-v006.pdf",
+  "version": "v006",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/meningitis-acwy-travel-v006.txt"
+ },
+ "mounjaro": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/mounjaro-v007-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/mounjaro-v007-SIGNED.docx",
+  "pdf": "mounjaro-v007.pdf",
+  "version": "v007",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/mounjaro-v007.txt"
+ },
+ "orlistat": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/orlistat-v002-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/orlistat-v002-SIGNED.docx",
+  "pdf": "orlistat-v002.pdf",
+  "version": "v002",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/orlistat-v002.txt"
+ },
+ "period-pain": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/period-pain-v003-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/period-pain-v003-SIGNED.docx",
+  "pdf": "period-pain-v003.pdf",
+  "version": "v003",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/period-pain-v003.txt"
+ },
+ "psoriasis": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/psoriasis-v004-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/psoriasis-v004-SIGNED.docx",
+  "pdf": "psoriasis-v004.pdf",
+  "version": "v004",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/psoriasis-v004.txt"
+ },
+ "rabies": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/rabies-v005-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/rabies-v005-SIGNED.docx",
+  "pdf": "rabies-v005.pdf",
+  "version": "v005",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/rabies-v005.txt"
+ },
+ "rosacea": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/rosacea-v003-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/rosacea-v003-SIGNED.docx",
+  "pdf": "rosacea-v003.pdf",
+  "version": "v003",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/rosacea-v003.txt"
+ },
+ "saxenda": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/saxenda-v003-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/saxenda-v003-SIGNED.docx",
+  "pdf": "saxenda-v003.pdf",
+  "version": "v003",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/saxenda-v003.txt"
+ },
+ "shingles-treatment": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/shingles-treatment-v005-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/shingles-treatment-v005-SIGNED.docx",
+  "pdf": "shingles-treatment-v005.pdf",
+  "version": "v005",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/shingles-treatment-v005.txt"
+ },
+ "skin-infection": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/skin-v005-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/skin-v005-SIGNED.docx",
+  "pdf": "skin-infection-v005.pdf",
+  "version": "v005",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/skin-infection-v005.txt"
+ },
+ "sleep-melatonin": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/sleep-melatonin-v005-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/sleep-melatonin-v005-SIGNED.docx",
+  "pdf": "sleep-melatonin-v005.pdf",
+  "version": "v005",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/sleep-melatonin-v005.txt"
+ },
+ "typhoid": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/typhoid-v005-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/typhoid-v005-SIGNED.docx",
+  "pdf": "typhoid-v005.pdf",
+  "version": "v005",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/typhoid-v005.txt"
+ },
+ "uti": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/uti-v005-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/uti-v005-SIGNED.docx",
+  "pdf": "uti-v005.pdf",
+  "version": "v005",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/uti-v005.txt"
+ },
+ "wegovy-oral": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/wegovy-oral-v010-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/wegovy-oral-v010-SIGNED.docx",
+  "pdf": "wegovy-oral-v010.pdf",
+  "version": "v010",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/wegovy-oral-v010.txt"
+ },
+ "wound-care": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/wound-care-v007-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/wound-care-v007-SIGNED.docx",
+  "pdf": "wound-care-v007.pdf",
+  "version": "v007",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/wound-care-v007.txt"
+ },
+ "hair-loss": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/alopecia-v002-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/alopecia-v002-SIGNED.docx",
+  "pdf": "hair-loss-v002.pdf",
+  "version": "v002",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/hair-loss-v002.txt"
+ },
+ "folic-acid": {
+  "docx": "/Users/nitinshori/Documents/GRH Front End/PGD Rewrite 2026/02 Approved/b12-folate-v008-SIGNED.docx",
+  "docx_bash": "/sessions/happy-nifty-bardeen/mnt/GRH Front End/PGD Rewrite 2026/02 Approved/b12-folate-v008-SIGNED.docx",
+  "pdf": "b12-folate-v008.pdf",
+  "version": "v008",
+  "text": "/sessions/happy-nifty-bardeen/mnt/outputs/align/text/b12-folate-v008.txt"
+ }
+}

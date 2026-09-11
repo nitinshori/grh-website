@@ -544,7 +544,21 @@ def change_record(doc, version, supersedes, date, changes, previous=()):
             doc.add_paragraph("")
 
 
+def strip_em_dashes(doc):
+    """House style: no em dashes. The November 2025 guidance summaries used
+    them as list punctuation; a comma or colon reads the same."""
+    n = 0
+    for p in walk(doc, doc.element.body):
+        for r in p.runs:
+            if r.text and "\u2014" in r.text:
+                r.text = r.text.replace(" \u2014 ", ", ").replace("\u2014", ", ")
+                n += 1
+    if n:
+        print(f"  em dashes replaced in {n} run(s)")
+
+
 def normalise(doc, version, date, supersedes):
+    strip_em_dashes(doc)
     blank_adoption_block(doc)
     remove_original_sign_blocks(doc)
     strip_old_sign_blocks(doc)
