@@ -2,6 +2,7 @@
 
 import React from 'react';
 import type { TDConsultationState } from '../travellers-diarrhoea-types';
+import { TD_PGD_VERSION } from '../travellers-diarrhoea-clinical-logic';
 import {
   SectionHeader,
   Row,
@@ -38,6 +39,7 @@ export const TravellersDiarrhoeaSummaryReport: React.FC<
           <p className="text-sm text-gray-500 mt-1">
             Standby Treatment Supply Consultation Record
           </p>
+          <p className="text-xs text-gray-500 mt-1">{TD_PGD_VERSION}</p>
         </div>
         <div className="text-right text-sm text-gray-600">
           <p className="font-medium">{summary.consultationDate}</p>
@@ -82,8 +84,12 @@ export const TravellersDiarrhoeaSummaryReport: React.FC<
         <Row label="Approach" value={medicineSelection.selectedApproach === 'standby' ? 'Standby treatment supplied' : 'Not supplied'} />
         {medicineSelection.selectedApproach === 'standby' && (
           <>
-            <Row label="Loperamide Dose" value={medicineSelection.loperamideDose} />
+            <Row label="Medicine" value="Azithromycin 500 mg tablets" />
+            <Row label="Brand" value={medicineSelection.brand || 'Not recorded'} />
             <Row label="Azithromycin Dose" value={medicineSelection.azithromycinDose} />
+            <Row label="Quantity supplied" value={medicineSelection.azithromycinQuantity !== null ? `${medicineSelection.azithromycinQuantity} x 500 mg tablets` : 'Not recorded'} />
+            <Row label="Indication" value="Self-start for moderate to severe traveller's diarrhoea" />
+            <Row label="Loperamide (OTC, not under PGD)" value={medicineSelection.loperamideDose || 'Not supplied'} />
           </>
         )}
         <Row label="Clinical Reason" value={medicineSelection.reason} />
@@ -93,16 +99,16 @@ export const TravellersDiarrhoeaSummaryReport: React.FC<
       <SectionHeader>Counselling Provided</SectionHeader>
       <CounsellingGrid
         items={[
-          ['Oral rehydration is first-line treatment', counselling.orCrsAdvice],
-          ['When to start antimotility / antibiotic treatment', counselling.whenToStartTreatment],
-          ['Loperamide: use only if no fever/blood', counselling.loperamideAdvice],
-          ['Azithromycin: for moderate-severe diarrhoea', counselling.azithromycinAdvice],
+          ['Oral rehydration is the key priority; maintain hydration', counselling.orCrsAdvice],
+          ['When and how to self-start azithromycin (moderate to severe symptoms, with food)', counselling.whenToStartTreatment],
+          ['Loperamide (OTC): not with fever or blood in stool', counselling.loperamideAdvice],
+          ['Azithromycin 500 mg once daily for 1 to 3 days; maximum 3 days', counselling.azithromycinAdvice],
           ['Pregnancy implications', counselling.pregnancyAdvice],
           ['Food/water hygiene measures', counselling.foodHygiene],
           ['Safe water and food sources', counselling.waterSafety],
-          ['Red flags requiring medical attention', counselling.whenToSeekHelp],
-          ['Warning: Not suitable for <12 without medical advice', counselling.childrenUnderWarning],
-          ['Medicine card / information provided', counselling.medicineCardProvided],
+          ['Seek local medical attention if symptoms worsen or persist (fever, blood, severe pain, vomiting, over 14 days, systemically unwell)', counselling.whenToSeekHelp],
+          ['Stop treatment if hypersensitivity or serious side effects occur', counselling.childrenUnderWarning],
+          ['Patient information leaflet supplied', counselling.medicineCardProvided],
         ]}
       />
 

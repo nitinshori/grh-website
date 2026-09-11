@@ -20,6 +20,9 @@ export default function MounjaroPage() {
           </p>
           <h1 className="text-3xl font-bold text-navy-900 mb-2">Tirzepatide Consultation</h1>
           <p className="text-gray-600">Dual GIP/GLP-1 receptor agonist for weight management</p>
+          <p className="text-sm text-gray-500 mt-1">
+            Mounjaro (tirzepatide) Injection for weight management PGD, version 007, issued 11 September 2026. Adults aged 18 to 75 years. One KwikPen (4 weekly doses) per appointment.
+          </p>
         </div>
         <MounjaroClient />
       </div>

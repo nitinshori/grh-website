@@ -332,6 +332,59 @@ export default function AnxietyPropranololClient() {
                 checked={state.medicalHistory.hepaticImpairment}
                 onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "hepaticImpairment", value: v })}
               />
+
+              <Checkbox
+                label="Renal impairment"
+                checked={state.medicalHistory.renalImpairment}
+                onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "renalImpairment", value: v })}
+              />
+
+              <p className="pt-2 text-xs font-semibold uppercase tracking-wide text-amber-800">
+                PGD cautions (supply may proceed with counselling)
+              </p>
+
+              <Checkbox
+                label="First-degree heart block"
+                checked={state.medicalHistory.firstDegreeHeartBlock}
+                onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "firstDegreeHeartBlock", value: v })}
+              />
+
+              <Checkbox
+                label="Portal hypertension"
+                checked={state.medicalHistory.portalHypertension}
+                onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "portalHypertension", value: v })}
+              />
+
+              <Checkbox
+                label="Mild peripheral vascular disease (severe peripheral arterial disease excludes)"
+                checked={state.medicalHistory.mildPeripheralVascularDisease}
+                onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "mildPeripheralVascularDisease", value: v })}
+              />
+
+              <Checkbox
+                label="Psoriasis"
+                checked={state.medicalHistory.psoriasis}
+                onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "psoriasis", value: v })}
+              />
+
+              <Checkbox
+                label="Myasthenia gravis"
+                checked={state.medicalHistory.myastheniaGravis}
+                onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "myastheniaGravis", value: v })}
+              />
+
+              <Checkbox
+                label="History of anaphylaxis"
+                checked={state.medicalHistory.historyOfAnaphylaxis}
+                onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "historyOfAnaphylaxis", value: v })}
+              />
+
+              <Checkbox
+                label="Depression that is not severe and without any suicidal ideation"
+                checked={state.medicalHistory.mildDepression}
+                onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "mildDepression", value: v })}
+                description="Supply may proceed with counselling. Severe depression or any suicidal ideation is an exclusion (contraindications step)."
+              />
             </div>
           </StepWrapper>
         );
@@ -371,7 +424,7 @@ export default function AnxietyPropranololClient() {
             <AlertBanner alerts={alerts} />
             <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
               <Checkbox
-                label="Asthma/COPD with bronchospasm"
+                label="Asthma, or history of bronchospasm"
                 checked={state.contraindications.asthmaWithBronchospasm}
                 onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "asthmaWithBronchospasm", value: v })}
               />
@@ -383,15 +436,33 @@ export default function AnxietyPropranololClient() {
               />
 
               <Checkbox
-                label="Bradycardia (HR &lt;50 bpm)"
+                label="Severe bradycardia (heart rate below 50 bpm at rest)"
                 checked={state.contraindications.severeBradycardia}
                 onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "severeBradycardia", value: v })}
               />
 
               <Checkbox
-                label="Uncontrolled heart failure (NYHA III–IV)"
+                label="Hypotension (systolic BP below 90 mmHg)"
+                checked={state.contraindications.hypotension}
+                onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "hypotension", value: v })}
+              />
+
+              <Checkbox
+                label="Uncontrolled heart failure"
                 checked={state.contraindications.uncontrolledHeartFailure}
                 onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "uncontrolledHeartFailure", value: v })}
+              />
+
+              <Checkbox
+                label="Cardiogenic shock"
+                checked={state.contraindications.cardiogenicShock}
+                onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "cardiogenicShock", value: v })}
+              />
+
+              <Checkbox
+                label="Sick sinus syndrome"
+                checked={state.contraindications.sickSinusSyndrome}
+                onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "sickSinusSyndrome", value: v })}
               />
 
               <Checkbox
@@ -401,9 +472,45 @@ export default function AnxietyPropranololClient() {
               />
 
               <Checkbox
-                label="Pheochromocytoma (not alpha-blocked)"
+                label="Phaeochromocytoma (unless already on alpha-blocker)"
                 checked={state.contraindications.pheochromocytoma}
                 onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "pheochromocytoma", value: v })}
+              />
+
+              <Checkbox
+                label="Metabolic acidosis"
+                checked={state.contraindications.metabolicAcidosis}
+                onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "metabolicAcidosis", value: v })}
+              />
+
+              <Checkbox
+                label="Known hypersensitivity to propranolol"
+                checked={state.contraindications.hypersensitivity}
+                onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "hypersensitivity", value: v })}
+              />
+
+              <Checkbox
+                label="Severe peripheral arterial disease (rest pain, ulceration or critical ischaemia)"
+                checked={state.contraindications.severePeripheralArterialDisease}
+                onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "severePeripheralArterialDisease", value: v })}
+              />
+
+              <Checkbox
+                label="Prolonged fasting, or any other risk of hypoglycaemia, including insulin-treated diabetes with hypoglycaemia unawareness"
+                checked={state.contraindications.fastingOrHypoglycaemiaRisk}
+                onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "fastingOrHypoglycaemiaRisk", value: v })}
+              />
+
+              <Checkbox
+                label="Pregnant, or planning pregnancy"
+                checked={state.contraindications.pregnancyOrPlanning}
+                onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "pregnancyOrPlanning", value: v })}
+              />
+
+              <Checkbox
+                label="Breastfeeding"
+                checked={state.contraindications.breastfeeding}
+                onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "breastfeeding", value: v })}
               />
 
               <Checkbox
@@ -458,9 +565,20 @@ export default function AnxietyPropranololClient() {
           >
             <div className="space-y-4">
               <div className="p-3 bg-[color:var(--tenant-primary)]/10 rounded-lg border border-[color:var(--tenant-primary)]/30">
-                <p className="text-sm font-medium text-navy-900">Propranolol 10mg tablets, 10 to 40mg per dose PRN</p>
-                <p className="text-xs text-gray-600 mt-1">Take 30–60 minutes before anxiety-provoking situation. For situational anxiety only.</p>
+                <p className="text-sm font-medium text-navy-900">Propranolol 10mg tablets (POM). Store below 25°C, protect from light.</p>
+                <p className="text-xs text-gray-600 mt-1">10 to 40mg taken 30 to 60 minutes before the anxiety-provoking situation, or 10 to 40mg two to three times daily for ongoing situational anxiety. Maximum 120mg daily. Review at 4 weeks; ongoing use should be reviewed regularly. Consider gradual dose reduction if discontinuing.</p>
               </div>
+
+              <SelectInput
+                label="Dosing regimen"
+                value={state.medicineSupply.regimen}
+                onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "regimen", value: v })}
+                options={[
+                  { value: "prn", label: "10 to 40mg, 30 to 60 minutes before the anxiety-provoking situation (PRN)" },
+                  { value: "regular", label: "10 to 40mg two to three times daily for ongoing situational anxiety (maximum 120mg daily)" },
+                ]}
+                required
+              />
 
               <NumberInput
                 label="Quantity to Supply"
@@ -492,7 +610,11 @@ export default function AnxietyPropranololClient() {
             <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
               <p className="text-sm font-medium text-navy-900 mb-3">Confirm counselling covered:</p>
               <Checkbox
-                label="PRN use only — not for daily use or long-term"
+                label={
+                  state.medicineSupply.regimen === "regular"
+                    ? "Take as directed, two to three times daily, maximum 120mg daily; review at 4 weeks, one supply per course"
+                    : "PRN use only: 30 to 60 minutes before the situation, maximum 120mg daily, one supply per situational event"
+                }
                 checked={state.counselling.prnUseOnly}
                 onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "prnUseOnly", value: v })}
               />
@@ -502,20 +624,41 @@ export default function AnxietyPropranololClient() {
                 onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "physicalSymptoms", value: v })}
               />
               <Checkbox
+                label="Not a cure for anxiety: consider psychological therapy (CBT is first-line)"
+                checked={state.counselling.notACure}
+                onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "notACure", value: v })}
+              />
+              <Checkbox
                 label="Does NOT cause dependence at PRN doses"
                 checked={state.counselling.noDependence}
                 onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "noDependence", value: v })}
               />
               <Checkbox
-                label="Do NOT stop suddenly if used regularly"
+                label="Do NOT stop suddenly if used regularly (gradual dose reduction if discontinuing)"
                 checked={state.counselling.noSuddenWithdrawal}
                 onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "noSuddenWithdrawal", value: v })}
               />
               <Checkbox
-                label="Do NOT use with verapamil (severe bradycardia risk)"
+                label="Report any breathlessness or wheeze"
+                checked={state.counselling.reportWheeze}
+                onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "reportWheeze", value: v })}
+              />
+              <Checkbox
+                label="May cause cold hands and feet"
+                checked={state.counselling.coldExtremities}
+                onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "coldExtremities", value: v })}
+              />
+              <Checkbox
+                label="Avoid alcohol (additive CNS depression)"
+                checked={state.counselling.avoidAlcohol}
+                onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "avoidAlcohol", value: v })}
+              />
+              <Checkbox
+                label="Do NOT use with verapamil or diltiazem (severe bradycardia, heart block and hypotension risk)"
                 checked={state.counselling.avoidVerapamil}
                 onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "avoidVerapamil", value: v })}
               />
+              <p className="text-xs text-gray-600">Supply the patient information leaflet (PIL) provided with the medication.</p>
             </div>
           </StepWrapper>
         );

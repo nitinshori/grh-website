@@ -13,28 +13,67 @@ import {
 
 // ─── Meningitis B-Specific Types ───
 
+/**
+ * Indication and exclusion questions. PGD v004: the indications are missed
+ * routine doses or presenting outside the NHS programme, an adolescent or
+ * student seeking protection, or an adult at increased risk. A case, contact
+ * or outbreak is managed by the Health Protection Team and is an exclusion;
+ * a travel request is an exclusion (MenB is not recommended for travel).
+ */
 export interface MeningitiBRiskAssessment {
+  /** Exclusion: management of a case, contact or outbreak (Health Protection Team). */
   closeContactOfCase: boolean;
   complementDeficiency: boolean;
   asplenia: boolean;
+  /** Treatment with a complement inhibitor such as eculizumab, or due to start one. */
+  complementInhibitor: boolean;
+  /** Adolescent or student seeking protection. */
   universityFresher: boolean;
+  /** Exclusion: a request for MenB vaccination for travel purposes. */
   hyperendemicArea: boolean;
+  /** Routine doses missed, or presenting outside the NHS programme. */
+  missedRoutineDoses: boolean;
+  /** Laboratory staff handling Neisseria meningitidis (4CMenB two doses, 5 yearly boosters). */
+  laboratoryStaff: boolean;
+  /** Free-text indication for an adult at increased risk not covered above. */
+  otherIndication: string;
 }
 
 export interface MeningitiBMedicalHistory {
   severeFebrilIllness: boolean;
   recentVaccination: boolean;
   pregnancy: boolean;
+  breastfeeding: boolean;
   anaphylaxisHistory: boolean;
+  immunosuppressed: boolean;
+  /** A previous systemic or local reaction to a meningococcal vaccine: not a bar to further doses. */
+  previousReaction: boolean;
+  /** Under 16 only: who gave consent (PGD inclusion criterion). */
+  consentBasis: "parental" | "gillick" | "";
+  consentGiverDetails: string;
+  /** Under 16: a person with parental responsibility, or a suitable adult authorised by them, is present. */
+  parentPresent: boolean;
 }
 
 export interface MeningitiBVaccineAdmin {
+  product: "bexsero" | "trumenba" | "";
+  /** Which dose in the course this administration represents. */
+  doseNumber: "1st" | "2nd" | "3rd" | "booster-12-months" | "";
+  /** Trumenba only: routine 2 dose (0 and 6 months) or increased risk 3 dose (0, 1 to 2 and 6 months). */
+  trumenbaSchedule: "routine" | "increased-risk" | "";
+  /** Date of this dose. */
   vaccinationDate1: string;
+  /** Site of this dose. */
   injectionSite1: string;
+  /** Batch number of this dose. */
   lotNumber1: string;
+  expiryDate: string;
+  /** Date the next dose in the course is due (booked at this appointment). */
   vaccinationDate2: string;
   injectionSite2: string;
   lotNumber2: string;
+  /** Course complete with this dose: no further dose due. */
+  courseComplete: boolean;
   administeredBy: string;
 }
 
@@ -46,6 +85,11 @@ export interface MeningitiBPostVaccine {
   paracetamolAdvice: boolean;
   meningitisSignsAdvice: boolean;
   reviewScheduleAdvice: boolean;
+  /** Observe every patient for 15 minutes, seated, and record that it was completed. */
+  observationCompleted: boolean;
+  /** PIL and written record (product, date, next dose due) given. */
+  writtenRecordGiven: boolean;
+  yellowCardAdvice: boolean;
 }
 
 export interface MeningitiBCounselling {
@@ -99,6 +143,10 @@ export const STEP_LABELS = [
 
 export const TOTAL_STEPS = STEP_LABELS.length;
 
+/** PGD strapline shown wherever the tool cites its authority. */
+export const MENB_PGD_VERSION =
+  "Meningococcal group B vaccine (Bexsero and Trumenba) PGD v004, issued 11 September 2026";
+
 // ─── Initial State ───
 
 export function createInitialMeningitiBState(): MeningitiBConsultationState {
@@ -110,22 +158,37 @@ export function createInitialMeningitiBState(): MeningitiBConsultationState {
       closeContactOfCase: false,
       complementDeficiency: false,
       asplenia: false,
+      complementInhibitor: false,
       universityFresher: false,
       hyperendemicArea: false,
+      missedRoutineDoses: false,
+      laboratoryStaff: false,
+      otherIndication: "",
     },
     medicalHistory: {
       severeFebrilIllness: false,
       recentVaccination: false,
       pregnancy: false,
+      breastfeeding: false,
       anaphylaxisHistory: false,
+      immunosuppressed: false,
+      previousReaction: false,
+      consentBasis: "",
+      consentGiverDetails: "",
+      parentPresent: false,
     },
     vaccineAdmin: {
+      product: "",
+      doseNumber: "",
+      trumenbaSchedule: "",
       vaccinationDate1: "",
       injectionSite1: "",
       lotNumber1: "",
+      expiryDate: "",
       vaccinationDate2: "",
       injectionSite2: "",
       lotNumber2: "",
+      courseComplete: false,
       administeredBy: "",
     },
     postVaccine: {
@@ -136,6 +199,9 @@ export function createInitialMeningitiBState(): MeningitiBConsultationState {
       paracetamolAdvice: false,
       meningitisSignsAdvice: false,
       reviewScheduleAdvice: false,
+      observationCompleted: false,
+      writtenRecordGiven: false,
+      yellowCardAdvice: false,
     },
     counselling: {
       doseScheduleAdvice: false,

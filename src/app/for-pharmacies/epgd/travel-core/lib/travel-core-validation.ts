@@ -5,7 +5,45 @@ import type {
   TravelCoreMalariaRisk,
   TravelCorePreventiveMeasures,
   TravelCoreMedicinesSupplied,
+  TravelCoreVaccineAdministration,
 } from "./travel-core-types";
+import { getVaccineAlerts } from "./travel-core-clinical-logic";
+
+export function validateVaccines(
+  v: TravelCoreVaccineAdministration,
+  age: number | null,
+  departureDate: string
+): string | null {
+  const anyGiven = v.hepAGiven || v.typhoidGiven || v.choleraGiven;
+  if (!anyGiven) {
+    if (!v.noVaccineToday) return "Select the vaccine(s) administered, or confirm that no vaccine was administered at this visit";
+    return null;
+  }
+  const stops = getVaccineAlerts(v, age, departureDate).filter((a) => a.severity === "stop");
+  if (stops.length > 0) return `Exclusion present: ${stops[0].message}. Deselect the vaccine or resolve the exclusion.`;
+  if (!v.adrenalineAvailable) return "Confirm adrenaline 1 in 1,000 is immediately available, in date, with a telephone and a written anaphylaxis protocol";
+  if (v.hepAGiven) {
+    if (!v.hepAProduct) return "Select the hepatitis A product (Havrix or Avaxim)";
+    if (!v.hepADose) return "Record whether this is the hepatitis A primary dose or the 6 to 12 month booster";
+    if (!v.hepABatch.trim()) return "Record the hepatitis A vaccine batch number";
+    if (!v.hepAExpiry.trim()) return "Record the hepatitis A vaccine expiry date";
+    if (!v.hepASite) return "Record the hepatitis A injection site";
+  }
+  if (v.typhoidGiven) {
+    if (!v.typhoidBatch.trim()) return "Record the Typhim Vi batch number";
+    if (!v.typhoidExpiry.trim()) return "Record the Typhim Vi expiry date";
+    if (!v.typhoidSite) return "Record the Typhim Vi injection site";
+  }
+  if (v.choleraGiven) {
+    if (!v.choleraDose) return "Record the Dukoral dose number (1, 2 or booster)";
+    if (!v.choleraBatch.trim()) return "Record the Dukoral batch number";
+    if (!v.choleraExpiry.trim()) return "Record the Dukoral expiry date";
+  }
+  if (!v.observationCompleted) return "Confirm the 15 minute seated observation period was completed";
+  if (!v.pilSupplied) return "Confirm the patient information leaflet was supplied and the booster schedule explained";
+  if (!v.followUpAdviceGiven) return "Confirm the follow-up advice was given";
+  return null;
+}
 
 export function validatePatient(patient: BasePatientDetails): string | null {
   return validatePatientStep(patient, { minAge: 18 }) // age gate per signed PGD (consistency review Jul 2026);
@@ -77,6 +115,7 @@ export function validateStep(
     malariaRisk: TravelCoreMalariaRisk;
     preventiveMeasures: TravelCorePreventiveMeasures;
     medicinesSupplied: TravelCoreMedicinesSupplied;
+    vaccines: TravelCoreVaccineAdministration;
     summary: BaseSummary;
   }
 ): string | null {
@@ -94,6 +133,8 @@ export function validateStep(
     case 5:
       return validateMedicinesSupplied(state.medicinesSupplied);
     case 6:
+      return validateVaccines(state.vaccines, state.patient.age, state.destination.departureDate);
+    case 7:
       return validateSummary(state.summary);
     default:
       return null;

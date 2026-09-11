@@ -33,6 +33,9 @@ export function HPVSummaryReport({
           Consultation Date: {state.summary.consultationDate} |{" "}
           {state.summary.consultationTime}
         </p>
+        <p className="text-xs text-gray-500 mt-1">
+          Administered under the Get Real Health Gardasil 9 PGD, version 004, issued 11 September 2026.
+        </p>
       </div>
 
       {/* Patient Details */}
@@ -58,7 +61,8 @@ export function HPVSummaryReport({
         <Row label="Pregnancy status" value={state.assessment.pregnancyStatus || "Not recorded"} />
         <Row label="Acute febrile illness" value={state.assessment.currentFebrileIllness ? "Yes" : "No"} />
         <Row label="Bleeding disorder or anticoagulated" value={state.assessment.bleedingDisorderOrAnticoagulated ? "Yes: technique adjusted" : "No"} />
-        <Row label="NHS eligibility discussed" value={state.assessment.nhsEligibilityDiscussed ? "Yes" : "Not recorded"} />
+        <Row label="Immunoglobulin or blood products in previous 3 months" value={state.assessment.bloodProductsLast3Months ? "Yes: recorded, not a contraindication" : "No"} />
+        <Row label="Patient told whether NHS-eligible" value={state.assessment.nhsEligibilityDiscussed ? "Yes" : "Not recorded"} />
       </div>
 
       {/* Exclusions Check */}
@@ -66,7 +70,10 @@ export function HPVSummaryReport({
       <div className="space-y-1.5 text-xs">
         {([
           ["No confirmed anaphylaxis to a previous HPV vaccine dose", !state.assessment.anaphylaxisToPreviousDose],
-          ["No confirmed anaphylaxis to a component of Gardasil 9", !state.assessment.anaphylaxisToComponent],
+          ["No confirmed anaphylaxis to a component of Gardasil 9, and no hypersensitivity after previous Gardasil 9, Gardasil or Silgard", !state.assessment.anaphylaxisToComponent],
+          ["Not known to be pregnant", state.assessment.pregnancyStatus !== "confirmed"],
+          ["No acute severe febrile illness or systemic upset", !state.assessment.currentFebrileIllness],
+          ["Course not already complete for age and immune status", !alerts.some((a) => a.code === "HPV_COURSE_COMPLETE")],
         ] as [string, boolean][]).map(([label, ok]) => (
           <div key={label} className="flex items-center gap-2">
             <span className={`w-3 h-3 rounded border flex items-center justify-center ${ok ? "bg-[color:var(--tenant-primary)]/100 border-[color:var(--tenant-primary)]/30 text-white" : "border-red-500 bg-red-50"}`}>
@@ -144,7 +151,8 @@ export function HPVSummaryReport({
       {/* Administration */}
       <SectionHeader>Administration and Safety</SectionHeader>
       <div className="space-y-0.5">
-        <Row label="Product" value={state.administration.productName} />
+        <Row label="Product" value={`${state.administration.productName} suspension for injection`} />
+        <Row label="Dose volume and route" value="0.5 mL intramuscular" />
         <Row label="Batch number" value={state.administration.batchNumber || "Not recorded"} />
         <Row label="Expiry date" value={state.administration.expiryDate || "Not recorded"} />
         <Row label="Anatomical site" value={state.administration.site || "Not recorded"} />
@@ -152,6 +160,10 @@ export function HPVSummaryReport({
         <Row
           label="Next dose due"
           value={state.administration.nextDoseDue || "No further dose required"}
+        />
+        <Row
+          label="Other vaccine at this visit (and site)"
+          value={state.administration.otherVaccineSameVisit || "None"}
         />
         <Row
           label="Adrenaline 1 in 1,000 immediately available"

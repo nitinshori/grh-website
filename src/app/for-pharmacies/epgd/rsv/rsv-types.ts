@@ -4,6 +4,8 @@ import {
   BaseSummary,
 } from '../shared/types';
 
+// Aligned to the Abrysvo / Arexvy RSV PGD version 005, issued 11 September 2026.
+
 export interface RSVPatientDetails extends BasePatientDetails {
   patientCategory: 'adult-60-plus' | 'pregnant-woman' | '';
   pregnancyWeeks?: number;
@@ -21,10 +23,30 @@ export interface RSVConsent extends BaseConsent {
   understandsNoBooster: boolean;
   understandsAdverseEvents: boolean;
   understands6MonthsProtection?: boolean;
+  /** PGD v005 consent block, under 16 only: who gave consent. */
+  consentBasis: '' | 'parental' | 'gillick';
+  parentName: string;
+  parentRelationship: string;
+  gillickBasis: string;
+}
+
+/** PGD v005 medical history and exclusion flags. */
+export interface RSVMedicalHistory {
+  anaphylaxisToVaccine: boolean;
+  anaphylaxisToVaccineComponent: boolean;
+  severeFebrilleIllness: boolean;
+  /** Exclusion, both arms: already received a complete dose of an RSV vaccine. */
+  previousRSVVaccine: boolean;
+  immunosuppressed: boolean;
+  bleedingDisorder: boolean;
+  /** Arexvy exclusion: pregnant or breastfeeding (asked of the adult category; the pregnant category is Abrysvo only). */
+  pregnantOrBreastfeeding: boolean;
+  /** Caution (Abrysvo, older adults): influenza vaccine at the same appointment or on the same day. */
+  fluVaccineSameDay: boolean;
 }
 
 export interface RSVSummary extends BaseSummary {
-  vaccineType: 'abrysvo' | 'mresvia' | '';
+  vaccineType: 'abrysvo' | 'arexvy' | '';
   batchNumber: string;
   expiryDate: string;
   administrationSite: 'left-deltoid' | 'right-deltoid' | '';
@@ -70,6 +92,21 @@ export const initialRSVConsent: RSVConsent = {
   understandsNoBooster: false,
   understandsAdverseEvents: false,
   understands6MonthsProtection: false,
+  consentBasis: '',
+  parentName: '',
+  parentRelationship: '',
+  gillickBasis: '',
+};
+
+export const initialRSVMedicalHistory: RSVMedicalHistory = {
+  anaphylaxisToVaccine: false,
+  anaphylaxisToVaccineComponent: false,
+  severeFebrilleIllness: false,
+  previousRSVVaccine: false,
+  immunosuppressed: false,
+  bleedingDisorder: false,
+  pregnantOrBreastfeeding: false,
+  fluVaccineSameDay: false,
 };
 
 export function initialRSVSummary(): RSVSummary {

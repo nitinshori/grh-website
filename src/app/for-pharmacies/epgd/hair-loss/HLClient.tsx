@@ -16,6 +16,7 @@ import {
   getAllAlerts,
   hasHardStops,
   calculateDoseRecommendation,
+  PGD_STRAPLINE,
 } from "./lib/hair-loss-clinical-logic";
 import { validateStep } from "./lib/hair-loss-validation";
 import { calculateAge } from "../shared/types";
@@ -285,10 +286,10 @@ export default function HLClient() {
                   value: v,
                 })
               }
-              description="Any history of hepatic impairment or liver disease"
+              description="History of liver disease is an exclusion"
             />
             <Checkbox
-              label="Prostate cancer"
+              label="Suspected or diagnosed prostate cancer"
               checked={state.medicalHistory.prostateCancer}
               onChange={(v) =>
                 dispatch({
@@ -314,7 +315,7 @@ export default function HLClient() {
               />
             )}
             <Checkbox
-              label="PSA abnormalities"
+              label="Raised PSA under investigation"
               checked={state.medicalHistory.psaAbnormalities}
               onChange={(v) =>
                 dispatch({
@@ -340,7 +341,7 @@ export default function HLClient() {
               />
             )}
             <Checkbox
-              label="Hypersensitivity to finasteride"
+              label="Known hypersensitivity to finasteride or any component of the formulation"
               checked={state.medicalHistory.hypersensitivity}
               onChange={(v) =>
                 dispatch({
@@ -349,6 +350,30 @@ export default function HLClient() {
                   value: v,
                 })
               }
+            />
+            <Checkbox
+              label="Current use of a 5-alpha-reductase inhibitor for another condition"
+              checked={state.medicalHistory.current5ARI}
+              onChange={(v) =>
+                dispatch({
+                  type: "UPDATE_MEDICAL_HISTORY",
+                  field: "current5ARI",
+                  value: v,
+                })
+              }
+              description="For example finasteride 5 mg or dutasteride for benign prostatic hyperplasia. Exclusion."
+            />
+            <Checkbox
+              label="Rare hereditary galactose intolerance, Lapp lactase deficiency or glucose-galactose malabsorption"
+              checked={state.medicalHistory.galactoseIntolerance}
+              onChange={(v) =>
+                dispatch({
+                  type: "UPDATE_MEDICAL_HISTORY",
+                  field: "galactoseIntolerance",
+                  value: v,
+                })
+              }
+              description="Should not take this medicine (contains lactose)."
             />
             <TextInput
               label="Other conditions (optional)"
@@ -378,7 +403,7 @@ export default function HLClient() {
                   value: v,
                 })
               }
-              description="Mood changes have been reported in some patients taking finasteride"
+              description="Mood alterations including depressed mood, depression and, less frequently, suicidal ideation have been reported. Monitor; discontinue and seek medical advice if psychiatric symptoms occur."
             />
             {state.contraindications.depressiveMood && (
               <TextInput
@@ -401,7 +426,7 @@ export default function HLClient() {
         return (
           <div className="space-y-4">
             <Checkbox
-              label="Supply finasteride 1mg once daily"
+              label="Supply finasteride 1 mg tablets, 1 mg orally once daily, with or without food"
               checked={state.medicineSupply.finasteride1mgOd}
               onChange={(v) =>
                 dispatch({
@@ -410,10 +435,29 @@ export default function HLClient() {
                   value: v,
                 })
               }
-              description="Confirm medicine supply at standard dose"
+              description="POM. Do not store above 25 C; store in the original package to protect from moisture and light."
             />
+            <SelectInput
+              label="Months of treatment supplied between reviews"
+              value={state.medicineSupply.quantityMonths}
+              onChange={(v) =>
+                dispatch({
+                  type: "UPDATE_MEDICINE_SUPPLY",
+                  field: "quantityMonths",
+                  value: v,
+                })
+              }
+              options={[
+                { value: "3", label: "3 months" },
+                { value: "6", label: "6 months" },
+                { value: "9", label: "9 months" },
+                { value: "12", label: "12 months" },
+              ]}
+              required
+            />
+            <p className="text-xs text-gray-500">3 to 12 months of treatment can be supplied between reviews. It is advisable to carry out the first review after 3 to 6 months. Minimum 3 to 6 months of continuous treatment to assess effectiveness; reassess if no improvement after 12 months.</p>
             <Checkbox
-              label="Partner (if any) has been informed of teratogenic risk"
+              label="Tablets must not be handled by women who are or may become pregnant (risk of fetal harm); partner informed if applicable"
               checked={state.medicineSupply.partnerNotified}
               onChange={(v) =>
                 dispatch({
@@ -422,7 +466,18 @@ export default function HLClient() {
                   value: v,
                 })
               }
-              description="Women should not handle crushed tablets. Inform partner if applicable."
+            />
+            <Checkbox
+              label="Condom recommended if a female partner is pregnant or likely to become pregnant"
+              checked={state.medicineSupply.condomAdvice}
+              onChange={(v) =>
+                dispatch({
+                  type: "UPDATE_MEDICINE_SUPPLY",
+                  field: "condomAdvice",
+                  value: v,
+                })
+              }
+              description="Finasteride is excreted in semen; it is not known whether a male fetus may be affected if its mother is exposed to the semen of a treated man."
             />
             <Checkbox
               label="Patient will monitor for sexual side effects"
@@ -434,10 +489,10 @@ export default function HLClient() {
                   value: v,
                 })
               }
-              description="Sexual dysfunction (~2%): reduced libido, erectile dysfunction"
+              description="Reduced libido, erectile dysfunction, ejaculation disorders; post-marketing reports of infertility and/or poor seminal quality, with normalisation reported after discontinuation."
             />
             <Checkbox
-              label="Patient understands finasteride lowers PSA by ~50%"
+              label="Patient understands finasteride can affect PSA levels"
               checked={state.medicineSupply.understandsPSAEffect}
               onChange={(v) =>
                 dispatch({
@@ -446,7 +501,7 @@ export default function HLClient() {
                   value: v,
                 })
               }
-              description="Inform GP when PSA testing performed. Does not affect prostate cancer screening"
+              description="Patient to tell any clinician conducting PSA tests that they take finasteride."
             />
           </div>
         );
@@ -455,7 +510,7 @@ export default function HLClient() {
         return (
           <div className="space-y-4">
             <Checkbox
-              label="Takes 3-6 months to see effect"
+              label="Continuous use for 3 to 6 months before stabilisation of hair loss can be expected; peak hair growth after 2 years; treatment must continue to maintain results"
               checked={state.counselling.effectOnsetTime}
               onChange={(v) =>
                 dispatch({
@@ -464,10 +519,9 @@ export default function HLClient() {
                   value: v,
                 })
               }
-              description="Hair growth benefit takes time; continued use needed"
             />
             <Checkbox
-              label="Hair loss resumes if treatment stops"
+              label="If treatment is stopped, the beneficial effects begin to reverse by 6 months and return to baseline by 9 to 12 months"
               checked={state.counselling.hairLossResumesStopped}
               onChange={(v) =>
                 dispatch({
@@ -476,10 +530,9 @@ export default function HLClient() {
                   value: v,
                 })
               }
-              description="Benefit is lost within 12 months of stopping"
             />
             <Checkbox
-              label="Sexual side effects possible (~2%)"
+              label="Sexual side effects possible"
               checked={state.counselling.sexualSideEffects}
               onChange={(v) =>
                 dispatch({
@@ -488,10 +541,10 @@ export default function HLClient() {
                   value: v,
                 })
               }
-              description="Reduced libido, erectile dysfunction, ejaculation disorders"
+              description="Reduced libido, erectile dysfunction, ejaculation disorders, breast tenderness or enlargement; reports of infertility / poor seminal quality"
             />
             <Checkbox
-              label="Report mood changes to GP"
+              label="Psychological side effects: report any mood changes"
               checked={state.counselling.moodChanges}
               onChange={(v) =>
                 dispatch({
@@ -500,10 +553,22 @@ export default function HLClient() {
                   value: v,
                 })
               }
-              description="Depression, mood changes, suicidal thoughts must be reported"
+              description="Depressed mood, depression and, less frequently, suicidal ideation have been reported; if these occur, stop finasteride and seek medical advice"
             />
             <Checkbox
-              label="Annual review recommended"
+              label="Promptly report any changes in breast tissue: lumps, pain, gynaecomastia or nipple discharge"
+              checked={state.counselling.breastChanges}
+              onChange={(v) =>
+                dispatch({
+                  type: "UPDATE_COUNSELLING",
+                  field: "breastChanges",
+                  value: v,
+                })
+              }
+              description="Breast cancer has been reported in men taking finasteride 1 mg during the post-marketing period"
+            />
+            <Checkbox
+              label="Review: first review after 3 to 6 months; reassess if no improvement after 12 months"
               checked={state.counselling.annualReview}
               onChange={(v) =>
                 dispatch({
@@ -512,10 +577,22 @@ export default function HLClient() {
                   value: v,
                 })
               }
-              description="Regular monitoring to assess efficacy and adverse effects"
+              description="3 to 12 months of treatment may be supplied between reviews"
             />
             <Checkbox
-              label="Report adverse changes immediately"
+              label="Realistic expectations and safe use explained"
+              checked={state.counselling.expectations}
+              onChange={(v) =>
+                dispatch({
+                  type: "UPDATE_COUNSELLING",
+                  field: "expectations",
+                  value: v,
+                })
+              }
+              description="Treatment slows hair loss and, to a lesser extent, produces regrowth; complete reversal is never achieved. Benefit demonstrated in men aged 18 to 41 and may be less above these ages. Do not take more than the recommended dose. Loss of scalp hair reduces protection against ultraviolet light, cold and mechanical injury. Hair loss can cause adverse psychosocial effects."
+            />
+            <Checkbox
+              label="Seek medical advice if adverse effects are experienced or the patient becomes systemically very unwell"
               checked={state.counselling.reportChanges}
               onChange={(v) =>
                 dispatch({
@@ -524,7 +601,17 @@ export default function HLClient() {
                   value: v,
                 })
               }
-              description="Any unexpected side effects or changes to report to pharmacist"
+            />
+            <Checkbox
+              label="Patient information leaflet and the patient card included in the pack supplied"
+              checked={state.counselling.pilAndCardSupplied}
+              onChange={(v) =>
+                dispatch({
+                  type: "UPDATE_COUNSELLING",
+                  field: "pilAndCardSupplied",
+                  value: v,
+                })
+              }
             />
           </div>
         );
@@ -588,6 +675,7 @@ export default function HLClient() {
 
   return (
     <div className="space-y-6">
+      <p className="text-xs text-gray-500">{PGD_STRAPLINE}</p>
       <ProgressBar
         stepLabels={STEP_LABELS}
         currentStep={state.currentStep}
@@ -616,9 +704,9 @@ export default function HLClient() {
       </StepWrapper>
 
       {doseRecommendation && state.currentStep >= 5 && (
-        <div className="bg-teal-50 border border-teal-200 rounded-lg p-4">
-          <h3 className="font-semibold text-teal-900 mb-2">Medicine Recommendation</h3>
-          <div className="space-y-1 text-sm text-teal-800">
+        <div className="bg-[color:var(--tenant-primary)]/10 border border-[color:var(--tenant-primary)]/30 rounded-lg p-4">
+          <h3 className="font-semibold text-[color:var(--tenant-primary)] mb-2">Medicine Recommendation</h3>
+          <div className="space-y-1 text-sm text-[color:var(--tenant-primary)]">
             <p>
               <span className="font-medium">Medicine:</span> {doseRecommendation.medicine}
             </p>

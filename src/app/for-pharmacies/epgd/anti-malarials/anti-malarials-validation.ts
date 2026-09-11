@@ -10,7 +10,7 @@ import type {
 } from './anti-malarials-types';
 import type { BaseConsent } from '../shared/types';
 import { calculateAge } from '../shared/types';
-import { calculateTripDuration } from './anti-malarials-clinical-logic';
+import { calculateTripDuration, getMefloquineBand } from './anti-malarials-clinical-logic';
 
 // ─── Patient Details Validation ───
 
@@ -22,9 +22,11 @@ export function validatePatientDetailsStep(
   if (!patient.dateOfBirth) return 'Date of birth is required';
   if (patient.age === null) return 'Unable to calculate age';
 
-  // Anti-malarials are for all ages (check if >18 for PGD scope)
+  // The PGD (v008) covers children by weight band; this tool is deliberately
+  // kept adult-only (stricter than the document) until parental consent and
+  // paediatric dosing are built in.
   if (patient.age < 18)
-    return 'This PGD applies to patients aged 18 years or older (under 18 requires specialist guidance)';
+    return 'This tool is for patients aged 18 years or older. For a child, work from the weight bands in Appendix 1 of the Malaria Chemoprophylaxis PGD v008 with consent from a person with parental responsibility';
 
   // Gender confirmation removed (Moin bug report, 18 Jun 2026). The previous
   // check required maleConfirmed || femaleConfirmed but no UI existed on the
@@ -66,6 +68,22 @@ export function validateTravelAssessmentStep(
   if (travel.previousMalariaProphylaxis && !travel.previousProphylaxisType)
     return 'If used prophylaxis before, specify which medicine';
 
+  // PGD v008: weight, measured and recorded, determines the dose and the
+  // product strength; weight not obtainable is an exclusion.
+  if (travel.weightKg === null || travel.weightKg <= 0)
+    return 'Body weight in kg is required (measured, not estimated)';
+
+  // PGD v008 inclusion: destination risk assessment from current NaTHNaC /
+  // TravelHealthPro guidance, and the source consulted must be recorded.
+  if (!travel.riskAssessmentCompleted)
+    return 'Confirm the destination risk assessment was carried out using current NaTHNaC / TravelHealthPro guidance and chemoprophylaxis is recommended';
+  if (!travel.riskAssessmentSource.trim())
+    return 'Record the source consulted for the destination recommendation';
+
+  // PGD v008 inclusion: able and willing to complete the whole course.
+  if (!travel.willingToCompleteCourse)
+    return 'Patient must be able and willing to complete the full course including the post-travel tail';
+
   return null;
 }
 
@@ -92,7 +110,8 @@ export function validateMedicationsStep(
 // ─── Medicine Selection Validation ───
 
 export function validateMedicineSelectionStep(
-  medicine: AMMedicineSelection
+  medicine: AMMedicineSelection,
+  travel?: AMTravelAssessment
 ): string | null {
   if (!medicine.selectedMedicine)
     return 'Please select an antimalarial medicine';
@@ -100,8 +119,17 @@ export function validateMedicineSelectionStep(
   if (!medicine.startTiming.trim()) return 'Start timing is required';
   if (!medicine.continuationAfterReturn.trim())
     return 'Continuation period after return is required';
+  if (!medicine.quantity.trim())
+    return 'Quantity supplied and calculated course length are required';
+  if (medicine.selectedMedicine === 'mefloquine' && travel) {
+    const band = getMefloquineBand(travel.weightKg);
+    if (band && band.tabletFraction < 1 && !medicine.scoredTabletConfirmed)
+      return 'A divided mefloquine dose may only be supplied from a scored tablet: confirm the product held is scored, or refer';
+  }
+  if (!medicine.batchNumber.trim()) return 'Batch number is required';
+  if (!medicine.expiryDate.trim()) return 'Expiry date is required';
   if (!medicine.reason.trim())
-    return 'Clinical reason for selection is required';
+    return 'Clinical reason for selection is required (including why any alternative was unsuitable)';
 
   return null;
 }
@@ -109,7 +137,8 @@ export function validateMedicineSelectionStep(
 // ─── Counselling Validation ───
 
 export function validateCounsellingStep(
-  counselling: AMCounselling
+  counselling: AMCounselling,
+  medicine?: AMMedicineSelection
 ): string | null {
   // All counselling points must be confirmed
   if (
@@ -121,10 +150,14 @@ export function validateCounsellingStep(
     !counselling.feverManagement ||
     !counselling.sideEffectsExplained ||
     !counselling.whenToSeekHelp ||
-    !counselling.medicineCardProvided
+    !counselling.medicineCardProvided ||
+    !counselling.completeCourseAdvised
   ) {
     return 'All counselling points must be addressed and confirmed';
   }
+
+  if (medicine && medicine.selectedMedicine === 'mefloquine' && !counselling.mefloquineStopAdvice)
+    return 'Mefloquine: confirm the patient was told to STOP and seek advice at the first neuropsychiatric symptom';
 
   return null;
 }
@@ -161,9 +194,9 @@ export function validateStep(stepIndex: number, data: any): string | null {
       // Contraindications review: no input, just review
       return null;
     case 6:
-      return validateMedicineSelectionStep(data.medicineSelection);
+      return validateMedicineSelectionStep(data.medicineSelection, data.travelAssessment);
     case 7:
-      return validateCounsellingStep(data.counselling);
+      return validateCounsellingStep(data.counselling, data.medicineSelection);
     case 8:
       return validateSummaryStep(data.summary);
     default:

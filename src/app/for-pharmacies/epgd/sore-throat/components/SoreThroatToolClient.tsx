@@ -48,6 +48,9 @@ import {
   validateHistoryStep,
   validateMedicineStep,
   validateCounsellingStep,
+  expectedQuantity,
+  PEN_V_DURATIONS,
+  CLARI_DURATIONS,
 } from "../lib/sore-throat-clinical-logic";
 
 const STEP_LABELS = [
@@ -171,8 +174,8 @@ export function SoreThroatToolClient({
 
   // Generate alerts
   const exclusionAlerts = useMemo(() => {
-    return generateExclusionAlerts(age, state.symptoms, state.history);
-  }, [age, state.symptoms, state.history]);
+    return generateExclusionAlerts(age, state.symptoms, state.history, state.examination);
+  }, [age, state.symptoms, state.history, state.examination]);
 
   const cautionAlerts = useMemo(() => {
     return generateCautionAlerts(state.symptoms, state.history, state.examination);
@@ -220,13 +223,16 @@ export function SoreThroatToolClient({
   // Validation errors
   const validationErrors: Record<number, string | null> = useMemo(() => {
     return {
-      0: validatePatientStep(patientWithAge, { minAge: 5 }),
+      0: validatePatientStep(patientWithAge, { minAge: 18 }),
       1: validateConsentStep(state.consent),
       2: validateSymptomStep(state.symptoms),
       3: validateFeverPAINStep(updatedFeverPain),
       4: validateExaminationStep(state.examination),
       5: validateHistoryStep(state.history),
-      6: validateMedicineStep(state.medicine),
+      6: validateMedicineStep(state.medicine, {
+        shouldPrescribe: medicineRecommendation.shouldPrescribe,
+        penicillinAllergy: state.history.penicillinAllergy,
+      }),
       7: validateCounsellingStep(state.counselling),
       8: validateSummaryStep(state.summary),
     };
@@ -240,6 +246,7 @@ export function SoreThroatToolClient({
     state.medicine,
     state.counselling,
     state.summary,
+    medicineRecommendation.shouldPrescribe,
   ]);
 
   const completedSteps = useMemo(() => {
@@ -424,7 +431,7 @@ export function SoreThroatToolClient({
                   />
 
                   <Checkbox
-                    label="Unilateral swelling"
+                    label="Unilateral peritonsillar swelling"
                     checked={state.symptoms.unilateralSwelling}
                     onChange={(v) =>
                       dispatch({
@@ -434,7 +441,76 @@ export function SoreThroatToolClient({
                       })
                     }
                   />
+
+                  <Checkbox
+                    label="Stridor"
+                    checked={state.symptoms.stridor}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_SYMPTOMS",
+                        field: "stridor",
+                        value: v,
+                      })
+                    }
+                  />
+
+                  <Checkbox
+                    label="Difficulty breathing"
+                    checked={state.symptoms.difficultyBreathing}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_SYMPTOMS",
+                        field: "difficultyBreathing",
+                        value: v,
+                      })
+                    }
+                  />
+
+                  <Checkbox
+                    label="Inability to swallow saliva"
+                    checked={state.symptoms.unableToSwallowSaliva}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_SYMPTOMS",
+                        field: "unableToSwallowSaliva",
+                        value: v,
+                      })
+                    }
+                  />
+
+                  <Checkbox
+                    label="Deviation of the uvula"
+                    checked={state.symptoms.uvulaDeviation}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_SYMPTOMS",
+                        field: "uvulaDeviation",
+                        value: v,
+                      })
+                    }
+                  />
                 </div>
+                <p className="text-xs text-red-700 mt-2">
+                  Any of drooling, trismus, muffled voice, unilateral peritonsillar swelling, stridor,
+                  difficulty breathing, inability to swallow saliva or deviation of the uvula
+                  (suspected quinsy or epiglottitis) is an exclusion: emergency referral, 999 or A&E.
+                  Do not examine the throat with a tongue depressor where epiglottitis is possible.
+                </p>
+              </div>
+
+              <div className="pt-2 border-t border-gray-200">
+                <Checkbox
+                  label="Persistent unilateral neck lump, unilateral tonsillar enlargement or hoarseness for more than 3 weeks"
+                  checked={state.symptoms.persistentNeckLumpOrHoarseness}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_SYMPTOMS",
+                      field: "persistentNeckLumpOrHoarseness",
+                      value: v,
+                    })
+                  }
+                  description="Exclusion: refer to the GP (possible malignancy pathway)"
+                />
               </div>
 
               <TextArea
@@ -574,7 +650,89 @@ export function SoreThroatToolClient({
                 placeholder="37.5"
                 min={35}
                 max={42}
+                required
               />
+
+              <div className="pt-2 border-t border-gray-200">
+                <p className="text-sm font-medium text-navy-900 mb-1">
+                  Sepsis and systemic illness screen
+                </p>
+                <p className="text-xs text-gray-500 mb-3">
+                  Temperature 38°C or above together with any of the following is an exclusion:
+                  emergency referral.
+                </p>
+                <div className="grid sm:grid-cols-3 gap-4">
+                  <NumberInput
+                    label="Heart rate"
+                    value={state.examination.heartRate}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_EXAMINATION",
+                        field: "heartRate",
+                        value: v,
+                      })
+                    }
+                    unit="bpm"
+                    placeholder="e.g. 80"
+                    min={20}
+                    max={250}
+                  />
+                  <NumberInput
+                    label="Respiratory rate"
+                    value={state.examination.respiratoryRate}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_EXAMINATION",
+                        field: "respiratoryRate",
+                        value: v,
+                      })
+                    }
+                    unit="/min"
+                    placeholder="e.g. 16"
+                    min={4}
+                    max={80}
+                  />
+                  <NumberInput
+                    label="Systolic BP"
+                    value={state.examination.systolicBP}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_EXAMINATION",
+                        field: "systolicBP",
+                        value: v,
+                      })
+                    }
+                    unit="mmHg"
+                    placeholder="e.g. 120"
+                    min={40}
+                    max={260}
+                  />
+                </div>
+                <div className="space-y-2 mt-3">
+                  <Checkbox
+                    label="New confusion"
+                    checked={state.examination.newConfusion}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_EXAMINATION",
+                        field: "newConfusion",
+                        value: v,
+                      })
+                    }
+                  />
+                  <Checkbox
+                    label="Patient looks unwell"
+                    checked={state.examination.looksUnwell}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_EXAMINATION",
+                        field: "looksUnwell",
+                        value: v,
+                      })
+                    }
+                  />
+                </div>
+              </div>
             </div>
           </>
         );
@@ -593,7 +751,34 @@ export function SoreThroatToolClient({
               </div>
 
               <Checkbox
-                label="Penicillin allergy"
+                label="Able to take oral medication"
+                checked={state.history.ableToTakeOralMedication}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_HISTORY",
+                    field: "ableToTakeOralMedication",
+                    value: v,
+                  })
+                }
+                description="Inclusion criterion: required"
+                required
+              />
+
+              <Checkbox
+                label="Recent antibiotic use for this illness"
+                checked={state.history.recentAntibioticForThisIllness}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_HISTORY",
+                    field: "recentAntibioticForThisIllness",
+                    value: v,
+                  })
+                }
+                description="Exclusion: the PGD requires no recent antibiotic use for this illness"
+              />
+
+              <Checkbox
+                label="Penicillin or beta-lactam allergy"
                 checked={state.history.penicillinAllergy}
                 onChange={(v) =>
                   dispatch({
@@ -602,6 +787,7 @@ export function SoreThroatToolClient({
                     value: v,
                   })
                 }
+                description="Phenoxymethylpenicillin excluded; clarithromycin arm applies (non-anaphylaxis history preferred for macrolide use)"
               />
 
               <Checkbox
@@ -614,8 +800,190 @@ export function SoreThroatToolClient({
                     value: v,
                   })
                 }
-                description="On immunosuppressive treatment (e.g., chemotherapy, biologics)"
+                description="Exclusion: refer for a same-day full blood count and clinical assessment"
               />
+
+              <Checkbox
+                label="Takes a medicine that can cause neutropenia"
+                checked={state.history.neutropeniaRiskMedicine}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_HISTORY",
+                    field: "neutropeniaRiskMedicine",
+                    value: v,
+                  })
+                }
+                description="Chemotherapy, carbimazole, clozapine, methotrexate or other DMARDs. Exclusion: refer for a same-day full blood count and clinical assessment"
+              />
+
+              <Checkbox
+                label="Severe hepatic or renal dysfunction"
+                checked={state.history.severeHepaticOrRenalDysfunction}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_HISTORY",
+                    field: "severeHepaticOrRenalDysfunction",
+                    value: v,
+                  })
+                }
+                description="Exclusion. Mild to moderate renal or hepatic impairment: generally safe, monitor function"
+              />
+
+              <Checkbox
+                label="Pregnant or breastfeeding"
+                checked={state.history.pregnantOrBreastfeeding}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_HISTORY",
+                    field: "pregnantOrBreastfeeding",
+                    value: v,
+                  })
+                }
+                description="Caution: penicillin V is generally safe; clarithromycin relatively safe (small amount passes to breast milk). Ensure informed consent"
+              />
+
+              <Checkbox
+                label="Possible mononucleosis (glandular fever)"
+                checked={state.history.suspectedMononucleosis}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_HISTORY",
+                    field: "suspectedMononucleosis",
+                    value: v,
+                  })
+                }
+                description="Caution: avoid phenoxymethylpenicillin due to risk of rash; clarify diagnosis if uncertain"
+              />
+
+              <Checkbox
+                label="Uses oral contraception"
+                checked={state.history.oralContraceptive}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_HISTORY",
+                    field: "oralContraceptive",
+                    value: v,
+                  })
+                }
+                description="Caution: advise additional contraception during the course and for 7 days afterwards"
+              />
+
+              {state.history.penicillinAllergy && (
+                <div className="border border-amber-200 bg-amber-50 rounded-lg p-3 space-y-2">
+                  <p className="text-xs font-semibold text-amber-800">
+                    Clarithromycin arm: exclusions and cautions (check every current medicine
+                    against the clarithromycin SmPC before supply)
+                  </p>
+                  <Checkbox
+                    label="Known hypersensitivity to macrolides"
+                    checked={state.history.macrolideAllergy}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_HISTORY",
+                        field: "macrolideAllergy",
+                        value: v,
+                      })
+                    }
+                    description="Clarithromycin, erythromycin, azithromycin. Exclusion"
+                  />
+                  <Checkbox
+                    label="Concurrent ergotamine or dihydroergotamine"
+                    checked={state.history.ergotamineUse}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_HISTORY",
+                        field: "ergotamineUse",
+                        value: v,
+                      })
+                    }
+                    description="Risk of ergot toxicity. Exclusion"
+                  />
+                  <Checkbox
+                    label="Concurrent simvastatin or lovastatin"
+                    checked={state.history.simvastatinLovastatinUse}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_HISTORY",
+                        field: "simvastatinLovastatinUse",
+                        value: v,
+                      })
+                    }
+                    description="Increased statin levels. Exclusion"
+                  />
+                  <Checkbox
+                    label="QT prolongation or risk factors"
+                    checked={state.history.qtProlongationRisk}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_HISTORY",
+                        field: "qtProlongationRisk",
+                        value: v,
+                      })
+                    }
+                    description="Hypokalaemia, hypomagnesaemia, cardiac arrhythmia history. Exclusion"
+                  />
+                  <Checkbox
+                    label="Concurrent colchicine, ticagrelor, ranolazine, ivabradine, domperidone, pimozide, astemizole, cisapride, terfenadine, oral midazolam or lomitapide"
+                    checked={state.history.clarithromycinInteractingMedicine}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_HISTORY",
+                        field: "clarithromycinInteractingMedicine",
+                        value: v,
+                      })
+                    }
+                    description="SmPC contraindications. Exclusion"
+                  />
+                  <Checkbox
+                    label="Severe hepatic impairment, or severe hepatic failure with renal impairment"
+                    checked={state.history.severeHepaticImpairment}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_HISTORY",
+                        field: "severeHepaticImpairment",
+                        value: v,
+                      })
+                    }
+                    description="Exclusion. Mild to moderate hepatic impairment: use with caution"
+                  />
+                  <Checkbox
+                    label="Myasthenia gravis"
+                    checked={state.history.myastheniaGravis}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_HISTORY",
+                        field: "myastheniaGravis",
+                        value: v,
+                      })
+                    }
+                    description="Macrolides can worsen muscle weakness. Exclusion"
+                  />
+                  <Checkbox
+                    label="Renal impairment (eGFR below 30 mL/min/1.73m2)"
+                    checked={state.history.renalImpairmentEgfrUnder30}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_HISTORY",
+                        field: "renalImpairmentEgfrUnder30",
+                        value: v,
+                      })
+                    }
+                    description="Caution: dose adjustment or alternative needed"
+                  />
+                  <Checkbox
+                    label="Takes warfarin or another anticoagulant"
+                    checked={state.history.warfarin}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_HISTORY",
+                        field: "warfarin",
+                        value: v,
+                      })
+                    }
+                    description="Caution: possible increased anticoagulant effect; monitor INR if on warfarin"
+                  />
+                </div>
+              )}
 
               <Checkbox
                 label="Recurrent tonsillitis"
@@ -708,8 +1076,8 @@ export function SoreThroatToolClient({
 
               {medicineRecommendation.shouldPrescribe ? (
                 <div className="space-y-4">
-                  <div className="bg-teal-50 border border-teal-200 rounded-lg p-3">
-                    <p className="text-xs text-teal-700">
+                  <div className="bg-[color:var(--tenant-primary)]/10 border border-[color:var(--tenant-primary)]/30 rounded-lg p-3">
+                    <p className="text-xs text-[color:var(--tenant-primary)]">
                       <span className="font-semibold">Recommendation:</span>{" "}
                       {medicineRecommendation.recommendation}
                     </p>
@@ -718,20 +1086,47 @@ export function SoreThroatToolClient({
                   <SelectInput
                     label="Medicine"
                     value={state.medicine.medicine}
-                    onChange={(v) =>
+                    onChange={(v) => {
                       dispatch({
                         type: "UPDATE_MEDICINE",
                         field: "medicine",
                         value: v,
-                      })
+                      });
+                      const isClari = v === "clarithromycin";
+                      dispatch({
+                        type: "UPDATE_MEDICINE",
+                        field: "dose",
+                        value: isClari ? "250 mg (one tablet)" : "500 mg (one tablet)",
+                      });
+                      dispatch({
+                        type: "UPDATE_MEDICINE",
+                        field: "frequency",
+                        value: isClari
+                          ? "twice daily, with or without food"
+                          : "four times daily on an empty stomach (1 hour before or 2 hours after meals)",
+                      });
+                      const duration = isClari ? "5 days" : "";
+                      dispatch({
+                        type: "UPDATE_MEDICINE",
+                        field: "duration",
+                        value: duration,
+                      });
+                      dispatch({
+                        type: "UPDATE_MEDICINE",
+                        field: "quantity",
+                        value: expectedQuantity(v as "phenoxymethylpenicillin" | "clarithromycin", duration) ?? 0,
+                      });
+                    }}
+                    options={
+                      state.history.penicillinAllergy
+                        ? [{ value: "clarithromycin", label: "Clarithromycin 250mg tablets" }]
+                        : [
+                            {
+                              value: "phenoxymethylpenicillin",
+                              label: "Phenoxymethylpenicillin 500mg tablets (Pen V)",
+                            },
+                          ]
                     }
-                    options={[
-                      {
-                        value: "phenoxymethylpenicillin",
-                        label: "Phenoxymethylpenicillin (Pen V)",
-                      },
-                      { value: "clarithromycin", label: "Clarithromycin" },
-                    ]}
                     required
                   />
 
@@ -746,6 +1141,7 @@ export function SoreThroatToolClient({
                       })
                     }
                     placeholder={medicineRecommendation.dose}
+                    disabled
                     required
                   />
 
@@ -760,20 +1156,29 @@ export function SoreThroatToolClient({
                       })
                     }
                     placeholder={medicineRecommendation.frequency}
+                    disabled
                     required
                   />
 
-                  <TextInput
+                  <SelectInput
                     label="Duration"
                     value={state.medicine.duration}
-                    onChange={(v) =>
+                    onChange={(v) => {
                       dispatch({
                         type: "UPDATE_MEDICINE",
                         field: "duration",
                         value: v,
-                      })
-                    }
-                    placeholder={medicineRecommendation.duration}
+                      });
+                      dispatch({
+                        type: "UPDATE_MEDICINE",
+                        field: "quantity",
+                        value: expectedQuantity(state.medicine.medicine, v) ?? 0,
+                      });
+                    }}
+                    options={(state.medicine.medicine === "clarithromycin"
+                      ? CLARI_DURATIONS
+                      : PEN_V_DURATIONS
+                    ).map((d) => ({ value: d, label: d }))}
                     required
                   />
 
@@ -784,10 +1189,29 @@ export function SoreThroatToolClient({
                       dispatch({
                         type: "UPDATE_MEDICINE",
                         field: "quantity",
+                        value: v ?? 0,
+                      })
+                    }
+                    unit={
+                      state.medicine.medicine === "clarithromycin"
+                        ? "tablets (10 tablets, 5-day course)"
+                        : "tablets (20-40 tablets, 5-10 day course)"
+                    }
+                    placeholder="e.g., 20"
+                    required
+                  />
+
+                  <TextInput
+                    label="Brand / manufacturer supplied"
+                    value={state.medicine.brand}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_MEDICINE",
+                        field: "brand",
                         value: v,
                       })
                     }
-                    placeholder="e.g., 20"
+                    placeholder="Record the name and brand of the medication supplied"
                   />
 
                   <Checkbox
@@ -807,10 +1231,12 @@ export function SoreThroatToolClient({
                 <div className="space-y-4">
                   <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                     <p className="text-sm font-semibold text-green-700">
-                      No antibiotic recommended
+                      No antibiotic under this PGD
                     </p>
                     <p className="text-xs text-green-600 mt-1">
-                      Recommend self-care management and monitor symptoms.
+                      Antibiotics may only be supplied with FeverPAIN 4 or more, or a positive
+                      RAST. Recommend self-care management and monitor symptoms. Document the
+                      advice given; inform or refer to the GP as appropriate.
                     </p>
                   </div>
 
@@ -824,71 +1250,9 @@ export function SoreThroatToolClient({
                         value: v,
                       })
                     }
-                    options={[
-                      { value: "none", label: "No antibiotic" },
-                      {
-                        value: "phenoxymethylpenicillin",
-                        label: "Phenoxymethylpenicillin (override)",
-                      },
-                      { value: "clarithromycin", label: "Clarithromycin (override)" },
-                    ]}
+                    options={[{ value: "none", label: "No antibiotic" }]}
                     required
                   />
-
-                  {state.medicine.medicine !== "none" && (
-                    <>
-                      <TextInput
-                        label="Dose"
-                        value={state.medicine.dose}
-                        onChange={(v) =>
-                          dispatch({
-                            type: "UPDATE_MEDICINE",
-                            field: "dose",
-                            value: v,
-                          })
-                        }
-                        required
-                      />
-
-                      <TextInput
-                        label="Frequency"
-                        value={state.medicine.frequency}
-                        onChange={(v) =>
-                          dispatch({
-                            type: "UPDATE_MEDICINE",
-                            field: "frequency",
-                            value: v,
-                          })
-                        }
-                        required
-                      />
-
-                      <TextInput
-                        label="Duration"
-                        value={state.medicine.duration}
-                        onChange={(v) =>
-                          dispatch({
-                            type: "UPDATE_MEDICINE",
-                            field: "duration",
-                            value: v,
-                          })
-                        }
-                        required
-                      />
-
-                      <NumberInput
-                        label="Quantity"
-                        value={state.medicine.quantity}
-                        onChange={(v) =>
-                          dispatch({
-                            type: "UPDATE_MEDICINE",
-                            field: "quantity",
-                            value: v,
-                          })
-                        }
-                      />
-                    </>
-                  )}
                 </div>
               )}
             </div>
@@ -910,7 +1274,7 @@ export function SoreThroatToolClient({
 
               <div className="space-y-3">
                 <Checkbox
-                  label="Importance of completing the full course of antibiotics"
+                  label="Complete the full course of antibiotics, even if symptoms improve within 2-3 days"
                   checked={state.counselling.completeCourse}
                   onChange={(v) =>
                     dispatch({
@@ -922,7 +1286,35 @@ export function SoreThroatToolClient({
                 />
 
                 <Checkbox
-                  label="Pain relief options (paracetamol/ibuprofen)"
+                  label={
+                    state.medicine.medicine === "clarithromycin"
+                      ? "Take clarithromycin with or without food; if GI upset occurs, take with food"
+                      : "Take phenoxymethylpenicillin (Penicillin V) on an empty stomach (1 hour before or 2 hours after food) for best absorption"
+                  }
+                  checked={state.counselling.howToTake}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_COUNSELLING",
+                      field: "howToTake",
+                      value: v,
+                    })
+                  }
+                />
+
+                <Checkbox
+                  label="If using oral contraception, use additional contraceptive methods during the antibiotic course and for 7 days afterwards"
+                  checked={state.counselling.contraceptionAdvice}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_COUNSELLING",
+                      field: "contraceptionAdvice",
+                      value: v,
+                    })
+                  }
+                />
+
+                <Checkbox
+                  label="Pain relief: paracetamol or ibuprofen as directed; a sore throat should improve within 3-5 days"
                   checked={state.counselling.painRelief}
                   onChange={(v) =>
                     dispatch({
@@ -934,12 +1326,24 @@ export function SoreThroatToolClient({
                 />
 
                 <Checkbox
-                  label="Importance of maintaining fluid intake"
+                  label="Stay hydrated: drink plenty of water and other fluids to help soothe the throat"
                   checked={state.counselling.fluidIntake}
                   onChange={(v) =>
                     dispatch({
                       type: "UPDATE_COUNSELLING",
                       field: "fluidIntake",
+                      value: v,
+                    })
+                  }
+                />
+
+                <Checkbox
+                  label="Throat lozenges or warm salt water gargles for comfort (not part of medical treatment)"
+                  checked={state.counselling.lozengesGargles}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_COUNSELLING",
+                      field: "lozengesGargles",
                       value: v,
                     })
                   }
@@ -958,7 +1362,7 @@ export function SoreThroatToolClient({
                 />
 
                 <Checkbox
-                  label="Return if symptoms worsen or no improvement in 3-5 days"
+                  label="Seek medical advice if symptoms worsen or do not improve after 3-5 days of treatment"
                   checked={state.counselling.returnIfWorsening}
                   onChange={(v) =>
                     dispatch({
@@ -982,7 +1386,33 @@ export function SoreThroatToolClient({
                 />
 
                 <Checkbox
-                  label="Avoid sharing antibiotics with others"
+                  label="Report any allergic reactions (rash, facial swelling, breathing difficulties) immediately"
+                  checked={state.counselling.allergicReactionAdvice}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_COUNSELLING",
+                      field: "allergicReactionAdvice",
+                      value: v,
+                    })
+                  }
+                />
+
+                {state.medicine.medicine === "clarithromycin" && (
+                  <Checkbox
+                    label="Clarithromycin: inform your doctor if you develop persistent diarrhoea during or after the course (possible C. difficile infection); a metallic taste should resolve after stopping the medication"
+                    checked={state.counselling.clarithromycinAdvice}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_COUNSELLING",
+                        field: "clarithromycinAdvice",
+                        value: v,
+                      })
+                    }
+                  />
+                )}
+
+                <Checkbox
+                  label="Do not share antibiotics with others; this course is for you alone"
                   checked={state.counselling.avoidAntibioticSharing}
                   onChange={(v) =>
                     dispatch({

@@ -8,8 +8,8 @@ export function getAllAlerts(state: OrlistatConsultationState): ClinicalAlert[] 
     alerts.push({
       severity: "stop",
       code: "CHOLESTASIS",
-      message: "Cholestasis",
-      detail: "Absolute contraindication. Do not supply.",
+      message: "Cholestasis or severe hepatic impairment",
+      detail: "Exclusion under this PGD. Do not supply.",
     });
   }
 
@@ -18,7 +18,25 @@ export function getAllAlerts(state: OrlistatConsultationState): ClinicalAlert[] 
       severity: "stop",
       code: "MALABSORPTION",
       message: "Chronic malabsorption syndrome",
-      detail: "Absolute contraindication. Do not supply.",
+      detail: "Exclusion under this PGD (e.g. cystic fibrosis, coeliac disease, inflammatory bowel disease). Do not supply.",
+    });
+  }
+
+  if (state.medicalHistory.hypersensitivityToOrlistat) {
+    alerts.push({
+      severity: "stop",
+      code: "HYPERSENSITIVITY",
+      message: "Known hypersensitivity to orlistat or any component of the formulation",
+      detail: "Exclusion under this PGD. Do not supply.",
+    });
+  }
+
+  if (state.medicalHistory.uncontrolledOrNewDiabetes) {
+    alerts.push({
+      severity: "stop",
+      code: "UNCONTROLLED_DIABETES",
+      message: "Uncontrolled or newly diagnosed diabetes",
+      detail: "Exclusion under this PGD. Requires GP review before starting orlistat. Do not supply; refer to GP.",
     });
   }
 
@@ -44,8 +62,26 @@ export function getAllAlerts(state: OrlistatConsultationState): ClinicalAlert[] 
     alerts.push({
       severity: "stop",
       code: "WARFARIN",
-      message: "Taking warfarin",
-      detail: "Significant drug interaction. Do not supply.",
+      message: "Warfarin therapy",
+      detail: "Exclusion under this PGD: relative contraindication, requires specialist assessment. Do not supply; refer to GP.",
+    });
+  }
+
+  if (state.medications.takesOtherAnticoagulant) {
+    alerts.push({
+      severity: "caution",
+      code: "ANTICOAGULANT",
+      message: "Anticoagulant therapy (edoxaban, dabigatran, rivaroxaban)",
+      detail: "Enhanced anticoagulant effect; requires GP liaison and INR monitoring if applicable.",
+    });
+  }
+
+  if (state.weightAssessment.comorbidities.includes("type2diabetes")) {
+    alerts.push({
+      severity: "caution",
+      code: "DIABETES",
+      message: "Diabetes mellitus",
+      detail: "Blood glucose control may improve; dose of antidiabetic medication (especially insulin and sulfonylureas) may require adjustment. Inform the GP.",
     });
   }
 
@@ -53,8 +89,35 @@ export function getAllAlerts(state: OrlistatConsultationState): ClinicalAlert[] 
     alerts.push({
       severity: "caution",
       code: "GALLBLADDER",
-      message: "Gallbladder disease",
-      detail: "Monitor for worsening symptoms. Advise on low-fat diet.",
+      message: "Gallstone disease",
+      detail: "Monitor for interactions and symptoms.",
+    });
+  }
+
+  if (state.medications.takesBileAcidSequestrants) {
+    alerts.push({
+      severity: "caution",
+      code: "BILE_ACID_SEQUESTRANT",
+      message: "Taking a bile acid sequestrant",
+      detail: "Monitor for interactions and symptoms.",
+    });
+  }
+
+  if (state.medicalHistory.oxalateKidneyStones) {
+    alerts.push({
+      severity: "caution",
+      code: "OXALATE_STONES",
+      message: "History of oxalate kidney stones",
+      detail: "Risk of hyperoxaluria and recurrence.",
+    });
+  }
+
+  if (state.medicalHistory.chronicLiverDisease) {
+    alerts.push({
+      severity: "caution",
+      code: "LIVER_DISEASE",
+      message: "Chronic liver disease or elevated liver function tests",
+      detail: "Proceed with caution; ensure baseline LFTs checked.",
     });
   }
 
@@ -62,8 +125,8 @@ export function getAllAlerts(state: OrlistatConsultationState): ClinicalAlert[] 
     alerts.push({
       severity: "caution",
       code: "LEVOTHYROXINE",
-      message: "Taking levothyroxine",
-      detail: "Orlistat may reduce absorption. Separate dosing by at least 4 hours.",
+      message: "Hypothyroidism: taking levothyroxine",
+      detail: "Levothyroxine absorption may be reduced; monitor thyroid function and dose. Administer levothyroxine at least 4 hours before orlistat.",
     });
   }
 
@@ -76,12 +139,13 @@ export function getAllAlerts(state: OrlistatConsultationState): ClinicalAlert[] 
     });
   }
 
+  // PGD v002: concurrent ciclosporin therapy is an exclusion, not a caution.
   if (state.medications.takesCiclosporin) {
     alerts.push({
-      severity: "caution",
+      severity: "stop",
       code: "CICLOSPORIN",
-      message: "Taking ciclosporin",
-      detail: "Risk of reduced absorption. Monitor ciclosporin levels.",
+      message: "Concurrent ciclosporin therapy",
+      detail: "Exclusion under this PGD (reduced absorption of ciclosporin). Do not supply; refer to GP.",
     });
   }
 
@@ -94,7 +158,7 @@ export function getAllAlerts(state: OrlistatConsultationState): ClinicalAlert[] 
     });
   }
 
-  // Chronic kidney disease — increased hyperoxaluria / oxalate-nephropathy
+  // Chronic kidney disease, increased hyperoxaluria / oxalate-nephropathy
   // risk. Per orlistat SmPC + recent post-marketing reports.
   if (state.medicalHistory.chronicKidneyDisease) {
     alerts.push({
@@ -106,7 +170,7 @@ export function getAllAlerts(state: OrlistatConsultationState): ClinicalAlert[] 
     });
   }
 
-  // Antiretrovirals — orlistat may reduce absorption.
+  // Antiretrovirals, orlistat may reduce absorption.
   if (state.medications.takesHIVAntiretrovirals) {
     alerts.push({
       severity: "caution",
@@ -117,7 +181,7 @@ export function getAllAlerts(state: OrlistatConsultationState): ClinicalAlert[] 
     });
   }
 
-  // Other clinically significant drug interaction — exclusion per Janey.
+  // Other clinically significant drug interaction, exclusion per Janey.
   if (state.medications.otherSignificantInteraction) {
     alerts.push({
       severity: "stop",
@@ -128,7 +192,7 @@ export function getAllAlerts(state: OrlistatConsultationState): ClinicalAlert[] 
     });
   }
 
-  // Antiepileptic interaction — promote to a more visible caution (orlistat
+  // Antiepileptic interaction, promote to a more visible caution (orlistat
   // may unbalance anticonvulsant treatment by reducing absorption →
   // convulsions). The existing takesAntiEpileptics field is already
   // captured in medications; add an explicit alert here.
@@ -142,10 +206,10 @@ export function getAllAlerts(state: OrlistatConsultationState): ClinicalAlert[] 
     });
   }
 
-  // Rectal bleeding caution — surfaces as a counselling point rather than
+  // Rectal bleeding caution, surfaces as a counselling point rather than
   // a per-patient alert; included in the patient counselling step below.
 
-  // Severe-diarrhoea contraception caution — surfaces in counselling /
+  // Severe-diarrhoea contraception caution, surfaces in counselling /
   // OC users.
   if (state.medications.takesOralContraceptives) {
     alerts.push({
@@ -166,11 +230,11 @@ export function hasHardStops(alerts: ClinicalAlert[]): boolean {
 
 export function calculateDoseRecommendation(state: OrlistatConsultationState): DoseRecommendation | null {
   return {
-    medicine: "Orlistat",
+    medicine: "Orlistat 120mg capsules",
     dose: "120mg",
-    frequency: "Three times daily (TDS) with meals",
-    duration: "12 weeks initially; continue if ≥5% weight loss achieved",
-    dosingRegimen: "Take 120mg with each meal (breakfast, lunch, dinner). Omit dose if meal missed or low-fat.",
-    reason: "Weight management in patients with BMI ≥30 or ≥28 with comorbidity",
+    frequency: "With each main meal containing fat, up to three times daily (maximum 360mg daily)",
+    duration: "Review at 12 weeks (3 months) from start; continue only if at least 5% reduction in body weight from baseline, otherwise discontinue and refer to GP",
+    dosingRegimen: "Swallow capsule whole with a glass of water with or shortly before each main meal (typically breakfast, lunch and dinner). If a meal is missed or contains negligible fat, omit the dose. Supply up to 84 capsules (28-day supply).",
+    reason: "Adjunct to reduced-calorie diet and lifestyle changes in adults aged 18 to 74 with BMI 30 kg/m2 or more, or BMI 28 kg/m2 or more with an obesity-related comorbidity",
   };
 }

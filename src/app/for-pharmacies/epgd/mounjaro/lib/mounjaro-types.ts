@@ -8,11 +8,17 @@ export interface MounjaroWeightAssessment {
   bmi: number | null;
   bmiCategory: string; // "underweight" | "normal" | "overweight" | "obese"
   waistCircumference: number | null;
-  comorbidities: string[]; // type2diabetes, hypertension, dyslipidaemia, osa
+  comorbidities: string[]; // see COMORBIDITY_OPTIONS
+  // PGD v007 records row: "height, weight and BMI at this visit, and the target weight agreed"
+  targetWeight: number | null;
+  // PGD v007 inclusion: willing to follow a reduced-calorie diet and increase physical activity
+  lifestylePlanAgreed: boolean;
+  // PGD v007 inclusion: initial assessment completed and documented (face to face)
+  initialAssessmentCompleted: boolean;
 }
 
 export interface MounjaroMedicalHistory {
-  // Exclusions
+  // Exclusions (PGD v007)
   personalMTCHistory: boolean;
   familyMTCHistory: boolean;
   men2: boolean;
@@ -21,32 +27,56 @@ export interface MounjaroMedicalHistory {
   pregnant: boolean;
   breastfeeding: boolean;
   planningPregnancy: boolean;
+  // Woman of childbearing potential not using effective contraception
+  noEffectiveContraception: boolean;
+  // Known hypersensitivity to tirzepatide or any excipient
+  hypersensitivity: boolean;
   type1Diabetes: boolean;
-  // Heart failure with REDUCED ejection fraction (EF ≤40%). Exclusion under
-  // this PGD per Chris/Janey clinical decision. HF with PRESERVED ejection
-  // fraction (HFpEF) is NOT an exclusion — there's emerging evidence of
-  // GLP-1 benefit in HFpEF. If the EF is unknown but the patient is under
-  // cardiology review for "heart failure", refer to the GP for clarification.
+  // Heart failure with REDUCED ejection fraction (EF 40% or below). Exclusion
+  // under this PGD. HF with PRESERVED ejection fraction (HFpEF) is NOT an
+  // exclusion. If the EF is unknown but the patient is under cardiology
+  // review for "heart failure", refer to the GP for clarification.
   heartFailureReducedEF: boolean;
-  // Cautions
+  // Current cholelithiasis or cholecystitis: exclusion (PGD v002 onwards)
   gallbladderDisease: boolean;
-  // Recent cholecystectomy (within the last 3 months). Treated as a caution
-  // alongside other gallbladder disease — worsening biliary symptoms are a
-  // recognised tirzepatide side effect.
+  // Cholecystectomy within the last 3 months: exclusion (PGD v002 onwards)
   recentCholecystectomy: boolean;
-  renalImpairment: boolean;
+  // Obesity caused by an endocrinological disorder (exclusion unless already
+  // overweight before that diagnosis)
+  endocrineObesity: boolean;
+  // Severe renal impairment (eGFR below 30) or end-stage renal disease: exclusion
+  severeRenalImpairment: boolean;
+  // Severe hepatic impairment: exclusion
+  severeHepaticImpairment: boolean;
+  // Diabetic retinopathy: exclusion (defer or refer)
   diabeticRetinopathy: boolean;
+  // Active eating disorder: exclusion
+  activeEatingDisorder: boolean;
+  // Not suitable in the clinical judgement of the healthcare professional
+  notSuitableClinicalJudgement: boolean;
+  // Cautions (PGD v007)
+  // Mild to moderate renal impairment: monitor for dehydration
+  renalImpairment: boolean;
+  // History of suicidal ideation, or active severe mental illness
   depression: boolean;
+  // Do not supply where psychiatric oversight is absent and concern exists
+  mentalHealthOversightAbsent: boolean;
+  // Pre-existing increased heart rate: caution, seek specialist advice before use
+  preExistingTachycardia: boolean;
   thyroidDisease: boolean;
 }
 
 export interface MounjaroMedications {
+  // Insulin-treated diabetes is an exclusion (PGD v006 onwards)
   takesInsulin: boolean;
   insulinDetails: string;
   currentGLP1: boolean;
   otherGLP1Details: string;
   warfarinUser: boolean;
   takesOralContraceptives: boolean;
+  takesHRT: boolean;
+  // Type 2 diabetes on metformin, an SGLT2 inhibitor or a DPP-4 inhibitor only: inform the GP
+  t2dmOralAgents: boolean;
   otherMedications: string;
   allergies: string;
 }
@@ -59,12 +89,23 @@ export interface MounjaroObservations {
   height: number | null;
 }
 
+export type MounjaroSupplyType = "" | "new-start" | "continue" | "escalate" | "reduce" | "restart";
+
 export interface MounjaroDoseSelection {
-  currentDoseStage: string; // "init" | "1" | "2" | "3" | "4" | "5" | "6"
+  currentDoseStage: string; // "init" | "1" | "2" | "3" | "4" | "5"
   dose: string;
   weeksAtCurrentDose: number | null;
   previousDose: string;
   injectionSite: string;
+  // Nature of today's supply: new start, continuation, escalation, reduction or restart after a break
+  supplyType: MounjaroSupplyType;
+  // More than 2 doses missed: reduce and re-escalate (PGD v007 dose row)
+  missedMoreThanTwoDoses: boolean;
+  // Restart after more than 2 months off treatment: BMI inclusion criteria must be reapplied
+  breakOverTwoMonths: boolean;
+  // PGD v007 records row: name and brand of medication, and batch number
+  batchNumber: string;
+  expiryDate: string;
   pharmacistOverride: boolean;
   overrideReason: string;
 }
@@ -78,9 +119,19 @@ export interface MounjaroCounselling {
   pancreatitisWarning: boolean;
   gallbladderWarning: boolean;
   retinopathyWarning: boolean;
+  // Warning symptoms needing urgent attention (PGD v007 follow-up row)
+  warningSymptoms: boolean;
+  // Reduced absorption of oral medicines, oral contraceptives and HRT
+  oralMedicationAbsorption: boolean;
+  // Pulmonary aspiration risk under general anaesthesia or deep sedation
+  anaesthesiaWarning: boolean;
   penDeviceUse: boolean;
   followUpSchedule: boolean;
   dietExerciseAdvice: boolean;
+  // PIL plus written lifestyle, diet and physical activity advice and the agreed target weight
+  writtenInfoProvided: boolean;
+  // GP informed (required where type 2 diabetes is managed with metformin, an SGLT2 inhibitor or a DPP-4 inhibitor)
+  gpInformed: boolean;
 }
 
 export interface MounjaroConsultationSummary extends BaseSummary {
@@ -133,6 +184,29 @@ export const STEP_LABELS = [
 
 export const TOTAL_STEPS = STEP_LABELS.length;
 
+// PGD strapline (document wins): version 007, issued 11 September 2026
+export const PGD_VERSION_LABEL = "Mounjaro (tirzepatide) Injection for weight management PGD, version 007, issued 11 September 2026";
+
+// Weight-related comorbidities named in the PGD indication and inclusion criteria
+export const COMORBIDITY_OPTIONS: { id: string; label: string }[] = [
+  { id: "type2diabetes", label: "Type 2 diabetes mellitus" },
+  { id: "prediabetes", label: "Pre-diabetes (dysglycaemia)" },
+  { id: "hypertension", label: "Hypertension" },
+  { id: "dyslipidaemia", label: "Dyslipidaemia" },
+  { id: "osa", label: "Obstructive sleep apnoea (OSA)" },
+  { id: "cvd", label: "Established cardiovascular disease" },
+];
+
+// Mounjaro KwikPen strengths by titration stage (PGD v007 dose and frequency row)
+export const DOSE_BY_STAGE: Record<string, string> = {
+  init: "2.5 mg",
+  "1": "5 mg",
+  "2": "7.5 mg",
+  "3": "10 mg",
+  "4": "12.5 mg",
+  "5": "15 mg",
+};
+
 // ─── Initial State ───
 
 export function createInitialConsultationState(): MounjaroConsultationState {
@@ -167,6 +241,9 @@ gpEmail: "",
       bmiCategory: "",
       waistCircumference: null,
       comorbidities: [],
+      targetWeight: null,
+      lifestylePlanAgreed: false,
+      initialAssessmentCompleted: false,
     },
     medicalHistory: {
       personalMTCHistory: false,
@@ -177,13 +254,22 @@ gpEmail: "",
       pregnant: false,
       breastfeeding: false,
       planningPregnancy: false,
+      noEffectiveContraception: false,
+      hypersensitivity: false,
       type1Diabetes: false,
       heartFailureReducedEF: false,
       gallbladderDisease: false,
       recentCholecystectomy: false,
-      renalImpairment: false,
+      endocrineObesity: false,
+      severeRenalImpairment: false,
+      severeHepaticImpairment: false,
       diabeticRetinopathy: false,
+      activeEatingDisorder: false,
+      notSuitableClinicalJudgement: false,
+      renalImpairment: false,
       depression: false,
+      mentalHealthOversightAbsent: false,
+      preExistingTachycardia: false,
       thyroidDisease: false,
     },
     medications: {
@@ -193,6 +279,8 @@ gpEmail: "",
       otherGLP1Details: "",
       warfarinUser: false,
       takesOralContraceptives: false,
+      takesHRT: false,
+      t2dmOralAgents: false,
       otherMedications: "",
       allergies: "",
     },
@@ -205,10 +293,15 @@ gpEmail: "",
     },
     doseSelection: {
       currentDoseStage: "init",
-      dose: "2.5mg",
+      dose: DOSE_BY_STAGE.init,
       weeksAtCurrentDose: null,
       previousDose: "",
       injectionSite: "",
+      supplyType: "",
+      missedMoreThanTwoDoses: false,
+      breakOverTwoMonths: false,
+      batchNumber: "",
+      expiryDate: "",
       pharmacistOverride: false,
       overrideReason: "",
     },
@@ -221,9 +314,14 @@ gpEmail: "",
       pancreatitisWarning: false,
       gallbladderWarning: false,
       retinopathyWarning: false,
+      warningSymptoms: false,
+      oralMedicationAbsorption: false,
+      anaesthesiaWarning: false,
       penDeviceUse: false,
       followUpSchedule: false,
       dietExerciseAdvice: false,
+      writtenInfoProvided: false,
+      gpInformed: false,
     },
     summary: {
       pharmacistName: "",

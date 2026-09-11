@@ -7,10 +7,11 @@ import { NumberInput, Checkbox } from "../../shared/components/FormInputs";
 const COMORBIDITIES = [
   { value: "hypertension" as const, label: "Hypertension" },
   { value: "type2diabetes" as const, label: "Type 2 Diabetes" },
-  { value: "sleepApnoea" as const, label: "Sleep Apnoea" },
+  { value: "sleepApnoea" as const, label: "Obstructive Sleep Apnoea" },
+  { value: "dyslipidaemia" as const, label: "Dyslipidaemia" },
+  { value: "cardiovascularDisease" as const, label: "Established Cardiovascular Disease" },
   { value: "osteoarthritis" as const, label: "Osteoarthritis" },
   { value: "pcos" as const, label: "PCOS (Polycystic Ovary Syndrome)" },
-  { value: "dyslipidaemia" as const, label: "Dyslipidaemia" },
 ];
 
 export function BMICalculator({
@@ -135,12 +136,12 @@ export function BMICalculator({
           Weight-Related Comorbidities
           <span className="text-xs text-gray-500 font-normal ml-2">
             {bmi !== null && bmi >= 27 && bmi < 30
-              ? "(Required for BMI 27-29.9)"
-              : "(Optional for BMI ≥30)"}
+              ? "(Required for BMI 27 to below 30)"
+              : "(Optional for BMI 30 or above)"}
           </span>
         </h3>
         <p className="text-xs text-gray-600 mb-3">
-          Select any weight-related comorbidities present:
+          Select any weight-related comorbidities present (the PGD lists these as examples):
         </p>
         <div className="space-y-2">
           {COMORBIDITIES.map((c) => (
@@ -168,12 +169,12 @@ export function BMICalculator({
           </p>
           <p className="text-xs text-gray-700">
             {bmi >= 30
-              ? "BMI ≥30: Patient meets weight criteria for Wegovy"
+              ? "BMI 30 or above: patient meets the weight criteria for Wegovy"
               : bmi >= 27 && bmi < 30 && comorbidities.length > 0
-                ? "BMI 27-29.9 with comorbidity: Patient meets weight criteria for Wegovy"
+                ? "BMI 27 to below 30 with a comorbidity: patient meets the weight criteria for Wegovy (maximum dose 2.4 mg; 7.2 mg not permitted)"
                 : bmi >= 27 && bmi < 30
-                  ? "BMI 27-29.9: Add comorbidities to meet eligibility"
-                  : "BMI <27: Does not meet minimum threshold"}
+                  ? "BMI 27 to below 30: at least one weight-related comorbidity is required"
+                  : "BMI below 27: below the PGD inclusion threshold"}
           </p>
         </div>
       )}

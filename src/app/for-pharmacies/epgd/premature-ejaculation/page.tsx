@@ -28,10 +28,10 @@ export default function PEToolPage() {
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-navy-900">
-            Premature Ejaculation — Dapoxetine PGD Consultation
+            Premature Ejaculation, Dapoxetine PGD Consultation
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Dapoxetine 30mg/60mg supply for premature ejaculation under Patient Group Direction
+            Dapoxetine 30mg/60mg tablets (Priligy) for Premature Ejaculation PGD, version 003, issued 11 September 2026. Adult men aged 18 to 64.
           </p>
         </div>
 

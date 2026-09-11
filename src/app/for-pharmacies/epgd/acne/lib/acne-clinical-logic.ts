@@ -1,55 +1,181 @@
+// Aligned to the Benzoyl Peroxide plus Clindamycin or Adapalene plus Benzoyl
+// Peroxide (Acne Vulgaris) PGD, version 003, issued 11 September 2026.
+
 import type { AcneConsultationState } from "./acne-types";
 import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
 
+export const PGD_STRAPLINE =
+  "Benzoyl Peroxide plus Clindamycin or Adapalene plus Benzoyl Peroxide (Acne Vulgaris) PGD, version 003, issued 11 September 2026";
+
+export function isDuac(choice: string): boolean {
+  return choice === "duac-3" || choice === "duac-5";
+}
+
+export function isEpiduo(choice: string): boolean {
+  return choice === "epiduo-0.1" || choice === "epiduo-0.3";
+}
+
 export function getAllAlerts(state: AcneConsultationState): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
+  const choice = state.medicineSelection.medicineChoice;
+  const duac = isDuac(choice);
+  const epiduo = isEpiduo(choice);
+  const ci = state.contraindications;
+  const mh = state.medicalHistory;
 
-  // Hard stops — pregnancy/breastfeeding
-  if (state.contraindications.pregnant) {
-    alerts.push({
-      severity: "stop",
-      code: "ACNE_PREGNANCY",
-      message: "Retinoids contraindicated in pregnancy",
-      detail: "Adapalene is teratogenic. Patient must not be pregnant. Discuss contraception.",
-    });
-  }
-
-  if (state.contraindications.breastfeeding) {
-    alerts.push({
-      severity: "stop",
-      code: "ACNE_BREASTFEEDING",
-      message: "Retinoids contraindicated in breastfeeding",
-      detail: "Adapalene passes into breast milk. Patient should not breastfeed if using this treatment.",
-    });
-  }
-
-  // Hard stops — age under 12
-  if (state.contraindications.ageUnder12) {
+  // Hard stops: age
+  if (ci.ageUnder12 || (state.patient.age !== null && state.patient.age < 12)) {
     alerts.push({
       severity: "stop",
       code: "ACNE_AGE",
       message: "Patient under 12 years old",
-      detail: "This PGD is for patients aged 12 and above.",
+      detail: "Both arms of this PGD are for individuals aged 12 years and over. Advise on alternative options; inform or refer to the GP as appropriate.",
     });
   }
 
-  // Red flag — severe/nodular acne
+  // Hard stops: pregnancy, planning pregnancy, breastfeeding
+  if (ci.pregnant) {
+    alerts.push({
+      severity: "stop",
+      code: "ACNE_PREGNANCY",
+      message: "Patient is pregnant",
+      detail:
+        "Adapalene / benzoyl peroxide: pregnancy is an exclusion. Benzoyl peroxide / clindamycin: safety in human pregnancy is not established; for pregnancy refer the patient to the GP.",
+    });
+  }
+
+  if (ci.planningPregnancy) {
+    alerts.push({
+      severity: epiduo ? "stop" : "caution",
+      code: "ACNE_PLANNING_PREGNANCY",
+      message: "Patient is planning pregnancy",
+      detail: "Exclusion for adapalene / benzoyl peroxide gel. Benzoyl peroxide / clindamycin gel may be considered; refer to the GP if in doubt.",
+    });
+  }
+
+  if (ci.breastfeeding) {
+    alerts.push({
+      severity: "stop",
+      code: "ACNE_BREASTFEEDING",
+      message: "Patient is breastfeeding",
+      detail:
+        "Benzoyl peroxide / clindamycin: clindamycin is found in breast milk; for breastfeeding refer the patient to the GP. Adapalene / benzoyl peroxide: a decision must be made whether to discontinue breast-feeding; a risk to the suckling child cannot be excluded. Refer to the GP.",
+    });
+  }
+
+  // Hard stops: severity
+  if (state.assessment.severity === "severe") {
+    alerts.push({
+      severity: "stop",
+      code: "ACNE_SEVERE_SYSTEMIC",
+      message: "Severe acne requiring systemic therapy, excluded",
+      detail: "Both arms are for mild to moderate acne vulgaris. Refer to the GP or dermatology.",
+    });
+  }
+
+  // Hard stops: hypersensitivity
+  if (ci.hypersensitivityBenzoylPeroxide) {
+    alerts.push({
+      severity: "stop",
+      code: "ACNE_HS_BPO",
+      message: "Known hypersensitivity to benzoyl peroxide",
+      detail: "Both products contain benzoyl peroxide. Cannot supply under this PGD.",
+    });
+  }
+  if (ci.hypersensitivityClindamycinLincomycin) {
+    alerts.push({
+      severity: duac ? "stop" : "caution",
+      code: "ACNE_HS_CLINDAMYCIN",
+      message: "Known hypersensitivity to clindamycin or lincomycin",
+      detail: "Exclusion for benzoyl peroxide / clindamycin gel. Adapalene / benzoyl peroxide gel may be considered.",
+    });
+  }
+  if (ci.hypersensitivityAdapalene) {
+    alerts.push({
+      severity: epiduo ? "stop" : "caution",
+      code: "ACNE_HS_ADAPALENE",
+      message: "Known hypersensitivity to adapalene or any excipient",
+      detail: "Exclusion for adapalene / benzoyl peroxide gel. Benzoyl peroxide / clindamycin gel may be considered.",
+    });
+  }
+
+  // Hard stops: application site
+  if (ci.brokenSkinAtSite) {
+    alerts.push({
+      severity: "stop",
+      code: "ACNE_BROKEN_SKIN",
+      message: "Broken skin at the application site",
+      detail: "Exclusion for both arms.",
+    });
+  }
+  if (ci.inflamedSkinAtSite) {
+    alerts.push({
+      severity: duac ? "stop" : "caution",
+      code: "ACNE_INFLAMED_SKIN",
+      message: "Inflamed skin at the application site",
+      detail: "Exclusion for benzoyl peroxide / clindamycin gel.",
+    });
+  }
+  if (ci.eczemaOrSunburnAtSite) {
+    alerts.push({
+      severity: epiduo ? "stop" : "caution",
+      code: "ACNE_ECZEMA_SUNBURN",
+      message: "Eczema or sunburned skin at the application site",
+      detail: "Exclusion for adapalene / benzoyl peroxide gel.",
+    });
+  }
+
+  // Hard stop: antibiotic-associated colitis (Duac)
+  if (mh.antibioticAssociatedColitis) {
+    alerts.push({
+      severity: duac ? "stop" : "caution",
+      code: "ACNE_COLITIS",
+      message: "History of antibiotic-associated colitis",
+      detail: "Exclusion for benzoyl peroxide / clindamycin gel. Adapalene / benzoyl peroxide gel may be considered.",
+    });
+  }
+
+  // Red flags
   if (state.assessment.nodalCystic) {
     alerts.push({
       severity: "red-flag",
       code: "ACNE_SEVERE",
-      message: "Nodular or cystic acne — refer to dermatology",
-      detail: "Severe acne requires specialist assessment and potentially systemic treatment (isotretinoin). Recommend urgent GP referral.",
+      message: "Nodular or cystic acne, consider referral",
+      detail: "Severe nodulocystic acne requires specialist assessment and potentially systemic treatment. Recommend GP referral.",
+    });
+  }
+  if (mh.scarringOrDistress) {
+    alerts.push({
+      severity: "red-flag",
+      code: "ACNE_SCARRING_DISTRESS",
+      message: "Severe scarring, persistent pigmentary changes or persistent psychological distress",
+      detail: "Consider referral to a dermatologist if acne is causing severe scarring, persistent pigmentary changes or is contributing to persistent psychological distress or a mental health disorder.",
     });
   }
 
-  // Caution — retinoid sensitivity
-  if (state.medicalHistory.sensitiveToRetinoids) {
+  // Cautions
+  if (mh.gastrointestinalDisease) {
+    alerts.push({
+      severity: "caution",
+      code: "ACNE_GI",
+      message: "History of gastrointestinal disease",
+      detail: "Benzoyl peroxide / clindamycin: use caution in patients with a history of gastrointestinal disease.",
+    });
+  }
+  if (mh.atopic) {
+    alerts.push({
+      severity: "caution",
+      code: "ACNE_ATOPIC",
+      message: "Atopic patient",
+      detail: "Benzoyl peroxide / clindamycin: use with caution in atopic patients.",
+    });
+  }
+  if (mh.sensitiveToRetinoids) {
     alerts.push({
       severity: "caution",
       code: "ACNE_RETINOID_SENS",
       message: "History of retinoid sensitivity",
-      detail: "Patient has previously reacted to retinoid products. Discuss risk-benefit with patient.",
+      detail: "Patient has previously reacted to retinoid products. Discuss risk-benefit before supplying adapalene / benzoyl peroxide; discontinue if excessive irritation or allergic reaction occurs.",
     });
   }
 
@@ -60,51 +186,63 @@ export function hasHardStops(alerts: ClinicalAlert[]): boolean {
   return alerts.some((a) => a.severity === "stop");
 }
 
+const DUAC_DOSE =
+  "Apply a thin layer to the entire affected area once daily in the evening, after washing gently with a mild cleanser and fully drying. Wash hands after application.";
+const DUAC_DURATION =
+  "Up to 1 x 30 g tube per treatment course. Maximum of 12 weeks continuous use; review required for repeat courses. Store in a refrigerator (2 to 8 C) before dispensing; once dispensed store below 25 C and use within 2 months.";
+const EPIDUO_DOSE =
+  "Apply a thin layer to the entire affected area once daily in the evening to clean and dry skin. Wash hands after use.";
+const EPIDUO_DURATION =
+  "Up to 1 x 30 g tube or pump per treatment course. Initial treatment for up to 12 weeks; reassess if longer use is required. If no improvement after 4 to 8 weeks, consider the benefit of continued treatment. Store below 25 C, do not freeze.";
+
 export function calculateDoseRecommendation(state: AcneConsultationState): DoseRecommendation | null {
-  if (!state.assessment.severity) return null;
+  const choice = state.medicineSelection.medicineChoice;
+  if (!choice) return null;
 
-  let recommendation: DoseRecommendation | null = null;
+  const recommendations: Record<string, DoseRecommendation> = {
+    "duac-3": {
+      medicine: "Benzoyl peroxide plus clindamycin gel, clindamycin 10 mg/g + benzoyl peroxide 30 mg/g (Duac 3%), POM",
+      dose: DUAC_DOSE,
+      frequency: "Once daily in the evening",
+      duration: DUAC_DURATION,
+      reason: "Mild to moderate acne vulgaris, particularly where comedones, papules and pustules are present. The 10 mg/g + 30 mg/g strength is suitable for mild to moderate presentations and minimises the risk of skin reactions.",
+    },
+    "duac-5": {
+      medicine: "Benzoyl peroxide plus clindamycin gel, clindamycin 10 mg/g + benzoyl peroxide 50 mg/g (Duac 5%), POM",
+      dose: DUAC_DOSE,
+      frequency: "Once daily in the evening",
+      duration: DUAC_DURATION,
+      reason: "Mild to moderate acne vulgaris where the lower strength has proven less effective, for more moderate presentations, or where the patient has previously tolerated 50 mg/g (5%) benzoyl peroxide.",
+    },
+    "epiduo-0.1": {
+      medicine: "Adapalene 0.1% / benzoyl peroxide 2.5% gel (Epiduo), POM",
+      dose: EPIDUO_DOSE,
+      frequency: "Once daily in the evening",
+      duration: EPIDUO_DURATION,
+      reason: "Mild to moderate acne vulgaris, especially where comedones and inflammatory lesions are present.",
+    },
+    "epiduo-0.3": {
+      medicine: "Adapalene 0.3% / benzoyl peroxide 2.5% gel (Epiduo Forte), POM",
+      dose: EPIDUO_DOSE,
+      frequency: "Once daily in the evening",
+      duration: EPIDUO_DURATION,
+      reason: "Mild to moderate acne vulgaris, especially where comedones and inflammatory lesions are present.",
+    },
+  };
 
-  if (state.assessment.severity === "mild") {
-    if (state.medicineSelection.medicineChoice === "adapalene") {
-      recommendation = {
-        medicine: "Adapalene 0.1% gel",
-        dose: "Apply once daily",
-        frequency: "Once daily",
-        duration: "Ongoing (review at 6-8 weeks)",
-        reason: "First-line retinoid for mild comedonal acne",
-      };
-    } else if (state.medicineSelection.medicineChoice === "benzoyl-peroxide") {
-      recommendation = {
-        medicine: "Benzoyl peroxide 5% gel",
-        dose: "Apply once daily",
-        frequency: "Once daily",
-        duration: "Ongoing (review at 6-8 weeks)",
-        reason: "First-line antibacterial for mild acne",
-      };
-    }
-  } else if (state.assessment.severity === "moderate") {
-    recommendation = {
-      medicine: "Adapalene 0.1%/Benzoyl peroxide 2.5% (Epiduo) gel",
-      dose: "Apply once daily",
-      frequency: "Once daily",
-      duration: "Ongoing (review at 6-8 weeks)",
-      reason: "Combination therapy for moderate inflammatory acne",
-    };
-
-    if (state.medicineSelection.inadequateResponse && state.medicineSelection.addLymecycline) {
-      recommendation.reason += "; add Lymecycline if inadequate response";
-    }
-  }
-
-  return recommendation;
+  return recommendations[choice] || null;
 }
 
+export const MEDICINE_OPTIONS: { value: string; label: string }[] = [
+  { value: "duac-3", label: "Benzoyl peroxide + clindamycin gel 10 mg/g + 30 mg/g (Duac 3%), once daily in the evening" },
+  { value: "duac-5", label: "Benzoyl peroxide + clindamycin gel 10 mg/g + 50 mg/g (Duac 5%), once daily in the evening" },
+  { value: "epiduo-0.1", label: "Adapalene 0.1% / benzoyl peroxide 2.5% gel (Epiduo), once daily in the evening" },
+  { value: "epiduo-0.3", label: "Adapalene 0.3% / benzoyl peroxide 2.5% gel (Epiduo Forte), once daily in the evening" },
+];
+
 export function getMedicineOptions(severity: string): string[] {
-  if (severity === "mild") {
-    return ["adapalene", "benzoyl-peroxide"];
-  } else if (severity === "moderate") {
-    return ["epiduo"];
+  if (severity === "mild" || severity === "moderate") {
+    return MEDICINE_OPTIONS.map((o) => o.value);
   }
   return [];
 }

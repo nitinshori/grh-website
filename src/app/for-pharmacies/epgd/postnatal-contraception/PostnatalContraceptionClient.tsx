@@ -6,7 +6,8 @@ import type {
   PostnatalContraceptionAction,
 } from "./lib/postnatal-contraception-types";
 import { STEP_LABELS, TOTAL_STEPS, createInitialPostnatalContraceptionState } from "./lib/postnatal-contraception-types";
-import { getAllAlerts, hasHardStops } from "./lib/postnatal-contraception-clinical-logic";
+import { getAllAlerts, hasHardStops, getAdditionalVteRiskFactors, getDepoTimingError, isBreastfeeding } from "./lib/postnatal-contraception-clinical-logic";
+import { PGD_VERSION_LABEL } from "./lib/postnatal-contraception-types";
 import { validateStep } from "./lib/postnatal-contraception-validation";
 import { calculateAge } from "../shared/types";
 import { ProgressBar } from "../shared/components/ProgressBar";
@@ -54,6 +55,10 @@ function reducer(
 
     case "UPDATE_ASSESSMENT":
       newState.assessment = { ...newState.assessment, [action.field]: action.value };
+      if (action.field === "daysPostpartum") {
+        const days = action.value as number | null;
+        newState.assessment.weeksPostpartum = days === null ? 0 : Math.floor(days / 7);
+      }
       break;
 
     case "UPDATE_MEDICAL_HISTORY":
@@ -205,7 +210,14 @@ export default function PostnatalContraceptionClient() {
               onChange={(field, value) =>
                 dispatch({ type: "UPDATE_PATIENT", field, value })
               }
+              requireAdult={false}
             />
+            {state.patient.age !== null && state.patient.age < 16 && (
+              <p className="mt-3 text-sm font-medium text-red-600">This PGD is for postnatal women aged 16 and over (Depo-Provera 18 and over).</p>
+            )}
+            {state.patient.age !== null && state.patient.age >= 16 && state.patient.age < 18 && (
+              <p className="mt-3 text-sm font-medium text-amber-700">Aged 16 or 17: desogestrel arm only. Depo-Provera is for women aged 18 and over.</p>
+            )}
           </StepWrapper>
         );
 
@@ -244,17 +256,24 @@ export default function PostnatalContraceptionClient() {
           >
             <div className="space-y-4">
               <NumberInput
-                label="Weeks postpartum"
-                value={state.assessment.weeksPostpartum}
+                label="Days postpartum"
+                value={state.assessment.daysPostpartum}
                 onChange={(v) =>
                   dispatch({
                     type: "UPDATE_ASSESSMENT",
-                    field: "weeksPostpartum",
+                    field: "daysPostpartum",
                     value: v,
                   })
                 }
                 min={0}
+                unit="days"
+                required
               />
+              {state.assessment.daysPostpartum !== null && (
+                <p className="text-xs text-gray-600">
+                  {state.assessment.weeksPostpartum} weeks. Desogestrel: any time postpartum (before day 21 no additional contraception needed). Depo-Provera: from 6 weeks if breastfeeding; from 21 days if not breastfeeding and no additional VTE risk factor; otherwise refer.
+                </p>
+              )}
 
               <SelectInput
                 label="Type of delivery"
@@ -292,23 +311,25 @@ export default function PostnatalContraceptionClient() {
                 required
               />
 
-              <SelectInput
-                label="VTE risk assessment"
-                value={state.assessment.vteRiskAssessment}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_ASSESSMENT",
-                    field: "vteRiskAssessment",
-                    value: v,
-                  })
-                }
-                options={[
-                  { value: "low-risk", label: "Low risk (no risk factors)" },
-                  { value: "intermediate-risk", label: "Intermediate risk (minor risk factors)" },
-                  { value: "high-risk", label: "High risk (significant risk factors)" },
-                ]}
-                required
-              />
+              <p className="text-sm font-semibold text-navy-900 mt-2">Additional VTE risk factors (Depo-Provera before 6 weeks requires none)</p>
+              <Checkbox label="Previous VTE" checked={state.assessment.previousVte} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "previousVte", value: v })} />
+              <Checkbox label="Thrombophilia" checked={state.assessment.thrombophilia} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "thrombophilia", value: v })} />
+              <Checkbox label="Immobility" checked={state.assessment.immobility} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "immobility", value: v })} />
+              <Checkbox label="BMI 30 or over" checked={state.assessment.bmi30OrOver} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "bmi30OrOver", value: v })} />
+              <Checkbox label="Postpartum haemorrhage" checked={state.assessment.postpartumHaemorrhage} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "postpartumHaemorrhage", value: v })} />
+              <Checkbox label="Pre-eclampsia" checked={state.assessment.preEclampsia} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "preEclampsia", value: v })} />
+              <Checkbox label="Smoking" checked={state.assessment.smoking} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "smoking", value: v })} />
+              <p className="text-xs text-gray-600">Caesarean delivery counts as an additional risk factor (taken from the delivery type above).</p>
+
+              {state.assessment.daysPostpartum !== null && state.assessment.daysPostpartum > 21 && (
+                <>
+                  <p className="text-sm font-semibold text-navy-900 mt-2">From day 21 pregnancy must be reasonably excluded</p>
+                  <Checkbox label="Unprotected intercourse since day 21" checked={state.assessment.unprotectedSexSinceDay21} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "unprotectedSexSinceDay21", value: v })} />
+                  {state.assessment.unprotectedSexSinceDay21 && (
+                    <Checkbox label="Negative pregnancy test 21 days after the last episode" checked={state.assessment.negativeTest21DaysAfterLastUpsi} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "negativeTest21DaysAfterLastUpsi", value: v })} description="Without this, pregnancy is not reasonably excluded and supply is refused." />
+                  )}
+                </>
+              )}
             </div>
           </StepWrapper>
         );
@@ -327,7 +348,20 @@ export default function PostnatalContraceptionClient() {
           >
             <div className="space-y-4">
               <Checkbox
-                label="Current or recent breast cancer"
+                label="Known or suspected pregnancy"
+                checked={state.medicalHistory.knownOrSuspectedPregnancy}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "knownOrSuspectedPregnancy",
+                    value: v,
+                  })
+                }
+                description="Exclusion for both arms."
+              />
+
+              <Checkbox
+                label="Current or suspected breast cancer"
                 checked={state.medicalHistory.currentBreastCancer}
                 onChange={(v) =>
                   dispatch({
@@ -336,11 +370,11 @@ export default function PostnatalContraceptionClient() {
                     value: v,
                   })
                 }
-                description="Contraindication to POP."
+                description="Sex hormone-dependent malignancy: exclusion for both arms."
               />
 
               <Checkbox
-                label="Severe active hepatic disease"
+                label="Severe hepatic impairment or severe liver disease"
                 checked={state.medicalHistory.severeLiverDisease}
                 onChange={(v) =>
                   dispatch({
@@ -349,11 +383,11 @@ export default function PostnatalContraceptionClient() {
                     value: v,
                   })
                 }
-                description="Contraindication to POP."
+                description="Exclusion for both arms."
               />
 
               <Checkbox
-                label="Unexplained vaginal bleeding"
+                label="Undiagnosed vaginal bleeding"
                 checked={state.medicalHistory.unexplainedVaginalBleeding}
                 onChange={(v) =>
                   dispatch({
@@ -362,7 +396,48 @@ export default function PostnatalContraceptionClient() {
                     value: v,
                   })
                 }
-                description="Requires investigation before starting POP."
+                description="Exclusion for both arms."
+              />
+
+              <Checkbox
+                label="Active thromboembolic disorder"
+                checked={state.medicalHistory.activeThromboembolicDisorder}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "activeThromboembolicDisorder", value: v })
+                }
+                description="Desogestrel exclusion."
+              />
+              <Checkbox
+                label="Hypersensitivity to desogestrel or any excipients"
+                checked={state.medicalHistory.desogestrelHypersensitivity}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "desogestrelHypersensitivity", value: v })
+                }
+                description="Desogestrel exclusion."
+              />
+              <Checkbox
+                label="Hypersensitivity to medroxyprogesterone acetate or any excipients"
+                checked={state.medicalHistory.mpaHypersensitivity}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "mpaHypersensitivity", value: v })
+                }
+                description="Depo-Provera exclusion."
+              />
+              <Checkbox
+                label="Severe cardiovascular disease"
+                checked={state.medicalHistory.severeCardiovascularDisease}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "severeCardiovascularDisease", value: v })
+                }
+                description="Depo-Provera exclusion."
+              />
+              <Checkbox
+                label="Meningioma, current or previous"
+                checked={state.medicalHistory.meningioma}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "meningioma", value: v })
+                }
+                description="Depo-Provera exclusion (SmPC)."
               />
 
               <Checkbox
@@ -375,11 +450,11 @@ export default function PostnatalContraceptionClient() {
                     value: v,
                   })
                 }
-                description="Contraindication to POP."
+                description="Not listed in the PGD; this tool refers (stricter)."
               />
 
               <Checkbox
-                label="History of breast cancer (cleared > 5 years ago)"
+                label="History of breast cancer (more than 5 years ago)"
                 checked={state.medicalHistory.pastBreastCancer}
                 onChange={(v) =>
                   dispatch({
@@ -388,11 +463,11 @@ export default function PostnatalContraceptionClient() {
                     value: v,
                   })
                 }
-                description="Caution; specialist advice recommended if < 5 years clear."
+                description="Caution in both arms; specialist advice recommended if less than 5 years clear."
               />
 
               <Checkbox
-                label="Benign or malignant liver tumours"
+                label="Liver tumours"
                 checked={state.medicalHistory.liverTumours}
                 onChange={(v) =>
                   dispatch({
@@ -401,8 +476,15 @@ export default function PostnatalContraceptionClient() {
                     value: v,
                   })
                 }
-                description="Caution; assess benefit/risk."
+                description="Desogestrel exclusion (severe hepatic impairment or liver tumours)."
               />
+
+              <p className="text-sm font-semibold text-navy-900 mt-2">Cautions</p>
+              <Checkbox label="Functional ovarian cysts" checked={state.medicalHistory.functionalOvarianCysts} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "functionalOvarianCysts", value: v })} description="Desogestrel caution." />
+              <Checkbox label="Diabetes" checked={state.medicalHistory.diabetes} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "diabetes", value: v })} description="Caution, both arms." />
+              <Checkbox label="Hypertension" checked={state.medicalHistory.hypertension} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "hypertension", value: v })} description="Desogestrel caution." />
+              <Checkbox label="Migraine" checked={state.medicalHistory.migraine} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "migraine", value: v })} description="Caution, both arms." />
+              <Checkbox label="Depression" checked={state.medicalHistory.depression} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "depression", value: v })} description="Caution, both arms." />
 
               <Checkbox
                 label="SLE with antiphospholipid antibodies"
@@ -449,7 +531,7 @@ export default function PostnatalContraceptionClient() {
                   Hard Stop — Cannot Supply
                 </p>
                 <p className="text-sm text-red-600">
-                  Based on the identified contraindications, POP cannot be supplied. Refer to GP for alternative contraceptive advice.
+                  Based on the identified exclusions, neither desogestrel nor Depo-Provera can be supplied under this PGD. Advise on alternative options and how to access them; document the advice and the decision; inform or refer to the GP as appropriate.
                 </p>
               </div>
             )}
@@ -460,7 +542,7 @@ export default function PostnatalContraceptionClient() {
         return (
           <StepWrapper
             title="Medicine Supply"
-            description="Desogestrel 75mcg (Cerazette/generic) supply details."
+            description="Desogestrel 75 microgram tablets or Depo-Provera 150 mg/mL injection."
             currentStep={state.currentStep}
             totalSteps={TOTAL_STEPS}
             onNext={handleNext}
@@ -470,41 +552,127 @@ export default function PostnatalContraceptionClient() {
             isBlocked={hasStops}
           >
             <div className="space-y-4">
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded">
-                <p className="text-sm font-semibold text-blue-900 mb-1">
-                  Desogestrel 75mcg (Cerazette/generic)
-                </p>
-                <p className="text-sm text-blue-800">
-                  Progesterone-only pill. One tablet daily at the same time (12-hour window). No pill-free interval. Can start any time postpartum; if started {'>'}  21 days, use additional contraception for 48 hours.
-                </p>
-              </div>
-
-              <NumberInput
-                label="Number of tablets/packs to supply"
-                value={state.medicineSupply.quantity}
-                onChange={(v) =>
+              <SelectInput
+                label="Medicine"
+                value={state.medicineSupply.medicineChoice}
+                onChange={(v) => {
+                  dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "medicineChoice", value: v });
                   dispatch({
                     type: "UPDATE_MEDICINE_SUPPLY",
-                    field: "quantity",
-                    value: v,
-                  })
-                }
-                min={1}
-              />
-
-              <TextInput
-                label="Start date"
-                value={state.medicineSupply.startDate}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_MEDICINE_SUPPLY",
-                    field: "startDate",
-                    value: v,
-                  })
-                }
-                type="date"
+                    field: "medicine",
+                    value: v === "desogestrel" ? "Desogestrel 75 micrograms tablets (Cerazette/Cerelle)" : v === "depo-provera" ? "Medroxyprogesterone acetate 150 mg/mL injection (Depo-Provera)" : "",
+                  });
+                  dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "doseStrength", value: v === "desogestrel" ? "75 micrograms" : v === "depo-provera" ? "150 mg" : "" });
+                }}
+                options={[
+                  { value: "desogestrel", label: "Desogestrel 75 micrograms tablets (Cerazette/Cerelle), women 16 and over" },
+                  { value: "depo-provera", label: "Medroxyprogesterone acetate 150 mg/mL injection (Depo-Provera), women 18 and over" },
+                ]}
                 required
               />
+
+              {state.medicineSupply.medicineChoice === "desogestrel" && (
+                <>
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded">
+                    <p className="text-sm font-semibold text-blue-900 mb-1">
+                      Desogestrel 75 micrograms tablets
+                    </p>
+                    <p className="text-sm text-blue-800">
+                      One tablet daily at the same time each day, continuously (no pill-free break). 12-hour window for missed pills. Start any time postpartum. Started up to and including day 21: no additional contraception needed. Started after day 21: exclude pregnancy first and use a barrier method for 2 days (FSRH; the SmPC states 7 days). Up to 3 months' supply (3 x 28 = 84 tablets). Continuous until change of contraception or pregnancy.
+                    </p>
+                  </div>
+
+                  <NumberInput
+                    label="Number of tablets to supply (maximum 84)"
+                    value={state.medicineSupply.quantity}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_MEDICINE_SUPPLY",
+                        field: "quantity",
+                        value: v,
+                      })
+                    }
+                    min={1}
+                    max={84}
+                    required
+                  />
+
+                  <TextInput
+                    label="Start date"
+                    value={state.medicineSupply.startDate}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_MEDICINE_SUPPLY",
+                        field: "startDate",
+                        value: v,
+                      })
+                    }
+                    type="date"
+                    required
+                  />
+                </>
+              )}
+
+              {state.medicineSupply.medicineChoice === "depo-provera" && (
+                <>
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded">
+                    <p className="text-sm font-semibold text-blue-900 mb-1">
+                      Medroxyprogesterone acetate 150 milligrams per millilitre injection (Depo-Provera)
+                    </p>
+                    <p className="text-sm text-blue-800">
+                      150 milligrams by deep intramuscular injection into the gluteal or deltoid muscle. Single injection per visit. Repeat every 12 weeks (plus or minus 5 days) until change of contraception or pregnancy. First injection from 6 weeks postpartum if breastfeeding; from 21 days if not breastfeeding and no additional VTE risk factor; otherwise refer.
+                    </p>
+                    <p className="text-xs text-blue-800 mt-1">
+                      {isBreastfeeding(state) ? "Breastfeeding: earliest start 42 days." : `Not breastfeeding: earliest start 21 days if no additional VTE risk factor (${getAdditionalVteRiskFactors(state).join(", ") || "none recorded"}), otherwise 42 days.`}
+                    </p>
+                    {getDepoTimingError(state) && (
+                      <p className="text-xs font-semibold text-red-700 mt-1">{getDepoTimingError(state)}</p>
+                    )}
+                  </div>
+
+                  <SelectInput
+                    label="Injection site (deep intramuscular)"
+                    value={state.medicineSupply.injectionSite}
+                    onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "injectionSite", value: v })}
+                    options={[
+                      { value: "gluteal", label: "Gluteal muscle" },
+                      { value: "deltoid", label: "Deltoid muscle" },
+                    ]}
+                    required
+                  />
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <TextInput
+                      label="Batch number"
+                      value={state.medicineSupply.batchNumber}
+                      onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "batchNumber", value: v })}
+                      required
+                    />
+                    <TextInput
+                      label="Expiry date"
+                      value={state.medicineSupply.expiryDate}
+                      onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "expiryDate", value: v })}
+                      type="date"
+                      required
+                    />
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <TextInput
+                      label="Date of injection"
+                      value={state.medicineSupply.startDate}
+                      onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "startDate", value: v })}
+                      type="date"
+                      required
+                    />
+                    <TextInput
+                      label="Next injection due (12 weeks, plus or minus 5 days)"
+                      value={state.medicineSupply.nextInjectionDue}
+                      onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "nextInjectionDue", value: v })}
+                      type="date"
+                      required
+                    />
+                  </div>
+                </>
+              )}
 
               <TextInput
                 label="Supplied by (name and credentials)"
@@ -527,7 +695,7 @@ export default function PostnatalContraceptionClient() {
         return (
           <StepWrapper
             title="Counselling"
-            description="Confirm counselling provided about POP use and management."
+            description="Confirm the PGD follow-up advice given for the method supplied."
             currentStep={state.currentStep}
             totalSteps={TOTAL_STEPS}
             onNext={handleNext}
@@ -538,33 +706,58 @@ export default function PostnatalContraceptionClient() {
           onNewConsultation={handleNewConsultation}
           >
             <div className="space-y-4">
-              <Checkbox
-                label="Advised when to start (any time postpartum, 48-hour backup if > 21 days)"
-                checked={state.counselling.timingAdvice}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_COUNSELLING",
-                    field: "timingAdvice",
-                    value: v,
-                  })
-                }
-              />
+              {state.medicineSupply.medicineChoice === "desogestrel" && (
+                <>
+                  <Checkbox
+                    label="Advised when to start (any time postpartum; before day 21 no additional contraception needed)"
+                    checked={state.counselling.timingAdvice}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_COUNSELLING",
+                        field: "timingAdvice",
+                        value: v,
+                      })
+                    }
+                  />
+                  {state.assessment.daysPostpartum !== null && state.assessment.daysPostpartum > 21 && (
+                    <Checkbox
+                      label="Started after day 21: use a barrier method for 2 days (FSRH; the SmPC states 7 days)"
+                      checked={state.counselling.extraPrecautionsAdvice}
+                      onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "extraPrecautionsAdvice", value: v })}
+                    />
+                  )}
+                  <Checkbox
+                    label="Take the tablet at the same time each day to maintain effectiveness (12-hour window)"
+                    checked={state.counselling.dailyTakingAdvice}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_COUNSELLING",
+                        field: "dailyTakingAdvice",
+                        value: v,
+                      })
+                    }
+                  />
+                </>
+              )}
+
+              {state.medicineSupply.medicineChoice === "depo-provera" && (
+                <>
+                  <Checkbox
+                    label="Explained that fertility may take 5 to 6 months to return after the last injection"
+                    checked={state.counselling.depoFertilityAdvice}
+                    onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "depoFertilityAdvice", value: v })}
+                  />
+                  <Checkbox
+                    label="Return for repeat injection every 12 weeks"
+                    checked={state.counselling.depoRepeatAdvice}
+                    onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "depoRepeatAdvice", value: v })}
+                    description="Bone mineral density loss with prolonged use: review at 2 years."
+                  />
+                </>
+              )}
 
               <Checkbox
-                label="Advised to take at same time daily (12-hour window)"
-                checked={state.counselling.dailyTakingAdvice}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_COUNSELLING",
-                    field: "dailyTakingAdvice",
-                    value: v,
-                  })
-                }
-                description="Strict adherence important for efficacy."
-              />
-
-              <Checkbox
-                label="Explained breakthrough bleeding is common in first 3 months"
+                label="Explained that irregular bleeding is common, particularly in the first few months"
                 checked={state.counselling.breakThroughBleedingAdvice}
                 onChange={(v) =>
                   dispatch({
@@ -576,7 +769,7 @@ export default function PostnatalContraceptionClient() {
               />
 
               <Checkbox
-                label="Confirmed POP does not affect breastfeeding"
+                label="Confirmed the method is safe during breastfeeding"
                 checked={state.counselling.breastfeedingCompatibilityAdvice}
                 onChange={(v) =>
                   dispatch({
@@ -589,7 +782,7 @@ export default function PostnatalContraceptionClient() {
               />
 
               <Checkbox
-                label="Explained POP does not protect against STIs"
+                label="Explained the method does not protect against STIs"
                 checked={state.counselling.stiAdvice}
                 onChange={(v) =>
                   dispatch({
@@ -613,7 +806,25 @@ export default function PostnatalContraceptionClient() {
               />
 
               <Checkbox
-                label="Explained side effects and when to seek help"
+                label="Seek immediate medical attention if symptoms of DVT/PE develop (calf pain, swelling, breathlessness)"
+                checked={state.counselling.dvtPeAdvice}
+                onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "dvtPeAdvice", value: v })}
+              />
+
+              <Checkbox
+                label="Report any unexpected vaginal bleeding"
+                checked={state.counselling.unexpectedBleedingAdvice}
+                onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "unexpectedBleedingAdvice", value: v })}
+              />
+
+              <Checkbox
+                label="Discussed contraceptive options if considering longer-term contraception"
+                checked={state.counselling.longerTermOptionsAdvice}
+                onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "longerTermOptionsAdvice", value: v })}
+              />
+
+              <Checkbox
+                label="Explained side effects; seek medical advice if symptoms worsen or any adverse effects occur"
                 checked={state.counselling.sideEffectsExplained}
                 onChange={(v) =>
                   dispatch({
@@ -622,21 +833,23 @@ export default function PostnatalContraceptionClient() {
                     value: v,
                   })
                 }
-                description="Breast tenderness, nausea, mood changes, acne."
+                description={state.medicineSupply.medicineChoice === "depo-provera" ? "Menstrual irregularity, weight gain, headache, dizziness, mood changes, acne, abdominal discomfort, decreased libido; reduced bone mineral density long term." : "Irregular bleeding or spotting, headache, mood changes, breast tenderness, nausea, acne, decreased libido, weight gain."}
               />
 
-              <Checkbox
-                label="Clarified there is no pill-free interval"
-                checked={state.counselling.pillfreeIntervalAdvice}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_COUNSELLING",
-                    field: "pillfreeIntervalAdvice",
-                    value: v,
-                  })
-                }
-                description="Continuous daily dosing; do not skip days."
-              />
+              {state.medicineSupply.medicineChoice === "desogestrel" && (
+                <Checkbox
+                  label="Clarified there is no pill-free interval"
+                  checked={state.counselling.pillfreeIntervalAdvice}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_COUNSELLING",
+                      field: "pillfreeIntervalAdvice",
+                      value: v,
+                    })
+                  }
+                  description="Continuous daily dosing; do not skip days."
+                />
+              )}
             </div>
           </StepWrapper>
         );
@@ -771,6 +984,7 @@ function PostnatalContraceptionSummaryReport({
 }) {
   return (
     <div className="space-y-4 text-xs print:text-[10px]">
+      <p className="text-[10px] text-gray-400">{PGD_VERSION_LABEL}</p>
       <SectionHeader>Patient Information</SectionHeader>
       <Row
         label="Name"
@@ -783,15 +997,27 @@ function PostnatalContraceptionSummaryReport({
 
       <SectionHeader>Postnatal Assessment</SectionHeader>
       <Row
-        label="Weeks postpartum"
-        value={`${state.assessment.weeksPostpartum} weeks`}
+        label="Days postpartum"
+        value={state.assessment.daysPostpartum !== null ? `${state.assessment.daysPostpartum} days (${state.assessment.weeksPostpartum} weeks)` : "Not recorded"}
       />
       <Row label="Delivery type" value={state.assessment.deliveryType} />
       <Row
         label="Breastfeeding"
         value={state.assessment.breastfeedingStatus}
       />
-      <Row label="VTE risk" value={state.assessment.vteRiskAssessment} />
+      <Row label="Additional VTE risk factors" value={getAdditionalVteRiskFactors(state).join(", ") || "None"} />
+      {state.assessment.daysPostpartum !== null && state.assessment.daysPostpartum > 21 && (
+        <Row
+          label="Pregnancy reasonably excluded"
+          value={
+            !state.assessment.unprotectedSexSinceDay21
+              ? "Yes: no unprotected intercourse since day 21"
+              : state.assessment.negativeTest21DaysAfterLastUpsi
+                ? "Yes: negative test 21 days after the last episode"
+                : "No"
+          }
+        />
+      )}
 
       <SectionHeader>Medical History &amp; Contraindications</SectionHeader>
       <Row
@@ -810,11 +1036,43 @@ function PostnatalContraceptionSummaryReport({
         label="Porphyria"
         value={state.medicalHistory.porphyria ? "Yes" : "No"}
       />
+      <Row label="Known or suspected pregnancy" value={state.medicalHistory.knownOrSuspectedPregnancy ? "Yes" : "No"} />
+      <Row label="Active thromboembolic disorder" value={state.medicalHistory.activeThromboembolicDisorder ? "Yes" : "No"} />
+      <Row label="Liver tumours" value={state.medicalHistory.liverTumours ? "Yes" : "No"} />
+      <Row label="Hypersensitivity (desogestrel / MPA)" value={`${state.medicalHistory.desogestrelHypersensitivity ? "Yes" : "No"} / ${state.medicalHistory.mpaHypersensitivity ? "Yes" : "No"}`} />
+      <Row label="Severe cardiovascular disease" value={state.medicalHistory.severeCardiovascularDisease ? "Yes" : "No"} />
+      <Row label="Meningioma (current or previous)" value={state.medicalHistory.meningioma ? "Yes" : "No"} />
+      <Row
+        label="Cautions"
+        value={[
+          state.medicalHistory.pastBreastCancer && "breast cancer history",
+          state.medicalHistory.functionalOvarianCysts && "functional ovarian cysts",
+          state.medicalHistory.diabetes && "diabetes",
+          state.medicalHistory.hypertension && "hypertension",
+          state.medicalHistory.migraine && "migraine",
+          state.medicalHistory.depression && "depression",
+        ]
+          .filter(Boolean)
+          .join(", ") || "None"}
+      />
 
       <SectionHeader>Medicine Supply</SectionHeader>
-      <Row label="Medicine" value={state.medicineSupply.medicine} />
-      <Row label="Quantity" value={`${state.medicineSupply.quantity} pack(s)`} />
-      <Row label="Start date" value={state.medicineSupply.startDate} />
+      <Row label="Medicine" value={state.medicineSupply.medicine || "None supplied"} />
+      {state.medicineSupply.medicineChoice === "desogestrel" && (
+        <>
+          <Row label="Dose" value="One tablet daily at the same time each day, continuously" />
+          <Row label="Quantity" value={`${state.medicineSupply.quantity} tablets (maximum 84)`} />
+          <Row label="Start date" value={state.medicineSupply.startDate} />
+        </>
+      )}
+      {state.medicineSupply.medicineChoice === "depo-provera" && (
+        <>
+          <Row label="Dose and route" value={`150 mg deep intramuscular injection, ${state.medicineSupply.injectionSite || "site not recorded"}`} />
+          <Row label="Batch / expiry" value={`${state.medicineSupply.batchNumber || "not recorded"} / ${state.medicineSupply.expiryDate || "not recorded"}`} />
+          <Row label="Date of injection" value={state.medicineSupply.startDate} />
+          <Row label="Next injection due" value={state.medicineSupply.nextInjectionDue || "Not recorded"} />
+        </>
+      )}
 
       <SectionHeader>Clinical Alerts</SectionHeader>
       <AlertSummary alerts={state.alerts} />
@@ -823,17 +1081,23 @@ function PostnatalContraceptionSummaryReport({
       <CounsellingGrid
         items={[
           ["Timing of start (any time postpartum)", state.counselling.timingAdvice],
+          ["Started after day 21: barrier method for 2 days", state.counselling.extraPrecautionsAdvice],
           ["Daily taking (same time, 12-hour window)", state.counselling.dailyTakingAdvice],
-          ["Breakthrough bleeding common (first 3 months)", state.counselling.breakThroughBleedingAdvice],
+          ["Irregular bleeding common in first months", state.counselling.breakThroughBleedingAdvice],
           ["Safe while breastfeeding", state.counselling.breastfeedingCompatibilityAdvice],
           ["No STI protection", state.counselling.stiAdvice],
           ["No pill-free interval", state.counselling.pillfreeIntervalAdvice],
+          ["DVT/PE symptoms: immediate attention", state.counselling.dvtPeAdvice],
+          ["Report unexpected vaginal bleeding", state.counselling.unexpectedBleedingAdvice],
+          ["Longer-term contraception discussed", state.counselling.longerTermOptionsAdvice],
+          ["Depo-Provera: fertility return 5 to 6 months", state.counselling.depoFertilityAdvice],
+          ["Depo-Provera: repeat every 12 weeks", state.counselling.depoRepeatAdvice],
           ["Side effects explained", state.counselling.sideEffectsExplained],
         ]}
       />
 
       <PharmacistDeclaration
-        pgdName="Postnatal Contraception (POP)"
+        pgdName="Postnatal Contraception"
         pharmacistName={state.summary.pharmacistName}
         pharmacistGPhC={state.summary.pharmacistGPhC}
         pharmacyName={state.summary.pharmacyName}
@@ -848,7 +1112,7 @@ function PostnatalContraceptionSummaryReport({
         </>
       )}
 
-      <ReportFooter pgdName="Postnatal Contraception (POP)" />
+      <ReportFooter pgdName="Postnatal Contraception" />
     </div>
   );
 }

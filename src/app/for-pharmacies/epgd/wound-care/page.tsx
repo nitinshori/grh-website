@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import WoundCareClient from "./WoundCareClient";
 import { PgdPageActions } from "@/components/PgdPageActions";
-export const metadata: Metadata = { title: "Wound Care Management Consultation ePGD", description: "Digital consultation tool for Wound Care Management under Patient Group Direction." };
+export const metadata: Metadata = { title: "Minor Wound Care Consultation ePGD", description: "Minor Wound Care PGD v007: co-amoxiclav for infected bites and heavily contaminated wounds (12 and over), flucloxacillin for infected non-bite wounds (2 and over)." };
 export default function Page() {
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -13,7 +13,7 @@ export default function Page() {
             <span>/</span>
             <span className="text-navy-900 font-medium">Wound Care Management Consultation ePGD</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-navy-900">Wound Care Management — PGD Consultation</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-navy-900">Minor Wound Care: PGD Consultation</h1>
         </div>
         <WoundCareClient />
         <div className="mt-8 text-center">

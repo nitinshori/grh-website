@@ -20,6 +20,17 @@ export interface PeriodDelayAssessment {
   daysUntilExpected: number | null;
   previousUse: boolean;
   previousIssues: string;
+  /** PGD v008 records the dates the delay is needed for. */
+  datesNeededFor: string;
+  /** PGD v008: previous supplies for period delay in the last 6 months.
+   *  Twice already excludes; total treatment must not exceed 30 days in 6 months. */
+  previousSuppliesLast6Months: "" | "0" | "1" | "2+";
+  daysSuppliedLast6Months: number | null;
+  // Excluding pregnancy, PGD v008: the two questions, and the test where needed.
+  lastPeriodNormalOnTime: boolean;
+  noUnprotectedSexSince: boolean;
+  pregnancyTestNegative: boolean;
+  pregnancyTestDate: string;
 }
 
 export interface PeriodDelayMedicalHistory {
@@ -36,6 +47,27 @@ export interface PeriodDelayMedicalHistory {
   hormonalContraception: boolean;
   hormonalContraceptionType: string;
   ageUnder16: boolean;
+  /** PGD v008 excludes male patients. */
+  femaleConfirmed: boolean;
+  hypersensitivity: boolean;
+  /** Liver dysfunction, active liver disease, jaundice in pregnancy, or a liver tumour. */
+  jaundiceInPregnancy: boolean;
+  severePruritusInPregnancy: boolean;
+  diabetesWithVascularComplications: boolean;
+  /** Hypertension of any grade, treated or untreated, or hypertension in pregnancy. */
+  hypertension: boolean;
+  systolicBP: number | null;
+  diastolicBP: number | null;
+  atrialFibrillationOrValvularDisease: boolean;
+  sleOrAntiphospholipid: boolean;
+  brcaCarrier: boolean;
+  dyslipidaemiaWithRiskFactor: boolean;
+  lamotrigineMonotherapy: boolean;
+  ciclosporin: boolean;
+  /** History of depression: NOT an exclusion; individualised counselling and record. */
+  historyOfDepression: boolean;
+  /** Current severe depression, active suicidal ideation: exclude and refer. */
+  severeDepressionOrSuicidalIdeation: boolean;
   // ── PGD v002 venous thromboembolism gate ──────────────────────────────
   // v001 listed these as risk factors and then asked only that the supplier
   // "assess individual risk factors", which gates nothing and is not
@@ -63,6 +95,8 @@ export interface PeriodDelayMedicalHistory {
   /** 16 or 17: competence and safeguarding assessed and satisfied. */
   under18AssessmentDone: boolean;
   safeguardingConcern: boolean;
+  /** 16 or 17: the assessment in full, not just the conclusion. */
+  under18AssessmentNotes: string;
 }
 
 export interface PeriodDelayMedications {
@@ -86,6 +120,12 @@ export interface PeriodDelayCounselling {
   periodReturnsAfter: boolean;
   sideEffects: boolean;
   notContraceptive: boolean;
+  /** Told to do a pregnancy test if her period does not arrive within a few days of finishing. */
+  pregnancyTestIfNoPeriod: boolean;
+  /** Move around and keep well hydrated, particularly on any journey. */
+  mobilityAndHydration: boolean;
+  /** Mood change is a recognised effect; monitor and seek follow up. */
+  moodMonitoring: boolean;
   seekHelpIfUnwell: boolean;
 }
 
@@ -125,11 +165,11 @@ export function createInitialConsultationState(): PeriodDelayConsultationState {
     currentStep: 0,
     patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", gpAddress: "", gpPhone: "", gpEmail: "", gpOdsCode: "", nhsNumber: "", address: "", phone: "", email: "" },
     consent: { informedConsentGiven: false, idVerified: false, idType: "", patientAwarePrivateService: false },
-    assessment: { reasonForDelay: "", reasonDetails: "", lastPeriodDate: "", cycleRegular: false, expectedPeriodDate: "", daysUntilExpected: null, previousUse: false, previousIssues: "" },
-    medicalHistory: { pregnancy: false, breastfeeding: false, liverDisease: false, historyOfDVT: false, historyOfPE: false, historyOfStroke: false, activeBreastCancer: false, severeArterialDisease: false, porphyria: false, abnormalVaginalBleeding: false, hormonalContraception: false, hormonalContraceptionType: "", ageUnder16: false, familyVteUnder45: false, currentSmoker: false, stoppedSmokingUnderOneYear: false, stoppedSmokingOverOneYear: false, cigarettesPerDay: null, heightCm: null, weightKg: null, longJourney: false, recentOrPlannedSurgery: false, immobility: false, activeOrRecentCancer: false, migraineWithAura: false, enzymeInducer: false, under18AssessmentDone: false, safeguardingConcern: false },
+    assessment: { reasonForDelay: "", reasonDetails: "", lastPeriodDate: "", cycleRegular: false, expectedPeriodDate: "", daysUntilExpected: null, previousUse: false, previousIssues: "", datesNeededFor: "", previousSuppliesLast6Months: "", daysSuppliedLast6Months: null, lastPeriodNormalOnTime: false, noUnprotectedSexSince: false, pregnancyTestNegative: false, pregnancyTestDate: "" },
+    medicalHistory: { pregnancy: false, breastfeeding: false, liverDisease: false, historyOfDVT: false, historyOfPE: false, historyOfStroke: false, activeBreastCancer: false, severeArterialDisease: false, porphyria: false, abnormalVaginalBleeding: false, hormonalContraception: false, hormonalContraceptionType: "", ageUnder16: false, femaleConfirmed: false, hypersensitivity: false, jaundiceInPregnancy: false, severePruritusInPregnancy: false, diabetesWithVascularComplications: false, hypertension: false, systolicBP: null, diastolicBP: null, atrialFibrillationOrValvularDisease: false, sleOrAntiphospholipid: false, brcaCarrier: false, dyslipidaemiaWithRiskFactor: false, lamotrigineMonotherapy: false, ciclosporin: false, historyOfDepression: false, severeDepressionOrSuicidalIdeation: false, familyVteUnder45: false, currentSmoker: false, stoppedSmokingUnderOneYear: false, stoppedSmokingOverOneYear: false, cigarettesPerDay: null, heightCm: null, weightKg: null, longJourney: false, recentOrPlannedSurgery: false, immobility: false, activeOrRecentCancer: false, migraineWithAura: false, enzymeInducer: false, under18AssessmentDone: false, safeguardingConcern: false, under18AssessmentNotes: "" },
     medications: { anticoagulants: false, antiepileptics: false, ciclosporin: false, otherMedications: "", allergies: "" },
     medicineSelection: { confirmed: false, daysToDelay: null, startDate: "" },
-    counselling: { howToTake: false, startThreeDaysBefore: false, maxDuration: false, periodReturnsAfter: false, sideEffects: false, notContraceptive: false, seekHelpIfUnwell: false },
+    counselling: { howToTake: false, startThreeDaysBefore: false, maxDuration: false, periodReturnsAfter: false, sideEffects: false, notContraceptive: false, pregnancyTestIfNoPeriod: false, mobilityAndHydration: false, moodMonitoring: false, seekHelpIfUnwell: false },
     summary: { pharmacistName: "", pharmacistGPhC: "", pharmacyName: "", pharmacyAddress: "", consultationDate: new Date().toISOString().split("T")[0], consultationTime: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }), clinicalNotes: "" },
     alerts: [],
     doseRecommendation: null,

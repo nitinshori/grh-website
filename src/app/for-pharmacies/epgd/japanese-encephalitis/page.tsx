@@ -21,14 +21,14 @@ export default function JapaneseEncephalitisPage(): React.ReactNode {
             <p className="text-gray-600 mb-4">PGD Consultation for UK Pharmacies</p>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-900">
-                This ePGD guides pharmacists through safe and effective administration of Ixiaro for Japanese encephalitis vaccination. Suitable for patients aged 2 months and over travelling to endemic areas of Southeast Asia with risk of exposure.
+                This ePGD guides pharmacists through safe and effective administration of Ixiaro for Japanese encephalitis vaccination. Suitable for individuals aged 2 months and over at risk through travel to endemic areas of Asia and the western Pacific, or through occupation. Japanese Encephalitis Vaccine (Ixiaro) PGD v005, issued 11 September 2026.
               </p>
             </div>
           </div>
         </div>
         <JapaneseEncephalitisClient />
         <div className="mt-8 text-center text-xs text-gray-500">
-          <p>Get Real Health ePGD — Japanese Encephalitis Vaccination | Confidential Patient Information</p>
+          <p>Get Real Health ePGD, Japanese Encephalitis Vaccination | Confidential Patient Information</p>
         </div>
       </div>
     </div>

@@ -1,8 +1,10 @@
 import type { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/types";
 import { validatePatientStep, validateConsentStep, validateSummaryStep } from "../../shared/types";
 
+// Minor Wound Care PGD v007 (11 September 2026): flucloxacillin arm from
+// 2 years; co-amoxiclav arm (bites and heavily contaminated wounds) from 12.
 export function validatePatient(patient: BasePatientDetails): string | null {
-  return validatePatientStep(patient, { minAge: 18 }) // age gate per signed PGD (consistency review Jul 2026);
+  return validatePatientStep(patient, { minAge: 2 });
 }
 
 export function validateConsent(consent: BaseConsent): string | null {

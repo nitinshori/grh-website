@@ -6,34 +6,37 @@ import { StepWrapper } from "../shared/components/StepWrapper"
 import type { ConsultationRecordData } from "../shared/hooks/useConsultationTracking"
 import { PatientDetailsStep } from "../shared/steps/PatientDetailsStep"
 import { ConsentStep } from "../shared/steps/ConsentStep"
-import { TextInput, TextArea, Checkbox } from "../shared/components/FormInputs"
+import { TextInput, TextArea, Checkbox, SelectInput } from "../shared/components/FormInputs"
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile"
+import { validatePatientStep, validateConsentStep } from "../shared/types"
 
 // ─────────────────────────────────────────────────────────────────────────
 // Hepatitis A / B Travel ePGD
 //
-// Replaces the previous tool that was a duplicate of MenACWY with the names
-// changed but the content untouched (reported by Moin, 16 Jun 2026). This
-// version is a genuine Hep A / Hep B consultation flow covering:
+// Aligned to the signed document: Hepatitis A and Hepatitis B Vaccination
+// (Havrix, Avaxim, Engerix B and Twinrix, for travel and lifestyle risk),
+// PGD version 006, issued 11 September 2026. Individuals aged 1 year and over.
 //
-//   • Twinrix Adult (combined Hep A + Hep B, ≥16y)
-//   • Twinrix Paediatric (combined, 1–15y)
-//   • Havrix Monodose / Havrix Junior (Hep A only)
-//   • Engerix-B Adult / Paediatric (Hep B only)
+//   • Twinrix Adult (combined Hep A + Hep B, 16y and over)
+//   • Twinrix Paediatric (combined, 1 to 15y; standard schedule only)
+//   • Havrix Monodose / Havrix Junior Monodose (Hep A only)
+//   • Avaxim / Avaxim Junior (Hep A only, added at document v003)
+//   • Engerix B / Engerix B Paediatric (Hep B only)
 //
-// Schedules supported:
-//   • Standard       — 0 / 1 / 6 months (preferred where time allows)
-//   • Accelerated    — 0 / 7 / 21 days + booster at 12 months
-//   • Very accelerated (Twinrix only) — 0 / 7 / 21 days, licensed for adults
+// Schedules per the document:
+//   • Hep A monovalent: single dose, booster at 6 to 12 months
+//   • Standard: 0, 1 and 6 months (Engerix B all ages; Twinrix Adult; Twinrix Paediatric only)
+//   • Accelerated: 0, 1 and 2 months plus 12-month booster (Engerix B, all ages)
+//   • Very rapid: 0, 7 and 21 days plus 12-month dose (Engerix B and Twinrix Adult;
+//     18 and over under this PGD; 16 to 17 off-label with documented consent)
 //
-// Clinical content cross-referenced against:
-//   • Green Book (Public Health England) chapters 17 (Hep A) and 18 (Hep B)
-//   • BNF (Hepatitis vaccines)
-//   • SPC Twinrix, Havrix, Engerix-B
-//   • TravelHealthPro country recommendations
-//
-// REQUIRES SIGN-OFF before un-gating in dashboard + pgd-access registry.
+// Out of scope (exclusions): occupational hepatitis B needing proof of immunity,
+// renal or dialysis patients, newborns of hepatitis B positive mothers, any
+// post-exposure situation, known non-responders, post-vaccination serology.
 // ─────────────────────────────────────────────────────────────────────────
+
+const PGD_VERSION =
+  "Hepatitis A and Hepatitis B Vaccination (Havrix, Avaxim, Engerix B and Twinrix) PGD v006, issued 11 September 2026"
 
 const STEP_TITLES = [
   "Patient Details",
@@ -60,7 +63,51 @@ type VaccineProduct =
   | "engerix-b-adult"
   | "engerix-b-paediatric"
 
-type Schedule = "" | "standard-0-1-6" | "accelerated-0-7-21-12m" | "very-accelerated"
+type Schedule =
+  | ""
+  | "hepa-single-booster-6-12m"
+  | "standard-0-1-6"
+  | "accelerated-0-1-2-12m"
+  | "rapid-0-7-21-12m"
+
+type ConsentBasis = "" | "parental" | "self"
+
+const HEP_A_PRODUCTS: VaccineProduct[] = [
+  "twinrix-adult", "twinrix-paediatric", "havrix-monodose", "havrix-junior", "avaxim-adult", "avaxim-junior",
+]
+const HEP_B_PRODUCTS: VaccineProduct[] = [
+  "twinrix-adult", "twinrix-paediatric", "engerix-b-adult", "engerix-b-paediatric",
+]
+
+/** Schedules the document permits for each product. */
+const SCHEDULES_FOR_PRODUCT: Record<Exclude<VaccineProduct, "">, Schedule[]> = {
+  "havrix-monodose": ["hepa-single-booster-6-12m"],
+  "havrix-junior": ["hepa-single-booster-6-12m"],
+  "avaxim-adult": ["hepa-single-booster-6-12m"],
+  "avaxim-junior": ["hepa-single-booster-6-12m"],
+  "engerix-b-adult": ["standard-0-1-6", "accelerated-0-1-2-12m", "rapid-0-7-21-12m"],
+  "engerix-b-paediatric": ["standard-0-1-6", "accelerated-0-1-2-12m"],
+  "twinrix-adult": ["standard-0-1-6", "rapid-0-7-21-12m"],
+  "twinrix-paediatric": ["standard-0-1-6"],
+}
+
+const SCHEDULE_LABEL: Record<Exclude<Schedule, "">, string> = {
+  "hepa-single-booster-6-12m": "Hepatitis A monovalent: single dose, booster at 6 to 12 months (Avaxim Junior: 6 months to 15 years)",
+  "standard-0-1-6": "Standard: 0, 1 and 6 months",
+  "accelerated-0-1-2-12m": "Accelerated: 0, 1 and 2 months, booster at 12 months (Engerix B)",
+  "rapid-0-7-21-12m": "Very rapid: 0, 7 and 21 days, plus a dose at 12 months (18 and over under this PGD)",
+}
+
+const PRODUCT_LABEL: Record<Exclude<VaccineProduct, "">, string> = {
+  "twinrix-adult": "Twinrix Adult, Hep A 720 EU + HBsAg 20 mcg, 1.0 mL",
+  "twinrix-paediatric": "Twinrix Paediatric, Hep A 360 EU + HBsAg 10 mcg, 0.5 mL",
+  "havrix-monodose": "Havrix Monodose, Hep A 1440 ELISA units, 1.0 mL",
+  "havrix-junior": "Havrix Junior Monodose, Hep A 720 ELISA units, 0.5 mL",
+  "avaxim-adult": "Avaxim, Hep A 160 EU, 0.5 mL",
+  "avaxim-junior": "Avaxim Junior, Hep A 80 EU, 0.5 mL",
+  "engerix-b-adult": "Engerix B, HBsAg 20 micrograms, 1.0 mL",
+  "engerix-b-paediatric": "Engerix B Paediatric, HBsAg 10 micrograms, 0.5 mL",
+}
 
 export function HepABClient() {
   const [currentStep, setCurrentStep] = useState(0)
@@ -93,6 +140,7 @@ export function HepABClient() {
       departureDate: "",
       durationWeeks: "",
       hepARisk: false,
+      hepANonTravelRisk: false,
       hepBRisk: false,
       longerStay: false,
       ruralOrRemote: false,
@@ -102,6 +150,9 @@ export function HepABClient() {
       previousHepAVaccine: false,
       previousHepBVaccine: false,
       previousVaccineDetails: "",
+      previousVaccinationInfoSufficient: false,
+      consentBasis: "" as ConsentBasis,
+      consentGivenBy: "",
     },
     eligibility: {
       vaccineChoice: "" as VaccineProduct,
@@ -110,20 +161,29 @@ export function HepABClient() {
       hypersensitivityDetails: "",
       acuteFebrileIllness: false,
       previousAnaphylaxisToHepVaccine: false,
+      previousHypersensitivityToHepVaccine: false,
+      outOfScope: false,
+      proofOfImmunityRequired: false,
       // Cautions to document
       pregnant: false,
+      pregnancyRiskAssessment: "",
       breastfeeding: false,
+      breastfeedingDecision: "",
       immunocompromised: false,
       immunoDetails: "",
       onAnticoagulants: false,
       bleedingDisorder: false,
       chronicLiverDisease: false,
+      latexAllergy: false,
+      otherVaccinesSameVisit: false,
+      twinrixPaedCoAdminRecorded: false,
       yeastAllergy: false, // Hep B vaccines contain recombinant yeast-derived HBsAg
       neomycinAllergy: false, // Hep A vaccines may contain trace neomycin
     },
     administration: {
       vaccineGiven: "" as VaccineProduct,
       schedule: "" as Schedule,
+      offLabelScheduleConsented: false,
       doseNumberThisVisit: "" as "" | "1" | "2" | "3" | "booster",
       batchNumber: "",
       expiryDate: "",
@@ -139,13 +199,17 @@ export function HepABClient() {
       anaphylaxisKitChecked: false,
       yellowCardDiscussed: false,
       nextDoseDueDate: "",
+      courseComplete: false,
     },
     advice: {
       sideEffectsCounselled: false,
       yellowCardLeafletGiven: false,
+      pilGiven: false,
       vaccineRecordCardIssued: false,
       gpInformed: false,
       followUpScheduleAgreed: false,
+      protectionByTravelExplained: false,
+      hepCNotCoveredExplained: false,
       travelHealthAdviceProvided: false,
       foodAndWaterHygieneCounselled: false,
       sexualHealthCounselling: false,
@@ -221,76 +285,173 @@ export function HepABClient() {
   }
 
   // ── Eligibility gating ─────────────────────────────────────────────
+  const age = state.patient.age
+  const isUnder16 = age !== null && age < 16
+  const choice = state.eligibility.vaccineChoice
+  const choiceHasHepA = HEP_A_PRODUCTS.includes(choice)
+  const choiceHasHepB = HEP_B_PRODUCTS.includes(choice)
+  const isTwinrix = choice === "twinrix-adult" || choice === "twinrix-paediatric"
+
   // Contraindications: any of these blocks the consultation.
   const blocked =
+    (age !== null && age < 1) ||
     state.eligibility.hypersensitivityToVaccine ||
     state.eligibility.acuteFebrileIllness ||
     state.eligibility.previousAnaphylaxisToHepVaccine ||
+    state.eligibility.previousHypersensitivityToHepVaccine ||
+    state.eligibility.outOfScope ||
+    state.eligibility.proofOfImmunityRequired ||
+    // Pregnancy: Twinrix is not used under this PGD in pregnancy. Where
+    // hepatitis B protection is needed, use a monovalent hepatitis B vaccine
+    // and document the risk assessment.
+    (state.eligibility.pregnant && isTwinrix) ||
     // Yeast allergy blocks all Hep B vaccines (including Twinrix)
-    (state.eligibility.yeastAllergy &&
-      ["twinrix-adult", "twinrix-paediatric", "engerix-b-adult", "engerix-b-paediatric"].includes(
-        state.eligibility.vaccineChoice
-      )) ||
-    // Neomycin anaphylaxis blocks Hep A-containing vaccines
-    (state.eligibility.neomycinAllergy &&
-      ["twinrix-adult", "twinrix-paediatric", "havrix-monodose", "havrix-junior",
-       "avaxim-adult", "avaxim-junior"].includes(
-        state.eligibility.vaccineChoice
-      ))
+    (state.eligibility.yeastAllergy && choiceHasHepB) ||
+    // Neomycin allergy excludes Havrix, Twinrix and Avaxim (trace neomycin)
+    (state.eligibility.neomycinAllergy && choiceHasHepA)
+
+  const blockReason = (() => {
+    if (age !== null && age < 1) return "Under 1 year of age: the vaccines are not licensed below 1 year."
+    if (state.eligibility.outOfScope) return "Out of scope of this PGD (occupational hepatitis B, renal or dialysis, newborn of a hepatitis B positive mother, post-exposure, known non-responder or serology). Refer to the GP, occupational health, the renal team, the Health Protection Team or emergency care as appropriate; make the urgency clear where it is a post-exposure situation."
+    if (state.eligibility.proofOfImmunityRequired) return "The patient requires proof of immunity: serology is out of scope. Refer to occupational health or the GP."
+    if (state.eligibility.pregnant && isTwinrix) return "Pregnancy: Twinrix is not given under this PGD (SPC advises delay until after delivery). Where hepatitis B protection is needed in pregnancy, use a monovalent hepatitis B vaccine and document the risk assessment; Havrix is preferred for hepatitis A."
+    if (state.eligibility.neomycinAllergy && choiceHasHepA) return "Neomycin allergy: Havrix, Twinrix and Avaxim contain trace neomycin and are excluded."
+    if (state.eligibility.acuteFebrileIllness) return "Acute severe febrile illness: postpone until recovered. Minor illness without fever is not a reason to defer."
+    return "Confirmed anaphylaxis or previous hypersensitivity reaction to a hepatitis A or B containing vaccine or any component: excluded. Refer to the GP or a travel clinic."
+  })()
 
   const ageMatchesVaccine = (() => {
-    const age = state.patient.age
     if (age === null) return true
-    switch (state.eligibility.vaccineChoice) {
+    switch (choice) {
       case "twinrix-adult":
       case "havrix-monodose":
       // Avaxim adult is 16 and over; its SPC says it is not recommended at
       // 15 or under for want of safety and efficacy data.
       case "avaxim-adult":
+      case "engerix-b-adult":
         return age >= 16
       case "twinrix-paediatric":
       case "havrix-junior":
       case "avaxim-junior":
-        return age >= 1 && age <= 15
-      case "engerix-b-adult":
-        return age >= 16
       case "engerix-b-paediatric":
-        return age < 16
+        return age >= 1 && age <= 15
       default:
         return true
     }
   })()
 
+  // Inclusion: hepatitis A needs a travel or non-travel risk factor; hepatitis
+  // B needs travel with a risk factor, or a lifestyle risk factor.
+  const indicationMet =
+    !!choice &&
+    (!choiceHasHepA || state.travel.hepARisk || state.travel.hepANonTravelRisk) &&
+    (!choiceHasHepB || state.travel.hepBRisk)
+
+  const cautionsDocumented =
+    (!state.eligibility.pregnant || !!state.eligibility.pregnancyRiskAssessment.trim()) &&
+    (!state.eligibility.breastfeeding || !!state.eligibility.breastfeedingDecision.trim()) &&
+    (!(choice === "twinrix-paediatric" && state.eligibility.otherVaccinesSameVisit) ||
+      state.eligibility.twinrixPaedCoAdminRecorded)
+
   const eligibilityValid =
-    !!state.eligibility.vaccineChoice && !blocked && ageMatchesVaccine
+    !!choice && !blocked && ageMatchesVaccine && indicationMet && cautionsDocumented
+
+  const eligibilityError = (() => {
+    if (!choice) return "Select the vaccine"
+    if (blocked) return blockReason
+    if (!ageMatchesVaccine) return "Selected vaccine is not licensed for this patient's age. Choose the age-appropriate product."
+    if (!indicationMet) return choiceHasHepA && !(state.travel.hepARisk || state.travel.hepANonTravelRisk)
+      ? "Hepatitis A inclusion not met: record travel to a moderate or high endemicity area, or a non-travel risk factor, on the Travel Risk Assessment step"
+      : "Hepatitis B inclusion not met: record travel to an intermediate or high prevalence area with a risk factor, or a lifestyle risk factor, on the Travel Risk Assessment step"
+    if (!cautionsDocumented) return "Record the pregnancy risk assessment, breastfeeding decision, or the Twinrix Paediatric co-administration decision"
+    return null
+  })()
+
+  // ── Schedule gating ───────────────────────────────────────────────
+  const given = state.administration.vaccineGiven
+  const allowedSchedules: Schedule[] = given ? SCHEDULES_FOR_PRODUCT[given] : []
+  const schedule = state.administration.schedule
+  const scheduleAllowed = !!schedule && allowedSchedules.includes(schedule)
+  // Very rapid schedule: 18 and over under this PGD; 16 to 17 off-label with
+  // documented consent (Engerix B and Twinrix Adult).
+  const rapidOffLabel = schedule === "rapid-0-7-21-12m" && age !== null && age < 18
+  const offLabelUsed = rapidOffLabel
+  const nextDoseRequired = !state.administration.courseComplete
 
   const adminValid =
-    !!state.administration.vaccineGiven &&
-    !!state.administration.schedule &&
+    !!given &&
+    given === choice &&
+    scheduleAllowed &&
+    (!offLabelUsed || state.administration.offLabelScheduleConsented) &&
     !!state.administration.doseNumberThisVisit &&
     !!state.administration.batchNumber &&
     !!state.administration.expiryDate &&
     !!state.administration.injectionSite &&
     !!state.administration.postObsMinutes &&
     state.administration.patientWell &&
-    state.administration.anaphylaxisKitChecked
+    state.administration.anaphylaxisKitChecked &&
+    (!nextDoseRequired || !!state.administration.nextDoseDueDate)
+
+  const adminError = (() => {
+    if (!given) return "Confirm the vaccine administered"
+    if (given !== choice) return "The vaccine administered must match the vaccine chosen on the eligibility step; go back and change the choice if a different product was given"
+    if (!schedule) return "Select the schedule"
+    if (!scheduleAllowed) return `${SCHEDULE_LABEL[schedule]} is not a schedule the document permits for ${PRODUCT_LABEL[given]}`
+    if (offLabelUsed && !state.administration.offLabelScheduleConsented) return "Very rapid schedule in a 16 or 17 year old is off-label: confirm it was explained and consented to, and recorded as such"
+    if (!state.administration.doseNumberThisVisit) return "Record the dose number at this visit"
+    if (!state.administration.batchNumber) return "Record the batch number"
+    if (!state.administration.expiryDate) return "Record the expiry date"
+    if (!state.administration.injectionSite) return "Record the injection site"
+    if (!state.administration.anaphylaxisKitChecked) return "Confirm adrenaline 1:1000 and the written anaphylaxis protocol are immediately available"
+    if (!state.administration.postObsMinutes || !state.administration.patientWell) return "Record that the 15 minute seated observation period was completed"
+    if (nextDoseRequired && !state.administration.nextDoseDueDate) return "Record the date the next dose is due, or mark the course complete"
+    return null
+  })()
+
+  const givenHasHepA = HEP_A_PRODUCTS.includes(given)
+  const givenHasHepB = HEP_B_PRODUCTS.includes(given)
 
   const adviceValid =
     state.advice.sideEffectsCounselled &&
+    state.advice.pilGiven &&
     state.advice.vaccineRecordCardIssued &&
-    state.advice.followUpScheduleAgreed
+    state.advice.followUpScheduleAgreed &&
+    state.advice.protectionByTravelExplained &&
+    state.advice.hepCNotCoveredExplained &&
+    (!givenHasHepA || state.advice.foodAndWaterHygieneCounselled) &&
+    (!givenHasHepB || state.advice.sexualHealthCounselling)
 
-  const canProceedByStep = [
-    true,
-    true,
-    !!state.travel.destinations && !!state.travel.departureDate,
-    eligibilityValid,
-    adminValid,
-    adviceValid,
-    true,
-    true,
+  const patientError = validatePatientStep(state.patient, { minAge: 1 })
+  const consentError = (() => {
+    const base = validateConsentStep(state.consent)
+    if (base) return base
+    if (isUnder16) {
+      if (state.travel.consentBasis !== "parental") return "Under 16: consent must be obtained from a person with parental responsibility"
+      if (!state.travel.consentGivenBy.trim()) return "Record the name and relationship of the person with parental responsibility who consented"
+    } else if (!state.travel.consentBasis) {
+      return "Record who gave consent"
+    }
+    return null
+  })()
+
+  const travelError = (() => {
+    if (!state.travel.destinations) return "Record the destination(s)"
+    if (!state.travel.departureDate) return "Record the departure date"
+    if (!state.travel.previousVaccinationInfoSufficient) return "Confirm sufficient information is available about any previous hepatitis A or B vaccination"
+    return null
+  })()
+
+  const stepErrors: (string | null)[] = [
+    patientError,
+    consentError,
+    travelError,
+    eligibilityError,
+    adminError,
+    adviceValid ? null : "Please confirm every counselling point that applies to the vaccine given",
+    null,
+    null,
   ]
-  const canProceed = canProceedByStep[currentStep]
+  const canProceed = stepErrors[currentStep] === null
 
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
     return {
@@ -305,8 +466,15 @@ export function HepABClient() {
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
       },
-      clinicalData: state as unknown as Record<string, unknown>,
-      outcome: "completed",
+      clinicalData: {
+        ...state,
+        pgdVersion: PGD_VERSION,
+        product: given ? PRODUCT_LABEL[given] : "",
+        scheduleLabel: schedule ? SCHEDULE_LABEL[schedule] : "",
+        route: "Intramuscular",
+        offLabelSchedule: offLabelUsed,
+      } as unknown as Record<string, unknown>,
+      outcome: blocked || !given ? "not_supplied" : "completed",
       summary: {
         pharmacistName: state.summary.pharmacistName,
         pharmacistGPhC: state.summary.pharmacistGPhC,
@@ -314,7 +482,7 @@ export function HepABClient() {
         consultationTime: state.summary.consultationTime,
       },
     }
-  }, [state])
+  }, [state, given, schedule, offLabelUsed, blocked])
 
   return (
     <div className="space-y-6">
@@ -327,9 +495,8 @@ export function HepABClient() {
         onNext={handleNext}
         onPrev={handlePrev}
         canProceed={canProceed}
-        validationError={
-          !canProceed ? "Please complete all required fields" : null
-        }
+        validationError={stepErrors[currentStep]}
+        isBlocked={blocked && currentStep === 3}
         getConsultationData={getConsultationData}
       >
         {currentStep === 0 && (
@@ -346,15 +513,42 @@ export function HepABClient() {
         )}
 
         {currentStep === 1 && (
-          <ConsentStep
-            consent={state.consent}
-            onChange={(field, value) =>
-              setState((prev) => ({
-                ...prev,
-                consent: { ...prev.consent, [field]: value },
-              }))
-            }
-          />
+          <div className="space-y-4">
+            <ConsentStep
+              consent={state.consent}
+              onChange={(field, value) =>
+                setState((prev) => ({
+                  ...prev,
+                  consent: { ...prev.consent, [field]: value },
+                }))
+              }
+            />
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-3">
+              <p className="text-sm font-semibold text-amber-900">Who gave consent</p>
+              <SelectInput
+                label="Consent given by"
+                value={state.travel.consentBasis}
+                onChange={(v) => updateTravel("consentBasis", v as ConsentBasis)}
+                options={[
+                  ...(isUnder16 ? [] : [{ value: "self", label: "The patient (16 and over)" }]),
+                  { value: "parental", label: "A person with parental responsibility (patient is a child)" },
+                ]}
+                required
+              />
+              {state.travel.consentBasis === "parental" && (
+                <TextInput
+                  label="Name and relationship of the person with parental responsibility"
+                  value={state.travel.consentGivenBy}
+                  onChange={(v) => updateTravel("consentGivenBy", v)}
+                  placeholder="e.g. Jane Smith, mother"
+                  required
+                />
+              )}
+              <p className="text-xs text-amber-900">
+                The patient (or parent) understands this is a private service and what it costs.
+              </p>
+            </div>
+          </div>
         )}
 
         {currentStep === 2 && (
@@ -387,37 +581,42 @@ export function HepABClient() {
                 Risk factors driving vaccine choice
               </p>
               <Checkbox
-                label="Hepatitis A risk — travel to intermediate/high endemic area (much of Africa, Asia, Central/South America)"
+                label="Hepatitis A inclusion: travel to an area of moderate or high hepatitis A endemicity (in practice anywhere outside northern and western Europe, North America, Australia and New Zealand)"
                 checked={state.travel.hepARisk}
                 onChange={(v) => updateTravel("hepARisk", v)}
               />
               <Checkbox
-                label="Hepatitis B risk — longer stay, healthcare exposure, sexual/blood exposure risk, body modification, or close family contact"
+                label="Hepatitis A inclusion, non-travel risk factor: chronic liver disease including chronic hepatitis B or C, haemophilia or receipt of plasma-derived clotting factors, injecting drug use, gay, bisexual and other men who have sex with men, or occupational risk such as laboratory or sewage work"
+                checked={state.travel.hepANonTravelRisk}
+                onChange={(v) => updateTravel("hepANonTravelRisk", v)}
+              />
+              <Checkbox
+                label="Hepatitis B inclusion: travel to an area of intermediate or high prevalence together with a risk factor, or a lifestyle risk factor regardless of travel (longer stay or expatriate posting, likely need for medical or dental care abroad, travel for medical treatment, unprotected sex with new partners, injecting drug use, tattooing, piercing or acupuncture where sterility cannot be assured, contact sports, adopting a child from a higher prevalence country)"
                 checked={state.travel.hepBRisk}
                 onChange={(v) => updateTravel("hepBRisk", v)}
               />
               <Checkbox
-                label="Longer-term stay (≥4 weeks) or repeat visits"
+                label="Longer stay or expatriate posting, or repeat visits"
                 checked={state.travel.longerStay}
                 onChange={(v) => updateTravel("longerStay", v)}
               />
               <Checkbox
-                label="Rural / remote travel"
+                label="Rural / remote travel, or likely need for medical or dental care abroad"
                 checked={state.travel.ruralOrRemote}
                 onChange={(v) => updateTravel("ruralOrRemote", v)}
               />
               <Checkbox
-                label="Healthcare worker / aid worker / blood-and-body-fluid exposure risk"
+                label="Relief or aid healthcare work abroad with blood or body fluid exposure (NOT occupational hepatitis B vaccination requiring proof of immunity, which is excluded from this PGD)"
                 checked={state.travel.healthcareWorkerExposure}
                 onChange={(v) => updateTravel("healthcareWorkerExposure", v)}
               />
               <Checkbox
-                label="Sexual or blood-borne exposure risk (multiple partners, unprotected sex, IVDU)"
+                label="Sexual or blood-borne exposure risk (unprotected sex with new partners, injecting drug use, contact sports)"
                 checked={state.travel.sexualOrBloodExposureRisk}
                 onChange={(v) => updateTravel("sexualOrBloodExposureRisk", v)}
               />
               <Checkbox
-                label="Body modification while abroad (tattoos, piercings)"
+                label="Tattooing, piercing or acupuncture abroad where sterility cannot be assured"
                 checked={state.travel.bodyModificationRisk}
                 onChange={(v) => updateTravel("bodyModificationRisk", v)}
               />
@@ -447,6 +646,14 @@ export function HepABClient() {
                   placeholder="e.g. Twinrix x2 doses in 2024, booster due"
                 />
               )}
+              <Checkbox
+                label="Sufficient information is available about any previous hepatitis A or B vaccination (inclusion criterion)"
+                checked={state.travel.previousVaccinationInfoSufficient}
+                onChange={(v) => updateTravel("previousVaccinationInfoSufficient", v)}
+              />
+              <p className="text-xs text-gray-600">
+                An interrupted course is resumed, not restarted; continue with the same product where possible. A late hepatitis A booster still works. Hepatitis A can be given up to the day of departure; hepatitis B needs more lead time (very rapid schedule gives roughly 65% seroprotection by day 28). For a late presenter, still start the course, arrange completion on return, and be explicit that they will not be fully protected while away.
+              </p>
             </div>
           </div>
         )}
@@ -467,7 +674,7 @@ export function HepABClient() {
                 }
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
               >
-                <option value="">— select —</option>
+                <option value="">Select</option>
                 <optgroup label="Combined Hep A + Hep B">
                   <option value="twinrix-adult">
                     Twinrix Adult (1 mL IM, &ge;16y)
@@ -509,7 +716,7 @@ export function HepABClient() {
 
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-2">
               <p className="text-sm font-semibold text-red-900">
-                Contraindications &mdash; any tick here BLOCKS the consultation
+                Contraindications: any tick here BLOCKS the consultation
               </p>
               <Checkbox
                 label="Known hypersensitivity to this vaccine, any of its active substances, or excipients"
@@ -529,45 +736,79 @@ export function HepABClient() {
                 />
               )}
               <Checkbox
-                label="Acute moderate or severe febrile illness today — postpone vaccination"
+                label="Acute severe febrile illness: postpone until recovered (minor illness without fever is not a reason to defer)"
                 checked={state.eligibility.acuteFebrileIllness}
                 onChange={(v) => updateEligibility("acuteFebrileIllness", v)}
               />
               <Checkbox
-                label="Previous anaphylaxis to a Hepatitis A or Hepatitis B vaccine"
+                label="Confirmed anaphylactic reaction to a previous dose of the same vaccine, or to any component"
                 checked={state.eligibility.previousAnaphylaxisToHepVaccine}
                 onChange={(v) =>
                   updateEligibility("previousAnaphylaxisToHepVaccine", v)
                 }
               />
               <Checkbox
-                label="Severe yeast allergy (blocks all Hep B-containing vaccines including Twinrix and Engerix-B)"
-                checked={state.eligibility.yeastAllergy}
-                onChange={(v) => updateEligibility("yeastAllergy", v)}
+                label="Previous hypersensitivity reaction following a hepatitis A or hepatitis B containing vaccine"
+                checked={state.eligibility.previousHypersensitivityToHepVaccine}
+                onChange={(v) =>
+                  updateEligibility("previousHypersensitivityToHepVaccine", v)
+                }
               />
               <Checkbox
-                label="Severe neomycin allergy (blocks all Hep A-containing vaccines including Twinrix and Havrix)"
+                label="Out of scope: occupational hepatitis B vaccination (healthcare or laboratory workers, employment requiring proof of immunity); renal failure or dialysis; newborn of a hepatitis B positive mother; ANY post-exposure situation including needlestick or sexual assault; known non-responder after a completed course; post-vaccination serology requested"
+                checked={state.eligibility.outOfScope}
+                onChange={(v) => updateEligibility("outOfScope", v)}
+              />
+              <Checkbox
+                label="The patient requires proof of immunity (serology is out of scope)"
+                checked={state.eligibility.proofOfImmunityRequired}
+                onChange={(v) => updateEligibility("proofOfImmunityRequired", v)}
+              />
+              <Checkbox
+                label="Neomycin allergy (excludes Havrix, Twinrix and Avaxim, which contain trace neomycin)"
                 checked={state.eligibility.neomycinAllergy}
                 onChange={(v) => updateEligibility("neomycinAllergy", v)}
+              />
+              <Checkbox
+                label="Severe yeast allergy (blocks all Hep B-containing vaccines including Twinrix and Engerix B)"
+                checked={state.eligibility.yeastAllergy}
+                onChange={(v) => updateEligibility("yeastAllergy", v)}
               />
             </div>
 
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-2">
               <p className="text-sm font-semibold text-amber-900">
-                Cautions &mdash; proceed with documented benefit-vs-risk assessment
+                Cautions: proceed with documented benefit-vs-risk assessment
               </p>
               <Checkbox
-                label="Pregnant (Hep A inactivated and Hep B recombinant may be given when benefit outweighs theoretical risk)"
+                label="Pregnant. Hepatitis A vaccine may be given where clearly indicated (Havrix preferred; Avaxim only where clearly necessary after a recorded risk-benefit assessment). Twinrix is not given in pregnancy under this PGD: where hepatitis B protection is needed, use monovalent hepatitis B vaccine and document the risk assessment"
                 checked={state.eligibility.pregnant}
                 onChange={(v) => updateEligibility("pregnant", v)}
               />
+              {state.eligibility.pregnant && (
+                <TextArea
+                  label="Pregnancy: risk assessment documented"
+                  value={state.eligibility.pregnancyRiskAssessment}
+                  onChange={(v) => updateEligibility("pregnancyRiskAssessment", v)}
+                  rows={2}
+                  placeholder="Indication, product chosen and why, discussion with the patient"
+                />
+              )}
               <Checkbox
-                label="Breastfeeding"
+                label="Breastfeeding. Excretion in breast milk is unknown; no established contraindication. Weigh benefit and record the decision"
                 checked={state.eligibility.breastfeeding}
                 onChange={(v) => updateEligibility("breastfeeding", v)}
               />
+              {state.eligibility.breastfeeding && (
+                <TextInput
+                  label="Breastfeeding: decision recorded"
+                  value={state.eligibility.breastfeedingDecision}
+                  onChange={(v) => updateEligibility("breastfeedingDecision", v)}
+                  placeholder="e.g. benefit outweighs unknown risk, patient wishes to proceed"
+                />
+              )}
               <Checkbox
-                label="Immunocompromised (may require additional doses; serology may be indicated for Hep B)"
+                label="Immunosuppression, including HIV. Response may be reduced and additional doses may be needed. Where the patient needs to know whether they responded, that requires serology and is outside this PGD: counsel and refer rather than assuming protection"
                 checked={state.eligibility.immunocompromised}
                 onChange={(v) => updateEligibility("immunocompromised", v)}
               />
@@ -580,28 +821,46 @@ export function HepABClient() {
                 />
               )}
               <Checkbox
-                label="On anticoagulants (use thin needle, firm pressure &ge;2 minutes)"
+                label="On anticoagulants (fine needle, 25G where possible, firm pressure without rubbing for at least 2 minutes)"
                 checked={state.eligibility.onAnticoagulants}
                 onChange={(v) => updateEligibility("onAnticoagulants", v)}
               />
               <Checkbox
-                label="Bleeding disorder (haemophilia, severe thrombocytopenia &mdash; assess as above)"
+                label="Bleeding disorder or thrombocytopenia (fine needle and pressure as above; deep subcutaneous is the fallback, but the Twinrix SPC warns the subcutaneous route may give a suboptimal response)"
                 checked={state.eligibility.bleedingDisorder}
                 onChange={(v) => updateEligibility("bleedingDisorder", v)}
               />
               <Checkbox
-                label="Chronic liver disease (strongly indicated &mdash; accelerated schedule may be appropriate)"
+                label="Chronic liver disease (hepatitis A indicated as a non-travel risk factor)"
                 checked={state.eligibility.chronicLiverDisease}
                 onChange={(v) => updateEligibility("chronicLiverDisease", v)}
               />
+              <Checkbox
+                label="Latex allergy: check the current PIL for the presentation in hand before reassuring (adult Avaxim attached-needle shield may be natural rubber)"
+                checked={state.eligibility.latexAllergy}
+                onChange={(v) => updateEligibility("latexAllergy", v)}
+              />
+              <Checkbox
+                label="Other vaccines are being given at the same visit"
+                checked={state.eligibility.otherVaccinesSameVisit}
+                onChange={(v) => updateEligibility("otherVaccinesSameVisit", v)}
+              />
+              {choice === "twinrix-paediatric" && state.eligibility.otherVaccinesSameVisit && (
+                <Checkbox
+                  label="Twinrix Paediatric: the SPC states vaccines other than Cervarix should not be given at the same time. Either separate the visits, or record here that co-administration was an informed off-label decision"
+                  checked={state.eligibility.twinrixPaedCoAdminRecorded}
+                  onChange={(v) => updateEligibility("twinrixPaedCoAdminRecorded", v)}
+                />
+              )}
             </div>
 
             {blocked && (
-              <div className="bg-red-100 border border-red-400 rounded-lg p-3">
+              <div className="bg-red-100 border border-red-400 rounded-lg p-3 space-y-1">
                 <p className="text-sm font-semibold text-red-900">
-                  Consultation blocked. Patient does not meet PGD inclusion
-                  criteria for the selected vaccine. Refer to GP / travel
-                  clinic for individual prescription assessment.
+                  Consultation blocked. {blockReason}
+                </p>
+                <p className="text-xs text-red-900">
+                  Give risk reduction advice regardless (food and water hygiene for hepatitis A; avoiding unprotected sex, unsterile tattooing, piercing and acupuncture, and not sharing needles or razors for hepatitis B). Document the reason, the advice given and the decision reached.
                 </p>
               </div>
             )}
@@ -628,7 +887,7 @@ export function HepABClient() {
                 }
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
               >
-                <option value="">— confirm —</option>
+                <option value="">Confirm</option>
                 <option value="twinrix-adult">Twinrix Adult</option>
                 <option value="twinrix-paediatric">Twinrix Paediatric</option>
                 <option value="havrix-monodose">Havrix Monodose</option>
@@ -651,17 +910,27 @@ export function HepABClient() {
                 }
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
               >
-                <option value="">— select schedule —</option>
-                <option value="standard-0-1-6">
-                  Standard: 0 / 1 / 6 months (preferred if time allows)
-                </option>
-                <option value="accelerated-0-7-21-12m">
-                  Accelerated: 0 / 7 / 21 days + booster at 12 months
-                </option>
-                <option value="very-accelerated">
-                  Very accelerated: 0 / 7 / 21 days (Twinrix Adult only)
-                </option>
+                <option value="">Select schedule</option>
+                {(given ? SCHEDULES_FOR_PRODUCT[given] : []).map((s) => (
+                  <option key={s} value={s}>
+                    {SCHEDULE_LABEL[s as Exclude<Schedule, "">]}
+                  </option>
+                ))}
               </select>
+              {given && (
+                <p className="text-xs text-gray-500 mt-1">
+                  {PRODUCT_LABEL[given]}. Only the schedules the document permits for this product are offered. Twinrix Paediatric has no accelerated or rapid schedule; do not improvise one.
+                </p>
+              )}
+              {rapidOffLabel && (
+                <div className="mt-2">
+                  <Checkbox
+                    label="Very rapid schedule in a 16 or 17 year old is off-label under this PGD: explained to the patient, consented to, and recorded as an explicit decision (the standard schedule is the alternative)"
+                    checked={state.administration.offLabelScheduleConsented}
+                    onChange={(v) => updateAdmin("offLabelScheduleConsented", v)}
+                  />
+                </div>
+              )}
             </div>
 
             <div>
@@ -678,11 +947,11 @@ export function HepABClient() {
                 }
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
               >
-                <option value="">— select —</option>
+                <option value="">Select</option>
                 <option value="1">Dose 1 (primary)</option>
                 <option value="2">Dose 2</option>
                 <option value="3">Dose 3</option>
-                <option value="booster">Booster (12 months post accelerated)</option>
+                <option value="booster">Booster or 12-month dose (hepatitis A booster at 6 to 12 months; 12-month dose after an accelerated or very rapid schedule)</option>
               </select>
             </div>
 
@@ -718,22 +987,21 @@ export function HepABClient() {
                 }
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
               >
-                <option value="">— select —</option>
-                <option value="left-deltoid">Left deltoid (preferred adults)</option>
+                <option value="">Select</option>
+                <option value="left-deltoid">Left deltoid (older children and adults)</option>
                 <option value="right-deltoid">Right deltoid</option>
                 <option value="anterolateral-thigh">
-                  Anterolateral thigh (young children)
+                  Anterolateral thigh (infants and young children)
                 </option>
               </select>
               <p className="text-xs text-gray-500 mt-1">
-                Intramuscular only. Do NOT inject IV, subcutaneously or
-                intradermally.
+                Intramuscular. Never into the gluteal muscle, and never intravenously or intradermally. Deep subcutaneous is the fallback only for bleeding disorders (Twinrix SPC warns of a suboptimal response). Where another vaccine is given at the same visit, use a separate limb where possible, or sites at least 2.5 cm apart, and record the site of each.
               </p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-navy-900 mb-1">
-                Post-administration observation
+                Post-administration observation (observe every patient for 15 minutes, seated) <span className="text-red-400">*</span>
               </label>
               <select
                 value={state.administration.postObsMinutes}
@@ -745,19 +1013,19 @@ export function HepABClient() {
                 }
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
               >
-                <option value="">— select —</option>
+                <option value="">Select</option>
                 <option value="15">15 minutes (routine)</option>
                 <option value="30">30 minutes (history of severe atopy)</option>
               </select>
             </div>
 
             <Checkbox
-              label="Patient remained well during observation period"
+              label="Observation period completed, seated, and patient remained well"
               checked={state.administration.patientWell}
               onChange={(v) => updateAdmin("patientWell", v)}
             />
             <Checkbox
-              label="Anaphylaxis kit checked, in date and accessible"
+              label="Adrenaline 1:1000 injection immediately available, in date, with a written anaphylaxis protocol consistent with Resuscitation Council UK guidance"
               checked={state.administration.anaphylaxisKitChecked}
               onChange={(v) => updateAdmin("anaphylaxisKitChecked", v)}
             />
@@ -775,12 +1043,19 @@ export function HepABClient() {
               />
             )}
 
-            <TextInput
-              label="Next dose due date"
-              type="date"
-              value={state.administration.nextDoseDueDate}
-              onChange={(v) => updateAdmin("nextDoseDueDate", v)}
+            <Checkbox
+              label="Course complete with this dose (no further dose due)"
+              checked={state.administration.courseComplete}
+              onChange={(v) => updateAdmin("courseComplete", v)}
             />
+            {!state.administration.courseComplete && (
+              <TextInput
+                label="Next dose due date"
+                type="date"
+                value={state.administration.nextDoseDueDate}
+                onChange={(v) => updateAdmin("nextDoseDueDate", v)}
+              />
+            )}
           </div>
         )}
 
@@ -792,8 +1067,8 @@ export function HepABClient() {
               </p>
               <ul className="text-sm text-blue-900 list-disc ml-5 space-y-1">
                 <li>
-                  Common side effects: sore arm, mild fever, headache, fatigue
-                  &mdash; usually resolve within 48 hours
+                  Common side effects: sore arm, mild fever, headache, fatigue;
+                  usually resolve within 48 hours
                 </li>
                 <li>
                   Seek urgent help if breathing difficulty, swelling of face /
@@ -806,7 +1081,7 @@ export function HepABClient() {
                   the third dose)
                 </li>
                 <li>
-                  Complete the full schedule &mdash; partial vaccination does not
+                  Complete the full schedule: partial vaccination does not
                   provide long-term protection
                 </li>
                 <li>
@@ -814,13 +1089,24 @@ export function HepABClient() {
                   sex / no needle sharing / no body modification by unverified
                   operators (Hep B)
                 </li>
+                <li>
+                  Vaccination does not protect against hepatitis C, for which there is no vaccine; the same precautions apply
+                </li>
+                <li>
+                  Keep a record of what was given, including the brand, because it determines how a course is completed elsewhere
+                </li>
               </ul>
             </div>
 
             <Checkbox
-              label="Common and serious side effects counselled"
+              label="Common local and systemic reactions and their self-limiting nature counselled; when to seek urgent help"
               checked={state.advice.sideEffectsCounselled}
               onChange={(v) => updateAdvice("sideEffectsCounselled", v)}
+            />
+            <Checkbox
+              label="Manufacturer's patient information leaflet given"
+              checked={state.advice.pilGiven}
+              onChange={(v) => updateAdvice("pilGiven", v)}
             />
             <Checkbox
               label="Yellow Card scheme leaflet given / discussed"
@@ -828,14 +1114,24 @@ export function HepABClient() {
               onChange={(v) => updateAdvice("yellowCardLeafletGiven", v)}
             />
             <Checkbox
-              label="Vaccine record card issued (with batch, date, next-dose date)"
+              label="Written record given (brand, strength, batch, date) and patient advised to keep it because the brand determines how a course is completed elsewhere"
               checked={state.advice.vaccineRecordCardIssued}
               onChange={(v) => updateAdvice("vaccineRecordCardIssued", v)}
             />
             <Checkbox
-              label="Follow-up dose dates confirmed with patient and reminder set"
+              label="Schedule given in writing with the date each remaining dose is due; explained that an incomplete course gives incomplete protection"
               checked={state.advice.followUpScheduleAgreed}
               onChange={(v) => updateAdvice("followUpScheduleAgreed", v)}
+            />
+            <Checkbox
+              label="Explicit about what protection the patient will and will not have by the time they travel (particularly hepatitis B on a rapid schedule)"
+              checked={state.advice.protectionByTravelExplained}
+              onChange={(v) => updateAdvice("protectionByTravelExplained", v)}
+            />
+            <Checkbox
+              label="Explained that vaccination does not protect against hepatitis C and the same precautions apply"
+              checked={state.advice.hepCNotCoveredExplained}
+              onChange={(v) => updateAdvice("hepCNotCoveredExplained", v)}
             />
             <Checkbox
               label="GP informed (with consent)"
@@ -848,12 +1144,12 @@ export function HepABClient() {
               onChange={(v) => updateAdvice("travelHealthAdviceProvided", v)}
             />
             <Checkbox
-              label="Food and water hygiene counselling provided (Hep A)"
+              label={`Risk reduction advice, hepatitis A: food and water hygiene${givenHasHepA ? " (required for the vaccine given)" : ""}`}
               checked={state.advice.foodAndWaterHygieneCounselled}
               onChange={(v) => updateAdvice("foodAndWaterHygieneCounselled", v)}
             />
             <Checkbox
-              label="Sexual health and blood-borne risk counselling provided (Hep B)"
+              label={`Risk reduction advice, hepatitis B: avoiding unprotected sex, unsterile tattooing, piercing and acupuncture, and not sharing needles or razors${givenHasHepB ? " (required for the vaccine given)" : ""}`}
               checked={state.advice.sexualHealthCounselling}
               onChange={(v) => updateAdvice("sexualHealthCounselling", v)}
             />
@@ -935,8 +1231,9 @@ export function HepABClient() {
                 }))
               }
               rows={4}
-              placeholder="Anything else worth recording — patient queries, future risk profile, anything that would matter at next appointment."
+              placeholder="Anything else worth recording: patient queries, future risk profile, anything that would matter at next appointment."
             />
+            <p className="text-xs text-gray-500">Administered under {PGD_VERSION}.</p>
           </div>
         )}
 

@@ -10,7 +10,7 @@ export default function ChickenpoxPage() {
           Varicella (Chickenpox) Vaccination
         </h1>
         <p className="text-gray-600">
-          Patient Group Direction consultation tool for varicella vaccination in eligible adults and children.
+          Patient Group Direction consultation tool for varicella vaccination with Varivax or Varilrix in susceptible individuals aged 12 months and over with no history of chickenpox. Two 0.5 mL doses. Varivax and Varilrix Chickenpox Vaccination PGD v004, issued 11 September 2026.
         </p>
       </div>
       <ChickenpoxClient />

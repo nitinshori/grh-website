@@ -22,14 +22,14 @@ export default function MeningitisACWYPage() {
             <p className="text-gray-600 mb-4">PGD Consultation for UK Pharmacies</p>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-900">
-                This ePGD guides pharmacists in the supply and administration of meningitis ACWY (MenACWY) conjugate vaccines to eligible patients, particularly those travelling to high-risk regions or attending university.
+                This ePGD guides pharmacists in the administration of meningococcal ACWY conjugate vaccine (Nimenrix from 6 weeks, MenQuadfi from 12 months, Menveo from 2 years) for travel-related protection, including the certificate required for entry to Saudi Arabia for Hajj and Umrah. Meningococcal ACWY (Travel and Hajj/Umrah) PGD v006, issued 11 September 2026.
               </p>
             </div>
           </div>
         </div>
         <MeningitisACWYClient />
         <div className="mt-8 text-center text-xs text-gray-500">
-          <p>Get Real Health ePGD — Meningitis ACWY Travel | Confidential Patient Information</p>
+          <p>Get Real Health ePGD, Meningitis ACWY Travel | Confidential Patient Information</p>
         </div>
       </div>
     </div>

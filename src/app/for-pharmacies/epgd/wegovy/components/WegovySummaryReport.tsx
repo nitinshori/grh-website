@@ -1,7 +1,13 @@
 "use client";
 
 import type { WegovyConsultationState } from "../lib/wegovy-types";
-import { calculateBMI, getBMICategory } from "../lib/wegovy-clinical-logic";
+import { WEGOVY_PGD_VERSION } from "../lib/wegovy-types";
+import {
+  calculateBMI,
+  getBMICategory,
+  getMonthsOnTreatment,
+  getPercentWeightLost,
+} from "../lib/wegovy-clinical-logic";
 import {
   SectionHeader,
   Row,
@@ -18,6 +24,16 @@ const COMORBIDITY_LABELS: Record<string, string> = {
   osteoarthritis: "Osteoarthritis",
   pcos: "PCOS",
   dyslipidaemia: "Dyslipidaemia",
+  cardiovascularDisease: "Established cardiovascular disease",
+};
+
+const DOSE_PRODUCT: Record<string, string> = {
+  "0.25mg": "Wegovy FlexTouch 0.25 mg solution for injection in pre-filled pen (4 doses)",
+  "0.5mg": "Wegovy FlexTouch 0.5 mg solution for injection in pre-filled pen (4 doses)",
+  "1mg": "Wegovy FlexTouch 1.0 mg solution for injection in pre-filled pen (4 doses)",
+  "1.7mg": "Wegovy FlexTouch 1.7 mg solution for injection in pre-filled pen (4 doses)",
+  "2.4mg": "Wegovy FlexTouch 2.4 mg solution for injection in pre-filled pen (4 doses)",
+  "7.2mg": "Wegovy 7.2 mg solution for injection in pre-filled pen (four single use pens)",
 };
 
 export function WegovySummaryReport({ state }: { state: WegovyConsultationState }) {
@@ -48,10 +64,10 @@ export function WegovySummaryReport({ state }: { state: WegovyConsultationState 
 
   const counsellingItems: [string, boolean][] = [
     ["Injection technique explained", state.counselling.injectionTechnique],
-    ["Storage (fridge 2-8°C) advised", state.counselling.storageFridge],
-    ["Missed dose protocol explained", state.counselling.missedDose],
+    ["Storage advised (fridge 2°C to 8°C; 6 weeks below 30°C after first use; travel)", state.counselling.storageFridge],
+    ["Missed dose protocol explained (within 5 days; more than 2 missed, re-escalate)", state.counselling.missedDose],
     [
-      "GI side effects (nausea, constipation) discussed",
+      "GI side effects and adequate fluid intake discussed",
       state.counselling.giSideEffects,
     ],
     ["Pancreatitis warning signs explained", state.counselling.pancreatitisWarning],
@@ -60,20 +76,33 @@ export function WegovySummaryReport({ state }: { state: WegovyConsultationState 
       state.counselling.gallbladderWarning,
     ],
     [
-      "Suicidal ideation warning signs explained",
+      "Urgent warning symptoms explained (severe abdominal pain, persistent vomiting, jaundice, sudden visual loss, sustained rise in heart rate)",
+      state.counselling.urgentWarningSymptoms,
+    ],
+    [
+      "Mood and mental health: when to seek help explained",
       state.counselling.suicidalIdeationWarning,
     ],
     [
-      "OCP efficacy reduction and backup contraception advised",
+      "Contraception and pregnancy advice given (stop 2 months before planned pregnancy)",
       state.counselling.contraceptionAdvice,
     ],
     [
-      "Hypoglycaemia risk (if on insulin/SU) explained",
+      "Hypoglycaemia signs and symptoms explained (type 2 diabetes)",
       state.counselling.hypoglycaemiaRisk,
     ],
-    ["Diet and exercise advice provided", state.counselling.dietExerciseAdvice],
-    ["Follow-up schedule arranged", state.counselling.followUpSchedule],
+    ["Diet and physical activity advice provided", state.counselling.dietExerciseAdvice],
+    [
+      "Written information given (PIL, lifestyle advice, agreed target weight)",
+      state.counselling.writtenInformationGiven,
+    ],
+    ["Follow-up and review arranged", state.counselling.followUpSchedule],
+    ["Patient told the NHS route exists and how to access it", state.counselling.nhsRouteExplained],
+    ["GP informed of this initiation or review", state.counselling.gpInformed],
   ];
+
+  const monthsOnTreatment = getMonthsOnTreatment(state);
+  const percentLost = getPercentWeightLost(state);
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-6 print:shadow-none print:border-0 print:p-0">
@@ -82,6 +111,7 @@ export function WegovySummaryReport({ state }: { state: WegovyConsultationState 
         <h2 className="text-lg font-bold text-navy-900">
           Wegovy (Semaglutide) Weight Management Consultation Record
         </h2>
+        <p className="text-xs text-gray-500 mt-1">{WEGOVY_PGD_VERSION}</p>
         <p className="text-xs text-gray-500 mt-1">
           Consultation Date: {state.summary.consultationDate} |{" "}
           {state.summary.consultationTime}
@@ -144,14 +174,30 @@ export function WegovySummaryReport({ state }: { state: WegovyConsultationState 
           }
         />
         <Row
-          label="Target Weight Loss"
+          label="Target Weight Agreed"
           value={state.weightAssessment.targetWeightLoss || "Not specified"}
+        />
+        <Row
+          label="Initial Assessment Completed"
+          value={state.weightAssessment.initialAssessmentCompleted ? "Yes" : "No"}
+        />
+        <Row
+          label="Lifestyle Plan Agreed"
+          value={state.weightAssessment.lifestylePlanAgreed ? "Yes" : "No"}
+        />
+        <Row
+          label="Prescribed Medication Causing Weight Gain"
+          value={state.weightAssessment.medicationInducedWeightGain ? "Yes (GP referral advised)" : "No"}
         />
       </div>
 
       {/* Medical History */}
-      <SectionHeader>Medical History — Key Points</SectionHeader>
+      <SectionHeader>Medical History: Key Points</SectionHeader>
       <div className="space-y-1.5 mb-6">
+        <Row
+          label="Hypersensitivity to Semaglutide or Excipients"
+          value={state.medicalHistory.semaglutideHypersensitivity ? "Yes" : "No"}
+        />
         <Row
           label="Medullary Thyroid Carcinoma (personal)"
           value={state.medicalHistory.personalMTCHistory ? "Yes" : "No"}
@@ -162,32 +208,52 @@ export function WegovySummaryReport({ state }: { state: WegovyConsultationState 
         />
         <Row label="MEN2 Syndrome" value={state.medicalHistory.men2 ? "Yes" : "No"} />
         <Row
-          label="Severe GI Disease"
-          value={state.medicalHistory.severeGIDisease ? "Yes" : "No"}
-        />
-        <Row
-          label="Pancreatitis History"
+          label="Pancreatitis History (acute or chronic)"
           value={state.medicalHistory.pancreatitisHistory ? "Yes" : "No"}
         />
         <Row
-          label="Gallbladder Disease"
+          label="Severe GI Disease (incl. gastroparesis)"
+          value={state.medicalHistory.severeGIDisease ? "Yes" : "No"}
+        />
+        <Row
+          label="Current Gallstones or Cholecystitis"
           value={state.medicalHistory.gallbladderDisease ? "Yes" : "No"}
+        />
+        <Row
+          label="Cholecystectomy Within 3 Months"
+          value={state.medicalHistory.recentCholecystectomy ? "Yes" : "No"}
+        />
+        <Row
+          label="Obesity Caused by Endocrinological Disorder"
+          value={state.medicalHistory.endocrineObesity ? "Yes" : "No"}
+        />
+        <Row
+          label="Type 1 Diabetes"
+          value={state.medicalHistory.type1Diabetes ? "Yes" : "No"}
         />
         <Row
           label="Diabetic Retinopathy"
           value={state.medicalHistory.diabeticRetinopathy ? "Yes" : "No"}
         />
         <Row
-          label="Active Eating Disorder"
-          value={state.medicalHistory.eatingDisorder ? "Yes" : "No"}
+          label="Severe Renal Impairment (eGFR below 30) or ESRD"
+          value={state.medicalHistory.severeRenal ? "Yes" : "No"}
+        />
+        <Row
+          label="Mild to Moderate Renal Impairment"
+          value={state.medicalHistory.mildModerateRenal ? "Yes" : "No"}
         />
         <Row
           label="Severe Hepatic Impairment"
           value={state.medicalHistory.severeHepatic ? "Yes" : "No"}
         />
         <Row
-          label="Severe Renal Impairment"
-          value={state.medicalHistory.severeRenal ? "Yes" : "No"}
+          label="Heart Failure with Reduced EF (below 40%)"
+          value={state.medicalHistory.heartFailureReducedEF ? "Yes" : "No"}
+        />
+        <Row
+          label="Active Eating Disorder"
+          value={state.medicalHistory.eatingDisorder ? "Yes" : "No"}
         />
         <Row label="Pregnant" value={state.medicalHistory.pregnant ? "Yes" : "No"} />
         <Row
@@ -199,16 +265,36 @@ export function WegovySummaryReport({ state }: { state: WegovyConsultationState 
           value={state.medicalHistory.planningPregnancy ? "Yes" : "No"}
         />
         <Row
-          label="Depression / Mental Health"
+          label="History of Suicidal Ideation or Active Severe Mental Illness"
           value={state.medicalHistory.depression ? "Yes" : "No"}
         />
+        {state.medicalHistory.depression && (
+          <>
+            <Row
+              label="Psychiatric Oversight in Place"
+              value={state.medicalHistory.psychiatricOversightInPlace ? "Yes" : "No"}
+            />
+            <Row
+              label="Concern About Current Mental State"
+              value={state.medicalHistory.mentalHealthConcern ? "Yes" : "No"}
+            />
+          </>
+        )}
         <Row
-          label="Suicidal Ideation"
+          label="Current Suicidal Ideation"
           value={state.medicalHistory.suicidalIdeation ? "Yes" : "No"}
+        />
+        <Row
+          label="Planned General Anaesthesia or Deep Sedation"
+          value={state.medicalHistory.plannedAnaesthesia ? "Yes" : "No"}
         />
         <Row
           label="Thyroid Disease"
           value={state.medicalHistory.thyroidDisease ? "Yes" : "No"}
+        />
+        <Row
+          label="Not Suitable in Clinical Judgement"
+          value={state.medicalHistory.clinicalJudgementUnsuitable ? "Yes" : "No"}
         />
       </div>
 
@@ -220,23 +306,28 @@ export function WegovySummaryReport({ state }: { state: WegovyConsultationState 
           <Row label="Insulin Details" value={state.medications.insulinDetails || "N/A"} />
         )}
         <Row
-          label="Takes Sulphonylureas"
+          label="Takes Sulfonylurea or Meglitinide"
           value={state.medications.takesSulphonylureas ? "Yes" : "No"}
         />
         {state.medications.takesSulphonylureas && (
           <Row
-            label="Sulphonylurea Details"
+            label="Sulfonylurea / Meglitinide Details"
             value={state.medications.sulphonylureDetails || "N/A"}
           />
         )}
         <Row
-          label="Takes Oral Contraceptives"
-          value={state.medications.takesOralContraceptives ? "Yes" : "No"}
-        />
-        <Row
-          label="Already on GLP-1 Agonist"
+          label="Already on GLP-1 Receptor Agonist (any indication)"
           value={state.medications.currentGLP1 ? "Yes" : "No"}
         />
+        <Row
+          label="Type 2 Diabetes on Metformin / SGLT2 / DPP-4 Only"
+          value={state.medications.takesOtherDiabetesMeds ? "Yes (inform GP)" : "No"}
+        />
+        <Row
+          label="Warfarin, Coumarin or Narrow Therapeutic Index Medicine"
+          value={state.medications.takesWarfarinOrNTI ? "Yes" : "No"}
+        />
+        <Row label="Takes HRT" value={state.medications.takesHRT ? "Yes" : "No"} />
         <Row
           label="Other Medications"
           value={state.medications.otherMedications || "None reported"}
@@ -293,12 +384,29 @@ export function WegovySummaryReport({ state }: { state: WegovyConsultationState 
       )}
 
       {/* Dose Selection */}
-      <SectionHeader>Dose Selection & Initiation</SectionHeader>
+      <SectionHeader>Dose Selection & Supply</SectionHeader>
       <div className="space-y-1.5 mb-6">
         <Row label="Current Dose Stage" value={state.doseSelection.currentDoseStage} />
         <Row label="Selected Dose" value={state.doseSelection.dose || "Not selected"} />
         <Row
-          label="Weeks at Current Dose"
+          label="Product Supplied (name, brand, form)"
+          value={DOSE_PRODUCT[state.doseSelection.dose] || "Not selected"}
+        />
+        <Row label="Batch Number" value={state.doseSelection.batchNumber || "Not recorded"} />
+        <Row
+          label="Route and Frequency"
+          value="Subcutaneous injection (abdomen, thigh or upper arm), once weekly"
+        />
+        <Row
+          label="Quantity Supplied"
+          value={
+            state.doseSelection.dose === "7.2mg"
+              ? "Four single use 7.2 mg pens (4 doses), one month of treatment"
+              : "One pre-filled pen (4 doses) with 4 needles, one month of treatment"
+          }
+        />
+        <Row
+          label="Weeks on Previous Dose"
           value={
             state.doseSelection.weeksAtCurrentDose
               ? `${state.doseSelection.weeksAtCurrentDose} weeks`
@@ -309,6 +417,36 @@ export function WegovySummaryReport({ state }: { state: WegovyConsultationState 
           label="Previous Dose"
           value={state.doseSelection.previousDose || "None (new patient)"}
         />
+        <Row
+          label="Recommencing After Previous Use"
+          value={state.doseSelection.recommencingAfterBreak ? "Yes (titrated again from 0.25 mg)" : "No"}
+        />
+        {state.doseSelection.treatmentStartDate && (
+          <Row
+            label="Treatment Start Date"
+            value={`${state.doseSelection.treatmentStartDate}${
+              monthsOnTreatment !== null ? ` (${monthsOnTreatment} months on treatment; maximum 24 under this PGD)` : ""
+            }`}
+          />
+        )}
+        {state.doseSelection.initialWeight !== null && (
+          <Row
+            label="Weight at Initiation"
+            value={`${state.doseSelection.initialWeight} kg${
+              percentLost !== null ? ` (${percentLost.toFixed(1)}% lost)` : ""
+            }`}
+          />
+        )}
+        {state.doseSelection.dose === "7.2mg" && (
+          <Row
+            label="Starting BMI (7.2 mg permitted only if 30 or above)"
+            value={
+              state.doseSelection.startingBMI !== null
+                ? `${state.doseSelection.startingBMI} kg/m²`
+                : "Not recorded"
+            }
+          />
+        )}
         <Row
           label="Injection Site"
           value={state.doseSelection.injectionSite || "Not selected"}

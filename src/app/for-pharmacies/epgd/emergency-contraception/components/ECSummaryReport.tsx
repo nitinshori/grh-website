@@ -1,6 +1,8 @@
 "use client";
 
 import type { ECConsultationState } from "../lib/ec-types";
+import { PGD_VERSION_LABEL } from "../lib/ec-types";
+import { calculateBmi } from "../lib/ec-clinical-logic";
 import {
   SectionHeader,
   Row,
@@ -28,6 +30,7 @@ export function ECSummaryReport({ state }: ECSummaryReportProps) {
         <p className="text-xs text-gray-500 mt-1">
           Patient Group Direction: Emergency Hormonal Contraception
         </p>
+        <p className="text-[10px] text-gray-400 mt-1">{PGD_VERSION_LABEL}</p>
       </div>
 
       {/* Patient Details */}
@@ -42,7 +45,27 @@ export function ECSummaryReport({ state }: ECSummaryReportProps) {
         />
         <Row label="GP name" value={patient.gpName || "Not provided"} />
         <Row label="GP practice" value={patient.gpPractice || "Not provided"} />
+        <Row label="Female confirmed" value={patient.femaleConfirmed ? "Yes" : "No"} />
       </div>
+
+      {patient.age !== null && patient.age <= 15 && (
+        <>
+          <SectionHeader>Safeguarding</SectionHeader>
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            {patient.age < 13 ? (
+              <Row label="Under 13: safeguarding referral (mandatory)" value={patient.safeguardingReferralMade ? "Made" : "NOT made"} />
+            ) : (
+              <>
+                <Row label="Fraser competence" value={patient.fraserCompetent ? "Assessed and recorded" : "Not established"} />
+                <Row label="Coercion asked about" value={patient.coercionAsked ? "Yes" : "No"} />
+                <Row label="Partner age" value={patient.partnerAge || "Not recorded"} />
+                <Row label="Safeguarding concern" value={patient.safeguardingConcern ? "Yes, local pathway followed" : "None identified"} />
+              </>
+            )}
+            <Row label="Safeguarding record" value={patient.safeguardingNotes || "Not recorded"} />
+          </div>
+        </>
+      )}
 
       {/* Consultation Details */}
       <SectionHeader>Consultation Details</SectionHeader>
@@ -119,6 +142,22 @@ export function ECSummaryReport({ state }: ECSummaryReportProps) {
           }
         />
         <Row
+          label="Known or suspected pregnancy"
+          value={medicalHistory.currentlyPregnant ? "Yes" : "No"}
+        />
+        <Row
+          label="Weight / BMI"
+          value={`${medicalHistory.weightKg !== null ? medicalHistory.weightKg + " kg" : "not recorded"} / ${calculateBmi(medicalHistory.weightKg, medicalHistory.heightCm) ?? "not calculated"}`}
+        />
+        <Row
+          label="Hypersensitivity (LNG / UPA)"
+          value={`${medicalHistory.lngHypersensitivity ? "Yes" : "No"} / ${medicalHistory.upaHypersensitivity ? "Yes" : "No"}`}
+        />
+        <Row
+          label="Hereditary galactose intolerance"
+          value={medicalHistory.galactoseIntolerance ? "Yes" : "No"}
+        />
+        <Row
           label="Breastfeeding"
           value={medicalHistory.breastfeeding ? "Yes" : "No"}
         />
@@ -167,6 +206,10 @@ export function ECSummaryReport({ state }: ECSummaryReportProps) {
               : "No"
           }
         />
+        <Row
+          label="Progestogen in previous 7 days"
+          value={medications.progestogenLast7Days ? "Yes" : "No"}
+        />
       </div>
 
       {/* Clinical Alerts */}
@@ -181,16 +224,29 @@ export function ECSummaryReport({ state }: ECSummaryReportProps) {
             label="Medicine selected"
             value={
               medicineSelection.medicine === "levonorgestrel"
-                ? "Levonorgestrel (Postinor 2 / generic)"
-                : "Ulipristal (EllaOne)"
+                ? "Levonorgestrel 1.5mg tablet (Levonelle)"
+                : "Ulipristal acetate 30mg tablet (ellaOne)"
             }
           />
           <Row label="Dose" value={medicineSelection.dose || "—"} />
-          {medicineSelection.doubleDosingRequired && (
+          <Row
+            label="Quantity supplied"
+            value={medicineSelection.medicine === "ulipristal" ? "1 tablet (30 mg)" : medicineSelection.dose === "3mg" ? "2 tablets (3 mg double dose)" : "1 tablet (1.5 mg)"}
+          />
+          {medicineSelection.dose === "3mg" && (
             <Row
-              label="Double-dosing"
-              value="Yes — enzyme inducers present"
+              label="Reason for 3 mg dose"
+              value={
+                medicineSelection.doubleDoseReason === "enzyme-inducers"
+                  ? "Enzyme-inducing drugs in the last 4 weeks (licensed)"
+                  : medicineSelection.doubleDoseReason === "weight-bmi"
+                    ? `Weight 70 kg or over, or BMI 26 or over (off-label per FSRH); explained to patient: ${medicineSelection.offLabelExplained ? "Yes" : "No"}`
+                    : "Not recorded"
+              }
             />
+          )}
+          {medications.takesEnzymeInducers && (
+            <Row label="Copper IUD offered" value={medicineSelection.copperIudOffered ? "Yes, declined" : "No"} />
           )}
           {medicineSelection.pharmacistOverride && (
             <Row

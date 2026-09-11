@@ -27,12 +27,13 @@ export interface TDTravelAssessment {
 export interface TDMedicalHistory {
   currentlyPregnant: boolean;
   breastfeeding: boolean;
-  severeHepaticImpairment: boolean;
+  severeHepaticImpairment: boolean; // PGD v003 exclusion: severe liver disease
   severeRenalImpairment: boolean;
-  liverDisease: boolean;
-  bloodInStool: boolean; // always refer if present
-  feverAbove38_5C: boolean; // always refer if present
-  diarrhoea12plusDays: boolean; // chronic/persistent
+  liverDisease: boolean; // PGD v003 exclusion: significant hepatic dysfunction
+  bloodInStool: boolean; // PGD v003 exclusion: bloody diarrhoea
+  feverAbove38_5C: boolean; // PGD v003 exclusion: high fever
+  systemicallyUnwell: boolean; // PGD v003 exclusion: signs of systemic illness
+  symptomsOver72Hours: boolean; // PGD v003 exclusion: symptoms lasting more than 72 hours without improvement
   crohnsDisease: boolean;
   ulcerativeColitis: boolean;
   ibd: boolean;
@@ -43,7 +44,7 @@ export interface TDMedicalHistory {
 // ─── Current Medications ───
 
 export interface TDMedications {
-  takesQTprolongingDrugs: boolean; // azithromycin caution
+  takesQTprolongingDrugs: boolean; // PGD v003 exclusion: concomitant QT-prolonging medicines
   takesWarfarin: boolean;
   takesMethadone: boolean;
   takesDigoxin: boolean;
@@ -55,9 +56,13 @@ export interface TDMedications {
 
 export interface TDMedicineSelection {
   selectedApproach: 'standby' | 'not-supplied' | '';
-  loperamideDose: string; // e.g. "2mg initial, then 2mg after each loose stool"
-  azithromycinDose: string; // e.g. "500mg OD x3 days"
-  selectedForCriteria: string; // mild vs moderate-severe
+  loperamideDose: string; // optional: loperamide is NOT supplied under this PGD (OTC sale alongside, guidance dose 4 mg then 2 mg, max 16 mg/day)
+  azithromycinDose: string; // PGD v003: 500 mg once daily for 1 to 3 days depending on clinical severity
+  /** PGD v003: one to three 500 mg tablets; maximum course 3 days. */
+  azithromycinQuantity: number | null;
+  /** PGD v003 records: name and brand of medication. */
+  brand: string;
+  selectedForCriteria: string; // 'moderate-severe' (PGD indication)
   reason: string;
 }
 
@@ -72,7 +77,7 @@ export interface TDCounselling {
   foodHygiene: boolean;
   waterSafety: boolean;
   whenToSeekHelp: boolean; // red flags
-  childrenUnderWarning: boolean; // not suitable <12 without medical advice
+  childrenUnderWarning: boolean; // repurposed (field name kept): stop treatment if hypersensitivity or serious side effects occur
   medicineCardProvided: boolean;
 }
 
@@ -108,7 +113,7 @@ export type TDAction =
   | { type: 'UPDATE_TRAVEL'; field: keyof TDTravelAssessment; value: TDTravelAssessment[keyof TDTravelAssessment] }
   | { type: 'UPDATE_MEDICAL_HISTORY'; field: keyof TDMedicalHistory; value: TDMedicalHistory[keyof TDMedicalHistory] }
   | { type: 'UPDATE_MEDICATIONS'; field: keyof TDMedications; value: TDMedications[keyof TDMedications] }
-  | { type: 'UPDATE_MEDICINE_SELECTION'; field: keyof TDMedicineSelection; value: string }
+  | { type: 'UPDATE_MEDICINE_SELECTION'; field: keyof TDMedicineSelection; value: TDMedicineSelection[keyof TDMedicineSelection] }
   | { type: 'UPDATE_COUNSELLING'; field: keyof TDCounselling; value: boolean }
   | { type: 'UPDATE_SUMMARY'; field: keyof TDConsultationSummary; value: string }
   | { type: 'SET_STEP'; step: number }
@@ -123,6 +128,7 @@ export const STEP_LABELS = [
   'Consent & ID',
   'Travel Assessment',
   'Medical History',
+  'Current Medications',
   'Contraindications Review',
   'Medicine Selection',
   'Counselling & Follow-up',
@@ -178,7 +184,8 @@ gpOdsCode: '',
       liverDisease: false,
       bloodInStool: false,
       feverAbove38_5C: false,
-      diarrhoea12plusDays: false,
+      systemicallyUnwell: false,
+      symptomsOver72Hours: false,
       crohnsDisease: false,
       ulcerativeColitis: false,
       ibd: false,
@@ -197,6 +204,8 @@ gpOdsCode: '',
       selectedApproach: '',
       loperamideDose: '',
       azithromycinDose: '',
+      azithromycinQuantity: null,
+      brand: '',
       selectedForCriteria: '',
       reason: '',
     },

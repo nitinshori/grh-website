@@ -3,6 +3,24 @@
 import React from 'react';
 import { JapaneseEncephalitisConsultationState } from '../japanese-encephalitis-types';
 import { calculateAge } from '../../shared/types';
+import { calculateAgeInMonths, getDoseVolume, JE_PGD_VERSION } from '../japanese-encephalitis-clinical-logic';
+
+const RISK_CATEGORY_LABELS: Record<string, string> = {
+  'recommended-residence': 'Recommended: residence in an endemic or epidemic area',
+  'recommended-long-stay': 'Recommended: stay of one month or longer in an endemic area during the transmission season',
+  'recommended-frequent-travel': 'Recommended: frequent travel to endemic areas',
+  'recommended-laboratory': 'Recommended: laboratory work with potential exposure',
+  'consider-higher-risk-itinerary': 'Consider: shorter stay with a higher risk itinerary or activity',
+  'consider-uncertain-itinerary': 'Consider: uncertain itinerary or duration within an endemic area',
+  'not-recommended-urban-short-stay': 'Not recommended: short urban stay under one month, low risk itinerary (exclusion)',
+};
+
+const DOSE_NUMBER_LABELS: Record<string, string> = {
+  '1st': '1st dose (primary course)',
+  '2nd': '2nd dose (primary course)',
+  booster: 'First booster',
+  'second-booster': 'Second booster',
+};
 
 interface JapaneseEncephalitisSummaryReportProps {
   state: JapaneseEncephalitisConsultationState;
@@ -14,6 +32,8 @@ export default function JapaneseEncephalitisSummaryReport({
   onPrint,
 }: JapaneseEncephalitisSummaryReportProps): React.ReactNode {
   const patientAge = calculateAge(state.patient.dateOfBirth);
+  const patientAgeMonths = calculateAgeInMonths(state.patient.dateOfBirth);
+  const doseVolume = getDoseVolume(patientAgeMonths);
 
   return (
     <div className="space-y-8">
@@ -76,6 +96,18 @@ export default function JapaneseEncephalitisSummaryReport({
               <span className="text-gray-600">Risk area:</span>
               <span className="font-medium text-gray-900">
                 {state.screening.riskArea}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Green Book risk category:</span>
+              <span className="font-medium text-gray-900 text-right">
+                {RISK_CATEGORY_LABELS[state.screening.riskCategory] ?? state.screening.riskCategory}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Sufficient time to complete primary course before travel:</span>
+              <span className="font-medium text-gray-900">
+                {state.screening.sufficientTimeBeforeTravel ? 'Yes' : 'No'}
               </span>
             </div>
             <div className="flex justify-between">
@@ -147,6 +179,48 @@ export default function JapaneseEncephalitisSummaryReport({
                 {state.screening.pregnant ? 'Yes' : 'No'}
               </span>
             </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Breastfeeding:</span>
+              <span className="font-medium text-gray-900">
+                {state.screening.breastfeeding ? 'Yes' : 'No'}
+              </span>
+            </div>
+            {state.screening.breastfeeding && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Breastfeeding risk assessment:</span>
+                <span className="font-medium text-gray-900 text-right">
+                  {state.screening.breastfeedingRiskAssessment}
+                </span>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <span className="text-gray-600">Anaphylaxis to Ixiaro or a component:</span>
+              <span className="font-medium text-gray-900">
+                {state.screening.anaphylaxisToVaccineOrComponent ? 'Yes' : 'No'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Hypersensitivity after first dose:</span>
+              <span className="font-medium text-gray-900">
+                {state.screening.hypersensitivityAfterFirstDose ? 'Yes' : 'No'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Bleeding disorder, thrombocytopenia or anticoagulation:</span>
+              <span className="font-medium text-gray-900">
+                {state.screening.bleedingDisorder ? 'Yes (deep subcutaneous route)' : 'No'}
+              </span>
+            </div>
+            {patientAge !== null && patientAge < 16 && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Under 16 consent basis:</span>
+                <span className="font-medium text-gray-900 text-right">
+                  {state.screening.consentBasis === 'gillick'
+                    ? `Gillick competent: ${state.screening.consentGiverDetails}`
+                    : `Parental responsibility: ${state.screening.consentGiverDetails}`}
+                </span>
+              </div>
+            )}
           </div>
         </section>
 
@@ -175,6 +249,18 @@ export default function JapaneseEncephalitisSummaryReport({
               </span>
             </div>
             <div className="flex justify-between">
+              <span className="text-gray-600">Dose:</span>
+              <span className="font-medium text-gray-900">
+                {doseVolume}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Route:</span>
+              <span className="font-medium text-gray-900">
+                {state.administration.route === 'deep-subcutaneous' ? 'Deep subcutaneous' : 'Intramuscular'}
+              </span>
+            </div>
+            <div className="flex justify-between">
               <span className="text-gray-600">Injection site:</span>
               <span className="font-medium text-gray-900">
                 {state.administration.injectionSite.replace('-', ' ')}
@@ -183,17 +269,25 @@ export default function JapaneseEncephalitisSummaryReport({
             <div className="flex justify-between">
               <span className="text-gray-600">Dose number:</span>
               <span className="font-medium text-gray-900">
-                {state.administration.doseNumber}
+                {DOSE_NUMBER_LABELS[state.administration.doseNumber] ?? state.administration.doseNumber}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Schedule:</span>
               <span className="font-medium text-gray-900">
                 {state.administration.schedule === 'standard'
-                  ? 'Standard (Day 0, 28)'
-                  : 'Accelerated (Day 0, 7)'}
+                  ? 'Conventional (day 0 and day 28)'
+                  : 'Rapid (day 0 and day 7)'}
               </span>
             </div>
+            {state.administration.offLabelRapidConsent && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Off-label rapid schedule:</span>
+                <span className="font-medium text-gray-900">
+                  Explained and explicit consent documented
+                </span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-gray-600">Next dose due:</span>
               <span className="font-medium text-gray-900">
@@ -230,9 +324,27 @@ export default function JapaneseEncephalitisSummaryReport({
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Anaphylaxis kit checked:</span>
+              <span className="text-gray-600">Observation period completed, seated:</span>
+              <span className="font-medium text-gray-900">
+                {state.postVaccineObs.observationCompleted ? 'Yes' : 'No'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Adrenaline 1:1000 and anaphylaxis protocol available:</span>
               <span className="font-medium text-gray-900">
                 {state.postVaccineObs.anaphylaxisKitChecked ? 'Yes' : 'No'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Administered via PGD:</span>
+              <span className="font-medium text-gray-900">
+                Yes, {JE_PGD_VERSION}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">GP to be informed:</span>
+              <span className="font-medium text-gray-900">
+                {state.consent.notifyGp ? 'Yes, copy of consultation to GP' : 'Inform GP as appropriate'}
               </span>
             </div>
             <div className="flex justify-between">
@@ -309,7 +421,7 @@ export default function JapaneseEncephalitisSummaryReport({
         )}
 
         <section className="text-center text-xs text-gray-500 py-4 border-t border-gray-200">
-          <p>Japanese Encephalitis Vaccination ePGD | Confidential Patient Information</p>
+          <p>Japanese Encephalitis Vaccination ePGD | {JE_PGD_VERSION} | Confidential Patient Information</p>
           <p>Generated: {new Date().toLocaleString()}</p>
         </section>
       </div>

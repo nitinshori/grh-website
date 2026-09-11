@@ -3,6 +3,7 @@
 import React from 'react';
 import { DengueConsultationState } from '../dengue-types';
 import { calculateAge } from '../../shared/types';
+import { DENGUE_PGD_VERSION } from '../dengue-clinical-logic';
 
 interface DengueSummaryReportProps {
   state: DengueConsultationState;
@@ -19,9 +20,12 @@ export default function DengueSummaryReport({
     <div className="space-y-8">
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">
-            Dengue Vaccination Consultation Summary
-          </h2>
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">
+              Dengue Vaccination Consultation Summary
+            </h2>
+            <p className="text-xs text-gray-500 mt-1">{DENGUE_PGD_VERSION}</p>
+          </div>
           <button
             onClick={onPrint}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
@@ -165,6 +169,10 @@ export default function DengueSummaryReport({
               </span>
             </div>
             <div className="flex justify-between">
+              <span className="text-gray-600">Dose and route:</span>
+              <span className="font-medium text-gray-900">0.5 mL subcutaneous injection</span>
+            </div>
+            <div className="flex justify-between">
               <span className="text-gray-600">Injection site:</span>
               <span className="font-medium text-gray-900">
                 {state.administration.injectionSite.replace('-', ' ')}
@@ -217,6 +225,12 @@ export default function DengueSummaryReport({
               <span className="text-gray-600">Anaphylaxis kit checked:</span>
               <span className="font-medium text-gray-900">
                 {state.postVaccineObs.anaphylaxisKitChecked ? 'Yes' : 'No'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Observation period completed (seated):</span>
+              <span className="font-medium text-gray-900">
+                {state.postVaccineObs.observationCompleted ? 'Yes' : 'No'}
               </span>
             </div>
             <div className="flex justify-between">

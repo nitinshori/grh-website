@@ -5,7 +5,7 @@ import { PgdPageActions } from "@/components/PgdPageActions";
 export const metadata: Metadata = {
   title: "HPV Vaccination (Gardasil 9) Consultation ePGD",
   description:
-    "Digital consultation tool for HPV vaccination (Gardasil 9) under Patient Group Direction. Screens for eligibility, assesses contraindications, and provides counselling for 9+ females.",
+    "Digital consultation tool for HPV vaccination (Gardasil 9) under Patient Group Direction. Screens for eligibility, assesses contraindications, selects the schedule from age and immune status, and provides counselling for patients of any sex aged 9 and over.",
 };
 
 export default function HPVToolPage() {
@@ -27,10 +27,12 @@ export default function HPVToolPage() {
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-navy-900">
-            HPV Vaccination — Gardasil 9 PGD Consultation
+            HPV Vaccination (Gardasil 9) PGD Consultation
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            3-dose series for eligible females under Patient Group Direction
+            Gardasil 9, intramuscular, from 9 years of age, all sexes. Schedule
+            selected from age and immune status. PGD version 004, issued 11
+            September 2026.
           </p>
         </div>
 

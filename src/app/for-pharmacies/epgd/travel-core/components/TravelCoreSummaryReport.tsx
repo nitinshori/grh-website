@@ -1,7 +1,14 @@
 "use client";
 
 import type { TravelCoreConsultationState } from "../lib/travel-core-types";
+import { TRAVEL_CORE_PGD_VERSION } from "../lib/travel-core-types";
+import { getVaccineDoseText } from "../lib/travel-core-clinical-logic";
 import type { ClinicalAlert } from "../../shared/types";
+
+const SITE_LABEL: Record<string, string> = {
+  "left-deltoid": "Left deltoid",
+  "right-deltoid": "Right deltoid",
+};
 import {
   SectionHeader,
   Row,
@@ -20,7 +27,9 @@ export function TravelCoreSummaryReport({
   state,
   alerts,
 }: TravelCoreSummaryReportProps) {
-  const { patient, destination, malariaRisk, preventiveMeasures, medicinesSupplied, summary } = state;
+  const { patient, destination, malariaRisk, preventiveMeasures, medicinesSupplied, vaccines, summary } = state;
+  const anyVaccine = vaccines.hepAGiven || vaccines.typhoidGiven || vaccines.choleraGiven;
+  const doseLines = getVaccineDoseText(vaccines);
 
   return (
     <div className="bg-white p-8 rounded-lg border border-gray-200 shadow-sm print:shadow-none">
@@ -33,6 +42,7 @@ export function TravelCoreSummaryReport({
           Destination: {destination.destination} | Duration:{" "}
           {destination.duration || "N/A"} days
         </p>
+        <p className="text-xs text-gray-500 mt-1">{TRAVEL_CORE_PGD_VERSION}</p>
       </div>
 
       {/* Patient Details */}
@@ -112,6 +122,48 @@ export function TravelCoreSummaryReport({
       />
       {medicinesSupplied.otherMedicinesNotes && (
         <Row label="Other Medicines" value={medicinesSupplied.otherMedicinesNotes} />
+      )}
+
+      {/* Vaccines administered under the PGD */}
+      <SectionHeader>Vaccines Administered Under This PGD</SectionHeader>
+      {!anyVaccine && (
+        <Row label="Vaccines" value={vaccines.noVaccineToday ? "No vaccine administered at this visit" : "None recorded"} />
+      )}
+      {vaccines.hepAGiven && (
+        <>
+          <Row
+            label="Hepatitis A"
+            value={`${vaccines.hepAProduct === "havrix" ? "Havrix Monodose 1440 EL.U/1.0 mL, 1.0 mL" : vaccines.hepAProduct === "avaxim" ? "Avaxim 160 U/0.5 mL, 0.5 mL" : "Product not recorded"}; ${vaccines.hepADose === "booster" ? "booster dose" : "primary dose"}; intramuscular`}
+          />
+          <Row label="Hepatitis A batch / expiry / site" value={`${vaccines.hepABatch} / ${vaccines.hepAExpiry} / ${SITE_LABEL[vaccines.hepASite] || "Not recorded"}`} />
+        </>
+      )}
+      {vaccines.typhoidGiven && (
+        <>
+          <Row label="Typhoid" value="Typhim Vi 25 mcg/0.5 mL, 0.5 mL, intramuscular" />
+          <Row label="Typhim Vi batch / expiry / site" value={`${vaccines.typhoidBatch} / ${vaccines.typhoidExpiry} / ${SITE_LABEL[vaccines.typhoidSite] || "Not recorded"}`} />
+        </>
+      )}
+      {vaccines.choleraGiven && (
+        <>
+          <Row label="Cholera" value={`Dukoral, oral, one 3 mL vial with buffer; ${vaccines.choleraDose === "booster" ? "booster" : `primary course dose ${vaccines.choleraDose || "?"} of 2`}`} />
+          <Row label="Dukoral batch / expiry" value={`${vaccines.choleraBatch} / ${vaccines.choleraExpiry}`} />
+        </>
+      )}
+      {anyVaccine && (
+        <>
+          <CounsellingGrid
+            items={[
+              ["Adrenaline 1 in 1,000, telephone and anaphylaxis protocol available", vaccines.adrenalineAvailable],
+              ["15 minute seated observation completed", vaccines.observationCompleted],
+              ["PIL supplied and booster schedule explained", vaccines.pilSupplied],
+              ["Follow-up advice given", vaccines.followUpAdviceGiven],
+            ]}
+          />
+          {doseLines.map((line, i) => (
+            <p key={i} className="text-xs text-gray-600 mt-1">{line}</p>
+          ))}
+        </>
       )}
 
       {/* Pharmacist Declaration */}

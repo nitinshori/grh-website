@@ -11,7 +11,7 @@ export function validateStep(stepIndex: number, state: ColdSoresConsultationStat
 
     case 2: // Symptom Assessment
       if (!state.symptomAssessment.isRecurrent && !state.symptomAssessment.isFirstEpisode) {
-        return "Please confirm whether this is recurrent or first episode";
+        return "Please confirm whether this is a recurrent episode (PGD inclusion) or a first episode (refer)";
       }
       if (!state.symptomAssessment.currentSymptoms.trim()) {
         return "Please describe current symptoms";
@@ -31,8 +31,23 @@ export function validateStep(stepIndex: number, state: ColdSoresConsultationStat
       return null;
 
     case 5: // Medicine Supply
-      if (!state.medicineSupply.doseChoice) return "Please select aciclovir dose";
-      if (state.medicineSupply.quantity === null) return "Please enter quantity to supply";
+      if (!state.medicineSupply.product) return "Select aciclovir 5% cream or aciclovir 200 mg tablets";
+      if (state.medicineSupply.product === "cream" && !state.medicineSupply.tubeSize) {
+        return "Select the tube size (2 g or 5 g; one tube per episode)";
+      }
+      if (state.medicineSupply.product === "tablets" && state.medicineSupply.doseChoice !== "200") {
+        return "The PGD dose is aciclovir 200 mg five times daily for 5 days";
+      }
+      if (state.medicineSupply.quantity === null || state.medicineSupply.quantity <= 0) {
+        return "Please enter quantity to supply";
+      }
+      if (state.medicineSupply.product === "tablets" && state.medicineSupply.quantity !== 25) {
+        return "The PGD quantity for tablets is 25 per episode (200 mg five times daily for 5 days)";
+      }
+      if (state.medicineSupply.product === "cream" && state.medicineSupply.quantity !== 1) {
+        return "The PGD quantity for cream is one tube per episode";
+      }
+      if (!state.medicineSupply.brand.trim()) return "Record the brand of the product supplied (PGD records requirement)";
       return null;
 
     case 6: // Counselling
@@ -41,7 +56,11 @@ export function validateStep(stepIndex: number, state: ColdSoresConsultationStat
         !state.counselling.completeCourse ||
         !state.counselling.contagious ||
         !state.counselling.avoidSharing ||
-        !state.counselling.sunExposure
+        !state.counselling.sunExposure ||
+        !state.counselling.safetyNetting ||
+        !state.counselling.symptomRelief ||
+        !state.counselling.hygieneMeasures ||
+        !state.counselling.providedPIL
       ) {
         return "Please confirm all counselling points have been covered";
       }

@@ -5,10 +5,10 @@ import type {
 } from "../../shared/types";
 
 /**
- * Genital warts ePGD — state shape.
+ * Genital warts ePGD: state shape.
  *
- * Built against the signed PGD (genital-warts.pdf, v001, valid from
- * 1 Nov 2025, expiry 31 Jul 2027), which is actually two PGDs in one
+ * Aligned to the signed PGD version 003, issued 11 September 2026 (valid
+ * to 31 July 2027), which is actually two PGDs in one
  * document: podophyllotoxin 0.5% solution / 0.15% cream, and imiquimod 5%
  * cream. They share most exclusions but differ on treatment area limits,
  * dosing, quantity and cautions, so the agent is chosen in the tool and the
@@ -36,8 +36,10 @@ export interface GenitalWartsAssessment {
   /** Keratinised lesions. Points towards imiquimod over podophyllotoxin. */
   keratinised: boolean;
   wartCount: number | null;
-  /** Treatment area in cm². Podophyllotoxin is capped at 10 cm². */
+  /** Treatment area in cm2. Podophyllotoxin is capped at 4 cm2 (SmPC limit for unsupervised use). */
   treatmentAreaCm2: number | null;
+  /** Inclusion: able to identify warts and apply treatment to warts only (not healthy skin). */
+  ableToSelfApply: boolean;
   /** Atypical appearance, bleeding or ulceration. Refer to exclude SCC. */
   suspiciousLesion: boolean;
   openWoundsPresent: boolean;
@@ -60,6 +62,8 @@ export interface GenitalWartsTreatment {
   agent: WartAgent;
   /** Podophyllotoxin only: "solution" (15 mL) or "cream" (5 g). */
   podophyllotoxinForm: string;
+  /** Record: name and brand of medication. */
+  brand: string;
   quantitySupplied: string;
   batchNumber: string;
   expiryDate: string;
@@ -82,6 +86,12 @@ export interface GenitalWartsCounselling {
   contraceptionCounselled: boolean;
   /** Podophyllotoxin solution only: flammable. */
   flammabilityWarningGiven: boolean;
+  /** Imiquimod only: weakens condoms and diaphragms; wash off before sex. */
+  condomWeakeningExplained: boolean;
+  /** Seek advice if warts worsen, spread or do not improve; report severe local reaction, bleeding, infection, systemic symptoms. */
+  safetyNettingGiven: boolean;
+  /** Attend follow-up; regular sexual health screening; pregnant women to inform their healthcare provider. */
+  followUpAndScreeningAdvised: boolean;
 }
 
 export interface GenitalWartsConsultationState {
@@ -105,6 +115,9 @@ export const STEP_LABELS = [
 ];
 
 export const TOTAL_STEPS = STEP_LABELS.length;
+
+export const PGD_VERSION_LINE =
+  "Genital Warts PGD (podophyllotoxin and imiquimod), version 003, issued 11 September 2026";
 
 export function createInitialConsultationState(): GenitalWartsConsultationState {
   return {
@@ -137,6 +150,7 @@ export function createInitialConsultationState(): GenitalWartsConsultationState 
       keratinised: false,
       wartCount: null,
       treatmentAreaCm2: null,
+      ableToSelfApply: false,
       suspiciousLesion: false,
       openWoundsPresent: false,
       immunosuppressed: false,
@@ -152,6 +166,7 @@ export function createInitialConsultationState(): GenitalWartsConsultationState 
     treatment: {
       agent: "",
       podophyllotoxinForm: "",
+      brand: "",
       quantitySupplied: "",
       batchNumber: "",
       expiryDate: "",
@@ -171,6 +186,9 @@ export function createInitialConsultationState(): GenitalWartsConsultationState 
       pilSupplied: false,
       contraceptionCounselled: false,
       flammabilityWarningGiven: false,
+      condomWeakeningExplained: false,
+      safetyNettingGiven: false,
+      followUpAndScreeningAdvised: false,
     },
     summary: {
       pharmacistName: "",

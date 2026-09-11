@@ -21,6 +21,7 @@ import {
   generateTDAlerts,
   recommendApproach,
   canProceedWithConsultation,
+  TD_PGD_VERSION,
 } from './travellers-diarrhoea-clinical-logic';
 import { validateStep } from './travellers-diarrhoea-validation';
 import { calculateAge } from '../shared/types';
@@ -422,12 +423,12 @@ export function TravellersDiarrhoeaClient() {
               description="Both agents enter breast milk"
             />
             <Checkbox
-              label="Severe Hepatic Impairment"
+              label="Severe liver disease"
               checked={state.medicalHistory.severeHepaticImpairment}
               onChange={(v) =>
                 handleMedicalChange('severeHepaticImpairment', v)
               }
-              description="Affects azithromycin metabolism"
+              description="Exclusion under this PGD"
             />
             <Checkbox
               label="Severe Renal Impairment"
@@ -438,16 +439,40 @@ export function TravellersDiarrhoeaClient() {
               description="eGFR <30 mL/min/1.73m²"
             />
             <Checkbox
-              label="Liver Disease"
+              label="Significant hepatic dysfunction"
               checked={state.medicalHistory.liverDisease}
               onChange={(v) => handleMedicalChange('liverDisease', v)}
-              description="Caution with azithromycin"
+              description="Exclusion under this PGD"
             />
             <Checkbox
-              label="Macrolide (e.g. Erythromycin) Allergy"
+              label="Allergy to azithromycin or other macrolide antibiotics"
               checked={state.medicalHistory.macrolideAllergy}
               onChange={(v) => handleMedicalChange('macrolideAllergy', v)}
-              description="Azithromycin is a macrolide"
+              description="Exclusion. Azithromycin is a macrolide."
+            />
+            <Checkbox
+              label="Bloody diarrhoea"
+              checked={state.medicalHistory.bloodInStool}
+              onChange={(v) => handleMedicalChange('bloodInStool', v)}
+              description="Exclusion. Refer for medical assessment."
+            />
+            <Checkbox
+              label="High fever"
+              checked={state.medicalHistory.feverAbove38_5C}
+              onChange={(v) => handleMedicalChange('feverAbove38_5C', v)}
+              description="Exclusion. Refer for medical assessment."
+            />
+            <Checkbox
+              label="Signs of systemic illness"
+              checked={state.medicalHistory.systemicallyUnwell}
+              onChange={(v) => handleMedicalChange('systemicallyUnwell', v)}
+              description="Exclusion. Refer for medical assessment."
+            />
+            <Checkbox
+              label="Symptoms lasting more than 72 hours without improvement"
+              checked={state.medicalHistory.symptomsOver72Hours}
+              onChange={(v) => handleMedicalChange('symptomsOver72Hours', v)}
+              description="Exclusion. Refer for investigation."
             />
             <Checkbox
               label="Crohn's Disease"
@@ -477,8 +502,67 @@ export function TravellersDiarrhoeaClient() {
         </StepWrapper>
       )}
 
-      {/* Step 4: Contraindications Review */}
+      {/* Step 4: Current Medications */}
       {state.currentStep === 4 && (
+        <StepWrapper
+          title="Current Medications"
+          currentStep={state.currentStep}
+          totalSteps={TOTAL_STEPS}
+          onNext={handleNext}
+          onPrev={handlePrev}
+          canProceed={!validationError}
+          validationError={validationError}
+        >
+          <div className="space-y-4">
+            <Checkbox
+              label="Medicines known to prolong the QT interval"
+              checked={state.medications.takesQTprolongingDrugs}
+              onChange={(v) =>
+                handleMedicationsChange('takesQTprolongingDrugs', v)
+              }
+              description="Exclusion under this PGD (e.g. amiodarone, sotalol, some antipsychotics, citalopram, ondansetron, hydroxychloroquine). Refer."
+            />
+            <Checkbox
+              label="Warfarin"
+              checked={state.medications.takesWarfarin}
+              onChange={(v) => handleMedicationsChange('takesWarfarin', v)}
+              description="Azithromycin may increase warfarin effect"
+            />
+            <Checkbox
+              label="Methadone"
+              checked={state.medications.takesMethadone}
+              onChange={(v) => handleMedicationsChange('takesMethadone', v)}
+              description="Azithromycin may increase methadone levels"
+            />
+            <Checkbox
+              label="Digoxin"
+              checked={state.medications.takesDigoxin}
+              onChange={(v) => handleMedicationsChange('takesDigoxin', v)}
+              description="Azithromycin may increase digoxin absorption"
+            />
+            <Checkbox
+              label="Other Medications"
+              checked={state.medications.takesOtherDrugs}
+              onChange={(v) => handleMedicationsChange('takesOtherDrugs', v)}
+              description="Any other regular medications?"
+            />
+
+            {state.medications.takesOtherDrugs && (
+              <TextInput
+                label="Please Specify Other Medications"
+                value={state.medications.otherDrugsDetails}
+                onChange={(v) =>
+                  handleMedicationsChange('otherDrugsDetails', v)
+                }
+                placeholder="e.g. metformin, levothyroxine"
+              />
+            )}
+          </div>
+        </StepWrapper>
+      )}
+
+      {/* Step 5: Contraindications Review */}
+      {state.currentStep === 5 && (
         <StepWrapper
           title="Contraindications Review"
           description="Based on clinical assessment, the following have been identified:"
@@ -525,65 +609,6 @@ export function TravellersDiarrhoeaClient() {
         </StepWrapper>
       )}
 
-      {/* Step 5: Medications (moved here for logical flow) */}
-      {state.currentStep === 5 && !isBlocked && (
-        <StepWrapper
-          title="Current Medications"
-          currentStep={state.currentStep}
-          totalSteps={TOTAL_STEPS}
-          onNext={handleNext}
-          onPrev={handlePrev}
-          canProceed={!validationError}
-          validationError={validationError}
-        >
-          <div className="space-y-4">
-            <Checkbox
-              label="QT-prolonging Drugs"
-              checked={state.medications.takesQTprolongingDrugs}
-              onChange={(v) =>
-                handleMedicationsChange('takesQTprolongingDrugs', v)
-              }
-              description="Risk of QT prolongation with azithromycin"
-            />
-            <Checkbox
-              label="Warfarin"
-              checked={state.medications.takesWarfarin}
-              onChange={(v) => handleMedicationsChange('takesWarfarin', v)}
-              description="Azithromycin may increase warfarin effect"
-            />
-            <Checkbox
-              label="Methadone"
-              checked={state.medications.takesMethadone}
-              onChange={(v) => handleMedicationsChange('takesMethadone', v)}
-              description="Azithromycin may increase methadone levels"
-            />
-            <Checkbox
-              label="Digoxin"
-              checked={state.medications.takesDigoxin}
-              onChange={(v) => handleMedicationsChange('takesDigoxin', v)}
-              description="Azithromycin may increase digoxin absorption"
-            />
-            <Checkbox
-              label="Other Medications"
-              checked={state.medications.takesOtherDrugs}
-              onChange={(v) => handleMedicationsChange('takesOtherDrugs', v)}
-              description="Any other regular medications?"
-            />
-
-            {state.medications.takesOtherDrugs && (
-              <TextInput
-                label="Please Specify Other Medications"
-                value={state.medications.otherDrugsDetails}
-                onChange={(v) =>
-                  handleMedicationsChange('otherDrugsDetails', v)
-                }
-                placeholder="e.g. metformin, levothyroxine"
-              />
-            )}
-          </div>
-        </StepWrapper>
-      )}
-
       {/* Step 6: Medicine Selection */}
       {state.currentStep === 6 && !isBlocked && (
         <StepWrapper
@@ -599,7 +624,7 @@ export function TravellersDiarrhoeaClient() {
             {recommendation ? (
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="font-medium text-sm text-blue-900 mb-2">
-                  Recommended Approach
+                  Regimen per the PGD ({TD_PGD_VERSION})
                 </p>
                 <p className="text-sm text-blue-800 mb-3">
                   <strong>{recommendation.approach}</strong>
@@ -628,34 +653,56 @@ export function TravellersDiarrhoeaClient() {
             {state.medicineSelection.selectedApproach === 'standby' && (
               <>
                 <TextInput
-                  label="Loperamide Dose"
-                  value={state.medicineSelection.loperamideDose}
-                  onChange={(v) =>
-                    handleMedicineChange('loperamideDose', v)
-                  }
-                  placeholder="e.g. 2mg initial, then 2mg after each loose stool, max 16mg/day"
-                />
-
-                <TextInput
-                  label="Azithromycin Dose"
+                  label="Azithromycin dose (PGD: 500 mg once daily for 1 to 3 days)"
                   value={state.medicineSelection.azithromycinDose}
                   onChange={(v) =>
                     handleMedicineChange('azithromycinDose', v)
                   }
-                  placeholder="e.g. 500mg once daily for 3 days"
+                  placeholder="e.g. 500 mg once daily for up to 3 days, with food"
+                  required
+                />
+
+                <NumberInput
+                  label="Azithromycin quantity (500 mg tablets)"
+                  value={state.medicineSelection.azithromycinQuantity}
+                  onChange={(v) => handleMedicineChange('azithromycinQuantity', v)}
+                  min={1}
+                  max={3}
+                  unit="tablets"
+                  placeholder="1 to 3"
+                  required
+                />
+                <p className="text-xs text-gray-600">
+                  PGD: one to three 500 mg tablets depending on symptom severity. Maximum treatment course 3 days.
+                </p>
+
+                <TextInput
+                  label="Brand supplied"
+                  value={state.medicineSelection.brand}
+                  onChange={(v) => handleMedicineChange('brand', v)}
+                  placeholder="Name and brand of the azithromycin product supplied"
                 />
 
                 <SelectInput
-                  label="Supply for..."
+                  label="Indication confirmed"
                   value={state.medicineSelection.selectedForCriteria}
                   onChange={(v) =>
                     handleMedicineChange('selectedForCriteria', v)
                   }
                   options={[
                     { value: '', label: 'Select...' },
-                    { value: 'mild', label: 'Mild diarrhoea (ORS first, antimotility if needed)' },
-                    { value: 'moderate-severe', label: 'Moderate-severe diarrhoea (add antibiotic)' },
+                    { value: 'moderate-severe', label: 'Self-start for moderate to severe traveller\'s diarrhoea (PGD indication)' },
                   ]}
+                  required
+                />
+
+                <TextInput
+                  label="Loperamide (OTC sale alongside, not supplied under this PGD; optional)"
+                  value={state.medicineSelection.loperamideDose}
+                  onChange={(v) =>
+                    handleMedicineChange('loperamideDose', v)
+                  }
+                  placeholder="Guidance: 4 mg initially, then 2 mg after each loose stool, max 16 mg/day; not with blood in stool or fever"
                 />
               </>
             )}
@@ -688,7 +735,7 @@ export function TravellersDiarrhoeaClient() {
               label="Oral rehydration is first-line"
               checked={state.counselling.orCrsAdvice}
               onChange={(v) => handleCounsellingChange('orCrsAdvice', v)}
-              description="Advised on ORS sachets and fluid replacement"
+              description="Oral rehydration is the key priority; maintain hydration"
             />
             <Checkbox
               label="When to start treatment"
@@ -696,13 +743,13 @@ export function TravellersDiarrhoeaClient() {
               onChange={(v) =>
                 handleCounsellingChange('whenToStartTreatment', v)
               }
-              description="Start when diarrhoea develops, following symptoms/criteria"
+              description="Self-start azithromycin only for moderate to severe symptoms (3 or more loose stools in 24 hours with cramps, nausea or vomiting, or essential plans disrupted); take with food to reduce GI upset"
             />
             <Checkbox
               label="Loperamide use"
               checked={state.counselling.loperamideAdvice}
               onChange={(v) => handleCounsellingChange('loperamideAdvice', v)}
-              description="Only if no fever or blood in stool"
+              description="If bought OTC: 4 mg initially then 2 mg after each loose stool, max 16 mg/day; not with blood in stool or fever. Not supplied under this PGD."
             />
             <Checkbox
               label="Azithromycin use"
@@ -710,7 +757,7 @@ export function TravellersDiarrhoeaClient() {
               onChange={(v) =>
                 handleCounsellingChange('azithromycinAdvice', v)
               }
-              description="For moderate-severe diarrhoea (>6 stools/day or bloody)"
+              description="500 mg once daily for 1 to 3 days depending on severity; maximum 3 days. Do not use for bloody diarrhoea or high fever: seek medical help instead"
             />
             <Checkbox
               label="Pregnancy implications"
@@ -734,23 +781,23 @@ export function TravellersDiarrhoeaClient() {
               label="When to seek help"
               checked={state.counselling.whenToSeekHelp}
               onChange={(v) => handleCounsellingChange('whenToSeekHelp', v)}
-              description="Red flags: severe dehydration, blood, fever, >7 days"
+              description="Seek local medical attention if symptoms worsen or persist: fever, bloody diarrhoea, severe abdominal pain, persistent vomiting or inability to stay hydrated, diarrhoea lasting more than 14 days, or becoming systemically very unwell"
             />
             <Checkbox
-              label="Not suitable for <12"
+              label="Stop treatment if hypersensitivity or serious side effects occur"
               checked={state.counselling.childrenUnderWarning}
               onChange={(v) =>
                 handleCounsellingChange('childrenUnderWarning', v)
               }
-              description="Warning that children <12 need specialist medical advice"
+              description="Nausea, abdominal pain, diarrhoea and headache are common; stop and seek advice for rash, allergic reaction or palpitations. Report via Yellow Card."
             />
             <Checkbox
-              label="Medicine card provided"
+              label="Patient information leaflet supplied"
               checked={state.counselling.medicineCardProvided}
               onChange={(v) =>
                 handleCounsellingChange('medicineCardProvided', v)
               }
-              description="Patient given loperamide/azithromycin information"
+              description="Patient information leaflet (PIL) provided with the medication"
             />
           </div>
         </StepWrapper>

@@ -12,11 +12,19 @@ import type {
   EczemaCounselling,
   EczemaConsultationSummary,
 } from "./lib/eczema-types";
-import { STEP_LABELS, TOTAL_STEPS, createInitialConsultationState } from "./lib/eczema-types";
+import {
+  STEP_LABELS,
+  TOTAL_STEPS,
+  createInitialConsultationState,
+  ECZEMA_PGD_VERSION,
+  TREATED_AREA_LABEL,
+  QUANTITY_BY_AREA,
+} from "./lib/eczema-types";
 import {
   getAllAlerts,
   hasHardStops,
   calculateDoseRecommendation,
+  requiredArm,
 } from "./lib/eczema-clinical-logic";
 import { validateStep } from "./lib/eczema-validation";
 import { calculateAge } from "../shared/types";
@@ -193,6 +201,13 @@ export default function EczemaClient() {
     setCompletedSteps(new Set());
   }, []);
 
+  const age = state.patient.age;
+  const thinSkin = state.assessment.thinSkinSite || state.contraindications.faceOrGroin;
+  const arm = requiredArm(state);
+  const areaQuantity =
+    state.assessment.treatedArea && state.assessment.treatedArea !== "over-10-palms"
+      ? QUANTITY_BY_AREA[state.assessment.treatedArea]
+      : null;
 
   const renderCurrentStep = () => {
     switch (state.currentStep) {
@@ -207,6 +222,7 @@ export default function EczemaClient() {
             canProceed={canProceed}
             validationError={validationError}
           >
+            <p className="text-xs text-gray-600 mb-3">{ECZEMA_PGD_VERSION}. Patients aged 12 years and over.</p>
             <PatientDetailsStep
               patient={state.patient}
               onChange={(field, value) => dispatch({ type: "UPDATE_PATIENT", field, value })}
@@ -230,6 +246,27 @@ export default function EczemaClient() {
               consent={state.consent}
               onChange={(field, value) => dispatch({ type: "UPDATE_CONSENT", field, value })}
             />
+            {age !== null && age < 16 && (
+              <div className="mt-4 space-y-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                <p className="text-sm font-medium text-navy-900">Patient under 16: basis of consent</p>
+                <SelectInput
+                  label="Consent given by"
+                  value={state.consent.consentBasis}
+                  onChange={(v) => dispatch({ type: "UPDATE_CONSENT", field: "consentBasis", value: v })}
+                  options={[
+                    { value: "parental-responsibility", label: "A person with parental responsibility" },
+                    { value: "gillick-competent", label: "The young person, assessed as Gillick competent" },
+                  ]}
+                  required
+                />
+                <TextArea
+                  label="Basis recorded (who consented; for Gillick competence, the assessment made)"
+                  value={state.consent.consentBasisNotes}
+                  onChange={(v) => dispatch({ type: "UPDATE_CONSENT", field: "consentBasisNotes", value: v })}
+                  required
+                />
+              </div>
+            )}
           </StepWrapper>
         );
 
@@ -250,12 +287,15 @@ export default function EczemaClient() {
                 value={state.assessment.severity}
                 onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "severity", value: v })}
                 options={[
-                  { value: "mild", label: "Mild (dry, occasional itch)" },
-                  { value: "moderate", label: "Moderate (red, frequent itch, thickened)" },
-                  { value: "severe", label: "Severe (extensive, cracked, oozing — refer)" },
+                  { value: "mild", label: "Mild: limited erythema and scaling, not markedly affecting sleep or daily activity" },
+                  { value: "moderate", label: "Moderate: marked erythema or lichenification, or disease disturbing sleep or daily activity" },
+                  { value: "severe", label: "Severe (extensive, cracked, oozing): refer, outside this PGD" },
                 ]}
                 required
               />
+              <p className="text-xs text-gray-600">
+                Severity AND site decide the arm. Excoriation from scratching may be present in either and does not by itself make disease moderate.
+              </p>
 
               {state.assessment.severity && (
                 <div className="space-y-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
@@ -289,10 +329,35 @@ export default function EczemaClient() {
               )}
 
               <TextArea
-                label="Affected Site(s)"
+                label="Site treated"
                 value={state.assessment.affectedSite}
                 onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "affectedSite", value: v })}
-                placeholder="e.g., Arms, neck; spares face and groin. Approximately 20% body surface area."
+                placeholder="e.g. flexures of both elbows; spares face and groin"
+                required
+              />
+              <div className="space-y-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                <p className="text-sm font-medium text-navy-900">Site: severity and site together decide the arm</p>
+                <Checkbox
+                  label="Face, flexures or genital skin involved (thin skin: clobetasone only, 7 days maximum at those sites)"
+                  checked={state.assessment.thinSkinSite}
+                  onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "thinSkinSite", value: v })}
+                />
+                <Checkbox
+                  label="Eyelids involved (excluded from both arms: refer)"
+                  checked={state.assessment.eyelids}
+                  onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "eyelids", value: v })}
+                />
+              </div>
+              <SelectInput
+                label="Treated area, in adult palms (one fingertip unit covers about two adult palms)"
+                value={state.assessment.treatedArea}
+                onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "treatedArea", value: v })}
+                options={[
+                  { value: "up-to-2-palms", label: TREATED_AREA_LABEL["up-to-2-palms"] },
+                  { value: "2-to-5-palms", label: TREATED_AREA_LABEL["2-to-5-palms"] },
+                  { value: "5-to-10-palms", label: TREATED_AREA_LABEL["5-to-10-palms"] },
+                  { value: "over-10-palms", label: TREATED_AREA_LABEL["over-10-palms"] },
+                ]}
                 required
               />
             </div>
@@ -325,6 +390,41 @@ export default function EczemaClient() {
                 placeholder="e.g., NKDA, reaction to lanolin"
                 required
               />
+              <SelectInput
+                label="Courses of topical corticosteroid supplied in the last 12 months"
+                value={state.medicalHistory.coursesLast12Months}
+                onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "coursesLast12Months", value: v })}
+                options={[
+                  { value: "0", label: "None" },
+                  { value: "1", label: "One" },
+                  { value: "2", label: "Two" },
+                  { value: "3-or-more", label: "Three or more without GP review (refer)" },
+                ]}
+                required
+              />
+              <Checkbox
+                label="Already using another topical corticosteroid (do not add a second: refer)"
+                checked={state.medicalHistory.currentlyUsingTopicalSteroid}
+                onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "currentlyUsingTopicalSteroid", value: v })}
+              />
+              <Checkbox
+                label="Known hypersensitivity to clobetasone, betamethasone or any excipient"
+                checked={state.medicalHistory.productHypersensitivity}
+                onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "productHypersensitivity", value: v })}
+              />
+              <Checkbox
+                label="Pregnant or breastfeeding"
+                checked={state.medicalHistory.pregnantOrBreastfeeding}
+                onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "pregnantOrBreastfeeding", value: v })}
+                description="Short-term use of these potencies is acceptable away from the breast or nipple area; record the site."
+              />
+              {state.medicalHistory.pregnantOrBreastfeeding && (
+                <Checkbox
+                  label="Treatment would be to the breast or nipple area (excluded)"
+                  checked={state.medicalHistory.treatmentToBreastArea}
+                  onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "treatmentToBreastArea", value: v })}
+                />
+              )}
             </div>
           </StepWrapper>
         );
@@ -344,31 +444,40 @@ export default function EczemaClient() {
             <AlertBanner alerts={alerts} />
             <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
               <Checkbox
-                label="Bacterial infection present"
+                label="Signs of secondary bacterial infection (weeping, crusting, sudden worsening or fever)"
                 checked={state.contraindications.bacterialInfection}
                 onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "bacterialInfection", value: v })}
+                description="Excluded unless the infection is MILD and LOCALISED and is treated at this visit under the Skin and Soft Tissue Infection PGD. Otherwise refer and supply neither."
               />
+              {(state.contraindications.bacterialInfection || state.assessment.isOozing) && (
+                <Checkbox
+                  label="Concurrent supply: mild, localised infection treated at this consultation with an oral antibiotic under the Skin and Soft Tissue Infection PGD, both supplies recorded in this one consultation record"
+                  checked={state.contraindications.concurrentAntibioticSupplied}
+                  onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "concurrentAntibioticSupplied", value: v })}
+                />
+              )}
 
               <Checkbox
-                label="Viral infection (suspected eczema herpeticum)"
+                label="Suspected eczema herpeticum: rapidly worsening, painful, punched-out or clustered vesicular lesions, or systemically unwell (EMERGENCY)"
                 checked={state.contraindications.viralInfection}
                 onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "viralInfection", value: v })}
               />
 
               <Checkbox
-                label="Affected site includes face or groin"
-                checked={state.contraindications.faceOrGroin}
-                onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "faceOrGroin", value: v })}
+                label="Untreated fungal infection, or any rash that might be tinea"
+                checked={state.contraindications.fungalInfection}
+                onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "fungalInfection", value: v })}
+                description="A topical steroid on tinea produces tinea incognito. Refer."
               />
 
               <Checkbox
-                label="Child under 1 year old"
-                checked={state.contraindications.childUnder1}
-                onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "childUnder1", value: v })}
+                label="Ulcerated skin, or an open wound (excoriation from scratching is NOT an exclusion)"
+                checked={state.contraindications.ulceratedOrOpenWound}
+                onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "ulceratedOrOpenWound", value: v })}
               />
 
               <Checkbox
-                label="Rosacea or acne at treatment site"
+                label="Rosacea, perioral dermatitis or acne (a topical steroid makes all three worse)"
                 checked={state.contraindications.rosaceaOrAcne}
                 onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "rosaceaOrAcne", value: v })}
               />
@@ -389,51 +498,75 @@ export default function EczemaClient() {
             isBlocked={hasStops}
           >
             <div className="space-y-4">
+              <AlertBanner alerts={alerts} />
               <Checkbox
-                label="Emollient confirmed as base of treatment"
+                label="Emollient confirmed as the base of treatment"
                 checked={state.medicineSelection.emollientFirst}
                 onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "emollientFirst", value: v })}
-                description="Emollients are most important; apply frequently, every 2 to 3 hours"
+                description="Emollients are first line for everyone, used liberally and frequently, and continued even when the skin is clear."
               />
 
-              {state.assessment.severity === "mild" && (
+              {doseRecommendation && (
                 <div className="p-3 bg-[color:var(--tenant-primary)]/10 rounded-lg border border-[color:var(--tenant-primary)]/30">
-                  <p className="text-sm font-medium text-navy-900">Clobetasone butyrate 0.05% cream or ointment, once or twice daily</p>
-                  <p className="text-xs text-gray-600 mt-1">PGD Arm 1. Mild disease at any permitted site, and MODERATE disease on the face, flexures or genital skin where Arm 2 is not authorised. On the trunk and limbs: up to 7 days initially, then review, maximum 4 weeks continuous. ON THE FACE, FLEXURES OR GENITAL SKIN: 7 DAYS MAXIMUM, not 4 weeks. No more than three courses in 12 months before GP review.</p>
+                  <p className="text-sm font-medium text-navy-900">{doseRecommendation.medicine}</p>
+                  <p className="text-xs text-gray-800 mt-1">{doseRecommendation.dose}, {doseRecommendation.frequency}. {doseRecommendation.dosingRegimen}</p>
+                  <p className="text-xs text-gray-800 mt-1">Duration: {doseRecommendation.duration}.</p>
+                  <p className="text-xs text-gray-600 mt-1">{doseRecommendation.reason}</p>
                 </div>
               )}
 
-              {state.assessment.severity === "moderate" && (
-                <SelectInput
-                  label="Steroid Strength"
-                  value={state.medicineSelection.steroidChoice}
-                  onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "steroidChoice", value: v })}
-                  options={[
-                    // Strengths corrected 8 Sep 2026 to match PGD v002:
-                    // Arm 1 clobetasone 0.05% for mild, Arm 2 betamethasone
-                    // valerate 0.1% for moderate. The tool previously offered
-                    // betamethasone 0.025%, a different strength from the one
-                    // the document authorises.
-                    { value: "betamethasone", label: "Betamethasone valerate 0.1% (Arm 2, moderate; not face/flexures)" },
-                    { value: "clobetasone", label: "Clobetasone butyrate 0.05% (Arm 1; mild anywhere, and moderate on face/flexures/genital skin, 7 days max there. NOT eyelids)" },
-                  ]}
+              <SelectInput
+                label="Corticosteroid arm"
+                value={state.medicineSelection.steroidChoice}
+                onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "steroidChoice", value: v })}
+                options={[
+                  { value: "clobetasone", label: "Arm 1: Clobetasone butyrate 0.05% (mild anywhere permitted; moderate on face, flexures or genital skin, 7 days maximum there)" },
+                  { value: "betamethasone", label: "Arm 2: Betamethasone valerate 0.1% (moderate, trunk and limbs only)" },
+                ]}
+                required
+              />
+              {arm && (
+                <p className="text-xs text-gray-600">Document route for this presentation: {arm === "clobetasone" ? "Arm 1, clobetasone butyrate 0.05%" : "Arm 2, betamethasone valerate 0.1%"}.</p>
+              )}
+              <SelectInput
+                label="Formulation"
+                value={state.medicineSelection.formulation}
+                onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "formulation", value: v })}
+                options={[
+                  { value: "ointment", label: "Ointment (dry, lichenified skin)" },
+                  { value: "cream", label: "Cream (weeping or moist areas; the face where an ointment is not tolerated)" },
+                ]}
+                required
+              />
+              <SelectInput
+                label="Quantity supplied (sized to the treated area for the initial 7 days)"
+                value={state.medicineSelection.quantitySupplied}
+                onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "quantitySupplied", value: v })}
+                options={[
+                  { value: "15g", label: "15g (up to 2 adult palms)" },
+                  { value: "30g", label: "30g (2 to 5 adult palms)" },
+                  { value: "60g", label: "60g (5 to 10 adult palms)" },
+                ]}
+                required
+              />
+              {areaQuantity && (
+                <p className="text-xs text-gray-600">Document quantity for the recorded treated area: {areaQuantity}. One supply per consultation.</p>
+              )}
+              <div className="grid sm:grid-cols-2 gap-3">
+                <TextInput
+                  label="Batch number"
+                  value={state.medicineSelection.batchNumber}
+                  onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "batchNumber", value: v })}
                   required
                 />
-              )}
-
-              <Checkbox
-                label="Suspected secondary bacterial infection"
-                checked={state.medicineSelection.hasFungalInfection}
-                onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "hasFungalInfection", value: v })}
-              />
-
-              {state.medicineSelection.hasFungalInfection && (
-                <Checkbox
-                  label="Suspected secondary bacterial infection"
-                  checked={state.medicineSelection.addFusicidAcid}
-                  onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "addFusicidAcid", value: v })}
+                <TextInput
+                  label="Expiry date"
+                  type="month"
+                  value={state.medicineSelection.expiryDate}
+                  onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "expiryDate", value: v })}
+                  required
                 />
-              )}
+              </div>
             </div>
           </StepWrapper>
         );
@@ -450,29 +583,61 @@ export default function EczemaClient() {
             validationError={validationError}
           >
             <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
-              <p className="text-sm font-medium text-navy-900 mb-3">Confirm counselling covered:</p>
+              <p className="text-sm font-medium text-navy-900 mb-3">Confirm counselling covered (supply the patient information leaflet):</p>
               <Checkbox
-                label="Emollient is most important — apply frequently as prevention"
-                checked={state.counselling.emollientFirst}
-                onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "emollientFirst", value: v })}
-              />
-              <Checkbox
-                label="Fingertip unit dosing for steroids"
-                checked={state.counselling.fingertipUnits}
-                onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "fingertipUnits", value: v })}
-              />
-              <Checkbox
-                label="Apply steroid thinly (avoid overuse)"
+                label="Apply the steroid FIRST, in a thin layer, to the affected skin only. WAIT AT LEAST 30 MINUTES, then apply the emollient. Do not put emollient straight over a freshly applied steroid"
                 checked={state.counselling.applyThinly}
                 onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "applyThinly", value: v })}
               />
               <Checkbox
-                label="Step-down approach (reduce frequency as improves)"
-                checked={state.counselling.stepDownApproach}
-                onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "stepDownApproach", value: v })}
+                label="Fingertip unit shown on the patient's own finger: one fingertip unit covers about two adult palms"
+                checked={state.counselling.fingertipUnits}
+                onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "fingertipUnits", value: v })}
+              />
+              {thinSkin && (
+                <Checkbox
+                  label="On the face, in skin folds or on genital skin, use this for no more than 7 days (7 day cap explained and recorded)"
+                  checked={state.counselling.sevenDayCapExplained}
+                  onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "sevenDayCapExplained", value: v })}
+                />
+              )}
+              {state.medicineSelection.steroidChoice === "betamethasone" && (
+                <>
+                  <Checkbox
+                    label="Do NOT use this on the face, eyelids, skin folds or genital skin. If eczema appears there, come back"
+                    checked={state.counselling.notOnFaceAdvice}
+                    onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "notOnFaceAdvice", value: v })}
+                  />
+                  <Checkbox
+                    label="Step down to a moderate potency once the flare settles rather than stopping abruptly"
+                    checked={state.counselling.stepDownApproach}
+                    onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "stepDownApproach", value: v })}
+                  />
+                </>
+              )}
+              <Checkbox
+                label="Keep using the emollient every day, including after the steroid course finishes. The emollient keeps eczema away; the steroid settles a flare"
+                checked={state.counselling.emollientFirst}
+                onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "emollientFirst", value: v })}
               />
               <Checkbox
-                label="Avoid known triggers (irritants, allergens)"
+                label="FIRE RISK FROM EMOLLIENTS explained: all emollients, including paraffin-free ones, soak into clothing, bedding and dressings and make them catch fire more easily and burn faster. Do not smoke, use a naked flame, or go near anything burning; wash clothing and bedding often, knowing washing may not remove the residue completely"
+                checked={state.counselling.fireRiskExplained}
+                onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "fireRiskExplained", value: v })}
+                description="MHRA safety issue; must be counselled on every time and recorded."
+              />
+              <Checkbox
+                label="Come back or see your GP if it is no better after 7 days, if it spreads, or if it starts weeping, crusting or becoming painful"
+                checked={state.counselling.followUpAdvice}
+                onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "followUpAdvice", value: v })}
+              />
+              <Checkbox
+                label="Seek urgent help if the rash becomes rapidly painful with clustered blisters or punched-out sores, or you feel unwell with it"
+                checked={state.counselling.urgentHelpAdvice}
+                onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "urgentHelpAdvice", value: v })}
+              />
+              <Checkbox
+                label="Avoid known triggers (irritants, allergens); do not use under occlusion, a tight dressing or a nappy unless specifically advised"
                 checked={state.counselling.avoidTriggers}
                 onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "avoidTriggers", value: v })}
               />

@@ -36,10 +36,16 @@ export function validateStep(state: HLConsultationState, stepIndex: number): str
 
     case 5: // Medicine Supply
       if (!state.medicineSupply.finasteride1mgOd) {
-        return "Please confirm finasteride 1mg OD supply";
+        return "Please confirm finasteride 1 mg once daily supply";
+      }
+      if (!state.medicineSupply.quantityMonths) {
+        return "Please record the months of treatment supplied (3 to 12 months between reviews)";
       }
       if (!state.medicineSupply.partnerNotified) {
-        return "Please confirm partner has been notified of teratogenic risk";
+        return "Please confirm the patient has been advised that tablets must not be handled by women who are or may become pregnant";
+      }
+      if (!state.medicineSupply.condomAdvice) {
+        return "Please confirm condom advice has been given (if a female partner is pregnant or likely to become pregnant)";
       }
       if (!state.medicineSupply.willMonitorSE) {
         return "Please confirm patient will monitor for side effects";
@@ -56,9 +62,14 @@ export function validateStep(state: HLConsultationState, stepIndex: number): str
         !state.counselling.sexualSideEffects ||
         !state.counselling.moodChanges ||
         !state.counselling.annualReview ||
-        !state.counselling.reportChanges
+        !state.counselling.reportChanges ||
+        !state.counselling.breastChanges ||
+        !state.counselling.expectations
       ) {
         return "All counselling points must be covered";
+      }
+      if (!state.counselling.pilAndCardSupplied) {
+        return "Please confirm the patient information leaflet and the patient card from the pack have been supplied";
       }
       return null;
 

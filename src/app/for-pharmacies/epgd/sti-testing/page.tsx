@@ -5,7 +5,7 @@ import { PgdPageActions } from "@/components/PgdPageActions";
 export const metadata: Metadata = {
   title: "STI Testing Consultation ePGD",
   description:
-    "Digital consultation tool for STI Testing. Guides pharmacists through risk assessment, clinical assessment, test selection, and counselling for sexually transmitted infection testing under UK Patient Group Direction.",
+    "Digital consultation tool for STI testing and chlamydia treatment. Guides pharmacists through risk assessment, clinical assessment, test selection, doxycycline or azithromycin supply, and counselling under the Get Real Health Chlamydia PGD (version 002, 11 September 2026).",
 };
 
 export default function STIToolPage() {
@@ -28,10 +28,10 @@ export default function STIToolPage() {
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-navy-900">
-            STI Testing — Consultation and Test Ordering
+            STI Testing and Chlamydia Treatment: Consultation
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Risk assessment, test selection, and counselling for STI testing under Patient Group Direction
+            Risk assessment, test selection, chlamydia treatment (doxycycline or azithromycin) and counselling under Patient Group Direction, version 002, issued 11 September 2026
           </p>
         </div>
 
@@ -44,7 +44,7 @@ export default function STIToolPage() {
             This ePGD is provided as a clinical decision support aid and does
             not replace professional clinical judgement. The pharmacist retains
             full responsibility for each consultation. Based on UK sexual health
-            guidance and the Get Real Health PGD for STI Testing.
+            guidance and the Get Real Health PGD for the treatment of Chlamydia (doxycycline or azithromycin), version 002, issued 11 September 2026.
           </p>
         </div>
       </div>

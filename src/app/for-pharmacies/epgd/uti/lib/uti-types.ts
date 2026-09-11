@@ -4,28 +4,66 @@ import type { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/
 
 export interface UTISymptoms {
   dysuria: boolean;
+  /** PGD v005 inclusion: two or more of dysuria, new nocturia, frequency, urgency. */
+  nocturia: boolean;
   frequency: boolean;
   urgency: boolean;
   suprapubicPain: boolean;
   haematuria: boolean;
   vaginalDischarge: boolean;
+  /** Pelvic pain, intermenstrual or post-coital bleeding, or a new or recent
+   *  sexual partner: PGD v005 excludes and refers for STI testing. */
+  pelvicPain: boolean;
+  abnormalBleeding: boolean;
+  stiHistory: boolean;
   duration: string; // "< 3 days" | "3-7 days" | "> 7 days" | "unknown"
   additionalNotes: string;
+  // Appendix 1 red flags (PGD v005). Every one is a stop.
+  redFlagsAsked: boolean;
+  feverRigors: boolean;
+  loinFlankPain: boolean;
+  nauseaVomiting: boolean;
+  confusionDrowsiness: boolean;
+  systemicallyUnwell: boolean;
 }
 
 export interface UTIMedicalHistory {
   pregnant: boolean;
   pregnancyPossible: boolean;
   breastfeeding: boolean;
+  /** Indwelling catheter, or a catheter removed within the last 7 days. */
   catheterised: boolean;
   previousUTIWithin4Weeks: boolean;
-  recurrentUTI: boolean; // 3+ in 12 months
+  /** PGD v005: an antibiotic already taken for this same episode, from anyone. */
+  antibioticThisEpisode: boolean;
+  /** PGD v005 records both answers: episodes in the last 6 and last 12 months.
+   *  Recurrent UTI (2 or more in 6 months, or 3 or more in 12 months) is derived. */
+  utiEpisodesLast6Months: "" | "0" | "1" | "2+";
+  utiEpisodesLast12Months: "" | "0" | "1" | "2" | "3+";
   kidneyDisease: boolean;
-  /** "unknown" is a real answer at a pharmacy counter and PGD v002 acts on it. */
-  renalImpairment: "none" | "moderate" | "severe" | "unknown";
+  /** "unknown" is a real answer at a pharmacy counter and the PGD acts on it.
+   *  "checked-adequate" means a recent renal function result has been seen and
+   *  is adequate (eGFR 45 or more); PGD v005 needs this for patients aged 60 to 64. */
+  renalImpairment: "none" | "checked-adequate" | "moderate" | "severe" | "unknown";
+  /** Diabetes, or any condition causing peripheral neuropathy (nitrofurantoin caution). */
   diabetesUncontrolled: boolean;
   immunosuppressed: boolean;
   knownAbnormalUrinaryTract: boolean;
+  // Nitrofurantoin arm exclusions (PGD v005)
+  nitrofurantoinHypersensitivity: boolean;
+  g6pdDeficiency: boolean;
+  previousNitrofurantoinReaction: boolean;
+  acutePorphyria: boolean;
+  // Trimethoprim arm exclusions (PGD v005)
+  trimethoprimHypersensitivity: boolean;
+  trimethoprimLast3Months: boolean;
+  folateDeficiencyOrBloodDyscrasia: boolean;
+  takingMethotrexate: boolean;
+  takingPotassiumSparingAgent: boolean;
+  takingInteractingMedicine: boolean;
+  takingWarfarin: boolean;
+  anticoagulationServiceConsulted: boolean;
+  hepaticImpairment: boolean;
   allergies: string;
   currentMedications: string;
 }
@@ -41,6 +79,9 @@ export interface UTIMedicineSelection {
   dose: string;
   duration: string;
   quantity: number;
+  /** PGD v005 gate on the trimethoprim arm: the reason nitrofurantoin is
+   *  unsuitable must be one of these and must be recorded. */
+  trimethoprimReason: "" | "contraindicated" | "intolerance" | "unavailable";
   pharmacistOverride: boolean;
   overrideReason: string;
 }
@@ -48,10 +89,19 @@ export interface UTIMedicineSelection {
 export interface UTICounselling {
   completeCourse: boolean;
   hydrationAdvice: boolean;
+  /** 48 hour safety netting given in the PGD's terms, and recorded. */
   symptomsToReturn: boolean;
+  /** Immediate-action list (Appendix 1 symptoms) given. */
+  immediateActionAdvice: boolean;
+  /** Nitrofurantoin: take with food or milk. Trimethoprim: doses about 12 hours apart. */
+  howToTake: boolean;
+  /** Nitrofurantoin only: urine may go dark yellow or brown. */
+  darkUrine: boolean;
+  /** Nitrofurantoin: numbness, tingling or breathlessness. Trimethoprim: sore
+   *  throat, fever, mouth ulcers, bruising or bleeding. */
+  stopAndSeekAdvice: boolean;
   avoidCranberry: boolean;
   painRelief: boolean;
-  alkalinisingAgents: boolean;
   sexualActivityAdvice: boolean;
   pregnancyPrecautions: boolean;
 }
@@ -79,11 +129,21 @@ export const initialUTISymptoms: UTISymptoms = {
   dysuria: false,
   frequency: false,
   urgency: false,
+  nocturia: false,
   suprapubicPain: false,
   haematuria: false,
   vaginalDischarge: false,
+  pelvicPain: false,
+  abnormalBleeding: false,
+  stiHistory: false,
   duration: "",
   additionalNotes: "",
+  redFlagsAsked: false,
+  feverRigors: false,
+  loinFlankPain: false,
+  nauseaVomiting: false,
+  confusionDrowsiness: false,
+  systemicallyUnwell: false,
 };
 
 export const initialUTIMedicalHistory: UTIMedicalHistory = {
@@ -92,12 +152,27 @@ export const initialUTIMedicalHistory: UTIMedicalHistory = {
   breastfeeding: false,
   catheterised: false,
   previousUTIWithin4Weeks: false,
-  recurrentUTI: false,
+  antibioticThisEpisode: false,
+  utiEpisodesLast6Months: "",
+  utiEpisodesLast12Months: "",
   kidneyDisease: false,
   renalImpairment: "none",
   diabetesUncontrolled: false,
   immunosuppressed: false,
   knownAbnormalUrinaryTract: false,
+  nitrofurantoinHypersensitivity: false,
+  g6pdDeficiency: false,
+  previousNitrofurantoinReaction: false,
+  acutePorphyria: false,
+  trimethoprimHypersensitivity: false,
+  trimethoprimLast3Months: false,
+  folateDeficiencyOrBloodDyscrasia: false,
+  takingMethotrexate: false,
+  takingPotassiumSparingAgent: false,
+  takingInteractingMedicine: false,
+  takingWarfarin: false,
+  anticoagulationServiceConsulted: false,
+  hepaticImpairment: false,
   allergies: "",
   currentMedications: "",
 };
@@ -113,6 +188,7 @@ export const initialUTIMedicineSelection: UTIMedicineSelection = {
   dose: "",
   duration: "",
   quantity: 0,
+  trimethoprimReason: "",
   pharmacistOverride: false,
   overrideReason: "",
 };
@@ -121,9 +197,12 @@ export const initialUTICounselling: UTICounselling = {
   completeCourse: false,
   hydrationAdvice: false,
   symptomsToReturn: false,
+  immediateActionAdvice: false,
+  howToTake: false,
+  darkUrine: false,
+  stopAndSeekAdvice: false,
   avoidCranberry: false,
   painRelief: false,
-  alkalinisingAgents: false,
   sexualActivityAdvice: false,
   pregnancyPrecautions: false,
 };

@@ -4,7 +4,7 @@ import { PgdPageActions } from "@/components/PgdPageActions";
 export const metadata = {
   title: 'Hepatitis A/B Travel ePGD | Pharmacy PGD',
   description:
-    'UK Pharmacy Patient Group Direction (PGD) consultation tool for hepatitis A and hepatitis B vaccination in travel and lifestyle-risk situations. Twinrix, Havrix and Engerix-B with standard and accelerated schedules.',
+    'UK Pharmacy Patient Group Direction (PGD) consultation tool for hepatitis A and hepatitis B vaccination in travel and lifestyle-risk situations. Twinrix, Havrix, Avaxim and Engerix B with standard, accelerated and very rapid schedules. PGD v006, 11 September 2026.',
 };
 
 export default function HepABPage() {
@@ -24,19 +24,24 @@ export default function HepABPage() {
             <p className="text-gray-600 mb-4">PGD Consultation for UK Pharmacies</p>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-900">
-                Guides pharmacists through the supply and administration of
-                Twinrix (combined Hep A + Hep B), Havrix (Hep A monocomponent)
-                and Engerix-B (Hep B monocomponent) to eligible patients
-                travelling to endemic regions or at lifestyle-risk for
-                Hepatitis B. Supports standard (0/1/6 months) and accelerated
-                (0/7/21 days + 12-month booster) schedules.
+                Guides pharmacists through the administration of Twinrix
+                (combined Hep A + Hep B), Havrix and Avaxim (Hep A) and
+                Engerix B (Hep B) to individuals aged 1 year and over at
+                increased risk through travel or lifestyle, in line with the
+                Hepatitis A and Hepatitis B Vaccination PGD v006, issued
+                11 September 2026. Supports the standard (0, 1 and 6 months),
+                accelerated (0, 1 and 2 months plus 12 months) and very rapid
+                (0, 7 and 21 days plus 12 months; 18 and over) schedules, and
+                the hepatitis A single dose with booster at 6 to 12 months.
+                Occupational hepatitis B, renal patients and post-exposure
+                situations are out of scope.
               </p>
             </div>
           </div>
         </div>
         <HepABClient />
         <div className="mt-8 text-center text-xs text-gray-500">
-          <p>Get Real Health ePGD — Hepatitis A/B Travel | Confidential Patient Information</p>
+          <p>Get Real Health ePGD, Hepatitis A/B Travel | Confidential Patient Information</p>
         </div>
       </div>
     </div>

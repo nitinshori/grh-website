@@ -330,8 +330,37 @@ export default function BPHClient() {
       case 3: // Medical History
         return (
           <div className="space-y-4">
+            <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-3 space-y-2">
+              <p className="text-sm font-semibold text-amber-900">Previous assessment (PGD v002)</p>
+              <Checkbox
+                label="Symptoms previously assessed by a GP or urologist"
+                checked={state.medicalHistory.previouslyAssessedByGp}
+                onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "previouslyAssessedByGp", value: v })}
+              />
+              {!state.medicalHistory.previouslyAssessedByGp && (
+                <>
+                  <p className="text-xs text-amber-800">Symptoms never assessed by a GP or urologist are an exclusion unless BOTH of the following apply and are recorded.</p>
+                  <Checkbox
+                    label="GP informed on the day of supply"
+                    checked={state.medicalHistory.gpInformedToday}
+                    onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "gpInformedToday", value: v })}
+                  />
+                  <Checkbox
+                    label="Patient agrees to attend the GP within 6 weeks for examination and, where indicated, PSA testing"
+                    checked={state.medicalHistory.patientAgreesGpWithin6Weeks}
+                    onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "patientAgreesGpWithin6Weeks", value: v })}
+                  />
+                </>
+              )}
+            </div>
+            <p className="text-sm font-semibold text-red-700">Exclusions (PGD v002). Any one excludes; refer.</p>
             <Checkbox
-              label="History of orthostatic hypotension"
+              label="Known hypersensitivity to tamsulosin or any excipient in the formulation"
+              checked={state.medicalHistory.hypersensitivity}
+              onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "hypersensitivity", value: v })}
+            />
+            <Checkbox
+              label="History of orthostatic hypotension (blood pressure drop on standing)"
               checked={state.medicalHistory.orthostasisHistory}
               onChange={(v) =>
                 dispatch({
@@ -340,10 +369,10 @@ export default function BPHClient() {
                   value: v,
                 })
               }
-              description="Previous episodes of dizziness or fainting on standing"
+              description="Exclusion. Previous episodes of dizziness or fainting on standing"
             />
             <Checkbox
-              label="Severe hepatic impairment"
+              label="Severe hepatic impairment (Child-Pugh grade C)"
               checked={state.medicalHistory.severeHepaticImpairment}
               onChange={(v) =>
                 dispatch({
@@ -352,9 +381,10 @@ export default function BPHClient() {
                   value: v,
                 })
               }
+              description="Exclusion"
             />
             <Checkbox
-              label="Planned cataract surgery"
+              label="Planned cataract or glaucoma surgery"
               checked={state.medicalHistory.plannedCataractSurgery}
               onChange={(v) =>
                 dispatch({
@@ -363,7 +393,38 @@ export default function BPHClient() {
                   value: v,
                 })
               }
-              description="Tamsulosin increases risk of intraoperative floppy iris syndrome (IFIS)"
+              description="Exclusion: risk of intraoperative floppy iris syndrome (IFIS)"
+            />
+            <Checkbox
+              label="Uncontrolled hypertension"
+              checked={state.medicalHistory.uncontrolledHypertension}
+              onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "uncontrolledHypertension", value: v })}
+              description="Exclusion"
+            />
+            <Checkbox
+              label="Neurological disease affecting bladder function: multiple sclerosis, Parkinson's disease, spinal cord disease, diabetic neuropathy"
+              checked={state.medicalHistory.neurologicalBladderDisease}
+              onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "neurologicalBladderDisease", value: v })}
+              description="Exclusion. Refer"
+            />
+            <p className="text-sm font-semibold text-amber-700 pt-2">Cautions (PGD v002)</p>
+            <Checkbox
+              label="Mild to moderate hepatic impairment"
+              checked={state.medicalHistory.mildModerateHepaticImpairment}
+              onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "mildModerateHepaticImpairment", value: v })}
+              description="Use with caution"
+            />
+            <Checkbox
+              label="Renal impairment, eGFR below 10 mL/min/1.73m2"
+              checked={state.medicalHistory.severeRenalImpairment}
+              onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "severeRenalImpairment", value: v })}
+              description="Use with caution"
+            />
+            <Checkbox
+              label="History of syncope or fainting"
+              checked={state.medicalHistory.syncopeHistory}
+              onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "syncopeHistory", value: v })}
+              description="Increased risk with tamsulosin; consider discontinuation if syncope occurs"
             />
             <TextInput
               label="Other conditions (optional)"
@@ -385,11 +446,11 @@ export default function BPHClient() {
           <div className="space-y-4">
             <div className="bg-red-50 border border-red-200 rounded p-4 mb-4">
               <p className="text-xs text-red-700 font-medium">
-                Red flags require urgent referral — do not supply medicine
+                Red flags are exclusions under PGD v002: refer, do not supply medicine
               </p>
             </div>
             <Checkbox
-              label="Haematuria (blood in urine)"
+              label="Visible or non-visible haematuria"
               checked={state.redFlags.haematuria}
               onChange={(v) =>
                 dispatch({
@@ -398,10 +459,10 @@ export default function BPHClient() {
                   value: v,
                 })
               }
-              description="Requires urgent urological assessment"
+              description="Refer: urological investigation before any treatment of symptoms"
             />
             <Checkbox
-              label="Acute urinary retention"
+              label="Acute urinary retention requiring catheterisation or in-patient management"
               checked={state.redFlags.acuteRetention}
               onChange={(v) =>
                 dispatch({
@@ -410,7 +471,7 @@ export default function BPHClient() {
                   value: v,
                 })
               }
-              description="Sudden inability to pass urine — emergency referral"
+              description="Sudden inability to pass urine: emergency referral"
             />
             <Checkbox
               label="Palpable bladder"
@@ -422,10 +483,22 @@ export default function BPHClient() {
                   value: v,
                 })
               }
-              description="On abdominal examination — suggests significant retention"
+              description="On abdominal examination: suggests significant retention. Refer for post-void residual measurement"
             />
             <Checkbox
-              label="PSA ≥4 ng/mL (or elevated)"
+              label="Symptoms suggesting chronic retention: overflow incontinence, or a constant feeling of incomplete emptying with a poor stream"
+              checked={state.redFlags.chronicRetentionSymptoms}
+              onChange={(v) => dispatch({ type: "UPDATE_RED_FLAGS", field: "chronicRetentionSymptoms", value: v })}
+              description="Refer for post-void residual measurement"
+            />
+            <Checkbox
+              label="Current or recurrent urinary tract infection, or dysuria with fever"
+              checked={state.redFlags.urinaryTractInfection}
+              onChange={(v) => dispatch({ type: "UPDATE_RED_FLAGS", field: "urinaryTractInfection", value: v })}
+              description="Refer"
+            />
+            <Checkbox
+              label="Known or suspected prostate cancer, an abnormal digital rectal examination, or a raised PSA"
               checked={state.redFlags.psa4OrAbove}
               onChange={(v) =>
                 dispatch({
@@ -434,7 +507,7 @@ export default function BPHClient() {
                   value: v,
                 })
               }
-              description="Requires prostate cancer screening assessment"
+              description="Refer"
             />
             <Checkbox
               label="Unexplained weight loss"
@@ -446,7 +519,7 @@ export default function BPHClient() {
                   value: v,
                 })
               }
-              description="May indicate malignancy — refer to GP"
+              description="May indicate malignancy: refer to GP"
             />
             <Checkbox
               label="Bone pain"
@@ -458,16 +531,58 @@ export default function BPHClient() {
                   value: v,
                 })
               }
-              description="May indicate metastatic disease — refer urgently"
+              description="May indicate metastatic disease: refer urgently"
             />
+            <div className="border-t pt-4 space-y-3">
+              <p className="text-sm font-semibold text-navy-900">Concurrent medicines</p>
+              <Checkbox
+                label="Taking another alpha-1 adrenoceptor antagonist (e.g. doxazosin, alfuzosin, terazosin, prazosin)"
+                checked={state.contraindications.otherAlphaBlocker}
+                onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "otherAlphaBlocker", value: v })}
+                description="Exclusion. Do not add a second alpha-blocker"
+              />
+              <Checkbox
+                label="Taking a PDE5 inhibitor (sildenafil, tadalafil)"
+                checked={state.contraindications.takingPde5Inhibitor}
+                onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "takingPde5Inhibitor", value: v })}
+                description="Caution: additive hypotensive effects; monitor blood pressure carefully"
+              />
+              {state.contraindications.takingPde5Inhibitor && (
+                <TextInput
+                  label="PDE5 inhibitor details"
+                  value={state.contraindications.pde5Detail}
+                  onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "pde5Detail", value: v })}
+                  placeholder="Which one, dose, how often"
+                />
+              )}
+              <Checkbox
+                label="Taking antihypertensive medication"
+                checked={state.contraindications.takingAntihypertensives}
+                onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "takingAntihypertensives", value: v })}
+                description="Caution: orthostatic hypotension; advise to sit or lie down if dizziness occurs"
+              />
+              {state.contraindications.takingAntihypertensives && (
+                <TextInput
+                  label="Antihypertensives"
+                  value={state.contraindications.otherAntihypertensives}
+                  onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "otherAntihypertensives", value: v })}
+                  placeholder="List antihypertensive medicines"
+                />
+              )}
+            </div>
           </div>
         );
 
       case 5: // Medicine Supply
         return (
           <div className="space-y-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-900 space-y-1">
+              <p className="font-semibold">Tamsulosin 400 micrograms modified-release capsules. PGD v002, 11 September 2026.</p>
+              <p>400 micrograms once daily, after food, preferably with breakfast. Swallow whole with water; do not crush, chew or open. Up to 28 capsules per supply.</p>
+              <p>Maximum under this PGD: an initial supply of 4 weeks, then, where the IPSS has improved by 3 points or more at the 4 to 6 week review and the patient has been examined by the GP, further supplies to a maximum of 12 months&apos; continuous treatment, after which the GP takes over prescribing. No improvement at 4 to 6 weeks, or any new exclusion, ends supply under this PGD.</p>
+            </div>
             <Checkbox
-              label="Supply tamsulosin 400mcg MR once daily"
+              label="Supply tamsulosin 400 micrograms MR capsules, once daily"
               checked={state.medicineSupply.tamsulosin400mcgMrOd}
               onChange={(v) =>
                 dispatch({
@@ -478,8 +593,64 @@ export default function BPHClient() {
               }
               description="Modified-release formulation"
             />
+            <SelectInput
+              label="Supply type"
+              value={state.medicineSupply.supplyType}
+              onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "supplyType", value: v })}
+              required
+              options={[
+                { value: "initial", label: "Initial supply (4 weeks), review at 4 to 6 weeks" },
+                { value: "continuation", label: "Continuation after the 4 to 6 week review" },
+              ]}
+            />
+            {state.medicineSupply.supplyType === "continuation" && (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-3 space-y-3">
+                <p className="text-xs text-amber-800">Continuation requires all three: IPSS improved by 3 or more since the start of treatment (current IPSS is recorded on the LUTS step), GP examination completed, and fewer than 12 months of continuous treatment.</p>
+                <NumberInput
+                  label="IPSS at the start of treatment"
+                  value={state.medicineSupply.previousIpss}
+                  onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "previousIpss", value: v })}
+                  min={0}
+                  max={35}
+                  required
+                />
+                {state.medicineSupply.previousIpss !== null && state.lutsAssessment.ipssScore !== null && (
+                  <p className="text-sm text-navy-900">Improvement: {state.medicineSupply.previousIpss - state.lutsAssessment.ipssScore} points (current IPSS {state.lutsAssessment.ipssScore})</p>
+                )}
+                <Checkbox
+                  label="Patient has been examined by the GP since starting treatment"
+                  checked={state.medicineSupply.gpExaminedSinceStart}
+                  onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "gpExaminedSinceStart", value: v })}
+                />
+                <NumberInput
+                  label="Months of continuous treatment so far"
+                  value={state.medicineSupply.monthsOnTreatment}
+                  onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "monthsOnTreatment", value: v })}
+                  min={0}
+                  max={24}
+                  unit="months"
+                  required
+                />
+              </div>
+            )}
+            <NumberInput
+              label="Quantity supplied (capsules, maximum 28)"
+              value={state.medicineSupply.quantity}
+              onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "quantity", value: v })}
+              min={1}
+              max={28}
+              unit="capsules"
+              required
+            />
+            <TextInput
+              label="Brand supplied"
+              value={state.medicineSupply.brand}
+              onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "brand", value: v })}
+              placeholder="e.g. generic manufacturer, Flomaxtra"
+              required
+            />
             <Checkbox
-              label="Patient will take 30 minutes after food"
+              label="Patient will take after food, preferably with breakfast"
               checked={state.medicineSupply.afterFood30mins}
               onChange={(v) =>
                 dispatch({
@@ -510,7 +681,7 @@ export default function BPHClient() {
                   value: v,
                 })
               }
-              description="Take first dose at bedtime; rise slowly when standing"
+              description="Stand up slowly from sitting or lying down, especially at the start of treatment"
             />
           </div>
         );
@@ -519,7 +690,7 @@ export default function BPHClient() {
         return (
           <div className="space-y-4">
             <Checkbox
-              label="Take 30 minutes after food at same time daily"
+              label="Take the capsule after food, preferably with breakfast, to minimise side effects"
               checked={state.counselling.take30minsAfterFood}
               onChange={(v) =>
                 dispatch({
@@ -530,7 +701,12 @@ export default function BPHClient() {
               }
             />
             <Checkbox
-              label="First-dose hypotension — rise slowly from lying/sitting"
+              label="Do not crush, chew or open the capsule; swallow whole to maintain the modified-release formulation"
+              checked={state.counselling.swallowWhole}
+              onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "swallowWhole", value: v })}
+            />
+            <Checkbox
+              label="Stand up slowly from sitting or lying down, especially at the start of treatment, as dizziness may occur; avoid sudden changes in posture"
               checked={state.counselling.firstDoseHypotension}
               onChange={(v) =>
                 dispatch({
@@ -539,10 +715,15 @@ export default function BPHClient() {
                   value: v,
                 })
               }
-              description="Take first dose at night; may cause dizziness"
             />
             <Checkbox
-              label="Retrograde ejaculation is common"
+              label="Report any episodes of dizziness, fainting or lightheadedness to your doctor immediately"
+              checked={state.counselling.reportDizzinessFainting}
+              onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "reportDizzinessFainting", value: v })}
+              description="May require dose adjustment or discontinuation"
+            />
+            <Checkbox
+              label="Inform your GP or pharmacist if you experience abnormal ejaculation or other sexual dysfunction"
               checked={state.counselling.retrogradeEjaculation}
               onChange={(v) =>
                 dispatch({
@@ -551,10 +732,10 @@ export default function BPHClient() {
                   value: v,
                 })
               }
-              description="Semen enters bladder instead of being ejaculated; harmless"
+              description="Abnormal (mostly retrograde) ejaculation is very common and harmless"
             />
             <Checkbox
-              label="Inform ophthalmologist before any eye surgery"
+              label="Inform any healthcare professional, including eye surgeons and dentists, that you take tamsulosin before any planned procedure, especially eye surgery"
               checked={state.counselling.informOphthalmologist}
               onChange={(v) =>
                 dispatch({
@@ -563,10 +744,25 @@ export default function BPHClient() {
                   value: v,
                 })
               }
-              description="Tamsulosin increases risk of intraoperative floppy iris syndrome"
+              description="Risk of intraoperative floppy iris syndrome"
             />
             <Checkbox
-              label="Review at 4-6 weeks to assess efficacy"
+              label="An erection lasting longer than 4 hours (priapism): go to A&E or your GP immediately"
+              checked={state.counselling.priapismWarning}
+              onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "priapismWarning", value: v })}
+            />
+            <Checkbox
+              label="Seek urgent medical attention for rapid heartbeat, chest pain or severe dizziness"
+              checked={state.counselling.urgentSymptoms}
+              onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "urgentSymptoms", value: v })}
+            />
+            <Checkbox
+              label="If you develop a rash or suspect an allergic reaction, stop the medicine and contact your GP or pharmacist"
+              checked={state.counselling.rashAllergy}
+              onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "rashAllergy", value: v })}
+            />
+            <Checkbox
+              label="Review appointment arranged for 4 to 6 weeks to assess symptom improvement and tolerability; contact your GP or pharmacist with any concerns"
               checked={state.counselling.reviewAt4To6Weeks}
               onChange={(v) =>
                 dispatch({

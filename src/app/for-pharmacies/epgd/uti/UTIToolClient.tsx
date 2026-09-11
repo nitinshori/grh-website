@@ -29,6 +29,7 @@ import {
   hasExclusionCriteria,
   getDoseRecommendation,
   getMedicineQuantity,
+  isNitrofurantoinContraindicated,
 } from "./lib/uti-clinical-logic";
 import {
   validateUTIStep,
@@ -242,8 +243,8 @@ export function UTIToolClient() {
       outcome: isBlocked ? 'not_supplied' : 'completed',
       medicine: {
         name: state.medicineSelection.medicine === 'nitrofurantoin'
-          ? 'Nitrofurantoin 100mg MR'
-          : 'Trimethoprim 200mg',
+          ? 'Nitrofurantoin 100mg modified release capsules'
+          : 'Trimethoprim 200mg tablets',
         dose: state.medicineSelection.dose,
         duration: state.medicineSelection.duration,
         quantity: medicineQuantity.toString(),
@@ -262,6 +263,8 @@ export function UTIToolClient() {
     setCurrentStep(0);
     setCompletedSteps(new Set());
   }, []);
+
+  const isTrimethoprim = state.medicineSelection.medicine === "trimethoprim";
 
   // ─── RENDER STEP CONTENT ───
 
@@ -304,7 +307,7 @@ export function UTIToolClient() {
             <AlertBanner alerts={alerts} />
             <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-4">
               <p className="text-sm text-blue-800">
-                Select the symptoms the patient is experiencing. At least one main symptom (dysuria, frequency, or urgency) must be present.
+                Select the symptoms the patient is experiencing. Two or more of dysuria, new nocturia, frequency or urgency must be present. Where only one is present, refer rather than supply.
               </p>
             </div>
             <div className="space-y-3">
@@ -315,6 +318,16 @@ export function UTIToolClient() {
                   dispatch({
                     type: "UPDATE_SYMPTOMS",
                     payload: { dysuria: v },
+                  })
+                }
+              />
+              <Checkbox
+                label="New nocturia (new need to pass urine at night)"
+                checked={state.symptoms.nocturia}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_SYMPTOMS",
+                    payload: { nocturia: v },
                   })
                 }
               />
@@ -358,6 +371,12 @@ export function UTIToolClient() {
                   })
                 }
               />
+            </div>
+            <div className="space-y-3 border-t border-gray-200 pt-4">
+              <h4 className="font-semibold text-sm text-navy-900">Sexually transmitted infection as an alternative diagnosis</h4>
+              <p className="text-xs text-gray-600">
+                Where discharge is present, or the history raises the possibility, do not supply under this PGD. Refer for chlamydia, gonorrhoea and trichomonas testing.
+              </p>
               <Checkbox
                 label="Vaginal discharge"
                 checked={state.symptoms.vaginalDischarge}
@@ -368,10 +387,41 @@ export function UTIToolClient() {
                   })
                 }
               />
+              <Checkbox
+                label="Pelvic pain"
+                checked={state.symptoms.pelvicPain}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_SYMPTOMS",
+                    payload: { pelvicPain: v },
+                  })
+                }
+              />
+              <Checkbox
+                label="Intermenstrual or post-coital bleeding"
+                checked={state.symptoms.abnormalBleeding}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_SYMPTOMS",
+                    payload: { abnormalBleeding: v },
+                  })
+                }
+              />
+              <Checkbox
+                label="New or recent sexual partner, or other history suggesting a sexually transmitted infection"
+                checked={state.symptoms.stiHistory}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_SYMPTOMS",
+                    payload: { stiHistory: v },
+                  })
+                }
+              />
             </div>
             <div>
               <SelectInput
                 label="Duration of symptoms"
+                required
                 value={state.symptoms.duration}
                 onChange={(v) =>
                   dispatch({
@@ -382,8 +432,8 @@ export function UTIToolClient() {
                 options={[
                   { value: "< 3 days", label: "Less than 3 days" },
                   { value: "3-7 days", label: "3 to 7 days" },
-                  { value: "> 7 days", label: "More than 7 days" },
-                  { value: "unknown", label: "Unknown" },
+                  { value: "> 7 days", label: "More than 7 days (excluded, refer)" },
+                  { value: "unknown", label: "Cannot be established (excluded, refer)" },
                 ]}
               />
             </div>
@@ -448,7 +498,7 @@ export function UTIToolClient() {
             <div className="space-y-3 border-b border-gray-200 pb-4">
               <h4 className="font-semibold text-sm text-navy-900">Catheterisation & UTI History</h4>
               <Checkbox
-                label="Currently catheterised"
+                label="Indwelling urinary catheter, or a catheter removed within the last 7 days"
                 checked={state.medicalHistory.catheterised}
                 onChange={(v) =>
                   dispatch({
@@ -456,6 +506,17 @@ export function UTIToolClient() {
                     payload: { catheterised: v },
                   })
                 }
+              />
+              <Checkbox
+                label="An antibiotic has already been taken for this same episode (supplied here, by a GP, or obtained elsewhere)"
+                checked={state.medicalHistory.antibioticThisEpisode}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    payload: { antibioticThisEpisode: v },
+                  })
+                }
+                description="One course per episode. Refer."
               />
               <Checkbox
                 label="Previous UTI within last 4 weeks"
@@ -467,21 +528,52 @@ export function UTIToolClient() {
                   })
                 }
               />
-              <Checkbox
-                label="Recurrent UTI (2 or more in 6 months, or 3 or more in 12 months)"
-                checked={state.medicalHistory.recurrentUTI}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_MEDICAL_HISTORY",
-                    payload: { recurrentUTI: v },
-                  })
-                }
-              />
+              <p className="text-xs text-gray-600">
+                Recurrent UTI means 2 or more episodes in the last 6 months, or 3 or more in the last 12 months. Ask both questions and record both answers.
+              </p>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <SelectInput
+                  label="UTI episodes in the last 6 months (before this one)"
+                  value={state.medicalHistory.utiEpisodesLast6Months}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_MEDICAL_HISTORY",
+                      payload: { utiEpisodesLast6Months: v as "" | "0" | "1" | "2+" },
+                    })
+                  }
+                  required
+                  options={[
+                    { value: "0", label: "None" },
+                    { value: "1", label: "1" },
+                    { value: "2+", label: "2 or more (recurrent, refer)" },
+                  ]}
+                />
+                <SelectInput
+                  label="UTI episodes in the last 12 months (before this one)"
+                  value={state.medicalHistory.utiEpisodesLast12Months}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_MEDICAL_HISTORY",
+                      payload: { utiEpisodesLast12Months: v as "" | "0" | "1" | "2" | "3+" },
+                    })
+                  }
+                  required
+                  options={[
+                    { value: "0", label: "None" },
+                    { value: "1", label: "1" },
+                    { value: "2", label: "2" },
+                    { value: "3+", label: "3 or more (recurrent, refer)" },
+                  ]}
+                />
+              </div>
             </div>
             <div className="space-y-3 border-b border-gray-200 pb-4">
               <h4 className="font-semibold text-sm text-navy-900">Kidney & Renal Function</h4>
+              <p className="text-xs text-gray-600">
+                Ask the patient directly: &quot;Have you ever been told you have kidney disease, or that your kidneys do not work as well as they should?&quot;
+              </p>
               <Checkbox
-                label="Known kidney disease"
+                label="Answer YES: known kidney disease, or under any renal follow-up"
                 checked={state.medicalHistory.kidneyDisease}
                 onChange={(v) =>
                   dispatch({
@@ -491,23 +583,27 @@ export function UTIToolClient() {
                 }
               />
               <SelectInput
-                label="Renal impairment level"
+                label="Renal function"
                 value={state.medicalHistory.renalImpairment}
                 onChange={(v) =>
                   dispatch({
                     type: "UPDATE_MEDICAL_HISTORY",
-                    payload: { renalImpairment: v as any },
+                    payload: { renalImpairment: v as "none" | "checked-adequate" | "moderate" | "severe" | "unknown" },
                   })
                 }
                 options={[
-                  { value: "none", label: "None known, patient says kidneys are fine" },
+                  { value: "none", label: "Answer NO, no known kidney disease (aged 16 to 59: proceed)" },
+                  { value: "checked-adequate", label: "Recent renal function result seen and adequate (eGFR 45 or more)" },
                   { value: "unknown", label: "Patient does not know" },
-                  { value: "moderate", label: "Moderate (eGFR 30 to 44)" },
-                  { value: "severe", label: "Severe (eGFR under 30)" },
+                  { value: "moderate", label: "Moderate impairment (eGFR 30 to 44)" },
+                  { value: "severe", label: "Severe impairment (eGFR under 30)" },
                 ]}
               />
+              <p className="text-xs text-gray-600">
+                Aged 60 to 64: exclude and refer for a renal function check first unless a recent result has been seen and is adequate.
+              </p>
               <Checkbox
-                label="Known abnormal urinary tract anatomy"
+                label="Known structural or functional abnormality of the urinary tract, or renal stones"
                 checked={state.medicalHistory.knownAbnormalUrinaryTract}
                 onChange={(v) =>
                   dispatch({
@@ -520,7 +616,7 @@ export function UTIToolClient() {
             <div className="space-y-3 border-b border-gray-200 pb-4">
               <h4 className="font-semibold text-sm text-navy-900">Other Conditions</h4>
               <Checkbox
-                label="Uncontrolled diabetes"
+                label="Diabetes, or any condition causing peripheral neuropathy"
                 checked={state.medicalHistory.diabetesUncontrolled}
                 onChange={(v) =>
                   dispatch({
@@ -528,6 +624,7 @@ export function UTIToolClient() {
                     payload: { diabetesUncontrolled: v },
                   })
                 }
+                description="Caution: increases the risk of nitrofurantoin-associated neuropathy. Counsel on new numbness or tingling."
               />
               <Checkbox
                 label="Immunosuppressed"
@@ -536,6 +633,155 @@ export function UTIToolClient() {
                   dispatch({
                     type: "UPDATE_MEDICAL_HISTORY",
                     payload: { immunosuppressed: v },
+                  })
+                }
+              />
+            </div>
+            <div className="space-y-3 border-b border-gray-200 pb-4">
+              <h4 className="font-semibold text-sm text-navy-900">Nitrofurantoin arm exclusions</h4>
+              <p className="text-xs text-gray-600">
+                Any of these excludes nitrofurantoin. Trimethoprim may then be supplied only if its own gate is satisfied.
+              </p>
+              <Checkbox
+                label="Known hypersensitivity to nitrofurantoin or to any excipient in the product"
+                checked={state.medicalHistory.nitrofurantoinHypersensitivity}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    payload: { nitrofurantoinHypersensitivity: v },
+                  })
+                }
+              />
+              <Checkbox
+                label="Glucose-6-phosphate dehydrogenase (G6PD) deficiency"
+                checked={state.medicalHistory.g6pdDeficiency}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    payload: { g6pdDeficiency: v },
+                  })
+                }
+                description="Nitrofurantoin causes haemolysis. Ask where the patient or their family originates from an area where G6PD deficiency is common."
+              />
+              <Checkbox
+                label="Previous pulmonary reaction, peripheral neuropathy or hepatic reaction attributed to nitrofurantoin"
+                checked={state.medicalHistory.previousNitrofurantoinReaction}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    payload: { previousNitrofurantoinReaction: v },
+                  })
+                }
+              />
+              <Checkbox
+                label="Acute porphyria"
+                checked={state.medicalHistory.acutePorphyria}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    payload: { acutePorphyria: v },
+                  })
+                }
+              />
+            </div>
+            <div className="space-y-3 border-b border-gray-200 pb-4">
+              <h4 className="font-semibold text-sm text-navy-900">Trimethoprim arm exclusions</h4>
+              <p className="text-xs text-gray-600">
+                Any of these excludes trimethoprim. Interactions are handled as exclusions, not cautions.
+              </p>
+              <Checkbox
+                label="Known hypersensitivity to trimethoprim or to any excipient in the product"
+                checked={state.medicalHistory.trimethoprimHypersensitivity}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    payload: { trimethoprimHypersensitivity: v },
+                  })
+                }
+              />
+              <Checkbox
+                label="Trimethoprim used in the last 3 months for any indication"
+                checked={state.medicalHistory.trimethoprimLast3Months}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    payload: { trimethoprimLast3Months: v },
+                  })
+                }
+                description="Resistance is likely. Do not supply trimethoprim again."
+              />
+              <Checkbox
+                label="Known folate deficiency, megaloblastic anaemia, or any blood dyscrasia"
+                checked={state.medicalHistory.folateDeficiencyOrBloodDyscrasia}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    payload: { folateDeficiencyOrBloodDyscrasia: v },
+                  })
+                }
+              />
+              <Checkbox
+                label="Taking methotrexate"
+                checked={state.medicalHistory.takingMethotrexate}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    payload: { takingMethotrexate: v },
+                  })
+                }
+                description="The combination causes profound marrow suppression and can be fatal. Absolute exclusion."
+              />
+              <Checkbox
+                label="Taking an ACE inhibitor, an angiotensin receptor blocker, spironolactone, eplerenone, amiloride or any other potassium-sparing agent"
+                checked={state.medicalHistory.takingPotassiumSparingAgent}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    payload: { takingPotassiumSparingAgent: v },
+                  })
+                }
+                description="Trimethoprim causes hyperkalaemia; the combination has been associated with sudden death in older patients."
+              />
+              <Checkbox
+                label="Taking phenytoin, azathioprine, ciclosporin, digoxin, repaglinide or dofetilide"
+                checked={state.medicalHistory.takingInteractingMedicine}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    payload: { takingInteractingMedicine: v },
+                  })
+                }
+              />
+              <Checkbox
+                label="Taking warfarin or any other coumarin anticoagulant"
+                checked={state.medicalHistory.takingWarfarin}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    payload: { takingWarfarin: v, anticoagulationServiceConsulted: v ? state.medicalHistory.anticoagulationServiceConsulted : false },
+                  })
+                }
+                description="Trimethoprim raises the INR. Excluded unless the anticoagulation service has been consulted."
+              />
+              {state.medicalHistory.takingWarfarin && (
+                <Checkbox
+                  label="Anticoagulation service consulted and supply agreed"
+                  checked={state.medicalHistory.anticoagulationServiceConsulted}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_MEDICAL_HISTORY",
+                      payload: { anticoagulationServiceConsulted: v },
+                    })
+                  }
+                />
+              )}
+              <Checkbox
+                label="Known hepatic impairment"
+                checked={state.medicalHistory.hepaticImpairment}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    payload: { hepaticImpairment: v },
                   })
                 }
               />
@@ -636,9 +882,91 @@ export function UTIToolClient() {
             <AlertBanner alerts={alerts} />
             <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-4">
               <p className="text-sm text-blue-800">
-                Review all identified clinical concerns. If any exclusion (red) criteria are present, this consultation cannot proceed and the patient must be referred to their GP.
+                Appendix 1 red flags. Ask every patient, before supplying anything. If ANY is present, do not supply. Refer the same day.
               </p>
             </div>
+            <div className="space-y-3 border-b border-gray-200 pb-4">
+              <Checkbox
+                label="Fever, rigors, or shivering"
+                checked={state.symptoms.feverRigors}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_SYMPTOMS",
+                    payload: { feverRigors: v },
+                  })
+                }
+                description="A lower UTI does not cause fever. Suggests the infection has reached the kidney or the bloodstream."
+              />
+              <Checkbox
+                label="Loin or flank pain, or back pain below the ribs"
+                checked={state.symptoms.loinFlankPain}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_SYMPTOMS",
+                    payload: { loinFlankPain: v },
+                  })
+                }
+                description="Suggests pyelonephritis. A 3 day course will not treat it."
+              />
+              <Checkbox
+                label="Nausea or vomiting"
+                checked={state.symptoms.nauseaVomiting}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_SYMPTOMS",
+                    payload: { nauseaVomiting: v },
+                  })
+                }
+                description="Suggests upper tract involvement, and an oral antibiotic may not be absorbed."
+              />
+              <Checkbox
+                label="Visible blood in the urine"
+                checked={state.symptoms.haematuria}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_SYMPTOMS",
+                    payload: { haematuria: v },
+                  })
+                }
+                description="Dipstick-only (non-visible) haematuria in a symptomatic woman is not by itself a red flag."
+              />
+              <Checkbox
+                label="Confusion, new drowsiness, or feeling very unwell"
+                checked={state.symptoms.confusionDrowsiness}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_SYMPTOMS",
+                    payload: { confusionDrowsiness: v },
+                  })
+                }
+                description="Possible sepsis. Refer urgently."
+              />
+              <Checkbox
+                label="Patient appears systemically unwell"
+                checked={state.symptoms.systemicallyUnwell}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_SYMPTOMS",
+                    payload: { systemicallyUnwell: v },
+                  })
+                }
+              />
+              <p className="text-xs text-gray-600">
+                Pregnancy, symptoms over 7 days, an antibiotic already taken for this episode, a catheter, and recurrent UTI are also Appendix 1 red flags and are captured on the earlier steps.
+              </p>
+            </div>
+            <Checkbox
+              label="All Appendix 1 red flags have been asked about with this patient"
+              checked={state.symptoms.redFlagsAsked}
+              onChange={(v) =>
+                dispatch({
+                  type: "UPDATE_SYMPTOMS",
+                  payload: { redFlagsAsked: v },
+                })
+              }
+              required
+              description="Recorded on the consultation record, with the answers given."
+            />
             {alerts.length === 0 ? (
               <div className="bg-[color:var(--tenant-primary)]/10 border border-[color:var(--tenant-primary)]/30 rounded-lg px-4 py-3">
                 <p className="text-sm text-[color:var(--tenant-primary)] font-semibold">
@@ -669,18 +997,53 @@ export function UTIToolClient() {
             <SelectInput
               label="Medicine"
               value={state.medicineSelection.medicine}
-              onChange={(v) =>
+              onChange={(v) => {
+                const medicine = v as "nitrofurantoin" | "trimethoprim" | "";
                 dispatch({
                   type: "UPDATE_MEDICINE",
-                  payload: { medicine: v as any },
-                })
-              }
+                  payload: {
+                    medicine,
+                    dose: medicine === "nitrofurantoin" ? "100mg" : medicine === "trimethoprim" ? "200mg" : "",
+                    duration: "3 days",
+                    quantity: getMedicineQuantity(medicine, "3 days"),
+                    trimethoprimReason:
+                      medicine === "trimethoprim"
+                        ? isNitrofurantoinContraindicated(state.medicalHistory)
+                          ? "contraindicated"
+                          : state.medicineSelection.trimethoprimReason
+                        : "",
+                  },
+                });
+              }}
               required
               options={[
-                { value: "nitrofurantoin", label: "Nitrofurantoin 100mg MR (first-line)" },
-                { value: "trimethoprim", label: "Trimethoprim 200mg (if contraindication)" },
+                { value: "nitrofurantoin", label: "Nitrofurantoin 100mg modified release capsules (first line)" },
+                { value: "trimethoprim", label: "Trimethoprim 200mg tablets (second line, only where nitrofurantoin is unsuitable)" },
               ]}
             />
+            {state.medicineSelection.medicine === "trimethoprim" && (
+              <SelectInput
+                label="Reason nitrofurantoin is unsuitable (recorded)"
+                value={state.medicineSelection.trimethoprimReason}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICINE",
+                    payload: { trimethoprimReason: v as "" | "contraindicated" | "intolerance" | "unavailable" },
+                  })
+                }
+                required
+                options={[
+                  { value: "contraindicated", label: "Nitrofurantoin is contraindicated for this patient (for example G6PD deficiency or a previous nitrofurantoin reaction)" },
+                  { value: "intolerance", label: "Intolerable adverse effect on nitrofurantoin previously" },
+                  { value: "unavailable", label: "Nitrofurantoin not available in the pharmacy and cannot be obtained the same day" },
+                ]}
+              />
+            )}
+            {state.medicineSelection.medicine === "trimethoprim" && (
+              <p className="text-xs text-amber-800">
+                Patient preference is NOT a reason to use this arm. Where trimethoprim was used in the last 3 months for any indication, do not supply it again.
+              </p>
+            )}
             <SelectInput
               label="Dose"
               value={state.medicineSelection.dose}
@@ -691,9 +1054,11 @@ export function UTIToolClient() {
                 })
               }
               required
-              options={[
-                { value: "100mg/200mg", label: "100mg / 200mg per dose" },
-              ]}
+              options={
+                state.medicineSelection.medicine === "trimethoprim"
+                  ? [{ value: "200mg", label: "200mg twice daily, about 12 hours apart, with or without food" }]
+                  : [{ value: "100mg", label: "100mg twice daily, with food or milk" }]
+              }
             />
             <SelectInput
               label="Duration"
@@ -708,18 +1073,20 @@ export function UTIToolClient() {
                 })
               }
               options={[
-                { value: "3 days", label: "3 days (standard)" },
-                { value: "7 days", label: "7 days" },
+                { value: "3 days", label: "3 days (one course per episode, no repeat supply)" },
               ]}
             />
             <div className="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-navy-900">
               <p className="font-medium">
-                Quantity: <span className="text-[color:var(--tenant-primary)]">{medicineQuantity} doses</span>
+                Quantity: <span className="text-[color:var(--tenant-primary)]">{medicineQuantity} {state.medicineSelection.medicine === "trimethoprim" ? "tablets" : "capsules"}</span>
               </p>
               <p className="text-xs text-gray-600 mt-1">
-                {state.medicineSelection.medicine === "nitrofurantoin"
-                  ? "Capsules (MR)"
-                  : "Tablets"}
+                {state.medicineSelection.medicine === "trimethoprim"
+                  ? "Trimethoprim 200mg tablets. A 3 day course. No repeat supply under this PGD."
+                  : "Nitrofurantoin 100mg modified release capsules. A 3 day course. No repeat supply under this PGD."}
+              </p>
+              <p className="text-xs text-gray-600 mt-1">
+                Maximum treatment period 3 days. A patient still symptomatic at 48 hours is referred, not re-supplied.
               </p>
             </div>
             <Checkbox
@@ -763,7 +1130,11 @@ export function UTIToolClient() {
             <div className="space-y-3">
               <h4 className="font-semibold text-sm text-navy-900">Counselling Points</h4>
               <Checkbox
-                label="Complete the full course (all 6 doses over 3 days)"
+                label={
+                  isTrimethoprim
+                    ? "Take one tablet twice a day for 3 days. Finish the course even if symptoms settle sooner"
+                    : "Take one capsule twice a day for 3 days. Finish the course even if symptoms settle sooner"
+                }
                 checked={state.counselling.completeCourse}
                 onChange={(v) =>
                   dispatch({
@@ -771,9 +1142,38 @@ export function UTIToolClient() {
                     payload: { completeCourse: v },
                   })
                 }
+                required
               />
               <Checkbox
-                label="Drink plenty of water and other fluids"
+                label={
+                  isTrimethoprim
+                    ? "Take the doses at evenly spaced intervals, about 12 hours apart"
+                    : "Take with food or milk, to reduce nausea and because absorption is better"
+                }
+                checked={state.counselling.howToTake}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_COUNSELLING",
+                    payload: { howToTake: v },
+                  })
+                }
+                required
+              />
+              {!isTrimethoprim && (
+                <Checkbox
+                  label="Your urine may go dark yellow or brown. That is expected and harmless"
+                  checked={state.counselling.darkUrine}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_COUNSELLING",
+                      payload: { darkUrine: v },
+                    })
+                  }
+                  required
+                />
+              )}
+              <Checkbox
+                label="Drink plenty of fluids"
                 checked={state.counselling.hydrationAdvice}
                 onChange={(v) =>
                   dispatch({
@@ -781,14 +1181,53 @@ export function UTIToolClient() {
                     payload: { hydrationAdvice: v },
                   })
                 }
+                required
               />
               <Checkbox
-                label="Return to GP if symptoms not improving within 48 hours"
+                label={
+                  isTrimethoprim
+                    ? "Seek advice promptly if you get a sore throat, fever, mouth ulcers, unusual bruising or bleeding (possible blood disorder)"
+                    : "Stop and seek advice if you develop new numbness, tingling or pins and needles, or if you become short of breath"
+                }
+                checked={state.counselling.stopAndSeekAdvice}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_COUNSELLING",
+                    payload: { stopAndSeekAdvice: v },
+                  })
+                }
+                required
+              />
+              <Checkbox
+                label='48 HOUR safety netting given in these terms: "If you are no better in 48 hours, or you get worse at any point, contact your GP or NHS 111 the same day. Do not wait."'
                 checked={state.counselling.symptomsToReturn}
                 onChange={(v) =>
                   dispatch({
                     type: "UPDATE_COUNSELLING",
                     payload: { symptomsToReturn: v },
+                  })
+                }
+                required
+                description="Recorded on the consultation record, with what the patient was told to do."
+              />
+              <Checkbox
+                label="Seek help IMMEDIATELY, not in 48 hours, for: a temperature, shivering or shaking uncontrollably; pain in the back or side, below the ribs; feeling sick or being sick; blood in the urine that they can see; confusion, drowsiness, or feeling very unwell; any new pain or bleeding in pregnancy, if pregnancy is a possibility"
+                checked={state.counselling.immediateActionAdvice}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_COUNSELLING",
+                    payload: { immediateActionAdvice: v },
+                  })
+                }
+                required
+              />
+              <Checkbox
+                label="Paracetamol or ibuprofen can be used for the pain if they suit you (separate pharmacy sale, subject to the usual checks)"
+                checked={state.counselling.painRelief}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_COUNSELLING",
+                    payload: { painRelief: v },
                   })
                 }
               />
@@ -799,26 +1238,6 @@ export function UTIToolClient() {
                   dispatch({
                     type: "UPDATE_COUNSELLING",
                     payload: { avoidCranberry: v },
-                  })
-                }
-              />
-              <Checkbox
-                label="Paracetamol can help with discomfort or pain"
-                checked={state.counselling.painRelief}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_COUNSELLING",
-                    payload: { painRelief: v },
-                  })
-                }
-              />
-              <Checkbox
-                label="Alkalinising agents may help ease symptoms"
-                checked={state.counselling.alkalinisingAgents}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_COUNSELLING",
-                    payload: { alkalinisingAgents: v },
                   })
                 }
               />

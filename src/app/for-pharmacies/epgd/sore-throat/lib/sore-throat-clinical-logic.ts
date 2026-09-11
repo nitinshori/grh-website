@@ -15,53 +15,90 @@ import type {
 export function generateExclusionAlerts(
   age: number | null,
   symptoms: SoreThroatSymptoms,
-  history: SoreThroatHistory
+  history: SoreThroatHistory,
+  examination?: SoreThroatExamination
 ): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
 
-  // Age exclusion: <5 years
-  if (age !== null && age < 5) {
+  // Age exclusion: under 18 years (PGD v003: adults aged 18 years and over)
+  if (age !== null && age < 18) {
     alerts.push({
       severity: "stop",
       code: "AGE_TOO_YOUNG",
-      message: "Patient is under 5 years old",
-      detail: "This PGD applies to patients aged 5 years and older. Refer to GP.",
+      message: "Patient is under 18 years old",
+      detail: "This PGD applies to adults aged 18 years and over. Refer to GP.",
     });
   }
 
-  // Stridor or respiratory distress (drooling + inability to swallow)
-  if (symptoms.drooling && symptoms.dysphagia) {
+  // Airway compromise, suspected quinsy or epiglottitis: any one red flag excludes
+  const airwayRedFlags: string[] = [];
+  if (symptoms.stridor) airwayRedFlags.push("stridor");
+  if (symptoms.difficultyBreathing) airwayRedFlags.push("difficulty breathing");
+  if (symptoms.drooling) airwayRedFlags.push("drooling");
+  if (symptoms.unableToSwallowSaliva) airwayRedFlags.push("inability to swallow saliva");
+  if (symptoms.trismus) airwayRedFlags.push("trismus");
+  if (symptoms.muffledVoice) airwayRedFlags.push("muffled 'hot potato' voice");
+  if (symptoms.unilateralSwelling) airwayRedFlags.push("unilateral peritonsillar swelling");
+  if (symptoms.uvulaDeviation) airwayRedFlags.push("deviation of the uvula");
+  if (examination && examination.tonsillarAppearance === "abscess")
+    airwayRedFlags.push("peritonsillar abscess on examination");
+  if (airwayRedFlags.length > 0) {
+    alerts.push({
+      severity: "stop",
+      code: "AIRWAY_QUINSY_EPIGLOTTITIS",
+      message: "Suspected quinsy, epiglottitis or airway compromise",
+      detail:
+        "Present: " + airwayRedFlags.join(", ") + ". Emergency referral, 999 or A&E. Do not examine the throat with a tongue depressor where epiglottitis is possible.",
+    });
+  }
+
+  // Legacy combined check retained (drooling and dysphagia); drooling alone now excludes above
+  if (symptoms.drooling && symptoms.dysphagia && airwayRedFlags.length === 0) {
     alerts.push({
       severity: "stop",
       code: "RESPIRATORY_DISTRESS",
       message: "Signs of respiratory distress or severe difficulty swallowing",
       detail:
-        "Patient has drooling and inability to swallow. Urgent referral to GP or A&E required.",
+        "Patient has drooling and inability to swallow. Emergency referral, 999 or A&E.",
     });
   }
 
-  // Suspected peritonsillar abscess/quinsy
-  if (symptoms.trismus && symptoms.unilateralSwelling && symptoms.muffledVoice) {
-    alerts.push({
-      severity: "stop",
-      code: "SUSPECTED_QUINSY",
-      message: "Suspected peritonsillar abscess (quinsy)",
-      detail:
-        "Patient has trismus, unilateral swelling, and muffled voice. Urgent referral to GP or ENT required.",
-    });
+  // Sepsis or systemic illness: temperature 38 or above together with any one marker
+  if (examination && examination.temperature !== null && examination.temperature >= 38) {
+    const sepsisMarkers: string[] = [];
+    if (examination.heartRate !== null && examination.heartRate > 90)
+      sepsisMarkers.push("heart rate above 90");
+    if (examination.respiratoryRate !== null && examination.respiratoryRate >= 20)
+      sepsisMarkers.push("respiratory rate 20 or above");
+    if (examination.systolicBP !== null && examination.systolicBP < 100)
+      sepsisMarkers.push("systolic blood pressure below 100");
+    if (examination.newConfusion) sepsisMarkers.push("new confusion");
+    if (examination.looksUnwell) sepsisMarkers.push("patient looks unwell");
+    if (sepsisMarkers.length > 0) {
+      alerts.push({
+        severity: "stop",
+        code: "SEPSIS_SYSTEMIC_ILLNESS",
+        message: "Signs of sepsis or systemic illness",
+        detail:
+          "Temperature 38°C or above together with " + sepsisMarkers.join(", ") + ". Emergency referral.",
+      });
+    }
   }
 
-  // Immunosuppression
-  if (history.immunosuppressed) {
+  // Immunosuppression, or a medicine that can cause neutropenia
+  if (history.immunosuppressed || history.neutropeniaRiskMedicine) {
     alerts.push({
       severity: "stop",
       code: "IMMUNOSUPPRESSED",
-      message: "Patient is immunosuppressed",
-      detail: "This PGD is not suitable for immunosuppressed patients. Refer to GP.",
+      message: history.immunosuppressed
+        ? "Patient is immunosuppressed"
+        : "Patient takes a medicine that can cause neutropenia",
+      detail:
+        "Immunosuppression, or a medicine that can cause neutropenia (chemotherapy, carbimazole, clozapine, methotrexate or other DMARDs): refer for a same-day full blood count and clinical assessment.",
     });
   }
 
-  // Symptoms >7 days without improvement
+  // Symptoms >7 days without improvement (tool threshold; PGD excludes symptoms over 2 weeks)
   if (symptoms.duration === ">7 days") {
     alerts.push({
       severity: "stop",
@@ -70,6 +107,65 @@ export function generateExclusionAlerts(
       detail:
         "Long-standing sore throat requires investigation. Refer to GP for assessment.",
     });
+  }
+
+  // Possible malignancy pathway
+  if (symptoms.persistentNeckLumpOrHoarseness) {
+    alerts.push({
+      severity: "stop",
+      code: "POSSIBLE_MALIGNANCY",
+      message: "Persistent unilateral neck lump, unilateral tonsillar enlargement or hoarseness for more than 3 weeks",
+      detail: "Refer to the GP (possible malignancy pathway).",
+    });
+  }
+
+  // Recent antibiotic use for this illness (inclusion: no recent antibiotic use)
+  if (history.recentAntibioticForThisIllness) {
+    alerts.push({
+      severity: "stop",
+      code: "RECENT_ANTIBIOTIC",
+      message: "Recent antibiotic use for this illness",
+      detail:
+        "This PGD requires no recent antibiotic use for this illness. Refer to GP.",
+    });
+  }
+
+  // Severe hepatic or renal dysfunction (both arms)
+  if (history.severeHepaticOrRenalDysfunction) {
+    alerts.push({
+      severity: "stop",
+      code: "SEVERE_HEPATIC_RENAL",
+      message: "Severe hepatic or renal dysfunction",
+      detail: "Excluded from this PGD. Refer to GP.",
+    });
+  }
+
+  // Clarithromycin arm exclusions: apply when penicillin allergic (no alternative arm)
+  if (history.penicillinAllergy) {
+    const clariExclusions: string[] = [];
+    if (history.macrolideAllergy)
+      clariExclusions.push("known hypersensitivity to macrolides (clarithromycin, erythromycin, azithromycin)");
+    if (history.ergotamineUse)
+      clariExclusions.push("concurrent ergotamine or dihydroergotamine (risk of ergot toxicity)");
+    if (history.simvastatinLovastatinUse)
+      clariExclusions.push("concurrent simvastatin or lovastatin (increased statin levels)");
+    if (history.qtProlongationRisk)
+      clariExclusions.push("QT prolongation or risk factors (hypokalaemia, hypomagnesaemia, cardiac arrhythmia history)");
+    if (history.clarithromycinInteractingMedicine)
+      clariExclusions.push("concurrent colchicine, ticagrelor, ranolazine, ivabradine, domperidone, pimozide, astemizole, cisapride, terfenadine, oral midazolam or lomitapide");
+    if (history.severeHepaticImpairment)
+      clariExclusions.push("severe hepatic impairment, or severe hepatic failure in combination with renal impairment");
+    if (history.myastheniaGravis)
+      clariExclusions.push("myasthenia gravis (macrolides can worsen muscle weakness)");
+    if (clariExclusions.length > 0) {
+      alerts.push({
+        severity: "stop",
+        code: "CLARITHROMYCIN_EXCLUDED",
+        message: "Penicillin allergy with a clarithromycin exclusion",
+        detail:
+          "Clarithromycin is excluded: " + clariExclusions.join("; ") + ". No PGD antibiotic is available. Refer to GP.",
+      });
+    }
   }
 
   return alerts;
@@ -82,13 +178,14 @@ export function generateCautionAlerts(
 ): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
 
-  // Penicillin allergy
+  // Penicillin or beta-lactam allergy
   if (history.penicillinAllergy) {
     alerts.push({
       severity: "caution",
       code: "PENICILLIN_ALLERGY",
-      message: "Patient has penicillin allergy",
-      detail: "Use clarithromycin instead of phenoxymethylpenicillin.",
+      message: "Patient has penicillin or beta-lactam allergy",
+      detail:
+        "Use clarithromycin instead of phenoxymethylpenicillin. Check every current medicine against the clarithromycin SmPC before supply.",
     });
   }
 
@@ -103,34 +200,88 @@ export function generateCautionAlerts(
     });
   }
 
-  // Rheumatic fever history
+  // Rheumatic fever history (the PGD criteria still apply: FeverPAIN 4 or more, or positive RAST)
   if (history.rheumaticFeverHistory) {
     alerts.push({
       severity: "caution",
       code: "RHEUMATIC_FEVER_HISTORY",
       message: "Patient has history of acute rheumatic fever",
-      detail: "Lower threshold for antibiotic use. Consider immediate antibiotic.",
-    });
-  }
-
-  // Suspected quinsy symptoms (red flag, not exclusion)
-  if (symptoms.trismus || symptoms.unilateralSwelling || symptoms.muffledVoice) {
-    alerts.push({
-      severity: "red-flag",
-      code: "QUINSY_SYMPTOMS",
-      message: "Symptoms suggestive of peritonsillar abscess",
       detail:
-        "Consider referral to GP or ENT. May require drainage or IV antibiotics.",
+        "The PGD criteria still apply (FeverPAIN 4 or more, or positive RAST). If not met, refer to GP for consideration of antibiotics.",
     });
   }
 
-  // Severe tonsillar appearance
-  if (examination.tonsillarAppearance === "abscess") {
+  // Pregnancy and breastfeeding (caution, both arms)
+  if (history.pregnantOrBreastfeeding) {
+    alerts.push({
+      severity: "caution",
+      code: "PREGNANCY_BREASTFEEDING",
+      message: "Patient is pregnant or breastfeeding",
+      detail: history.penicillinAllergy
+        ? "Clarithromycin: relatively safe but ensure informed consent; a small amount passes to breast milk."
+        : "Penicillin V is generally safe; ensure informed consent.",
+    });
+  }
+
+  // Mononucleosis (glandular fever)
+  if (history.suspectedMononucleosis) {
+    alerts.push({
+      severity: "caution",
+      code: "MONONUCLEOSIS",
+      message: "Possible mononucleosis (glandular fever)",
+      detail:
+        "Avoid phenoxymethylpenicillin due to risk of rash. If uncertain of diagnosis, clarify before supply.",
+    });
+  }
+
+  // Oral contraceptives
+  if (history.oralContraceptive) {
+    alerts.push({
+      severity: "caution",
+      code: "ORAL_CONTRACEPTIVE",
+      message: "Patient uses oral contraception",
+      detail:
+        "Antibiotics may reduce efficacy of oral contraceptives; advise additional contraception during the course and for 7 days afterwards.",
+    });
+  }
+
+  // Clarithromycin arm cautions
+  if (history.penicillinAllergy && history.renalImpairmentEgfrUnder30) {
+    alerts.push({
+      severity: "caution",
+      code: "CLARI_RENAL",
+      message: "Renal impairment (eGFR below 30 mL/min/1.73m2)",
+      detail:
+        "Clarithromycin: dose adjustment or alternative needed. Consider referral to GP.",
+    });
+  }
+  if (history.penicillinAllergy && history.warfarin) {
+    alerts.push({
+      severity: "caution",
+      code: "CLARI_WARFARIN",
+      message: "Patient takes warfarin",
+      detail:
+        "Clarithromycin: possible increased anticoagulant effect; monitor INR.",
+    });
+  }
+
+  // Sepsis markers without a documented fever of 38 or above: warn
+  const markersPresent =
+    (examination.heartRate !== null && examination.heartRate > 90) ||
+    (examination.respiratoryRate !== null && examination.respiratoryRate >= 20) ||
+    (examination.systolicBP !== null && examination.systolicBP < 100) ||
+    examination.newConfusion ||
+    examination.looksUnwell;
+  if (
+    markersPresent &&
+    !(examination.temperature !== null && examination.temperature >= 38)
+  ) {
     alerts.push({
       severity: "red-flag",
-      code: "ABSCESS_PRESENT",
-      message: "Evidence of tonsillar abscess on examination",
-      detail: "Consider referral to GP or ENT for further assessment.",
+      code: "SEPSIS_MARKER",
+      message: "Systemic illness marker present",
+      detail:
+        "Record the temperature. With a temperature of 38°C or above this is a sepsis exclusion (emergency referral). Use clinical judgement and refer if the patient looks unwell.",
     });
   }
 
@@ -174,13 +325,13 @@ export function interpretFeverPAINScore(
   label: string;
   recommendation: string;
 } {
-  // If Rapid Strep A positive: antibiotic regardless of score
+  // If Rapid Strep A positive: antibiotic indicated regardless of score
   if (rapidStrepAResult === "positive") {
     return {
       riskLevel: "high",
       label: "Rapid Strep A Positive",
       recommendation:
-        "Antibiotic indicated. Consider immediate antibiotic prescription.",
+        "Antibiotic indicated under this PGD (positive rapid antigen test for Group A Streptococcus).",
     };
   }
 
@@ -207,17 +358,17 @@ export function interpretFeverPAINScore(
   if (score === 2 || score === 3) {
     return {
       riskLevel: "moderate",
-      label: "Moderate Risk (FeverPAIN 2-3)",
+      label: "FeverPAIN 2-3",
       recommendation:
-        "Consider delayed/back-up antibiotic prescription. Self-care initially.",
+        "Antibiotics not indicated under this PGD without a positive RAST (NICE: do not offer antibiotics for FeverPAIN 0-3 without test). Advise supportive care.",
     };
   }
 
   return {
     riskLevel: "high",
-    label: "High Risk (FeverPAIN 4-5)",
+    label: "FeverPAIN 4-5",
     recommendation:
-      "Likely strep throat. Consider immediate antibiotic prescription.",
+      "Likely strep throat. Antibiotic indicated under this PGD (FeverPAIN 4 or more).",
   };
 }
 
@@ -240,13 +391,14 @@ export function recommendMedicine(
   // Determine if antibiotic is indicated
   let shouldPrescribe = false;
 
+  // PGD v003 inclusion: FeverPAIN 4 or more, OR positive RAST. A history of
+  // rheumatic fever does not lower the threshold under this PGD.
+  void rheumaticFeverHistory;
+  void age;
   if (rapidStrepAResult === "positive") {
     shouldPrescribe = true;
   } else if (rapidStrepAResult === "negative") {
     shouldPrescribe = false;
-  } else if (rheumaticFeverHistory) {
-    // Lower threshold for rheumatic fever history
-    shouldPrescribe = feverPainScore >= 2;
   } else {
     shouldPrescribe = feverPainScore >= 4;
   }
@@ -254,7 +406,7 @@ export function recommendMedicine(
   if (!shouldPrescribe) {
     return {
       shouldPrescribe: false,
-      recommendation: "No antibiotic recommended. Advise self-care.",
+      recommendation: "No antibiotic under this PGD. Advise self-care.",
       medicine: "none",
       dose: "",
       frequency: "",
@@ -269,9 +421,9 @@ export function recommendMedicine(
     return {
       shouldPrescribe: true,
       recommendation:
-        "Patient has penicillin allergy. Use clarithromycin instead.",
+        "Patient has penicillin allergy. Clarithromycin 250mg tablets, one tablet twice daily for 5 days (10 tablets).",
       medicine: "clarithromycin",
-      dose: age && age < 12 ? "7.5 mg/kg" : "250 mg",
+      dose: "250 mg",
       frequency: "twice daily",
       duration: "5 days",
     };
@@ -280,12 +432,29 @@ export function recommendMedicine(
   // Phenoxymethylpenicillin (Pen V)
   return {
     shouldPrescribe: true,
-    recommendation: "Phenoxymethylpenicillin (Pen V) recommended.",
+    recommendation:
+      "Phenoxymethylpenicillin 500mg tablets, one tablet four times daily on an empty stomach for 5-10 days (20-40 tablets).",
     medicine: "phenoxymethylpenicillin",
-    dose: age && age < 12 ? "250 mg" : "500 mg",
+    dose: "500 mg",
     frequency: "four times daily",
     duration: "5-10 days",
   };
+}
+
+// ─── Fixed regimens (PGD v003) ───
+
+export const PEN_V_DURATIONS = ["5 days", "6 days", "7 days", "8 days", "9 days", "10 days"] as const;
+export const CLARI_DURATIONS = ["5 days"] as const;
+
+export function expectedQuantity(
+  medicine: SoreThroatMedicine["medicine"],
+  duration: string
+): number | null {
+  const days = parseInt(duration, 10);
+  if (isNaN(days)) return null;
+  if (medicine === "phenoxymethylpenicillin") return days * 4;
+  if (medicine === "clarithromycin") return days * 2;
+  return null;
 }
 
 // ─── Validation ───
@@ -311,21 +480,36 @@ export function validateExaminationStep(
     return "Rapid Strep A test result is required";
   if (!examination.tonsillarAppearance)
     return "Tonsillar appearance assessment is required";
+  if (examination.temperature === null)
+    return "Temperature is required for the sepsis screen";
   return null;
 }
 
 export function validateHistoryStep(history: SoreThroatHistory): string | null {
-  // All fields are optional, validation can be custom based on logic
+  if (!history.ableToTakeOralMedication)
+    return "Confirm the patient is able to take oral medication";
   return null;
 }
 
-export function validateMedicineStep(medicine: SoreThroatMedicine): string | null {
+export function validateMedicineStep(
+  medicine: SoreThroatMedicine,
+  opts?: { shouldPrescribe: boolean; penicillinAllergy: boolean }
+): string | null {
   if (!medicine.medicine) return "Medicine selection is required";
   if (medicine.medicine !== "none") {
+    if (opts && !opts.shouldPrescribe)
+      return "Antibiotics may only be supplied under this PGD with FeverPAIN 4 or more, or a positive RAST";
+    if (opts && opts.penicillinAllergy && medicine.medicine === "phenoxymethylpenicillin")
+      return "Phenoxymethylpenicillin is excluded in penicillin or beta-lactam allergy; select clarithromycin";
+    if (opts && !opts.penicillinAllergy && medicine.medicine === "clarithromycin")
+      return "Clarithromycin under this PGD requires a documented penicillin allergy or intolerance";
     if (!medicine.dose) return "Dose is required";
     if (!medicine.frequency) return "Frequency is required";
     if (!medicine.duration) return "Duration is required";
     if (!medicine.quantity) return "Quantity is required";
+    const expected = expectedQuantity(medicine.medicine, medicine.duration);
+    if (expected !== null && medicine.quantity !== expected)
+      return `Quantity must be ${expected} tablets for a ${medicine.duration} course`;
   }
   return null;
 }

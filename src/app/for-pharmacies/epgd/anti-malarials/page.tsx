@@ -28,10 +28,12 @@ export default function AntiMalarialsPage() {
             </p>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-900">
-                This ePGD guides pharmacists through the Patient Group Direction for supply of
-                antimalarial prophylaxis (Malarone, Doxycycline, Mefloquine) to patients
-                travelling to malaria-endemic areas. Includes travel assessment, medical history
-                review, contraindications screening, and counselling.
+                This ePGD guides pharmacists through the Malaria Chemoprophylaxis Patient Group
+                Direction (version 008, issued 11 September 2026) for supply of antimalarial
+                prophylaxis (atovaquone/proguanil, doxycycline, mefloquine) to adults travelling
+                to malaria-endemic areas. Prophylaxis only. Includes destination risk assessment,
+                weight-based product and dose, medical history review, contraindications
+                screening, and counselling.
               </p>
             </div>
           </div>
@@ -42,7 +44,7 @@ export default function AntiMalarialsPage() {
 
         {/* Footer */}
         <div className="mt-8 text-center text-xs text-gray-500">
-          <p>Get Real Health ePGD — Anti-malarials | Confidential Patient Information</p>
+          <p>Get Real Health ePGD: Anti-malarials | Confidential Patient Information</p>
         </div>
       </div>
     </div>

@@ -3,7 +3,7 @@
 import { useReducer, useMemo, useState, useCallback, useEffect } from "react";
 import type { CovidBoosterConsultationState, CovidBoosterAction } from "./lib/covid-booster-types";
 import { STEP_LABELS, TOTAL_STEPS, createInitialConsultationState } from "./lib/covid-booster-types";
-import { getAllAlerts, hasHardStops, calculateDoseRecommendation } from "./lib/covid-booster-clinical-logic";
+import { getAllAlerts, hasHardStops, calculateDoseRecommendation, intervalTooShort } from "./lib/covid-booster-clinical-logic";
 import { validateStep } from "./lib/covid-booster-validation";
 import { calculateAge } from "../shared/types";
 import { ProgressBar } from "../shared/components/ProgressBar";
@@ -180,6 +180,32 @@ export default function CovidBoosterClient() {
               }
               description="A previous dose is not required. Leave unticked for a first dose. The PGD only excludes a primary course where the patient is also immunosuppressed."
             />
+            {state.assessment.previousCovidVaccine && (
+              <TextInput
+                label="Date of the previous COVID-19 vaccine dose, where known"
+                type="date"
+                value={state.assessment.previousDoseDate}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_ASSESSMENT", field: "previousDoseDate", value: v })
+                }
+              />
+            )}
+            {intervalTooShort(state) && (
+              <div className="p-3 bg-red-50 border border-red-300 rounded-lg">
+                <Checkbox
+                  label="A shorter interval than 3 months is specifically advised in national guidance for this individual"
+                  checked={state.assessment.shorterIntervalNationalGuidance}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_ASSESSMENT",
+                      field: "shorterIntervalNationalGuidance",
+                      value: v,
+                    })
+                  }
+                  description="Otherwise excluded. Record the guidance relied on in the clinical notes."
+                />
+              </div>
+            )}
             <Checkbox
               label="Immunosuppressed"
               checked={state.assessment.immunosuppressed}
@@ -191,6 +217,34 @@ export default function CovidBoosterClient() {
                 })
               }
               description="As defined in the COVID-19 chapter of the Green Book. Determines both NHS eligibility and which Comirnaty formulation must be used."
+            />
+            <Checkbox
+              label="Resident in a care home for older adults"
+              checked={state.assessment.careHomeResident}
+              onChange={(v) =>
+                dispatch({
+                  type: "UPDATE_ASSESSMENT",
+                  field: "careHomeResident",
+                  value: v,
+                })
+              }
+              description="NHS-eligible cohort for autumn 2026, with adults aged 75 and over and the immunosuppressed."
+            />
+            <SelectInput
+              label="NHS entitlement (PGD inclusion)"
+              value={state.assessment.nhsStatus}
+              onChange={(v) =>
+                dispatch({
+                  type: "UPDATE_ASSESSMENT",
+                  field: "nhsStatus",
+                  value: v,
+                })
+              }
+              options={[
+                { value: "not-eligible", label: "Requires vaccination and does not qualify for NHS vaccination" },
+                { value: "eligible-prefers-private", label: "Qualifies for NHS vaccination but prefers to be vaccinated privately, having been told of their NHS entitlement" },
+              ]}
+              required
             />
             <Checkbox
               label="At least 3 months since the last COVID-19 vaccine dose, or this is a first dose"
@@ -214,7 +268,7 @@ export default function CovidBoosterClient() {
               Check exclusion and caution criteria:
             </p>
             <Checkbox
-              label="Anaphylaxis to previous COVID vaccine: NOT documented"
+              label="Anaphylaxis to a previous dose of the same vaccine or any of its components: NOT documented"
               checked={!state.assessment.anaphylaxisToPreviousDose}
               onChange={(v) =>
                 dispatch({
@@ -223,27 +277,34 @@ export default function CovidBoosterClient() {
                   value: !v,
                 })
               }
-              description="Contraindicated if severe reaction occurred"
+              description="Exclusion if anaphylaxis occurred. Untick to record."
             />
             <Checkbox
-              label="Anaphylaxis to PEG/polysorbate: NOT documented"
-              checked={!state.assessment.anaphylaxisToPEG && !state.assessment.anaphylaxisToPolysorbate}
-              onChange={(v) => {
+              label="Hypersensitivity to polyethylene glycol (PEG): NOT documented"
+              checked={!state.assessment.anaphylaxisToPEG}
+              onChange={(v) =>
                 dispatch({
                   type: "UPDATE_ASSESSMENT",
                   field: "anaphylaxisToPEG",
                   value: !v,
-                });
+                })
+              }
+              description="PEG is an excipient of the mRNA vaccines (Comirnaty, Spikevax). Exclusion. Untick to record."
+            />
+            <Checkbox
+              label="Hypersensitivity to polysorbate 80: NOT documented"
+              checked={!state.assessment.anaphylaxisToPolysorbate}
+              onChange={(v) =>
                 dispatch({
                   type: "UPDATE_ASSESSMENT",
                   field: "anaphylaxisToPolysorbate",
                   value: !v,
-                });
-              }}
-              description="Contraindicated if anaphylaxis to these components"
+                })
+              }
+              description="Polysorbate 80 is an excipient of Nuvaxovid. Exclusion. Untick to record."
             />
             <Checkbox
-              label="No severe febrile illness present"
+              label="No acute severe febrile illness"
               checked={!state.assessment.severeFebrilIllness}
               onChange={(v) =>
                 dispatch({
@@ -252,8 +313,60 @@ export default function CovidBoosterClient() {
                   value: !v,
                 })
               }
-              description="Defer if fever &gt;38.5°C or systemic infection symptoms"
+              description="Postpone until recovered. A minor infection without fever is not a contraindication. Untick to record."
             />
+            <Checkbox
+              label="Confirmed current COVID-19 infection"
+              checked={state.assessment.currentCovidInfection}
+              onChange={(v) =>
+                dispatch({
+                  type: "UPDATE_ASSESSMENT",
+                  field: "currentCovidInfection",
+                  value: v,
+                })
+              }
+              description="Exclusion: defer until recovered (4 weeks from a positive test or symptom onset is commonly applied; 12 weeks in 5 to 17 year olds not in a risk group)."
+            />
+            <Checkbox
+              label="History of myocarditis or pericarditis after a previous mRNA COVID-19 vaccine"
+              checked={state.assessment.myocarditisHistory}
+              onChange={(v) =>
+                dispatch({
+                  type: "UPDATE_ASSESSMENT",
+                  field: "myocarditisHistory",
+                  value: v,
+                })
+              }
+              description="Exclusion: refer for specialist advice. Do not give a further mRNA dose under this PGD."
+            />
+            <Checkbox
+              label="Bleeding disorder"
+              checked={state.assessment.bleedingDisorder}
+              onChange={(v) =>
+                dispatch({
+                  type: "UPDATE_ASSESSMENT",
+                  field: "bleedingDisorder",
+                  value: v,
+                })
+              }
+              description="Exclusion unless intramuscular injection has been assessed as safe by a clinician familiar with the individual's bleeding risk."
+            />
+            {state.assessment.bleedingDisorder && (
+              <div className="pl-6">
+                <Checkbox
+                  label="Intramuscular injection assessed as safe by a clinician familiar with the bleeding risk"
+                  checked={state.assessment.bleedingDisorderAssessedSafe}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_ASSESSMENT",
+                      field: "bleedingDisorderAssessedSafe",
+                      value: v,
+                    })
+                  }
+                  description="Record who assessed it in the clinical notes."
+                />
+              </div>
+            )}
             <Checkbox
               label="Patient on anticoagulants"
               checked={state.assessment.onAnticoagulants}
@@ -264,19 +377,31 @@ export default function CovidBoosterClient() {
                   value: v,
                 })
               }
-              description="Caution: Apply pressure for 2-3 min post-injection"
+              description="Caution: stable anticoagulation may be vaccinated IM with a 23 gauge or finer needle, firm pressure without rubbing for at least 2 minutes; advise on haematoma risk."
             />
             <Checkbox
-              label="History of myocarditis/pericarditis"
-              checked={state.assessment.myocarditisHistory}
+              label="Pregnant"
+              checked={state.assessment.pregnant}
               onChange={(v) =>
                 dispatch({
                   type: "UPDATE_ASSESSMENT",
-                  field: "myocarditisHistory",
+                  field: "pregnant",
                   value: v,
                 })
               }
-              description="Caution: Ensure 15-min observation; counsel on chest pain warning signs"
+              description="Caution: vaccination is recommended in pregnancy for those in an eligible group and is safe while breastfeeding. Confirm the vaccine and indication against current national guidance before proceeding."
+            />
+            <Checkbox
+              label="History of capillary leak syndrome"
+              checked={state.assessment.capillaryLeakHistory}
+              onChange={(v) =>
+                dispatch({
+                  type: "UPDATE_ASSESSMENT",
+                  field: "capillaryLeakHistory",
+                  value: v,
+                })
+              }
+              description="Caution: flare-ups reported after Spikevax. Vaccination should be planned with appropriate medical experts; Spikevax cannot be selected."
             />
           </div>
         );
@@ -297,7 +422,7 @@ export default function CovidBoosterClient() {
                   value: v,
                 })
               }
-              description="Variant coverage and benefit of updated formulation"
+              description="Variant coverage and benefit of the updated formulation. Protection develops over about 1 to 2 weeks and wanes over time; vaccines do not provide 100% protection and vaccination does not remove the need to seek advice if unwell."
             />
             <Checkbox
               label="Discussed common reactions"
@@ -309,7 +434,7 @@ export default function CovidBoosterClient() {
                   value: v,
                 })
               }
-              description="Arm soreness, mild fever, headache; usually mild and short-lived"
+              description="Injection site soreness, tiredness, headache, aching muscles, chills and mild fever are common in the first day or two and settle on their own"
             />
             <Checkbox
               label="Explained 15-minute observation period"
@@ -333,10 +458,22 @@ export default function CovidBoosterClient() {
                   value: v,
                 })
               }
-              description="Anaphylaxis, severe allergic reactions; when to contact emergency services"
+              description="Seek urgent medical attention for chest pain, shortness of breath, palpitations or a fluttering heartbeat after vaccination (myocarditis and pericarditis, very rare after mRNA vaccines). Anaphylaxis and when to contact emergency services."
             />
             <Checkbox
-              label="Provided written information"
+              label="Explained Yellow Card self-reporting"
+              checked={state.counselling.explainedYellowCard}
+              onChange={(v) =>
+                dispatch({
+                  type: "UPDATE_COUNSELLING",
+                  field: "explainedYellowCard",
+                  value: v,
+                })
+              }
+              description="Report any suspected side effect via the Yellow Card scheme at yellowcard.mhra.gov.uk. For a routine query about the vaccine, contact the pharmacy."
+            />
+            <Checkbox
+              label="Provided written information for the product and variant given"
               checked={state.counselling.providedWrittenInfo}
               onChange={(v) =>
                 dispatch({
@@ -345,7 +482,7 @@ export default function CovidBoosterClient() {
                   value: v,
                 })
               }
-              description="Patient information leaflet provided"
+              description="The marketing authorisation holder's leaflet for the product and variant administered (the Comirnaty XFG leaflet is not the LP.8.1 leaflet), plus a written record of the vaccine given with date, brand, variant designation and batch number."
             />
           </div>
         );
@@ -455,6 +592,15 @@ export default function CovidBoosterClient() {
               />
             </div>
 
+            <TextInput
+              label="Other vaccine given at this visit and its site (if any)"
+              value={state.supply.coAdministeredVaccine}
+              onChange={(v) =>
+                dispatch({ type: "UPDATE_SUPPLY", field: "coAdministeredVaccine", value: v })
+              }
+              placeholder="e.g. Influenza vaccine, right deltoid. Use separate sites, preferably different limbs, or at least 2.5 cm apart."
+            />
+
             <TextArea
               label="Additional clinical notes"
               value={state.summary.clinicalNotes}
@@ -544,6 +690,57 @@ export default function CovidBoosterClient() {
                 dispatch({ type: "UPDATE_CONSENT", field, value })
               }
             />
+
+            {state.patient.age !== null && state.patient.age < 16 && (
+              <div className="p-4 bg-blue-50 border border-blue-300 rounded-lg space-y-3">
+                <p className="text-sm font-semibold text-blue-900">
+                  Patient is under 16: record the basis of consent
+                </p>
+                <p className="text-xs text-blue-900">
+                  Valid consent must come from a person with parental responsibility, or from the young person where assessed as Gillick competent, with the basis of any Gillick assessment recorded.
+                </p>
+                <SelectInput
+                  label="Consent given by"
+                  value={state.supply.consentBasis}
+                  onChange={(v) =>
+                    dispatch({ type: "UPDATE_SUPPLY", field: "consentBasis", value: v })
+                  }
+                  options={[
+                    { value: "parental", label: "A person with parental responsibility" },
+                    { value: "gillick", label: "The young person, assessed as Gillick competent" },
+                  ]}
+                  required
+                />
+                {state.supply.consentBasis === "parental" && (
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <TextInput
+                      label="Name of person with parental responsibility"
+                      value={state.supply.parentName}
+                      onChange={(v) => dispatch({ type: "UPDATE_SUPPLY", field: "parentName", value: v })}
+                      placeholder="Full name"
+                      required
+                    />
+                    <TextInput
+                      label="Relationship to the patient"
+                      value={state.supply.parentRelationship}
+                      onChange={(v) => dispatch({ type: "UPDATE_SUPPLY", field: "parentRelationship", value: v })}
+                      placeholder="Mother, father, guardian"
+                      required
+                    />
+                  </div>
+                )}
+                {state.supply.consentBasis === "gillick" && (
+                  <TextArea
+                    label="Basis of the Gillick competence assessment"
+                    value={state.supply.gillickBasis}
+                    onChange={(v) => dispatch({ type: "UPDATE_SUPPLY", field: "gillickBasis", value: v })}
+                    placeholder="What the young person understood about the vaccine, its benefits and risks, and the decision being made."
+                    rows={3}
+                    required
+                  />
+                )}
+              </div>
+            )}
           </div>
         );
 

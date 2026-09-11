@@ -49,11 +49,18 @@ export interface MedicalHistory {
   bleedingDisorders: boolean;
   penileDeformity: boolean; // Peyronie's, angulation, fibrosis
   penileDeformityDetails: string;
+  /** PGD v006: previous priapism, or an erection over 4 hours on any PDE5 inhibitor, excludes. */
   priapismHistory: boolean;
   unstableAngina: boolean;
-  severeHeartFailure: boolean; // NYHA class IV
+  /** PGD v006: heart failure of NYHA class 2 or greater in the last 6 months. */
+  severeHeartFailure: boolean;
   uncontrolledArrhythmias: boolean;
+  /** PGD v006: hypertrophic cardiomyopathy, significant aortic stenosis or other
+   *  moderate to severe valve disease, or a murmur of unknown cause. */
+  structuralHeartDisease: boolean;
   recentMIOrStroke: boolean; // within 6 months
+  /** Date of the last cardiovascular review, where known (recorded at every supply). */
+  lastCvReviewDate: string;
   naionHistory: boolean; // non-arteritic anterior ischaemic optic neuropathy
   hypogonadism: boolean;
   psychiatricIssues: boolean;
@@ -71,8 +78,16 @@ export interface CurrentMedications {
    */
   takesNicorandil: boolean;
   usesPoppers: boolean; // HARD STOP - absolute contraindication
+  /** PGD v006: the direct question about poppers must be asked and the answer recorded. */
+  poppersQuestionAsked: boolean;
   nitrateDetails: string;
   takesRiociguat: boolean; // HARD STOP
+  /** PGD v006: excludes the sildenafil arm (25mg in 48 hours cap cannot be titrated). */
+  takesRitonavirOrCobicistat: boolean;
+  /** PGD v006: excludes the tadalafil arm (combination not recommended in the SmPC). */
+  takesDoxazosin: boolean;
+  /** PGD v006: already taking any other PDE5 inhibitor, including one obtained online. */
+  takesOtherPDE5Inhibitor: boolean;
   takesAlphaBlockers: boolean; // caution - start 25mg
   alphaBlockerStable: boolean; // must be stable on alpha-blocker
   alphaBlockerDetails: string;
@@ -89,10 +104,15 @@ export interface Observations {
   bpTakenToday: boolean;
   /** PGD v002 Appendix 1 functional test. */
   exerciseTolerance: '' | 'yes' | 'no' | 'unknown';
+  /** The cardiovascular fitness answer, in the patient's terms (recorded). */
+  exerciseToleranceNotes: string;
   symptomsOnExertionOrSex: boolean;
 }
 
 export interface RedFlagsChecklist {
+  /** PGD v006 exclusion: ED of sudden onset following trauma, surgery or a new
+   *  medicine, or accompanied by penile pain or deformity. Refer for a diagnosis. */
+  suddenOnsetSecondaryCause: boolean;
   pelvicPerinealTrauma: boolean;
   penileAnatomicalAbnormality: boolean;
   previousPDE5Failure: boolean; // failed 2 different PDE5 inhibitors at max dose
@@ -107,6 +127,8 @@ export interface MedicineSelection {
   dosingRegimen: DosingRegimen; // tadalafil only: on-demand vs daily
   dose: string; // e.g. "25mg", "50mg", "100mg" for sildenafil; "2.5mg", "5mg", "10mg", "20mg" for tadalafil
   quantity: number; // tablets supplied
+  /** Brand supplied (PGD v006 records: name, brand, form, strength). */
+  brand: string;
   pharmacistOverride: boolean; // pharmacist overrode auto-recommendation
   overrideReason: string;
 }
@@ -118,6 +140,12 @@ export interface CounsellingChecklist {
   priapismWarning: boolean; // seek help if erection >4hrs
   visionHearingWarning: boolean; // sudden loss → urgent attention
   noSTIProtection: boolean;
+  /** One dose in 24 hours. No more. */
+  maxOneDoseIn24Hours: boolean;
+  /** NEVER with poppers or any nitrate medicine (tadalafil: for two days after a dose). */
+  nitrateWarningGiven: boolean;
+  /** Chest pain during or after sex: no GTN spray; tell the paramedics what was taken. */
+  chestPainAdvice: boolean;
   grapefruitAvoidance: boolean;
   alcoholModeration: boolean;
   sideEffectsExplained: boolean;

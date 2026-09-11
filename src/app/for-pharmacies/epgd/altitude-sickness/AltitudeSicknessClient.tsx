@@ -21,6 +21,8 @@ import {
   generateASAlerts,
   recommendMedicine,
   canProceedWithConsultation,
+  maxQuantityTablets,
+  AS_PGD_VERSION,
 } from './altitude-sickness-clinical-logic';
 import { validateStep } from './altitude-sickness-validation';
 import { calculateAge } from '../shared/types';
@@ -345,10 +347,26 @@ export function AltitudeSicknessClient() {
               placeholder="e.g. Peru, Nepal, Ecuador"
             />
             <NumberInput
-              label="Destination Altitude (meters)"
+              label="Destination Altitude (metres)"
               value={state.travelAssessment.destinationAltitude}
               onChange={(v) => handleTravelChange('destinationAltitude', v)}
               placeholder="e.g. 3000"
+              unit="m"
+              required
+            />
+            <p className="text-xs text-gray-600">
+              PGD inclusion: travelling to, or currently at, altitudes above 2,500 metres.
+            </p>
+            <SelectInput
+              label="Reason for request"
+              value={state.travelAssessment.purpose}
+              onChange={(v) => handleTravelChange('purpose', v)}
+              options={[
+                { value: '', label: 'Select...' },
+                { value: 'prevention', label: 'Prevention of AMS (started before ascent)' },
+                { value: 'treatment', label: 'Symptomatic treatment of AMS (started at symptom onset)' },
+              ]}
+              required
             />
             <NumberInput
               label="Current Altitude (meters)"
@@ -436,20 +454,20 @@ export function AltitudeSicknessClient() {
         >
           <div className="space-y-4">
             <Checkbox
-              label="Sulfonamide Allergy"
+              label="Hypersensitivity to acetazolamide or sulfonamides"
               checked={state.medicalHistory.sulfonamideAllergy}
               onChange={(v) =>
                 handleMedicalChange('sulfonamideAllergy', v)
               }
-              description="Affects acetazolamide (a sulfonamide derivative)"
+              description="Exclusion. Acetazolamide is a sulfonamide derivative."
             />
             <Checkbox
-              label="Severe Hepatic Impairment"
+              label="Severe hepatic impairment or hepatic cirrhosis"
               checked={state.medicalHistory.severeHepaticImpairment}
               onChange={(v) =>
                 handleMedicalChange('severeHepaticImpairment', v)
               }
-              description="Cirrhosis or severe liver disease"
+              description="Exclusion."
             />
             <Checkbox
               label="Severe Renal Impairment"
@@ -457,7 +475,15 @@ export function AltitudeSicknessClient() {
               onChange={(v) =>
                 handleMedicalChange('severeRenalImpairment', v)
               }
-              description="eGFR <30 mL/min/1.73m²"
+              description="eGFR <30 mL/min/1.73m². Exclusion."
+            />
+            <Checkbox
+              label="Mild renal impairment"
+              checked={state.medicalHistory.mildRenalImpairment}
+              onChange={(v) =>
+                handleMedicalChange('mildRenalImpairment', v)
+              }
+              description="Caution: use with care, monitor for electrolyte imbalance and dehydration."
             />
             <Checkbox
               label="Adrenocortical Insufficiency"
@@ -478,6 +504,18 @@ export function AltitudeSicknessClient() {
               checked={state.medicalHistory.hyponatraemia}
               onChange={(v) => handleMedicalChange('hyponatraemia', v)}
               description="Low sodium"
+            />
+            <Checkbox
+              label="Hyperchloraemic (metabolic) acidosis, or a history of electrolyte imbalance"
+              checked={state.medicalHistory.metabolicAcidosisOrElectrolyteImbalance}
+              onChange={(v) => handleMedicalChange('metabolicAcidosisOrElectrolyteImbalance', v)}
+              description="Exclusion."
+            />
+            <Checkbox
+              label="Previous non-cardiogenic pulmonary oedema after acetazolamide"
+              checked={state.medicalHistory.pulmonaryOedemaAfterAcetazolamide}
+              onChange={(v) => handleMedicalChange('pulmonaryOedemaAfterAcetazolamide', v)}
+              description="Exclusion."
             />
             <Checkbox
               label="Renal Stone History"
@@ -517,14 +555,87 @@ export function AltitudeSicknessClient() {
               onChange={(v) =>
                 handleMedicalChange('pregnantOrBreastfeeding', v)
               }
-              description="Current pregnancy or breastfeeding"
+              description="Exclusion under this PGD."
             />
           </div>
         </StepWrapper>
       )}
 
-      {/* Step 4: Contraindications Review */}
+      {/* Step 4: Current Medications */}
       {state.currentStep === 4 && (
+        <StepWrapper
+          title="Current Medications"
+          currentStep={state.currentStep}
+          totalSteps={TOTAL_STEPS}
+          onNext={handleNext}
+          onPrev={handlePrev}
+          canProceed={!validationError}
+          validationError={validationError}
+        >
+          <div className="space-y-4">
+            <Checkbox
+              label="Potassium-depleting diuretic (thiazide or loop)"
+              checked={state.medications.takesThiazideDiuretics}
+              onChange={(v) =>
+                handleMedicationsChange('takesThiazideDiuretics', v)
+              }
+              description="Exclusion. Refer."
+            />
+            <Checkbox
+              label="Lithium"
+              checked={state.medications.takesLithium}
+              onChange={(v) => handleMedicationsChange('takesLithium', v)}
+              description="Exclusion. Refer."
+            />
+            <Checkbox
+              label="Phenytoin"
+              checked={state.medications.takesPhenytoin}
+              onChange={(v) => handleMedicationsChange('takesPhenytoin', v)}
+              description="Exclusion. Refer."
+            />
+            <Checkbox
+              label="High-dose aspirin"
+              checked={state.medications.takesHighDoseAspirin}
+              onChange={(v) => handleMedicationsChange('takesHighDoseAspirin', v)}
+              description="Exclusion. Refer. (Low-dose antiplatelet aspirin is not high-dose.)"
+            />
+            <Checkbox
+              label="ACE Inhibitors"
+              checked={state.medications.takesACEInhibitors}
+              onChange={(v) =>
+                handleMedicationsChange('takesACEInhibitors', v)
+              }
+              description="May increase potassium; monitor K+ and renal function"
+            />
+            <Checkbox
+              label="Topiramate"
+              checked={state.medications.takesTopiramate}
+              onChange={(v) => handleMedicationsChange('takesTopiramate', v)}
+              description="Both are carbonic anhydrase inhibitors; avoid combined use"
+            />
+            <Checkbox
+              label="Other Medications"
+              checked={state.medications.takesOtherDrugs}
+              onChange={(v) => handleMedicationsChange('takesOtherDrugs', v)}
+              description="Any other regular medications?"
+            />
+
+            {state.medications.takesOtherDrugs && (
+              <TextInput
+                label="Please Specify Other Medications"
+                value={state.medications.otherDrugsDetails}
+                onChange={(v) =>
+                  handleMedicationsChange('otherDrugsDetails', v)
+                }
+                placeholder="e.g. metformin, amlodipine"
+              />
+            )}
+          </div>
+        </StepWrapper>
+      )}
+
+      {/* Step 5: Contraindications Review */}
+      {state.currentStep === 5 && (
         <StepWrapper
           title="Contraindications Review"
           description="Based on clinical assessment, the following alerts have been identified:"
@@ -571,61 +682,6 @@ export function AltitudeSicknessClient() {
         </StepWrapper>
       )}
 
-      {/* Step 5: Medications (moved here for logical flow) */}
-      {state.currentStep === 5 && !isBlocked && (
-        <StepWrapper
-          title="Current Medications"
-          currentStep={state.currentStep}
-          totalSteps={TOTAL_STEPS}
-          onNext={handleNext}
-          onPrev={handlePrev}
-          canProceed={!validationError}
-          validationError={validationError}
-        >
-          <div className="space-y-4">
-            <Checkbox
-              label="Thiazide Diuretics"
-              checked={state.medications.takesThiazideDiuretics}
-              onChange={(v) =>
-                handleMedicationsChange('takesThiazideDiuretics', v)
-              }
-              description="Both cause potassium loss; monitor K+"
-            />
-            <Checkbox
-              label="ACE Inhibitors"
-              checked={state.medications.takesACEInhibitors}
-              onChange={(v) =>
-                handleMedicationsChange('takesACEInhibitors', v)
-              }
-              description="May increase potassium; monitor K+ and renal function"
-            />
-            <Checkbox
-              label="Topiramate"
-              checked={state.medications.takesTopiramate}
-              onChange={(v) => handleMedicationsChange('takesTopiramate', v)}
-              description="Both are carbonic anhydrase inhibitors; avoid combined use"
-            />
-            <Checkbox
-              label="Other Medications"
-              checked={state.medications.takesOtherDrugs}
-              onChange={(v) => handleMedicationsChange('takesOtherDrugs', v)}
-              description="Any other regular medications?"
-            />
-
-            {state.medications.takesOtherDrugs && (
-              <TextInput
-                label="Please Specify Other Medications"
-                value={state.medications.otherDrugsDetails}
-                onChange={(v) =>
-                  handleMedicationsChange('otherDrugsDetails', v)
-                }
-                placeholder="e.g. metformin, amlodipine"
-              />
-            )}
-          </div>
-        </StepWrapper>
-      )}
-
       {/* Step 6: Medicine Selection */}
       {state.currentStep === 6 && !isBlocked && (
         <StepWrapper
@@ -641,7 +697,7 @@ export function AltitudeSicknessClient() {
             {recommendation ? (
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="font-medium text-sm text-blue-900 mb-2">
-                  Recommended Medicine
+                  Regimen per the PGD ({AS_PGD_VERSION})
                 </p>
                 <p className="text-sm text-blue-800 mb-3">
                   <strong>{recommendation.medicine}</strong>
@@ -656,6 +712,7 @@ export function AltitudeSicknessClient() {
                   <li>
                     <strong>Continue:</strong> {recommendation.continuationTiming}
                   </li>
+                  <li>{recommendation.reason}</li>
                 </ul>
               </div>
             ) : (
@@ -673,22 +730,29 @@ export function AltitudeSicknessClient() {
               onChange={(v) => handleMedicineChange('selectedMedicine', v)}
               options={[
                 { value: '', label: 'Select...' },
-                { value: 'acetazolamide', label: 'Acetazolamide 250mg' },
+                { value: 'acetazolamide', label: 'Acetazolamide 250 mg tablets (scored)' },
               ]}
+            />
+
+            <TextInput
+              label="Brand supplied"
+              value={state.medicineSelection.brand}
+              onChange={(v) => handleMedicineChange('brand', v)}
+              placeholder="Name and brand of the product supplied"
             />
 
             <TextInput
               label="Dose"
               value={state.medicineSelection.dose}
               onChange={(v) => handleMedicineChange('dose', v)}
-              placeholder="e.g. 250mg twice daily"
+              placeholder={state.travelAssessment.purpose === 'treatment' ? 'e.g. 250 mg twice daily for up to 3 days' : 'e.g. 125 mg (half a tablet) twice daily'}
             />
 
             <TextInput
               label="Start Timing"
               value={state.medicineSelection.startTiming}
               onChange={(v) => handleMedicineChange('startTiming', v)}
-              placeholder="e.g. 1–2 days before ascent"
+              placeholder={state.travelAssessment.purpose === 'treatment' ? 'At symptom onset' : 'e.g. 1 to 2 days before ascent'}
             />
 
             <TextInput
@@ -697,7 +761,39 @@ export function AltitudeSicknessClient() {
               onChange={(v) =>
                 handleMedicineChange('continuationTiming', v)
               }
-              placeholder="e.g. 2 days after reaching highest altitude"
+              placeholder={state.travelAssessment.purpose === 'treatment' ? 'Maximum 3 days' : 'e.g. 2 days after reaching highest altitude, or until descent begins'}
+            />
+
+            {state.travelAssessment.purpose === 'prevention' && (
+              <Checkbox
+                label="Also supply a treatment course (6 tablets, 250 mg twice daily for 3 days)"
+                checked={state.medicineSelection.includeTreatmentCourse}
+                onChange={(v) => handleMedicineChange('includeTreatmentCourse', v)}
+                description="Only where the itinerary makes descent difficult. Maximum total 20 tablets per supply."
+              />
+            )}
+
+            <NumberInput
+              label="Quantity supplied (tablets)"
+              value={state.medicineSelection.quantityTablets}
+              onChange={(v) => handleMedicineChange('quantityTablets', v)}
+              min={1}
+              max={maxQuantityTablets(state.travelAssessment.purpose, state.medicineSelection.includeTreatmentCourse)}
+              unit="tablets"
+              placeholder="Rounded up to whole tablets"
+              required
+            />
+            <p className="text-xs text-gray-600">
+              PGD maximum for this regimen: {maxQuantityTablets(state.travelAssessment.purpose, state.medicineSelection.includeTreatmentCourse)} tablets
+              (prevention 14 = 28 doses over 14 days; treatment 6; total 20). Prevention: maximum 14 days per supply without review.
+            </p>
+
+            <Checkbox
+              label="Off-label use explained and consented"
+              checked={state.medicineSelection.offLabelExplained}
+              onChange={(v) => handleMedicineChange('offLabelExplained', v)}
+              description="Patient told that acetazolamide is not licensed for AMS (SmPC indications are glaucoma, fluid retention and epilepsy) and that it is supplied off-label under this PGD, supported by BNF and Wilderness Medical Society guidance."
+              required
             />
 
             <TextArea
@@ -730,7 +826,7 @@ export function AltitudeSicknessClient() {
               onChange={(v) =>
                 handleCounsellingChange('paraesthesiaExplained', v)
               }
-              description="Tingling in fingers/lips/toes is expected and harmless"
+              description="Tingling, passing more urine, taste change, nausea and drowsiness are common. Discontinue and seek advice if severe side effects develop. Report via Yellow Card."
             />
             <Checkbox
               label="Avoid alcohol at altitude"
@@ -742,45 +838,45 @@ export function AltitudeSicknessClient() {
               label="Hydrate well"
               checked={state.counselling.hydrateWellAdvice}
               onChange={(v) => handleCounsellingChange('hydrateWellAdvice', v)}
-              description="Drink 2.5–3L of water daily; especially if renal stone history"
+              description="Maintain adequate hydration; watch for signs of dehydration or electrolyte imbalance. Extra fluids if renal stone history."
             />
             <Checkbox
               label="Ascend gradually"
               checked={state.counselling.ascentAdvice}
               onChange={(v) => handleCounsellingChange('ascentAdvice', v)}
-              description="Slow ascent is more important than any medicine"
+              description="No more than 300 to 500 metres per day above 2,500 m, with a rest day every 3 to 4 days. Do not ascend further while symptomatic."
             />
             <Checkbox
               label="AMS symptoms"
               checked={state.counselling.amsSymptomAdvice}
               onChange={(v) => handleCounsellingChange('amsSymptomAdvice', v)}
-              description="Headache, nausea, dizziness, fatigue within 12–24 hours"
+              description="Headache plus nausea, dizziness, fatigue, poor sleep or loss of appetite, within 6 to 12 hours of ascent"
             />
             <Checkbox
               label="HACE warning signs"
               checked={state.counselling.haceSymptomAdvice}
               onChange={(v) => handleCounsellingChange('haceSymptomAdvice', v)}
-              description="Severe headache, confusion, ataxia, loss of consciousness"
+              description="Confusion, unsteadiness, severe headache, reduced consciousness: descend and seek help urgently"
             />
             <Checkbox
               label="HAPE warning signs"
               checked={state.counselling.hapeSymptomAdvice}
               onChange={(v) => handleCounsellingChange('hapeSymptomAdvice', v)}
-              description="Shortness of breath at rest, chest tightness, pink sputum"
+              description="Breathlessness at rest, cough with frothy sputum: descend and seek help urgently"
             />
             <Checkbox
-              label="Descend immediately if severe"
+              label="Descend and seek help urgently; acetazolamide is not a substitute for descent"
               checked={state.counselling.descentAdvice}
               onChange={(v) => handleCounsellingChange('descentAdvice', v)}
-              description="HACE and HAPE are medical emergencies; descend immediately"
+              description="Symptoms not improving within 24 hours, or any sign of HACE or HAPE: descend and seek help urgently. Acetazolamide is not a substitute for descent."
             />
             <Checkbox
-              label="Medicine card provided"
+              label="Patient information leaflet supplied"
               checked={state.counselling.medicineCardProvided}
               onChange={(v) =>
                 handleCounsellingChange('medicineCardProvided', v)
               }
-              description="Patient given acetazolamide information leaflet"
+              description="Patient information leaflet (PIL) provided with the medication"
             />
           </div>
         </StepWrapper>

@@ -24,11 +24,16 @@ import {
   hasHardStopContraindications,
   getObservationPeriodRecommendation,
   calculateNextDoseDate,
+  calculateAgeInMonths,
+  getDoseVolume,
+  isRapidScheduleOffLabel,
+  JE_PGD_VERSION,
 } from './japanese-encephalitis-clinical-logic';
 import {
   validatePatientDetails,
   validateConsent,
   validateScreening,
+  validateMedicalHistory,
   validateContraindications,
   validateAdministration,
   validatePostVaccineObs,
@@ -93,6 +98,31 @@ export default function JapaneseEncephalitisClient({
   );
 
   const patientAge = calculateAge(state.patient.dateOfBirth);
+  const patientAgeMonths = calculateAgeInMonths(state.patient.dateOfBirth);
+  const underSixteen = patientAge !== null && patientAge < 16;
+  const doseVolume = getDoseVolume(patientAgeMonths);
+  const rapidOffLabel = isRapidScheduleOffLabel(patientAge);
+
+  /** Generic setter for screening fields added for PGD v005. */
+  const setScreening = useCallback(
+    (patch: Partial<JapaneseEncephalitisScreening>): void => {
+      setState((prev) => ({
+        ...prev,
+        screening: { ...prev.screening, ...patch },
+      }));
+    },
+    []
+  );
+
+  const setAdministration = useCallback(
+    (patch: Partial<JapaneseEncephalitisVaccineAdministration>): void => {
+      setState((prev) => ({
+        ...prev,
+        administration: { ...prev.administration, ...patch },
+      }));
+    },
+    []
+  );
 
   // Patient Details handlers
   const handlePatientChange = useCallback(
@@ -344,6 +374,13 @@ export default function JapaneseEncephalitisClient({
     }));
   }, []);
 
+  const handleObservationCompletedChange = useCallback((value: boolean): void => {
+    setState((prev) => ({
+      ...prev,
+      postVaccineObs: { ...prev.postVaccineObs, observationCompleted: value },
+    }));
+  }, []);
+
   // Advice handlers
   const handleAdviceChange = useCallback(
     (field: keyof JapaneseEncephalitisAdvice, value: boolean): void => {
@@ -377,7 +414,7 @@ export default function JapaneseEncephalitisClient({
         break;
       }
       case 1: {
-        const result = validateConsent(state.consent);
+        const result = validateConsent(state.consent, state.screening, patientAge);
         errors.push(...result.errors);
         break;
       }
@@ -387,7 +424,8 @@ export default function JapaneseEncephalitisClient({
         break;
       }
       case 3: {
-        // Medical history validation included in screening
+        const result = validateMedicalHistory(state.screening);
+        errors.push(...result.errors);
         break;
       }
       case 4: {
@@ -396,11 +434,13 @@ export default function JapaneseEncephalitisClient({
         break;
       }
       case 5: {
-        const result = validateAdministration(state.administration);
+        const result = validateAdministration(state.administration, state.screening, patientAge);
         errors.push(...result.errors);
         break;
       }
       case 6: {
+        const obsResult = validatePostVaccineObs(state.postVaccineObs);
+        errors.push(...obsResult.errors);
         const result = validateAdvice(state.advice);
         errors.push(...result.errors);
         break;
@@ -422,18 +462,21 @@ export default function JapaneseEncephalitisClient({
       return newErrors;
     });
     return true;
-  }, [state, validationErrors]);
+  }, [state, validationErrors, patientAge]);
 
   const handleNextStep = useCallback((): void => {
     if (!validateStep(state.step)) {
       return;
     }
 
-    // On step 2 (Travel Assessment), evaluate contraindications
-    if (state.step === 2) {
+    // Evaluate contraindications on leaving Travel Assessment (step 2) and
+    // again on leaving Medical History (step 3), once pregnancy, allergy,
+    // breastfeeding and temperature have been entered.
+    if (state.step === 2 || state.step === 3) {
       const { contraindications, alerts } = evaluateJapaneseEncephalitisContraindications(
         state.screening,
-        patientAge || 0
+        patientAgeMonths,
+        patientAge
       );
       setState((prev) => ({
         ...prev,
@@ -461,7 +504,7 @@ export default function JapaneseEncephalitisClient({
       ...prev,
       step: Math.min(prev.step + 1, STEP_LABELS.length - 1),
     }));
-  }, [state, patientAge, validateStep]);
+  }, [state, patientAge, patientAgeMonths, validateStep]);
 
   const handlePreviousStep = useCallback((): void => {
     setState((prev) => ({
@@ -526,13 +569,21 @@ export default function JapaneseEncephalitisClient({
   }, []);
 
   const getStepAlerts = useCallback((): React.ReactNode => {
+    const travelCodes = [
+      'MONSOON_SEASON_JE',
+      'OUTDOOR_ACTIVITIES_JE',
+      'CONTINUED_RISK_JE',
+      'LOW_RISK_ITINERARY_JE',
+      'INSUFFICIENT_TIME_JE',
+      'RAPID_SCHEDULE_NEEDED_JE',
+      'AGE_OVER_65_JE',
+      'AGE_UNDER_2_MONTHS_JE',
+    ];
     const stepAlerts = state.alerts.filter((alert: ClinicalAlert) => {
-      if (alert.code === 'SEVERE_FEBRILE_ILLNESS_JE') return state.step === 3;
-      if (alert.code === 'PREGNANCY_JE') return state.step === 4;
-      if (alert.code === 'IMMUNOSUPPRESSED_JE') return state.step === 4;
-      if (alert.code === 'MONSOON_SEASON_JE') return state.step === 2;
-      if (alert.code === 'OUTDOOR_ACTIVITIES_JE') return state.step === 2;
-      if (alert.code === 'CONTINUED_RISK_JE') return state.step === 2;
+      // Travel and age alerts (raised on leaving step 2) show on the medical
+      // history step; every alert shows on the contraindications review.
+      if (state.step === 4) return true;
+      if (state.step === 3) return travelCodes.includes(alert.code);
       return false;
     });
 
@@ -600,10 +651,34 @@ export default function JapaneseEncephalitisClient({
           )}
 
           {state.step === 1 && (
-            <ConsentStep
-              consent={state.consent}
-              onChange={handleConsentChange}
-            />
+            <div className="space-y-4">
+              <ConsentStep
+                consent={state.consent}
+                onChange={handleConsentChange}
+              />
+              {underSixteen && (
+                <div className="space-y-3 p-4 rounded-lg border border-amber-300 bg-amber-50">
+                  <p className="text-sm font-semibold text-amber-900">Under 16: consent basis (PGD consent in children and young people)</p>
+                  <SelectInput
+                    label="Consent given by"
+                    value={state.screening.consentBasis}
+                    onChange={(v) => setScreening({ consentBasis: v as JapaneseEncephalitisScreening['consentBasis'] })}
+                    options={[
+                      { value: 'parental', label: 'A person with parental responsibility' },
+                      { value: 'gillick', label: 'The young person, assessed as Gillick competent' },
+                    ]}
+                    required
+                  />
+                  <TextInput
+                    label={state.screening.consentBasis === 'gillick' ? 'Basis of the Gillick competence assessment' : 'Name and relationship of the person with parental responsibility'}
+                    value={state.screening.consentGiverDetails}
+                    onChange={(v) => setScreening({ consentGiverDetails: v })}
+                    placeholder={state.screening.consentBasis === 'gillick' ? 'Why the young person was judged competent' : 'A parent accompanying a child does not automatically hold parental responsibility. Ask.'}
+                    required
+                  />
+                </div>
+              )}
+            </div>
           )}
 
           {state.step === 2 && (
@@ -628,6 +703,21 @@ export default function JapaneseEncephalitisClient({
                     placeholder="e.g., Rural areas, rice farming region"
                   />
                   <SelectInput
+                    label="Green Book risk category (PGD inclusion and exclusion criteria)"
+                    value={state.screening.riskCategory}
+                    onChange={(v) => setScreening({ riskCategory: v as JapaneseEncephalitisScreening['riskCategory'] })}
+                    options={[
+                      { value: 'recommended-residence', label: 'Recommended: residence in an endemic or epidemic area' },
+                      { value: 'recommended-long-stay', label: 'Recommended: stay of one month or longer in an endemic area during the transmission season' },
+                      { value: 'recommended-frequent-travel', label: 'Recommended: frequent travel to endemic areas' },
+                      { value: 'recommended-laboratory', label: 'Recommended: laboratory work with potential exposure' },
+                      { value: 'consider-higher-risk-itinerary', label: 'Consider: shorter stay with a higher risk itinerary or activity (rural travel, rice fields, pig farming, extensive outdoor and evening exposure)' },
+                      { value: 'consider-uncertain-itinerary', label: 'Consider: uncertain itinerary or duration within an endemic area' },
+                      { value: 'not-recommended-urban-short-stay', label: 'Not recommended: short stay under one month confined to urban areas with a low risk itinerary (exclusion)' },
+                    ]}
+                    required
+                  />
+                  <SelectInput
                     label="Season of travel"
                     value={state.screening.seasonOfTravel}
                     onChange={handleSeasonChange}
@@ -649,6 +739,13 @@ export default function JapaneseEncephalitisClient({
                     value={state.screening.travelDuration}
                     onChange={handleTravelDurationChange}
                     placeholder="e.g., 2 weeks, 1 month"
+                  />
+                  <Checkbox
+                    label="Sufficient time before travel to complete the primary course"
+                    checked={state.screening.sufficientTimeBeforeTravel}
+                    onChange={(v) => setScreening({ sufficientTimeBeforeTravel: v })}
+                    description="Inclusion criterion: ideally at least one week between the second dose and potential exposure. Conventional course day 0 and day 28; rapid course day 0 and day 7 (licensed for adults 18 to 64 only)."
+                    required
                   />
                 </div>
               </div>
@@ -695,10 +792,31 @@ export default function JapaneseEncephalitisClient({
                 />
 
                 <Checkbox
-                  label="Currently unwell or severely febrile"
+                  label="Acute severe febrile illness"
                   checked={state.screening.severeFebrileIllness}
                   onChange={handleSevereFebrileChange}
-                  description="Has patient got fever (>38.5°C) or severe illness?"
+                  description="Exclusion: postpone until recovered. A recorded temperature of 39 C or above also triggers this."
+                />
+
+                <Checkbox
+                  label="Confirmed anaphylactic or serious systemic reaction to a previous dose of Ixiaro, or to any component"
+                  checked={state.screening.anaphylaxisToVaccineOrComponent}
+                  onChange={(v) => setScreening({ anaphylaxisToVaccineOrComponent: v })}
+                  description="Exclusion. Components include the residues protamine sulphate, formaldehyde, bovine serum albumin, host cell DNA and protein, and sodium metabisulphite. A history of allergy or urticaria is not in itself a reason to withhold Ixiaro."
+                />
+
+                <Checkbox
+                  label="Hypersensitivity reaction following the first dose"
+                  checked={state.screening.hypersensitivityAfterFirstDose}
+                  onChange={(v) => setScreening({ hypersensitivityAfterFirstDose: v })}
+                  description="Exclusion: do not give the second dose; refer."
+                />
+
+                <Checkbox
+                  label="Bleeding disorder, thrombocytopenia or anticoagulation"
+                  checked={state.screening.bleedingDisorder}
+                  onChange={(v) => setScreening({ bleedingDisorder: v })}
+                  description="Caution: give by deep subcutaneous injection rather than intramuscularly."
                 />
 
                 <Checkbox
@@ -720,7 +838,7 @@ export default function JapaneseEncephalitisClient({
                   label="Immunosuppressed"
                   checked={state.screening.immunosuppressed}
                   onChange={handleImmunosuppressedChange}
-                  description="Condition or medication affecting immunity?"
+                  description="Caution: an adequate immune response may not be achieved. Counsel accordingly and consider referral for serology where the risk is high."
                 />
                 {state.screening.immunosuppressed && (
                   <TextArea
@@ -735,8 +853,24 @@ export default function JapaneseEncephalitisClient({
                   label="Pregnant"
                   checked={state.screening.pregnant}
                   onChange={handlePregnantChange}
-                  description="Is the patient pregnant?"
+                  description="Exclusion unless the risk of Japanese encephalitis is high and cannot be avoided. Refer for individual assessment rather than vaccinating under this PGD."
                 />
+
+                <Checkbox
+                  label="Breastfeeding"
+                  checked={state.screening.breastfeeding}
+                  onChange={(v) => setScreening(v ? { breastfeeding: true } : { breastfeeding: false, breastfeedingRiskAssessment: '' })}
+                  description="Caution: limited data. Avoid as a precaution unless the risk of exposure is significant, and record the risk assessment."
+                />
+                {state.screening.breastfeeding && (
+                  <TextArea
+                    label="Breastfeeding risk assessment (recorded)"
+                    value={state.screening.breastfeedingRiskAssessment}
+                    onChange={(v) => setScreening({ breastfeedingRiskAssessment: v })}
+                    placeholder="Why the risk of exposure is significant enough to vaccinate despite the precaution"
+                    required
+                  />
+                )}
               </div>
             </div>
           )}
@@ -760,7 +894,7 @@ export default function JapaneseEncephalitisClient({
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-700">Severe febrile illness:</span>
+                  <span className="text-gray-700">Acute severe febrile illness:</span>
                   <span
                     className={`font-semibold ${
                       state.contraindications.severeFebrileIllness
@@ -769,8 +903,32 @@ export default function JapaneseEncephalitisClient({
                     }`}
                   >
                     {state.contraindications.severeFebrileIllness
-                      ? 'DEFER'
+                      ? 'POSTPONE'
                       : 'OK'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-700">Anaphylaxis to Ixiaro or a component:</span>
+                  <span className={`font-semibold ${state.contraindications.severeAllergy ? 'text-red-600' : 'text-green-600'}`}>
+                    {state.contraindications.severeAllergy ? 'EXCLUDED' : 'OK'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-700">Hypersensitivity after first dose:</span>
+                  <span className={`font-semibold ${state.contraindications.hypersensitivityAfterFirstDose ? 'text-red-600' : 'text-green-600'}`}>
+                    {state.contraindications.hypersensitivityAfterFirstDose ? 'EXCLUDED, REFER' : 'OK'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-700">Pregnancy:</span>
+                  <span className={`font-semibold ${state.contraindications.pregnancy ? 'text-red-600' : 'text-green-600'}`}>
+                    {state.contraindications.pregnancy ? 'EXCLUDED, REFER' : 'OK'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-700">Low risk itinerary (vaccination not recommended):</span>
+                  <span className={`font-semibold ${state.contraindications.lowRiskItinerary ? 'text-red-600' : 'text-green-600'}`}>
+                    {state.contraindications.lowRiskItinerary ? 'EXCLUDED' : 'OK'}
                   </span>
                 </div>
               </div>
@@ -778,8 +936,10 @@ export default function JapaneseEncephalitisClient({
               {!canProceedFromStep() && (
                 <div className="p-4 bg-red-50 border-2 border-red-200 rounded-lg">
                   <p className="text-red-900 font-semibold">
-                    Vaccination is contraindicated. Do not proceed.
-                    Refer patient to GP as needed.
+                    Vaccination is excluded under this PGD. Do not proceed.
+                  </p>
+                  <p className="text-sm text-red-800 mt-2">
+                    Discuss the reason for exclusion with the patient and ensure they understand it. Advise on alternative options (GP, travel clinic or specialist service). Document the reason for exclusion, the advice given and the decision reached. Inform or refer to the GP as appropriate, and where the exclusion is time critical make the urgency explicit.
                   </p>
                 </div>
               )}
@@ -792,12 +952,18 @@ export default function JapaneseEncephalitisClient({
                 Vaccine Administration
               </h2>
               <div className="space-y-4">
-                <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg space-y-1">
                   <p className="text-sm text-blue-900 font-semibold">
-                    Ixiaro (Japanese Encephalitis Inactivated Vaccine)
+                    Ixiaro (Valneva), suspension for injection in a pre-filled syringe. Inactivated, adjuvanted, Vero cell derived, strain SA14-14-2.
                   </p>
-                  <p className="text-sm text-blue-800 mt-1">
-                    Schedule: 2 doses, Day 0 and Day 28 (or Day 7 for accelerated)
+                  <p className="text-sm text-blue-800">
+                    Dose for this patient: {doseVolume || 'enter date of birth'} (0.5 mL from 3 years; 0.25 mL from 2 months to under 3 years, discarding the excess using the syringe marking and using a new sterile needle).
+                  </p>
+                  <p className="text-sm text-blue-800">
+                    Conventional primary course: two doses, day 0 and day 28. Rapid primary course: day 0 and day 7, licensed only for adults aged 18 to 64 (off-label in children and from 65, requires explicit documented consent). Complete the course at least one week before potential exposure. If interrupted, resume rather than restart.
+                  </p>
+                  <p className="text-sm text-blue-800">
+                    First booster 12 to 24 months after the primary course (12 months at continuous risk). Second booster: adults 18 to 64 at continued risk, 10 years after the first booster. Route: intramuscular, deltoid in older children and adults, anterolateral thigh in infants; deep subcutaneous in bleeding disorders. Shake before use. One dose per patient per attendance.
                   </p>
                 </div>
 
@@ -828,13 +994,28 @@ export default function JapaneseEncephalitisClient({
                 />
 
                 <SelectInput
+                  label="Route"
+                  value={state.administration.route}
+                  onChange={(v) => setAdministration({ route: v as JapaneseEncephalitisVaccineAdministration['route'] })}
+                  options={[
+                    { value: 'intramuscular', label: 'Intramuscular' },
+                    { value: 'deep-subcutaneous', label: 'Deep subcutaneous (bleeding disorders, thrombocytopenia or anticoagulation)' },
+                  ]}
+                  required
+                />
+                {state.screening.bleedingDisorder && state.administration.route !== 'deep-subcutaneous' && (
+                  <p className="text-xs text-amber-700">Bleeding disorder, thrombocytopenia or anticoagulation recorded: give by deep subcutaneous injection instead.</p>
+                )}
+
+                <SelectInput
                   label="Dose number"
                   value={state.administration.doseNumber}
                   onChange={handleDoseNumberChange}
                   options={[
-                    { value: '1st', label: '1st dose' },
-                    { value: '2nd', label: '2nd dose' },
-                    { value: 'booster', label: 'Booster' },
+                    { value: '1st', label: '1st dose (primary course)' },
+                    { value: '2nd', label: '2nd dose (primary course)' },
+                    { value: 'booster', label: 'First booster (12 to 24 months after primary course)' },
+                    { value: 'second-booster', label: 'Second booster (adults 18 to 64 at continued risk, 10 years after first booster)' },
                   ]}
                 />
 
@@ -843,10 +1024,21 @@ export default function JapaneseEncephalitisClient({
                   value={state.administration.schedule}
                   onChange={handleScheduleChange}
                   options={[
-                    { value: 'standard', label: 'Standard (Day 0, 28)' },
-                    { value: 'accelerated', label: 'Accelerated (Day 0, 7)' },
+                    { value: 'standard', label: 'Conventional (day 0 and day 28)' },
+                    { value: 'accelerated', label: 'Rapid (day 0 and day 7), licensed for adults 18 to 64 only' },
                   ]}
                 />
+                {state.administration.schedule === 'accelerated' && rapidOffLabel && (
+                  <div className="p-3 rounded-lg border border-amber-300 bg-amber-50">
+                    <Checkbox
+                      label="Off-label rapid schedule explained and explicit consent documented"
+                      checked={state.administration.offLabelRapidConsent}
+                      onChange={(v) => setAdministration({ offLabelRapidConsent: v })}
+                      description="The rapid course is licensed only for adults aged 18 to 64. The Green Book permits it in children and in adults aged 65 and over where there is genuinely insufficient time before travel; off-label use requires explicit documented consent."
+                      required
+                    />
+                  </div>
+                )}
 
                 <TextInput
                   label="Next dose due date"
@@ -888,16 +1080,25 @@ export default function JapaneseEncephalitisClient({
                     value={state.postVaccineObs.observationPeriod}
                     onChange={handleObservationPeriodChange}
                     options={[
-                      { value: '15-min', label: '15 minutes' },
-                      { value: '30-min', label: '30 minutes (standard for first dose)' },
+                      { value: '15-min', label: '15 minutes, seated (PGD minimum)' },
+                      { value: '30-min', label: '30 minutes (extended)' },
                     ]}
                   />
 
                   <Checkbox
-                    label="Anaphylaxis kit checked"
+                    label="Observation period completed, patient seated"
+                    checked={state.postVaccineObs.observationCompleted}
+                    onChange={handleObservationCompletedChange}
+                    description="Observe every patient for 15 minutes after vaccination, seated, and record that the observation period was completed. Procedures in place to prevent injury from a vasovagal faint."
+                    required
+                  />
+
+                  <Checkbox
+                    label="Adrenaline 1:1000 injection immediately available, with a written anaphylaxis protocol"
                     checked={state.postVaccineObs.anaphylaxisKitChecked}
                     onChange={handleAnaphylaxisKitChange}
-                    description="Confirm anaphylaxis emergency kit is available"
+                    description="Required whenever a vaccine is administered under this PGD; protocol consistent with current Resuscitation Council UK guidance."
+                    required
                   />
 
                   <Checkbox
@@ -934,59 +1135,65 @@ export default function JapaneseEncephalitisClient({
                 </p>
                 <div className="space-y-4">
                   <Checkbox
-                    label="Two-dose schedule explained"
+                    label="Manufacturer's patient information leaflet given"
+                    checked={state.advice.leafletGiven}
+                    onChange={(v) => handleAdviceChange('leafletGiven', v)}
+                  />
+
+                  <Checkbox
+                    label="Two-dose primary course explained"
                     checked={state.advice.twoDozeSchedule}
                     onChange={(v) => handleAdviceChange('twoDozeSchedule', v)}
-                    description="Patient understands need for 2 doses"
+                    description="Patient understands the need for two doses and that the course must be completed at least one week before exposure"
                   />
 
                   <Checkbox
-                    label="Schedule intervals"
+                    label="Schedule and date of the second dose"
                     checked={state.advice.scheduleExplained}
                     onChange={(v) => handleAdviceChange('scheduleExplained', v)}
-                    description="Standard (Day 0, 28) or Accelerated (Day 0, 7)"
+                    description="Conventional (day 0 and day 28) or rapid (day 0 and day 7); the date the second dose is due given clearly. If the course is interrupted it is resumed, not restarted."
                   />
 
                   <Checkbox
-                    label="Common side effects"
+                    label="Common local and systemic reactions"
                     checked={state.advice.commonReactions}
                     onChange={(v) => handleAdviceChange('commonReactions', v)}
-                    description="Headache, myalgia, fatigue, injection site reactions (1-2 days)"
+                    description="Very common: headache, myalgia, injection site pain or tenderness, fatigue. Common: nausea, injection site redness, induration, swelling and itching, influenza-like illness and fever. In children: fever, diarrhoea, influenza-like illness and irritability."
                   />
 
                   <Checkbox
-                    label="Serious side effects"
+                    label="Serious reactions and no vaccine is completely protective"
                     checked={state.advice.seriousReactions}
                     onChange={(v) => handleAdviceChange('seriousReactions', v)}
-                    description="Anaphylaxis: difficulty breathing, face/throat swelling"
+                    description="Anaphylaxis signs (difficulty breathing, face or throat swelling). Any febrile illness with headache, confusion or neurological symptoms during or after travel needs urgent medical assessment, mentioning the travel history."
                   />
 
                   <Checkbox
-                    label="Mosquito bite prevention"
+                    label="Mosquito bite avoidance as the primary protection"
                     checked={state.advice.mosquitoBitePrevention}
                     onChange={(v) => handleAdviceChange('mosquitoBitePrevention', v)}
-                    description="Use insect repellent (DEET), wear protective clothing"
+                    description="Repellent containing DEET, covering up at dusk and dawn, and treated bed nets. Vaccination supplements this and does not replace it."
                   />
 
                   <Checkbox
-                    label="Dusk/dawn biting mosquitoes"
+                    label="Dusk to dawn biting mosquitoes"
                     checked={state.advice.duskDawnBiting}
                     onChange={(v) => handleAdviceChange('duskDawnBiting', v)}
-                    description="Japanese encephalitis mosquitoes bite mainly at dusk and dawn - avoid outdoor exposure during these times"
+                    description="The mosquito that transmits Japanese encephalitis bites mainly between dusk and dawn"
                   />
 
                   <Checkbox
                     label="Booster information"
                     checked={state.advice.boosterInformation}
                     onChange={(v) => handleAdviceChange('boosterInformation', v)}
-                    description="Booster at 12-24 months if continued risk exposure"
+                    description="First booster 12 to 24 months after the primary course and before re-exposure (12 months at continuous risk, and consider at 12 months if over 65). Second booster for adults 18 to 64 at continued risk, 10 years after the first booster."
                   />
 
                   <Checkbox
                     label="When to seek help"
                     checked={state.advice.returnIfConcerned}
                     onChange={(v) => handleAdviceChange('returnIfConcerned', v)}
-                    description="Return to pharmacy/GP if concerned, or call NHS 111"
+                    description="Return to pharmacy/GP if concerned, or call NHS 111. Report suspected adverse reactions via the Yellow Card scheme."
                   />
                 </div>
               </div>

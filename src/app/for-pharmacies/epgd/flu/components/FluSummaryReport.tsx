@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { FluConsultationState } from '../lib/flu-types';
+import { FluConsultationState, FLU_VACCINES, FLU_SEASON } from '../lib/flu-types';
 
 // Inline date utility function
 const calculateAge = (dateOfBirth: string): number => {
@@ -30,9 +30,12 @@ export default function FluSummaryReport({
   return (
     <div className="space-y-8">
       <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">
-          Flu Vaccination Consultation Summary
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          Flu Vaccination Consultation Summary, {FLU_SEASON} season
         </h2>
+        <p className="text-xs text-gray-500 mb-6">
+          Administered via the Patient Group Direction for seasonal influenza vaccines (IIVc, aIIV, IIVr and IIVe), version 004, issued 11 September 2026.
+        </p>
 
         {/* Patient Details Section */}
         <section className="mb-8 pb-8 border-b border-gray-200">
@@ -61,6 +64,22 @@ export default function FluSummaryReport({
               <p className="text-sm font-medium text-gray-600">Phone</p>
               <p className="text-gray-900">{state.patient.phone}</p>
             </div>
+            <div>
+              <p className="text-sm font-medium text-gray-600">Registered GP practice</p>
+              <p className="text-gray-900">{state.patient.gpPractice || 'Not recorded'}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-600">Consent</p>
+              <p className="text-gray-900">
+                {state.consent.informedConsentGiven ? 'Informed consent given' : 'Not recorded'}
+                {patientAge < 16 &&
+                  (state.childConsent.basis === 'parental'
+                    ? `, by person with parental responsibility: ${state.childConsent.parentName} (${state.childConsent.parentRelationship})`
+                    : state.childConsent.basis === 'gillick'
+                      ? `, by the young person (Gillick competent: ${state.childConsent.gillickBasis})`
+                      : ', basis for under 16 not recorded')}
+              </p>
+            </div>
           </div>
         </section>
 
@@ -80,10 +99,33 @@ export default function FluSummaryReport({
               <div className="flex justify-between">
                 <span className="text-gray-600">Previous reaction:</span>
                 <span className="font-medium text-gray-900">
+                  {state.screening.previousReactionType === 'anaphylaxis' ? 'Confirmed anaphylaxis: ' : ''}
                   {state.screening.reactionDetails}
                 </span>
               </div>
             )}
+            <div className="flex justify-between">
+              <span className="text-gray-600">Already vaccinated this season:</span>
+              <span className="font-medium text-gray-900">
+                {state.screening.receivedThisSeason ? 'Yes' : 'No'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">NHS entitlement:</span>
+              <span className="font-medium text-gray-900">
+                {state.screening.nhsStatus === 'not-eligible'
+                  ? 'Does not qualify for NHS vaccination'
+                  : state.screening.nhsStatus === 'eligible-prefers-private'
+                    ? 'Qualifies for NHS vaccination, told, prefers private'
+                    : 'Not recorded'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Hypersensitivity to active substance or excipient:</span>
+              <span className="font-medium text-gray-900">
+                {state.screening.hypersensitivityToComponent ? 'Yes' : 'No'}
+              </span>
+            </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Egg allergy:</span>
               <span className="font-medium text-gray-900">
@@ -125,7 +167,17 @@ export default function FluSummaryReport({
             <div className="flex justify-between">
               <span className="text-gray-600">Bleeding disorder:</span>
               <span className="font-medium text-gray-900">
-                {state.screening.bleedingDisorder ? 'Yes' : 'No'}
+                {state.screening.bleedingDisorder
+                  ? state.screening.bleedingDisorderAssessedSafe
+                    ? 'Yes, IM assessed as safe by a clinician'
+                    : 'Yes, not assessed'
+                  : 'No'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Anticoagulation:</span>
+              <span className="font-medium text-gray-900">
+                {state.screening.anticoagulated ? 'Yes' : 'No'}
               </span>
             </div>
             <div className="flex justify-between">
@@ -152,11 +204,27 @@ export default function FluSummaryReport({
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Severe egg allergy:</span>
+              <span className="text-gray-600">Egg allergy (egg-free vaccine required):</span>
               <span className="font-medium text-gray-900">
-                {state.contraindications.severeEggAllergy
-                  ? 'CONTRAINDICATED'
-                  : 'No'}
+                {state.screening.eggAllergy ? 'Yes, IIVc or IIVr only' : 'No'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Hypersensitivity to component:</span>
+              <span className="font-medium text-gray-900">
+                {state.contraindications.hypersensitivityToComponent ? 'CONTRAINDICATED' : 'No'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Already vaccinated this season:</span>
+              <span className="font-medium text-gray-900">
+                {state.contraindications.alreadyVaccinatedThisSeason ? 'CONTRAINDICATED' : 'No'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Bleeding disorder unassessed:</span>
+              <span className="font-medium text-gray-900">
+                {state.contraindications.bleedingDisorderUnassessed ? 'CONTRAINDICATED' : 'No'}
               </span>
             </div>
             <div className="flex justify-between">
@@ -168,7 +236,7 @@ export default function FluSummaryReport({
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Age appropriate:</span>
+              <span className="text-gray-600">Aged 2 years or over:</span>
               <span className="font-medium text-gray-900">
                 {state.contraindications.ageAppropriate ? 'Yes' : 'No'}
               </span>
@@ -183,10 +251,40 @@ export default function FluSummaryReport({
           </h3>
           <div className="space-y-3">
             <div className="flex justify-between">
-              <span className="text-gray-600">Vaccine:</span>
+              <span className="text-gray-600">Vaccine type:</span>
               <span className="font-medium text-gray-900">
-                {state.administration.vaccineName}
+                {state.administration.vaccineName
+                  ? `${state.administration.vaccineName.toUpperCase().replace('IIVC', 'IIVc').replace('AIIV', 'aIIV').replace('IIVR', 'IIVr').replace('IIVE', 'IIVe')}: ${FLU_VACCINES[state.administration.vaccineName].label}`
+                  : 'Not recorded'}
               </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Brand (as on pack):</span>
+              <span className="font-medium text-gray-900">
+                {state.administration.brandName || 'Not recorded'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Season:</span>
+              <span className="font-medium text-gray-900">{FLU_SEASON}</span>
+            </div>
+            {state.administration.doseNumber && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Dose (child under 9, first course):</span>
+                <span className="font-medium text-gray-900">
+                  {state.administration.doseNumber} of 2
+                  {state.administration.doseNumber === '1' && state.administration.nextDoseDue
+                    ? `, second dose due ${state.administration.nextDoseDue}`
+                    : ''}
+                  {state.administration.doseNumber === '2' && state.administration.previousDoseDate
+                    ? `, dose 1 given ${state.administration.previousDoseDate}`
+                    : ''}
+                </span>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <span className="text-gray-600">Date administered:</span>
+              <span className="font-medium text-gray-900">{state.summary.consultationDate}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Batch number:</span>
@@ -230,6 +328,46 @@ export default function FluSummaryReport({
                 {state.administration.timeAdministered}
               </span>
             </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Adrenaline 1 in 1,000 available:</span>
+              <span className="font-medium text-gray-900">
+                {state.administration.adrenalineAvailable ? 'Yes' : 'No'}
+              </span>
+            </div>
+            {state.administration.coAdministeredVaccine && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Other vaccine given at this visit:</span>
+                <span className="font-medium text-gray-900">
+                  {state.administration.coAdministeredVaccine}
+                </span>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Advice given */}
+        <section className="mb-8 pb-8 border-b border-gray-200">
+          <h3 className="text-xl font-semibold text-gray-800 mb-4">
+            Advice Given
+          </h3>
+          <div className="space-y-2 text-sm">
+            {[
+              ['Side effects and their management', state.advice.commonReactions],
+              ['Serious reactions, seek medical advice, Yellow Card reporting', state.advice.seriousReactions],
+              ['Pain relief advice', state.advice.paracetamolAdvice],
+              ['When to seek help', state.advice.returnIfConcerned],
+              ['Protection over 10 to 14 days, lasts the season, annual revaccination', state.advice.annualRevaccination],
+              ['Cannot cause influenza; no protection against other infections; not 100%', state.advice.cannotCauseFlu],
+              ['PIL and written record of vaccine given', state.advice.pilAndRecordGiven],
+              ...(state.administration.doseNumber === '1'
+                ? [['Written confirmation of second dose date', state.advice.secondDoseDateGiven] as [string, boolean]]
+                : []),
+            ].map(([label, done]) => (
+              <div key={String(label)} className="flex justify-between">
+                <span className="text-gray-600">{label}:</span>
+                <span className="font-medium text-gray-900">{done ? 'Yes' : 'No'}</span>
+              </div>
+            ))}
           </div>
         </section>
 

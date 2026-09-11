@@ -23,6 +23,7 @@ import {
   hasHardStopContraindications,
   getObservationPeriodRecommendation,
   calculateNextDoseDate,
+  DENGUE_PGD_VERSION,
 } from './dengue-clinical-logic';
 import {
   validatePatientDetails,
@@ -228,6 +229,17 @@ export default function DengueClient({
     }));
   }, []);
 
+  // Generic screening flag handler (PGD v005 inclusion / exclusion checkboxes)
+  const handleScreeningFlagChange = useCallback(
+    (field: keyof DengueScreening, value: boolean): void => {
+      setState((prev) => ({
+        ...prev,
+        screening: { ...prev.screening, [field]: value },
+      }));
+    },
+    []
+  );
+
   // Administration handlers
   const handleBatchChange = useCallback((value: string): void => {
     setState((prev) => ({
@@ -287,6 +299,13 @@ export default function DengueClient({
     setState((prev) => ({
       ...prev,
       postVaccineObs: { ...prev.postVaccineObs, observationPeriod: value as any },
+    }));
+  }, []);
+
+  const handleObservationCompletedChange = useCallback((value: boolean): void => {
+    setState((prev) => ({
+      ...prev,
+      postVaccineObs: { ...prev.postVaccineObs, observationCompleted: value },
     }));
   }, []);
 
@@ -375,6 +394,8 @@ export default function DengueClient({
         break;
       }
       case 6: {
+        const obsResult = validatePostVaccineObs(state.postVaccineObs);
+        errors.push(...obsResult.errors);
         const result = validateAdvice(state.advice);
         errors.push(...result.errors);
         break;
@@ -403,8 +424,11 @@ export default function DengueClient({
       return;
     }
 
-    // On step 2 (Travel Assessment), evaluate contraindications
-    if (state.step === 2) {
+    // Evaluate contraindications on leaving Travel Assessment (step 2) and
+    // again on leaving Medical History (step 3), where the exclusion
+    // questions are answered. Previously this ran only at step 2, before
+    // pregnancy, immunosuppression and fever had been entered.
+    if (state.step === 2 || state.step === 3) {
       const { contraindications, alerts } = evaluateDengueContraindications(
         state.screening,
         patientAge || 0
@@ -500,14 +524,10 @@ export default function DengueClient({
   }, []);
 
   const getStepAlerts = useCallback((): React.ReactNode => {
+    const travelCodes = ['PREVIOUS_DENGUE_INFECTION', 'ENDEMIC_AREA_TRAVEL'];
     const stepAlerts = state.alerts.filter((alert: ClinicalAlert) => {
-      if (alert.code === 'PREGNANCY_DENGUE') return state.step === 4;
-      if (alert.code === 'BREASTFEEDING_DENGUE') return state.step === 4;
-      if (alert.code === 'ACUTE_FEBRILE_ILLNESS_DENGUE') return state.step === 3;
-      if (alert.code === 'IMMUNOSUPPRESSED_DENGUE') return state.step === 4;
-      if (alert.code === 'PREVIOUS_DENGUE_INFECTION') return state.step === 2;
-      if (alert.code === 'ENDEMIC_AREA_TRAVEL') return state.step === 2;
-      return false;
+      if (travelCodes.includes(alert.code)) return state.step === 2 || state.step === 4;
+      return state.step === 4;
     });
 
     if (stepAlerts.length === 0) return null;
@@ -596,10 +616,11 @@ export default function DengueClient({
                     placeholder="e.g., Thailand, Brazil, India"
                   />
                   <Checkbox
-                    label="Endemic dengue area"
+                    label="Travel to or residence in a dengue-endemic area"
                     checked={state.screening.endemicArea}
                     onChange={handleEndemicAreaChange}
-                    description="Travel to dengue endemic region (tropical areas)"
+                    description="PGD inclusion criterion. Check current NaTHNaC / TravelHealthPro country information."
+                    required
                   />
                   <TextInput
                     label="Departure date"
@@ -612,6 +633,13 @@ export default function DengueClient({
                     value={state.screening.travelDuration}
                     onChange={handleTravelDurationChange}
                     placeholder="e.g., 2 weeks, 1 month"
+                  />
+                  <Checkbox
+                    label="Willing to receive two doses, 3 months apart"
+                    checked={state.screening.willingTwoDoses}
+                    onChange={(v) => handleScreeningFlagChange('willingTwoDoses', v)}
+                    description="PGD inclusion criterion. First dose at least 3 months before travel when possible."
+                    required
                   />
                 </div>
               </div>
@@ -651,10 +679,10 @@ export default function DengueClient({
                 />
 
                 <Checkbox
-                  label="Currently unwell"
+                  label="Acute fever or significant intercurrent illness"
                   checked={state.screening.currentIllness}
                   onChange={handleCurrentIllnessChange}
-                  description="Is the patient currently experiencing illness symptoms?"
+                  description="Exclusion: defer vaccination until recovered."
                 />
                 {state.screening.currentIllness && (
                   <TextArea
@@ -666,10 +694,10 @@ export default function DengueClient({
                 )}
 
                 <Checkbox
-                  label="Immunosuppressed"
+                  label="Immune deficiency of any cause"
                   checked={state.screening.immunosuppressed}
                   onChange={handleImmunosuppressedChange}
-                  description="Condition or medication affecting immunity?"
+                  description="Exclusion (live vaccine): any congenital or acquired immune deficiency, including chemotherapy or other immunosuppressive therapy, systemic corticosteroids at 20 mg/day prednisolone (or 2 mg/kg/day) or more for 2 weeks or longer within the previous 4 weeks, active malignancy, symptomatic HIV, or asymptomatic HIV with impaired immune function."
                 />
                 {state.screening.immunosuppressed && (
                   <TextArea
@@ -684,14 +712,42 @@ export default function DengueClient({
                   label="Pregnant"
                   checked={state.screening.pregnant}
                   onChange={handlePregnantChange}
-                  description="Is the patient pregnant?"
+                  description="Exclusion."
                 />
 
                 <Checkbox
                   label="Breastfeeding"
                   checked={state.screening.breastfeeding}
                   onChange={handleBreastfeedingChange}
-                  description="Is the patient breastfeeding?"
+                  description="Exclusion."
+                />
+
+                <Checkbox
+                  label="Known hypersensitivity to any component of the vaccine"
+                  checked={state.screening.vaccineComponentAllergy}
+                  onChange={(v) => handleScreeningFlagChange('vaccineComponentAllergy', v)}
+                  description="Exclusion. Check the Qdenga SmPC excipient list."
+                />
+
+                <Checkbox
+                  label="Another live vaccine given or planned within 4 weeks before or after this dose"
+                  checked={state.screening.liveVaccineWithin4Weeks}
+                  onChange={(v) => handleScreeningFlagChange('liveVaccineWithin4Weeks', v)}
+                  description="Exclusion. Live vaccines are given on the same day or separated by at least 4 weeks."
+                />
+
+                <Checkbox
+                  label="History of Guillain-Barre syndrome following prior dengue vaccination"
+                  checked={state.screening.gbsAfterDengueVaccine}
+                  onChange={(v) => handleScreeningFlagChange('gbsAfterDengueVaccine', v)}
+                  description="Exclusion."
+                />
+
+                <Checkbox
+                  label="Anticoagulant therapy"
+                  checked={state.screening.anticoagulantTherapy}
+                  onChange={(v) => handleScreeningFlagChange('anticoagulantTherapy', v)}
+                  description="Caution: assess bleeding risk."
                 />
               </div>
             </div>
@@ -704,7 +760,7 @@ export default function DengueClient({
               </h2>
               <div className="bg-gray-50 p-4 rounded-lg space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-700">Age appropriate (4+ years):</span>
+                  <span className="text-gray-700">Age appropriate (18 years and over):</span>
                   <span
                     className={`font-semibold ${
                       state.contraindications.ageAppropriate
@@ -730,7 +786,7 @@ export default function DengueClient({
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-700">Acute febrile illness:</span>
+                  <span className="text-gray-700">Acute fever or significant intercurrent illness:</span>
                   <span
                     className={`font-semibold ${
                       state.contraindications.acuteFebrileIllness
@@ -743,6 +799,20 @@ export default function DengueClient({
                       : 'OK'}
                   </span>
                 </div>
+                {([
+                  ['Breastfeeding', state.contraindications.breastfeeding],
+                  ['Immune deficiency of any cause', state.contraindications.immunosuppressed],
+                  ['Hypersensitivity to a vaccine component', state.contraindications.severeAllergy],
+                  ['Other live vaccine within 4 weeks', state.contraindications.liveVaccineInterval],
+                  ['Guillain-Barre syndrome after prior dengue vaccination', state.contraindications.gbsHistory],
+                ] as [string, boolean][]).map(([label, flagged]) => (
+                  <div key={label} className="flex justify-between items-center">
+                    <span className="text-gray-700">{label}:</span>
+                    <span className={`font-semibold ${flagged ? 'text-red-600' : 'text-green-600'}`}>
+                      {flagged ? 'CONTRAINDICATED' : 'OK'}
+                    </span>
+                  </div>
+                ))}
               </div>
 
               {!canProceedFromStep() && (
@@ -767,7 +837,10 @@ export default function DengueClient({
                     Qdenga (TAK-003) - Live Attenuated Dengue Vaccine
                   </p>
                   <p className="text-sm text-blue-800 mt-1">
-                    Schedule: 2 doses, 3 months apart
+                    {DENGUE_PGD_VERSION}. Powder and solvent for solution for injection: reconstitute the vial with the 0.5 mL solvent in the pre-filled syringe immediately before use (use within 30 minutes at room temperature).
+                  </p>
+                  <p className="text-sm text-blue-800 mt-1">
+                    Dose: 0.5 mL subcutaneously, preferably in the deltoid area of the upper arm. Schedule: 2 doses, 3 months apart.
                   </p>
                 </div>
 
@@ -786,7 +859,7 @@ export default function DengueClient({
                 />
 
                 <SelectInput
-                  label="Injection site"
+                  label="Injection site (subcutaneous; deltoid preferred)"
                   value={state.administration.injectionSite}
                   onChange={handleSiteChange}
                   options={[
@@ -855,10 +928,19 @@ export default function DengueClient({
                   />
 
                   <Checkbox
-                    label="Anaphylaxis kit checked"
+                    label="Adrenaline 1 in 1,000 immediately available"
                     checked={state.postVaccineObs.anaphylaxisKitChecked}
                     onChange={handleAnaphylaxisKitChange}
-                    description="Confirm anaphylaxis emergency kit is available"
+                    description="In date, in the room where vaccination takes place, with a telephone and a written anaphylaxis protocol"
+                    required
+                  />
+
+                  <Checkbox
+                    label="Observation period completed, seated"
+                    checked={state.postVaccineObs.observationCompleted}
+                    onChange={handleObservationCompletedChange}
+                    description="Every patient is observed for 15 minutes after vaccination, seated. Record that it was completed."
+                    required
                   />
 
                   <Checkbox
@@ -898,42 +980,42 @@ export default function DengueClient({
                     label="Two-dose schedule explained"
                     checked={state.advice.twoDozeSchedule}
                     onChange={(v) => handleAdviceChange('twoDozeSchedule', v)}
-                    description="Patient understands need for 2nd dose in 3 months"
+                    description="Second dose in 3 months; attend for the appointment. Keep the PIL supplied with Qdenga."
                   />
 
                   <Checkbox
                     label="Common side effects"
                     checked={state.advice.commonReactions}
                     onChange={(v) => handleAdviceChange('commonReactions', v)}
-                    description="Headache, myalgia, injection site pain usually resolve in 1-2 days"
+                    description="Very common: injection site pain, headache, myalgia. Common: malaise, fatigue, fever (usually within 7 days). Seek medical advice if fever develops or persists beyond 7 days."
                   />
 
                   <Checkbox
                     label="Serious side effects"
                     checked={state.advice.seriousReactions}
                     onChange={(v) => handleAdviceChange('seriousReactions', v)}
-                    description="Anaphylaxis: difficulty breathing, swelling of face/throat, severe rash"
+                    description="Seek immediate medical attention for rash, difficulty breathing or signs of anaphylaxis. Report unusual or severe symptoms to a healthcare provider or via Yellow Card."
                   />
 
                   <Checkbox
                     label="Mosquito bite prevention"
                     checked={state.advice.mosquitoPrevention}
                     onChange={(v) => handleAdviceChange('mosquitoPrevention', v)}
-                    description="Continue bite prevention (repellent, clothing) - vaccine does not provide 100% protection"
+                    description="Continue mosquito bite prevention (insect repellent, protective clothing, screened or air-conditioned accommodation) even after vaccination"
                   />
 
                   <Checkbox
                     label="Dengue symptom warning signs"
                     checked={state.advice.dengueSymptomsWarning}
                     onChange={(v) => handleAdviceChange('dengueSymptomsWarning', v)}
-                    description="Seek medical attention if dengue symptoms (fever, rash, joint pain) develop after travel"
+                    description="If signs of dengue fever (fever, headache, rash, joint pain) develop whilst travelling, seek medical attention promptly"
                   />
 
                   <Checkbox
                     label="No other live vaccines for 4 weeks"
                     checked={state.advice.noOtherLiveVaccines}
                     onChange={(v) => handleAdviceChange('noOtherLiveVaccines', v)}
-                    description="Do not give other live vaccines within 4 weeks of this vaccine"
+                    description="Other live vaccines are given on the same day or separated by at least 4 weeks"
                   />
 
                   <Checkbox
@@ -941,6 +1023,20 @@ export default function DengueClient({
                     checked={state.advice.returnIfConcerned}
                     onChange={(v) => handleAdviceChange('returnIfConcerned', v)}
                     description="Return to pharmacy/GP if concerned, or call NHS 111"
+                  />
+
+                  <Checkbox
+                    label="Avoid pregnancy for at least 4 weeks after each dose"
+                    checked={state.advice.avoidPregnancy4Weeks}
+                    onChange={(v) => handleAdviceChange('avoidPregnancy4Weeks', v)}
+                    description="If of childbearing potential"
+                  />
+
+                  <Checkbox
+                    label="Keep a record of vaccination dates"
+                    checked={state.advice.keepVaccinationRecord}
+                    onChange={(v) => handleAdviceChange('keepVaccinationRecord', v)}
+                    description="Bring documentation when travelling"
                   />
                 </div>
               </div>

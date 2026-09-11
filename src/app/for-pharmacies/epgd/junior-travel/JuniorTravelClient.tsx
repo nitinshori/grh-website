@@ -20,15 +20,19 @@ import { AlertBanner } from "../shared/components/AlertBanner";
 import { PatientDetailsStep } from "../shared/steps/PatientDetailsStep";
 import { ConsentStep } from "../shared/steps/ConsentStep";
 import type { ConsultationRecordData } from "../shared/hooks/useConsultationTracking";
-import { TextInput, Checkbox, TextArea } from "../shared/components/FormInputs";
+import { TextInput, Checkbox, SelectInput, TextArea } from "../shared/components/FormInputs";
 
 /**
- * Junior Travel Vaccines ePGD, signed 30 Jul 2026. Children and young people
- * aged 12 months to 17 years inclusive. Each vaccine carries its own licensed
- * minimum age and dose, which the tool enforces against the child's age: a
- * vaccine selected below its minimum age becomes a hard stop, and the dose
- * shown is the age-correct one (Ixiaro splits at 3 years).
+ * Junior Travel Vaccines ePGD, PGD version 006, issued 11 September 2026.
+ * Children and young people aged 12 months to 17 years inclusive. Each
+ * vaccine carries its own licensed minimum age and dose, which the tool
+ * enforces against the child's age (the HIGHER of 12 months and the
+ * vaccine-specific minimum applies): a vaccine selected below its minimum age
+ * becomes a hard stop, and the dose shown is the age-correct one (Ixiaro
+ * splits at 3 years).
  */
+
+const PGD_VERSION = "Junior Travel Vaccines PGD v006, issued 11 September 2026";
 
 const STEP_LABELS = [
   "Patient Details",
@@ -119,28 +123,38 @@ const VACCINES: VaccineDef[] = [
     name: "Cholera oral (Dukoral)",
     minAgeMonths: 24,
     maxAgeYears: 17,
-    dose: () => "Oral suspension in the supplied buffer",
-    schedule: "Age 2 to under 6 years: three doses at least one week apart. Age 6 years and over: two doses at least one week apart. Complete at least one week before travel.",
+    dose: () => "Oral suspension in the supplied buffer, with no food or drink for one hour before and after administration",
+    schedule: "Age 2 to under 6 years: three doses at least one week apart. Age 6 years and over: two doses at least one week apart. Complete at least one week before travel. Separate from oral typhoid vaccine and from antimalarials in accordance with the SPC.",
   },
 ];
+
+type ConsentBasis = "parental" | "gillick" | "self" | "";
 
 interface Clinical {
   destination: string;
   departureDate: string;
   itinerary: string;
+  recommendedForDestination: boolean;
   routineUpToDate: boolean;
+  catchUpPlanDiscussed: boolean;
   selected: string[];
+  twinrixCoAdminReason: string;
   anaphylaxisComponent: boolean;
   acuteFebrileIllness: boolean;
   immunosuppressed: boolean;
   pregnant: boolean;
   bleedingDisorder: boolean;
   postExposure: boolean;
+  clinicalUncertainty: boolean;
+  chronicConditionOrRemote: boolean;
   parentPresent: boolean;
+  consentBasis: ConsentBasis;
+  consentDetail: string;
   allergies: string;
   batchNumbers: string;
   sites: string;
   anaphylaxisKit: boolean;
+  observationCompleted: boolean;
   scheduleAdvice: boolean;
   sideEffectAdvice: boolean;
   bitesAndFoodAdvice: boolean;
@@ -148,10 +162,12 @@ interface Clinical {
 }
 
 const emptyClinical: Clinical = {
-  destination: "", departureDate: "", itinerary: "", routineUpToDate: false, selected: [],
+  destination: "", departureDate: "", itinerary: "", recommendedForDestination: false,
+  routineUpToDate: false, catchUpPlanDiscussed: false, selected: [], twinrixCoAdminReason: "",
   anaphylaxisComponent: false, acuteFebrileIllness: false, immunosuppressed: false,
-  pregnant: false, bleedingDisorder: false, postExposure: false, parentPresent: false,
-  allergies: "", batchNumbers: "", sites: "", anaphylaxisKit: false,
+  pregnant: false, bleedingDisorder: false, postExposure: false, clinicalUncertainty: false,
+  chronicConditionOrRemote: false, parentPresent: false, consentBasis: "", consentDetail: "",
+  allergies: "", batchNumbers: "", sites: "", anaphylaxisKit: false, observationCompleted: false,
   scheduleAdvice: false, sideEffectAdvice: false, bitesAndFoodAdvice: false, rabiesAdvice: false,
 };
 
@@ -264,7 +280,14 @@ export default function JuniorTravelClient() {
         code: "bleeding",
         severity: "stop",
         message: "Bleeding disorder without a clinician's assessment",
-        detail: "Intramuscular injection must be assessed as safe by a clinician familiar with the child's bleeding risk before proceeding.",
+        detail: "Intramuscular injection must be assessed as safe by a clinician familiar with the child's bleeding risk before proceeding. Where assessed as safe, use a 23 gauge or finer needle with firm pressure without rubbing for at least 2 minutes.",
+      });
+    if (c.clinicalUncertainty)
+      a.push({
+        code: "clinical-uncertainty",
+        severity: "stop",
+        message: "Complex itinerary, unresolved immunisation history or clinical uncertainty",
+        detail: "Excluded from this PGD. Refer to the GP or a specialist travel health service.",
       });
     // Gated on reaching the eligibility step, where the box is ticked.
     // Otherwise this fired from step 0 for every under-16, which is the whole
@@ -275,15 +298,29 @@ export default function JuniorTravelClient() {
         code: "no-parent",
         severity: "stop",
         message: "No person with parental responsibility present",
-        detail: "Go back to the Eligibility step and confirm that a person with parental responsibility is present, or that the young person is Gillick competent.",
+        detail: "Go back to the Eligibility step and confirm that a person with parental responsibility, or a suitable adult authorised by them, is present, or that the young person is Gillick competent.",
       });
 
-    if (!c.routineUpToDate)
+    if (!c.routineUpToDate && !c.catchUpPlanDiscussed)
       a.push({
         code: "routine-catchup",
         severity: "caution",
         message: "Routine UK immunisations not confirmed up to date",
-        detail: "Catch-up of the routine schedule is a priority before travel-specific vaccines. Discuss a catch-up plan and inform the GP.",
+        detail: "Inclusion requires the routine schedule to be up to date, or a catch-up plan discussed and the GP informed. Catch-up is a priority before travel-specific vaccines.",
+      });
+    if (c.selected.includes("twinrix-paed") && c.selected.length > 1)
+      a.push({
+        code: "twinrix-coadmin",
+        severity: "caution",
+        message: "Twinrix Paediatric: SmPC advises against same-day co-administration",
+        detail: "Vaccines other than Cervarix should not be given at the same time as Twinrix Paediatric. Give separately, or follow Green Book advice and record the reason.",
+      });
+    if (c.chronicConditionOrRemote)
+      a.push({
+        code: "chronic-or-remote",
+        severity: "caution",
+        message: "Chronic condition, specialist care, or prolonged rural, remote or high-altitude travel",
+        detail: "Discuss with or refer to the GP.",
       });
     if (c.selected.includes("rabies"))
       a.push({
@@ -326,21 +363,28 @@ export default function JuniorTravelClient() {
       case 2:
         if (!c.destination.trim()) return "Please record the destination";
         if (!c.departureDate.trim()) return "Please record the departure date";
+        if (!c.recommendedForDestination) return "Confirm the vaccine is recommended by NaTHNaC / TravelHealthPro for the destination, or the child is otherwise at risk as described in the Green Book";
+        if (!c.routineUpToDate && !c.catchUpPlanDiscussed) return "Confirm routine UK childhood immunisations are up to date, or that a catch-up plan has been discussed and the GP informed";
         return null;
       case 3:
         if (c.selected.length === 0) return "Please select at least one vaccine";
+        if (c.selected.includes("twinrix-paed") && c.selected.length > 1 && !c.twinrixCoAdminReason.trim()) return "Twinrix Paediatric with another vaccine today: record the reason for same-day co-administration, or give separately";
         return null;
       case 4:
         if (!c.allergies.trim()) return "Please record allergy status (or NKDA)";
+        if (patient.age !== null && patient.age < 16 && !c.parentPresent) return "Confirm a person with parental responsibility (or a suitable adult authorised by them) is present, or that the young person is Gillick competent";
+        if (!c.consentBasis) return "Record who gave consent";
+        if (patient.age !== null && patient.age < 16 && c.consentBasis === "self") return "Under 16: consent must come from a person with parental responsibility, or the young person must be assessed as Gillick competent";
+        if ((c.consentBasis === "parental" || c.consentBasis === "gillick") && !c.consentDetail.trim()) return c.consentBasis === "parental" ? "Record the relationship of the person with parental responsibility to the child" : "Record the basis of the Gillick competence assessment";
         return null;
       case 5:
-        if (!c.anaphylaxisKit) return "Confirm the anaphylaxis kit is immediately available";
+        if (!c.anaphylaxisKit) return "Confirm anaphylaxis facilities and adrenaline 1 in 1,000 are immediately available";
         if (!c.batchNumbers.trim()) return "Please record the batch number and expiry for each vaccine given";
         if (!c.sites.trim()) return "Please record the anatomical site for each vaccine given";
         return null;
       case 6:
-        if (!c.scheduleAdvice || !c.sideEffectAdvice || !c.bitesAndFoodAdvice) return "Please confirm all counselling points";
-        if (c.selected.includes("rabies") && !c.rabiesAdvice) return "Please confirm the rabies exposure advice";
+        if (!c.observationCompleted) return "Confirm the 15 minute seated observation period was completed";
+        if (!c.scheduleAdvice || !c.sideEffectAdvice || !c.bitesAndFoodAdvice || !c.rabiesAdvice) return "Please confirm all counselling points";
         return validateSummaryStep(summary);
       default: return null;
     }
@@ -357,8 +401,8 @@ export default function JuniorTravelClient() {
       gpName: patient.gpName, gpPractice: patient.gpPractice,
     },
     clinicalData: {
-      patient, consent, clinical: c, alerts, ageMonths,
-      vaccines: selectedDefs.map((v) => ({ name: v.name, dose: ageMonths !== null ? v.dose(ageMonths) : "", schedule: v.schedule })),
+      patient, consent, clinical: c, alerts, ageMonths, pgdVersion: PGD_VERSION,
+      vaccines: selectedDefs.map((v) => ({ name: v.name, dose: ageMonths !== null ? v.dose(ageMonths) : "", schedule: v.schedule, route: v.id === "cholera" ? "Oral" : "Intramuscular" })),
     } as unknown as Record<string, unknown>,
     outcome: hasStops ? "not_supplied" : "completed",
     summary: {
@@ -387,7 +431,12 @@ export default function JuniorTravelClient() {
             <TextInput label="Departure date" value={c.departureDate} onChange={(v) => set({ departureDate: v })} placeholder="DD/MM/YYYY" required />
             <TextArea label="Itinerary, duration and planned activities" value={c.itinerary} onChange={(v) => set({ itinerary: v })} placeholder="Rural or urban, length of stay, animal contact, accommodation, season" />
             <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
+              <Checkbox label="Travelling to, or residing in, an area where the vaccine is recommended by NaTHNaC / TravelHealthPro (checked at this consultation), or otherwise at occupational or lifestyle risk as described in the relevant Green Book chapter" checked={c.recommendedForDestination} onChange={(v) => set({ recommendedForDestination: v })} />
               <Checkbox label="Routine UK childhood immunisations confirmed up to date" checked={c.routineUpToDate} onChange={(v) => set({ routineUpToDate: v })} />
+              {!c.routineUpToDate && (
+                <Checkbox label="Routine immunisations not up to date: a catch-up plan has been discussed and the GP informed" checked={c.catchUpPlanDiscussed} onChange={(v) => set({ catchUpPlanDiscussed: v })} />
+              )}
+              <Checkbox label="Chronic condition, under specialist care, or itinerary includes prolonged rural travel, remote areas or high-altitude destinations (discuss with or refer to the GP)" checked={c.chronicConditionOrRemote} onChange={(v) => set({ chronicConditionOrRemote: v })} />
             </div>
             <div className="p-4 bg-[color:var(--tenant-primary)]/10 rounded-lg border border-[color:var(--tenant-primary)]/30 text-sm">
               Check TravelHealthPro (NaTHNaC) for this destination at the time of the consultation. Vaccination does not replace bite avoidance, food and water precautions, or malaria chemoprophylaxis where indicated.
@@ -399,7 +448,7 @@ export default function JuniorTravelClient() {
           <div className="space-y-4">
             <AlertBanner alerts={alerts} />
             <p className="text-sm text-gray-600">
-              Select the vaccines indicated by the risk assessment. Age eligibility is checked against the child&apos;s date of birth.
+              Select the vaccines indicated by the risk assessment. Age eligibility is checked against the child&apos;s date of birth: the higher of 12 months and the vaccine-specific minimum age applies.
             </p>
             <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
               {VACCINES.map((v) => {
@@ -427,6 +476,9 @@ export default function JuniorTravelClient() {
                 ))}
               </div>
             )}
+            {c.selected.includes("twinrix-paed") && c.selected.length > 1 && (
+              <TextInput label="Twinrix Paediatric with another vaccine today: reason for same-day co-administration (Green Book advice)" value={c.twinrixCoAdminReason} onChange={(v) => set({ twinrixCoAdminReason: v })} placeholder="e.g. imminent departure, Green Book permits co-administration at separate sites" required />
+            )}
           </div>
         );
       case 4:
@@ -442,10 +494,23 @@ export default function JuniorTravelClient() {
               <Checkbox label="Known or suspected pregnancy" checked={c.pregnant} onChange={(v) => set({ pregnant: v })} />
               <Checkbox label="Bleeding disorder not assessed as safe for intramuscular injection" checked={c.bleedingDisorder} onChange={(v) => set({ bleedingDisorder: v })} />
               <Checkbox label="Attending for post-exposure treatment (including animal bite, scratch or lick to broken skin)" checked={c.postExposure} onChange={(v) => set({ postExposure: v })} />
+              <Checkbox label="Complex itinerary, incomplete or unreliable immunisation history that cannot be resolved, or any clinical uncertainty" checked={c.clinicalUncertainty} onChange={(v) => set({ clinicalUncertainty: v })} />
             </div>
             <div className="space-y-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
               <p className="text-sm font-semibold text-amber-800">Consent</p>
-              <Checkbox label="A person with parental responsibility, or an adult authorised by them, is present (or the young person is Gillick competent)" checked={c.parentPresent} onChange={(v) => set({ parentPresent: v })} />
+              <Checkbox label="A person with parental responsibility, or a suitable adult authorised by them, is present (or the young person is Gillick competent)" checked={c.parentPresent} onChange={(v) => set({ parentPresent: v })} />
+              <SelectInput label="Consent given by" value={c.consentBasis} onChange={(v) => set({ consentBasis: v as ConsentBasis })}
+                options={[
+                  { value: "parental", label: "A person with parental responsibility" },
+                  { value: "gillick", label: "The young person, assessed as Gillick competent" },
+                  { value: "self", label: "The young person, aged 16 or 17" },
+                ]} required />
+              {c.consentBasis === "parental" && (
+                <TextInput label="Relationship of the person with parental responsibility to the child" value={c.consentDetail} onChange={(v) => set({ consentDetail: v })} placeholder="e.g. mother" required />
+              )}
+              {c.consentBasis === "gillick" && (
+                <TextInput label="Basis of the Gillick competence assessment" value={c.consentDetail} onChange={(v) => set({ consentDetail: v })} placeholder="e.g. understands the purpose, benefits and risks and can retain and weigh the information" required />
+              )}
             </div>
             <div className="p-4 bg-[color:var(--tenant-primary)]/10 rounded-lg border border-[color:var(--tenant-primary)]/30 text-sm">
               Check neomycin, polymyxin, streptomycin, latex and thiomersal sensitivities against the specific product SPC before administration. Rabies vaccine presentations differ, check the SPC where there is an egg allergy.
@@ -462,10 +527,10 @@ export default function JuniorTravelClient() {
                 {selectedDefs.map((v) => (
                   <p key={v.id}>{v.name}: {v.dose(ageMonths)}</p>
                 ))}
-                <p className="mt-2">Use separate sites, preferably different limbs, or at least 2.5 cm apart in the same limb. Use the anterolateral thigh in younger children where deltoid bulk is insufficient. Record the site of each.</p>
+                <p className="mt-2">Intramuscular injection into the deltoid, or the anterolateral thigh in younger children where deltoid bulk is insufficient. Use separate sites, preferably different limbs, or at least 2.5 cm apart in the same limb. Record the site of each. Inspect each vaccine visually and do not use if the appearance differs from the SPC. Vaccinate seated and observe for 15 minutes.</p>
               </div>
             )}
-            <Checkbox label="Adrenaline 1 in 1,000 and anaphylaxis facilities are immediately available" checked={c.anaphylaxisKit} onChange={(v) => set({ anaphylaxisKit: v })} />
+            <Checkbox label="Facilities and trained staff for anaphylaxis are available, with immediate access to adrenaline (epinephrine) 1 in 1,000 injection and a telephone" checked={c.anaphylaxisKit} onChange={(v) => set({ anaphylaxisKit: v })} />
             <TextArea label="Batch numbers and expiry dates" value={c.batchNumbers} onChange={(v) => set({ batchNumbers: v })} placeholder="One line per vaccine given" />
             <TextArea label="Anatomical sites" value={c.sites} onChange={(v) => set({ sites: v })} placeholder="One line per vaccine given, e.g. Typhim Vi, left deltoid" />
           </div>
@@ -475,13 +540,13 @@ export default function JuniorTravelClient() {
           <div className="space-y-4">
             <AlertBanner alerts={alerts} />
             <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
-              <Checkbox label="Written record of vaccines given provided, and remaining doses and dates explained" checked={c.scheduleAdvice} onChange={(v) => set({ scheduleAdvice: v })} />
-              <Checkbox label="Side effects and their management explained, including Yellow Card reporting" checked={c.sideEffectAdvice} onChange={(v) => set({ sideEffectAdvice: v })} />
-              <Checkbox label="Bite avoidance, food and water hygiene and malaria advice given, and advised that fever during or after travel needs urgent assessment" checked={c.bitesAndFoodAdvice} onChange={(v) => set({ bitesAndFoodAdvice: v })} />
-              {c.selected.includes("rabies") && (
-                <Checkbox label="Advised that any animal bite, scratch or lick to broken skin needs immediate wound washing and urgent medical attention regardless of vaccination" checked={c.rabiesAdvice} onChange={(v) => set({ rabiesAdvice: v })} />
-              )}
+              <Checkbox label="Observed for 15 minutes after vaccination, seated, and the observation period completed" checked={c.observationCompleted} onChange={(v) => set({ observationCompleted: v })} />
+              <Checkbox label="PIL offered for each vaccine; written record of vaccines given with dates provided; remaining doses and dates explained, and that the course should be completed even if travel has taken place" checked={c.scheduleAdvice} onChange={(v) => set({ scheduleAdvice: v })} />
+              <Checkbox label="Side effects and their management explained; advised to seek medical advice for an adverse reaction and to report it via the Yellow Card scheme" checked={c.sideEffectAdvice} onChange={(v) => set({ sideEffectAdvice: v })} />
+              <Checkbox label="Destination-specific written advice given on food and water hygiene, insect bite avoidance, animal avoidance and rabies risk, and malaria prevention where indicated; advised that any fever during or after travel to a malarial area needs urgent medical assessment" checked={c.bitesAndFoodAdvice} onChange={(v) => set({ bitesAndFoodAdvice: v })} />
+              <Checkbox label="Advised that any animal bite, scratch or lick to broken skin abroad needs immediate wound washing and urgent medical attention regardless of rabies vaccination status" checked={c.rabiesAdvice} onChange={(v) => set({ rabiesAdvice: v })} />
             </div>
+            <p className="text-xs text-gray-500">{PGD_VERSION}.</p>
             <TextInput label="Pharmacist name" value={summary.pharmacistName} onChange={(v) => setSummary((p) => ({ ...p, pharmacistName: v }))} required />
             <TextInput label="GPhC registration number" value={summary.pharmacistGPhC} onChange={(v) => setSummary((p) => ({ ...p, pharmacistGPhC: v }))} required />
             <TextArea label="Clinical notes (optional)" value={summary.clinicalNotes} onChange={(v) => setSummary((p) => ({ ...p, clinicalNotes: v }))} />

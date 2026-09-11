@@ -36,20 +36,20 @@ export function FeverPAINScore({
   const getRiskBadge = (score: number) => {
     if (score <= 1) {
       return {
-        label: "Low Risk — Self-care",
+        label: "Low Risk: self-care, no antibiotic under this PGD",
         color: "bg-green-50 border-green-200 text-green-700",
         icon: "✓",
       };
     }
     if (score <= 3) {
       return {
-        label: "Moderate Risk — Consider Back-up Antibiotic",
+        label: "FeverPAIN 2-3: no antibiotic under this PGD unless RAST positive",
         color: "bg-amber-50 border-amber-200 text-amber-700",
         icon: "⚠",
       };
     }
     return {
-      label: "High Risk — Consider Immediate Antibiotic",
+      label: "FeverPAIN 4 or more: antibiotic indicated under this PGD",
       color: "bg-red-50 border-red-200 text-red-700",
       icon: "!",
     };

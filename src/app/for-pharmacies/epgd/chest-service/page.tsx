@@ -5,7 +5,7 @@ import PgdGate from "../PgdGate";
 import { ChestServiceClient } from "./ChestServiceClient";
 
 export const metadata = {
-  title: "Chest Infection Service — Acute Bacterial Bronchitis",
+  title: "Chest Infection Service: Acute Bacterial Bronchitis",
   description:
     "UK Pharmacy PGD tool for acute bacterial bronchitis in patients aged 12 and over: doxycycline, amoxicillin or clarithromycin, with red flag screening and antimicrobial stewardship.",
 };
@@ -30,21 +30,25 @@ export default async function ChestServicePage() {
               </h1>
               <p className="text-gray-600 mb-4">
                 Acute bacterial bronchitis in patients aged 12 and over.
-                Doxycycline, amoxicillin or clarithromycin, per the signed PGD.
+                Doxycycline, amoxicillin or clarithromycin, per the signed PGD
+                (version 007, issued 11 September 2026).
               </p>
               <div className="bg-amber-50 border border-amber-300 rounded-lg p-4">
                 <p className="text-sm text-amber-900">
                   <strong>Most acute bronchitis is viral and needs no
-                  antibiotic.</strong> An antibiotic is only appropriate where
-                  there are features suggesting bacterial infection, or the
-                  patient is at higher risk of complications. This tool will ask
-                  you to record that judgement before it lets you supply.
+                  antibiotic.</strong> The inclusion criteria are deliberately
+                  narrow: purulent sputum PLUS either a higher-risk comorbidity
+                  or symptoms beyond 14 days. Every observation in Appendix 1
+                  must be measured and recorded before any supply, and the CRB
+                  score (without the age point) must be 0.
                 </p>
               </div>
               <p className="mt-3 text-xs text-gray-500">
-                This service does not cover pneumonia, which needs medical
+                This service does not cover pneumonia, which needs same-day
                 assessment, nor cough lasting more than three weeks, which is no
-                longer an acute cough and needs investigation.
+                longer an acute cough and needs investigation. A pregnant or
+                breastfeeding patient who is penicillin-allergic has no arm
+                under this PGD and is referred the same day.
               </p>
             </div>
           </div>
@@ -53,7 +57,7 @@ export default async function ChestServicePage() {
 
           <div className="mt-8 text-center text-xs text-gray-500">
             <p>
-              Get Real Health ePGD — Chest Infection Service | Confidential
+              Get Real Health ePGD, Chest Infection Service | Confidential
               Patient Information
             </p>
           </div>

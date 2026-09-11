@@ -25,7 +25,13 @@ import {
 import type { ConsultationRecordData } from "../shared/hooks/useConsultationTracking";
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 
+/** Strapline of the document this tool follows. */
+const PGD_VERSION_LABEL = "Wegovy (semaglutide) Tablets PGD version 010, issued 11 September 2026";
+
 // ── State shape ────────────────────────────────────────────────
+
+type VisitType = "" | "initiation" | "continuation" | "restart";
+type TabletStrength = "" | "1.5" | "4" | "9" | "25";
 
 interface WegovyOralState {
   currentStep: number;
@@ -46,14 +52,21 @@ interface WegovyOralState {
     age18To85: boolean;
     willingLifestyleChange: boolean;
     tried6MonthLifestyle: boolean;
-    // ── PGD v005: switching from semaglutide injection ──────────────────
-    // v004 said only "Switching from semaglutide 2.4 mg injection: 25 mg once
-    // daily, starting one week after the last injection". It required no
-    // evidence of the current injection dose and said nothing at all about
-    // patients on 0.25, 0.5, 1 or 1.7 mg, for whom 25 mg is a large jump.
+    // PGD v010: visit type, baseline weight and target weight. The 5% review
+    // rule is calculated from the recorded baseline, not the last visit.
+    visitType: VisitType;
+    baselineWeightKg: number | null;
+    targetWeightKg: number | null;
+    initialAssessmentDone: boolean;
+    ableEmptyStomach: boolean;
+    currentDose: TabletStrength;
+    monthsAtCurrentDose: number | null;
+    // Switching from semaglutide injection requires documented evidence of the
+    // current injection dose. Patient self-report is not sufficient.
     switchingFromInjection: boolean;
     injectionDose: '' | '0.25' | '0.5' | '1.0' | '1.7' | '2.4';
     injectionDoseEvidence: '' | 'label' | 'clinic-record' | 'pen-seen' | 'prescriber' | 'none';
+    injectionStoppedOver2Months: boolean;
   };
   contraindications: {
     pregnancyOrTryingConceive: boolean;
@@ -68,29 +81,54 @@ interface WegovyOralState {
     severeHepaticImpairment: boolean;
     hypersensitivity: boolean;
     concurrentGlp1: boolean;
+    cholelithiasisOrCholecystectomy: boolean;
+    endocrineObesity: boolean;
+    insulinSecretagogue: boolean;
+    insulinTreated: boolean;
+    heartFailureLowEf: boolean;
+    clinicalJudgementUnsuitable: boolean;
+  };
+  cautions: {
+    mentalHealthHistory: boolean;
+    psychiatricOversight: boolean;
+    mildModerateRenal: boolean;
+    raisedHeartRate: boolean;
+    sodiumRestrictedDiet: boolean;
   };
   interactions: {
     levothyroxine: boolean;
     warfarin: boolean;
     sulfonylureaOrInsulin: boolean;
     oralContraception: boolean;
+    metforminSglt2Dpp4: boolean;
+    oralHrt: boolean;
     other: string;
   };
   doseSelection: {
     product: string; // 'wegovy-oral-1.5' | 'wegovy-oral-4' | 'wegovy-oral-9' | 'wegovy-oral-25' | ''
     rationale: string;
+    batchNumber: string;
   };
   counselling: {
     emptyStomachExplained: boolean;
     waterLimit120ml: boolean;
     waitBeforeFood: boolean;
+    swallowWholeOneTablet: boolean;
+    missedDose: boolean;
+    dietAndActivity: boolean;
     gastrointestinalSe: boolean;
     pancreatitisRedFlag: boolean;
+    urgentVomitingDehydration: boolean;
     gallbladderRedFlag: boolean;
+    visionLoss: boolean;
+    heartRateRise: boolean;
+    anaesthetistWarning: boolean;
     hypoRiskIfDiabetic: boolean;
     pregnancyWarning: boolean;
     storedTablet: boolean;
+    writtenInfoSupplied: boolean;
     followUpPlan: boolean;
+    gpInformed: boolean;
   };
   summary: BaseSummary;
 }
@@ -110,6 +148,24 @@ const TOTAL_STEPS = STEP_LABELS.length;
 /** Index of the "Informed Consent" step. The written-consent stop only
  *  applies once the pharmacist has been past it. */
 const STEP_INFORMED_CONSENT = STEP_LABELS.indexOf("Informed Consent");
+const STEP_ELIGIBILITY = STEP_LABELS.indexOf("Eligibility & BMI");
+const STEP_DOSE = STEP_LABELS.indexOf("Dose");
+const STEP_COUNSELLING = STEP_LABELS.indexOf("Counselling");
+
+/** Titration ladder in the document: 1.5 mg, 4 mg, 9 mg, 25 mg once daily. */
+const STRENGTH_ORDER: TabletStrength[] = ["1.5", "4", "9", "25"];
+const PRODUCT_STRENGTH: Record<string, TabletStrength> = {
+  "wegovy-oral-1.5": "1.5",
+  "wegovy-oral-4": "4",
+  "wegovy-oral-9": "9",
+  "wegovy-oral-25": "25",
+};
+const PRODUCT_LABEL: Record<string, string> = {
+  "wegovy-oral-1.5": "Wegovy (semaglutide) 1.5 mg tablets",
+  "wegovy-oral-4": "Wegovy (semaglutide) 4 mg tablets",
+  "wegovy-oral-9": "Wegovy (semaglutide) 9 mg tablets",
+  "wegovy-oral-25": "Wegovy (semaglutide) 25 mg tablets",
+};
 
 function initialState(): WegovyOralState {
   return {
@@ -131,9 +187,17 @@ function initialState(): WegovyOralState {
       age18To85: false,
       willingLifestyleChange: false,
       tried6MonthLifestyle: false,
+      visitType: "",
+      baselineWeightKg: null,
+      targetWeightKg: null,
+      initialAssessmentDone: false,
+      ableEmptyStomach: false,
+      currentDose: "",
+      monthsAtCurrentDose: null,
       switchingFromInjection: false,
       injectionDose: "",
       injectionDoseEvidence: "",
+      injectionStoppedOver2Months: false,
     },
     contraindications: {
       pregnancyOrTryingConceive: false,
@@ -148,29 +212,54 @@ function initialState(): WegovyOralState {
       severeHepaticImpairment: false,
       hypersensitivity: false,
       concurrentGlp1: false,
+      cholelithiasisOrCholecystectomy: false,
+      endocrineObesity: false,
+      insulinSecretagogue: false,
+      insulinTreated: false,
+      heartFailureLowEf: false,
+      clinicalJudgementUnsuitable: false,
+    },
+    cautions: {
+      mentalHealthHistory: false,
+      psychiatricOversight: false,
+      mildModerateRenal: false,
+      raisedHeartRate: false,
+      sodiumRestrictedDiet: false,
     },
     interactions: {
       levothyroxine: false,
       warfarin: false,
       sulfonylureaOrInsulin: false,
       oralContraception: false,
+      metforminSglt2Dpp4: false,
+      oralHrt: false,
       other: "",
     },
     doseSelection: {
       product: "",
       rationale: "",
+      batchNumber: "",
     },
     counselling: {
       emptyStomachExplained: false,
       waterLimit120ml: false,
       waitBeforeFood: false,
+      swallowWholeOneTablet: false,
+      missedDose: false,
+      dietAndActivity: false,
       gastrointestinalSe: false,
       pancreatitisRedFlag: false,
+      urgentVomitingDehydration: false,
       gallbladderRedFlag: false,
+      visionLoss: false,
+      heartRateRise: false,
+      anaesthetistWarning: false,
       hypoRiskIfDiabetic: false,
       pregnancyWarning: false,
       storedTablet: false,
+      writtenInfoSupplied: false,
       followUpPlan: false,
+      gpInformed: false,
     },
     summary: initialSummary(),
   };
@@ -182,6 +271,7 @@ type Action =
   | { type: "UPDATE_OFFLABEL"; field: keyof WegovyOralState["offLabelConsent"]; value: boolean }
   | { type: "UPDATE_ELIGIBILITY"; field: keyof WegovyOralState["eligibility"]; value: WegovyOralState["eligibility"][keyof WegovyOralState["eligibility"]] }
   | { type: "UPDATE_CONTRAINDICATION"; field: keyof WegovyOralState["contraindications"]; value: boolean }
+  | { type: "UPDATE_CAUTION"; field: keyof WegovyOralState["cautions"]; value: boolean }
   | { type: "UPDATE_INTERACTION"; field: keyof WegovyOralState["interactions"]; value: WegovyOralState["interactions"][keyof WegovyOralState["interactions"]] }
   | { type: "UPDATE_DOSE"; field: keyof WegovyOralState["doseSelection"]; value: string }
   | { type: "UPDATE_COUNSELLING"; field: keyof WegovyOralState["counselling"]; value: boolean }
@@ -212,6 +302,8 @@ function reducer(state: WegovyOralState, action: Action): WegovyOralState {
     }
     case "UPDATE_CONTRAINDICATION":
       return { ...state, contraindications: { ...state.contraindications, [action.field]: action.value } };
+    case "UPDATE_CAUTION":
+      return { ...state, cautions: { ...state.cautions, [action.field]: action.value } };
     case "UPDATE_INTERACTION":
       return { ...state, interactions: { ...state.interactions, [action.field]: action.value } };
     case "UPDATE_DOSE":
@@ -233,6 +325,12 @@ function reducer(state: WegovyOralState, action: Action): WegovyOralState {
   }
 }
 
+/** Percentage change from the recorded baseline weight (negative = loss). */
+function percentChangeFromBaseline(baseline: number | null, weight: number | null): number | null {
+  if (!baseline || !weight) return null;
+  return parseFloat((((weight - baseline) / baseline) * 100).toFixed(1));
+}
+
 export function WegovyOralClient() {
   const [state, dispatch] = useReducer(reducer, undefined, initialState);
   const __pharm = usePharmacistProfile();
@@ -247,24 +345,44 @@ export function WegovyOralClient() {
 
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
 
+  const pctChange = percentChangeFromBaseline(state.eligibility.baselineWeightKg, state.eligibility.weightKg);
+
   // ── Alerts / contraindication summary ───────────────────────
   const alerts = useMemo(() => {
     const out: { code: string; severity: "stop" | "caution" | "red-flag"; message: string; detail: string }[] = [];
     const c = state.contraindications;
-    if (c.pregnancyOrTryingConceive) out.push({ code: "preg", severity: "stop", message: "Pregnancy / trying to conceive", detail: "Oral semaglutide is contraindicated. Stop pregnancy 2 months before planned conception." });
-    if (c.breastfeeding) out.push({ code: "bf", severity: "stop", message: "Breastfeeding", detail: "Avoid — limited data; use alternative or defer." });
-    if (c.type1Diabetes) out.push({ code: "t1d", severity: "stop", message: "Type 1 diabetes", detail: "Not indicated. Refer specialist diabetes service." });
-    if (c.mtcOrMen2) out.push({ code: "mtc", severity: "stop", message: "Personal / family MTC or MEN 2", detail: "Contraindicated." });
-    if (c.pancreatitisHistory) out.push({ code: "panc", severity: "stop", message: "Pancreatitis history", detail: "Contraindicated." });
-    if (c.diabeticRetinopathy) out.push({ code: "retino", severity: "stop", message: "Diabetic retinopathy", detail: "Risk of progression — refer specialist." });
-    if (c.severeGastroparesisOrIBD) out.push({ code: "gp", severity: "stop", message: "Severe gastroparesis / IBD", detail: "Contraindicated — oral absorption unreliable + symptom risk." });
-    if (c.eatingDisorder) out.push({ code: "ed", severity: "stop", message: "Active eating disorder", detail: "Contraindicated. Refer specialist." });
-    if (c.severeRenalImpairment) out.push({ code: "renal", severity: "stop", message: "Severe renal impairment (eGFR <30)", detail: "Avoid." });
-    if (c.severeHepaticImpairment) out.push({ code: "hep", severity: "stop", message: "Severe hepatic impairment", detail: "Avoid." });
-    if (c.hypersensitivity) out.push({ code: "allergy", severity: "stop", message: "Hypersensitivity", detail: "Contraindicated." });
-    if (c.concurrentGlp1) out.push({ code: "glp1", severity: "stop", message: "Concurrent GLP-1 / GIP RA, for any indication", detail: "Do not double up. Ask specifically about medicines taken for diabetes and name the products: a patient does not always think of a diabetes medicine as the same kind of drug." });
+    if (c.pregnancyOrTryingConceive) out.push({ code: "preg", severity: "stop", message: "Pregnancy, planning pregnancy, or trying to conceive", detail: "Excluded. Effective contraception is required throughout treatment. Semaglutide must be discontinued at least 2 months before a planned pregnancy because of its long half-life, and stopped immediately if pregnancy occurs or is suspected (SPC section 4.6)." });
+    if (c.breastfeeding) out.push({ code: "bf", severity: "stop", message: "Breastfeeding", detail: "Excluded. The absorption enhancer salcaprozate sodium passes into breast milk and a risk to the breast-fed child cannot be excluded; Wegovy tablets should not be used during breastfeeding." });
+    if (c.type1Diabetes) out.push({ code: "t1d", severity: "stop", message: "Type 1 diabetes mellitus", detail: "Excluded. Semaglutide must not be used as a substitute for insulin. Refer to the specialist diabetes service." });
+    if (c.mtcOrMen2) out.push({ code: "mtc", severity: "stop", message: "Personal or family history of medullary thyroid carcinoma, or MEN 2", detail: "Excluded." });
+    if (c.pancreatitisHistory) out.push({ code: "panc", severity: "stop", message: "History of pancreatitis, acute or chronic", detail: "Excluded. The MHRA strengthened the GLP-1 pancreatitis class warning on 29 January 2026." });
+    if (c.diabeticRetinopathy) out.push({ code: "retino", severity: "stop", message: "Diabetic retinopathy", detail: "Excluded. Treatment may worsen retinopathy; defer or refer to a specialist." });
+    if (c.severeGastroparesisOrIBD) out.push({ code: "gp", severity: "stop", message: "Severe gastrointestinal disease, including gastroparesis or a severe persistent gastrointestinal disorder", detail: "Excluded. Oral absorption is unreliable and symptoms may worsen." });
+    if (c.eatingDisorder) out.push({ code: "ed", severity: "stop", message: "Active eating disorder", detail: "Excluded: anorexia nervosa, bulimia, or binge-eating disorder under specialist care. Refer to the specialist." });
+    if (c.severeRenalImpairment) out.push({ code: "renal", severity: "stop", message: "Severe renal impairment (eGFR below 30 mL/min/1.73 m2) or end-stage renal disease", detail: "Excluded. Semaglutide is not recommended in severe renal impairment." });
+    if (c.severeHepaticImpairment) out.push({ code: "hep", severity: "stop", message: "Severe hepatic impairment", detail: "Excluded. Semaglutide is not recommended in severe hepatic impairment." });
+    if (c.hypersensitivity) out.push({ code: "allergy", severity: "stop", message: "Known hypersensitivity to semaglutide or to any of the excipients", detail: "Excluded." });
+    if (c.concurrentGlp1) out.push({ code: "glp1", severity: "stop", message: "Concurrent use of any other GLP-1 receptor agonist, for any indication", detail: "Excluded. Ask specifically whether the patient takes anything for diabetes and name the products: orforglipron, oral semaglutide for diabetes at 3 mg, 7 mg and 14 mg, and semaglutide and tirzepatide injections. A patient does not always think of a diabetes medicine as the same kind of drug." });
+    if (c.cholelithiasisOrCholecystectomy) out.push({ code: "gall", severity: "stop", message: "Current cholelithiasis or cholecystitis, or cholecystectomy within the last 3 months", detail: "Excluded." });
+    if (c.endocrineObesity) out.push({ code: "endo", severity: "stop", message: "Obesity caused by an endocrinological disorder", detail: "Excluded. Where the patient was already overweight before that diagnosis, this exclusion may not apply: untick and record the reasoning in the clinical notes if so. Consider referring to the GP." });
+    if (c.insulinSecretagogue) out.push({ code: "secretagogue", severity: "stop", message: "Concurrent insulin secretagogue (any sulfonylurea or meglitinide), for any indication", detail: "Excluded. There is no GP-monitored route for these patients under this PGD." });
+    if (c.insulinTreated) out.push({ code: "insulin", severity: "stop", message: "Insulin-treated diabetes", detail: "Excluded. Refer: a pharmacy weight-management service cannot manage insulin dose reduction." });
+    if (c.heartFailureLowEf) out.push({ code: "hf", severity: "stop", message: "Known heart failure with reduced ejection fraction below 40%", detail: "Excluded." });
+    if (c.clinicalJudgementUnsuitable) out.push({ code: "judgement", severity: "stop", message: "Not suitable for the medicine in the clinical judgement of the healthcare professional", detail: "Excluded. Discuss the reason with the patient, advise on alternatives (GP, specialist weight management service, lifestyle programme) and document the advice given." });
 
-    // PGD v005: switching requires documented evidence of the injection dose.
+    // Cautions from the document. Mental health: do not supply where oversight
+    // is absent and concern exists.
+    const ca = state.cautions;
+    if (ca.mentalHealthHistory && !ca.psychiatricOversight) {
+      out.push({ code: "mh-oversight", severity: "stop", message: "History of suicidal ideation or active severe mental illness without psychiatric oversight", detail: "Do not supply where oversight is absent and concern exists. Ensure appropriate psychiatric oversight is in place, monitor mood at review, and refer if there is any concern." });
+    } else if (ca.mentalHealthHistory) {
+      out.push({ code: "mh", severity: "caution", message: "History of suicidal ideation, or active severe mental illness", detail: "Psychiatric oversight confirmed. Monitor mood at review and refer if there is any concern." });
+    }
+    if (ca.mildModerateRenal) out.push({ code: "renal-mild", severity: "caution", message: "Mild to moderate renal impairment", detail: "Monitor for dehydration secondary to gastrointestinal side effects. Patients with eGFR 30 to below 60 may experience more gastrointestinal effects." });
+    if (ca.raisedHeartRate) out.push({ code: "hr", severity: "caution", message: "Pre-existing raised heart rate", detail: "Tachycardia has been reported. Use with caution and seek specialist advice first. Discontinue and seek advice for a clinically relevant sustained rise in resting heart rate." });
+    if (ca.sodiumRestrictedDiet) out.push({ code: "sodium", severity: "caution", message: "Sodium-restricted diet", detail: "The 25 mg maintenance tablet contains 23 mg of sodium. The lower strengths are essentially sodium free. Rarely material, but worth knowing." });
+
+    // Switching requires documented evidence of the injection dose.
     if (state.eligibility.switchingFromInjection) {
       if (!state.eligibility.injectionDose) {
         out.push({ code: "switch-dose", severity: "stop", message: "Injection dose not recorded", detail: "Record the current injection dose before switching." });
@@ -275,7 +393,7 @@ export function WegovyOralClient() {
           severity: "stop",
           message: "No documented evidence of the current injection dose",
           detail:
-            "PGD v005 does not permit a switch on patient self-report. Ask for a dispensing label, prescription or repeat slip, a clinic record, the pen or carton itself, or confirmation from the prescriber. Tell the patient exactly what to bring so the appointment can be rebooked rather than abandoned.",
+            "The PGD does not permit a switch on patient self-report. Ask for a dispensing label, prescription or repeat slip, a record from the supplying clinic or pharmacy (including a GRH consultation record), the pen or carton itself with the strength legible, or written or verbal confirmation from the prescriber recorded with the date and the name of the person who gave it. A photograph on a phone is acceptable where the strength is legible. Tell the patient exactly what to bring so the appointment can be rebooked rather than abandoned.",
         });
       }
       if (state.eligibility.injectionDose && state.eligibility.injectionDose !== "2.4") {
@@ -284,16 +402,26 @@ export function WegovyOralClient() {
           severity: "caution",
           message: `Switching from ${state.eligibility.injectionDose} mg, which is below 2.4 mg`,
           detail:
-            "Do not start at 25 mg. Either continue the injection under the original prescriber to 2.4 mg, or start the tablets as a new initiation at 1.5 mg one week after the last injection and titrate monthly. This lower-dose pathway is a Get Real Health practice decision, not a licensed instruction; record it as such.",
+            "Do not start at 25 mg. Either continue the injection under the original prescriber to 2.4 mg, or start the tablets as a new initiation at 1.5 mg one week after the last injection and titrate monthly through 4 mg and 9 mg to 25 mg. This lower-dose pathway is a Get Real Health practice decision, not a licensed instruction; record it as such.",
+        });
+      }
+      if (state.eligibility.injectionStoppedOver2Months) {
+        out.push({
+          code: "switch-gap",
+          severity: "caution",
+          message: "Injection stopped more than 2 months ago",
+          detail: "Treat as a new initiation: start at 1.5 mg once daily and apply the BMI inclusion criteria afresh.",
         });
       }
     }
 
     const i = state.interactions;
-    if (i.warfarin) out.push({ code: "warf", severity: "caution", message: "Warfarin", detail: "Monitor INR closely; gastric emptying delay alters absorption." });
-    if (i.levothyroxine) out.push({ code: "levo", severity: "caution", message: "Levothyroxine", detail: "Take levothyroxine 4h apart from oral semaglutide — oral semaglutide significantly delays absorption." });
-    if (i.sulfonylureaOrInsulin) out.push({ code: "su", severity: "caution", message: "Sulfonylurea / insulin", detail: "Hypo risk — counsel + refer prescribing GP." });
-    if (i.oralContraception) out.push({ code: "oc", severity: "caution", message: "Oral contraception", detail: "GI symptoms may reduce absorption — counsel additional barrier for 7 days after vomiting/diarrhoea." });
+    if (i.warfarin) out.push({ code: "warf", severity: "caution", message: "Warfarin or other coumarin", detail: "Frequent INR monitoring is recommended on starting semaglutide. Decreased INR has been reported with acenocoumarol, so the same applies to other coumarins." });
+    if (i.levothyroxine) out.push({ code: "levo", severity: "caution", message: "Levothyroxine", detail: "Oral semaglutide increases levothyroxine exposure by about a third (AUC increased 33%). Monitor thyroid function when the two are taken together, and make sure the patient keeps the 30 minute separation, which matters more here than with most co-medicines." });
+    if (i.sulfonylureaOrInsulin) out.push({ code: "su", severity: "stop", message: "Sulfonylurea, meglitinide or insulin", detail: "Any sulfonylurea, meglitinide or insulin EXCLUDES under this PGD; there is no GP-monitored route for those patients. Refer." });
+    if (i.oralContraception) out.push({ code: "oc", severity: "caution", message: "Oral contraception", detail: "Exposure to ethinylestradiol and levonorgestrel is not changed to a clinically relevant degree. Counsel an additional barrier method for 7 days after vomiting or diarrhoea, and keep the 30 minute separation." });
+    if (i.metforminSglt2Dpp4) out.push({ code: "t2dm", severity: "caution", message: "Type 2 diabetes on metformin, an SGLT2 inhibitor or a DPP-4 inhibitor only", detail: "No dose adjustment is needed, but inform the GP. Record that the GP has been informed on the counselling step." });
+    if (i.oralHrt) out.push({ code: "hrt", severity: "caution", message: "Oral HRT", detail: "Given the lack of absorption data, non-oral products such as a patch, gel or levonorgestrel intrauterine device may be considered." });
 
     // Written-consent gate.
     // Only applies once the pharmacist has worked past the Informed Consent
@@ -304,25 +432,120 @@ export function WegovyOralClient() {
       out.push({ code: "consent", severity: "stop", message: "Written informed consent not yet obtained", detail: "Go back to the Informed Consent step and confirm that written consent has been obtained and filed." });
     }
 
-    // Age gate per signed PGD — adults 18+ (consistency review Jul 2026)
+    // Age gate per the PGD: adults aged 18 to 85 years inclusive.
     if (state.patient.age !== null && state.patient.age < 18) {
-      out.push({ code: "age", severity: "stop", message: "Patient under 18", detail: "This PGD applies to adults aged 18 years and over." });
+      out.push({ code: "age", severity: "stop", message: "Patient under 18", detail: "This PGD applies to adults aged 18 to 85 years inclusive." });
+    }
+    if (state.patient.age !== null && state.patient.age > 85) {
+      out.push({ code: "age-over", severity: "stop", message: "Patient over 85 years of age", detail: "Excluded. This is a Get Real Health position, not a licence restriction; the SPC sets no upper age limit and records only that experience above 85 is limited. Refer to a specialist if treatment is being considered." });
     }
 
     // Eligibility
     if (state.eligibility.bmi !== null && state.eligibility.bmi < 27) {
-      out.push({ code: "bmi", severity: "stop", message: "BMI below threshold", detail: `BMI ${state.eligibility.bmi} — must be ≥30, or ≥27 with weight-related comorbidity.` });
+      out.push({ code: "bmi", severity: "stop", message: "BMI below threshold", detail: `BMI ${state.eligibility.bmi}. Must be 30 or above, or 27 or above with at least one weight-related comorbidity.` });
     }
     if (state.eligibility.bmi !== null && state.eligibility.bmi >= 27 && state.eligibility.bmi < 30 && !state.eligibility.hasComorbidity) {
-      out.push({ code: "bmi-comorb", severity: "stop", message: "BMI 27–30 requires comorbidity", detail: "Patient must have at least one weight-related comorbidity." });
+      out.push({ code: "bmi-comorb", severity: "stop", message: "BMI 27 to below 30 requires a weight-related comorbidity", detail: "Patient must have at least one weight-related comorbidity (for example hypertension, dyslipidaemia, obstructive sleep apnoea, cardiovascular disease or type 2 diabetes)." });
+    }
+
+    // Review and the stopping rule: reassess where less than 5% of BASELINE
+    // body weight has been lost after 6 months at the established dose.
+    const e = state.eligibility;
+    if (e.visitType === "continuation" && pctChange !== null && e.monthsAtCurrentDose !== null && e.monthsAtCurrentDose >= 6 && pctChange > -5) {
+      out.push({
+        code: "review-5pc",
+        severity: "caution",
+        message: `Less than 5% of baseline weight lost after ${e.monthsAtCurrentDose} months at the current dose (${pctChange}% change)`,
+        detail: "Reassess whether to continue. The rule applies at 25 mg where reached, or at the highest dose tolerated for at least 3 consecutive months where 25 mg was not reached; a patient who never reaches 25 mg is not exempt from review. Record the decision and the reasoning in the clinical rationale.",
+      });
+    }
+
+    // Dose selection rules from the document.
+    const d = state.doseSelection;
+    const supplyStrength = PRODUCT_STRENGTH[d.product] ?? "";
+    if (supplyStrength) {
+      const switchingAt24 = e.switchingFromInjection && e.injectionDose === "2.4" && !e.injectionStoppedOver2Months;
+      if (e.switchingFromInjection && e.injectionDose && e.injectionDose !== "2.4" && supplyStrength === "25") {
+        out.push({ code: "dose-switch-low", severity: "stop", message: "25 mg selected after an injection dose below 2.4 mg", detail: "Do NOT start at 25 mg. There is no licensed switch from these doses and 25 mg would be a substantial jump. Start as a new initiation at 1.5 mg once daily, or continue the injection under the original prescriber until 2.4 mg is reached." });
+      }
+      if (e.switchingFromInjection && e.injectionStoppedOver2Months && supplyStrength !== "1.5") {
+        out.push({ code: "dose-switch-gap", severity: "stop", message: "Injection stopped more than 2 months ago: tablets must start at 1.5 mg", detail: "Treat as a new initiation and titrate again from the lowest dose." });
+      }
+      if ((e.visitType === "initiation" || e.visitType === "restart") && !switchingAt24 && supplyStrength !== "1.5") {
+        out.push({ code: "dose-start", severity: "stop", message: "New initiation or restart must begin at 1.5 mg once daily", detail: "Start at 1.5 mg once daily for one month, then escalate monthly through 4 mg and 9 mg to the maintenance dose of 25 mg. To recommence after stopping, titrate again from the lowest dose. The only exception is a documented switch from semaglutide 2.4 mg injection, which starts at 25 mg one week after the last injection." });
+      }
+      if (switchingAt24 && (e.visitType === "initiation" || e.visitType === "restart") && supplyStrength !== "25") {
+        out.push({ code: "dose-switch-24", severity: "caution", message: "Documented 2.4 mg injection dose: the PGD starts the tablets at 25 mg once daily", detail: "Start Wegovy tablets at 25 mg once daily, one week after the last injection. Record the reason if a lower strength is chosen." });
+      }
+      if (e.visitType === "continuation" && e.currentDose) {
+        const currentIdx = STRENGTH_ORDER.indexOf(e.currentDose);
+        const supplyIdx = STRENGTH_ORDER.indexOf(supplyStrength);
+        if (supplyIdx > currentIdx + 1) {
+          out.push({ code: "dose-skip", severity: "stop", message: "Titration step skipped", detail: "Escalate monthly through 4 mg and 9 mg to 25 mg, with a minimum of one month at each step. Do not skip a step." });
+        }
+        if (supplyIdx === currentIdx + 1 && e.monthsAtCurrentDose !== null && e.monthsAtCurrentDose < 1) {
+          out.push({ code: "dose-early", severity: "stop", message: "Less than one month at the current dose", detail: "A minimum of one month at each dose level is required before escalating." });
+        }
+      }
     }
 
     return out;
-  }, [state]);
+  }, [state, pctChange]);
 
   const hasStops = alerts.some((a) => a.severity === "stop");
 
-  const canProceed = !hasStops || state.currentStep >= TOTAL_STEPS - 2;
+  // Step-level validation for inclusion criteria and records the document
+  // requires. Returns null when the step is complete.
+  const stepError = useMemo((): string | null => {
+    const e = state.eligibility;
+    if (state.currentStep === STEP_ELIGIBILITY) {
+      if (!e.visitType) return "Select the visit type.";
+      if (!e.age18To85) return "Confirm the patient is an adult aged 18 to 85 years inclusive.";
+      if (e.heightCm === null || e.weightKg === null || e.bmi === null) return "Record height, weight and BMI at this visit.";
+      if (e.baselineWeightKg === null) return "Record the baseline weight. At initiation this is today's weight; at every later visit carry the baseline forward.";
+      if (e.targetWeightKg === null) return "Record the agreed target weight.";
+      if (!e.initialAssessmentDone) return "Confirm the initial assessment has been completed and documented.";
+      if (!e.ableEmptyStomach) return "Confirm the patient is able to follow, and is following, the empty-stomach administration requirements.";
+      if (!e.willingLifestyleChange) return "Confirm the patient is willing to follow a reduced-calorie diet and increase physical activity in line with the agreed lifestyle plan.";
+      if (e.visitType === "continuation" && !e.currentDose) return "Record the dose the patient is currently established on.";
+      if (e.visitType === "continuation" && e.monthsAtCurrentDose === null) return "Record how many months the patient has been on the current dose.";
+      return null;
+    }
+    if (state.currentStep === STEP_DOSE) {
+      if (!state.doseSelection.product) return "Select the product and strength to supply.";
+      if (!state.doseSelection.batchNumber.trim()) return "Record the batch number of the pack supplied (traceability requirement).";
+      return null;
+    }
+    if (state.currentStep === STEP_COUNSELLING) {
+      const c = state.counselling;
+      const required: [boolean, string][] = [
+        [c.emptyStomachExplained, "empty-stomach administration"],
+        [c.waterLimit120ml, "water limit"],
+        [c.waitBeforeFood, "30 minute wait"],
+        [c.swallowWholeOneTablet, "swallow whole, one tablet a day"],
+        [c.missedDose, "missed dose"],
+        [c.dietAndActivity, "diet and activity"],
+        [c.gastrointestinalSe, "gastrointestinal effects and fluids"],
+        [c.pancreatitisRedFlag, "pancreatitis red flag"],
+        [c.urgentVomitingDehydration, "persistent vomiting with dehydration"],
+        [c.gallbladderRedFlag, "jaundice"],
+        [c.visionLoss, "sudden loss of vision"],
+        [c.heartRateRise, "sustained rise in resting heart rate"],
+        [c.anaesthetistWarning, "anaesthetist, dentist or surgeon"],
+        [c.pregnancyWarning, "pregnancy and contraception"],
+        [c.storedTablet, "storage"],
+        [c.writtenInfoSupplied, "written information"],
+        [c.followUpPlan, "review and the 5% rule"],
+      ];
+      const missing = required.filter(([done]) => !done).map(([, label]) => label);
+      if (missing.length > 0) return `Confirm the remaining counselling items: ${missing.join(", ")}.`;
+      if (state.interactions.metforminSglt2Dpp4 && !c.gpInformed) return "Confirm the GP has been informed (type 2 diabetes on metformin, SGLT2 inhibitor or DPP-4 inhibitor).";
+      return null;
+    }
+    return null;
+  }, [state]);
+
+  const canProceed = (!hasStops || state.currentStep >= TOTAL_STEPS - 2) && stepError === null;
 
   const markComplete = useCallback(() => {
     setCompletedSteps((prev) => new Set(prev).add(state.currentStep));
@@ -350,7 +573,13 @@ export function WegovyOralClient() {
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
       },
-      clinicalData: state as unknown as Record<string, unknown>,
+      clinicalData: {
+        ...(state as unknown as Record<string, unknown>),
+        pgdVersion: PGD_VERSION_LABEL,
+        percentChangeFromBaseline: pctChange,
+        quantitySupplied: "1 calendar pack of 30 tablets (one month)",
+        productSupplied: PRODUCT_LABEL[state.doseSelection.product] ?? "",
+      },
       outcome: hasStops ? "not_supplied" : "completed",
       summary: {
         pharmacistName: state.summary.pharmacistName,
@@ -359,7 +588,7 @@ export function WegovyOralClient() {
         consultationTime: state.summary.consultationTime,
       },
     };
-  }, [state, hasStops]);
+  }, [state, hasStops, pctChange]);
 
   const handleNewConsultation = useCallback(() => {
     dispatch({ type: "RESET" });
@@ -382,145 +611,223 @@ export function WegovyOralClient() {
         );
       case 2:
         return (
-          <StepWrapper title="Informed Consent to Treatment" description="Wegovy (semaglutide) tablets — UK-licensed for weight management. Documented written consent required." currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={null}>
+          <StepWrapper title="Informed Consent to Treatment" description="Wegovy (semaglutide) tablets, UK-licensed for weight management. Documented written consent required, including the side-effect profile and treatment expectations." currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={null}>
             <div className="space-y-4">
               <div className="p-4 bg-amber-50 border border-amber-300 rounded-md text-sm text-amber-900">
-                <strong>This consultation supplies Wegovy (semaglutide) tablets — UK-licensed for weight management.</strong>
+                <strong>This consultation supplies Wegovy (semaglutide) tablets under {PGD_VERSION_LABEL}.</strong>
                 <ul className="list-disc ml-5 mt-2 space-y-1">
-                  <li>Licensed strengths: 1.5 mg, 4 mg, 9 mg and 25 mg tablets. Maintenance dose 25 mg once daily; maximum ONE tablet per day.</li>
-                  <li>Black-triangle medicine (additional monitoring) — report any suspected adverse reactions via the MHRA Yellow Card scheme.</li>
-                  <li>Counsel on the empty-stomach regimen: at least 8 hours fasting, swallow whole with up to 120 ml water, wait at least 30 minutes before food, drink or other oral medicines.</li>
+                  <li>Licensed strengths: 1.5 mg, 4 mg, 9 mg and 25 mg tablets. Maintenance dose 25 mg once daily; maximum ONE tablet per day. Never combine tablets to approximate a higher dose.</li>
+                  <li>Black-triangle medicine (additional monitoring): report any suspected adverse reactions via the MHRA Yellow Card scheme and inform the GP as appropriate.</li>
+                  <li>Counsel on the empty-stomach regimen: at least 8 hours fasting, swallow whole with up to half a glass of water (120 mL), wait at least 30 minutes before food, drink or other oral medicines.</li>
                 </ul>
               </div>
               <Checkbox label="Treatment, dosing schedule and administration requirements clearly explained to the patient" checked={state.offLabelConsent.explainedOffLabel} onChange={(v) => dispatch({ type: "UPDATE_OFFLABEL", field: "explainedOffLabel", value: v })} />
-              <Checkbox label="Risk-benefit discussion completed (GI side effects, gallbladder, pancreatitis, hypoglycaemia if diabetic, retinopathy progression)" checked={state.offLabelConsent.riskBenefitDiscussed} onChange={(v) => dispatch({ type: "UPDATE_OFFLABEL", field: "riskBenefitDiscussed", value: v })} />
-              <Checkbox label="Alternatives discussed (subcutaneous Wegovy/Mounjaro, lifestyle, bariatric referral)" checked={state.offLabelConsent.alternativesDiscussed} onChange={(v) => dispatch({ type: "UPDATE_OFFLABEL", field: "alternativesDiscussed", value: v })} />
+              <Checkbox label="Risk-benefit discussion completed: side-effect profile (GI effects, gallstones, acute pancreatitis, NAION, hypoglycaemia if diabetic, retinopathy progression) and realistic treatment expectations" checked={state.offLabelConsent.riskBenefitDiscussed} onChange={(v) => dispatch({ type: "UPDATE_OFFLABEL", field: "riskBenefitDiscussed", value: v })} />
+              <Checkbox label="Alternatives discussed (GP, specialist weight management service, lifestyle programme)" checked={state.offLabelConsent.alternativesDiscussed} onChange={(v) => dispatch({ type: "UPDATE_OFFLABEL", field: "alternativesDiscussed", value: v })} />
               <Checkbox label="Written informed consent to treatment obtained and filed" checked={state.offLabelConsent.writtenConsentObtained} onChange={(v) => dispatch({ type: "UPDATE_OFFLABEL", field: "writtenConsentObtained", value: v })} />
             </div>
           </StepWrapper>
         );
       case 3:
         return (
-          <StepWrapper title="Eligibility & BMI" currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={null}>
+          <StepWrapper title="Eligibility & BMI" currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={stepError}>
             <div className="space-y-4">
-              <Checkbox label="Adult aged 18 to 85 years (inclusive)" checked={state.eligibility.age18To85} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "age18To85", value: v })} />
+              <SelectInput
+                label="Visit type"
+                value={state.eligibility.visitType}
+                onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "visitType", value: v as VisitType })}
+                options={[
+                  { value: "", label: "Select" },
+                  { value: "initiation", label: "New initiation (first supply of tablets, including a switch from the injection)" },
+                  { value: "continuation", label: "Continuing treatment (titration step or maintenance)" },
+                  { value: "restart", label: "Recommencing after stopping (titrate again from 1.5 mg)" },
+                ]}
+                required
+              />
+              {state.eligibility.visitType === "restart" && (
+                <p className="text-xs text-amber-800">To recommence after stopping, titrate again from the lowest dose. Apply the BMI inclusion criteria afresh if more than 2 months have passed since discontinuing.</p>
+              )}
+              <Checkbox label="Adult aged 18 to 85 years (inclusive)" checked={state.eligibility.age18To85} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "age18To85", value: v })} required />
               <div className="grid grid-cols-2 gap-3">
-                <NumberInput label="Height (cm)" value={state.eligibility.heightCm} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "heightCm", value: v })} min={100} max={220} />
-                <NumberInput label="Weight (kg)" value={state.eligibility.weightKg} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "weightKg", value: v })} min={30} max={250} />
+                <NumberInput label="Height (cm)" value={state.eligibility.heightCm} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "heightCm", value: v })} min={100} max={220} required />
+                <NumberInput label="Weight today (kg)" value={state.eligibility.weightKg} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "weightKg", value: v })} min={30} max={250} required />
               </div>
               {state.eligibility.bmi !== null && (
                 <div className="p-3 bg-[color:var(--tenant-primary)]/10 border border-[color:var(--tenant-primary)]/30 rounded-md">
                   <p className="text-sm text-[color:var(--tenant-primary)]"><strong>BMI: {state.eligibility.bmi}</strong></p>
                   <p className="text-xs text-[color:var(--tenant-primary)] mt-1">
                     {state.eligibility.bmi >= 30
-                      ? "BMI ≥30 — eligible (no comorbidity required)."
+                      ? "BMI 30 or above: eligible (no comorbidity required)."
                       : state.eligibility.bmi >= 27
-                      ? "BMI 27–30 — eligible only with weight-related comorbidity."
-                      : "BMI <27 — not eligible under this PGD."}
+                      ? "BMI 27 to below 30: eligible only with at least one weight-related comorbidity."
+                      : "BMI below 27: not eligible under this PGD."}
                   </p>
                 </div>
               )}
-              <Checkbox label="Has at least one weight-related comorbidity (HTN, T2DM, dyslipidaemia, OSA, CVD)" checked={state.eligibility.hasComorbidity} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "hasComorbidity", value: v })} />
+              <div className="grid grid-cols-2 gap-3">
+                <NumberInput label="Baseline weight (kg)" value={state.eligibility.baselineWeightKg} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "baselineWeightKg", value: v })} min={30} max={250} required />
+                <NumberInput label="Agreed target weight (kg)" value={state.eligibility.targetWeightKg} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "targetWeightKg", value: v })} min={30} max={250} required />
+              </div>
+              <p className="text-xs text-gray-600">Record the weight as the BASELINE at initiation and carry it forward at every visit. The 5% review rule is calculated from this baseline, not from the weight at the last visit. Where no baseline was recorded, establish one now and the 6 months run from this point.</p>
+              {pctChange !== null && (
+                <p className="text-xs font-semibold text-gray-700">Change from baseline: {pctChange > 0 ? "+" : ""}{pctChange}%</p>
+              )}
+              <Checkbox label="Has at least one weight-related comorbidity (for example hypertension, dyslipidaemia, obstructive sleep apnoea, cardiovascular disease or type 2 diabetes)" checked={state.eligibility.hasComorbidity} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "hasComorbidity", value: v })} />
+              <TextInput label="List comorbidities" value={state.eligibility.comorbidities} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "comorbidities", value: v })} />
+              {state.eligibility.visitType === "continuation" && (
+                <div className="grid grid-cols-2 gap-3">
+                  <SelectInput
+                    label="Current established dose"
+                    value={state.eligibility.currentDose}
+                    onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "currentDose", value: v as TabletStrength })}
+                    options={[
+                      { value: "", label: "Select" },
+                      { value: "1.5", label: "1.5 mg once daily" },
+                      { value: "4", label: "4 mg once daily" },
+                      { value: "9", label: "9 mg once daily" },
+                      { value: "25", label: "25 mg once daily" },
+                    ]}
+                    required
+                  />
+                  <NumberInput label="Months on this dose" value={state.eligibility.monthsAtCurrentDose} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "monthsAtCurrentDose", value: v })} min={0} max={60} required />
+                </div>
+              )}
               <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-3 space-y-3">
                 <div>
                   <p className="text-sm font-semibold text-amber-900">Switching from semaglutide injection</p>
-                  <p className="text-xs text-amber-800 mt-1">PGD v005 requires documented evidence of the current injection dose. Patient self-report is not sufficient. Version 004 required no evidence and covered only the 2.4 mg dose.</p>
+                  <p className="text-xs text-amber-800 mt-1">DOCUMENTED EVIDENCE IS REQUIRED. Patient self-report of the injection dose is not sufficient and must not be relied on. Record which evidence was seen and the strength it showed.</p>
                 </div>
                 <Checkbox label="Patient is switching from semaglutide injection" checked={state.eligibility.switchingFromInjection} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "switchingFromInjection", value: v })} />
                 {state.eligibility.switchingFromInjection && (
                   <div className="space-y-3">
-                    <SelectInput label="Current injection dose, as documented" value={state.eligibility.injectionDose} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "injectionDose", value: v })} options={[{ value: "0.25", label: "0.25 mg weekly" }, { value: "0.5", label: "0.5 mg weekly" }, { value: "1.0", label: "1 mg weekly" }, { value: "1.7", label: "1.7 mg weekly" }, { value: "2.4", label: "2.4 mg weekly" }]} />
-                    <SelectInput label="Evidence seen for that dose" value={state.eligibility.injectionDoseEvidence} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "injectionDoseEvidence", value: v })} options={[{ value: "label", label: "Dispensing label, prescription or repeat slip" }, { value: "clinic-record", label: "Record from the supplying clinic or pharmacy" }, { value: "pen-seen", label: "Patient's own pen or carton, strength legible" }, { value: "prescriber", label: "Confirmation from the prescriber (record name and date)" }, { value: "none", label: "None. Patient self-report only" }]} />
+                    <SelectInput label="Current injection dose, as documented" value={state.eligibility.injectionDose} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "injectionDose", value: v as WegovyOralState["eligibility"]["injectionDose"] })} options={[{ value: "", label: "Select" }, { value: "0.25", label: "0.25 mg weekly" }, { value: "0.5", label: "0.5 mg weekly" }, { value: "1.0", label: "1 mg weekly" }, { value: "1.7", label: "1.7 mg weekly" }, { value: "2.4", label: "2.4 mg weekly" }]} required />
+                    <SelectInput label="Evidence seen for that dose" value={state.eligibility.injectionDoseEvidence} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "injectionDoseEvidence", value: v as WegovyOralState["eligibility"]["injectionDoseEvidence"] })} options={[{ value: "", label: "Select" }, { value: "label", label: "Dispensing label, prescription or repeat slip showing the strength" }, { value: "clinic-record", label: "Record from the supplying clinic or pharmacy, including a GRH consultation record" }, { value: "pen-seen", label: "Patient's own pen or carton, seen by the pharmacist, strength legible" }, { value: "prescriber", label: "Written or verbal confirmation from the prescriber (record the date and the name of the person who gave it)" }, { value: "none", label: "None. Patient self-report only" }]} required />
+                    <Checkbox label="The injection was stopped more than 2 months ago (treat as a new initiation; apply the BMI inclusion criteria afresh)" checked={state.eligibility.injectionStoppedOver2Months} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "injectionStoppedOver2Months", value: v })} />
                     {state.eligibility.injectionDose && state.eligibility.injectionDose !== "2.4" && (
                       <p className="text-xs font-semibold text-amber-900">
-                        Below 2.4 mg. Do NOT start at 25 mg. Either continue the injection under the original prescriber until 2.4 mg is reached, or start the tablets as a new initiation at 1.5 mg one week after the last injection and titrate monthly. Explain to the patient that this is the only safe route, not a step backwards.
+                        Below 2.4 mg. Do NOT start at 25 mg. Either continue the injection under the original prescriber until 2.4 mg is reached, or start the tablets as a new initiation at 1.5 mg one week after the last injection and titrate monthly through 4 mg and 9 mg to 25 mg. Explain to the patient that starting again at 1.5 mg is not a step backwards but the only safe route, and that the titration protects them from gastrointestinal effects. This lower-dose pathway is a Get Real Health practice decision, not a licensed instruction; record it as such.
                       </p>
                     )}
-                    {state.eligibility.injectionDose === "2.4" && (
-                      <p className="text-xs font-semibold text-amber-900">2.4 mg documented. Start 25 mg once daily, one week after the last injection.</p>
+                    {state.eligibility.injectionDose === "2.4" && !state.eligibility.injectionStoppedOver2Months && (
+                      <p className="text-xs font-semibold text-amber-900">2.4 mg documented. Start Wegovy tablets at 25 mg once daily, one week after the last injection.</p>
                     )}
                   </div>
                 )}
               </div>
-              <TextInput label="List comorbidities" value={state.eligibility.comorbidities} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "comorbidities", value: v })} />
-              <Checkbox label="Patient willing to follow diet + exercise plan alongside the medication" checked={state.eligibility.willingLifestyleChange} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "willingLifestyleChange", value: v })} />
-              <Checkbox label="Patient has tried ≥6 months of lifestyle changes alone without adequate result" checked={state.eligibility.tried6MonthLifestyle} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "tried6MonthLifestyle", value: v })} />
+              <Checkbox label="Initial assessment completed and documented (causes of weight gain, lifestyle, previous attempts, contributing factors, other disease states, expectations, height, weight and BMI)" checked={state.eligibility.initialAssessmentDone} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "initialAssessmentDone", value: v })} required />
+              <Checkbox label="Able to follow the empty-stomach administration requirements: a fast of at least 8 hours before the dose, and a 30 minute wait afterwards before food, drink or other oral medicines. At follow-up: confirmed these are being followed" checked={state.eligibility.ableEmptyStomach} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "ableEmptyStomach", value: v })} required />
+              <Checkbox label="Willing to follow a reduced-calorie diet and increase physical activity in line with the agreed lifestyle plan" checked={state.eligibility.willingLifestyleChange} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "willingLifestyleChange", value: v })} required />
+              <Checkbox label="Patient has tried lifestyle changes alone before without adequate result (record what has and has not worked)" checked={state.eligibility.tried6MonthLifestyle} onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "tried6MonthLifestyle", value: v })} />
             </div>
           </StepWrapper>
         );
       case 4:
         return (
-          <StepWrapper title="Contraindications" currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={null}>
+          <StepWrapper title="Contraindications" description="Any ticked exclusion prevents supply. Ask specifically whether the patient takes anything for diabetes, and name the products." currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={null}>
             <div className="space-y-2">
               {(
                 [
                   ["pregnancyOrTryingConceive", "Pregnant, planning pregnancy, or trying to conceive"],
                   ["breastfeeding", "Currently breastfeeding"],
+                  ["hypersensitivity", "Known hypersensitivity to semaglutide or to any of the excipients"],
+                  ["mtcOrMen2", "Personal or family history of medullary thyroid carcinoma, or Multiple Endocrine Neoplasia syndrome type 2"],
+                  ["pancreatitisHistory", "History of pancreatitis, acute or chronic"],
+                  ["severeGastroparesisOrIBD", "Severe gastrointestinal disease, including gastroparesis or a severe persistent gastrointestinal disorder"],
+                  ["cholelithiasisOrCholecystectomy", "Current cholelithiasis or cholecystitis, or cholecystectomy within the last 3 months"],
+                  ["endocrineObesity", "Obesity caused by an endocrinological disorder (may not apply where the patient was already overweight before that diagnosis)"],
+                  ["concurrentGlp1", "Concurrent use of any other GLP-1 receptor agonist, for any indication (orforglipron, oral semaglutide 3 mg, 7 mg or 14 mg for diabetes, semaglutide or tirzepatide injection)"],
+                  ["insulinSecretagogue", "Concurrent insulin secretagogue (any sulfonylurea or meglitinide), for any indication"],
                   ["type1Diabetes", "Type 1 diabetes mellitus"],
-                  ["mtcOrMen2", "Personal or family history of MTC or MEN 2"],
-                  ["pancreatitisHistory", "History of pancreatitis (acute or chronic)"],
                   ["diabeticRetinopathy", "Diabetic retinopathy"],
-                  ["severeGastroparesisOrIBD", "Severe gastroparesis or active IBD"],
-                  ["eatingDisorder", "Active eating disorder"],
-                  ["severeRenalImpairment", "Severe renal impairment (eGFR <30)"],
+                  ["insulinTreated", "Insulin-treated diabetes"],
+                  ["severeRenalImpairment", "Severe renal impairment (eGFR below 30 mL/min/1.73 m2) or end-stage renal disease"],
                   ["severeHepaticImpairment", "Severe hepatic impairment"],
-                  ["hypersensitivity", "Hypersensitivity to semaglutide or excipients"],
-                  ["concurrentGlp1", "Currently on another GLP-1 / GIP receptor agonist"],
+                  ["heartFailureLowEf", "Known heart failure with reduced ejection fraction below 40%"],
+                  ["eatingDisorder", "Active eating disorder: anorexia nervosa, bulimia, or binge-eating disorder under specialist care"],
+                  ["clinicalJudgementUnsuitable", "In the clinical judgement of the healthcare professional, not suitable for the medicine"],
                 ] as const
               ).map(([key, label]) => (
                 <Checkbox key={key} label={label} checked={state.contraindications[key]} onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATION", field: key, value: v })} />
               ))}
             </div>
+            <div className="mt-6 space-y-2">
+              <p className="text-sm font-semibold text-navy-900">Cautions</p>
+              <Checkbox label="History of suicidal ideation, or active severe mental illness" description="Ensure appropriate psychiatric oversight is in place, monitor mood at review, and refer if there is any concern. Do not supply where oversight is absent and concern exists." checked={state.cautions.mentalHealthHistory} onChange={(v) => dispatch({ type: "UPDATE_CAUTION", field: "mentalHealthHistory", value: v })} />
+              {state.cautions.mentalHealthHistory && (
+                <div className="ml-6">
+                  <Checkbox label="Appropriate psychiatric oversight is in place; mood will be monitored at review" checked={state.cautions.psychiatricOversight} onChange={(v) => dispatch({ type: "UPDATE_CAUTION", field: "psychiatricOversight", value: v })} required />
+                </div>
+              )}
+              <Checkbox label="Mild to moderate renal impairment (monitor for dehydration secondary to gastrointestinal side effects)" checked={state.cautions.mildModerateRenal} onChange={(v) => dispatch({ type: "UPDATE_CAUTION", field: "mildModerateRenal", value: v })} />
+              <Checkbox label="Pre-existing raised heart rate (use with caution and seek specialist advice first)" checked={state.cautions.raisedHeartRate} onChange={(v) => dispatch({ type: "UPDATE_CAUTION", field: "raisedHeartRate", value: v })} />
+              <Checkbox label="Sodium-restricted diet (the 25 mg tablet contains 23 mg of sodium)" checked={state.cautions.sodiumRestrictedDiet} onChange={(v) => dispatch({ type: "UPDATE_CAUTION", field: "sodiumRestrictedDiet", value: v })} />
+            </div>
           </StepWrapper>
         );
       case 5:
         return (
-          <StepWrapper title="Drug Interactions" description="Oral semaglutide delays gastric emptying — affects absorption of co-administered drugs." currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={null}>
+          <StepWrapper title="Drug Interactions" description="Semaglutide delays gastric emptying and may reduce the absorption of other oral medicines, especially those with a narrow therapeutic index. Other oral medicines must be taken at least 30 minutes after the tablet." currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={null}>
             <div className="space-y-2">
-              <Checkbox label="Levothyroxine — counsel to space by ≥4h" checked={state.interactions.levothyroxine} onChange={(v) => dispatch({ type: "UPDATE_INTERACTION", field: "levothyroxine", value: v })} />
-              <Checkbox label="Warfarin — INR monitoring needed" checked={state.interactions.warfarin} onChange={(v) => dispatch({ type: "UPDATE_INTERACTION", field: "warfarin", value: v })} />
-              <Checkbox label="Sulfonylurea or insulin (hypo risk)" checked={state.interactions.sulfonylureaOrInsulin} onChange={(v) => dispatch({ type: "UPDATE_INTERACTION", field: "sulfonylureaOrInsulin", value: v })} />
-              <Checkbox label="Combined oral contraception — counsel barrier method if GI symptoms" checked={state.interactions.oralContraception} onChange={(v) => dispatch({ type: "UPDATE_INTERACTION", field: "oralContraception", value: v })} />
+              <Checkbox label="Levothyroxine (exposure increased by about a third; monitor thyroid function and keep the 30 minute separation)" checked={state.interactions.levothyroxine} onChange={(v) => dispatch({ type: "UPDATE_INTERACTION", field: "levothyroxine", value: v })} />
+              <Checkbox label="Warfarin or other coumarin (frequent INR monitoring recommended on initiation)" checked={state.interactions.warfarin} onChange={(v) => dispatch({ type: "UPDATE_INTERACTION", field: "warfarin", value: v })} />
+              <Checkbox label="Sulfonylurea, meglitinide or insulin, for any indication (EXCLUDES under this PGD)" checked={state.interactions.sulfonylureaOrInsulin} onChange={(v) => dispatch({ type: "UPDATE_INTERACTION", field: "sulfonylureaOrInsulin", value: v })} />
+              <Checkbox label="Type 2 diabetes on metformin, an SGLT2 inhibitor or a DPP-4 inhibitor only (no dose adjustment; inform the GP)" checked={state.interactions.metforminSglt2Dpp4} onChange={(v) => dispatch({ type: "UPDATE_INTERACTION", field: "metforminSglt2Dpp4", value: v })} />
+              <Checkbox label="Combined oral contraception (counsel barrier method if GI symptoms)" checked={state.interactions.oralContraception} onChange={(v) => dispatch({ type: "UPDATE_INTERACTION", field: "oralContraception", value: v })} />
+              <Checkbox label="Oral HRT (non-oral products such as a patch, gel or levonorgestrel intrauterine device may be considered)" checked={state.interactions.oralHrt} onChange={(v) => dispatch({ type: "UPDATE_INTERACTION", field: "oralHrt", value: v })} />
               <TextArea label="Other relevant medications" value={state.interactions.other} onChange={(v) => dispatch({ type: "UPDATE_INTERACTION", field: "other", value: v })} />
             </div>
           </StepWrapper>
         );
       case 6:
         return (
-          <StepWrapper title="Dose Selection" currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={null} isBlocked={hasStops}>
+          <StepWrapper title="Dose Selection" currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={stepError} isBlocked={hasStops}>
             <div className="space-y-4">
+              <div className="p-3 bg-gray-50 border border-gray-200 rounded-md text-xs text-gray-700 space-y-1">
+                <p>Start at 1.5 mg once daily for one month. Escalate monthly through 4 mg and 9 mg to the maintenance dose of 25 mg once daily, with a minimum of one month at each step. The dose may be held at the previous level if needed. Maximum dose 25 mg once daily.</p>
+                <p>For significant gastrointestinal symptoms during titration, consider delaying a dose increase or dropping to the previous dose until symptoms improve. Where several consecutive doses have been missed, use clinical judgement about restarting at a lower step and re-escalating (a practice decision rather than a licensed instruction).</p>
+                <p>Quantity: one calendar pack of 30 tablets at the appropriate strength, giving one month of treatment. One month of treatment per patient appointment. This PGD does not allow additional medicine to be supplied to enable a patient to stock up.</p>
+              </div>
               <SelectInput
-                label="Product & strength"
+                label="Product & strength (one pack of 30 tablets)"
                 value={state.doseSelection.product}
                 onChange={(v) => dispatch({ type: "UPDATE_DOSE", field: "product", value: v })}
                 options={[
-                  { value: "", label: "Select…" },
+                  { value: "", label: "Select" },
                   { value: "wegovy-oral-1.5", label: "Wegovy 1.5 mg tablet once daily (start dose, 1 month)" },
                   { value: "wegovy-oral-4", label: "Wegovy 4 mg tablet once daily (titration, min 1 month)" },
                   { value: "wegovy-oral-9", label: "Wegovy 9 mg tablet once daily (titration, min 1 month)" },
-                  { value: "wegovy-oral-25", label: "Wegovy 25 mg tablet once daily (maintenance)" },
-                  
+                  { value: "wegovy-oral-25", label: "Wegovy 25 mg tablet once daily (maintenance, maximum dose)" },
                 ]}
                 required
               />
-              <TextArea label="Clinical rationale for product choice" value={state.doseSelection.rationale} onChange={(v) => dispatch({ type: "UPDATE_DOSE", field: "rationale", value: v })} placeholder="e.g. starting dose; titration step; chosen 25 mg as long-term maintenance after completing titration; etc." />
+              <TextInput label="Batch number" value={state.doseSelection.batchNumber} onChange={(v) => dispatch({ type: "UPDATE_DOSE", field: "batchNumber", value: v })} placeholder="From the pack supplied" required />
+              <TextArea label="Clinical rationale for product choice" value={state.doseSelection.rationale} onChange={(v) => dispatch({ type: "UPDATE_DOSE", field: "rationale", value: v })} placeholder="e.g. starting dose; titration step; held at previous dose for GI symptoms; 25 mg maintenance after completing titration; switch from documented 2.4 mg injection; reassessment under the 5% rule." />
             </div>
           </StepWrapper>
         );
       case 7:
         return (
-          <StepWrapper title="Counselling Checklist" description="Confirm each item discussed with the patient." currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={null}>
+          <StepWrapper title="Counselling Checklist" description="Confirm each item discussed with the patient." currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={stepError}>
             <div className="space-y-2">
-              <Checkbox label="Take on an empty stomach in the morning, at least 30 minutes before any food, drink, or other oral medication" checked={state.counselling.emptyStomachExplained} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "emptyStomachExplained", value: v })} />
-              <Checkbox label="Take with up to 120 mL of plain water only — no other liquids" checked={state.counselling.waterLimit120ml} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "waterLimit120ml", value: v })} />
-              <Checkbox label="Wait the full 30 minutes before food/drink — absorption is significantly reduced otherwise" checked={state.counselling.waitBeforeFood} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "waitBeforeFood", value: v })} />
-              <Checkbox label="Gastrointestinal side effects (nausea, vomiting, diarrhoea, constipation) and how to manage" checked={state.counselling.gastrointestinalSe} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "gastrointestinalSe", value: v })} />
-              <Checkbox label="Pancreatitis red flags — severe abdominal pain, persistent vomiting — stop and seek urgent help" checked={state.counselling.pancreatitisRedFlag} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "pancreatitisRedFlag", value: v })} />
-              <Checkbox label="Gallbladder symptoms — RUQ pain, jaundice, fever — seek urgent review" checked={state.counselling.gallbladderRedFlag} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "gallbladderRedFlag", value: v })} />
-              <Checkbox label="Hypoglycaemia risk if patient is on sulfonylurea or insulin (refer prescribing GP)" checked={state.counselling.hypoRiskIfDiabetic} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "hypoRiskIfDiabetic", value: v })} />
-              <Checkbox label="Pregnancy warning — discontinue ≥2 months before planned conception" checked={state.counselling.pregnancyWarning} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "pregnancyWarning", value: v })} />
-              <Checkbox label="Store tablets in original blister; keep at room temperature" checked={state.counselling.storedTablet} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "storedTablet", value: v })} />
-              <Checkbox label="Follow-up plan agreed (weight + tolerability review at 4 weeks, then per protocol)" checked={state.counselling.followUpPlan} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "followUpPlan", value: v })} />
+              <Checkbox label="Take one tablet a day on an empty stomach, after at least 8 hours without food" checked={state.counselling.emptyStomachExplained} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "emptyStomachExplained", value: v })} required />
+              <Checkbox label="Take with no more than half a glass of water (about 120 mL)" checked={state.counselling.waterLimit120ml} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "waterLimit120ml", value: v })} required />
+              <Checkbox label="Wait at least 30 minutes before anything else, including food, drink and other tablets; waiting less reduces absorption" checked={state.counselling.waitBeforeFood} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "waitBeforeFood", value: v })} required />
+              <Checkbox label="Swallow whole. Do not split, crush or chew. Never take two in a day" checked={state.counselling.swallowWholeOneTablet} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "swallowWholeOneTablet", value: v })} required />
+              <Checkbox label="Missed dose: skip it and take the next dose the following day. Never take two tablets in a day to make up a missed dose" checked={state.counselling.missedDose} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "missedDose", value: v })} required />
+              <Checkbox label="The medicine works alongside diet and activity, not instead of them" checked={state.counselling.dietAndActivity} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "dietAndActivity", value: v })} required />
+              <Checkbox label="Nausea and other stomach effects are common at first and usually settle. Drink enough fluid" checked={state.counselling.gastrointestinalSe} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "gastrointestinalSe", value: v })} required />
+              <Checkbox label="Seek urgent medical attention the same day for severe, persistent abdominal pain, often going through to the back, and stop the medicine (acute pancreatitis)" checked={state.counselling.pancreatitisRedFlag} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "pancreatitisRedFlag", value: v })} required />
+              <Checkbox label="Seek urgent medical attention the same day for persistent vomiting with signs of dehydration" checked={state.counselling.urgentVomitingDehydration} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "urgentVomitingDehydration", value: v })} required />
+              <Checkbox label="Seek urgent medical attention the same day for yellowing of the skin or the whites of the eyes" checked={state.counselling.gallbladderRedFlag} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "gallbladderRedFlag", value: v })} required />
+              <Checkbox label="Seek urgent medical attention the same day for sudden loss of vision in one or both eyes" checked={state.counselling.visionLoss} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "visionLoss", value: v })} required />
+              <Checkbox label="Seek urgent medical attention the same day for a sustained rise in resting heart rate" checked={state.counselling.heartRateRise} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "heartRateRise", value: v })} required />
+              <Checkbox label="Tell any anaesthetist, dentist or surgeon that you take this medicine before any procedure with sedation or a general anaesthetic" checked={state.counselling.anaesthetistWarning} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "anaesthetistWarning", value: v })} required />
+              <Checkbox label="Hypoglycaemia signs and symptoms explained (patient with type 2 diabetes on metformin, SGLT2 inhibitor or DPP-4 inhibitor)" checked={state.counselling.hypoRiskIfDiabetic} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "hypoRiskIfDiabetic", value: v })} />
+              <Checkbox label="Effective contraception required throughout. Stop at least 2 months before a planned pregnancy; stop immediately if pregnancy occurs or is suspected" checked={state.counselling.pregnancyWarning} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "pregnancyWarning", value: v })} required />
+              <Checkbox label="Store in the original package below 30 degrees Celsius to protect from moisture. Keep the container tightly closed" checked={state.counselling.storedTablet} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "storedTablet", value: v })} required />
+              <Checkbox label="Patient information leaflet supplied, with written lifestyle, diet and physical activity advice and the agreed target weight" checked={state.counselling.writtenInfoSupplied} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "writtenInfoSupplied", value: v })} required />
+              <Checkbox label="Attend for review as agreed. Treatment will be reassessed if less than 5% of the starting weight has been lost after 6 months at the established dose" checked={state.counselling.followUpPlan} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "followUpPlan", value: v })} required />
+              <Checkbox label="GP informed (required where the patient has type 2 diabetes on metformin, SGLT2 inhibitor or DPP-4 inhibitor; otherwise as appropriate)" checked={state.counselling.gpInformed} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "gpInformed", value: v })} required={state.interactions.metforminSglt2Dpp4} />
             </div>
           </StepWrapper>
         );
@@ -544,12 +851,24 @@ export function WegovyOralClient() {
               <TextArea label="Additional clinical notes" value={state.summary.clinicalNotes} onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "clinicalNotes", value: v })} />
             </div>
             <div className="border-t border-gray-200 pt-6">
-              <p className="text-sm text-gray-600 mb-4">Record will be saved with PGD slug <code>wegovy-oral</code>.</p>
+              <p className="text-sm text-gray-600 mb-4">Record will be saved with PGD slug <code>wegovy-oral</code>. Supplied under {PGD_VERSION_LABEL}.</p>
               <div className="p-4 bg-gray-50 rounded-md text-xs space-y-2">
                 <div><strong>Patient:</strong> {state.patient.firstName} {state.patient.lastName} ({state.patient.dateOfBirth})</div>
-                <div><strong>BMI:</strong> {state.eligibility.bmi ?? "—"}</div>
-                <div><strong>Product:</strong> {state.doseSelection.product || "—"}</div>
-                <div><strong>Written informed consent:</strong> {state.offLabelConsent.writtenConsentObtained ? "Yes" : "NO — cannot proceed"}</div>
+                <div><strong>Visit type:</strong> {state.eligibility.visitType || "not recorded"}</div>
+                <div><strong>Height / weight / BMI:</strong> {state.eligibility.heightCm ?? "?"} cm / {state.eligibility.weightKg ?? "?"} kg / {state.eligibility.bmi ?? "not recorded"}</div>
+                <div><strong>Baseline weight:</strong> {state.eligibility.baselineWeightKg ?? "not recorded"} kg{pctChange !== null ? ` (change from baseline ${pctChange > 0 ? "+" : ""}${pctChange}%)` : ""}</div>
+                <div><strong>Target weight agreed:</strong> {state.eligibility.targetWeightKg ?? "not recorded"} kg</div>
+                {state.eligibility.visitType === "continuation" && (
+                  <div><strong>Current established dose:</strong> {state.eligibility.currentDose ? `${state.eligibility.currentDose} mg once daily` : "not recorded"}{state.eligibility.monthsAtCurrentDose !== null ? `, ${state.eligibility.monthsAtCurrentDose} months on this dose` : ""}</div>
+                )}
+                {state.eligibility.switchingFromInjection && (
+                  <div><strong>Switch from injection:</strong> {state.eligibility.injectionDose ? `${state.eligibility.injectionDose} mg weekly` : "dose not recorded"}; evidence: {state.eligibility.injectionDoseEvidence || "none recorded"}</div>
+                )}
+                <div><strong>Product:</strong> {PRODUCT_LABEL[state.doseSelection.product] ?? "not selected"}, once daily, oral</div>
+                <div><strong>Quantity:</strong> 1 calendar pack of 30 tablets (one month)</div>
+                <div><strong>Batch number:</strong> {state.doseSelection.batchNumber || "not recorded"}</div>
+                <div><strong>Empty-stomach requirements confirmed:</strong> {state.eligibility.ableEmptyStomach ? "Yes" : "No"}</div>
+                <div><strong>Written informed consent:</strong> {state.offLabelConsent.writtenConsentObtained ? "Yes" : "NO. Cannot proceed"}</div>
                 <div><strong>Stops present:</strong> {hasStops ? "Yes" : "No"}</div>
               </div>
             </div>
@@ -563,7 +882,7 @@ export function WegovyOralClient() {
   return (
     <div className="space-y-6">
       <ProgressBar stepLabels={STEP_LABELS} currentStep={state.currentStep} onStepClick={handleStepClick} completedSteps={completedSteps} hasErrors={false} />
-      {alerts.length > 0 && state.currentStep < 4 && <AlertBanner alerts={alerts} />}
+      {alerts.length > 0 && <AlertBanner alerts={alerts} />}
       {renderStep()}
     </div>
   );

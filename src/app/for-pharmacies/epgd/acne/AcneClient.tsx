@@ -18,6 +18,10 @@ import {
   hasHardStops,
   calculateDoseRecommendation,
   getMedicineOptions,
+  MEDICINE_OPTIONS,
+  PGD_STRAPLINE,
+  isDuac,
+  isEpiduo,
 } from "./lib/acne-clinical-logic";
 import { validateStep } from "./lib/acne-validation";
 import { calculateAge } from "../shared/types";
@@ -284,7 +288,7 @@ export default function AcneClient() {
                 label="Patient is female (or able to become pregnant)"
                 checked={state.consent.femaleConfirmed}
                 onChange={(v) => handleConsentChange("femaleConfirmed", v)}
-                description="Required to ensure retinoid safety — retinoids are teratogenic."
+                description="Pregnancy and planning pregnancy are exclusions for adapalene / benzoyl peroxide; pregnancy and breastfeeding are referred to the GP under both arms."
               />
             </div>
           </StepWrapper>
@@ -302,6 +306,7 @@ export default function AcneClient() {
             validationError={validationError}
           >
             <div className="space-y-4">
+              <AlertBanner alerts={alerts} />
               <SelectInput
                 label="Acne Severity"
                 value={state.assessment.severity}
@@ -309,7 +314,7 @@ export default function AcneClient() {
                 options={[
                   { value: "mild", label: "Mild (comedonal only)" },
                   { value: "moderate", label: "Moderate (inflammatory papules/pustules)" },
-                  { value: "severe", label: "Severe (nodular/cystic — refer)" },
+                  { value: "severe", label: "Severe, requiring systemic therapy (excluded, refer)" },
                 ]}
                 required
               />
@@ -363,6 +368,7 @@ export default function AcneClient() {
             validationError={validationError}
           >
             <div className="space-y-4">
+              <AlertBanner alerts={alerts} />
               <TextArea
                 label="Previous acne treatments"
                 value={state.medicalHistory.previousTreatments}
@@ -383,6 +389,30 @@ export default function AcneClient() {
                 checked={state.medicalHistory.sensitiveToRetinoids}
                 onChange={(v) => handleMedicalHistoryChange("sensitiveToRetinoids", v)}
                 description="Extreme dryness, irritation, or rash with previous retinoid use"
+              />
+              <Checkbox
+                label="History of antibiotic-associated colitis"
+                checked={state.medicalHistory.antibioticAssociatedColitis}
+                onChange={(v) => handleMedicalHistoryChange("antibioticAssociatedColitis", v)}
+                description="Exclusion for benzoyl peroxide / clindamycin gel"
+              />
+              <Checkbox
+                label="History of gastrointestinal disease"
+                checked={state.medicalHistory.gastrointestinalDisease}
+                onChange={(v) => handleMedicalHistoryChange("gastrointestinalDisease", v)}
+                description="Caution with benzoyl peroxide / clindamycin gel"
+              />
+              <Checkbox
+                label="Atopic patient"
+                checked={state.medicalHistory.atopic}
+                onChange={(v) => handleMedicalHistoryChange("atopic", v)}
+                description="Caution with benzoyl peroxide / clindamycin gel"
+              />
+              <Checkbox
+                label="Acne causing severe scarring, persistent pigmentary changes, or persistent psychological distress / mental health disorder"
+                checked={state.medicalHistory.scarringOrDistress}
+                onChange={(v) => handleMedicalHistoryChange("scarringOrDistress", v)}
+                description="Consider referral to a dermatologist"
               />
             </div>
           </StepWrapper>
@@ -406,21 +436,70 @@ export default function AcneClient() {
                 label="Patient is pregnant"
                 checked={state.contraindications.pregnant}
                 onChange={(v) => handleContraindicationsChange("pregnant", v)}
-                description="Retinoids are teratogenic. ABSOLUTE contraindication."
+                description="Exclusion for adapalene / benzoyl peroxide. Benzoyl peroxide / clindamycin: safety in pregnancy not established, refer to the GP."
+              />
+
+              <Checkbox
+                label="Patient is planning pregnancy"
+                checked={state.contraindications.planningPregnancy}
+                onChange={(v) => handleContraindicationsChange("planningPregnancy", v)}
+                description="Exclusion for adapalene / benzoyl peroxide gel."
               />
 
               <Checkbox
                 label="Patient is breastfeeding"
                 checked={state.contraindications.breastfeeding}
                 onChange={(v) => handleContraindicationsChange("breastfeeding", v)}
-                description="Adapalene passes into breast milk. ABSOLUTE contraindication."
+                description="Benzoyl peroxide / clindamycin: clindamycin is found in breast milk, refer to the GP. Adapalene / benzoyl peroxide: a risk to the suckling child cannot be excluded. Refer to the GP."
               />
 
               <Checkbox
                 label="Patient under 12 years old"
                 checked={state.contraindications.ageUnder12}
                 onChange={(v) => handleContraindicationsChange("ageUnder12", v)}
-                description="This PGD is for patients aged 12+."
+                description="Both arms are for individuals aged 12 years and over."
+              />
+
+              <Checkbox
+                label="Known hypersensitivity to benzoyl peroxide"
+                checked={state.contraindications.hypersensitivityBenzoylPeroxide}
+                onChange={(v) => handleContraindicationsChange("hypersensitivityBenzoylPeroxide", v)}
+                description="Exclusion for both arms (both products contain benzoyl peroxide)."
+              />
+
+              <Checkbox
+                label="Known hypersensitivity to clindamycin or lincomycin"
+                checked={state.contraindications.hypersensitivityClindamycinLincomycin}
+                onChange={(v) => handleContraindicationsChange("hypersensitivityClindamycinLincomycin", v)}
+                description="Exclusion for benzoyl peroxide / clindamycin gel."
+              />
+
+              <Checkbox
+                label="Known hypersensitivity to adapalene or any excipient"
+                checked={state.contraindications.hypersensitivityAdapalene}
+                onChange={(v) => handleContraindicationsChange("hypersensitivityAdapalene", v)}
+                description="Exclusion for adapalene / benzoyl peroxide gel."
+              />
+
+              <Checkbox
+                label="Broken skin at the application site"
+                checked={state.contraindications.brokenSkinAtSite}
+                onChange={(v) => handleContraindicationsChange("brokenSkinAtSite", v)}
+                description="Exclusion for both arms."
+              />
+
+              <Checkbox
+                label="Inflamed skin at the application site"
+                checked={state.contraindications.inflamedSkinAtSite}
+                onChange={(v) => handleContraindicationsChange("inflamedSkinAtSite", v)}
+                description="Exclusion for benzoyl peroxide / clindamycin gel."
+              />
+
+              <Checkbox
+                label="Eczema or sunburned skin at the application site"
+                checked={state.contraindications.eczemaOrSunburnAtSite}
+                onChange={(v) => handleContraindicationsChange("eczemaOrSunburnAtSite", v)}
+                description="Exclusion for adapalene / benzoyl peroxide gel."
               />
             </div>
           </StepWrapper>
@@ -439,51 +518,53 @@ export default function AcneClient() {
             isBlocked={hasStops}
           >
             <div className="space-y-4">
-              {state.assessment.severity === "mild" && (
+              <AlertBanner alerts={alerts} />
+              {medicineOptions.length === 0 ? (
+                <div className="p-3 bg-red-50 rounded-lg border border-red-200 text-sm text-red-800">
+                  No product can be supplied for severe acne under this PGD. Severe acne requiring systemic therapy is an exclusion for both arms; refer to the GP.
+                </div>
+              ) : (
                 <>
                   <SelectInput
                     label="Medicine Choice"
                     value={state.medicineSelection.medicineChoice}
                     onChange={(v) => handleMedicineSelectionChange("medicineChoice", v)}
-                    options={[
-                      { value: "adapalene", label: "Adapalene 0.1% gel OD" },
-                      { value: "benzoyl-peroxide", label: "Benzoyl peroxide 5% gel OD" },
-                    ]}
+                    options={MEDICINE_OPTIONS.filter((o) => medicineOptions.includes(o.value))}
                     required
                   />
+                  {state.medicineSelection.medicineChoice === "duac-5" && (
+                    <SelectInput
+                      label="Clinical reason for the 10 mg/g + 50 mg/g strength"
+                      value={state.medicineSelection.strengthRationale}
+                      onChange={(v) => handleMedicineSelectionChange("strengthRationale", v)}
+                      options={[
+                        { value: "lower-strength-less-effective", label: "The 10 mg/g + 30 mg/g strength has proven less effective" },
+                        { value: "more-moderate", label: "More moderate presentation" },
+                        { value: "tolerated-5pc-bpo", label: "Patient has previously tolerated 50 mg/g (5%) benzoyl peroxide" },
+                      ]}
+                      required
+                    />
+                  )}
+                  {doseRecommendation && (
+                    <div className="p-3 bg-[color:var(--tenant-primary)]/10 rounded-lg border border-[color:var(--tenant-primary)]/30 space-y-1">
+                      <p className="text-sm font-medium text-navy-900">{doseRecommendation.medicine}</p>
+                      <p className="text-xs text-gray-600">{doseRecommendation.dose}</p>
+                      <p className="text-xs text-gray-600">{doseRecommendation.duration}</p>
+                      <p className="text-xs text-gray-600">{doseRecommendation.reason}</p>
+                    </div>
+                  )}
                   <Checkbox
-                    label="Inadequate response to monotherapy after 6–8 weeks"
-                    checked={state.medicineSelection.inadequateResponse}
-                    onChange={(v) => handleMedicineSelectionChange("inadequateResponse", v)}
+                    label="Repeat course (patient has had a previous course of this treatment)"
+                    checked={state.medicineSelection.repeatCourse}
+                    onChange={(v) => handleMedicineSelectionChange("repeatCourse", v)}
+                    description="Maximum of 12 weeks continuous use; review required for repeat courses."
                   />
-                </>
-              )}
-
-              {state.assessment.severity === "moderate" && (
-                <>
-                  <div className="p-3 bg-[color:var(--tenant-primary)]/10 rounded-lg border border-[color:var(--tenant-primary)]/30">
-                    <p className="text-sm font-medium text-navy-900">Recommended: Epiduo</p>
-                    <p className="text-xs text-gray-600 mt-1">
-                      Adapalene 0.1%/Benzoyl peroxide 2.5% combination gel — apply once daily
-                    </p>
-                  </div>
-                  <SelectInput
-                    label="Confirm selection"
-                    value={state.medicineSelection.medicineChoice}
-                    onChange={(v) => handleMedicineSelectionChange("medicineChoice", v)}
-                    options={[{ value: "epiduo", label: "Epiduo (Adapalene/BP combination)" }]}
-                    required
-                  />
-                  <Checkbox
-                    label="Inadequate response after 6–8 weeks — add Lymecycline"
-                    checked={state.medicineSelection.inadequateResponse}
-                    onChange={(v) => handleMedicineSelectionChange("inadequateResponse", v)}
-                  />
-                  {state.medicineSelection.inadequateResponse && (
+                  {state.medicineSelection.repeatCourse && (
                     <Checkbox
-                      label="Add Lymecycline 408mg OD for 12 weeks"
-                      checked={state.medicineSelection.addLymecycline}
-                      onChange={(v) => handleMedicineSelectionChange("addLymecycline", v)}
+                      label="Review completed before this repeat course"
+                      checked={state.medicineSelection.repeatCourseReviewed}
+                      onChange={(v) => handleMedicineSelectionChange("repeatCourseReviewed", v)}
+                      required
                     />
                   )}
                 </>
@@ -506,29 +587,72 @@ export default function AcneClient() {
             <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
               <p className="text-sm font-medium text-navy-900 mb-3">Confirm counselling points covered:</p>
               <Checkbox
-                label="Takes 6–8 weeks to see improvement"
+                label="Improvement is not expected before 6 to 8 weeks; treatments may irritate the skin, especially at the start"
                 checked={state.counselling.improvementTimeline}
                 onChange={(v) => handleCounsellingChange("improvementTimeline", v)}
               />
               <Checkbox
-                label="Photosensitivity warning (retinoids increase UV sensitivity)"
+                label="Application: thin layer to the entire affected area once daily in the evening to clean, dry skin; wash hands after; avoid eyes, mouth, mucous membranes and broken skin (rinse well with water if contact)"
+                checked={state.counselling.applicationAdvice}
+                onChange={(v) => handleCounsellingChange("applicationAdvice", v)}
+                description="Excessive application will not improve efficacy but may increase skin irritation."
+              />
+              <Checkbox
+                label="Use sunscreen and limit sun exposure (increased sensitivity)"
                 checked={state.counselling.photosensitivity}
                 onChange={(v) => handleCounsellingChange("photosensitivity", v)}
               />
               <Checkbox
-                label="Avoid excess washing; gentle cleanser only"
+                label="Irritation: if excessive dryness or peeling occurs, reduce frequency or interrupt; discontinue if severe irritation or allergic reaction"
+                checked={state.counselling.irritationAdvice}
+                onChange={(v) => handleCounsellingChange("irritationAdvice", v)}
+                description={isEpiduo(state.medicineSelection.medicineChoice) ? "To reduce irritation, may start with alternate-day or short-contact application (for example washing off after an hour)." : undefined}
+              />
+              <Checkbox
+                label="Avoid over-cleaning; use a non-alkaline (pH neutral or slightly acidic) cleanser twice daily; acne is not caused by poor hygiene"
                 checked={state.counselling.washingAdvice}
                 onChange={(v) => handleCounsellingChange("washingAdvice", v)}
               />
               <Checkbox
-                label="Use non-comedogenic skincare products"
+                label="Avoid oil-based comedogenic skin care products, make-up and sunscreens; remove make-up at the end of the day"
                 checked={state.counselling.productAdvice}
                 onChange={(v) => handleCounsellingChange("productAdvice", v)}
               />
               <Checkbox
-                label="Complete full course (do not stop early)"
+                label="Persistent picking or scratching of lesions can increase the risk of scarring"
+                checked={state.counselling.scarringAdvice}
+                onChange={(v) => handleCounsellingChange("scarringAdvice", v)}
+              />
+              <Checkbox
+                label="Treatment period: maximum 12 weeks continuous use; review required before any repeat course"
                 checked={state.counselling.courseCompletion}
                 onChange={(v) => handleCounsellingChange("courseCompletion", v)}
+              />
+              <Checkbox
+                label={isEpiduo(state.medicineSelection.medicineChoice)
+                  ? "Follow-up: seek advice if the skin reaction is severe (marked redness, peeling, burning or swelling), or if there is no improvement after 4 to 8 weeks of regular use"
+                  : "Follow-up: seek advice if the skin reaction is severe (marked redness, peeling, burning or swelling), or if there is no improvement after 8 to 12 weeks of regular use"}
+                checked={state.counselling.followUpAdvice}
+                onChange={(v) => handleCounsellingChange("followUpAdvice", v)}
+              />
+              {isDuac(state.medicineSelection.medicineChoice) && (
+                <Checkbox
+                  label="Storage: once dispensed store below 25 C and use within 2 months (refrigerated 2 to 8 C before dispensing)"
+                  checked={state.counselling.storageAdvice}
+                  onChange={(v) => handleCounsellingChange("storageAdvice", v)}
+                />
+              )}
+              {isEpiduo(state.medicineSelection.medicineChoice) && (
+                <Checkbox
+                  label="Avoid contact with coloured material including hair and dyed fabrics (bleaching); cosmetics with irritant or drying effects may add to irritation; if product enters the eye, wash immediately with warm water"
+                  checked={state.counselling.bleachingAdvice}
+                  onChange={(v) => handleCounsellingChange("bleachingAdvice", v)}
+                />
+              )}
+              <Checkbox
+                label="Patient information leaflet (PIL) supplied with the medication"
+                checked={state.counselling.pilSupplied}
+                onChange={(v) => handleCounsellingChange("pilSupplied", v)}
               />
             </div>
           </StepWrapper>
@@ -590,6 +714,7 @@ export default function AcneClient() {
       <div className="max-w-6xl mx-auto px-4 print:px-0 print:py-0">
         {/* Only show progress bar and steps if not printing */}
         <div className="print:hidden space-y-6">
+          <p className="text-xs text-gray-500">{PGD_STRAPLINE}</p>
           <ProgressBar
             stepLabels={STEP_LABELS}
             currentStep={state.currentStep}
@@ -600,7 +725,7 @@ export default function AcneClient() {
           {renderCurrentStep()}
         </div>
 
-        {/* Print view — show summary report */}
+        {/* Print view: summary report */}
         <div className="hidden print:block">
           <AcneSummaryReport state={updatedState} />
         </div>

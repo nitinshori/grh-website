@@ -4,7 +4,7 @@ import { PgdPageActions } from "@/components/PgdPageActions";
 export const metadata = {
   title: "Skin Infection ePGD | GRH Pharmacy",
   description:
-    "Patient Group Direction for mild-to-moderate bacterial skin infections — flucloxacillin, clarithromycin or doxycycline",
+    "Patient Group Direction for mild to moderate bacterial skin and soft tissue infection from 2 years (cellulitis from 12 years): flucloxacillin, clarithromycin or doxycycline",
 };
 
 export default function SkinInfectionPage() {

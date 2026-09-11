@@ -18,25 +18,33 @@ export default function MysimbaPage(): React.ReactNode {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               Mysimba (Naltrexone / Bupropion) ePGD
             </h1>
-            <p className="text-gray-600 mb-4">
-              Oral naltrexone 8 mg / bupropion 90 mg combination for chronic
-              weight management. Adults 18–75 with BMI ≥30, or ≥27 with a
-              weight-related comorbidity.
+            <p className="text-gray-600 mb-2">
+              Mysimba (naltrexone hydrochloride 8 mg / bupropion hydrochloride 90 mg)
+              prolonged-release tablets, oral, as an adjunct to a reduced-calorie diet
+              and increased physical activity for weight management. Adults aged 18 and
+              over with BMI ≥30, or ≥27 with at least one weight-related comorbidity.
+            </p>
+            <p className="text-xs text-gray-500 mb-4">
+              Patient Group Direction version 003, issued 11 September 2026. Valid from
+              11 September 2026, expiry 31 July 2027.
             </p>
             <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
               <p className="text-sm text-orange-900">
                 <strong>Mysimba prolonged-release tablets (8 mg/90 mg).</strong>{" "}
-                Dose titrated over 4 weeks (week 1: 1 tab AM; week 2: 1 AM + 1
-                PM; week 3: 2 AM + 1 PM; week 4+: 2 AM + 2 PM). Treatment must
-                be discontinued at 16 weeks if the patient has not lost at
-                least 5% of their initial body weight.
+                Dose titrated over 4 weeks (week 1: 1 tablet AM; week 2: 1 AM + 1
+                PM; week 3: 2 AM + 1 PM; week 4 onwards: 2 AM + 2 PM, maximum 4
+                tablets daily). Up to 120 tablets per supply. Maximum treatment
+                period under this PGD is 16 weeks: review at 16 weeks and
+                discontinue if the patient has not lost at least 5% of initial body
+                weight; continuation beyond 16 weeks is by GP or specialist
+                prescription.
               </p>
             </div>
           </div>
         </div>
         <MysimbaClient />
         <div className="mt-8 text-center text-xs text-gray-500">
-          <p>Get Real Health ePGD — Mysimba (Naltrexone/Bupropion) | Confidential Patient Information</p>
+          <p>Get Real Health ePGD, Mysimba (Naltrexone/Bupropion) PGD v003, 11 September 2026 | Confidential Patient Information</p>
         </div>
       </div>
     </div>

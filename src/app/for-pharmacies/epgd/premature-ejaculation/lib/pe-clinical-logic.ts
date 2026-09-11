@@ -37,33 +37,78 @@ export function getAllAlerts(state: PEConsultationState): ClinicalAlert[] {
     });
   }
 
-  // Hard stop: Cardiac disorder NYHA II-IV
+  // Hard stop: Cardiac disorder NYHA II-IV, significant valvular disease
   if (state.medicalHistory.cardiacDisorder) {
     alerts.push({
       severity: "stop",
       code: "PE_CARDIAC",
-      message: "Cardiac disorder (NYHA II-IV or significant valvular disease) is a contraindication",
-      detail: "Dapoxetine can reduce blood pressure. Refer to cardiologist.",
+      message: "Significant cardiac disorder (NYHA class II to IV heart failure, or significant valvular disease) is an exclusion",
+      detail: "Dapoxetine can reduce blood pressure. Refer to GP or cardiologist.",
     });
   }
 
-  // Hard stop: Syncope
+  if (state.medicalHistory.conductionOrQT) {
+    alerts.push({
+      severity: "stop",
+      code: "PE_QT",
+      message: "Conduction abnormality or a condition that prolongs the QT interval is an exclusion",
+      detail: "PGD v003. Do not supply. Refer.",
+    });
+  }
+
+  if (state.medicalHistory.ischaemicHeartDisease) {
+    alerts.push({
+      severity: "stop",
+      code: "PE_IHD",
+      message: "History of ischaemic heart disease is an exclusion",
+      detail: "PGD v003. Do not supply. Refer.",
+    });
+  }
+
+  // Hard stop: Syncope or orthostatic hypotension
   if (state.medicalHistory.syncope) {
     alerts.push({
       severity: "stop",
       code: "PE_SYNCOPE",
-      message: "History of syncope is a contraindication",
+      message: "History of syncope or orthostatic hypotension is an exclusion",
       detail: "Dapoxetine may cause orthostatic hypotension and syncope.",
     });
   }
 
-  // Hard stop: Severe hepatic impairment
+  // Hard stop: Moderate or severe hepatic impairment (Child-Pugh B or C)
   if (state.medicalHistory.severeHepaticImpairment) {
     alerts.push({
       severity: "stop",
       code: "PE_LIVER",
-      message: "Severe hepatic impairment is a contraindication",
-      detail: "Dapoxetine is metabolised hepatically. Contraindicated in severe liver disease.",
+      message: "Moderate or severe hepatic impairment (Child-Pugh class B or C) is an exclusion",
+      detail: "The Priligy SmPC contraindicates moderate as well as severe impairment. Do not supply.",
+    });
+  }
+
+  if (state.medicalHistory.renalImpairment) {
+    alerts.push({
+      severity: "stop",
+      code: "PE_RENAL",
+      message: "Moderate or severe renal impairment is an exclusion",
+      detail: "PGD v003. Do not supply. Refer.",
+    });
+  }
+
+  if (state.medicalHistory.bipolarOrMania) {
+    alerts.push({
+      severity: "stop",
+      code: "PE_BIPOLAR",
+      message: "History of bipolar disorder or mania is an exclusion",
+      detail: "PGD v003. Do not supply. Refer.",
+    });
+  }
+
+  if (state.currentMedications.potentCyp3a4Inhibitor) {
+    alerts.push({
+      severity: "stop",
+      code: "PE_CYP3A4",
+      message: "Concurrent potent CYP3A4 inhibitor (ketoconazole, ritonavir, etc.) is an exclusion",
+      detail: "PGD v003. Do not supply.",
     });
   }
 
@@ -77,13 +122,14 @@ export function getAllAlerts(state: PEConsultationState): ClinicalAlert[] {
     });
   }
 
-  // Hard stop: MAOIs, SSRIs, SNRIs, thioridazine
+  // Hard stop: serotonergic medicines, now or within the last 14 days
   if (state.currentMedications.maoisOrSsrisOrSnris) {
     alerts.push({
       severity: "stop",
       code: "PE_MAOI_SSRI",
-      message: "Concomitant MAOIs, SSRIs, or SNRIs are contraindications",
-      detail: "Significant serotonin interaction risk. Refer to GP.",
+      message: "Serotonergic medicine now or within the last 14 days is an exclusion",
+      detail:
+        "MAOIs, SSRIs, SNRIs, tricyclic antidepressants, tramadol, triptans, linezolid, lithium, L-tryptophan and St John's wort. Serotonin syndrome risk. Refer to GP.",
     });
   }
 
@@ -94,6 +140,32 @@ export function getAllAlerts(state: PEConsultationState): ClinicalAlert[] {
       message: "Concomitant thioridazine is a contraindication",
       detail: "Risk of QT prolongation and arrhythmias. Do not supply.",
     });
+  }
+
+  // Cautions (PGD v003)
+  if (state.medicalHistory.mildHepaticImpairment) {
+    alerts.push({ severity: "caution", code: "PE_LIVER_MILD", message: "Mild hepatic impairment (Child-Pugh class A): use with caution", detail: "Moderate or severe impairment excludes." });
+  }
+  if (state.currentMedications.moderateCyp3a4Inhibitor) {
+    alerts.push({ severity: "caution", code: "PE_CYP3A4_MOD", message: "Moderate CYP3A4 inhibitor may increase dapoxetine concentrations", detail: "Use with caution; do not increase to 60mg." });
+  }
+  if (state.medicalHistory.cyp2d6PoorMetaboliser) {
+    alerts.push({ severity: "caution", code: "PE_CYP2D6", message: "CYP2D6 poor metaboliser may require dose adjustment", detail: "Use with caution; do not increase to 60mg." });
+  }
+  if (state.medicalHistory.orthostaticRiskFactors) {
+    alerts.push({ severity: "caution", code: "PE_ORTHO_RISK", message: "Risk factors for orthostatic hypotension", detail: "Advise to stand slowly. A history of syncope or orthostatic hypotension excludes." });
+  }
+  if (state.currentMedications.pde5Inhibitor) {
+    alerts.push({ severity: "caution", code: "PE_PDE5", message: "Concomitant PDE5 inhibitor (sildenafil, tadalafil): increased hypotension risk", detail: "Counsel on dizziness and standing slowly." });
+  }
+  if (state.medicalHistory.bleedingDisorderOrAnticoagulant) {
+    alerts.push({ severity: "caution", code: "PE_BLEEDING", message: "Bleeding disorder or concurrent anticoagulant therapy: increased bleeding risk", detail: "Use with caution." });
+  }
+  if (state.medicalHistory.seizureHistory) {
+    alerts.push({ severity: "caution", code: "PE_SEIZURE", message: "History of seizures: dapoxetine may lower the seizure threshold", detail: "Use with caution. Uncontrolled epilepsy excludes." });
+  }
+  if (state.medicalHistory.hyponatraemiaRisk) {
+    alerts.push({ severity: "caution", code: "PE_SODIUM", message: "Hyponatraemia risk: monitor sodium levels, particularly during the first 2 weeks", detail: "Use with caution." });
   }
 
   // Caution: Orthostatic hypotension test not done
@@ -129,14 +201,14 @@ export function calculateDoseRecommendation(
   if (hasHardStops(state)) return null;
 
   const dosingRegimen = state.medicineSupply.mayIncreaseTo60mg
-    ? "30mg or 60mg PRN (1-3 hours before, max once per 24 hours)"
-    : "30mg PRN (1-3 hours before, max once per 24 hours)";
+    ? "60mg as needed, 1 to 3 hours before sexual activity, maximum one dose in 24 hours (30mg insufficient and well tolerated)"
+    : "30mg as needed, 1 to 3 hours before sexual activity, maximum one dose in 24 hours";
 
   return {
-    medicine: "Dapoxetine",
-    dose: "30mg (or 60mg if inadequate response)",
+    medicine: "Dapoxetine 30mg and 60mg tablets (Priligy)",
+    dose: state.medicineSupply.mayIncreaseTo60mg ? "60mg" : "30mg (starting dose)",
     dosingRegimen,
-    frequency: "As needed, 1-3 hours before sexual activity",
-    reason: "Premature ejaculation (IELT <2 minutes). PRN dosing.",
+    frequency: "As needed, 1 to 3 hours before sexual activity; not daily. Up to 6 tablets per supply",
+    reason: "Premature ejaculation (IELT under 2 minutes) causing significant personal distress. Review after 4 weeks (about 6 doses); reassess every 6 months.",
   };
 }

@@ -7,15 +7,18 @@ import type {
   COPDPatientDetails,
   COPDAssessment,
   COPDMedicalHistory,
+  COPDCurrentMedications,
   COPDRedFlags,
   COPDMedicineSupply,
   COPDCounselling,
 } from "./lib/copd-types";
-import { STEP_LABELS, TOTAL_STEPS, createInitialConsultationState } from "./lib/copd-types";
+import { STEP_LABELS, TOTAL_STEPS, createInitialConsultationState, PGD_STRAPLINE } from "./lib/copd-types";
 import {
   getAllAlerts,
   hasHardStops,
   calculateDoseRecommendation,
+  SALBUTAMOL_RECOMMENDATION,
+  AMOXICILLIN_RECOMMENDATION,
 } from "./lib/copd-clinical-logic";
 import { validateStep } from "./lib/copd-validation";
 import { calculateAge } from "../shared/types";
@@ -53,6 +56,9 @@ function reducer(state: COPDConsultationState, action: COPDAction): COPDConsulta
       break;
     case "UPDATE_MEDICAL_HISTORY":
       newState.medicalHistory = { ...newState.medicalHistory, [action.field]: action.value };
+      break;
+    case "UPDATE_CURRENT_MEDICATIONS":
+      newState.currentMedications = { ...newState.currentMedications, [action.field]: action.value };
       break;
     case "UPDATE_RED_FLAGS":
       newState.redFlags = { ...newState.redFlags, [action.field]: action.value };
@@ -147,12 +153,86 @@ export default function COPDClient() {
         return (
           <div className="space-y-4">
             <Checkbox
-              label="Confirm patient has existing COPD diagnosis"
+              label="Confirmed diagnosis of COPD (documented spirometry and GOLD classification)"
               checked={state.assessment.hasExistingDiagnosis}
               onChange={(v) =>
                 dispatch({ type: "UPDATE_ASSESSMENT", field: "hasExistingDiagnosis", value: v })
               }
-              description="Patient must have documented COPD diagnosis from GP"
+              description="Inclusion criterion: spirometry FEV1/FVC below 0.70 with a GOLD classification documented"
+              required
+            />
+            <SelectInput
+              label="GOLD classification"
+              value={state.assessment.goldClassification}
+              onChange={(v) =>
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "goldClassification", value: v })
+              }
+              options={[
+                { value: "1", label: "GOLD 1: FEV1 80% predicted or more (mild)" },
+                { value: "2", label: "GOLD 2: FEV1 50 to 79% predicted (moderate)" },
+                { value: "3", label: "GOLD 3: FEV1 30 to 49% predicted (severe)" },
+                { value: "4", label: "GOLD 4: FEV1 below 30% predicted (very severe)" },
+                { value: "unknown", label: "Documented, classification not to hand" },
+              ]}
+            />
+            <SelectInput
+              label="Presentation"
+              value={state.assessment.presentation}
+              onChange={(v) =>
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "presentation", value: v })
+              }
+              options={[
+                { value: "exacerbation", label: "Acute exacerbation (increased dyspnoea, cough, change in sputum)" },
+                { value: "breathlessness", label: "Episode of breathlessness requiring symptom relief" },
+              ]}
+              required
+            />
+            <Checkbox
+              label="Purulent sputum (yellow/green), indicating bacterial infection"
+              checked={state.assessment.purulentSputum}
+              onChange={(v) =>
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "purulentSputum", value: v })
+              }
+              description="Required for the amoxicillin arm (infective exacerbation)"
+            />
+            <NumberInput
+              label="Oxygen saturation (SpO2) on air"
+              value={state.assessment.spo2}
+              onChange={(v) => {
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "spo2", value: v });
+                dispatch({ type: "UPDATE_RED_FLAGS", field: "severeHypoxia", value: v !== null && v < 88 });
+              }}
+              min={50}
+              max={100}
+              unit="% (below 88% is an exclusion: emergency referral)"
+              required
+            />
+            <NumberInput
+              label="Salbutamol supplies under this PGD in the last 12 months"
+              value={state.assessment.salbutamolSuppliesLast12Months}
+              onChange={(v) =>
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "salbutamolSuppliesLast12Months", value: v })
+              }
+              min={0}
+              max={20}
+              unit="(maximum 2 supplies in any 12 months; a third request is a GP review)"
+              required
+            />
+            <Checkbox
+              label="Capable of using an inhaler device, or willing to use a spacer"
+              checked={state.assessment.canUseInhalerOrSpacer}
+              onChange={(v) =>
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "canUseInhalerOrSpacer", value: v })
+              }
+              description="Inclusion criterion for the salbutamol arm"
+            />
+            <Checkbox
+              label="Able to take oral medication"
+              checked={state.assessment.ableToTakeOralMedication}
+              onChange={(v) =>
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "ableToTakeOralMedication", value: v })
+              }
+              description="Inclusion criterion for the amoxicillin arm"
             />
             <NumberInput
               label="MRC breathlessness scale (1-5)"
@@ -233,6 +313,34 @@ export default function COPDClient() {
               }
               placeholder="e.g., CVD, diabetes, osteoporosis"
             />
+            <div className="pt-2 border-t border-gray-200">
+              <p className="text-sm font-medium text-navy-900 mb-2">Salbutamol cautions (PGD v002)</p>
+              <div className="space-y-2">
+                <Checkbox label="Cardiovascular disease" checked={state.medicalHistory.cardiovascularDisease} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "cardiovascularDisease", value: v })} description="Salbutamol can increase heart rate and blood pressure; assess cardiac risk" />
+                <Checkbox label="Hypertension" checked={state.medicalHistory.hypertension} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "hypertension", value: v })} description="Monitor blood pressure; beta-2 agonists may worsen" />
+                <Checkbox label="Coronary artery disease or recent MI" checked={state.medicalHistory.coronaryDiseaseOrRecentMI} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "coronaryDiseaseOrRecentMI", value: v })} description="Assess risk/benefit; monitor for angina" />
+                <Checkbox label="Diabetes mellitus" checked={state.medicalHistory.diabetes} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "diabetes", value: v })} description="Monitor blood glucose (hyperglycaemia possible)" />
+                <Checkbox label="Hyperthyroidism" checked={state.medicalHistory.hyperthyroidism} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "hyperthyroidism", value: v })} description="Beta-2 agonists can worsen symptoms" />
+                <Checkbox label="Hypokalaemia" checked={state.medicalHistory.hypokalaemia} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "hypokalaemia", value: v })} description="May be worsened; monitor potassium" />
+              </div>
+            </div>
+            <div className="pt-2 border-t border-gray-200">
+              <p className="text-sm font-medium text-navy-900 mb-2">Amoxicillin exclusions and cautions (PGD v002)</p>
+              <div className="space-y-2">
+                <Checkbox label="Infectious mononucleosis" checked={state.medicalHistory.infectiousMononucleosis} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "infectiousMononucleosis", value: v })} description="Exclusion for amoxicillin: can precipitate severe rash" />
+                <Checkbox label="Severe renal impairment (eGFR below 30 mL/min/1.73m2)" checked={state.medicalHistory.severeRenalImpairment} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "severeRenalImpairment", value: v })} description="Exclusion for amoxicillin: dose adjustment needed" />
+                <Checkbox label="Mild to moderate renal impairment" checked={state.medicalHistory.mildModerateRenalImpairment} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "mildModerateRenalImpairment", value: v })} description="Caution: monitor renal function; dose adjustment may be needed" />
+                <Checkbox label="Hepatic impairment" checked={state.medicalHistory.hepaticImpairment} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "hepaticImpairment", value: v })} description="Caution: generally safe but monitor liver function" />
+                <Checkbox label="Antibiotic resistance suspected in local resistance patterns" checked={state.medicalHistory.localResistanceConcern} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "localResistanceConcern", value: v })} description="Exclusion for amoxicillin: check local microbiology guidance (Haemophilus influenzae, Moraxella catarrhalis, Streptococcus pneumoniae coverage)" />
+              </div>
+            </div>
+            <div className="pt-2 border-t border-gray-200">
+              <p className="text-sm font-medium text-navy-900 mb-2">Pregnancy and breastfeeding</p>
+              <div className="space-y-2">
+                <Checkbox label="Pregnant" checked={state.medicalHistory.pregnancy} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "pregnancy", value: v })} description="Caution: salbutamol and amoxicillin generally safe; ensure informed consent" />
+                <Checkbox label="Breastfeeding" checked={state.medicalHistory.breastfeeding} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "breastfeeding", value: v })} description="Caution: amoxicillin generally safe; ensure informed consent" />
+              </div>
+            </div>
           </div>
         );
 
@@ -240,10 +348,37 @@ export default function COPDClient() {
         return (
           <div className="space-y-4">
             <Checkbox
-              label="Current long-acting bronchodilator therapy"
-              checked={false}
-              onChange={() => {}}
-              description="Document current LABA/LAMA/ICS regimen above"
+              label="Known hypersensitivity to salbutamol or other beta-2 agonists"
+              checked={state.currentMedications.salbutamolAllergy}
+              onChange={(v) =>
+                dispatch({ type: "UPDATE_CURRENT_MEDICATIONS", field: "salbutamolAllergy", value: v })
+              }
+              description="Exclusion for the salbutamol arm"
+            />
+            <Checkbox
+              label="Known penicillin or beta-lactam allergy"
+              checked={state.currentMedications.penicillinAllergy}
+              onChange={(v) =>
+                dispatch({ type: "UPDATE_CURRENT_MEDICATIONS", field: "penicillinAllergy", value: v })
+              }
+              description="Exclusion for the amoxicillin arm"
+            />
+            <Checkbox
+              label="Uses oral contraception"
+              checked={state.currentMedications.oralContraceptive}
+              onChange={(v) =>
+                dispatch({ type: "UPDATE_CURRENT_MEDICATIONS", field: "oralContraceptive", value: v })
+              }
+              description="Caution: amoxicillin may reduce efficacy; advise additional contraception during and for 7 days after the course"
+            />
+            <TextArea
+              label="Other current medicines (including LABA/LAMA/ICS regimen)"
+              value={state.currentMedications.otherMedicines}
+              onChange={(v) =>
+                dispatch({ type: "UPDATE_CURRENT_MEDICATIONS", field: "otherMedicines", value: v })
+              }
+              placeholder="List current medicines"
+              rows={3}
             />
           </div>
         );
@@ -253,23 +388,31 @@ export default function COPDClient() {
           <div className="space-y-4">
             <div className="bg-red-50 border border-red-200 rounded p-4 mb-4">
               <p className="text-xs text-red-700 font-medium">
-                Red flags require urgent referral
+                Exclusions require emergency referral; red flags require urgent referral
               </p>
             </div>
+            <Checkbox
+              label="Severe exacerbation with hypoxia (SpO2 below 88%)"
+              checked={state.redFlags.severeHypoxia}
+              onChange={(v) =>
+                dispatch({ type: "UPDATE_RED_FLAGS", field: "severeHypoxia", value: v })
+              }
+              description="Exclusion: requires emergency referral and oxygen therapy. Set automatically from the recorded SpO2."
+            />
+            <Checkbox
+              label="Acute distress with inability to speak, cyanosis, or signs of respiratory failure"
+              checked={state.redFlags.acuteDistress}
+              onChange={(v) =>
+                dispatch({ type: "UPDATE_RED_FLAGS", field: "acuteDistress", value: v })
+              }
+              description="Exclusion: emergency referral, call 999"
+            />
             <Checkbox
               label="MRC Grade 5 (housebound, breathless at rest)"
               checked={state.redFlags.mrcGrade5}
               onChange={(v) =>
                 dispatch({ type: "UPDATE_RED_FLAGS", field: "mrcGrade5", value: v })
               }
-            />
-            <Checkbox
-              label="Suspected acute exacerbation"
-              checked={state.redFlags.suspectedExacerbation}
-              onChange={(v) =>
-                dispatch({ type: "UPDATE_RED_FLAGS", field: "suspectedExacerbation", value: v })
-              }
-              description="Increased sputum, fever, or worsening breathlessness"
             />
             <Checkbox
               label="New haemoptysis"
@@ -307,18 +450,59 @@ export default function COPDClient() {
             />
             {state.medicineSupply.medicinePrescribed && (
               <>
-                <SelectInput
-                  label="Medicine type"
-                  value={state.medicineSupply.medicineType}
-                  onChange={(v) =>
-                    dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "medicineType", value: v })
-                  }
-                  options={[
-                    { value: "salbutamol", label: "Salbutamol 100mcg pMDI (reliever)" },
-                    { value: "ipratropium", label: "Ipratropium 20mcg pMDI (anticholinergic)" },
-                  ]}
-                  required
-                />
+                <div className="border border-gray-200 rounded-lg p-3 space-y-2">
+                  <Checkbox
+                    label="Salbutamol 100mcg metered-dose inhaler (MDI), 1 inhaler (200 doses)"
+                    checked={state.medicineSupply.supplySalbutamol}
+                    onChange={(v) =>
+                      dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "supplySalbutamol", value: v })
+                    }
+                    description="Acute symptom relief in an acute exacerbation or breathlessness. Inhalation via MDI, with or without spacer."
+                  />
+                  {state.medicineSupply.supplySalbutamol && (
+                    <div className="ml-6 space-y-2">
+                      <p className="text-xs text-gray-700">
+                        <strong>Dose:</strong> {SALBUTAMOL_RECOMMENDATION.dose}. {SALBUTAMOL_RECOMMENDATION.frequency}
+                      </p>
+                      <p className="text-xs text-gray-700">
+                        <strong>Supply:</strong> {SALBUTAMOL_RECOMMENDATION.duration} Use a spacer to optimise delivery if the patient is not experienced with an MDI.
+                      </p>
+                      <TextInput
+                        label="Brand supplied (salbutamol)"
+                        value={state.medicineSupply.salbutamolBrand}
+                        onChange={(v) =>
+                          dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "salbutamolBrand", value: v })
+                        }
+                        placeholder="e.g. Ventolin Evohaler, Salamol"
+                      />
+                    </div>
+                  )}
+                </div>
+                <div className="border border-gray-200 rounded-lg p-3 space-y-2">
+                  <Checkbox
+                    label="Amoxicillin 500mg capsules, 15 capsules (5-day course)"
+                    checked={state.medicineSupply.supplyAmoxicillin}
+                    onChange={(v) =>
+                      dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "supplyAmoxicillin", value: v })
+                    }
+                    description="Infective acute exacerbation with purulent (yellow/green) sputum only. Oral."
+                  />
+                  {state.medicineSupply.supplyAmoxicillin && (
+                    <div className="ml-6 space-y-2">
+                      <p className="text-xs text-gray-700">
+                        <strong>Dose:</strong> {AMOXICILLIN_RECOMMENDATION.dose}, {AMOXICILLIN_RECOMMENDATION.frequency}. {AMOXICILLIN_RECOMMENDATION.duration}
+                      </p>
+                      <TextInput
+                        label="Brand supplied (amoxicillin)"
+                        value={state.medicineSupply.amoxicillinBrand}
+                        onChange={(v) =>
+                          dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "amoxicillinBrand", value: v })
+                        }
+                        placeholder="Manufacturer or brand"
+                      />
+                    </div>
+                  )}
+                </div>
                 <Checkbox
                   label="Dosage confirmed with patient"
                   checked={state.medicineSupply.dosageConfirmed}
@@ -379,6 +563,72 @@ export default function COPDClient() {
                 dispatch({ type: "UPDATE_COUNSELLING", field: "symptomMgmtExplained", value: v })
               }
             />
+            <div className="pt-2 border-t border-gray-200">
+              <p className="text-sm font-medium text-navy-900 mb-2">Follow-up advice (PGD v002)</p>
+              <div className="space-y-2">
+                {state.medicineSupply.supplySalbutamol && (
+                  <>
+                    <Checkbox
+                      label="Use the rescue inhaler (salbutamol) as needed when you experience breathlessness: 1 to 2 puffs, up to 4 times in 24 hours, maximum 8 puffs in 24 hours. Needing more than this, relief more often than every 4 hours, or the reliever on most days: same-day GP or urgent care. Ten puffs through a spacer with no relief: call 999"
+                      checked={state.counselling.relieverUseAndLimits}
+                      onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "relieverUseAndLimits", value: v })}
+                      required
+                    />
+                    <Checkbox
+                      label="Use a spacer device if you have difficulty coordinating MDI actuation"
+                      checked={state.counselling.spacerAdvice}
+                      onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "spacerAdvice", value: v })}
+                    />
+                  </>
+                )}
+                {state.medicineSupply.supplyAmoxicillin && (
+                  <>
+                    <Checkbox
+                      label="Complete the full course of amoxicillin even if symptoms improve"
+                      checked={state.counselling.completeCourse}
+                      onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "completeCourse", value: v })}
+                      required
+                    />
+                    <Checkbox
+                      label="Take amoxicillin at regular intervals, ideally 1 hour before or 2 hours after meals for best absorption (with food if GI upset occurs)"
+                      checked={state.counselling.amoxicillinTiming}
+                      onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "amoxicillinTiming", value: v })}
+                    />
+                    <Checkbox
+                      label="If using oral contraception, use additional contraceptive methods during and for 7 days after the antibiotic course"
+                      checked={state.counselling.contraceptionAdvice}
+                      onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "contraceptionAdvice", value: v })}
+                    />
+                  </>
+                )}
+                <Checkbox
+                  label="Monitor your sputum colour: purulent (yellow/green) sputum suggests continued infection"
+                  checked={state.counselling.sputumColour}
+                  onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "sputumColour", value: v })}
+                />
+                <Checkbox
+                  label="Seek immediate medical attention if symptoms worsen despite treatment, or if you develop fever, persistent chest pain, or haemoptysis"
+                  checked={state.counselling.seekImmediateAttention}
+                  onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "seekImmediateAttention", value: v })}
+                />
+                <Checkbox
+                  label="Seek urgent assessment if you experience worsening breathlessness, difficulty speaking in sentences, confusion, or cyanosis"
+                  checked={state.counselling.seekUrgentAssessment}
+                  onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "seekUrgentAssessment", value: v })}
+                  required
+                />
+                <Checkbox
+                  label="Monitor your oxygen saturation if you have a pulse oximeter at home; report any drop below 88%"
+                  checked={state.counselling.oximeterAdvice}
+                  onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "oximeterAdvice", value: v })}
+                />
+                <Checkbox
+                  label="Report any allergic reactions (rash, facial swelling, difficulty breathing) immediately"
+                  checked={state.counselling.allergicReactionAdvice}
+                  onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "allergicReactionAdvice", value: v })}
+                />
+              </div>
+            </div>
           </div>
         );
 

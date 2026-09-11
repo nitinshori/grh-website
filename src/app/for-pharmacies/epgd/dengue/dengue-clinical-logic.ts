@@ -1,8 +1,11 @@
+// Aligned to the Qdenga (TAK-003) Dengue PGD, version 005, issued 11 September 2026.
 import { ClinicalAlert } from '../shared/types';
 import {
   DengueScreening,
   DengueContraindications,
 } from './dengue-types';
+
+export const DENGUE_PGD_VERSION = 'Qdenga (TAK-003) Dengue PGD v005, issued 11 September 2026';
 
 export function evaluateDengueContraindications(
   screening: DengueScreening,
@@ -13,9 +16,33 @@ export function evaluateDengueContraindications(
     severeAllergy: false,
     immunosuppressed: false,
     pregnancy: false,
+    breastfeeding: false,
     acuteFebrileIllness: false,
-    ageAppropriate: patientAge >= 4,
+    liveVaccineInterval: false,
+    gbsHistory: false,
+    ageAppropriate: patientAge >= 18,
   };
+
+  // Hard stop: age under 18 (PGD v005 exclusion)
+  if (patientAge < 18) {
+    alerts.push({
+      severity: 'stop',
+      code: 'AGE_UNDER_18_DENGUE',
+      message: 'Age under 18 years',
+      detail: 'This PGD covers adults aged 18 years and over only.',
+    });
+  }
+
+  // Hard stop: hypersensitivity to any component of the vaccine
+  if (screening.vaccineComponentAllergy) {
+    contraindications.severeAllergy = true;
+    alerts.push({
+      severity: 'stop',
+      code: 'VACCINE_ALLERGY_DENGUE',
+      message: 'Known hypersensitivity to a component of the vaccine',
+      detail: 'Known hypersensitivity to any component of Qdenga is an exclusion. Do not vaccinate; refer to the GP.',
+    });
+  }
 
   // Hard stop: Pregnancy
   if (screening.pregnant) {
@@ -31,6 +58,7 @@ export function evaluateDengueContraindications(
 
   // Hard stop: Breastfeeding
   if (screening.breastfeeding) {
+    contraindications.breastfeeding = true;
     alerts.push({
       severity: 'stop',
       code: 'BREASTFEEDING_DENGUE',
@@ -47,18 +75,61 @@ export function evaluateDengueContraindications(
       severity: 'stop',
       code: 'ACUTE_FEBRILE_ILLNESS_DENGUE',
       message: 'Acute febrile illness',
-      detail: `Patient temperature is ${screening.temperature}°C. Defer vaccination until patient has recovered from acute illness.`,
+      detail: `Patient temperature is ${screening.temperature} C. Acute fever is an exclusion: defer vaccination until the patient has recovered.`,
     });
   }
 
-  // Caution: Immunosuppression with moderate CD4 count
+  // Hard stop: significant intercurrent illness
+  if (screening.currentIllness) {
+    contraindications.acuteFebrileIllness = true;
+    alerts.push({
+      severity: 'stop',
+      code: 'INTERCURRENT_ILLNESS_DENGUE',
+      message: 'Acute fever or significant intercurrent illness',
+      detail: `Reported: ${screening.illnessDetails || 'not described'}. Acute fever or significant intercurrent illness is an exclusion. Defer vaccination until recovered.`,
+    });
+  }
+
+  // Hard stop: immune deficiency of any cause (PGD v005: no immunocompromised group is vaccinated under this PGD)
   if (screening.immunosuppressed) {
     contraindications.immunosuppressed = true;
     alerts.push({
-      severity: 'caution',
+      severity: 'stop',
       code: 'IMMUNOSUPPRESSED_DENGUE',
-      message: 'Patient is immunosuppressed',
-      detail: `Reason: ${screening.immunosuppressedDetails}. Live vaccine may have reduced efficacy or increased risk of adverse events. Consider referral to specialist or GP for risk-benefit assessment. If CD4 <200 (HIV), do not vaccinate.`,
+      message: 'Immune deficiency of any cause: exclusion',
+      detail: `Reason: ${screening.immunosuppressedDetails || 'not described'}. Qdenga is a live vaccine and any congenital or acquired immune deficiency excludes, including immunosuppressive therapy such as chemotherapy, systemic corticosteroids at 20 mg/day prednisolone (or 2 mg/kg/day) or more for 2 weeks or longer within the previous 4 weeks, active malignancy, symptomatic HIV, or asymptomatic HIV with impaired immune function. Do not vaccinate; refer to the GP.`,
+    });
+  }
+
+  // Hard stop: another live vaccine within 4 weeks before or after
+  if (screening.liveVaccineWithin4Weeks) {
+    contraindications.liveVaccineInterval = true;
+    alerts.push({
+      severity: 'stop',
+      code: 'LIVE_VACCINE_INTERVAL_DENGUE',
+      message: 'Another live vaccine within 4 weeks',
+      detail: 'Planned administration of another live vaccine within 4 weeks before or after Qdenga is an exclusion. Give live vaccines on the same day or separate them by at least 4 weeks.',
+    });
+  }
+
+  // Hard stop: Guillain-Barre syndrome after prior dengue vaccination
+  if (screening.gbsAfterDengueVaccine) {
+    contraindications.gbsHistory = true;
+    alerts.push({
+      severity: 'stop',
+      code: 'GBS_DENGUE',
+      message: 'History of Guillain-Barre syndrome following prior dengue vaccination',
+      detail: 'This is an exclusion under the PGD. Do not vaccinate; refer to the GP.',
+    });
+  }
+
+  // Caution: anticoagulant therapy
+  if (screening.anticoagulantTherapy) {
+    alerts.push({
+      severity: 'caution',
+      code: 'ANTICOAGULANT_DENGUE',
+      message: 'Anticoagulant therapy: assess bleeding risk',
+      detail: 'Use with caution in patients on anticoagulant therapy. Assess bleeding risk before the subcutaneous injection and apply firm pressure afterwards.',
     });
   }
 
@@ -68,18 +139,18 @@ export function evaluateDengueContraindications(
       severity: 'red-flag',
       code: 'PREVIOUS_DENGUE_INFECTION',
       message: 'Previous dengue infection noted',
-      detail: `Previous infection: ${screening.dengueInfectionDetails}. Serological testing may be recommended prior to vaccination to confirm immunity. Consult GP for guidance.`,
+      detail: `Previous infection: ${screening.dengueInfectionDetails}. The PGD says consider serological testing in those with previous dengue infection. Consult the GP for guidance.`,
     });
   }
 
-  // Caution: Travel to endemic area
+  // Caution: timing before travel
   if (screening.endemicArea) {
     alerts.push({
       severity: 'caution',
       code: 'ENDEMIC_AREA_TRAVEL',
-      message: 'Travel to dengue endemic area',
+      message: 'Timing before travel',
       detail:
-        'Patient is travelling to dengue endemic region. Ensure adequate interval before departure for vaccine efficacy. First dose should be given ideally 10-30 days before travel.',
+        'Two doses of Qdenga are given 3 months apart. The first dose should be administered at least 3 months prior to travel when possible.',
     });
   }
 
@@ -90,8 +161,14 @@ export function hasHardStopContraindications(
   contraindications: DengueContraindications
 ): boolean {
   return (
+    !contraindications.ageAppropriate ||
+    contraindications.severeAllergy ||
     contraindications.pregnancy ||
-    contraindications.acuteFebrileIllness
+    contraindications.breastfeeding ||
+    contraindications.acuteFebrileIllness ||
+    contraindications.immunosuppressed ||
+    contraindications.liveVaccineInterval ||
+    contraindications.gbsHistory
   );
 }
 

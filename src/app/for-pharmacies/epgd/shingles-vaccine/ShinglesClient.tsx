@@ -32,6 +32,9 @@ function reducer(state: ShinglesConsultationState, action: ShinglesAction): Shin
     case "UPDATE_ASSESSMENT":
       newState.assessment = { ...newState.assessment, [action.field]: action.value };
       break;
+    case "UPDATE_SUPPLY":
+      newState.supply = { ...newState.supply, [action.field]: action.value };
+      break;
     case "UPDATE_COUNSELLING":
       newState.counselling = { ...newState.counselling, [action.field]: action.value };
       break;
@@ -74,13 +77,14 @@ export default function ShinglesClient() {
   }, [state, validationError, hardStops]);
 
   const handleNext = useCallback(() => {
+    if (state.currentStep <= 3 && hardStops) return;
     if (!validationError && state.currentStep < TOTAL_STEPS - 1) {
       const newCompleted = new Set(completedSteps);
       newCompleted.add(state.currentStep);
       setCompletedSteps(newCompleted);
       dispatch({ type: "SET_STEP", step: state.currentStep + 1 });
     }
-  }, [state.currentStep, validationError, completedSteps]);
+  }, [state.currentStep, validationError, completedSteps, hardStops]);
 
   const handlePrev = useCallback(() => {
     if (state.currentStep > 0) {
@@ -134,7 +138,7 @@ export default function ShinglesClient() {
         return (
           <div className="space-y-4">
             <Checkbox
-              label="Age eligible (50+ or 18+ if immunosuppressed)"
+              label="Aged 50 years or older and eligible under national immunisation guidelines"
               checked={state.assessment.ageEligible}
               onChange={(v) =>
                 dispatch({
@@ -143,7 +147,7 @@ export default function ShinglesClient() {
                   value: v,
                 })
               }
-              description="Standard eligibility 50+ years; 18+ if immunocompromised"
+              description="This PGD covers individuals aged 50 and over only. An immunosuppressed adult aged 18 to 49 is not covered: refer."
             />
             <Checkbox
               label="Patient is immunosuppressed"
@@ -155,10 +159,10 @@ export default function ShinglesClient() {
                   value: v,
                 })
               }
-              description="HIV, cancer treatment, organ transplant, etc."
+              description="HIV, cancer treatment, organ transplant, immunosuppressive therapy. Shingrix (non-live) is the preferred vaccine; must still be aged 50 or over."
             />
             <SelectInput
-              label="Pregnancy status"
+              label="Pregnancy or breastfeeding status"
               value={state.assessment.pregnancyStatus}
               onChange={(v) =>
                 dispatch({
@@ -168,14 +172,29 @@ export default function ShinglesClient() {
                 })
               }
               options={[
-                { value: "not-pregnant", label: "Not pregnant" },
+                { value: "not-pregnant", label: "Not pregnant and not breastfeeding (or not applicable)" },
                 { value: "unknown", label: "Pregnancy status unknown" },
-                { value: "confirmed", label: "Confirmed pregnant" },
+                { value: "confirmed", label: "Confirmed pregnant (excluded)" },
+                { value: "breastfeeding", label: "Breastfeeding (excluded)" },
               ]}
               required
             />
+
+            <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide pt-2">Vaccine history (check before administration)</p>
             <Checkbox
-              label="Previous Shingrix dose received"
+              label="Two-dose course of Shingrix already completed"
+              checked={state.assessment.completedCourse}
+              onChange={(v) =>
+                dispatch({
+                  type: "UPDATE_ASSESSMENT",
+                  field: "completedCourse",
+                  value: v,
+                })
+              }
+              description="Excluded: the PGD covers individuals who have not completed a two-dose course"
+            />
+            <Checkbox
+              label="Dose 1 of Shingrix already given (here or elsewhere)"
               checked={state.assessment.previousShingrix}
               onChange={(v) =>
                 dispatch({
@@ -184,10 +203,37 @@ export default function ShinglesClient() {
                   value: v,
                 })
               }
-              description="Has patient received dose 1 of the 2-dose series?"
+              description="Dose 2 may be given under this PGD where dose 1 was given elsewhere; record the date of dose 1"
+            />
+            {state.assessment.previousShingrix && (
+              <TextInput
+                label="Date of dose 1"
+                value={state.assessment.previousShingrixDate}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_ASSESSMENT",
+                    field: "previousShingrixDate",
+                    value: v,
+                  })
+                }
+                type="date"
+                required
+              />
+            )}
+            <Checkbox
+              label="Previous Zostavax (live) vaccine"
+              checked={state.assessment.previousZostavax}
+              onChange={(v) =>
+                dispatch({
+                  type: "UPDATE_ASSESSMENT",
+                  field: "previousZostavax",
+                  value: v,
+                })
+              }
+              description="Not an exclusion under the PGD; a full two-dose Shingrix course may be given"
             />
             <Checkbox
-              label="Patient has history of shingles"
+              label="Shingles (herpes zoster) within the past 12 months"
               checked={state.assessment.previousShinglesHistory}
               onChange={(v) =>
                 dispatch({
@@ -196,7 +242,19 @@ export default function ShinglesClient() {
                   value: v,
                 })
               }
-              description="Vaccination still protective even with previous episode"
+              description="Inclusion requires no history of shingles in the past 12 months. Not for treatment of acute shingles."
+            />
+            <Checkbox
+              label="Another vaccine (e.g. COVID-19 or influenza) given today or recently"
+              checked={state.assessment.recentOtherVaccine}
+              onChange={(v) =>
+                dispatch({
+                  type: "UPDATE_ASSESSMENT",
+                  field: "recentOtherVaccine",
+                  value: v,
+                })
+              }
+              description="Caution: allow appropriate spacing from other vaccines based on clinical judgement"
             />
           </div>
         );
@@ -208,7 +266,7 @@ export default function ShinglesClient() {
               Check contraindications:
             </p>
             <Checkbox
-              label="No anaphylaxis to vaccine components"
+              label="No hypersensitivity to any component of the vaccine"
               checked={!state.assessment.anaphylaxisToComponent}
               onChange={(v) =>
                 dispatch({
@@ -217,10 +275,10 @@ export default function ShinglesClient() {
                   value: !v,
                 })
               }
-              description="Contraindicated if previous anaphylactic reaction to Shingrix"
+              description="Exclusion: hypersensitivity to any component of Shingrix (untick to record)"
             />
             <Checkbox
-              label="No severe acute illness present"
+              label="No acute illness with fever"
               checked={!state.assessment.severeAcuteIllness}
               onChange={(v) =>
                 dispatch({
@@ -229,7 +287,7 @@ export default function ShinglesClient() {
                   value: !v,
                 })
               }
-              description="Defer if patient has serious systemic infection or fever"
+              description="Delay vaccination in cases of acute illness with fever (untick to record)"
             />
           </div>
         );
@@ -241,7 +299,7 @@ export default function ShinglesClient() {
               Counselling delivered:
             </p>
             <Checkbox
-              label="Explained 2-dose schedule"
+              label="Explained the 2-dose schedule"
               checked={state.counselling.explainedDoseSchedule}
               onChange={(v) =>
                 dispatch({
@@ -250,7 +308,7 @@ export default function ShinglesClient() {
                   value: v,
                 })
               }
-              description="Dose 1 today, Dose 2 at 2 months"
+              description="Two doses of 0.5 mL, the second 2 to 6 months after the first"
             />
             <Checkbox
               label="Discussed local injection reactions"
@@ -262,7 +320,19 @@ export default function ShinglesClient() {
                   value: v,
                 })
               }
-              description="Stronger local reactions than other vaccines are normal"
+              description="Localised pain, redness and swelling at the injection site"
+            />
+            <Checkbox
+              label="Counselled that systemic side effects are common and generally self-limiting"
+              checked={state.counselling.explainedSystemicReactions}
+              onChange={(v) =>
+                dispatch({
+                  type: "UPDATE_COUNSELLING",
+                  field: "explainedSystemicReactions",
+                  value: v,
+                })
+              }
+              description="Fatigue, headache, myalgia, shivering, fever, gastrointestinal symptoms (PGD v005 caution)"
             />
             <Checkbox
               label="Explained effectiveness"
@@ -289,7 +359,7 @@ export default function ShinglesClient() {
               description="Safe for immunocompromised patients (unlike Zostavax)"
             />
             <Checkbox
-              label="Offered written information"
+              label="Patient information leaflet (PIL) supplied"
               checked={state.counselling.offeredWrittenInfo}
               onChange={(v) =>
                 dispatch({
@@ -298,7 +368,19 @@ export default function ShinglesClient() {
                   value: v,
                 })
               }
-              description="Patient information leaflet provided"
+              description="Supply the PIL provided with the medication"
+            />
+            <Checkbox
+              label="Follow-up advice given"
+              checked={state.counselling.followUpAdviceGiven}
+              onChange={(v) =>
+                dispatch({
+                  type: "UPDATE_COUNSELLING",
+                  field: "followUpAdviceGiven",
+                  value: v,
+                })
+              }
+              description="Seek medical advice if symptoms worsen rapidly or significantly, do not improve in 3 to 4 weeks, or they become systemically very unwell"
             />
           </div>
         );
@@ -308,15 +390,67 @@ export default function ShinglesClient() {
           <div className="space-y-4">
             <div className="p-3 bg-[color:var(--tenant-primary)]/10 border border-[color:var(--tenant-primary)]/30 rounded-lg">
               <p className="text-sm font-medium text-[color:var(--tenant-primary)]">
-                Shingrix (Recombinant Zoster Vaccine)
+                Shingrix (recombinant zoster vaccine, non-live)
               </p>
               <p className="text-xs text-[color:var(--tenant-primary)] mt-1">
-                0.5 mL intramuscular injection into deltoid
+                0.5 mL intramuscular injection, preferably in the deltoid muscle
               </p>
               <p className="text-xs text-[color:var(--tenant-primary)] mt-2">
-                Schedule: Dose 1 today, Dose 2 in 2 months
+                Two doses of 0.5 mL, the second 2 to 6 months after the first. Record date, site, batch number and brand.
               </p>
             </div>
+            <SelectInput
+              label="Dose number"
+              value={state.supply.doseNumber}
+              onChange={(v) => dispatch({ type: "UPDATE_SUPPLY", field: "doseNumber", value: v })}
+              options={[
+                { value: "1", label: "Dose 1 of 2" },
+                { value: "2", label: "Dose 2 of 2 (2 to 6 months after dose 1)" },
+              ]}
+              required
+            />
+            <TextInput
+              label="Vaccination date"
+              value={state.supply.vaccinationDate}
+              onChange={(v) => dispatch({ type: "UPDATE_SUPPLY", field: "vaccinationDate", value: v })}
+              type="date"
+              required
+            />
+            {state.supply.doseNumber === "1" && (
+              <TextInput
+                label="Second dose due (2 to 6 months after today)"
+                value={state.supply.nextDoseDue}
+                onChange={(v) => dispatch({ type: "UPDATE_SUPPLY", field: "nextDoseDue", value: v })}
+                type="date"
+                required
+              />
+            )}
+            <div className="grid sm:grid-cols-2 gap-4">
+              <TextInput
+                label="Batch number"
+                value={state.supply.batchNumber}
+                onChange={(v) => dispatch({ type: "UPDATE_SUPPLY", field: "batchNumber", value: v })}
+                placeholder="e.g. X012345"
+                required
+              />
+              <TextInput
+                label="Expiry date"
+                value={state.supply.expiryDate}
+                onChange={(v) => dispatch({ type: "UPDATE_SUPPLY", field: "expiryDate", value: v })}
+                type="date"
+                required
+              />
+            </div>
+            <SelectInput
+              label="Anatomical site"
+              value={state.supply.site}
+              onChange={(v) => dispatch({ type: "UPDATE_SUPPLY", field: "site", value: v })}
+              options={[
+                { value: "left-deltoid", label: "Left deltoid, intramuscular" },
+                { value: "right-deltoid", label: "Right deltoid, intramuscular" },
+              ]}
+              required
+            />
             <TextArea
               label="Additional clinical notes"
               value={state.summary.clinicalNotes}
@@ -424,7 +558,9 @@ export default function ShinglesClient() {
               The shingles vaccination ePGD consultation has been recorded successfully.
             </p>
             <p className="text-xs text-gray-500 mt-4">
-              Patient should return for their second dose as scheduled in 2 months.
+              {state.supply.doseNumber === "2"
+                ? "Two-dose course complete."
+                : `Patient should return for their second dose 2 to 6 months after today${state.supply.nextDoseDue ? ` (due ${state.supply.nextDoseDue})` : ""}.`}
             </p>
           </div>
         );

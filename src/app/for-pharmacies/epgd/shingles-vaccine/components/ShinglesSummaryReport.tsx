@@ -47,10 +47,30 @@ export function ShinglesSummaryReport({
 
       <SectionHeader>Eligibility Assessment</SectionHeader>
       <div className="space-y-0.5">
-        <Row label="Age Eligible (50+ or 18+ immunosuppressed)" value={state.assessment.ageEligible ? "Yes" : "No"} />
+        <Row label="Aged 50 or older, eligible under national guidelines" value={state.assessment.ageEligible ? "Yes" : "No"} />
         <Row label="Immunosuppressed" value={state.assessment.immunosuppressed ? "Yes" : "No"} />
-        <Row label="Previous Shingrix dose" value={state.assessment.previousShingrix ? "Yes" : "No"} />
-        <Row label="History of shingles" value={state.assessment.previousShinglesHistory ? "Yes" : "No"} />
+        <Row
+          label="Pregnancy or breastfeeding"
+          value={
+            state.assessment.pregnancyStatus === "confirmed"
+              ? "Pregnant (excluded)"
+              : state.assessment.pregnancyStatus === "breastfeeding"
+                ? "Breastfeeding (excluded)"
+                : state.assessment.pregnancyStatus === "unknown"
+                  ? "Unknown"
+                  : state.assessment.pregnancyStatus === "not-pregnant"
+                    ? "No"
+                    : "Not recorded"
+          }
+        />
+        <Row label="Two-dose course already completed" value={state.assessment.completedCourse ? "Yes (excluded)" : "No"} />
+        <Row
+          label="Dose 1 of Shingrix previously given"
+          value={state.assessment.previousShingrix ? `Yes (${state.assessment.previousShingrixDate || "date not recorded"})` : "No"}
+        />
+        <Row label="Previous Zostavax" value={state.assessment.previousZostavax ? "Yes (not an exclusion)" : "No"} />
+        <Row label="Shingles in the past 12 months" value={state.assessment.previousShinglesHistory ? "Yes (excluded)" : "No"} />
+        <Row label="Other vaccine recently or today" value={state.assessment.recentOtherVaccine ? "Yes (spacing per clinical judgement)" : "No"} />
       </div>
 
       <SectionHeader>Contraindication Check</SectionHeader>
@@ -63,7 +83,7 @@ export function ShinglesSummaryReport({
               </svg>
             )}
           </span>
-          <span>No anaphylaxis to vaccine components documented</span>
+          <span>No hypersensitivity to any component of the vaccine</span>
         </div>
         <div className="flex items-center gap-2">
           <span className={`w-3 h-3 rounded border flex items-center justify-center ${!state.assessment.severeAcuteIllness ? "bg-[color:var(--tenant-primary)]/100 border-[color:var(--tenant-primary)]/30 text-white" : "border-red-500 bg-red-50"}`}>
@@ -73,18 +93,20 @@ export function ShinglesSummaryReport({
               </svg>
             )}
           </span>
-          <span>No severe acute illness at time of consultation</span>
+          <span>No acute illness with fever at time of consultation</span>
         </div>
       </div>
 
       <SectionHeader>Counselling Provided</SectionHeader>
       <CounsellingGrid
         items={[
-          ["Explained 2-dose schedule (0 and 2 months)", state.counselling.explainedDoseSchedule],
-          ["Discussed local reactions (stronger than other vaccines)", state.counselling.explainedLocalReactions],
-          ["Explained vaccine effectiveness (>90% protection)", state.counselling.explainedEffectiveness],
+          ["Explained 2-dose schedule (second dose 2 to 6 months after the first)", state.counselling.explainedDoseSchedule],
+          ["Discussed local injection reactions", state.counselling.explainedLocalReactions],
+          ["Systemic side effects common and self-limiting", state.counselling.explainedSystemicReactions],
+          ["Explained vaccine effectiveness (over 90% protection)", state.counselling.explainedEffectiveness],
           ["Clarified NOT a live vaccine", state.counselling.explainedNotLiveVaccine],
-          ["Offered written information leaflet", state.counselling.offeredWrittenInfo],
+          ["Patient information leaflet supplied", state.counselling.offeredWrittenInfo],
+          ["Follow-up advice given", state.counselling.followUpAdviceGiven],
         ]}
       />
 
@@ -95,6 +117,23 @@ export function ShinglesSummaryReport({
           <Row label="Dose" value={doseRecommendation.dose} />
           <Row label="Schedule" value={doseRecommendation.dosingRegimen || ""} />
           <Row label="Clinical Reason" value={doseRecommendation.reason} />
+          <Row label="Dose number" value={state.supply.doseNumber ? `${state.supply.doseNumber} of 2` : "Not recorded"} />
+          <Row label="Vaccination date" value={state.supply.vaccinationDate || "Not recorded"} />
+          {state.supply.doseNumber === "1" && (
+            <Row label="Second dose due" value={state.supply.nextDoseDue || "Not recorded"} />
+          )}
+          <Row label="Batch number" value={state.supply.batchNumber || "Not recorded"} />
+          <Row label="Expiry date" value={state.supply.expiryDate || "Not recorded"} />
+          <Row
+            label="Anatomical site"
+            value={
+              state.supply.site === "left-deltoid"
+                ? "Left deltoid (IM)"
+                : state.supply.site === "right-deltoid"
+                  ? "Right deltoid (IM)"
+                  : "Not recorded"
+            }
+          />
         </div>
       ) : (
         <p className="text-xs text-gray-500">No vaccine recommendation (check alerts)</p>
@@ -103,6 +142,10 @@ export function ShinglesSummaryReport({
       <SectionHeader>Clinical Notes</SectionHeader>
       <p className="text-xs text-gray-700 whitespace-pre-wrap">
         {state.summary.clinicalNotes || "(No additional notes)"}
+      </p>
+
+      <p className="text-[10px] text-gray-500 mt-4">
+        Patient Group Direction for Shingrix (prevention of shingles), version 005, issued 11 September 2026.
       </p>
 
       <PharmacistDeclaration

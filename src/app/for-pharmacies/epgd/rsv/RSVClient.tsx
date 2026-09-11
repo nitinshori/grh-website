@@ -17,8 +17,10 @@ import type {
 import {
   initialRSVPatientDetails,
   initialRSVConsent,
+  initialRSVMedicalHistory,
   initialRSVSummary,
 } from './rsv-types';
+import type { RSVMedicalHistory } from './rsv-types';
 import {
   getRSVClinicalAlerts,
   getRSVVaccineGuidance,
@@ -57,18 +59,17 @@ export function RSVClient() {
 
   const [consent, setConsent] = useState<RSVConsent>(initialRSVConsent);
 
-  const [eligibilityAssessment, setEligibilityAssessment] = useState({
+  const [eligibilityAssessment, setEligibilityAssessment] = useState<{
+    confirmEligible: boolean;
+    riskFactorsReviewed: boolean;
+    nhsStatus: '' | 'not-eligible' | 'eligible-prefers-private';
+  }>({
     confirmEligible: false,
     riskFactorsReviewed: false,
+    nhsStatus: '',
   });
 
-  const [medicalHistory, setMedicalHistory] = useState({
-    anaphylaxisToVaccine: false,
-    anaphylaxisToVaccineComponent: false,
-    severeFebrilleIllness: false,
-    immunosuppressed: false,
-    bleedingDisorder: false,
-  });
+  const [medicalHistory, setMedicalHistory] = useState<RSVMedicalHistory>(initialRSVMedicalHistory);
 
   const [contraIndicationsReviewed, setContraIndicationsReviewed] = useState({
     confirmedNoAbsoluteContraindications: false,
@@ -96,6 +97,8 @@ export function RSVClient() {
     counselledReactions: false,
     counselledNoBooster: false,
     counselledSeason: false,
+    followUpAdviceGiven: false,
+    pilSupplied: false,
   });
 
   const [showSummaryReport, setShowSummaryReport] = useState(false);
@@ -135,16 +138,16 @@ export function RSVClient() {
   }, [patientDetails]);
 
   const consentValidationError = useMemo(() => {
-    return validateRSVConsentStep(consent);
-  }, [consent]);
+    return validateRSVConsentStep(consent, patientDetails.age);
+  }, [consent, patientDetails.age]);
 
   const eligibilityValidationError = useMemo(() => {
     return validateRSVEligibilityAssessmentStep(eligibilityAssessment);
   }, [eligibilityAssessment]);
 
   const administrationValidationError = useMemo(() => {
-    return validateRSVAdministrationStep(summary);
-  }, [summary]);
+    return validateRSVAdministrationStep(summary, patientDetails, medicalHistory);
+  }, [summary, patientDetails, medicalHistory]);
 
   const summaryValidationError = useMemo(() => {
     return validateRSVSummaryStep(summary);
@@ -157,7 +160,20 @@ export function RSVClient() {
   const canProceedStep3 = true; // Medical history is always valid
   const canProceedStep4 = contraIndicationsReviewed.confirmedNoAbsoluteContraindications;
   const canProceedStep5 = administrationValidationError === null;
-  const canProceedStep6 = postVaccineAdvice.patientAdvised;
+  const canProceedStep6 =
+    postVaccineAdvice.patientAdvised &&
+    postVaccineAdvice.counselledReactions &&
+    postVaccineAdvice.followUpAdviceGiven &&
+    postVaccineAdvice.pilSupplied;
+  const postVaccineValidationError = !postVaccineAdvice.counselledReactions
+    ? 'Confirm the patient was advised on possible side effects and when to seek medical attention'
+    : !postVaccineAdvice.followUpAdviceGiven
+      ? 'Confirm the follow-up advice was given'
+      : !postVaccineAdvice.pilSupplied
+        ? 'Confirm the patient information leaflet was supplied'
+        : !postVaccineAdvice.patientAdvised
+          ? 'Patient must be advised'
+          : null;
   const canProceedStep7 = summaryValidationError === null;
 
   const canProceedByStep = [
@@ -225,14 +241,8 @@ export function RSVClient() {
     setCompletedSteps(new Set());
     setPatientDetails(initialRSVPatientDetails);
     setConsent(initialRSVConsent);
-    setEligibilityAssessment({ confirmEligible: false, riskFactorsReviewed: false });
-    setMedicalHistory({
-      anaphylaxisToVaccine: false,
-      anaphylaxisToVaccineComponent: false,
-      severeFebrilleIllness: false,
-      immunosuppressed: false,
-      bleedingDisorder: false,
-    });
+    setEligibilityAssessment({ confirmEligible: false, riskFactorsReviewed: false, nhsStatus: '' });
+    setMedicalHistory(initialRSVMedicalHistory);
     setContraIndicationsReviewed({ confirmedNoAbsoluteContraindications: false });
     setSummary(initialRSVSummary());
     setPostVaccineAdvice({
@@ -240,6 +250,8 @@ export function RSVClient() {
       counselledReactions: false,
       counselledNoBooster: false,
       counselledSeason: false,
+      followUpAdviceGiven: false,
+      pilSupplied: false,
     });
     setShowSummaryReport(false);
   }, []);
@@ -254,6 +266,7 @@ export function RSVClient() {
           medicalHistory={medicalHistory}
           clinicalAlerts={clinicalAlerts}
           postVaccineAdvice={postVaccineAdvice}
+          nhsStatus={eligibilityAssessment.nhsStatus}
           onBack={() => setShowSummaryReport(false)}
         />
       </div>
@@ -317,7 +330,7 @@ export function RSVClient() {
               }
               options={[
                 { value: 'adult-60-plus', label: 'Adult aged 60 years or older' },
-                { value: 'pregnant-woman', label: 'Pregnant woman (32-36 weeks gestation)' },
+                { value: 'pregnant-woman', label: 'Pregnant woman (28 to 36 weeks of gestation, Abrysvo only)' },
               ]}
               required
             />
@@ -329,8 +342,9 @@ export function RSVClient() {
                 onChange={(v) => handlePatientDetailsChange('pregnancyWeeks', v)}
                 min={0}
                 max={42}
-                placeholder="e.g., 34"
-                unit="weeks"
+                placeholder="e.g., 30"
+                unit="weeks (PGD inclusion 28 to 36; after 36 refer to the maternity service)"
+                required
               />
             )}
 
@@ -378,18 +392,70 @@ export function RSVClient() {
             consent={consent}
             onChange={(field, value) => setConsent({ ...consent, [field]: value })}
           />
+
+          {patientDetails.age !== null && patientDetails.age < 16 && (
+            <div className="mt-4 p-4 bg-blue-50 border border-blue-300 rounded-lg space-y-3">
+              <p className="text-sm font-semibold text-blue-900">
+                Patient is under 16: record the basis of consent
+              </p>
+              <p className="text-xs text-blue-900">
+                Valid consent must come from a person with parental responsibility, or from the young person where you assess them as Gillick competent. A parent accompanying a child does not automatically hold parental responsibility: ask.
+              </p>
+              <SelectInput
+                label="Consent given by"
+                value={consent.consentBasis}
+                onChange={(v) =>
+                  setConsent({ ...consent, consentBasis: v as RSVConsent['consentBasis'] })
+                }
+                options={[
+                  { value: 'parental', label: 'A person with parental responsibility' },
+                  { value: 'gillick', label: 'The young person, assessed as Gillick competent' },
+                ]}
+                required
+              />
+              {consent.consentBasis === 'parental' && (
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <TextInput
+                    label="Name of person with parental responsibility"
+                    value={consent.parentName}
+                    onChange={(v) => setConsent({ ...consent, parentName: v })}
+                    placeholder="Full name"
+                    required
+                  />
+                  <TextInput
+                    label="Relationship to the patient"
+                    value={consent.parentRelationship}
+                    onChange={(v) => setConsent({ ...consent, parentRelationship: v })}
+                    placeholder="Mother, father, guardian"
+                    required
+                  />
+                </div>
+              )}
+              {consent.consentBasis === 'gillick' && (
+                <TextArea
+                  label="Basis of the Gillick competence assessment"
+                  value={consent.gillickBasis}
+                  onChange={(v) => setConsent({ ...consent, gillickBasis: v })}
+                  placeholder="What the young person understood about the vaccine, its benefits and risks, and the decision being made."
+                  rows={3}
+                  required
+                />
+              )}
+            </div>
+          )}
+
           <div className="mt-6 space-y-3 border-t pt-6">
             <Checkbox
               label="Patient understands vaccine protects against severe RSV disease"
               checked={consent.understandsVaccineProtection}
               onChange={(v) => setConsent({ ...consent, understandsVaccineProtection: v })}
-              description="Explain protection against respiratory syncytial virus infection"
+              description="Explain protection against lower respiratory tract disease caused by RSV. No vaccination is 100% effective."
             />
             <Checkbox
-              label="Patient understands no booster is currently recommended"
+              label="Patient understands this is a one-time vaccination"
               checked={consent.understandsNoBooster}
               onChange={(v) => setConsent({ ...consent, understandsNoBooster: v })}
-              description="Single dose provides protection; booster schedule not yet established"
+              description="Single 0.5 mL dose; one-time vaccination per current guidance"
             />
             <Checkbox
               label="Patient is aware of possible adverse events"
@@ -429,7 +495,7 @@ export function RSVClient() {
                     Adult RSV Vaccination ({patientDetails.age} years old)
                   </p>
                   <ul className="text-xs text-blue-800 mt-2 space-y-1 list-disc list-inside">
-                    <li>Recommended for all adults 60+</li>
+                    <li>PGD inclusion: adults aged 60 years and over (Abrysvo or Arexvy)</li>
                     <li>
                       {patientDetails.atIncreasedrisk
                         ? 'At increased risk of severe RSV disease'
@@ -449,18 +515,30 @@ export function RSVClient() {
                     Maternal RSV Vaccination ({patientDetails.pregnancyWeeks} weeks gestation)
                   </p>
                   <ul className="text-xs text-blue-800 mt-2 space-y-1 list-disc list-inside">
-                    <li>Approved for 32-36 weeks gestation</li>
-                    <li>Use Abrysvo (Pfizer) only</li>
-                    <li>Protects newborn for ~6 months through maternal antibodies</li>
-                    <li>
-                      {rsvSeasonStatus
-                        ? 'Currently in RSV season (Sep-Jan)'
-                        : 'Currently outside RSV season (Feb-Aug)'}
-                    </li>
+                    <li>PGD inclusion: 28 to 36 weeks of gestation, in every pregnancy, all year round</li>
+                    <li>Use Abrysvo only; Arexvy must not be given in pregnancy</li>
+                    <li>Protects the infant for the first months of life via placental antibody transfer</li>
+                    <li>After 36 weeks refer to the maternity service (vaccination up to delivery is still recommended)</li>
                   </ul>
                 </>
               )}
             </div>
+
+            <SelectInput
+              label="NHS eligibility (PGD inclusion)"
+              value={eligibilityAssessment.nhsStatus}
+              onChange={(v) =>
+                setEligibilityAssessment({
+                  ...eligibilityAssessment,
+                  nhsStatus: v as '' | 'not-eligible' | 'eligible-prefers-private',
+                })
+              }
+              options={[
+                { value: 'not-eligible', label: 'Requires immunisation but does not qualify for a free NHS vaccination' },
+                { value: 'eligible-prefers-private', label: 'Qualifies for a free NHS vaccination but prefers to have the vaccine privately' },
+              ]}
+              required
+            />
 
             <Checkbox
               label="Patient meets eligibility criteria for RSV vaccination"
@@ -468,7 +546,7 @@ export function RSVClient() {
               onChange={(v) =>
                 setEligibilityAssessment({ ...eligibilityAssessment, confirmEligible: v })
               }
-              description="Confirm patient is eligible based on age/pregnancy status and other factors"
+              description="Confirm patient is eligible based on age or gestation and other factors"
             />
 
             <Checkbox
@@ -480,7 +558,7 @@ export function RSVClient() {
               description="For adults 60+, assess any additional risk factors for severe RSV disease"
             />
 
-            {rsvSeasonStatus && (
+            {patientDetails.patientCategory === 'adult-60-plus' && rsvSeasonStatus && (
               <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                 <p className="text-xs text-green-800">
                   <strong>RSV season active (Sep-Jan):</strong> Timing is optimal for vaccination.
@@ -488,11 +566,10 @@ export function RSVClient() {
               </div>
             )}
 
-            {!rsvSeasonStatus && (
+            {patientDetails.patientCategory === 'adult-60-plus' && !rsvSeasonStatus && (
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
                 <p className="text-xs text-amber-800">
-                  <strong>Outside RSV season (Feb-Aug):</strong> Vaccination may be less timely but can still be given
-                  for at-risk individuals.
+                  <strong>Outside RSV season (Feb-Aug):</strong> Timing note only; the PGD permits vaccination of adults 60 and over all year.
                 </p>
               </div>
             )}
@@ -513,17 +590,28 @@ export function RSVClient() {
           validationError={null}
         >
           <div className="space-y-4">
+            <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Exclusion criteria (PGD v005)</p>
+
             <Checkbox
-              label="Anaphylaxis to previous RSV vaccine"
+              label="Already received a complete dose of an RSV vaccine"
+              checked={medicalHistory.previousRSVVaccine}
+              onChange={(v) =>
+                setMedicalHistory({ ...medicalHistory, previousRSVVaccine: v })
+              }
+              description="Excluded: one-time vaccination per current guidance"
+            />
+
+            <Checkbox
+              label="Severe allergic reaction to a previous RSV vaccine"
               checked={medicalHistory.anaphylaxisToVaccine}
               onChange={(v) =>
                 setMedicalHistory({ ...medicalHistory, anaphylaxisToVaccine: v })
               }
-              description="Absolute contraindication — do not proceed"
+              description="Excluded: do not proceed"
             />
 
             <Checkbox
-              label="Anaphylaxis to vaccine component"
+              label="Previous severe allergic reaction to any component of the RSV vaccine"
               checked={medicalHistory.anaphylaxisToVaccineComponent}
               onChange={(v) =>
                 setMedicalHistory({
@@ -531,35 +619,59 @@ export function RSVClient() {
                   anaphylaxisToVaccineComponent: v,
                 })
               }
-              description="Absolute contraindication — do not proceed"
+              description="Excluded: do not proceed"
             />
 
             <Checkbox
-              label="Severe acute febrile illness"
+              label="Acute febrile illness"
               checked={medicalHistory.severeFebrilleIllness}
               onChange={(v) =>
                 setMedicalHistory({ ...medicalHistory, severeFebrilleIllness: v })
               }
-              description="Defer vaccination until patient has recovered"
+              description="Postpone vaccination until recovered. Minor illness without fever is not a contraindication."
             />
 
+            {patientDetails.patientCategory === 'adult-60-plus' && (
+              <Checkbox
+                label="Pregnant or breastfeeding"
+                checked={medicalHistory.pregnantOrBreastfeeding}
+                onChange={(v) =>
+                  setMedicalHistory({ ...medicalHistory, pregnantOrBreastfeeding: v })
+                }
+                description="Arexvy must not be given to those who are pregnant or breastfeeding; Abrysvo only"
+              />
+            )}
+
+            <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide pt-2">Cautions (PGD v005)</p>
+
             <Checkbox
-              label="Patient is immunosuppressed"
+              label="Patient is immunocompromised"
               checked={medicalHistory.immunosuppressed}
               onChange={(v) =>
                 setMedicalHistory({ ...medicalHistory, immunosuppressed: v })
               }
-              description="Vaccine response may be reduced but can still be given"
+              description="Advise that they may have a reduced response to the vaccine; it can still be given"
             />
 
             <Checkbox
-              label="Bleeding disorder or on anticoagulant therapy"
+              label="Coagulation disorder (including anticoagulant therapy)"
               checked={medicalHistory.bleedingDisorder}
               onChange={(v) =>
                 setMedicalHistory({ ...medicalHistory, bleedingDisorder: v })
               }
-              description="Requires subcutaneous injection instead of IM"
+              description="Increased bleeding risk after IM injection: fine needle (23 or 25 gauge), firm pressure without rubbing for at least 2 minutes, warn about haematoma. Do NOT give subcutaneously."
             />
+
+            {patientDetails.patientCategory === 'adult-60-plus' && (
+              <Checkbox
+                label="Influenza vaccine given at this appointment or on the same day"
+                checked={medicalHistory.fluVaccineSameDay}
+                onChange={(v) =>
+                  setMedicalHistory({ ...medicalHistory, fluVaccineSameDay: v })
+                }
+                description="Abrysvo is not routinely scheduled on the same day as influenza vaccine in older adults (reduced response to both). Give together only if the patient is unlikely to return or immediate protection is necessary. Arexvy may be co-administered at a different site."
+              />
+            )}
           </div>
         </StepWrapper>
       )}
@@ -654,15 +766,15 @@ export function RSVClient() {
               onChange={(v) =>
                 setSummary({
                   ...summary,
-                  vaccineType: v as 'abrysvo' | 'mresvia' | '',
+                  vaccineType: v as 'abrysvo' | 'arexvy' | '',
                 })
               }
               options={
                 patientDetails.patientCategory === 'pregnant-woman'
-                  ? [{ value: 'abrysvo', label: 'Abrysvo (Pfizer) — for maternal use' }]
+                  ? [{ value: 'abrysvo', label: 'Abrysvo (Pfizer), 0.5 mL IM: maternal use' }]
                   : [
-                      { value: 'abrysvo', label: 'Abrysvo (Pfizer)' },
-                      { value: 'mresvia', label: 'mRESVIA (Moderna)' },
+                      { value: 'abrysvo', label: 'Abrysvo (Pfizer), 0.5 mL IM' },
+                      { value: 'arexvy', label: 'Arexvy (GSK), 0.5 mL IM: 60 years and over only' },
                     ]
               }
               required
@@ -709,8 +821,8 @@ export function RSVClient() {
                 })
               }
               options={[
-                { value: 'left-deltoid', label: 'Left deltoid (IM preferred)' },
-                { value: 'right-deltoid', label: 'Right deltoid (IM preferred)' },
+                { value: 'left-deltoid', label: 'Left deltoid, intramuscular' },
+                { value: 'right-deltoid', label: 'Right deltoid, intramuscular' },
               ]}
               required
             />
@@ -740,54 +852,76 @@ export function RSVClient() {
           onNext={handleNext}
           onPrev={handlePrev}
           canProceed={canProceedStep6}
-          validationError={!postVaccineAdvice.patientAdvised ? 'Patient must be advised' : null}
+          validationError={postVaccineValidationError}
         >
           <div className="space-y-4">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm font-semibold text-blue-900">Common side effects to advise patient about:</p>
+              <p className="text-sm font-semibold text-blue-900">Possible side effects to advise the patient about (PGD v005):</p>
               <ul className="text-xs text-blue-800 mt-2 space-y-1 list-disc list-inside">
-                <li>Injection site pain, redness, or swelling</li>
-                <li>Fatigue or general malaise</li>
-                <li>Headache</li>
-                <li>Myalgia (muscle aches)</li>
-                <li>Arthralgia (joint aches)</li>
-                <li>Mild fever</li>
+                <li>Pain at the injection site</li>
+                <li>Fatigue, headache</li>
+                <li>Muscle ache (myalgia), joint ache (arthralgia, Arexvy)</li>
+                <li>Fever (Abrysvo)</li>
+                <li>Rare: hypersensitivity or allergic reactions</li>
+                <li>Guillain-Barre syndrome has been reported rarely; seek urgent medical attention for new weakness, numbness or tingling</li>
+                <li>Fainting can occur following, or even before, any vaccination</li>
               </ul>
             </div>
 
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-              <p className="text-sm font-semibold text-amber-900">Important information to share:</p>
+              <p className="text-sm font-semibold text-amber-900">Follow-up advice (PGD v005):</p>
               <ul className="text-xs text-amber-800 mt-2 space-y-1 list-disc list-inside">
-                <li>Most reactions are mild and resolve within 24-48 hours</li>
-                <li>No booster is currently recommended</li>
+                <li>Seek medical advice if symptoms worsen rapidly or significantly, do not improve in 3 to 4 weeks, or they become systemically very unwell</li>
+                <li>No vaccination is 100% effective</li>
+                <li>The inactivated vaccine cannot cause RSV infection</li>
+                <li>The vaccine will not protect against influenza, COVID-19 or other respiratory viruses in circulation, especially during the winter season</li>
+                <li>Immunosuppressed individuals may not have a full immune response to the vaccine</li>
+                <li>One-time vaccination per current guidance</li>
                 {patientDetails.patientCategory === 'pregnant-woman' && (
                   <>
-                    <li>Vaccine protects newborn for approximately 6 months of life</li>
-                    <li>Protection transferred via maternal antibodies (passive immunity)</li>
-                    <li>Newborn should be monitored for RSV infection during season</li>
+                    <li>Protects the infant for the first months of life via maternal antibodies</li>
+                    <li>Babies born to women who have had Abrysvo can be safely breastfed</li>
                   </>
                 )}
                 <li>Paracetamol or ibuprofen can be taken for fever or myalgia</li>
-                <li>Seek GP advice if severe reaction develops</li>
               </ul>
             </div>
 
             <Checkbox
-              label="Patient has been advised of common side effects"
+              label="Patient advised on possible side effects and when to seek medical attention"
               checked={postVaccineAdvice.counselledReactions}
               onChange={(v) =>
                 setPostVaccineAdvice({ ...postVaccineAdvice, counselledReactions: v })
               }
-              description="Confirm patient is aware of expected reactions"
+              description="Required by the PGD cautions row"
+              required
             />
 
             <Checkbox
-              label="Patient understands no booster is currently recommended"
+              label="Follow-up advice given as listed above"
+              checked={postVaccineAdvice.followUpAdviceGiven}
+              onChange={(v) =>
+                setPostVaccineAdvice({ ...postVaccineAdvice, followUpAdviceGiven: v })
+              }
+              required
+            />
+
+            <Checkbox
+              label="Patient information leaflet (PIL) supplied"
+              checked={postVaccineAdvice.pilSupplied}
+              onChange={(v) =>
+                setPostVaccineAdvice({ ...postVaccineAdvice, pilSupplied: v })
+              }
+              required
+            />
+
+            <Checkbox
+              label="Patient understands this is a one-time vaccination"
               checked={postVaccineAdvice.counselledNoBooster}
               onChange={(v) =>
                 setPostVaccineAdvice({ ...postVaccineAdvice, counselledNoBooster: v })
               }
-              description="Single dose provides protection; booster schedule not yet established"
+              description="One-time vaccination per current guidance"
             />
 
             {patientDetails.patientCategory === 'adult-60-plus' && rsvSeasonStatus && (

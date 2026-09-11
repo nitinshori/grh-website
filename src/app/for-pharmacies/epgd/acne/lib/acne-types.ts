@@ -19,18 +19,48 @@ export interface AcneMedicalHistory {
   previousTreatments: string;
   allergies: string;
   sensitiveToRetinoids: boolean;
+  /** History of antibiotic-associated colitis (Duac exclusion). */
+  antibioticAssociatedColitis: boolean;
+  /** History of gastrointestinal disease (Duac caution). */
+  gastrointestinalDisease: boolean;
+  /** Atopic patient (Duac caution). */
+  atopic: boolean;
+  /** Severe scarring, persistent pigmentary change, or persistent psychological
+   *  distress / mental health disorder attributable to acne (consider dermatology referral). */
+  scarringOrDistress: boolean;
 }
 
 export interface AcneContraindications {
   pregnant: boolean;
+  /** Planning pregnancy (adapalene / benzoyl peroxide exclusion). */
+  planningPregnancy: boolean;
   breastfeeding: boolean;
   ageUnder12: boolean;
+  /** Known hypersensitivity to benzoyl peroxide (excludes both arms). */
+  hypersensitivityBenzoylPeroxide: boolean;
+  /** Known hypersensitivity to clindamycin or lincomycin (Duac exclusion). */
+  hypersensitivityClindamycinLincomycin: boolean;
+  /** Known hypersensitivity to adapalene or any excipient (Epiduo exclusion). */
+  hypersensitivityAdapalene: boolean;
+  /** Broken skin at the application site (excludes both arms). */
+  brokenSkinAtSite: boolean;
+  /** Inflamed skin at the application site (Duac exclusion). */
+  inflamedSkinAtSite: boolean;
+  /** Eczema or sunburned skin at the application site (Epiduo exclusion). */
+  eczemaOrSunburnAtSite: boolean;
 }
 
+/** Medicine values: "duac-3" (clindamycin 10mg/g + benzoyl peroxide 30mg/g),
+ *  "duac-5" (clindamycin 10mg/g + benzoyl peroxide 50mg/g),
+ *  "epiduo-0.1" (adapalene 0.1% / benzoyl peroxide 2.5%),
+ *  "epiduo-0.3" (adapalene 0.3% / benzoyl peroxide 2.5%). */
 export interface AcneMedicineSelection {
   medicineChoice: string;
-  inadequateResponse: boolean;
-  addLymecycline: boolean;
+  /** Duac 10mg/g + 50mg/g only: the clinical reason for choosing the higher strength. */
+  strengthRationale: string;
+  /** Repeat course (maximum 12 weeks continuous use; review required for repeat courses). */
+  repeatCourse: boolean;
+  repeatCourseReviewed: boolean;
 }
 
 export interface AcneCounselling {
@@ -39,6 +69,19 @@ export interface AcneCounselling {
   washingAdvice: boolean;
   productAdvice: boolean;
   courseCompletion: boolean;
+  /** Thin layer once daily in the evening to clean, dry skin; wash hands after; avoid eyes, mouth, mucous membranes, broken skin. */
+  applicationAdvice: boolean;
+  /** Irritation, dryness, peeling especially at the start; reduce frequency or interrupt; discontinue if severe. */
+  irritationAdvice: boolean;
+  /** Seek advice if severe skin reaction, or no improvement after the product's review interval. */
+  followUpAdvice: boolean;
+  /** Picking or scratching lesions increases the risk of scarring. */
+  scarringAdvice: boolean;
+  /** Duac: refrigerate before dispensing; once dispensed store below 25 C and use within 2 months. */
+  storageAdvice: boolean;
+  /** Epiduo: bleaching of hair and coloured fabrics; irritant cosmetics additive. */
+  bleachingAdvice: boolean;
+  pilSupplied: boolean;
 }
 
 export interface AcneConsultationSummary extends BaseSummary {
@@ -125,16 +168,28 @@ gpEmail: "",
       previousTreatments: "",
       allergies: "",
       sensitiveToRetinoids: false,
+      antibioticAssociatedColitis: false,
+      gastrointestinalDisease: false,
+      atopic: false,
+      scarringOrDistress: false,
     },
     contraindications: {
       pregnant: false,
+      planningPregnancy: false,
       breastfeeding: false,
       ageUnder12: false,
+      hypersensitivityBenzoylPeroxide: false,
+      hypersensitivityClindamycinLincomycin: false,
+      hypersensitivityAdapalene: false,
+      brokenSkinAtSite: false,
+      inflamedSkinAtSite: false,
+      eczemaOrSunburnAtSite: false,
     },
     medicineSelection: {
       medicineChoice: "",
-      inadequateResponse: false,
-      addLymecycline: false,
+      strengthRationale: "",
+      repeatCourse: false,
+      repeatCourseReviewed: false,
     },
     counselling: {
       improvementTimeline: false,
@@ -142,6 +197,13 @@ gpEmail: "",
       washingAdvice: false,
       productAdvice: false,
       courseCompletion: false,
+      applicationAdvice: false,
+      irritationAdvice: false,
+      followUpAdvice: false,
+      scarringAdvice: false,
+      storageAdvice: false,
+      bleachingAdvice: false,
+      pilSupplied: false,
     },
     summary: {
       pharmacistName: "",

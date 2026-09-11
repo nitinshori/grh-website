@@ -7,7 +7,18 @@ import type { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/
 export interface ECPatientDetails extends BasePatientDetails {
   femaleConfirmed: boolean; // must confirm female
   fraserCompetent?: boolean; // required for ages 13-15
+  // PGD v003 (11 September 2026) safeguarding: under 13 supply may still be
+  // appropriate but a safeguarding referral is mandatory; 13 to 15 record
+  // Fraser competence, coercion, partner age and any safeguarding concern.
+  safeguardingReferralMade: boolean;
+  coercionAsked: boolean;
+  partnerAge: string;
+  safeguardingConcern: boolean;
+  safeguardingNotes: string;
 }
+
+export const PGD_VERSION_LABEL =
+  "Emergency Contraception PGD (levonorgestrel 1.5 mg, Levonelle / ulipristal acetate 30 mg, ellaOne), version 003, issued 11 September 2026";
 
 // ─── Clinical Assessment ───
 
@@ -31,31 +42,42 @@ export interface ECClinicalAssessment {
 
 export interface ECMedicalHistory {
   severeHepatic: boolean; // contraindication for both medicines
-  severeAsthma: boolean; // contraindication for ulipristal
+  severeAsthma: boolean; // severe asthma insufficiently controlled by oral glucocorticoids: ulipristal exclusion
   crohnsDisease: boolean; // caution - reduced efficacy
-  breastfeeding: boolean; // caution - requires expression/discard
+  breastfeeding: boolean; // caution - avoid breastfeeding 8 hours (LNG) or 7 days (UPA)
   previousEctopic: boolean; // history of ectopic pregnancy
-  porphyria: boolean; // contraindication
-  currentlyPregnant: boolean; // HARD STOP
+  porphyria: boolean; // acute intermittent porphyria: levonorgestrel exclusion
+  currentlyPregnant: boolean; // known or suspected pregnancy: HARD STOP
   pregnancyTestResult: "positive" | "negative" | "not-done" | "";
+  lngHypersensitivity: boolean; // levonorgestrel or any component: LNG exclusion
+  upaHypersensitivity: boolean; // ulipristal acetate or any component: UPA exclusion
+  galactoseIntolerance: boolean; // hereditary galactose intolerance: exclusion, both arms
+  weightKg: number | null;
+  heightCm: number | null;
 }
 
 // ─── Current Medications & Interactions ───
 
 export interface ECMedications {
-  takesEnzymeInducers: boolean; // carbamazepine, phenytoin, etc.
+  takesEnzymeInducers: boolean; // enzyme-inducing drugs in the last 4 weeks (anticonvulsants, rifampicin, antiretrovirals, St John's Wort)
   enzymeInducerDetails: string; // which enzyme inducer
-  takesUPA: boolean; // already taken ulipristal (EllaOne) this cycle
+  takesUPA: boolean; // already taken ulipristal (ellaOne) this cycle
   currentHormonalContraception: boolean; // combined or POP
   hormonalContraceptionType: string; // pill name/type
+  progestogenLast7Days: boolean; // progestogen-containing contraceptive taken in the previous 7 days: ulipristal caution
 }
 
 // ─── Medicine Selection ───
 
+export type ECDoubleDoseReason = "" | "enzyme-inducers" | "weight-bmi";
+
 export interface ECMedicineSelection {
   medicine: "levonorgestrel" | "ulipristal" | ""; // selected EC medicine
-  dose: string; // "1.5mg" for LNG, "30mg" for UPA
-  doubleDosingRequired: boolean; // 3mg LNG for enzyme inducers
+  dose: string; // "1.5mg" or "3mg" for LNG, "30mg" for UPA
+  doubleDosingRequired: boolean; // 3mg LNG
+  doubleDoseReason: ECDoubleDoseReason; // PGD: record the reason for a 3 mg dose
+  offLabelExplained: boolean; // weight or BMI based 3 mg is off-label per FSRH: explain and record
+  copperIudOffered: boolean; // enzyme inducers: offer a copper IUD first; LNG 3 mg if declined
   pharmacistOverride: boolean; // override auto-recommendation
   overrideReason: string;
 }
@@ -161,6 +183,11 @@ export function createInitialConsultationState(): ECConsultationState {
       dateOfBirth: "",
       age: null,
       femaleConfirmed: false,
+      safeguardingReferralMade: false,
+      coercionAsked: false,
+      partnerAge: "",
+      safeguardingConcern: false,
+      safeguardingNotes: "",
       gpName: "",
       gpPractice: "",
       gpAddress: "",
@@ -202,6 +229,11 @@ gpEmail: "",
       porphyria: false,
       currentlyPregnant: false,
       pregnancyTestResult: "",
+      lngHypersensitivity: false,
+      upaHypersensitivity: false,
+      galactoseIntolerance: false,
+      weightKg: null,
+      heightCm: null,
     },
     medications: {
       takesEnzymeInducers: false,
@@ -209,11 +241,15 @@ gpEmail: "",
       takesUPA: false,
       currentHormonalContraception: false,
       hormonalContraceptionType: "",
+      progestogenLast7Days: false,
     },
     medicineSelection: {
       medicine: "",
       dose: "",
       doubleDosingRequired: false,
+      doubleDoseReason: "",
+      offLabelExplained: false,
+      copperIudOffered: false,
       pharmacistOverride: false,
       overrideReason: "",
     },

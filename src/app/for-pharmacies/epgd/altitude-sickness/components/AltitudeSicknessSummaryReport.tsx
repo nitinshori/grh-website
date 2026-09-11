@@ -2,6 +2,7 @@
 
 import React from 'react';
 import type { ASConsultationState } from '../altitude-sickness-types';
+import { AS_PGD_VERSION } from '../altitude-sickness-clinical-logic';
 import {
   SectionHeader,
   Row,
@@ -36,8 +37,9 @@ export const AltitudeSicknessSummaryReport: React.FC<
             Altitude Sickness ePGD Consultation
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Acute Mountain Sickness Prevention Consultation Record
+            Acute Mountain Sickness Consultation Record
           </p>
+          <p className="text-xs text-gray-500 mt-1">{AS_PGD_VERSION}</p>
         </div>
         <div className="text-right text-sm text-gray-600">
           <p className="font-medium">{summary.consultationDate}</p>
@@ -60,6 +62,7 @@ export const AltitudeSicknessSummaryReport: React.FC<
         <Row label="Destination" value={travelAssessment.destinationCountry} />
         <Row label="Destination Altitude" value={`${travelAssessment.destinationAltitude}m`} />
         <Row label="Current Altitude" value={travelAssessment.currentAltitude ? `${travelAssessment.currentAltitude}m` : 'Not specified'} />
+        <Row label="Reason for request" value={travelAssessment.purpose === 'treatment' ? 'Symptomatic treatment of AMS' : travelAssessment.purpose === 'prevention' ? 'Prevention of AMS' : 'Not specified'} />
         <Row label="Departure" value={new Date(travelAssessment.departureDate).toLocaleDateString('en-GB')} />
         <Row label="Ascent Rate" value={travelAssessment.ascentRate} />
         <Row label="Acclimatisation Plan" value={travelAssessment.acclimatisationPlan ? `Yes (${travelAssessment.acclimatisationDays} days)` : 'No'} />
@@ -81,10 +84,14 @@ export const AltitudeSicknessSummaryReport: React.FC<
       {/* Medicine Selection */}
       <SectionHeader>Medicine Prescribed</SectionHeader>
       <div className="grid grid-cols-2 gap-4 mb-6">
-        <Row label="Medicine" value={medicineSelection.selectedMedicine || 'None'} />
+        <Row label="Medicine" value={medicineSelection.selectedMedicine ? 'Acetazolamide 250 mg tablets (scored)' : 'None'} />
+        <Row label="Brand" value={medicineSelection.brand || 'Not recorded'} />
         <Row label="Dose" value={medicineSelection.dose} />
         <Row label="Start Timing" value={medicineSelection.startTiming} />
         <Row label="Continue Until" value={medicineSelection.continuationTiming} />
+        <Row label="Treatment course added" value={medicineSelection.includeTreatmentCourse ? 'Yes (6 tablets, 250 mg twice daily for 3 days)' : 'No'} />
+        <Row label="Quantity supplied" value={medicineSelection.quantityTablets !== null ? `${medicineSelection.quantityTablets} tablets` : 'Not recorded'} />
+        <Row label="Off-label use explained" value={medicineSelection.offLabelExplained ? 'Yes, recorded' : 'No'} />
         <Row label="Clinical Reason" value={medicineSelection.reason} />
       </div>
 
@@ -92,15 +99,15 @@ export const AltitudeSicknessSummaryReport: React.FC<
       <SectionHeader>Counselling Provided</SectionHeader>
       <CounsellingGrid
         items={[
-          ['Paraesthesia (tingling) is common and harmless', counselling.paraesthesiaExplained],
+          ['Side effects explained; discontinue if severe', counselling.paraesthesiaExplained],
           ['Avoid alcohol at altitude', counselling.avoidAlcoholAdvice],
-          ['Hydrate well (2.5–3L/day)', counselling.hydrateWellAdvice],
-          ['Ascend gradually / allow acclimatisation', counselling.ascentAdvice],
+          ['Maintain adequate hydration', counselling.hydrateWellAdvice],
+          ['Ascend gradually; do not ascend further while symptomatic', counselling.ascentAdvice],
           ['AMS symptoms and recognition', counselling.amsSymptomAdvice],
-          ['HACE (cerebral edema) warning signs', counselling.haceSymptomAdvice],
-          ['HAPE (pulmonary edema) warning signs', counselling.hapeSymptomAdvice],
-          ['Descent immediately if severe symptoms', counselling.descentAdvice],
-          ['Medicine card / information provided', counselling.medicineCardProvided],
+          ['HACE warning signs (confusion, unsteadiness, severe headache, reduced consciousness)', counselling.haceSymptomAdvice],
+          ['HAPE warning signs (breathlessness at rest, cough with frothy sputum)', counselling.hapeSymptomAdvice],
+          ['Descend and seek help urgently if not improving in 24 hours; acetazolamide is not a substitute for descent', counselling.descentAdvice],
+          ['Patient information leaflet supplied', counselling.medicineCardProvided],
         ]}
       />
 

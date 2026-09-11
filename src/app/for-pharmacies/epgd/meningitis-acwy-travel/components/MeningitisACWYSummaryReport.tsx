@@ -14,26 +14,33 @@ import type {
   MeningitisACWYPatientDetails,
   MeningitisACWYConsent,
   MeningitisACWYSummary,
+  MeningitisACWYMedicalHistory,
+  MeningitisACWYPostVaccineAdvice,
 } from '../meningitis-acwy-travel-types';
+
+const SITE_LABELS: Record<string, string> = {
+  'left-deltoid': 'Left deltoid',
+  'right-deltoid': 'Right deltoid',
+  'left-thigh': 'Left anterolateral thigh',
+  'right-thigh': 'Right anterolateral thigh',
+};
+
+const DOSE_NUMBER_LABELS: Record<string, string> = {
+  single: 'Single dose',
+  '1st': '1st dose of two (infant course)',
+  '2nd': '2nd dose of two (infant course)',
+  'booster-12-months': 'Booster at 12 months of age',
+  'repeat-certificate': 'Repeat for certificate (previous dose more than 5 years ago)',
+};
 
 interface MeningitisACWYSummaryReportProps {
   patientDetails: MeningitisACWYPatientDetails;
   consent: MeningitisACWYConsent;
   summary: MeningitisACWYSummary;
-  medicalHistory: {
-    anaphylaxisToVaccine: boolean;
-    anaphylaxisToVaccineComponent: boolean;
-    severeFebrilleIllness: boolean;
-    bleedingDisorder: boolean;
-    immunosuppressed: boolean;
-  };
+  medicalHistory: MeningitisACWYMedicalHistory;
   clinicalAlerts: ClinicalAlert[];
-  postVaccineAdvice: {
-    patientAdvised: boolean;
-    counselledReactions: boolean;
-    counselledValidity: boolean;
-    counselledCertificate: boolean;
-  };
+  postVaccineAdvice: MeningitisACWYPostVaccineAdvice;
+  pgdVersion?: string;
   onBack: () => void;
 }
 
@@ -44,14 +51,16 @@ export default function MeningitisACWYSummaryReport({
   medicalHistory,
   clinicalAlerts,
   postVaccineAdvice,
+  pgdVersion,
   onBack,
 }: MeningitisACWYSummaryReportProps) {
+  const underSixteen = patientDetails.age !== null && patientDetails.age < 16;
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
       {/* Header with print styles */}
       <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50 print:bg-white print:border-0 print:pb-4">
         <h2 className="text-lg font-bold text-navy-900">Consultation Summary Report</h2>
-        <p className="text-sm text-gray-500 mt-1">Meningitis ACWY Travel ePGD</p>
+        <p className="text-sm text-gray-500 mt-1">Meningitis ACWY Travel ePGD{pgdVersion ? `, ${pgdVersion}` : ''}</p>
       </div>
 
       {/* Report content */}
@@ -66,6 +75,16 @@ export default function MeningitisACWYSummaryReport({
             <Row label="NHS Number" value={patientDetails.nhsNumber || 'Not provided'} />
             <Row label="GP Name" value={patientDetails.gpName || 'Not provided'} />
             <Row label="GP Practice" value={patientDetails.gpPractice || 'Not provided'} />
+            {underSixteen && (
+              <Row
+                label="Under 16 consent basis"
+                value={
+                  consent.consentBasis === 'gillick'
+                    ? `Gillick competent: ${consent.consentGiverDetails}`
+                    : `Parental responsibility: ${consent.consentGiverDetails}`
+                }
+              />
+            )}
           </div>
         </div>
 
@@ -85,6 +104,9 @@ export default function MeningitisACWYSummaryReport({
                   : 'No'
               }
             />
+            {patientDetails.repeatDoseReason && (
+              <Row label="Reason for repeat dose" value={patientDetails.repeatDoseReason} />
+            )}
           </div>
         </div>
 
@@ -93,11 +115,15 @@ export default function MeningitisACWYSummaryReport({
           <SectionHeader>Medical History & Risk Factors</SectionHeader>
           <CounsellingGrid
             items={[
-              ['Anaphylaxis to previous MenACWY', medicalHistory.anaphylaxisToVaccine],
-              ['Anaphylaxis to vaccine component', medicalHistory.anaphylaxisToVaccineComponent],
-              ['Severe acute febrile illness', medicalHistory.severeFebrilleIllness],
-              ['Bleeding disorder', medicalHistory.bleedingDisorder],
+              ['Anaphylaxis to previous dose of the same vaccine', medicalHistory.anaphylaxisToVaccine],
+              ['Anaphylaxis to excipient or manufacturing residue', medicalHistory.anaphylaxisToVaccineComponent],
+              ['Hypersensitivity to diphtheria toxoid or CRM197 (Menveo excluded)', medicalHistory.diphtheriaToxoidHypersensitivity],
+              ['Acute severe febrile illness', medicalHistory.severeFebrilleIllness],
+              ['Outbreak or contact management', medicalHistory.outbreakOrContact],
+              ['Pregnant', medicalHistory.pregnant],
+              ['Bleeding disorder or anticoagulation', medicalHistory.bleedingDisorder],
               ['Immunosuppressed', medicalHistory.immunosuppressed],
+              ['Asplenia, complement deficiency or complement inhibitor', medicalHistory.nhsEligibleRiskGroup],
             ]}
           />
         </div>
@@ -115,15 +141,16 @@ export default function MeningitisACWYSummaryReport({
             <Row label="Vaccine type" value={summary.vaccineType === 'nimenrix' ? 'Nimenrix' : summary.vaccineType === 'menquadfi' ? 'MenQuadfi' : 'Menveo'} />
             <Row label="Batch number" value={summary.batchNumber} />
             <Row label="Expiry date" value={summary.expiryDate} />
+            <Row label="Dose and route" value="0.5 mL intramuscular" />
             <Row
               label="Administration site"
-              value={
-                summary.administrationSite === 'left-deltoid'
-                  ? 'Left deltoid'
-                  : 'Right deltoid'
-              }
+              value={SITE_LABELS[summary.administrationSite] ?? summary.administrationSite}
             />
+            <Row label="Dose number" value={DOSE_NUMBER_LABELS[summary.doseNumber] ?? summary.doseNumber} />
+            {summary.nextDueDate && <Row label="Next dose due" value={summary.nextDueDate} />}
             <Row label="Administration time" value={summary.administrationTime} />
+            <Row label="15 minute observation completed" value={postVaccineAdvice.observationCompleted ? 'Yes' : 'No'} />
+            <Row label="Administered under PGD" value={pgdVersion ? `Yes, ${pgdVersion}` : 'Yes'} />
           </div>
         </div>
 
@@ -135,11 +162,16 @@ export default function MeningitisACWYSummaryReport({
               ['Informed consent obtained', consent.informedConsentGiven],
               ['ID verified', consent.idVerified],
               ['Patient aware of private service', consent.patientAwarePrivateService],
-              ['Understands 5-year validity', consent.understands5YearValidity],
-              ['Understands ≥10 days before travel timing', consent.understandsTimingRequirement],
+              ['Understands conjugate certificate accepted for 5 years', consent.understands5YearValidity],
+              ['Understands at least 10 days before arrival timing', consent.understandsTimingRequirement],
               ['Aware of certificate requirement', consent.certificateRequirement],
+              ['Patient information leaflet supplied', postVaccineAdvice.leafletGiven],
               ['Advised of common reactions', postVaccineAdvice.counselledReactions],
               ['Understands vaccine validity period', postVaccineAdvice.counselledValidity],
+              ['Certificate states conjugate vaccine; 10 days before arrival', postVaccineAdvice.counselledConjugateCertificate],
+              ['Told vaccine does not protect against group B', postVaccineAdvice.counselledNotMenB],
+              ['Meningitis and septicaemia signs counselled', postVaccineAdvice.counselledMeningitisSigns],
+              ['Next dose booked (where a course is involved)', postVaccineAdvice.nextDoseBooked],
               ['Advised to report serious adverse events', postVaccineAdvice.counselledCertificate],
             ]}
           />

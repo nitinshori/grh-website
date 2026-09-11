@@ -16,17 +16,43 @@ export interface PEClinicalAssessment {
 }
 
 export interface PEMedicalHistory {
-  cardiacDisorder: boolean; // NYHA II-IV, significant valvular disease
+  cardiacDisorder: boolean; // NYHA II-IV heart failure, significant valvular disease
   cardiacDisorderDetail: string;
+  /** PGD v003 exclusions: conduction abnormality or QT-prolonging condition; history of IHD. */
+  conductionOrQT: boolean;
+  ischaemicHeartDisease: boolean;
+  /** History of syncope or orthostatic hypotension (exclusion). */
   syncope: boolean;
+  /** Moderate or severe hepatic impairment, Child-Pugh B or C (exclusion). */
   severeHepaticImpairment: boolean;
+  /** Mild hepatic impairment, Child-Pugh A (caution). */
+  mildHepaticImpairment: boolean;
+  /** Moderate or severe renal impairment (exclusion). */
+  renalImpairment: boolean;
+  /** History of bipolar disorder or mania (exclusion). */
+  bipolarOrMania: boolean;
   uncontrolledEpilepsy: boolean;
+  // Cautions (PGD v003)
+  seizureHistory: boolean;
+  bleedingDisorderOrAnticoagulant: boolean;
+  orthostaticRiskFactors: boolean;
+  cyp2d6PoorMetaboliser: boolean;
+  hyponatraemiaRisk: boolean;
   otherConditions: string;
 }
 
 export interface PECurrentMedications {
-  maoisOrSsrisOrSnris: boolean; // Major contraindication
+  /** MAOIs, thioridazine, SSRIs, SNRIs, tricyclics, or any other serotonergic
+   *  medicine (tramadol, triptans, linezolid, lithium, L-tryptophan, St John's
+   *  wort), now or within the last 14 days. Exclusion. */
+  maoisOrSsrisOrSnris: boolean;
   thioridazine: boolean;
+  /** Potent CYP3A4 inhibitor (ketoconazole, ritonavir, etc.): exclusion. */
+  potentCyp3a4Inhibitor: boolean;
+  /** Moderate CYP3A4 inhibitor: caution. */
+  moderateCyp3a4Inhibitor: boolean;
+  /** PDE5 inhibitor (sildenafil, tadalafil): caution, hypotension risk. */
+  pde5Inhibitor: boolean;
   otherMedications: string;
 }
 
@@ -38,16 +64,27 @@ export interface PEContraindications {
 export interface PEMedicineSupply {
   dapoxetine30mgSupplied: boolean;
   mayIncreaseTo60mg: boolean;
+  /** Strength supplied: 30mg starting dose; 60mg only where 30mg was insufficient and well tolerated. */
+  strengthSupplied: "" | "30mg" | "60mg";
+  /** Up to 6 tablets per supply (PGD v003). */
+  quantity: number | null;
+  brand: string;
   understandsUsage: boolean; // 1-3 hours before, max once per 24h, take with water
   understandsOrthostatic: boolean; // Lying/standing BP done
 }
 
 export interface PECounselling {
   takeWithWater: boolean;
+  maxOnePer24h: boolean;
   avoidAlcohol: boolean;
+  standSlowly: boolean;
+  hydration: boolean;
   noDrive2hrs: boolean;
   avoidGrapefruit: boolean;
   mayHaveSideEffects: boolean;
+  reportChestPainHeadacheFainting: boolean;
+  priapismWarning: boolean;
+  informGp: boolean;
   notForDaily: boolean;
   review4weeks: boolean;
 }
@@ -129,14 +166,27 @@ gpEmail: "",
     medicalHistory: {
       cardiacDisorder: false,
       cardiacDisorderDetail: "",
+      conductionOrQT: false,
+      ischaemicHeartDisease: false,
       syncope: false,
       severeHepaticImpairment: false,
+      mildHepaticImpairment: false,
+      renalImpairment: false,
+      bipolarOrMania: false,
       uncontrolledEpilepsy: false,
+      seizureHistory: false,
+      bleedingDisorderOrAnticoagulant: false,
+      orthostaticRiskFactors: false,
+      cyp2d6PoorMetaboliser: false,
+      hyponatraemiaRisk: false,
       otherConditions: "",
     },
     currentMedications: {
       maoisOrSsrisOrSnris: false,
       thioridazine: false,
+      potentCyp3a4Inhibitor: false,
+      moderateCyp3a4Inhibitor: false,
+      pde5Inhibitor: false,
       otherMedications: "",
     },
     contraindications: {
@@ -146,15 +196,24 @@ gpEmail: "",
     medicineSupply: {
       dapoxetine30mgSupplied: false,
       mayIncreaseTo60mg: false,
+      strengthSupplied: "",
+      quantity: null,
+      brand: "",
       understandsUsage: false,
       understandsOrthostatic: false,
     },
     counselling: {
       takeWithWater: false,
+      maxOnePer24h: false,
       avoidAlcohol: false,
+      standSlowly: false,
+      hydration: false,
       noDrive2hrs: false,
       avoidGrapefruit: false,
       mayHaveSideEffects: false,
+      reportChestPainHeadacheFainting: false,
+      priapismWarning: false,
+      informGp: false,
       notForDaily: false,
       review4weeks: false,
     },

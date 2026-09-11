@@ -74,7 +74,10 @@ export default function ThrushClient({ lockedMedicine }: ThrushClientProps = {})
     if (lockedMedicine && state.medicineSelection.medicineChoice !== lockedMedicine) {
       dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "medicineChoice", value: lockedMedicine });
     }
-  }, [lockedMedicine, state.medicineSelection.medicineChoice]);
+    if (lockedMedicine && !state.medicineSelection.combiPack) {
+      dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "combiPack", value: true });
+    }
+  }, [lockedMedicine, state.medicineSelection.medicineChoice, state.medicineSelection.combiPack]);
   // Auto-fill pharmacist details from logged-in user. Refires when fields
   // are empty (e.g. after "New Consultation"), so subsequent patients fill too.
   const __pharmProfile = usePharmacistProfile();
@@ -160,7 +163,20 @@ export default function ThrushClient({ lockedMedicine }: ThrushClientProps = {})
       case 0:
         return (
           <StepWrapper title="Patient Details" currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={validationError}>
-            <PatientDetailsStep patient={state.patient} onChange={(field, value) => dispatch({ type: "UPDATE_PATIENT", field, value })} />
+            <PatientDetailsStep
+              patient={state.patient}
+              onChange={(field, value) => dispatch({ type: "UPDATE_PATIENT", field, value })}
+              requireAdult={false}
+              genderOption={{
+                label: "Patient is female",
+                description: "This PGD is for women aged 16 to 60.",
+                checked: state.medicalHistory.femaleConfirmed,
+                onToggle: (v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "femaleConfirmed", value: v }),
+              }}
+            />
+            {state.patient.age !== null && (state.patient.age < 16 || state.patient.age > 60) && (
+              <p className="mt-3 text-sm font-medium text-red-600">Aged under 16 or over 60 is an exclusion. Refer to GP.</p>
+            )}
           </StepWrapper>
         );
       case 1:
@@ -176,13 +192,15 @@ export default function ThrushClient({ lockedMedicine }: ThrushClientProps = {})
               <Checkbox label="Vulval itching" checked={state.assessment.vulvalItching} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "vulvalItching", value: v })} />
               <Checkbox label="Vulval soreness" checked={state.assessment.vulvalSoreness} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "vulvalSoreness", value: v })} />
               <Checkbox label="Thick white discharge" checked={state.assessment.thickWhiteDischarge} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "thickWhiteDischarge", value: v })} />
-              <Checkbox label="Dysuria (pain passing urine)" checked={state.assessment.dysuria} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "dysuria", value: v })} />
               <Checkbox label="Dyspareunia (pain on intercourse)" checked={state.assessment.dyspareunia} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "dyspareunia", value: v })} />
-              <div className="border-t pt-4"><p className="text-sm font-semibold text-red-700 mb-3">RED FLAGS - If any present, refer to GP:</p></div>
-              <Checkbox label="Blood-stained discharge" checked={state.assessment.bloodStainedDischarge} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "bloodStainedDischarge", value: v })} description="Not typical of thrush" />
-              <Checkbox label="Offensive-smelling discharge" checked={state.assessment.offensiveSmell} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "offensiveSmell", value: v })} description="May indicate BV or STI" />
-              <Checkbox label="Fever or pelvic pain" checked={state.assessment.fever || state.assessment.pelvicPain} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "fever", value: v })} />
-              <NumberInput label="Number of recurrent episodes (per year)" value={state.assessment.recurrentEpisodes} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "recurrentEpisodes", value: v })} min={0} max={20} />
+              <div className="border-t pt-4"><p className="text-sm font-semibold text-red-700 mb-3">EXCLUSIONS - If any present, refer to GP:</p></div>
+              <Checkbox label="Abnormal or blood-stained vaginal bleeding" checked={state.assessment.bloodStainedDischarge} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "bloodStainedDischarge", value: v })} description="Exclusion" />
+              <Checkbox label="Vulval ulcers, sores or blisters" checked={state.assessment.vulvalUlcers} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "vulvalUlcers", value: v })} description="Exclusion" />
+              <Checkbox label="Foul-smelling discharge" checked={state.assessment.offensiveSmell} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "offensiveSmell", value: v })} description="Exclusion; may indicate BV or STI" />
+              <Checkbox label="Dysuria (pain passing urine)" checked={state.assessment.dysuria} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "dysuria", value: v })} description="Exclusion under this PGD" />
+              <Checkbox label="Lower abdominal pain or fever" checked={state.assessment.fever || state.assessment.pelvicPain} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "fever", value: v })} description="Exclusion" />
+              <Checkbox label="Systemic upset" checked={state.assessment.systemicUpset} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "systemicUpset", value: v })} description="Exclusion" />
+              <NumberInput label="Number of episodes in the last 12 months" value={state.assessment.recurrentEpisodes} onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "recurrentEpisodes", value: v })} min={0} max={20} />
             </div>
           </StepWrapper>
         );
@@ -190,15 +208,34 @@ export default function ThrushClient({ lockedMedicine }: ThrushClientProps = {})
         return (
           <StepWrapper title="Medical History" currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={validationError}>
             <div className="space-y-4">
+              <p className="text-sm font-semibold text-red-700">Exclusions (both arms)</p>
+              <Checkbox label="First episode of symptoms" checked={state.medicalHistory.firstEpisode} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "firstEpisode", value: v })} description="Needs a diagnosis; refer" />
+              <Checkbox label="Recurrent candidiasis: 4 or more episodes in 12 months, or 2 in the last 6 months" checked={state.medicalHistory.recurrentThrush} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "recurrentThrush", value: v })} description="Refer" />
+              <Checkbox label="Immunosuppression" checked={state.medicalHistory.immunocompromised} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "immunocompromised", value: v })} description="Exclusion" />
               <Checkbox label="Diabetes" checked={state.medicalHistory.diabetes} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "diabetes", value: v })} description="Increased thrush risk" />
-              <Checkbox label="Currently pregnant" checked={state.medicalHistory.pregnancy} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "pregnancy", value: v })} description="Avoid oral fluconazole" />
-              <Checkbox label="Currently breastfeeding" checked={state.medicalHistory.breastfeeding} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "breastfeeding", value: v })} />
-              <Checkbox label="Immunocompromised" checked={state.medicalHistory.immunocompromised} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "immunocompromised", value: v })} />
-              <Checkbox label="Patient under 16 years" checked={state.medicalHistory.ageUnder16} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "ageUnder16", value: v })} />
-              <Checkbox label="Patient over 60 years" checked={state.medicalHistory.ageOver60} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "ageOver60", value: v })} />
-              <Checkbox label="First ever episode of thrush" checked={state.medicalHistory.firstEpisode} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "firstEpisode", value: v })} />
-              <Checkbox label="Recurrent thrush (4+ per year)" checked={state.medicalHistory.recurrentThrush} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "recurrentThrush", value: v })} />
-              <TextArea label="Other relevant medical history" value={state.medications.otherMedications} onChange={(v) => dispatch({ type: "UPDATE_MEDICATIONS", field: "otherMedications", value: v })} placeholder="e.g., recent antibiotic use, treatment history" />
+              {state.medicalHistory.diabetes && (
+                <Checkbox label="Diabetes is poorly controlled" checked={state.medicalHistory.diabetesPoorlyControlled} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "diabetesPoorlyControlled", value: v })} description="Exclusion" />
+              )}
+              <Checkbox label="Possible exposure to a sexually transmitted infection, or a partner with an STI" checked={state.medicalHistory.stiExposure} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "stiExposure", value: v })} description="Exclusion" />
+              <p className="text-sm font-semibold text-navy-900 mt-2">Fluconazole arm exclusions (pessary may still be used)</p>
+              <Checkbox label="Currently pregnant" checked={state.medicalHistory.pregnancy} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "pregnancy", value: v })} description="Oral fluconazole contraindicated. Pessary: do not use the applicator; insert with fingers." />
+              <Checkbox label="Currently breastfeeding" checked={state.medicalHistory.breastfeeding} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "breastfeeding", value: v })} description="Fluconazole excluded (insufficient data)" />
+              <Checkbox label="Known hypersensitivity to fluconazole or azoles" checked={state.medicalHistory.azoleHypersensitivity} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "azoleHypersensitivity", value: v })} />
+              <Checkbox label="Taking terfenadine, astemizole, cisapride, pimozide, quinidine or erythromycin" checked={state.medications.qtDrugs} onChange={(v) => dispatch({ type: "UPDATE_MEDICATIONS", field: "qtDrugs", value: v })} description="Risk of QT prolongation and torsades de pointes" />
+              <Checkbox label="History of QT prolongation or cardiac arrhythmias" checked={state.medicalHistory.qtHistory} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "qtHistory", value: v })} />
+              <Checkbox label="Severe hepatic impairment (Child-Pugh score over 9)" checked={state.medicalHistory.severeHepatic} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "severeHepatic", value: v })} />
+              <Checkbox label="Severe renal impairment (eGFR under 20 mL/min)" checked={state.medicalHistory.severeRenal} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "severeRenal", value: v })} />
+              <p className="text-sm font-semibold text-navy-900 mt-2">Pessary arm</p>
+              <Checkbox label="Known hypersensitivity to clotrimazole or imidazoles" checked={state.medicalHistory.imidazoleHypersensitivity} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "imidazoleHypersensitivity", value: v })} description="Pessary excluded" />
+              <Checkbox label="May not retain a pessary (abnormal anatomy, severe prolapse)" checked={state.medicalHistory.cannotRetainPessary} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "cannotRetainPessary", value: v })} description="Caution" />
+              <p className="text-sm font-semibold text-navy-900 mt-2">Cautions (fluconazole)</p>
+              <Checkbox label="Hepatic impairment (mild to moderate)" checked={state.medicalHistory.mildModerateHepatic} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "mildModerateHepatic", value: v })} description="Monitor closely" />
+              <Checkbox label="Renal impairment (mild to moderate)" checked={state.medicalHistory.mildModerateRenal} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "mildModerateRenal", value: v })} description="Dose adjustment may be needed" />
+              <Checkbox label="Warfarin or other oral anticoagulant" checked={state.medications.warfarin} onChange={(v) => dispatch({ type: "UPDATE_MEDICATIONS", field: "warfarin", value: v })} description="Increased anticoagulant effect" />
+              <Checkbox label="Statins" checked={state.medications.statins} onChange={(v) => dispatch({ type: "UPDATE_MEDICATIONS", field: "statins", value: v })} description="Increased statin levels" />
+              <Checkbox label="Phenytoin" checked={state.medications.phenytoin} onChange={(v) => dispatch({ type: "UPDATE_MEDICATIONS", field: "phenytoin", value: v })} description="Increased phenytoin levels" />
+              <Checkbox label="Rifampicin" checked={state.medications.rifampicin} onChange={(v) => dispatch({ type: "UPDATE_MEDICATIONS", field: "rifampicin", value: v })} description="Reduced fluconazole levels" />
+              <TextArea label="Other relevant medical history and medicines (check interactions via BNF)" value={state.medications.otherMedications} onChange={(v) => dispatch({ type: "UPDATE_MEDICATIONS", field: "otherMedications", value: v })} placeholder="e.g., recent antibiotic use, treatment history, other medicines" />
             </div>
           </StepWrapper>
         );
@@ -222,7 +259,16 @@ export default function ThrushClient({ lockedMedicine }: ThrushClientProps = {})
                   <p className="text-xs text-[color:var(--tenant-primary)] mt-1">Medicine choice is fixed by this PGD; both products supplied as the combo pack.</p>
                 </div>
               ) : (
-                <SelectInput label="Treatment" value={state.medicineSelection.medicineChoice} onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "medicineChoice", value: v })} options={[{ value: "fluconazole-oral", label: "Fluconazole 150mg single oral dose" }, { value: "clotrimazole-pessary", label: "Clotrimazole 500mg pessary + 1% cream" }]} required />
+                <SelectInput label="Treatment" value={state.medicineSelection.medicineChoice} onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "medicineChoice", value: v })} options={[{ value: "fluconazole-oral", label: "Fluconazole 150mg capsule, single oral dose (1 capsule)" }, { value: "clotrimazole-pessary", label: "Clotrimazole 500mg vaginal pessary, single dose at night (1 pessary)" }]} required />
+              )}
+              {state.medicineSelection.medicineChoice === "clotrimazole-pessary" && (
+                <Checkbox label="Patient is able to insert the pessary intravaginally" checked={state.medicineSelection.abilityConfirmed} onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "abilityConfirmed", value: v })} required />
+              )}
+              {doseRecommendation && (
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded text-sm text-blue-900">
+                  <p className="font-semibold">{doseRecommendation.medicine}</p>
+                  <p>{doseRecommendation.dosingRegimen}</p>
+                </div>
               )}
             </div>
           </StepWrapper>
@@ -232,12 +278,17 @@ export default function ThrushClient({ lockedMedicine }: ThrushClientProps = {})
           <StepWrapper title="Counselling & Patient Education" currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={validationError}>
             <div className="space-y-3">
               <Checkbox label="Typical symptoms of thrush explained" checked={state.counselling.typicalSymptoms} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "typicalSymptoms", value: v })} />
-              <Checkbox label="Avoid perfumed products" checked={state.counselling.avoidPerfumedProducts} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "avoidPerfumedProducts", value: v })} />
-              <Checkbox label="Cotton underwear advised" checked={state.counselling.cottonUnderwear} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "cottonUnderwear", value: v })} />
-              <Checkbox label="Complete full course of treatment" checked={state.counselling.completesTreatment} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "completesTreatment", value: v })} />
-              <Checkbox label="Timeline to relief: 1-3 days" checked={state.counselling.timelineToRelief} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "timelineToRelief", value: v })} />
+              <Checkbox label="Avoid irritants such as douches, scented products and tight clothing" checked={state.counselling.avoidPerfumedProducts} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "avoidPerfumedProducts", value: v })} />
+              <Checkbox label="Wear cotton underwear" checked={state.counselling.cottonUnderwear} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "cottonUnderwear", value: v })} />
+              <Checkbox label="Complete the full course of treatment as prescribed" checked={state.counselling.completesTreatment} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "completesTreatment", value: v })} />
+              <Checkbox label="Symptoms should resolve within 5 to 7 days; if symptoms persist or worsen, contact your GP" checked={state.counselling.timelineToRelief} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "timelineToRelief", value: v })} />
+              <Checkbox label="Avoid sexual intercourse for at least 5 days after treatment (pessary may damage condoms and diaphragms)" checked={state.counselling.avoidIntercourse} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "avoidIntercourse", value: v })} />
+              {state.medicineSelection.medicineChoice === "clotrimazole-pessary" && (
+                <Checkbox label="Insert the pessary with fingers rather than the applicator to minimise damage to barriers" checked={state.counselling.insertWithFingers} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "insertWithFingers", value: v })} description={state.medicalHistory.pregnancy ? "Pregnancy: the applicator should not be used" : undefined} />
+              )}
               <Checkbox label="Advise sexual contacts to seek treatment" checked={state.counselling.sexualContacts} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "sexualContacts", value: v })} />
-              <Checkbox label="Recurrence management: See GP if recurring" checked={state.counselling.recurrenceAdvice} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "recurrenceAdvice", value: v })} />
+              <Checkbox label="Recurrent infections (4 or more per year): contact your GP for investigation" checked={state.counselling.recurrenceAdvice} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "recurrenceAdvice", value: v })} />
+              <Checkbox label="Report any adverse effects to your healthcare provider or via the Yellow Card scheme" checked={state.counselling.yellowCardAdvice} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "yellowCardAdvice", value: v })} />
             </div>
           </StepWrapper>
         );

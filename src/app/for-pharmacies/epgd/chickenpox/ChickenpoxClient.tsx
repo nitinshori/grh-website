@@ -5,8 +5,9 @@ import type {
   ChickenpoxConsultationState,
   ChickenpoxAction,
 } from "./lib/chickenpox-types";
-import { STEP_LABELS, TOTAL_STEPS, createInitialChickenpoxState } from "./lib/chickenpox-types";
-import { getAllAlerts, hasHardStops } from "./lib/chickenpox-clinical-logic";
+import { STEP_LABELS, TOTAL_STEPS, CHICKENPOX_PGD_VERSION, createInitialChickenpoxState } from "./lib/chickenpox-types";
+import type { ChickenpoxMedicalHistory, ChickenpoxVaccineAdmin } from "./lib/chickenpox-types";
+import { getAllAlerts, hasHardStops, getScheduleText } from "./lib/chickenpox-clinical-logic";
 import { validateStep } from "./lib/chickenpox-validation";
 import { calculateAge } from "../shared/types";
 import { ProgressBar } from "../shared/components/ProgressBar";
@@ -128,6 +129,7 @@ export default function ChickenpoxClient() {
 
   // Validation
   const validationError = useMemo(() => validateStep(state.currentStep, state), [state.currentStep, state]);
+  const underSixteen = state.patient.age !== null && state.patient.age < 16;
 
   // Can proceed?
   const canProceed = !validationError && (!hasStops || state.currentStep >= 4);
@@ -231,6 +233,30 @@ export default function ChickenpoxClient() {
                 dispatch({ type: "UPDATE_CONSENT", field, value })
               }
             />
+            {underSixteen && (
+              <div className="mt-6 space-y-3 p-4 rounded-lg border border-amber-300 bg-amber-50">
+                <p className="text-sm font-semibold text-amber-900">Under 16: consent basis (PGD consent in children and young people)</p>
+                <SelectInput
+                  label="Consent given by"
+                  value={state.medicalHistory.consentBasis}
+                  onChange={(v) =>
+                    dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "consentBasis", value: v as ChickenpoxMedicalHistory["consentBasis"] })
+                  }
+                  options={[
+                    { value: "parental", label: "A person with parental responsibility" },
+                    { value: "gillick", label: "The young person, assessed as Gillick competent" },
+                  ]}
+                  required
+                />
+                <TextInput
+                  label={state.medicalHistory.consentBasis === "gillick" ? "Basis of the Gillick competence assessment" : "Name and relationship of the person with parental responsibility"}
+                  value={state.medicalHistory.consentGiverDetails}
+                  onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "consentGiverDetails", value: v })}
+                  placeholder={state.medicalHistory.consentBasis === "gillick" ? "Why the young person was judged competent" : "A parent accompanying a child does not automatically hold parental responsibility. Ask."}
+                  required
+                />
+              </div>
+            )}
           </StepWrapper>
         );
 
@@ -238,7 +264,7 @@ export default function ChickenpoxClient() {
         return (
           <StepWrapper
             title="Eligibility Assessment"
-            description="Confirm at least one eligibility criterion."
+            description="Confirm the inclusion criteria and screen for a history of chickenpox or a completed course."
             currentStep={state.currentStep}
             totalSteps={TOTAL_STEPS}
             onNext={handleNext}
@@ -248,7 +274,7 @@ export default function ChickenpoxClient() {
           >
             <div className="space-y-4">
               <Checkbox
-                label="No prior history of chickenpox or varicella"
+                label="No history of chickenpox infection (inclusion criterion)"
                 checked={state.eligibility.noPriorVaricella}
                 onChange={(v) =>
                   dispatch({
@@ -257,7 +283,56 @@ export default function ChickenpoxClient() {
                     value: v,
                   })
                 }
+                description="Susceptible: no reliable history of chickenpox or no evidence of immunity. Consider prior immunity testing in adults if uncertain."
+                required
               />
+              <Checkbox
+                label="History of chickenpox infection"
+                checked={state.eligibility.historyOfChickenpox}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_ELIGIBILITY", field: "historyOfChickenpox", value: v })
+                }
+                description="Exclusion"
+              />
+              <Checkbox
+                label="Has already completed a two-dose varicella course"
+                checked={state.eligibility.completedTwoDoseCourse}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_ELIGIBILITY", field: "completedTwoDoseCourse", value: v })
+                }
+                description="Exclusion"
+              />
+              <Checkbox
+                label="Dose 1 was given elsewhere (attending for dose 2)"
+                checked={state.eligibility.dose1GivenElsewhere}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_ELIGIBILITY", field: "dose1GivenElsewhere", value: v })
+                }
+                description="Dose 2 may be given under this PGD where dose 1 was given elsewhere; record the date and brand of dose 1."
+              />
+              {state.eligibility.dose1GivenElsewhere && (
+                <>
+                  <TextInput
+                    label="Date of dose 1"
+                    value={state.eligibility.dose1ElsewhereDate}
+                    onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "dose1ElsewhereDate", value: v })}
+                    type="date"
+                    required
+                  />
+                  <SelectInput
+                    label="Brand of dose 1"
+                    value={state.eligibility.dose1ElsewhereBrand}
+                    onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "dose1ElsewhereBrand", value: v })}
+                    options={[
+                      { value: "Varivax", label: "Varivax" },
+                      { value: "Varilrix", label: "Varilrix" },
+                      { value: "Unknown", label: "Unknown or not recorded" },
+                    ]}
+                    required
+                  />
+                </>
+              )}
+              <p className="text-sm font-semibold text-navy-900 pt-2">Reason for vaccination (Green Book indications, for the record)</p>
               <Checkbox
                 label="Seronegative (confirmed by testing)"
                 checked={state.eligibility.seronegative}
@@ -309,7 +384,7 @@ export default function ChickenpoxClient() {
           >
             <div className="space-y-4">
               <Checkbox
-                label="Currently pregnant or planning pregnancy"
+                label="Pregnant, or planning pregnancy within one month"
                 checked={state.medicalHistory.pregnancy}
                 onChange={(v) =>
                   dispatch({
@@ -318,11 +393,11 @@ export default function ChickenpoxClient() {
                     value: v,
                   })
                 }
-                description="Avoid vaccination if pregnant; avoid pregnancy 1 month after vaccination."
+                description="Exclusion (live vaccine). Pregnancy must be avoided for one month post-vaccination."
               />
 
               <Checkbox
-                label="Immunosuppressed or on immunosuppressive therapy"
+                label="Immunosuppression of any cause"
                 checked={state.medicalHistory.immunosuppressed}
                 onChange={(v) =>
                   dispatch({
@@ -331,11 +406,11 @@ export default function ChickenpoxClient() {
                     value: v,
                   })
                 }
-                description="Live vaccine is contraindicated."
+                description="Exclusion: immunosuppressive therapy or high-dose systemic corticosteroids; blood dyscrasias, leukaemia, lymphoma or other malignancy of the blood or lymphatic system; family history of congenital or hereditary immunodeficiency unless immune competence has been demonstrated. Refer."
               />
 
               <Checkbox
-                label="Severe febrile illness"
+                label="Acute febrile illness (moderate or severe illness with fever)"
                 checked={state.medicalHistory.severeFebrilIllness}
                 onChange={(v) =>
                   dispatch({
@@ -344,11 +419,11 @@ export default function ChickenpoxClient() {
                     value: v,
                   })
                 }
-                description="Defer vaccination until recovery."
+                description="Exclusion: postpone until recovered."
               />
 
               <Checkbox
-                label="Anaphylaxis to neomycin"
+                label="Hypersensitivity to neomycin"
                 checked={state.medicalHistory.anaphylaxisNeomycin}
                 onChange={(v) =>
                   dispatch({
@@ -357,11 +432,11 @@ export default function ChickenpoxClient() {
                     value: v,
                   })
                 }
-                description="Contraindication to varicella vaccine."
+                description="Exclusion."
               />
 
               <Checkbox
-                label="Anaphylaxis to gelatin"
+                label="Hypersensitivity to gelatin"
                 checked={state.medicalHistory.anaphylaxisGelatin}
                 onChange={(v) =>
                   dispatch({
@@ -370,7 +445,16 @@ export default function ChickenpoxClient() {
                     value: v,
                   })
                 }
-                description="Contraindication to varicella vaccine."
+                description="Exclusion."
+              />
+
+              <Checkbox
+                label="Hypersensitivity to any other component of the vaccine"
+                checked={state.medicalHistory.hypersensitivityComponent}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "hypersensitivityComponent", value: v })
+                }
+                description="Exclusion. Check the SmPC excipient list for the product held."
               />
 
               <Checkbox
@@ -383,8 +467,35 @@ export default function ChickenpoxClient() {
                     value: v,
                   })
                 }
-                description="Live vaccine should not be given."
+                description="Exclusion: live vaccine should not be given."
               />
+
+              <Checkbox
+                label="MMR or another live vaccine within the previous 4 weeks (not on the same day)"
+                checked={state.medicalHistory.liveVaccineWithin4Weeks}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "liveVaccineWithin4Weeks", value: v })
+                }
+                description="Exclusion unless given on the same day. Give on the same day as MMR or other live vaccines, or 4 weeks apart."
+              />
+
+              <Checkbox
+                label="Immunoglobulin or blood products in the previous 3 months"
+                checked={state.medicalHistory.bloodProductsWithin3Months}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "bloodProductsWithin3Months", value: v })
+                }
+                description="Caution: may reduce the response. Where protection is needed vaccinate now and consider a further dose after 3 months (Green Book); record the reason."
+              />
+              {state.medicalHistory.bloodProductsWithin3Months && (
+                <TextInput
+                  label="Reason for vaccinating now (recorded)"
+                  value={state.medicalHistory.bloodProductsReason}
+                  onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "bloodProductsReason", value: v })}
+                  placeholder="Why protection is needed now; further dose considered after 3 months"
+                  required
+                />
+              )}
             </div>
           </StepWrapper>
         );
@@ -401,7 +512,7 @@ export default function ChickenpoxClient() {
             canProceed={!hasStops}
             validationError={
               hasStops
-                ? "Hard stop contraindications present — cannot proceed to vaccine administration."
+                ? "Exclusion present: cannot proceed to vaccine administration."
                 : null
             }
             isBlocked={hasStops}
@@ -415,12 +526,10 @@ export default function ChickenpoxClient() {
             {hasStops && (
               <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded">
                 <p className="text-sm font-semibold text-red-700 mb-2">
-                  Hard Stop — Cannot Vaccinate
+                  Excluded: do not vaccinate under this PGD
                 </p>
                 <p className="text-sm text-red-600">
-                  Based on the identified contraindications, varicella vaccination cannot be
-                  administered. Refer the patient to their GP or specialist clinic for further
-                  advice.
+                  Advise on alternative treatment options and how these can be accessed. Document any advice given and the decision reached. Inform or refer to the GP as appropriate.
                 </p>
               </div>
             )}
@@ -452,14 +561,45 @@ export default function ChickenpoxClient() {
                   })
                 }
                 options={[
-                  { value: "Varivax", label: "Varivax (live attenuated)" },
-                  { value: "Varilrix", label: "Varilrix (live attenuated)" },
+                  { value: "Varivax", label: "Varivax (live attenuated), subcutaneous" },
+                  { value: "Varilrix", label: "Varilrix (live attenuated), subcutaneous or intramuscular" },
+                ]}
+                required
+              />
+
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded">
+                <p className="text-sm text-blue-800">{getScheduleText(state.vaccineAdmin.vaccine, state.patient.age)}</p>
+                <p className="text-xs text-blue-800 mt-1">0.5 mL per dose; course of two doses. Store at 2 to 8 C, do not freeze, protect from light.</p>
+              </div>
+
+              <SelectInput
+                label="Dose in course"
+                value={state.vaccineAdmin.doseNumber}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_VACCINE_ADMIN", field: "doseNumber", value: v as ChickenpoxVaccineAdmin["doseNumber"] })
+                }
+                options={[
+                  { value: "1st", label: "Dose 1" },
+                  { value: "2nd", label: "Dose 2 (dose 1 recorded on the Eligibility step)" },
+                ]}
+                required
+              />
+
+              <SelectInput
+                label="Route"
+                value={state.vaccineAdmin.route}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_VACCINE_ADMIN", field: "route", value: v as ChickenpoxVaccineAdmin["route"] })
+                }
+                options={[
+                  { value: "subcutaneous", label: "Subcutaneous (Varivax: usually the upper arm)" },
+                  { value: "intramuscular", label: "Intramuscular (Varilrix only)" },
                 ]}
                 required
               />
 
               <TextInput
-                label="Dose 1 date"
+                label="Date of administration"
                 value={state.vaccineAdmin.dose1Date}
                 onChange={(v) =>
                   dispatch({
@@ -473,7 +613,7 @@ export default function ChickenpoxClient() {
               />
 
               <TextInput
-                label="Dose 1 injection site"
+                label="Anatomical site"
                 value={state.vaccineAdmin.dose1Site}
                 onChange={(v) =>
                   dispatch({
@@ -482,12 +622,12 @@ export default function ChickenpoxClient() {
                     value: v,
                   })
                 }
-                placeholder="e.g. Left deltoid, Right deltoid"
+                placeholder="e.g. Left upper arm, Right upper arm"
                 required
               />
 
               <TextInput
-                label="Lot/Batch number"
+                label="Batch number"
                 value={state.vaccineAdmin.dose1Lot}
                 onChange={(v) =>
                   dispatch({
@@ -496,21 +636,35 @@ export default function ChickenpoxClient() {
                     value: v,
                   })
                 }
-                placeholder="Vaccine lot number"
+                placeholder="Vaccine batch number"
+                required
               />
 
               <TextInput
-                label="Dose 2 scheduled date (4-8 weeks later)"
-                value={state.vaccineAdmin.dose2Scheduled}
+                label="Expiry date"
+                value={state.vaccineAdmin.expiryDate}
                 onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_VACCINE_ADMIN",
-                    field: "dose2Scheduled",
-                    value: v,
-                  })
+                  dispatch({ type: "UPDATE_VACCINE_ADMIN", field: "expiryDate", value: v })
                 }
                 type="date"
+                required
               />
+
+              {state.vaccineAdmin.doseNumber === "1st" && (
+                <TextInput
+                  label={state.vaccineAdmin.vaccine === "Varilrix" ? "Dose 2 due (at least 6 weeks later, never less than 4)" : "Dose 2 due (at least 4 weeks later; 13 years and over: 4 to 8 weeks)"}
+                  value={state.vaccineAdmin.dose2Scheduled}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_VACCINE_ADMIN",
+                      field: "dose2Scheduled",
+                      value: v,
+                    })
+                  }
+                  type="date"
+                  required
+                />
+              )}
 
               <TextInput
                 label="Administered by (name and credentials)"
@@ -544,6 +698,16 @@ export default function ChickenpoxClient() {
           onNewConsultation={handleNewConsultation}
           >
             <div className="space-y-4">
+              <Checkbox
+                label="Observed for 15 minutes after vaccination, seated, and the observation period completed"
+                checked={state.postVaccine.observationCompleted}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_POST_VACCINE", field: "observationCompleted", value: v })
+                }
+                description="Anxiety-related reactions including vasovagal syncope are commonest in adolescents. Have procedures in place to prevent injury from a faint."
+                required
+              />
+
               <Checkbox
                 label="Any immediate reactions observed"
                 checked={state.postVaccine.reactionsObserved}
@@ -584,42 +748,77 @@ export default function ChickenpoxClient() {
                 />
               )}
 
+              <p className="text-sm font-semibold text-navy-900 pt-2">Counselling and written information (PGD)</p>
+
               <Checkbox
-                label="Advised to avoid contact with immunosuppressed persons if rash develops"
-                checked={state.postVaccine.contactWithImmunosuppressed}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_POST_VACCINE",
-                    field: "contactWithImmunosuppressed",
-                    value: v,
-                  })
-                }
+                label="Patient information leaflet (PIL) provided with the medication supplied"
+                checked={state.postVaccine.leafletGiven}
+                onChange={(v) => dispatch({ type: "UPDATE_POST_VACCINE", field: "leafletGiven", value: v })}
+                required
               />
 
               <Checkbox
-                label="Advised to avoid salicylates for 6 weeks post-vaccine"
+                label="Two-dose course explained and dose 2 date confirmed"
+                checked={state.counselling.doseScheduleAdvice}
+                onChange={(v) => {
+                  dispatch({ type: "UPDATE_COUNSELLING", field: "doseScheduleAdvice", value: v });
+                  dispatch({ type: "UPDATE_COUNSELLING", field: "reviewScheduleAdvice", value: v });
+                }}
+                description={getScheduleText(state.vaccineAdmin.vaccine, state.patient.age)}
+                required
+              />
+
+              <Checkbox
+                label="Advised to avoid contact with high-risk individuals (e.g. immunosuppressed) for 4 to 6 weeks if a rash develops"
+                checked={state.postVaccine.contactWithImmunosuppressed && state.counselling.immunosuppressedContactAdvice}
+                onChange={(v) => {
+                  dispatch({ type: "UPDATE_POST_VACCINE", field: "contactWithImmunosuppressed", value: v });
+                  dispatch({ type: "UPDATE_COUNSELLING", field: "immunosuppressedContactAdvice", value: v });
+                  dispatch({ type: "UPDATE_COUNSELLING", field: "mildRashAdvice", value: v });
+                }}
+                description="A mild varicella-like rash can follow vaccination."
+                required
+              />
+
+              <Checkbox
+                label="Pregnancy must be avoided for one month post-vaccination"
+                checked={state.postVaccine.pregnancyAdviceGiven && state.counselling.pregnancyAvoidanceAdvice}
+                onChange={(v) => {
+                  dispatch({ type: "UPDATE_POST_VACCINE", field: "pregnancyAdviceGiven", value: v });
+                  dispatch({ type: "UPDATE_COUNSELLING", field: "pregnancyAvoidanceAdvice", value: v });
+                }}
+                description="Women of childbearing age: appropriate contraceptive advice."
+                required
+              />
+
+              <Checkbox
+                label="Expected side effects explained"
+                checked={state.counselling.sideEffectsExplained}
+                onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "sideEffectsExplained", value: v })}
+                description="Injection site reactions (pain, redness, swelling), fever, rash, irritability, or upper respiratory symptoms. Rarely, varicella-like rash or febrile convulsions. Report suspected adverse effects via the Yellow Card scheme."
+                required
+              />
+
+              <Checkbox
+                label="Advised to avoid salicylates (e.g. aspirin) for 6 weeks post-vaccine"
                 checked={state.postVaccine.salicylatesAvoided}
-                onChange={(v) =>
+                onChange={(v) => {
                   dispatch({
                     type: "UPDATE_POST_VACCINE",
                     field: "salicylatesAvoided",
                     value: v,
-                  })
-                }
-                description="To prevent Reye's syndrome if chickenpox infection occurs."
+                  });
+                  dispatch({ type: "UPDATE_COUNSELLING", field: "salicylatesAvoidanceAdvice", value: v });
+                }}
+                description="Reye's syndrome risk (Green Book precaution)."
               />
 
               <Checkbox
-                label="Pregnancy avoidance advice given"
-                checked={state.postVaccine.pregnancyAdviceGiven}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_POST_VACCINE",
-                    field: "pregnancyAdviceGiven",
-                    value: v,
-                  })
-                }
-                description="Avoid pregnancy for 1 month after dose 2."
+                label="Follow-up advice given"
+                checked={state.postVaccine.followUpAdviceGiven}
+                onChange={(v) => dispatch({ type: "UPDATE_POST_VACCINE", field: "followUpAdviceGiven", value: v })}
+                description="Seek medical advice if symptoms worsen rapidly or significantly, do not improve in 3 to 4 weeks, or they become systemically very unwell."
+                required
               />
             </div>
           </StepWrapper>
@@ -765,11 +964,36 @@ function ChickenpoxSummaryReport({
       <Row label="NHS Number" value={state.patient.nhsNumber} />
       <Row label="GP" value={state.patient.gpName} />
 
+      {state.patient.age !== null && state.patient.age < 16 && (
+        <Row
+          label="Under 16 consent basis"
+          value={
+            state.medicalHistory.consentBasis === "gillick"
+              ? `Gillick competent: ${state.medicalHistory.consentGiverDetails}`
+              : `Parental responsibility: ${state.medicalHistory.consentGiverDetails}`
+          }
+        />
+      )}
+
       <SectionHeader>Eligibility</SectionHeader>
       <Row
-        label="No prior varicella history"
+        label="No history of chickenpox infection"
         value={state.eligibility.noPriorVaricella ? "Yes" : "No"}
       />
+      <Row
+        label="History of chickenpox (exclusion)"
+        value={state.eligibility.historyOfChickenpox ? "Yes" : "No"}
+      />
+      <Row
+        label="Completed two-dose course (exclusion)"
+        value={state.eligibility.completedTwoDoseCourse ? "Yes" : "No"}
+      />
+      {state.eligibility.dose1GivenElsewhere && (
+        <Row
+          label="Dose 1 given elsewhere"
+          value={`${state.eligibility.dose1ElsewhereDate}, ${state.eligibility.dose1ElsewhereBrand}`}
+        />
+      )}
       <Row
         label="Seronegative"
         value={state.eligibility.seronegative ? "Yes" : "No"}
@@ -793,21 +1017,35 @@ function ChickenpoxSummaryReport({
         value={state.medicalHistory.immunosuppressed ? "Yes" : "No"}
       />
       <Row
-        label="Anaphylaxis to neomycin/gelatin"
+        label="Hypersensitivity to neomycin, gelatin or any component"
         value={
           state.medicalHistory.anaphylaxisNeomycin ||
-          state.medicalHistory.anaphylaxisGelatin
+          state.medicalHistory.anaphylaxisGelatin ||
+          state.medicalHistory.hypersensitivityComponent
             ? "Yes"
             : "No"
         }
       />
+      <Row label="Acute febrile illness" value={state.medicalHistory.severeFebrilIllness ? "Yes" : "No"} />
+      <Row label="Active untreated tuberculosis" value={state.medicalHistory.activeTB ? "Yes" : "No"} />
+      <Row label="Live vaccine within 4 weeks" value={state.medicalHistory.liveVaccineWithin4Weeks ? "Yes" : "No"} />
+      <Row
+        label="Immunoglobulin or blood products within 3 months"
+        value={state.medicalHistory.bloodProductsWithin3Months ? `Yes: ${state.medicalHistory.bloodProductsReason}` : "No"}
+      />
 
       <SectionHeader>Vaccine Administration</SectionHeader>
       <Row label="Vaccine" value={state.vaccineAdmin.vaccine} />
-      <Row label="Dose 1 date" value={state.vaccineAdmin.dose1Date} />
-      <Row label="Injection site" value={state.vaccineAdmin.dose1Site} />
-      <Row label="Lot number" value={state.vaccineAdmin.dose1Lot} />
-      <Row label="Dose 2 scheduled" value={state.vaccineAdmin.dose2Scheduled} />
+      <Row label="Dose in course" value={state.vaccineAdmin.doseNumber === "2nd" ? "Dose 2" : "Dose 1"} />
+      <Row label="Date of administration" value={state.vaccineAdmin.dose1Date} />
+      <Row label="Dose, form and route" value={`0.5 mL suspension for injection, ${state.vaccineAdmin.route === "intramuscular" ? "intramuscular" : "subcutaneous"}; quantity administered one dose`} />
+      <Row label="Anatomical site" value={state.vaccineAdmin.dose1Site} />
+      <Row label="Batch number" value={state.vaccineAdmin.dose1Lot} />
+      <Row label="Expiry date" value={state.vaccineAdmin.expiryDate} />
+      {state.vaccineAdmin.doseNumber === "1st" && <Row label="Dose 2 due" value={state.vaccineAdmin.dose2Scheduled} />}
+      <Row label="Administered by" value={state.vaccineAdmin.administeredBy} />
+      <Row label="15 minute observation completed" value={state.postVaccine.observationCompleted ? "Yes" : "No"} />
+      <Row label="Administered via PGD" value={`Yes, ${CHICKENPOX_PGD_VERSION}`} />
 
       <SectionHeader>Clinical Alerts</SectionHeader>
       <AlertSummary alerts={state.alerts} />
@@ -815,11 +1053,14 @@ function ChickenpoxSummaryReport({
       <SectionHeader>Counselling Provided</SectionHeader>
       <CounsellingGrid
         items={[
-          ["2-dose schedule explained", state.postVaccine.pregnancyAdviceGiven],
+          ["PIL supplied", state.postVaccine.leafletGiven],
+          ["Two-dose course and dose 2 date explained", state.counselling.doseScheduleAdvice],
           ["Pregnancy avoidance (1 month)", state.postVaccine.pregnancyAdviceGiven],
-          ["Mild rash may develop", true],
-          ["Avoid contact if rash develops", state.postVaccine.contactWithImmunosuppressed],
+          ["Mild rash may develop", state.counselling.mildRashAdvice],
+          ["Avoid high-risk contacts 4 to 6 weeks if rash develops", state.postVaccine.contactWithImmunosuppressed],
+          ["Side effects explained", state.counselling.sideEffectsExplained],
           ["Salicylate avoidance", state.postVaccine.salicylatesAvoided],
+          ["Follow-up advice given", state.postVaccine.followUpAdviceGiven],
         ]}
       />
 
@@ -839,6 +1080,7 @@ function ChickenpoxSummaryReport({
         </>
       )}
 
+      <p className="text-[10px] text-gray-500 text-center">{CHICKENPOX_PGD_VERSION}</p>
       <ReportFooter pgdName="Chickenpox/Varicella Vaccination" />
     </div>
   );

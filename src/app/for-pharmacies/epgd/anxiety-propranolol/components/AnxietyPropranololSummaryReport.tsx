@@ -64,10 +64,10 @@ export function AnxietyPropranololSummaryReport({ state }: AnxietyPropranololSum
       <div className="px-6 py-4 print:px-4 print:py-2">
         <SectionHeader>Medicine Recommended</SectionHeader>
         <div className="space-y-2 text-xs print:space-y-1">
-          <Row label="Medicine" value="Propranolol tablet" />
-          <Row label="Dose" value="10–40mg PRN" />
-          <Row label="Timing" value="30–60 minutes before anxiety-provoking situation" />
-          <Row label="Quantity" value={medicineSupply.quantity ? `${medicineSupply.quantity} tablets of 10mg` : "Not specified"} />
+          <Row label="Medicine" value="Propranolol 10mg tablets" />
+          <Row label="Dose" value={medicineSupply.regimen === "regular" ? "10 to 40mg two to three times daily (maximum 120mg daily)" : "10 to 40mg PRN (maximum 120mg daily)"} />
+          <Row label="Timing" value={medicineSupply.regimen === "regular" ? "Ongoing situational anxiety; review at 4 weeks" : "30 to 60 minutes before anxiety-provoking situation"} />
+          <Row label="Quantity" value={medicineSupply.quantity ? `${medicineSupply.quantity} tablets of 10mg (${medicineSupply.quantity * 10}mg in total)` : "Not specified"} />
         </div>
       </div>
 
@@ -75,11 +75,15 @@ export function AnxietyPropranololSummaryReport({ state }: AnxietyPropranololSum
         <SectionHeader>Counselling Provided</SectionHeader>
         <CounsellingGrid
           items={[
-            ["PRN use only — not daily/regular", counselling.prnUseOnly],
+            [medicineSupply.regimen === "regular" ? "Two to three times daily, maximum 120mg daily, review at 4 weeks" : "PRN use only, 30 to 60 minutes before the situation", counselling.prnUseOnly],
             ["Reduces physical symptoms (tremor, palpitations, sweating)", counselling.physicalSymptoms],
+            ["Not a cure for anxiety; consider psychological therapy", counselling.notACure],
             ["Does not cause dependence at PRN doses", counselling.noDependence],
             ["Do not stop suddenly if used regularly", counselling.noSuddenWithdrawal],
-            ["Do NOT use with verapamil", counselling.avoidVerapamil],
+            ["Report breathlessness or wheeze", counselling.reportWheeze],
+            ["May cause cold hands and feet", counselling.coldExtremities],
+            ["Avoid alcohol (additive CNS depression)", counselling.avoidAlcohol],
+            ["Do NOT use with verapamil or diltiazem", counselling.avoidVerapamil],
           ]}
         />
       </div>

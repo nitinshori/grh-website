@@ -19,13 +19,20 @@ export default function FolicAcidPage(): React.ReactNode {
               Folic Acid 5 mg ePGD
             </h1>
             <p className="text-gray-600 mb-4">
-              Oral folic acid 5 mg once daily for confirmed folate deficiency.
+              Oral folic acid 5 mg once daily for confirmed folate deficiency
+              in adults aged 18 and over (PGD 3 of 3, version 008, issued 11
+              September 2026).
             </p>
             <div className="bg-lime-50 border border-lime-200 rounded-lg p-4">
               <p className="text-sm text-lime-900 mb-2">
-                <strong>Folic Acid 5 mg tablets, one daily.</strong> Standard
-                treatment course 4 months for most patients (longer in chronic
-                haemolysis or malabsorption — refer to GP).
+                <strong>Folic acid 5mg tablets, one daily.</strong> Usually 4
+                months; up to 4 months supply under this PGD. Where the
+                underlying cause persists (for example malabsorption), refer
+                to the GP rather than continuing indefinitely. Vitamin B12
+                status must be known: B12 deficiency excluded, or treated
+                first or at the same time under PGD 1 of 3. Pregnancy,
+                planning pregnancy, malignancy and antifolate or antiepileptic
+                medicines are exclusions.
               </p>
               <details className="text-xs text-lime-900">
                 <summary className="cursor-pointer font-semibold">

@@ -27,7 +27,7 @@ export function validatePatientDetails(
     errors.push('Date of birth is required');
   }
 
-  // Age gate per signed PGD — adults 18+ (consistency review Jul 2026)
+  // Age gate per signed PGD (v005): adults 18+
   if (patient.age !== null && patient.age < 18) {
     errors.push('This PGD applies to adults aged 18 years and over');
   }
@@ -63,6 +63,12 @@ export function validateScreening(screening: DengueScreening): ValidationResult 
   if (!screening.travelDuration?.trim()) {
     errors.push('Travel duration is required');
   }
+  if (!screening.endemicArea) {
+    errors.push('This PGD covers travel to or residence in a dengue-endemic area only');
+  }
+  if (!screening.willingTwoDoses) {
+    errors.push('Patient must be willing to receive two doses, 3 months apart');
+  }
   if (screening.previousDengueInfection && !screening.dengueInfectionDetails?.trim()) {
     errors.push('Please describe previous dengue infection');
   }
@@ -85,7 +91,7 @@ export function validateContraindications(
   const errors: string[] = [];
 
   if (!contraindications.ageAppropriate) {
-    errors.push('Patient age is not appropriate for dengue vaccination (minimum 4 years)');
+    errors.push('This PGD applies to adults aged 18 years and over');
   }
 
   return { isValid: errors.length === 0, errors };
@@ -139,7 +145,10 @@ export function validatePostVaccineObs(
     errors.push('Observation period must be specified');
   }
   if (!postVaccineObs.anaphylaxisKitChecked) {
-    errors.push('Anaphylaxis kit must be checked');
+    errors.push('Confirm adrenaline 1 in 1,000 is immediately available, in date, with a telephone');
+  }
+  if (!postVaccineObs.observationCompleted) {
+    errors.push('Record that the seated observation period (15 minutes) was completed');
   }
 
   if (postVaccineObs.adverseReaction && !postVaccineObs.reactionDetails?.trim()) {
@@ -159,7 +168,9 @@ export function validateAdvice(advice: DengueAdvice): ValidationResult {
     !advice.mosquitoPrevention ||
     !advice.dengueSymptomsWarning ||
     !advice.noOtherLiveVaccines ||
-    !advice.returnIfConcerned
+    !advice.returnIfConcerned ||
+    !advice.avoidPregnancy4Weeks ||
+    !advice.keepVaccinationRecord
   ) {
     errors.push('All advice points must be acknowledged');
   }

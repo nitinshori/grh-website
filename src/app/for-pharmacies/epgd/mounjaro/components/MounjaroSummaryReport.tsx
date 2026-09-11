@@ -1,6 +1,7 @@
 "use client";
 
 import type { MounjaroConsultationState } from "../lib/mounjaro-types";
+import { COMORBIDITY_OPTIONS, PGD_VERSION_LABEL } from "../lib/mounjaro-types";
 import {
   SectionHeader,
   Row,
@@ -10,7 +11,21 @@ import {
   ReportFooter,
 } from "../../shared/components/SummaryReportShell";
 
+const NOT_RECORDED = "Not recorded";
+
+const SUPPLY_TYPE_LABELS: Record<string, string> = {
+  "new-start": "New start (2.5 mg titration dose)",
+  continue: "Continuing the same dose",
+  escalate: "Escalating to the next dose",
+  reduce: "Reducing to the previous dose",
+  restart: "Restarting after a break (re-titrated from 2.5 mg)",
+};
+
 export function MounjaroSummaryReport({ state }: { state: MounjaroConsultationState }) {
+  const comorbidityLabels = state.weightAssessment.comorbidities.map(
+    (id) => COMORBIDITY_OPTIONS.find((c) => c.id === id)?.label ?? id
+  );
+
   return (
     <div className="space-y-4 print:text-xs print:space-y-2">
       {/* Header */}
@@ -19,6 +34,7 @@ export function MounjaroSummaryReport({ state }: { state: MounjaroConsultationSt
           Mounjaro (Tirzepatide) ePGD Consultation Record
         </h2>
         <p className="text-xs text-gray-500">Dual GIP/GLP-1 receptor agonist for weight management</p>
+        <p className="text-xs text-gray-500">{PGD_VERSION_LABEL}. Supplied via PGD.</p>
       </div>
 
       {/* Patient Details */}
@@ -26,26 +42,35 @@ export function MounjaroSummaryReport({ state }: { state: MounjaroConsultationSt
       <div className="space-y-1.5">
         <Row label="Full Name" value={`${state.patient.firstName} ${state.patient.lastName}`} />
         <Row label="Date of Birth" value={state.patient.dateOfBirth} />
-        <Row label="Age" value={state.patient.age ? `${state.patient.age} years` : "—"} />
-        <Row label="NHS Number" value={state.patient.nhsNumber || "—"} />
-        <Row label="GP Name" value={state.patient.gpName || "—"} />
-        <Row label="GP Practice" value={state.patient.gpPractice || "—"} />
+        <Row label="Age" value={state.patient.age ? `${state.patient.age} years` : NOT_RECORDED} />
+        <Row label="Address" value={state.patient.address || NOT_RECORDED} />
+        <Row label="NHS Number" value={state.patient.nhsNumber || NOT_RECORDED} />
+        <Row label="GP Name" value={state.patient.gpName || NOT_RECORDED} />
+        <Row label="GP Practice" value={state.patient.gpPractice || NOT_RECORDED} />
       </div>
 
       {/* Weight Assessment */}
       <SectionHeader>Weight Assessment & BMI</SectionHeader>
       <div className="space-y-1.5">
-        <Row label="Height" value={state.weightAssessment.height ? `${state.weightAssessment.height} cm` : "—"} />
-        <Row label="Weight" value={state.weightAssessment.weight ? `${state.weightAssessment.weight} kg` : "—"} />
-        <Row label="BMI" value={state.weightAssessment.bmi ? `${state.weightAssessment.bmi} kg/m²` : "—"} />
-        <Row label="BMI Category" value={state.weightAssessment.bmiCategory || "—"} />
+        <Row label="Height" value={state.weightAssessment.height ? `${state.weightAssessment.height} cm` : NOT_RECORDED} />
+        <Row label="Weight" value={state.weightAssessment.weight ? `${state.weightAssessment.weight} kg` : NOT_RECORDED} />
+        <Row label="BMI" value={state.weightAssessment.bmi ? `${state.weightAssessment.bmi} kg/m²` : NOT_RECORDED} />
+        <Row label="BMI Category" value={state.weightAssessment.bmiCategory || NOT_RECORDED} />
         <Row
           label="Weight-Related Comorbidities"
-          value={
-            state.weightAssessment.comorbidities.length > 0
-              ? state.weightAssessment.comorbidities.join(", ")
-              : "None"
-          }
+          value={comorbidityLabels.length > 0 ? comorbidityLabels.join(", ") : "None"}
+        />
+        <Row
+          label="Target weight agreed"
+          value={state.weightAssessment.targetWeight ? `${state.weightAssessment.targetWeight} kg` : NOT_RECORDED}
+        />
+        <Row
+          label="Initial assessment completed (face to face)"
+          value={state.weightAssessment.initialAssessmentCompleted ? "Yes" : "No"}
+        />
+        <Row
+          label="Willing to follow reduced-calorie diet and increase activity"
+          value={state.weightAssessment.lifestylePlanAgreed ? "Yes" : "No"}
         />
       </div>
 
@@ -55,23 +80,35 @@ export function MounjaroSummaryReport({ state }: { state: MounjaroConsultationSt
         <p className="font-semibold text-navy-900">Exclusion Criteria Checked:</p>
         <CounsellingGrid
           items={[
+            ["Hypersensitivity to tirzepatide or excipients", state.medicalHistory.hypersensitivity],
             ["Personal MTC history", state.medicalHistory.personalMTCHistory],
             ["Family MTC history", state.medicalHistory.familyMTCHistory],
-            ["MEN2", state.medicalHistory.men2],
+            ["MEN 2", state.medicalHistory.men2],
             ["History of pancreatitis", state.medicalHistory.pancreatitisHistory],
-            ["Severe GI disease", state.medicalHistory.severeGIDisease],
+            ["Severe GI disease / gastroparesis", state.medicalHistory.severeGIDisease],
+            ["Current cholelithiasis or cholecystitis", state.medicalHistory.gallbladderDisease],
+            ["Cholecystectomy within 3 months", state.medicalHistory.recentCholecystectomy],
+            ["Obesity caused by endocrine disorder", state.medicalHistory.endocrineObesity],
             ["Type 1 diabetes", state.medicalHistory.type1Diabetes],
+            ["Diabetic retinopathy", state.medicalHistory.diabeticRetinopathy],
+            ["Severe renal impairment / ESRD", state.medicalHistory.severeRenalImpairment],
+            ["Severe hepatic impairment", state.medicalHistory.severeHepaticImpairment],
+            ["Heart failure with reduced EF", state.medicalHistory.heartFailureReducedEF],
+            ["Active eating disorder", state.medicalHistory.activeEatingDisorder],
             ["Currently pregnant", state.medicalHistory.pregnant],
             ["Currently breastfeeding", state.medicalHistory.breastfeeding],
+            ["Planning pregnancy", state.medicalHistory.planningPregnancy],
+            ["No effective contraception (childbearing potential)", state.medicalHistory.noEffectiveContraception],
+            ["Not suitable (clinical judgement)", state.medicalHistory.notSuitableClinicalJudgement],
           ]}
         />
         <p className="font-semibold text-navy-900 mt-3">Cautions & Monitoring:</p>
         <CounsellingGrid
           items={[
-            ["Gallbladder disease", state.medicalHistory.gallbladderDisease],
-            ["Renal impairment", state.medicalHistory.renalImpairment],
-            ["Diabetic retinopathy", state.medicalHistory.diabeticRetinopathy],
-            ["Depression/mental health", state.medicalHistory.depression],
+            ["Mild to moderate renal impairment", state.medicalHistory.renalImpairment],
+            ["Suicidal ideation / severe mental illness", state.medicalHistory.depression],
+            ["Psychiatric oversight absent with concern", state.medicalHistory.mentalHealthOversightAbsent],
+            ["Pre-existing increased heart rate", state.medicalHistory.preExistingTachycardia],
             ["Thyroid disease", state.medicalHistory.thyroidDisease],
           ]}
         />
@@ -80,13 +117,25 @@ export function MounjaroSummaryReport({ state }: { state: MounjaroConsultationSt
       {/* Medications */}
       <SectionHeader>Current Medications & Interactions</SectionHeader>
       <div className="space-y-1.5">
-        <Row label="Taking insulin" value={state.medications.takesInsulin ? "Yes" : "No"} />
+        <Row label="Insulin-treated diabetes" value={state.medications.takesInsulin ? "Yes (excluded)" : "No"} />
         {state.medications.takesInsulin && (
-          <Row label="Insulin details" value={state.medications.insulinDetails || "—"} />
+          <Row label="Insulin details" value={state.medications.insulinDetails || NOT_RECORDED} />
         )}
-        <Row label="Other GLP-1 agonist" value={state.medications.currentGLP1 ? "Yes" : "No"} />
+        <Row
+          label="Other GLP-1 agonist or insulin secretagogue (any indication)"
+          value={state.medications.currentGLP1 ? "Yes (excluded)" : "No"}
+        />
+        {state.medications.currentGLP1 && (
+          <Row label="Details" value={state.medications.otherGLP1Details || NOT_RECORDED} />
+        )}
+        <Row
+          label="T2DM on metformin / SGLT2 inhibitor / DPP-4 inhibitor only"
+          value={state.medications.t2dmOralAgents ? "Yes (GP to be informed)" : "No"}
+        />
         <Row label="Warfarin user" value={state.medications.warfarinUser ? "Yes" : "No"} />
         <Row label="Oral contraceptives" value={state.medications.takesOralContraceptives ? "Yes" : "No"} />
+        <Row label="Oral HRT" value={state.medications.takesHRT ? "Yes" : "No"} />
+        <Row label="Other medications" value={state.medications.otherMedications || "None recorded"} />
         <Row label="Allergies" value={state.medications.allergies || "NKDA"} />
       </div>
 
@@ -94,17 +143,38 @@ export function MounjaroSummaryReport({ state }: { state: MounjaroConsultationSt
       <SectionHeader>Clinical Alerts</SectionHeader>
       <AlertSummary alerts={state.alerts} />
 
-      {/* Dose Recommendation */}
+      {/* Medicine supplied */}
       {state.doseRecommendation && (
         <>
-          <SectionHeader>Dose Recommendation</SectionHeader>
+          <SectionHeader>Medicine Supplied</SectionHeader>
           <div className="space-y-1.5">
-            <Row label="Medicine" value={state.doseRecommendation.medicine} />
+            <Row label="Name and brand" value={state.doseRecommendation.medicine} />
+            <Row label="Form" value="Solution for injection in a multi-dose pre-filled pen (KwikPen), POM" />
             <Row label="Dose" value={state.doseRecommendation.dose} />
-            <Row label="Frequency" value={state.doseRecommendation.frequency || "—"} />
-            <Row label="Duration" value={state.doseRecommendation.duration || "—"} />
-            <Row label="Dosing Regimen" value={state.doseRecommendation.dosingRegimen || "—"} />
+            <Row label="Frequency and route" value={state.doseRecommendation.frequency || NOT_RECORDED} />
+            <Row label="Quantity supplied" value={state.doseRecommendation.duration || NOT_RECORDED} />
+            <Row label="Dosing Regimen" value={state.doseRecommendation.dosingRegimen || NOT_RECORDED} />
             <Row label="Reason" value={state.doseRecommendation.reason} />
+            <Row
+              label="Nature of supply"
+              value={SUPPLY_TYPE_LABELS[state.doseSelection.supplyType] ?? NOT_RECORDED}
+            />
+            <Row
+              label="Weeks on current or previous dose"
+              value={
+                state.doseSelection.weeksAtCurrentDose !== null
+                  ? `${state.doseSelection.weeksAtCurrentDose} weeks`
+                  : NOT_RECORDED
+              }
+            />
+            <Row label="More than 2 doses missed" value={state.doseSelection.missedMoreThanTwoDoses ? "Yes (reduce and re-escalate)" : "No"} />
+            <Row label="Batch number" value={state.doseSelection.batchNumber || NOT_RECORDED} />
+            <Row label="Expiry date" value={state.doseSelection.expiryDate || NOT_RECORDED} />
+            <Row label="Injection site advised" value={state.doseSelection.injectionSite || NOT_RECORDED} />
+            <Row label="Date of supply" value={state.summary.consultationDate} />
+            {state.doseSelection.pharmacistOverride && (
+              <Row label="Pharmacist override" value={state.doseSelection.overrideReason || "Reason not recorded"} />
+            )}
           </div>
         </>
       )}
@@ -115,15 +185,20 @@ export function MounjaroSummaryReport({ state }: { state: MounjaroConsultationSt
         items={[
           ["Injection technique explained", state.counselling.injectionTechnique],
           ["Injection site rotation", state.counselling.injectionSiteRotation],
-          ["Storage: refrigeration (2-8°C)", state.counselling.storageRefrigeration],
+          ["Storage: refrigerate 2 to 8°C; 21 days unrefrigerated below 30°C", state.counselling.storageRefrigeration],
           ["Missed dose protocol", state.counselling.missedDoseProtocol],
-          ["GI side effects discussed", state.counselling.giSideEffects],
+          ["GI side effects and fluid intake discussed", state.counselling.giSideEffects],
+          ["Warning symptoms needing urgent attention", state.counselling.warningSymptoms],
           ["Pancreatitis warning signs", state.counselling.pancreatitisWarning],
           ["Gallbladder warning signs", state.counselling.gallbladderWarning],
           ["Retinopathy monitoring", state.counselling.retinopathyWarning],
+          ["Oral medicine, contraceptive and HRT absorption", state.counselling.oralMedicationAbsorption],
+          ["General anaesthesia / deep sedation advice", state.counselling.anaesthesiaWarning],
           ["Pen device use", state.counselling.penDeviceUse],
-          ["Follow-up schedule arranged", state.counselling.followUpSchedule],
+          ["Follow-up schedule arranged (6-month 5% review)", state.counselling.followUpSchedule],
           ["Diet & exercise advice", state.counselling.dietExerciseAdvice],
+          ["PIL and written lifestyle advice given", state.counselling.writtenInfoProvided],
+          ["GP informed", state.counselling.gpInformed],
         ]}
       />
 
@@ -135,11 +210,11 @@ export function MounjaroSummaryReport({ state }: { state: MounjaroConsultationSt
           value={
             state.observations.systolicBP && state.observations.diastolicBP
               ? `${state.observations.systolicBP}/${state.observations.diastolicBP} mmHg`
-              : "—"
+              : NOT_RECORDED
           }
         />
-        <Row label="Heart Rate" value={state.observations.heartRate ? `${state.observations.heartRate} bpm` : "—"} />
-        <Row label="Weight (at consultation)" value={state.observations.weight ? `${state.observations.weight} kg` : "—"} />
+        <Row label="Heart Rate" value={state.observations.heartRate ? `${state.observations.heartRate} bpm` : NOT_RECORDED} />
+        <Row label="Weight (at consultation)" value={state.observations.weight ? `${state.observations.weight} kg` : NOT_RECORDED} />
       </div>
 
       {/* Pharmacist Declaration */}

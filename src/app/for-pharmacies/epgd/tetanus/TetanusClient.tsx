@@ -23,14 +23,19 @@ import type { ConsultationRecordData } from "../shared/hooks/useConsultationTrac
 import { TextInput, Checkbox, SelectInput, TextArea } from "../shared/components/FormInputs";
 
 /**
- * Tetanus, Diphtheria and Polio ePGD (Td/IPV, Revaxis), signed 30 Jul 2026.
- * Faithful to the signed PGD: 10 years and over, single 0.5 ml intramuscular
- * dose. Covers the missed adolescent booster, incomplete or unknown history,
- * the travel booster where the last dose was over 10 years ago, and
- * tetanus-prone wounds where immunoglobulin is NOT indicated. Wounds needing
- * immunoglobulin, outbreak case and contact management, and pregnancy are
- * hard stops with referral.
+ * Tetanus, Diphtheria and Polio ePGD (Td/IPV, Revaxis), PGD version 008,
+ * issued 11 September 2026. Faithful to the signed PGD: 10 years and over,
+ * single 0.5 mL intramuscular dose. Covers the missed adolescent booster,
+ * incomplete or unknown history, the travel booster where the last dose was
+ * over 10 years ago, and tetanus-prone wounds assessed by time since the last
+ * dose (not dose count). Pregnancy, a dose within the last 12 months (other
+ * than the scheduled second or third primary dose), outbreak case and contact
+ * management and current neurological deterioration are hard stops with
+ * referral. A wound needing immunoglobulin does NOT exclude the vaccine dose:
+ * the dose is given and the patient is referred the same day.
  */
+
+const PGD_VERSION = "Tetanus, Diphtheria and Polio (Revaxis, Td/IPV) PGD v008, issued 11 September 2026";
 
 const STEP_LABELS = [
   "Patient Details",
@@ -42,21 +47,31 @@ const STEP_LABELS = [
 ] as const;
 
 type Indication = "adolescent-booster" | "incomplete-history" | "travel" | "wound" | "";
-type LastDose = "over-10" | "5-to-10" | "under-5" | "unknown" | "";
+type LastDose = "over-10" | "5-to-10" | "under-5" | "under-12-months" | "unknown" | "";
+type Priming = "adequate" | "incomplete" | "";
+type ConsentBasis = "gillick" | "parental" | "";
 
 interface Clinical {
   indication: Indication;
   destination: string;
   lastDose: LastDose;
+  lastDoseDate: string;
   dosesReceived: string;
+  dosesSource: string;
+  primaryCourseContinuation: boolean;
+  consentBasis: ConsentBasis;
+  parentName: string;
   woundProne: boolean;
-  immunoglobulinIndicated: boolean;
+  woundHighRisk: boolean;
+  priming: Priming;
+  woundAssessmentNote: string;
   outbreakContact: boolean;
   anaphylaxisPreviousDose: boolean;
   anaphylaxisComponent: boolean;
   acuteFebrileIllness: boolean;
   pregnant: boolean;
   neurologicalDeterioration: boolean;
+  neuroComplicationsPrevious: boolean;
   immunosuppressed: boolean;
   bleedingDisorder: boolean;
   allergies: string;
@@ -64,19 +79,28 @@ interface Clinical {
   expiryDate: string;
   site: string;
   anaphylaxisKit: boolean;
+  offLabelExplained: boolean;
+  immunoglobulinReferralArranged: boolean;
+  observationCompleted: boolean;
   courseAdvice: boolean;
   sideEffectAdvice: boolean;
   woundAdvice: boolean;
+  recordAdvice: boolean;
 }
 
 const emptyClinical: Clinical = {
-  indication: "", destination: "", lastDose: "", dosesReceived: "",
-  woundProne: false, immunoglobulinIndicated: false, outbreakContact: false,
+  indication: "", destination: "", lastDose: "", lastDoseDate: "", dosesReceived: "", dosesSource: "",
+  primaryCourseContinuation: false, consentBasis: "", parentName: "",
+  woundProne: false, woundHighRisk: false, priming: "", woundAssessmentNote: "", outbreakContact: false,
   anaphylaxisPreviousDose: false, anaphylaxisComponent: false, acuteFebrileIllness: false,
-  pregnant: false, neurologicalDeterioration: false, immunosuppressed: false, bleedingDisorder: false,
+  pregnant: false, neurologicalDeterioration: false, neuroComplicationsPrevious: false,
+  immunosuppressed: false, bleedingDisorder: false,
   allergies: "", batchNumber: "", expiryDate: "", site: "", anaphylaxisKit: false,
-  courseAdvice: false, sideEffectAdvice: false, woundAdvice: false,
+  offLabelExplained: false, immunoglobulinReferralArranged: false, observationCompleted: false,
+  courseAdvice: false, sideEffectAdvice: false, woundAdvice: false, recordAdvice: false,
 };
+
+const WITHIN_10_YEARS: LastDose[] = ["under-12-months", "under-5", "5-to-10"];
 
 export default function TetanusClient() {
   const [step, setStep] = useState(0);
@@ -87,6 +111,19 @@ export default function TetanusClient() {
   const [c, setC] = useState<Clinical>({ ...emptyClinical });
   const set = (patch: Partial<Clinical>) => setC((prev) => ({ ...prev, ...patch }));
 
+  const isUnder16 = patient.age !== null && patient.age < 16;
+
+  // Derived wound logic (UKHSA Tetanus: advice for health professionals, Table 4;
+  // Green Book chapter 30 table 30.1), as stated in the PGD.
+  const wound = c.indication === "wound";
+  const uncertainHistory = c.priming === "incomplete" || c.lastDose === "unknown";
+  const primedWithin10 = wound && c.woundProne && c.priming === "adequate" && WITHIN_10_YEARS.includes(c.lastDose);
+  const immunoglobulinIndicated = wound && c.woundProne && (c.woundHighRisk || uncertainHistory);
+  const woundDoseIndicated = wound && c.woundProne && !primedWithin10 && (c.lastDose === "over-10" || uncertainHistory);
+
+  // Off-label: primary immunisation over 10 years, or a dose 12 months to 5 years after the last.
+  const offLabel = c.indication === "incomplete-history" || c.lastDose === "under-5";
+
   const alerts = useMemo<ClinicalAlert[]>(() => {
     const a: ClinicalAlert[] = [];
     const age = patient.age;
@@ -96,14 +133,28 @@ export default function TetanusClient() {
         code: "under-10",
         severity: "stop",
         message: "Under 10 years is excluded from this PGD",
-        detail: "Refer to the GP or an immunisation service for an age-appropriate vaccine (DTaP/IPV/Hib/HepB or dTaP/IPV).",
+        detail: "Refer to the GP or an appropriate immunisation service for an age-appropriate vaccine (DTaP/IPV/Hib/HepB or dTaP/IPV).",
+      });
+    if (c.pregnant)
+      a.push({
+        code: "pregnancy",
+        severity: "stop",
+        message: "Pregnancy is excluded from this PGD in all circumstances, including after a tetanus-prone wound",
+        detail: "Refer to the GP or midwife THE SAME DAY and make the urgency explicit where a wound is involved. There is no 'protection required without delay' route under this PGD. From week 16 a pertussis-containing vaccine is routinely indicated instead, which is a different product and a different decision.",
+      });
+    if (c.lastDose === "under-12-months" && !(c.indication === "incomplete-history" && c.primaryCourseContinuation))
+      a.push({
+        code: "dose-within-12-months",
+        severity: "stop",
+        message: "A tetanus, diphtheria or polio containing vaccine within the last 12 months excludes",
+        detail: "Refer to establish what was given and when. The only exception is the second or third dose of a primary course being given under this PGD at the scheduled one-month interval.",
       });
     if (c.anaphylaxisPreviousDose)
       a.push({
         code: "anaphylaxis-previous",
         severity: "stop",
         message: "Confirmed anaphylaxis to a previous diphtheria, tetanus or polio containing vaccine",
-        detail: "Excluded from this PGD, including conjugate vaccines using diphtheria or tetanus toxoid as the carrier. Refer to the GP.",
+        detail: "Excluded from this PGD, including any conjugate vaccine in which diphtheria or tetanus toxoid is used as the carrier. Refer to the GP.",
       });
     if (c.anaphylaxisComponent)
       a.push({
@@ -117,21 +168,7 @@ export default function TetanusClient() {
         code: "febrile",
         severity: "stop",
         message: "Acute severe febrile illness, postpone",
-        detail: "A minor infection without fever is not a contraindication. Advise when to return and arrange another appointment.",
-      });
-    if (c.pregnant)
-      a.push({
-        code: "pregnancy",
-        severity: "stop",
-        message: "Pregnancy is excluded from this PGD",
-        detail: "From week 16 a pertussis-containing vaccine is routinely indicated instead. Refer to the GP or midwife.",
-      });
-    if (c.immunoglobulinIndicated)
-      a.push({
-        code: "immunoglobulin",
-        severity: "stop",
-        message: "Tetanus immunoglobulin indicated, outside this PGD",
-        detail: "Arrange same-day medical assessment. Do not delay. Immunoglobulin cannot be supplied under this PGD.",
+        detail: "A minor infection is not a contraindication. Advise when to return and arrange another appointment.",
       });
     if (c.outbreakContact)
       a.push({
@@ -140,43 +177,84 @@ export default function TetanusClient() {
         message: "Case or contact in a diphtheria or polio outbreak",
         detail: "Must be managed by the local Health Protection Team. Outside this PGD.",
       });
+    if (c.neurologicalDeterioration)
+      a.push({
+        code: "neuro",
+        severity: "stop",
+        message: "Current neurological deterioration, defer",
+        detail: "Defer and seek advice so that any change is not incorrectly attributed to the vaccine. A stable neurological condition is not a contraindication; only current deterioration defers.",
+      });
+    if (c.neuroComplicationsPrevious)
+      a.push({
+        code: "neuro-complications",
+        severity: "stop",
+        message: "Neurological complications after a previous diphtheria or tetanus containing vaccine",
+        detail: "Guillain-Barre syndrome or brachial neuritis following a previous diphtheria or tetanus containing vaccine is excluded (Revaxis SmPC). Refer.",
+      });
 
-    // Indication-specific logic
-    if (c.indication === "travel" && c.lastDose === "under-5")
+    // Travel: the final dose of the relevant antigen must be more than 10 years ago.
+    if (c.indication === "travel" && WITHIN_10_YEARS.includes(c.lastDose))
       a.push({
         code: "travel-not-due",
-        severity: "caution",
-        message: "Booster not indicated for travel",
-        detail: "The last dose was under 5 years ago. A travel booster is indicated only where the last relevant dose was more than 10 years ago. Give reassurance and wound care advice instead.",
+        severity: "stop",
+        message: "Travel booster not indicated",
+        detail: "A travel booster under this PGD requires the final dose of the relevant antigen more than 10 years ago (this applies even where 5 doses have been received). Give reassurance and wound care advice, and check TravelHealthPro for the destination.",
       });
-    if (c.indication === "travel" && c.lastDose === "5-to-10")
+    if (c.indication === "travel" && c.lastDose === "unknown")
       a.push({
-        code: "travel-interval",
-        severity: "caution",
-        message: "Check the interval before supply",
-        detail: "A travel booster is indicated where the last relevant dose was more than 10 years ago. Where the interval is 5 to 10 years, confirm the destination risk against TravelHealthPro before proceeding.",
+        code: "travel-uncertain",
+        severity: "stop",
+        message: "Uncertain history in a traveller: use the incomplete or uncertain history indication",
+        detail: "Where there is no reliable history, assume undocumented doses are missing. Select 'No history, or incomplete or unknown history' so that a primary course is offered and recorded.",
       });
-    if (c.indication === "wound" && !c.woundProne)
+
+    // Tetanus-prone wound, assessed by time since the last dose.
+    if (wound && !c.woundProne)
       a.push({
         code: "wound-not-prone",
-        severity: "caution",
-        message: "Confirm the wound is tetanus-prone",
-        detail: "Reinforcing doses under this PGD are for tetanus-prone wounds as described in Green Book chapter 30. Assess the wound and refer if there is any doubt.",
+        severity: "stop",
+        message: "Wound not confirmed as tetanus-prone: no immunisation action under this indication",
+        detail: "Confirm the wound assessment (Green Book chapter 30 table 30.1). Where the wound is not tetanus-prone, give wound care advice and record the assessment. If another indication applies, select it instead.",
       });
+    if (primedWithin10)
+      a.push({
+        code: "wound-primed-within-10",
+        severity: "stop",
+        message: "Adequately primed with the last dose within 10 years: no vaccine needed",
+        detail: c.woundHighRisk
+          ? "No further vaccine is needed. The wound is HIGH RISK: refer the same day for tetanus immunoglobulin, which this PGD does not supply. Give wound care advice and record the assessment."
+          : "No further vaccine is needed. Give wound care advice and record the assessment against table 30.1.",
+      });
+    if (immunoglobulinIndicated && !primedWithin10)
+      a.push({
+        code: "immunoglobulin",
+        severity: "red-flag",
+        message: "Tetanus immunoglobulin indicated: give the vaccine dose and refer the same day",
+        detail: uncertainHistory
+          ? "Not adequately primed or history uncertain with a tetanus-prone wound: give the vaccine dose under this PGD AND refer the same day for tetanus immunoglobulin, whether or not the wound is high risk. Immunoglobulin is not a PGD supply. Do not delay."
+          : "High-risk wound (heavy contamination with soil or manure, devitalised tissue, burns, sepsis, or more than 6 hours to surgical treatment) with the last dose more than 10 years ago: give the reinforcing dose AND refer the same day for tetanus immunoglobulin, which this PGD does not supply. Do not delay.",
+      });
+    if (wound && c.woundProne && c.priming === "adequate" && c.lastDose === "over-10" && !c.woundHighRisk)
+      a.push({
+        code: "wound-reinforcing",
+        severity: "caution",
+        message: "Reinforcing dose indicated",
+        detail: "Adequate priming with the last dose more than 10 years ago: a single reinforcing dose under this PGD, whatever the total number of doses. Immunoglobulin is not indicated unless the wound is high risk.",
+      });
+
     if (c.indication === "incomplete-history")
       a.push({
         code: "primary-course",
         severity: "caution",
         message: "Primary course required",
-        detail: "Where there is no reliable history, assume unimmunised: 3 doses one month apart, then boosters at 5 and 10 year intervals. Book the follow-up doses today and inform the GP.",
+        detail: "Where there is no reliable history, assume undocumented doses are missing: 3 doses one month apart, resumed (not restarted) if interrupted, then a first booster at least 5 years after the third dose and a second booster a minimum of 5 and ideally 10 years after the first. Primary immunisation over 10 years of age is off-label: explain and record. Book the next dose today and inform the GP.",
       });
-
-    if (c.neurologicalDeterioration)
+    if (c.lastDose === "under-5")
       a.push({
-        code: "neuro",
+        code: "off-label-interval",
         severity: "caution",
-        message: "Current neurological deterioration",
-        detail: "Consider deferring so that any change is not incorrectly attributed to the vaccine. Balance against the risk of preventable infection and seek advice.",
+        message: "Dose within 5 years of the last diphtheria or tetanus toxoid containing vaccine is off-label",
+        detail: "Outside the Revaxis SmPC (section 4.4) and given in accordance with the Green Book. Explain this as part of consent and record it. For the adolescent booster, confirm a minimum of 5 years since the pre-school booster.",
       });
     if (c.immunosuppressed)
       a.push({
@@ -190,51 +268,72 @@ export default function TetanusClient() {
         code: "bleeding",
         severity: "caution",
         message: "Bleeding disorder or anticoagulation",
-        detail: "Intramuscular vaccination is appropriate where assessed as safe: use a 23 gauge or finer needle, apply firm pressure without rubbing for at least 2 minutes, and advise on the risk of haematoma.",
+        detail: "Stable anticoagulation (warfarin up to date with INR testing and latest INR below the upper threshold of the therapeutic range) may be vaccinated intramuscularly with a 23 gauge or finer needle, followed by firm pressure without rubbing for at least 2 minutes. Advise on the risk of haematoma. Where the intramuscular route is not suitable, give by deep subcutaneous injection.",
       });
     if (!c.anaphylaxisKit && step >= 4)
       a.push({
         code: "no-kit",
         severity: "red-flag",
-        message: "Anaphylaxis kit not confirmed",
-        detail: "Adrenaline 1 in 1,000 injection and a telephone must be immediately available before any vaccine is given.",
+        message: "Anaphylaxis facilities not confirmed",
+        detail: "Facilities and trained staff for the management of anaphylaxis, with immediate access to adrenaline (epinephrine) 1 in 1,000 injection and a telephone, must be available before any vaccine is given.",
       });
 
     return a;
-  }, [patient.age, c, step]);
+  }, [patient.age, c, step, wound, uncertainHistory, primedWithin10, immunoglobulinIndicated]);
 
   const hasStops = alerts.some((x) => x.severity === "stop");
 
   const doseText = useMemo(() => {
+    const base = "Revaxis 0.5 mL by intramuscular injection, preferably into the deltoid muscle of the upper arm.";
     if (c.indication === "incomplete-history")
-      return "Revaxis 0.5 ml intramuscular. First of a 3 dose primary course, doses one month apart. First booster at least 5 years after the third dose, second booster a minimum of 5 and ideally 10 years after the first.";
-    return "Revaxis 0.5 ml intramuscular, single dose into the deltoid muscle of the upper arm.";
-  }, [c.indication]);
+      return `${base} ${c.primaryCourseContinuation ? "Second or third dose" : "First dose"} of a 3 dose primary course, one month between doses; an interrupted course is resumed, not restarted. First booster at least 5 years after the third dose, second booster a minimum of 5 and ideally 10 years after the first.`;
+    if (c.indication === "wound")
+      return `${base} Single reinforcing dose for a tetanus-prone wound.`;
+    if (c.indication === "travel")
+      return `${base} Single travel booster (last dose more than 10 years ago).`;
+    return `${base} Single adolescent booster dose, a minimum of 5 years after the pre-school booster.`;
+  }, [c.indication, c.primaryCourseContinuation]);
 
   const validationError = useMemo(() => {
     switch (step) {
       case 0: return validatePatientStep(patient, { minAge: 10 });
-      case 1: return validateConsentStep(consent);
+      case 1: {
+        const base = validateConsentStep(consent);
+        if (base) return base;
+        if (isUnder16) {
+          if (!c.consentBasis) return "Under 16: record whether the young person is Gillick competent or consent was given by a person with parental responsibility";
+          if (c.consentBasis === "parental" && !c.parentName.trim()) return "Record the name and relationship of the person with parental responsibility";
+        }
+        return null;
+      }
       case 2:
         if (!c.indication) return "Please select the indication";
         if (c.indication === "travel" && !c.destination.trim()) return "Please record the destination";
         if (!c.lastDose) return "Please record when the last tetanus-containing dose was given";
+        if (!c.lastDoseDate.trim()) return "Please record the date of the most recent tetanus-containing dose and how it was established";
+        if (!c.dosesReceived.trim()) return "Please record the number of documented prior doses";
+        if (!c.dosesSource.trim()) return "Please record the source of the dose history";
         return null;
       case 3:
         if (!c.allergies.trim()) return "Please record allergy status (or NKDA)";
+        if (wound && !c.priming) return "Please record the priming status for the wound assessment";
+        if (wound && !c.woundAssessmentNote.trim()) return "Please record the wound assessment against table 30.1 and the conclusion on immunoglobulin";
         return null;
       case 4:
-        if (!c.anaphylaxisKit) return "Confirm the anaphylaxis kit is immediately available";
+        if (!c.anaphylaxisKit) return "Confirm anaphylaxis facilities and adrenaline 1 in 1,000 are immediately available";
+        if (offLabel && !c.offLabelExplained) return "Confirm the off-label use was explained and consent given on that basis";
+        if (immunoglobulinIndicated && !c.immunoglobulinReferralArranged) return "Confirm the same-day referral for tetanus immunoglobulin has been arranged";
         if (!c.batchNumber.trim()) return "Please record the batch number";
         if (!c.expiryDate.trim()) return "Please record the expiry date";
         if (!c.site.trim()) return "Please record the anatomical site";
         return null;
       case 5:
-        if (!c.courseAdvice || !c.sideEffectAdvice || !c.woundAdvice) return "Please confirm all counselling points";
+        if (!c.observationCompleted) return "Confirm the 15 minute observation period was completed";
+        if (!c.courseAdvice || !c.sideEffectAdvice || !c.woundAdvice || !c.recordAdvice) return "Please confirm all counselling points";
         return validateSummaryStep(summary);
       default: return null;
     }
-  }, [step, patient, consent, c, summary]);
+  }, [step, patient, consent, c, summary, isUnder16, wound, offLabel, immunoglobulinIndicated]);
 
   const canProceed = !validationError && (!hasStops || step >= 4);
   const next = () => { if (canProceed) { setCompleted((p) => new Set([...p, step])); setStep((s) => Math.min(s + 1, STEP_LABELS.length - 1)); } };
@@ -246,7 +345,10 @@ export default function TetanusClient() {
       nhsNumber: patient.nhsNumber, phone: patient.phone, email: patient.email, address: patient.address,
       gpName: patient.gpName, gpPractice: patient.gpPractice,
     },
-    clinicalData: { patient, consent, clinical: c, alerts, dose: doseText } as unknown as Record<string, unknown>,
+    clinicalData: {
+      patient, consent, clinical: c, alerts, dose: doseText, pgdVersion: PGD_VERSION,
+      route: "Intramuscular", woundDoseIndicated, immunoglobulinIndicated, offLabel,
+    } as unknown as Record<string, unknown>,
     outcome: hasStops ? "not_supplied" : "completed",
     summary: {
       pharmacistName: summary.pharmacistName, pharmacistGPhC: summary.pharmacistGPhC,
@@ -262,31 +364,57 @@ export default function TetanusClient() {
       case 0:
         return <PatientDetailsStep patient={patient} onChange={onPatientChange} requireAdult={false} />;
       case 1:
-        return <ConsentStep consent={consent} onChange={(f, v) => setConsent((p) => ({ ...p, [f]: v }))} />;
+        return (
+          <div className="space-y-4">
+            <ConsentStep consent={consent} onChange={(f, v) => setConsent((p) => ({ ...p, [f]: v }))} />
+            {isUnder16 && (
+              <div className="space-y-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                <p className="text-sm font-semibold text-amber-800">Consent in a young person under 16</p>
+                <SelectInput label="Basis of consent" value={c.consentBasis} onChange={(v) => set({ consentBasis: v as ConsentBasis })}
+                  options={[
+                    { value: "gillick", label: "Young person assessed as Gillick competent and consents" },
+                    { value: "parental", label: "Consent from a person with parental responsibility" },
+                  ]} required />
+                {c.consentBasis === "parental" && (
+                  <TextInput label="Name and relationship of the person with parental responsibility" value={c.parentName} onChange={(v) => set({ parentName: v })} placeholder="e.g. Jane Smith, mother" required />
+                )}
+                {c.consentBasis === "gillick" && (
+                  <TextInput label="Basis of the Gillick assessment (optional note)" value={c.parentName} onChange={(v) => set({ parentName: v })} placeholder="e.g. understands the purpose, benefits and risks and can retain and weigh the information" />
+                )}
+              </div>
+            )}
+          </div>
+        );
       case 2:
         return (
           <div className="space-y-4">
             <AlertBanner alerts={alerts} />
             <SelectInput label="Indication" value={c.indication} onChange={(v) => set({ indication: v as Indication })}
               options={[
-                { value: "adolescent-booster", label: "Adolescent booster (missed or due, usually 13 to 18 years)" },
-                { value: "incomplete-history", label: "No history, or incomplete or unknown history" },
-                { value: "travel", label: "Travel to an endemic or epidemic area, or where medical care may not be accessible" },
-                { value: "wound", label: "Tetanus-prone wound, reinforcing dose" },
+                { value: "adolescent-booster", label: "Adolescent booster following a primary course (usually offered at 13 to 18 years), not already completed" },
+                { value: "incomplete-history", label: "No history, or incomplete or uncertain history" },
+                { value: "travel", label: "Travel where medical attention may not be accessible, or residing in an endemic or epidemic area, and last dose more than 10 years ago" },
+                { value: "wound", label: "Tetanus-prone wound, reinforcing dose (UKHSA Table 4)" },
               ]} required />
             {c.indication === "travel" && (
               <TextInput label="Destination and travel dates" value={c.destination} onChange={(v) => set({ destination: v })} placeholder="e.g. rural Nepal, departing 12 Sep" required />
             )}
-            <SelectInput label="Last tetanus-containing dose" value={c.lastDose} onChange={(v) => set({ lastDose: v as LastDose })}
+            <SelectInput label="Last tetanus, diphtheria or polio containing dose" value={c.lastDose} onChange={(v) => set({ lastDose: v as LastDose })}
               options={[
                 { value: "over-10", label: "More than 10 years ago" },
                 { value: "5-to-10", label: "5 to 10 years ago" },
-                { value: "under-5", label: "Less than 5 years ago" },
+                { value: "under-5", label: "Between 12 months and 5 years ago" },
+                { value: "under-12-months", label: "Within the last 12 months" },
                 { value: "unknown", label: "Unknown or uncertain" },
               ]} required />
-            <TextInput label="Number of previous doses documented (if known)" value={c.dosesReceived} onChange={(v) => set({ dosesReceived: v })} placeholder="e.g. 5, or unknown" />
+            {c.indication === "incomplete-history" && c.lastDose === "under-12-months" && (
+              <Checkbox label="This is the second or third dose of a primary course being given under this PGD at the scheduled one-month interval" checked={c.primaryCourseContinuation} onChange={(v) => set({ primaryCourseContinuation: v })} />
+            )}
+            <TextInput label="Date of the most recent tetanus-containing dose, and how it was established" value={c.lastDoseDate} onChange={(v) => set({ lastDoseDate: v })} placeholder="e.g. 14/03/2012 from GP record; or unknown, no records available" required />
+            <TextInput label="Number of documented prior doses" value={c.dosesReceived} onChange={(v) => set({ dosesReceived: v })} placeholder="e.g. 5, or 0 documented" required />
+            <TextInput label="Source of the dose history" value={c.dosesSource} onChange={(v) => set({ dosesSource: v })} placeholder="e.g. GP summary care record, red book, patient recall" required />
             <div className="p-4 bg-[color:var(--tenant-primary)]/10 rounded-lg border border-[color:var(--tenant-primary)]/30 text-sm">
-              A travel booster is indicated where the last relevant dose was more than 10 years ago, even where 5 doses have previously been received. Some countries require proof of polio vaccination within the previous 12 months, check TravelHealthPro for the destination.
+              Five documented doses is a complete lifetime course for routine purposes. It does not exempt the individual from a travel booster or a wound reinforcing dose where the last dose was more than 10 years ago. A dose within the last 12 months excludes, other than the scheduled second and third doses of a primary course under this PGD. Some countries require proof of polio vaccination within the previous 12 months, check TravelHealthPro for the destination.
             </div>
           </div>
         );
@@ -297,27 +425,37 @@ export default function TetanusClient() {
             <TextInput label="Allergies" value={c.allergies} onChange={(v) => set({ allergies: v })} placeholder="Record allergies, or NKDA" required />
             <div className="space-y-3 p-4 bg-red-50 rounded-lg border border-red-200">
               <p className="text-sm font-semibold text-red-800">Exclusions</p>
-              <Checkbox label="Confirmed anaphylaxis to a previous diphtheria, tetanus or polio containing vaccine" checked={c.anaphylaxisPreviousDose} onChange={(v) => set({ anaphylaxisPreviousDose: v })} />
+              <Checkbox label="Pregnant (excluded in all circumstances, including after a tetanus-prone wound: refer to the GP or midwife the same day)" checked={c.pregnant} onChange={(v) => set({ pregnant: v })} />
+              <Checkbox label="Confirmed anaphylaxis to a previous diphtheria, tetanus or polio containing vaccine (including a conjugate vaccine using diphtheria or tetanus toxoid as the carrier)" checked={c.anaphylaxisPreviousDose} onChange={(v) => set({ anaphylaxisPreviousDose: v })} />
               <Checkbox label="Confirmed anaphylaxis to a vaccine component (neomycin, streptomycin, polymyxin B)" checked={c.anaphylaxisComponent} onChange={(v) => set({ anaphylaxisComponent: v })} />
-              <Checkbox label="Acute severe febrile illness" checked={c.acuteFebrileIllness} onChange={(v) => set({ acuteFebrileIllness: v })} />
-              <Checkbox label="Pregnant" checked={c.pregnant} onChange={(v) => set({ pregnant: v })} />
-              <Checkbox label="Tetanus immunoglobulin indicated for this wound" checked={c.immunoglobulinIndicated} onChange={(v) => set({ immunoglobulinIndicated: v })} />
+              <Checkbox label="Acute severe febrile illness (a minor infection is not a contraindication)" checked={c.acuteFebrileIllness} onChange={(v) => set({ acuteFebrileIllness: v })} />
               <Checkbox label="Case or contact in a diphtheria or polio outbreak" checked={c.outbreakContact} onChange={(v) => set({ outbreakContact: v })} />
+              <Checkbox label="Current neurological deterioration" checked={c.neurologicalDeterioration} onChange={(v) => set({ neurologicalDeterioration: v })} />
+              <Checkbox label="Neurological complications (Guillain-Barre syndrome or brachial neuritis) following a previous diphtheria or tetanus containing vaccine" checked={c.neuroComplicationsPrevious} onChange={(v) => set({ neuroComplicationsPrevious: v })} />
             </div>
-            {c.indication === "wound" && (
+            {wound && (
               <div className="space-y-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
-                <p className="text-sm font-semibold text-amber-800">Wound assessment</p>
-                <Checkbox label="Wound is tetanus-prone (Green Book chapter 30)" checked={c.woundProne} onChange={(v) => set({ woundProne: v })} />
+                <p className="text-sm font-semibold text-amber-800">Wound assessment (Green Book chapter 30 table 30.1; UKHSA Tetanus: advice for health professionals, Table 4)</p>
+                <Checkbox label="Wound is tetanus-prone" checked={c.woundProne} onChange={(v) => set({ woundProne: v })} />
+                <Checkbox label="Wound is HIGH RISK: heavy contamination with soil or manure, devitalised tissue, burns, sepsis, or a delay of more than 6 hours to surgical treatment" checked={c.woundHighRisk} onChange={(v) => set({ woundHighRisk: v })} />
+                <SelectInput label="Priming status" value={c.priming} onChange={(v) => set({ priming: v as Priming })}
+                  options={[
+                    { value: "adequate", label: "Adequate priming course: 3 or more documented doses" },
+                    { value: "incomplete", label: "Not adequately primed, or incomplete or uncertain history" },
+                  ]} required />
+                <TextArea label="Assessment against table 30.1 and conclusion on immunoglobulin" value={c.woundAssessmentNote} onChange={(v) => set({ woundAssessmentNote: v })} placeholder="e.g. puncture wound gardening, soil contamination, 3 doses documented, last dose 2009: reinforcing dose given, high-risk wound, same-day referral for immunoglobulin" required />
+                <p className="text-xs text-amber-800">
+                  Adequate priming with the last dose within 10 years: no vaccine. Last dose more than 10 years ago, whatever the total number of doses: a reinforcing dose. Immunoglobulin is indicated where the wound is high risk, or where the person is not adequately primed or the history is uncertain; it is a same-day referral, not a PGD supply, and does not exclude the vaccine dose.
+                </p>
               </div>
             )}
             <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
               <p className="text-sm font-semibold text-gray-700">Cautions</p>
-              <Checkbox label="Current neurological deterioration" checked={c.neurologicalDeterioration} onChange={(v) => set({ neurologicalDeterioration: v })} />
-              <Checkbox label="Immunosuppressed" checked={c.immunosuppressed} onChange={(v) => set({ immunosuppressed: v })} />
+              <Checkbox label="Immunosuppressed (vaccinate; advise protection may be limited)" checked={c.immunosuppressed} onChange={(v) => set({ immunosuppressed: v })} />
               <Checkbox label="Bleeding disorder or anticoagulation" checked={c.bleedingDisorder} onChange={(v) => set({ bleedingDisorder: v })} />
             </div>
             <div className="p-4 bg-[color:var(--tenant-primary)]/10 rounded-lg border border-[color:var(--tenant-primary)]/30 text-sm">
-              Revaxis contains approximately 10 micrograms of phenylalanine per 0.5 ml dose. The NSPKU advises this amount is negligible and that individuals with phenylketonuria should take up the offer of immunisation.
+              A stable neurological condition is not a contraindication; only current deterioration defers. Revaxis contains approximately 10 micrograms of phenylalanine per 0.5 mL dose. The NSPKU advises this amount is negligible and that individuals with phenylketonuria should take up the offer of immunisation.
             </div>
           </div>
         );
@@ -328,12 +466,18 @@ export default function TetanusClient() {
             <div className="p-4 bg-[color:var(--tenant-primary)]/10 rounded-lg border border-[color:var(--tenant-primary)]/30 text-sm">
               <p className="font-semibold mb-1">Dose</p>
               <p>{doseText}</p>
-              <p className="mt-2">Shake the pre-filled syringe well before use. Inspect visually and do not administer if the appearance differs from a cloudy white suspension. Where given with other vaccines, use separate sites, preferably different limbs, or at least 2.5 cm apart.</p>
+              <p className="mt-2">Revaxis, adsorbed diphtheria (low dose), tetanus and inactivated poliomyelitis vaccine, suspension for injection in a pre-filled syringe, 0.5 mL. Shake the pre-filled syringe well before use; the normal appearance is a cloudy white suspension that may sediment. Inspect visually and do not administer if there is foreign particulate matter or any variation from the expected appearance. Where given with other vaccines, use separate sites, preferably different limbs, or at least 2.5 cm apart in the same limb, and record the site of each. Vaccinate seated and observe every patient for 15 minutes after vaccination.</p>
             </div>
-            <Checkbox label="Adrenaline 1 in 1,000 and anaphylaxis facilities are immediately available" checked={c.anaphylaxisKit} onChange={(v) => set({ anaphylaxisKit: v })} />
+            <Checkbox label="Facilities and trained staff for anaphylaxis are available, with immediate access to adrenaline (epinephrine) 1 in 1,000 injection and a telephone" checked={c.anaphylaxisKit} onChange={(v) => set({ anaphylaxisKit: v })} />
+            {offLabel && (
+              <Checkbox label="Off-label use explained (given outside the product licence but in accordance with the Green Book) and consent given on that basis" checked={c.offLabelExplained} onChange={(v) => set({ offLabelExplained: v })} />
+            )}
+            {immunoglobulinIndicated && (
+              <Checkbox label="Same-day referral for tetanus immunoglobulin arranged (immunoglobulin is not supplied under this PGD)" checked={c.immunoglobulinReferralArranged} onChange={(v) => set({ immunoglobulinReferralArranged: v })} />
+            )}
             <TextInput label="Batch number" value={c.batchNumber} onChange={(v) => set({ batchNumber: v })} required />
             <TextInput label="Expiry date" value={c.expiryDate} onChange={(v) => set({ expiryDate: v })} placeholder="MM/YYYY" required />
-            <TextInput label="Anatomical site" value={c.site} onChange={(v) => set({ site: v })} placeholder="e.g. left deltoid" required />
+            <TextInput label="Anatomical site (route: intramuscular)" value={c.site} onChange={(v) => set({ site: v })} placeholder="e.g. left deltoid" required />
           </div>
         );
       case 5:
@@ -341,10 +485,13 @@ export default function TetanusClient() {
           <div className="space-y-4">
             <AlertBanner alerts={alerts} />
             <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
-              <Checkbox label="Advised when any further doses are due, and that the course should be completed" checked={c.courseAdvice} onChange={(v) => set({ courseAdvice: v })} />
-              <Checkbox label="Side effects and their management explained, including Yellow Card reporting" checked={c.sideEffectAdvice} onChange={(v) => set({ sideEffectAdvice: v })} />
-              <Checkbox label="Advised that any future tetanus-prone wound needs medical assessment regardless of immunisation status" checked={c.woundAdvice} onChange={(v) => set({ woundAdvice: v })} />
+              <Checkbox label="15 minute observation period after vaccination completed" checked={c.observationCompleted} onChange={(v) => set({ observationCompleted: v })} />
+              <Checkbox label="Written record of the vaccine given (date, brand, batch number) and the patient information leaflet supplied; told to keep the record because the number of doses determines what happens if they are ever injured" checked={c.recordAdvice} onChange={(v) => set({ recordAdvice: v })} />
+              <Checkbox label="Where a course is involved, the next dose has been booked at this appointment and the patient advised to come back for every dose" checked={c.courseAdvice} onChange={(v) => set({ courseAdvice: v })} />
+              <Checkbox label="Advised that a sore arm, mild fever, headache or aching for a day or two is common and settles by itself; Yellow Card reporting explained" checked={c.sideEffectAdvice} onChange={(v) => set({ sideEffectAdvice: v })} />
+              <Checkbox label="Advised that any dirty wound, puncture wound, burn, animal bite or wound with soil or manure in it must be cleaned and medical advice sought, whatever vaccinations they have had (and, for travellers, that vaccination does not remove the need to get any significant wound cleaned and assessed while away)" checked={c.woundAdvice} onChange={(v) => set({ woundAdvice: v })} />
             </div>
+            <p className="text-xs text-gray-500">{PGD_VERSION}.</p>
             <TextInput label="Pharmacist name" value={summary.pharmacistName} onChange={(v) => setSummary((p) => ({ ...p, pharmacistName: v }))} required />
             <TextInput label="GPhC registration number" value={summary.pharmacistGPhC} onChange={(v) => setSummary((p) => ({ ...p, pharmacistGPhC: v }))} required />
             <TextArea label="Clinical notes (optional)" value={summary.clinicalNotes} onChange={(v) => setSummary((p) => ({ ...p, clinicalNotes: v }))} />

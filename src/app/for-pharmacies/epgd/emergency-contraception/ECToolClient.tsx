@@ -19,6 +19,8 @@ import {
   calculateDoseRecommendation,
   calculateHoursSinceUPSI,
   getMedicineAvailability,
+  calculateBmi,
+  isHighWeightOrBmi,
 } from "./lib/ec-clinical-logic";
 import { validateStep } from "./lib/ec-validation";
 import { calculateAge } from "../shared/types";
@@ -245,10 +247,40 @@ export function ECToolClient() {
                   dispatch({ type: "UPDATE_PATIENT", field: "femaleConfirmed", value: v }),
               }}
             />
-            {state.patient.age !== null && state.patient.age >= 13 && state.patient.age <= 15 && (
-              <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded">
+            {state.patient.age !== null && state.patient.age < 13 && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded space-y-3">
+                <p className="text-sm font-semibold text-red-800">
+                  Aged under 13: any sexual activity is a safeguarding concern. This ePGD does not
+                  supply emergency contraception to a child under 13. Refer the same day to the GP or
+                  sexual health service, make a safeguarding referral, and record both below.
+                </p>
                 <Checkbox
-                  label="Fraser competence confirmed"
+                  label="Safeguarding referral made"
+                  checked={state.patient.safeguardingReferralMade}
+                  onChange={(v) =>
+                    dispatch({ type: "UPDATE_PATIENT", field: "safeguardingReferralMade", value: v })
+                  }
+                  required
+                />
+                <TextArea
+                  label="Safeguarding referral record"
+                  value={state.patient.safeguardingNotes}
+                  onChange={(v) =>
+                    dispatch({ type: "UPDATE_PATIENT", field: "safeguardingNotes", value: v })
+                  }
+                  placeholder="Who was contacted, when, and the outcome"
+                  required
+                />
+              </div>
+            )}
+            {state.patient.age !== null && state.patient.age >= 13 && state.patient.age <= 15 && (
+              <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded space-y-3">
+                <p className="text-sm font-semibold text-amber-900">
+                  Aged 13 to 15: assess and record Fraser competence, ask about coercion, the age of the
+                  partner and any safeguarding concern, and follow the local safeguarding pathway.
+                </p>
+                <Checkbox
+                  label="Fraser competence assessed and recorded"
                   checked={state.patient.fraserCompetent ?? false}
                   onChange={(v) =>
                     dispatch({
@@ -257,7 +289,32 @@ export function ECToolClient() {
                       value: v,
                     })
                   }
-                  description="For patients aged 13-15, confirm that they understand the implications of emergency contraception and are competent to consent."
+                  description="The young person understands the advice, cannot be persuaded to involve a parent, is likely to continue having sex, and their best interests require supply."
+                />
+                <Checkbox
+                  label="Asked about coercion"
+                  checked={state.patient.coercionAsked}
+                  onChange={(v) => dispatch({ type: "UPDATE_PATIENT", field: "coercionAsked", value: v })}
+                />
+                <TextInput
+                  label="Age of the partner"
+                  value={state.patient.partnerAge}
+                  onChange={(v) => dispatch({ type: "UPDATE_PATIENT", field: "partnerAge", value: v })}
+                  placeholder="e.g. 15"
+                  required
+                />
+                <Checkbox
+                  label="Safeguarding concern identified"
+                  checked={state.patient.safeguardingConcern}
+                  onChange={(v) => dispatch({ type: "UPDATE_PATIENT", field: "safeguardingConcern", value: v })}
+                  description="If ticked, follow the local safeguarding pathway and record the action taken."
+                />
+                <TextArea
+                  label="Safeguarding assessment record"
+                  value={state.patient.safeguardingNotes}
+                  onChange={(v) => dispatch({ type: "UPDATE_PATIENT", field: "safeguardingNotes", value: v })}
+                  placeholder="Fraser assessment, coercion, partner age, any concern and action taken"
+                  required
                 />
               </div>
             )}
@@ -525,7 +582,81 @@ export function ECToolClient() {
               />
 
               <Checkbox
-                label="Severe hepatic impairment"
+                label="Known or suspected pregnancy"
+                checked={state.medicalHistory.currentlyPregnant}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "currentlyPregnant",
+                    value: v,
+                  })
+                }
+                description="Exclusion for both medicines (also triggered by a positive pregnancy test)."
+              />
+
+              <div className="grid sm:grid-cols-3 gap-4">
+                <NumberInput
+                  label="Weight"
+                  value={state.medicalHistory.weightKg}
+                  onChange={(v) =>
+                    dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "weightKg", value: v })
+                  }
+                  min={20}
+                  max={300}
+                  unit="kg"
+                  required
+                />
+                <NumberInput
+                  label="Height"
+                  value={state.medicalHistory.heightCm}
+                  onChange={(v) =>
+                    dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "heightCm", value: v })
+                  }
+                  min={100}
+                  max={250}
+                  unit="cm"
+                />
+                <div>
+                  <label className="block text-sm font-medium text-navy-900 mb-1">BMI</label>
+                  <div className="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-navy-900">
+                    {calculateBmi(state.medicalHistory.weightKg, state.medicalHistory.heightCm) ?? "Enter weight and height"}
+                  </div>
+                </div>
+              </div>
+              {isHighWeightOrBmi(state) && (
+                <p className="text-xs text-amber-700">
+                  Weight 70 kg or over, or BMI 26 or over: ulipristal is preferred (FSRH) unless unsuitable; where
+                  levonorgestrel is used give 3 mg (off-label per FSRH). Explain this and record it.
+                </p>
+              )}
+
+              <Checkbox
+                label="Hypersensitivity to levonorgestrel or any component of the formulation"
+                checked={state.medicalHistory.lngHypersensitivity}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "lngHypersensitivity", value: v })
+                }
+                description="Exclusion for levonorgestrel."
+              />
+              <Checkbox
+                label="Hypersensitivity to ulipristal acetate or any component of the formulation"
+                checked={state.medicalHistory.upaHypersensitivity}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "upaHypersensitivity", value: v })
+                }
+                description="Exclusion for ulipristal."
+              />
+              <Checkbox
+                label="Hereditary galactose intolerance"
+                checked={state.medicalHistory.galactoseIntolerance}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "galactoseIntolerance", value: v })
+                }
+                description="Exclusion for both medicines."
+              />
+
+              <Checkbox
+                label="Severe hepatic impairment (e.g. cirrhosis)"
                 checked={state.medicalHistory.severeHepatic}
                 onChange={(v) =>
                   dispatch({
@@ -538,7 +669,7 @@ export function ECToolClient() {
               />
 
               <Checkbox
-                label="Severe asthma"
+                label="Severe asthma insufficiently controlled by oral glucocorticoids"
                 checked={state.medicalHistory.severeAsthma}
                 onChange={(v) =>
                   dispatch({
@@ -547,11 +678,11 @@ export function ECToolClient() {
                     value: v,
                   })
                 }
-                description="Contraindication for ulipristal."
+                description="Exclusion for ulipristal."
               />
 
               <Checkbox
-                label="Crohn's disease or inflammatory bowel disease"
+                label="Malabsorption condition affecting drug absorption (e.g. Crohn's disease)"
                 checked={state.medicalHistory.crohnsDisease}
                 onChange={(v) =>
                   dispatch({
@@ -573,7 +704,7 @@ export function ECToolClient() {
                     value: v,
                   })
                 }
-                description="Both medicines can be used with precautions (expression/discard of milk)."
+                description="Levonorgestrel: avoid breastfeeding for 8 hours after the dose. Ulipristal: avoid breastfeeding for 7 days after the dose."
               />
 
               <Checkbox
@@ -590,7 +721,7 @@ export function ECToolClient() {
               />
 
               <Checkbox
-                label="Porphyria"
+                label="Acute intermittent porphyria"
                 checked={state.medicalHistory.porphyria}
                 onChange={(v) =>
                   dispatch({
@@ -599,7 +730,7 @@ export function ECToolClient() {
                     value: v,
                   })
                 }
-                description="May be contraindicated; specialist advice recommended."
+                description="Exclusion for levonorgestrel."
               />
             </div>
           </StepWrapper>
@@ -628,7 +759,7 @@ export function ECToolClient() {
                     value: v,
                   })
                 }
-                description="e.g. carbamazepine, phenytoin, phenobarbital, rifampicin, St John's Wort"
+                description="In the last 4 weeks: anticonvulsants, rifampicin, antiretrovirals, St John's Wort. Ulipristal is not recommended; offer a copper IUD, or levonorgestrel 3 mg if declined."
               />
 
               {state.medications.takesEnzymeInducers && (
@@ -647,7 +778,7 @@ export function ECToolClient() {
               )}
 
               <Checkbox
-                label="Already taken ulipristal (EllaOne) this cycle"
+                label="Already taken ulipristal (ellaOne) this cycle"
                 checked={state.medications.takesUPA}
                 onChange={(v) =>
                   dispatch({
@@ -656,7 +787,16 @@ export function ECToolClient() {
                     value: v,
                   })
                 }
-                description="Cannot combine with levonorgestrel."
+                description="Repeated use in the same cycle is not recommended; levonorgestrel is not given after ulipristal."
+              />
+
+              <Checkbox
+                label="Progestogen-containing contraceptive taken in the previous 7 days"
+                checked={state.medications.progestogenLast7Days}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_MEDICATIONS", field: "progestogenLast7Days", value: v })
+                }
+                description="May reduce ulipristal efficacy; consider levonorgestrel instead."
               />
 
               <Checkbox
@@ -773,11 +913,11 @@ export function ECToolClient() {
                 options={[
                   {
                     value: "levonorgestrel",
-                    label: `Levonorgestrel (${medicineAvailability.canUseLNG ? "Available" : "Not available"})`,
+                    label: `Levonorgestrel 1.5mg tablet (Levonelle), within 72 hours (${medicineAvailability.canUseLNG ? "Available" : "Not available: " + medicineAvailability.lngReasons.join(", ")})`,
                   },
                   {
                     value: "ulipristal",
-                    label: `Ulipristal/EllaOne (${medicineAvailability.canUseUPA ? "Available" : "Not available"})`,
+                    label: `Ulipristal acetate 30mg tablet (ellaOne), within 120 hours (${medicineAvailability.canUseUPA ? "Available" : "Not available: " + medicineAvailability.upaReasons.join(", ")})`,
                   },
                 ]}
                 required
@@ -787,46 +927,84 @@ export function ECToolClient() {
                 <SelectInput
                   label="Dose"
                   value={state.medicineSelection.dose}
-                  onChange={(v) =>
+                  onChange={(v) => {
                     dispatch({
                       type: "UPDATE_MEDICINE_SELECTION",
                       field: "dose",
                       value: v,
-                    })
-                  }
+                    });
+                    dispatch({
+                      type: "UPDATE_MEDICINE_SELECTION",
+                      field: "doubleDosingRequired",
+                      value: v === "3mg",
+                    });
+                    if (v !== "3mg") {
+                      dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "doubleDoseReason", value: "" });
+                    }
+                  }}
                   options={[
-                    { value: "1.5mg", label: "1.5mg (standard single dose)" },
+                    { value: "1.5mg", label: "1.5 mg single dose (1 tablet), as soon as possible, ideally within 12 hours" },
                     {
                       value: "3mg",
-                      label: "3mg (double dose for enzyme inducers)",
+                      label: "3 mg double dose (2 tablets): enzyme inducers (licensed) or weight 70 kg or over / BMI 26 or over (off-label, FSRH)",
                     },
                   ]}
                   required
                 />
               )}
 
-              {state.medicineSelection.medicine === "ulipristal" && (
-                <div className="p-3 bg-gray-50 border border-gray-200 rounded">
-                  <p className="text-sm font-medium text-navy-900">Dose</p>
-                  <p className="text-sm text-gray-700 mt-1">30mg (single dose)</p>
-                </div>
-              )}
+              {state.medicineSelection.medicine === "levonorgestrel" &&
+                state.medicineSelection.dose === "3mg" && (
+                  <SelectInput
+                    label="Reason for 3 mg dose (recorded)"
+                    value={state.medicineSelection.doubleDoseReason}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_MEDICINE_SELECTION",
+                        field: "doubleDoseReason",
+                        value: v as ECConsultationState["medicineSelection"]["doubleDoseReason"],
+                      })
+                    }
+                    options={[
+                      { value: "enzyme-inducers", label: "Enzyme-inducing drugs in the last 4 weeks (licensed)" },
+                      { value: "weight-bmi", label: "Weight 70 kg or over, or BMI 26 or over (off-label per FSRH)" },
+                    ]}
+                    required
+                  />
+                )}
+
+              {state.medicineSelection.medicine === "levonorgestrel" &&
+                state.medicineSelection.doubleDoseReason === "weight-bmi" && (
+                  <Checkbox
+                    label="Off-label use explained to the patient and recorded"
+                    checked={state.medicineSelection.offLabelExplained}
+                    onChange={(v) =>
+                      dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "offLabelExplained", value: v })
+                    }
+                    description="Weight or BMI based 3 mg levonorgestrel is off-label per FSRH guidance."
+                    required
+                  />
+                )}
 
               {state.medicineSelection.medicine === "levonorgestrel" &&
                 state.medications.takesEnzymeInducers && (
                   <Checkbox
-                    label="Double dosing required"
-                    checked={state.medicineSelection.doubleDosingRequired}
+                    label="Copper IUD offered and declined"
+                    checked={state.medicineSelection.copperIudOffered}
                     onChange={(v) =>
-                      dispatch({
-                        type: "UPDATE_MEDICINE_SELECTION",
-                        field: "doubleDosingRequired",
-                        value: v,
-                      })
+                      dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "copperIudOffered", value: v })
                     }
-                    description="Patient takes enzyme inducers; 3mg dose recommended for adequate efficacy."
+                    description="Enzyme inducers: offer a copper IUD; if declined give levonorgestrel 3 mg (two tablets, licensed). Do not switch to ulipristal."
+                    required
                   />
                 )}
+
+              {state.medicineSelection.medicine === "ulipristal" && (
+                <div className="p-3 bg-gray-50 border border-gray-200 rounded">
+                  <p className="text-sm font-medium text-navy-900">Dose</p>
+                  <p className="text-sm text-gray-700 mt-1">30 mg as a single dose (1 tablet), as soon as possible after UPSI, effective up to 120 hours</p>
+                </div>
+              )}
 
               <Checkbox
                 label="Override automatic recommendation"
@@ -885,7 +1063,7 @@ export function ECToolClient() {
                     value: v,
                   })
                 }
-                description="As soon as possible; levonorgestrel within 72 hours, ulipristal within 120 hours."
+                description="As soon as possible (levonorgestrel ideally within 12 hours, effective up to 72 hours; ulipristal up to 120 hours). Emergency contraception works best when taken as soon as possible."
               />
 
               <Checkbox
@@ -898,7 +1076,7 @@ export function ECToolClient() {
                     value: v,
                   })
                 }
-                description="If vomiting within 2 hours (LNG) or 3 hours (UPA), repeat dose advised."
+                description="If vomiting occurs within 3 hours of taking the tablet (either medicine), return immediately as another tablet is needed."
               />
 
               <Checkbox
@@ -911,7 +1089,7 @@ export function ECToolClient() {
                     value: v,
                   })
                 }
-                description="Backup contraception (condom) recommended until next period."
+                description="Use barrier contraception (condoms) until the next period."
               />
 
               <Checkbox
@@ -949,7 +1127,7 @@ export function ECToolClient() {
                     value: v,
                   })
                 }
-                description="If period does not arrive, if unusually heavy bleeding, or if abdominal pain."
+                description="If the period is more than 7 days late, do a pregnancy test or contact the doctor; contact the doctor for any adverse effects or concerns."
               />
 
               <Checkbox
@@ -962,7 +1140,7 @@ export function ECToolClient() {
                     value: v,
                   })
                 }
-                description="Given information about accessing STI testing."
+                description="Emergency contraception does not protect against STIs; discuss STI testing if appropriate."
               />
 
               <Checkbox
@@ -988,7 +1166,7 @@ export function ECToolClient() {
                     value: v,
                   })
                 }
-                description="LNG: restart immediately. UPA: restart after 5 days."
+                description="After levonorgestrel: start or continue regular contraception. After ulipristal: wait 5 days before starting hormonal contraception, with condoms until it is reliable again."
               />
             </div>
           </StepWrapper>

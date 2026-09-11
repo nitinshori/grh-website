@@ -31,7 +31,10 @@ export default function HerpesToolPage() {
             <span className="text-navy-900 font-medium">Herpes Management ePGD</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-navy-900">Herpes Management</h1>
-          <p className="text-sm text-gray-600 mt-1">Aciclovir and valaciclovir supply for HSV-1 and HSV-2</p>
+          <p className="text-sm text-gray-600 mt-1">
+            Aciclovir 400 mg tablets or valaciclovir 500 mg tablets for genital herpes (HSV-1 and HSV-2), patients aged 16 and over.
+            Genital Herpes Management PGD, version 003, issued 11 September 2026.
+          </p>
         </div>
 
         {/* Coming Soon Badge */}
@@ -47,23 +50,23 @@ export default function HerpesToolPage() {
           <ul className="space-y-2 text-gray-700 text-sm">
             <li className="flex gap-2">
               <span className="text-[color:var(--tenant-primary)] font-bold">•</span>
-              <span>Aciclovir and valaciclovir supply for initial episodes and suppressive therapy</span>
+              <span>Aciclovir 400 mg or valaciclovir 500 mg tablets for first episodes, recurrent episodes (started within 48 hours of onset) and suppressive therapy (6 or more recurrences a year, maximum 3 months' supply before GP or GUM review)</span>
             </li>
             <li className="flex gap-2">
               <span className="text-[color:var(--tenant-primary)] font-bold">•</span>
-              <span>Episode assessment and diagnosis support</span>
+              <span>Episode assessment for confirmed or highly suspected genital herpes</span>
             </li>
             <li className="flex gap-2">
               <span className="text-[color:var(--tenant-primary)] font-bold">•</span>
-              <span>Treatment selection (first episode vs. recurrent vs. suppressive therapy)</span>
+              <span>Exclusion checks: hypersensitivity, eGFR below 30, severe hepatic impairment, immunocompromise (any presentation), pregnancy at any gestation or breastfeeding, and emergency features (disseminated infection, meningitis, encephalitis, urinary retention)</span>
             </li>
             <li className="flex gap-2">
               <span className="text-[color:var(--tenant-primary)] font-bold">•</span>
-              <span>Counselling on transmission risk and prevention</span>
+              <span>Counselling on transmission risk and prevention, and the PGD follow-up advice</span>
             </li>
             <li className="flex gap-2">
               <span className="text-[color:var(--tenant-primary)] font-bold">•</span>
-              <span>Follow-up scheduling and review guidance</span>
+              <span>Records: consent, name and brand of medicine, dose, form, route and quantity supplied</span>
             </li>
           </ul>
         </div>
@@ -79,7 +82,7 @@ export default function HerpesToolPage() {
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
           <h3 className="font-semibold text-amber-900 mb-2">In the meantime</h3>
           <p className="text-amber-900 text-sm">
-            Please refer to the printed PGD documentation for clinical guidance.
+            Please refer to the signed Genital Herpes Management PGD (version 003, issued 11 September 2026) for clinical guidance and supply under it on paper.
           </p>
         </div>
 

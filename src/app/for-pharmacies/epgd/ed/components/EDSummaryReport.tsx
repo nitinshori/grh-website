@@ -70,11 +70,10 @@ export function EDSummaryReport({ state }: EDSummaryReportProps) {
       {/* Print header */}
       <div className="text-center mb-6 print:mb-4">
         <h1 className="text-xl font-bold text-navy-900 print:text-base">
-          Get Real Health — ED Consultation Record
+          Get Real Health, ED Consultation Record
         </h1>
         <p className="text-xs text-gray-500 mt-1">
-          Patient Group Direction: Sildenafil / Tadalafil for Erectile
-          Dysfunction
+          Erectile Dysfunction Patient Group Direction (sildenafil and tadalafil), version 006, issued 11 September 2026
         </p>
         <p className="text-xs text-gray-400">
           Date: {state.summary.consultationDate || new Date().toLocaleDateString("en-GB")} | Time:{" "}
@@ -98,14 +97,14 @@ export function EDSummaryReport({ state }: EDSummaryReportProps) {
           value={
             state.patient.dateOfBirth
               ? new Date(state.patient.dateOfBirth).toLocaleDateString("en-GB")
-              : "—"
+              : "Not recorded"
           }
         />
-        <Row label="Age" value={state.patient.age?.toString() ?? "—"} />
-        <Row label="NHS Number" value={state.patient.nhsNumber || "—"} />
-        <Row label="Address" value={state.patient.address || "—"} />
-        <Row label="Phone" value={state.patient.phone || "—"} />
-        <Row label="GP" value={`${state.patient.gpName} — ${state.patient.gpPractice}`} />
+        <Row label="Age" value={state.patient.age?.toString() ?? "Not recorded"} />
+        <Row label="NHS Number" value={state.patient.nhsNumber || "Not recorded"} />
+        <Row label="Address" value={state.patient.address || "Not recorded"} />
+        <Row label="Phone" value={state.patient.phone || "Not recorded"} />
+        <Row label="GP" value={`${state.patient.gpName} ${state.patient.gpPractice}`.trim() || "Not recorded"} />
       </dl>
 
       {/* Consent */}
@@ -119,7 +118,7 @@ export function EDSummaryReport({ state }: EDSummaryReportProps) {
           label="ID verified"
           value={
             state.consent.idVerified
-              ? `Yes — ${state.consent.idType || "type not specified"}`
+              ? `Yes: ${state.consent.idType || "type not specified"}`
               : "No"
           }
         />
@@ -134,10 +133,10 @@ export function EDSummaryReport({ state }: EDSummaryReportProps) {
       <dl>
         <Row
           label="Onset"
-          value={state.complaint.onsetType || "—"}
+          value={state.complaint.onsetType || "Not recorded"}
         />
-        <Row label="Duration" value={state.complaint.duration || "—"} />
-        <Row label="Severity" value={state.complaint.severity || "—"} />
+        <Row label="Duration" value={state.complaint.duration || "Not recorded"} />
+        <Row label="Severity" value={state.complaint.severity || "Not recorded"} />
         <Row
           label="Previous treatment"
           value={
@@ -191,8 +190,24 @@ export function EDSummaryReport({ state }: EDSummaryReportProps) {
           value={state.medicalHistory.recentMIOrStroke ? "Yes" : "No"}
         />
         <Row
+          label="Last cardiovascular review"
+          value={state.medicalHistory.lastCvReviewDate || "Not known"}
+        />
+        <Row
+          label="HF NYHA 2+ in 6 months / structural heart disease / murmur"
+          value={state.medicalHistory.severeHeartFailure || state.medicalHistory.structuralHeartDisease ? "Yes" : "No"}
+        />
+        <Row
+          label="Previous priapism or erection over 4 hours"
+          value={state.medicalHistory.priapismHistory ? "Yes" : "No"}
+        />
+        <Row
           label="NAION history"
           value={state.medicalHistory.naionHistory ? "Yes" : "No"}
+        />
+        <Row
+          label="Sudden onset after trauma, surgery, new medicine, or with pain or deformity"
+          value={state.redFlags.suddenOnsetSecondaryCause ? "Yes" : "No"}
         />
       </dl>
 
@@ -200,24 +215,44 @@ export function EDSummaryReport({ state }: EDSummaryReportProps) {
       <SectionHeader>Current Medications</SectionHeader>
       <dl>
         <Row
-          label="Nitrates"
+          label="Nitrates (GTN, isosorbide, nitroprusside)"
           value={
             state.medications.takesNitrates
-              ? `Yes — ${state.medications.nitrateDetails || "details not specified"}`
+              ? `Yes: ${state.medications.nitrateDetails || "details not specified"}`
               : "No"
           }
         />
         <Row
-          label="Riociguat"
+          label="Nicorandil"
+          value={state.medications.takesNicorandil ? "Yes" : "No"}
+        />
+        <Row
+          label="Poppers question asked"
+          value={state.medications.poppersQuestionAsked ? "Yes" : "No"}
+        />
+        <Row
+          label="Poppers (amyl or alkyl nitrite) used"
+          value={state.medications.usesPoppers ? "Yes" : "No"}
+        />
+        <Row
+          label="Riociguat or other sGC stimulator"
           value={state.medications.takesRiociguat ? "Yes" : "No"}
+        />
+        <Row
+          label="Other PDE5 inhibitor"
+          value={state.medications.takesOtherPDE5Inhibitor ? "Yes" : "No"}
         />
         <Row
           label="Alpha-blockers"
           value={
             state.medications.takesAlphaBlockers
-              ? `Yes — ${state.medications.alphaBlockerDetails || "stable: " + (state.medications.alphaBlockerStable ? "yes" : "no")}`
+              ? `Yes: ${state.medications.alphaBlockerDetails || "not specified"}; stable: ${state.medications.alphaBlockerStable ? "yes" : "no"}${state.medications.takesDoxazosin ? "; doxazosin (tadalafil excluded)" : ""}`
               : "No"
           }
+        />
+        <Row
+          label="Ritonavir or cobicistat"
+          value={state.medications.takesRitonavirOrCobicistat ? "Yes (sildenafil excluded)" : "No"}
         />
         <Row
           label="CYP3A4 inhibitors"
@@ -238,14 +273,34 @@ export function EDSummaryReport({ state }: EDSummaryReportProps) {
       </dl>
 
       {/* Observations */}
-      <SectionHeader>Observations</SectionHeader>
+      <SectionHeader>Cardiovascular Fitness (Appendix 1) and Observations</SectionHeader>
       <dl>
         <Row
-          label="Blood pressure"
+          label="Functional question (mile in 20 minutes or two flights of stairs)"
+          value={
+            state.observations.exerciseTolerance === "yes"
+              ? "Yes, comfortably"
+              : state.observations.exerciseTolerance === "no"
+                ? "No"
+                : state.observations.exerciseTolerance === "unknown"
+                  ? "Does not know"
+                  : "Not asked"
+          }
+        />
+        <Row
+          label="Answer in patient's terms"
+          value={state.observations.exerciseToleranceNotes || "Not recorded"}
+        />
+        <Row
+          label="Symptoms on exertion or during sex"
+          value={state.observations.symptomsOnExertionOrSex ? "Yes" : "No"}
+        />
+        <Row
+          label="Blood pressure measured today"
           value={
             state.observations.systolicBP !== null
-              ? `${state.observations.systolicBP}/${state.observations.diastolicBP} mmHg`
-              : "—"
+              ? `${state.observations.systolicBP}/${state.observations.diastolicBP} mmHg${state.observations.bpTakenToday ? "" : " (not measured today)"}`
+              : "Not recorded"
           }
         />
         <Row
@@ -253,7 +308,7 @@ export function EDSummaryReport({ state }: EDSummaryReportProps) {
           value={
             state.observations.heartRate !== null
               ? `${state.observations.heartRate} bpm`
-              : "—"
+              : "Not recorded"
           }
         />
       </dl>
@@ -265,16 +320,18 @@ export function EDSummaryReport({ state }: EDSummaryReportProps) {
       {/* Medicine supplied */}
       <SectionHeader>Medicine Supplied</SectionHeader>
       <dl>
-        <Row label="Medicine" value={fullMedicine} />
+        <Row label="Medicine" value={`${fullMedicine} film-coated tablets, oral`} />
+        <Row label="Brand" value={state.medicineSelection.brand || "Not recorded"} />
         <Row label="Regimen" value={regimenLabel} />
         <Row
           label="Quantity"
           value={`${state.medicineSelection.quantity} tablets`}
         />
+        <Row label="Supplied under" value="Erectile Dysfunction PGD v006, 11 September 2026" />
         {state.medicineSelection.pharmacistOverride && (
           <Row
             label="Override reason"
-            value={state.medicineSelection.overrideReason || "—"}
+            value={state.medicineSelection.overrideReason || "Not recorded"}
           />
         )}
       </dl>
@@ -288,7 +345,10 @@ export function EDSummaryReport({ state }: EDSummaryReportProps) {
           ["Food interactions", state.counselling.foodInteractions],
           ["Priapism warning", state.counselling.priapismWarning],
           ["Vision/hearing", state.counselling.visionHearingWarning],
-          ["No STI protection", state.counselling.noSTIProtection],
+          ["No STI protection (advised)", state.counselling.noSTIProtection],
+          ["One dose in 24 hours", state.counselling.maxOneDoseIn24Hours],
+          ["Never with poppers or nitrates", state.counselling.nitrateWarningGiven],
+          ["Chest pain: no GTN, tell paramedics", state.counselling.chestPainAdvice],
           ["Grapefruit avoidance", state.counselling.grapefruitAvoidance],
           ["Alcohol moderation", state.counselling.alcoholModeration],
           ["Side effects", state.counselling.sideEffectsExplained],
@@ -369,7 +429,7 @@ export function EDSummaryReport({ state }: EDSummaryReportProps) {
       {/* Footer */}
       <div className="mt-8 pt-4 border-t border-gray-300 text-center">
         <p className="text-[10px] text-gray-400">
-          Get Real Health ePGD — Consultation Record | Confidential
+          Get Real Health ePGD Consultation Record | Confidential
           Patient Information | Retain for 8 years (adults)
         </p>
       </div>

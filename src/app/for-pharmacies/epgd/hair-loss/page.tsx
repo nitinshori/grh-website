@@ -28,10 +28,10 @@ export default function HLToolPage() {
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-navy-900">
-            Hair Loss — Finasteride PGD Consultation
+            Hair Loss, Finasteride PGD Consultation
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Finasteride 1mg supply for male-pattern baldness under Patient Group Direction
+            Finasteride 1 mg tablets for androgenetic alopecia (male pattern hair loss) in men aged 18 to 65 years. PGD version 002, issued 11 September 2026.
           </p>
         </div>
 
@@ -44,7 +44,7 @@ export default function HLToolPage() {
             This ePGD is provided as a clinical decision support aid and does
             not replace professional clinical judgement. The pharmacist retains
             full responsibility for each consultation. Based on UK medicines
-            guidance and the Get Real Health PGD for Hair Loss (Finasteride).
+            guidance and the Get Real Health PGD for Finasteride (Androgenetic Alopecia), version 002, 11 September 2026.
           </p>
         </div>
       </div>

@@ -1,6 +1,8 @@
 /**
  * Smoking Cessation ePGD - Clinical Logic & Guidelines
- * Based on Varenicline (Champix) PGD and NICE Guidelines
+ * Based on the Varenicline 0.5mg and 1mg tablets PGD (version 003, 11
+ * September 2026) and NICE Guidelines. Champix is no longer marketed in the
+ * UK; any UK-licensed generic varenicline product is supplied.
  */
 
 import {
@@ -114,6 +116,28 @@ export function checkHardContraindications(
     });
   }
 
+  // Known hypersensitivity to varenicline or excipients (PGD exclusion)
+  if (formData.medicalHistory.hypersensitivityVarenicline) {
+    alerts.push({
+      severity: "stop",
+      code: "HYPERSENSITIVITY",
+      message: "Known hypersensitivity to varenicline or excipients",
+      detail:
+        "Exclusion under the PGD. Do not supply. Advise on alternative treatment options and inform or refer to the GP.",
+    });
+  }
+
+  // Severe renal impairment (PGD exclusion, v002 onwards)
+  if (formData.medicalHistory.renalImpairment === "severe") {
+    alerts.push({
+      severity: "stop",
+      code: "SEVERE_RENAL_IMPAIRMENT",
+      message: "Severe renal impairment (eGFR below 30 mL/min/1.73m2) or end-stage renal disease",
+      detail:
+        "Exclusion under the PGD. Do not supply. Refer to GP.",
+    });
+  }
+
   // Pregnancy
   if (formData.medicalHistory.pregnant) {
     alerts.push({
@@ -195,28 +219,20 @@ export function checkCautions(
     alerts.push({
       severity: "caution",
       code: "SEIZURE_HISTORY",
-      message: "Varenicline may lower seizure threshold",
+      message: "Seizure disorder: varenicline may lower seizure threshold (rare but serious)",
       detail:
         "Patient reports seizure history. Monitor closely and ensure seizure management optimised. Discuss risks with patient.",
     });
   }
 
-  // Renal impairment
+  // Renal impairment, eGFR 30 to 50 (PGD caution, SmPC advice)
   if (formData.medicalHistory.renalImpairment === "moderate") {
     alerts.push({
       severity: "caution",
       code: "MODERATE_RENAL_IMPAIRMENT",
-      message: "Dose adjustment required for moderate renal impairment",
+      message: "Renal impairment, eGFR 30 to 50 mL/min/1.73m2: no dose adjustment",
       detail:
-        "Maximum dose: 1mg once daily (instead of 1mg twice daily). Monitor tolerability and renal function.",
-    });
-  } else if (formData.medicalHistory.renalImpairment === "severe") {
-    alerts.push({
-      severity: "red-flag",
-      code: "SEVERE_RENAL_IMPAIRMENT",
-      message: "Severe renal impairment requires specialist supervision",
-      detail:
-        "Maximum dose: 0.5mg once daily. Refer for specialist pharmacological advice and monitoring.",
+        "No dose adjustment; if adverse effects are not tolerated reduce to 1mg once daily. eGFR below 30 excludes.",
     });
   }
 
@@ -236,9 +252,9 @@ export function checkCautions(
     alerts.push({
       severity: "caution",
       code: "CARDIOVASCULAR_DISEASE",
-      message: "Varenicline generally safe in cardiovascular disease",
+      message: "Cardiovascular disease: recent MI (within 4 weeks), unstable angina, or severe cardiac arrhythmias",
       detail:
-        "Smoking cessation reduces cardiovascular risk. Monitor for any chest pain or palpitations. Benefits of cessation usually outweigh risks.",
+        "Assess benefit vs risk before supply. Smoking cessation reduces cardiovascular risk. Advise the patient to contact the GP if they experience chest pain, shortness of breath or severe headaches.",
     });
   }
 
@@ -361,25 +377,25 @@ export function calculateDosePlan(
 
   if (renalImpairment === "severe") {
     return {
-      phase: "titration",
-      currentDose: "0.5mg OD",
+      phase: "",
+      currentDose: "Excluded",
       schedule:
-        "Varenicline 0.5mg once daily for full 12 weeks. No escalation due to severe renal impairment.",
+        "Severe renal impairment (eGFR below 30) or end-stage renal disease is an exclusion under this PGD. Do not supply; refer to GP.",
     };
   } else if (renalImpairment === "moderate") {
     return {
       phase: "titration",
-      currentDose: "0.5mg BD then 1mg OD",
+      currentDose: "0.5mg OD, 0.5mg BD, then 1mg BD (reduce to 1mg OD if not tolerated)",
       schedule:
-        "Days 1-7: Varenicline 0.5mg once daily. Days 8-12: Varenicline 0.5mg twice daily. Week 2 onwards: Varenicline 1mg once daily maximum.",
+        "Days 1-3: Varenicline 0.5mg once daily. Days 4-7: Varenicline 0.5mg twice daily. Day 8 to end of treatment: Varenicline 1mg twice daily. eGFR 30 to 50: no dose adjustment; if adverse effects are not tolerated reduce to 1mg once daily.",
     };
   } else {
     // Normal renal function
     return {
       phase: "titration",
-      currentDose: "0.5mg OD → 0.5mg BD → 1mg BD",
+      currentDose: "0.5mg OD, 0.5mg BD, then 1mg BD",
       schedule:
-        "Days 1-3: Varenicline 0.5mg once daily. Days 4-7: Varenicline 0.5mg twice daily. Week 2-12: Varenicline 1mg twice daily (maintenance).",
+        "Days 1-3: Varenicline 0.5mg once daily. Days 4-7: Varenicline 0.5mg twice daily (morning and evening). Day 8 to end of treatment: Varenicline 1mg twice daily (morning and evening). Quit date on day 8 to 14 of treatment.",
     };
   }
 }

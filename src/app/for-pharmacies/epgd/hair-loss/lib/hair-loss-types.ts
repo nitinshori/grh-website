@@ -22,6 +22,11 @@ export interface HLMedicalHistory {
   psaAbnormalities: boolean;
   psaAbnormaltiesDetail: string;
   hypersensitivity: boolean;
+  /** Current use of 5-alpha-reductase inhibitors for other conditions (exclusion). */
+  current5ARI: boolean;
+  /** Rare hereditary galactose intolerance, Lapp lactase deficiency or
+   *  glucose-galactose malabsorption: should not take this medicine. */
+  galactoseIntolerance: boolean;
   otherConditions: string;
 }
 
@@ -32,7 +37,11 @@ export interface HLContraindications {
 
 export interface HLMedicineSupply {
   finasteride1mgOd: boolean;
+  /** Months of treatment supplied between reviews: "3" | "6" | "9" | "12". */
+  quantityMonths: string;
   partnerNotified: boolean; // critical caution: teratogenic
+  /** Condom recommended if a female partner is pregnant or likely to become pregnant. */
+  condomAdvice: boolean;
   willMonitorSE: boolean; // sexual side effects
   understandsPSAEffect: boolean;
 }
@@ -44,6 +53,12 @@ export interface HLCounselling {
   moodChanges: boolean;
   annualReview: boolean;
   reportChanges: boolean;
+  /** Promptly report breast lumps, pain, gynaecomastia or nipple discharge. */
+  breastChanges: boolean;
+  /** Realistic expectations: slows loss, partial regrowth, never complete reversal; benefit less above 41; do not exceed dose; scalp protection; psychosocial effects. */
+  expectations: boolean;
+  /** PIL and the patient card in the pack supplied. */
+  pilAndCardSupplied: boolean;
 }
 
 export interface HLConsultationState {
@@ -124,6 +139,8 @@ gpEmail: "",
       psaAbnormalities: false,
       psaAbnormaltiesDetail: "",
       hypersensitivity: false,
+      current5ARI: false,
+      galactoseIntolerance: false,
       otherConditions: "",
     },
     contraindications: {
@@ -132,7 +149,9 @@ gpEmail: "",
     },
     medicineSupply: {
       finasteride1mgOd: false,
+      quantityMonths: "",
       partnerNotified: false,
+      condomAdvice: false,
       willMonitorSE: false,
       understandsPSAEffect: false,
     },
@@ -143,6 +162,9 @@ gpEmail: "",
       moodChanges: false,
       annualReview: false,
       reportChanges: false,
+      breastChanges: false,
+      expectations: false,
+      pilAndCardSupplied: false,
     },
     summary: {
       pharmacistName: "",

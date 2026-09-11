@@ -22,10 +22,10 @@ export function PESummaryReport({ state, alerts }: PESummaryReportProps) {
       {/* Header */}
       <div className="text-center border-b border-gray-300 pb-4">
         <h2 className="text-lg font-bold text-navy-900">
-          Premature Ejaculation — Dapoxetine Consultation
+          Premature Ejaculation, Dapoxetine Consultation
         </h2>
         <p className="text-xs text-gray-500 mt-1">
-          ePGD Consultation Record
+          ePGD Consultation Record. Dapoxetine 30mg/60mg tablets (Priligy) for Premature Ejaculation PGD, version 003, issued 11 September 2026
         </p>
       </div>
 
@@ -34,9 +34,9 @@ export function PESummaryReport({ state, alerts }: PESummaryReportProps) {
         <SectionHeader>Patient Details</SectionHeader>
         <Row label="Name" value={`${state.patient.firstName} ${state.patient.lastName}`} />
         <Row label="DOB" value={state.patient.dateOfBirth} />
-        <Row label="Age" value={state.patient.age ? `${state.patient.age} years` : "—"} />
-        <Row label="NHS Number" value={state.patient.nhsNumber || "—"} />
-        <Row label="GP" value={state.patient.gpName ? `${state.patient.gpName}, ${state.patient.gpPractice}` : "—"} />
+        <Row label="Age" value={state.patient.age ? `${state.patient.age} years` : "Not recorded"} />
+        <Row label="NHS Number" value={state.patient.nhsNumber || "Not recorded"} />
+        <Row label="GP" value={state.patient.gpName ? `${state.patient.gpName}, ${state.patient.gpPractice}` : "Not recorded"} />
       </div>
 
       {/* Consent */}
@@ -55,11 +55,11 @@ export function PESummaryReport({ state, alerts }: PESummaryReportProps) {
         <SectionHeader>Clinical Assessment</SectionHeader>
         <Row
           label="PE type"
-          value={state.clinicalAssessment.peType ? state.clinicalAssessment.peType.charAt(0).toUpperCase() + state.clinicalAssessment.peType.slice(1) : "—"}
+          value={state.clinicalAssessment.peType ? state.clinicalAssessment.peType.charAt(0).toUpperCase() + state.clinicalAssessment.peType.slice(1) : "Not recorded"}
         />
         <Row
           label="IELT (minutes)"
-          value={state.clinicalAssessment.ieltMinutes !== null ? state.clinicalAssessment.ieltMinutes : "—"}
+          value={state.clinicalAssessment.ieltMinutes !== null ? state.clinicalAssessment.ieltMinutes : "Not recorded"}
         />
         <Row
           label="Relationship distress"
@@ -74,16 +74,26 @@ export function PESummaryReport({ state, alerts }: PESummaryReportProps) {
       {/* Medical History */}
       <div>
         <SectionHeader>Medical History</SectionHeader>
-        <Row label="Cardiac disorder" value={state.medicalHistory.cardiacDisorder ? "Yes" : "No"} />
-        <Row label="History of syncope" value={state.medicalHistory.syncope ? "Yes" : "No"} />
+        <Row label="Cardiac disorder (NYHA II to IV, valvular)" value={state.medicalHistory.cardiacDisorder ? "Yes" : "No"} />
+        <Row label="Conduction abnormality or QT prolongation" value={state.medicalHistory.conductionOrQT ? "Yes" : "No"} />
+        <Row label="Ischaemic heart disease" value={state.medicalHistory.ischaemicHeartDisease ? "Yes" : "No"} />
+        <Row label="History of syncope or orthostatic hypotension" value={state.medicalHistory.syncope ? "Yes" : "No"} />
         <Row
-          label="Severe hepatic impairment"
+          label="Moderate or severe hepatic impairment (Child-Pugh B or C)"
           value={state.medicalHistory.severeHepaticImpairment ? "Yes" : "No"}
         />
+        <Row label="Mild hepatic impairment (Child-Pugh A)" value={state.medicalHistory.mildHepaticImpairment ? "Yes" : "No"} />
+        <Row label="Moderate or severe renal impairment" value={state.medicalHistory.renalImpairment ? "Yes" : "No"} />
+        <Row label="Bipolar disorder or mania" value={state.medicalHistory.bipolarOrMania ? "Yes" : "No"} />
         <Row
           label="Uncontrolled epilepsy"
           value={state.medicalHistory.uncontrolledEpilepsy ? "Yes" : "No"}
         />
+        <Row label="History of seizures" value={state.medicalHistory.seizureHistory ? "Yes" : "No"} />
+        <Row label="Bleeding disorder or anticoagulant" value={state.medicalHistory.bleedingDisorderOrAnticoagulant ? "Yes" : "No"} />
+        <Row label="Orthostatic hypotension risk factors" value={state.medicalHistory.orthostaticRiskFactors ? "Yes" : "No"} />
+        <Row label="CYP2D6 poor metaboliser" value={state.medicalHistory.cyp2d6PoorMetaboliser ? "Yes" : "No"} />
+        <Row label="Hyponatraemia risk" value={state.medicalHistory.hyponatraemiaRisk ? "Yes" : "No"} />
         {state.medicalHistory.otherConditions && (
           <Row label="Other conditions" value={state.medicalHistory.otherConditions} />
         )}
@@ -93,13 +103,16 @@ export function PESummaryReport({ state, alerts }: PESummaryReportProps) {
       <div>
         <SectionHeader>Current Medications</SectionHeader>
         <Row
-          label="MAOIs/SSRIs/SNRIs"
+          label="Serotonergic medicine (now or within 14 days)"
           value={state.currentMedications.maoisOrSsrisOrSnris ? "Yes" : "No"}
         />
         <Row
           label="Thioridazine"
           value={state.currentMedications.thioridazine ? "Yes" : "No"}
         />
+        <Row label="Potent CYP3A4 inhibitor" value={state.currentMedications.potentCyp3a4Inhibitor ? "Yes" : "No"} />
+        <Row label="Moderate CYP3A4 inhibitor" value={state.currentMedications.moderateCyp3a4Inhibitor ? "Yes" : "No"} />
+        <Row label="PDE5 inhibitor" value={state.currentMedications.pde5Inhibitor ? "Yes" : "No"} />
         {state.currentMedications.otherMedications && (
           <Row label="Other medications" value={state.currentMedications.otherMedications} />
         )}
@@ -113,15 +126,15 @@ export function PESummaryReport({ state, alerts }: PESummaryReportProps) {
           value={state.contraindications.hadSevereOrSuddenAE ? "Yes" : "No"}
         />
         {state.contraindications.hadSevereOrSuddenAE && (
-          <Row label="Details" value={state.contraindications.aeDetail || "—"} />
+          <Row label="Details" value={state.contraindications.aeDetail || "Not recorded"} />
         )}
       </div>
 
       {/* Orthostatic Hypotension */}
       <div>
         <SectionHeader>Orthostatic Hypotension Assessment</SectionHeader>
-        <Row label="Lying BP" value={state.summary.lyingBP || "—"} />
-        <Row label="Standing BP" value={state.summary.standingBP || "—"} />
+        <Row label="Lying BP" value={state.summary.lyingBP || "Not recorded"} />
+        <Row label="Standing BP" value={state.summary.standingBP || "Not recorded"} />
       </div>
 
       {/* Clinical Alerts */}
@@ -138,9 +151,17 @@ export function PESummaryReport({ state, alerts }: PESummaryReportProps) {
           value={state.medicineSupply.dapoxetine30mgSupplied ? "Yes" : "No"}
         />
         <Row
-          label="May increase to 60mg"
+          label="Medicine, form and strength"
+          value={state.medicineSupply.strengthSupplied ? `Dapoxetine ${state.medicineSupply.strengthSupplied} tablets, oral` : "Not recorded"}
+        />
+        <Row label="Brand" value={state.medicineSupply.brand || "Not recorded"} />
+        <Row label="Quantity" value={state.medicineSupply.quantity !== null ? `${state.medicineSupply.quantity} tablets` : "Not recorded"} />
+        <Row label="Dose" value="One tablet 1 to 3 hours before sexual activity; maximum one dose in 24 hours; not daily" />
+        <Row
+          label="30mg insufficient, 60mg permitted"
           value={state.medicineSupply.mayIncreaseTo60mg ? "Yes" : "No"}
         />
+        <Row label="Supplied under" value="Dapoxetine for Premature Ejaculation PGD v003, 11 September 2026" />
         <Row
           label="Patient understands usage"
           value={state.medicineSupply.understandsUsage ? "Yes" : "No"}
@@ -152,13 +173,19 @@ export function PESummaryReport({ state, alerts }: PESummaryReportProps) {
         <SectionHeader>Counselling Provided</SectionHeader>
         <CounsellingGrid
           items={[
-            ["Take with water 1-3 hrs before", state.counselling.takeWithWater],
+            ["Take 1 to 3 hours before, with water", state.counselling.takeWithWater],
+            ["Maximum one dose per 24 hours", state.counselling.maxOnePer24h],
             ["Avoid alcohol", state.counselling.avoidAlcohol],
-            ["Do not drive for 2 hours after", state.counselling.noDrive2hrs],
+            ["Stand up slowly", state.counselling.standSlowly],
+            ["Maintain hydration", state.counselling.hydration],
+            ["No driving or machinery if dizzy or drowsy", state.counselling.noDrive2hrs],
             ["Avoid grapefruit juice", state.counselling.avoidGrapefruit],
-            ["May cause nausea/dizziness/headache", state.counselling.mayHaveSideEffects],
-            ["Not for daily use (PRN only)", state.counselling.notForDaily],
-            ["Review efficacy after 4 weeks", state.counselling.review4weeks],
+            ["Side effects explained", state.counselling.mayHaveSideEffects],
+            ["Report chest pain, severe headache or fainting", state.counselling.reportChestPainHeadacheFainting],
+            ["Priapism over 4 hours: immediate attention", state.counselling.priapismWarning],
+            ["Inform GP, especially before new medicines", state.counselling.informGp],
+            ["Not for daily use", state.counselling.notForDaily],
+            ["Review after 4 weeks / 6 doses; reassess 6-monthly", state.counselling.review4weeks],
           ]}
         />
       </div>

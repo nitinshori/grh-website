@@ -3,6 +3,21 @@
 import React from 'react';
 import { RabiesConsultationState } from '../rabies-types';
 import { calculateAge } from '../../shared/types';
+import { getDoseVolume, getProductLabel, RABIES_PGD_VERSION } from '../rabies-clinical-logic';
+
+const INDICATION_LABELS: Record<string, string> = {
+  'travel-enzootic-area': 'Travel to a rabies enzootic area',
+  'occupational-abroad': 'Occupational risk abroad',
+  'occupational-uk': 'UK-based occupational risk',
+};
+
+const DOSE_NUMBER_LABELS: Record<string, string> = {
+  '1st': '1st dose',
+  '2nd': '2nd dose',
+  '3rd': '3rd dose',
+  'one-year-dose': 'Further dose at one year',
+  booster: 'Booster',
+};
 
 interface RabiesSummaryReportProps {
   state: RabiesConsultationState;
@@ -67,6 +82,12 @@ export default function RabiesSummaryReport({
           </h3>
           <div className="space-y-3">
             <div className="flex justify-between">
+              <span className="text-gray-600">Indication:</span>
+              <span className="font-medium text-gray-900">
+                {INDICATION_LABELS[state.screening.indication] ?? state.screening.indication}
+              </span>
+            </div>
+            <div className="flex justify-between">
               <span className="text-gray-600">Destination:</span>
               <span className="font-medium text-gray-900">
                 {state.screening.destinationCountry}
@@ -92,8 +113,28 @@ export default function RabiesSummaryReport({
                 )}
               </ul>
             </div>
+            {state.screening.otherActivities && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Other activities or occupational indication:</span>
+                <span className="font-medium text-gray-900 text-right">
+                  {state.screening.otherActivities}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between">
-              <span className="text-gray-600">Access to PEP:</span>
+              <span className="text-gray-600">Sufficient time to complete the chosen course:</span>
+              <span className="font-medium text-gray-900">
+                {state.screening.sufficientTimeBeforeTravel ? 'Yes' : 'No'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Exposure already occurred (post-exposure):</span>
+              <span className="font-medium text-gray-900">
+                {state.screening.priorExposure ? 'Yes, referred same day' : 'No'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Access to post-exposure treatment at destination:</span>
               <span className="font-medium text-gray-900">
                 {state.screening.accessToPEP ? 'Yes' : 'Limited/No'}
               </span>
@@ -114,7 +155,13 @@ export default function RabiesSummaryReport({
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Currently unwell:</span>
+              <span className="text-gray-600">Acute severe febrile illness:</span>
+              <span className="font-medium text-gray-900">
+                {state.screening.acuteFebrileIllness ? 'Yes' : 'No'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Minor current illness:</span>
               <span className="font-medium text-gray-900">
                 {state.screening.currentIllness ? 'Yes' : 'No'}
               </span>
@@ -131,6 +178,34 @@ export default function RabiesSummaryReport({
                 {state.screening.pregnant ? 'Yes' : 'No'}
               </span>
             </div>
+            {state.screening.pregnant && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Pregnancy risk assessment:</span>
+                <span className="font-medium text-gray-900 text-right">
+                  {state.screening.pregnancyRiskAssessment}
+                </span>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <span className="text-gray-600">Breastfeeding:</span>
+              <span className="font-medium text-gray-900">
+                {state.screening.breastfeeding ? 'Yes' : 'No'}
+              </span>
+            </div>
+            {state.screening.breastfeeding && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Breastfeeding risk assessment:</span>
+                <span className="font-medium text-gray-900 text-right">
+                  {state.screening.breastfeedingRiskAssessment}
+                </span>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <span className="text-gray-600">Anaphylaxis to rabies vaccine or a component:</span>
+              <span className="font-medium text-gray-900">
+                {state.screening.anaphylaxisToVaccineOrComponent ? 'Yes' : 'No'}
+              </span>
+            </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Egg allergy:</span>
               <span className="font-medium text-gray-900">
@@ -139,6 +214,28 @@ export default function RabiesSummaryReport({
                   : 'No'}
               </span>
             </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Polymyxin B, streptomycin or neomycin hypersensitivity:</span>
+              <span className="font-medium text-gray-900">
+                {state.screening.antibioticHypersensitivity ? 'Yes' : 'No'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Bleeding disorder, thrombocytopenia or anticoagulation:</span>
+              <span className="font-medium text-gray-900">
+                {state.screening.bleedingDisorder ? 'Yes (deep subcutaneous route)' : 'No'}
+              </span>
+            </div>
+            {patientAge !== null && patientAge < 16 && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Under 16 consent basis:</span>
+                <span className="font-medium text-gray-900 text-right">
+                  {state.screening.consentBasis === 'gillick'
+                    ? `Gillick competent: ${state.screening.consentGiverDetails}`
+                    : `Parental responsibility: ${state.screening.consentGiverDetails}`}
+                </span>
+              </div>
+            )}
           </div>
         </section>
 
@@ -149,9 +246,21 @@ export default function RabiesSummaryReport({
           </h3>
           <div className="space-y-3">
             <div className="flex justify-between">
-              <span className="text-gray-600">Vaccine:</span>
+              <span className="text-gray-600">Product given:</span>
+              <span className="font-medium text-gray-900 text-right">
+                {getProductLabel(state.administration.product) || state.administration.vaccineName}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Dose volume:</span>
               <span className="font-medium text-gray-900">
-                {state.administration.vaccineName}
+                {getDoseVolume(state.administration.product)}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Route:</span>
+              <span className="font-medium text-gray-900">
+                {state.administration.route === 'deep-subcutaneous' ? 'Deep subcutaneous' : 'Intramuscular'}
               </span>
             </div>
             <div className="flex justify-between">
@@ -175,17 +284,33 @@ export default function RabiesSummaryReport({
             <div className="flex justify-between">
               <span className="text-gray-600">Dose number:</span>
               <span className="font-medium text-gray-900">
-                {state.administration.doseNumber}
+                {DOSE_NUMBER_LABELS[state.administration.doseNumber] ?? state.administration.doseNumber}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Schedule:</span>
-              <span className="font-medium text-gray-900">
+              <span className="font-medium text-gray-900 text-right">
                 {state.administration.schedule === 'standard'
-                  ? 'Standard (Day 0, 7, 21-28)'
-                  : 'Accelerated (Day 0, 3, 7 +1yr booster)'}
+                  ? 'Conventional (day 0, 7 and 28; third dose may be brought forward to day 21)'
+                  : 'Accelerated, off-label (day 0, 3 and 7, further dose at one year if travel to high risk areas continues)'}
               </span>
             </div>
+            {state.administration.schedule === 'accelerated' && (
+              <>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Reason conventional course not possible:</span>
+                  <span className="font-medium text-gray-900 text-right">
+                    {state.administration.scheduleReason}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Consent to off-label use (day 0, 3 and 7 schedule):</span>
+                  <span className="font-medium text-gray-900">
+                    {state.administration.offLabelConsent ? 'Given and recorded' : 'Not recorded'}
+                  </span>
+                </div>
+              </>
+            )}
             <div className="flex justify-between">
               <span className="text-gray-600">Next due dates:</span>
               <span className="font-medium text-gray-900">
@@ -222,9 +347,27 @@ export default function RabiesSummaryReport({
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Anaphylaxis kit checked:</span>
+              <span className="text-gray-600">15 minute observation period completed:</span>
+              <span className="font-medium text-gray-900">
+                {state.postVaccineObs.observationCompleted ? 'Yes' : 'No'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Adrenaline 1 in 1,000, anaphylaxis protocol and telephone available:</span>
               <span className="font-medium text-gray-900">
                 {state.postVaccineObs.anaphylaxisKitChecked ? 'Yes' : 'No'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Administered under PGD:</span>
+              <span className="font-medium text-gray-900 text-right">
+                Yes, {RABIES_PGD_VERSION}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Written record given to patient:</span>
+              <span className="font-medium text-gray-900">
+                {state.advice.writtenRecordGiven ? 'Yes' : 'No'}
               </span>
             </div>
             <div className="flex justify-between">
@@ -301,7 +444,7 @@ export default function RabiesSummaryReport({
         )}
 
         <section className="text-center text-xs text-gray-500 py-4 border-t border-gray-200">
-          <p>Rabies Pre-exposure Vaccination ePGD | Confidential Patient Information</p>
+          <p>Rabies Pre-exposure Vaccination ePGD | {RABIES_PGD_VERSION} | Confidential Patient Information</p>
           <p>Generated: {new Date().toLocaleString()}</p>
         </section>
       </div>

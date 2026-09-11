@@ -1,18 +1,22 @@
 'use client';
 
 import { ImpetigoTreatmentSelection } from './impetigo-types';
-import { TreatmentRecommendation } from './impetigo-clinical-logic';
+import { TreatmentRecommendation, ImpetigoRoute } from './impetigo-clinical-logic';
 import { SelectInput, TextInput, NumberInput, Checkbox, TextArea } from '../shared/components/FormInputs';
 
 interface TreatmentSelectionStepProps {
   treatment: ImpetigoTreatmentSelection;
   recommendation: TreatmentRecommendation | null;
+  route: ImpetigoRoute;
+  pregnant: boolean;
   onChange: (treatment: ImpetigoTreatmentSelection) => void;
 }
 
 export function TreatmentSelectionStep({
   treatment,
   recommendation,
+  route,
+  pregnant,
   onChange,
 }: TreatmentSelectionStepProps) {
   const handleChange = (field: keyof ImpetigoTreatmentSelection, value: unknown) => {
@@ -22,13 +26,24 @@ export function TreatmentSelectionStep({
     });
   };
 
+  // Only the arm the document sends this patient to is offered. Topical and
+  // oral antibiotics are never combined.
   const treatmentOptions = [
     { value: '', label: 'Select treatment...' },
-    { value: 'fusidic-acid', label: 'Fusidic Acid 2% Cream (Localised non-bullous)' },
-    { value: 'hydrogen-peroxide', label: 'Hydrogen Peroxide 1% Cream (Alternative topical)' },
-    { value: 'flucloxacillin', label: 'Flucloxacillin Capsules (Widespread non-bullous)' },
-    // Authorised by PGD v002, 8 Sep 2026. FIVE days per NICE NG153.
-    { value: 'clarithromycin', label: 'Clarithromycin (penicillin allergy) - 5 days' },
+    ...(route === 'topical'
+      ? [
+          { value: 'hydrogen-peroxide', label: 'Hydrogen peroxide 1% cream (P sale first; NOT a PGD supply)' },
+          { value: 'fusidic-acid', label: 'Fusidic acid 2% cream, three times a day for 5 days (localised non-bullous)' },
+        ]
+      : []),
+    ...(route === 'flucloxacillin'
+      ? [{ value: 'flucloxacillin', label: 'Flucloxacillin 250mg/5ml oral suspension, four times a day for 5 days (children 3 months to 17)' }]
+      : []),
+    ...(route === 'macrolide'
+      ? pregnant
+        ? [{ value: 'erythromycin', label: 'Erythromycin 250mg tablets or oral suspension, four times a day for 5 days (pregnancy)' }]
+        : [{ value: 'clarithromycin', label: 'Clarithromycin, twice a day for 5 days (penicillin allergy or flucloxacillin unsuitable)' }]
+      : []),
   ];
 
   return (
@@ -53,11 +68,17 @@ export function TreatmentSelectionStep({
             </div>
             <div>
               <span className="font-semibold text-green-800">Quantity:</span>
-              <p className="text-green-700">{recommendation.quantity}</p>
+              <p className="text-green-700">
+                {recommendation.quantity} {recommendation.quantityUnit || ''}
+              </p>
             </div>
           </div>
         </div>
       )}
+
+      <div className="bg-amber-50 border border-amber-200 rounded p-3 text-sm text-amber-900">
+        Do NOT combine a topical and an oral antibiotic. One course per episode; no repeat supply under this PGD.
+      </div>
 
       {/* Treatment Selection */}
       <div>
@@ -75,12 +96,22 @@ export function TreatmentSelectionStep({
           label="Dose *"
           value={treatment.dose}
           onChange={(value) => handleChange('dose', value)}
-          placeholder={recommendation?.dose || 'E.g., 250 mg, 2g, Apply a small amount'}
+          placeholder={recommendation?.dose || 'E.g., 250 mg, apply a thin layer'}
         />
         {recommendation && (
           <p className="text-xs text-gray-600 mt-1">Recommended: {recommendation.dose}</p>
         )}
       </div>
+
+      {treatment.treatment === 'clarithromycin' && (
+        <TextArea
+          label="Clarithromycin 500mg twice a day (severe infection only): reason recorded"
+          value={treatment.severeDoseReason}
+          onChange={(value) => handleChange('severeDoseReason', value)}
+          placeholder="Leave blank for the standard 250mg twice a day. If 500mg twice a day is used, record the reason here."
+          rows={2}
+        />
+      )}
 
       {/* Frequency */}
       <div>
@@ -88,7 +119,7 @@ export function TreatmentSelectionStep({
           label="Frequency *"
           value={treatment.frequency}
           onChange={(value) => handleChange('frequency', value)}
-          placeholder={recommendation?.frequency || 'E.g., Once daily, Three times daily (TDS), Four times daily (QDS)'}
+          placeholder={recommendation?.frequency || 'E.g., Three times a day, Four times a day'}
         />
         {recommendation && (
           <p className="text-xs text-gray-600 mt-1">Recommended: {recommendation.frequency}</p>
@@ -97,14 +128,27 @@ export function TreatmentSelectionStep({
 
       {/* Duration */}
       <div>
-        <TextInput
+        <SelectInput
           label="Duration *"
           value={treatment.duration}
           onChange={(value) => handleChange('duration', value)}
-          placeholder={recommendation?.duration || 'E.g., 5 days, 7 days'}
+          options={[
+            { value: '', label: 'Select duration...' },
+            { value: '5 days', label: '5 days (standard course)' },
+            { value: '7 days', label: '7 days (clinical judgement only, lesions severe or numerous; reason required)' },
+          ]}
         />
-        {recommendation && (
-          <p className="text-xs text-gray-600 mt-1">Recommended: {recommendation.duration}</p>
+        <p className="text-xs text-gray-600 mt-1">Courses are 5 days. Maximum 7 days, extended only on clinical judgement with the reason recorded.</p>
+        {treatment.duration === '7 days' && (
+          <div className="mt-3">
+            <TextArea
+              label="Reason for extending to 7 days *"
+              value={treatment.extensionReason}
+              onChange={(value) => handleChange('extensionReason', value)}
+              placeholder="E.g., numerous lesions over both forearms"
+              rows={2}
+            />
+          </div>
         )}
       </div>
 
@@ -115,10 +159,13 @@ export function TreatmentSelectionStep({
           value={treatment.quantity}
           onChange={(value) => handleChange('quantity', value)}
           min={0}
-          placeholder="E.g., 1, 28, 56"
+          placeholder="E.g., 1, 10, 20"
+          unit={recommendation?.quantityUnit}
         />
         {recommendation && (
-          <p className="text-xs text-gray-600 mt-1">Recommended: {recommendation.quantity}</p>
+          <p className="text-xs text-gray-600 mt-1">
+            Recommended: {recommendation.quantity} {recommendation.quantityUnit || ''}
+          </p>
         )}
       </div>
 

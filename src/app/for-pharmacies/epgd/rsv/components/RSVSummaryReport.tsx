@@ -14,26 +14,24 @@ import type {
   RSVPatientDetails,
   RSVConsent,
   RSVSummary,
+  RSVMedicalHistory,
 } from '../rsv-types';
 
 interface RSVSummaryReportProps {
   patientDetails: RSVPatientDetails;
   consent: RSVConsent;
   summary: RSVSummary;
-  medicalHistory: {
-    anaphylaxisToVaccine: boolean;
-    anaphylaxisToVaccineComponent: boolean;
-    severeFebrilleIllness: boolean;
-    immunosuppressed: boolean;
-    bleedingDisorder: boolean;
-  };
+  medicalHistory: RSVMedicalHistory;
   clinicalAlerts: ClinicalAlert[];
   postVaccineAdvice: {
     patientAdvised: boolean;
     counselledReactions: boolean;
     counselledNoBooster: boolean;
     counselledSeason: boolean;
+    followUpAdviceGiven?: boolean;
+    pilSupplied?: boolean;
   };
+  nhsStatus?: '' | 'not-eligible' | 'eligible-prefers-private';
   onBack: () => void;
 }
 
@@ -44,6 +42,7 @@ export default function RSVSummaryReport({
   medicalHistory,
   clinicalAlerts,
   postVaccineAdvice,
+  nhsStatus,
   onBack,
 }: RSVSummaryReportProps) {
   return (
@@ -95,19 +94,53 @@ export default function RSVSummaryReport({
             {patientDetails.riskFactors && (
               <Row label="Risk factors" value={patientDetails.riskFactors} />
             )}
+            <Row
+              label="NHS eligibility"
+              value={
+                nhsStatus === 'not-eligible'
+                  ? 'Does not qualify for a free NHS vaccination'
+                  : nhsStatus === 'eligible-prefers-private'
+                  ? 'Qualifies for NHS vaccination, prefers private'
+                  : 'Not recorded'
+              }
+            />
           </div>
         </div>
+
+        {patientDetails.age !== null && patientDetails.age < 16 && (
+          <div>
+            <SectionHeader>Consent (under 16)</SectionHeader>
+            <div className="space-y-1.5">
+              <Row
+                label="Consent given by"
+                value={
+                  consent.consentBasis === 'parental'
+                    ? `Person with parental responsibility: ${consent.parentName} (${consent.parentRelationship})`
+                    : consent.consentBasis === 'gillick'
+                    ? 'Young person, assessed as Gillick competent'
+                    : 'Not recorded'
+                }
+              />
+              {consent.consentBasis === 'gillick' && (
+                <Row label="Gillick assessment basis" value={consent.gillickBasis || 'Not recorded'} />
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Medical History */}
         <div>
           <SectionHeader>Medical History & Contraindications</SectionHeader>
           <CounsellingGrid
             items={[
-              ['Anaphylaxis to previous RSV vaccine', medicalHistory.anaphylaxisToVaccine],
-              ['Anaphylaxis to vaccine component', medicalHistory.anaphylaxisToVaccineComponent],
-              ['Severe acute febrile illness', medicalHistory.severeFebrilleIllness],
-              ['Immunosuppressed', medicalHistory.immunosuppressed],
-              ['Bleeding disorder', medicalHistory.bleedingDisorder],
+              ['Already received a complete dose of an RSV vaccine', medicalHistory.previousRSVVaccine],
+              ['Severe allergic reaction to a previous RSV vaccine', medicalHistory.anaphylaxisToVaccine],
+              ['Severe allergic reaction to any vaccine component', medicalHistory.anaphylaxisToVaccineComponent],
+              ['Acute febrile illness', medicalHistory.severeFebrilleIllness],
+              ['Pregnant or breastfeeding (Arexvy exclusion)', medicalHistory.pregnantOrBreastfeeding],
+              ['Immunocompromised (caution)', medicalHistory.immunosuppressed],
+              ['Coagulation disorder (caution)', medicalHistory.bleedingDisorder],
+              ['Influenza vaccine same day (caution)', medicalHistory.fluVaccineSameDay],
             ]}
           />
         </div>
@@ -126,12 +159,13 @@ export default function RSVSummaryReport({
               label="Vaccine type"
               value={
                 summary.vaccineType === 'abrysvo'
-                  ? 'Abrysvo (Pfizer)'
-                  : summary.vaccineType === 'mresvia'
-                  ? 'mRESVIA (Moderna)'
+                  ? 'Abrysvo powder and solvent for solution for injection (Pfizer)'
+                  : summary.vaccineType === 'arexvy'
+                  ? 'Arexvy powder and suspension for suspension for injection (GSK)'
                   : 'Not specified'
               }
             />
+            <Row label="Dose and route" value="0.5 mL intramuscular injection" />
             <Row label="Batch number" value={summary.batchNumber} />
             <Row label="Expiry date" value={summary.expiryDate} />
             <Row
@@ -160,11 +194,17 @@ export default function RSVSummaryReport({
               ...(patientDetails.patientCategory === 'pregnant-woman'
                 ? [['Understands ~6 months newborn protection', consent.understands6MonthsProtection || false] as [string, boolean]]
                 : []),
-              ['Advised of common reactions', !!postVaccineAdvice.counselledReactions] as [string, boolean],
-              ['Understands no booster schedule', !!postVaccineAdvice.counselledNoBooster] as [string, boolean],
+              ['Advised on side effects and when to seek medical attention', !!postVaccineAdvice.counselledReactions] as [string, boolean],
+              ['Follow-up advice given (PGD v005 list)', !!postVaccineAdvice.followUpAdviceGiven] as [string, boolean],
+              ['Patient information leaflet supplied', !!postVaccineAdvice.pilSupplied] as [string, boolean],
+              ['Understands one-time vaccination', !!postVaccineAdvice.counselledNoBooster] as [string, boolean],
             ]}
           />
         </div>
+
+        <p className="text-[10px] text-gray-500">
+          Patient Group Direction for Abrysvo or Arexvy (RSV), version 005, issued 11 September 2026.
+        </p>
 
         {/* Clinical Notes */}
         {summary.clinicalNotes && (

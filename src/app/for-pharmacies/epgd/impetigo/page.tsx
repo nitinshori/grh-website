@@ -2,8 +2,8 @@ import { ImpetigoConsultationClient } from './ImpetigoConsultationClient';
 import { PgdPageActions } from "@/components/PgdPageActions";
 
 export const metadata = {
-  title: 'Impetigo ePGD - UK Pharmacy PGD',
-  description: 'Comprehensive Impetigo consultation and treatment tool for UK pharmacies',
+  title: 'Impetigo ePGD | GRH Pharmacy',
+  description: 'Impetigo PGD v008: fusidic acid 2% cream, flucloxacillin oral suspension (children 3 months to 17), or a macrolide where penicillin-allergic',
 };
 
 export default function ImpetigoPage() {

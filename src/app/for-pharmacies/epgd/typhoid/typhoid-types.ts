@@ -5,13 +5,22 @@ import {
   DoseRecommendation,
 } from '../shared/types';
 
+export type TyphoidConsentBasis = 'parental' | 'gillick' | 'self' | '';
+
 export interface TyphoidPatientDetails extends BasePatientDetails {
   travelDestination: string;
   travelReason: 'south-asia' | 'southeast-asia' | 'africa' | 'central-south-america' | 'other' | '';
   departureDate: string;
+  itinerary: string;
+  recommendationSource: string;
   previousTyphoidDose: boolean;
   previousDoseDate?: string;
+  /** Document exception to the 3-year exclusion: returning to a risk area and
+   *  the previous dose is due for renewal. Free text reason, recorded. */
+  previousDoseRenewalReason: string;
   knownAllergies: string;
+  consentBasis: TyphoidConsentBasis;
+  consentDetail: string;
 }
 
 export interface TyphoidConsent extends BaseConsent {
@@ -21,11 +30,14 @@ export interface TyphoidConsent extends BaseConsent {
 }
 
 export interface TyphoidSummary extends BaseSummary {
-  vaccineType: 'typhim-vi' | '';
+  vaccineType: 'typhim-vi' | 'other-vi' | '';
+  vaccineBrand: string;
   batchNumber: string;
   expiryDate: string;
   administrationSite: 'left-deltoid' | 'right-deltoid' | '';
   administrationTime: string;
+  adrenalineAvailable: boolean;
+  nextBoosterDue: string;
   counselledReactions: boolean;
   counselledValidity: boolean;
   counselledCertificate: boolean;
@@ -50,9 +62,14 @@ gpOdsCode: '',
   travelDestination: '',
   travelReason: '',
   departureDate: '',
+  itinerary: '',
+  recommendationSource: '',
   previousTyphoidDose: false,
   previousDoseDate: '',
+  previousDoseRenewalReason: '',
   knownAllergies: '',
+  consentBasis: '',
+  consentDetail: '',
 };
 
 export const initialTyphoidConsent: TyphoidConsent = {
@@ -78,10 +95,13 @@ export function initialTyphoidSummary(): TyphoidSummary {
     }),
     clinicalNotes: '',
     vaccineType: '',
+    vaccineBrand: '',
     batchNumber: '',
     expiryDate: '',
     administrationSite: '',
     administrationTime: '',
+    adrenalineAvailable: false,
+    nextBoosterDue: '',
     counselledReactions: false,
     counselledValidity: false,
     counselledCertificate: false,

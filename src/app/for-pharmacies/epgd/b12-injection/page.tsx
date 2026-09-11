@@ -19,21 +19,25 @@ export default function B12InjectionPage(): React.ReactNode {
               Vitamin B12 Injection ePGD
             </h1>
             <p className="text-gray-600 mb-4">
-              Hydroxocobalamin 1 mg/mL intramuscular injection — for confirmed
-              B12 deficiency or established maintenance therapy.
+              Hydroxocobalamin 1mg/ml intramuscular injection (PGD 1 of 3) and
+              cyanocobalamin 50 microgram tablets (PGD 2 of 3), for confirmed
+              B12 deficiency or established maintenance therapy. PGD version
+              008, issued 11 September 2026.
             </p>
             <div className="bg-lime-50 border border-lime-200 rounded-lg p-4">
               <p className="text-sm text-lime-900 mb-3">
-                <strong>Hydroxocobalamin 1 mg/mL Solution for Injection.</strong>{" "}
-                This ePGD covers loading therapy (1 mg IM three times weekly
-                for two weeks) and lifelong maintenance therapy via PGD for
-                patients with non-diet-related B12 deficiency. For patients
-                aged 18 and over with documented B12 deficiency,
-                post-bariatric surgery, atrophic gastritis, or established
-                vegan / vegetarian dietary deficiency. Not appropriate for
-                unconfirmed symptomatic patients without laboratory evidence
-                — refer to GP for diagnostic workup. Annual pharmacy review
-                with patient is recommended even on lifelong therapy.
+                <strong>Hydroxocobalamin 1mg/ml Solution for Injection.</strong>{" "}
+                This ePGD covers initial correction (1 mg IM three times a
+                week for 2 weeks) and maintenance (1 mg IM every 2 to 3 months,
+                usually lifelong, where the deficiency is not diet related; 1
+                mg IM twice yearly or cyanocobalamin 50 to 150 micrograms daily
+                where it is diet related). For adults aged 18 and over with
+                B12 deficiency confirmed on blood testing with a full blood
+                count, blood film and serum folate reviewed. Not appropriate
+                for unconfirmed symptomatic patients, pregnancy, or new or
+                progressive neurological symptoms: refer. Review at 3 months
+                after the loading course, then at least annually with a full
+                blood count.
               </p>
               <details className="text-xs text-lime-900">
                 <summary className="cursor-pointer font-semibold">

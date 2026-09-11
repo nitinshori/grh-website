@@ -16,12 +16,18 @@ import {
   initialFluVaccineAdministration,
   initialFluPostVaccineObs,
   initialFluAdvice,
+  initialFluChildConsent,
+  FluChildConsent,
+  FluVaccineType,
+  FLU_SEASON,
 } from './lib/flu-types';
 import { ClinicalAlert } from '../shared/types';
 import {
   evaluateFluContraindications,
   hasHardStopContraindications,
   getObservationPeriodRecommendation,
+  needsTwoDoses,
+  permittedVaccineTypes,
 } from './lib/flu-clinical-logic';
 import {
   validatePatientDetails,
@@ -97,6 +103,7 @@ gpOdsCode: '',
       idType: '',
       patientAwarePrivateService: false,
     },
+    childConsent: initialFluChildConsent(),
     screening: initialFluScreening(),
     contraindications: initialFluContraindications(),
     administration: initialFluVaccineAdministration(),
@@ -176,6 +183,39 @@ gpOdsCode: '',
       patient: { ...prev.patient, phone: value },
     }));
   }, []);
+
+  const handleGpPracticeChange = useCallback((value: string): void => {
+    setState((prev) => ({
+      ...prev,
+      patient: { ...prev.patient, gpPractice: value },
+    }));
+  }, []);
+
+  /** Generic setters for the fields added for PGD v004. */
+  const setScreeningField = useCallback(
+    <K extends keyof FluScreening>(field: K, value: FluScreening[K]): void => {
+      setState((prev) => ({ ...prev, screening: { ...prev.screening, [field]: value } }));
+    },
+    []
+  );
+  const setAdministrationField = useCallback(
+    <K extends keyof FluVaccineAdministration>(field: K, value: FluVaccineAdministration[K]): void => {
+      setState((prev) => ({ ...prev, administration: { ...prev.administration, [field]: value } }));
+    },
+    []
+  );
+  const setAdviceField = useCallback(
+    <K extends keyof FluAdvice>(field: K, value: FluAdvice[K]): void => {
+      setState((prev) => ({ ...prev, advice: { ...prev.advice, [field]: value } }));
+    },
+    []
+  );
+  const setChildConsentField = useCallback(
+    <K extends keyof FluChildConsent>(field: K, value: FluChildConsent[K]): void => {
+      setState((prev) => ({ ...prev, childConsent: { ...prev.childConsent, [field]: value } }));
+    },
+    []
+  );
 
   // Consent handlers
   const handleConsentChange = useCallback((value: boolean): void => {
@@ -309,7 +349,7 @@ gpOdsCode: '',
   const handleVaccineChange = useCallback((value: string): void => {
     setState((prev) => ({
       ...prev,
-      administration: { ...prev.administration, vaccineName: value },
+      administration: { ...prev.administration, vaccineName: value as FluVaccineType },
     }));
   }, []);
 
@@ -455,17 +495,17 @@ gpOdsCode: '',
 
     switch (stepNum) {
       case 0: {
-        const result = validatePatientDetails(state.patient);
+        const result = validatePatientDetails(state.patient, patientAge);
         errors.push(...result.errors);
         break;
       }
       case 1: {
-        const result = validateConsent(state.consent);
+        const result = validateConsent(state.consent, state.childConsent, patientAge);
         errors.push(...result.errors);
         break;
       }
       case 2: {
-        const result = validateScreening(state.screening);
+        const result = validateScreening(state.screening, patientAge);
         errors.push(...result.errors);
         break;
       }
@@ -475,7 +515,7 @@ gpOdsCode: '',
         break;
       }
       case 4: {
-        const result = validateAdministration(state.administration);
+        const result = validateAdministration(state.administration, patientAge, state.screening);
         errors.push(...result.errors);
         break;
       }
@@ -485,7 +525,10 @@ gpOdsCode: '',
         break;
       }
       case 6: {
-        const result = validateAdvice(state.advice);
+        const result = validateAdvice(
+          state.advice,
+          needsTwoDoses(state.screening, patientAge) && state.administration.doseNumber === '1'
+        );
         errors.push(...result.errors);
         break;
       }
@@ -506,7 +549,7 @@ gpOdsCode: '',
       return newErrors;
     });
     return true;
-  }, [state, validationErrors]);
+  }, [state, validationErrors, patientAge]);
 
   const handleNextStep = useCallback((): void => {
     if (!validateStep(state.step)) {
@@ -614,6 +657,7 @@ gpOdsCode: '',
         idType: '',
         patientAwarePrivateService: false,
       },
+      childConsent: initialFluChildConsent(),
       screening: initialFluScreening(),
       contraindications: initialFluContraindications(),
       administration: initialFluVaccineAdministration(),
@@ -639,17 +683,10 @@ gpOdsCode: '',
   const getStepAlerts = useCallback((): React.ReactNode => {
     const stepAlerts = state.alerts.filter((alert: ClinicalAlert) => {
       // Route alerts based on step
-      if (alert.code === 'ANAPHYLAXIS_PREVIOUS_DOSE') return state.step === 3;
-      if (alert.code === 'SEVERE_EGG_ALLERGY') return state.step === 3;
-      if (alert.code === 'ACUTE_FEBRILE_ILLNESS') return state.step === 2;
-      if (alert.code === 'MILD_EGG_ALLERGY') return state.step === 3;
-      if (alert.code === 'PREVIOUS_MILD_REACTION') return state.step === 3;
-      if (alert.code === 'PREVIOUS_GBS') return state.step === 3;
-      if (alert.code === 'IMMUNOSUPPRESSED') return state.step === 3;
-      if (alert.code === 'PREGNANT') return state.step === 3;
+      if (alert.code === 'ACUTE_FEBRILE_ILLNESS' || alert.code === 'CURRENT_ILLNESS') return state.step === 2;
       if (alert.code === 'BLEEDING_DISORDER') return state.step === 4;
-      if (alert.code === 'CURRENT_ILLNESS') return state.step === 2;
-      return false;
+      if (alert.code === 'TWO_DOSE_CHILD' || alert.code === 'CHILD_IIVC_ONLY') return state.step === 3 || state.step === 4;
+      return state.step === 3;
     });
 
     if (stepAlerts.length === 0) return null;
@@ -671,10 +708,10 @@ gpOdsCode: '',
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Flu Vaccination ePGD
+            Flu Vaccination ePGD, 2026/27 season
           </h1>
           <p className="text-gray-600">
-            UK Pharmacy PGD Consultation
+            Seasonal influenza vaccines (IIVc, aIIV, IIVr and IIVe) under the Patient Group Direction, version 004, issued 11 September 2026. Privately funded vaccination, aged 2 years and over; single 0.5 ml intramuscular dose.
           </p>
         </div>
 
@@ -754,12 +791,20 @@ gpOdsCode: '',
                   placeholder="XXX XXX XXXX"
                 />
               </div>
-              <TextInput
-                label="Phone"
-                value={state.patient.phone}
-                onChange={handlePhoneChange}
-                placeholder="07700 900000"
-              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <TextInput
+                  label="Phone"
+                  value={state.patient.phone}
+                  onChange={handlePhoneChange}
+                  placeholder="07700 900000"
+                />
+                <TextInput
+                  label="GP practice with whom the individual is registered"
+                  value={state.patient.gpPractice}
+                  onChange={handleGpPracticeChange}
+                  placeholder="Practice name"
+                />
+              </div>
               <PostcodeLookup
                 onResolved={({ town, postcode }) => {
                   const locality = [town, postcode].filter(Boolean).join(', ');
@@ -797,6 +842,53 @@ gpOdsCode: '',
                 onChange={handleIdVerifiedChange}
                 description="Patient identity has been verified"
               />
+
+              {patientAge < 16 && (
+                <div className="p-4 bg-blue-50 border border-blue-300 rounded-lg space-y-3">
+                  <p className="text-sm font-semibold text-blue-900">
+                    Patient is under 16: record the basis of consent
+                  </p>
+                  <p className="text-xs text-blue-900">
+                    Consent must be obtained from a person with parental responsibility, or from the young person where they are assessed as Gillick competent. A parent accompanying a child does not automatically hold parental responsibility: ask.
+                  </p>
+                  <SelectInput
+                    label="Consent given by"
+                    value={state.childConsent.basis}
+                    onChange={(v) => setChildConsentField('basis', v as FluChildConsent['basis'])}
+                    options={[
+                      { value: 'parental', label: 'A person with parental responsibility' },
+                      { value: 'gillick', label: 'The young person, assessed as Gillick competent' },
+                    ]}
+                    required
+                  />
+                  {state.childConsent.basis === 'parental' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <TextInput
+                        label="Name of person with parental responsibility"
+                        value={state.childConsent.parentName}
+                        onChange={(v) => setChildConsentField('parentName', v)}
+                        placeholder="Full name"
+                        required
+                      />
+                      <TextInput
+                        label="Relationship to the child"
+                        value={state.childConsent.parentRelationship}
+                        onChange={(v) => setChildConsentField('parentRelationship', v)}
+                        placeholder="Mother, father, guardian"
+                        required
+                      />
+                    </div>
+                  )}
+                  {state.childConsent.basis === 'gillick' && (
+                    <TextArea
+                      label="Basis of the Gillick competence assessment"
+                      value={state.childConsent.gillickBasis}
+                      onChange={(v) => setChildConsentField('gillickBasis', v)}
+                      placeholder="What the young person understood about the vaccine, its benefits and risks, and the decision being made."
+                    />
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -811,10 +903,14 @@ gpOdsCode: '',
                   Vaccination History
                 </h3>
                 <Checkbox
-                  label="Previous flu vaccine"
+                  label="Previous flu vaccine (any season)"
                   checked={state.screening.previousFluVaccine}
                   onChange={handlePreviousVaccineChange}
-                  description="Has the patient received flu vaccine before?"
+                  description={
+                    patientAge < 9
+                      ? 'Has the child received influenza vaccine before? A child under 9 having it for the first time needs 2 doses at least 4 weeks apart.'
+                      : 'Has the patient received flu vaccine before?'
+                  }
                 />
                 {state.screening.previousFluVaccine && (
                   <div className="mt-4 ml-6 space-y-4">
@@ -825,15 +921,47 @@ gpOdsCode: '',
                       description="Did the patient experience any adverse reaction?"
                     />
                     {state.screening.previousReaction && (
-                      <TextArea
-                        label="Describe previous reaction"
-                        value={state.screening.reactionDetails}
-                        onChange={handleReactionDetailsChange}
-                        placeholder="e.g., Mild fever, arm soreness, anaphylaxis..."
-                      />
+                      <>
+                        <SelectInput
+                          label="Type of previous reaction"
+                          value={state.screening.previousReactionType}
+                          onChange={(v) => setScreeningField('previousReactionType', v as FluScreening['previousReactionType'])}
+                          options={[
+                            { value: 'anaphylaxis', label: 'Confirmed anaphylactic reaction (exclusion)' },
+                            { value: 'other', label: 'Other reaction (observe 15 minutes)' },
+                          ]}
+                          required
+                        />
+                        <TextArea
+                          label="Describe previous reaction"
+                          value={state.screening.reactionDetails}
+                          onChange={handleReactionDetailsChange}
+                          placeholder="e.g., Mild fever, arm soreness, anaphylaxis..."
+                        />
+                      </>
                     )}
                   </div>
                 )}
+                <div className="mt-4">
+                  <Checkbox
+                    label={`Already received an influenza vaccine for the ${FLU_SEASON} season`}
+                    checked={state.screening.receivedThisSeason}
+                    onChange={(v) => setScreeningField('receivedThisSeason', v)}
+                    description="Exclusion: one dose per individual per season, other than a child under 9 years attending for the second of two doses."
+                  />
+                </div>
+                <div className="mt-4">
+                  <SelectInput
+                    label="NHS entitlement (PGD inclusion)"
+                    value={state.screening.nhsStatus}
+                    onChange={(v) => setScreeningField('nhsStatus', v as FluScreening['nhsStatus'])}
+                    options={[
+                      { value: 'not-eligible', label: `Requires vaccination for ${FLU_SEASON} and does not qualify for NHS vaccination` },
+                      { value: 'eligible-prefers-private', label: 'Qualifies for NHS vaccination but prefers to be vaccinated privately, having been told it is free on the NHS' },
+                    ]}
+                    required
+                  />
+                </div>
               </div>
 
               <div>
@@ -841,10 +969,16 @@ gpOdsCode: '',
                   Allergies
                 </h3>
                 <Checkbox
+                  label="Known hypersensitivity to the active substances, or to any excipient or residue listed in the SPC"
+                  checked={state.screening.hypersensitivityToComponent}
+                  onChange={(v) => setScreeningField('hypersensitivityToComponent', v)}
+                  description="Exclusion. Check the SPC for the product to be given."
+                />
+                <Checkbox
                   label="Egg allergy"
                   checked={state.screening.eggAllergy}
                   onChange={handleEggAllergyChange}
-                  description="Does the patient have an egg allergy?"
+                  description="Not a barrier to vaccination provided an egg-free vaccine (IIVc or IIVr) is used, including for a history of anaphylaxis to egg. aIIV and IIVe are egg-cultured and will not be offered."
                 />
                 {state.screening.eggAllergy && (
                   <div className="mt-4 ml-6">
@@ -912,7 +1046,7 @@ gpOdsCode: '',
                     label="Pregnant"
                     checked={state.screening.pregnant}
                     onChange={handlePregnantChange}
-                    description="Is the patient pregnant?"
+                    description="Inactivated influenza vaccine is recommended at any stage of pregnancy. Pregnant women are eligible under the NHS programme and must be told."
                   />
                   <Checkbox
                     label="Breastfeeding"
@@ -932,7 +1066,23 @@ gpOdsCode: '',
                     label="Bleeding disorder"
                     checked={state.screening.bleedingDisorder}
                     onChange={handleBleedingDisorderChange}
-                    description="Does the patient have a bleeding disorder?"
+                    description="Exclusion unless intramuscular injection has been assessed as safe by a clinician familiar with the individual's bleeding risk."
+                  />
+                  {state.screening.bleedingDisorder && (
+                    <div className="ml-6">
+                      <Checkbox
+                        label="Intramuscular injection assessed as safe by a clinician familiar with the bleeding risk"
+                        checked={state.screening.bleedingDisorderAssessedSafe}
+                        onChange={(v) => setScreeningField('bleedingDisorderAssessedSafe', v)}
+                        description="Record who assessed it in the clinical notes."
+                      />
+                    </div>
+                  )}
+                  <Checkbox
+                    label="On anticoagulation"
+                    checked={state.screening.anticoagulated}
+                    onChange={(v) => setScreeningField('anticoagulated', v)}
+                    description="Caution: stable anticoagulation (including warfarin with an up-to-date INR below the upper threshold of the therapeutic range) may be vaccinated IM with a 23 gauge or finer needle, firm pressure for at least 2 minutes."
                   />
                   <Checkbox
                     label="Previous Guillain-Barré syndrome"
@@ -968,17 +1118,43 @@ gpOdsCode: '',
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-700">Severe egg allergy:</span>
+                  <span className="text-gray-700">Egg allergy (egg-free vaccine required):</span>
                   <span
                     className={`font-semibold ${
-                      state.contraindications.severeEggAllergy
-                        ? 'text-red-600'
-                        : 'text-green-600'
+                      state.screening.eggAllergy ? 'text-amber-600' : 'text-green-600'
                     }`}
                   >
-                    {state.contraindications.severeEggAllergy
-                      ? 'CONTRAINDICATED'
-                      : 'OK'}
+                    {state.screening.eggAllergy ? 'IIVc OR IIVr ONLY' : 'OK'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-700">Hypersensitivity to active substance or excipient:</span>
+                  <span
+                    className={`font-semibold ${
+                      state.contraindications.hypersensitivityToComponent ? 'text-red-600' : 'text-green-600'
+                    }`}
+                  >
+                    {state.contraindications.hypersensitivityToComponent ? 'CONTRAINDICATED' : 'OK'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-700">Already vaccinated this season:</span>
+                  <span
+                    className={`font-semibold ${
+                      state.contraindications.alreadyVaccinatedThisSeason ? 'text-red-600' : 'text-green-600'
+                    }`}
+                  >
+                    {state.contraindications.alreadyVaccinatedThisSeason ? 'CONTRAINDICATED' : 'OK'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-700">Bleeding disorder not assessed for IM injection:</span>
+                  <span
+                    className={`font-semibold ${
+                      state.contraindications.bleedingDisorderUnassessed ? 'text-red-600' : 'text-green-600'
+                    }`}
+                  >
+                    {state.contraindications.bleedingDisorderUnassessed ? 'CONTRAINDICATED' : 'OK'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
@@ -996,7 +1172,7 @@ gpOdsCode: '',
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-700">Age appropriate:</span>
+                  <span className="text-gray-700">Aged 2 years or over:</span>
                   <span
                     className={`font-semibold ${
                       state.contraindications.ageAppropriate
@@ -1027,7 +1203,10 @@ gpOdsCode: '',
               </h2>
               <VaccineAdminFields
                 administration={state.administration}
+                permittedTypes={permittedVaccineTypes(patientAge, state.screening.eggAllergy)}
+                twoDoseSchedule={needsTwoDoses(state.screening, patientAge)}
                 onVaccineChange={handleVaccineChange}
+                onBrandChange={(v) => setAdministrationField('brandName', v)}
                 onBatchChange={handleBatchChange}
                 onExpiryChange={handleExpiryChange}
                 onSiteChange={handleSiteChange}
@@ -1035,6 +1214,11 @@ gpOdsCode: '',
                 onDoseChange={handleDoseChange}
                 onAdministeredByChange={handleAdministeredByChange}
                 onTimeChange={handleTimeChange}
+                onDoseNumberChange={(v) => setAdministrationField('doseNumber', v as FluVaccineAdministration['doseNumber'])}
+                onPreviousDoseDateChange={(v) => setAdministrationField('previousDoseDate', v)}
+                onNextDoseDueChange={(v) => setAdministrationField('nextDoseDue', v)}
+                onAdrenalineChange={(v) => setAdministrationField('adrenalineAvailable', v)}
+                onCoAdministeredChange={(v) => setAdministrationField('coAdministeredVaccine', v)}
               />
             </div>
           )}
@@ -1046,8 +1230,7 @@ gpOdsCode: '',
               </h2>
               <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
                 <p className="text-sm text-blue-900">
-                  Keep patient under observation for the recommended period before
-                  discharge.
+                  Observe for 15 minutes after vaccination where there is a history of allergy or previous vaccine reaction. Syncope can occur, particularly in adolescents; vaccinate seated. Anxiety related reactions (dizziness, palpitations, paraesthesia, sweating) are temporary and resolve on their own: ask the individual to report symptoms.
                 </p>
               </div>
               <SelectInput
@@ -1099,16 +1282,16 @@ gpOdsCode: '',
               </p>
               <div className="space-y-4">
                 <Checkbox
-                  label="Common side effects"
+                  label="Possible side effects and their management"
                   checked={state.advice.commonReactions}
                   onChange={handleCommonReactionsChange}
-                  description="Patient advised about common reactions: sore arm, mild fever, muscle ache (usually resolve in 1-2 days)"
+                  description="Pain, redness, swelling or induration at the injection site, headache, fatigue, myalgia, malaise and low grade fever; in children irritability, drowsiness and loss of appetite. Reactions may be more frequent with adjuvanted vaccine."
                 />
                 <Checkbox
-                  label="Serious side effects"
+                  label="Serious side effects and Yellow Card reporting"
                   checked={state.advice.seriousReactions}
                   onChange={handleSeriousReactionsChange}
-                  description="Patient advised about signs of anaphylaxis: difficulty breathing, swelling of face/throat, severe rash"
+                  description="Signs of anaphylaxis (difficulty breathing, swelling of face or throat, severe rash). Seek medical advice in the event of an adverse reaction and report it via the Yellow Card scheme."
                 />
                 <Checkbox
                   label="Pain relief advice"
@@ -1120,14 +1303,33 @@ gpOdsCode: '',
                   label="When to seek help"
                   checked={state.advice.returnIfConcerned}
                   onChange={handleReturnIfConcernedChange}
-                  description="Return to pharmacy or GP if concerned, or call NHS 111 if needed"
+                  description="Seek advice if they become unwell. Return to the pharmacy or GP if concerned, or call NHS 111 if needed"
                 />
                 <Checkbox
-                  label="Annual revaccination"
+                  label="Protection develops over 10 to 14 days, lasts for the season; revaccination every year"
                   checked={state.advice.annualRevaccination}
                   onChange={handleAnnualRevaccinationChange}
-                  description="Annual flu vaccination is recommended"
+                  description="Explain that protection develops over about 10 to 14 days and lasts for the season, and that revaccination is needed each year."
                 />
+                <Checkbox
+                  label="Vaccine cannot cause influenza; does not protect against other respiratory infections; not 100% protection"
+                  checked={state.advice.cannotCauseFlu}
+                  onChange={(v) => setAdviceField('cannotCauseFlu', v)}
+                />
+                <Checkbox
+                  label="Patient information leaflet and written record of the vaccine given offered"
+                  checked={state.advice.pilAndRecordGiven}
+                  onChange={(v) => setAdviceField('pilAndRecordGiven', v)}
+                  description="The marketing authorisation holder's PIL, and a written record with the date, brand, vaccine type and batch number."
+                />
+                {needsTwoDoses(state.screening, patientAge) && state.administration.doseNumber === '1' && (
+                  <Checkbox
+                    label="Written confirmation of the date the second dose is due given to the parent or carer"
+                    checked={state.advice.secondDoseDateGiven}
+                    onChange={(v) => setAdviceField('secondDoseDateGiven', v)}
+                    description={`Second dose booked for ${state.administration.nextDoseDue || '(date not recorded)'}.`}
+                  />
+                )}
               </div>
             </div>
           )}

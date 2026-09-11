@@ -23,37 +23,54 @@ const counsellingItems: {
     field: "timingAdvice",
     label: "Timing of administration",
     detail:
-      "Sildenafil: take approximately 1 hour before activity (effective 30 mins to 4 hours). Tadalafil on-demand: take at least 30 minutes before (effective up to 36 hours). Tadalafil daily: take at the same time each day.",
+      "Sildenafil: take about an hour before sex; it can work from 30 minutes up to about 4 hours. Tadalafil on-demand: take at least 30 minutes before; it can still work up to 36 hours later. Tadalafil once daily: take at the same time each day, whether or not you expect to have sex.",
+  },
+  {
+    field: "maxOneDoseIn24Hours",
+    label: "One dose in 24 hours. No more",
+    detail: "Maximum one dose in any 24 hours, whichever medicine. Do not use tadalafil on-demand and once-daily together.",
+  },
+  {
+    field: "nitrateWarningGiven",
+    label: "NEVER with poppers or any nitrate medicine",
+    detail:
+      "Never take this with poppers, or with any nitrate medicine such as a GTN spray or nicorandil. Together they can drop your blood pressure to a dangerous level. Tadalafil stays in your system for up to two days, so that warning applies for two days after your last dose, not just on the day.",
   },
   {
     field: "foodInteractions",
     label: "Food interactions",
     detail:
-      "Sildenafil: efficacy may be reduced if taken after a high-fat meal. Tadalafil: absorption not affected by food.",
+      "Sildenafil: a heavy, fatty meal can make it work less well. Tadalafil: absorption is not affected by food.",
   },
   {
     field: "priapismWarning",
     label: "Priapism warning",
     detail:
-      "Seek immediate medical attention if an erection lasts longer than 4 hours. This is a medical emergency.",
+      "An erection lasting more than 4 hours: go to A&E. This can cause permanent damage.",
   },
   {
     field: "visionHearingWarning",
     label: "Vision and hearing warning",
     detail:
-      "Seek urgent medical attention if there is a sudden loss of vision in one or both eyes, or a sudden decrease or loss of hearing.",
+      "Sudden loss of vision in one or both eyes: stop the tablets and seek immediate medical attention (possible NAION). Sudden loss or reduction of hearing: seek immediate medical attention.",
+  },
+  {
+    field: "chestPainAdvice",
+    label: "Chest pain during or after sex",
+    detail:
+      "Seek immediate medical attention. Do not take a GTN spray for it; tell the paramedics you have taken this medicine (and, for tadalafil, that it lasts up to 36 hours).",
   },
   {
     field: "noSTIProtection",
     label: "No STI protection",
     detail:
-      "This medication does not protect against sexually transmitted infections. Advise on appropriate barrier methods.",
+      "This does not protect you against sexually transmitted infections. Offer testing where appropriate. Recorded on the consultation record.",
   },
   {
     field: "grapefruitAvoidance",
     label: "Grapefruit avoidance",
     detail:
-      "Avoid grapefruit juice while taking the medication as it may increase side effects.",
+      "Sildenafil: avoid grapefruit juice, which increases exposure.",
   },
   {
     field: "alcoholModeration",
@@ -71,7 +88,7 @@ const counsellingItems: {
     field: "reviewAdvice",
     label: "Review and follow-up advice",
     detail:
-      "Trial the medication on at least 6-8 separate occasions with sexual stimulation before concluding treatment failure. Review annually.",
+      "Reassess where there has been no improvement after 6 to 8 attempts at the maximum tolerated dose. Review effectiveness, blood pressure and cardiovascular fitness at least annually; for tadalafil once daily, reassess periodically whether continued daily use remains appropriate.",
   },
 ];
 
@@ -97,7 +114,7 @@ export function EDCounsellingChecklist({
         <span
           className={`text-xs font-medium px-2 py-1 rounded-full ${
             allChecked
-              ? "bg-teal-100 text-teal-700"
+              ? "bg-[color:var(--tenant-primary)]/15 text-[color:var(--tenant-primary)]"
               : "bg-gray-100 text-gray-500"
           }`}
         >
@@ -113,7 +130,7 @@ export function EDCounsellingChecklist({
               flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all
               ${
                 checklist[item.field]
-                  ? "border-teal-200 bg-teal-50/50"
+                  ? "border-[color:var(--tenant-primary)]/30 bg-[color:var(--tenant-primary)]/10/50"
                   : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
               }
             `}
@@ -122,12 +139,12 @@ export function EDCounsellingChecklist({
               type="checkbox"
               checked={checklist[item.field]}
               onChange={(e) => onChange(item.field, e.target.checked)}
-              className="mt-1 rounded border-gray-300 text-teal-500 focus:ring-teal-400"
+              className="mt-1 rounded border-gray-300 text-[color:var(--tenant-primary)] focus:ring-[color:var(--tenant-primary)]"
             />
             <div className="flex-1">
               <p
                 className={`text-sm font-medium ${
-                  checklist[item.field] ? "text-teal-800" : "text-navy-900"
+                  checklist[item.field] ? "text-[color:var(--tenant-primary)]" : "text-navy-900"
                 }`}
               >
                 {item.label}
@@ -136,7 +153,7 @@ export function EDCounsellingChecklist({
             </div>
             {checklist[item.field] && (
               <svg
-                className="w-4 h-4 text-teal-500 flex-shrink-0 mt-1"
+                className="w-4 h-4 text-[color:var(--tenant-primary)] flex-shrink-0 mt-1"
                 viewBox="0 0 20 20"
                 fill="currentColor"
               >
@@ -160,15 +177,16 @@ export function EDCounsellingChecklist({
             onChange={(e) =>
               onChange("gpReviewRecommended", e.target.checked)
             }
-            className="mt-1 rounded border-gray-300 text-teal-500 focus:ring-teal-400"
+            className="mt-1 rounded border-gray-300 text-[color:var(--tenant-primary)] focus:ring-[color:var(--tenant-primary)]"
           />
           <div>
             <p className="text-sm font-medium text-navy-900">
-              GP cardiovascular review recommended (optional)
+              Cardiovascular and diabetes check recommended
             </p>
             <p className="text-xs text-gray-500 mt-0.5">
-              If the patient is not already under regular GP review, recommend a
-              cardiovascular risk assessment. Tick to confirm this was discussed.
+              If the patient is not under regular GP review, advise him to arrange a
+              cardiovascular and diabetes check: erection problems are often the first
+              sign of something else. Tick to record that you recommended it.
             </p>
           </div>
         </label>

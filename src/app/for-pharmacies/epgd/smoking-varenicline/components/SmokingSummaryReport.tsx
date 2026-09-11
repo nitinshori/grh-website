@@ -36,7 +36,7 @@ export const SmokingSummaryReport: React.FC<SmokingSummaryReportProps> = ({
         {/* Header */}
         <div className="border-b-2 border-gray-300 pb-6 mb-6">
           <h1 className="text-3xl font-bold text-gray-900">
-            Varenicline (Champix) PGD Consultation Record
+            Varenicline 0.5mg and 1mg tablets PGD Consultation Record (version 003, 11 September 2026)
           </h1>
           <p className="text-gray-600 mt-2">
             UK Pharmacy Smoking Cessation ePGD
@@ -281,9 +281,10 @@ export const SmokingSummaryReport: React.FC<SmokingSummaryReportProps> = ({
               <p className="text-xs font-semibold text-gray-500 uppercase">
                 Tablet Quantity
               </p>
-              <p className="text-lg text-gray-900">{formData.dosePlan.quantity} tablets</p>
+              <p className="text-lg text-gray-900">{formData.dosePlan.quantity} tablets{formData.dosePlan.supplyType === "starter" ? " (starter pack)" : formData.dosePlan.supplyType === "continuation" ? " (continuation supply, 1mg tablets)" : ""}</p>
             </div>
           </div>
+          <p className="text-xs text-gray-600 mt-3">Review at 2 weeks, 4 weeks, then monthly. Maximum 12 weeks; may extend to 24 weeks total.</p>
         </div>
 
         {/* Counselling & Advice Section */}
@@ -353,7 +354,7 @@ export const SmokingSummaryReport: React.FC<SmokingSummaryReportProps> = ({
                 {formData.counselling.quitDatePlanning ? "✓" : ""}
               </span>
               <span className="text-gray-900">
-                Quit date planning (set 1-2 weeks into treatment)
+                Quit date planning (day 8 to 14 of treatment)
               </span>
             </div>
             <div className="flex items-center">
@@ -361,7 +362,47 @@ export const SmokingSummaryReport: React.FC<SmokingSummaryReportProps> = ({
                 {formData.counselling.returnIfWorsening ? "✓" : ""}
               </span>
               <span className="text-gray-900">
-                Return if worsening (especially mood changes)
+                Report mood changes, depression, anxiety or suicidal thoughts immediately
+              </span>
+            </div>
+            <div className="flex items-center">
+              <span className="w-4 h-4 rounded border-2 border-gray-300 mr-3 flex items-center justify-center text-sm font-bold">
+                {formData.counselling.physicalSymptomsWarning ? "✓" : ""}
+              </span>
+              <span className="text-gray-900">
+                Contact GP for chest pain, shortness of breath or severe headaches
+              </span>
+            </div>
+            <div className="flex items-center">
+              <span className="w-4 h-4 rounded border-2 border-gray-300 mr-3 flex items-center justify-center text-sm font-bold">
+                {formData.counselling.slipUpAdvice ? "✓" : ""}
+              </span>
+              <span className="text-gray-900">
+                Continue after a slip-up; discuss with pharmacist or GP
+              </span>
+            </div>
+            <div className="flex items-center">
+              <span className="w-4 h-4 rounded border-2 border-gray-300 mr-3 flex items-center justify-center text-sm font-bold">
+                {formData.counselling.followUpSchedule ? "✓" : ""}
+              </span>
+              <span className="text-gray-900">
+                Follow-up at 2 weeks, 4 weeks, then monthly
+              </span>
+            </div>
+            <div className="flex items-center">
+              <span className="w-4 h-4 rounded border-2 border-gray-300 mr-3 flex items-center justify-center text-sm font-bold">
+                {formData.counselling.pregnancyAdvice ? "✓" : ""}
+              </span>
+              <span className="text-gray-900">
+                Inform GP immediately if pregnant
+              </span>
+            </div>
+            <div className="flex items-center">
+              <span className="w-4 h-4 rounded border-2 border-gray-300 mr-3 flex items-center justify-center text-sm font-bold">
+                {formData.counselling.doNotStopSuddenly ? "✓" : ""}
+              </span>
+              <span className="text-gray-900">
+                Do not stop suddenly; PIL supplied and dosing schedule understood
               </span>
             </div>
           </div>
@@ -380,7 +421,7 @@ export const SmokingSummaryReport: React.FC<SmokingSummaryReportProps> = ({
               <p className="text-lg text-gray-900">{formData.pharmacistName}</p>
             </div>
             <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase">GMC Number</p>
+              <p className="text-xs font-semibold text-gray-500 uppercase">GPhC Number</p>
               <p className="text-lg text-gray-900">{formData.pharmacistGMCNumber}</p>
             </div>
           </div>
@@ -413,7 +454,7 @@ export const SmokingSummaryReport: React.FC<SmokingSummaryReportProps> = ({
           </p>
           <p className="mt-2">
             This record has been generated using the UK Pharmacy ePGD for Varenicline
-            (Champix) Smoking Cessation.
+            Smoking Cessation (any UK-licensed generic varenicline product).
           </p>
         </div>
       </div>

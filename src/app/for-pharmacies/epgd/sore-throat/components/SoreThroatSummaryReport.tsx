@@ -61,7 +61,7 @@ export function SoreThroatSummaryReport({
           Sore Throat Test & Treat Consultation Record
         </h2>
         <p className="text-xs mt-2 opacity-80 print:text-gray-600">
-          Patient Group Direction: Sore Throat Test & Treat
+          Patient Group Direction: Sore Throat Test & Treat, version 003, issued 11 September 2026
         </p>
       </div>
 
@@ -139,19 +139,38 @@ export function SoreThroatSummaryReport({
                   : "Not recorded"
               }
             />
+            <Row
+              label="Heart rate"
+              value={examination.heartRate !== null ? `${examination.heartRate} bpm` : "Not recorded"}
+            />
+            <Row
+              label="Respiratory rate"
+              value={examination.respiratoryRate !== null ? `${examination.respiratoryRate} /min` : "Not recorded"}
+            />
+            <Row
+              label="Systolic BP"
+              value={examination.systolicBP !== null ? `${examination.systolicBP} mmHg` : "Not recorded"}
+            />
           </div>
         </div>
 
         {/* Symptoms */}
         <div>
-          <SectionHeader>Associated Symptoms</SectionHeader>
+          <SectionHeader>Associated Symptoms and Red Flags</SectionHeader>
           <CounsellingGrid
             items={[
               ["Difficulty swallowing", symptoms.dysphagia],
               ["Drooling", symptoms.drooling],
               ["Difficulty opening mouth", symptoms.trismus],
               ["Muffled voice", symptoms.muffledVoice],
-              ["Unilateral swelling", symptoms.unilateralSwelling],
+              ["Unilateral peritonsillar swelling", symptoms.unilateralSwelling],
+              ["Stridor", symptoms.stridor],
+              ["Difficulty breathing", symptoms.difficultyBreathing],
+              ["Inability to swallow saliva", symptoms.unableToSwallowSaliva],
+              ["Deviation of the uvula", symptoms.uvulaDeviation],
+              ["Neck lump / tonsillar enlargement / hoarseness over 3 weeks", symptoms.persistentNeckLumpOrHoarseness],
+              ["New confusion", examination.newConfusion],
+              ["Looks unwell", examination.looksUnwell],
               ["Cervical lymphadenopathy", examination.cervicalLymphadenopathy],
             ]}
           />
@@ -290,8 +309,24 @@ export function SoreThroatSummaryReport({
           <SectionHeader>Medical History & Contraindications</SectionHeader>
           <CounsellingGrid
             items={[
-              ["Penicillin allergy", history.penicillinAllergy],
+              ["Able to take oral medication", history.ableToTakeOralMedication],
+              ["Recent antibiotic for this illness", history.recentAntibioticForThisIllness],
+              ["Penicillin or beta-lactam allergy", history.penicillinAllergy],
               ["Immunosuppressed", history.immunosuppressed],
+              ["Neutropenia-risk medicine", history.neutropeniaRiskMedicine],
+              ["Severe hepatic or renal dysfunction", history.severeHepaticOrRenalDysfunction],
+              ["Pregnant or breastfeeding", history.pregnantOrBreastfeeding],
+              ["Possible mononucleosis", history.suspectedMononucleosis],
+              ["Oral contraception", history.oralContraceptive],
+              ["Macrolide hypersensitivity", history.macrolideAllergy],
+              ["Ergotamine / dihydroergotamine", history.ergotamineUse],
+              ["Simvastatin / lovastatin", history.simvastatinLovastatinUse],
+              ["QT prolongation or risk factors", history.qtProlongationRisk],
+              ["Clarithromycin SmPC contraindicated medicine", history.clarithromycinInteractingMedicine],
+              ["Severe hepatic impairment", history.severeHepaticImpairment],
+              ["Myasthenia gravis", history.myastheniaGravis],
+              ["Renal impairment (eGFR below 30)", history.renalImpairmentEgfrUnder30],
+              ["Warfarin / anticoagulant", history.warfarin],
               ["Recurrent tonsillitis", history.recurrentTonsillitis],
               ["Previous quinsy", history.previousQuinsy],
               ["Rheumatic fever history", history.rheumaticFeverHistory],
@@ -308,14 +343,16 @@ export function SoreThroatSummaryReport({
                 label="Medicine"
                 value={
                   medicine.medicine === "phenoxymethylpenicillin"
-                    ? "Phenoxymethylpenicillin (Pen V)"
-                    : "Clarithromycin"
+                    ? "Phenoxymethylpenicillin 500mg tablets (Pen V)"
+                    : "Clarithromycin 250mg tablets"
                 }
               />
+              <Row label="Brand" value={medicine.brand || "Not recorded"} />
+              <Row label="Form and route" value="Tablets, oral" />
               <Row label="Dose" value={medicine.dose} />
               <Row label="Frequency" value={medicine.frequency} />
               <Row label="Duration" value={medicine.duration} />
-              <Row label="Quantity" value={medicine.quantity.toString()} />
+              <Row label="Quantity" value={`${medicine.quantity} tablets`} />
               <Row
                 label="Back-up prescription"
                 value={medicine.backupPrescription ? "Yes" : "No"}
@@ -330,14 +367,19 @@ export function SoreThroatSummaryReport({
           <CounsellingGrid
             items={[
               ["Complete course of antibiotics", counselling.completeCourse],
+              ["How to take (empty stomach / with or without food)", counselling.howToTake],
+              ["Additional contraception during course and 7 days after", counselling.contraceptionAdvice],
               ["Pain relief options", counselling.painRelief],
               ["Fluid intake importance", counselling.fluidIntake],
+              ["Lozenges / salt water gargles", counselling.lozengesGargles],
               ["Soft foods and nutrition", counselling.softFoods],
               [
-                "Return if worsening/no improvement",
+                "Seek advice if worsening/no improvement after 3-5 days",
                 counselling.returnIfWorsening,
               ],
               ["Red flag symptoms", counselling.redFlagSymptoms],
+              ["Report allergic reactions immediately", counselling.allergicReactionAdvice],
+              ["Clarithromycin: persistent diarrhoea, metallic taste", counselling.clarithromycinAdvice],
               ["Avoid antibiotic sharing", counselling.avoidAntibioticSharing],
               ["Return to school/work advice", counselling.schoolWorkAdvice],
             ]}

@@ -5,16 +5,16 @@ import { PgdPageActions } from "@/components/PgdPageActions";
 import { WegovyOralClient } from "./WegovyOralClient";
 
 export const metadata = {
-  title: "Oral Wegovy (Oral Semaglutide 1.5–25 mg) — Weight Management",
+  title: "Oral Wegovy (Oral Semaglutide 1.5 to 25 mg), Weight Management",
   description:
-    "UK Pharmacy PGD for licensed Wegovy tablets (oral semaglutide 1.5, 4, 9 and 25 mg) — chronic weight management in adults with BMI ≥30 or BMI ≥27 with weight-related comorbidity.",
+    "UK Pharmacy PGD for licensed Wegovy tablets (oral semaglutide 1.5, 4, 9 and 25 mg): weight management in adults aged 18 to 85 with BMI 30 or above, or BMI 27 or above with a weight-related comorbidity.",
 };
 
 export default async function WegovyOralPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  // Look up the PGD entry. Access gating is still applied — when the
+  // Look up the PGD entry. Access gating is still applied: when the
   // restrictedToEmails allowlist is removed from the catalogue entry,
   // isPgdAccessibleByEmail returns true for everyone, so this becomes
   // a no-op rather than a hard block.
@@ -36,21 +36,25 @@ export default async function WegovyOralPage() {
               For registered pharmacy professionals only
             </p>
             <h1 className="text-3xl sm:text-4xl font-bold text-navy-900 mb-2">
-              Oral Wegovy — Weight Management
+              Oral Wegovy, Weight Management
             </h1>
             <p className="text-gray-600 mb-4">
               Semaglutide 1.5, 4, 9 and 25 mg oral tablets. Licensed in the UK for
-              chronic weight management in adults.
+              weight management in adults. Wegovy (semaglutide) Tablets PGD
+              version 010, issued 11 September 2026.
             </p>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-900">
-                Oral Wegovy is licensed for chronic weight management in adults
-                with a BMI of 30 kg/m² or above (obesity) or 27 kg/m² or above
-                (overweight) in the presence of at least one weight-related
-                comorbidity. Same exclusions, cautions and dose-titration
-                principles as injectable Wegovy. Take on an empty stomach with
-                a small sip of plain water and wait at least 30 minutes before
-                food, drink or other medication.
+                Wegovy tablets are licensed as an adjunct to a reduced-calorie diet
+                and increased physical activity for weight management in adults
+                with a BMI of 30 kg/m² or above (obesity) or 27 kg/m² to below
+                30 kg/m² (overweight) in the presence of at least one weight-related
+                comorbidity. This PGD covers adults aged 18 to 85. Start at 1.5 mg
+                once daily and escalate monthly through 4 mg and 9 mg to 25 mg.
+                Take on an empty stomach after a fast of at least 8 hours, with no
+                more than half a glass of water (about 120 mL), and wait at least
+                30 minutes before food, drink or other oral medicines. One pack of
+                30 tablets per appointment.
               </p>
             </div>
           </div>
@@ -60,7 +64,7 @@ export default async function WegovyOralPage() {
 
         <div className="mt-8 text-center text-xs text-gray-500">
           <p>
-            Get Real Health ePGD — Oral Wegovy | Confidential Patient Information
+            Get Real Health ePGD, Oral Wegovy | Confidential Patient Information
           </p>
         </div>
       </div>

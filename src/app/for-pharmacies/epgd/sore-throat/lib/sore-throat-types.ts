@@ -12,6 +12,13 @@ export interface SoreThroatSymptoms {
   trismus: boolean; // difficulty opening mouth
   muffledVoice: boolean; // hot potato voice
   unilateralSwelling: boolean;
+  // PGD v003 red flags (airway compromise, quinsy or epiglottitis): any one excludes
+  stridor: boolean;
+  difficultyBreathing: boolean;
+  unableToSwallowSaliva: boolean;
+  uvulaDeviation: boolean;
+  // PGD v003: possible malignancy pathway, refer to GP
+  persistentNeckLumpOrHoarseness: boolean;
   additionalNotes: string;
 }
 
@@ -33,13 +40,37 @@ export interface SoreThroatExamination {
   tonsillarAppearance: "normal" | "erythematous" | "exudate" | "abscess" | "";
   cervicalLymphadenopathy: boolean;
   temperature: number | null;
+  // PGD v003 sepsis screen: temperature 38 or above together with any of these
+  heartRate: number | null;
+  respiratoryRate: number | null;
+  systolicBP: number | null;
+  newConfusion: boolean;
+  looksUnwell: boolean;
 }
 
 // ─── Medical History & Contraindications ───
 
 export interface SoreThroatHistory {
-  penicillinAllergy: boolean;
+  penicillinAllergy: boolean; // penicillin or beta-lactam allergy: clarithromycin arm
   immunosuppressed: boolean;
+  neutropeniaRiskMedicine: boolean; // chemotherapy, carbimazole, clozapine, methotrexate or other DMARDs
+  recentAntibioticForThisIllness: boolean; // inclusion: no recent antibiotic use for this illness
+  ableToTakeOralMedication: boolean; // inclusion
+  severeHepaticOrRenalDysfunction: boolean; // exclusion, both arms
+  pregnantOrBreastfeeding: boolean; // caution, both arms
+  suspectedMononucleosis: boolean; // caution, phenoxymethylpenicillin
+  oralContraceptive: boolean; // caution: additional contraception for 7 days
+  // Clarithromycin arm exclusions (apply when penicillin allergic)
+  macrolideAllergy: boolean;
+  ergotamineUse: boolean;
+  simvastatinLovastatinUse: boolean;
+  qtProlongationRisk: boolean;
+  clarithromycinInteractingMedicine: boolean; // SmPC 4.3 list
+  severeHepaticImpairment: boolean;
+  myastheniaGravis: boolean;
+  // Clarithromycin arm cautions
+  renalImpairmentEgfrUnder30: boolean;
+  warfarin: boolean;
   recurrentTonsillitis: boolean; // 7+ episodes/year
   previousQuinsy: boolean;
   rheumaticFeverHistory: boolean;
@@ -55,6 +86,7 @@ export interface SoreThroatMedicine {
   frequency: string;
   duration: string;
   quantity: number;
+  brand: string; // records: name and brand of medication
   backupPrescription: boolean; // delayed/back-up strategy
 }
 
@@ -62,11 +94,16 @@ export interface SoreThroatMedicine {
 
 export interface SoreThroatCounselling {
   completeCourse: boolean;
+  howToTake: boolean; // Pen V on an empty stomach; clarithromycin with or without food
+  contraceptionAdvice: boolean; // additional contraception during course and for 7 days after
   painRelief: boolean; // paracetamol/ibuprofen
   fluidIntake: boolean;
+  lozengesGargles: boolean;
   softFoods: boolean;
   returnIfWorsening: boolean; // worsen or no improvement in 3-5 days
   redFlagSymptoms: boolean; // difficulty breathing, unable to swallow
+  allergicReactionAdvice: boolean; // report rash, facial swelling, breathing difficulty immediately
+  clarithromycinAdvice: boolean; // persistent diarrhoea (C. difficile), metallic taste
   avoidAntibioticSharing: boolean;
   schoolWorkAdvice: boolean;
 }
@@ -95,6 +132,11 @@ export const initialSoreThroatSymptoms: SoreThroatSymptoms = {
   trismus: false,
   muffledVoice: false,
   unilateralSwelling: false,
+  stridor: false,
+  difficultyBreathing: false,
+  unableToSwallowSaliva: false,
+  uvulaDeviation: false,
+  persistentNeckLumpOrHoarseness: false,
   additionalNotes: "",
 };
 
@@ -112,11 +154,32 @@ export const initialSoreThroatExamination: SoreThroatExamination = {
   tonsillarAppearance: "",
   cervicalLymphadenopathy: false,
   temperature: null,
+  heartRate: null,
+  respiratoryRate: null,
+  systolicBP: null,
+  newConfusion: false,
+  looksUnwell: false,
 };
 
 export const initialSoreThroatHistory: SoreThroatHistory = {
   penicillinAllergy: false,
   immunosuppressed: false,
+  neutropeniaRiskMedicine: false,
+  recentAntibioticForThisIllness: false,
+  ableToTakeOralMedication: false,
+  severeHepaticOrRenalDysfunction: false,
+  pregnantOrBreastfeeding: false,
+  suspectedMononucleosis: false,
+  oralContraceptive: false,
+  macrolideAllergy: false,
+  ergotamineUse: false,
+  simvastatinLovastatinUse: false,
+  qtProlongationRisk: false,
+  clarithromycinInteractingMedicine: false,
+  severeHepaticImpairment: false,
+  myastheniaGravis: false,
+  renalImpairmentEgfrUnder30: false,
+  warfarin: false,
   recurrentTonsillitis: false,
   previousQuinsy: false,
   rheumaticFeverHistory: false,
@@ -130,16 +193,22 @@ export const initialSoreThroatMedicine: SoreThroatMedicine = {
   frequency: "",
   duration: "",
   quantity: 0,
+  brand: "",
   backupPrescription: false,
 };
 
 export const initialSoreThroatCounselling: SoreThroatCounselling = {
   completeCourse: false,
+  howToTake: false,
+  contraceptionAdvice: false,
   painRelief: false,
   fluidIntake: false,
+  lozengesGargles: false,
   softFoods: false,
   returnIfWorsening: false,
   redFlagSymptoms: false,
+  allergicReactionAdvice: false,
+  clarithromycinAdvice: false,
   avoidAntibioticSharing: false,
   schoolWorkAdvice: false,
 };

@@ -9,8 +9,16 @@ import { PatientDetailsStep } from "../shared/steps/PatientDetailsStep";
 import { ConsentStep } from "../shared/steps/ConsentStep";
 import { TextInput, Checkbox, SelectInput, NumberInput, TextArea } from "../shared/components/FormInputs";
 import type { ClinicalAlert } from "../shared/types";
+import { calculateAge, validatePatientStep, validateConsentStep } from "../shared/types";
 
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
+
+// Aligned to the signed PGD version 007, issued 11 September 2026:
+// amoxicillin 500mg capsules first line, metronidazole 200mg tablets for
+// penicillin allergy; adults 18 and over; spreading or systemic infection only.
+const PGD_STRAPLINE = "Acute Dental Infection (bridging antibiotic) PGD version 007, issued 11 September 2026";
+const COURSE_QUANTITY = 15;
+
 export default function DentalBridgingClient() {
   const [currentStep, setCurrentStep] = useState(0);
   const [state, setState] = useState({
@@ -30,9 +38,11 @@ export default function DentalBridgingClient() {
       malaise: false,
       cellulitis: false,
       temperature38: false,
+      temperature: null as number | null,
       // ── Higher risk of complications even if localised (CKS) ──────────
       immunosuppressed: false,
       poorlyControlledDiabetes: false,
+      higherRiskReason: "",
       // ── EMERGENCY red flags: 999 or same-day, never a supply ──────────
       difficultSwallowingBreathing: false,
       floorOfMouthSwelling: false,
@@ -41,17 +51,31 @@ export default function DentalBridgingClient() {
       rapidlySpreading: false,
       sepsisSigns: false,
       penicillinAllergy: false,
+      penicillinAllergyHistory: "",
       metronidazoleAllergy: false,
       warfarin: false,
       pregnancy: false,
       breastfeeding: false,
       otherAntibiotics: false,
+      courseAlreadySuppliedThisEpisode: false,
+      // Amoxicillin arm exclusions
+      renalFunctionAsked: false,
+      significantRenalImpairment: false,
+      mononucleosisOrALL: false,
+      // Metronidazole arm exclusions
+      alcoholCanAvoid: "" as "" | "yes" | "no",
+      cockayneSyndrome: false,
+      severeHepaticOrNeurological: false,
+      // Inclusion: unable to obtain definitive dental treatment before the
+      // infection would worsen, and willing and able to arrange an urgent
+      // dental appointment within 24 to 48 hours
+      urgentDentalAppointmentCommitted: false,
       dentalAppointmentBooked: false,
       dentalAppointmentDate: "",
     },
     treatment: {
       antibiotic: "",
-      quantity: 15 as number | null,
+      quantity: COURSE_QUANTITY as number | null,
       batchNumber: "",
       expiryDate: "",
       // v004 supplies no analgesia. v003 offered ibuprofen and paracetamol
@@ -108,9 +132,16 @@ export default function DentalBridgingClient() {
     );
   }, [state.assessment]);
 
+  const age = useMemo(() => calculateAge(state.patient.dateOfBirth), [state.patient.dateOfBirth]);
+  const patientError = useMemo(
+    () => validatePatientStep({ ...state.patient, age }, { minAge: 18 }),
+    [state.patient, age]
+  );
+
   const spreadingOrSystemic = useMemo(() => {
     const a = state.assessment;
-    return a.facialSwelling || a.lymphadenopathy || a.malaise || a.cellulitis || a.temperature38;
+    const fever = a.temperature38 || (a.temperature !== null && a.temperature >= 38);
+    return a.facialSwelling || a.lymphadenopathy || a.malaise || a.cellulitis || fever;
   }, [state.assessment]);
 
   const higherRisk = useMemo(
@@ -127,6 +158,17 @@ export default function DentalBridgingClient() {
   const clinicalAlerts = useMemo<ClinicalAlert[]>(() => {
     const alerts: ClinicalAlert[] = [];
     const a = state.assessment;
+
+    // ── Age: adults 18 and over only ────────────────────────────────────
+    if (age !== null && age < 18) {
+      alerts.push({
+        severity: "stop",
+        code: "UNDER_18",
+        message: "Under 18: refer",
+        detail:
+          "Children with dental infection are referred: this PGD carries no paediatric dose, no suitable formulation and no paediatric red flag route.",
+      });
+    }
 
     // ── Outcome 3: emergency ────────────────────────────────────────────
     if (a.difficultSwallowingBreathing) {
@@ -225,15 +267,58 @@ export default function DentalBridgingClient() {
       });
     }
 
-    // Metronidazole arm exclusions. These are exclusions in v004, not
+    // Metronidazole arm exclusions. These are exclusions in v007, not
     // cautions: v003's tool listed warfarin as a caution to "inform the GP".
     if (a.penicillinAllergy && a.warfarin) {
       alerts.push({
         severity: "stop",
         code: "METRONIDAZOLE_WARFARIN",
-        message: "Warfarin excludes the metronidazole arm",
+        message: "Interacting medicine excludes the metronidazole arm",
         detail:
-          "Metronidazole potentiates warfarin and other coumarins. This is an exclusion under v004, not a caution. Refer. The same applies to lithium, disulfiram, busulfan, 5-fluorouracil, ciclosporin, phenytoin, phenobarbital and QT-prolonging medicines.",
+          "Warfarin or another coumarin, lithium, disulfiram, busulfan, 5-fluorouracil, ciclosporin, phenytoin, phenobarbital, or a QT-prolonging medicine excludes metronidazole. Refer. Say plainly that the issue is the antibiotic and not the dental problem.",
+      });
+    }
+    if (a.penicillinAllergy && a.alcoholCanAvoid === "no") {
+      alerts.push({
+        severity: "stop",
+        code: "METRONIDAZOLE_ALCOHOL",
+        message: "Unable or unwilling to avoid alcohol: metronidazole arm excluded",
+        detail:
+          "The patient must avoid alcohol completely during the course and for 48 hours afterwards. Ask directly and record the answer. Refer.",
+      });
+    }
+    if (a.penicillinAllergy && a.cockayneSyndrome) {
+      alerts.push({
+        severity: "stop",
+        code: "METRONIDAZOLE_COCKAYNE",
+        message: "Cockayne syndrome: absolute exclusion for metronidazole",
+        detail:
+          "Reports of severe and sometimes fatal hepatotoxicity of very rapid onset. Refer.",
+      });
+    }
+    if (a.penicillinAllergy && a.severeHepaticOrNeurological) {
+      alerts.push({
+        severity: "stop",
+        code: "METRONIDAZOLE_HEPATIC_NEURO",
+        message: "Severe hepatic impairment or active neurological disease excludes the metronidazole arm",
+        detail: "Refer.",
+      });
+    }
+    // Amoxicillin arm exclusions
+    if (!a.penicillinAllergy && a.significantRenalImpairment) {
+      alerts.push({
+        severity: "stop",
+        code: "AMOXICILLIN_RENAL",
+        message: "Known significant renal impairment: refer",
+        detail: "A short bridging course is not the place for a dose adjustment. Refer.",
+      });
+    }
+    if (!a.penicillinAllergy && a.mononucleosisOrALL) {
+      alerts.push({
+        severity: "stop",
+        code: "AMOXICILLIN_MONO",
+        message: "Infectious mononucleosis or acute lymphoblastic leukaemia: amoxicillin excluded",
+        detail: "Because of the risk of a widespread rash. Refer.",
       });
     }
     if (a.penicillinAllergy && (a.pregnancy || a.breastfeeding)) {
@@ -266,20 +351,76 @@ export default function DentalBridgingClient() {
         code: "CONCURRENT_ANTIBIOTICS",
         message: "Already taking an antibiotic: do not supply",
         detail:
-          "An antibiotic already taken for this or any other indication is an exclusion under this PGD. One supply per episode. Refer.",
+          "An antibiotic already taken for this or any other indication is an exclusion under this PGD. Refer.",
+      });
+    }
+    if (a.courseAlreadySuppliedThisEpisode) {
+      alerts.push({
+        severity: "stop",
+        code: "COURSE_ALREADY_SUPPLIED",
+        message: "A course already supplied for this episode: do not supply",
+        detail: "One supply per episode. A second course is not authorised under this PGD; refer.",
       });
     }
 
     return alerts;
-  }, [state.assessment, outcome, higherRisk, spreadingOrSystemic]);
+  }, [state.assessment, outcome, higherRisk, spreadingOrSystemic, age]);
 
   const hasStopAlerts = clinicalAlerts.some(a => a.severity === "stop");
-  const canProceedFromAssessment = !hasStopAlerts && !!state.assessment.painType && !!state.assessment.painDuration && !!state.assessment.painSeverity;
+
+  // Required records before leaving the assessment (PGD v007 inclusion
+  // criteria and records to be kept).
+  const assessmentError = useMemo<string | null>(() => {
+    const a = state.assessment;
+    if (hasStopAlerts) return "Resolve the clinical alerts: this patient is excluded or needs emergency care";
+    if (!a.painType || !a.painDuration || !a.painSeverity) return "Complete the pain assessment fields";
+    if (a.temperature === null) return "Record the temperature";
+    if (higherRisk && !spreadingOrSystemic && !a.higherRiskReason.trim())
+      return "Record which higher-risk factor applies and why you judged the risk higher";
+    if (a.penicillinAllergy && !a.penicillinAllergyHistory.trim())
+      return "Record the penicillin allergy history in the patient's own terms";
+    if (a.penicillinAllergy && !a.alcoholCanAvoid)
+      return "Ask directly whether the patient can avoid alcohol completely during the course and for 48 hours afterwards, and record the answer";
+    if (!a.penicillinAllergy && !a.renalFunctionAsked)
+      return "Ask about renal function and record that no significant impairment was reported";
+    if (!a.urgentDentalAppointmentCommitted)
+      return "Confirm the patient is unable to obtain definitive dental treatment before the infection would worsen, and is willing and able to arrange an urgent dental appointment within 24 to 48 hours";
+    return null;
+  }, [state.assessment, hasStopAlerts, higherRisk, spreadingOrSystemic]);
+  const treatmentError = useMemo<string | null>(() => {
+    const t = state.treatment;
+    if (!t.antibiotic) return "Antibiotic not set";
+    if (t.quantity !== COURSE_QUANTITY) return `Quantity must be ${COURSE_QUANTITY}: supply the whole 5-day course, do not split it`;
+    if (!t.batchNumber.trim()) return "Record the batch number";
+    if (!t.expiryDate) return "Record the expiry date";
+    return null;
+  }, [state.treatment]);
+
+  const counsellingError = state.counselling.counsellingAcknowledged
+    ? null
+    : "Confirm the counselling points were given, including that this is a bridge and not a treatment";
+
+  const stepError = useMemo<string | null>(() => {
+    switch (currentStep) {
+      case 0:
+        return patientError;
+      case 1:
+        return validateConsentStep(state.consent);
+      case 2:
+        return assessmentError;
+      case 3:
+        return treatmentError;
+      case 4:
+        return counsellingError;
+      default:
+        return null;
+    }
+  }, [currentStep, patientError, assessmentError, treatmentError, counsellingError, state.consent]);
 
   const handleNext = useCallback(() => {
-    if (currentStep === 2 && hasStopAlerts) return;
+    if (stepError) return;
     setCurrentStep(prev => Math.min(prev + 1, 6));
-  }, [currentStep, hasStopAlerts]);
+  }, [stepError]);
 
   const handlePrev = useCallback(() => {
     setCurrentStep(prev => Math.max(prev - 1, 0));
@@ -330,8 +471,12 @@ export default function DentalBridgingClient() {
         gpName: state.patient.gpName,
         gpPractice: state.patient.gpPractice,
       },
-      clinicalData: state as unknown as Record<string, unknown>,
-      outcome: "completed",
+      clinicalData: {
+        ...(state as unknown as Record<string, unknown>),
+        outcomeCategory: outcome,
+        pgdVersion: PGD_STRAPLINE,
+      },
+      outcome: hasStopAlerts || outcome !== "bridge" ? "not_supplied" : "completed",
       summary: {
         pharmacistName: state.summary.pharmacistName,
         pharmacistGPhC: state.summary.pharmacistGPhC,
@@ -339,13 +484,13 @@ export default function DentalBridgingClient() {
         consultationTime: state.summary.consultationTime,
       },
     };
-  }, [state]);
+  }, [state, outcome, hasStopAlerts]);
 
   return (
     <div className="space-y-6">
       <ProgressBar current={currentStep + 1} total={7} />
 
-      {currentStep === 2 && clinicalAlerts.length > 0 && (
+      {(currentStep === 0 || currentStep === 2) && clinicalAlerts.length > 0 && (
         <AlertBanner alerts={clinicalAlerts} />
       )}
 
@@ -355,8 +500,9 @@ export default function DentalBridgingClient() {
         totalSteps={7}
         onNext={handleNext}
         onPrev={handlePrev}
-        canProceed={currentStep === 2 ? canProceedFromAssessment : true}
-        validationError={currentStep === 2 && !canProceedFromAssessment ? "Complete required fields and resolve clinical alerts" : null}
+        canProceed={stepError === null}
+        validationError={stepError}
+        isBlocked={currentStep === 2 && hasStopAlerts}
        getConsultationData={getConsultationData}>
         {currentStep === 0 && (
           <PatientDetailsStep
@@ -440,6 +586,15 @@ export default function DentalBridgingClient() {
                 these is present and the patient is not at higher risk, an antibiotic is NOT indicated:
                 analgesia advice and urgent dental care are the correct answer.
               </p>
+              <NumberInput
+                label="Temperature"
+                value={state.assessment.temperature}
+                onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, temperature: v, temperature38: v !== null && v >= 38 } }))}
+                min={30}
+                max={45}
+                unit="C (38 or above is a sign of systemic involvement)"
+                required
+              />
               <Checkbox
                 label="Temperature 38C or above"
                 checked={state.assessment.temperature38}
@@ -457,14 +612,16 @@ export default function DentalBridgingClient() {
                 onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, lymphadenopathy: v } }))}
               />
               <Checkbox
-                label="Cellulitis: diffuse redness and swelling spreading into the soft tissues"
+                label="Cellulitis: diffuse redness and swelling spreading into the soft tissues of the face, without red flags"
                 checked={state.assessment.cellulitis}
                 onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, cellulitis: v } }))}
+                description="ANY spread to the neck is an Appendix 1 emergency (tick the red flag above), not a reason to supply."
               />
               <Checkbox
-                label="Malaise, rigors, or feeling generally unwell"
+                label="Malaise, feeling generally unwell"
                 checked={state.assessment.malaise}
                 onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, malaise: v } }))}
+                description="Rigors are NOT on this list: a rigor is a sepsis red flag (tick it above) and refers."
               />
             </div>
 
@@ -483,6 +640,15 @@ export default function DentalBridgingClient() {
                 checked={state.assessment.poorlyControlledDiabetes}
                 onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, poorlyControlledDiabetes: v } }))}
               />
+              {higherRisk && (
+                <TextArea
+                  label="Which higher-risk factor applies, and why you judged the risk higher"
+                  value={state.assessment.higherRiskReason}
+                  onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, higherRiskReason: v } }))}
+                  placeholder="e.g. on methotrexate and prednisolone for rheumatoid arthritis; HbA1c 90 at last check"
+                  required
+                />
+              )}
             </div>
 
             <div className="space-y-3">
@@ -545,22 +711,80 @@ export default function DentalBridgingClient() {
             <div className="space-y-3">
               <h3 className="text-lg font-semibold text-gray-900">Allergies, medicines and pregnancy</h3>
               <Checkbox
-                label="Penicillin or beta-lactam allergy"
+                label="Penicillin or beta-lactam allergy, or any history of cephalosporin allergy"
                 checked={state.assessment.penicillinAllergy}
                 onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, penicillinAllergy: v } }))}
-                description="Routes to the metronidazole arm. Record the allergy history in the patient's own words."
+                description="Routes to the metronidazole arm. Record the allergy history in the patient's own words, distinguishing true allergy from intolerance."
               />
+              {state.assessment.penicillinAllergy && (
+                <TextArea
+                  label="Penicillin allergy history in the patient's own terms"
+                  value={state.assessment.penicillinAllergyHistory}
+                  onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, penicillinAllergyHistory: v } }))}
+                  placeholder="What happened, which medicine, when"
+                  required
+                />
+              )}
               <Checkbox
                 label="Metronidazole or nitroimidazole allergy"
                 checked={state.assessment.metronidazoleAllergy}
                 onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, metronidazoleAllergy: v } }))}
               />
               <Checkbox
-                label="Taking warfarin or another coumarin, lithium, disulfiram, phenytoin or a QT-prolonging medicine"
+                label="Taking warfarin or another coumarin, lithium, disulfiram, busulfan, 5-fluorouracil, ciclosporin, phenytoin, phenobarbital, or a QT-prolonging medicine"
                 checked={state.assessment.warfarin}
                 onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, warfarin: v } }))}
-                description="Excludes the metronidazole arm under v004. Not relevant to amoxicillin."
+                description="Excludes the metronidazole arm. Not relevant to amoxicillin."
               />
+              {state.assessment.penicillinAllergy && (
+                <>
+                  <SelectInput
+                    label="Can the patient avoid alcohol completely during the course and for 48 hours afterwards? (ask directly)"
+                    value={state.assessment.alcoholCanAvoid}
+                    onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, alcoholCanAvoid: v as "" | "yes" | "no" } }))}
+                    options={[
+                      { value: "yes", label: "Yes: the rule was explained and the patient confirmed they can keep to it" },
+                      { value: "no", label: "No: unable or unwilling to avoid alcohol (exclusion)" },
+                    ]}
+                    required
+                  />
+                  <Checkbox
+                    label="Cockayne syndrome"
+                    checked={state.assessment.cockayneSyndrome}
+                    onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, cockayneSyndrome: v } }))}
+                    description="Absolute exclusion for metronidazole."
+                  />
+                  <Checkbox
+                    label="Severe hepatic impairment, or active neurological disease"
+                    checked={state.assessment.severeHepaticOrNeurological}
+                    onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, severeHepaticOrNeurological: v } }))}
+                    description="Excludes the metronidazole arm."
+                  />
+                </>
+              )}
+              {!state.assessment.penicillinAllergy && (
+                <>
+                  <Checkbox
+                    label="Renal function asked about, and no significant impairment reported"
+                    checked={state.assessment.renalFunctionAsked}
+                    onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, renalFunctionAsked: v } }))}
+                    description="Required record for the amoxicillin arm."
+                    required
+                  />
+                  <Checkbox
+                    label="Known significant renal impairment"
+                    checked={state.assessment.significantRenalImpairment}
+                    onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, significantRenalImpairment: v } }))}
+                    description="Exclusion. A short bridging course is not the place for a dose adjustment. Refer."
+                  />
+                  <Checkbox
+                    label="Infectious mononucleosis or acute lymphoblastic leukaemia"
+                    checked={state.assessment.mononucleosisOrALL}
+                    onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, mononucleosisOrALL: v } }))}
+                    description="Exclusion for amoxicillin because of the risk of a widespread rash."
+                  />
+                </>
+              )}
               <Checkbox
                 label="Pregnant"
                 checked={state.assessment.pregnancy}
@@ -577,12 +801,25 @@ export default function DentalBridgingClient() {
                 label="Already taking an antibiotic, for this or any other indication"
                 checked={state.assessment.otherAntibiotics}
                 onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, otherAntibiotics: v } }))}
-                description="Exclusion. One supply per episode."
+                description="Exclusion."
+              />
+              <Checkbox
+                label="A course already supplied for this episode"
+                checked={state.assessment.courseAlreadySuppliedThisEpisode}
+                onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, courseAlreadySuppliedThisEpisode: v } }))}
+                description="Exclusion. One supply per episode; a second course is not authorised."
               />
             </div>
 
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-900">Dental care</h3>
+              <Checkbox
+                label="Unable to obtain definitive dental treatment before the infection would be expected to worsen, and willing and able to arrange an urgent dental appointment within 24 to 48 hours"
+                checked={state.assessment.urgentDentalAppointmentCommitted}
+                onChange={v => setState(prev => ({ ...prev, assessment: { ...prev.assessment, urgentDentalAppointmentCommitted: v } }))}
+                description="Inclusion criterion. Arrange the appointment before the patient leaves where possible, or give the NHS 111 route to emergency dental care."
+                required
+              />
               <Checkbox
                 label="Patient already has a dental appointment booked"
                 checked={state.assessment.dentalAppointmentBooked}
@@ -615,32 +852,40 @@ export default function DentalBridgingClient() {
                 value={state.treatment.antibiotic}
                 onChange={v => setState(prev => ({ ...prev, treatment: { ...prev.treatment, antibiotic: v } }))}
                 options={[
-                  { value: "Amoxicillin 500mg TDS", label: "Amoxicillin 500mg TDS (5 days)" },
+                  { value: "Amoxicillin 500mg TDS", label: "Amoxicillin 500mg capsules: 500mg three times daily, one capsule every 8 hours, for 5 days (15 capsules)" },
                   // 200mg, the licensed dose for acute dental infection. The
                   // 400mg option this tool used to carry is off-label for this
                   // indication and is deliberately not offered.
-                  { value: "Metronidazole 200mg TDS", label: "Metronidazole 200mg TDS (5 days), penicillin allergy" },
+                  { value: "Metronidazole 200mg TDS", label: "Metronidazole 200mg tablets: 200mg three times daily for 5 days (15 tablets), penicillin allergy" },
                 ]}
                 required
                 disabled
               />
+              <p className="text-xs text-gray-600">
+                {state.treatment.antibiotic.includes("Metronidazole")
+                  ? "Oral. Swallow with water, with or after food to reduce nausea. Maximum treatment period 5 days; one course per episode."
+                  : "Oral. Swallow whole with water, with or without food. Maximum treatment period 5 days; one course per episode."}
+              </p>
               <NumberInput
                 label="Quantity (capsules/tablets)"
                 value={state.treatment.quantity}
                 onChange={v => setState(prev => ({ ...prev, treatment: { ...prev.treatment, quantity: v } }))}
                 min={1}
+                unit="15: supply the whole course, do not split it"
                 required
               />
               <TextInput
                 label="Batch number"
                 value={state.treatment.batchNumber}
                 onChange={v => setState(prev => ({ ...prev, treatment: { ...prev.treatment, batchNumber: v } }))}
+                required
               />
               <TextInput
                 label="Expiry date"
                 type="date"
                 value={state.treatment.expiryDate}
                 onChange={v => setState(prev => ({ ...prev, treatment: { ...prev.treatment, expiryDate: v } }))}
+                required
               />
             </div>
 
@@ -673,30 +918,37 @@ export default function DentalBridgingClient() {
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
               <h3 className="text-sm font-semibold text-amber-900 mb-2">Patient Counselling Points</h3>
               <ul className="text-sm text-amber-800 space-y-2">
-                <li>• Complete the full antibiotic course even if feeling better</li>
-                <li>• Take antibiotic with or after food</li>
+                <li>• THIS IS A BRIDGE, NOT A CURE. The antibiotic will slow the infection down. It cannot drain the abscess or fix the tooth. You still need to see a dentist urgently, within 24 to 48 hours</li>
+                {state.treatment.antibiotic.includes("Metronidazole") && (
+                  <li>• NO ALCOHOL AT ALL during the course and for 48 hours after the last tablet. That includes wine, beer, spirits, and alcohol in medicines such as some cough remedies and mouthwashes. The reaction causes flushing, vomiting and a racing heart</li>
+                )}
+                <li>• Finish the whole course even if the pain settles. Finishing it does not remove the need for the dental appointment</li>
                 {state.treatment.antibiotic.includes("Amoxicillin") && (
                   <>
-                    <li>• May cause diarrhoea or nausea; take with food if stomach upset</li>
-                    <li>• Report severe diarrhoea to GP</li>
+                    <li>• Take one capsule every 8 hours, with or without food</li>
+                    <li>• Some diarrhoea is common. Get advice if it is severe or bloody</li>
+                    <li>• A rash that appears with this antibiotic is usually not an allergy, but get it checked, and seek urgent help for any swelling of the lips or tongue or any wheeze</li>
+                    <li>• Oral thrush can follow a course of amoxicillin; it is treatable</li>
                   </>
                 )}
                 {state.treatment.antibiotic.includes("Metronidazole") && (
                   <>
-                    <li>• Strictly avoid alcohol during treatment and 48 hours after finishing</li>
-                    <li>• May cause metallic taste or nausea</li>
+                    <li>• Take one tablet every 8 hours, with or after food</li>
+                    <li>• A metallic taste and furred tongue are common and go when the course finishes</li>
+                    <li>• Tell us if you get numbness or pins and needles in your hands or feet</li>
                     <li>• Do not drive if feeling dizzy</li>
                   </>
                 )}
+                <li>• Come back or seek urgent help the same day if the swelling spreads, your eye starts to close, you cannot open your mouth properly, you have difficulty swallowing or breathing, or you feel much worse. Call 999 for breathing or swallowing difficulty</li>
+                <li>• Pain should improve within 24 to 48 hours; worsening pain, worsening fever or spreading swelling needs the same-day routes above rather than a wait</li>
                 <li>• For pain relief, ask us: we can sell you something suitable over the counter</li>
-                <li>• THIS IS A BRIDGE, NOT A CURE. You still need an urgent dental appointment within 24 to 48 hours. The antibiotic cannot drain the abscess or fix the tooth</li>
-                <li>• Seek urgent help the same day if the swelling spreads, your eye starts to close, you cannot open your mouth properly, or you feel much worse. Call 999 for any difficulty swallowing or breathing</li>
+                <li>• Dental appointment arranged before leaving where possible, or the NHS 111 route to emergency dental care given</li>
                 <li>• Register with NHS dentist if not already registered</li>
               </ul>
             </div>
 
             <Checkbox
-              label="Patient counselling acknowledged"
+              label="Patient counselling given, and the patient was told this is a bridge and not a treatment, and that a dental appointment is still needed"
               checked={state.counselling.counsellingAcknowledged}
               onChange={v => setState(prev => ({ ...prev, counselling: { ...prev.counselling, counsellingAcknowledged: v } }))}
             />
@@ -728,14 +980,38 @@ export default function DentalBridgingClient() {
               onChange={v => setState(prev => ({ ...prev, summary: { ...prev.summary, clinicalNotes: v } }))}
               rows={3}
             />
+            <div className="p-4 bg-gray-50 rounded-md text-xs space-y-1 border border-gray-200">
+              <div><strong>Outcome:</strong> {outcome === "bridge" ? "2. Spreading or systemic infection (or higher risk), no emergency red flag: bridging antibiotic supplied" : outcome === "emergency" ? "3. Emergency red flag: 999 or same-day care" : "1. Localised infection only: no antibiotic"}</div>
+              <div><strong>Finding that decided it:</strong> {[
+                state.assessment.temperature38 ? "temperature 38C or above" : "",
+                state.assessment.facialSwelling ? "facial swelling" : "",
+                state.assessment.lymphadenopathy ? "regional lymphadenopathy" : "",
+                state.assessment.cellulitis ? "cellulitis of the face" : "",
+                state.assessment.malaise ? "malaise" : "",
+                state.assessment.immunosuppressed ? "significant immunosuppression" : "",
+                state.assessment.poorlyControlledDiabetes ? "poorly controlled diabetes" : "",
+              ].filter(Boolean).join(", ") || "none recorded"}{state.assessment.higherRiskReason ? `; ${state.assessment.higherRiskReason}` : ""}</div>
+              <div><strong>Appendix 1 worked through, no emergency red flag:</strong> {emergency ? "No, red flag present" : "Yes"}</div>
+              <div><strong>Temperature:</strong> {state.assessment.temperature ?? "not recorded"} C; facial swelling {state.assessment.facialSwelling ? "present" : "absent"}; lymphadenopathy {state.assessment.lymphadenopathy ? "present" : "absent"}</div>
+              <div><strong>Arm:</strong> {state.treatment.antibiotic || "none"}{state.assessment.penicillinAllergy ? ` (penicillin allergy: ${state.assessment.penicillinAllergyHistory || "history not recorded"})` : " (first line, not penicillin-allergic)"}</div>
+              {state.assessment.penicillinAllergy && (
+                <div><strong>Alcohol rule explained and patient confirmed they can keep to it:</strong> {state.assessment.alcoholCanAvoid === "yes" ? "Yes" : "No"}</div>
+              )}
+              {!state.assessment.penicillinAllergy && (
+                <div><strong>Renal function asked, no significant impairment reported:</strong> {state.assessment.renalFunctionAsked ? "Yes" : "No"}</div>
+              )}
+              <div><strong>Supply:</strong> {state.treatment.antibiotic.includes("Metronidazole") ? "Metronidazole 200mg tablets, oral" : "Amoxicillin 500mg capsules, oral"}, 5 days, {state.treatment.quantity ?? "?"} supplied; batch {state.treatment.batchNumber || "not recorded"}, expiry {state.treatment.expiryDate || "not recorded"}</div>
+              <div><strong>Told this is a bridge, dental appointment still needed:</strong> {state.counselling.counsellingAcknowledged ? "Yes" : "No"}</div>
+              <div><strong>Supplied under:</strong> {PGD_STRAPLINE}</div>
+            </div>
           </div>
         )}
 
         {currentStep === 6 && (
           <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-            <p className="text-sm font-semibold text-green-900">Dental Pain Bridging Consultation Complete</p>
+            <p className="text-sm font-semibold text-green-900">Acute Dental Infection Bridging Consultation Complete</p>
             <p className="text-sm text-green-800 mt-2">
-              Patient has received bridging treatment with antibiotic and counselling. Urgent dental appointment required.
+              Patient has received a bridging antibiotic and counselling under the {PGD_STRAPLINE}. Urgent dental appointment within 24 to 48 hours required.
             </p>
           </div>
         )}

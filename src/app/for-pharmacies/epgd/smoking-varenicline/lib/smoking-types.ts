@@ -1,6 +1,8 @@
 /**
  * Smoking Cessation ePGD - Type Definitions
- * UK Pharmacy PGD Consultation Tool for Varenicline (Champix)
+ * UK Pharmacy PGD Consultation Tool for Varenicline 0.5mg and 1mg tablets
+ * (any UK-licensed generic; Champix is no longer marketed in the UK).
+ * Aligned to PGD version 003, issued 11 September 2026.
  */
 
 export type AlertSeverity = "stop" | "caution" | "red-flag";
@@ -40,6 +42,9 @@ export interface SmokingMedicalHistory {
   psychiatricHistory: boolean;
   psychiatricDetails: string;
   seizureHistory: boolean;
+  /** Known hypersensitivity to varenicline or excipients: exclusion. */
+  hypersensitivityVarenicline: boolean;
+  /** none: eGFR above 50; moderate: eGFR 30 to 50 (caution); severe: eGFR below 30 or end-stage renal disease (exclusion). */
   renalImpairment: "none" | "moderate" | "severe" | "";
   hepaticImpairment: "none" | "mild-moderate" | "severe" | "";
   pregnant: boolean;
@@ -68,6 +73,8 @@ export interface SmokingDosePlan {
   currentDose: string;
   weeksCompleted: number | null;
   treatmentDuration: "12-weeks" | "24-weeks-extended" | "";
+  /** starter: starter pack; continuation: up to 56 x 1mg tablets (4-week supply). */
+  supplyType: "starter" | "continuation" | "";
   quantity: number;
 }
 
@@ -82,6 +89,12 @@ export interface SmokingCounselling {
   quitDatePlanning: boolean;
   returnIfWorsening: boolean;
   carbonMonoxideMonitoring: boolean;
+  // PGD v003 follow-up advice row
+  physicalSymptomsWarning: boolean;
+  slipUpAdvice: boolean;
+  followUpSchedule: boolean;
+  pregnancyAdvice: boolean;
+  doNotStopSuddenly: boolean;
 }
 
 export interface SmokingToolFormData {
@@ -178,6 +191,7 @@ export const DEFAULT_FORM_DATA: SmokingToolFormData = {
     psychiatricHistory: false,
     psychiatricDetails: "",
     seizureHistory: false,
+    hypersensitivityVarenicline: false,
     renalImpairment: "",
     hepaticImpairment: "",
     pregnant: false,
@@ -209,6 +223,7 @@ export const DEFAULT_FORM_DATA: SmokingToolFormData = {
     currentDose: "",
     weeksCompleted: null,
     treatmentDuration: "",
+    supplyType: "",
     quantity: 0,
   },
 
@@ -223,6 +238,11 @@ export const DEFAULT_FORM_DATA: SmokingToolFormData = {
     quitDatePlanning: false,
     returnIfWorsening: false,
     carbonMonoxideMonitoring: false,
+    physicalSymptomsWarning: false,
+    slipUpAdvice: false,
+    followUpSchedule: false,
+    pregnancyAdvice: false,
+    doNotStopSuddenly: false,
   },
 
   pharmacistName: "",

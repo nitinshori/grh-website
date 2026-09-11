@@ -27,9 +27,9 @@ export function validatePatientDetails(
     errors.push('Date of birth is required');
   }
 
-  // Age gate per signed PGD — adults 18+ (consistency review Jul 2026)
-  if (patient.age !== null && patient.age < 18) {
-    errors.push('This PGD applies to adults aged 18 years and over');
+  // Age gate per PGD v005 cover: from age 2 years onwards. Accelerated course 18 and over (checked at administration).
+  if (patient.age !== null && patient.age < 2) {
+    errors.push('This PGD covers patients from age 2 years onwards');
   }
   if (!patient.nhsNumber?.trim()) {
     errors.push('NHS number is required');
@@ -38,7 +38,11 @@ export function validatePatientDetails(
   return { isValid: errors.length === 0, errors };
 }
 
-export function validateConsent(consent: BaseConsent): ValidationResult {
+export function validateConsent(
+  consent: BaseConsent,
+  screening: RabiesScreening,
+  ageYears: number | null
+): ValidationResult {
   const errors: string[] = [];
 
   if (!consent.informedConsentGiven) {
@@ -47,6 +51,14 @@ export function validateConsent(consent: BaseConsent): ValidationResult {
   if (!consent.idVerified) {
     errors.push('Patient ID must be verified');
   }
+  if (ageYears !== null && ageYears < 16) {
+    if (!screening.consentBasis) {
+      errors.push('Under 16: record whether consent came from a person with parental responsibility or from a Gillick competent young person');
+    }
+    if (!screening.consentGiverDetails?.trim()) {
+      errors.push('Under 16: record the consent giver\'s name and relationship, or the basis of the Gillick assessment');
+    }
+  }
 
   return { isValid: errors.length === 0, errors };
 }
@@ -54,15 +66,31 @@ export function validateConsent(consent: BaseConsent): ValidationResult {
 export function validateScreening(screening: RabiesScreening): ValidationResult {
   const errors: string[] = [];
 
-  if (!screening.destinationCountry?.trim()) {
+  if (!screening.indication) {
+    errors.push('Select the indication (travel or occupational) for pre-exposure vaccination');
+  }
+  if (screening.indication !== 'occupational-uk' && !screening.destinationCountry?.trim()) {
     errors.push('Destination country is required');
   }
-  if (!screening.departureDate) {
+  if (screening.indication === 'occupational-uk' && !screening.otherActivities?.trim()) {
+    errors.push('Record the occupational indication');
+  }
+  if (screening.indication !== 'occupational-uk' && !screening.departureDate) {
     errors.push('Departure date is required');
   }
-  if (screening.highRiskActivities.length === 0) {
-    errors.push('At least one activity category must be selected');
+  if (!screening.sufficientTimeBeforeTravel) {
+    errors.push('Confirm there is sufficient time before travel to complete the chosen course (inclusion criterion)');
   }
+  if (screening.highRiskActivities.length === 0 && !screening.otherActivities?.trim()) {
+    errors.push('Select at least one activity category or describe the exposure risk');
+  }
+
+  return { isValid: errors.length === 0, errors };
+}
+
+export function validateMedicalHistory(screening: RabiesScreening): ValidationResult {
+  const errors: string[] = [];
+
   if (screening.temperature === null || screening.temperature === undefined) {
     errors.push('Temperature must be recorded');
   }
@@ -75,6 +103,12 @@ export function validateScreening(screening: RabiesScreening): ValidationResult 
   if (screening.eggAllergy && !screening.eggAllergySeverity?.trim()) {
     errors.push('Please specify egg allergy severity');
   }
+  if (screening.pregnant && !screening.pregnancyRiskAssessment?.trim()) {
+    errors.push('Pregnancy: record the risk assessment (PGD caution)');
+  }
+  if (screening.breastfeeding && !screening.breastfeedingRiskAssessment?.trim()) {
+    errors.push('Breastfeeding: record the risk assessment (PGD caution)');
+  }
 
   return { isValid: errors.length === 0, errors };
 }
@@ -85,17 +119,29 @@ export function validateContraindications(
   const errors: string[] = [];
 
   if (!contraindications.ageAppropriate) {
-    errors.push('Patient age is not appropriate for rabies vaccination');
+    errors.push('Patient age is not appropriate for this PGD (from age 2 years onwards)');
   }
 
   return { isValid: errors.length === 0, errors };
 }
 
 export function validateAdministration(
-  administration: RabiesVaccineAdministration
+  administration: RabiesVaccineAdministration,
+  screening: RabiesScreening,
+  contraindications: RabiesContraindications,
+  ageYears: number | null
 ): ValidationResult {
   const errors: string[] = [];
 
+  if (!administration.product) {
+    errors.push('Select the product in hand: Rabipur (1.0 mL) or Verorab (0.5 mL)');
+  }
+  if (administration.product === 'rabipur' && contraindications.severeEggAllergy) {
+    errors.push('Severe egg allergy: Rabipur is excluded (chick embryo cell residues including ovalbumin). Use Verorab or refer.');
+  }
+  if (administration.product === 'verorab' && contraindications.antibioticHypersensitivity) {
+    errors.push('Hypersensitivity to polymyxin B, streptomycin or neomycin: Verorab is excluded. Use Rabipur where appropriate or refer.');
+  }
   if (!administration.batchNumber?.trim()) {
     errors.push('Batch number is required');
   }
@@ -114,11 +160,31 @@ export function validateAdministration(
   if (!administration.injectionSite) {
     errors.push('Injection site must be selected');
   }
+  if (!administration.route) {
+    errors.push('Route must be selected (intramuscular, or deep subcutaneous in bleeding disorders)');
+  }
+  if (screening.bleedingDisorder && administration.route === 'intramuscular') {
+    errors.push('Bleeding disorder, thrombocytopenia or anticoagulation: give by deep subcutaneous injection, not intramuscularly');
+  }
   if (!administration.doseNumber) {
     errors.push('Dose number must be selected');
   }
   if (!administration.schedule) {
-    errors.push('Schedule (standard or accelerated) must be selected');
+    errors.push('Schedule (conventional or accelerated) must be selected');
+  }
+  if (administration.schedule === 'accelerated') {
+    if (ageYears !== null && ageYears < 18) {
+      errors.push('Under 18: the accelerated course may not be given under this PGD. Give the conventional course, or refer to a travel clinic or the GP where a fast course is needed.');
+    }
+    if (screening.immunosuppressed) {
+      errors.push('Immunosuppressed: the accelerated course is excluded. Use the conventional course and refer for post-course serology.');
+    }
+    if (!administration.scheduleReason?.trim()) {
+      errors.push('Accelerated course: record the reason the conventional course was not possible');
+    }
+    if (!administration.offLabelConsent) {
+      errors.push('Accelerated course is off-label: record that the consent script was given and consent to off-label use obtained, naming the day 0, 3 and 7 schedule');
+    }
   }
   if (!administration.administeredBy?.trim()) {
     errors.push('Administrator name is required');
@@ -141,8 +207,11 @@ export function validatePostVaccineObs(
   if (!postVaccineObs.observationPeriod) {
     errors.push('Observation period must be specified');
   }
+  if (!postVaccineObs.observationCompleted) {
+    errors.push('Record that the 15 minute observation period was completed');
+  }
   if (!postVaccineObs.anaphylaxisKitChecked) {
-    errors.push('Anaphylaxis kit must be checked');
+    errors.push('Confirm adrenaline 1 in 1,000, the written anaphylaxis protocol and a telephone are immediately available');
   }
 
   if (postVaccineObs.adverseReaction && !postVaccineObs.reactionDetails?.trim()) {
@@ -156,12 +225,14 @@ export function validateAdvice(advice: RabiesAdvice): ValidationResult {
   const errors: string[] = [];
 
   if (
+    !advice.writtenRecordGiven ||
     !advice.threeDozeSchedule ||
     !advice.scheduleExplained ||
     !advice.pEPSimplification ||
     !advice.woundCleaning ||
     !advice.stillNeedPEP ||
     !advice.exposureWarning ||
+    !advice.avoidAnimals ||
     !advice.returnIfConcerned ||
     !advice.boosterInformation
   ) {

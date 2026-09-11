@@ -2,6 +2,7 @@
 
 import type { HLConsultationState } from "../lib/hair-loss-types";
 import type { ClinicalAlert } from "../../shared/types";
+import { PGD_STRAPLINE } from "../lib/hair-loss-clinical-logic";
 import {
   SectionHeader,
   Row,
@@ -22,11 +23,12 @@ export function HLSummaryReport({ state, alerts }: HLSummaryReportProps) {
       {/* Header */}
       <div className="text-center border-b border-gray-300 pb-4">
         <h2 className="text-lg font-bold text-navy-900">
-          Hair Loss — Finasteride Consultation
+          Hair Loss, Finasteride Consultation
         </h2>
         <p className="text-xs text-gray-500 mt-1">
           ePGD Consultation Record
         </p>
+        <p className="text-xs text-gray-500 mt-1">{PGD_STRAPLINE}</p>
       </div>
 
       {/* Patient Details */}
@@ -75,12 +77,14 @@ export function HLSummaryReport({ state, alerts }: HLSummaryReportProps) {
       <div>
         <SectionHeader>Medical History</SectionHeader>
         <Row label="Liver disease" value={state.medicalHistory.liverDisease ? "Yes" : "No"} />
-        <Row label="Prostate cancer" value={state.medicalHistory.prostateCancer ? "Yes" : "No"} />
-        <Row label="PSA abnormalities" value={state.medicalHistory.psaAbnormalities ? "Yes" : "No"} />
+        <Row label="Suspected or diagnosed prostate cancer" value={state.medicalHistory.prostateCancer ? "Yes" : "No"} />
+        <Row label="Raised PSA under investigation" value={state.medicalHistory.psaAbnormalities ? "Yes" : "No"} />
         <Row
-          label="Hypersensitivity"
+          label="Hypersensitivity to finasteride or any component"
           value={state.medicalHistory.hypersensitivity ? "Yes" : "No"}
         />
+        <Row label="Current 5-alpha-reductase inhibitor use" value={state.medicalHistory.current5ARI ? "Yes" : "No"} />
+        <Row label="Galactose intolerance / Lapp lactase deficiency / glucose-galactose malabsorption" value={state.medicalHistory.galactoseIntolerance ? "Yes" : "No"} />
         {state.medicalHistory.otherConditions && (
           <Row label="Other conditions" value={state.medicalHistory.otherConditions} />
         )}
@@ -111,12 +115,20 @@ export function HLSummaryReport({ state, alerts }: HLSummaryReportProps) {
       <div>
         <SectionHeader>Medicine Supply</SectionHeader>
         <Row
-          label="Finasteride 1mg OD supplied"
+          label="Finasteride 1 mg tablets, 1 mg orally once daily, supplied"
           value={state.medicineSupply.finasteride1mgOd ? "Yes" : "No"}
         />
         <Row
-          label="Partner notified (teratogenic risk)"
+          label="Quantity supplied"
+          value={state.medicineSupply.quantityMonths ? `${state.medicineSupply.quantityMonths} months of treatment (first review after 3 to 6 months)` : "Not recorded"}
+        />
+        <Row
+          label="Tablets not to be handled by women who are or may become pregnant; partner informed"
           value={state.medicineSupply.partnerNotified ? "Yes" : "No"}
+        />
+        <Row
+          label="Condom advice (female partner pregnant or likely to become pregnant)"
+          value={state.medicineSupply.condomAdvice ? "Yes" : "No"}
         />
         <Row
           label="Patient to monitor SE"
@@ -133,18 +145,21 @@ export function HLSummaryReport({ state, alerts }: HLSummaryReportProps) {
         <SectionHeader>Counselling Provided</SectionHeader>
         <CounsellingGrid
           items={[
-            ["Takes 3-6 months for effect", state.counselling.effectOnsetTime],
-            ["Hair loss resumes if stopped", state.counselling.hairLossResumesStopped],
+            ["Continuous use 3 to 6 months before stabilisation; peak at 2 years; must continue", state.counselling.effectOnsetTime],
+            ["If stopped, effects reverse by 6 months, baseline by 9 to 12 months", state.counselling.hairLossResumesStopped],
             [
-              "Sexual side effects possible (~2%)",
+              "Sexual side effects possible (libido, erectile dysfunction, ejaculation, breast tenderness; infertility reports)",
               state.counselling.sexualSideEffects,
             ],
-            ["Report mood changes to GP", state.counselling.moodChanges],
-            ["Annual review recommended", state.counselling.annualReview],
+            ["Psychological side effects: report mood changes; stop and seek advice", state.counselling.moodChanges],
+            ["Report breast changes promptly (lumps, pain, gynaecomastia, nipple discharge)", state.counselling.breastChanges],
+            ["Review after 3 to 6 months; reassess if no improvement after 12 months", state.counselling.annualReview],
+            ["Realistic expectations, dose, scalp protection, psychosocial effects", state.counselling.expectations],
             [
-              "Report adverse changes immediately",
+              "Seek medical advice if adverse effects or systemically very unwell",
               state.counselling.reportChanges,
             ],
+            ["PIL and patient card supplied", state.counselling.pilAndCardSupplied],
           ]}
         />
       </div>

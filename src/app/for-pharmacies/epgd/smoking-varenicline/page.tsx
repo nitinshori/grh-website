@@ -5,7 +5,7 @@ import { PgdPageActions } from "@/components/PgdPageActions";
 export const metadata = {
   title: "Smoking Cessation ePGD - Varenicline PGD",
   description:
-    "UK Pharmacy ePGD Consultation for Varenicline (Champix) Smoking Cessation",
+    "UK Pharmacy ePGD Consultation for Varenicline 0.5mg and 1mg tablets, Smoking Cessation",
 };
 
 export default function SmokingCessationPage(): React.ReactElement {

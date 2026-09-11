@@ -9,6 +9,8 @@ export interface SmokingAssessment {
   timeToFirstCigarette: string;
   currentlySmokes: boolean;
   quitDate: string;
+  /** PGD inclusion: motivated to quit smoking and set a quit date. */
+  motivated: boolean;
 }
 
 export interface SmokingMedicalHistory {
@@ -18,19 +20,36 @@ export interface SmokingMedicalHistory {
   cardiovascularDisease: boolean;
   diabetes: boolean;
   pheochromocytoma: boolean;
+  // PGD v002 cautions
+  hepaticRenalImpairment: boolean;
+  pepticUlcer: boolean;
+  oralUlcerationOrDentalWork: boolean;
+  pregnant: boolean;
+  breastfeeding: boolean;
 }
 
 export interface SmokingContraindications {
   childUnder12: boolean;
   recentCardiacEvent: boolean;
   pheochromocytoma: boolean;
+  // PGD v002 exclusions
+  hypersensitivity: boolean;
+  nonSmokerOrOccasional: boolean;
+  /** Generalised skin disorder that may affect absorption: excludes the patch arm. */
+  generalisedSkinDisorder: boolean;
 }
 
 export interface SmokingNRTSelection {
   usePatches: boolean;
   patchStrength: string;
   useOralForm: boolean;
+  /** PGD 2: nicotine lozenges or gum, 2mg and 4mg only. */
   oralFormType: string;
+  oralStrength: "" | "2mg" | "4mg";
+  /** 28 patches (4-week supply). */
+  patchQuantity: number | null;
+  /** Up to 4-week supply, maximum 120 pieces. */
+  oralQuantity: number | null;
   combinationTherapy: boolean;
   behavioralSupport: boolean;
 }
@@ -41,6 +60,16 @@ export interface SmokingCounselling {
   behavioralSupport: boolean;
   sideEffects: boolean;
   courseDuration: boolean;
+  // PGD v002 follow-up advice row
+  correctTechnique: boolean;
+  useEnough: boolean;
+  doNotSmoke: boolean;
+  withdrawalSymptoms: boolean;
+  drivingWarning: boolean;
+  cardiovascularSymptoms: boolean;
+  reportReactions: boolean;
+  pregnancyAdvice: boolean;
+  followUpSchedule: boolean;
 }
 
 export interface SmokingConsultationSummary extends BaseSummary {
@@ -119,6 +148,7 @@ gpEmail: "",
       timeToFirstCigarette: "",
       currentlySmokes: true,
       quitDate: "",
+      motivated: false,
     },
     medicalHistory: {
       recentMI: false,
@@ -127,17 +157,28 @@ gpEmail: "",
       cardiovascularDisease: false,
       diabetes: false,
       pheochromocytoma: false,
+      hepaticRenalImpairment: false,
+      pepticUlcer: false,
+      oralUlcerationOrDentalWork: false,
+      pregnant: false,
+      breastfeeding: false,
     },
     contraindications: {
       childUnder12: false,
       recentCardiacEvent: false,
       pheochromocytoma: false,
+      hypersensitivity: false,
+      nonSmokerOrOccasional: false,
+      generalisedSkinDisorder: false,
     },
     nrtSelection: {
       usePatches: false,
       patchStrength: "",
       useOralForm: false,
       oralFormType: "",
+      oralStrength: "",
+      patchQuantity: null,
+      oralQuantity: null,
       combinationTherapy: false,
       behavioralSupport: false,
     },
@@ -147,6 +188,15 @@ gpEmail: "",
       behavioralSupport: false,
       sideEffects: false,
       courseDuration: false,
+      correctTechnique: false,
+      useEnough: false,
+      doNotSmoke: false,
+      withdrawalSymptoms: false,
+      drivingWarning: false,
+      cardiovascularSymptoms: false,
+      reportReactions: false,
+      pregnancyAdvice: false,
+      followUpSchedule: false,
     },
     summary: {
       pharmacistName: "",

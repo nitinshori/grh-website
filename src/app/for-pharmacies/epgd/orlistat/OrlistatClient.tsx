@@ -6,6 +6,7 @@ import type { OrlistatConsultationState, OrlistatAction } from "./lib/orlistat-t
 import {
   STEP_LABELS,
   TOTAL_STEPS,
+  ORLISTAT_MAX_QUANTITY,
   createInitialConsultationState,
 } from "./lib/orlistat-types";
 import {
@@ -200,7 +201,9 @@ export default function OrlistatClient() {
       clinicalData: state as unknown as Record<string, unknown>,
       outcome: hasStops ? "not_supplied" : "completed",
       medicine: {
-        name: "Orlistat 120mg",
+        name: state.medicineSupply.brand.trim()
+          ? `Orlistat 120mg capsules (${state.medicineSupply.brand.trim()})`
+          : "Orlistat 120mg capsules",
         dose: state.medicineSupply.dosage,
         quantity: state.medicineSupply.quantity?.toString() ?? "",
       },
@@ -224,7 +227,7 @@ export default function OrlistatClient() {
         return (
           <StepWrapper
             title="Patient Details"
-            description="Confirm patient identity. Patient must be 18 or older."
+            description="Confirm patient identity. Patient must be aged 18 years or over and under 75 years."
             currentStep={state.currentStep}
             totalSteps={TOTAL_STEPS}
             onNext={handleNext}
@@ -266,7 +269,7 @@ export default function OrlistatClient() {
         return (
           <StepWrapper
             title="Weight Assessment"
-            description="Calculate BMI. BMI ≥30 or ≥28 with comorbidity required."
+            description="Calculate BMI and document baseline weight and waist circumference. BMI 30 or more, or BMI 28 or more with at least one obesity-related comorbidity, is required."
             currentStep={state.currentStep}
             totalSteps={TOTAL_STEPS}
             onNext={handleNext}
@@ -297,6 +300,18 @@ export default function OrlistatClient() {
                   unit="kg"
                 />
               </div>
+
+              <NumberInput
+                label="Baseline waist circumference"
+                value={state.weightAssessment.waistCircumference}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_WEIGHT_ASSESSMENT", field: "waistCircumference", value: v })
+                }
+                min={40}
+                max={250}
+                unit="cm"
+                required
+              />
 
               {state.weightAssessment.bmi !== null && (
                 <div className="p-3 bg-[color:var(--tenant-primary)]/10 border border-[color:var(--tenant-primary)]/30 rounded">
@@ -339,6 +354,22 @@ export default function OrlistatClient() {
                   ))}
                 </div>
               </div>
+
+              <div className="border-t pt-4">
+                <Checkbox
+                  label="Patient is motivated and committed to weight loss with a structured reduced-calorie diet"
+                  checked={state.weightAssessment.motivatedStructuredDiet}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_WEIGHT_ASSESSMENT",
+                      field: "motivatedStructuredDiet",
+                      value: v,
+                    })
+                  }
+                  description="Inclusion criterion. Reduced-calorie diet, typically 500 to 1000 kcal below estimated daily expenditure."
+                  required
+                />
+              </div>
             </div>
           </StepWrapper>
         );
@@ -358,12 +389,12 @@ export default function OrlistatClient() {
             <div className="space-y-4">
               <div className="p-3 bg-red-50 border border-red-200 rounded">
                 <p className="text-xs font-semibold text-red-700 mb-2">
-                  Absolute Contraindications
+                  Exclusion Criteria (do not supply)
                 </p>
               </div>
 
               <Checkbox
-                label="Cholestasis"
+                label="Cholestasis or severe hepatic impairment"
                 checked={state.medicalHistory.cholestasis}
                 onChange={(v) =>
                   dispatch({
@@ -384,6 +415,32 @@ export default function OrlistatClient() {
                     value: v,
                   })
                 }
+                description="e.g. cystic fibrosis, coeliac disease, inflammatory bowel disease"
+              />
+
+              <Checkbox
+                label="Known hypersensitivity to orlistat or any component of the formulation"
+                checked={state.medicalHistory.hypersensitivityToOrlistat}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "hypersensitivityToOrlistat",
+                    value: v,
+                  })
+                }
+              />
+
+              <Checkbox
+                label="Uncontrolled or newly diagnosed diabetes"
+                checked={state.medicalHistory.uncontrolledOrNewDiabetes}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "uncontrolledOrNewDiabetes",
+                    value: v,
+                  })
+                }
+                description="Requires GP review before starting orlistat."
               />
 
               <Checkbox
@@ -429,7 +486,7 @@ export default function OrlistatClient() {
               </div>
 
               <Checkbox
-                label="Gallbladder disease"
+                label="Gallstone disease"
                 checked={state.medicalHistory.gallbladderDisease}
                 onChange={(v) =>
                   dispatch({
@@ -438,6 +495,33 @@ export default function OrlistatClient() {
                     value: v,
                   })
                 }
+                description="Monitor for interactions and symptoms."
+              />
+
+              <Checkbox
+                label="History of oxalate kidney stones"
+                checked={state.medicalHistory.oxalateKidneyStones}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "oxalateKidneyStones",
+                    value: v,
+                  })
+                }
+                description="Risk of hyperoxaluria and recurrence."
+              />
+
+              <Checkbox
+                label="Chronic liver disease or elevated liver function tests"
+                checked={state.medicalHistory.chronicLiverDisease}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "chronicLiverDisease",
+                    value: v,
+                  })
+                }
+                description="Proceed with caution; ensure baseline LFTs checked."
               />
 
               <Checkbox
@@ -503,7 +587,20 @@ export default function OrlistatClient() {
                     value: v,
                   })
                 }
-                description="Significant interaction risk"
+                description="EXCLUSION. Relative contraindication; requires specialist assessment."
+              />
+
+              <Checkbox
+                label="Taking another anticoagulant (edoxaban, dabigatran, rivaroxaban)"
+                checked={state.medications.takesOtherAnticoagulant}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICATIONS",
+                    field: "takesOtherAnticoagulant",
+                    value: v,
+                  })
+                }
+                description="Caution. Enhanced anticoagulant effect; requires GP liaison and INR monitoring if applicable."
               />
 
               <Checkbox
@@ -516,7 +613,7 @@ export default function OrlistatClient() {
                     value: v,
                   })
                 }
-                description="Separate dosing by at least 4 hours"
+                description="Caution. Administer levothyroxine at least 4 hours before orlistat; monitor thyroid function and dose."
               />
 
               <Checkbox
@@ -533,7 +630,7 @@ export default function OrlistatClient() {
               />
 
               <Checkbox
-                label="Taking ciclosporin"
+                label="Concurrent ciclosporin therapy"
                 checked={state.medications.takesCiclosporin}
                 onChange={(v) =>
                   dispatch({
@@ -542,7 +639,20 @@ export default function OrlistatClient() {
                     value: v,
                   })
                 }
-                description="Risk of reduced absorption"
+                description="EXCLUSION. Reduced absorption of ciclosporin."
+              />
+
+              <Checkbox
+                label="Taking a bile acid sequestrant (e.g. colestyramine, colesevelam)"
+                checked={state.medications.takesBileAcidSequestrants}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICATIONS",
+                    field: "takesBileAcidSequestrants",
+                    value: v,
+                  })
+                }
+                description="Caution. Monitor for interactions and symptoms."
               />
 
               <Checkbox
@@ -555,7 +665,7 @@ export default function OrlistatClient() {
                     value: v,
                   })
                 }
-                description="Severe diarrhoea may reduce contraceptive efficacy — advise additional barrier method during episodes."
+                description="Severe diarrhoea may reduce contraceptive efficacy; advise additional barrier method during episodes."
               />
 
               <Checkbox
@@ -568,7 +678,7 @@ export default function OrlistatClient() {
                     value: v,
                   })
                 }
-                description="Orlistat may reduce absorption — discuss with HIV specialist team before initiating."
+                description="Orlistat may reduce absorption; discuss with HIV specialist team before initiating."
               />
 
               <Checkbox
@@ -625,7 +735,7 @@ export default function OrlistatClient() {
             canProceed={!hasStops}
             validationError={
               hasStops
-                ? "Hard stop contraindications present — cannot proceed."
+                ? "Exclusion criteria met, cannot proceed."
                 : null
             }
             isBlocked={hasStops}
@@ -639,10 +749,13 @@ export default function OrlistatClient() {
             {hasStops && (
               <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded">
                 <p className="text-sm font-semibold text-red-700 mb-2">
-                  Hard Stop — Cannot Supply
+                  Excluded: Cannot Supply
                 </p>
                 <p className="text-sm text-red-600">
-                  Based on the identified contraindications, Orlistat cannot be supplied.
+                  Based on the identified exclusion criteria, orlistat cannot be supplied under this PGD.
+                </p>
+                <p className="text-sm text-red-600 mt-2">
+                  Advise on alternative treatment options and how these can be accessed. Document any advice given and the decision reached. Inform or refer to the GP as appropriate.
                 </p>
               </div>
             )}
@@ -663,11 +776,34 @@ export default function OrlistatClient() {
             isBlocked={hasStops}
           >
             <div className="space-y-4">
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded">
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded space-y-1">
                 <p className="text-xs text-blue-700">
-                  <strong>Standard dosage:</strong> 120mg three times daily with meals
+                  <strong>Medicine:</strong> Orlistat 120mg capsules (POM). Oral: swallow capsule whole with a glass of water with or shortly before each main meal.
+                </p>
+                <p className="text-xs text-blue-700">
+                  <strong>Dose:</strong> 120mg with each main meal containing fat, up to 3 times daily (typically breakfast, lunch and dinner). If a meal is missed or contains negligible fat, omit the dose. Maximum 360mg daily (3 x 120mg).
+                </p>
+                <p className="text-xs text-blue-700">
+                  <strong>Quantity:</strong> up to {ORLISTAT_MAX_QUANTITY} capsules per patient (28-day supply at maximum dose of 3 capsules daily).
+                </p>
+                <p className="text-xs text-blue-700">
+                  <strong>Treatment period:</strong> review at 12 weeks (3 months) from start. Continue only if at least 5% reduction in body weight from baseline; otherwise discontinue and refer to GP.
                 </p>
               </div>
+
+              <TextInput
+                label="Brand of orlistat supplied"
+                value={state.medicineSupply.brand}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICINE_SUPPLY",
+                    field: "brand",
+                    value: v,
+                  })
+                }
+                placeholder="e.g., Xenical, or generic manufacturer name"
+                required
+              />
 
               <NumberInput
                 label="Quantity to supply"
@@ -679,8 +815,8 @@ export default function OrlistatClient() {
                     value: v,
                   })
                 }
-                min={10}
-                max={360}
+                min={1}
+                max={ORLISTAT_MAX_QUANTITY}
                 unit="capsules"
                 required
               />
@@ -695,7 +831,7 @@ export default function OrlistatClient() {
                     value: v,
                   })
                 }
-                placeholder="e.g., monthly, 3 months"
+                placeholder="e.g., 28 days"
               />
             </div>
           </StepWrapper>
@@ -715,7 +851,21 @@ export default function OrlistatClient() {
           >
             <div className="space-y-3">
               <Checkbox
-                label="Low-fat diet explained"
+                label="Patient Information Leaflet (PIL) supplied"
+                checked={state.counselling.pilSupplied}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_COUNSELLING",
+                    field: "pilSupplied",
+                    value: v,
+                  })
+                }
+                description="Ensure patient understands mechanism of action, dietary requirements and expected side effects."
+                required
+              />
+
+              <Checkbox
+                label="Reduced-calorie, low-fat diet explained (30% or less of daily calories from fat)"
                 checked={state.counselling.dietaryAdvice}
                 onChange={(v) =>
                   dispatch({
@@ -724,6 +874,8 @@ export default function OrlistatClient() {
                     value: v,
                   })
                 }
+                description="To minimise GI side effects such as oily spotting, flatulence and stool urgency."
+                required
               />
 
               <Checkbox
@@ -751,7 +903,7 @@ export default function OrlistatClient() {
               />
 
               <Checkbox
-                label="Multivitamin supplement advised at bedtime"
+                label="Multivitamin supplement containing fat-soluble vitamins (A, D, E, K) advised, taken at least 2 hours apart from orlistat"
                 checked={state.counselling.multivitamin}
                 onChange={(v) =>
                   dispatch({
@@ -760,10 +912,24 @@ export default function OrlistatClient() {
                     value: v,
                   })
                 }
+                required
               />
 
               <Checkbox
-                label="Separation of other medications (levothyroxine by 4 hours)"
+                label="Do not take orlistat if a meal is missed or contains no fat"
+                checked={state.counselling.missedMealAdvice}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_COUNSELLING",
+                    field: "missedMealAdvice",
+                    value: v,
+                  })
+                }
+                required
+              />
+
+              <Checkbox
+                label="If taking levothyroxine, administer at least 4 hours before orlistat"
                 checked={state.counselling.separationAdvice}
                 onChange={(v) =>
                   dispatch({
@@ -772,10 +938,66 @@ export default function OrlistatClient() {
                     value: v,
                   })
                 }
+                description="Required when the patient takes levothyroxine."
+                required={state.medications.takesLevothyroxine}
               />
 
               <Checkbox
-                label="3-month review scheduled"
+                label="Report any jaundice, persistent abdominal pain, signs of pancreatitis, or persistent diarrhoea to the GP immediately"
+                checked={state.counselling.redFlagSymptoms}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_COUNSELLING",
+                    field: "redFlagSymptoms",
+                    value: v,
+                  })
+                }
+                required
+              />
+
+              <Checkbox
+                label="Expect weight loss to be gradual (typically 2 to 4 kg in the first 12 weeks with a reduced-calorie diet and exercise)"
+                checked={state.counselling.expectedWeightLoss}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_COUNSELLING",
+                    field: "expectedWeightLoss",
+                    value: v,
+                  })
+                }
+                required
+              />
+
+              <Checkbox
+                label="If diabetes medications are being taken, inform the GP as blood glucose control may improve and medication adjustment may be needed"
+                checked={state.counselling.diabetesMedicationAdvice}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_COUNSELLING",
+                    field: "diabetesMedicationAdvice",
+                    value: v,
+                  })
+                }
+                description="Required when type 2 diabetes is recorded as a comorbidity."
+                required={state.weightAssessment.comorbidities.includes("type2diabetes")}
+              />
+
+              <Checkbox
+                label="If on an anticoagulant, ensure GP is aware and INR is monitored as appropriate"
+                checked={state.counselling.anticoagulantAdvice}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_COUNSELLING",
+                    field: "anticoagulantAdvice",
+                    value: v,
+                  })
+                }
+                description="Required when the patient takes an anticoagulant. Warfarin itself is an exclusion."
+                required={state.medications.takesOtherAnticoagulant}
+              />
+
+              <Checkbox
+                label="Follow-up appointment at 12 weeks (3 months) arranged to assess weight loss progress"
                 checked={state.counselling.reviewSchedule}
                 onChange={(v) =>
                   dispatch({
@@ -784,10 +1006,11 @@ export default function OrlistatClient() {
                     value: v,
                   })
                 }
+                required
               />
 
               <Checkbox
-                label="Weight loss target discussed (≥5% in 12 weeks)"
+                label="Weight loss target discussed (at least 5% of baseline body weight by 12 weeks); continue treatment only if this target is met"
                 checked={state.counselling.weightLossTarget}
                 onChange={(v) =>
                   dispatch({
@@ -796,10 +1019,11 @@ export default function OrlistatClient() {
                     value: v,
                   })
                 }
+                required
               />
 
               <Checkbox
-                label="Follow-up protocol explained (discontinue if <5% loss at 12 weeks)"
+                label="Follow-up protocol explained (discontinue and refer to GP if less than 5% loss at 12 weeks)"
                 checked={state.counselling.followUpProtocol}
                 onChange={(v) =>
                   dispatch({
@@ -808,6 +1032,19 @@ export default function OrlistatClient() {
                     value: v,
                   })
                 }
+              />
+
+              <Checkbox
+                label="Report any suspected adverse drug reactions or side effects to the GP or via the Yellow Card scheme (yellowcard.mhra.gov.uk)"
+                checked={state.counselling.yellowCard}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_COUNSELLING",
+                    field: "yellowCard",
+                    value: v,
+                  })
+                }
+                required
               />
             </div>
           </StepWrapper>

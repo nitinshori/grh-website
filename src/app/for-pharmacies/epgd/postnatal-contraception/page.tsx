@@ -7,10 +7,10 @@ export default function PostnatalContraceptionPage() {
         <PgdPageActions />
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-navy-900 mb-2">
-          Postnatal Contraception (POP)
+          Postnatal Contraception
         </h1>
         <p className="text-gray-600">
-          Patient Group Direction consultation tool for progesterone-only pill supply to postnatal women.
+          Patient Group Direction consultation tool for desogestrel 75 microgram tablets (women 16 and over) or Depo-Provera 150 mg injection (women 18 and over) for postnatal women. PGD version 004, issued 11 September 2026.
         </p>
       </div>
       <PostnatalContraceptionClient />

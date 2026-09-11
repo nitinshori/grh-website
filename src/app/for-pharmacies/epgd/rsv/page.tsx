@@ -4,7 +4,7 @@ import { PgdPageActions } from "@/components/PgdPageActions";
 export const metadata = {
   title: 'RSV Vaccination ePGD | Pharmacy PGD',
   description:
-    'UK Pharmacy Group Protocol Direction (PGD) consultation tool for respiratory syncytial virus (RSV) vaccination in adults 60+ and pregnant women',
+    'UK Pharmacy Group Protocol Direction (PGD) consultation tool for respiratory syncytial virus (RSV) vaccination with Abrysvo or Arexvy in adults 60 and over and pregnant women',
 };
 
 export default function RSVPage() {
@@ -18,14 +18,14 @@ export default function RSVPage() {
             <p className="text-gray-600 mb-4">PGD Consultation for UK Pharmacies</p>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-900">
-                This ePGD guides pharmacists in the supply and administration of RSV vaccines (Abrysvo or mRESVIA) to eligible adults aged 60+ years and pregnant women.
+                This ePGD guides pharmacists in the administration of Abrysvo or Arexvy under the Patient Group Direction (version 005, issued 11 September 2026) to adults aged 60 years and over, and (Abrysvo only) pregnant women between 28 and 36 weeks of gestation. Single 0.5 mL intramuscular dose; one-time vaccination.
               </p>
             </div>
           </div>
         </div>
         <RSVClient />
         <div className="mt-8 text-center text-xs text-gray-500">
-          <p>Get Real Health ePGD — RSV Vaccination | Confidential Patient Information</p>
+          <p>Get Real Health ePGD: RSV Vaccination | Confidential Patient Information</p>
         </div>
       </div>
     </div>

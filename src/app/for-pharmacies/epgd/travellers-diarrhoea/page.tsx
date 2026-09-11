@@ -25,10 +25,11 @@ export default function TravellersDiarrhoeaPage() {
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-900">
                 This ePGD guides pharmacists through the Patient Group Direction for supply of
-                standby treatment for travellers' diarrhoea: loperamide (antimotility) and
-                azithromycin (antibiotic) for self-treatment if diarrhoea develops during travel.
-                Includes travel assessment, medical history screening, drug interactions, and
-                comprehensive patient counselling on oral rehydration and red flags.
+                azithromycin 500 mg (version 003, issued 11 September 2026) as standby treatment
+                for moderate to severe travellers' diarrhoea, for adults to self-start if symptoms
+                develop during travel. Loperamide is not supplied under this PGD. Includes travel
+                assessment, medical history screening, drug interactions, and patient counselling
+                on oral rehydration and red flags.
               </p>
             </div>
           </div>
@@ -39,7 +40,7 @@ export default function TravellersDiarrhoeaPage() {
 
         {/* Footer */}
         <div className="mt-8 text-center text-xs text-gray-500">
-          <p>Get Real Health ePGD — Travellers' Diarrhoea | Confidential Patient Information</p>
+          <p>Get Real Health ePGD: Travellers' Diarrhoea | Confidential Patient Information</p>
         </div>
       </div>
     </div>

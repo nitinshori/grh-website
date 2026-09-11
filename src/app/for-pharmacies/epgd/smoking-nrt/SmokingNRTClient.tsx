@@ -263,6 +263,13 @@ export default function SmokingNRTClient() {
                   required
                 />
               </div>
+
+              <Checkbox
+                label="Motivated to quit smoking and has set a quit date"
+                checked={state.assessment.motivated}
+                onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "motivated", value: v })}
+                description="PGD inclusion criterion. Non-smokers and occasional smokers are excluded (contraindications step)."
+              />
             </div>
           </StepWrapper>
         );
@@ -280,13 +287,14 @@ export default function SmokingNRTClient() {
           >
             <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
               <Checkbox
-                label="Recent MI (myocardial infarction) — within 2 weeks"
+                label="Recent MI (myocardial infarction), within 4 weeks"
                 checked={state.medicalHistory.recentMI}
                 onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "recentMI", value: v })}
+                description="PGD caution: assess benefit vs risk. Within 2 weeks: tick the contraindication on the next step."
               />
 
               <Checkbox
-                label="Recent stroke — within 2 weeks"
+                label="Recent stroke, within 4 weeks"
                 checked={state.medicalHistory.recentStroke}
                 onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "recentStroke", value: v })}
               />
@@ -298,21 +306,59 @@ export default function SmokingNRTClient() {
               />
 
               <Checkbox
-                label="Cardiovascular disease (stable)"
+                label="Cardiovascular disease (stable), including severe arrhythmias"
                 checked={state.medicalHistory.cardiovascularDisease}
                 onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "cardiovascularDisease", value: v })}
+                description="PGD caution: assess benefit vs risk."
               />
 
               <Checkbox
                 label="Diabetes mellitus"
                 checked={state.medicalHistory.diabetes}
                 onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "diabetes", value: v })}
+                description="Monitor blood glucose control; nicotine may affect insulin requirements."
               />
 
               <Checkbox
-                label="Pheochromocytoma"
+                label="Phaeochromocytoma"
                 checked={state.medicalHistory.pheochromocytoma}
                 onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "pheochromocytoma", value: v })}
+                description="Nicotine may cause catecholamine release."
+              />
+
+              <Checkbox
+                label="Hepatic or renal impairment"
+                checked={state.medicalHistory.hepaticRenalImpairment}
+                onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "hepaticRenalImpairment", value: v })}
+                description="Consider close monitoring."
+              />
+
+              <Checkbox
+                label="Peptic ulcer disease"
+                checked={state.medicalHistory.pepticUlcer}
+                onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "pepticUlcer", value: v })}
+                description="Nicotine may increase gastric acid secretion."
+              />
+
+              <Checkbox
+                label="Oral ulceration or dental work"
+                checked={state.medicalHistory.oralUlcerationOrDentalWork}
+                onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "oralUlcerationOrDentalWork", value: v })}
+                description="Nicotine oral products may cause irritation."
+              />
+
+              <Checkbox
+                label="Pregnant"
+                checked={state.medicalHistory.pregnant}
+                onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "pregnant", value: v })}
+                description="Use only if unable to quit without NRT; benefits must outweigh risks."
+              />
+
+              <Checkbox
+                label="Breastfeeding"
+                checked={state.medicalHistory.breastfeeding}
+                onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "breastfeeding", value: v })}
+                description="Nicotine passes into breast milk; weigh risks and benefits."
               />
             </div>
           </StepWrapper>
@@ -354,9 +400,27 @@ export default function SmokingNRTClient() {
             <AlertBanner alerts={alerts} />
             <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
               <Checkbox
-                label="Patient under 12 years old"
+                label="Patient under 18 years old"
                 checked={state.contraindications.childUnder12}
                 onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "childUnder12", value: v })}
+              />
+
+              <Checkbox
+                label="Known hypersensitivity to nicotine or excipients"
+                checked={state.contraindications.hypersensitivity}
+                onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "hypersensitivity", value: v })}
+              />
+
+              <Checkbox
+                label="Non-smoker or occasional smoker"
+                checked={state.contraindications.nonSmokerOrOccasional}
+                onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "nonSmokerOrOccasional", value: v })}
+              />
+
+              <Checkbox
+                label="Generalised skin disorder that may affect absorption (excludes patches; oral products may be supplied)"
+                checked={state.contraindications.generalisedSkinDisorder}
+                onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "generalisedSkinDisorder", value: v })}
               />
 
               <Checkbox
@@ -366,7 +430,7 @@ export default function SmokingNRTClient() {
               />
 
               <Checkbox
-                label="Pheochromocytoma"
+                label="Phaeochromocytoma"
                 checked={state.contraindications.pheochromocytoma}
                 onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "pheochromocytoma", value: v })}
               />
@@ -387,46 +451,97 @@ export default function SmokingNRTClient() {
             isBlocked={hasStops}
           >
             <div className="space-y-4">
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-900 space-y-1">
+                <p className="font-semibold">PGD version 002, issued 11 September 2026. Two arms:</p>
+                <p>1. Nicotine 24-hour transdermal patches 7mg, 14mg, 21mg (e.g. NiQuitin Clear). Nicorette Invisi patches are 16-hour patches (10mg, 15mg, 25mg) and are NOT the product described. More than 10 cigarettes a day: 21mg daily for 6 to 8 weeks, then 14mg for 2 weeks, then 7mg for 2 weeks. 10 or fewer a day: start 14mg and step down. Apply to clean, dry, hairless skin (arm or chest), rotate sites daily, press firmly for 10 seconds. 28 patches (4-week supply). Store below 25°C.</p>
+                <p>2. Nicotine lozenges or gum 2mg and 4mg. 20 or fewer cigarettes a day: 2mg; more than 20 a day: 4mg. Initially 8 to 12 pieces a day, reduce gradually over 8 to 12 weeks. Up to 4-week supply, maximum 120 pieces. Store below 25°C.</p>
+                <p>Total course 8 to 12 weeks. Review at 2 weeks, 4 weeks, then regularly.</p>
+              </div>
+
               <Checkbox
-                label="Supply nicotine patches"
+                label="Supply nicotine 24-hour patches (7mg, 14mg, 21mg; e.g. NiQuitin Clear)"
                 checked={state.nrtSelection.usePatches}
                 onChange={(v) => dispatch({ type: "UPDATE_NRT_SELECTION", field: "usePatches", value: v })}
               />
 
+              {state.nrtSelection.usePatches && state.contraindications.generalisedSkinDisorder && (
+                <p className="text-xs text-red-700">Generalised skin disorder that may affect absorption excludes the patch arm. Supply oral products only, or refer.</p>
+              )}
+
               {state.nrtSelection.usePatches && (
-                <SelectInput
-                  label="Patch Strength"
-                  value={state.nrtSelection.patchStrength}
-                  onChange={(v) => dispatch({ type: "UPDATE_NRT_SELECTION", field: "patchStrength", value: v })}
-                  options={[
-                    { value: "21mg", label: "21mg (high strength)" },
-                    { value: "14mg", label: "14mg (medium strength)" },
-                    { value: "7mg", label: "7mg (low strength)" },
-                  ]}
-                  required
-                />
+                <>
+                  <SelectInput
+                    label="Patch strength (24-hour patch)"
+                    value={state.nrtSelection.patchStrength}
+                    onChange={(v) => dispatch({ type: "UPDATE_NRT_SELECTION", field: "patchStrength", value: v })}
+                    options={[
+                      { value: "21mg", label: "21mg/24-hour (start, more than 10 cigarettes a day; 6 to 8 weeks)" },
+                      { value: "14mg", label: "14mg/24-hour (start, 10 or fewer a day; or step-down for 2 weeks)" },
+                      { value: "7mg", label: "7mg/24-hour (final step-down, 2 weeks)" },
+                    ]}
+                    required
+                  />
+                  {state.assessment.cigarettesPerDay !== null && state.assessment.cigarettesPerDay <= 10 && state.nrtSelection.patchStrength === "21mg" && (
+                    <p className="text-xs text-amber-700">Patient smokes 10 or fewer a day: the PGD starts lighter smokers on the 14mg patch.</p>
+                  )}
+                  <NumberInput
+                    label="Number of patches supplied"
+                    value={state.nrtSelection.patchQuantity}
+                    onChange={(v) => dispatch({ type: "UPDATE_NRT_SELECTION", field: "patchQuantity", value: v })}
+                    min={1}
+                    max={28}
+                    placeholder="up to 28 (4-week supply)"
+                    unit="patches"
+                    required
+                  />
+                </>
               )}
 
               <Checkbox
-                label="Supply oral NRT (gum, lozenge, inhalator, nasal spray, mouth spray)"
+                label="Supply oral NRT (nicotine lozenges or gum, 2mg or 4mg)"
                 checked={state.nrtSelection.useOralForm}
                 onChange={(v) => dispatch({ type: "UPDATE_NRT_SELECTION", field: "useOralForm", value: v })}
               />
 
               {state.nrtSelection.useOralForm && (
-                <SelectInput
-                  label="Oral NRT Type"
-                  value={state.nrtSelection.oralFormType}
-                  onChange={(v) => dispatch({ type: "UPDATE_NRT_SELECTION", field: "oralFormType", value: v })}
-                  options={[
-                    { value: "gum", label: "Gum (2mg or 4mg)" },
-                    { value: "lozenge", label: "Lozenge (1mg, 2mg, or 4mg)" },
-                    { value: "inhalator", label: "Inhalator" },
-                    { value: "nasal-spray", label: "Nasal spray" },
-                    { value: "mouth-spray", label: "Mouth spray" },
-                  ]}
-                  required
-                />
+                <>
+                  <SelectInput
+                    label="Oral NRT type"
+                    value={state.nrtSelection.oralFormType}
+                    onChange={(v) => dispatch({ type: "UPDATE_NRT_SELECTION", field: "oralFormType", value: v })}
+                    options={[
+                      { value: "gum", label: "Gum (chew slowly, then park between cheek and gum)" },
+                      { value: "lozenge", label: "Lozenge (dissolve slowly; do not chew or swallow whole)" },
+                    ]}
+                    required
+                  />
+                  <SelectInput
+                    label="Oral product strength"
+                    value={state.nrtSelection.oralStrength}
+                    onChange={(v) => dispatch({ type: "UPDATE_NRT_SELECTION", field: "oralStrength", value: v })}
+                    options={[
+                      { value: "2mg", label: "2mg (20 or fewer cigarettes a day)" },
+                      { value: "4mg", label: "4mg (more than 20 cigarettes a day)" },
+                    ]}
+                    required
+                  />
+                  {state.assessment.cigarettesPerDay !== null && (
+                    (state.assessment.cigarettesPerDay > 20 && state.nrtSelection.oralStrength === "2mg") ||
+                    (state.assessment.cigarettesPerDay <= 20 && state.nrtSelection.oralStrength === "4mg")
+                  ) && (
+                    <p className="text-xs text-amber-700">Strength does not match the PGD dose row for {state.assessment.cigarettesPerDay} cigarettes a day (2mg for 20 or fewer; 4mg for more than 20).</p>
+                  )}
+                  <NumberInput
+                    label="Number of pieces supplied"
+                    value={state.nrtSelection.oralQuantity}
+                    onChange={(v) => dispatch({ type: "UPDATE_NRT_SELECTION", field: "oralQuantity", value: v })}
+                    min={1}
+                    max={120}
+                    placeholder="up to 120 (4-week supply)"
+                    unit="pieces"
+                    required
+                  />
+                </>
               )}
 
               <Checkbox
@@ -475,14 +590,59 @@ export default function SmokingNRTClient() {
                 onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "behavioralSupport", value: v })}
               />
               <Checkbox
-                label="Common side effects explained (skin irritation with patches, hiccups with gum)"
+                label="Common side effects explained (patches: remove old patch first, dispose folded sticky side in, mild skin redness is normal; oral: no eating or drinking for 15 minutes before and during use, avoid acidic drinks such as coffee and fruit juice)"
                 checked={state.counselling.sideEffects}
                 onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "sideEffects", value: v })}
               />
               <Checkbox
-                label="8–12 week course duration explained; step-down approach"
+                label="Continue NRT for the full 8 to 12 weeks; do not stop early even if abstinent; step-down approach explained"
                 checked={state.counselling.courseDuration}
                 onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "courseDuration", value: v })}
+              />
+              <Checkbox
+                label="Correct technique explained (patches on clean, dry, hairless skin, sites rotated daily; gum chewed slowly then parked; lozenges dissolved, not chewed)"
+                checked={state.counselling.correctTechnique}
+                onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "correctTechnique", value: v })}
+              />
+              <Checkbox
+                label="Use enough NRT: continued cravings may need higher doses or combination therapy"
+                checked={state.counselling.useEnough}
+                onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "useEnough", value: v })}
+              />
+              <Checkbox
+                label="Do not smoke while using NRT (continued smoking increases nicotine levels and adverse effects)"
+                checked={state.counselling.doNotSmoke}
+                onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "doNotSmoke", value: v })}
+              />
+              <Checkbox
+                label="Expect cravings and withdrawal symptoms; these usually improve within 2 to 3 weeks"
+                checked={state.counselling.withdrawalSymptoms}
+                onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "withdrawalSymptoms", value: v })}
+              />
+              <Checkbox
+                label="Avoid driving or operating machinery if experiencing dizziness; monitor blood glucose more often if diabetic"
+                checked={state.counselling.drivingWarning}
+                onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "drivingWarning", value: v })}
+              />
+              <Checkbox
+                label="Seek immediate medical attention for chest pain, palpitations or shortness of breath"
+                checked={state.counselling.cardiovascularSymptoms}
+                onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "cardiovascularSymptoms", value: v })}
+              />
+              <Checkbox
+                label="Report severe skin reactions or oral irritation to the pharmacy or GP"
+                checked={state.counselling.reportReactions}
+                onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "reportReactions", value: v })}
+              />
+              <Checkbox
+                label="Inform the pharmacy or GP immediately if pregnant or planning pregnancy"
+                checked={state.counselling.pregnancyAdvice}
+                onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "pregnancyAdvice", value: v })}
+              />
+              <Checkbox
+                label="Follow-up appointments at 2 weeks, 4 weeks, and monthly to monitor progress; PIL supplied"
+                checked={state.counselling.followUpSchedule}
+                onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "followUpSchedule", value: v })}
               />
             </div>
           </StepWrapper>

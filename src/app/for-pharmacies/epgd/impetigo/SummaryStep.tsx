@@ -1,8 +1,10 @@
 'use client';
 
-import { ImpetigoData } from './impetigo-types';
+import { ImpetigoData, IMPETIGO_PGD_VERSION } from './impetigo-types';
 import { BaseSummary, ClinicalAlert } from '../shared/types';
-import { TextInput, TextArea, Checkbox } from '../shared/components/FormInputs';
+import { TextInput, TextArea } from '../shared/components/FormInputs';
+import { clarithromycinWeightBand } from './impetigo-clinical-logic';
+import { drugSpecificAdviceLabel } from './CounsellingStep';
 import {
   SectionHeader,
   Row,
@@ -19,6 +21,14 @@ interface SummaryStepProps {
   alerts: ClinicalAlert[];
 }
 
+const TREATMENT_LABEL: Record<string, string> = {
+  'fusidic-acid': 'Fusidic acid 2% cream (topical arm)',
+  'hydrogen-peroxide': 'Hydrogen peroxide 1% cream, P sale (not a PGD supply)',
+  flucloxacillin: 'Flucloxacillin 250mg/5ml oral suspension (flucloxacillin arm)',
+  clarithromycin: 'Clarithromycin (macrolide arm)',
+  erythromycin: 'Erythromycin, pregnancy (macrolide arm)',
+};
+
 export function SummaryStep({ data, summary, onSummaryChange, alerts }: SummaryStepProps) {
   const handleSummaryChange = (field: keyof BaseSummary, value: unknown) => {
     onSummaryChange({
@@ -28,24 +38,38 @@ export function SummaryStep({ data, summary, onSummaryChange, alerts }: SummaryS
   };
 
   const counsellingItems: [string, boolean][] = [
-    ['Hygiene advice - do not share towels/flannels', data.counselling.hygieneAdvice],
-    ['Hand washing with soap and water', data.counselling.handwashing],
-    ['School/work exclusion until 48hrs post-treatment', data.counselling.schoolExclusion],
-    ['Avoid touching/scratching lesions', data.counselling.avoidTouching],
-    ['Complete full course of antibiotics', data.counselling.completeCourse],
+    ['Hygiene advice: do not share towels, flannels or bedding', data.counselling.hygieneAdvice],
+    ['Hand washing after touching lesions or applying cream', data.counselling.handwashing],
+    ['School or nursery exclusion until crusted and dry, or 48 hours after starting an antibiotic', data.counselling.schoolExclusion],
+    ['Keep covered, no picking or scratching, nails short', data.counselling.avoidTouching],
+    ['Told topical and oral treatment are not combined', data.counselling.noCombination],
+    [drugSpecificAdviceLabel(data.treatmentSelection.treatment), data.counselling.drugSpecificAdvice],
+    ['Complete the course', data.counselling.completeCourse],
     ['Application technique for topical treatment', data.counselling.applicationAdvice],
-    ['Return if worsening or no improvement in 48hrs', data.counselling.returnIfWorsening],
-    ['Contagion period and transmission risk', data.counselling.contagionPeriod],
+    ['Return if no improvement, spreading, or unwell', data.counselling.returnIfWorsening],
+    ['Contagion period explained', data.counselling.contagionPeriod],
   ];
+
+  const age = data.patientDetails.age;
+  const weight = parseFloat(data.medicalHistory.weightKg);
+  const weightBand = !isNaN(weight) && weight > 0 ? clarithromycinWeightBand(weight).label : '';
+  const isMacrolide = data.treatmentSelection.treatment === 'clarithromycin' || data.treatmentSelection.treatment === 'erythromycin';
+
+  const consentText = (() => {
+    const c = data.consentDetails;
+    if (c.basis === 'parental-responsibility')
+      return `From a person with parental responsibility: ${c.personName || 'name not recorded'} (${c.relationship || 'relationship not recorded'})`;
+    if (c.basis === 'gillick-competent') return `From the young person, assessed as Gillick competent. Basis: ${c.gillickBasis || 'not recorded'}`;
+    if (c.basis === 'patient') return 'From the patient';
+    return data.consent.informedConsentGiven ? 'Informed consent given' : 'Not recorded';
+  })();
 
   return (
     <div className="space-y-6">
       {/* Header Section */}
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded p-6">
         <h2 className="text-2xl font-bold text-blue-900 mb-2">Impetigo Consultation Report</h2>
-        <p className="text-sm text-blue-700">
-          PGD Consultation - Summary and Print
-        </p>
+        <p className="text-sm text-blue-700">{IMPETIGO_PGD_VERSION}</p>
       </div>
 
       {/* Pharmacist Details */}
@@ -56,6 +80,12 @@ export function SummaryStep({ data, summary, onSummaryChange, alerts }: SummaryS
           onChange={(value) => handleSummaryChange('pharmacistName', value)}
           placeholder="Enter your full name"
           label="Pharmacist Name *"
+        />
+        <TextInput
+          value={summary.pharmacistGPhC}
+          onChange={(value) => handleSummaryChange('pharmacistGPhC', value)}
+          placeholder="GPhC registration number"
+          label="GPhC registration number *"
         />
         <TextInput
           value={summary.consultationDate}
@@ -78,44 +108,62 @@ export function SummaryStep({ data, summary, onSummaryChange, alerts }: SummaryS
       <div className="space-y-2">
         <Row label="Name" value={`${data.patientDetails.firstName} ${data.patientDetails.lastName}`} />
         <Row label="NHS Number" value={data.patientDetails.nhsNumber} />
-        <Row label="Date of Birth" value={data.patientDetails.dateOfBirth} />
+        <Row label="Date of Birth" value={`${data.patientDetails.dateOfBirth}${age !== null ? ` (age ${age})` : ''}`} />
+        <Row label="Address" value={data.patientDetails.address} />
+        <Row label="GP" value={`${data.patientDetails.gpName || ''} ${data.patientDetails.gpPractice || ''}`.trim()} />
         <Row label="Contact Number" value={data.patientDetails.phone} />
+        <Row label="Consent" value={consentText} />
       </div>
 
       {/* Clinical Assessment */}
       <SectionHeader>Clinical Assessment</SectionHeader>
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-900 mb-2">
-            Lesion Type
-          </label>
-          <p className="text-gray-700 capitalize">{data.lesionAssessment.lesionType || 'Not specified'}</p>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-900 mb-2">
-            Extent
-          </label>
-          <p className="text-gray-700 capitalize">{data.lesionAssessment.extent || 'Not specified'}</p>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-900 mb-2">
-            Affected Areas
-          </label>
-          <p className="text-gray-700">{data.lesionAssessment.affectedAreas.join(', ') || 'None specified'}</p>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-900 mb-2">
-            Duration
-          </label>
-          <p className="text-gray-700">{data.lesionAssessment.duration || 'Not specified'}</p>
-        </div>
+      <div className="space-y-2">
+        <Row label="Type" value={data.lesionAssessment.lesionType || 'Not specified'} />
+        <Row label="Extent" value={data.lesionAssessment.extent || 'Not specified'} />
+        <Row
+          label="Number and size of lesions"
+          value={`${data.lesionAssessment.numberOfLesions || 'not recorded'}; area ${data.lesionAssessment.lesionSizeCm || 'not recorded'} cm`}
+        />
+        <Row label="Affected Areas" value={data.lesionAssessment.affectedAreas.join(', ') || 'None specified'} />
+        <Row label="Duration" value={data.lesionAssessment.duration || 'Not specified'} />
+        {data.lesionAssessment.hydrogenPeroxide && (
+          <Row
+            label="Hydrogen peroxide 1%"
+            value={
+              data.lesionAssessment.hydrogenPeroxide === 'offered-p-sale'
+                ? 'Offered as a P sale first'
+                : data.lesionAssessment.hydrogenPeroxide === 'unsuitable'
+                  ? 'Unsuitable'
+                  : 'Tried and ineffective'
+            }
+          />
+        )}
+        <Row
+          label="Penicillin allergy history"
+          value={`${data.medicalHistory.penicillinAllergy ? 'Penicillin-allergic' : 'Not penicillin-allergic'}. ${data.medicalHistory.penicillinAllergyHistory || ''}`.trim()}
+        />
+        {age !== null && age < 18 && isMacrolide && (
+          <Row
+            label="Weight (measured today)"
+            value={
+              data.medicalHistory.cannotBeWeighed
+                ? 'Could not be weighed'
+                : `${data.medicalHistory.weightKg || 'not recorded'} kg${weightBand ? `, band ${weightBand}` : ''}`
+            }
+          />
+        )}
+        {(data.medicalHistory.pregnant || data.medicalHistory.breastfeeding) && (
+          <Row
+            label="Pregnancy / breastfeeding"
+            value={`${data.medicalHistory.pregnant ? `Pregnant (${data.medicalHistory.pregnancyEstablishedHow || 'how established: not recorded'})` : ''}${
+              data.medicalHistory.breastfeeding
+                ? `${data.medicalHistory.pregnant ? '; ' : ''}Breastfeeding${data.medicalHistory.breastfeedingDiscussed ? ', macrolide choice discussed and recorded' : ''}`
+                : ''
+            }`}
+          />
+        )}
         {data.lesionAssessment.additionalNotes && (
-          <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">
-              Additional Notes
-            </label>
-            <p className="text-gray-700">{data.lesionAssessment.additionalNotes}</p>
-          </div>
+          <Row label="Additional Notes" value={data.lesionAssessment.additionalNotes} />
         )}
       </div>
 
@@ -129,31 +177,22 @@ export function SummaryStep({ data, summary, onSummaryChange, alerts }: SummaryS
 
       {/* Treatment Plan */}
       <SectionHeader>Treatment Plan</SectionHeader>
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-900 mb-2">
-            Treatment *
-          </label>
-          <p className="text-gray-700 capitalize">{data.treatmentSelection.treatment.replace('-', ' ')}</p>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-900 mb-2">
-            Dose
-          </label>
-          <p className="text-gray-700">{data.treatmentSelection.dose}</p>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-900 mb-2">
-            Frequency
-          </label>
-          <p className="text-gray-700">{data.treatmentSelection.frequency}</p>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-900 mb-2">
-            Duration
-          </label>
-          <p className="text-gray-700">{data.treatmentSelection.duration}</p>
-        </div>
+      <div className="space-y-2">
+        <Row label="Treatment (arm)" value={TREATMENT_LABEL[data.treatmentSelection.treatment] || 'Not selected'} />
+        <Row label="Dose" value={data.treatmentSelection.dose} />
+        <Row label="Frequency" value={data.treatmentSelection.frequency} />
+        <Row
+          label="Duration"
+          value={`${data.treatmentSelection.duration}${data.treatmentSelection.duration === '7 days' ? ` (extended: ${data.treatmentSelection.extensionReason || 'reason not recorded'})` : ''}`}
+        />
+        {data.treatmentSelection.severeDoseReason && (
+          <Row label="500mg twice a day, reason" value={data.treatmentSelection.severeDoseReason} />
+        )}
+        <Row label="Quantity" value={String(data.treatmentSelection.quantity)} />
+        <Row label="Date of supply" value={summary.consultationDate} />
+        {data.treatmentSelection.pharmacistOverride && (
+          <Row label="Override reason" value={data.treatmentSelection.overrideReason} />
+        )}
       </div>
 
       {/* Counselling Provided */}
@@ -173,14 +212,14 @@ export function SummaryStep({ data, summary, onSummaryChange, alerts }: SummaryS
       {/* Pharmacist Declaration */}
       <SectionHeader>Pharmacist Declaration</SectionHeader>
       <PharmacistDeclaration
-        pgdName="Impetigo PGD"
+        pgdName={IMPETIGO_PGD_VERSION}
         pharmacistName={summary.pharmacistName}
         pharmacistGPhC={summary.pharmacistGPhC || ''}
         pharmacyName={summary.pharmacyName || ''}
       />
 
       {/* Footer */}
-      <ReportFooter pgdName="Impetigo PGD" />
+      <ReportFooter pgdName={IMPETIGO_PGD_VERSION} />
     </div>
   );
 }

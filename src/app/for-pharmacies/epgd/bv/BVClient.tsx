@@ -2,7 +2,7 @@
 import { useReducer, useMemo, useState, useCallback, useEffect } from "react";
 import type { BVConsultationState, BVAction } from "./lib/bv-types";
 import { STEP_LABELS, TOTAL_STEPS, createInitialConsultationState } from "./lib/bv-types";
-import { getAllAlerts, hasHardStops, calculateDoseRecommendation } from "./lib/bv-clinical-logic";
+import { getAllAlerts, hasHardStops, calculateDoseRecommendation, isOralChoice } from "./lib/bv-clinical-logic";
 import { validateStep } from "./lib/bv-validation";
 import { calculateAge } from "../shared/types";
 import { ProgressBar } from "../shared/components/ProgressBar";
@@ -146,7 +146,20 @@ export default function BVClient() {
       case 0:
         return (
           <StepWrapper title="Patient Details" currentStep={state.currentStep} totalSteps={TOTAL_STEPS} onNext={handleNext} onPrev={handlePrev} canProceed={canProceed} validationError={validationError}>
-            <PatientDetailsStep patient={state.patient} onChange={(field, value) => dispatch({ type: "UPDATE_PATIENT", field, value })} />
+            <PatientDetailsStep
+              patient={state.patient}
+              onChange={(field, value) => dispatch({ type: "UPDATE_PATIENT", field, value })}
+              requireAdult={false}
+              genderOption={{
+                label: "Patient is female",
+                description: "This PGD is for women aged 16 to 65 (vaginal gel arm 18 to 65).",
+                checked: state.medicalHistory.femaleConfirmed,
+                onToggle: (v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "femaleConfirmed", value: v }),
+              }}
+            />
+            {state.patient.age !== null && (state.patient.age < 16 || state.patient.age > 65) && (
+              <p className="mt-3 text-sm font-medium text-red-600">This PGD is for women aged 16 to 65. Refer to GP.</p>
+            )}
           </StepWrapper>
         );
       case 1:
@@ -180,11 +193,19 @@ export default function BVClient() {
             <div className="space-y-4">
               <Checkbox label="First episode of BV (not diagnosed before)" checked={state.medicalHistory.firstEpisode} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "firstEpisode", value: v })} />
               <Checkbox label="Recurrent BV" checked={state.medicalHistory.recurrentBV} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "recurrentBV", value: v })} />
-              <Checkbox label="Currently pregnant" checked={state.medicalHistory.pregnancy} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "pregnancy", value: v })} description="First trimester: refer to GP for metronidazole use" />
+              <Checkbox label="Pregnant, known or suspected" checked={state.medicalHistory.pregnancy} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "pregnancy", value: v })} description="This PGD is for non-pregnant women. Refer to GP or midwife." />
+              <Checkbox label="Breastfeeding" checked={state.medicalHistory.breastfeeding} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "breastfeeding", value: v })} description="Oral: significant amounts in breast milk, consider alternatives or temporary cessation. Gel: minimal absorption, caution advised." />
               <Checkbox label="Planning pregnancy within 2 months" checked={state.medicalHistory.planningPregnancy} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "planningPregnancy", value: v })} />
               <Checkbox label="Active pelvic inflammatory disease" checked={state.medicalHistory.activePelvicInflammation} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "activePelvicInflammation", value: v })} />
-              <Checkbox label="Currently using alcohol or planning to during treatment" checked={state.medications.alcohol} onChange={(v) => dispatch({ type: "UPDATE_MEDICATIONS", field: "alcohol", value: v })} description="Disulfiram reaction risk: avoid alcohol 48 hours after treatment" />
-              <Checkbox label="Taking warfarin" checked={state.medications.warfarin} onChange={(v) => dispatch({ type: "UPDATE_MEDICATIONS", field: "warfarin", value: v })} />
+              <Checkbox label="Known hypersensitivity to metronidazole or nitroimidazoles" checked={state.medicalHistory.hypersensitivity} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "hypersensitivity", value: v })} description="Exclusion for both arms." />
+              <Checkbox label="Active CNS disease or blood dyscrasia" checked={state.medicalHistory.cnsDiseaseOrBloodDyscrasia} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "cnsDiseaseOrBloodDyscrasia", value: v })} description="Exclusion for oral metronidazole." />
+              <Checkbox label="Hepatic impairment (mild to moderate)" checked={state.medicalHistory.hepaticImpairment} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "hepaticImpairment", value: v })} description="Oral: adjust dose or frequency." />
+              <Checkbox label="Renal impairment" checked={state.medicalHistory.renalImpairment} onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "renalImpairment", value: v })} description="Oral: may require dose reduction." />
+              <Checkbox label="Current alcohol consumption" checked={state.medications.alcohol} onChange={(v) => dispatch({ type: "UPDATE_MEDICATIONS", field: "alcohol", value: v })} description="Exclusion for oral metronidazole (disulfiram-like reaction during or within 48 hours of treatment). Gel arm may be used." />
+              <Checkbox label="Concurrent lithium therapy" checked={state.medications.lithium} onChange={(v) => dispatch({ type: "UPDATE_MEDICATIONS", field: "lithium", value: v })} description="Exclusion for oral metronidazole (increased lithium levels, risk of toxicity)." />
+              <Checkbox label="Concurrent disulfiram therapy" checked={state.medications.disulfiram} onChange={(v) => dispatch({ type: "UPDATE_MEDICATIONS", field: "disulfiram", value: v })} description="Exclusion for oral metronidazole." />
+              <Checkbox label="Taking warfarin" checked={state.medications.warfarin} onChange={(v) => dispatch({ type: "UPDATE_MEDICATIONS", field: "warfarin", value: v })} description="Increased anticoagulant effect; monitor INR." />
+              <Checkbox label="Taking phenytoin" checked={state.medications.phenytoin} onChange={(v) => dispatch({ type: "UPDATE_MEDICATIONS", field: "phenytoin", value: v })} description="Increased phenytoin levels." />
             </div>
           </StepWrapper>
         );
@@ -201,14 +222,31 @@ export default function BVClient() {
               <SelectInput
                 label="Treatment"
                 value={state.medicineSelection.medicineChoice}
-                onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "medicineChoice", value: v })}
+                onChange={(v) => {
+                  dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "medicineChoice", value: v });
+                  dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "abilityConfirmed", value: false });
+                }}
                 options={[
-                  { value: "metronidazole-400", label: "Metronidazole 400mg BD for 5-7 days" },
-                  { value: "metronidazole-2g", label: "Metronidazole 2g single dose" },
-                  { value: "metronidazole-gel", label: "Metronidazole intravaginal gel 0.75% for 5 days" },
+                  { value: "metronidazole-400", label: "Metronidazole 400mg tablets: 400 mg twice daily for 5 to 7 days (10 to 14 tablets), preferred" },
+                  { value: "metronidazole-2g", label: "Metronidazole 400mg tablets: 2 g single oral dose (less effective than the 5 to 7 day course)" },
+                  { value: "metronidazole-gel", label: "Metronidazole 0.75% vaginal gel (Zidoval): 5 g at bedtime for 5 nights (1 x 40 g tube), women 18 to 65" },
                 ]}
                 required
               />
+              {state.medicineSelection.medicineChoice && (
+                <Checkbox
+                  label={isOralChoice(state.medicineSelection.medicineChoice) ? "Patient is able to swallow tablets" : "Patient is able to insert the gel intravaginally"}
+                  checked={state.medicineSelection.abilityConfirmed}
+                  onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "abilityConfirmed", value: v })}
+                  required
+                />
+              )}
+              {doseRecommendation && (
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded text-sm text-blue-900">
+                  <p className="font-semibold">{doseRecommendation.medicine}</p>
+                  <p>{doseRecommendation.dosingRegimen}</p>
+                </div>
+              )}
             </div>
           </StepWrapper>
         );
@@ -223,7 +261,11 @@ export default function BVClient() {
               <Checkbox label="Complete full course of treatment" checked={state.counselling.completesCourse} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "completesCourse", value: v })} />
               <Checkbox label="BV is NOT an STI" checked={state.counselling.notSTI} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "notSTI", value: v })} description="Partner treatment not routinely recommended" />
               <Checkbox label="Recurrence likely (50% within 3 months)" checked={state.counselling.recurrenceAdvice} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "recurrenceAdvice", value: v })} />
-              <Checkbox label="Sexual contacts/partner notification" checked={state.counselling.sexPartnerAdvice} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "sexPartnerAdvice", value: v })} />
+              <Checkbox label="Sexual contacts/partner notification" checked={state.counselling.sexPartnerAdvice} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "sexPartnerAdvice", value: v })} description="Partners may not require treatment unless they develop symptoms" />
+              <Checkbox label="Seek medical advice if symptoms do not resolve within 5 to 7 days of completing treatment, or if new symptoms develop (pelvic pain, fever)" checked={state.counselling.seekAdviceIfNotResolved} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "seekAdviceIfNotResolved", value: v })} />
+              {state.medicineSelection.medicineChoice === "metronidazole-gel" && (
+                <Checkbox label="Gel may damage latex condoms and diaphragms: use alternative contraception during treatment and for 5 days after" checked={state.counselling.latexAdvice} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "latexAdvice", value: v })} />
+              )}
             </div>
           </StepWrapper>
         );

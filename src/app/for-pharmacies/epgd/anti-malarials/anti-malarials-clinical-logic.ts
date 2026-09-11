@@ -1,12 +1,21 @@
 // ─── Anti-malarials Clinical Logic ───
+//
+// Aligned to the Malaria Chemoprophylaxis PGD, version 008, issued
+// 11 September 2026. Three arms: atovaquone/proguanil, doxycycline,
+// mefloquine. Arm-level exclusions remove that arm from the medicine
+// selector; a hard stop is raised when the whole PGD excludes the
+// patient or when no arm remains.
 
-import type { ClinicalAlert, AlertSeverity } from '../shared/types';
+import type { ClinicalAlert } from '../shared/types';
 import type {
   AMTravelAssessment,
   AMMedicalHistory,
   AMMedications,
   AMPatientDetails,
+  AMMedicineChoice,
 } from './anti-malarials-types';
+
+export const AM_PGD_VERSION = 'Malaria Chemoprophylaxis PGD v008, issued 11 September 2026';
 
 // ─── Calculate trip duration ───
 
@@ -28,6 +37,77 @@ export function calculateTripDuration(
   return diffDays;
 }
 
+// ─── Days from today until departure (mefloquine needs 2 to 3 weeks) ───
+
+export function calculateDaysUntilDeparture(departureDate: string): number | null {
+  if (!departureDate) return null;
+  const departure = new Date(departureDate);
+  if (isNaN(departure.getTime())) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  departure.setHours(0, 0, 0, 0);
+  return Math.round((departure.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+// ─── Atovaquone/proguanil weight band (PGD v008 Appendix 1) ───
+
+export interface APWeightBand {
+  label: string;
+  product: 'malarone' | 'malarone-paediatric';
+  productName: string;
+  tabletsPerDay: number;
+}
+
+export function getAtovaquoneProguanilBand(weightKg: number | null): APWeightBand | null {
+  if (weightKg === null || weightKg < 11) return null;
+  if (weightKg <= 20) {
+    return {
+      label: '11 to 20 kg',
+      product: 'malarone-paediatric',
+      productName: 'Malarone Paediatric (atovaquone 62.5mg / proguanil 25mg) tablets',
+      tabletsPerDay: 1,
+    };
+  }
+  if (weightKg <= 30) {
+    return {
+      label: '21 to 30 kg',
+      product: 'malarone-paediatric',
+      productName: 'Malarone Paediatric (atovaquone 62.5mg / proguanil 25mg) tablets',
+      tabletsPerDay: 2,
+    };
+  }
+  if (weightKg <= 40) {
+    return {
+      label: '31 to 40 kg',
+      product: 'malarone-paediatric',
+      productName: 'Malarone Paediatric (atovaquone 62.5mg / proguanil 25mg) tablets',
+      tabletsPerDay: 3,
+    };
+  }
+  return {
+    label: 'Over 40 kg',
+    product: 'malarone',
+    productName: 'Malarone (atovaquone 250mg / proguanil 100mg) tablets, adult strength',
+    tabletsPerDay: 1,
+  };
+}
+
+// ─── Mefloquine weight band (PGD v008 Arm 3 dose table) ───
+
+export interface MefloquineWeightBand {
+  label: string;
+  tabletFraction: number; // tablets per weekly dose
+  doseText: string;
+}
+
+export function getMefloquineBand(weightKg: number | null): MefloquineWeightBand | null {
+  if (weightKg === null || weightKg < 5) return null;
+  if (weightKg <= 20) return { label: '5 to 20 kg', tabletFraction: 0.25, doseText: 'ONE QUARTER of a 250mg tablet once weekly' };
+  if (weightKg <= 30) return { label: '21 to 30 kg', tabletFraction: 0.5, doseText: 'HALF a 250mg tablet once weekly' };
+  if (weightKg <= 45) return { label: '31 to 45 kg', tabletFraction: 0.75, doseText: 'THREE QUARTERS of a 250mg tablet once weekly' };
+  return { label: 'Over 45 kg', tabletFraction: 1, doseText: 'ONE 250mg tablet once weekly' };
+}
+
 // ─── Generate clinical alerts ───
 
 export function generateAMAlerts(
@@ -38,39 +118,50 @@ export function generateAMAlerts(
 ): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
 
-  // ─── Paediatric hard stop ─────────────────────────────────────
+  // ─── Paediatric hard stop (tool is stricter than the PGD) ─────────
   //
-  // This tool cannot dose a child. It collects no body weight at any
-  // step, and for atovaquone/proguanil weight determines both the dose
-  // AND the product strength: 11-20kg is ONE paediatric 62.5/25mg
-  // tablet, and the adult 250/100mg tablet is for over 40kg only.
-  //
-  // Until weight capture and banding are built, anyone under 18 is
-  // referred rather than dosed from an adult recommendation. v001 of
-  // this tool returned a flat "Atovaquone/Proguanil (Malarone)
-  // 250/100mg, 1 tablet daily" for every patient, which in an 11kg
-  // child is four times the intended atovaquone dose. That is why the
-  // service was withdrawn on 7 Sep 2026.
-  //
-  // The PGD itself (v002) does cover children, with full weight bands.
-  // A pharmacist can therefore still supply for a child by working from
-  // the document; what they cannot do is have this tool tell them the
-  // dose. Remove this stop only when the tool captures weight and
-  // implements Appendix 1 of the PGD.
+  // The PGD (v008) covers children by weight band. This tool is kept
+  // adult-only: anyone under 18 is referred rather than dosed here.
+  // Remove this stop only when parental consent capture and the
+  // under-12 doxycycline exclusion are built into the tool.
   if (patient.age !== null && patient.age < 18) {
     alerts.push({
       severity: 'stop',
       code: 'PAEDIATRIC_NOT_SUPPORTED_BY_TOOL',
-      message: 'This tool cannot calculate a paediatric dose',
+      message: 'This tool does not supply to anyone under 18',
       detail:
-        'Malaria chemoprophylaxis in anyone under 18 is dosed by body weight, and this tool does not capture weight. ' +
-        'Do not use the recommendation below for a child. Work from the weight bands in Appendix 1 of the Malaria ' +
-        'Chemoprophylaxis PGD (v002), which give one paediatric 62.5mg/25mg tablet for 11-20kg, two for 21-30kg, ' +
-        'three for 31-40kg, and one adult tablet only above 40kg. Weigh the child; do not estimate from age.',
-    })
+        'Malaria chemoprophylaxis in children is dosed by body weight. Work from Appendix 1 of the Malaria ' +
+        'Chemoprophylaxis PGD (v008, 11 September 2026): one Malarone Paediatric 62.5mg/25mg tablet daily for 11 to 20kg, ' +
+        'two for 21 to 30kg, three for 31 to 40kg, and one adult 250mg/100mg tablet only above 40kg. Doxycycline is not ' +
+        'for under 12s. Weigh the child; do not estimate from age.',
+    });
   }
 
-  // ─── Pregnancy checks ───
+  // ─── Fever and suspected malaria (all arms: exclusion, refer same day) ───
+
+  if (medical.currentFeverOrSuspectedMalaria) {
+    alerts.push({
+      severity: 'stop',
+      code: 'FEVER_OR_SUSPECTED_MALARIA',
+      message: 'Febrile illness now, or suspected or confirmed malaria',
+      detail:
+        'This PGD covers PROPHYLAXIS ONLY. Malaria is a medical emergency: refer the same day for urgent assessment ' +
+        'and a malaria blood film, and say plainly that malaria must be excluded. Do not supply a prophylactic dose.',
+    });
+  }
+
+  if (medical.uninvestigatedPostTravelFever) {
+    alerts.push({
+      severity: 'stop',
+      code: 'UNINVESTIGATED_POST_TRAVEL_FEVER',
+      message: 'Fever within 12 months of travel to a malarious area, not investigated with a blood film',
+      detail:
+        'Any fever in the last 12 months following travel to a malarious area that has not been investigated with a ' +
+        'malaria blood film excludes. Refer the same day for urgent assessment.',
+    });
+  }
+
+  // ─── Pregnancy and breastfeeding (all arms: exclusion) ───
 
   if (travel.currentlyPregnant) {
     alerts.push({
@@ -78,7 +169,19 @@ export function generateAMAlerts(
       code: 'PREGNANT_CONTRAINDICATED',
       message: 'Patient is currently pregnant',
       detail:
-        'Antimalarial prophylaxis during pregnancy requires specialist guidance. Refer to GP/midwife.',
+        'Pregnancy is an exclusion for every arm of this PGD. Chemoprophylaxis in pregnancy needs individual ' +
+        'specialist assessment and is outside this PGD. Refer, and give bite avoidance advice regardless.',
+    });
+  }
+
+  if (travel.breastfeeding) {
+    alerts.push({
+      severity: 'stop',
+      code: 'BREASTFEEDING',
+      message: 'Patient is currently breastfeeding',
+      detail:
+        'Breastfeeding is an exclusion for every arm of this PGD. Refer for individual specialist assessment, and ' +
+        'give bite avoidance advice regardless.',
     });
   }
 
@@ -92,37 +195,115 @@ export function generateAMAlerts(
     });
   }
 
-  if (travel.breastfeeding) {
+  // ─── Weight (all arms: below minimum or not obtainable is an exclusion) ───
+
+  if (travel.weightKg !== null && travel.weightKg < 5) {
     alerts.push({
-      severity: 'caution',
-      code: 'BREASTFEEDING',
-      message: 'Patient is currently breastfeeding',
-      detail:
-        'Check compatibility of chosen antimalarial with breastfeeding. Some are contraindicated.',
+      severity: 'stop',
+      code: 'WEIGHT_BELOW_MINIMUM',
+      message: 'Weight below the minimum for every available agent',
+      detail: 'Weight below 5kg is outside every arm of this PGD. Refer.',
     });
   }
 
-  // ─── Malarone-specific contraindications ───
+  // ─── Arm 1: atovaquone/proguanil exclusions ───
+
+  if (travel.weightKg !== null && travel.weightKg >= 5 && travel.weightKg < 11) {
+    alerts.push({
+      severity: 'red-flag',
+      code: 'AP_WEIGHT_CI',
+      message: 'Atovaquone/proguanil arm excluded: weight below 11kg',
+      detail: 'Atovaquone/proguanil is outside this PGD below 11kg (Appendix 1). Refer for this agent.',
+    });
+  }
+
+  if (medical.atovaquoneProguanilAllergy) {
+    alerts.push({
+      severity: 'red-flag',
+      code: 'AP_ALLERGY_CI',
+      message: 'Atovaquone/proguanil arm excluded: known hypersensitivity',
+      detail: 'Known hypersensitivity to atovaquone or proguanil excludes this arm.',
+    });
+  }
 
   if (medical.severeRenalImpairment) {
     alerts.push({
-      severity: 'stop',
+      severity: 'red-flag',
       code: 'MALARONE_RENAL_CI',
-      message: 'Atovaquone/Proguanil (Malarone) is contraindicated',
+      message: 'Atovaquone/proguanil arm excluded: renal impairment, kidney disease or dialysis',
       detail:
-        'Patient has severe renal impairment (eGFR <30). Malarone is contraindicated. Consider alternative.',
+        'Known severe renal impairment (eGFR below 30), or the patient reports kidney disease or dialysis, excludes ' +
+        'atovaquone/proguanil. Refer for this agent; another arm may be suitable.',
     });
   }
 
-  // ─── Doxycycline-specific contraindications ───
-
-  if (travel.currentlyPregnant && !medical.severeRenalImpairment) {
+  if (medications.takesRifampicinOrRifabutin || medications.takesMetoclopramideOrTetracycline) {
     alerts.push({
-      severity: 'stop',
-      code: 'DOXY_PREGNANCY_CI',
-      message: 'Doxycycline is contraindicated in pregnancy',
+      severity: 'red-flag',
+      code: 'AP_INTERACTION_CI',
+      message: 'Atovaquone/proguanil arm excluded: interacting medicine',
       detail:
-        'Doxycycline can affect fetal bone/tooth development. Contraindicated in all trimesters.',
+        'Rifampicin, rifabutin, metoclopramide and tetracycline reduce atovaquone concentrations. Refer for this agent.',
+    });
+  }
+
+  if (medications.takesAntiretroviralsOrPyrimethamine) {
+    alerts.push({
+      severity: 'red-flag',
+      code: 'AP_ARV_CI',
+      message: 'Atovaquone/proguanil arm excluded: antiretroviral therapy or pyrimethamine',
+      detail:
+        'Antiretroviral therapy (efavirenz, other NNRTIs or boosted protease inhibitors) and pyrimethamine exclude ' +
+        'atovaquone/proguanil. Refer for this agent.',
+    });
+  }
+
+  // ─── Arm 2: doxycycline exclusions ───
+
+  if (medical.tetracyclineAllergy) {
+    alerts.push({
+      severity: 'red-flag',
+      code: 'DOXY_ALLERGY_CI',
+      message: 'Doxycycline arm excluded: known hypersensitivity',
+      detail: 'Known hypersensitivity to doxycycline or other tetracyclines excludes this arm.',
+    });
+  }
+
+  if (medical.severeHepaticImpairment) {
+    alerts.push({
+      severity: 'red-flag',
+      code: 'HEPATIC_CI',
+      message: 'Doxycycline and mefloquine arms excluded: severe hepatic impairment',
+      detail:
+        'Known severe hepatic impairment excludes doxycycline and mefloquine. Atovaquone/proguanil is not excluded ' +
+        'on this ground.',
+    });
+  }
+
+  if (medications.takesCarbamazepinePhenytoinPhenobarbital || medications.takesRifampicinOrRifabutin) {
+    alerts.push({
+      severity: 'red-flag',
+      code: 'DOXY_INDUCER_CI',
+      message: 'Doxycycline arm excluded: carbamazepine, phenytoin, phenobarbital or rifampicin',
+      detail: 'These medicines reduce doxycycline concentrations. Refer for this agent.',
+    });
+  }
+
+  if (medications.takesIsotretinoin) {
+    alerts.push({
+      severity: 'red-flag',
+      code: 'DOXY_ISOTRETINOIN_CI',
+      message: 'Doxycycline arm excluded: taking isotretinoin',
+      detail: 'Taking isotretinoin excludes doxycycline. Refer for this agent.',
+    });
+  }
+
+  if (medical.lupusMyastheniaPorphyria) {
+    alerts.push({
+      severity: 'red-flag',
+      code: 'DOXY_SLE_MG_CI',
+      message: 'Doxycycline arm excluded: systemic lupus erythematosus, myasthenia gravis or porphyria',
+      detail: 'These conditions exclude doxycycline under this PGD.',
     });
   }
 
@@ -132,71 +313,167 @@ export function generateAMAlerts(
       code: 'DOXY_PHOTOSENSITIVITY',
       message: 'Doxycycline may cause photosensitivity',
       detail:
-        'Patient reports photosensitivity history. Advise strict sun protection if using doxycycline.',
+        'Patient reports photosensitivity history. Photosensitivity is common with doxycycline and matters in a sunny ' +
+        'destination: advise high-factor sunscreen, covering up and avoiding midday sun.',
     });
   }
 
-  // ─── Mefloquine-specific contraindications ───
+  // ─── Warfarin: A/P and doxycycline arms excluded (refer for INR monitoring) ───
+
+  if (medications.takesWarfarin) {
+    alerts.push({
+      severity: 'red-flag',
+      code: 'WARFARIN_INTERACTION',
+      message: 'Atovaquone/proguanil and doxycycline arms excluded: taking warfarin',
+      detail:
+        'Proguanil and doxycycline potentiate warfarin. The PGD says refer for INR monitoring rather than supplying ' +
+        'these agents. Advise the patient to inform their anticoagulant clinic.',
+    });
+  }
+
+  // ─── Arm 3: mefloquine exclusions ───
 
   if (medical.epilepsy) {
     alerts.push({
-      severity: 'stop',
+      severity: 'red-flag',
       code: 'MEFLOQUINE_EPILEPSY_CI',
-      message: 'Mefloquine is contraindicated in epilepsy',
+      message: 'Mefloquine arm excluded: epilepsy or seizure disorder',
       detail:
-        'Mefloquine can lower seizure threshold and worsen seizure control. Do not use.',
+        'Epilepsy or any seizure disorder is an absolute exclusion for mefloquine. Offer an alternative arm rather ' +
+        'than seeking a second opinion.',
+    });
+  }
+
+  if (medications.takesCarbamazepinePhenytoinPhenobarbital || medications.takesOtherAnticonvulsant) {
+    alerts.push({
+      severity: 'red-flag',
+      code: 'MEFLOQUINE_ANTICONVULSANT_CI',
+      message: 'Mefloquine arm excluded: taking an anticonvulsant',
+      detail: 'Taking an anticonvulsant excludes mefloquine under this PGD.',
     });
   }
 
   if (medical.psychiatricHistory) {
     alerts.push({
-      severity: 'stop',
+      severity: 'red-flag',
       code: 'MEFLOQUINE_PSYCH_CI',
-      message: 'Mefloquine is contraindicated with psychiatric history',
+      message: 'Mefloquine arm excluded: current or previous psychiatric disorder',
       detail:
-        'Mefloquine is associated with neuropsychiatric adverse effects. Contraindicated if previous psychiatric illness.',
+        'ANY current or previous psychiatric disorder, including depression, anxiety, psychosis or a suicide attempt ' +
+        'at any time, is an absolute exclusion for mefloquine. Offer an alternative arm rather than seeking a second opinion.',
+    });
+  }
+
+  if (medications.takesBupropionOrSeizureLowering) {
+    alerts.push({
+      severity: 'red-flag',
+      code: 'MEFLOQUINE_BUPROPION_CI',
+      message: 'Mefloquine arm excluded: bupropion or a seizure-threshold-lowering medicine',
+      detail: 'Taking bupropion, or any other medicine that lowers the seizure threshold, excludes mefloquine. Refer for this agent.',
+    });
+  }
+
+  if (medications.takesHalofantrineOrKetoconazole) {
+    alerts.push({
+      severity: 'red-flag',
+      code: 'MEFLOQUINE_HALOFANTRINE_CI',
+      message: 'Mefloquine arm excluded: halofantrine or ketoconazole',
+      detail: 'Taking, or planning to take, halofantrine or ketoconazole excludes mefloquine.',
+    });
+  }
+
+  if (medical.blackwaterFever) {
+    alerts.push({
+      severity: 'red-flag',
+      code: 'MEFLOQUINE_BLACKWATER_CI',
+      message: 'Mefloquine arm excluded: history of Blackwater fever',
+      detail: 'A history of Blackwater fever excludes mefloquine.',
+    });
+  }
+
+  if (medical.mefloquineQuinineAllergy) {
+    alerts.push({
+      severity: 'red-flag',
+      code: 'MEFLOQUINE_ALLERGY_CI',
+      message: 'Mefloquine arm excluded: hypersensitivity to mefloquine, quinine or quinidine',
+      detail: 'Known hypersensitivity to mefloquine, quinine or quinidine excludes this arm.',
     });
   }
 
   if (medical.qTprolongation) {
     alerts.push({
-      severity: 'stop',
+      severity: 'red-flag',
       code: 'MEFLOQUINE_QT_CI',
-      message: 'Mefloquine is contraindicated with QT prolongation',
+      message: 'Mefloquine arm excluded: QT prolongation, family history, or QT-prolonging medicines',
       detail:
-        'Mefloquine can prolong QT interval. Do not use if patient has history of QT prolongation.',
+        'Known QT prolongation, a family history of it, or concurrent QT-prolonging medicines exclude mefloquine. ' +
+        'Mefloquine carries QT prolongation and arrhythmia in its SPC as rare but serious. Refer for this agent.',
     });
   }
 
   if (medical.arrhythmia) {
     alerts.push({
-      severity: 'caution',
+      severity: 'red-flag',
       code: 'MEFLOQUINE_ARRHYTHMIA',
-      message: 'Caution: Mefloquine and cardiac arrhythmia',
+      message: 'Mefloquine arm excluded: cardiac conduction disorder or family history',
       detail:
-        'Mefloquine can affect heart rhythm. Use with caution; monitor patient. Consider alternative if possible.',
+        'A known cardiac conduction disorder, or a family history of one, excludes mefloquine. Refer for this agent.',
     });
   }
 
-  // ─── Drug interactions ───
-
-  if (medications.takesWarfarin) {
+  if (medical.pilotOrDiver) {
     alerts.push({
-      severity: 'caution',
-      code: 'WARFARIN_INTERACTION',
-      message: 'Antimalarials may interact with warfarin',
-      detail:
-        'Some antimalarials can affect warfarin metabolism. Monitor INR closely. Advise patient to inform anticoagulation clinic.',
+      severity: 'red-flag',
+      code: 'MEFLOQUINE_OCCUPATION_CI',
+      message: 'Mefloquine arm excluded: occupation requiring fine coordination or spatial discrimination',
+      detail: 'Pilots, divers and similar occupations are excluded from mefloquine. Refer for this agent.',
     });
   }
+
+  const daysUntilDeparture = calculateDaysUntilDeparture(travel.departureDate);
+  if (daysUntilDeparture !== null && daysUntilDeparture < 14) {
+    alerts.push({
+      severity: 'red-flag',
+      code: 'MEFLOQUINE_LATE_DEPARTURE',
+      message: 'Mefloquine arm excluded: departing within 2 weeks',
+      detail:
+        'Mefloquine is started 2 to 3 weeks before travel so that tolerability can be assessed before departure. ' +
+        'Do not supply it to a traveller leaving within 2 weeks. Atovaquone/proguanil or doxycycline can be started ' +
+        '1 to 2 days before travel.',
+    });
+  }
+
+  // ─── Maximum treatment periods ───
+
+  if (travel.tripDuration !== null && travel.tripDuration > 365) {
+    alerts.push({
+      severity: 'red-flag',
+      code: 'MAX_PERIOD_AP_MEFLOQUINE',
+      message: 'Atovaquone/proguanil and mefloquine arms excluded: trip longer than 12 months',
+      detail:
+        'Continuous use of atovaquone/proguanil is supported for up to 12 months and mefloquine for up to 1 year. ' +
+        'Beyond that, refer for specialist advice.',
+    });
+  }
+  if (travel.tripDuration !== null && travel.tripDuration > 730) {
+    alerts.push({
+      severity: 'red-flag',
+      code: 'MAX_PERIOD_DOXY',
+      message: 'Doxycycline arm excluded: trip longer than 2 years',
+      detail: 'Continuous use of doxycycline is supported for up to 2 years. Beyond that, refer.',
+    });
+  }
+
+  // ─── Other interactions and cautions ───
 
   if (medications.takesOralContraception) {
     alerts.push({
       severity: 'caution',
       code: 'DOXY_OCP_INTERACTION',
-      message: 'Doxycycline may reduce oral contraceptive efficacy',
+      message: 'Oral contraception: no extra precautions needed with doxycycline unless vomiting or diarrhoea',
       detail:
-        'If choosing doxycycline, advise patient to use backup contraception (condoms) during and for 7 days after treatment.',
+        'Doxycycline is a non-enzyme-inducing antibiotic, so additional contraceptive precautions are not required ' +
+        'with combined or progestogen-only oral contraceptives unless vomiting or diarrhoea occur.',
     });
   }
 
@@ -204,21 +481,35 @@ export function generateAMAlerts(
     alerts.push({
       severity: 'caution',
       code: 'ANTACID_INTERACTION',
-      message: 'Antacids may reduce antimalarial absorption',
+      message: 'Antacids, iron and dairy: separate from doxycycline by at least 2 hours',
       detail:
-        'If patient takes antacids, space them apart from antimalarials. Advise timing to pharmacy.',
+        'If doxycycline is chosen, advise the patient to avoid indigestion remedies, iron tablets and milk within ' +
+        '2 hours of a dose.',
     });
   }
 
-  // ─── G6PD deficiency ───
-
   if (medical.g6pdDeficiency) {
     alerts.push({
-      severity: 'red-flag',
+      severity: 'caution',
       code: 'G6PD_DEFICIENCY',
       message: 'Patient has G6PD deficiency',
       detail:
-        'G6PD deficiency may affect choice of antimalarial. Consider testing severity and ethnicity-specific risk. Refer to specialist if unsure.',
+        'UKMEAG guidance summarised in the PGD states that atovaquone/proguanil, doxycycline and mefloquine can all ' +
+        'be used in G6PD deficiency. Record the diagnosis and refer if unsure.',
+    });
+  }
+
+  // ─── No arm remains ───
+
+  const ci = identifyMedicineContraindications(medical, medications, travel);
+  if (ci.malarone && ci.doxycycline && ci.mefloquine) {
+    alerts.push({
+      severity: 'stop',
+      code: 'NO_SUITABLE_ARM',
+      message: 'No arm of this PGD is suitable for this patient',
+      detail:
+        'Every agent is excluded. Refer to a travel clinic or the GP, give bite avoidance advice regardless, and ' +
+        'document the advice and the decision.',
     });
   }
 
@@ -236,23 +527,85 @@ export function identifyMedicineContraindications(
   doxycycline: boolean;
   mefloquine: boolean;
 } {
-  const malaroneCI =
-    medical.severeRenalImpairment ||
-    medical.severeHepaticImpairment ||
-    travel.currentlyPregnant;
+  const longerThanYear = travel.tripDuration !== null && travel.tripDuration > 365;
+  const longerThanTwoYears = travel.tripDuration !== null && travel.tripDuration > 730;
+  const daysUntilDeparture = calculateDaysUntilDeparture(travel.departureDate);
 
-  const doxyCI = travel.currentlyPregnant || travel.breastfeeding;
+  const malaroneCI =
+    travel.currentlyPregnant ||
+    travel.breastfeeding ||
+    (travel.weightKg !== null && travel.weightKg < 11) ||
+    medical.atovaquoneProguanilAllergy ||
+    medical.severeRenalImpairment ||
+    medications.takesRifampicinOrRifabutin ||
+    medications.takesMetoclopramideOrTetracycline ||
+    medications.takesAntiretroviralsOrPyrimethamine ||
+    medications.takesWarfarin ||
+    longerThanYear;
+
+  const doxyCI =
+    travel.currentlyPregnant ||
+    travel.breastfeeding ||
+    medical.tetracyclineAllergy ||
+    medical.severeHepaticImpairment ||
+    medications.takesWarfarin ||
+    medications.takesCarbamazepinePhenytoinPhenobarbital ||
+    medications.takesRifampicinOrRifabutin ||
+    medications.takesIsotretinoin ||
+    medical.lupusMyastheniaPorphyria ||
+    longerThanTwoYears;
 
   const mefloquineCI =
-    medical.epilepsy ||
+    travel.currentlyPregnant ||
+    travel.breastfeeding ||
+    (travel.weightKg !== null && travel.weightKg < 5) ||
     medical.psychiatricHistory ||
-    medical.qTprolongation;
+    medical.epilepsy ||
+    medications.takesCarbamazepinePhenytoinPhenobarbital ||
+    medications.takesOtherAnticonvulsant ||
+    medications.takesBupropionOrSeizureLowering ||
+    medications.takesHalofantrineOrKetoconazole ||
+    medical.blackwaterFever ||
+    medical.mefloquineQuinineAllergy ||
+    medical.qTprolongation ||
+    medical.arrhythmia ||
+    medical.severeHepaticImpairment ||
+    medical.pilotOrDiver ||
+    (daysUntilDeparture !== null && daysUntilDeparture < 14) ||
+    longerThanYear;
 
   return {
     malarone: malaroneCI,
     doxycycline: doxyCI,
     mefloquine: mefloquineCI,
   };
+}
+
+// ─── Eligible medicine options for the selector (exclusions enforced) ───
+
+export function getEligibleMedicineOptions(
+  medical: AMMedicalHistory,
+  medications: AMMedications,
+  travel: AMTravelAssessment
+): { value: AMMedicineChoice; label: string }[] {
+  const ci = identifyMedicineContraindications(medical, medications, travel);
+  const options: { value: AMMedicineChoice; label: string }[] = [];
+  const apBand = getAtovaquoneProguanilBand(travel.weightKg);
+
+  if (!ci.malarone && apBand) {
+    if (apBand.product === 'malarone') {
+      options.push({ value: 'malarone', label: 'Atovaquone/Proguanil (Malarone) 250mg/100mg adult tablets, over 40kg' });
+    } else {
+      options.push({ value: 'malarone-paediatric', label: 'Atovaquone/Proguanil (Malarone Paediatric) 62.5mg/25mg tablets, 11 to 40kg' });
+    }
+  }
+  if (!ci.doxycycline) {
+    options.push({ value: 'doxycycline', label: 'Doxycycline 100mg capsules' });
+  }
+  if (!ci.mefloquine && getMefloquineBand(travel.weightKg)) {
+    options.push({ value: 'mefloquine', label: 'Mefloquine 250mg tablets' });
+  }
+  return options;
 }
 
 // ─── Dose and timing recommendations ───
@@ -262,53 +615,84 @@ export interface MedicineRecommendation {
   dose: string;
   startTiming: string;
   continuationAfterReturn: string;
+  quantity: string;
+  maxPeriod: string;
   reason: string;
+}
+
+function describeArm(
+  choice: AMMedicineChoice,
+  travel: AMTravelAssessment
+): MedicineRecommendation | null {
+  const days = travel.tripDuration;
+  const daysText = days === null ? 'days in area' : String(days);
+
+  if (choice === 'malarone' || choice === 'malarone-paediatric') {
+    const band = getAtovaquoneProguanilBand(travel.weightKg);
+    if (!band) return null;
+    const perDay = band.tabletsPerDay;
+    const total = days === null ? null : (2 + days + 7) * perDay;
+    return {
+      medicine: band.productName,
+      dose: `${perDay} ${band.product === 'malarone' ? 'adult' : 'paediatric'} tablet${perDay > 1 ? 's' : ''} once daily, at the same time each day, with food or a milky drink (weight band ${band.label})`,
+      startTiming: '1 to 2 days before entering the malarious area',
+      continuationAfterReturn: 'Continue daily throughout and for 7 DAYS after leaving the malarious area',
+      quantity:
+        `(2 lead-in + ${daysText} + 7 tail) x ${perDay} per day` +
+        (total !== null ? ` = ${total} tablets` : ''),
+      maxPeriod: 'Continuous use for up to 12 months. Beyond that, refer for specialist advice.',
+      reason: 'Supply the whole course. A short supply leaves the traveller unprotected at the end, which is when risk is highest.',
+    };
+  }
+
+  if (choice === 'doxycycline') {
+    const total = days === null ? null : 2 + days + 28;
+    return {
+      medicine: 'Doxycycline 100mg capsules',
+      dose: '100mg (one capsule) once daily, swallowed with plenty of water sitting or standing, well before lying down',
+      startTiming: '1 to 2 days before entering the malarious area',
+      continuationAfterReturn: 'Continue daily throughout and for 4 WEEKS (28 days) after leaving the malarious area',
+      quantity: `2 lead-in + ${daysText} + 28 tail` + (total !== null ? ` = ${total} capsules` : '') + '. A quantity below 30 cannot be correct for any itinerary.',
+      maxPeriod: 'Continuous use for up to 2 years. Beyond that, refer.',
+      reason: 'Supply the whole course including the 4 week tail.',
+    };
+  }
+
+  if (choice === 'mefloquine') {
+    const band = getMefloquineBand(travel.weightKg);
+    if (!band) return null;
+    const weeks = days === null ? null : Math.ceil(days / 7);
+    const doses = weeks === null ? null : 3 + weeks + 4;
+    return {
+      medicine: 'Mefloquine 250mg tablets',
+      dose: `${band.doseText}, on the same day each week, with food and plenty of water (weight band ${band.label})`,
+      startTiming: '2 to 3 weeks before travel, so that tolerability can be assessed before departure',
+      continuationAfterReturn: 'Continue weekly throughout and for 4 WEEKS after leaving the malarious area',
+      quantity:
+        `3 lead-in + ${weeks === null ? 'weeks in area' : weeks} + 4 tail` +
+        (doses !== null ? ` = ${doses} weekly doses` : '') +
+        (band.tabletFraction < 1 ? ' (divided dose: tablet must be scored)' : ' = tablets'),
+      maxPeriod: 'Continuous use for up to 1 year. Beyond that, refer.',
+      reason: 'Tell the patient to STOP and seek advice at the first neuropsychiatric symptom, including insomnia and abnormal dreams.',
+    };
+  }
+
+  return null;
 }
 
 export function recommendMedicine(
   medical: AMMedicalHistory,
   medications: AMMedications,
-  travel: AMTravelAssessment
+  travel: AMTravelAssessment,
+  selected: AMMedicineChoice = ''
 ): MedicineRecommendation | null {
-  const ci = identifyMedicineContraindications(medical, medications, travel);
+  const options = getEligibleMedicineOptions(medical, medications, travel);
+  if (options.length === 0) return null;
 
-  // ─── Malarone (atovaquone/proguanil 250/100mg) ───
-  if (!ci.malarone) {
-    return {
-      medicine: 'Atovaquone/Proguanil (Malarone) 250/100mg',
-      dose: '1 tablet daily',
-      startTiming: '1–2 days before travel',
-      continuationAfterReturn: 'Continue for 7 days after leaving malaria area',
-      reason:
-        'Malarone is well-tolerated, effective, and suitable. Start early, continue post-travel.',
-    };
-  }
+  const choice: AMMedicineChoice =
+    selected && options.some((o) => o.value === selected) ? selected : options[0].value;
 
-  // ─── Doxycycline (100mg daily) ───
-  if (!ci.doxycycline && !medical.photosensitivity) {
-    return {
-      medicine: 'Doxycycline 100mg',
-      dose: '1 tablet daily',
-      startTiming: '1–2 days before travel',
-      continuationAfterReturn: 'Continue for 4 weeks after leaving malaria area',
-      reason:
-        'Doxycycline is cost-effective and widely used. Start early, longer post-travel duration.',
-    };
-  }
-
-  // ─── Mefloquine (250mg weekly) ───
-  if (!ci.mefloquine && !medical.arrhythmia) {
-    return {
-      medicine: 'Mefloquine 250mg',
-      dose: '1 tablet weekly',
-      startTiming: '2–3 weeks before travel (allows tolerance assessment)',
-      continuationAfterReturn: 'Continue for 4 weeks after leaving malaria area',
-      reason:
-        'Mefloquine is given weekly. Start well in advance to assess tolerance and watch for neuropsychiatric effects.',
-    };
-  }
-
-  return null;
+  return describeArm(choice, travel);
 }
 
 // ─── Check if consultation can proceed ───

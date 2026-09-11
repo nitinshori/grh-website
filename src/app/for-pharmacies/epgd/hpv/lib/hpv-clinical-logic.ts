@@ -2,8 +2,8 @@ import type { HPVConsultationState } from "./hpv-types";
 import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
 
 // ─────────────────────────────────────────────────────────────────────────
-// Clinical logic for the HPV PGD, aligned to signed document v002
-// (8 Sep 2026), Green Book chapter 18a (June 2023) and the Gardasil 9
+// Clinical logic for the HPV PGD, aligned to signed document v004
+// (11 Sep 2026), Green Book chapter 18a (June 2023) and the Gardasil 9
 // SPC (text revised 13 Sep 2024).
 //
 // Schedule, which is chosen from age at first dose and immune status:
@@ -28,6 +28,20 @@ export interface HPVSchedule {
   basis: string;
 }
 
+/** Number of previous HPV vaccine doses recorded, 0 where none or unknown. */
+function priorDoseCount(state: HPVConsultationState): number {
+  switch (state.assessment.priorDoses) {
+    case "one":
+      return 1;
+    case "two":
+      return 2;
+    case "three":
+      return 3;
+    default:
+      return 0;
+  }
+}
+
 /** Selects the schedule. Returns null while age or immune status is unknown. */
 export function selectSchedule(state: HPVConsultationState): HPVSchedule | null {
   const age = state.patient.age;
@@ -45,6 +59,28 @@ export function selectSchedule(state: HPVConsultationState): HPVSchedule | null 
     };
   }
 
+  const schedule = selectCourse(state, age);
+
+  // Exclusion (PGD v004): has already completed a full course of HPV vaccine
+  // appropriate to their age and immune status.
+  if (priorDoseCount(state) >= schedule.doses) {
+    return {
+      key: "complete",
+      doses: 0,
+      label: "No further doses required",
+      intervals: `The patient has already received ${priorDoseCount(state)} dose${
+        priorDoseCount(state) === 1 ? "" : "s"
+      }, which completes the ${schedule.doses}-dose course appropriate to their age and immune status.`,
+      offLabel: false,
+      basis: "PGD exclusion: full course already completed for age and immune status.",
+    };
+  }
+
+  return schedule;
+}
+
+/** The course that applies from age at first dose and immune status, ignoring prior doses. */
+function selectCourse(state: HPVConsultationState, age: number): HPVSchedule {
   if (state.assessment.immunosuppressedOrHIV) {
     return {
       key: "three-dose",
@@ -133,9 +169,10 @@ export function getAllAlerts(state: HPVConsultationState): ClinicalAlert[] {
     alerts.push({
       severity: "stop",
       code: "HPV_COMPONENT_ANAPHYLAXIS",
-      message: "Confirmed anaphylaxis to a component of Gardasil 9",
+      message:
+        "Confirmed anaphylaxis to a component of Gardasil 9, or hypersensitivity after previous Gardasil 9, Gardasil or Silgard",
       detail:
-        "Contraindicated. Excipients are sodium chloride, histidine, polysorbate 80, borax and water for injections, with amorphous aluminium hydroxyphosphate sulfate adjuvant. Refer.",
+        "Contraindicated. Excipients are sodium chloride, histidine, polysorbate 80, borax and water for injections, with amorphous aluminium hydroxyphosphate sulfate adjuvant. Refer to the GP or an allergy service rather than simply declining.",
     });
   }
 
@@ -144,8 +181,7 @@ export function getAllAlerts(state: HPVConsultationState): ClinicalAlert[] {
       severity: "stop",
       code: "HPV_COURSE_COMPLETE",
       message: "Course already complete: no further dose required",
-      detail:
-        "A single dose received before the 25th birthday completes the course under current UK policy. Do not give, and do not charge for, a further dose. Explain this to the patient.",
+      detail: `${schedule.intervals} Do not give, and do not charge for, a further dose. Explain this to the patient.`,
     });
   }
 
@@ -188,6 +224,16 @@ export function getAllAlerts(state: HPVConsultationState): ClinicalAlert[] {
       message: "Bleeding disorder or anticoagulation: adjust technique",
       detail:
         "Intramuscular vaccination is generally acceptable. Use a 23 gauge or finer needle and apply firm pressure without rubbing for at least two minutes. For haemophilia treatment, vaccinate shortly after a dose of that treatment. A patient on stable warfarin, up to date with INR testing and with a latest INR below the top of their therapeutic range, may be vaccinated intramuscularly. If in doubt, contact the clinician responsible for the anticoagulation.",
+    });
+  }
+
+  if (state.assessment.bloodProductsLast3Months) {
+    alerts.push({
+      severity: "caution",
+      code: "HPV_BLOOD_PRODUCTS",
+      message: "Immunoglobulin or blood products within the previous three months: record it",
+      detail:
+        "Not studied with Gardasil 9. Not a contraindication. Vaccinate and record it on the consultation record.",
     });
   }
 

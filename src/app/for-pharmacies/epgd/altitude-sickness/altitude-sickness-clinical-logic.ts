@@ -1,4 +1,6 @@
 // ─── Altitude Sickness Clinical Logic ───
+// Aligned to the Acetazolamide for Altitude Sickness PGD, version 003,
+// issued 11 September 2026.
 
 import type { ClinicalAlert } from '../shared/types';
 import type {
@@ -6,6 +8,13 @@ import type {
   ASMedicalHistory,
   ASMedications,
 } from './altitude-sickness-types';
+
+export const AS_PGD_VERSION = 'Acetazolamide for Altitude Sickness PGD v003, issued 11 September 2026';
+
+// PGD v003 quantity limits (tablets per supply)
+export const AS_MAX_PREVENTION_TABLETS = 14;
+export const AS_TREATMENT_TABLETS = 6;
+export const AS_MAX_TOTAL_TABLETS = 20;
 
 // ─── Generate clinical alerts ───
 
@@ -16,6 +25,18 @@ export function generateASAlerts(
 ): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
 
+  // ─── Inclusion: altitude above 2,500 metres ───
+
+  if (travel.destinationAltitude !== null && travel.destinationAltitude <= 2500) {
+    alerts.push({
+      severity: 'stop',
+      code: 'ALTITUDE_BELOW_2500',
+      message: 'Destination altitude is not above 2,500 metres',
+      detail:
+        'This PGD covers adults travelling to, or currently at, altitudes above 2,500 metres. Acetazolamide cannot be supplied under it for this itinerary.',
+    });
+  }
+
   // ─── Acetazolamide contraindications ───
 
   if (medical.sulfonamideAllergy) {
@@ -24,7 +45,7 @@ export function generateASAlerts(
       code: 'ACETAZOLAMIDE_ALLERGY_CI',
       message: 'Acetazolamide is contraindicated',
       detail:
-        'Patient has sulfonamide allergy. Acetazolamide is a sulfonamide derivative. Do not use.',
+        'Known hypersensitivity to acetazolamide or sulfonamides. Do not use.',
     });
   }
 
@@ -34,7 +55,7 @@ export function generateASAlerts(
       code: 'ACETAZOLAMIDE_LIVER_CI',
       message: 'Acetazolamide is contraindicated',
       detail:
-        'Patient has severe hepatic impairment. Acetazolamide is contraindicated.',
+        'Severe hepatic impairment or hepatic cirrhosis. Acetazolamide is contraindicated.',
     });
   }
 
@@ -78,7 +99,57 @@ export function generateASAlerts(
     });
   }
 
+  if (medical.metabolicAcidosisOrElectrolyteImbalance) {
+    alerts.push({
+      severity: 'stop',
+      code: 'ACETAZOLAMIDE_ACIDOSIS_CI',
+      message: 'Acetazolamide is contraindicated',
+      detail:
+        'Hyperchloraemic (metabolic) acidosis, or a history of electrolyte imbalance. Acetazolamide is contraindicated.',
+    });
+  }
+
+  if (medical.pulmonaryOedemaAfterAcetazolamide) {
+    alerts.push({
+      severity: 'stop',
+      code: 'ACETAZOLAMIDE_PULMONARY_OEDEMA_CI',
+      message: 'Acetazolamide is contraindicated',
+      detail:
+        'Previous non-cardiogenic pulmonary oedema after acetazolamide. Do not use.',
+    });
+  }
+
+  if (medical.pregnantOrBreastfeeding) {
+    alerts.push({
+      severity: 'stop',
+      code: 'PREGNANCY_ALTITUDE',
+      message: 'Patient is pregnant or breastfeeding',
+      detail:
+        'Pregnancy or breastfeeding is an exclusion under this PGD. Advise on alternative options (gradual ascent) and refer to the GP as appropriate.',
+    });
+  }
+
+  if (medications.takesLithium || medications.takesPhenytoin || medications.takesHighDoseAspirin || medications.takesThiazideDiuretics) {
+    alerts.push({
+      severity: 'stop',
+      code: 'ACETAZOLAMIDE_INTERACTING_MEDICINE',
+      message: 'Taking lithium, phenytoin, high-dose aspirin or a potassium-depleting diuretic',
+      detail:
+        'These medicines are an exclusion under this PGD. Refer to the GP.',
+    });
+  }
+
   // ─── Cautions ───
+
+  if (medical.mildRenalImpairment) {
+    alerts.push({
+      severity: 'caution',
+      code: 'ACETAZOLAMIDE_MILD_RENAL_CAUTION',
+      message: 'Caution: mild renal impairment',
+      detail:
+        'Use with caution in mild renal impairment. Monitor for symptoms of electrolyte imbalance and dehydration; advise adequate hydration.',
+    });
+  }
 
   if (medical.renalStoneHistory) {
     alerts.push({
@@ -86,7 +157,7 @@ export function generateASAlerts(
       code: 'ACETAZOLAMIDE_STONES_CAUTION',
       message: 'Caution: Renal stone history',
       detail:
-        'Acetazolamide increases uric acid excretion. Patient should increase fluid intake significantly (aim 2.5–3L/day).',
+        'Acetazolamide increases uric acid excretion. Patient should increase fluid intake significantly (aim 2.5 to 3 litres a day).',
     });
   }
 
@@ -120,27 +191,7 @@ export function generateASAlerts(
     });
   }
 
-  if (medical.pregnantOrBreastfeeding) {
-    alerts.push({
-      severity: 'caution',
-      code: 'PREGNANCY_ALTITUDE',
-      message: 'Patient is pregnant or breastfeeding',
-      detail:
-        'Acetazolamide is relatively safe in pregnancy but specialist advice recommended. Consider non-pharmacological prevention (slow ascent).',
-    });
-  }
-
   // ─── Drug interactions ───
-
-  if (medications.takesThiazideDiuretics) {
-    alerts.push({
-      severity: 'caution',
-      code: 'THIAZIDE_INTERACTION',
-      message: 'Thiazide interaction with acetazolamide',
-      detail:
-        'Both cause potassium loss. Monitor K+ levels. May need supplementation.',
-    });
-  }
 
   if (medications.takesACEInhibitors) {
     alerts.push({
@@ -204,24 +255,53 @@ export function recommendMedicine(
   medications: ASMedications,
   travel: ASTravelAssessment
 ): AltitudeSicknessRecommendation | null {
-  // Check contraindications
+  // Check contraindications (PGD v003 exclusion criteria)
   if (
     medical.sulfonamideAllergy ||
     medical.severeHepaticImpairment ||
     medical.severeRenalImpairment ||
     medical.adrenalInsufficiency ||
     medical.hypokalaemia ||
-    medical.hyponatraemia
+    medical.hyponatraemia ||
+    medical.metabolicAcidosisOrElectrolyteImbalance ||
+    medical.pulmonaryOedemaAfterAcetazolamide ||
+    medical.pregnantOrBreastfeeding ||
+    medications.takesLithium ||
+    medications.takesPhenytoin ||
+    medications.takesHighDoseAspirin ||
+    medications.takesThiazideDiuretics ||
+    (travel.destinationAltitude !== null && travel.destinationAltitude <= 2500)
   ) {
     return null; // Do not recommend if contraindicated
   }
 
+  if (travel.purpose === 'treatment') {
+    return {
+      medicine: 'Acetazolamide 250 mg tablets (scored)',
+      dose: '250 mg (one tablet) twice daily for up to 3 days',
+      startTiming: 'At symptom onset',
+      continuationTiming: 'Maximum 3 days; 6 tablets. Acetazolamide is not a substitute for descent.',
+      reason:
+        'Symptomatic treatment of AMS under the PGD, as an adjunct to rest or descent. Descent is the definitive treatment. Off-label use: tell the patient and record it.',
+    };
+  }
+
   return {
-    medicine: 'Acetazolamide 250mg',
-    dose: '250mg twice daily (morning and evening)',
-    startTiming: '1–2 days before ascent',
-    continuationTiming: '2 days after reaching highest altitude',
+    medicine: 'Acetazolamide 250 mg tablets (scored)',
+    dose: '125 mg (half a 250 mg tablet) twice daily',
+    startTiming: '1 to 2 days before ascent',
+    continuationTiming: 'Continue for 2 days after reaching the highest altitude, or until descent begins. Maximum 14 tablets (28 doses, 14 days) per supply without review. Treatment course of 6 tablets (250 mg twice daily for 3 days) may be added where the itinerary makes descent difficult; maximum total 20 tablets.',
     reason:
-      'Acetazolamide helps prevent acute mountain sickness by enhancing respiratory acclimatisation and promoting diuresis. Start early to assess tolerance.',
+      'Prevention of AMS under the PGD. Quantity: half a tablet twice daily for (1 to 2 lead-in days + days ascending + 2 days), rounded up to whole tablets. Off-label use: tell the patient and record it.',
   };
+}
+
+// ─── Maximum quantity for the chosen regimen (PGD v003) ───
+
+export function maxQuantityTablets(
+  purpose: ASTravelAssessment['purpose'],
+  includeTreatmentCourse: boolean
+): number {
+  if (purpose === 'treatment') return AS_TREATMENT_TABLETS;
+  return includeTreatmentCourse ? AS_MAX_TOTAL_TABLETS : AS_MAX_PREVENTION_TABLETS;
 }

@@ -29,20 +29,12 @@ export const CounsellingStep: React.FC<CounsellingStepProps> = ({
     onChange({ ...counselling, [field]: value });
   };
 
-  const allConfirmed =
-    counselling.completeCourse &&
-    counselling.painManagement &&
-    counselling.rashCare &&
-    counselling.contagiousPeriod &&
-    counselling.pregnancyExposure &&
-    counselling.PHNRisk &&
-    counselling.returnIfWorsening &&
-    counselling.vaccinationAdvice;
+  const allConfirmed = validationError === null;
 
   return (
     <StepWrapper
       title="Counselling"
-      description="Confirm patient counselling on antiviral use and self-care"
+      description="Confirm patient counselling on antiviral use, infection control and safety netting, and record that it was given"
       currentStep={currentStep}
       totalSteps={totalSteps}
       onNext={onNext}
@@ -57,50 +49,58 @@ export const CounsellingStep: React.FC<CounsellingStepProps> = ({
 
           <div className="space-y-4">
             <div className="bg-white border-l-4 border-blue-500 p-3 rounded">
-              <h4 className="font-semibold text-sm text-gray-900 mb-2">Complete the Full Course</h4>
+              <h4 className="font-semibold text-sm text-gray-900 mb-2">Complete the full course</h4>
               <p className="text-sm text-gray-700 mb-3">
-                Patient must complete all tablets even if symptoms improve before finishing the course.
-                Stopping early increases risk of prolonged pain and complications.
+                The patient must complete the course even if symptoms improve. Antivirals reduce the severity and duration of the episode but do not cure it instantly, and some pain may persist.
               </p>
               <Checkbox
-                label="Counselled patient on completing full 7-day course"
+                label="Counselled patient on completing the full course"
                 checked={counselling.completeCourse}
                 onChange={(v) => handleChange('completeCourse', v)}
               />
             </div>
 
             <div className="bg-white border-l-4 border-blue-500 p-3 rounded">
-              <h4 className="font-semibold text-sm text-gray-900 mb-2">Administration Instructions</h4>
+              <h4 className="font-semibold text-sm text-gray-900 mb-2">Patient information leaflet and dosing schedule</h4>
               <ul className="text-sm text-gray-700 list-disc list-inside mb-3 space-y-1">
-                <li>Take with food or water if GI upset occurs</li>
-                <li>Maintain adequate hydration (drink plenty of water)</li>
-                <li>Do not exceed recommended dose</li>
-                <li>Take at regular intervals throughout the day</li>
+                <li>Give the patient the manufacturer&apos;s patient information leaflet</li>
+                <li>Explain the dosing schedule clearly; for aciclovir, five doses a day is demanding and the course will not work well if doses are missed</li>
+                <li>Antivirals reduce the severity and duration of the episode but do not cure it instantly</li>
+                <li>Return any unused medicine to a pharmacy for disposal</li>
               </ul>
-              <p className="text-sm text-gray-700 italic">
-                (This is implicit in dispensing printed counselling/labels)
+              <Checkbox
+                label="Leaflet given, dosing schedule explained, and return of unused medicine advised"
+                checked={counselling.leafletAndDosing}
+                onChange={(v) => handleChange('leafletAndDosing', v)}
+              />
+            </div>
+
+            <div className="bg-white border-l-4 border-blue-500 p-3 rounded">
+              <h4 className="font-semibold text-sm text-gray-900 mb-2">Fluid intake</h4>
+              <p className="text-sm text-gray-700 mb-3">
+                Maintain a good fluid intake throughout the course, particularly if elderly. Counsel firmly where the patient takes other nephrotoxic medicines.
               </p>
+              <Checkbox
+                label="Counselled on maintaining a good fluid intake throughout the course"
+                checked={counselling.hydration}
+                onChange={(v) => handleChange('hydration', v)}
+              />
             </div>
           </div>
         </div>
 
         {/* Pain Management */}
         <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-          <h3 className="font-semibold text-orange-900 mb-3">Pain Management Counselling</h3>
+          <h3 className="font-semibold text-orange-900 mb-3">Pain</h3>
 
           <div className="space-y-4">
             <div className="bg-white border-l-4 border-orange-500 p-3 rounded">
-              <p className="text-sm text-gray-700 mb-3">
-                Patient should be advised on safe analgesia options alongside antiviral therapy:
-              </p>
               <ul className="text-sm text-gray-700 list-disc list-inside mb-3 space-y-1">
-                <li><strong>Paracetamol</strong> - up to 1g four times daily (4g max per day)</li>
-                <li><strong>Ibuprofen</strong> - up to 400mg three times daily with food (check renal function)</li>
-                <li><strong>Cool compresses</strong> - apply to rash to reduce pain and itching</li>
-                <li><strong>Topical lidocaine</strong> - may be applied to affected area if needed</li>
+                <li>For mild pain, paracetamol alone or with codeine, or an NSAID such as ibuprofen, subject to the usual contraindications</li>
+                <li>Refer urgently to a prescriber if pain is not controlled by over-the-counter analgesia</li>
               </ul>
               <Checkbox
-                label="Counselled on pain management (paracetamol, ibuprofen, cool compresses)"
+                label="Counselled on pain management (paracetamol with or without codeine, or an NSAID) and when to seek help"
                 checked={counselling.painManagement}
                 onChange={(v) => handleChange('painManagement', v)}
               />
@@ -110,23 +110,20 @@ export const CounsellingStep: React.FC<CounsellingStepProps> = ({
 
         {/* Rash Care */}
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <h3 className="font-semibold text-green-900 mb-3">Rash Care Counselling</h3>
+          <h3 className="font-semibold text-green-900 mb-3">Infection control: practical advice</h3>
 
           <div className="space-y-4">
             <div className="bg-white border-l-4 border-green-500 p-3 rounded">
-              <p className="text-sm text-gray-700 mb-3">
-                Patient should be advised on self-care to prevent infection and reduce symptoms:
-              </p>
               <ul className="text-sm text-gray-700 list-disc list-inside mb-3 space-y-1">
-                <li>Keep rash clean and dry</li>
-                <li>Wear loose cotton clothing to avoid irritation</li>
-                <li>Do not scratch or pick at lesions (infection risk)</li>
-                <li>Use non-adherent dressings if needed</li>
-                <li>Calamine lotion or zinc oxide may soothe itching</li>
-                <li>Avoid perfumed products on the rash area</li>
+                <li>Cover weeping lesions that are not under clothing</li>
+                <li>Keep the rash clean and dry</li>
+                <li>Wear loose clothing</li>
+                <li>Wash hands often; do not share towels or clothes</li>
+                <li>Avoid topical creams and adhesive dressings</li>
+                <li>Work, school and childcare need only be avoided while the rash is weeping and cannot be covered</li>
               </ul>
               <Checkbox
-                label="Counselled on rash care (keep clean, loose clothing, calamine)"
+                label="Counselled on rash care (cover weeping lesions, keep clean and dry, loose clothing, hand washing, no topical creams or adhesive dressings)"
                 checked={counselling.rashCare}
                 onChange={(v) => handleChange('rashCare', v)}
               />
@@ -136,22 +133,17 @@ export const CounsellingStep: React.FC<CounsellingStepProps> = ({
 
         {/* Contagiousness */}
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <h3 className="font-semibold text-red-900 mb-3">Contagiousness Period Counselling</h3>
+          <h3 className="font-semibold text-red-900 mb-3">Infection control: infectious period</h3>
 
           <div className="space-y-4">
             <div className="bg-white border-l-4 border-red-500 p-3 rounded">
-              <p className="text-sm text-gray-700 mb-3">
-                Patient is contagious (but only to those who have not had chickenpox):
-              </p>
               <ul className="text-sm text-gray-700 list-disc list-inside mb-3 space-y-1">
-                <li>Infectious until all vesicles are completely crusted over (usually 7-10 days)</li>
-                <li>Avoid contact with pregnant women who haven't had chickenpox (risk of chickenpox)</li>
-                <li>Avoid contact with newborn babies and immunosuppressed individuals</li>
-                <li>Avoid healthcare settings if possible until covered</li>
-                <li>Antiviral therapy shortens contagious period</li>
+                <li>The patient can transmit chickenpox, not shingles, to someone who has never had chickenpox or the varicella vaccine</li>
+                <li>Transmission is by direct contact with vesicle fluid</li>
+                <li>They remain infectious until all the vesicles have crusted over, usually 5 to 7 days after the rash appears</li>
               </ul>
               <Checkbox
-                label="Counselled on contagious period (until crusted, avoid pregnant women/immunosuppressed/newborns)"
+                label="Counselled on the infectious period (until all vesicles have crusted, usually 5 to 7 days) and how the virus spreads"
                 checked={counselling.contagiousPeriod}
                 onChange={(v) => handleChange('contagiousPeriod', v)}
               />
@@ -159,23 +151,22 @@ export const CounsellingStep: React.FC<CounsellingStepProps> = ({
           </div>
         </div>
 
-        {/* Pregnancy Exposure Risk */}
+        {/* At-risk contacts */}
         <div className="bg-pink-50 border border-pink-200 rounded-lg p-4">
-          <h3 className="font-semibold text-pink-900 mb-3">Pregnancy Exposure Risk Counselling</h3>
+          <h3 className="font-semibold text-pink-900 mb-3">Infection control: people to avoid</h3>
 
           <div className="space-y-4">
             <div className="bg-white border-l-4 border-pink-500 p-3 rounded">
               <p className="text-sm text-gray-700 mb-3">
-                Shingles virus can cause chickenpox in exposed unvaccinated pregnant women:
+                Advise the patient specifically to avoid, until the rash has crusted over:
               </p>
               <ul className="text-sm text-gray-700 list-disc list-inside mb-3 space-y-1">
-                <li>Avoid close contact with pregnant women who have NOT had chickenpox</li>
-                <li>Pregnant women exposed to shingles (unvaccinated) need urgent GP assessment</li>
-                <li>Varicella-zoster immunoglobulin may be offered to exposed pregnant women</li>
-                <li>Patient should not use shingles rash as excuse to avoid hygiene measures</li>
+                <li>Pregnant women who have not had chickenpox</li>
+                <li>Babies under one month old</li>
+                <li>Anyone who is immunosuppressed</li>
               </ul>
               <Checkbox
-                label="Counselled on pregnancy exposure risk"
+                label="Counselled to avoid pregnant women who have not had chickenpox, babies under one month, and immunosuppressed people"
                 checked={counselling.pregnancyExposure}
                 onChange={(v) => handleChange('pregnancyExposure', v)}
               />
@@ -185,22 +176,16 @@ export const CounsellingStep: React.FC<CounsellingStepProps> = ({
 
         {/* Postherpetic Neuralgia Risk */}
         <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-          <h3 className="font-semibold text-purple-900 mb-3">Postherpetic Neuralgia (PHN) Risk</h3>
+          <h3 className="font-semibold text-purple-900 mb-3">Post-herpetic neuralgia</h3>
 
           <div className="space-y-4">
             <div className="bg-white border-l-4 border-purple-500 p-3 rounded">
-              <p className="text-sm text-gray-700 mb-3">
-                Postherpetic neuralgia (persistent pain after rash resolves) is a common complication:
-              </p>
               <ul className="text-sm text-gray-700 list-disc list-inside mb-3 space-y-1">
-                <li>Risk increases significantly with age (&gt;50 years)</li>
-                <li>Early antiviral treatment (within 72 hours) reduces PHN risk</li>
-                <li>Severe acute pain correlates with PHN risk</li>
-                <li>PHN pain can persist for weeks to months after rash heals</li>
-                <li>If PHN develops, GP should consider gabapentin, pregabalin, or topical lidocaine patches</li>
+                <li>Pain persisting after the rash heals, more common with increasing age</li>
+                <li>It is managed with neuropathic pain treatments that require a prescription, so the patient should see their GP if pain persists</li>
               </ul>
               <Checkbox
-                label="Counselled on PHN risk and importance of early treatment"
+                label="Explained post-herpetic neuralgia and to see the GP if pain persists after the rash heals"
                 checked={counselling.PHNRisk}
                 onChange={(v) => handleChange('PHNRisk', v)}
               />
@@ -208,28 +193,23 @@ export const CounsellingStep: React.FC<CounsellingStepProps> = ({
           </div>
         </div>
 
-        {/* Red Flags - Return to GP */}
+        {/* Safety netting */}
         <div className="bg-red-50 border border-red-300 rounded-lg p-4">
-          <h3 className="font-semibold text-red-900 mb-3">Red Flags - Return to GP Immediately</h3>
+          <h3 className="font-semibold text-red-900 mb-3">Safety netting</h3>
 
           <div className="space-y-4">
             <div className="bg-white border-l-4 border-red-500 p-3 rounded">
-              <p className="text-sm text-gray-700 mb-3">
-                Patient should return to GP immediately if any of the following develop:
-              </p>
+              <p className="text-sm text-gray-700 mb-3">Seek medical advice:</p>
               <ul className="text-sm text-gray-700 list-disc list-inside mb-3 space-y-1">
-                <li><strong>Eye symptoms</strong> - pain, redness, vision changes (possible ocular zoster)</li>
-                <li><strong>Facial weakness/drooping</strong> - possible Ramsay Hunt syndrome</li>
-                <li><strong>Hearing loss or ear pain</strong> - possible Ramsay Hunt syndrome</li>
-                <li><strong>Spreading rash</strong> - crosses midline or new areas (possible dissemination)</li>
-                <li><strong>Fever</strong> - especially if high or persistent</li>
-                <li><strong>Severe headache</strong> - rule out CNS involvement</li>
-                <li><strong>Confusion or altered mental state</strong> - possible encephalitis</li>
-                <li><strong>Inability to urinate</strong> - possible urinary retention (sacral involvement)</li>
-                <li><strong>Worsening pain despite treatment</strong></li>
+                <li>If the shingles has not resolved within 4 weeks</li>
+                <li>If symptoms worsen significantly at any point, or do not improve after finishing the course</li>
+                <li>If new vesicles are still appearing after 7 days of treatment</li>
+                <li>For any new eye symptom, however minor</li>
+                <li>If pain is not controlled</li>
+                <li><strong>Call 999 or go to A&amp;E</strong> for signs of sepsis, confusion, neck stiffness, weakness, or loss of bladder or bowel control</li>
               </ul>
               <Checkbox
-                label="Counselled on red flags requiring urgent GP review"
+                label="Safety netting advice given (4 weeks, worsening, new vesicles after 7 days, eye symptoms, uncontrolled pain, 999 signs)"
                 checked={counselling.returnIfWorsening}
                 onChange={(v) => handleChange('returnIfWorsening', v)}
               />
@@ -239,22 +219,15 @@ export const CounsellingStep: React.FC<CounsellingStepProps> = ({
 
         {/* Vaccination Advice */}
         <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-4">
-          <h3 className="font-semibold text-cyan-900 mb-3">Post-Recovery Vaccination Advice</h3>
+          <h3 className="font-semibold text-cyan-900 mb-3">Shingles vaccine</h3>
 
           <div className="space-y-4">
             <div className="bg-white border-l-4 border-cyan-500 p-3 rounded">
               <p className="text-sm text-gray-700 mb-3">
-                Vaccination after recovery from shingles is important:
+                Once recovered, discuss the shingles vaccine with the GP practice. This is separate from treatment and is covered by a different PGD. The shingles vaccine is not a treatment for shingles or post-herpetic neuralgia.
               </p>
-              <ul className="text-sm text-gray-700 list-disc list-inside mb-3 space-y-1">
-                <li><strong>Shingrix</strong> (recombinant zoster vaccine) is now recommended for all adults aged 50+</li>
-                <li>Two doses given 2-6 months apart</li>
-                <li>Should be offered after rash has completely healed</li>
-                <li>Efficacy &gt;90% for preventing recurrent shingles and PHN</li>
-                <li>Patient should discuss with GP about Shingrix vaccination</li>
-              </ul>
               <Checkbox
-                label="Counselled on Shingrix vaccination after recovery"
+                label="Advised to discuss the shingles vaccine with the GP practice once recovered"
                 checked={counselling.vaccinationAdvice}
                 onChange={(v) => handleChange('vaccinationAdvice', v)}
               />
@@ -273,7 +246,7 @@ export const CounsellingStep: React.FC<CounsellingStepProps> = ({
               ? 'text-green-900'
               : 'text-yellow-900'
           }`}>
-            {allConfirmed ? '✓ Counselling Complete' : '⏳ Counselling In Progress'}
+            {allConfirmed ? 'Counselling complete' : 'Counselling in progress'}
           </h3>
           <p className={`text-sm ${
             allConfirmed
@@ -281,7 +254,7 @@ export const CounsellingStep: React.FC<CounsellingStepProps> = ({
               : 'text-yellow-800'
           }`}>
             {allConfirmed
-              ? 'All counselling items confirmed. Ready to proceed to summary.'
+              ? 'All counselling items confirmed and recorded. Ready to proceed to summary.'
               : 'Please confirm all counselling items before proceeding.'}
           </p>
         </div>

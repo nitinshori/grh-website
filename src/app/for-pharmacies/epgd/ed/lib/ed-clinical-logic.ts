@@ -10,7 +10,7 @@ import type {
 
 export function checkExclusions(state: EDConsultationState): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
-  const { medications, observations, medicalHistory } = state;
+  const { medications, observations, medicalHistory, redFlags } = state;
 
   // Nitrates: absolute contraindication
   if (medications.takesNitrates) {
@@ -29,7 +29,7 @@ export function checkExclusions(state: EDConsultationState): ClinicalAlert[] {
       code: "NICORANDIL",
       message: "Patient takes nicorandil",
       detail:
-        "Nicorandil is a nitric oxide donor. Combined with a PDE5 inhibitor it causes profound, prolonged and potentially fatal hypotension, exactly as an organic nitrate does. Absolute contraindication. It appeared in neither arm of PGD v001.",
+        "Nicorandil is a nitric oxide donor. Combined with a PDE5 inhibitor it causes profound, prolonged and potentially fatal hypotension, exactly as an organic nitrate does. Absolute contraindication in both arms.",
     });
   }
 
@@ -49,7 +49,7 @@ export function checkExclusions(state: EDConsultationState): ClinicalAlert[] {
       code: "CV_FITNESS",
       message: "Fails, or cannot answer, the cardiovascular fitness question",
       detail:
-        "PGD v002 Appendix 1: the patient must be able to walk a mile on the flat in about 20 minutes, or climb two flights of stairs briskly, without chest pain and without stopping for breath. Sexual activity carries a comparable cardiac workload. Refer to the GP for assessment.",
+        "PGD v006 Appendix 1: the patient must be able to walk a mile on the flat in about 20 minutes, or climb two flights of stairs briskly, without chest pain and without stopping for breath. Sexual activity carries a comparable cardiac workload. Refer to the GP for cardiovascular assessment.",
     });
   }
 
@@ -67,9 +67,47 @@ export function checkExclusions(state: EDConsultationState): ClinicalAlert[] {
     alerts.push({
       severity: "stop",
       code: "RIOCIGUAT",
-      message: "Patient takes riociguat — CANNOT supply PDE5 inhibitor",
+      message: "Patient takes riociguat, CANNOT supply PDE5 inhibitor",
       detail:
-        "Concurrent use of riociguat (a guanylate cyclase stimulator) is contraindicated with PDE5 inhibitors.",
+        "Concurrent use of riociguat or any other soluble guanylate cyclase stimulator is contraindicated with PDE5 inhibitors.",
+    });
+  }
+
+  // Both arms excluded by medicines: ritonavir/cobicistat bars sildenafil, doxazosin bars tadalafil
+  if (medications.takesRitonavirOrCobicistat && medications.takesDoxazosin) {
+    alerts.push({
+      severity: "stop",
+      code: "BOTH_ARMS_EXCLUDED",
+      message: "Ritonavir or cobicistat excludes sildenafil and doxazosin excludes tadalafil",
+      detail: "Neither arm of this PGD can be used. Refer to the GP.",
+    });
+  }
+
+  if (medications.takesOtherPDE5Inhibitor) {
+    alerts.push({
+      severity: "stop",
+      code: "OTHER_PDE5",
+      message: "Already taking another PDE5 inhibitor",
+      detail:
+        "Including one obtained online or from another supplier. Do not add a second. Excluded under PGD v006.",
+    });
+  }
+
+  if (medicalHistory.priapismHistory) {
+    alerts.push({
+      severity: "stop",
+      code: "PRIAPISM_HISTORY",
+      message: "Previous priapism, or an erection lasting more than 4 hours on any previous PDE5 inhibitor",
+      detail: "Excluded under PGD v006. Refer for specialist assessment.",
+    });
+  }
+
+  if (redFlags.suddenOnsetSecondaryCause) {
+    alerts.push({
+      severity: "stop",
+      code: "SUDDEN_ONSET_SECONDARY",
+      message: "Erectile dysfunction of sudden onset following trauma, surgery or a new medicine, or accompanied by penile pain or deformity",
+      detail: "Excluded. Refer for a diagnosis rather than treating the symptom.",
     });
   }
 
@@ -83,9 +121,9 @@ export function checkExclusions(state: EDConsultationState): ClinicalAlert[] {
       alerts.push({
         severity: "stop",
         code: "HYPOTENSION",
-        message: `Blood pressure ${observations.systolicBP}/${observations.diastolicBP} mmHg — CANNOT supply`,
+        message: `Blood pressure ${observations.systolicBP}/${observations.diastolicBP} mmHg, CANNOT supply`,
         detail:
-          "Hypotension (BP <90/50 mmHg) is a contraindication. The patient should be referred to their GP for further assessment.",
+          "Hypotension (BP below 90/50 mmHg, measured today) is an exclusion. The patient should be referred to their GP for further assessment.",
       });
     }
 
@@ -94,9 +132,9 @@ export function checkExclusions(state: EDConsultationState): ClinicalAlert[] {
       alerts.push({
         severity: "stop",
         code: "HYPERTENSION",
-        message: `Blood pressure ${observations.systolicBP}/${observations.diastolicBP} mmHg — CANNOT supply`,
+        message: `Blood pressure ${observations.systolicBP}/${observations.diastolicBP} mmHg, CANNOT supply`,
         detail:
-          "Uncontrolled hypertension (BP >170/100 mmHg) is a contraindication. The patient should be referred to their GP for blood pressure management.",
+          "Uncontrolled hypertension (BP above 170/100 mmHg, measured today) is an exclusion. The patient should be referred to their GP for blood pressure management.",
       });
     }
   }
@@ -106,7 +144,7 @@ export function checkExclusions(state: EDConsultationState): ClinicalAlert[] {
     alerts.push({
       severity: "stop",
       code: "RECENT_MI_STROKE",
-      message: "Recent MI or stroke within 6 months — CANNOT supply",
+      message: "Recent MI or stroke within 6 months, CANNOT supply",
       detail:
         "Patients who have had a myocardial infarction or stroke within the last 6 months are excluded. Refer to GP/cardiologist.",
     });
@@ -117,9 +155,9 @@ export function checkExclusions(state: EDConsultationState): ClinicalAlert[] {
     alerts.push({
       severity: "stop",
       code: "SEVERE_HEPATIC",
-      message: "Severe hepatic impairment — CANNOT supply",
+      message: "Severe hepatic impairment (Child-Pugh C), CANNOT supply",
       detail:
-        "Severe hepatic impairment is a contraindication for both sildenafil and tadalafil. Refer to GP.",
+        "Severe hepatic impairment is an exclusion for both sildenafil and tadalafil. Refer to GP.",
     });
   }
 
@@ -128,7 +166,7 @@ export function checkExclusions(state: EDConsultationState): ClinicalAlert[] {
     alerts.push({
       severity: "stop",
       code: "NAION",
-      message: "Previous NAION — CANNOT supply PDE5 inhibitor",
+      message: "Previous NAION, CANNOT supply PDE5 inhibitor",
       detail:
         "Previous episode of non-arteritic anterior ischaemic optic neuropathy (NAION) is a contraindication. Refer to ophthalmology/GP.",
     });
@@ -139,7 +177,7 @@ export function checkExclusions(state: EDConsultationState): ClinicalAlert[] {
     alerts.push({
       severity: "stop",
       code: "UNSTABLE_ANGINA",
-      message: "Unstable angina — CANNOT supply",
+      message: "Unstable angina, or angina during sexual activity, CANNOT supply",
       detail:
         "Sexual activity is inadvisable in patients with unstable angina. Refer to cardiology/GP.",
     });
@@ -150,9 +188,18 @@ export function checkExclusions(state: EDConsultationState): ClinicalAlert[] {
     alerts.push({
       severity: "stop",
       code: "SEVERE_HF",
-      message: "Severe heart failure (NYHA IV) — CANNOT supply",
+      message: "Heart failure of NYHA class 2 or greater in the last 6 months, CANNOT supply",
       detail:
-        "Sexual activity is inadvisable in patients with severe heart failure (NYHA class IV). Refer to cardiology/GP.",
+        "Excluded under PGD v006 (Cialis SmPC 4.3). Refer to cardiology/GP.",
+    });
+  }
+
+  if (medicalHistory.structuralHeartDisease) {
+    alerts.push({
+      severity: "stop",
+      code: "STRUCTURAL_HEART",
+      message: "Hypertrophic cardiomyopathy, significant aortic stenosis or other moderate to severe valve disease, or a murmur of unknown cause",
+      detail: "Excluded under PGD v006 (BSSM high-risk group). Refer to cardiology/GP.",
     });
   }
 
@@ -161,7 +208,7 @@ export function checkExclusions(state: EDConsultationState): ClinicalAlert[] {
     alerts.push({
       severity: "stop",
       code: "ARRHYTHMIAS",
-      message: "Uncontrolled arrhythmias — CANNOT supply",
+      message: "Uncontrolled arrhythmias, CANNOT supply",
       detail:
         "Sexual activity is inadvisable in patients with uncontrolled arrhythmias. Refer to cardiology/GP.",
     });
@@ -172,7 +219,7 @@ export function checkExclusions(state: EDConsultationState): ClinicalAlert[] {
     alerts.push({
       severity: "stop",
       code: "RETINAL",
-      message: "Hereditary degenerative retinal disorder — CANNOT supply",
+      message: "Hereditary degenerative retinal disorder, CANNOT supply",
       detail:
         "Known hereditary degenerative retinal disorders (e.g. retinitis pigmentosa) are a contraindication for PDE5 inhibitors.",
     });
@@ -195,19 +242,38 @@ export function checkCautions(state: EDConsultationState): ClinicalAlert[] {
       alerts.push({
         severity: "caution",
         code: "ALPHA_UNSTABLE",
-        message: "Patient not stable on alpha-blocker — stabilise first",
+        message: "Patient not stable on alpha-blocker, stabilise first",
         detail:
-          "Patient must be stable on alpha-blocker therapy before initiating PDE5 inhibitor. Consider deferring supply.",
+          "The patient must be stable on his alpha-blocker before starting. Defer supply.",
       });
     } else {
       alerts.push({
         severity: "caution",
         code: "ALPHA_BLOCKER",
-        message: "Alpha-blocker use — start sildenafil at 25mg",
+        message: "Alpha-blocker: sildenafil START AT 25mg; tadalafil on-demand 10mg (do not exceed until tolerance established), once-daily 2.5mg",
         detail:
-          "Concurrent alpha-blocker use requires a lower starting dose. Sildenafil should start at 25mg. Monitor for postural hypotension.",
+          "Do not start sildenafil at 50mg. Record which alpha-blocker and that he is stable on it. Doxazosin excludes the tadalafil arm.",
       });
     }
+  }
+
+  if (medications.takesRitonavirOrCobicistat) {
+    alerts.push({
+      severity: "caution",
+      code: "RITONAVIR",
+      message: "Ritonavir or cobicistat: sildenafil arm excluded",
+      detail:
+        "The sildenafil dose must not exceed 25mg in 48 hours and cannot be titrated under this PGD. Tadalafil on-demand only, not exceeding 10mg in any 72 hour period (potent CYP3A4 inhibitor).",
+    });
+  }
+
+  if (medications.takesDoxazosin) {
+    alerts.push({
+      severity: "caution",
+      code: "DOXAZOSIN",
+      message: "Doxazosin: tadalafil arm excluded",
+      detail: "The combination with tadalafil is not recommended in the SmPC. Use the sildenafil arm (start at 25mg, stable on the alpha-blocker first) or refer.",
+    });
   }
 
   // CYP3A4 inhibitors
@@ -215,9 +281,9 @@ export function checkCautions(state: EDConsultationState): ClinicalAlert[] {
     alerts.push({
       severity: "caution",
       code: "CYP3A4",
-      message: "CYP3A4 inhibitor use — dose adjustment required",
+      message: "CYP3A4 inhibitor: sildenafil start at 25mg; tadalafil on-demand not more than 10mg in any 72 hours",
       detail:
-        "Concurrent use of CYP3A4 inhibitors (e.g. erythromycin, ketoconazole, itraconazole, ritonavir) requires dose adjustment. Sildenafil: start at 25mg. Tadalafil on-demand: max 10mg in 72-hour period.",
+        "For example erythromycin, clarithromycin, ketoconazole or itraconazole. Ritonavir and cobicistat exclude the sildenafil arm. Record the inhibitor and the starting dose chosen.",
     });
   }
 
@@ -226,9 +292,9 @@ export function checkCautions(state: EDConsultationState): ClinicalAlert[] {
     alerts.push({
       severity: "caution",
       code: "AGE_65",
-      message: "Patient aged ≥65 — consider lower starting dose",
+      message: "Aged 65 or over: sildenafil start at 25mg; tadalafil on-demand 10mg rather than escalating, once-daily 2.5mg",
       detail:
-        "In patients aged 65 and over, consider a starting dose of sildenafil 25mg due to potentially altered pharmacokinetics.",
+        "PGD v006 dose reduction for the over-65s. Record the starting dose chosen.",
     });
   }
 
@@ -237,9 +303,9 @@ export function checkCautions(state: EDConsultationState): ClinicalAlert[] {
     alerts.push({
       severity: "caution",
       code: "HEPATIC_MILD_MOD",
-      message: "Mild-moderate hepatic impairment — dose adjustment",
+      message: "Mild to moderate hepatic impairment (Child-Pugh A or B): sildenafil start at 25mg; tadalafil on-demand not more than 10mg",
       detail:
-        "Sildenafil: consider starting dose of 25mg. Tadalafil on-demand: dose should not exceed 10mg.",
+        "Record the impairment and the starting dose chosen as a result.",
     });
   }
 
@@ -248,9 +314,9 @@ export function checkCautions(state: EDConsultationState): ClinicalAlert[] {
     alerts.push({
       severity: "caution",
       code: "RENAL_SEVERE",
-      message: "Severe renal impairment (eGFR <30) — dose adjustment",
+      message: "Severe renal impairment (creatinine clearance below 30 mL/min): sildenafil start at 25mg; tadalafil once-daily excluded, on-demand not more than 10mg",
       detail:
-        "Sildenafil: consider starting dose of 25mg. Tadalafil daily dosing is not recommended with severe renal impairment.",
+        "PGD v006. Record the impairment and the starting dose chosen as a result.",
     });
   }
 
@@ -259,9 +325,18 @@ export function checkCautions(state: EDConsultationState): ClinicalAlert[] {
     alerts.push({
       severity: "caution",
       code: "RENAL_MODERATE",
-      message: "Moderate renal impairment (eGFR 30-50) — caution with daily tadalafil",
+      message: "Moderate renal impairment (creatinine clearance 30 to 50 mL/min): tadalafil once-daily start at 2.5mg",
       detail:
-        "For tadalafil once-daily dosing, start at 2.5mg with caution. On-demand dosing unaffected.",
+        "On-demand dosing is unaffected. Record the impairment and the starting dose chosen.",
+    });
+  }
+
+  if (medicalHistory.cardiovascularDisease && !medicalHistory.lastCvReviewDate.trim()) {
+    alerts.push({
+      severity: "caution",
+      code: "CV_REVIEW_DATE",
+      message: "Known cardiovascular disease: record the date of the last cardiovascular review where known",
+      detail: "Where he has not had a recent check, recommend one and record that you did.",
     });
   }
 
@@ -270,7 +345,7 @@ export function checkCautions(state: EDConsultationState): ClinicalAlert[] {
     alerts.push({
       severity: "caution",
       code: "PENILE_DEFORMITY",
-      message: "Anatomical penile deformity — use with caution",
+      message: "Anatomical penile deformity, use with caution",
       detail:
         "Conditions such as angulation, cavernosal fibrosis, or Peyronie's disease require caution with PDE5 inhibitors.",
     });
@@ -281,7 +356,7 @@ export function checkCautions(state: EDConsultationState): ClinicalAlert[] {
     alerts.push({
       severity: "caution",
       code: "PRIAPISM_RISK",
-      message: "Sickle cell disease — increased priapism risk",
+      message: "Sickle cell disease, multiple myeloma or leukaemia: increased priapism risk",
       detail:
         "Conditions predisposing to priapism (sickle cell anaemia, multiple myeloma, leukaemia) require caution. Ensure patient understands priapism warning.",
     });
@@ -292,7 +367,7 @@ export function checkCautions(state: EDConsultationState): ClinicalAlert[] {
     alerts.push({
       severity: "caution",
       code: "BLEEDING",
-      message: "Active peptic ulceration or bleeding disorder — use with caution",
+      message: "Active peptic ulceration or bleeding disorder, use with caution",
       detail:
         "PDE5 inhibitors may exacerbate bleeding in patients with active peptic ulceration or bleeding disorders.",
     });
@@ -303,9 +378,9 @@ export function checkCautions(state: EDConsultationState): ClinicalAlert[] {
     alerts.push({
       severity: "caution",
       code: "CVD_RISK",
-      message: "Cardiovascular disease — risk assessment required",
+      message: "Known cardiovascular disease: apply the Appendix 1 fitness assessment and record what it is",
       detail:
-        "Patients with cardiovascular disease should have risk assessed before treatment initiation. Ensure sexual activity is not inadvisable.",
+        "Ensure sexual activity is not inadvisable. Record the condition and the date of the last cardiovascular review.",
     });
   }
 
@@ -324,7 +399,7 @@ export function checkRedFlags(state: EDConsultationState): ClinicalAlert[] {
     alerts.push({
       severity: "red-flag",
       code: "PELVIC_TRAUMA",
-      message: "Pelvic or perineal trauma — consider referral",
+      message: "Pelvic or perineal trauma, consider referral",
       detail:
         "History of pelvic or perineal trauma may indicate structural cause. Consider urology referral.",
     });
@@ -334,19 +409,9 @@ export function checkRedFlags(state: EDConsultationState): ClinicalAlert[] {
     alerts.push({
       severity: "red-flag",
       code: "PENILE_ABNORMALITY",
-      message: "Penile anatomical abnormality (e.g. Peyronie's) — consider referral",
+      message: "Penile anatomical abnormality (e.g. Peyronie's), consider referral",
       detail:
         "Penile anatomical abnormalities may require specialist assessment. Consider urology referral.",
-    });
-  }
-
-  if (medicalHistory.priapismHistory) {
-    alerts.push({
-      severity: "red-flag",
-      code: "PRIAPISM_HISTORY",
-      message: "History of priapism — refer to specialist",
-      detail:
-        "Patients with a history of priapism or sickle cell disease should be referred for specialist assessment before initiating PDE5 therapy.",
     });
   }
 
@@ -354,7 +419,7 @@ export function checkRedFlags(state: EDConsultationState): ClinicalAlert[] {
     alerts.push({
       severity: "red-flag",
       code: "HYPOGONADISM",
-      message: "Suspected hypogonadism — refer for endocrine assessment",
+      message: "Suspected hypogonadism, refer for endocrine assessment",
       detail:
         "Unexplained hypogonadism or suspected endocrine disorder requires specialist assessment. Check early morning testosterone.",
     });
@@ -364,7 +429,7 @@ export function checkRedFlags(state: EDConsultationState): ClinicalAlert[] {
     alerts.push({
       severity: "red-flag",
       code: "PSYCHOSEXUAL",
-      message: "Complex psychiatric/psychosexual issues — consider referral",
+      message: "Complex psychiatric/psychosexual issues, consider referral",
       detail:
         "Complex psychiatric or psychosexual issues may require specialist counselling or therapy alongside pharmacological treatment.",
     });
@@ -374,7 +439,7 @@ export function checkRedFlags(state: EDConsultationState): ClinicalAlert[] {
     alerts.push({
       severity: "red-flag",
       code: "PDE5_FAILURE",
-      message: "Failed 2 PDE5 inhibitors at max dose — refer to specialist",
+      message: "Failed 2 PDE5 inhibitors at max dose, refer to specialist",
       detail:
         "Failure to respond to two different PDE5 inhibitors at maximum dose after adequate trial (6-8 attempts each) warrants referral to urology.",
     });
@@ -385,9 +450,9 @@ export function checkRedFlags(state: EDConsultationState): ClinicalAlert[] {
     alerts.push({
       severity: "red-flag",
       code: "SUDDEN_ONSET",
-      message: "Sudden onset ED — consider psychogenic cause",
+      message: "Sudden onset ED: ask whether it followed trauma, surgery or a new medicine, or comes with penile pain or deformity",
       detail:
-        "Sudden onset ED is more suggestive of a psychogenic cause. Consider psychological/psychosexual assessment alongside pharmacological treatment.",
+        "Those presentations are exclusions (Red Flags step). Otherwise sudden onset is more suggestive of a psychogenic cause; consider psychosexual assessment alongside treatment.",
     });
   }
 
@@ -416,7 +481,7 @@ export function calculateDoseRecommendation(
 
   const reasons: string[] = [];
 
-  if (patient.age !== null && patient.age >= 65) reasons.push("age ≥65");
+  if (patient.age !== null && patient.age >= 65) reasons.push("age 65 or over");
   if (medicalHistory.hepaticImpairment === "mild-moderate")
     reasons.push("hepatic impairment");
   if (medicalHistory.renalImpairment === "severe")
@@ -425,12 +490,22 @@ export function calculateDoseRecommendation(
   if (medications.takesCYP3A4Inhibitors)
     reasons.push("CYP3A4 inhibitor use");
 
+  // Sildenafil arm excluded by ritonavir or cobicistat: recommend tadalafil on-demand 10mg
+  if (medications.takesRitonavirOrCobicistat) {
+    return {
+      medicine: "tadalafil",
+      dosingRegimen: "on-demand",
+      dose: "10mg",
+      reason: "Ritonavir or cobicistat excludes the sildenafil arm. Tadalafil on-demand, not exceeding 10mg in any 72 hour period.",
+    };
+  }
+
   if (needsLowerDose) {
     return {
       medicine: "sildenafil",
       dosingRegimen: "on-demand",
       dose: "25mg",
-      reason: `Lower starting dose recommended due to: ${reasons.join(", ")}`,
+      reason: `START AT 25mg (PGD v006) due to: ${reasons.join(", ")}`,
     };
   }
 
@@ -467,14 +542,99 @@ export const SILDENAFIL_DOSES = ["25mg", "50mg", "100mg"] as const;
 export const TADALAFIL_ON_DEMAND_DOSES = ["5mg", "10mg", "20mg"] as const;
 export const TADALAFIL_DAILY_DOSES = ["2.5mg", "5mg"] as const;
 
+/** Which arms of PGD v006 remain open for this patient, and why not. */
+export interface ArmAvailability {
+  sildenafil: boolean;
+  tadalafil: boolean;
+  sildenafilReason: string;
+  tadalafilReason: string;
+}
+
+export function getArmAvailability(state: EDConsultationState): ArmAvailability {
+  const { medications } = state;
+  return {
+    sildenafil: !medications.takesRitonavirOrCobicistat,
+    tadalafil: !medications.takesDoxazosin,
+    sildenafilReason: medications.takesRitonavirOrCobicistat
+      ? "Excluded: ritonavir or cobicistat (sildenafil cannot exceed 25mg in 48 hours and cannot be titrated under this PGD)"
+      : "",
+    tadalafilReason: medications.takesDoxazosin
+      ? "Excluded: doxazosin (combination not recommended in the SmPC)"
+      : "",
+  };
+}
+
+/** Dose limits from the PGD v006 cautions. Starting-dose rules apply to a
+ *  patient who has not used the medicine before; hard caps always apply. */
+export interface DoseCaps {
+  sildenafilMaxMg: number;
+  tadalafilOnDemandMaxMg: number;
+  tadalafilDailyMaxMg: number;
+  tadalafilDailyAllowed: boolean;
+  reasons: string[];
+}
+
+export function getDoseCaps(state: EDConsultationState): DoseCaps {
+  const { medications, medicalHistory, patient, complaint } = state;
+  const caps: DoseCaps = {
+    sildenafilMaxMg: 100,
+    tadalafilOnDemandMaxMg: 20,
+    tadalafilDailyMaxMg: 5,
+    tadalafilDailyAllowed: true,
+    reasons: [],
+  };
+  const firstUse = !complaint.previousTreatment;
+
+  // Hard caps, whatever the history
+  if (medicalHistory.hepaticImpairment === "mild-moderate") {
+    caps.tadalafilOnDemandMaxMg = Math.min(caps.tadalafilOnDemandMaxMg, 10);
+    caps.reasons.push("hepatic impairment: tadalafil on-demand not more than 10mg");
+  }
+  if (medications.takesCYP3A4Inhibitors || medications.takesRitonavirOrCobicistat) {
+    caps.tadalafilOnDemandMaxMg = Math.min(caps.tadalafilOnDemandMaxMg, 10);
+    caps.reasons.push("CYP3A4 inhibitor: tadalafil on-demand not more than 10mg in any 72 hours");
+  }
+  if (medicalHistory.renalImpairment === "severe") {
+    caps.tadalafilOnDemandMaxMg = Math.min(caps.tadalafilOnDemandMaxMg, 10);
+    caps.tadalafilDailyAllowed = false;
+    caps.reasons.push("severe renal impairment: tadalafil once-daily excluded, on-demand not more than 10mg");
+  }
+
+  // Starting-dose rules for a patient new to the medicine
+  const startLow =
+    (patient.age !== null && patient.age >= 65) ||
+    medicalHistory.hepaticImpairment === "mild-moderate" ||
+    medicalHistory.renalImpairment === "severe" ||
+    medications.takesAlphaBlockers ||
+    medications.takesCYP3A4Inhibitors;
+  if (firstUse && startLow) {
+    caps.sildenafilMaxMg = Math.min(caps.sildenafilMaxMg, 25);
+    caps.tadalafilOnDemandMaxMg = Math.min(caps.tadalafilOnDemandMaxMg, 10);
+    caps.tadalafilDailyMaxMg = Math.min(caps.tadalafilDailyMaxMg, 2.5);
+    caps.reasons.push("starting dose: sildenafil 25mg, tadalafil on-demand 10mg, once-daily 2.5mg (over 65, alpha-blocker, CYP3A4 inhibitor, hepatic or renal impairment)");
+  }
+  if (firstUse && medicalHistory.renalImpairment === "moderate") {
+    caps.tadalafilDailyMaxMg = Math.min(caps.tadalafilDailyMaxMg, 2.5);
+    caps.reasons.push("moderate renal impairment: tadalafil once-daily start at 2.5mg");
+  }
+  return caps;
+}
+
+function mg(dose: string): number {
+  return parseFloat(dose.replace("mg", ""));
+}
+
 export function getAvailableDoses(
   medicine: string,
-  regimen: string
+  regimen: string,
+  caps?: DoseCaps
 ): readonly string[] {
-  if (medicine === "sildenafil") return SILDENAFIL_DOSES;
+  if (medicine === "sildenafil")
+    return SILDENAFIL_DOSES.filter((d) => !caps || mg(d) <= caps.sildenafilMaxMg);
   if (medicine === "tadalafil" && regimen === "daily")
-    return TADALAFIL_DAILY_DOSES;
-  if (medicine === "tadalafil") return TADALAFIL_ON_DEMAND_DOSES;
+    return TADALAFIL_DAILY_DOSES.filter((d) => !caps || mg(d) <= caps.tadalafilDailyMaxMg);
+  if (medicine === "tadalafil")
+    return TADALAFIL_ON_DEMAND_DOSES.filter((d) => !caps || mg(d) <= caps.tadalafilOnDemandMaxMg);
   return [];
 }
 

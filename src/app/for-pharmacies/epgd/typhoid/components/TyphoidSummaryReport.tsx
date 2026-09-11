@@ -24,6 +24,9 @@ interface TyphoidSummaryReportProps {
     anaphylaxisToVaccine: boolean;
     anaphylaxisToVaccineComponent: boolean;
     severeFebrilleIllness: boolean;
+    feverAfterTravel: boolean;
+    pregnantOrBreastfeeding: boolean;
+    pregnancyDecision: string;
     bleedingDisorder: boolean;
     immunosuppressed: boolean;
   };
@@ -33,9 +36,18 @@ interface TyphoidSummaryReportProps {
     counselledReactions: boolean;
     counselledValidity: boolean;
     counselledCertificate: boolean;
+    counselledFoodWater: boolean;
+    counselledFeverWarning: boolean;
+    observationCompleted: boolean;
   };
   onBack: () => void;
 }
+
+const CONSENT_BASIS_LABEL: Record<string, string> = {
+  self: 'Patient (aged 16 and over)',
+  parental: 'Person with parental responsibility',
+  gillick: 'Young person, assessed as Gillick competent',
+};
 
 export default function TyphoidSummaryReport({
   patientDetails,
@@ -51,7 +63,7 @@ export default function TyphoidSummaryReport({
       {/* Header with print styles */}
       <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50 print:bg-white print:border-0 print:pb-4">
         <h2 className="text-lg font-bold text-navy-900">Consultation Summary Report</h2>
-        <p className="text-sm text-gray-500 mt-1">Typhoid ePGD</p>
+        <p className="text-sm text-gray-500 mt-1">Typhoid ePGD. Typhoid (Vi Polysaccharide Vaccine) PGD v005, issued 11 September 2026</p>
       </div>
 
       {/* Report content */}
@@ -74,13 +86,15 @@ export default function TyphoidSummaryReport({
           <SectionHeader>Travel Assessment</SectionHeader>
           <div className="space-y-1.5">
             <Row label="Destination" value={patientDetails.travelDestination} />
-            <Row label="Reason for travel" value={patientDetails.travelReason || 'Not specified'} />
+            <Row label="Risk region" value={patientDetails.travelReason || 'Not specified'} />
             <Row label="Departure date" value={patientDetails.departureDate} />
+            <Row label="Itinerary" value={patientDetails.itinerary || 'Not recorded'} />
+            <Row label="Source consulted for the recommendation" value={patientDetails.recommendationSource || 'Not recorded'} />
             <Row
               label="Previous Typhoid dose"
               value={
                 patientDetails.previousTyphoidDose
-                  ? `Yes (${patientDetails.previousDoseDate || 'date not specified'})`
+                  ? `Yes (${patientDetails.previousDoseDate || 'date not specified'})${patientDetails.previousDoseRenewalReason ? `; renewal reason: ${patientDetails.previousDoseRenewalReason}` : ''}`
                   : 'No'
               }
             />
@@ -92,13 +106,20 @@ export default function TyphoidSummaryReport({
           <SectionHeader>Medical History & Risk Factors</SectionHeader>
           <CounsellingGrid
             items={[
-              ['Anaphylaxis to previous Typhoid', medicalHistory.anaphylaxisToVaccine],
+              ['Anaphylaxis to previous typhoid vaccine', medicalHistory.anaphylaxisToVaccine],
               ['Anaphylaxis to vaccine component', medicalHistory.anaphylaxisToVaccineComponent],
-              ['Severe acute febrile illness', medicalHistory.severeFebrilleIllness],
-              ['Bleeding disorder', medicalHistory.bleedingDisorder],
+              ['Acute severe febrile illness', medicalHistory.severeFebrilleIllness],
+              ['Fever following recent travel to a risk area', medicalHistory.feverAfterTravel],
+              ['Pregnant or breastfeeding', medicalHistory.pregnantOrBreastfeeding],
+              ['Bleeding disorder or anticoagulation', medicalHistory.bleedingDisorder],
               ['Immunosuppressed', medicalHistory.immunosuppressed],
             ]}
           />
+          {medicalHistory.pregnantOrBreastfeeding && (
+            <div className="mt-2">
+              <Row label="Pregnancy or breastfeeding decision" value={medicalHistory.pregnancyDecision || 'Not recorded'} />
+            </div>
+          )}
         </div>
 
         {/* Clinical Alerts */}
@@ -111,7 +132,17 @@ export default function TyphoidSummaryReport({
         <div>
           <SectionHeader>Vaccine Administration</SectionHeader>
           <div className="space-y-1.5">
-            <Row label="Vaccine type" value={summary.vaccineType === 'typhim-vi' ? 'Typhim Vi (Sanofi)' : '—'} />
+            <Row
+              label="Vaccine"
+              value={
+                summary.vaccineType === 'typhim-vi'
+                  ? 'Typhim Vi (Sanofi), typhoid Vi polysaccharide vaccine 25 micrograms in 0.5 mL'
+                  : summary.vaccineType === 'other-vi'
+                  ? `${summary.vaccineBrand || 'Brand not recorded'}, Vi polysaccharide typhoid vaccine 25 micrograms in 0.5 mL`
+                  : 'Not recorded'
+              }
+            />
+            <Row label="Dose and route" value="0.5 mL by intramuscular injection" />
             <Row label="Batch number" value={summary.batchNumber} />
             <Row label="Expiry date" value={summary.expiryDate} />
             <Row
@@ -119,27 +150,43 @@ export default function TyphoidSummaryReport({
               value={
                 summary.administrationSite === 'left-deltoid'
                   ? 'Left deltoid'
-                  : 'Right deltoid'
+                  : summary.administrationSite === 'right-deltoid'
+                  ? 'Right deltoid'
+                  : 'Not recorded'
               }
             />
             <Row label="Administration time" value={summary.administrationTime} />
+            <Row label="Next booster due" value={summary.nextBoosterDue || 'Not recorded'} />
+            <Row label="Adrenaline 1 in 1,000, anaphylaxis protocol and telephone available" value={summary.adrenalineAvailable ? 'Confirmed' : 'Not confirmed'} />
+            <Row label="15 minute observation completed" value={postVaccineAdvice.observationCompleted ? 'Yes' : 'No'} />
           </div>
         </div>
 
         {/* Patient Counselling */}
         <div>
           <SectionHeader>Patient Counselling & Consent</SectionHeader>
+          <div className="space-y-1.5 mb-3">
+            <Row label="Consent given by" value={CONSENT_BASIS_LABEL[patientDetails.consentBasis] || 'Not recorded'} />
+            {patientDetails.consentDetail && (
+              <Row
+                label={patientDetails.consentBasis === 'gillick' ? 'Basis of Gillick assessment' : 'Person with parental responsibility'}
+                value={patientDetails.consentDetail}
+              />
+            )}
+          </div>
           <CounsellingGrid
             items={[
               ['Informed consent obtained', consent.informedConsentGiven],
               ['ID verified', consent.idVerified],
               ['Patient aware of private service', consent.patientAwarePrivateService],
-              ['Understands 3-year protection', consent.understands5YearValidity],
+              ['Understands booster every 3 years if travel continues', consent.understands5YearValidity],
               ['Understands at least 2 weeks before travel timing', consent.understandsTimingRequirement],
-              ['Aware of certificate requirement', consent.certificateRequirement],
-              ['Advised of common reactions', postVaccineAdvice.counselledReactions],
-              ['Understands vaccine validity period', postVaccineAdvice.counselledValidity],
-              ['Advised to report serious adverse events', postVaccineAdvice.counselledCertificate],
+              ['Understands 70 to 80% efficacy, no paratyphoid cover, food and water precautions', consent.certificateRequirement],
+              ['Food and water hygiene advice given and sheet supplied', postVaccineAdvice.counselledFoodWater],
+              ['Post-travel fever warning given', postVaccineAdvice.counselledFeverWarning],
+              ['Advised of common reactions, PIL supplied', postVaccineAdvice.counselledReactions],
+              ['Understands booster every 3 years', postVaccineAdvice.counselledValidity],
+              ['Advised to report adverse reactions (Yellow Card)', postVaccineAdvice.counselledCertificate],
             ]}
           />
         </div>

@@ -3,7 +3,7 @@ import { PgdPageActions } from "@/components/PgdPageActions";
 
 export const metadata: Metadata = {
   title: "Gonorrhoea Treatment Consultation ePGD",
-  description: "Gonorrhoea Treatment Consultation ePGD - Coming Soon. Ceftriaxone IM administration under PGD following confirmed positive test.",
+  description: "Gonorrhoea Treatment Consultation ePGD - Coming Soon. Ceftriaxone 1 g IM (reconstituted with lidocaine 1%) under PGD version 003, issued 11 September 2026, for adults with a positive NAAT or strong clinical suspicion with a clear epidemiological link.",
 };
 
 export default function GonorrhoeaToolPage() {
@@ -31,7 +31,7 @@ export default function GonorrhoeaToolPage() {
             <span className="text-navy-900 font-medium">Gonorrhoea Treatment Consultation ePGD</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-navy-900">Gonorrhoea Treatment Consultation</h1>
-          <p className="text-sm text-gray-600 mt-1">Ceftriaxone IM administration under PGD</p>
+          <p className="text-sm text-gray-600 mt-1">Ceftriaxone 1 g IM, reconstituted with 3.5 mL lidocaine 1%, under PGD version 003, issued 11 September 2026</p>
         </div>
 
         {/* Coming Soon Badge */}
@@ -47,23 +47,27 @@ export default function GonorrhoeaToolPage() {
           <ul className="space-y-2 text-gray-700 text-sm">
             <li className="flex gap-2">
               <span className="text-[color:var(--tenant-primary)] font-bold">•</span>
-              <span>Ceftriaxone IM administration under PGD following confirmed positive NAAT test</span>
+              <span>Ceftriaxone 1 g single IM dose into the gluteal muscle, reconstituted with 3.5 mL lidocaine 1% (both supplied under the PGD; never given intravenously), for adults aged 18 and over with a positive NAAT or strong clinical suspicion with a clear epidemiological link</span>
             </li>
             <li className="flex gap-2">
               <span className="text-[color:var(--tenant-primary)] font-bold">•</span>
-              <span>Antimicrobial stewardship checks and contraindication screening</span>
+              <span>Exclusion screening: cephalosporin anaphylaxis, severe penicillin allergy, lidocaine hypersensitivity or SmPC contraindications, complicated infection (DGI, meningitis, endocarditis)</span>
             </li>
             <li className="flex gap-2">
               <span className="text-[color:var(--tenant-primary)] font-bold">•</span>
-              <span>Partner notification guidance</span>
+              <span>Anaphylaxis provision: adrenaline 1 in 1,000 immediately available, written protocol, 15 minute seated observation recorded, sharps disposal</span>
             </li>
             <li className="flex gap-2">
               <span className="text-[color:var(--tenant-primary)] font-bold">•</span>
-              <span>Test of cure scheduling</span>
+              <span>Partner notification guidance (contacts within 2 weeks)</span>
+            </li>
+            <li className="flex gap-2">
+              <span className="text-[color:var(--tenant-primary)] font-bold">•</span>
+              <span>Test of cure scheduling at 2 weeks</span>
             </li>
           </ul>
           <p className="text-amber-700 text-sm mt-4 pt-4 border-t border-gray-200">
-            <strong>Note:</strong> Requires IM injection training and competency verification.
+            <strong>Note:</strong> Requires intramuscular injection competence, anaphylaxis recognition and management training and current basic life support training.
           </p>
         </div>
 
@@ -84,7 +88,7 @@ export default function GonorrhoeaToolPage() {
 
         {/* Disclaimer */}
         <div className="mt-8 text-center">
-          <p className="text-[11px] text-gray-400 max-w-2xl mx-auto">This ePGD requires NAAT confirmation of gonorrhoea diagnosis. Partner notification and test of cure are essential components.</p>
+          <p className="text-[11px] text-gray-400 max-w-2xl mx-auto">This ePGD requires a positive NAAT for N. gonorrhoeae or strong clinical suspicion with a clear epidemiological link. Partner notification and test of cure at 2 weeks are essential components. PGD version 003, issued 11 September 2026.</p>
         </div>
       </div>
     </div>

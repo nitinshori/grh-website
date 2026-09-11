@@ -32,18 +32,39 @@ export function B12InjectionClient() {
       deficiencySource: "" as "" | "labs" | "established" | "post-bariatric" | "dietary",
       labB12Result: "",
       labDate: "",
+      // PGD v008: FBC, blood film and serum folate must have been obtained
+      // and reviewed alongside the B12 result (a B12-only point of care
+      // device does not satisfy the PGD).
+      bloodsReviewed: false,
+      labDevice: "",
       // Symptoms
       hasSymptoms: false,
       symptoms: "",
+      // New or progressive neurological symptoms or signs: EXCLUSION (refer
+      // for same-week medical assessment)
       neuroSymptoms: false,
       // Contraindications
       anyHypersensitivity: false,
       hypersensitivityDetails: "",
+      // LHON is an exclusion for cyanocobalamin tablets (PGD 2 of 3) only;
+      // hydroxocobalamin is the licensed treatment for Leber's optic atrophy.
       lhonHistory: false,
+      hereditaryCobalaminDisorder: false,
+      abnormalBloodPicture: false,
+      // Injection-specific exclusions (PGD 1 of 3)
+      injectionSiteInfection: false,
+      bleedingDisorder: false,
+      bleedingRiskAssessedSafe: false,
+      suitableForIM: false,
+      // Cyanocobalamin tablet inclusion (PGD 2 of 3)
+      malabsorptionExcluded: false,
+      onB12Supplement: false,
       // Cautions
       pregnant: false,
       breastfeeding: false,
       anticoagulants: false,
+      folateAlsoLow: false,
+      allergyOrAsthmaHistory: false,
       // Drug interactions / additional cautions (per CKS)
       onChloramphenicol: false,
       onOralContraceptives: false,
@@ -52,23 +73,28 @@ export function B12InjectionClient() {
       regime: "" as "" | "loading" | "maintenance" | "oral-tablets",
       doseNumber: "" as "" | "1" | "2" | "3" | "4" | "5" | "6",
       nextDueDate: "",
-      // Diet-related maintenance: cyanocobalamin tablets 50–150 mcg daily
+      // Diet-related maintenance: cyanocobalamin tablets 50 to 150 mcg daily
       // OR 6-monthly hydroxocobalamin 1 mg IM.
       maintenanceInterval: "" as "" | "8-weeks" | "12-weeks" | "26-weeks-diet-related",
       // Diet-related vs not-diet-related pathway
       maintenancePathway: "" as "" | "not-diet-related" | "diet-related",
+      // Cyanocobalamin 50 microgram tablets (PGD 2 of 3): 50 to 150 mcg
+      // daily between meals, up to 3 months supply.
+      tabletDose: "" as "" | "50" | "100" | "150",
+      tabletSupplyDays: "" as "" | "28" | "56" | "84",
     },
     administration: {
       batchNumber: "",
       expiryDate: "",
       injectionSite: "" as "" | "left-deltoid" | "right-deltoid" | "left-gluteus" | "right-gluteus" | "left-thigh" | "right-thigh",
       administeredAt: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
+      adrenalineAvailable: false,
       postObsMinutes: "" as "" | "5" | "10" | "15",
       patientWell: false,
       adverseReaction: false,
       adverseReactionDetails: "",
     },
-    summary: { pharmacistName: "", pharmacistGPhC: "", pharmacyName: "", pharmacyAddress: "", consultationDate: new Date().toISOString().split("T")[0], consultationTime: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }), clinicalNotes: "" },
+    summary: { pharmacistName: "", pharmacistGPhC: "", pharmacyName: "", pharmacyAddress: "", consultationDate: new Date().toISOString().split("T")[0], consultationTime: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }), clinicalNotes: "", gpInformed: false },
   })
 
   // Auto-fill pharmacist details from session
@@ -85,29 +111,61 @@ export function B12InjectionClient() {
   const handleNext = useCallback(() => setCurrentStep((s) => Math.min(s + 1, STEP_TITLES.length - 1)), [])
   const handlePrev = useCallback(() => setCurrentStep((s) => Math.max(s - 1, 0)), [])
 
-  // Eligibility logic — blocks if any contraindication ticked, requires
-  // documented deficiency basis.
+  // Eligibility logic (PGD v008, 11 September 2026): blocks if any
+  // exclusion shared by all three arms is ticked, requires a documented
+  // deficiency basis and the full blood work-up (FBC, film, folate).
+  const isEstablishedPatient = state.eligibility.deficiencySource === "established"
+  const bloodRecordComplete =
+    isEstablishedPatient ||
+    (!!state.eligibility.labB12Result && !!state.eligibility.labDate && !!state.eligibility.labDevice)
   const eligibilityValid =
     state.eligibility.confirmedDeficiency &&
     !!state.eligibility.deficiencySource &&
+    state.eligibility.bloodsReviewed &&
+    bloodRecordComplete &&
     !state.eligibility.anyHypersensitivity &&
-    !state.eligibility.lhonHistory
+    !state.eligibility.hereditaryCobalaminDisorder &&
+    !state.eligibility.pregnant &&
+    !state.eligibility.neuroSymptoms &&
+    !state.eligibility.abnormalBloodPicture
 
-  // Treatment plan needs a regime + dose-number choice
+  // Treatment plan needs a regime + dose-number choice, and the arm-specific
+  // inclusion / exclusion checks for that regime.
+  const isOralTablets = state.treatment.regime === "oral-tablets"
+  const isInjection = state.treatment.regime === "loading" || state.treatment.regime === "maintenance"
+  const injectionSuitable =
+    state.eligibility.suitableForIM &&
+    !state.eligibility.injectionSiteInfection &&
+    (!state.eligibility.bleedingDisorder || state.eligibility.bleedingRiskAssessedSafe)
+  const maintenanceIntervalMatchesPathway =
+    state.treatment.maintenancePathway === "diet-related"
+      ? state.treatment.maintenanceInterval === "26-weeks-diet-related"
+      : state.treatment.maintenancePathway === "not-diet-related"
+        ? state.treatment.maintenanceInterval === "8-weeks" || state.treatment.maintenanceInterval === "12-weeks"
+        : false
+  const tabletEligible =
+    state.eligibility.deficiencySource === "dietary" &&
+    state.eligibility.malabsorptionExcluded &&
+    !state.eligibility.lhonHistory
   const treatmentValid =
     !!state.treatment.regime &&
-    (state.treatment.regime === "maintenance"
-      ? !!state.treatment.maintenanceInterval
-      : !!state.treatment.doseNumber) &&
+    (state.treatment.regime === "loading"
+      ? !!state.treatment.doseNumber && injectionSuitable
+      : state.treatment.regime === "maintenance"
+        ? maintenanceIntervalMatchesPathway && injectionSuitable
+        : tabletEligible && !!state.treatment.tabletDose && !!state.treatment.tabletSupplyDays) &&
     !!state.treatment.nextDueDate
 
-  // Administration needs batch/expiry/site + post-obs check
+  // Administration needs batch/expiry (all arms); injections also need site,
+  // adrenaline available and the post-injection observation.
   const adminValid =
     !!state.administration.batchNumber &&
     !!state.administration.expiryDate &&
-    !!state.administration.injectionSite &&
-    !!state.administration.postObsMinutes &&
-    state.administration.patientWell
+    (isOralTablets ||
+      (!!state.administration.injectionSite &&
+        state.administration.adrenalineAvailable &&
+        !!state.administration.postObsMinutes &&
+        state.administration.patientWell))
 
   // Age gate per signed PGD — adults 18+ (consistency review Jul 2026)
   const patientAge = calculateAge(state.patient.dateOfBirth)
@@ -165,7 +223,18 @@ export function B12InjectionClient() {
           !canProceed
             ? currentStep === 0 && !patientValid
               ? "This PGD applies to adults aged 18 years and over"
-              : "Please complete all required fields"
+              : currentStep === 2 &&
+                  (state.eligibility.anyHypersensitivity ||
+                    state.eligibility.hereditaryCobalaminDisorder ||
+                    state.eligibility.pregnant ||
+                    state.eligibility.neuroSymptoms ||
+                    state.eligibility.abnormalBloodPicture)
+                ? "An exclusion criterion applies. Do not treat under this PGD; refer as stated and document the advice given."
+                : currentStep === 3 && isInjection && !injectionSuitable
+                  ? "Patient is excluded from the injection pathway (site infection, bleeding risk not assessed, or not suitable for IM injection). Refer."
+                  : currentStep === 3 && isOralTablets && !tabletEligible
+                    ? "Cyanocobalamin tablets are only for diet related deficiency with malabsorption and pernicious anaemia thought unlikely, and are excluded in Leber's hereditary optic neuropathy. Use the injection pathway or refer."
+                    : "Please complete all required fields"
             : null
         }
         getConsultationData={getConsultationData}
@@ -189,20 +258,24 @@ export function B12InjectionClient() {
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
               <p className="font-semibold mb-1">Confirmed B12 deficiency required</p>
               <p>
-                This PGD is for patients with established B12 deficiency
-                (laboratory-confirmed, or established maintenance therapy after
-                bariatric surgery / atrophic gastritis / dietary). Patients
-                presenting only with unconfirmed symptoms (fatigue,
-                paraesthesia, etc) should be referred to their GP for
-                diagnostic workup rather than treated under this PGD.
+                This PGD is for adults with vitamin B12 deficiency confirmed on
+                blood testing (total B12 below 180 ng/L or active B12 below
+                25 pmol/L, interpreted with the clinical picture), where a full
+                blood count, blood film and serum folate from an accredited
+                laboratory have been obtained and reviewed alongside the B12
+                result. A point of care or finger prick device that reports
+                B12 alone does not satisfy this PGD. Patients presenting only
+                with unconfirmed symptoms, or with incomplete testing, should
+                be referred to their GP for diagnostic workup rather than
+                treated under this PGD.
               </p>
             </div>
 
             <Checkbox
-              label="Documented B12 deficiency confirmed"
+              label="Documented B12 deficiency confirmed on blood testing"
               checked={state.eligibility.confirmedDeficiency}
               onChange={(v) => updateEligibility("confirmedDeficiency", v)}
-              description="Tick to continue. If unconfirmed, refer to GP."
+              description="Tick to continue. If deficiency is not confirmed on testing, or testing is incomplete, refer to GP."
             />
 
             {state.eligibility.confirmedDeficiency && (
@@ -216,57 +289,120 @@ export function B12InjectionClient() {
                   className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
                 >
                   <option value="">— select —</option>
-                  <option value="labs">Laboratory-confirmed (low serum B12 ± raised MMA / low holoTC)</option>
-                  <option value="established">Established maintenance — existing patient continuing therapy</option>
-                  <option value="post-bariatric">Post-bariatric surgery (lifelong replacement indicated)</option>
-                  <option value="dietary">Long-term strict vegan / vegetarian + confirmed deficiency</option>
+                  <option value="labs">Laboratory-confirmed (low total or active B12, with or without raised MMA)</option>
+                  <option value="established">Established maintenance, existing patient continuing therapy with diagnosis and cause already established</option>
+                  <option value="post-bariatric">Confirmed deficiency after gastrectomy, bariatric or ileal surgery (lifelong replacement indicated)</option>
+                  <option value="dietary">Diet related (vegan or severely restricted diet) with confirmed deficiency</option>
                 </select>
               </div>
             )}
 
-            {state.eligibility.deficiencySource === "labs" && (
-              <div className="grid sm:grid-cols-2 gap-4">
-                <TextInput
-                  label="Serum B12 result (ng/L or pmol/L)"
-                  value={state.eligibility.labB12Result}
-                  onChange={(v) => updateEligibility("labB12Result", v)}
-                  placeholder="e.g. 142 ng/L"
+            {!!state.eligibility.deficiencySource && (
+              <div className="space-y-3">
+                <Checkbox
+                  label="Full blood count, blood film and serum folate obtained from an accredited laboratory and reviewed alongside the B12 result"
+                  checked={state.eligibility.bloodsReviewed}
+                  onChange={(v) => updateEligibility("bloodsReviewed", v)}
+                  required
+                  description="Required by the PGD. A B12-only point of care or finger prick result is not sufficient to start treatment."
                 />
-                <div>
-                  <label className="block text-sm font-medium text-navy-900 mb-1">Test date</label>
-                  <input
-                    type="date"
-                    value={state.eligibility.labDate}
-                    onChange={(e) => updateEligibility("labDate", e.target.value)}
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
+                <div className="grid sm:grid-cols-3 gap-4">
+                  <TextInput
+                    label="B12 result relied on (ng/L or pmol/L)"
+                    value={state.eligibility.labB12Result}
+                    onChange={(v) => updateEligibility("labB12Result", v)}
+                    placeholder="e.g. 142 ng/L"
+                    required={!isEstablishedPatient}
+                  />
+                  <div>
+                    <label className="block text-sm font-medium text-navy-900 mb-1">
+                      Date sample taken {!isEstablishedPatient && <span className="text-red-400">*</span>}
+                    </label>
+                    <input
+                      type="date"
+                      value={state.eligibility.labDate}
+                      onChange={(e) => updateEligibility("labDate", e.target.value)}
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
+                    />
+                  </div>
+                  <TextInput
+                    label="Laboratory or device used"
+                    value={state.eligibility.labDevice}
+                    onChange={(v) => updateEligibility("labDevice", v)}
+                    placeholder="e.g. NHS lab via GP"
+                    required={!isEstablishedPatient}
                   />
                 </div>
+                {isEstablishedPatient && (
+                  <p className="text-xs text-gray-500">
+                    Repeat blood testing is not required before each maintenance
+                    injection once the diagnosis and cause are established. Do
+                    not repeat serum B12 in a patient on intramuscular
+                    maintenance (NICE NG239: the result is uninformative).
+                    Record the results originally relied on where known.
+                  </p>
+                )}
               </div>
             )}
 
             <div className="border-t border-gray-200 pt-4">
-              <p className="text-sm font-semibold text-navy-900 mb-3">Contraindications</p>
+              <p className="text-sm font-semibold text-navy-900 mb-3">Exclusion criteria (any ticked: do not treat under this PGD)</p>
               <div className="space-y-2">
                 <Checkbox
-                  label="Known hypersensitivity to hydroxocobalamin or any cobalamin"
+                  label="Known hypersensitivity to hydroxocobalamin, cyanocobalamin, cobalamin derivatives or any excipient"
                   checked={state.eligibility.anyHypersensitivity}
                   onChange={(v) => updateEligibility("anyHypersensitivity", v)}
                 />
                 {state.eligibility.anyHypersensitivity && (
                   <p className="text-xs text-red-700 ml-7">
                     Hypersensitivity is an absolute contraindication. Do not
-                    administer. Refer to GP.
+                    administer or supply. Refer to GP.
                   </p>
                 )}
                 <Checkbox
-                  label="History of Leber's hereditary optic neuropathy (LHON)"
-                  checked={state.eligibility.lhonHistory}
-                  onChange={(v) => updateEligibility("lhonHistory", v)}
+                  label="Known hereditary problems of cobalamin metabolism"
+                  checked={state.eligibility.hereditaryCobalaminDisorder}
+                  onChange={(v) => updateEligibility("hereditaryCobalaminDisorder", v)}
                 />
-                {state.eligibility.lhonHistory && (
+                {state.eligibility.hereditaryCobalaminDisorder && (
+                  <p className="text-xs text-red-700 ml-7">Excluded. Refer to GP.</p>
+                )}
+                <Checkbox
+                  label="Patient is pregnant"
+                  checked={state.eligibility.pregnant}
+                  onChange={(v) => updateEligibility("pregnant", v)}
+                />
+                {state.eligibility.pregnant && (
                   <p className="text-xs text-red-700 ml-7">
-                    Hydroxocobalamin contraindicated in LHON — refer to GP for
-                    alternative.
+                    Pregnancy is an exclusion. The SPC states that
+                    hydroxocobalamin injection should not be used for the
+                    treatment of megaloblastic anaemia of pregnancy, and B12
+                    results are less reliable in pregnancy. Refer to the GP or
+                    midwife so that the cause is properly identified and
+                    antenatal care is not delayed.
+                  </p>
+                )}
+                <Checkbox
+                  label="New or progressive neurological symptoms or signs (sensory disturbance, gait disturbance, cognitive change)"
+                  checked={state.eligibility.neuroSymptoms}
+                  onChange={(v) => updateEligibility("neuroSymptoms", v)}
+                />
+                {state.eligibility.neuroSymptoms && (
+                  <p className="text-xs text-red-700 ml-7">
+                    Excluded. Refer for same-week medical assessment: these
+                    require prompt investigation and may need a different
+                    treatment schedule. Do not delay the referral by starting
+                    treatment.
+                  </p>
+                )}
+                <Checkbox
+                  label="Abnormal full blood count or blood film beyond macrocytic anaemia (unexplained cytopenias or features suggesting another cause)"
+                  checked={state.eligibility.abnormalBloodPicture}
+                  onChange={(v) => updateEligibility("abnormalBloodPicture", v)}
+                />
+                {state.eligibility.abnormalBloodPicture && (
+                  <p className="text-xs text-red-700 ml-7">
+                    Excluded. Refer to GP; make the referral clear and timely.
                   </p>
                 )}
               </div>
@@ -276,36 +412,54 @@ export function B12InjectionClient() {
               <p className="text-sm font-semibold text-navy-900 mb-3">Cautions</p>
               <div className="space-y-2">
                 <Checkbox
-                  label="Patient is pregnant"
-                  checked={state.eligibility.pregnant}
-                  onChange={(v) => updateEligibility("pregnant", v)}
-                  description="Per NICE CKS: hydroxocobalamin CAN be used in pregnancy to correct an established B12 deficiency. SmPC restriction relates to megaloblastic anaemia of pregnancy specifically — refer if that's the indication."
+                  label="Serum folate is also low"
+                  checked={state.eligibility.folateAlsoLow}
+                  onChange={(v) => updateEligibility("folateAlsoLow", v)}
+                  description="Where both B12 and folate are low, treat B12 first or at the same time. Folic acid alone can precipitate or worsen subacute combined degeneration of the cord. Folic acid 5 mg may be supplied under PGD 3 of 3 once B12 treatment has been started. If in any doubt about the order of treatment, refer."
                 />
                 <Checkbox
                   label="Patient is breastfeeding"
                   checked={state.eligibility.breastfeeding}
                   onChange={(v) => updateEligibility("breastfeeding", v)}
-                  description="Compatible with breastfeeding — hydroxocobalamin is excreted in breast milk but is unlikely to be harmful."
+                  description="Not a contraindication. Hydroxocobalamin is excreted in breast milk but is unlikely to harm the infant. Review at 1 month after the loading course rather than 3 months."
+                />
+                <Checkbox
+                  label="History of significant allergy or asthma"
+                  checked={state.eligibility.allergyOrAsthmaHistory}
+                  onChange={(v) => updateEligibility("allergyOrAsthmaHistory", v)}
+                  description="Use with caution. Anaphylaxis is rare but recognised: facilities and trained staff for its management, adrenaline 1 in 1,000 and a telephone must be available, and the patient must be observed after administration."
                 />
                 <Checkbox
                   label="Patient takes oral anticoagulants"
                   checked={state.eligibility.anticoagulants}
                   onChange={(v) => updateEligibility("anticoagulants", v)}
-                  description="Apply pressure to injection site for ≥2 min post-injection."
+                  description="Apply pressure to injection site for at least 2 minutes post-injection."
                 />
                 <Checkbox
                   label="Patient takes chloramphenicol"
                   checked={state.eligibility.onChloramphenicol}
                   onChange={(v) => updateEligibility("onChloramphenicol", v)}
-                  description="Chloramphenicol may reduce the haematological response to hydroxocobalamin. Discuss with patient and consider extended monitoring."
+                  description="People taking chloramphenicol may respond poorly to hydroxocobalamin. Where the response is inadequate, review the medication history and refer."
                 />
                 <Checkbox
                   label="Patient is on oral contraceptives (combined or progesterone-only)"
                   checked={state.eligibility.onOralContraceptives}
                   onChange={(v) => updateEligibility("onOralContraceptives", v)}
-                  description="May lower serum B12 due to reduced carrier protein. Unlikely to be clinically significant but document for the record."
+                  description="Serum concentrations may be lowered by oral contraceptives. Unlikely to be clinically significant but consider when interpreting a borderline result."
+                />
+                <Checkbox
+                  label="Patient already takes a B12 containing supplement"
+                  checked={state.eligibility.onB12Supplement}
+                  onChange={(v) => updateEligibility("onB12Supplement", v)}
+                  description="Can raise measured levels without correcting deficiency. Interpret the result with caution."
                 />
               </div>
+              <p className="mt-3 text-xs text-gray-600">
+                Severe deficiency: monitor plasma potassium during the initial
+                correction phase, as rapid haematological response can cause
+                hypokalaemia. Refer any patient who becomes unwell or develops
+                palpitations or muscle weakness during initiation.
+              </p>
             </div>
 
             <div className="border-t border-gray-200 pt-4">
@@ -322,13 +476,7 @@ export function B12InjectionClient() {
                     value={state.eligibility.symptoms}
                     onChange={(v) => updateEligibility("symptoms", v)}
                     rows={2}
-                    placeholder="e.g. fatigue, paraesthesia, glossitis"
-                  />
-                  <Checkbox
-                    label="Any neurological symptoms (paraesthesia, ataxia, memory changes, cognitive decline)"
-                    checked={state.eligibility.neuroSymptoms}
-                    onChange={(v) => updateEligibility("neuroSymptoms", v)}
-                    description="If present, use the every-2-month maintenance interval and notify GP."
+                    placeholder="e.g. fatigue, glossitis (any new or progressive neurological symptoms must be ticked above and referred)"
                   />
                 </div>
               )}
@@ -352,8 +500,8 @@ export function B12InjectionClient() {
                     className="mt-1"
                   />
                   <div className="text-sm">
-                    <div className="font-medium text-navy-900">Loading therapy</div>
-                    <div className="text-gray-600">1 mg IM three times weekly for two weeks (6 injections total). Use at start of treatment for newly diagnosed deficiency.</div>
+                    <div className="font-medium text-navy-900">Initial correction (loading), hydroxocobalamin 1 mg/ml injection</div>
+                    <div className="text-gray-600">1 mg IM three times a week for 2 weeks (6 injections total). Use at start of treatment for newly diagnosed deficiency. Where neurological involvement is suspected the schedule differs and the patient is excluded from this PGD; refer.</div>
                   </div>
                 </label>
                 <label className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
@@ -365,12 +513,138 @@ export function B12InjectionClient() {
                     className="mt-1"
                   />
                   <div className="text-sm">
-                    <div className="font-medium text-navy-900">Maintenance therapy</div>
-                    <div className="text-gray-600">1 mg IM every 2 months (with neurological involvement) or every 3 months (without). Lifelong for most indications.</div>
+                    <div className="font-medium text-navy-900">Maintenance, hydroxocobalamin 1 mg/ml injection</div>
+                    <div className="text-gray-600">1 mg IM every 2 to 3 months where the deficiency is not diet related (usually lifelong), or 1 mg IM twice yearly where the deficiency is diet related.</div>
+                  </div>
+                </label>
+                <label className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                  <input
+                    type="radio"
+                    name="regime"
+                    checked={state.treatment.regime === "oral-tablets"}
+                    onChange={() => updateTreatment("regime", "oral-tablets")}
+                    className="mt-1"
+                  />
+                  <div className="text-sm">
+                    <div className="font-medium text-navy-900">Oral maintenance, cyanocobalamin 50 microgram tablets (PGD 2 of 3)</div>
+                    <div className="text-gray-600">Diet related deficiency only: 50 to 150 micrograms daily by mouth, taken between meals. Up to 3 months supply at the selected dose, with review before further supply.</div>
                   </div>
                 </label>
               </div>
             </div>
+
+            {isInjection && (
+              <div className="border border-gray-200 rounded-lg p-3 space-y-2">
+                <p className="text-sm font-semibold text-navy-900">Injection pathway checks</p>
+                <Checkbox
+                  label="Suitable for intramuscular injection in a non-acute setting"
+                  checked={state.eligibility.suitableForIM}
+                  onChange={(v) => updateEligibility("suitableForIM", v)}
+                  required
+                />
+                <Checkbox
+                  label="Active infection at the proposed injection site"
+                  checked={state.eligibility.injectionSiteInfection}
+                  onChange={(v) => updateEligibility("injectionSiteInfection", v)}
+                />
+                {state.eligibility.injectionSiteInfection && (
+                  <p className="text-xs text-red-700 ml-7">Excluded. Do not inject at an infected site; refer or rebook once resolved.</p>
+                )}
+                <Checkbox
+                  label="Severe thrombocytopenia or a bleeding disorder"
+                  checked={state.eligibility.bleedingDisorder}
+                  onChange={(v) => updateEligibility("bleedingDisorder", v)}
+                />
+                {state.eligibility.bleedingDisorder && (
+                  <div className="ml-7 space-y-2">
+                    <p className="text-xs text-red-700">
+                      Excluded unless intramuscular injection has been assessed
+                      as safe by a clinician familiar with the individual&apos;s
+                      bleeding risk.
+                    </p>
+                    <Checkbox
+                      label="Intramuscular injection has been assessed as safe by a clinician familiar with the individual's bleeding risk (documented)"
+                      checked={state.eligibility.bleedingRiskAssessedSafe}
+                      onChange={(v) => updateEligibility("bleedingRiskAssessedSafe", v)}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {isOralTablets && (
+              <div className="space-y-4">
+                <div className="border border-gray-200 rounded-lg p-3 space-y-2">
+                  <p className="text-sm font-semibold text-navy-900">Cyanocobalamin tablet checks (PGD 2 of 3)</p>
+                  {state.eligibility.deficiencySource !== "dietary" && (
+                    <p className="text-xs text-red-700">
+                      Oral maintenance is only for deficiency assessed as diet
+                      related. Deficiency due to, or possibly due to,
+                      malabsorption, pernicious anaemia, gastric or ileal
+                      surgery, or any cause other than diet is excluded: oral
+                      replacement at this dose is not reliable in
+                      malabsorption. Use the injection pathway or refer.
+                    </p>
+                  )}
+                  <Checkbox
+                    label="Malabsorption and pernicious anaemia have been considered and are thought unlikely"
+                    checked={state.eligibility.malabsorptionExcluded}
+                    onChange={(v) => updateEligibility("malabsorptionExcluded", v)}
+                    required
+                  />
+                  <Checkbox
+                    label="Leber's hereditary optic neuropathy, or a family history of it"
+                    checked={state.eligibility.lhonHistory}
+                    onChange={(v) => updateEligibility("lhonHistory", v)}
+                  />
+                  {state.eligibility.lhonHistory && (
+                    <p className="text-xs text-red-700 ml-7">
+                      Cyanocobalamin is excluded in Leber&apos;s hereditary
+                      optic neuropathy. Hydroxocobalamin injection is not
+                      excluded on this ground; use the injection pathway or
+                      refer.
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-600">
+                    Adherence matters: oral maintenance only works if taken
+                    daily and continued. Where adherence is likely to be poor,
+                    the injection pathway may be more appropriate.
+                  </p>
+                </div>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-navy-900 mb-1">
+                      Daily dose <span className="text-red-400">*</span>
+                    </label>
+                    <select
+                      value={state.treatment.tabletDose}
+                      onChange={(e) => updateTreatment("tabletDose", e.target.value as typeof state.treatment.tabletDose)}
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
+                    >
+                      <option value="">select</option>
+                      <option value="50">50 micrograms daily (1 tablet)</option>
+                      <option value="100">100 micrograms daily (2 tablets)</option>
+                      <option value="150">150 micrograms daily (3 tablets)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-navy-900 mb-1">
+                      Supply <span className="text-red-400">*</span>
+                    </label>
+                    <select
+                      value={state.treatment.tabletSupplyDays}
+                      onChange={(e) => updateTreatment("tabletSupplyDays", e.target.value as typeof state.treatment.tabletSupplyDays)}
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
+                    >
+                      <option value="">select</option>
+                      <option value="28">28 days</option>
+                      <option value="56">56 days</option>
+                      <option value="84">84 days (3 months, maximum)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {state.treatment.regime === "loading" && (
               <div>
@@ -409,8 +683,8 @@ export function B12InjectionClient() {
                         className="mt-1"
                       />
                       <div className="text-sm">
-                        <div className="font-medium text-navy-900">Non-diet-related deficiency</div>
-                        <div className="text-gray-600">e.g. pernicious anaemia, post-bariatric surgery, atrophic gastritis. Maintenance is 1 mg IM every 2–3 months for life (8 weeks if neuro involvement; 12 weeks otherwise). Alternatively, large oral daily doses (500–1000 micrograms cyanocobalamin) can be considered.</div>
+                        <div className="font-medium text-navy-900">Deficiency NOT diet related</div>
+                        <div className="text-gray-600">e.g. pernicious anaemia (autoimmune gastritis), gastrectomy, bariatric or ileal surgery, malabsorption. Maintenance is 1 mg IM every 2 to 3 months, continuing long term (usually lifelong). A daily high dose oral alternative (500 to 1000 micrograms) is outside this PGD; discuss with the GP if the patient prefers it.</div>
                       </div>
                     </label>
                     <label className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
@@ -422,8 +696,8 @@ export function B12InjectionClient() {
                         className="mt-1"
                       />
                       <div className="text-sm">
-                        <div className="font-medium text-navy-900">Diet-related deficiency</div>
-                        <div className="text-gray-600">e.g. vegan / vegetarian. Maintenance is either cyanocobalamin tablets 50–150 micrograms daily, OR 6-monthly hydroxocobalamin 1 mg IM.</div>
+                        <div className="font-medium text-navy-900">Deficiency IS diet related</div>
+                        <div className="text-gray-600">e.g. vegan or severely restricted diet. Maintenance is either cyanocobalamin tablets 50 to 150 micrograms daily (select the oral maintenance regime above), OR hydroxocobalamin 1 mg IM twice yearly.</div>
                       </div>
                     </label>
                   </div>
@@ -439,17 +713,33 @@ export function B12InjectionClient() {
                     className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
                   >
                     <option value="">— select —</option>
-                    <option value="8-weeks">Every 8 weeks — non-diet-related with neurological involvement</option>
-                    <option value="12-weeks">Every 12 weeks — non-diet-related, no neurological involvement</option>
-                    <option value="26-weeks-diet-related">Every 6 months — diet-related deficiency only</option>
+                    <option value="8-weeks">Every 2 months (8 weeks), deficiency not diet related</option>
+                    <option value="12-weeks">Every 3 months (12 weeks), deficiency not diet related</option>
+                    <option value="26-weeks-diet-related">Twice yearly (every 6 months), diet related deficiency only</option>
                   </select>
+                  {!!state.treatment.maintenancePathway && !!state.treatment.maintenanceInterval && !maintenanceIntervalMatchesPathway && (
+                    <p className="mt-1 text-xs text-red-700">
+                      Interval does not match the maintenance pathway. Not diet
+                      related: every 2 to 3 months. Diet related: twice yearly.
+                    </p>
+                  )}
                 </div>
+                <p className="text-xs text-gray-600">
+                  Review at 3 months after the loading course (symptoms,
+                  response, full blood count; at 1 month if breastfeeding), then
+                  at least annually with symptoms, adherence and a full blood
+                  count. Do not repeat serum B12 on intramuscular maintenance.
+                  Refer to the GP if there is no response to the initial
+                  correction, if new neurological symptoms develop, if the blood
+                  picture changes, or if the cause of the deficiency has never
+                  been established.
+                </p>
               </>
             )}
 
             <div>
               <label className="block text-sm font-medium text-navy-900 mb-1">
-                Next injection due <span className="text-red-400">*</span>
+                {isOralTablets ? "Review date (before further supply)" : "Next injection due"} <span className="text-red-400">*</span>
               </label>
               <input
                 type="date"
@@ -464,9 +754,22 @@ export function B12InjectionClient() {
 
         {currentStep === 4 && (
           <div className="space-y-5">
+            <div className="rounded-lg bg-[color:var(--tenant-primary)]/10 border border-[color:var(--tenant-primary)]/30 p-3 text-sm text-[color:var(--tenant-primary)]">
+              <p className="font-semibold">
+                {isOralTablets
+                  ? `Cyanocobalamin 50 microgram tablets, ${state.treatment.tabletDose || "50 to 150"} micrograms daily by mouth between meals, ${state.treatment.tabletSupplyDays || "up to 84"} days supply (P medicine)`
+                  : "Hydroxocobalamin 1mg/ml Solution for Injection, one 1 mg ampoule intramuscularly (POM)"}
+              </p>
+              <p className="mt-1 text-xs">
+                {isOralTablets
+                  ? "Store below 25°C in the original container, protected from light."
+                  : "Store below 25°C. Protect from light. Do not freeze. Record the anatomical site used and rotate sites where a course is given."}
+              </p>
+            </div>
+
             <div className="grid sm:grid-cols-2 gap-4">
               <TextInput
-                label="Vaccine / drug batch number"
+                label={isOralTablets ? "Batch number of pack supplied" : "Ampoule batch number"}
                 value={state.administration.batchNumber}
                 onChange={(v) => updateAdmin("batchNumber", v)}
                 required
@@ -486,6 +789,20 @@ export function B12InjectionClient() {
               </div>
             </div>
 
+            {isOralTablets && (
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-700">
+                Supply the patient information leaflet (PIL) with the pack,
+                together with written dietary advice on B12 sources. Counsel:
+                take the tablets every day, between meals. Improvement in
+                tiredness and other symptoms may take a few weeks. Continue
+                while the dietary cause persists and attend for annual review
+                (symptoms, adherence, repeat B12 and full blood count). Seek
+                medical advice promptly for any new numbness, tingling,
+                unsteadiness, or memory or mood change.
+              </div>
+            )}
+
+            {isInjection && (
             <div>
               <label className="block text-sm font-medium text-navy-900 mb-1">
                 Injection site <span className="text-red-400">*</span>
@@ -504,16 +821,28 @@ export function B12InjectionClient() {
                 <option value="right-thigh">Right vastus lateralis (thigh)</option>
               </select>
             </div>
+            )}
 
+            {isInjection && (
             <TextInput
               label="Time administered"
               value={state.administration.administeredAt}
               onChange={(v) => updateAdmin("administeredAt", v)}
               placeholder="HH:MM"
             />
+            )}
 
+            {isInjection && (
             <div className="border-t border-gray-200 pt-4">
               <p className="text-sm font-semibold text-navy-900 mb-3">Post-injection observation</p>
+              <div className="mb-3">
+                <Checkbox
+                  label="Facilities and trained staff for the management of anaphylaxis available, with immediate access to adrenaline (epinephrine) 1 in 1,000 injection and a telephone"
+                  checked={state.administration.adrenalineAvailable}
+                  onChange={(v) => updateAdmin("adrenalineAvailable", v)}
+                  required
+                />
+              </div>
               <div>
                 <label className="block text-sm font-medium text-navy-900 mb-1">
                   Observation period <span className="text-red-400">*</span>
@@ -546,11 +875,28 @@ export function B12InjectionClient() {
                     value={state.administration.adverseReactionDetails}
                     onChange={(v) => updateAdmin("adverseReactionDetails", v)}
                     rows={2}
-                    placeholder="Describe reaction, action taken, Yellow Card reported"
+                    placeholder="Describe reaction, action taken, Yellow Card reported (https://yellowcard.mhra.gov.uk), GP informed"
                   />
                 )}
               </div>
+              <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-700">
+                Supply the PIL and a written record of the dose given and the
+                date the next dose is due. Counsel: hydroxocobalamin starts to
+                work straight away, but it may take a few days or weeks before
+                B12 levels and symptoms such as extreme tiredness start to
+                improve. At first the injection may be needed a few times a
+                week to build levels up; once the condition improves it may
+                only be needed every few months. There may be some mild,
+                short-lived pain, swelling or itching at the injection site.
+                It is safe to take long term and some people need it for the
+                rest of their lives. Urine may look reddish for a short time
+                after the injection, which is harmless. Seek medical advice
+                promptly for any new numbness, tingling, unsteadiness, memory
+                or mood change, and urgent advice for any breathing difficulty,
+                facial swelling or widespread rash after an injection.
+              </div>
             </div>
+            )}
           </div>
         )}
 
@@ -560,6 +906,12 @@ export function B12InjectionClient() {
             <TextInput label="GPhC registration" value={state.summary.pharmacistGPhC} onChange={(v) => setState((p) => ({ ...p, summary: { ...p.summary, pharmacistGPhC: v } }))} required />
             <TextInput label="Pharmacy name" value={state.summary.pharmacyName} onChange={(v) => setState((p) => ({ ...p, summary: { ...p.summary, pharmacyName: v } }))} />
             <TextArea label="Clinical notes" value={state.summary.clinicalNotes} onChange={(v) => setState((p) => ({ ...p, summary: { ...p.summary, clinicalNotes: v } }))} rows={3} placeholder="Any further notes, advice given, follow-up arrangements" />
+            <Checkbox
+              label="GP informed of the supply or administration under this PGD (or referral made)"
+              checked={state.summary.gpInformed}
+              onChange={(v) => setState((p) => ({ ...p, summary: { ...p.summary, gpInformed: v } }))}
+              description="The PGD requires the individual's GP to be informed."
+            />
           </div>
         )}
 
@@ -568,7 +920,9 @@ export function B12InjectionClient() {
             <p className="text-sm font-semibold text-green-900">Consultation record complete</p>
             <p className="text-sm text-green-800 mt-1">
               Save the consultation to lock the record. Patient should return on
-              {state.treatment.nextDueDate ? ` ${state.treatment.nextDueDate}` : " the date you noted"} for the next dose.
+              {state.treatment.nextDueDate ? ` ${state.treatment.nextDueDate}` : " the date you noted"}
+              {isOralTablets ? " for review before further supply." : " for the next dose."}
+              {" "}Review at 3 months after the loading course (1 month if breastfeeding), then at least annually with a full blood count.
             </p>
           </div>
         )}

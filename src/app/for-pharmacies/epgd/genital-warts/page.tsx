@@ -23,16 +23,18 @@ export default function GenitalWartsPage() {
             <p className="text-sm text-gray-600 mt-1">
               Treatment of visible external genital and perianal warts in
               adults aged 18 and over. Patient-applied podophyllotoxin or
-              imiquimod.
+              imiquimod. PGD version 003, issued 11 September 2026.
             </p>
             <div className="mt-4 rounded-lg bg-purple-50 border border-purple-200 p-4">
               <p className="text-sm text-purple-900">
                 <strong>Two agents, one PGD.</strong> Podophyllotoxin 0.5%
                 solution or 0.15% cream for small non-keratinised external
-                warts, capped at 50 warts and a 10 cm² treatment area.
-                Imiquimod 5% cream for larger or keratinised lesions, with no
-                equivalent cap. Both exclude internal warts, pregnancy and
-                breastfeeding. External perianal warts are in scope.
+                warts, total treatment area up to and including 4 cm2 (the
+                SmPC limit for unsupervised use), up to 4 weekly cycles.
+                Imiquimod 5% cream for larger or keratinised lesions, 3 times
+                a week for up to 16 weeks, with no equivalent area cap. Both
+                exclude internal warts, pregnancy and breastfeeding. External
+                perianal warts are in scope.
               </p>
             </div>
           </div>
@@ -41,7 +43,7 @@ export default function GenitalWartsPage() {
 
           <div className="mt-8 text-center text-xs text-gray-500">
             <p>
-              Get Real Health ePGD — Genital Warts | Confidential Patient
+              Get Real Health ePGD, Genital Warts | Confidential Patient
               Information
             </p>
           </div>

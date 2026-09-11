@@ -1,11 +1,22 @@
 // Clinical logic and validation for shingles ePGD
-import { ClinicalAlert, AlertSeverity } from '../shared/types';
+// Aligned to the Shingles (Herpes Zoster) Treatment PGD, version 005,
+// issued 11 September 2026. Aciclovir, valaciclovir or famciclovir, adults
+// 18 and over, immunocompetent or non-severe immunosuppression.
+import { ClinicalAlert } from '../shared/types';
 import {
   ShinglesSymptoms,
   ShinglesMedicalHistory,
   ShinglesMedicineSelection,
+  ShinglesCounselling,
   RashDermatome,
+  Medicine,
 } from './shingles-types';
+
+/** Pain score bands on the 1 to 10 scale used by the tool. */
+export const MODERATE_PAIN_THRESHOLD = 4;
+export const SEVERE_PAIN_THRESHOLD = 7;
+/** Age from which the PGD treats a patient as elderly for renal and neurological cautions. */
+export const ELDERLY_AGE = 65;
 
 /**
  * Calculate hours since rash onset from ISO date string
@@ -19,11 +30,17 @@ export function calculateHoursSinceOnset(rashOnsetDate: string): number | null {
 }
 
 /**
- * Check if rash is within treatment window (72 hours)
+ * Check if rash is within the 72 hour treatment window
  */
 export function isWithinTreatmentWindow(hoursSinceOnset: number | null): boolean {
   if (hoursSinceOnset === null) return false;
   return hoursSinceOnset <= 72;
+}
+
+/** Rash onset within 7 days (the extended window in the PGD). */
+export function isWithinSevenDays(hoursSinceOnset: number | null): boolean {
+  if (hoursSinceOnset === null) return false;
+  return hoursSinceOnset <= 24 * 7;
 }
 
 /**
@@ -41,17 +58,95 @@ export function hasHutchinsonSignRisk(dermatome: RashDermatome): boolean {
 }
 
 /**
- * Check for Ramsay Hunt syndrome risk (ear involvement, V3/cervical area)
+ * Head or neck involvement, including the face, scalp, ear or eye: refer (PGD v005 red flag).
  */
-export function hasRamsayHuntRisk(dermatome: RashDermatome): boolean {
-  return dermatome === 'cervical' || dermatome === 'trigeminal-V3';
+export function isHeadOrNeck(dermatome: RashDermatome): boolean {
+  return (
+    dermatome === 'cervical' ||
+    dermatome === 'trigeminal-V1' ||
+    dermatome === 'trigeminal-V2' ||
+    dermatome === 'trigeminal-V3'
+  );
+}
+
+/** Non-truncal involvement of the limbs or perineum (72 hour window criterion). */
+export function isNonTruncal(dermatome: RashDermatome): boolean {
+  return dermatome === 'upper-limb' || dermatome === 'lower-limb' || dermatome === 'perineum';
 }
 
 /**
  * Check for urinary retention risk (sacral involvement)
  */
 export function hasUrinaryRetentionRisk(dermatome: RashDermatome): boolean {
-  return dermatome === 'sacral';
+  return dermatome === 'sacral' || dermatome === 'perineum';
+}
+
+/** Severe immunosuppression as defined in Green Book chapter 28a: excluded. */
+export function hasSevereImmunosuppression(medicalHistory: ShinglesMedicalHistory): boolean {
+  return (
+    medicalHistory.cancerActive ||
+    medicalHistory.organTransplant ||
+    ((medicalHistory.immunosuppressed || medicalHistory.hivPositive) &&
+      medicalHistory.immunosuppressionSeverity === 'severe')
+  );
+}
+
+/** Non-severe (mild or moderate) immunosuppression: supply valaciclovir or famciclovir, not aciclovir. */
+export function hasNonSevereImmunosuppression(medicalHistory: ShinglesMedicalHistory): boolean {
+  return (
+    !hasSevereImmunosuppression(medicalHistory) &&
+    (medicalHistory.immunosuppressed || medicalHistory.hivPositive) &&
+    medicalHistory.immunosuppressionSeverity === 'non-severe'
+  );
+}
+
+/** Which treatment window the presentation meets, for the record. */
+export type TreatmentWindow = 'within-72h' | 'within-7-days' | 'outside' | 'not-met' | 'unknown';
+
+export function meets72HourCriteria(symptoms: ShinglesSymptoms, age: number | null): boolean {
+  return (
+    (age !== null && age > 50) ||
+    isNonTruncal(symptoms.dermatome) ||
+    (symptoms.painLevel !== null && symptoms.painLevel >= MODERATE_PAIN_THRESHOLD) ||
+    symptoms.rashSeverity === 'moderate' ||
+    symptoms.rashSeverity === 'severe'
+  );
+}
+
+export function meetsSevenDayCriteria(symptoms: ShinglesSymptoms, age: number | null): boolean {
+  return (
+    symptoms.newVesiclesForming ||
+    (symptoms.painLevel !== null && symptoms.painLevel >= SEVERE_PAIN_THRESHOLD) ||
+    (age !== null && age >= 70) ||
+    symptoms.highRiskSevereShingles
+  );
+}
+
+export function getTreatmentWindow(symptoms: ShinglesSymptoms, age: number | null): TreatmentWindow {
+  const hours = symptoms.hoursSinceOnset;
+  if (hours === null) return 'unknown';
+  if (!isWithinSevenDays(hours)) return 'outside';
+  if (isWithinTreatmentWindow(hours)) {
+    if (meets72HourCriteria(symptoms, age)) return 'within-72h';
+    if (meetsSevenDayCriteria(symptoms, age)) return 'within-7-days';
+    return 'not-met';
+  }
+  return meetsSevenDayCriteria(symptoms, age) ? 'within-7-days' : 'not-met';
+}
+
+export function describeTreatmentWindow(window: TreatmentWindow): string {
+  switch (window) {
+    case 'within-72h':
+      return 'Rash onset within 72 hours with a qualifying criterion (age over 50, non-truncal involvement, moderate or severe pain, or moderate or severe rash)';
+    case 'within-7-days':
+      return 'Rash onset within 7 days with a qualifying criterion (new vesicles forming, severe pain, age 70 or over, or high risk of severe shingles)';
+    case 'outside':
+      return 'Rash onset more than 7 days ago: excluded, refer to a prescriber';
+    case 'not-met':
+      return 'No inclusion criterion for the treatment window met: refer to a prescriber';
+    default:
+      return 'Not established';
+  }
 }
 
 /**
@@ -59,141 +154,411 @@ export function hasUrinaryRetentionRisk(dermatome: RashDermatome): boolean {
  */
 export function generateClinicalAlerts(
   symptoms: ShinglesSymptoms,
-  medicalHistory: ShinglesMedicalHistory
+  medicalHistory: ShinglesMedicalHistory,
+  age: number | null = null
 ): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
 
   // HARD STOPS (CRITICAL)
 
+  if (age !== null && age < 18) {
+    alerts.push({
+      code: 'under-18',
+      message: 'Patient is under 18 years of age.',
+      detail: 'This PGD covers adults aged 18 years and over only. Refer.',
+      severity: 'stop',
+    });
+  }
+
   // Ophthalmic shingles
-  if (isOphthalmicShingles(symptoms.dermatome)) {
+  if (isOphthalmicShingles(symptoms.dermatome) || symptoms.eyeSymptoms) {
     alerts.push({
       code: 'ophthalmic-shingles',
-      message: 'URGENT: Ophthalmic shingles (V1 dermatome) requires urgent ophthalmology referral.',
-      detail: 'Pharmacy cannot manage ophthalmic shingles - refer to GP immediately for urgent ophthalmology assessment.',
+      message: 'URGENT: Ophthalmic involvement. Refer the same day for ophthalmology assessment.',
+      detail:
+        'Rash in the ophthalmic division of the trigeminal nerve, any visual symptom, an unexplained red eye, or Hutchinson\'s sign (rash on the tip, side or root of the nose). Do not supply under this PGD.',
       severity: 'stop',
     });
   }
 
-  // Immunosuppressed patients
-  if (
-    medicalHistory.immunosuppressed ||
-    medicalHistory.hivPositive ||
-    medicalHistory.cancerActive ||
-    medicalHistory.organTransplant
-  ) {
+  // Head or neck involvement (face, scalp, ear, eye)
+  if (isHeadOrNeck(symptoms.dermatome) && !isOphthalmicShingles(symptoms.dermatome)) {
     alerts.push({
-      code: 'immunosuppressed',
-      message: 'Patient is immunosuppressed.',
-      detail: 'This requires specialist management - refer to GP or appropriate specialist.',
+      code: 'head-neck',
+      message: 'Head or neck involvement (face, scalp, ear or neck). Refer or seek specialist advice the same day.',
+      detail:
+        'NICE CKS: head and neck involvement is a trigger for admission or specialist advice, urgently where the eye may be involved. Not for supply under this PGD.',
       severity: 'stop',
     });
   }
 
-  // Pregnant patients
+  if (symptoms.earOrFacialSymptoms) {
+    alerts.push({
+      code: 'ramsay-hunt',
+      message: 'Ramsay Hunt syndrome or facial nerve involvement. Refer urgently.',
+      detail: 'Rash in or around the ear, hearing loss, vertigo, altered taste, or unilateral facial weakness.',
+      severity: 'stop',
+    });
+  }
+
+  if (symptoms.meningitisSigns) {
+    alerts.push({
+      code: 'meningitis',
+      message: 'Signs of meningitis (neck stiffness, photophobia, mottled skin). Refer to A&E.',
+      detail: 'Do not supply. Arrange emergency assessment.',
+      severity: 'stop',
+    });
+  }
+
+  if (symptoms.encephalitisSigns) {
+    alerts.push({
+      code: 'encephalitis',
+      message: 'Signs of encephalitis (disorientation, confusion, change in behaviour). Refer to A&E.',
+      detail: 'Do not supply. Arrange emergency assessment.',
+      severity: 'stop',
+    });
+  }
+
+  if (symptoms.myelitisSigns) {
+    alerts.push({
+      code: 'myelitis',
+      message: 'Signs of myelitis (muscle weakness, loss of bladder or bowel control). Refer to A&E.',
+      detail: 'Do not supply. Arrange emergency assessment.',
+      severity: 'stop',
+    });
+  }
+
+  if (symptoms.sepsisSigns) {
+    alerts.push({
+      code: 'sepsis',
+      message: 'Signs of sepsis or serious systemic infection. Call 999.',
+      detail: 'Do not supply. Emergency.',
+      severity: 'stop',
+    });
+  }
+
+  if (symptoms.systemicallyUnwell) {
+    alerts.push({
+      code: 'systemic-illness',
+      message: 'Systemic illness not meeting the threshold for sepsis. Refer to a prescriber the same day.',
+      detail: 'Not for supply under this PGD.',
+      severity: 'stop',
+    });
+  }
+
+  if (symptoms.painUncontrolledByOtc) {
+    alerts.push({
+      code: 'pain-uncontrolled',
+      message: 'Pain not controlled by over-the-counter analgesia. Refer to a prescriber the same day.',
+      detail: 'Not for supply under this PGD.',
+      severity: 'stop',
+    });
+  }
+
+  if (!symptoms.unilateral && symptoms.rashDescription.trim()) {
+    alerts.push({
+      code: 'not-dermatomal',
+      message: 'Rash is not a unilateral dermatomal rash, or crosses the midline. Refer.',
+      detail:
+        'A disseminated or widespread rash, or a rash crossing the midline, suggests dissemination. Inclusion requires a unilateral, dermatomal, painful vesicular rash that does not cross the midline.',
+      severity: 'stop',
+    });
+  }
+
+  // Treatment window
+  const window = getTreatmentWindow(symptoms, age);
+  if (window === 'outside') {
+    alerts.push({
+      code: 'outside-7-days',
+      message: `Rash onset ${symptoms.hoursSinceOnset} hours ago (more than 7 days). Excluded: refer for a prescriber decision.`,
+      detail:
+        'A prescriber may still favour treatment where new vesicles are forming or pain is severe, but supply under this PGD is not permitted.',
+      severity: 'stop',
+    });
+  } else if (window === 'not-met') {
+    alerts.push({
+      code: 'window-criteria-not-met',
+      message: 'No treatment window inclusion criterion is met. Refer to a prescriber.',
+      detail: isWithinTreatmentWindow(symptoms.hoursSinceOnset)
+        ? 'Within 72 hours, supply requires at least one of: age over 50; non-truncal involvement of the limbs or perineum; moderate or severe pain; or moderate or severe rash with confluent lesions.'
+        : 'Between 72 hours and 7 days, supply requires at least one of: continued formation of new vesicles; severe pain; age 70 or over; or a high risk of severe shingles (for example severe atopic eczema).',
+      severity: 'stop',
+    });
+  }
+
+  // Severe immunosuppression (Green Book chapter 28a)
+  if (hasSevereImmunosuppression(medicalHistory)) {
+    alerts.push({
+      code: 'severe-immunosuppression',
+      message: 'Severe immunosuppression as defined in Green Book chapter 28a. Excluded.',
+      detail:
+        'Refer for intravenous aciclovir or specialist advice. Refer to A&E if the rash is widespread or severe, or the patient is systemically unwell.',
+      severity: 'stop',
+    });
+  }
+
+  // Pregnant patients (known or suspected)
   if (medicalHistory.pregnant) {
     alerts.push({
       code: 'pregnant',
-      message: 'Patient is pregnant.',
-      detail: 'Antiviral therapy requires specialist advice - refer to GP or obstetrics.',
+      message: 'Pregnancy, known or suspected. Refer to a prescriber.',
+      detail: 'NICE CKS: seek specialist advice before antiviral treatment in pregnancy.',
       severity: 'stop',
     });
   }
 
-  // Severe hepatic impairment
+  if (medicalHistory.breastfeeding && medicalHistory.breastLesions) {
+    alerts.push({
+      code: 'breastfeeding-breast-lesions',
+      message: 'Breastfeeding with shingles lesions on the breast. Excluded: refer.',
+      detail: 'Sores elsewhere are a caution rather than an exclusion.',
+      severity: 'stop',
+    });
+  }
+
+  // Renal impairment below the PGD thresholds: refer, do not operate a dosing ladder
+  if (medicalHistory.renalImpairment === 'severe') {
+    alerts.push({
+      code: 'severe-renal',
+      message: 'eGFR below 30 mL/min/1.73m2. Excluded: refer to a prescriber.',
+      detail: 'No antiviral may be supplied under this PGD below 30. Do not attempt to operate the renal dosing ladder in the pharmacy.',
+      severity: 'stop',
+    });
+  }
+
+  const renalRiskFactors =
+    (age !== null && age >= ELDERLY_AGE) ||
+    medicalHistory.nephrotoxicMedicines ||
+    medicalHistory.tenofovir ||
+    medicalHistory.immunosuppressed ||
+    medicalHistory.hivPositive ||
+    medicalHistory.dehydrationRisk;
+  if (medicalHistory.renalImpairment === 'unknown' && renalRiskFactors) {
+    alerts.push({
+      code: 'renal-unknown-risk',
+      message: 'Renal function unknown in a patient who is elderly or has risk factors for renal impairment. Refer rather than assume.',
+      detail: 'The PGD requires renal function to be checked before supply in elderly patients and where risk factors are present.',
+      severity: 'stop',
+    });
+  }
+
+  // Severe hepatic impairment (tool position, retained)
   if (medicalHistory.hepaticImpairment === 'severe') {
     alerts.push({
       code: 'severe-hepatic',
       message: 'Severe hepatic impairment.',
-      detail: 'Antivirals are contraindicated. Refer to GP.',
+      detail: 'Refer to a prescriber.',
       severity: 'stop',
     });
   }
 
-  // Outside treatment window AND already crusting (antivirals unlikely to help)
-  if (
-    symptoms.hoursSinceOnset !== null &&
-    symptoms.hoursSinceOnset > 72 &&
-    symptoms.rashStage === 'crusting'
-  ) {
+  if (medicalHistory.allergyAciclovirValaciclovir && medicalHistory.allergyFamciclovirPenciclovir) {
     alerts.push({
-      code: 'outside-window-crusting',
-      message: `Rash is ${symptoms.hoursSinceOnset} hours since onset and crusting.`,
-      detail: 'Antivirals are unlikely to be effective. Refer to GP for pain management advice.',
+      code: 'hypersensitivity-all',
+      message: 'Hypersensitivity to both antiviral classes. No agent can be supplied.',
+      detail: 'Aciclovir and valaciclovir are cross-reactive; famciclovir and penciclovir are cross-reactive. Refer.',
+      severity: 'stop',
+    });
+  }
+
+  if (medicalHistory.previousDress) {
+    alerts.push({
+      code: 'previous-dress',
+      message: 'Previous DRESS reaction to valaciclovir or famciclovir. Excluded: these must never be restarted.',
+      detail: 'Refer to a prescriber.',
+      severity: 'stop',
+    });
+  }
+
+  if (medicalHistory.excludedInteractingMedicines) {
+    alerts.push({
+      code: 'interacting-medicines',
+      message: 'Concurrent ciclosporin, tacrolimus, mycophenolate, aminophylline or theophylline. Excluded: refer to a prescriber.',
+      detail: 'Not for supply under this PGD.',
+      severity: 'stop',
+    });
+  }
+
+  if (medicalHistory.unableToSwallowOrAbsorb) {
+    alerts.push({
+      code: 'oral-route',
+      message: 'Unable to swallow or absorb oral medication. Excluded.',
+      detail: 'Refer to a prescriber.',
+      severity: 'stop',
+    });
+  }
+
+  if (medicalHistory.onAntiviralProphylaxis) {
+    alerts.push({
+      code: 'antiviral-prophylaxis',
+      message: 'Current long-term prophylactic treatment with the same class of antiviral. Excluded.',
+      detail: 'Refer to a prescriber.',
+      severity: 'stop',
+    });
+  }
+
+  if (medicalHistory.neurologicalCondition) {
+    alerts.push({
+      code: 'neurological-condition',
+      message: 'Underlying neurological condition. Excluded.',
+      detail: 'Antivirals carry a higher risk of neurological adverse effects. Refer to a prescriber.',
+      severity: 'stop',
+    });
+  }
+
+  if (medicalHistory.dehydrationRisk) {
+    alerts.push({
+      code: 'dehydration-risk',
+      message: 'Unable to maintain adequate fluid intake, or at risk of dehydration. Excluded.',
+      detail: 'Refer to a prescriber.',
+      severity: 'stop',
+    });
+  }
+
+  if (medicalHistory.failedAntiviralThisEpisode) {
+    alerts.push({
+      code: 'failed-antiviral',
+      message: 'Failure to respond to antiviral treatment already given for this episode. Excluded.',
+      detail: 'Refer to a prescriber.',
       severity: 'stop',
     });
   }
 
   // RED FLAGS (HIGH)
 
-  // Hutchinson's sign risk
-  if (hasHutchinsonSignRisk(symptoms.dermatome)) {
-    alerts.push({
-      code: 'hutchinson-sign-risk',
-      message: 'V1 involvement carries risk of eye complications (Hutchinson\'s sign).',
-      detail: 'Ensure patient understands need for immediate eye care if eye symptoms develop.',
-      severity: 'red-flag',
-    });
-  }
-
-  // Ramsay Hunt syndrome risk
-  if (hasRamsayHuntRisk(symptoms.dermatome)) {
-    alerts.push({
-      code: 'ramsay-hunt-risk',
-      message: 'V3/cervical dermatome involvement carries risk of Ramsay Hunt syndrome.',
-      detail: 'Monitor for facial weakness, ear pain, or hearing loss.',
-      severity: 'red-flag',
-    });
-  }
-
   // Urinary retention risk
   if (hasUrinaryRetentionRisk(symptoms.dermatome)) {
     alerts.push({
       code: 'urinary-retention-risk',
-      message: 'Sacral dermatome involvement carries risk of urinary retention.',
-      detail: 'Counsel patient to seek medical attention if unable to void.',
+      message: 'Sacral or perineal involvement carries a risk of urinary retention.',
+      detail: 'Counsel the patient to seek medical attention if unable to pass urine.',
       severity: 'red-flag',
     });
   }
 
   // Severe pain
-  if (symptoms.painLevel !== null && symptoms.painLevel >= 8) {
+  if (symptoms.painLevel !== null && symptoms.painLevel >= SEVERE_PAIN_THRESHOLD) {
     alerts.push({
       code: 'severe-pain',
-      message: 'Severe pain (8+/10).',
-      detail: 'Consider specialist pain management and higher-dose analgesia. Patient may need GP review for additional support.',
+      message: `Severe pain (${symptoms.painLevel}/10).`,
+      detail:
+        'Advise paracetamol alone or with codeine, or an NSAID, subject to the usual contraindications. Refer urgently to a prescriber if pain is not controlled by over-the-counter analgesia.',
       severity: 'red-flag',
     });
   }
 
   // CAUTIONS (AMBER)
 
-  // Outside treatment window (48-72 hours)
-  if (symptoms.hoursSinceOnset !== null && symptoms.hoursSinceOnset > 48 && symptoms.hoursSinceOnset <= 72) {
+  if (window === 'within-7-days' && !isWithinTreatmentWindow(symptoms.hoursSinceOnset)) {
     alerts.push({
-      code: 'approaching-treatment-window',
-      message: `Rash is ${symptoms.hoursSinceOnset} hours since onset.`,
-      detail: 'Approaching edge of treatment window - antivirals may be less effective.',
+      code: 'extended-window',
+      message: `Rash onset ${symptoms.hoursSinceOnset} hours ago: outside 72 hours, supplied under the 7 day criteria.`,
+      detail: 'Start treatment as soon as possible. The benefit falls away the longer the delay after rash onset.',
       severity: 'caution',
     });
   }
 
-  // Moderate renal impairment
+  if (hasNonSevereImmunosuppression(medicalHistory)) {
+    alerts.push({
+      code: 'non-severe-immunosuppression',
+      message: 'Non-severe immunosuppression: use valaciclovir or famciclovir, not aciclovir.',
+      detail:
+        'Valaciclovir and famciclovir are licensed for herpes zoster in immunocompromised adults; aciclovir is not licensed in the same terms. Famciclovir course is 10 days in this group.',
+      severity: 'caution',
+    });
+  }
+
+  if (
+    (medicalHistory.immunosuppressed || medicalHistory.hivPositive) &&
+    medicalHistory.immunosuppressionSeverity === ''
+  ) {
+    alerts.push({
+      code: 'immunosuppression-unclassified',
+      message: 'Immunosuppression or HIV recorded: classify as severe or non-severe using Green Book chapter 28a before proceeding.',
+      detail: 'Severe immunosuppression is excluded. HIV with a CD4 count below 200 is severe.',
+      severity: 'caution',
+    });
+  }
+
   if (medicalHistory.renalImpairment === 'moderate') {
     alerts.push({
       code: 'moderate-renal',
-      message: 'Moderate renal impairment detected.',
-      detail: 'Dose adjustment required: valaciclovir 1g BD or aciclovir 800mg TDS.',
+      message: 'eGFR 30 to 59 mL/min/1.73m2: aciclovir only. Valaciclovir and famciclovir are not to be supplied below eGFR 60.',
+      detail:
+        'The PGD does not operate the renal dosing ladder. Aciclovir at the standard dose may be supplied at eGFR 30 and above; counsel firmly on fluid intake and neurological side effects.',
       severity: 'caution',
     });
   }
 
-  // Severe renal impairment
-  if (medicalHistory.renalImpairment === 'severe') {
+  if (medicalHistory.renalImpairment === 'unknown' && !renalRiskFactors) {
     alerts.push({
-      code: 'severe-renal',
-      message: 'Severe renal impairment detected.',
-      detail: 'Significant dose adjustment required: valaciclovir 500mg TDS or aciclovir 800mg BD. Consider GP referral.',
+      code: 'renal-unknown',
+      message: 'Renal function not established.',
+      detail: 'Record how renal function was assessed. Where the patient is elderly or has risk factors for renal impairment, refer rather than assume.',
+      severity: 'caution',
+    });
+  }
+
+  if (age !== null && age >= ELDERLY_AGE) {
+    alerts.push({
+      code: 'elderly',
+      message: 'Elderly patient: check renal function before supply.',
+      detail:
+        'Renal function declines with age, often without a diagnosis of chronic kidney disease, and all three antivirals carry a higher risk of neurological adverse effects (confusion, hallucinations, somnolence) in this group.',
+      severity: 'caution',
+    });
+  }
+
+  if (medicalHistory.nephrotoxicMedicines) {
+    alerts.push({
+      code: 'nephrotoxic-medicines',
+      message: 'Other nephrotoxic medicines (ACE inhibitor, ARB, diuretic, NSAID, metformin, aminoglycoside, methotrexate).',
+      detail: 'Supply may still be appropriate but counsel firmly on maintaining fluid intake.',
+      severity: 'caution',
+    });
+  }
+
+  if (medicalHistory.tenofovir) {
+    alerts.push({
+      code: 'tenofovir',
+      message: 'Tenofovir: supply may proceed.',
+      detail: 'Advise the patient to contact the prescriber of their tenofovir about additional renal monitoring.',
+      severity: 'caution',
+    });
+  }
+
+  if (medicalHistory.probenecidOrCimetidine) {
+    alerts.push({
+      code: 'probenecid-cimetidine',
+      message: 'Probenecid or cimetidine reduce renal clearance of aciclovir and valaciclovir.',
+      detail: 'The therapeutic index is wide so this is usually not significant, but it matters more where renal function is already reduced.',
+      severity: 'caution',
+    });
+  }
+
+  if (medicalHistory.raloxifene) {
+    alerts.push({
+      code: 'raloxifene',
+      message: 'Raloxifene with famciclovir: antiviral effect may be reduced.',
+      detail: 'Raloxifene inhibits the enzyme that converts famciclovir to its active form. Monitor the clinical response, or choose another agent.',
+      severity: 'caution',
+    });
+  }
+
+  if (medicalHistory.allergyAciclovirValaciclovir && !medicalHistory.allergyFamciclovirPenciclovir) {
+    alerts.push({
+      code: 'allergy-aciclovir',
+      message: 'Hypersensitivity to aciclovir or valaciclovir: neither may be supplied (cross-reactive). Famciclovir only.',
+      detail: 'Known hypersensitivity to the antiviral to be supplied is an exclusion.',
+      severity: 'caution',
+    });
+  }
+
+  if (medicalHistory.allergyFamciclovirPenciclovir && !medicalHistory.allergyAciclovirValaciclovir) {
+    alerts.push({
+      code: 'allergy-famciclovir',
+      message: 'Hypersensitivity to famciclovir or penciclovir: famciclovir may not be supplied (cross-reactive).',
+      detail: 'Known hypersensitivity to the antiviral to be supplied is an exclusion.',
       severity: 'caution',
     });
   }
@@ -202,28 +567,19 @@ export function generateClinicalAlerts(
   if (medicalHistory.hepaticImpairment === 'mild-moderate') {
     alerts.push({
       code: 'hepatic-impairment',
-      message: 'Mild-moderate hepatic impairment noted.',
-      detail: 'Monitor for side effects. Patient should avoid alcohol.',
+      message: 'Mild to moderate hepatic impairment noted.',
+      detail: 'No dose modification is required in mild or moderate cirrhosis (valaciclovir SmPC). Monitor for side effects.',
       severity: 'caution',
     });
   }
 
-  // Breastfeeding
-  if (medicalHistory.breastfeeding) {
+  // Breastfeeding without breast lesions
+  if (medicalHistory.breastfeeding && !medicalHistory.breastLesions) {
     alerts.push({
       code: 'breastfeeding',
-      message: 'Patient is breastfeeding.',
-      detail: 'Aciclovir is preferred (small amounts in breast milk); valaciclovir less preferred. Counsel on monitoring infant.',
-      severity: 'caution',
-    });
-  }
-
-  // Elderly (>70 years)
-  if (symptoms.painLevel !== null && symptoms.painLevel >= 7) {
-    alerts.push({
-      code: 'elderly-phn-risk',
-      message: 'Significant pain in patient.',
-      detail: 'Postherpetic neuralgia (PHN) risk is high. Optimal antiviral timing is critical.',
+      message: 'Breastfeeding: caution, not an exclusion where there are no sores on the breast.',
+      detail:
+        'Aciclovir is detected in breast milk; valaciclovir should be used with caution and only when clinically indicated (SmPCs). Sores on the breast would be an exclusion.',
       severity: 'caution',
     });
   }
@@ -231,13 +587,67 @@ export function generateClinicalAlerts(
   return alerts;
 }
 
+/** Agents that may be supplied to this patient, with the reason for any that may not. */
+export function getMedicineAvailability(
+  medicalHistory: ShinglesMedicalHistory
+): { medicine: Exclude<Medicine, ''>; available: boolean; reason: string }[] {
+  const nonSevere = hasNonSevereImmunosuppression(medicalHistory);
+  const renalBelow60 =
+    medicalHistory.renalImpairment === 'moderate' || medicalHistory.renalImpairment === 'severe';
+  const renalBelow30 = medicalHistory.renalImpairment === 'severe';
+
+  return [
+    {
+      medicine: 'aciclovir',
+      available:
+        !medicalHistory.allergyAciclovirValaciclovir && !nonSevere && !renalBelow30,
+      reason: medicalHistory.allergyAciclovirValaciclovir
+        ? 'hypersensitivity to aciclovir or valaciclovir'
+        : nonSevere
+        ? 'non-severe immunosuppression: use valaciclovir or famciclovir'
+        : renalBelow30
+        ? 'eGFR below 30'
+        : '',
+    },
+    {
+      medicine: 'valaciclovir',
+      available:
+        !medicalHistory.allergyAciclovirValaciclovir &&
+        !medicalHistory.previousDress &&
+        !renalBelow60,
+      reason: medicalHistory.allergyAciclovirValaciclovir
+        ? 'hypersensitivity to aciclovir or valaciclovir'
+        : medicalHistory.previousDress
+        ? 'previous DRESS reaction'
+        : renalBelow60
+        ? 'eGFR below 60'
+        : '',
+    },
+    {
+      medicine: 'famciclovir',
+      available:
+        !medicalHistory.allergyFamciclovirPenciclovir &&
+        !medicalHistory.previousDress &&
+        !renalBelow60,
+      reason: medicalHistory.allergyFamciclovirPenciclovir
+        ? 'hypersensitivity to famciclovir or penciclovir'
+        : medicalHistory.previousDress
+        ? 'previous DRESS reaction'
+        : renalBelow60
+        ? 'eGFR below 60'
+        : '',
+    },
+  ];
+}
+
 /**
- * Get recommended dose based on medicine and renal status
+ * Get the PGD regimen for the chosen agent. The PGD does not operate a renal
+ * dosing ladder: below the renal threshold for an agent the patient is
+ * referred, so no renal-adjusted doses exist here.
  */
 export function getRecommendedDose(
   medicine: string,
-  renalStatus: 'none' | 'moderate' | 'severe',
-  age?: number
+  medicalHistory: ShinglesMedicalHistory
 ): {
   dose: string;
   frequency: string;
@@ -246,59 +656,44 @@ export function getRecommendedDose(
   notes: string;
 } {
   if (medicine === 'valaciclovir') {
-    if (renalStatus === 'none') {
+    return {
+      dose: '1000 mg (two 500 mg tablets)',
+      frequency: 'three times daily',
+      duration: '7 days',
+      quantity: 42,
+      notes:
+        'Valaciclovir 500 mg film-coated tablets: 1000 mg three times daily for 7 days (42 tablets). Preferred where five times daily dosing is impractical or in non-severe immunosuppression. Not below eGFR 60.',
+    };
+  }
+  if (medicine === 'aciclovir') {
+    return {
+      dose: '800 mg',
+      frequency: 'five times daily at approximately four hourly intervals, omitting the night dose',
+      duration: '7 days',
+      quantity: 35,
+      notes:
+        'Aciclovir 800 mg tablets or dispersible tablets: 800 mg five times daily for 7 days (35 tablets). Adherence to five doses a day is the practical problem. Not below eGFR 30.',
+    };
+  }
+  if (medicine === 'famciclovir') {
+    if (hasNonSevereImmunosuppression(medicalHistory)) {
       return {
-        dose: '1g',
+        dose: '500 mg',
         frequency: 'three times daily',
-        duration: '7 days',
-        quantity: 21,
-        notes: 'Standard dose for normal renal function',
-      };
-    } else if (renalStatus === 'moderate') {
-      return {
-        dose: '1g',
-        frequency: 'twice daily',
-        duration: '7 days',
-        quantity: 14,
-        notes: 'Moderate renal impairment - reduced frequency',
-      };
-    } else {
-      // severe
-      return {
-        dose: '500mg',
-        frequency: 'three times daily',
-        duration: '7 days',
-        quantity: 21,
-        notes: 'Severe renal impairment - reduced dose',
+        duration: '10 days',
+        quantity: 30,
+        notes:
+          'Famciclovir 500 mg film-coated tablets, non-severe immunosuppression: 500 mg three times daily for 10 days (30 tablets). Not below eGFR 60.',
       };
     }
-  } else if (medicine === 'aciclovir') {
-    if (renalStatus === 'none') {
-      return {
-        dose: '800mg',
-        frequency: 'five times daily',
-        duration: '7 days',
-        quantity: 35,
-        notes: 'Standard dose for normal renal function',
-      };
-    } else if (renalStatus === 'moderate') {
-      return {
-        dose: '800mg',
-        frequency: 'three times daily',
-        duration: '7 days',
-        quantity: 21,
-        notes: 'Moderate renal impairment - reduced frequency',
-      };
-    } else {
-      // severe
-      return {
-        dose: '800mg',
-        frequency: 'twice daily',
-        duration: '7 days',
-        quantity: 14,
-        notes: 'Severe renal impairment - reduced frequency',
-      };
-    }
+    return {
+      dose: '500 mg',
+      frequency: 'three times daily',
+      duration: '7 days',
+      quantity: 21,
+      notes:
+        'Famciclovir 500 mg film-coated tablets, immunocompetent: 500 mg three times daily for 7 days (21 tablets). Not part of NHS Pharmacy First. Not below eGFR 60.',
+    };
   }
 
   return {
@@ -323,6 +718,9 @@ export function validateSymptomStep(symptoms: ShinglesSymptoms): string | null {
   if (!symptoms.dermatome) {
     return 'Dermatome location is required';
   }
+  if (!symptoms.rashSeverity) {
+    return 'Rash severity must be recorded';
+  }
   if (symptoms.painLevel === null || symptoms.painLevel < 1 || symptoms.painLevel > 10) {
     return 'Pain level must be between 1 and 10';
   }
@@ -331,6 +729,12 @@ export function validateSymptomStep(symptoms: ShinglesSymptoms): string | null {
   }
   if (!symptoms.rashDescription.trim()) {
     return 'Rash description is required';
+  }
+  if (!symptoms.unilateral) {
+    return 'Confirm a unilateral, dermatomal rash that does not cross the midline. If it does not fit, refer: not for supply under this PGD';
+  }
+  if (!symptoms.ophthalmicExcluded) {
+    return 'Record that ophthalmic involvement was specifically excluded (PGD records requirement)';
   }
   return null;
 }
@@ -342,15 +746,33 @@ export function validateMedicalHistoryStep(medicalHistory: ShinglesMedicalHistor
   if (medicalHistory.immunosuppressed && !medicalHistory.immunosuppressedDetails.trim()) {
     return 'Please provide details of immunosuppression';
   }
+  if (
+    (medicalHistory.immunosuppressed || medicalHistory.hivPositive) &&
+    !medicalHistory.immunosuppressionSeverity
+  ) {
+    return 'Classify the immunosuppression as severe or non-severe (Green Book chapter 28a)';
+  }
+  if (!medicalHistory.renalFunctionSource.trim()) {
+    return 'Record renal function and how it was established (PGD records requirement)';
+  }
   return null;
 }
 
 /**
  * Validate medicine selection
  */
-export function validateMedicineSelectionStep(selection: ShinglesMedicineSelection): string | null {
+export function validateMedicineSelectionStep(
+  selection: ShinglesMedicineSelection,
+  medicalHistory?: ShinglesMedicalHistory
+): string | null {
   if (!selection.medicine) {
     return 'Medicine must be selected';
+  }
+  if (medicalHistory) {
+    const entry = getMedicineAvailability(medicalHistory).find((m) => m.medicine === selection.medicine);
+    if (entry && !entry.available) {
+      return `${selection.medicine} may not be supplied to this patient (${entry.reason})`;
+    }
   }
   if (!selection.dose) {
     return 'Dose is required';
@@ -364,6 +786,9 @@ export function validateMedicineSelectionStep(selection: ShinglesMedicineSelecti
   if (selection.quantity <= 0) {
     return 'Quantity must be greater than 0';
   }
+  if (!selection.batchNumber.trim()) {
+    return 'Batch number must be recorded (PGD records requirement)';
+  }
   if (selection.pharmacistOverride && !selection.overrideReason.trim()) {
     return 'Override reason is required';
   }
@@ -373,8 +798,8 @@ export function validateMedicineSelectionStep(selection: ShinglesMedicineSelecti
 /**
  * Validate counselling
  */
-export function validateCounsellingStep(counselling: any): string | null {
-  const requiredItems = [
+export function validateCounsellingStep(counselling: ShinglesCounselling): string | null {
+  const requiredItems: (keyof ShinglesCounselling)[] = [
     'completeCourse',
     'painManagement',
     'rashCare',
@@ -383,6 +808,8 @@ export function validateCounsellingStep(counselling: any): string | null {
     'PHNRisk',
     'returnIfWorsening',
     'vaccinationAdvice',
+    'leafletAndDosing',
+    'hydration',
   ];
 
   for (const item of requiredItems) {

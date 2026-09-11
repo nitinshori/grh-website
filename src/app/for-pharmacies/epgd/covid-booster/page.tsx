@@ -5,7 +5,7 @@ import { PgdPageActions } from "@/components/PgdPageActions";
 export const metadata: Metadata = {
   title: "COVID-19 Booster Vaccination Consultation ePGD",
   description:
-    "Digital consultation tool for COVID-19 variant-updated booster vaccination under Patient Group Direction. Screens for eligibility, assesses contraindications, and provides counselling for eligible adults.",
+    "Digital consultation tool for COVID-19 variant-updated booster vaccination under Patient Group Direction. Screens for eligibility, assesses contraindications, and provides counselling for individuals aged 12 years and over (PGD version 006).",
 };
 
 export default function CovidBoosterToolPage() {
@@ -27,10 +27,10 @@ export default function CovidBoosterToolPage() {
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-navy-900">
-            COVID-19 Booster — Variant-Updated Vaccination PGD Consultation
+            COVID-19 Vaccination 2026/27: PGD Consultation
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Single-dose booster vaccination for eligible adults under Patient Group Direction
+            Single dose per campaign for individuals aged 12 years and over under the Patient Group Direction (version 006, issued 11 September 2026): Comirnaty XFG, Comirnaty LP.8.1 (existing stock only), Spikevax LP.8.1 or Nuvaxovid JN.1
           </p>
         </div>
 
@@ -41,7 +41,7 @@ export default function CovidBoosterToolPage() {
             This ePGD is provided as a clinical decision support aid and does
             not replace professional clinical judgement. The pharmacist retains
             full responsibility for each consultation. Based on UK medicines
-            guidance and the Get Real Health PGD for COVID-19 Booster Vaccination.
+            guidance and the Get Real Health PGD for COVID-19 Vaccination, 2026/27 season, version 006, issued 11 September 2026.
           </p>
         </div>
       </div>

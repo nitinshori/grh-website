@@ -2,7 +2,8 @@
 
 import type { STIConsultationState } from "../lib/sti-types";
 import type { ClinicalAlert } from "../../shared/types";
-import { getWindowPeriodInfo } from "../lib/sti-clinical-logic";
+import { getWindowPeriodInfo, getTreatmentPlan } from "../lib/sti-clinical-logic";
+import { PGD_VERSION_LABEL } from "../lib/sti-types";
 import {
   SectionHeader,
   Row,
@@ -18,17 +19,20 @@ interface STISummaryReportProps {
 
 export function STISummaryReport({ state, alerts }: STISummaryReportProps) {
   const windowPeriods = getWindowPeriodInfo();
+  const treatmentPlan = getTreatmentPlan(state);
+  const isMinor = state.patient.age !== null && state.patient.age >= 13 && state.patient.age <= 15;
 
   return (
     <div className="bg-white p-8 rounded-lg space-y-6 print:p-4">
       {/* Header */}
       <div className="text-center border-b border-gray-300 pb-4">
         <h2 className="text-lg font-bold text-navy-900">
-          STI Testing Consultation
+          STI Testing and Chlamydia Treatment Consultation
         </h2>
         <p className="text-xs text-gray-500 mt-1">
-          Test Requisition and Counselling Record
+          Test Requisition, Treatment and Counselling Record
         </p>
+        <p className="text-[10px] text-gray-400 mt-1">{PGD_VERSION_LABEL}</p>
       </div>
 
       {/* Patient Details */}
@@ -40,6 +44,22 @@ export function STISummaryReport({ state, alerts }: STISummaryReportProps) {
         <Row label="Gender Identity" value={state.patient.genderIdentity || "—"} />
         <Row label="NHS Number" value={state.patient.nhsNumber || "—"} />
         <Row label="GP" value={state.patient.gpName ? `${state.patient.gpName}, ${state.patient.gpPractice}` : "—"} />
+        {isMinor && (
+          <>
+            <Row label="Fraser competence" value={state.patient.fraserCompetent ? "Assessed and recorded" : "Not established"} />
+            <Row
+              label="Safeguarding assessment"
+              value={
+                state.patient.safeguardingAssessed
+                  ? state.patient.safeguardingConcern
+                    ? "Completed: concern identified, referred"
+                    : "Completed: no concern"
+                  : "Not completed"
+              }
+            />
+            <Row label="Safeguarding record" value={state.patient.safeguardingNotes || "Not recorded"} />
+          </>
+        )}
       </div>
 
       {/* Consent */}
@@ -163,6 +183,57 @@ export function STISummaryReport({ state, alerts }: STISummaryReportProps) {
         </div>
       </div>
 
+      {/* Treatment supplied under the PGD */}
+      <div>
+        <SectionHeader>Chlamydia Treatment (PGD)</SectionHeader>
+        {state.treatment.treatUnderPgd ? (
+          <>
+            <Row
+              label="Diagnosis"
+              value={
+                state.treatment.chlamydiaDiagnosis === "confirmed"
+                  ? "Confirmed genital chlamydia"
+                  : state.treatment.chlamydiaDiagnosis === "strongly-suspected"
+                    ? "Strongly suspected genital chlamydia"
+                    : "Not recorded"
+              }
+            />
+            <Row
+              label="Exclusions checked"
+              value={[
+                state.treatment.pregnant && "pregnant",
+                state.treatment.breastfeeding && "breastfeeding",
+                state.treatment.severeHepaticImpairment && "severe hepatic impairment",
+                state.treatment.complicatedInfection && "complicated infection",
+                state.treatment.tetracyclineHypersensitivity && "tetracycline hypersensitivity",
+                state.treatment.unableToComplyOrSwallow && "unable to comply with 7 days or swallow capsules",
+                state.treatment.macrolideHypersensitivity && "macrolide hypersensitivity",
+                state.treatment.qtProlongation && "QT prolongation or interacting drugs",
+                state.treatment.ergotDerivatives && "ergot derivatives",
+              ]
+                .filter(Boolean)
+                .join(", ") || "None identified"}
+            />
+            {state.treatment.doxycyclineUnsuitable && (
+              <Row label="Doxycycline unsuitable" value={state.treatment.doxycyclineUnsuitableReason || "Yes"} />
+            )}
+            {treatmentPlan ? (
+              <>
+                <Row label="Medicine supplied" value={treatmentPlan.product} />
+                <Row label="Dose and frequency" value={treatmentPlan.dose} />
+                <Row label="Route" value={treatmentPlan.route} />
+                <Row label="Quantity supplied" value={treatmentPlan.quantity} />
+                <Row label="Treatment period" value={treatmentPlan.duration} />
+              </>
+            ) : (
+              <Row label="Medicine supplied" value="None" />
+            )}
+          </>
+        ) : (
+          <p className="text-xs text-gray-500">No medicine supplied under the PGD (testing only).</p>
+        )}
+      </div>
+
       {/* Clinical Alerts */}
       {alerts.length > 0 && (
         <div>
@@ -193,6 +264,36 @@ export function STISummaryReport({ state, alerts }: STISummaryReportProps) {
           <p>
             {state.counselling.followUp ? "✓" : "—"} Follow-up procedures explained
           </p>
+          {treatmentPlan && (
+            <>
+              <p>
+                {state.counselling.medicineAdvice ? "✓" : "[ ]"}{" "}
+                {treatmentPlan.medicine === "doxycycline"
+                  ? "Take with water, remain upright 30 minutes, avoid sun exposure"
+                  : "No antacids 2 hours before or after a dose"}
+              </p>
+              <p>
+                {state.counselling.abstinenceAdvice ? "✓" : "[ ]"}{" "}
+                {treatmentPlan.medicine === "doxycycline"
+                  ? "Abstain until treatment and partner treatment completed"
+                  : "Abstain for 7 days after treatment and until partners are treated"}
+              </p>
+              {treatmentPlan.medicine === "doxycycline" && (
+                <p>
+                  {state.counselling.contraceptionAdvice ? "✓" : "[ ]"} Effective contraception during and for 7 days after the course
+                </p>
+              )}
+              {treatmentPlan.medicine === "azithromycin" && (
+                <p>
+                  {state.counselling.testOfCureAdvice ? "✓" : "[ ]"} Test of cure if symptoms persist or in pregnancy
+                </p>
+              )}
+              <p>
+                {state.counselling.worseningAdvice ? "✓" : "[ ]"} Seek medical advice if symptoms worsen, do not improve in 3 to 4 weeks, or systemically very unwell
+              </p>
+              <p>{state.counselling.pilSupplied ? "✓" : "[ ]"} PIL supplied</p>
+            </>
+          )}
         </div>
       </div>
 

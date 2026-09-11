@@ -3,6 +3,14 @@ import type {
   PneumococcalConsent,
   PneumococcalSummary,
 } from './pneumococcal-types';
+import {
+  revaccinationGroup,
+  weeksSince,
+  yearsSinceLastPolysaccharideOrPCV20,
+  type PneumococcalMedicalHistoryInput,
+} from './pneumococcal-clinical-logic';
+
+// Aligned to the Pneumovax 23 / Prevenar 13 PGD version 004, issued 11 September 2026.
 
 export function validatePneumococcalPatientStep(
   patient: PneumococcalPatientDetails
@@ -11,24 +19,42 @@ export function validatePneumococcalPatientStep(
   if (!patient.lastName.trim()) return 'Patient last name is required';
   if (!patient.dateOfBirth) return 'Date of birth is required';
   if (patient.age === null) return 'Unable to calculate age';
-  if (!patient.riskCategory) return 'At-risk category must be selected';
+  if (patient.age < 2) return 'This PGD is for individuals aged 2 years and over';
+  if (!patient.riskCategory) return 'Eligibility group under national guidance must be selected';
   if (patient.riskCategory === 'chronic-disease' && !patient.chronicDiseaseType?.trim()) {
     return 'Please specify the chronic disease type';
   }
   if (patient.riskCategory === 'immunosuppressed' && !patient.immunosuppressedReason?.trim()) {
     return 'Please specify the reason for immunosuppression';
   }
+  if (patient.riskCategory === 'age-65-plus' && patient.age < 65) {
+    return 'Patient is under 65: select the clinical risk group that applies';
+  }
+  if (patient.riskCategory === 'other-national-guidance' && !patient.otherEligibilityReason?.trim()) {
+    return 'State the Green Book chapter 25 group under which the patient is eligible';
+  }
   return null;
 }
 
 export function validatePneumococcalConsentStep(
-  consent: PneumococcalConsent
+  consent: PneumococcalConsent,
+  age?: number | null
 ): string | null {
   if (!consent.informedConsentGiven)
     return 'Informed consent must be obtained before proceeding';
   if (!consent.idVerified) return 'ID verification is required';
   if (!consent.patientAwarePrivateService)
     return 'Patient must be aware this is a private service';
+  if (age !== undefined && age !== null && age < 16) {
+    if (!consent.consentBasis)
+      return 'Under 16: record whether consent came from a person with parental responsibility or from the young person as Gillick competent';
+    if (consent.consentBasis === 'parental' && !consent.parentName.trim())
+      return 'Record the name of the person with parental responsibility';
+    if (consent.consentBasis === 'parental' && !consent.parentRelationship.trim())
+      return 'Record the relationship of the person with parental responsibility to the patient';
+    if (consent.consentBasis === 'gillick' && !consent.gillickBasis.trim())
+      return 'Record the basis of the Gillick competence assessment';
+  }
   if (!consent.understandsVaccineNeed)
     return 'Patient must understand why pneumococcal vaccination is needed';
   if (!consent.understandsSchedule)
@@ -41,8 +67,17 @@ export function validatePneumococcalConsentStep(
 export function validatePneumococcalRiskAssessmentStep(data: {
   confirmedRiskCategory: boolean;
   reviewedVaccineHistory: boolean;
+  previousPCV13: boolean;
+  previousPCV13Date: string;
+  previousPCV20: boolean;
+  previousPCV20Date: string;
+  previousPPV23: boolean;
+  previousPPV23Date: string;
 }): string | null {
   if (!data.confirmedRiskCategory) return 'Risk category must be confirmed';
+  if (data.previousPCV13 && !data.previousPCV13Date) return 'Enter the date of the previous PCV13 dose';
+  if (data.previousPCV20 && !data.previousPCV20Date) return 'Enter the date of the previous PCV20 dose';
+  if (data.previousPPV23 && !data.previousPPV23Date) return 'Enter the date of the previous PPV23 dose';
   if (!data.reviewedVaccineHistory)
     return 'Previous vaccine history must be reviewed';
   return null;
@@ -65,10 +100,41 @@ export function validatePneumococcalContraindicationsStep(data: {
   return null;
 }
 
+/**
+ * Administration step. Enforces the product-specific exclusions and dose
+ * rules in PGD v004 that depend on which vaccine is chosen:
+ * Prevenar 13: not after any conjugate vaccine, not with CRM197 hypersensitivity, IM only.
+ * Pneumovax 23: at least 8 weeks after a conjugate vaccine; no revaccination
+ * except asplenia, splenic dysfunction or CKD after 5 years.
+ */
 export function validatePneumococcalAdministrationStep(
-  summary: Partial<PneumococcalSummary>
+  summary: Partial<PneumococcalSummary>,
+  patient?: PneumococcalPatientDetails,
+  history?: PneumococcalMedicalHistoryInput
 ): string | null {
   if (!summary.vaccineType) return 'Vaccine type must be selected';
+  if (patient && history) {
+    if (summary.vaccineType === 'pcv13') {
+      if (history.diphtheriaToxoidHypersensitivity)
+        return 'Prevenar 13 is contraindicated: hypersensitivity to diphtheria toxoid (CRM197 carrier protein)';
+      if (history.previousPCV13 || history.previousPCV20)
+        return 'Prevenar 13 under this PGD is only for individuals who have not previously received a pneumococcal conjugate vaccine';
+      if (summary.administrationSite === 'left-arm-sc' || summary.administrationSite === 'right-arm-sc')
+        return 'Prevenar 13 is given by intramuscular injection only';
+    }
+    if (summary.vaccineType === 'ppv23') {
+      const w = history.previousPCV13 ? weeksSince(history.previousPCV13Date) : null;
+      if (w !== null && w < 8)
+        return 'Pneumovax 23 must be given at least 8 weeks after the conjugate vaccine';
+      if (history.previousPPV23 || history.previousPCV20) {
+        if (!revaccinationGroup(patient))
+          return 'PPV23 or PCV20 already received: revaccination is only for asplenia, splenic dysfunction or chronic kidney disease';
+        const y = yearsSinceLastPolysaccharideOrPCV20(history);
+        if (y !== null && y < 5)
+          return 'PPV23 or PCV20 received within the last 5 years: revaccination is not yet due';
+      }
+    }
+  }
   if (!summary.doseNumber) return 'Dose number must be specified';
   if (!summary.batchNumber?.trim()) return 'Batch number is required';
   if (!summary.expiryDate) return 'Expiry date is required';

@@ -12,13 +12,26 @@ export interface HayfeverAssessment {
   seasonalOrPerennial: string; // "seasonal" | "perennial" | "both"
   previousOTCUse: string;
   symptomDuration: string;
+  /** PGD v003 fexofenadine inclusion: previous diagnosis of allergic rhinitis
+   *  or recurrence of known symptoms. */
+  previousDiagnosisOrRecurrence: boolean;
 }
 
 export interface HayfeverMedicalHistory {
   asthmaOrLrti: boolean;
   severeHepaticImpairment: boolean;
+  /** Severe renal impairment (fexofenadine exclusion, PGD v003). */
   renalImpairment: boolean;
+  /** Recent nasal surgery or trauma (Dymista exclusion, PGD v003). */
   recentNasalSurgery: boolean;
+  /** Untreated fungal, bacterial or viral nasal infection (Dymista exclusion). */
+  untreatedNasalInfection: boolean;
+  /** History of cardiovascular disease (fexofenadine caution). */
+  cardiovascularDisease: boolean;
+  /** Glaucoma (Dymista caution). */
+  glaucoma: boolean;
+  /** Tuberculosis (Dymista caution). */
+  tuberculosis: boolean;
   phenylketonuria: boolean;
   otherConditions: string;
 }
@@ -27,13 +40,22 @@ export interface HayfeverContraindications {
   pregnant: boolean;
   breastfeeding: boolean;
   childUnder12: boolean;
+  /** Known hypersensitivity to fexofenadine or any component of the formulation. */
+  hypersensitivityFexofenadine: boolean;
+  /** Known hypersensitivity to azelastine, fluticasone or any excipient of Dymista. */
+  hypersensitivityDymista: boolean;
   otherMedicines: string;
 }
 
 export interface HayfeverMedicineSupply {
-  medicineSelected: string; // "fexofenadine" | "fluticasone" | "combination"
-  fexofenadin180: boolean;
-  fluticasonNasalSpray: boolean;
+  medicineSelected: string; // "fexofenadine" | "dymista" | "combination"
+  fexofenadine120: boolean;
+  dymistaNasalSpray: boolean;
+  /** Brand supplied for fexofenadine 120 mg: "allevia" (P) or "generic" (POM). */
+  fexofenadineBrand: string;
+  /** Dymista inclusion: dual therapy required, monotherapy with an intranasal
+   *  antihistamine or corticosteroid not sufficient. */
+  dualTherapyRequired: boolean;
   dosageConfirmed: boolean;
 }
 
@@ -44,6 +66,17 @@ export interface HayfeverCounselling {
   combinationRationale: boolean;
   wrapsunglasses: boolean;
   pollenForecastAdvice: boolean;
+  /** Fexofenadine: avoid alcohol and other sedating antihistamines. */
+  alcoholSedatingAdvice: boolean;
+  /** Fexofenadine: non-sedating but occasional drowsiness may still occur. */
+  drowsinessAdvice: boolean;
+  /** Dymista: possible side effects and need for ongoing review if used long-term. */
+  sideEffectsAdvice: boolean;
+  /** Seek medical advice if symptoms worsen rapidly or significantly, do not
+   *  improve in 3 to 4 weeks, or the patient becomes systemically very unwell. */
+  followUpAdvice: boolean;
+  /** Patient information leaflet supplied with the medication. */
+  pilSupplied: boolean;
 }
 
 export interface HayfeverConsultationState {
@@ -113,12 +146,17 @@ gpEmail: "",
       seasonalOrPerennial: "",
       previousOTCUse: "",
       symptomDuration: "",
+      previousDiagnosisOrRecurrence: false,
     },
     medicalHistory: {
       asthmaOrLrti: false,
       severeHepaticImpairment: false,
       renalImpairment: false,
       recentNasalSurgery: false,
+      untreatedNasalInfection: false,
+      cardiovascularDisease: false,
+      glaucoma: false,
+      tuberculosis: false,
       phenylketonuria: false,
       otherConditions: "",
     },
@@ -126,12 +164,16 @@ gpEmail: "",
       pregnant: false,
       breastfeeding: false,
       childUnder12: false,
+      hypersensitivityFexofenadine: false,
+      hypersensitivityDymista: false,
       otherMedicines: "",
     },
     medicineSupply: {
       medicineSelected: "",
-      fexofenadin180: false,
-      fluticasonNasalSpray: false,
+      fexofenadine120: false,
+      dymistaNasalSpray: false,
+      fexofenadineBrand: "",
+      dualTherapyRequired: false,
       dosageConfirmed: false,
     },
     counselling: {
@@ -141,6 +183,11 @@ gpEmail: "",
       combinationRationale: false,
       wrapsunglasses: false,
       pollenForecastAdvice: false,
+      alcoholSedatingAdvice: false,
+      drowsinessAdvice: false,
+      sideEffectsAdvice: false,
+      followUpAdvice: false,
+      pilSupplied: false,
     },
     summary: {
       pharmacistName: "",

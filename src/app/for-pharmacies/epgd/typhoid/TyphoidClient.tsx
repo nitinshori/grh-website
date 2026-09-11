@@ -23,12 +23,17 @@ import {
   getTyphoidClinicalAlerts,
   shouldBlockConsultation,
   getAdministrationGuidance,
+  daysUntilDeparture,
+  nextBoosterDueDate,
+  TYPHOID_PGD_VERSION,
 } from './typhoid-clinical-logic';
 import {
   validateTyphoidPatientStep,
   validateTyphoidStep,
   validateTyphoidConsentStep,
+  validateTyphoidMedicalHistoryStep,
   validateTyphoidAdministrationStep,
+  validateTyphoidPostVaccineStep,
   validateTyphoidSummaryStep,
 } from './typhoid-validation';
 import { calculateAge } from '../shared/types';
@@ -61,12 +66,16 @@ export function TyphoidClient() {
     travelDestinationConfirmed: false,
     travelReasonConfirmed: false,
     timingConfirmed: false,
+    shortNoticeAdvised: false,
   });
 
   const [medicalHistory, setMedicalHistory] = useState({
     anaphylaxisToVaccine: false,
     anaphylaxisToVaccineComponent: false,
     severeFebrilleIllness: false,
+    feverAfterTravel: false,
+    pregnantOrBreastfeeding: false,
+    pregnancyDecision: '',
     bleedingDisorder: false,
     immunosuppressed: false,
   });
@@ -84,6 +93,9 @@ export function TyphoidClient() {
     counselledReactions: false,
     counselledValidity: false,
     counselledCertificate: false,
+    counselledFoodWater: false,
+    counselledFeverWarning: false,
+    observationCompleted: false,
   });
 
   const [showSummaryReport, setShowSummaryReport] = useState(false);
@@ -182,8 +194,8 @@ export function TyphoidClient() {
   }, [patientDetails]);
 
   const consentValidationError = useMemo(() => {
-    return validateTyphoidConsentStep(consent);
-  }, [consent]);
+    return validateTyphoidConsentStep(consent, patientDetails);
+  }, [consent, patientDetails]);
 
   const administrationValidationError = useMemo(() => {
     return validateTyphoidAdministrationStep(summary);
@@ -197,14 +209,25 @@ export function TyphoidClient() {
     return validateTyphoidStep(patientDetails, travelAssessment);
   }, [patientDetails, travelAssessment]);
 
+  const medicalHistoryValidationError = useMemo(() => {
+    return validateTyphoidMedicalHistoryStep(medicalHistory);
+  }, [medicalHistory]);
+
+  const postVaccineValidationError = useMemo(() => {
+    return validateTyphoidPostVaccineStep(postVaccineAdvice);
+  }, [postVaccineAdvice]);
+
+  const daysToDeparture = useMemo(() => daysUntilDeparture(patientDetails.departureDate), [patientDetails.departureDate]);
+  const isUnder16 = patientDetails.age !== null && patientDetails.age < 16;
+
   // Step can proceed checks
   const canProceedStep0 = patientValidationError === null;
   const canProceedStep1 = consentValidationError === null;
   const canProceedStep2 = travelValidationError === null;
-  const canProceedStep3 = true; // Medical history is always valid
-  const canProceedStep4 = contraIndicationsReviewed.confirmedNoAbsoluteContraindications;
+  const canProceedStep3 = medicalHistoryValidationError === null;
+  const canProceedStep4 = contraIndicationsReviewed.confirmedNoAbsoluteContraindications && !isBlocked;
   const canProceedStep5 = administrationValidationError === null;
-  const canProceedStep6 = postVaccineAdvice.patientAdvised;
+  const canProceedStep6 = postVaccineValidationError === null;
   const canProceedStep7 = summaryValidationError === null;
 
   const canProceedByStep = [
@@ -256,6 +279,9 @@ export function TyphoidClient() {
         postVaccineAdvice,
         summary,
         clinicalAlerts,
+        pgdVersion: TYPHOID_PGD_VERSION,
+        dose: '0.5 mL, 25 micrograms Vi polysaccharide, solution for injection in a pre-filled syringe',
+        route: 'Intramuscular',
       } as unknown as Record<string, unknown>,
       outcome: clinicalAlerts.some((a) => a.severity === 'stop') ? "not_supplied" : "completed",
       summary: {
@@ -272,6 +298,16 @@ export function TyphoidClient() {
     setCompletedSteps(new Set());
     setPatientDetails(initialTyphoidPatientDetails);
     setConsent(initialTyphoidConsent);
+    setTravelAssessment({ travelDestinationConfirmed: false, travelReasonConfirmed: false, timingConfirmed: false, shortNoticeAdvised: false });
+    setMedicalHistory({
+      anaphylaxisToVaccine: false, anaphylaxisToVaccineComponent: false, severeFebrilleIllness: false,
+      feverAfterTravel: false, pregnantOrBreastfeeding: false, pregnancyDecision: '', bleedingDisorder: false, immunosuppressed: false,
+    });
+    setContraIndicationsReviewed({ confirmedNoAbsoluteContraindications: false });
+    setPostVaccineAdvice({
+      patientAdvised: false, counselledReactions: false, counselledValidity: false, counselledCertificate: false,
+      counselledFoodWater: false, counselledFeverWarning: false, observationCompleted: false,
+    });
     setSummary(initialTyphoidSummary());
     setShowSummaryReport(false);
   }, []);
@@ -357,23 +393,52 @@ export function TyphoidClient() {
             onChange={(field, value) => setConsent({ ...consent, [field]: value })}
           />
           <div className="mt-6 space-y-3 border-t pt-6">
+            <SelectInput
+              label="Consent given by"
+              value={patientDetails.consentBasis}
+              onChange={(v) => handlePatientDetailsChange('consentBasis', v as TyphoidPatientDetails['consentBasis'])}
+              options={[
+                ...(isUnder16 ? [] : [{ value: 'self', label: 'The patient (aged 16 and over)' }]),
+                { value: 'parental', label: 'A person with parental responsibility (patient under 16)' },
+                { value: 'gillick', label: 'The young person, assessed as Gillick competent (under 16)' },
+              ]}
+              required
+            />
+            {patientDetails.consentBasis === 'parental' && (
+              <TextInput
+                label="Name and relationship of the person with parental responsibility"
+                value={patientDetails.consentDetail}
+                onChange={(v) => handlePatientDetailsChange('consentDetail', v)}
+                placeholder="e.g. Jane Smith, mother"
+                required
+              />
+            )}
+            {patientDetails.consentBasis === 'gillick' && (
+              <TextInput
+                label="Basis of the Gillick competence assessment"
+                value={patientDetails.consentDetail}
+                onChange={(v) => handlePatientDetailsChange('consentDetail', v)}
+                placeholder="e.g. understands the purpose, benefits and risks and can retain and weigh the information"
+                required
+              />
+            )}
             <Checkbox
-              label="Patient understands protection lasts 3 years and revaccination is needed if risk continues"
+              label="Patient understands a booster is needed every 3 years if travel to risk areas continues"
               checked={consent.understands5YearValidity}
               onChange={(v) => setConsent({ ...consent, understands5YearValidity: v })}
               description="Confirm patient is aware of duration of protection"
             />
             <Checkbox
-              label="Patient understands timing requirement (at least 2 weeks before travel)"
+              label="Patient understands the vaccine takes about 2 weeks to work and should be given at least 2 weeks before travel"
               checked={consent.understandsTimingRequirement}
               onChange={(v) => setConsent({ ...consent, understandsTimingRequirement: v })}
-              description="For high-risk destinations, vaccination must be given at least 2 weeks before departure"
+              description="Where travel is sooner, vaccination may still be given but protection may be incomplete"
             />
             <Checkbox
-              label="Patient aware certificate may be required for travel"
+              label="Patient understands the vaccine is about 70 to 80% effective, does not protect against paratyphoid, and that food and water precautions remain the main protection"
               checked={consent.certificateRequirement}
               onChange={(v) => setConsent({ ...consent, certificateRequirement: v })}
-              description="Typhoid risk is highest in South Asia. Vaccination does not replace food and water precautions"
+              description="It reduces the risk; it does not remove it"
             />
           </div>
         </StepWrapper>
@@ -401,7 +466,7 @@ export function TyphoidClient() {
             />
 
             <SelectInput
-              label="Reason for travel"
+              label="Risk region"
               value={patientDetails.travelReason}
               onChange={(v) =>
                 handlePatientDetailsChange('travelReason', v as TyphoidPatientDetails['travelReason'])
@@ -428,30 +493,85 @@ export function TyphoidClient() {
               />
             </div>
 
+            <TextArea
+              label="Itinerary"
+              value={patientDetails.itinerary}
+              onChange={(v) => handlePatientDetailsChange('itinerary', v)}
+              placeholder="Areas visited, duration, style of travel (e.g. visiting friends and relatives, rural stay)"
+              rows={2}
+            />
+
+            <TextInput
+              label="Source consulted for the recommendation"
+              value={patientDetails.recommendationSource}
+              onChange={(v) => handlePatientDetailsChange('recommendationSource', v)}
+              required
+              placeholder="e.g. TravelHealthPro country page, checked today"
+            />
+
             <Checkbox
-              label="Travel destination confirmed"
+              label="Typhoid vaccination is recommended for this destination on current NaTHNaC / TravelHealthPro guidance"
               checked={travelAssessment.travelDestinationConfirmed}
               onChange={(v) =>
                 setTravelAssessment({ ...travelAssessment, travelDestinationConfirmed: v })
               }
-              description="Confirm destination is appropriate for Typhoid vaccination"
+              description="Inclusion criterion: established from current guidance and recorded"
             />
 
             <Checkbox
-              label="Travel reason confirmed"
+              label="Risk region confirmed"
               checked={travelAssessment.travelReasonConfirmed}
               onChange={(v) =>
                 setTravelAssessment({ ...travelAssessment, travelReasonConfirmed: v })
               }
-              description="Confirm the stated reason for travel"
+              description="Confirm the risk region recorded above"
             />
 
             <Checkbox
               label="Departure timing confirmed"
               checked={travelAssessment.timingConfirmed}
               onChange={(v) => setTravelAssessment({ ...travelAssessment, timingConfirmed: v })}
-              description="Confirm departure date allows at least 2 weeks for the vaccine to take effect"
+              description="At least 2 weeks before departure so that protection can develop"
             />
+
+            {daysToDeparture !== null && daysToDeparture < 14 && (
+              <Checkbox
+                label="Travel is sooner than 2 weeks: the traveller has been told protection may be incomplete, and this is recorded"
+                checked={travelAssessment.shortNoticeAdvised}
+                onChange={(v) => setTravelAssessment({ ...travelAssessment, shortNoticeAdvised: v })}
+                description="Vaccination may still be given"
+              />
+            )}
+
+            <div className="space-y-3 border-t pt-4">
+              <Checkbox
+                label="Previous typhoid Vi vaccine dose"
+                checked={patientDetails.previousTyphoidDose}
+                onChange={(v) => handlePatientDetailsChange('previousTyphoidDose', v)}
+                description="A dose within the last 3 years excludes, unless the traveller is returning to a risk area and the previous dose is due for renewal"
+              />
+              {patientDetails.previousTyphoidDose && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-navy-900 mb-1">
+                      Date of previous dose <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={patientDetails.previousDoseDate || ''}
+                      onChange={(e) => handlePatientDetailsChange('previousDoseDate', e.target.value)}
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
+                    />
+                  </div>
+                  <TextInput
+                    label="If within the last 3 years: reason the previous dose is due for renewal (returning to a risk area)"
+                    value={patientDetails.previousDoseRenewalReason}
+                    onChange={(v) => handlePatientDetailsChange('previousDoseRenewalReason', v)}
+                    placeholder="Leave blank to exclude and refer"
+                  />
+                </>
+              )}
+            </div>
           </div>
         </StepWrapper>
       )}
@@ -466,20 +586,20 @@ export function TyphoidClient() {
           onNext={handleNext}
           onPrev={handlePrev}
           canProceed={canProceedStep3}
-          validationError={null}
+          validationError={medicalHistoryValidationError}
         >
           <div className="space-y-4">
             <Checkbox
-              label="Anaphylaxis to previous Typhoid dose"
+              label="Confirmed anaphylactic reaction to a previous dose of typhoid vaccine"
               checked={medicalHistory.anaphylaxisToVaccine}
               onChange={(v) =>
                 setMedicalHistory({ ...medicalHistory, anaphylaxisToVaccine: v })
               }
-              description="Absolute contraindication — do not proceed"
+              description="Exclusion: refer, do not vaccinate"
             />
 
             <Checkbox
-              label="Anaphylaxis to vaccine component (polysorbate 80 or other)"
+              label="Confirmed anaphylactic reaction to any component of the product held"
               checked={medicalHistory.anaphylaxisToVaccineComponent}
               onChange={(v) =>
                 setMedicalHistory({
@@ -487,30 +607,57 @@ export function TyphoidClient() {
                   anaphylaxisToVaccineComponent: v,
                 })
               }
-              description="Absolute contraindication — do not proceed"
+              description="Exclusion: refer, do not vaccinate"
             />
 
             <Checkbox
-              label="Severe acute febrile illness"
+              label="Acute severe febrile illness"
               checked={medicalHistory.severeFebrilleIllness}
               onChange={(v) =>
                 setMedicalHistory({ ...medicalHistory, severeFebrilleIllness: v })
               }
-              description="Defer vaccination until patient has recovered"
+              description="Postpone until recovered. A minor illness without fever is not a reason to defer"
             />
+
+            <Checkbox
+              label="Any fever following recent travel to a typhoid risk area"
+              checked={medicalHistory.feverAfterTravel}
+              onChange={(v) =>
+                setMedicalHistory({ ...medicalHistory, feverAfterTravel: v })
+              }
+              description="Exclusion: a febrile returning traveller needs urgent same-day assessment, not vaccination. Typhoid is notifiable"
+            />
+
+            <Checkbox
+              label="Pregnant or breastfeeding"
+              checked={medicalHistory.pregnantOrBreastfeeding}
+              onChange={(v) =>
+                setMedicalHistory({ ...medicalHistory, pregnantOrBreastfeeding: v })
+              }
+              description="Caution: inactivated polysaccharide vaccine, may be given where the risk of typhoid is significant and travel is unavoidable. Discuss and record the decision"
+            />
+            {medicalHistory.pregnantOrBreastfeeding && (
+              <TextInput
+                label="Pregnancy or breastfeeding: decision recorded"
+                value={medicalHistory.pregnancyDecision}
+                onChange={(v) => setMedicalHistory({ ...medicalHistory, pregnancyDecision: v })}
+                required
+                placeholder="e.g. 20 weeks pregnant, unavoidable travel to rural Pakistan, risk discussed, patient wishes to proceed"
+              />
+            )}
 
             <Checkbox
               label="Bleeding disorder or on anticoagulant therapy"
               checked={medicalHistory.bleedingDisorder}
               onChange={(v) => setMedicalHistory({ ...medicalHistory, bleedingDisorder: v })}
-              description="Requires subcutaneous injection instead of IM"
+              description="Use a fine needle (23 gauge or finer) and firm pressure without rubbing for at least 2 minutes"
             />
 
             <Checkbox
               label="Patient is immunosuppressed"
               checked={medicalHistory.immunosuppressed}
               onChange={(v) => setMedicalHistory({ ...medicalHistory, immunosuppressed: v })}
-              description="Vaccine response may be reduced; discuss with patient"
+              description="May be given; response may be reduced. Advise that food and water hygiene matters more, not less"
             />
 
             <TextInput
@@ -607,20 +754,39 @@ export function TyphoidClient() {
           validationError={administrationValidationError}
         >
           <div className="space-y-4">
+            <Checkbox
+              label="Adrenaline (epinephrine) 1 in 1,000 injection is immediately available, with a written anaphylaxis protocol (Resuscitation Council UK) and a telephone"
+              checked={summary.adrenalineAvailable}
+              onChange={(v) => setSummary({ ...summary, adrenalineAvailable: v })}
+              description="Required before any vaccine is administered under this PGD. Vaccinate seated and observe for 15 minutes"
+            />
+
             <SelectInput
-              label="Vaccine type"
+              label="Vaccine"
               value={summary.vaccineType}
               onChange={(v) =>
                 setSummary({
                   ...summary,
-                  vaccineType: v as 'typhim-vi' | '',
+                  vaccineType: v as TyphoidSummary['vaccineType'],
+                  nextBoosterDue: summary.nextBoosterDue || nextBoosterDueDate(),
                 })
               }
               options={[
-                { value: 'typhim-vi', label: 'Typhim Vi (Sanofi), Vi polysaccharide 25 micrograms/0.5 mL' },
+                { value: 'typhim-vi', label: 'Typhim Vi (Sanofi), Vi polysaccharide 25 micrograms in 0.5 mL, pre-filled syringe' },
+                { value: 'other-vi', label: 'Equivalent Vi polysaccharide typhoid vaccine, 25 micrograms in 0.5 mL (record brand)' },
               ]}
               required
             />
+
+            {summary.vaccineType === 'other-vi' && (
+              <TextInput
+                label="Brand of vaccine given"
+                value={summary.vaccineBrand}
+                onChange={(v) => setSummary({ ...summary, vaccineBrand: v })}
+                required
+                placeholder="Name and brand as on the pack"
+              />
+            )}
 
             {summary.vaccineType && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm">
@@ -689,6 +855,19 @@ export function TyphoidClient() {
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
               />
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-navy-900 mb-1">
+                Next booster due (3 years) <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="date"
+                value={summary.nextBoosterDue}
+                onChange={(e) => setSummary({ ...summary, nextBoosterDue: e.target.value })}
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
+              />
+              <p className="text-xs text-gray-500 mt-1">Pre-filled as 3 years from today when the vaccine is selected; record the date the next booster is due.</p>
+            </div>
           </div>
         </StepWrapper>
       )}
@@ -703,34 +882,62 @@ export function TyphoidClient() {
           onNext={handleNext}
           onPrev={handlePrev}
           canProceed={canProceedStep6}
-          validationError={!postVaccineAdvice.patientAdvised ? 'Patient must be advised' : null}
+          validationError={postVaccineValidationError}
         >
           <div className="space-y-4">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm font-semibold text-blue-900">Common reactions to advise patient about:</p>
               <ul className="text-xs text-blue-800 mt-2 space-y-1 list-disc list-inside">
-                <li>Injection site pain, redness, or swelling</li>
-                <li>Headache</li>
-                <li>Fatigue or malaise</li>
-                <li>Myalgia (muscle aches)</li>
-                <li>Mild fever</li>
+                <li>Very common: injection site pain, redness and swelling</li>
+                <li>Common: malaise, headache, myalgia, mild fever</li>
+                <li>Uncommon: nausea, abdominal pain</li>
+                <li>Rare: urticaria, Guillain-Barre syndrome, anaphylaxis</li>
+                <li>A sore arm, mild fever and feeling off for a day or two afterwards is common and settles by itself</li>
               </ul>
             </div>
 
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-              <p className="text-sm font-semibold text-amber-900">Important information to share:</p>
+              <p className="text-sm font-semibold text-amber-900">Counselling (every point, every time):</p>
               <ul className="text-xs text-amber-800 mt-2 space-y-1 list-disc list-inside">
-                <li>Most reactions are mild and resolve within 24-48 hours</li>
-                <li>Protection lasts 3 years</li>
-                <li>Revaccination every 3 years if risk of exposure continues</li>
-                <li>Protection is 70 to 80% and does not cover paratyphoid, so food and water precautions remain essential</li>
-                <li>Paracetamol or ibuprofen can be taken for fever or myalgia</li>
-                <li>Seek GP advice if severe reaction develops</li>
+                <li>This vaccine is about 70 to 80% effective. It reduces your risk; it does not remove it.</li>
+                <li>Food and water care is your main protection. Boil it, cook it, peel it, or leave it. Avoid ice, salads washed in local water, unpasteurised dairy and food from street stalls that is not cooked in front of you.</li>
+                <li>It does not protect against paratyphoid, which causes a very similar illness.</li>
+                <li>It takes about 2 weeks to work, so it is worth having in good time before you go.</li>
+                <li>If you develop a fever, headache and feel increasingly unwell during or after your trip, see a doctor and tell them where you have been. Typhoid can present weeks after you return.</li>
+                <li>If you travel to risk areas regularly, you need a booster every 3 years.</li>
+                <li>Supply the patient information leaflet and the Get Real Health food and water hygiene sheet.</li>
               </ul>
             </div>
 
             <Checkbox
-              label="Patient has been advised of common reactions"
+              label="Observed for 15 minutes after vaccination, seated, and the observation period completed"
+              checked={postVaccineAdvice.observationCompleted}
+              onChange={(v) =>
+                setPostVaccineAdvice({ ...postVaccineAdvice, observationCompleted: v })
+              }
+              description="Record that the observation period was completed"
+            />
+
+            <Checkbox
+              label="Food and water hygiene advice given and the Get Real Health food and water hygiene sheet supplied"
+              checked={postVaccineAdvice.counselledFoodWater}
+              onChange={(v) =>
+                setPostVaccineAdvice({ ...postVaccineAdvice, counselledFoodWater: v })
+              }
+              description="Not optional: the main protection regardless of vaccination. Vaccine about 70 to 80% effective; no protection against paratyphoid"
+            />
+
+            <Checkbox
+              label="Post-travel fever warning given: any fever during or after travel needs medical assessment with the travel history disclosed"
+              checked={postVaccineAdvice.counselledFeverWarning}
+              onChange={(v) =>
+                setPostVaccineAdvice({ ...postVaccineAdvice, counselledFeverWarning: v })
+              }
+              description="Typhoid can present one to three weeks after return"
+            />
+
+            <Checkbox
+              label="Patient has been advised of common reactions and the patient information leaflet supplied"
               checked={postVaccineAdvice.counselledReactions}
               onChange={(v) =>
                 setPostVaccineAdvice({ ...postVaccineAdvice, counselledReactions: v })
@@ -739,21 +946,21 @@ export function TyphoidClient() {
             />
 
             <Checkbox
-              label="Patient understands protection lasts 3 years"
+              label="Patient understands a booster is needed every 3 years if travel to risk areas continues"
               checked={postVaccineAdvice.counselledValidity}
               onChange={(v) =>
                 setPostVaccineAdvice({ ...postVaccineAdvice, counselledValidity: v })
               }
-              description="Discuss revaccination every 3 years if risk of exposure continues"
+              description="No routine follow-up; return in 3 years for a booster"
             />
 
             <Checkbox
-              label="Patient advised to report serious adverse events"
+              label="Patient advised to seek medical attention for a serious adverse reaction and how to report via Yellow Card"
               checked={postVaccineAdvice.counselledCertificate}
               onChange={(v) =>
                 setPostVaccineAdvice({ ...postVaccineAdvice, counselledCertificate: v })
               }
-              description="Patient should contact GP or NHS 111 if severe reactions develop"
+              description="Suspected adverse reactions: yellowcard.mhra.gov.uk; inform the GP"
             />
 
             <Checkbox
@@ -820,6 +1027,7 @@ export function TyphoidClient() {
               placeholder="Any additional clinical notes or recommendations"
               rows={4}
             />
+            <p className="text-xs text-gray-500">Administered under {TYPHOID_PGD_VERSION}.</p>
           </div>
         </StepWrapper>
       )}

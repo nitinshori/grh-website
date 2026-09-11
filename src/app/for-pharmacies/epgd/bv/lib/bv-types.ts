@@ -14,23 +14,35 @@ export interface BVAssessment {
 }
 
 export interface BVMedicalHistory {
-  pregnancy: boolean;
+  femaleConfirmed: boolean; // PGD: women aged 16 to 65
+  pregnancy: boolean; // known or suspected: PGD is for non-pregnant women
+  breastfeeding: boolean; // caution, both arms
   firstEpisode: boolean;
   recurrentBV: boolean;
   activePelvicInflammation: boolean;
   planningPregnancy: boolean;
+  hypersensitivity: boolean; // metronidazole or nitroimidazoles: exclusion, both arms
+  hepaticImpairment: boolean; // caution (oral)
+  renalImpairment: boolean; // caution (oral)
+  cnsDiseaseOrBloodDyscrasia: boolean; // exclusion (oral)
 }
 
 export interface BVMedications {
   warfarin: boolean;
-  alcohol: boolean;
+  alcohol: boolean; // current alcohol consumption: exclusion (oral arm)
+  lithium: boolean; // exclusion (oral arm)
+  disulfiram: boolean; // exclusion (oral arm)
+  phenytoin: boolean; // caution (oral arm)
   otherMedications: string;
   allergies: string;
 }
 
+export type BVMedicineChoice = "" | "metronidazole-400" | "metronidazole-2g" | "metronidazole-gel";
+
 export interface BVMedicineSelection {
-  medicineChoice: string; // "metronidazole-400" | "metronidazole-2g" | "metronidazole-gel"
+  medicineChoice: BVMedicineChoice;
   duration: string;
+  abilityConfirmed: boolean; // oral: able to swallow tablets; gel: able to insert gel intravaginally
 }
 
 export interface BVCounselling {
@@ -42,7 +54,12 @@ export interface BVCounselling {
   notSTI: boolean;
   recurrenceAdvice: boolean;
   sexPartnerAdvice: boolean;
+  latexAdvice: boolean; // gel may damage latex condoms and diaphragms; alternative contraception during treatment and for 5 days after
+  seekAdviceIfNotResolved: boolean; // no resolution within 5 to 7 days of completing treatment, or new symptoms (pelvic pain, fever)
 }
+
+export const PGD_VERSION_LABEL =
+  "Bacterial Vaginosis PGD (metronidazole 400 mg tablets / 0.75% vaginal gel), version 003, issued 11 September 2026";
 
 export interface BVConsultationState {
   currentStep: number;
@@ -81,10 +98,10 @@ export function createInitialConsultationState(): BVConsultationState {
     patient: { firstName: "", lastName: "", dateOfBirth: "", age: null, gpName: "", gpPractice: "", gpAddress: "", gpPhone: "", gpEmail: "", gpOdsCode: "", nhsNumber: "", address: "", phone: "", email: "" },
     consent: { informedConsentGiven: false, idVerified: false, idType: "", patientAwarePrivateService: false },
     assessment: { thinGrayishDischarge: false, fishyOdour: false, odourWorseSexOrMenses: false, itching: false, soreness: false, dysuria: false, dyspareunia: false, bloodStainedDischarge: false, fever: false, pelvicPain: false },
-    medicalHistory: { pregnancy: false, firstEpisode: false, recurrentBV: false, activePelvicInflammation: false, planningPregnancy: false },
-    medications: { warfarin: false, alcohol: false, otherMedications: "", allergies: "" },
-    medicineSelection: { medicineChoice: "", duration: "5-7 days" },
-    counselling: { symptomsExplained: false, differentiateThrush: false, noAlcoholAdvice: false, avoidDouching: false, completesCourse: false, notSTI: false, recurrenceAdvice: false, sexPartnerAdvice: false },
+    medicalHistory: { femaleConfirmed: false, pregnancy: false, breastfeeding: false, firstEpisode: false, recurrentBV: false, activePelvicInflammation: false, planningPregnancy: false, hypersensitivity: false, hepaticImpairment: false, renalImpairment: false, cnsDiseaseOrBloodDyscrasia: false },
+    medications: { warfarin: false, alcohol: false, lithium: false, disulfiram: false, phenytoin: false, otherMedications: "", allergies: "" },
+    medicineSelection: { medicineChoice: "", duration: "5-7 days", abilityConfirmed: false },
+    counselling: { symptomsExplained: false, differentiateThrush: false, noAlcoholAdvice: false, avoidDouching: false, completesCourse: false, notSTI: false, recurrenceAdvice: false, sexPartnerAdvice: false, latexAdvice: false, seekAdviceIfNotResolved: false },
     summary: { pharmacistName: "", pharmacistGPhC: "", pharmacyName: "", pharmacyAddress: "", consultationDate: new Date().toISOString().split("T")[0], consultationTime: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }), clinicalNotes: "" },
     alerts: [],
     doseRecommendation: null,

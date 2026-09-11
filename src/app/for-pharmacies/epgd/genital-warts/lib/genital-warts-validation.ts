@@ -15,12 +15,14 @@ export function validateStep(
   const { patient, consent, assessment, treatment, counselling } = state;
 
   switch (step) {
-    // Patient details
+    // Patient details. Both PGDs: adults aged 18 years and over.
     case 0:
       return Boolean(
         patient.firstName.trim() &&
           patient.lastName.trim() &&
-          patient.dateOfBirth,
+          patient.dateOfBirth &&
+          patient.age !== null &&
+          patient.age >= 18,
       );
 
     // Consent
@@ -37,6 +39,7 @@ export function validateStep(
         assessment.externalWartsConfirmed &&
           assessment.wartCount !== null &&
           assessment.treatmentAreaCm2 !== null &&
+          assessment.ableToSelfApply &&
           assessment.sexualHistoryTaken,
       );
 
@@ -51,6 +54,8 @@ export function validateStep(
         treatment.agent &&
           (treatment.agent !== "podophyllotoxin" ||
             treatment.podophyllotoxinForm) &&
+          treatment.brand.trim() &&
+          treatment.quantitySupplied.trim() &&
           treatment.batchNumber.trim() &&
           treatment.expiryDate &&
           treatment.reviewDate &&
@@ -70,7 +75,9 @@ export function validateStep(
         counselling.completeCourseAdvised &&
         counselling.handWashingAdvised &&
         counselling.yellowCardExplained &&
-        counselling.pilSupplied;
+        counselling.pilSupplied &&
+        counselling.safetyNettingGiven &&
+        counselling.followUpAndScreeningAdvised;
 
       if (treatment.agent === "podophyllotoxin") {
         return Boolean(
@@ -79,6 +86,10 @@ export function validateStep(
             (treatment.podophyllotoxinForm !== "solution" ||
               counselling.flammabilityWarningGiven),
         );
+      }
+
+      if (treatment.agent === "imiquimod") {
+        return Boolean(core && counselling.condomWeakeningExplained);
       }
 
       return Boolean(core);

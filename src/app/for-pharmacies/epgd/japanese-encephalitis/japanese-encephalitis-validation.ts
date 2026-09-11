@@ -6,6 +6,7 @@ import {
   JapaneseEncephalitisAdvice,
 } from './japanese-encephalitis-types';
 import { BasePatientDetails, BaseConsent } from '../shared/types';
+import { calculateAgeInMonths, isRapidScheduleOffLabel } from './japanese-encephalitis-clinical-logic';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -27,9 +28,10 @@ export function validatePatientDetails(
     errors.push('Date of birth is required');
   }
 
-  // Age gate per signed PGD — adults 18+ (consistency review Jul 2026)
-  if (patient.age !== null && patient.age < 18) {
-    errors.push('This PGD applies to adults aged 18 years and over');
+  // Age gate per PGD v005: aged 2 months or over, no upper limit
+  const ageInMonths = calculateAgeInMonths(patient.dateOfBirth);
+  if (ageInMonths !== null && ageInMonths < 2) {
+    errors.push('This PGD applies to individuals aged 2 months or over');
   }
   if (!patient.nhsNumber?.trim()) {
     errors.push('NHS number is required');
@@ -38,7 +40,11 @@ export function validatePatientDetails(
   return { isValid: errors.length === 0, errors };
 }
 
-export function validateConsent(consent: BaseConsent): ValidationResult {
+export function validateConsent(
+  consent: BaseConsent,
+  screening: JapaneseEncephalitisScreening,
+  ageYears: number | null
+): ValidationResult {
   const errors: string[] = [];
 
   if (!consent.informedConsentGiven) {
@@ -46,6 +52,14 @@ export function validateConsent(consent: BaseConsent): ValidationResult {
   }
   if (!consent.idVerified) {
     errors.push('Patient ID must be verified');
+  }
+  if (ageYears !== null && ageYears < 16) {
+    if (!screening.consentBasis) {
+      errors.push('Under 16: record whether consent came from a person with parental responsibility or from a Gillick competent young person');
+    }
+    if (!screening.consentGiverDetails?.trim()) {
+      errors.push('Under 16: record the consent giver\'s name and relationship, or the basis of the Gillick assessment');
+    }
   }
 
   return { isValid: errors.length === 0, errors };
@@ -60,15 +74,28 @@ export function validateScreening(screening: JapaneseEncephalitisScreening): Val
   if (!screening.riskArea?.trim()) {
     errors.push('Risk area description is required');
   }
+  if (!screening.riskCategory) {
+    errors.push('Select the Green Book risk category that applies to this traveller');
+  }
   if (!screening.departureDate) {
     errors.push('Departure date is required');
   }
   if (!screening.travelDuration?.trim()) {
     errors.push('Travel duration is required');
   }
+  if (!screening.sufficientTimeBeforeTravel) {
+    errors.push('Confirm there is sufficient time before travel to complete the primary course (inclusion criterion)');
+  }
   if (screening.outdoorActivities && !screening.activitiesDetails?.trim()) {
     errors.push('Please describe outdoor activities');
   }
+
+  return { isValid: errors.length === 0, errors };
+}
+
+export function validateMedicalHistory(screening: JapaneseEncephalitisScreening): ValidationResult {
+  const errors: string[] = [];
+
   if (screening.temperature === null || screening.temperature === undefined) {
     errors.push('Temperature must be recorded');
   }
@@ -77,6 +104,9 @@ export function validateScreening(screening: JapaneseEncephalitisScreening): Val
   }
   if (screening.immunosuppressed && !screening.immunosuppressedDetails?.trim()) {
     errors.push('Please specify reason for immunosuppression');
+  }
+  if (screening.breastfeeding && !screening.breastfeedingRiskAssessment?.trim()) {
+    errors.push('Breastfeeding: record the risk assessment (PGD caution)');
   }
 
   return { isValid: errors.length === 0, errors };
@@ -95,7 +125,9 @@ export function validateContraindications(
 }
 
 export function validateAdministration(
-  administration: JapaneseEncephalitisVaccineAdministration
+  administration: JapaneseEncephalitisVaccineAdministration,
+  screening: JapaneseEncephalitisScreening,
+  ageYears: number | null
 ): ValidationResult {
   const errors: string[] = [];
 
@@ -117,11 +149,24 @@ export function validateAdministration(
   if (!administration.injectionSite) {
     errors.push('Injection site must be selected');
   }
+  if (!administration.route) {
+    errors.push('Route must be selected');
+  }
+  if (screening.bleedingDisorder && administration.route === 'intramuscular') {
+    errors.push('Bleeding disorder, thrombocytopenia or anticoagulation: give by deep subcutaneous injection, not intramuscularly');
+  }
   if (!administration.doseNumber) {
     errors.push('Dose number must be selected');
   }
   if (!administration.schedule) {
     errors.push('Schedule must be selected');
+  }
+  if (
+    administration.schedule === 'accelerated' &&
+    isRapidScheduleOffLabel(ageYears) &&
+    !administration.offLabelRapidConsent
+  ) {
+    errors.push('Rapid schedule outside adults aged 18 to 64 is off-label: record that this was explained and explicit consent given');
   }
   if (!administration.administeredBy?.trim()) {
     errors.push('Administrator name is required');
@@ -144,8 +189,11 @@ export function validatePostVaccineObs(
   if (!postVaccineObs.observationPeriod) {
     errors.push('Observation period must be specified');
   }
+  if (!postVaccineObs.observationCompleted) {
+    errors.push('Record that the observation period was completed (15 minutes minimum, seated)');
+  }
   if (!postVaccineObs.anaphylaxisKitChecked) {
-    errors.push('Anaphylaxis kit must be checked');
+    errors.push('Confirm adrenaline 1:1000 and the written anaphylaxis protocol are immediately available');
   }
 
   if (postVaccineObs.adverseReaction && !postVaccineObs.reactionDetails?.trim()) {
@@ -159,6 +207,7 @@ export function validateAdvice(advice: JapaneseEncephalitisAdvice): ValidationRe
   const errors: string[] = [];
 
   if (
+    !advice.leafletGiven ||
     !advice.twoDozeSchedule ||
     !advice.scheduleExplained ||
     !advice.commonReactions ||

@@ -1,4 +1,5 @@
 import { WegovyToolClient } from "./WegovyToolClient";
+import { WEGOVY_PGD_VERSION } from "./lib/wegovy-types";
 import { PgdPageActions } from "@/components/PgdPageActions";
 
 export const metadata = {
@@ -23,17 +24,20 @@ export default function WegovyToolPage() {
             <h1 className="text-3xl sm:text-4xl font-bold text-navy-900 mb-2">
               Semaglutide Weight Management
             </h1>
-            <p className="text-gray-600 mb-4">
+            <p className="text-gray-600 mb-1">
               ePGD Consultation for UK Pharmacies
             </p>
+            <p className="text-xs text-gray-500 mb-4">{WEGOVY_PGD_VERSION}</p>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-900">
-                This tool guides a registered pharmacist through a structured
-                assessment for semaglutide weight management. It includes
-                eligibility checks (BMI &ge;30 or &ge;27 with comorbidities),
-                contraindication screening, dose selection, and patient
-                counselling documentation. Follow all 10 steps to complete the
-                consultation record.
+                This tool guides a registered pharmacist or pharmacy technician
+                through a structured assessment for Wegovy (semaglutide)
+                injection for weight management in adults aged 18 to 75. It
+                includes eligibility checks (BMI 30 or above, or 27 or above
+                with at least one weight-related comorbidity), exclusion
+                screening, dose selection and titration (0.25 mg to 2.4 mg, and
+                7.2 mg where permitted), and patient counselling documentation.
+                Follow all 10 steps to complete the consultation record.
               </p>
             </div>
           </div>
@@ -45,7 +49,7 @@ export default function WegovyToolPage() {
         {/* Footer */}
         <div className="mt-8 text-center text-xs text-gray-500">
           <p>
-            Get Real Health ePGD &mdash; Semaglutide Weight Management |
+            Get Real Health ePGD: Wegovy (semaglutide) Injection for Weight Management |
             Confidential Patient Information
           </p>
         </div>

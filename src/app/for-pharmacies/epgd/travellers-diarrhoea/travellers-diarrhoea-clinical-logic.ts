@@ -1,4 +1,6 @@
 // ─── Travellers' Diarrhoea Clinical Logic ───
+// Aligned to the Azithromycin for Traveller's Diarrhoea PGD, version 003,
+// issued 11 September 2026. The PGD supplies azithromycin only.
 
 import type { ClinicalAlert } from '../shared/types';
 import type {
@@ -6,6 +8,8 @@ import type {
   TDMedicalHistory,
   TDMedications,
 } from './travellers-diarrhoea-types';
+
+export const TD_PGD_VERSION = "Azithromycin for Traveller's Diarrhoea PGD v003, issued 11 September 2026";
 
 // ─── Generate clinical alerts ───
 
@@ -22,9 +26,9 @@ export function generateTDAlerts(
     alerts.push({
       severity: 'stop',
       code: 'BLOOD_IN_STOOL',
-      message: 'Blood in stool — refer for medical assessment',
+      message: 'Bloody diarrhoea: exclusion, refer for medical assessment',
       detail:
-        'Blood in stool may indicate invasive infection or inflammatory bowel disease. Refer to doctor immediately.',
+        'Bloody diarrhoea is an exclusion under this PGD. It may indicate invasive infection. Refer to a doctor.',
     });
   }
 
@@ -32,19 +36,29 @@ export function generateTDAlerts(
     alerts.push({
       severity: 'stop',
       code: 'HIGH_FEVER',
-      message: 'Fever >38.5°C — refer for medical assessment',
+      message: 'High fever: exclusion, refer for medical assessment',
       detail:
-        'High fever suggests systemic infection. Refer to doctor. Do not supply standby antibiotics.',
+        'High fever is an exclusion under this PGD and suggests systemic infection. Refer to a doctor. Do not supply standby antibiotics.',
     });
   }
 
-  if (medical.diarrhoea12plusDays) {
+  if (medical.systemicallyUnwell) {
     alerts.push({
       severity: 'stop',
-      code: 'CHRONIC_DIARRHOEA',
-      message: 'Diarrhoea >12 days — refer for investigation',
+      code: 'SYSTEMIC_ILLNESS',
+      message: 'Signs of systemic illness: exclusion, refer',
       detail:
-        'Chronic diarrhoea requires investigation. Refer to doctor.',
+        'Signs of systemic illness are an exclusion under this PGD. Refer for medical assessment.',
+    });
+  }
+
+  if (medical.symptomsOver72Hours) {
+    alerts.push({
+      severity: 'stop',
+      code: 'SYMPTOMS_OVER_72_HOURS',
+      message: 'Symptoms lasting more than 72 hours without improvement: exclusion, refer',
+      detail:
+        'Symptoms lasting more than 72 hours without improvement are an exclusion under this PGD. Refer to a doctor for investigation.',
     });
   }
 
@@ -74,11 +88,11 @@ export function generateTDAlerts(
 
   if (medical.severeHepaticImpairment || medical.liverDisease) {
     alerts.push({
-      severity: 'caution',
+      severity: 'stop',
       code: 'LIVER_DISEASE_DIARRHOEA',
-      message: 'Severe liver disease — caution with azithromycin',
+      message: 'Severe liver disease or significant hepatic dysfunction: exclusion',
       detail:
-        'Azithromycin is hepatically metabolized. Use with caution if liver disease present.',
+        'Severe liver disease or significant hepatic dysfunction is an exclusion under this PGD. Azithromycin cannot be supplied; refer to the GP.',
     });
   }
 
@@ -86,7 +100,7 @@ export function generateTDAlerts(
     alerts.push({
       severity: 'caution',
       code: 'RENAL_DISEASE_DIARRHOEA',
-      message: 'Severe renal impairment — caution',
+      message: 'Severe renal impairment: caution',
       detail:
         'Both agents need careful dosing in renal impairment. Specialist advice may be needed.',
     });
@@ -98,7 +112,7 @@ export function generateTDAlerts(
     alerts.push({
       severity: 'red-flag',
       code: 'IBD_DIARRHOEA',
-      message: 'Inflammatory bowel disease — caution with loperamide',
+      message: 'Inflammatory bowel disease: caution with loperamide',
       detail:
         'Loperamide may worsen IBD symptoms and increase toxic megacolon risk. Consider azithromycin alone.',
     });
@@ -132,11 +146,11 @@ export function generateTDAlerts(
 
   if (medications.takesQTprolongingDrugs) {
     alerts.push({
-      severity: 'caution',
+      severity: 'stop',
       code: 'QT_INTERACTION',
-      message: 'QT-prolonging drug interaction with azithromycin',
+      message: 'Concomitant QT-prolonging medicine: exclusion',
       detail:
-        'Both azithromycin and some QT-prolonging drugs increase QT interval risk. Monitor and consider alternative.',
+        'Concomitant medications known to prolong the QT interval are an exclusion under this PGD. Azithromycin cannot be supplied; refer to the GP.',
     });
   }
 
@@ -170,16 +184,6 @@ export function generateTDAlerts(
     });
   }
 
-  // ─── Age warning ───
-
-  alerts.push({
-    severity: 'red-flag',
-    code: 'AGE_LIMIT_WARNING',
-    message: 'Note: Not suitable for children <12 without medical advice',
-    detail:
-      'This PGD applies to adults and children 12+ years. Children <12 require specialist medical assessment.',
-  });
-
   return alerts;
 }
 
@@ -207,22 +211,26 @@ export function recommendApproach(
   medical: TDMedicalHistory,
   medications: TDMedications
 ): TravellersDiarrhoeaRecommendation | null {
-  // Check if any hard stops exist
+  // Check if any hard stops exist (PGD v003 exclusion criteria)
   if (
     medical.bloodInStool ||
     medical.feverAbove38_5C ||
-    medical.diarrhoea12plusDays ||
-    medical.macrolideAllergy
+    medical.systemicallyUnwell ||
+    medical.symptomsOver72Hours ||
+    medical.macrolideAllergy ||
+    medical.severeHepaticImpairment ||
+    medical.liverDisease ||
+    medications.takesQTprolongingDrugs
   ) {
     return null; // Cannot supply standby
   }
 
   // If no contraindications
   return {
-    approach: 'Standby treatment supply',
+    approach: 'Standby azithromycin supply (self-start for moderate to severe symptoms)',
     treatment:
-      'Loperamide 2mg initial dose, then 2mg after each loose stool (max 16mg/day) + Azithromycin 500mg OD for 3 days if moderate-severe',
+      'Azithromycin 500 mg once daily for 1 to 3 days depending on clinical severity, taken with food. Supply one to three 500 mg tablets; maximum course 3 days. Oral rehydration is the first priority. Loperamide is not supplied under this PGD (OTC: 4 mg initially then 2 mg after each loose stool, max 16 mg/day; not with blood in stool or fever).',
     reason:
-      'Standby supply allows patient to treat diarrhoea if it develops during travel. Oral rehydration is first-line; antidiarrhoeal and antibiotic added only if needed.',
+      'Standby supply allows the patient to self-treat moderate to severe traveller\'s diarrhoea if it develops during travel, where fluoroquinolone resistance is a concern.',
   };
 }

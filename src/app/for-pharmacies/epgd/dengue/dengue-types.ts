@@ -2,25 +2,38 @@ import { BasePatientDetails, BaseConsent, BaseSummary, ClinicalAlert } from '../
 
 export interface DengueScreening {
   destinationCountry: string;
-  endemicArea: boolean;
+  endemicArea: boolean; // PGD v005 inclusion: travel to or residence in a dengue-endemic area
   departureDate: string;
   travelDuration: string;
+  /** PGD v005 inclusion: willing to receive two doses, 3 months apart. */
+  willingTwoDoses: boolean;
   previousDengueInfection: boolean;
   dengueInfectionDetails: string;
-  currentIllness: boolean;
+  currentIllness: boolean; // PGD v005 exclusion: acute fever or significant intercurrent illness
   illnessDetails: string;
-  immunosuppressed: boolean;
+  immunosuppressed: boolean; // PGD v005 exclusion: any congenital or acquired immune deficiency
   immunosuppressedDetails: string;
   pregnant: boolean;
   breastfeeding: boolean;
   temperature: number | null;
+  /** PGD v005 exclusion: known hypersensitivity to any component of the vaccine. */
+  vaccineComponentAllergy: boolean;
+  /** PGD v005 exclusion: another live vaccine planned within 4 weeks before or after Qdenga. */
+  liveVaccineWithin4Weeks: boolean;
+  /** PGD v005 exclusion: history of Guillain-Barre syndrome following prior dengue vaccination. */
+  gbsAfterDengueVaccine: boolean;
+  /** PGD v005 caution: anticoagulant therapy, assess bleeding risk. */
+  anticoagulantTherapy: boolean;
 }
 
 export interface DengueContraindications {
   severeAllergy: boolean;
   immunosuppressed: boolean;
   pregnancy: boolean;
+  breastfeeding: boolean;
   acuteFebrileIllness: boolean;
+  liveVaccineInterval: boolean;
+  gbsHistory: boolean;
   ageAppropriate: boolean;
 }
 
@@ -37,6 +50,8 @@ export interface DengueVaccineAdministration {
 
 export interface DenguePostVaccineObs {
   observationPeriod: '15-min' | '30-min' | '';
+  /** PGD v005: record that the seated observation period was completed. */
+  observationCompleted: boolean;
   patientWell: boolean;
   adverseReaction: boolean;
   reactionDetails: string;
@@ -51,6 +66,10 @@ export interface DengueAdvice {
   dengueSymptomsWarning: boolean;
   noOtherLiveVaccines: boolean;
   returnIfConcerned: boolean;
+  /** PGD v005: avoid pregnancy for at least 4 weeks after each dose. */
+  avoidPregnancy4Weeks: boolean;
+  /** PGD v005: keep a record of vaccination dates and bring documentation when travelling. */
+  keepVaccinationRecord: boolean;
 }
 
 export interface DengueConsultationState {
@@ -71,6 +90,7 @@ export const initialDengueScreening = (): DengueScreening => ({
   endemicArea: false,
   departureDate: '',
   travelDuration: '',
+  willingTwoDoses: false,
   previousDengueInfection: false,
   dengueInfectionDetails: '',
   currentIllness: false,
@@ -80,13 +100,20 @@ export const initialDengueScreening = (): DengueScreening => ({
   pregnant: false,
   breastfeeding: false,
   temperature: null,
+  vaccineComponentAllergy: false,
+  liveVaccineWithin4Weeks: false,
+  gbsAfterDengueVaccine: false,
+  anticoagulantTherapy: false,
 });
 
 export const initialDengueContraindications = (): DengueContraindications => ({
   severeAllergy: false,
   immunosuppressed: false,
   pregnancy: false,
+  breastfeeding: false,
   acuteFebrileIllness: false,
+  liveVaccineInterval: false,
+  gbsHistory: false,
   ageAppropriate: false,
 });
 
@@ -103,6 +130,7 @@ export const initialDengueVaccineAdministration = (): DengueVaccineAdministratio
 
 export const initialDenguePostVaccineObs = (): DenguePostVaccineObs => ({
   observationPeriod: '',
+  observationCompleted: false,
   patientWell: false,
   adverseReaction: false,
   reactionDetails: '',
@@ -117,4 +145,6 @@ export const initialDengueAdvice = (): DengueAdvice => ({
   dengueSymptomsWarning: false,
   noOtherLiveVaccines: false,
   returnIfConcerned: false,
+  avoidPregnancy4Weeks: false,
+  keepVaccinationRecord: false,
 });

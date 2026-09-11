@@ -53,24 +53,23 @@ export const CurrentMedicationsStep: React.FC<CurrentMedicationsStepProps> = ({
           />
 
           <div className="mt-4 text-sm text-blue-700 space-y-2">
-            <p><strong>Key drug interactions to consider:</strong></p>
+            <p><strong>Medicines that matter under this PGD (tick the matching boxes on the Medical History step):</strong></p>
             <ul className="list-disc list-inside space-y-1">
-              <li>Anticonvulsants (phenytoin, carbamazepine) - may increase antiviral metabolism</li>
-              <li>Nephrotoxic drugs (NSAIDs, ACE inhibitors) - monitor renal function with antivirals</li>
-              <li>Probenecid - increases aciclovir levels (risk of toxicity)</li>
-              <li>Theophylline - aciclovir may reduce clearance</li>
-              <li>High-dose NSAIDs - increased risk of renal impairment</li>
+              <li>EXCLUSION: ciclosporin, tacrolimus, mycophenolate, aminophylline or theophylline. Refer to a prescriber</li>
+              <li>EXCLUSION: current long-term prophylactic antiviral of the same class</li>
+              <li>Caution: nephrotoxic medicines (ACE inhibitors, ARBs, diuretics, NSAIDs, metformin, aminoglycosides, methotrexate). Counsel firmly on fluid intake</li>
+              <li>Caution: tenofovir. Advise the patient to contact its prescriber about additional renal monitoring</li>
+              <li>Caution: probenecid or cimetidine reduce renal clearance of aciclovir and valaciclovir</li>
+              <li>Caution: raloxifene reduces the activation of famciclovir</li>
             </ul>
           </div>
 
           <div className="mt-4 text-sm text-gray-700 space-y-2">
-            <p><strong>Pain management options (may already be taking):</strong></p>
+            <p><strong>Pain management (may already be taking):</strong></p>
             <ul className="list-disc list-inside space-y-1">
-              <li>Paracetamol - safe first-line option</li>
-              <li>Ibuprofen/naproxen - check renal function and GI history</li>
-              <li>Codeine-based preparations - may cause constipation</li>
-              <li>Topical lidocaine - can be used alongside oral antivirals</li>
-              <li>Gabapentin (pregabalin) - for neuropathic pain, may require GP referral</li>
+              <li>Paracetamol alone or with codeine</li>
+              <li>An NSAID such as ibuprofen, subject to the usual contraindications (renal function, GI history)</li>
+              <li>Pain not controlled by over-the-counter analgesia: refer to a prescriber the same day</li>
             </ul>
           </div>
         </div>

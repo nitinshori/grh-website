@@ -20,6 +20,8 @@ import {
   getAllAlerts,
   hasHardStops,
   calculateDoseRecommendation,
+  getArmAvailability,
+  getDoseCaps,
 } from "./lib/ed-clinical-logic";
 import { validateStep, calculateAge } from "./lib/ed-validation";
 import type { ConsultationRecordData } from "../shared/hooks/useConsultationTracking";
@@ -86,7 +88,9 @@ gpEmail: "",
     unstableAngina: false,
     severeHeartFailure: false,
     uncontrolledArrhythmias: false,
+    structuralHeartDisease: false,
     recentMIOrStroke: false,
+    lastCvReviewDate: "",
     naionHistory: false,
     hypogonadism: false,
     psychiatricIssues: false,
@@ -97,7 +101,11 @@ gpEmail: "",
     nitrateDetails: "",
     takesNicorandil: false,
     usesPoppers: false,
+    poppersQuestionAsked: false,
     takesRiociguat: false,
+    takesRitonavirOrCobicistat: false,
+    takesDoxazosin: false,
+    takesOtherPDE5Inhibitor: false,
     takesAlphaBlockers: false,
     alphaBlockerStable: false,
     alphaBlockerDetails: "",
@@ -112,9 +120,11 @@ gpEmail: "",
     heartRate: null,
     bpTakenToday: false,
     exerciseTolerance: "" as "" | "yes" | "no" | "unknown",
+    exerciseToleranceNotes: "",
     symptomsOnExertionOrSex: false,
   },
   redFlags: {
+    suddenOnsetSecondaryCause: false,
     pelvicPerinealTrauma: false,
     penileAnatomicalAbnormality: false,
     previousPDE5Failure: false,
@@ -125,6 +135,7 @@ gpEmail: "",
     dosingRegimen: "",
     dose: "",
     quantity: 4,
+    brand: "",
     pharmacistOverride: false,
     overrideReason: "",
   },
@@ -135,6 +146,9 @@ gpEmail: "",
     priapismWarning: false,
     visionHearingWarning: false,
     noSTIProtection: false,
+    maxOneDoseIn24Hours: false,
+    nitrateWarningGiven: false,
+    chestPainAdvice: false,
     grapefruitAvoidance: false,
     alcoholModeration: false,
     sideEffectsExplained: false,
@@ -754,15 +768,15 @@ export function EDToolClient() {
             {
               value: "mild",
               label:
-                "Mild — occasional difficulty achieving/maintaining erection",
+                "Mild: occasional difficulty achieving/maintaining erection",
             },
             {
               value: "moderate",
-              label: "Moderate — frequent difficulty",
+              label: "Moderate: frequent difficulty",
             },
             {
               value: "severe",
-              label: "Severe — unable to achieve/maintain erection",
+              label: "Severe: unable to achieve/maintain erection",
             },
           ]}
         />
@@ -795,8 +809,8 @@ export function EDToolClient() {
         )}
         <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-3 space-y-3">
             <div>
-              <p className="text-sm font-semibold text-amber-900">Cardiovascular fitness (PGD v002, Appendix 1)</p>
-              <p className="text-xs text-amber-800 mt-1">v001 required an assessment &quot;deemed low risk for sexual activity&quot; with no content and no threshold. Sexual activity carries a cardiac workload comparable to brisk walking or two flights of stairs.</p>
+              <p className="text-sm font-semibold text-amber-900">Cardiovascular fitness (PGD v006, Appendix 1). Complete for every patient, at every supply, and record the answers.</p>
+              <p className="text-xs text-amber-800 mt-1">Sexual activity carries a cardiac workload comparable to brisk walking or climbing two flights of stairs. Not done, failed, or does not know: do not supply.</p>
             </div>
             <SelectInput
               label="Can he walk a mile on the flat in about 20 minutes, or climb two flights of stairs briskly, without chest pain and without stopping for breath?"
@@ -807,11 +821,19 @@ export function EDToolClient() {
                 { value: "no", label: "No" },
                 { value: "unknown", label: "Does not know, never exerts himself that much" },
               ]}
+              required
+            />
+            <TextInput
+              label="The answer, in the patient's own terms (recorded)"
+              value={state.observations.exerciseToleranceNotes}
+              onChange={(v) => updateObs("exerciseToleranceNotes", v)}
+              placeholder="e.g. walks the dog for half an hour daily, no problems on the stairs"
             />
             <Checkbox
               label="Chest pain, breathlessness or palpitations on exertion, or during previous sexual activity"
               checked={state.observations.symptomsOnExertionOrSex}
               onChange={(v) => updateObs("symptomsOnExertionOrSex", v)}
+              description="Any YES: do not supply. Refer."
             />
           </div>
           <Checkbox
@@ -838,10 +860,10 @@ export function EDToolClient() {
             Cardiovascular
           </h4>
           <Checkbox
-            label="Cardiovascular disease"
+            label="Known cardiovascular disease (record what)"
             checked={state.medicalHistory.cardiovascularDisease}
             onChange={(v) => updateHistory("cardiovascularDisease", v)}
-            description="Hypertension, ischaemic heart disease, peripheral vascular disease"
+            description="Hypertension, ischaemic heart disease, peripheral vascular disease. Recorded at every supply."
           />
           {state.medicalHistory.cardiovascularDisease && (
             <TextInput
@@ -852,23 +874,34 @@ export function EDToolClient() {
               className="ml-7"
             />
           )}
+          <TextInput
+            label="Date of the last cardiovascular review, where known"
+            value={state.medicalHistory.lastCvReviewDate}
+            onChange={(v) => updateHistory("lastCvReviewDate", v)}
+            placeholder="e.g. March 2026, or 'none recent: check recommended'"
+          />
           <Checkbox
-            label="🔴 Unstable angina"
+            label="🔴 Unstable angina, or angina during sexual activity"
             checked={state.medicalHistory.unstableAngina}
             onChange={(v) => updateHistory("unstableAngina", v)}
           />
           <Checkbox
-            label="🔴 Severe heart failure (NYHA class IV)"
+            label="🔴 Heart failure of NYHA class 2 or greater in the last 6 months"
             checked={state.medicalHistory.severeHeartFailure}
             onChange={(v) => updateHistory("severeHeartFailure", v)}
           />
           <Checkbox
-            label="🔴 Uncontrolled arrhythmias"
+            label="🔴 Uncontrolled arrhythmia"
             checked={state.medicalHistory.uncontrolledArrhythmias}
             onChange={(v) => updateHistory("uncontrolledArrhythmias", v)}
           />
           <Checkbox
-            label="🔴 Recent MI or stroke (within 6 months)"
+            label="🔴 Hypertrophic cardiomyopathy, significant aortic stenosis or other moderate to severe valve disease, or a murmur of unknown cause"
+            checked={state.medicalHistory.structuralHeartDisease}
+            onChange={(v) => updateHistory("structuralHeartDisease", v)}
+          />
+          <Checkbox
+            label="🔴 Recent stroke or myocardial infarction (within the last 6 months)"
             checked={state.medicalHistory.recentMIOrStroke}
             onChange={(v) => updateHistory("recentMIOrStroke", v)}
           />
@@ -905,7 +938,7 @@ export function EDToolClient() {
                 },
                 {
                   value: "severe",
-                  label: "🔴 Severe (Child-Pugh C) — EXCLUSION",
+                  label: "🔴 Severe (Child-Pugh C), EXCLUSION",
                 },
               ]}
             />
@@ -919,11 +952,11 @@ export function EDToolClient() {
                 { value: "none", label: "None" },
                 {
                   value: "moderate",
-                  label: "Moderate (eGFR 30-50 mL/min)",
+                  label: "Moderate (creatinine clearance 30 to 50 mL/min): tadalafil once-daily start at 2.5mg",
                 },
                 {
                   value: "severe",
-                  label: "Severe (eGFR <30 mL/min)",
+                  label: "Severe (creatinine clearance below 30 mL/min): sildenafil start 25mg; tadalafil once-daily excluded, on-demand max 10mg",
                 },
               ]}
             />
@@ -942,19 +975,19 @@ export function EDToolClient() {
             label="🔴 Hereditary degenerative retinal disorders"
             checked={state.medicalHistory.retinalDisorders}
             onChange={(v) => updateHistory("retinalDisorders", v)}
-            description="e.g. retinitis pigmentosa — EXCLUSION"
+            description="e.g. retinitis pigmentosa, EXCLUSION"
           />
           <Checkbox
             label="🔴 Previous NAION"
             checked={state.medicalHistory.naionHistory}
             onChange={(v) => updateHistory("naionHistory", v)}
-            description="Non-arteritic anterior ischaemic optic neuropathy — EXCLUSION"
+            description="Non-arteritic anterior ischaemic optic neuropathy, EXCLUSION"
           />
           <Checkbox
-            label="Sickle cell disease / blood disorders"
+            label="Sickle cell anaemia, multiple myeloma or leukaemia"
             checked={state.medicalHistory.sickleCell}
             onChange={(v) => updateHistory("sickleCell", v)}
-            description="Conditions predisposing to priapism"
+            description="Conditions predisposing to priapism (caution)"
           />
           <Checkbox
             label="Bleeding disorders / active peptic ulceration"
@@ -968,9 +1001,10 @@ export function EDToolClient() {
             description="Peyronie's disease, angulation, cavernosal fibrosis"
           />
           <Checkbox
-            label="History of priapism"
+            label="🔴 Previous priapism, or an erection lasting more than 4 hours on any previous PDE5 inhibitor"
             checked={state.medicalHistory.priapismHistory}
             onChange={(v) => updateHistory("priapismHistory", v)}
+            description="EXCLUSION under PGD v006"
           />
           <Checkbox
             label="Suspected hypogonadism"
@@ -1013,19 +1047,31 @@ export function EDToolClient() {
             label="🔴 Patient takes NICORANDIL"
             checked={state.medications.takesNicorandil}
             onChange={(v) => updateMeds("takesNicorandil", v)}
-            description="An angina medicine with no 'nitrate' in its name. It is a nitric oxide donor and the interaction is the same. It appeared in neither arm of v001."
+            description="An angina medicine with no 'nitrate' in its name. It is a nitric oxide donor and the interaction is the same."
           />
           <Checkbox
-            label="🔴 Patient uses POPPERS (amyl, butyl or isobutyl nitrite)"
+            label="Direct question about poppers asked, and the answer recorded"
+            checked={state.medications.poppersQuestionAsked}
+            onChange={(v) => updateMeds("poppersQuestionAsked", v)}
+            description="Ask, without judgement: 'Some men use poppers, amyl nitrite, at the same time as these tablets. Taken together they can drop your blood pressure to a dangerous level. Do you ever use them, or think you might?' It is bought, not prescribed, so it will never appear on a medication list. Required before supply."
+          />
+          <Checkbox
+            label="🔴 Patient uses POPPERS (amyl, butyl, isobutyl or other alkyl nitrite), or thinks he might"
             checked={state.medications.usesPoppers}
             onChange={(v) => updateMeds("usesPoppers", v)}
-            description="Ask directly and without judgement: 'Some men use poppers at the same time as these tablets. Together they can drop your blood pressure to a dangerous level. Do you ever use them, or think you might?' It is bought, not prescribed, so it will never appear on a medication list."
+            description="Absolute exclusion while he is unwilling to stop. Explain that it is the combination that is dangerous, not either one alone."
           />
           <Checkbox
-            label="🔴 Patient takes RIOCIGUAT (guanylate cyclase stimulator)"
+            label="🔴 Patient takes RIOCIGUAT or any other soluble guanylate cyclase stimulator"
             checked={state.medications.takesRiociguat}
             onChange={(v) => updateMeds("takesRiociguat", v)}
             description="CONTRAINDICATION with PDE5 inhibitors"
+          />
+          <Checkbox
+            label="🔴 Already taking any other PDE5 inhibitor, including one obtained online or from another supplier"
+            checked={state.medications.takesOtherPDE5Inhibitor}
+            onChange={(v) => updateMeds("takesOtherPDE5Inhibitor", v)}
+            description="Do not add a second. EXCLUSION."
           />
         </div>
 
@@ -1034,10 +1080,10 @@ export function EDToolClient() {
             Other relevant medications
           </h4>
           <Checkbox
-            label="Alpha-blockers (e.g. tamsulosin, doxazosin)"
+            label="Alpha-blockers (e.g. tamsulosin, alfuzosin, doxazosin)"
             checked={state.medications.takesAlphaBlockers}
             onChange={(v) => updateMeds("takesAlphaBlockers", v)}
-            description="Dose adjustment required — start sildenafil at 25mg"
+            description="Must be stable on it first. Sildenafil START AT 25mg; tadalafil on-demand 10mg, once-daily 2.5mg. Record which one and whether he is stable."
           />
           {state.medications.takesAlphaBlockers && (
             <div className="ml-7 space-y-2">
@@ -1048,18 +1094,30 @@ export function EDToolClient() {
                 description="Must be stable on alpha-blocker therapy before initiating PDE5 inhibitor"
               />
               <TextInput
-                label="Alpha-blocker details"
+                label="Alpha-blocker details (which one, dose, how long)"
                 value={state.medications.alphaBlockerDetails}
                 onChange={(v) => updateMeds("alphaBlockerDetails", v)}
                 placeholder="Which alpha-blocker, dose, duration?"
               />
+              <Checkbox
+                label="The alpha-blocker is DOXAZOSIN"
+                checked={state.medications.takesDoxazosin}
+                onChange={(v) => updateMeds("takesDoxazosin", v)}
+                description="Excludes the tadalafil arm (SmPC: combination not recommended). Use the sildenafil arm or refer."
+              />
             </div>
           )}
           <Checkbox
-            label="CYP3A4 inhibitors (e.g. erythromycin, ketoconazole, itraconazole, ritonavir)"
+            label="CYP3A4 inhibitors (e.g. erythromycin, clarithromycin, ketoconazole, itraconazole)"
             checked={state.medications.takesCYP3A4Inhibitors}
             onChange={(v) => updateMeds("takesCYP3A4Inhibitors", v)}
-            description="Dose adjustment required"
+            description="Sildenafil start at 25mg. Tadalafil on-demand not more than 10mg in any 72 hours. Record the inhibitor and the starting dose chosen."
+          />
+          <Checkbox
+            label="RITONAVIR or COBICISTAT"
+            checked={state.medications.takesRitonavirOrCobicistat}
+            onChange={(v) => updateMeds("takesRitonavirOrCobicistat", v)}
+            description="Excludes the sildenafil arm (dose must not exceed 25mg in 48 hours and cannot be titrated under this PGD). Tadalafil on-demand only, max 10mg in 72 hours."
           />
           {state.medications.takesCYP3A4Inhibitors && (
             <TextInput
@@ -1105,7 +1163,7 @@ export function EDToolClient() {
           label="Blood pressure taken today"
           checked={state.observations.bpTakenToday}
           onChange={(v) => updateObs("bpTakenToday", v)}
-          description="A current blood pressure reading is required before supply"
+          description="Measured today. Do not accept a figure from memory. Required before supply."
         />
 
         {state.observations.bpTakenToday && (
@@ -1153,17 +1211,17 @@ export function EDToolClient() {
                 {state.observations.systolicBP}/{state.observations.diastolicBP}{" "}
                 mmHg
               </span>
-              {" — "}
+              {": "}
               {state.observations.systolicBP < 90 ||
               state.observations.diastolicBP < 50
-                ? "Hypotension — CANNOT supply"
+                ? "Hypotension (below 90/50), CANNOT supply"
                 : state.observations.systolicBP > 170 ||
                     state.observations.diastolicBP > 100
-                  ? "Uncontrolled hypertension — CANNOT supply"
+                  ? "Uncontrolled hypertension (above 170/100), CANNOT supply"
                   : state.observations.systolicBP > 140 ||
                       state.observations.diastolicBP > 90
-                    ? "Elevated — proceed with caution"
-                    : "Within normal range"}
+                    ? "Elevated, proceed with caution and recommend a GP check"
+                    : "Within the acceptable range"}
             </div>
           )}
 
@@ -1190,6 +1248,12 @@ export function EDToolClient() {
           supplying medication.
         </p>
 
+        <Checkbox
+          label="🔴 Erectile dysfunction of sudden onset following trauma, surgery or a new medicine, or accompanied by penile pain or deformity"
+          checked={state.redFlags.suddenOnsetSecondaryCause}
+          onChange={(v) => updateRedFlags("suddenOnsetSecondaryCause", v)}
+          description="EXCLUSION under PGD v006. Refer for a diagnosis rather than treating the symptom."
+        />
         <Checkbox
           label="Pelvic or perineal trauma"
           checked={state.redFlags.pelvicPerinealTrauma}
@@ -1239,7 +1303,7 @@ export function EDToolClient() {
       return (
         <div className="text-center py-8">
           <p className="text-red-600 font-semibold">
-            Cannot proceed to medicine selection — exclusion criteria have been
+            Cannot proceed to medicine selection: exclusion criteria have been
             identified.
           </p>
           <p className="text-sm text-gray-500 mt-2">
@@ -1255,6 +1319,8 @@ export function EDToolClient() {
         selection={state.medicineSelection}
         recommendation={doseRec}
         onChange={updateMedicine}
+        armAvailability={getArmAvailability(state)}
+        caps={getDoseCaps(state)}
       />
     );
   }

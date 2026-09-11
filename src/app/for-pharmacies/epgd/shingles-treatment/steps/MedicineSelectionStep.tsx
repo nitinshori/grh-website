@@ -1,10 +1,16 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { SelectInput, Checkbox, TextArea } from '../../shared/components/FormInputs';
+import React, { useEffect, useMemo } from 'react';
+import { SelectInput, Checkbox, TextArea, TextInput } from '../../shared/components/FormInputs';
 import { StepWrapper } from '../../shared/components/StepWrapper';
 import { ShinglesMedicineSelection, ShinglesSymptoms, ShinglesMedicalHistory } from '../shingles-types';
-import { getRecommendedDose, validateMedicineSelectionStep } from '../shingles-clinical-logic';
+import {
+  getRecommendedDose,
+  getMedicineAvailability,
+  validateMedicineSelectionStep,
+  isWithinTreatmentWindow,
+  hasNonSevereImmunosuppression,
+} from '../shingles-clinical-logic';
 
 interface MedicineSelectionStepProps {
   medicine: ShinglesMedicineSelection;
@@ -17,6 +23,12 @@ interface MedicineSelectionStepProps {
   onPrev: () => void;
 }
 
+const MEDICINE_LABELS: Record<'aciclovir' | 'valaciclovir' | 'famciclovir', string> = {
+  aciclovir: 'Aciclovir 800 mg tablets or dispersible tablets (five times daily; cheapest; adherence is the practical problem)',
+  valaciclovir: 'Valaciclovir 500 mg film-coated tablets (three times daily; preferred where five times daily dosing is impractical, or in non-severe immunosuppression)',
+  famciclovir: 'Famciclovir 500 mg film-coated tablets (three times daily; not part of NHS Pharmacy First, private supply)',
+};
+
 export const MedicineSelectionStep: React.FC<MedicineSelectionStepProps> = ({
   medicine,
   symptoms,
@@ -27,25 +39,24 @@ export const MedicineSelectionStep: React.FC<MedicineSelectionStepProps> = ({
   onNext,
   onPrev,
 }) => {
-  const [recommendedDose, setRecommendedDose] = useState<any>(null);
-  const validationError = validateMedicineSelectionStep(medicine);
+  const validationError = validateMedicineSelectionStep(medicine, medicalHistory);
+  const availability = useMemo(() => getMedicineAvailability(medicalHistory), [medicalHistory]);
 
+  const recommendedDose = useMemo(
+    () => (medicine.medicine ? getRecommendedDose(medicine.medicine, medicalHistory) : null),
+    [medicine.medicine, medicalHistory]
+  );
+
+  // The PGD specifies one complete course per agent. Fill the regimen from the
+  // PGD whenever the agent changes; the pharmacist may override with a reason.
   useEffect(() => {
-    if (medicine.medicine) {
-      const dose = getRecommendedDose(
-        medicine.medicine,
-        medicalHistory.renalImpairment
-      );
-      setRecommendedDose(dose);
-    }
-  }, [medicine.medicine, medicalHistory.renalImpairment]);
-
-  const handleChange = (field: keyof ShinglesMedicineSelection, value: any) => {
-    onChange({ ...medicine, [field]: value });
-  };
-
-  const applyRecommendedDose = () => {
-    if (recommendedDose) {
+    if (!recommendedDose || medicine.pharmacistOverride) return;
+    if (
+      medicine.dose !== recommendedDose.dose ||
+      medicine.frequency !== recommendedDose.frequency ||
+      medicine.duration !== recommendedDose.duration ||
+      medicine.quantity !== recommendedDose.quantity
+    ) {
       onChange({
         ...medicine,
         dose: recommendedDose.dose,
@@ -54,17 +65,24 @@ export const MedicineSelectionStep: React.FC<MedicineSelectionStepProps> = ({
         quantity: recommendedDose.quantity,
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recommendedDose, medicine.pharmacistOverride]);
+
+  const handleChange = <K extends keyof ShinglesMedicineSelection>(
+    field: K,
+    value: ShinglesMedicineSelection[K]
+  ) => {
+    onChange({ ...medicine, [field]: value });
   };
 
-  // Calculate hours since onset for warning
   const hoursSinceOnset = symptoms.hoursSinceOnset;
-  const showApproachingWindowWarning =
-    hoursSinceOnset !== null && hoursSinceOnset > 48 && hoursSinceOnset <= 72;
+  const showExtendedWindowWarning =
+    hoursSinceOnset !== null && !isWithinTreatmentWindow(hoursSinceOnset);
 
   return (
     <StepWrapper
       title="Medicine Selection"
-      description="Select and confirm antiviral medicine and dose"
+      description="Select the antiviral and confirm the PGD regimen"
       currentStep={currentStep}
       totalSteps={totalSteps}
       onNext={onNext}
@@ -74,51 +92,57 @@ export const MedicineSelectionStep: React.FC<MedicineSelectionStepProps> = ({
     >
       <div className="space-y-6">
         {/* Treatment Window Warning */}
-        {showApproachingWindowWarning && (
+        {showExtendedWindowWarning && (
           <div className="bg-amber-50 border-2 border-amber-300 rounded-lg p-4">
-            <h3 className="font-semibold text-amber-900 mb-2">⏰ Treatment Window Alert</h3>
+            <h3 className="font-semibold text-amber-900 mb-2">Treatment window</h3>
             <p className="text-amber-800">
-              Rash onset was {hoursSinceOnset} hours ago. Approaching edge of 72-hour treatment window.
-              Antivirals may be less effective. Reinforce importance of early treatment.
+              Rash onset was {hoursSinceOnset} hours ago, outside 72 hours. Supply is under the 7 day criteria. Start treatment as soon as possible: the benefit falls away the longer the delay after rash onset.
+            </p>
+          </div>
+        )}
+
+        {hasNonSevereImmunosuppression(medicalHistory) && (
+          <div className="bg-amber-50 border border-amber-300 rounded-lg p-4">
+            <p className="text-sm text-amber-900">
+              Non-severe immunosuppression: use valaciclovir or famciclovir rather than aciclovir. The famciclovir course in this group is 10 days.
             </p>
           </div>
         )}
 
         {/* Medicine Selection */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h3 className="font-semibold text-blue-900 mb-3">Select Medicine</h3>
+          <h3 className="font-semibold text-blue-900 mb-1">Select Medicine</h3>
+          <p className="text-xs text-blue-800 mb-3">Choose one agent. Do not combine. One complete course; no repeat supply under this PGD.</p>
 
           <SelectInput
             label="Antiviral medicine"
             value={medicine.medicine}
-            onChange={(v) => handleChange('medicine', v)}
+            onChange={(v) => handleChange('medicine', v as ShinglesMedicineSelection['medicine'])}
             options={[
               { value: '', label: 'Select medicine...' },
-              { value: 'valaciclovir', label: 'Valaciclovir (first-line - better absorption)' },
-              { value: 'aciclovir', label: 'Aciclovir (if valaciclovir unsuitable)' },
+              ...availability.map((a) => ({
+                value: a.medicine,
+                label: a.available
+                  ? MEDICINE_LABELS[a.medicine]
+                  : `NOT AVAILABLE (${a.reason}): ${a.medicine}`,
+              })),
             ]}
             required
           />
 
-          {medicine.medicine && (
+          {medicine.medicine && recommendedDose && (
             <div className="mt-4 p-3 bg-white rounded border border-blue-300">
-              <p className="text-sm text-gray-700">
-                {medicine.medicine === 'valaciclovir'
-                  ? 'Valaciclovir: Pro-drug of aciclovir, better oral bioavailability, requires less frequent dosing, preferred for most patients.'
-                  : 'Aciclovir: If valaciclovir unsuitable (renal impairment, high dose intolerance), more frequent dosing required.'}
-              </p>
+              <p className="text-sm text-gray-700">{recommendedDose.notes}</p>
             </div>
           )}
         </div>
 
-        {/* Renal Adjustment Notification */}
-        {medicalHistory.renalImpairment !== 'none' && (
+        {/* Renal threshold notification */}
+        {medicalHistory.renalImpairment === 'moderate' && (
           <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-4">
-            <p className="font-semibold text-yellow-900">
-              ℹ️ Renal impairment detected ({medicalHistory.renalImpairment})
-            </p>
+            <p className="font-semibold text-yellow-900">eGFR 30 to 59: aciclovir only, at the standard dose.</p>
             <p className="text-sm text-yellow-800 mt-2">
-              Dose recommendations below have been adjusted for renal function.
+              Valaciclovir and famciclovir are not supplied under this PGD below eGFR 60. The PGD does not operate the renal dosing ladder.
             </p>
           </div>
         )}
@@ -126,7 +150,7 @@ export const MedicineSelectionStep: React.FC<MedicineSelectionStepProps> = ({
         {/* Dose Information */}
         {recommendedDose && (
           <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-            <h3 className="font-semibold text-purple-900 mb-3">Recommended Dose</h3>
+            <h3 className="font-semibold text-purple-900 mb-3">PGD regimen</h3>
 
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-4">
@@ -147,34 +171,39 @@ export const MedicineSelectionStep: React.FC<MedicineSelectionStepProps> = ({
                   <p className="text-lg font-semibold text-purple-900">{recommendedDose.quantity} tablets</p>
                 </div>
               </div>
-
-              <p className="text-sm text-purple-700 bg-white p-2 rounded">
-                {recommendedDose.notes}
-              </p>
-
-              <button
-                onClick={applyRecommendedDose}
-                className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded"
-              >
-                Apply Recommended Dose
-              </button>
             </div>
           </div>
         )}
 
-        {/* Manual Dose Entry */}
+        {/* Supply record */}
         <div className="bg-gray-50 border border-gray-300 rounded-lg p-4">
-          <h3 className="font-semibold text-gray-900 mb-3">Dose Details</h3>
+          <h3 className="font-semibold text-gray-900 mb-3">Supply record</h3>
 
           <div className="space-y-4">
+            <div className="grid sm:grid-cols-2 gap-4">
+              <TextInput
+                label="Brand / manufacturer supplied"
+                value={medicine.brand}
+                onChange={(v) => handleChange('brand', v)}
+                placeholder="e.g. Wockhardt aciclovir 800 mg; Valtrex 500 mg"
+              />
+              <TextInput
+                label="Batch number"
+                value={medicine.batchNumber}
+                onChange={(v) => handleChange('batchNumber', v)}
+                placeholder="Batch number from the pack"
+                required
+              />
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Dose per administration *</label>
               <input
                 type="text"
                 value={medicine.dose}
                 onChange={(e) => handleChange('dose', e.target.value)}
-                placeholder="e.g., 1g, 800mg, 500mg"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={!medicine.pharmacistOverride}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
               />
             </div>
 
@@ -184,8 +213,8 @@ export const MedicineSelectionStep: React.FC<MedicineSelectionStepProps> = ({
                 type="text"
                 value={medicine.frequency}
                 onChange={(e) => handleChange('frequency', e.target.value)}
-                placeholder="e.g., three times daily, twice daily, five times daily"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={!medicine.pharmacistOverride}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
               />
             </div>
 
@@ -196,8 +225,8 @@ export const MedicineSelectionStep: React.FC<MedicineSelectionStepProps> = ({
                   type="text"
                   value={medicine.duration}
                   onChange={(e) => handleChange('duration', e.target.value)}
-                  placeholder="e.g., 7 days"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  disabled={!medicine.pharmacistOverride}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
                 />
               </div>
               <div>
@@ -206,8 +235,8 @@ export const MedicineSelectionStep: React.FC<MedicineSelectionStepProps> = ({
                   type="number"
                   value={medicine.quantity || ''}
                   onChange={(e) => handleChange('quantity', parseInt(e.target.value) || 0)}
-                  placeholder="e.g., 21"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  disabled={!medicine.pharmacistOverride}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
                   min="1"
                 />
               </div>
@@ -217,13 +246,14 @@ export const MedicineSelectionStep: React.FC<MedicineSelectionStepProps> = ({
 
         {/* Pharmacist Override */}
         <div className="bg-orange-50 border border-orange-300 rounded-lg p-4">
-          <h3 className="font-semibold text-orange-900 mb-3">Pharmacist Override (if applicable)</h3>
+          <h3 className="font-semibold text-orange-900 mb-3">Pharmacist override (if applicable)</h3>
 
           <div className="space-y-3">
             <Checkbox
-              label="I am deviating from recommended dose and wish to apply a pharmacist override"
+              label="I am deviating from the PGD regimen and wish to record a pharmacist override"
               checked={medicine.pharmacistOverride}
               onChange={(v) => handleChange('pharmacistOverride', v)}
+              description="The PGD authorises one complete course as specified above. A deviation is outside the PGD and must be justified."
             />
 
             {medicine.pharmacistOverride && (
@@ -231,7 +261,7 @@ export const MedicineSelectionStep: React.FC<MedicineSelectionStepProps> = ({
                 label="Reason for override *"
                 value={medicine.overrideReason}
                 onChange={(v) => handleChange('overrideReason', v)}
-                placeholder="Provide clinical justification for deviation from recommended dose..."
+                placeholder="Provide clinical justification for deviation from the PGD regimen..."
                 required
                 rows={3}
               />
@@ -243,11 +273,11 @@ export const MedicineSelectionStep: React.FC<MedicineSelectionStepProps> = ({
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <h3 className="font-semibold text-blue-900 mb-3">Key Counselling Points</h3>
           <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-            <li>Complete full 7-day course even if symptoms improve</li>
-            <li>Take with food or water if GI upset occurs</li>
-            <li>Ensure adequate hydration (especially with aciclovir)</li>
-            <li>Time-critical: Most effective if started within 72 hours of rash onset</li>
-            <li>Do not exceed recommended dose - risk of renal/neurological toxicity</li>
+            <li>Complete the full course even if symptoms improve</li>
+            <li>Aciclovir: five doses a day is demanding and the course will not work well if doses are missed</li>
+            <li>Maintain a good fluid intake throughout the course, particularly if elderly</li>
+            <li>Start as soon as possible: the benefit falls away the longer the delay after rash onset</li>
+            <li>Antivirals reduce the severity and duration of the episode but do not cure it instantly; some pain may persist</li>
             <li>Report any neurological symptoms (confusion, hallucinations, tremor)</li>
           </ul>
         </div>

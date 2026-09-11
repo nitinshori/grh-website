@@ -90,7 +90,9 @@ export default function HayfeverClient() {
   const validationError = useMemo(() => validateStep(state, state.currentStep), [state]);
   const canProceed = useMemo(() => {
     if (state.currentStep >= TOTAL_STEPS - 1) return true;
-    if (state.currentStep <= 4 && hardStops) return false;
+    // General exclusions block steps 0 to 4; arm-specific exclusions
+    // (evaluated once a medicine is chosen) block the Medicine Selection step.
+    if (state.currentStep <= 5 && hardStops) return false;
     return !validationError;
   }, [state, validationError, hardStops]);
 
@@ -183,6 +185,14 @@ export default function HayfeverClient() {
               }
               placeholder="e.g., past 2 weeks"
             />
+            <Checkbox
+              label="Previous diagnosis of allergic rhinitis, or recurrence of known symptoms"
+              checked={state.assessment.previousDiagnosisOrRecurrence}
+              onChange={(v) =>
+                dispatch({ type: "UPDATE_ASSESSMENT", field: "previousDiagnosisOrRecurrence", value: v })
+              }
+              description="Inclusion criterion for fexofenadine 120 mg under this PGD."
+            />
           </div>
         );
 
@@ -203,22 +213,55 @@ export default function HayfeverClient() {
               onChange={(v) =>
                 dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "severeHepaticImpairment", value: v })
               }
+              description="Exclusion for fexofenadine. Dymista: caution in hepatic impairment."
             />
             <Checkbox
-              label="Renal impairment"
+              label="Severe renal impairment"
               checked={state.medicalHistory.renalImpairment}
               onChange={(v) =>
                 dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "renalImpairment", value: v })
               }
-              description="Caution with fexofenadine"
+              description="Exclusion for fexofenadine"
             />
             <Checkbox
-              label="Recent nasal surgery"
+              label="Recent nasal surgery or trauma"
               checked={state.medicalHistory.recentNasalSurgery}
               onChange={(v) =>
                 dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "recentNasalSurgery", value: v })
               }
-              description="Nasal sprays contraindicated"
+              description="Exclusion for Dymista nasal spray"
+            />
+            <Checkbox
+              label="Untreated fungal, bacterial or viral nasal infection"
+              checked={state.medicalHistory.untreatedNasalInfection}
+              onChange={(v) =>
+                dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "untreatedNasalInfection", value: v })
+              }
+              description="Exclusion for Dymista nasal spray"
+            />
+            <Checkbox
+              label="History of cardiovascular disease"
+              checked={state.medicalHistory.cardiovascularDisease}
+              onChange={(v) =>
+                dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "cardiovascularDisease", value: v })
+              }
+              description="Caution with fexofenadine"
+            />
+            <Checkbox
+              label="Glaucoma"
+              checked={state.medicalHistory.glaucoma}
+              onChange={(v) =>
+                dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "glaucoma", value: v })
+              }
+              description="Caution with Dymista"
+            />
+            <Checkbox
+              label="Tuberculosis"
+              checked={state.medicalHistory.tuberculosis}
+              onChange={(v) =>
+                dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "tuberculosis", value: v })
+              }
+              description="Caution with Dymista"
             />
             <Checkbox
               label="Phenylketonuria (PKU)"
@@ -248,7 +291,7 @@ export default function HayfeverClient() {
               onChange={(v) =>
                 dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "pregnant", value: v })
               }
-              description="Most antihistamines caution in pregnancy. GP consultation required."
+              description="Exclusion for fexofenadine under this PGD. Inform or refer to the GP as appropriate."
             />
             <Checkbox
               label="Patient is breastfeeding"
@@ -256,14 +299,31 @@ export default function HayfeverClient() {
               onChange={(v) =>
                 dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "breastfeeding", value: v })
               }
-              description="Some medicines contraindicated. GP consultation required."
+              description="Exclusion for fexofenadine under this PGD. Inform or refer to the GP as appropriate."
             />
             <Checkbox
-              label="Patient is under 12 years (if considering fexofenadine 180mg)"
+              label="Patient is under 12 years"
               checked={state.contraindications.childUnder12}
               onChange={(v) =>
                 dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "childUnder12", value: v })
               }
+              description="Exclusion for both fexofenadine and Dymista. Also enforced from the date of birth."
+            />
+            <Checkbox
+              label="Known hypersensitivity to fexofenadine or any component of the formulation"
+              checked={state.contraindications.hypersensitivityFexofenadine}
+              onChange={(v) =>
+                dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "hypersensitivityFexofenadine", value: v })
+              }
+              description="Exclusion for fexofenadine"
+            />
+            <Checkbox
+              label="Known hypersensitivity to azelastine, fluticasone or any excipient"
+              checked={state.contraindications.hypersensitivityDymista}
+              onChange={(v) =>
+                dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "hypersensitivityDymista", value: v })
+              }
+              description="Exclusion for Dymista nasal spray"
             />
             <TextInput
               label="Current medications that may interact"
@@ -286,13 +346,47 @@ export default function HayfeverClient() {
                 dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "medicineSelected", value: v })
               }
               options={[
-                { value: "fexofenadine", label: "Fexofenadine 180mg OD (oral antihistamine)" },
-                { value: "fluticasone", label: "Fluticasone propionate nasal spray 50mcg" },
+                { value: "fexofenadine", label: "Fexofenadine 120 mg tablets, one daily (up to 30 tablets)" },
+                { value: "dymista", label: "Dymista nasal spray (azelastine 137 micrograms / fluticasone propionate 50 micrograms per actuation), one spray each nostril twice daily, one 23 g bottle" },
                 // Montelukast is not offered. See hayfever-clinical-logic.ts.
-                { value: "combination", label: "Combination (antihistamine + nasal spray)" },
+                { value: "combination", label: "Combination: fexofenadine 120 mg tablets + Dymista nasal spray" },
               ]}
               required
             />
+            {(state.medicineSupply.medicineSelected === "fexofenadine" ||
+              state.medicineSupply.medicineSelected === "combination") && (
+              <SelectInput
+                label="Fexofenadine 120 mg brand supplied"
+                value={state.medicineSupply.fexofenadineBrand}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "fexofenadineBrand", value: v })
+                }
+                options={[
+                  { value: "allevia", label: "Allevia 120 mg tablets (P). Where the P licence is narrower than this PGD, the P licence governs." },
+                  { value: "generic", label: "Generic fexofenadine 120 mg tablets (POM, supplied under this PGD)" },
+                ]}
+                required
+              />
+            )}
+            {(state.medicineSupply.medicineSelected === "dymista" ||
+              state.medicineSupply.medicineSelected === "combination") && (
+              <Checkbox
+                label="Dual therapy required: monotherapy with either an intranasal antihistamine or a corticosteroid is not sufficient"
+                checked={state.medicineSupply.dualTherapyRequired}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "dualTherapyRequired", value: v })
+                }
+                description="Dymista inclusion criterion: moderate to severe allergic rhinitis requiring dual therapy."
+                required
+              />
+            )}
+            {doseRecommendation && (
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-navy-900 space-y-1">
+                <p><span className="font-medium">Medicine:</span> {doseRecommendation.medicine}</p>
+                <p><span className="font-medium">Dose:</span> {doseRecommendation.dose}</p>
+                <p><span className="font-medium">Quantity and treatment period:</span> {doseRecommendation.duration}</p>
+              </div>
+            )}
             <Checkbox
               label="Dosage confirmed with patient"
               checked={state.medicineSupply.dosageConfirmed}
@@ -315,12 +409,12 @@ export default function HayfeverClient() {
               description="Keeping windows closed, avoiding outdoor activities during high pollen counts"
             />
             <Checkbox
-              label="Nasal spray technique demonstrated"
+              label="Correct nasal spray technique advised (Dymista)"
               checked={state.counselling.nasalSprayTechnique}
               onChange={(v) =>
                 dispatch({ type: "UPDATE_COUNSELLING", field: "nasalSprayTechnique", value: v })
               }
-              description="Spray directed away from nasal septum"
+              description="Advise on correct nasal spray technique to optimise efficacy and reduce side effects. Spray directed away from the nasal septum."
             />
             <Checkbox
               label="Effectiveness timeline explained"
@@ -328,7 +422,7 @@ export default function HayfeverClient() {
               onChange={(v) =>
                 dispatch({ type: "UPDATE_COUNSELLING", field: "effectivenessTimeline", value: v })
               }
-              description="Nasal steroids take up to 2 weeks to peak effect"
+              description="Dymista: assess effectiveness after 2 to 4 weeks; reassess need for continued treatment if symptoms persist beyond 4 weeks. Fexofenadine: if symptoms persist beyond 7 days or worsen, refer to a healthcare provider."
             />
             <Checkbox
               label="Combination therapy rationale explained"
@@ -336,7 +430,46 @@ export default function HayfeverClient() {
               onChange={(v) =>
                 dispatch({ type: "UPDATE_COUNSELLING", field: "combinationRationale", value: v })
               }
-              description="Can combine antihistamine and nasal steroid for enhanced effect"
+              description="Fexofenadine 120 mg and Dymista may be supplied together for moderate to severe symptoms"
+            />
+            <Checkbox
+              label="Avoid alcohol and other sedating antihistamines (fexofenadine)"
+              checked={state.counselling.alcoholSedatingAdvice}
+              onChange={(v) =>
+                dispatch({ type: "UPDATE_COUNSELLING", field: "alcoholSedatingAdvice", value: v })
+              }
+            />
+            <Checkbox
+              label="Non-sedating antihistamine, but occasional drowsiness may still occur (fexofenadine)"
+              checked={state.counselling.drowsinessAdvice}
+              onChange={(v) =>
+                dispatch({ type: "UPDATE_COUNSELLING", field: "drowsinessAdvice", value: v })
+              }
+            />
+            <Checkbox
+              label="Possible side effects and need for ongoing review if used long-term (Dymista)"
+              checked={state.counselling.sideEffectsAdvice}
+              onChange={(v) =>
+                dispatch({ type: "UPDATE_COUNSELLING", field: "sideEffectsAdvice", value: v })
+              }
+              description="Nasal irritation, headache, epistaxis (nosebleeds), bitter taste, somnolence. Rare: hypersensitivity reactions."
+            />
+            <Checkbox
+              label="Follow-up advice given"
+              checked={state.counselling.followUpAdvice}
+              onChange={(v) =>
+                dispatch({ type: "UPDATE_COUNSELLING", field: "followUpAdvice", value: v })
+              }
+              description="Seek medical advice if symptoms worsen rapidly or significantly, do not improve in 3 to 4 weeks, or the patient becomes systemically very unwell."
+              required
+            />
+            <Checkbox
+              label="Patient information leaflet (PIL) supplied with the medication"
+              checked={state.counselling.pilSupplied}
+              onChange={(v) =>
+                dispatch({ type: "UPDATE_COUNSELLING", field: "pilSupplied", value: v })
+              }
+              required
             />
             <Checkbox
               label="Wraparound sunglasses recommended"

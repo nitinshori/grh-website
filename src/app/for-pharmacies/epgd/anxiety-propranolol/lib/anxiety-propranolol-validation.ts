@@ -4,7 +4,8 @@ import { validatePatientStep, validateConsentStep, validateSummaryStep } from ".
 export function validateStep(stepIndex: number, state: AnxietyPropranololConsultationState): string | null {
   switch (stepIndex) {
     case 0:
-      return validatePatientStep(state.patient, { minAge: 12 });
+      // PGD v004: adults aged 18 years and over.
+      return validatePatientStep(state.patient, { minAge: 18 });
 
     case 1:
       return validateConsentStep(state.consent);
@@ -25,8 +26,10 @@ export function validateStep(stepIndex: number, state: AnxietyPropranololConsult
       return null;
 
     case 6: {
+      if (!state.medicineSupply.regimen) return "Please select the dosing regimen";
       const q = state.medicineSupply.quantity;
       if (q === null) return "Please enter quantity to supply";
+      if (q < 1) return "Please enter quantity to supply";
       // PGD v002: 10mg tablets only, and the whole supply must stay below
       // 320mg. 28 x 10mg is 280mg.
       if (q > 28) return "Maximum 28 tablets of 10mg under this PGD (280mg in total)";
@@ -39,7 +42,11 @@ export function validateStep(stepIndex: number, state: AnxietyPropranololConsult
         !state.counselling.physicalSymptoms ||
         !state.counselling.noDependence ||
         !state.counselling.noSuddenWithdrawal ||
-        !state.counselling.avoidVerapamil
+        !state.counselling.avoidVerapamil ||
+        !state.counselling.reportWheeze ||
+        !state.counselling.coldExtremities ||
+        !state.counselling.notACure ||
+        !state.counselling.avoidAlcohol
       ) {
         return "Please confirm all counselling points have been covered";
       }

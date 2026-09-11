@@ -21,11 +21,13 @@ import {
   hasHardStopContraindications,
   getObservationPeriodRecommendation,
   calculateNextDueDates,
+  getDoseVolume,
 } from './rabies-clinical-logic';
 import {
   validatePatientDetails,
   validateConsent,
   validateScreening,
+  validateMedicalHistory,
   validateContraindications,
   validateAdministration,
   validatePostVaccineObs,
@@ -100,6 +102,29 @@ export default function RabiesClient({
   );
 
   const patientAge = calculateAge(state.patient.dateOfBirth);
+  const underSixteen = patientAge !== null && patientAge < 16;
+  const underEighteen = patientAge !== null && patientAge < 18;
+
+  /** Generic setters for fields added for PGD v005. */
+  const setScreening = useCallback(
+    (patch: Partial<RabiesScreening>): void => {
+      setState((prev) => ({
+        ...prev,
+        screening: { ...prev.screening, ...patch },
+      }));
+    },
+    []
+  );
+
+  const setAdministration = useCallback(
+    (patch: Partial<RabiesVaccineAdministration>): void => {
+      setState((prev) => ({
+        ...prev,
+        administration: { ...prev.administration, ...patch },
+      }));
+    },
+    []
+  );
 
   // Patient Details handlers
   const handlePatientChange = useCallback(
@@ -274,23 +299,34 @@ export default function RabiesClient({
   }, []);
 
   const handleDoseNumberChange = useCallback((value: string): void => {
-    setState((prev) => ({
-      ...prev,
-      administration: { ...prev.administration, doseNumber: value as any },
-    }));
+    setState((prev) => {
+      const doseNumber = value as RabiesVaccineAdministration['doseNumber'];
+      const nextDueDates =
+        prev.administration.schedule && doseNumber
+          ? calculateNextDueDates(new Date().toISOString().split('T')[0], prev.administration.schedule, doseNumber)
+          : prev.administration.nextDueDates;
+      return {
+        ...prev,
+        administration: { ...prev.administration, doseNumber, nextDueDates },
+      };
+    });
   }, []);
 
   const handleScheduleChange = useCallback((value: string): void => {
     setState((prev) => {
-      const nextDueDates = value
-        ? calculateNextDueDates(new Date().toISOString().split('T')[0], value as any)
-        : '';
+      const schedule = value as RabiesVaccineAdministration['schedule'];
+      const nextDueDates =
+        schedule && prev.administration.doseNumber
+          ? calculateNextDueDates(new Date().toISOString().split('T')[0], schedule, prev.administration.doseNumber)
+          : '';
       return {
         ...prev,
         administration: {
           ...prev.administration,
-          schedule: value as any,
+          schedule,
           nextDueDates,
+          scheduleReason: schedule === 'accelerated' ? prev.administration.scheduleReason : '',
+          offLabelConsent: schedule === 'accelerated' ? prev.administration.offLabelConsent : false,
         },
       };
     });
@@ -379,7 +415,7 @@ export default function RabiesClient({
         break;
       }
       case 1: {
-        const result = validateConsent(state.consent);
+        const result = validateConsent(state.consent, state.screening, patientAge);
         errors.push(...result.errors);
         break;
       }
@@ -389,7 +425,8 @@ export default function RabiesClient({
         break;
       }
       case 3: {
-        // Medical history validation included in screening
+        const result = validateMedicalHistory(state.screening);
+        errors.push(...result.errors);
         break;
       }
       case 4: {
@@ -398,11 +435,13 @@ export default function RabiesClient({
         break;
       }
       case 5: {
-        const result = validateAdministration(state.administration);
+        const result = validateAdministration(state.administration, state.screening, state.contraindications, patientAge);
         errors.push(...result.errors);
         break;
       }
       case 6: {
+        const obsResult = validatePostVaccineObs(state.postVaccineObs);
+        errors.push(...obsResult.errors);
         const result = validateAdvice(state.advice);
         errors.push(...result.errors);
         break;
@@ -424,18 +463,20 @@ export default function RabiesClient({
       return newErrors;
     });
     return true;
-  }, [state, validationErrors]);
+  }, [state, validationErrors, patientAge]);
 
   const handleNextStep = useCallback((): void => {
     if (!validateStep(state.step)) {
       return;
     }
 
-    // On step 2 (Travel Assessment), evaluate contraindications
-    if (state.step === 2) {
+    // Evaluate contraindications on leaving Travel Assessment (step 2) and
+    // again on leaving Medical History (step 3), once allergy, pregnancy,
+    // immunosuppression and temperature have been entered.
+    if (state.step === 2 || state.step === 3) {
       const { contraindications, alerts } = evaluateRabiesContraindications(
         state.screening,
-        patientAge || 0
+        patientAge
       );
       setState((prev) => ({
         ...prev,
@@ -528,13 +569,12 @@ export default function RabiesClient({
   }, []);
 
   const getStepAlerts = useCallback((): React.ReactNode => {
+    const travelCodes = ['LIMITED_PEP_ACCESS', 'PRIOR_EXPOSURE_RABIES', 'AGE_UNDER_2_RABIES'];
     const stepAlerts = state.alerts.filter((alert: ClinicalAlert) => {
-      if (alert.code === 'SEVERE_EGG_ALLERGY_RABIES') return state.step === 4;
-      if (alert.code === 'MILD_EGG_ALLERGY_RABIES') return state.step === 4;
-      if (alert.code === 'ACUTE_FEBRILE_ILLNESS_RABIES') return state.step === 3;
-      if (alert.code === 'PREGNANCY_RABIES') return state.step === 4;
-      if (alert.code === 'IMMUNOSUPPRESSED_RABIES') return state.step === 4;
-      if (alert.code === 'LIMITED_PEP_ACCESS') return state.step === 2;
+      // Travel and age alerts (raised on leaving step 2) show on the medical
+      // history step; every alert shows on the contraindications review.
+      if (state.step === 4) return true;
+      if (state.step === 3) return travelCodes.includes(alert.code);
       return false;
     });
 
@@ -602,10 +642,34 @@ export default function RabiesClient({
           )}
 
           {state.step === 1 && (
-            <ConsentStep
-              consent={state.consent}
-              onChange={handleConsentChange}
-            />
+            <div className="space-y-4">
+              <ConsentStep
+                consent={state.consent}
+                onChange={handleConsentChange}
+              />
+              {underSixteen && (
+                <div className="space-y-3 p-4 rounded-lg border border-amber-300 bg-amber-50">
+                  <p className="text-sm font-semibold text-amber-900">Under 16: consent basis (PGD inclusion criterion)</p>
+                  <SelectInput
+                    label="Consent given by"
+                    value={state.screening.consentBasis}
+                    onChange={(v) => setScreening({ consentBasis: v as RabiesScreening['consentBasis'] })}
+                    options={[
+                      { value: 'parental', label: 'A person with parental responsibility' },
+                      { value: 'gillick', label: 'The young person, assessed as Gillick competent' },
+                    ]}
+                    required
+                  />
+                  <TextInput
+                    label={state.screening.consentBasis === 'gillick' ? 'Basis of the Gillick competence assessment' : 'Name and relationship of the person with parental responsibility'}
+                    value={state.screening.consentGiverDetails}
+                    onChange={(v) => setScreening({ consentGiverDetails: v })}
+                    placeholder={state.screening.consentBasis === 'gillick' ? 'Why the young person was judged competent' : 'A parent accompanying a child does not automatically hold parental responsibility. Ask.'}
+                    required
+                  />
+                </div>
+              )}
+            </div>
           )}
 
           {state.step === 2 && (
@@ -617,6 +681,17 @@ export default function RabiesClient({
                   Travel Details
                 </h3>
                 <div className="space-y-4">
+                  <SelectInput
+                    label="Indication (PGD inclusion criteria)"
+                    value={state.screening.indication}
+                    onChange={(v) => setScreening({ indication: v as RabiesScreening['indication'] })}
+                    options={[
+                      { value: 'travel-enzootic-area', label: 'Travel to a rabies enzootic area (particularly where post-exposure treatment is lacking, higher risk activities such as cycling or running, or a stay longer than one month)' },
+                      { value: 'occupational-abroad', label: 'Occupational risk abroad: animal control and wildlife workers, veterinary staff and zoologists in enzootic areas' },
+                      { value: 'occupational-uk', label: 'UK-based occupational risk: rabies laboratory staff, DEFRA quarantine premises or carriers, bat handlers, veterinary and technical staff' },
+                    ]}
+                    required
+                  />
                   <TextInput
                     label="Destination country/region"
                     value={state.screening.destinationCountry}
@@ -629,7 +704,23 @@ export default function RabiesClient({
                     value={state.screening.departureDate}
                     onChange={handleDepartureDateChange}
                   />
+                  <Checkbox
+                    label="Sufficient time before travel to complete the chosen course"
+                    checked={state.screening.sufficientTimeBeforeTravel}
+                    onChange={(v) => setScreening({ sufficientTimeBeforeTravel: v })}
+                    description="Inclusion criterion. Conventional course day 0, 7 and 28 (third dose may be brought forward to day 21). Accelerated course day 0, 3 and 7 is for adults 18 and over only, off-label, and only where there is genuinely insufficient time for the conventional course."
+                    required
+                  />
                 </div>
+              </div>
+
+              <div className="p-4 rounded-lg border border-red-300 bg-red-50">
+                <Checkbox
+                  label="Any actual or possible exposure has ALREADY occurred (bite, scratch or lick on broken skin from a mammal in a rabies risk area, however trivial and however long ago)"
+                  checked={state.screening.priorExposure}
+                  onChange={(v) => setScreening({ priorExposure: v })}
+                  description="Exclusion. This is post-exposure and a same-day medical emergency. Refer for urgent medical assessment today; do not manage it here."
+                />
               </div>
 
               <div>
@@ -649,10 +740,10 @@ export default function RabiesClient({
                   ))}
                 </div>
                 <TextArea
-                  label="Other activities or exposure risks"
+                  label="Other activities, exposure risks or occupational indication"
                   value={state.screening.otherActivities}
                   onChange={handleOtherActivitiesChange}
-                  placeholder="e.g., work in healthcare, research with animals..."
+                  placeholder="e.g., bat handling, quarantine premises, laboratory work with rabies virus, veterinary work..."
                 />
               </div>
 
@@ -661,10 +752,10 @@ export default function RabiesClient({
                   Post-Exposure Prophylaxis Access
                 </h3>
                 <Checkbox
-                  label="Good access to post-exposure prophylaxis (PEP)"
+                  label="Good access to post-exposure treatment at destination"
                   checked={state.screening.accessToPEP}
                   onChange={handleAccessToPEPChange}
-                  description="Healthcare facilities with rabies immunoglobulin and vaccine available nearby"
+                  description="Post-exposure treatment and rabies biologics (vaccine and immunoglobulin) available and not in short supply at the destination. Leave unticked where they are lacking."
                 />
                 {state.screening.accessToPEP && (
                   <TextArea
@@ -691,10 +782,17 @@ export default function RabiesClient({
                 />
 
                 <Checkbox
-                  label="Currently unwell"
+                  label="Acute severe febrile illness (acutely unwell with fever or systemic upset)"
+                  checked={state.screening.acuteFebrileIllness}
+                  onChange={(v) => setScreening({ acuteFebrileIllness: v })}
+                  description="Exclusion: postpone until recovered. A minor illness without fever is not a reason to defer. A recorded temperature of 38.5 C or above also triggers this."
+                />
+
+                <Checkbox
+                  label="Minor current illness (no fever or systemic upset)"
                   checked={state.screening.currentIllness}
                   onChange={handleCurrentIllnessChange}
-                  description="Is the patient experiencing acute illness symptoms?"
+                  description="Not a reason to postpone. Record for completeness."
                 />
                 {state.screening.currentIllness && (
                   <TextArea
@@ -706,10 +804,10 @@ export default function RabiesClient({
                 )}
 
                 <Checkbox
-                  label="Immunosuppressed"
+                  label="Immunosuppressed, including HIV"
                   checked={state.screening.immunosuppressed}
                   onChange={handleImmunosuppressedChange}
-                  description="Condition or medication affecting immunity?"
+                  description="Caution: a full response may not be mounted. Conventional three dose schedule only (the accelerated course is excluded); refer for post-course serology (protective titre 0.5 IU/mL or above)."
                 />
                 {state.screening.immunosuppressed && (
                   <TextArea
@@ -724,14 +822,46 @@ export default function RabiesClient({
                   label="Pregnant"
                   checked={state.screening.pregnant}
                   onChange={handlePregnantChange}
-                  description="Is the patient pregnant?"
+                  description="Caution: give pre-exposure vaccine where the risk of exposure is high and rapid access to post-exposure treatment would be limited, and record the risk assessment."
+                />
+                {state.screening.pregnant && (
+                  <TextArea
+                    label="Pregnancy risk assessment (recorded)"
+                    value={state.screening.pregnancyRiskAssessment}
+                    onChange={(v) => setScreening({ pregnancyRiskAssessment: v })}
+                    placeholder="Why the risk of exposure is high and post-exposure treatment access would be limited"
+                    required
+                  />
+                )}
+
+                <Checkbox
+                  label="Breastfeeding"
+                  checked={state.screening.breastfeeding}
+                  onChange={(v) => setScreening(v ? { breastfeeding: true } : { breastfeeding: false, breastfeedingRiskAssessment: '' })}
+                  description="Caution: the same principle as pregnancy applies. No risk to the infant has been identified. Record the risk assessment."
+                />
+                {state.screening.breastfeeding && (
+                  <TextArea
+                    label="Breastfeeding risk assessment (recorded)"
+                    value={state.screening.breastfeedingRiskAssessment}
+                    onChange={(v) => setScreening({ breastfeedingRiskAssessment: v })}
+                    placeholder="Why the risk of exposure is high and post-exposure treatment access would be limited"
+                    required
+                  />
+                )}
+
+                <Checkbox
+                  label="Confirmed anaphylactic reaction to a previous dose of rabies vaccine or to any component of the product to be used"
+                  checked={state.screening.anaphylaxisToVaccineOrComponent}
+                  onChange={(v) => setScreening({ anaphylaxisToVaccineOrComponent: v })}
+                  description="Exclusion: refer, do not vaccinate."
                 />
 
                 <Checkbox
                   label="Egg allergy"
                   checked={state.screening.eggAllergy}
                   onChange={handleEggAllergyChange}
-                  description="Does the patient have an egg allergy?"
+                  description="Severe egg allergy excludes Rabipur (chick embryo cell residues including ovalbumin). Verorab may be a suitable alternative."
                 />
                 {state.screening.eggAllergy && (
                   <SelectInput
@@ -739,11 +869,25 @@ export default function RabiesClient({
                     value={state.screening.eggAllergySeverity}
                     onChange={handleEggAllergySeverityChange}
                     options={[
-                      { value: 'mild', label: 'Mild (itching)' },
-                      { value: 'severe', label: 'Severe (anaphylaxis risk)' },
+                      { value: 'mild', label: 'Mild (not severe)' },
+                      { value: 'severe', label: 'Severe (Rabipur excluded)' },
                     ]}
                   />
                 )}
+
+                <Checkbox
+                  label="Hypersensitivity to polymyxin B, streptomycin or neomycin, or to any antibiotic of the same class"
+                  checked={state.screening.antibioticHypersensitivity}
+                  onChange={(v) => setScreening({ antibioticHypersensitivity: v })}
+                  description="Excludes Verorab. Rabipur contains traces of neomycin, chlortetracycline and amphotericin B."
+                />
+
+                <Checkbox
+                  label="Bleeding disorder, thrombocytopenia or anticoagulation"
+                  checked={state.screening.bleedingDisorder}
+                  onChange={(v) => setScreening({ bleedingDisorder: v })}
+                  description="Caution: give by deep subcutaneous injection rather than intramuscularly."
+                />
               </div>
             </div>
           )}
@@ -755,7 +899,25 @@ export default function RabiesClient({
               </h2>
               <div className="bg-gray-50 p-4 rounded-lg space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-700">Severe egg allergy:</span>
+                  <span className="text-gray-700">Age appropriate (2 years and over):</span>
+                  <span className={`font-semibold ${state.contraindications.ageAppropriate ? 'text-green-600' : 'text-red-600'}`}>
+                    {state.contraindications.ageAppropriate ? 'OK' : 'NOT OK'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-700">Exposure already occurred (post-exposure):</span>
+                  <span className={`font-semibold ${state.contraindications.priorExposure ? 'text-red-600' : 'text-green-600'}`}>
+                    {state.contraindications.priorExposure ? 'REFER SAME DAY' : 'OK'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-700">Anaphylaxis to rabies vaccine or a component:</span>
+                  <span className={`font-semibold ${state.contraindications.anaphylaxisHistory ? 'text-red-600' : 'text-green-600'}`}>
+                    {state.contraindications.anaphylaxisHistory ? 'EXCLUDED' : 'OK'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-700">Severe egg allergy (Rabipur):</span>
                   <span
                     className={`font-semibold ${
                       state.contraindications.severeEggAllergy
@@ -764,12 +926,18 @@ export default function RabiesClient({
                     }`}
                   >
                     {state.contraindications.severeEggAllergy
-                      ? 'CONTRAINDICATED'
+                      ? 'RABIPUR EXCLUDED, USE VERORAB'
                       : 'OK'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-700">Acute febrile illness:</span>
+                  <span className="text-gray-700">Polymyxin B, streptomycin or neomycin hypersensitivity (Verorab):</span>
+                  <span className={`font-semibold ${state.contraindications.antibioticHypersensitivity ? 'text-red-600' : 'text-green-600'}`}>
+                    {state.contraindications.antibioticHypersensitivity ? 'VERORAB EXCLUDED' : 'OK'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-700">Acute severe febrile illness:</span>
                   <span
                     className={`font-semibold ${
                       state.contraindications.acuteFebrileIllness
@@ -778,17 +946,31 @@ export default function RabiesClient({
                     }`}
                   >
                     {state.contraindications.acuteFebrileIllness
-                      ? 'DEFER'
+                      ? 'POSTPONE'
                       : 'OK'}
                   </span>
                 </div>
+                {underEighteen && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-700">Under 18:</span>
+                    <span className="font-semibold text-amber-700">CONVENTIONAL COURSE ONLY</span>
+                  </div>
+                )}
+                {state.screening.immunosuppressed && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-700">Immunosuppressed:</span>
+                    <span className="font-semibold text-amber-700">CONVENTIONAL COURSE ONLY, POST-COURSE SEROLOGY</span>
+                  </div>
+                )}
               </div>
 
               {!canProceedFromStep() && (
                 <div className="p-4 bg-red-50 border-2 border-red-200 rounded-lg">
                   <p className="text-red-900 font-semibold">
-                    Vaccination is contraindicated. Do not proceed with vaccination.
-                    Refer patient to GP or specialist.
+                    Vaccination is excluded under this PGD. Do not proceed.
+                  </p>
+                  <p className="text-sm text-red-800 mt-2">
+                    Discuss the reason for exclusion with the patient and make sure they understand it. Advise on alternative options: the GP, a travel clinic, or a specialist service. Where the exclusion is a possible exposure that has already occurred, make the urgency explicit: that patient needs assessment today, not an appointment. Document the reason for exclusion, the advice given and the decision reached. Inform or refer to the GP as appropriate.
                   </p>
                 </div>
               )}
@@ -801,14 +983,40 @@ export default function RabiesClient({
                 Vaccine Administration
               </h2>
               <div className="space-y-4">
-                <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg space-y-1">
                   <p className="text-sm text-blue-900 font-semibold">
-                    Rabies Vaccine (Rabipur or RabAvert) - Inactivated
+                    Rabipur (Bavarian Nordic) or Verorab (Sanofi), intramuscular route only, pre-exposure only
                   </p>
-                  <p className="text-sm text-blue-800 mt-1">
-                    Standard: Day 0, 7, 21-28 | Accelerated: Day 0, 3, 7 (+1yr booster)
+                  <p className="text-sm text-blue-800">
+                    THE DOSE VOLUMES DIFFER: Rabipur 1.0 mL, Verorab 0.5 mL. Confirm which product is in hand before drawing up. Do not carry a volume across from one product to the other. Reconstitute immediately before use: Rabipur within one hour of reconstitution, Verorab for intramuscular use immediately.
+                  </p>
+                  <p className="text-sm text-blue-800">
+                    Conventional, preferred, all ages: day 0, day 7 and day 28 (third dose may be brought forward to day 21). Accelerated, 18 and over only, off-label, documented consent required: day 0, day 3 and day 7, with a further dose at one year if travel to high risk areas continues. Do NOT use the two dose day 0 and day 7 SPC regimen. Complete a course with the same product wherever possible.
+                  </p>
+                  <p className="text-sm text-blue-800">
+                    Route: intramuscular into the deltoid in older children and adults, or the anterolateral thigh in infants and young children. Never into the buttock. Deep subcutaneous in bleeding disorders. Verorab prefilled syringes without an attached needle have a tip cap containing a natural rubber latex derivative; Verorab contains phenylalanine 4.1 micrograms per dose. One dose per patient per attendance.
                   </p>
                 </div>
+
+                <SelectInput
+                  label="Product in hand"
+                  value={state.administration.product}
+                  onChange={(v) => setAdministration({ product: v as RabiesVaccineAdministration['product'] })}
+                  options={[
+                    { value: 'rabipur', label: 'Rabipur, purified chick embryo cell vaccine, 1.0 mL per dose' },
+                    { value: 'verorab', label: 'Verorab, purified Vero cell rabies vaccine, 0.5 mL per dose' },
+                  ]}
+                  required
+                />
+                {state.administration.product && (
+                  <p className="text-sm font-semibold text-blue-900">Dose volume for this product: {getDoseVolume(state.administration.product)}</p>
+                )}
+                {state.administration.product === 'rabipur' && state.contraindications.severeEggAllergy && (
+                  <p className="text-xs text-red-700">Severe egg allergy recorded: Rabipur is excluded. Select Verorab or refer.</p>
+                )}
+                {state.administration.product === 'verorab' && state.contraindications.antibioticHypersensitivity && (
+                  <p className="text-xs text-red-700">Polymyxin B, streptomycin or neomycin hypersensitivity recorded: Verorab is excluded.</p>
+                )}
 
                 <TextInput
                   label="Batch number"
@@ -837,37 +1045,74 @@ export default function RabiesClient({
                 />
 
                 <SelectInput
-                  label="Dose number"
-                  value={state.administration.doseNumber}
-                  onChange={handleDoseNumberChange}
+                  label="Route"
+                  value={state.administration.route}
+                  onChange={(v) => setAdministration({ route: v as RabiesVaccineAdministration['route'] })}
                   options={[
-                    { value: '1st', label: '1st dose' },
-                    { value: '2nd', label: '2nd dose' },
-                    { value: '3rd', label: '3rd dose' },
+                    { value: 'intramuscular', label: 'Intramuscular' },
+                    { value: 'deep-subcutaneous', label: 'Deep subcutaneous (bleeding disorders, thrombocytopenia or anticoagulation)' },
                   ]}
+                  required
                 />
+                {state.screening.bleedingDisorder && state.administration.route !== 'deep-subcutaneous' && (
+                  <p className="text-xs text-amber-700">Bleeding disorder, thrombocytopenia or anticoagulation recorded: give by deep subcutaneous injection instead.</p>
+                )}
 
                 <SelectInput
                   label="Schedule"
                   value={state.administration.schedule}
                   onChange={handleScheduleChange}
                   options={[
-                    { value: 'standard', label: 'Standard (Day 0, 7, 21-28)' },
-                    { value: 'accelerated', label: 'Accelerated (Day 0, 3, 7 +1yr booster)' },
+                    { value: 'standard', label: 'Conventional, preferred, all ages (day 0, 7 and 28; third dose may be brought forward to day 21)' },
+                    { value: 'accelerated', label: 'Accelerated, 18 and over only, off-label (day 0, 3 and 7, plus a further dose at one year if travel to high risk areas continues)' },
                   ]}
+                  required
+                />
+                {state.administration.schedule === 'accelerated' && underEighteen && (
+                  <p className="text-xs text-red-700">Under 18: the accelerated course may not be given under this PGD. Give the conventional course, or direct the patient to a travel clinic where a fast course is needed.</p>
+                )}
+                {state.administration.schedule === 'accelerated' && state.screening.immunosuppressed && (
+                  <p className="text-xs text-red-700">Immunosuppressed: the accelerated course is excluded. Use the conventional course and refer for post-course serology.</p>
+                )}
+                {state.administration.schedule === 'accelerated' && (
+                  <div className="space-y-3 p-4 rounded-lg border border-amber-300 bg-amber-50">
+                    <p className="text-sm font-semibold text-amber-900">Accelerated course is off-label: what to say and record</p>
+                    <TextInput
+                      label="Reason the conventional course was not possible"
+                      value={state.administration.scheduleReason}
+                      onChange={(v) => setAdministration({ scheduleReason: v })}
+                      placeholder="e.g., departure in 12 days"
+                      required
+                    />
+                    <Checkbox
+                      label="Consent script given and consent to off-label use recorded, naming the day 0, 3 and 7 schedule"
+                      checked={state.administration.offLabelConsent}
+                      onChange={(v) => setAdministration({ offLabelConsent: v })}
+                      description="Told the patient: the schedule is recommended by UK national guidance but is not the schedule in the manufacturer's licence; the conventional day 0, 7 and 28 course is preferred and is being departed from only because there is not enough time before travel; a further dose will be needed at one year if travel to high risk areas continues; pre-exposure vaccination does not remove the need for urgent treatment after any bite, scratch or lick on broken skin. A general consent to vaccination is not sufficient."
+                      required
+                    />
+                  </div>
+                )}
+
+                <SelectInput
+                  label="Dose number"
+                  value={state.administration.doseNumber}
+                  onChange={handleDoseNumberChange}
+                  options={[
+                    { value: '1st', label: '1st dose (day 0)' },
+                    { value: '2nd', label: '2nd dose (day 7 conventional, day 3 accelerated)' },
+                    { value: '3rd', label: '3rd dose (day 28 or 21 conventional, day 7 accelerated)' },
+                    { value: 'one-year-dose', label: 'Further dose at one year (after accelerated course, continued travel to high risk areas)' },
+                    { value: 'booster', label: 'Booster (single booster after risk assessment, or reinforcing dose for frequent unrecognised exposure risk)' },
+                  ]}
+                  required
                 />
 
                 <TextInput
                   label="Next due dates"
                   value={state.administration.nextDueDates}
-                  onChange={(v) => {
-                    setState((prev) => ({
-                      ...prev,
-                      administration: { ...prev.administration, nextDueDates: v },
-                    }));
-                  }}
-                  placeholder="Automatically calculated"
-                  disabled
+                  onChange={(v) => setAdministration({ nextDueDates: v })}
+                  placeholder="Calculated from the schedule and dose number; edit if the course started on another date"
                 />
 
                 <TextInput
@@ -903,16 +1148,25 @@ export default function RabiesClient({
                     value={state.postVaccineObs.observationPeriod}
                     onChange={handleObservationPeriodChange}
                     options={[
-                      { value: '15-min', label: '15 minutes' },
-                      { value: '30-min', label: '30 minutes' },
+                      { value: '15-min', label: '15 minutes (PGD requirement)' },
+                      { value: '30-min', label: '30 minutes (extended)' },
                     ]}
                   />
 
                   <Checkbox
-                    label="Anaphylaxis kit checked"
+                    label="15 minute observation period completed"
+                    checked={state.postVaccineObs.observationCompleted}
+                    onChange={(v) => setState((prev) => ({ ...prev, postVaccineObs: { ...prev.postVaccineObs, observationCompleted: v } }))}
+                    description="Observe every patient for 15 minutes after vaccination. Vaccinate seated. Procedures in place to prevent injury from a faint."
+                    required
+                  />
+
+                  <Checkbox
+                    label="Adrenaline 1 in 1,000 injection immediately available, with a written anaphylaxis protocol and a telephone"
                     checked={state.postVaccineObs.anaphylaxisKitChecked}
                     onChange={handleAnaphylaxisKitChange}
-                    description="Confirm anaphylaxis emergency kit is available"
+                    description="Required whenever a vaccine is administered under this PGD; protocol consistent with current Resuscitation Council UK guidance."
+                    required
                   />
 
                   <Checkbox
@@ -949,59 +1203,73 @@ export default function RabiesClient({
                 </p>
                 <div className="space-y-4">
                   <Checkbox
-                    label="Three-dose schedule explained"
+                    label="Patient information leaflet and written vaccination record given"
+                    checked={state.advice.writtenRecordGiven}
+                    onChange={(v) => handleAdviceChange('writtenRecordGiven', v)}
+                    description="PIL for the product given, and a written record of the vaccine, the schedule used, the batch number and the date the next dose is due. Keep it with the passport: if ever bitten, it determines the post-exposure treatment needed."
+                  />
+
+                  <Checkbox
+                    label="Three-dose course explained: come back for every dose"
                     checked={state.advice.threeDozeSchedule}
                     onChange={(v) => handleAdviceChange('threeDozeSchedule', v)}
-                    description="Patient understands 3-dose pre-exposure schedule"
+                    description="A part course is not a course. The next dose has been booked at this appointment."
                   />
 
                   <Checkbox
                     label="Schedule intervals"
                     checked={state.advice.scheduleExplained}
                     onChange={(v) => handleAdviceChange('scheduleExplained', v)}
-                    description="Standard (Day 0,7,21-28) or Accelerated (Day 0,3,7 +1yr booster)"
+                    description="Conventional: day 0, 7 and 28 (third dose may be brought forward to day 21). Accelerated (18 and over, off-label): day 0, 3 and 7, plus a further dose at one year if travel to high risk areas continues."
                   />
 
                   <Checkbox
-                    label="PEP simplification"
+                    label="This does not make you immune to rabies"
                     checked={state.advice.pEPSimplification}
                     onChange={(v) => handleAdviceChange('pEPSimplification', v)}
-                    description="Pre-exposure vaccination simplifies post-exposure response to 2 booster doses instead of full course"
+                    description="If bitten, scratched or licked on broken skin by any mammal you still need urgent medical treatment. Pre-exposure vaccination buys time and removes the need for rabies immunoglobulin, which is often unavailable where the risk is highest."
                   />
 
                   <Checkbox
-                    label="Wound cleaning critical"
+                    label="Wound cleaning"
                     checked={state.advice.woundCleaning}
                     onChange={(v) => handleAdviceChange('woundCleaning', v)}
-                    description="Thorough wound cleaning with soap/water or antiseptic is essential after any bite/scratch"
+                    description="Wash any bite or scratch immediately with soap under running water for several minutes, apply a suitable disinfectant, then seek medical help the same day, wherever you are. Avoid primary suture until post-exposure treatment has started."
                   />
 
                   <Checkbox
-                    label="Still need PEP after exposure"
+                    label="Post-exposure treatment still needed after any exposure"
                     checked={state.advice.stillNeedPEP}
                     onChange={(v) => handleAdviceChange('stillNeedPEP', v)}
-                    description="Even with pre-exposure vaccination, post-exposure prophylaxis is still required after exposure"
+                    description="A fully immunised person with a significant exposure still needs two doses of vaccine, on days 0 and 3 to 7. Seek urgent medical attention whatever your vaccination status and however long ago the exposure was."
                   />
 
                   <Checkbox
-                    label="Exposure warning signs"
+                    label="Exposure warning"
                     checked={state.advice.exposureWarning}
                     onChange={(v) => handleAdviceChange('exposureWarning', v)}
-                    description="Any bite, scratch, or mucous membrane exposure requires urgent medical attention"
+                    description="Any bite, scratch or lick on broken skin or mucous membranes from any warm blooded animal (including bats, monkeys and rodents as well as cats, dogs and foxes) needs same-day medical attention. A normal appearance and behaviour of the animal does not exclude rabies."
                   />
 
                   <Checkbox
-                    label="When to seek help"
+                    label="Avoid contact with animals while away"
+                    checked={state.advice.avoidAnimals}
+                    onChange={(v) => handleAdviceChange('avoidAnimals', v)}
+                    description="Including dogs, cats, monkeys and bats. Do not feed or handle them."
+                  />
+
+                  <Checkbox
+                    label="Side effects and when to seek help"
                     checked={state.advice.returnIfConcerned}
                     onChange={(v) => handleAdviceChange('returnIfConcerned', v)}
-                    description="Return to pharmacy/GP if concerned, or seek emergency care after exposure"
+                    description="Some soreness, headache, aching or mild fever in the first day or two is common and settles on its own. For a routine query about the vaccine or the schedule, contact the pharmacy. Report suspected adverse reactions via the Yellow Card scheme."
                   />
 
                   <Checkbox
                     label="Booster information"
                     checked={state.advice.boosterInformation}
                     onChange={(v) => handleAdviceChange('boosterInformation', v)}
-                    description="If accelerated schedule, booster at 1 year if continued risk. Serological testing available."
+                    description="Boosters are not routinely recommended for most travellers; a single booster may be considered after risk assessment if travelling again to an enzootic area more than a year after the course. Accelerated course: further dose at one year if travel to high risk areas continues. Frequent unrecognised exposure risk (bat handlers): reinforcing dose at one year then every 3 to 5 years or by serology. Laboratory staff: 6 monthly titres via occupational health. Where given with JE vaccine on the accelerated JE schedule, rabies antibody declines faster."
                   />
                 </div>
               </div>

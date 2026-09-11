@@ -244,7 +244,7 @@ export default function PEClient() {
               required
             />
             <NumberInput
-              label="IELT — Intravaginal Ejaculation Latency Time (minutes)"
+              label="IELT, Intravaginal Ejaculation Latency Time (minutes). Inclusion: under 2 minutes"
               value={state.clinicalAssessment.ieltMinutes}
               onChange={(v) =>
                 dispatch({
@@ -276,7 +276,7 @@ export default function PEClient() {
               }
             />
             <Checkbox
-              label="Patient reports psychological distress"
+              label="Premature ejaculation causes significant personal distress (inclusion criterion)"
               checked={state.clinicalAssessment.psychologicalDistress}
               onChange={(v) =>
                 dispatch({
@@ -292,8 +292,9 @@ export default function PEClient() {
       case 3: // Medical History
         return (
           <div className="space-y-4">
+            <p className="text-sm font-semibold text-red-700">Exclusions (PGD v003). Any one excludes; refer.</p>
             <Checkbox
-              label="Cardiac disorder (NYHA II-IV or significant valvular disease)"
+              label="Significant cardiac disorder: NYHA class II to IV heart failure, or significant valvular disease"
               checked={state.medicalHistory.cardiacDisorder}
               onChange={(v) =>
                 dispatch({
@@ -319,7 +320,17 @@ export default function PEClient() {
               />
             )}
             <Checkbox
-              label="History of syncope (fainting)"
+              label="Conduction abnormality, or a condition that prolongs the QT interval"
+              checked={state.medicalHistory.conductionOrQT}
+              onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "conductionOrQT", value: v })}
+            />
+            <Checkbox
+              label="History of ischaemic heart disease"
+              checked={state.medicalHistory.ischaemicHeartDisease}
+              onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "ischaemicHeartDisease", value: v })}
+            />
+            <Checkbox
+              label="History of syncope (fainting) or orthostatic hypotension"
               checked={state.medicalHistory.syncope}
               onChange={(v) =>
                 dispatch({
@@ -330,7 +341,7 @@ export default function PEClient() {
               }
             />
             <Checkbox
-              label="Severe hepatic impairment"
+              label="Moderate or severe hepatic impairment (Child-Pugh class B or C)"
               checked={state.medicalHistory.severeHepaticImpairment}
               onChange={(v) =>
                 dispatch({
@@ -339,6 +350,16 @@ export default function PEClient() {
                   value: v,
                 })
               }
+            />
+            <Checkbox
+              label="Moderate or severe renal impairment"
+              checked={state.medicalHistory.renalImpairment}
+              onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "renalImpairment", value: v })}
+            />
+            <Checkbox
+              label="History of bipolar disorder or mania"
+              checked={state.medicalHistory.bipolarOrMania}
+              onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "bipolarOrMania", value: v })}
             />
             <Checkbox
               label="Uncontrolled epilepsy"
@@ -350,6 +371,43 @@ export default function PEClient() {
                   value: v,
                 })
               }
+            />
+            <p className="text-sm font-semibold text-amber-700 pt-2">Cautions (PGD v003)</p>
+            <Checkbox
+              label="Mild hepatic impairment (Child-Pugh class A)"
+              checked={state.medicalHistory.mildHepaticImpairment}
+              onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "mildHepaticImpairment", value: v })}
+              description="Use with caution"
+            />
+            <Checkbox
+              label="History of seizures"
+              checked={state.medicalHistory.seizureHistory}
+              onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "seizureHistory", value: v })}
+              description="Dapoxetine may lower the seizure threshold"
+            />
+            <Checkbox
+              label="Bleeding disorder or concurrent anticoagulant therapy"
+              checked={state.medicalHistory.bleedingDisorderOrAnticoagulant}
+              onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "bleedingDisorderOrAnticoagulant", value: v })}
+              description="Increased bleeding risk"
+            />
+            <Checkbox
+              label="Risk factors for orthostatic hypotension"
+              checked={state.medicalHistory.orthostaticRiskFactors}
+              onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "orthostaticRiskFactors", value: v })}
+              description="Advise to stand slowly"
+            />
+            <Checkbox
+              label="Known or suspected CYP2D6 poor metaboliser"
+              checked={state.medicalHistory.cyp2d6PoorMetaboliser}
+              onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "cyp2d6PoorMetaboliser", value: v })}
+              description="May require dose adjustment"
+            />
+            <Checkbox
+              label="Hyponatraemia, or at risk of it"
+              checked={state.medicalHistory.hyponatraemiaRisk}
+              onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "hyponatraemiaRisk", value: v })}
+              description="Monitor sodium levels, particularly during the first 2 weeks"
             />
             <TextInput
               label="Other conditions (optional)"
@@ -370,7 +428,7 @@ export default function PEClient() {
         return (
           <div className="space-y-4">
             <Checkbox
-              label="Taking MAOIs, SSRIs, or SNRIs"
+              label="Taking, or has taken within the last 14 days: an MAOI, SSRI, SNRI, tricyclic antidepressant, or any other serotonergic medicine (tramadol, triptans, linezolid, lithium, L-tryptophan, St John's wort)"
               checked={state.currentMedications.maoisOrSsrisOrSnris}
               onChange={(v) =>
                 dispatch({
@@ -379,7 +437,7 @@ export default function PEClient() {
                   value: v,
                 })
               }
-              description="Major contraindication — significant serotonin interaction risk"
+              description="Exclusion. Serotonin syndrome risk; the 14 day washout applies."
             />
             <Checkbox
               label="Taking thioridazine"
@@ -391,7 +449,25 @@ export default function PEClient() {
                   value: v,
                 })
               }
-              description="Risk of QT prolongation and arrhythmias"
+              description="Risk of QT prolongation and arrhythmias. Exclusion."
+            />
+            <Checkbox
+              label="Taking a potent CYP3A4 inhibitor (ketoconazole, itraconazole, ritonavir, clarithromycin, etc.)"
+              checked={state.currentMedications.potentCyp3a4Inhibitor}
+              onChange={(v) => dispatch({ type: "UPDATE_CURRENT_MEDICATIONS", field: "potentCyp3a4Inhibitor", value: v })}
+              description="Exclusion."
+            />
+            <Checkbox
+              label="Taking a moderate CYP3A4 inhibitor (e.g. erythromycin, fluconazole, diltiazem, verapamil)"
+              checked={state.currentMedications.moderateCyp3a4Inhibitor}
+              onChange={(v) => dispatch({ type: "UPDATE_CURRENT_MEDICATIONS", field: "moderateCyp3a4Inhibitor", value: v })}
+              description="Caution: may increase dapoxetine concentrations."
+            />
+            <Checkbox
+              label="Taking a PDE5 inhibitor (sildenafil, tadalafil)"
+              checked={state.currentMedications.pde5Inhibitor}
+              onChange={(v) => dispatch({ type: "UPDATE_CURRENT_MEDICATIONS", field: "pde5Inhibitor", value: v })}
+              description="Caution: increased hypotension risk."
             />
             <TextInput
               label="Other medications (optional)"
@@ -443,8 +519,13 @@ export default function PEClient() {
       case 6: // Medicine Supply
         return (
           <div className="space-y-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-900">
+              <p className="font-semibold">Dapoxetine 30mg and 60mg tablets (Priligy). PGD v003, 11 September 2026.</p>
+              <p>Starting dose 30mg orally, 1 to 3 hours before anticipated sexual activity. May be increased to 60mg if 30mg is insufficient and well tolerated. Maximum one dose per 24 hours. Not daily. Swallow whole with water, with or without food.</p>
+              <p>Up to 6 tablets per supply. Review efficacy and tolerability after 4 weeks (about 6 doses); reassess every 6 months if continuing. Inadequate response after 6 doses at the recommended dose: consider referral to GP or specialist.</p>
+            </div>
             <Checkbox
-              label="Dapoxetine 30mg supplied"
+              label="Dapoxetine supplied under this PGD"
               checked={state.medicineSupply.dapoxetine30mgSupplied}
               onChange={(v) =>
                 dispatch({
@@ -453,10 +534,10 @@ export default function PEClient() {
                   value: v,
                 })
               }
-              description="Standard starting dose"
+              description="Starting dose 30mg"
             />
             <Checkbox
-              label="May increase to 60mg if inadequate response"
+              label="30mg dose previously insufficient and well tolerated: 60mg may be supplied"
               checked={state.medicineSupply.mayIncreaseTo60mg}
               onChange={(v) =>
                 dispatch({
@@ -465,10 +546,36 @@ export default function PEClient() {
                   value: v,
                 })
               }
-              description="Higher dose available after initial response assessment"
+              description="Only after a trial of 30mg. Not for a first supply."
+            />
+            <SelectInput
+              label="Strength supplied"
+              value={state.medicineSupply.strengthSupplied}
+              onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "strengthSupplied", value: v })}
+              required
+              options={[
+                { value: "30mg", label: "Dapoxetine 30mg tablets (starting dose)" },
+                { value: "60mg", label: "Dapoxetine 60mg tablets (30mg insufficient and well tolerated)" },
+              ]}
+            />
+            <NumberInput
+              label="Quantity supplied (tablets, maximum 6 per supply)"
+              value={state.medicineSupply.quantity}
+              onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "quantity", value: v })}
+              min={1}
+              max={6}
+              unit="tablets"
+              required
+            />
+            <TextInput
+              label="Brand supplied"
+              value={state.medicineSupply.brand}
+              onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SUPPLY", field: "brand", value: v })}
+              placeholder="e.g. Priligy, or generic manufacturer"
+              required
             />
             <Checkbox
-              label="Patient understands usage (1-3 hours before, max once per 24 hours, with water)"
+              label="Patient understands usage (1 to 3 hours before, maximum once per 24 hours, swallow whole with water, not daily)"
               checked={state.medicineSupply.understandsUsage}
               onChange={(v) =>
                 dispatch({
@@ -521,7 +628,7 @@ export default function PEClient() {
         return (
           <div className="space-y-4">
             <Checkbox
-              label="Take with water 1-3 hours before sexual activity"
+              label="Take the tablet 1 to 3 hours before sexual activity as directed, swallowed whole with water"
               checked={state.counselling.takeWithWater}
               onChange={(v) =>
                 dispatch({
@@ -532,7 +639,12 @@ export default function PEClient() {
               }
             />
             <Checkbox
-              label="Avoid alcohol"
+              label="Do not exceed one dose per 24 hour period"
+              checked={state.counselling.maxOnePer24h}
+              onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "maxOnePer24h", value: v })}
+            />
+            <Checkbox
+              label="Avoid alcohol while using it"
               checked={state.counselling.avoidAlcohol}
               onChange={(v) =>
                 dispatch({
@@ -541,10 +653,20 @@ export default function PEClient() {
                   value: v,
                 })
               }
-              description="Increases risk of hypotension and dizziness"
+              description="Increases the risk of dizziness and syncope"
             />
             <Checkbox
-              label="Do not drive for 2 hours after dose"
+              label="Stand up slowly from sitting or lying down, particularly after the first dose, to minimise dizziness"
+              checked={state.counselling.standSlowly}
+              onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "standSlowly", value: v })}
+            />
+            <Checkbox
+              label="Maintain adequate hydration, especially in warm weather"
+              checked={state.counselling.hydration}
+              onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "hydration", value: v })}
+            />
+            <Checkbox
+              label="Do not drive or operate machinery if experiencing dizziness or somnolence"
               checked={state.counselling.noDrive2hrs}
               onChange={(v) =>
                 dispatch({
@@ -553,7 +675,21 @@ export default function PEClient() {
                   value: v,
                 })
               }
-              description="May cause dizziness or drowsiness"
+            />
+            <Checkbox
+              label="Report any chest pain, severe headache or fainting immediately to your GP"
+              checked={state.counselling.reportChestPainHeadacheFainting}
+              onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "reportChestPainHeadacheFainting", value: v })}
+            />
+            <Checkbox
+              label="An erection lasting longer than 4 hours (priapism): seek immediate medical attention"
+              checked={state.counselling.priapismWarning}
+              onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "priapismWarning", value: v })}
+            />
+            <Checkbox
+              label="Inform your GP that you are using this medicine, particularly before starting any new medicine"
+              checked={state.counselling.informGp}
+              onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "informGp", value: v })}
             />
             <Checkbox
               label="Avoid grapefruit juice"
@@ -568,7 +704,7 @@ export default function PEClient() {
               description="Inhibits metabolism; increases blood levels"
             />
             <Checkbox
-              label="May cause nausea, dizziness, headache"
+              label="May cause headache, dizziness, nausea (very common); somnolence, insomnia, fatigue, anxiety, diarrhoea, dry mouth, erectile dysfunction, nasal congestion (common)"
               checked={state.counselling.mayHaveSideEffects}
               onChange={(v) =>
                 dispatch({
@@ -580,7 +716,7 @@ export default function PEClient() {
               description="Common side effects; usually mild and transient"
             />
             <Checkbox
-              label="Not for daily use (PRN only)"
+              label="Do not take on a daily basis; use only as needed before sexual activity"
               checked={state.counselling.notForDaily}
               onChange={(v) =>
                 dispatch({
@@ -592,7 +728,7 @@ export default function PEClient() {
               description="Use only when needed before sexual activity"
             />
             <Checkbox
-              label="Review efficacy after 4 weeks"
+              label="Review efficacy and tolerability after 4 weeks (about 6 doses); if no improvement after 6 doses, discuss with the pharmacist or GP for further assessment; reassess every 6 months if continuing"
               checked={state.counselling.review4weeks}
               onChange={(v) =>
                 dispatch({
@@ -693,9 +829,9 @@ export default function PEClient() {
       </StepWrapper>
 
       {doseRecommendation && state.currentStep >= 6 && (
-        <div className="bg-teal-50 border border-teal-200 rounded-lg p-4">
-          <h3 className="font-semibold text-teal-900 mb-2">Medicine Recommendation</h3>
-          <div className="space-y-1 text-sm text-teal-800">
+        <div className="bg-[color:var(--tenant-primary)]/10 border border-[color:var(--tenant-primary)]/30 rounded-lg p-4">
+          <h3 className="font-semibold text-[color:var(--tenant-primary)] mb-2">Medicine Recommendation</h3>
+          <div className="space-y-1 text-sm text-[color:var(--tenant-primary)]">
             <p>
               <span className="font-medium">Medicine:</span> {doseRecommendation.medicine}
             </p>

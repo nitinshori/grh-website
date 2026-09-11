@@ -20,17 +20,41 @@ export interface BPHLutsAssessment {
 }
 
 export interface BPHMedicalHistory {
-  orthostasisHistory: boolean; // Orthostatic hypotension
+  /** PGD v002 exclusion: history of orthostatic hypotension. */
+  orthostasisHistory: boolean;
+  /** Exclusion: severe hepatic impairment (Child-Pugh C). */
   severeHepaticImpairment: boolean;
-  plannedCataractSurgery: boolean; // IFIS risk
+  /** Caution: mild to moderate hepatic impairment. */
+  mildModerateHepaticImpairment: boolean;
+  /** Exclusion: planned cataract or glaucoma surgery (IFIS). */
+  plannedCataractSurgery: boolean;
+  hypersensitivity: boolean;
+  uncontrolledHypertension: boolean;
+  /** Exclusion: MS, Parkinson's, spinal cord disease, diabetic neuropathy. */
+  neurologicalBladderDisease: boolean;
+  /** Caution: history of syncope or fainting. */
+  syncopeHistory: boolean;
+  /** Caution: eGFR below 10. */
+  severeRenalImpairment: boolean;
+  /** Symptoms previously assessed by a GP or urologist. If not, the GP must be
+   *  informed on the day and the patient must agree to attend within 6 weeks. */
+  previouslyAssessedByGp: boolean;
+  gpInformedToday: boolean;
+  patientAgreesGpWithin6Weeks: boolean;
   otherConditions: string;
 }
 
 export interface BPHRedFlags {
+  /** Visible or non-visible haematuria. */
   haematuria: boolean;
   acuteRetention: boolean;
+  /** Palpable bladder, or symptoms suggesting chronic retention. */
   palpableBladder: boolean;
+  chronicRetentionSymptoms: boolean;
+  /** Known or suspected prostate cancer, abnormal DRE, or raised PSA. */
   psa4OrAbove: boolean;
+  /** Current or recurrent UTI, or dysuria with fever. */
+  urinaryTractInfection: boolean;
   weightLoss: boolean;
   bonePain: boolean;
 }
@@ -38,11 +62,23 @@ export interface BPHRedFlags {
 export interface BPHContraindications {
   takingPde5Inhibitor: boolean;
   pde5Detail: string;
+  /** Exclusion: concurrent use of another alpha-1 adrenoceptor antagonist. */
+  otherAlphaBlocker: boolean;
+  /** Caution: concurrent antihypertensive medication (orthostatic hypotension). */
+  takingAntihypertensives: boolean;
   otherAntihypertensives: string;
 }
 
 export interface BPHMedicineSupply {
   tamsulosin400mcgMrOd: boolean;
+  /** Initial 4-week supply, or a continuation supply after the 4 to 6 week review. */
+  supplyType: "" | "initial" | "continuation";
+  quantity: number | null;
+  brand: string;
+  // Continuation gate (PGD v002 maximum treatment period)
+  previousIpss: number | null;
+  gpExaminedSinceStart: boolean;
+  monthsOnTreatment: number | null;
   afterFood30mins: boolean;
   sameTimeDaily: boolean;
   firstDoseHypotension: boolean;
@@ -50,9 +86,14 @@ export interface BPHMedicineSupply {
 
 export interface BPHCounselling {
   take30minsAfterFood: boolean;
+  swallowWhole: boolean;
   firstDoseHypotension: boolean;
+  reportDizzinessFainting: boolean;
   retrogradeEjaculation: boolean;
   informOphthalmologist: boolean;
+  priapismWarning: boolean;
+  urgentSymptoms: boolean;
+  rashAllergy: boolean;
   reviewAt4To6Weeks: boolean;
 }
 
@@ -136,33 +177,57 @@ gpEmail: "",
     medicalHistory: {
       orthostasisHistory: false,
       severeHepaticImpairment: false,
+      mildModerateHepaticImpairment: false,
       plannedCataractSurgery: false,
+      hypersensitivity: false,
+      uncontrolledHypertension: false,
+      neurologicalBladderDisease: false,
+      syncopeHistory: false,
+      severeRenalImpairment: false,
+      previouslyAssessedByGp: false,
+      gpInformedToday: false,
+      patientAgreesGpWithin6Weeks: false,
       otherConditions: "",
     },
     redFlags: {
       haematuria: false,
       acuteRetention: false,
       palpableBladder: false,
+      chronicRetentionSymptoms: false,
       psa4OrAbove: false,
+      urinaryTractInfection: false,
       weightLoss: false,
       bonePain: false,
     },
     contraindications: {
       takingPde5Inhibitor: false,
       pde5Detail: "",
+      otherAlphaBlocker: false,
+      takingAntihypertensives: false,
       otherAntihypertensives: "",
     },
     medicineSupply: {
       tamsulosin400mcgMrOd: false,
+      supplyType: "",
+      quantity: null,
+      brand: "",
+      previousIpss: null,
+      gpExaminedSinceStart: false,
+      monthsOnTreatment: null,
       afterFood30mins: false,
       sameTimeDaily: false,
       firstDoseHypotension: false,
     },
     counselling: {
       take30minsAfterFood: false,
+      swallowWhole: false,
       firstDoseHypotension: false,
+      reportDizzinessFainting: false,
       retrogradeEjaculation: false,
       informOphthalmologist: false,
+      priapismWarning: false,
+      urgentSymptoms: false,
+      rashAllergy: false,
       reviewAt4To6Weeks: false,
     },
     summary: {

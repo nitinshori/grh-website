@@ -4,8 +4,8 @@ import type { ClinicalAlert } from "../../shared/types";
 /**
  * Clinical logic for the genital warts ePGD.
  *
- * Every rule here traces to the signed PGD (genital-warts.pdf v001), which
- * carries separate inclusion and exclusion criteria for podophyllotoxin and
+ * Every rule here traces to the signed PGD version 003 (11 September 2026),
+ * which carries separate inclusion and exclusion criteria for podophyllotoxin and
  * for imiquimod. Where they differ, the rule is scoped to the chosen agent.
  *
  * A deliberate note on the shape of these conditions. Every stop below fires
@@ -16,8 +16,14 @@ import type { ClinicalAlert } from "../../shared/types";
  * a rule here, make it assert something the pharmacist has actually recorded.
  */
 
-const PODO_MAX_WARTS = 50;
-const PODO_MAX_AREA_CM2 = 10;
+/**
+ * Podophyllotoxin: the Warticon SmPC limits unsupervised application to a
+ * total treatment area of 4 cm2 and treatment to 4 weekly cycles (PGD v002
+ * correction, carried in v003). The earlier 50-wart figure had no source and
+ * was removed from the document.
+ */
+const PODO_MAX_AREA_CM2 = 4;
+const PODO_MAX_CYCLES = 4;
 
 export function getAllAlerts(
   state: GenitalWartsConsultationState,
@@ -95,16 +101,6 @@ export function getAllAlerts(
   // and only bite once podophyllotoxin has actually been selected.
 
   if (agent === "podophyllotoxin") {
-    if (a.wartCount !== null && a.wartCount > PODO_MAX_WARTS) {
-      alerts.push({
-        severity: "stop",
-        code: "WARTS_PODO_COUNT",
-        message: `More than ${PODO_MAX_WARTS} warts`,
-        detail:
-          "Above the podophyllotoxin limit in the PGD. Imiquimod has no wart-count cap and may be suitable instead.",
-      });
-    }
-
     if (
       a.treatmentAreaCm2 !== null &&
       a.treatmentAreaCm2 > PODO_MAX_AREA_CM2
@@ -112,9 +108,9 @@ export function getAllAlerts(
       alerts.push({
         severity: "stop",
         code: "WARTS_PODO_AREA",
-        message: `Treatment area greater than ${PODO_MAX_AREA_CM2} cm²`,
+        message: `Treatment area greater than ${PODO_MAX_AREA_CM2} cm2`,
         detail:
-          "Above the podophyllotoxin limit in the PGD. Imiquimod is the agent indicated for larger areas.",
+          "Above the SmPC limit for unsupervised podophyllotoxin use; the PGD excludes it (needs healthcare professional supervision; refer). Imiquimod is the agent indicated for larger or keratinised lesions.",
       });
     }
 
@@ -157,7 +153,7 @@ export function getAllAlerts(
 
   if (a.suspiciousLesion) {
     alerts.push({
-      severity: "red-flag",
+      severity: "stop",
       code: "WARTS_SUSPICIOUS",
       message: "Atypical, bleeding or ulcerated lesion",
       detail:
@@ -202,17 +198,10 @@ export function suggestedAgent(
     };
   }
 
-  if (a.wartCount !== null && a.wartCount > PODO_MAX_WARTS) {
-    return {
-      agent: "imiquimod",
-      reason: `More than ${PODO_MAX_WARTS} warts, which is above the podophyllotoxin limit.`,
-    };
-  }
-
   if (a.treatmentAreaCm2 !== null && a.treatmentAreaCm2 > PODO_MAX_AREA_CM2) {
     return {
       agent: "imiquimod",
-      reason: `Treatment area above ${PODO_MAX_AREA_CM2} cm², which is above the podophyllotoxin limit.`,
+      reason: `Treatment area above ${PODO_MAX_AREA_CM2} cm2, which is above the podophyllotoxin limit for unsupervised use.`,
     };
   }
 
@@ -242,11 +231,10 @@ export function doseSchedule(agent: string): {
     return {
       regimen:
         "Apply a thin layer to the warts twice daily for 3 consecutive days, then 4 days with no treatment.",
-      course:
-        "Repeat the 3-days-on, 4-days-off cycle for up to 4 to 5 cycles, so 4 to 5 weeks in total.",
+      course: `Repeat the 3-days-on, 4-days-off cycle for up to ${PODO_MAX_CYCLES} cycles (4 weeks total treatment, the licensed maximum).`,
       review:
-        "Review after 2 cycles. If warts persist, repeat for a further 2 cycles.",
-      quantity: "1 bottle of solution (15 mL) or 1 tube of cream (5 g) per treatment cycle.",
+        "Review progress after 2 cycles. If warts persist, repeat for an additional 2 cycles.",
+      quantity: "1 bottle of solution (15 mL) or 1 tube of cream (5 g) per treatment cycle. Total treatment area up to and including 4 cm2.",
     };
   }
 

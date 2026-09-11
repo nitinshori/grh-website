@@ -1,4 +1,9 @@
 // ─── Hair Loss (Finasteride) Clinical Logic ───
+// Aligned to the Finasteride (Androgenetic Alopecia) PGD, version 002,
+// issued 11 September 2026. One document serves both the 'hair-loss' and
+// 'alopecia-minoxidil' catalogue entries.
+
+export const PGD_STRAPLINE = "Finasteride 1 mg (Androgenetic Alopecia) PGD, version 002, issued 11 September 2026";
 
 import type { ClinicalAlert, DoseRecommendation, AlertSeverity } from "../../shared/types";
 import type { HLConsultationState } from "./hair-loss-types";
@@ -14,7 +19,7 @@ export function getAllAlerts(state: HLConsultationState): ClinicalAlert[] {
       severity: "stop",
       code: "HL_GENDER",
       message: "This PGD is for male patients only",
-      detail: "Finasteride is teratogenic and contraindicated in women (pregnancy risk).",
+      detail: "Female patients are excluded: finasteride 1 mg is not indicated. Tablets should not be handled by women who are or may become pregnant.",
     });
   }
 
@@ -24,7 +29,7 @@ export function getAllAlerts(state: HLConsultationState): ClinicalAlert[] {
       severity: "stop",
       code: "HL_AGE_MIN",
       message: "Patient must be 18 years or older",
-      detail: "Finasteride is not recommended in patients under 18.",
+      detail: "Inclusion: male patients aged 18 to 65 years.",
     });
   }
 
@@ -33,7 +38,7 @@ export function getAllAlerts(state: HLConsultationState): ClinicalAlert[] {
       severity: "stop",
       code: "HL_AGE_MAX",
       message: "This PGD is for patients 65 years or younger",
-      detail: "Finasteride may be used in older men but this PGD recommends age <65.",
+      detail: "Inclusion: male patients aged 18 to 65 years. Refer to the GP.",
     });
   }
 
@@ -42,7 +47,7 @@ export function getAllAlerts(state: HLConsultationState): ClinicalAlert[] {
     alerts.push({
       severity: "stop",
       code: "HL_LIVER",
-      message: "Severe liver disease is a contraindication",
+      message: "History of liver disease is an exclusion",
       detail: "Finasteride is metabolised by hepatic cytochrome P450. Refer to GP.",
     });
   }
@@ -52,8 +57,8 @@ export function getAllAlerts(state: HLConsultationState): ClinicalAlert[] {
     alerts.push({
       severity: "stop",
       code: "HL_PROSTATE_CANCER",
-      message: "History of prostate cancer is a contraindication",
-      detail: "Finasteride is not suitable. Refer to urology.",
+      message: "Suspected prostate cancer is an exclusion",
+      detail: "Finasteride is not suitable. Refer to GP / urology.",
     });
   }
 
@@ -62,7 +67,7 @@ export function getAllAlerts(state: HLConsultationState): ClinicalAlert[] {
     alerts.push({
       severity: "stop",
       code: "HL_PSA",
-      message: "PSA abnormalities are a contraindication",
+      message: "Raised PSA under investigation is an exclusion",
       detail: "Refer to GP for further assessment before considering finasteride.",
     });
   }
@@ -72,8 +77,28 @@ export function getAllAlerts(state: HLConsultationState): ClinicalAlert[] {
     alerts.push({
       severity: "stop",
       code: "HL_HYPERSENS",
-      message: "Known hypersensitivity to finasteride or other 5-alpha reductase inhibitors",
+      message: "Known hypersensitivity to finasteride or any component of the formulation",
       detail: "Do not supply. Document allergy in patient record.",
+    });
+  }
+
+  // Hard stop: current 5-alpha-reductase inhibitor use
+  if (state.medicalHistory.current5ARI) {
+    alerts.push({
+      severity: "stop",
+      code: "HL_5ARI",
+      message: "Current use of a 5-alpha-reductase inhibitor for another condition",
+      detail: "Exclusion (for example finasteride 5 mg or dutasteride for BPH). Do not supply; refer to GP.",
+    });
+  }
+
+  // Hard stop: galactose intolerance, Lapp lactase deficiency, glucose-galactose malabsorption
+  if (state.medicalHistory.galactoseIntolerance) {
+    alerts.push({
+      severity: "stop",
+      code: "HL_GALACTOSE",
+      message: "Rare hereditary galactose intolerance, Lapp lactase deficiency or glucose-galactose malabsorption",
+      detail: "Patients with these problems should not take this medicine (contains lactose). Do not supply.",
     });
   }
 
@@ -83,7 +108,7 @@ export function getAllAlerts(state: HLConsultationState): ClinicalAlert[] {
       severity: "caution",
       code: "HL_MOOD",
       message: "Patient reports depressive mood or mood changes",
-      detail: "Finasteride may affect mood. Counsel patient to report mood changes and liaise with GP.",
+      detail: "Mood alterations including depressed mood, depression and, less frequently, suicidal ideation have been reported with finasteride 1 mg. Monitor for psychiatric symptoms; if they occur, discontinue and advise the patient to seek medical advice.",
     });
   }
 
@@ -95,8 +120,8 @@ export function getAllAlerts(state: HLConsultationState): ClinicalAlert[] {
     alerts.push({
       severity: "caution",
       code: "HL_PARTNER",
-      message: "Partner should be made aware of teratogenic risk",
-      detail: "Women should not handle crushed tablets. If partner may be pregnant, advise caution.",
+      message: "Partner should be made aware of the risk of fetal harm",
+      detail: "Tablets should not be handled by women who are or may become pregnant. A condom is recommended if a female partner is pregnant or likely to become pregnant (finasteride is excreted in semen).",
     });
   }
 
@@ -109,7 +134,7 @@ export function getAllAlerts(state: HLConsultationState): ClinicalAlert[] {
       severity: "caution",
       code: "HL_PSA_EFFECT",
       message: "Patient should understand PSA effect",
-      detail: "Finasteride lowers PSA by ~50%. Inform GP and ensure patient understands when checking PSA.",
+      detail: "Finasteride can affect PSA levels; the patient must tell any clinician conducting PSA tests.",
     });
   }
 
@@ -131,11 +156,15 @@ export function calculateDoseRecommendation(
   if (state.patient.age === null || state.patient.age < 18) return null;
   if (hasHardStops(state)) return null;
 
+  const months = state.medicineSupply.quantityMonths;
   return {
-    medicine: "Finasteride",
-    dose: "1 mg",
+    medicine: "Finasteride 1 mg tablets (POM)",
+    dose: "1 mg orally once daily, with or without food",
     frequency: "Once daily",
-    dosingRegimen: "1mg OD (oral daily)",
-    reason: "Male-pattern baldness (androgenetic alopecia). Standard indication for finasteride.",
+    dosingRegimen: "1 mg OD (oral daily)",
+    duration: months
+      ? `${months} months of treatment supplied between reviews (3 to 12 months permitted; first review after 3 to 6 months). Minimum 3 to 6 months of continuous treatment to assess effectiveness.`
+      : "3 to 12 months of treatment can be supplied between reviews; first review after 3 to 6 months. Minimum 3 to 6 months of continuous treatment to assess effectiveness.",
+    reason: "Androgenetic alopecia (male pattern hair loss) in men aged 18 to 65 years, to increase hair growth and prevent further hair loss.",
   };
 }

@@ -3,7 +3,16 @@
  */
 
 import { SmokingToolFormData, STEP_LABELS } from "./smoking-types";
-import { calculateAge } from "./smoking-clinical-logic";
+import { calculateAge, getAllClinicalAlerts } from "./smoking-clinical-logic";
+
+/** Whole days from date string a to date string b (b minus a). */
+function daysBetween(a: string, b: string): number | null {
+  if (!a || !b) return null;
+  const da: Date = new Date(a);
+  const db: Date = new Date(b);
+  if (isNaN(da.getTime()) || isNaN(db.getTime())) return null;
+  return Math.round((db.getTime() - da.getTime()) / 86400000);
+}
 
 export interface ValidationError {
   field: string;
@@ -144,6 +153,23 @@ export function validateSmokingAssessment(
       field: "assessment.quitDate",
       message: "Target quit date is required",
     });
+  } else {
+    // PGD inclusion: set a quit date within the next 1-2 weeks.
+    const today: string = new Date().toISOString().split("T")[0];
+    const ahead: number | null = daysBetween(today, assessment.quitDate);
+    if (ahead !== null && (ahead < 0 || ahead > 14)) {
+      errors.push({
+        field: "assessment.quitDate",
+        message: "The PGD requires a quit date set within the next 1 to 2 weeks",
+      });
+    }
+  }
+
+  if (!assessment.readyToQuit) {
+    errors.push({
+      field: "assessment.readyToQuit",
+      message: "The PGD requires the patient to be motivated and ready to quit",
+    });
   }
 
   if (!assessment.timeToFirstCigarette) {
@@ -251,6 +277,15 @@ export function validateContraindications(
     });
   }
 
+  // Exclusion criteria are enforced: a hard stop blocks supply.
+  const { hardStops } = getAllClinicalAlerts(formData);
+  if (hardStops.length > 0) {
+    errors.push({
+      field: "hardStops",
+      message: "An exclusion criterion applies. Varenicline cannot be supplied under this PGD; advise on alternatives and inform or refer to the GP",
+    });
+  }
+
   return errors;
 }
 
@@ -275,6 +310,16 @@ export function validateDosePlan(
       field: "dosePlan.quitDate",
       message: "Target quit date is required",
     });
+  } else if (dosePlan.startDate) {
+    // PGD: quit date should be on day 8-14 of treatment (when 1mg twice
+    // daily is established). Start date is day 1.
+    const gap: number | null = daysBetween(dosePlan.startDate, dosePlan.quitDate);
+    if (gap !== null && (gap < 7 || gap > 13)) {
+      errors.push({
+        field: "dosePlan.quitDate",
+        message: "Quit date should be on day 8 to 14 of treatment (7 to 13 days after the start date)",
+      });
+    }
   }
 
   if (!dosePlan.treatmentDuration) {
@@ -284,10 +329,22 @@ export function validateDosePlan(
     });
   }
 
+  if (!dosePlan.supplyType) {
+    errors.push({
+      field: "dosePlan.supplyType",
+      message: "Select the supply: starter pack, or continuation supply of up to 56 tablets",
+    });
+  }
+
   if (dosePlan.quantity <= 0) {
     errors.push({
       field: "dosePlan.quantity",
       message: "Quantity must be greater than 0",
+    });
+  } else if (dosePlan.supplyType === "continuation" && dosePlan.quantity > 56) {
+    errors.push({
+      field: "dosePlan.quantity",
+      message: "Maximum 56 tablets per continuation supply under this PGD (4-week supply at 1mg twice daily)",
     });
   }
 
@@ -313,6 +370,11 @@ export function validateCounselling(
     "behaviouralSupport",
     "quitDatePlanning",
     "returnIfWorsening",
+    "physicalSymptomsWarning",
+    "slipUpAdvice",
+    "followUpSchedule",
+    "pregnancyAdvice",
+    "doNotStopSuddenly",
   ];
 
   requiredFields.forEach((field) => {
@@ -343,7 +405,7 @@ export function validateSummary(formData: SmokingToolFormData): ValidationError[
   if (!formData.pharmacistGMCNumber.trim()) {
     errors.push({
       field: "pharmacistGMCNumber",
-      message: "GMC number is required",
+      message: "GPhC registration number is required",
     });
   }
 

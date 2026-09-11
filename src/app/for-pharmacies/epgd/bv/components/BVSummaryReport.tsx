@@ -1,5 +1,6 @@
 "use client";
 import type { BVConsultationState } from "../lib/bv-types";
+import { PGD_VERSION_LABEL } from "../lib/bv-types";
 import { SectionHeader, Row, AlertSummary, CounsellingGrid, PharmacistDeclaration, ReportFooter } from "../../shared/components/SummaryReportShell";
 
 export function BVSummaryReport({ state }: { state: BVConsultationState }) {
@@ -8,11 +9,13 @@ export function BVSummaryReport({ state }: { state: BVConsultationState }) {
       <div className="border-b-2 border-navy-900 pb-2 mb-4">
         <h2 className="text-lg font-bold text-navy-900 print:text-base">Bacterial Vaginosis ePGD Consultation Record</h2>
         <p className="text-xs text-gray-500">Treatment of uncomplicated bacterial vaginosis</p>
+        <p className="text-[10px] text-gray-400">{PGD_VERSION_LABEL}</p>
       </div>
       <SectionHeader>Patient Details</SectionHeader>
       <div className="space-y-1.5">
         <Row label="Full Name" value={`${state.patient.firstName} ${state.patient.lastName}`} />
         <Row label="Age" value={state.patient.age ? `${state.patient.age} years` : "—"} />
+        <Row label="Female confirmed" value={state.medicalHistory.femaleConfirmed ? "Yes" : "No"} />
         <Row label="NHS Number" value={state.patient.nhsNumber || "—"} />
       </div>
       <SectionHeader>Clinical Presentation</SectionHeader>
@@ -30,9 +33,19 @@ export function BVSummaryReport({ state }: { state: BVConsultationState }) {
       <SectionHeader>Medical History & Contraindications</SectionHeader>
       <CounsellingGrid
         items={[
-          ["Currently pregnant", state.medicalHistory.pregnancy],
+          ["Pregnant (known or suspected)", state.medicalHistory.pregnancy],
+          ["Breastfeeding", state.medicalHistory.breastfeeding],
           ["Recurrent BV", state.medicalHistory.recurrentBV],
           ["Active pelvic inflammation", state.medicalHistory.activePelvicInflammation],
+          ["Hypersensitivity to metronidazole/nitroimidazoles", state.medicalHistory.hypersensitivity],
+          ["Active CNS disease or blood dyscrasia", state.medicalHistory.cnsDiseaseOrBloodDyscrasia],
+          ["Hepatic impairment", state.medicalHistory.hepaticImpairment],
+          ["Renal impairment", state.medicalHistory.renalImpairment],
+          ["Current alcohol consumption", state.medications.alcohol],
+          ["Lithium", state.medications.lithium],
+          ["Disulfiram", state.medications.disulfiram],
+          ["Warfarin", state.medications.warfarin],
+          ["Phenytoin", state.medications.phenytoin],
         ]}
       />
       <SectionHeader>Clinical Alerts</SectionHeader>
@@ -46,6 +59,7 @@ export function BVSummaryReport({ state }: { state: BVConsultationState }) {
             <Row label="Frequency" value={state.doseRecommendation.frequency || "—"} />
             <Row label="Duration" value={state.doseRecommendation.duration || "—"} />
             <Row label="Dosing Regimen" value={state.doseRecommendation.dosingRegimen || "—"} />
+            <Row label="Ability confirmed" value={state.medicineSelection.abilityConfirmed ? (state.medicineSelection.medicineChoice === "metronidazole-gel" ? "Able to insert gel intravaginally" : "Able to swallow tablets") : "No"} />
           </div>
         </>
       )}
@@ -60,6 +74,8 @@ export function BVSummaryReport({ state }: { state: BVConsultationState }) {
           ["Not an STI", state.counselling.notSTI],
           ["Recurrence likely (50% within 3m)", state.counselling.recurrenceAdvice],
           ["Sexual partner notification", state.counselling.sexPartnerAdvice],
+          ["Seek advice if not resolved in 5 to 7 days or new symptoms", state.counselling.seekAdviceIfNotResolved],
+          ["Gel: latex condoms/diaphragms, alternative contraception 5 days", state.counselling.latexAdvice],
         ]}
       />
       <PharmacistDeclaration pgdName="Bacterial Vaginosis" pharmacistName={state.summary.pharmacistName} pharmacistGPhC={state.summary.pharmacistGPhC} pharmacyName={state.summary.pharmacyName} />

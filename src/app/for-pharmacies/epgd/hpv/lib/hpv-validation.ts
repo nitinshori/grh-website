@@ -19,6 +19,9 @@ export function validateStep(state: HPVConsultationState, step: number): string 
       if (!state.assessment.priorDoses.trim()) {
         return "Prior HPV vaccine history must be recorded: it determines the schedule";
       }
+      if (!state.assessment.nhsEligibilityDiscussed) {
+        return "Tell the patient whether they could have this vaccine free on the NHS, and record that you did (PGD inclusion criterion)";
+      }
       return null;
 
     case 2: // Red Flags & Exclusions

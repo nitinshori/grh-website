@@ -63,32 +63,27 @@ export function ContraindicationsStep({ alerts, referralReasons }: Contraindicat
 
       {/* Information Panel */}
       <div className="bg-gray-50 border border-gray-200 rounded p-4">
-        <h3 className="font-semibold text-gray-900 mb-3">Referral Considerations</h3>
+        <h3 className="font-semibold text-gray-900 mb-3">Refer, do not supply (Impetigo PGD v008)</h3>
         <ul className="space-y-2 text-sm text-gray-700">
-          <li className="flex items-start gap-2">
-            <span className="text-red-500 font-bold">•</span>
-            <span>Age less than 1 year</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-red-500 font-bold">•</span>
-            <span>Bullous impetigo (requires systemic treatment)</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-red-500 font-bold">•</span>
-            <span>Lesions near or around the eyes (ocular involvement risk)</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-red-500 font-bold">•</span>
-            <span>Immunosuppressed patients</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-red-500 font-bold">•</span>
-            <span>MRSA suspected</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-red-500 font-bold">•</span>
-            <span>Widespread bullous impetigo</span>
-          </li>
+          {[
+            'Systemically unwell: fever, malaise, lymphadenopathy, or appearing unwell (same day)',
+            'Signs of cellulitis: spreading redness, warmth, swelling or pain beyond the lesions (hospital)',
+            'Immunocompromised (NICE: hospital referral where widespread)',
+            'Bullous impetigo in a baby',
+            'Recurrent impetigo: swab and consider decolonisation rather than treating again',
+            'Around the eye or involving the eyelid margin',
+            'Diagnostic uncertainty: herpes simplex, eczema herpeticum or fungal infection',
+            'A course of antibiotic already supplied for this episode (one course per episode)',
+            'Adult needing an oral antibiotic who is not penicillin-allergic: no adult flucloxacillin arm',
+            'Fusidic acid resistance suspected (mupirocin is not authorised)',
+            'Clarithromycin contraindications: simvastatin, lovastatin, colchicine, ergot alkaloids, ticagrelor, oral midazolam, lomitapide, ivabradine, ranolazine, domperidone, pimozide, QT prolongation, hypokalaemia or hypomagnesaemia',
+            'Pregnant and penicillin-allergic where erythromycin is not suitable; a child who cannot be weighed today',
+          ].map((item) => (
+            <li key={item} className="flex items-start gap-2">
+              <span className="text-red-500 font-bold">-</span>
+              <span>{item}</span>
+            </li>
+          ))}
         </ul>
       </div>
     </div>

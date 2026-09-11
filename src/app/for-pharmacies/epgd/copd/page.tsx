@@ -3,9 +3,9 @@ import COPDClient from "./COPDClient";
 import { PgdPageActions } from "@/components/PgdPageActions";
 
 export const metadata: Metadata = {
-  title: "COPD Symptom Management Consultation ePGD",
+  title: "COPD Management Consultation ePGD",
   description:
-    "Digital consultation tool for the COPD Symptom Management PGD. Guides pharmacists through COPD assessment, MRC breathlessness scale, exacerbation review, red flag identification, and supply of short-acting bronchodilators under UK Patient Group Direction.",
+    "Digital consultation tool for the COPD Management PGD (version 002, 11 September 2026). Guides pharmacists through COPD assessment, exacerbation review, red flag identification, and supply of salbutamol 100mcg MDI or amoxicillin 500mg capsules under UK Patient Group Direction.",
 };
 
 export default function COPDToolPage() {
@@ -27,10 +27,10 @@ export default function COPDToolPage() {
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-navy-900">
-            COPD Symptom Management PGD Consultation
+            COPD Management PGD Consultation
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Supply of short-acting bronchodilators for known COPD patients under Patient Group Direction
+            Salbutamol 100mcg MDI for acute symptom relief, and amoxicillin 500mg capsules for infective exacerbation with purulent sputum, in adults with confirmed COPD. PGD version 002, issued 11 September 2026.
           </p>
         </div>
 
@@ -41,7 +41,7 @@ export default function COPDToolPage() {
             This ePGD is provided as a clinical decision support aid and does
             not replace professional clinical judgement. The pharmacist retains
             full responsibility for each consultation. Based on UK medicines
-            guidance and the Get Real Health PGD for COPD Symptom Management.
+            guidance and the Get Real Health PGD for COPD Management, version 002.
           </p>
         </div>
       </div>

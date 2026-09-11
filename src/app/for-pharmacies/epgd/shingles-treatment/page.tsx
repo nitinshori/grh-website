@@ -21,7 +21,10 @@ import {
   initialSummary,
   validatePatientStep,
   validateConsentStep,
+  calculateAge,
 } from '../shared/types';
+import type { ClinicalAlert } from '../shared/types';
+import { usePharmacistProfile } from '../shared/hooks/usePharmacistProfile';
 import {
   initialShinglesSymptoms,
   initialShinglesMedicalHistory,
@@ -34,6 +37,10 @@ import {
 import {
   generateClinicalAlerts,
   canProceedToMedicineSelection,
+  validateSymptomStep,
+  validateMedicalHistoryStep,
+  validateMedicineSelectionStep,
+  validateCounsellingStep,
 } from './shingles-clinical-logic';
 
 const STEP_LABELS = [
@@ -66,40 +73,36 @@ export default function ShinglesTreatmentPage() {
   const [medicineSelection, setMedicineSelection] = useState(initialShinglesMedicineSelection());
   const [counselling, setCounselling] = useState(initialShinglesCounselling());
 
-  // Derived state
-  const [alerts, setAlerts] = useState<any[]>([]);
+  // Pharmacist details for the record (name of healthcare practitioner)
+  const pharmacistProfile = usePharmacistProfile();
 
-  // Generate alerts whenever symptoms or medical history change
+  // Derived state
+  const [alerts, setAlerts] = useState<ClinicalAlert[]>([]);
+
+  // Generate alerts whenever symptoms, medical history or age change
   useEffect(() => {
-    const newAlerts = generateClinicalAlerts(symptoms, medicalHistory);
+    const newAlerts = generateClinicalAlerts(symptoms, medicalHistory, patientDetails.age);
     setAlerts(newAlerts);
-  }, [symptoms, medicalHistory]);
+  }, [symptoms, medicalHistory, patientDetails.age]);
 
   const canProceedFromCurrentStep = (): boolean => {
     switch (currentStep) {
-      case 0: // Patient Details
-        return !validatePatientStep(patientDetails);
+      case 0: // Patient Details (PGD: adults aged 18 years and over)
+        return !validatePatientStep(patientDetails, { minAge: 18 });
       case 1: // Consent
         return !validateConsentStep(consent);
       case 2: // Symptoms
-        return symptoms.rashOnsetDate !== '';
+        return !validateSymptomStep(symptoms);
       case 3: // Medical History
-        return true; // Optional step
+        return !validateMedicalHistoryStep(medicalHistory);
       case 4: // Medications
         return true; // Optional step
       case 5: // Contraindications
         return canProceedToMedicineSelection(alerts);
       case 6: // Medicine Selection
-        return medicineSelection.medicine !== '';
+        return !validateMedicineSelectionStep(medicineSelection, medicalHistory);
       case 7: // Counselling
-        return counselling.completeCourse &&
-               counselling.painManagement &&
-               counselling.rashCare &&
-               counselling.contagiousPeriod &&
-               counselling.pregnancyExposure &&
-               counselling.PHNRisk &&
-               counselling.returnIfWorsening &&
-               counselling.vaccinationAdvice;
+        return !validateCounsellingStep(counselling);
       case 8: // Summary
         return true;
       default:
@@ -132,7 +135,14 @@ export default function ShinglesTreatmentPage() {
 
   // Field-level update handlers for PatientDetailsStep and ConsentStep
   const updatePatientField = (field: keyof typeof patientDetails, value: any) => {
-    setPatientDetails((prev) => ({ ...prev, [field]: value }));
+    setPatientDetails((prev) => {
+      const next = { ...prev, [field]: value };
+      // Age gates the PGD (18 and over) and the treatment window criteria.
+      if (field === 'dateOfBirth') {
+        next.age = calculateAge(typeof value === 'string' ? value : '');
+      }
+      return next;
+    });
   };
 
   const updateConsentField = (field: keyof typeof consent, value: any) => {
@@ -142,6 +152,10 @@ export default function ShinglesTreatmentPage() {
   // Build summary object
   const summary: ShinglesSummary = {
     ...initialSummary(),
+    pharmacistName: pharmacistProfile?.name ?? '',
+    pharmacistGPhC: pharmacistProfile?.gphcNumber ?? '',
+    pharmacyName: pharmacistProfile?.pharmacyName ?? '',
+    pharmacyAddress: pharmacistProfile?.pharmacyAddress ?? '',
     patientDetails,
     consent,
     symptoms,
@@ -150,7 +164,7 @@ export default function ShinglesTreatmentPage() {
     counselling,
   };
 
-  const blockingAlerts = alerts.filter((a) => a.blocking);
+  const blockingAlerts = alerts.filter((a) => a.severity === 'stop');
   const isBlocked = blockingAlerts.length > 0;
 
   // ─── Consultation Record Data (for saving to database) ───
@@ -210,7 +224,9 @@ export default function ShinglesTreatmentPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Shingles Acute Treatment ePGD</h1>
-          <p className="text-gray-600 mt-2">UK Pharmacy PGD Consultation</p>
+          <p className="text-gray-600 mt-2">
+            Aciclovir, valaciclovir or famciclovir for adults aged 18 and over. Shingles (Herpes Zoster) Treatment PGD, version 005, issued 11 September 2026.
+          </p>
         </div>
 
         {currentStep === 0 && (
@@ -252,7 +268,13 @@ export default function ShinglesTreatmentPage() {
               <PatientDetailsStep
                 patient={patientDetails}
                 onChange={updatePatientField}
+                requireAdult
               />
+              {validatePatientStep(patientDetails, { minAge: 18 }) && patientDetails.dateOfBirth && (
+                <p className="mt-3 text-sm text-red-600">
+                  {validatePatientStep(patientDetails, { minAge: 18 })}
+                </p>
+              )}
               <div className="flex justify-between mt-8">
                 <button
                   onClick={handlePrev}
@@ -301,6 +323,7 @@ export default function ShinglesTreatmentPage() {
             <SymptomAssessmentStep
               symptoms={symptoms}
               onChange={setSymptoms}
+              age={patientDetails.age}
               currentStep={currentStep}
               totalSteps={STEP_LABELS.length}
               onNext={handleNext}

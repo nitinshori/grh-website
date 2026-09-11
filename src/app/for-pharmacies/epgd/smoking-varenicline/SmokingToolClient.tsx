@@ -180,7 +180,7 @@ export const SmokingToolClient: React.FC = () => {
             {saveStatus === 'saved' && (
               <button
                 onClick={handleNewConsultation}
-                className="px-4 py-2 rounded-lg text-teal-600 border border-teal-300 hover:bg-teal-50"
+                className="px-4 py-2 rounded-lg text-[color:var(--tenant-primary)] border border-[color:var(--tenant-primary)]/30 hover:bg-[color:var(--tenant-primary)]/10"
               >
                 New Consultation
               </button>
@@ -218,7 +218,7 @@ export const SmokingToolClient: React.FC = () => {
             Smoking Cessation ePGD
           </h1>
           <p className="text-gray-600 mt-2">
-            Varenicline (Champix) PGD Consultation for UK Pharmacies
+            Varenicline 0.5mg and 1mg tablets PGD consultation for UK pharmacies (any UK-licensed generic; Champix is no longer marketed). PGD version 003, issued 11 September 2026.
           </p>
         </div>
 
@@ -226,7 +226,7 @@ export const SmokingToolClient: React.FC = () => {
           <div className="mb-4 print:hidden">
             <Link
               href="/for-pharmacies/dashboard"
-              className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-teal-600 transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-[color:var(--tenant-primary)] transition-colors"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -468,9 +468,10 @@ export const SmokingToolClient: React.FC = () => {
               )}
 
               <Checkbox
-                label="Ready to quit smoking"
+                label="Motivated and ready to quit smoking, with a quit date set within the next 1 to 2 weeks"
                 checked={formData.assessment.readyToQuit}
                 onChange={(v) => handleInputChange("assessment.readyToQuit", v)}
+                description={getFieldError("assessment.readyToQuit") || getFieldError("assessment.quitDate")}
               />
 
               {/* Fagerström Test */}
@@ -512,9 +513,16 @@ export const SmokingToolClient: React.FC = () => {
               )}
 
               <Checkbox
-                label="Seizure history"
+                label="Seizure disorder or seizure history"
                 checked={formData.medicalHistory.seizureHistory}
                 onChange={(v) => handleInputChange("medicalHistory.seizureHistory", v)}
+              />
+
+              <Checkbox
+                label="Known hypersensitivity to varenicline or excipients"
+                checked={formData.medicalHistory.hypersensitivityVarenicline}
+                onChange={(v) => handleInputChange("medicalHistory.hypersensitivityVarenicline", v)}
+                description="Exclusion: do not supply."
               />
 
               <SelectInput
@@ -523,9 +531,9 @@ export const SmokingToolClient: React.FC = () => {
                 onChange={(v) => handleInputChange("medicalHistory.renalImpairment", v)}
                 options={[
                   { value: "", label: "Select..." },
-                  { value: "none", label: "Normal" },
-                  { value: "moderate", label: "Moderate impairment" },
-                  { value: "severe", label: "Severe impairment" },
+                  { value: "none", label: "Normal (eGFR above 50 mL/min/1.73m2)" },
+                  { value: "moderate", label: "eGFR 30 to 50 mL/min/1.73m2 (caution: no dose adjustment; reduce to 1mg once daily if not tolerated)" },
+                  { value: "severe", label: "eGFR below 30 mL/min/1.73m2 or end-stage renal disease (exclusion: refer to GP)" },
                 ]}
               />
 
@@ -554,7 +562,7 @@ export const SmokingToolClient: React.FC = () => {
               />
 
               <Checkbox
-                label="Cardiovascular disease (heart disease, stroke, etc.)"
+                label="Cardiovascular disease: recent MI (within 4 weeks), unstable angina, or severe cardiac arrhythmias (assess benefit vs risk)"
                 checked={formData.medicalHistory.cardiovascularDisease}
                 onChange={(v) =>
                   handleInputChange("medicalHistory.cardiovascularDisease", v)
@@ -574,7 +582,7 @@ export const SmokingToolClient: React.FC = () => {
               />
 
               <Checkbox
-                label="Suicidal ideation or self-harm thoughts"
+                label="History of suicidal ideation or self-harm"
                 checked={formData.medicalHistory.suicidalIdeation}
                 onChange={(v) => handleInputChange("medicalHistory.suicidalIdeation", v)}
               />
@@ -693,6 +701,7 @@ export const SmokingToolClient: React.FC = () => {
                 label="I (the pharmacist) approve treatment with varenicline for this patient"
                 checked={formData.pharmacistApproves}
                 onChange={(v) => handleInputChange("pharmacistApproves", v)}
+                description={getFieldError("hardStops")}
               />
             </div>
           )}
@@ -705,18 +714,21 @@ export const SmokingToolClient: React.FC = () => {
               </h2>
 
               <div className="bg-blue-50 border border-blue-300 rounded-lg p-4">
-                <h3 className="font-semibold text-blue-900 mb-2">Standard Dosing:</h3>
+                <h3 className="font-semibold text-blue-900 mb-2">Varenicline (as tartrate) 0.5mg and 1mg film-coated tablets (POM). Store below 30°C, protect from light, keep in original packaging. Oral, swallowed whole with water, with or without food.</h3>
                 <ul className="text-blue-800 text-sm space-y-1">
                   <li>Days 1-3: 0.5mg once daily</li>
-                  <li>Days 4-7: 0.5mg twice daily</li>
-                  <li>Week 2-12: 1mg twice daily (maintenance)</li>
+                  <li>Days 4-7: 0.5mg twice daily (morning and evening)</li>
+                  <li>Day 8 to end of treatment: 1mg twice daily (morning and evening)</li>
+                  <li>Quit date on day 8 to 14 of treatment (when 1mg twice daily is established)</li>
+                  <li>Standard course 12 weeks; consider an additional 12 weeks (24 weeks total) for sustained abstinence to reduce relapse risk</li>
+                  <li>Review at 2 weeks, 4 weeks, then monthly</li>
                 </ul>
               </div>
 
               {formData.medicalHistory.renalImpairment === "moderate" && (
                 <div className="bg-amber-50 border border-amber-300 rounded-lg p-4">
                   <p className="text-amber-900 font-semibold">
-                    Moderate renal impairment: Max dose 1mg once daily
+                    Renal impairment, eGFR 30 to 50: no dose adjustment; if adverse effects are not tolerated reduce to 1mg once daily.
                   </p>
                 </div>
               )}
@@ -724,7 +736,7 @@ export const SmokingToolClient: React.FC = () => {
               {formData.medicalHistory.renalImpairment === "severe" && (
                 <div className="bg-red-50 border border-red-300 rounded-lg p-4">
                   <p className="text-red-900 font-semibold">
-                    Severe renal impairment: Max dose 0.5mg once daily. Refer for specialist supervision.
+                    Severe renal impairment (eGFR below 30) or end-stage renal disease is an exclusion. Do not supply; refer to GP.
                   </p>
                 </div>
               )}
@@ -737,11 +749,14 @@ export const SmokingToolClient: React.FC = () => {
               />
 
               <TextInput
-                label="Target quit date"
+                label="Target quit date (day 8 to 14 of treatment)"
                 type="date"
                 value={formData.dosePlan.quitDate}
                 onChange={(v) => handleInputChange("dosePlan.quitDate", v)}
               />
+              {getFieldError("dosePlan.quitDate") && (
+                <p className="text-xs text-red-700">{getFieldError("dosePlan.quitDate")}</p>
+              )}
 
               <SelectInput
                 label="Treatment duration"
@@ -752,26 +767,41 @@ export const SmokingToolClient: React.FC = () => {
                   { value: "12-weeks", label: "12 weeks (standard)" },
                   {
                     value: "24-weeks-extended",
-                    label: "24 weeks (extended support)",
+                    label: "24 weeks total (additional 12 weeks for sustained abstinence)",
                   },
                 ]}
               />
+
+              <SelectInput
+                label="This supply"
+                value={formData.dosePlan.supplyType}
+                onChange={(v) => handleInputChange("dosePlan.supplyType", v)}
+                options={[
+                  { value: "", label: "Select..." },
+                  { value: "starter", label: "Starter pack (titration, 0.5mg and 1mg tablets)" },
+                  { value: "continuation", label: "Continuation supply: up to 56 x 1mg tablets (4 weeks at 1mg twice daily)" },
+                ]}
+              />
+              {getFieldError("dosePlan.supplyType") && (
+                <p className="text-xs text-red-700">{getFieldError("dosePlan.supplyType")}</p>
+              )}
 
               <NumberInput
                 label="Number of tablets to dispense"
                 value={formData.dosePlan.quantity}
                 onChange={(v) => handleInputChange("dosePlan.quantity", v)}
                 min={1}
+                max={formData.dosePlan.supplyType === "continuation" ? 56 : undefined}
               />
+              {getFieldError("dosePlan.quantity") && (
+                <p className="text-xs text-red-700">{getFieldError("dosePlan.quantity")}</p>
+              )}
 
               <div className="bg-gray-50 border border-gray-300 rounded-lg p-4">
-                <p className="text-xs font-semibold text-gray-600 uppercase">Notes:</p>
-                <p className="text-sm text-gray-700 mt-2">
-                  Varenicline is typically dispensed as:
-                </p>
+                <p className="text-xs font-semibold text-gray-600 uppercase">Quantity under this PGD:</p>
                 <ul className="text-sm text-gray-700 mt-2 space-y-1">
-                  <li>• Starter pack: 11 x 0.5mg + 14 x 1mg (covers days 1-14)</li>
-                  <li>• Continuation pack: 56 x 1mg (covers 4 weeks)</li>
+                  <li>• Starter pack (first 4 weeks), then up to 56 tablets (4-week supply at full dose of 1mg twice daily)</li>
+                  <li>• Maximum treatment period 12 weeks; may extend to 24 weeks total. Review at 2 weeks, 4 weeks, then monthly.</li>
                 </ul>
               </div>
             </div>
@@ -829,7 +859,7 @@ export const SmokingToolClient: React.FC = () => {
               />
 
               <Checkbox
-                label="Advised to complete full 12-week course (best chance of success)"
+                label="Advised to complete the full 12-week course (best chance of success); an additional 12 weeks may be considered for sustained abstinence"
                 checked={formData.counselling.completeCourseAdvice}
                 onChange={(v) => handleInputChange("counselling.completeCourseAdvice", v)}
                 description={getFieldError("counselling.completeCourseAdvice")}
@@ -843,17 +873,52 @@ export const SmokingToolClient: React.FC = () => {
               />
 
               <Checkbox
-                label="Discussed quit date planning (set 1-2 weeks into treatment)"
+                label="Discussed quit date planning (set on day 8 to 14 of treatment, when 1mg twice daily starts)"
                 checked={formData.counselling.quitDatePlanning}
                 onChange={(v) => handleInputChange("counselling.quitDatePlanning", v)}
                 description={getFieldError("counselling.quitDatePlanning")}
               />
 
               <Checkbox
-                label="Advised to return if worsening symptoms (especially mood changes)"
+                label="Advised to report any mood changes, depression, anxiety or suicidal thoughts immediately to the pharmacy or GP"
                 checked={formData.counselling.returnIfWorsening}
                 onChange={(v) => handleInputChange("counselling.returnIfWorsening", v)}
                 description={getFieldError("counselling.returnIfWorsening")}
+              />
+
+              <Checkbox
+                label="Advised to contact the GP if chest pain, shortness of breath or severe headaches occur"
+                checked={formData.counselling.physicalSymptomsWarning}
+                onChange={(v) => handleInputChange("counselling.physicalSymptomsWarning", v)}
+                description={getFieldError("counselling.physicalSymptomsWarning")}
+              />
+
+              <Checkbox
+                label="Advised to continue varenicline after a slip-up (single cigarette) and discuss with the pharmacist or GP"
+                checked={formData.counselling.slipUpAdvice}
+                onChange={(v) => handleInputChange("counselling.slipUpAdvice", v)}
+                description={getFieldError("counselling.slipUpAdvice")}
+              />
+
+              <Checkbox
+                label="Follow-up appointments arranged at 2 weeks, 4 weeks, then monthly to monitor progress and side effects"
+                checked={formData.counselling.followUpSchedule}
+                onChange={(v) => handleInputChange("counselling.followUpSchedule", v)}
+                description={getFieldError("counselling.followUpSchedule")}
+              />
+
+              <Checkbox
+                label="Advised to inform the GP immediately if they become pregnant"
+                checked={formData.counselling.pregnancyAdvice}
+                onChange={(v) => handleInputChange("counselling.pregnancyAdvice", v)}
+                description={getFieldError("counselling.pregnancyAdvice")}
+              />
+
+              <Checkbox
+                label="Advised not to stop varenicline suddenly; discuss any changes with the GP. Patient information leaflet supplied and dosing schedule understood"
+                checked={formData.counselling.doNotStopSuddenly}
+                onChange={(v) => handleInputChange("counselling.doNotStopSuddenly", v)}
+                description={getFieldError("counselling.doNotStopSuddenly")}
               />
             </div>
           )}
@@ -871,7 +936,7 @@ export const SmokingToolClient: React.FC = () => {
                 />
 
                 <TextInput
-                  label="GMC registration number"
+                  label="GPhC registration number"
                   value={formData.pharmacistGMCNumber}
                   onChange={(v) => handleInputChange("pharmacistGMCNumber", v)}
                 />

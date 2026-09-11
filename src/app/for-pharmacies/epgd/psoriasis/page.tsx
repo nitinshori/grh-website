@@ -3,7 +3,7 @@ import { PgdPageActions } from "@/components/PgdPageActions";
 
 export const metadata = {
   title: "Psoriasis ePGD | GRH Pharmacy",
-  description: "Patient Group Direction for mild-to-moderate plaque psoriasis — calcipotriol / betamethasone",
+  description: "Plaque Psoriasis PGD v004: calcipotriol 50 micrograms/g with betamethasone 0.5 mg/g, adults 18 and over, stable plaque psoriasis",
 };
 
 export default function PsoriasisPage() {

@@ -1,14 +1,32 @@
 'use client';
 
-import { ImpetigoCounselling } from './impetigo-types';
+import { ImpetigoCounselling, ImpetigoTreatmentSelection } from './impetigo-types';
 import { Checkbox } from '../shared/components/FormInputs';
 
 interface CounsellingStepProps {
   counselling: ImpetigoCounselling;
+  treatment: ImpetigoTreatmentSelection['treatment'];
   onChange: (counselling: ImpetigoCounselling) => void;
 }
 
-export function CounsellingStep({ counselling, onChange }: CounsellingStepProps) {
+export function drugSpecificAdviceLabel(treatment: ImpetigoTreatmentSelection['treatment']): string {
+  switch (treatment) {
+    case 'fusidic-acid':
+      return 'Fusidic acid: apply a thin layer three times a day for 5 days, washing hands before and after. Do not use it for longer than the course, and do not keep the tube for next time. Return any unused cream to a pharmacy.';
+    case 'hydrogen-peroxide':
+      return 'Hydrogen peroxide 1%: apply two or three times a day for 5 days. Come back if there is no improvement after 48 hours.';
+    case 'flucloxacillin':
+      return 'Flucloxacillin: four times a day, on an empty stomach, an hour before food or two hours after. Finish the course even if the skin looks better. Come back for yellowing of the skin or eyes, dark urine or pale stools, even weeks after finishing. Seek advice for severe or bloody diarrhoea.';
+    case 'clarithromycin':
+      return 'Clarithromycin: twice a day for 5 days; finish the course. A metallic or bitter taste is common and settles when you stop. Come back for severe or bloody diarrhoea, a rash that blisters or peels, or yellowing of the skin or eyes.';
+    case 'erythromycin':
+      return 'Erythromycin: four times a day for 5 days; finish the course. Come back for severe or bloody diarrhoea, a rash that blisters or peels, or yellowing of the skin or eyes.';
+    default:
+      return 'Medicine-specific advice from the PGD counselling row given for the product supplied.';
+  }
+}
+
+export function CounsellingStep({ counselling, treatment, onChange }: CounsellingStepProps) {
   const handleChange = (field: keyof ImpetigoCounselling, value: unknown) => {
     onChange({
       ...counselling,
@@ -16,59 +34,77 @@ export function CounsellingStep({ counselling, onChange }: CounsellingStepProps)
     });
   };
 
+  const isTopical = treatment === 'fusidic-acid' || treatment === 'hydrogen-peroxide';
+
   const counsellingItems: Array<{ field: keyof ImpetigoCounselling; label: string; advice: string }> = [
     {
       field: 'hygieneAdvice',
-      label: 'Hygiene Advice - Do not share towels or flannels',
-      advice: 'Explain the importance of not sharing personal items to prevent spread to other family members',
+      label: 'Hygiene advice: do not share towels, flannels or bedding until the lesions have crusted over or healed',
+      advice: 'Impetigo is contagious. Give the hygiene advice in writing.',
     },
     {
       field: 'handwashing',
-      label: 'Hand Washing - Frequent hand washing with soap and water',
-      advice: 'Emphasise thorough hand washing for 20 seconds, especially after contact with lesions',
+      label: 'Wash hands after touching the lesions and after applying any cream',
+      advice: 'Emphasise thorough hand washing, especially after contact with lesions',
     },
     {
       field: 'schoolExclusion',
-      label: 'School/Work Exclusion - Do not attend until 48 hours post-treatment or lesions crusted over',
-      advice: 'Patient should avoid close contact with others for 48 hours from starting treatment, or until lesions are crusted',
+      label: 'Stay away from school or nursery until the lesions are crusted and dry, or for 48 hours after starting an antibiotic',
+      advice: 'Treatment limits spread and hastens recovery',
     },
     {
       field: 'avoidTouching',
-      label: 'Avoid Touching/Scratching - Do not pick, scratch or squeeze lesions',
-      advice: 'Touching lesions can spread infection and increase risk of scarring. Trim nails short if needed',
+      label: 'Keep the lesions covered where practical, discourage picking or scratching, and keep fingernails short',
+      advice: 'Touching lesions spreads infection to other areas of the body and to other people',
+    },
+    {
+      field: 'noCombination',
+      label: 'Told that topical and oral treatment are not combined',
+      advice: 'NICE is explicit on this and it is a common error. Record that the patient was told.',
+    },
+    {
+      field: 'drugSpecificAdvice',
+      label: drugSpecificAdviceLabel(treatment),
+      advice: 'From the counselling row of the arm supplied.',
     },
     {
       field: 'completeCourse',
-      label: 'Complete Course - Finish full course of antibiotics even if improving',
-      advice: 'Particularly important for oral antibiotics. Incomplete courses risk relapse and antibiotic resistance',
+      label: 'Complete the course, even if improving',
+      advice: 'Incomplete courses risk relapse and antibiotic resistance. One course per episode.',
     },
     {
       field: 'applicationAdvice',
-      label: 'Application Technique - For topical treatments, apply thinly to affected area after gentle cleaning',
-      advice: 'Wash area gently with soap and water, pat dry, then apply cream thinly. Use clean hands or applicator',
+      label: 'Application technique for topical treatment: cover the lesion and about 1cm of surrounding skin; avoid contact with the eyes (rinse with water if it occurs); do not apply to large areas',
+      advice: 'Wash the area gently, pat dry, then apply thinly with clean hands',
     },
     {
       field: 'returnIfWorsening',
-      label: 'Return If Worsening - Seek advice if spreading, not improving in 48hrs, or systemic symptoms develop',
-      advice: 'Red flags: spreading rapidly despite treatment, fever, malaise, signs of cellulitis or abscess formation',
+      label: isTopical
+        ? 'Come back if there is no improvement after 48 hours, if the lesions spread, or if you feel unwell'
+        : 'Come back if there is no improvement after 48 to 72 hours, if the lesions spread, or if you or your child becomes unwell',
+      advice: 'Seek medical help if symptoms worsen rapidly or significantly at any time, or have not improved after completing a course. Treatment failure needs a swab, not a second course.',
     },
     {
       field: 'contagionPeriod',
-      label: 'Contagion Period - Infection is contagious until 48 hours after starting effective treatment',
-      advice: 'Advise patient this is a contagious infection. They can return to school/work after 48 hours of treatment or once lesions crusted',
+      label: 'Infection is contagious until the lesions have crusted and dried, or 48 hours after starting an antibiotic',
+      advice: 'Advise the patient, and parents or carers, that this is a contagious infection',
     },
   ];
+
+  const shownItems = isTopical
+    ? counsellingItems
+    : counsellingItems.filter((i) => i.field !== 'applicationAdvice');
 
   return (
     <div className="space-y-6">
       <div className="bg-blue-50 border border-blue-200 rounded p-4 mb-6">
         <p className="text-sm text-blue-900">
-          Review each counselling point with the patient. Mark each item as discussed.
+          Review each counselling point with the patient. Mark each item as discussed. Supply the patient information leaflet and the hygiene advice in writing.
         </p>
       </div>
 
       <div className="space-y-4">
-        {counsellingItems.map((item) => (
+        {shownItems.map((item) => (
           <div key={item.field} className="border border-gray-200 rounded p-4 hover:bg-gray-50 transition">
             <Checkbox
               label={item.label}

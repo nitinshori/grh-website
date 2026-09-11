@@ -4,6 +4,10 @@ import type {
   DoseRecommendation,
 } from "./ec-types";
 
+// Emergency Contraception PGD v003 (11 September 2026). Two arms:
+// levonorgestrel 1.5 mg (Levonelle) within 72 hours of UPSI, and ulipristal
+// acetate 30 mg (ellaOne) within 120 hours.
+
 // ══════════════════════════════════════════════════════════════
 // HOURS SINCE UPSI CALCULATOR
 // ══════════════════════════════════════════════════════════════
@@ -26,160 +30,294 @@ export function calculateHoursSinceUPSI(
 }
 
 // ══════════════════════════════════════════════════════════════
-// EXCLUSION CHECKS — Hard stops: cannot supply
+// WEIGHT / BMI (FSRH: ulipristal preferred at 70 kg or over, or BMI 26 or over)
+// ══════════════════════════════════════════════════════════════
+
+export function calculateBmi(weightKg: number | null, heightCm: number | null): number | null {
+  if (weightKg === null || heightCm === null || weightKg <= 0 || heightCm <= 0) return null;
+  const m = heightCm / 100;
+  return Math.round((weightKg / (m * m)) * 10) / 10;
+}
+
+export function isHighWeightOrBmi(state: ECConsultationState): boolean {
+  const { weightKg, heightCm } = state.medicalHistory;
+  const bmi = calculateBmi(weightKg, heightCm);
+  return (weightKg !== null && weightKg >= 70) || (bmi !== null && bmi >= 26);
+}
+
+export function isKnownOrSuspectedPregnancy(state: ECConsultationState): boolean {
+  return (
+    state.medicalHistory.pregnancyTestResult === "positive" ||
+    state.medicalHistory.currentlyPregnant
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// MEDICINE AVAILABILITY (per-arm exclusions and indication windows)
+// ══════════════════════════════════════════════════════════════
+
+export function getMedicineAvailability(state: ECConsultationState): {
+  canUseLNG: boolean;
+  canUseUPA: boolean;
+  lngReasons: string[];
+  upaReasons: string[];
+} {
+  const { medicalHistory, medications, clinicalAssessment } = state;
+  const hours = clinicalAssessment.hoursSinceUPSI;
+  const lngReasons: string[] = [];
+  const upaReasons: string[] = [];
+
+  // Exclusions common to both arms
+  if (isKnownOrSuspectedPregnancy(state)) {
+    lngReasons.push("known or suspected pregnancy");
+    upaReasons.push("known or suspected pregnancy");
+  }
+  if (medicalHistory.severeHepatic) {
+    lngReasons.push("severe hepatic impairment");
+    upaReasons.push("severe hepatic impairment");
+  }
+  if (medicalHistory.galactoseIntolerance) {
+    lngReasons.push("hereditary galactose intolerance");
+    upaReasons.push("hereditary galactose intolerance");
+  }
+  if (hours === null) {
+    lngReasons.push("time since UPSI not recorded");
+    upaReasons.push("time since UPSI not recorded");
+  }
+
+  // Levonorgestrel: within 72 hours of UPSI
+  if (hours !== null && hours > 72) lngReasons.push("more than 72 hours since UPSI");
+  if (medicalHistory.lngHypersensitivity) lngReasons.push("hypersensitivity to levonorgestrel or any component");
+  if (medicalHistory.porphyria) lngReasons.push("acute intermittent porphyria");
+  if (medications.takesUPA) lngReasons.push("ulipristal already taken this cycle");
+
+  // Ulipristal: within 120 hours of UPSI
+  if (hours !== null && hours > 120) upaReasons.push("more than 120 hours since UPSI");
+  if (medicalHistory.upaHypersensitivity) upaReasons.push("hypersensitivity to ulipristal acetate or any component");
+  if (medicalHistory.severeAsthma) upaReasons.push("severe asthma insufficiently controlled by oral glucocorticoids");
+  if (medications.takesEnzymeInducers) upaReasons.push("enzyme-inducing drugs in the last 4 weeks (ulipristal not recommended, SmPC)");
+
+  return {
+    canUseLNG: lngReasons.length === 0,
+    canUseUPA: upaReasons.length === 0,
+    lngReasons,
+    upaReasons,
+  };
+}
+
+// ══════════════════════════════════════════════════════════════
+// EXCLUSION CHECKS: hard stops, cannot supply either medicine
 // ══════════════════════════════════════════════════════════════
 
 export function checkExclusions(state: ECConsultationState): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
-  const { medicalHistory, clinicalAssessment, medications } = state;
+  const { medicalHistory } = state;
   const hours = state.clinicalAssessment.hoursSinceUPSI;
 
-  // Currently pregnant (positive test)
-  if (medicalHistory.pregnancyTestResult === "positive") {
+  if (isKnownOrSuspectedPregnancy(state)) {
     alerts.push({
       severity: "stop",
       code: "CURRENTLY_PREGNANT",
-      message: "Patient is currently pregnant — CANNOT supply",
+      message: "Known or suspected pregnancy: CANNOT supply",
       detail:
-        "Emergency contraception is not appropriate for patients who are already pregnant. The patient should be referred to their GP or sexual health clinic for further support.",
+        "Known or suspected pregnancy is an exclusion for both levonorgestrel and ulipristal. Refer to the GP or sexual health clinic.",
     });
   }
 
-  // Severe hepatic impairment
   if (medicalHistory.severeHepatic) {
     alerts.push({
       severity: "stop",
       code: "SEVERE_HEPATIC",
-      message: "Severe hepatic impairment — CANNOT supply",
+      message: "Severe hepatic impairment (e.g. cirrhosis): CANNOT supply",
       detail:
-        "Severe hepatic impairment is a contraindication for both levonorgestrel and ulipristal. Refer to GP.",
+        "Severe hepatic impairment is an exclusion for both levonorgestrel and ulipristal. Refer to GP.",
     });
   }
 
-  // >120 hours since UPSI — cannot supply either option
+  if (medicalHistory.galactoseIntolerance) {
+    alerts.push({
+      severity: "stop",
+      code: "GALACTOSE",
+      message: "Hereditary galactose intolerance: CANNOT supply",
+      detail: "Exclusion for both levonorgestrel and ulipristal (lactose-containing tablets). Refer.",
+    });
+  }
+
   if (hours !== null && hours > 120) {
     alerts.push({
       severity: "stop",
       code: "TOO_LATE",
-      message: `${Math.round(hours)} hours since UPSI — CANNOT supply emergency contraception`,
+      message: `${Math.round(hours)} hours since UPSI: CANNOT supply emergency contraception`,
       detail:
-        "Emergency hormonal contraception is only effective within 120 hours (5 days) of unprotected sexual intercourse. The patient should be referred to their GP or sexual health clinic to discuss the copper intrauterine device (Cu-IUD), which can be fitted up to 5 days after UPSI or up to 5 days after ovulation.",
+        "Levonorgestrel is indicated within 72 hours and ulipristal within 120 hours of UPSI. Refer to the GP or sexual health clinic to discuss the copper intrauterine device (Cu-IUD), which can be fitted up to 5 days after UPSI or up to 5 days after ovulation.",
     });
-  }
-
-  // >72 hours and considering levonorgestrel only
-  if (hours !== null && hours > 72) {
-    alerts.push({
-      severity: "caution",
-      code: "BEYOND_72HRS",
-      message: `${Math.round(hours)} hours since UPSI — Levonorgestrel effectiveness reduced`,
-      detail:
-        "Levonorgestrel is less effective after 72 hours. Ulipristal (if available and not contraindicated) remains effective up to 120 hours and is preferred.",
-    });
+  } else if (hours !== null) {
+    const availability = getMedicineAvailability(state);
+    if (!availability.canUseLNG && !availability.canUseUPA && alerts.length === 0) {
+      alerts.push({
+        severity: "stop",
+        code: "NO_ORAL_OPTION",
+        message: "No oral emergency contraception available under this PGD",
+        detail: `Levonorgestrel: ${availability.lngReasons.join(", ")}. Ulipristal: ${availability.upaReasons.join(", ")}. Refer for a copper IUD or specialist advice.`,
+      });
+    }
   }
 
   return alerts;
 }
 
 // ══════════════════════════════════════════════════════════════
-// CONTRAINDICATIONS & CAUTIONS
+// CONTRAINDICATIONS AND CAUTIONS
 // ══════════════════════════════════════════════════════════════
 
 export function checkContraindications(state: ECConsultationState): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
   const { medicalHistory, medications, clinicalAssessment } = state;
+  const hours = clinicalAssessment.hoursSinceUPSI;
 
-  // ULIPRISTAL-SPECIFIC CONTRAINDICATIONS
+  if (hours !== null && hours > 72 && hours <= 120) {
+    alerts.push({
+      severity: "caution",
+      code: "BEYOND_72HRS",
+      message: `${Math.round(hours)} hours since UPSI: levonorgestrel is outside its 72 hour indication`,
+      detail:
+        "Only ulipristal (within 120 hours) can be supplied under this PGD. If ulipristal is excluded, refer for a copper IUD.",
+    });
+  }
 
-  // Severe asthma — ulipristal contraindicated
   if (medicalHistory.severeAsthma) {
     alerts.push({
       severity: "caution",
       code: "SEVERE_ASTHMA",
-      message: "Severe asthma — ulipristal is contraindicated",
-      detail:
-        "Ulipristal acetate is contraindicated in severe asthma. Levonorgestrel is the preferred option. Refer to clinical guidance if unsure about asthma severity.",
+      message: "Severe asthma insufficiently controlled by oral glucocorticoids: ulipristal excluded",
+      detail: "Levonorgestrel may be supplied within 72 hours if no levonorgestrel exclusion applies.",
     });
   }
 
-  // ENZYME INDUCERS — affects both options
+  if (medicalHistory.lngHypersensitivity) {
+    alerts.push({
+      severity: "caution",
+      code: "LNG_ALLERGY",
+      message: "Hypersensitivity to levonorgestrel or any component: levonorgestrel excluded",
+      detail: "Ulipristal may be supplied if no ulipristal exclusion applies.",
+    });
+  }
+
+  if (medicalHistory.upaHypersensitivity) {
+    alerts.push({
+      severity: "caution",
+      code: "UPA_ALLERGY",
+      message: "Hypersensitivity to ulipristal acetate or any component: ulipristal excluded",
+      detail: "Levonorgestrel may be supplied within 72 hours if no levonorgestrel exclusion applies.",
+    });
+  }
+
   if (medications.takesEnzymeInducers) {
     alerts.push({
       severity: "caution",
       code: "ENZYME_INDUCERS",
-      message: `Patient takes enzyme inducers — dose adjustment required`,
+      message: "Enzyme-inducing drugs in the last 4 weeks",
       detail:
-        "Patient is taking enzyme-inducing drugs (e.g. carbamazepine, phenytoin, phenobarbital, rifampicin, St John's Wort). Levonorgestrel efficacy is reduced and double dosing (3mg) should be considered. Ulipristal is less affected but may also have reduced efficacy. Consider alternative methods or refer for specialist advice.",
+        "Anticonvulsants, rifampicin, antiretrovirals, St John's Wort: offer a copper IUD; if declined give levonorgestrel 3 mg (two tablets, licensed). Do NOT switch to ulipristal, which is not recommended in these women (SmPC). Record the reason for the 3 mg dose.",
     });
   }
 
-  // Already taken ulipristal this cycle — cannot use levonorgestrel
+  if (isHighWeightOrBmi(state)) {
+    alerts.push({
+      severity: "caution",
+      code: "WEIGHT_BMI",
+      message: "Weight 70 kg or over, or BMI 26 or over",
+      detail:
+        "Ulipristal is preferred (FSRH) unless unsuitable; where levonorgestrel is used give 3 mg (double dose), which is off-label per FSRH guidance. Explain this to the patient and record it.",
+    });
+  }
+
+  if (medications.progestogenLast7Days) {
+    alerts.push({
+      severity: "caution",
+      code: "PROGESTOGEN_7_DAYS",
+      message: "Progestogen-containing contraceptive taken in the previous 7 days",
+      detail:
+        "May reduce ulipristal efficacy; consider levonorgestrel instead. Hormonal contraception must not be restarted until 5 days after ulipristal, with condoms until it is reliable again.",
+    });
+  }
+
   if (medications.takesUPA) {
     alerts.push({
       severity: "caution",
       code: "PREVIOUS_UPA",
       message: "Patient has already taken ulipristal this cycle",
       detail:
-        "If ulipristal has already been used, levonorgestrel should not be given as they are incompatible. Further emergency contraception use in the same cycle is not recommended. Refer to sexual health clinic for advice.",
+        "Repeated use in the same cycle is not recommended. Levonorgestrel should not be given after ulipristal in the same cycle. Refer to sexual health clinic for advice.",
     });
   }
 
-  // BREASTFEEDING
   if (medicalHistory.breastfeeding) {
     alerts.push({
       severity: "caution",
       code: "BREASTFEEDING",
-      message: "Patient is breastfeeding — special precautions required",
+      message: "Breastfeeding",
       detail:
-        "Both medicines are safe while breastfeeding but with precautions: Levonorgestrel — express and discard for 8 hours post-dose. Ulipristal — express and discard for 7 days post-dose. Ulipristal is contraindicated if severe asthma present.",
+        "Levonorgestrel: avoid breastfeeding for 8 hours after the dose. Ulipristal: avoid breastfeeding for 7 days after the dose.",
     });
   }
 
-  // PREVIOUS ECTOPIC
   if (medicalHistory.previousEctopic) {
     alerts.push({
       severity: "caution",
       code: "PREVIOUS_ECTOPIC",
-      message: "History of ectopic pregnancy — caution advised",
+      message: "History of ectopic pregnancy",
       detail:
-        "Patient has a history of ectopic pregnancy. Emergency contraception efficacy is not reduced, but vigilance for signs of ectopic pregnancy (unusual abdominal pain) is important. Patient should be advised to contact GP urgently if experiencing severe abdominal pain.",
+        "Caution. Emergency contraception efficacy is not reduced, but advise the patient to contact the GP urgently if experiencing severe abdominal pain.",
     });
   }
 
-  // PORPHYRIA
   if (medicalHistory.porphyria) {
     alerts.push({
       severity: "caution",
       code: "PORPHYRIA",
-      message: "Patient has porphyria — caution advised",
-      detail:
-        "Hormonal contraceptives can precipitate porphyria attacks. Refer to specialist before proceeding with emergency contraception.",
+      message: "Acute intermittent porphyria: levonorgestrel excluded",
+      detail: "Ulipristal may be supplied if no ulipristal exclusion applies.",
     });
   }
 
-  // CROHNS DISEASE
   if (medicalHistory.crohnsDisease) {
     alerts.push({
       severity: "caution",
       code: "CROHNS",
-      message: "Patient has Crohn's disease — efficacy may be reduced",
+      message: "Malabsorption condition affecting drug absorption (e.g. Crohn's disease)",
       detail:
-        "Inflammatory bowel disease may reduce efficacy of oral emergency contraception due to malabsorption. Consider alternative methods such as Cu-IUD, or refer for specialist advice.",
+        "May reduce efficacy of oral emergency contraception. Consider alternative methods such as Cu-IUD, or refer for specialist advice.",
     });
+  }
+
+  if (clinicalAssessment.cycleRegular && clinicalAssessment.lastMenstrualPeriod) {
+    const lmp = new Date(clinicalAssessment.lastMenstrualPeriod);
+    const upsi = clinicalAssessment.upsiDate ? new Date(clinicalAssessment.upsiDate) : null;
+    if (upsi && !isNaN(lmp.getTime()) && !isNaN(upsi.getTime())) {
+      const day = Math.floor((upsi.getTime() - lmp.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      if (day >= 10 && day <= 17) {
+        alerts.push({
+          severity: "caution",
+          code: "MID_CYCLE",
+          message: "UPSI around mid-cycle: pregnancy risk is higher",
+          detail: "Caution in the PGD. Consider the copper IUD as the most effective option and discuss with the patient.",
+        });
+      }
+    }
   }
 
   return alerts;
 }
 
 // ══════════════════════════════════════════════════════════════
-// RED FLAGS FOR SAFEGUARDING
+// SAFEGUARDING (PGD inclusion criteria)
 // ══════════════════════════════════════════════════════════════
 
 export function checkRedFlags(state: ECConsultationState): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
   const { clinicalAssessment, patient } = state;
 
-  // Multiple UPSI episodes
   if (clinicalAssessment.additionalUPSIInstances) {
     alerts.push({
       severity: "red-flag",
@@ -190,14 +328,41 @@ export function checkRedFlags(state: ECConsultationState): ClinicalAlert[] {
     });
   }
 
-  // Age 13-15 safeguarding
+  if (clinicalAssessment.previousEC) {
+    alerts.push({
+      severity: "red-flag",
+      code: "REPEAT_EC",
+      message: "Repeated emergency contraception request",
+      detail: "Repeated use in the same cycle is not recommended. Signpost to ongoing contraception.",
+    });
+  }
+
+  if (patient.age !== null && patient.age < 13) {
+    alerts.push({
+      severity: "red-flag",
+      code: "UNDER_13",
+      message: "Aged under 13: any sexual activity is a safeguarding concern",
+      detail:
+        "Supply may still be appropriate but a safeguarding referral is MANDATORY. Record the referral on this consultation.",
+    });
+  }
+
   if (patient.age !== null && patient.age >= 13 && patient.age <= 15) {
     alerts.push({
       severity: "red-flag",
       code: "YOUNG_AGE",
-      message: "Patient is under 16 — Fraser competence assessment required",
+      message: "Aged 13 to 15: Fraser competence and safeguarding assessment required",
       detail:
-        "For patients aged 13-15, Fraser competence must be assessed. Consider whether there are safeguarding concerns and report to local safeguarding team if abuse or coercion suspected.",
+        "Assess and record Fraser competence, ask about coercion, the age of the partner and any safeguarding concern, and follow the local safeguarding pathway. Record the assessment.",
+    });
+  }
+
+  if (patient.safeguardingConcern) {
+    alerts.push({
+      severity: "red-flag",
+      code: "SAFEGUARDING_CONCERN",
+      message: "Safeguarding concern identified",
+      detail: "Follow the local safeguarding pathway and record the action taken.",
     });
   }
 
@@ -214,92 +379,111 @@ export function calculateDoseRecommendation(
   const { clinicalAssessment, medicalHistory, medications } = state;
   const hours = clinicalAssessment.hoursSinceUPSI;
 
-  // Cannot recommend if time not calculated
   if (hours === null) {
     return null;
   }
 
-  // Cannot supply if >120 hours
+  const availability = getMedicineAvailability(state);
+
   if (hours > 120) {
     return {
       medicine: "none",
       dose: "",
-      reason: "Beyond 120-hour window. Refer for Cu-IUD assessment.",
+      reason: "Beyond the 120 hour window. Refer for Cu-IUD assessment.",
     };
   }
 
-  // Cannot supply if pregnant
-  if (medicalHistory.pregnancyTestResult === "positive") {
-    return {
-      medicine: "none",
-      dose: "",
-      reason: "Patient currently pregnant.",
-    };
+  if (isKnownOrSuspectedPregnancy(state)) {
+    return { medicine: "none", dose: "", reason: "Known or suspected pregnancy." };
   }
 
-  // Cannot supply if severe hepatic impairment
   if (medicalHistory.severeHepatic) {
+    return { medicine: "none", dose: "", reason: "Severe hepatic impairment: refer to GP." };
+  }
+
+  if (medicalHistory.galactoseIntolerance) {
+    return { medicine: "none", dose: "", reason: "Hereditary galactose intolerance: refer." };
+  }
+
+  if (!availability.canUseLNG && !availability.canUseUPA) {
     return {
       medicine: "none",
       dose: "",
-      reason: "Severe hepatic impairment — refer to GP.",
+      reason: `No oral option under this PGD (levonorgestrel: ${availability.lngReasons.join(", ")}; ulipristal: ${availability.upaReasons.join(", ")}). Refer for Cu-IUD or specialist advice.`,
     };
   }
 
-  // ─── WITHIN 72 HOURS: Both options available ───
-  if (hours <= 72) {
-    // Levonorgestrel is standard first-line within 72 hours
+  const highWeight = isHighWeightOrBmi(state);
 
-    // BUT: severe asthma → use LNG not UPA
-    if (medicalHistory.severeAsthma) {
-      const doubleRequired = medications.takesEnzymeInducers;
-      return {
-        medicine: "levonorgestrel",
-        dose: doubleRequired ? "3mg" : "1.5mg",
-        reason: doubleRequired
-          ? "≤72 hours, severe asthma (UPA contraindicated), enzyme inducers present (double dose recommended)"
-          : "≤72 hours; severe asthma contraindicates ulipristal; levonorgestrel first-line",
-      };
-    }
-
-    // Check if enzyme inducers present
-    if (medications.takesEnzymeInducers) {
-      // Double dose LNG or consider UPA
+  // Enzyme inducers: copper IUD first; if declined, levonorgestrel 3 mg (licensed). Never ulipristal.
+  if (medications.takesEnzymeInducers) {
+    if (availability.canUseLNG) {
       return {
         medicine: "levonorgestrel",
         dose: "3mg",
-        reason: "≤72 hours with enzyme inducers; double-dose levonorgestrel (3mg) recommended for adequate efficacy. Ulipristal may be considered if available.",
+        reason:
+          "Enzyme-inducing drugs in the last 4 weeks: offer a copper IUD; if declined give levonorgestrel 3 mg (two tablets, licensed). Do not use ulipristal.",
       };
     }
-
-    // Standard case: levonorgestrel 1.5mg
     return {
-      medicine: "levonorgestrel",
-      dose: "1.5mg",
-      reason: "≤72 hours since UPSI; levonorgestrel 1.5mg is first-line emergency contraception.",
+      medicine: "none",
+      dose: "",
+      reason: `Enzyme inducers exclude ulipristal and levonorgestrel is unavailable (${availability.lngReasons.join(", ")}). Refer for a copper IUD.`,
     };
   }
 
-  // ─── 72-120 HOURS: Ulipristal preferred ───
-  if (hours > 72 && hours <= 120) {
-    // Check if severe asthma → cannot use ulipristal
-    if (medicalHistory.severeAsthma) {
+  // Weight 70 kg or over, or BMI 26 or over: ulipristal preferred; otherwise LNG 3 mg off-label
+  if (highWeight) {
+    if (availability.canUseUPA) {
+      return {
+        medicine: "ulipristal",
+        dose: "30mg",
+        reason:
+          "Weight 70 kg or over, or BMI 26 or over: ulipristal 30 mg is preferred (FSRH) unless unsuitable.",
+      };
+    }
+    if (availability.canUseLNG) {
+      return {
+        medicine: "levonorgestrel",
+        dose: "3mg",
+        reason:
+          "Weight 70 kg or over, or BMI 26 or over, and ulipristal unsuitable: levonorgestrel 3 mg (double dose), off-label per FSRH guidance. Explain this and record it.",
+      };
+    }
+  }
+
+  // Within 72 hours: levonorgestrel 1.5 mg first line; ulipristal if LNG unavailable
+  if (hours <= 72) {
+    if (availability.canUseLNG) {
       return {
         medicine: "levonorgestrel",
         dose: "1.5mg",
-        reason: "Beyond 72 hours (reduced LNG efficacy), but severe asthma contraindicates ulipristal. Levonorgestrel single dose offered with discussion of limited efficacy. Cu-IUD referral advised.",
+        reason: "Within 72 hours of UPSI: levonorgestrel 1.5 mg single dose, as soon as possible (ideally within 12 hours).",
       };
     }
+    if (availability.canUseUPA) {
+      return {
+        medicine: "ulipristal",
+        dose: "30mg",
+        reason: `Levonorgestrel unavailable (${availability.lngReasons.join(", ")}): ulipristal 30 mg single dose.`,
+      };
+    }
+  }
 
-    // Ulipristal is preferred at 72-120 hours
+  // 72 to 120 hours: ulipristal only
+  if (availability.canUseUPA) {
     return {
       medicine: "ulipristal",
       dose: "30mg",
-      reason: "72-120 hours since UPSI; ulipristal (EllaOne) 30mg is more effective than levonorgestrel in this window.",
+      reason: "72 to 120 hours since UPSI: ulipristal (ellaOne) 30 mg is the only oral option under this PGD.",
     };
   }
 
-  return null;
+  return {
+    medicine: "none",
+    dose: "",
+    reason: `72 to 120 hours since UPSI and ulipristal excluded (${availability.upaReasons.join(", ")}). Refer for a copper IUD.`,
+  };
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -322,52 +506,4 @@ export function getAllAlerts(state: ECConsultationState): ClinicalAlert[] {
 
 export function hasHardStops(alerts: ClinicalAlert[]): boolean {
   return alerts.some((alert) => alert.severity === "stop");
-}
-
-// ══════════════════════════════════════════════════════════════
-// MEDICINE AVAILABILITY CHECK
-// ══════════════════════════════════════════════════════════════
-
-export function getMedicineAvailability(state: ECConsultationState): {
-  canUseLNG: boolean;
-  canUseUPA: boolean;
-} {
-  const { medicalHistory, medications, clinicalAssessment } = state;
-  const hours = clinicalAssessment.hoursSinceUPSI;
-
-  let canUseLNG = true;
-  let canUseUPA = true;
-
-  // General exclusions
-  if (
-    medicalHistory.severeHepatic ||
-    medicalHistory.pregnancyTestResult === "positive" ||
-    hours === null ||
-    hours > 120
-  ) {
-    canUseLNG = false;
-    canUseUPA = false;
-  }
-
-  // Levonorgestrel: safe even >72 hours (less effective but no hard stop)
-  if (hours !== null && hours > 120) {
-    canUseLNG = false;
-  }
-
-  // Ulipristal: only up to 120 hours
-  if (hours !== null && hours > 120) {
-    canUseUPA = false;
-  }
-
-  // Ulipristal: contraindicated with severe asthma
-  if (medicalHistory.severeAsthma) {
-    canUseUPA = false;
-  }
-
-  // Already taken ulipristal: cannot use levonorgestrel with it
-  if (medications.takesUPA && canUseLNG) {
-    canUseLNG = false; // Don't give both together
-  }
-
-  return { canUseLNG, canUseUPA };
 }

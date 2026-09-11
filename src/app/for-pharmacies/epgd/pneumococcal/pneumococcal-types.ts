@@ -4,10 +4,25 @@ import {
   BaseSummary,
 } from '../shared/types';
 
+// Aligned to the Pneumovax 23 / Prevenar 13 PGD version 004, issued 11 September 2026.
+
+export type PneumococcalRiskCategory =
+  | 'asplenia'
+  | 'ckd'
+  | 'chronic-disease'
+  | 'immunosuppressed'
+  | 'cochlear'
+  | 'csf-leak'
+  | 'age-65-plus'
+  | 'other-national-guidance'
+  | '';
+
 export interface PneumococcalPatientDetails extends BasePatientDetails {
-  riskCategory: 'asplenia' | 'chronic-disease' | 'immunosuppressed' | 'cochlear' | 'csf-leak' | '';
+  riskCategory: PneumococcalRiskCategory;
   chronicDiseaseType?: string;
   immunosuppressedReason?: string;
+  /** Used with 'other-national-guidance': the Green Book chapter 25 group that applies. */
+  otherEligibilityReason?: string;
   knownAllergies: string;
 }
 
@@ -15,14 +30,26 @@ export interface PneumococcalConsent extends BaseConsent {
   understandsVaccineNeed: boolean;
   understandsSchedule: boolean;
   understandsSideEffects: boolean;
+  /** PGD v004 consent block, under 16 only: who gave consent. */
+  consentBasis: '' | 'parental' | 'gillick';
+  parentName: string;
+  parentRelationship: string;
+  gillickBasis: string;
 }
+
+export type PneumococcalAdministrationSite =
+  | 'left-deltoid'
+  | 'right-deltoid'
+  | 'left-arm-sc'
+  | 'right-arm-sc'
+  | '';
 
 export interface PneumococcalSummary extends BaseSummary {
   vaccineType: 'pcv13' | 'ppv23' | '';
   doseNumber: '1' | '2' | '';
   batchNumber: string;
   expiryDate: string;
-  administrationSite: 'left-deltoid' | 'right-deltoid' | '';
+  administrationSite: PneumococcalAdministrationSite;
   administrationTime: string;
   counselledReactions: boolean;
   counselledBothVaccines: boolean;
@@ -48,6 +75,7 @@ gpOdsCode: '',
   riskCategory: '',
   chronicDiseaseType: '',
   immunosuppressedReason: '',
+  otherEligibilityReason: '',
   knownAllergies: '',
 };
 
@@ -59,6 +87,10 @@ export const initialPneumococcalConsent: PneumococcalConsent = {
   understandsVaccineNeed: false,
   understandsSchedule: false,
   understandsSideEffects: false,
+  consentBasis: '',
+  parentName: '',
+  parentRelationship: '',
+  gillickBasis: '',
 };
 
 export function initialPneumococcalSummary(): PneumococcalSummary {

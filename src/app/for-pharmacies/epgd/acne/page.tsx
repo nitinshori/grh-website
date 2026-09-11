@@ -3,7 +3,7 @@ import { PgdPageActions } from "@/components/PgdPageActions";
 
 export const metadata = {
   title: "Acne Treatment ePGD | GRH Pharmacy",
-  description: "Patient Group Direction for acne treatment consultation",
+  description: "Patient Group Direction for mild to moderate acne vulgaris: benzoyl peroxide plus clindamycin gel or adapalene plus benzoyl peroxide gel. Version 003, issued 11 September 2026.",
 };
 
 export default function AcnePage() {

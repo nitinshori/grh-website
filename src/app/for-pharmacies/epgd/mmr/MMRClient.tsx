@@ -51,6 +51,10 @@ function reducer(
       newState.consent = { ...newState.consent, [action.field]: action.value };
       break;
 
+    case "UPDATE_CONSENT_BASIS":
+      newState.consentBasis = { ...newState.consentBasis, [action.field]: action.value };
+      break;
+
     case "UPDATE_ELIGIBILITY":
       newState.eligibility = { ...newState.eligibility, [action.field]: action.value };
       break;
@@ -231,6 +235,63 @@ export default function MMRClient() {
                 dispatch({ type: "UPDATE_CONSENT", field, value })
               }
             />
+
+            {state.patient.age !== null && state.patient.age < 16 && (
+              <div className="mt-4 p-4 bg-blue-50 border border-blue-300 rounded-lg space-y-3">
+                <p className="text-sm font-semibold text-blue-900">
+                  Patient is under 16: record the basis of consent
+                </p>
+                <p className="text-xs text-blue-900">
+                  Valid consent must come from a person with parental responsibility, or from the young person where you assess them as Gillick competent. A parent accompanying a child does not automatically hold parental responsibility: ask.
+                </p>
+                <SelectInput
+                  label="Consent given by"
+                  value={state.consentBasis.basis}
+                  onChange={(v) =>
+                    dispatch({ type: "UPDATE_CONSENT_BASIS", field: "basis", value: v })
+                  }
+                  options={[
+                    { value: "parental", label: "A person with parental responsibility" },
+                    { value: "gillick", label: "The young person, assessed as Gillick competent" },
+                  ]}
+                  required
+                />
+                {state.consentBasis.basis === "parental" && (
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <TextInput
+                      label="Name of person with parental responsibility"
+                      value={state.consentBasis.parentName}
+                      onChange={(v) =>
+                        dispatch({ type: "UPDATE_CONSENT_BASIS", field: "parentName", value: v })
+                      }
+                      placeholder="Full name"
+                      required
+                    />
+                    <TextInput
+                      label="Relationship to the patient"
+                      value={state.consentBasis.parentRelationship}
+                      onChange={(v) =>
+                        dispatch({ type: "UPDATE_CONSENT_BASIS", field: "parentRelationship", value: v })
+                      }
+                      placeholder="Mother, father, guardian"
+                      required
+                    />
+                  </div>
+                )}
+                {state.consentBasis.basis === "gillick" && (
+                  <TextArea
+                    label="Basis of the Gillick competence assessment"
+                    value={state.consentBasis.gillickBasis}
+                    onChange={(v) =>
+                      dispatch({ type: "UPDATE_CONSENT_BASIS", field: "gillickBasis", value: v })
+                    }
+                    placeholder="What the young person understood about the vaccine, its benefits and risks, and the decision being made."
+                    rows={3}
+                    required
+                  />
+                )}
+              </div>
+            )}
           </StepWrapper>
         );
 
@@ -238,7 +299,7 @@ export default function MMRClient() {
         return (
           <StepWrapper
             title="Eligibility Assessment"
-            description="Confirm at least one eligibility criterion."
+            description="Individuals aged 12 months and over without two documented doses of MMR, or where protection is otherwise required. Confirm at least one criterion."
             currentStep={state.currentStep}
             totalSteps={TOTAL_STEPS}
             onNext={handleNext}
@@ -281,7 +342,7 @@ export default function MMRClient() {
                 }
               />
               <Checkbox
-                label="No documented prior 2 doses of MMR"
+                label="No documented prior 2 doses of MMR (catch-up, students, outbreak contacts)"
                 checked={state.eligibility.noPriorTwoDoses}
                 onChange={(v) =>
                   dispatch({
@@ -291,6 +352,36 @@ export default function MMRClient() {
                   })
                 }
               />
+              <Checkbox
+                label="Protection is otherwise required"
+                checked={state.eligibility.protectionOtherwiseRequired}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_ELIGIBILITY",
+                    field: "protectionOtherwiseRequired",
+                    value: v,
+                  })
+                }
+                description="PGD inclusion: where protection is otherwise required. Record the reason in the clinical notes."
+              />
+
+              {state.patient.age !== null && state.patient.age < 18 && (
+                <div className="p-4 bg-amber-50 border border-amber-300 rounded-lg">
+                  <Checkbox
+                    label="Told that they can be vaccinated free by their GP under the NHS childhood programme before any private supply"
+                    checked={state.eligibility.nhsFreeOfferTold}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_ELIGIBILITY",
+                        field: "nhsFreeOfferTold",
+                        value: v,
+                      })
+                    }
+                    description="Required by the PGD for children eligible for the NHS childhood programme. Record that this was done."
+                    required
+                  />
+                </div>
+              )}
             </div>
           </StepWrapper>
         );
@@ -308,8 +399,10 @@ export default function MMRClient() {
             validationError={validationError}
           >
             <div className="space-y-4">
+              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Exclusion criteria (any ticked item excludes)</p>
+
               <Checkbox
-                label="Currently pregnant or planning pregnancy"
+                label="Pregnant or planning pregnancy within one month"
                 checked={state.medicalHistory.pregnancy}
                 onChange={(v) =>
                   dispatch({
@@ -318,11 +411,11 @@ export default function MMRClient() {
                     value: v,
                   })
                 }
-                description="Avoid vaccination if pregnant; avoid pregnancy 1 month after vaccination."
+                description="Excluded. Avoid pregnancy for 1 month after vaccination."
               />
 
               <Checkbox
-                label="Immunosuppressed or on immunosuppressive therapy"
+                label="Immunocompromised or receiving immunosuppressive therapy"
                 checked={state.medicalHistory.immunosuppressed}
                 onChange={(v) =>
                   dispatch({
@@ -335,7 +428,46 @@ export default function MMRClient() {
               />
 
               <Checkbox
-                label="Anaphylaxis to neomycin"
+                label="Blood dyscrasia, leukaemia, lymphoma or other malignant neoplasm of the haematopoietic or lymphatic system"
+                checked={state.medicalHistory.haematologicalMalignancy}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "haematologicalMalignancy",
+                    value: v,
+                  })
+                }
+                description="Excluded."
+              />
+
+              <Checkbox
+                label="Family history of congenital or hereditary immunodeficiency, and immune competence has not been demonstrated"
+                checked={state.medicalHistory.familyImmunodeficiency}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "familyImmunodeficiency",
+                    value: v,
+                  })
+                }
+                description="Excluded unless immune competence has been demonstrated."
+              />
+
+              <Checkbox
+                label="Active untreated tuberculosis"
+                checked={state.medicalHistory.activeUntreatedTB}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "activeUntreatedTB",
+                    value: v,
+                  })
+                }
+                description="Excluded."
+              />
+
+              <Checkbox
+                label="Known hypersensitivity to neomycin"
                 checked={state.medicalHistory.anaphylaxisNeomycin}
                 onChange={(v) =>
                   dispatch({
@@ -348,7 +480,7 @@ export default function MMRClient() {
               />
 
               <Checkbox
-                label="Anaphylaxis to gelatin"
+                label="Known hypersensitivity to gelatin"
                 checked={state.medicalHistory.anaphylaxisGelatin}
                 onChange={(v) =>
                   dispatch({
@@ -361,6 +493,58 @@ export default function MMRClient() {
               />
 
               <Checkbox
+                label="Known hypersensitivity to any other component of the vaccine"
+                checked={state.medicalHistory.hypersensitivityOtherComponent}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "hypersensitivityOtherComponent",
+                    value: v,
+                  })
+                }
+                description="Check the SmPC excipient list. Excluded."
+              />
+
+              <Checkbox
+                label="Anaphylaxis to a previous measles, mumps or rubella containing vaccine"
+                checked={state.medicalHistory.anaphylaxisPreviousMMR}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "anaphylaxisPreviousMMR",
+                    value: v,
+                  })
+                }
+                description="Excluded."
+              />
+
+              <Checkbox
+                label="Yellow fever or varicella vaccine within the previous 4 weeks"
+                checked={state.medicalHistory.liveVaccineLast4Weeks}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "liveVaccineLast4Weeks",
+                    value: v,
+                  })
+                }
+                description="Defer. Never give yellow fever vaccine and MMR on the same day."
+              />
+
+              <Checkbox
+                label="Acute febrile illness"
+                checked={state.medicalHistory.severeFebrilIllness}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "severeFebrilIllness",
+                    value: v,
+                  })
+                }
+                description="Vaccination should be postponed until recovery. Minor infections without fever are not a reason to delay."
+              />
+
+              <Checkbox
                 label="Anaphylaxis to egg"
                 checked={state.medicalHistory.anaphylaxisEgg}
                 onChange={(v) =>
@@ -370,24 +554,13 @@ export default function MMRClient() {
                     value: v,
                   })
                 }
-                description="Contraindication to MMRVaxPro; Priorix may be alternative."
+                description="Egg allergy is not a contraindication to MMR (Green Book). This tool will not give MMRVaxPro after egg anaphylaxis; select Priorix (egg-free)."
               />
 
-              <Checkbox
-                label="Severe febrile illness"
-                checked={state.medicalHistory.severeFebrilIllness}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_MEDICAL_HISTORY",
-                    field: "severeFebrilIllness",
-                    value: v,
-                  })
-                }
-                description="Defer vaccination until recovery."
-              />
+              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide pt-2">Cautions</p>
 
               <Checkbox
-                label="Recent blood products or immunoglobulin received"
+                label="Blood products or immunoglobulin in the previous 3 months"
                 checked={state.medicalHistory.recentBloodProducts}
                 onChange={(v) =>
                   dispatch({
@@ -396,7 +569,39 @@ export default function MMRClient() {
                     value: v,
                   })
                 }
-                description="May need to defer MMR by 3 months depending on product."
+                description="Defer where possible; where protection is needed now, give and repeat after 3 months (Green Book). Record which applied."
+              />
+
+              {state.medicalHistory.recentBloodProducts && (
+                <SelectInput
+                  label="Which applied"
+                  value={state.medicalHistory.bloodProductsAction}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_MEDICAL_HISTORY",
+                      field: "bloodProductsAction",
+                      value: v,
+                    })
+                  }
+                  options={[
+                    { value: "deferred", label: "Deferred until 3 months after the blood product or immunoglobulin" },
+                    { value: "given-repeat-3-months", label: "Protection needed now: given, to be repeated after 3 months" },
+                  ]}
+                  required
+                />
+              )}
+
+              <Checkbox
+                label="History of thrombocytopenia or febrile seizures"
+                checked={state.medicalHistory.thrombocytopeniaOrFebrileSeizures}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "thrombocytopeniaOrFebrileSeizures",
+                    value: v,
+                  })
+                }
+                description="Use caution in children with a history of thrombocytopenia or febrile seizures."
               />
             </div>
           </StepWrapper>
@@ -414,7 +619,7 @@ export default function MMRClient() {
             canProceed={!hasStops}
             validationError={
               hasStops
-                ? "Hard stop contraindications present — cannot proceed to vaccine administration."
+                ? "Hard stop contraindications present: cannot proceed to vaccine administration."
                 : null
             }
             isBlocked={hasStops}
@@ -428,7 +633,7 @@ export default function MMRClient() {
             {hasStops && (
               <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded">
                 <p className="text-sm font-semibold text-red-700 mb-2">
-                  Hard Stop — Cannot Vaccinate
+                  Hard Stop: Cannot Vaccinate
                 </p>
                 <p className="text-sm text-red-600">
                   Based on the identified contraindications, MMR vaccination cannot be
@@ -471,6 +676,30 @@ export default function MMRClient() {
                 required
               />
 
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-900">
+                <p className="font-semibold">Dose: 0.5 mL by subcutaneous injection, preferably in the upper arm or thigh.</p>
+                <p className="text-xs mt-1">
+                  Two doses at least 4 weeks apart (at least 3 months apart where both doses are given under 18 months of age). Doses given before the first birthday do not count towards the course.
+                </p>
+              </div>
+
+              <SelectInput
+                label="Dose number"
+                value={state.vaccineAdmin.doseNumber}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_VACCINE_ADMIN",
+                    field: "doseNumber",
+                    value: v,
+                  })
+                }
+                options={[
+                  { value: "1", label: "Dose 1 of 2" },
+                  { value: "2", label: "Dose 2 of 2" },
+                ]}
+                required
+              />
+
               <TextInput
                 label="Vaccination date"
                 value={state.vaccineAdmin.vaccinationDate}
@@ -485,8 +714,40 @@ export default function MMRClient() {
                 required
               />
 
+              {state.vaccineAdmin.doseNumber === "2" && (
+                <TextInput
+                  label="Date of first dose"
+                  value={state.vaccineAdmin.previousDoseDate}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_VACCINE_ADMIN",
+                      field: "previousDoseDate",
+                      value: v,
+                    })
+                  }
+                  type="date"
+                  required
+                />
+              )}
+
+              {state.vaccineAdmin.doseNumber === "1" && (
+                <TextInput
+                  label="Date the next dose is due"
+                  value={state.vaccineAdmin.nextDoseDue}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_VACCINE_ADMIN",
+                      field: "nextDoseDue",
+                      value: v,
+                    })
+                  }
+                  type="date"
+                  required
+                />
+              )}
+
               <TextInput
-                label="Injection site"
+                label="Injection site (anatomical site)"
                 value={state.vaccineAdmin.injectionSite}
                 onChange={(v) =>
                   dispatch({
@@ -495,12 +756,12 @@ export default function MMRClient() {
                     value: v,
                   })
                 }
-                placeholder="e.g. Left deltoid, Right deltoid"
+                placeholder="e.g. Left upper arm, right anterolateral thigh"
                 required
               />
 
               <TextInput
-                label="Lot/Batch number"
+                label="Batch number"
                 value={state.vaccineAdmin.lotNumber}
                 onChange={(v) =>
                   dispatch({
@@ -509,7 +770,8 @@ export default function MMRClient() {
                     value: v,
                   })
                 }
-                placeholder="Vaccine lot number"
+                placeholder="Vaccine batch number"
+                required
               />
 
               <TextInput
@@ -612,14 +874,102 @@ export default function MMRClient() {
               <Checkbox
                 label="Pregnancy avoidance advice given"
                 checked={state.postVaccine.pregnancyAdviceGiven}
-                onChange={(v) =>
+                onChange={(v) => {
                   dispatch({
                     type: "UPDATE_POST_VACCINE",
                     field: "pregnancyAdviceGiven",
                     value: v,
+                  });
+                  dispatch({
+                    type: "UPDATE_COUNSELLING",
+                    field: "pregnancyAvoidanceAdvice",
+                    value: v,
+                  });
+                }}
+                description="Avoid pregnancy for 1 month after vaccination."
+              />
+
+              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide pt-2">Counselling and follow-up (PGD v004)</p>
+
+              <Checkbox
+                label="Common side effects explained and when to seek further medical advice"
+                checked={state.counselling.sideEffectsExplained}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_COUNSELLING",
+                    field: "sideEffectsExplained",
+                    value: v,
                   })
                 }
-                description="Avoid pregnancy for 1 month after vaccination."
+                description="Fever, rash (5 to 10 days after), irritability, swelling or pain at the injection site, mild parotid swelling. Rare: febrile convulsions, thrombocytopenia, allergic reactions. Seek medical advice if symptoms worsen rapidly or significantly, do not improve in 3 to 4 weeks, or they become systemically very unwell."
+                required
+              />
+
+              <Checkbox
+                label="Common reactions explained (fever, rash)"
+                checked={state.counselling.commonReactionsAdvice}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_COUNSELLING",
+                    field: "commonReactionsAdvice",
+                    value: v,
+                  })
+                }
+              />
+
+              <Checkbox
+                label="Transient joint pain may occur (more common in adult women)"
+                checked={state.counselling.jointPainAdvice}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_COUNSELLING",
+                    field: "jointPainAdvice",
+                    value: v,
+                  })
+                }
+              />
+
+              <Checkbox
+                label="Patient information leaflet (PIL) supplied"
+                checked={state.counselling.pilSupplied}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_COUNSELLING",
+                    field: "pilSupplied",
+                    value: v,
+                  })
+                }
+                required
+              />
+
+              <Checkbox
+                label="Told when the next dose is due"
+                checked={state.counselling.reviewScheduleAdvice}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_COUNSELLING",
+                    field: "reviewScheduleAdvice",
+                    value: v,
+                  })
+                }
+                description={
+                  state.vaccineAdmin.doseNumber === "1"
+                    ? `Second dose due ${state.vaccineAdmin.nextDoseDue || "(date not recorded)"}: at least 4 weeks after this dose, or 3 months where both doses are given under 18 months of age.`
+                    : "Course complete after dose 2."
+                }
+                required={state.vaccineAdmin.doseNumber === "1"}
+              />
+
+              <Checkbox
+                label="MMR is not linked to autism"
+                checked={state.counselling.autismMythDebunked}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_COUNSELLING",
+                    field: "autismMythDebunked",
+                    value: v,
+                  })
+                }
               />
             </div>
           </StepWrapper>
@@ -765,10 +1115,33 @@ function MMRSummaryReport({
       <Row label="NHS Number" value={state.patient.nhsNumber} />
       <Row label="GP" value={state.patient.gpName} />
 
+      {state.patient.age !== null && state.patient.age < 16 && (
+        <>
+          <SectionHeader>Consent (under 16)</SectionHeader>
+          <Row
+            label="Consent given by"
+            value={
+              state.consentBasis.basis === "parental"
+                ? `Person with parental responsibility: ${state.consentBasis.parentName} (${state.consentBasis.parentRelationship})`
+                : state.consentBasis.basis === "gillick"
+                  ? "Young person, assessed as Gillick competent"
+                  : "Not recorded"
+            }
+          />
+          {state.consentBasis.basis === "gillick" && (
+            <Row label="Gillick assessment basis" value={state.consentBasis.gillickBasis || "Not recorded"} />
+          )}
+        </>
+      )}
+
       <SectionHeader>Eligibility</SectionHeader>
       <Row
         label="Born after 1970"
         value={state.eligibility.bornAfter1970 ? "Yes" : "No"}
+      />
+      <Row
+        label="No documented 2 doses"
+        value={state.eligibility.noPriorTwoDoses ? "Yes" : "No"}
       />
       <Row
         label="Healthcare worker"
@@ -778,32 +1151,89 @@ function MMRSummaryReport({
         label="Travel to endemic area"
         value={state.eligibility.travelToEndemicArea ? "Yes" : "No"}
       />
+      <Row
+        label="Protection otherwise required"
+        value={state.eligibility.protectionOtherwiseRequired ? "Yes" : "No"}
+      />
+      {state.patient.age !== null && state.patient.age < 18 && (
+        <Row
+          label="Told NHS vaccination is free from GP"
+          value={state.eligibility.nhsFreeOfferTold ? "Yes, recorded" : "No"}
+        />
+      )}
 
       <SectionHeader>Medical History &amp; Contraindications</SectionHeader>
       <Row
-        label="Pregnancy"
+        label="Pregnant or planning pregnancy"
         value={state.medicalHistory.pregnancy ? "Yes" : "No"}
       />
       <Row
-        label="Immunosuppressed"
+        label="Immunocompromised / immunosuppressive therapy"
         value={state.medicalHistory.immunosuppressed ? "Yes" : "No"}
       />
       <Row
-        label="Anaphylaxis to components"
+        label="Haematological or lymphatic malignancy"
+        value={state.medicalHistory.haematologicalMalignancy ? "Yes" : "No"}
+      />
+      <Row
+        label="Family history of immunodeficiency"
+        value={state.medicalHistory.familyImmunodeficiency ? "Yes" : "No"}
+      />
+      <Row
+        label="Active untreated TB"
+        value={state.medicalHistory.activeUntreatedTB ? "Yes" : "No"}
+      />
+      <Row
+        label="Hypersensitivity to components / previous MMR anaphylaxis"
         value={
           state.medicalHistory.anaphylaxisNeomycin ||
           state.medicalHistory.anaphylaxisGelatin ||
-          state.medicalHistory.anaphylaxisEgg
+          state.medicalHistory.anaphylaxisEgg ||
+          state.medicalHistory.hypersensitivityOtherComponent ||
+          state.medicalHistory.anaphylaxisPreviousMMR
             ? "Yes"
             : "No"
         }
       />
+      <Row
+        label="Yellow fever or varicella vaccine in last 4 weeks"
+        value={state.medicalHistory.liveVaccineLast4Weeks ? "Yes" : "No"}
+      />
+      <Row
+        label="Acute febrile illness"
+        value={state.medicalHistory.severeFebrilIllness ? "Yes" : "No"}
+      />
+      <Row
+        label="Blood products / immunoglobulin in last 3 months"
+        value={
+          state.medicalHistory.recentBloodProducts
+            ? state.medicalHistory.bloodProductsAction === "deferred"
+              ? "Yes: deferred"
+              : state.medicalHistory.bloodProductsAction === "given-repeat-3-months"
+                ? "Yes: given, repeat after 3 months"
+                : "Yes: action not recorded"
+            : "No"
+        }
+      />
+      <Row
+        label="Thrombocytopenia or febrile seizures"
+        value={state.medicalHistory.thrombocytopeniaOrFebrileSeizures ? "Yes" : "No"}
+      />
 
       <SectionHeader>Vaccine Administration</SectionHeader>
       <Row label="Vaccine" value={state.vaccineAdmin.vaccine} />
+      <Row label="Dose and route" value="0.5 mL subcutaneous injection" />
+      <Row label="Dose number" value={state.vaccineAdmin.doseNumber ? `${state.vaccineAdmin.doseNumber} of 2` : ""} />
       <Row label="Date" value={state.vaccineAdmin.vaccinationDate} />
+      {state.vaccineAdmin.doseNumber === "2" && (
+        <Row label="Date of first dose" value={state.vaccineAdmin.previousDoseDate} />
+      )}
+      {state.vaccineAdmin.doseNumber === "1" && (
+        <Row label="Next dose due" value={state.vaccineAdmin.nextDoseDue} />
+      )}
       <Row label="Injection site" value={state.vaccineAdmin.injectionSite} />
-      <Row label="Lot number" value={state.vaccineAdmin.lotNumber} />
+      <Row label="Batch number" value={state.vaccineAdmin.lotNumber} />
+      <Row label="Administered by" value={state.vaccineAdmin.administeredBy} />
 
       <SectionHeader>Clinical Alerts</SectionHeader>
       <AlertSummary alerts={state.alerts} />
@@ -811,13 +1241,19 @@ function MMRSummaryReport({
       <SectionHeader>Counselling Provided</SectionHeader>
       <CounsellingGrid
         items={[
+          ["Side effects and when to seek further medical advice", state.counselling.sideEffectsExplained],
           ["Common reactions explained (fever, rash)", state.counselling.commonReactionsAdvice],
           ["Pregnancy avoidance (1 month)", state.counselling.pregnancyAvoidanceAdvice],
           ["Joint pain may occur", state.counselling.jointPainAdvice],
+          ["Patient information leaflet supplied", state.counselling.pilSupplied],
+          ["Told when the next dose is due", state.counselling.reviewScheduleAdvice],
           ["Not linked to autism", state.counselling.autismMythDebunked],
-          ["Side effects explained", state.counselling.sideEffectsExplained],
         ]}
       />
+
+      <p className="text-[10px] text-gray-500">
+        Patient Group Direction for MMRVaxPRO or Priorix (MMR), version 004, issued 11 September 2026.
+      </p>
 
       <PharmacistDeclaration
         pgdName="MMR Top-up"

@@ -15,9 +15,11 @@ import {
   NumberInput,
 } from "../shared/components/FormInputs";
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
+import { calculateAge } from "../shared/types";
 import {
   createInitialConsultationState,
   STEP_LABELS,
+  PGD_VERSION_LINE,
   type GenitalWartsConsultationState,
 } from "./lib/genital-warts-types";
 import {
@@ -159,10 +161,19 @@ export function GenitalWartsClient() {
         {currentStep === 0 && (
           <PatientDetailsStep
             patient={state.patient}
+            requireAdult
             onChange={(field, value) =>
               setState((prev) => ({
                 ...prev,
-                patient: { ...prev.patient, [field]: value },
+                patient: {
+                  ...prev.patient,
+                  [field]: value,
+                  // Age gates both PGDs (18 and over); it must be derived here
+                  // or the under-18 stop never fires.
+                  ...(field === "dateOfBirth"
+                    ? { age: calculateAge(typeof value === "string" ? value : "") }
+                    : {}),
+                },
               }))
             }
           />
@@ -210,6 +221,13 @@ export function GenitalWartsClient() {
               onChange={(v) => updateAssessment("keratinised", v)}
               description="Points towards imiquimod rather than podophyllotoxin."
             />
+            <Checkbox
+              label="Patient is able to identify the warts and apply treatment to the warts only, not healthy skin"
+              checked={state.assessment.ableToSelfApply}
+              onChange={(v) => updateAssessment("ableToSelfApply", v)}
+              description="Inclusion criterion for patient-applied treatment under both PGDs."
+              required
+            />
 
             <div className="grid sm:grid-cols-2 gap-4">
               <NumberInput
@@ -220,11 +238,11 @@ export function GenitalWartsClient() {
                 required
               />
               <NumberInput
-                label="Total treatment area"
+                label="Total treatment area (podophyllotoxin: up to and including 4 cm2)"
                 value={state.assessment.treatmentAreaCm2}
                 onChange={(v) => updateAssessment("treatmentAreaCm2", v)}
                 min={0}
-                unit="cm²"
+                unit="cm2"
                 required
               />
             </div>
@@ -394,12 +412,21 @@ export function GenitalWartsClient() {
             )}
 
             <TextInput
+              label="Brand supplied"
+              value={state.treatment.brand}
+              onChange={(v) => updateTreatment("brand", v)}
+              placeholder={isPodo ? "e.g. Warticon, Condyline" : "e.g. Aldara"}
+              required
+            />
+
+            <TextInput
               label="Quantity supplied"
               value={state.treatment.quantitySupplied}
               onChange={(v) => updateTreatment("quantitySupplied", v)}
               placeholder={
                 isPodo ? "e.g. 1 x 15 mL bottle" : "e.g. 12 sachets"
               }
+              required
             />
 
             <div className="grid sm:grid-cols-2 gap-4">
@@ -462,10 +489,22 @@ export function GenitalWartsClient() {
               }
             />
             <Checkbox
-              label="Consistent condom use counselled, even once the warts are treated"
+              label={
+                isPodo
+                  ? "Consistent condom use counselled at other times, even once the warts are treated, to reduce transmission"
+                  : "Consistent condom use counselled at other times (when no cream is on the skin), even once the warts are treated"
+              }
               checked={state.counselling.condomsCounselled}
               onChange={(v) => updateCounselling("condomsCounselled", v)}
             />
+            {state.treatment.agent === "imiquimod" && (
+              <Checkbox
+                label="Imiquimod weakens condoms and diaphragms: they cannot be relied on while cream is on the skin. Wash the cream off before sexual activity"
+                checked={state.counselling.condomWeakeningExplained}
+                onChange={(v) => updateCounselling("condomWeakeningExplained", v)}
+                required
+              />
+            )}
             <Checkbox
               label="Partner notification discussed: partners may need screening or treatment"
               checked={state.counselling.partnerNotificationDiscussed}
@@ -498,6 +537,16 @@ export function GenitalWartsClient() {
               label="Patient information leaflet supplied"
               checked={state.counselling.pilSupplied}
               onChange={(v) => updateCounselling("pilSupplied", v)}
+            />
+            <Checkbox
+              label="Safety netting: seek advice if warts worsen, spread significantly or do not improve after the treatment cycles; report severe local reaction, excessive pain, bleeding, signs of infection or systemic symptoms (fever, severe headache)"
+              checked={state.counselling.safetyNettingGiven}
+              onChange={(v) => updateCounselling("safetyNettingGiven", v)}
+            />
+            <Checkbox
+              label="Attend the follow-up appointment to assess response; regular sexual health screening recommended; if pregnant, inform the healthcare provider (treatment deferred until after pregnancy)"
+              checked={state.counselling.followUpAndScreeningAdvised}
+              onChange={(v) => updateCounselling("followUpAndScreeningAdvised", v)}
             />
 
             {isPodo && (
@@ -565,6 +614,7 @@ export function GenitalWartsClient() {
                 : "Podophyllotoxin supplied."}{" "}
               Review booked for {state.treatment.reviewDate || "a date to be arranged"}.
             </p>
+            <p className="text-xs text-green-800 mt-1">Supplied under the {PGD_VERSION_LINE}.</p>
             {schedule && (
               <p className="text-xs text-green-800 mt-2">{schedule.review}</p>
             )}

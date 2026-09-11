@@ -9,7 +9,7 @@ export function getAllAlerts(state: MySimbaConsultationState): ClinicalAlert[] {
       severity: "stop",
       code: "MYSIMBA_BMI",
       message: "BMI does not meet eligibility",
-      detail: "BMI must be &gt;30 or &gt;27 with comorbidity",
+      detail: "BMI must be 30 or more, or 27 or more with at least one weight-related comorbidity",
     });
   }
 
@@ -35,8 +35,8 @@ export function getAllAlerts(state: MySimbaConsultationState): ClinicalAlert[] {
     alerts.push({
       severity: "stop",
       code: "MYSIMBA_OPIOID",
-      message: "Current opioid use or &lt;7-10 days since opioid",
-      detail: "Stop opioids 7-10 days before Mysimba start due to seizure risk",
+      message: "Current opioid use or dependence, or within 7 to 10 days of opioid discontinuation",
+      detail: "Do not use within 7 to 10 days of opioid discontinuation",
     });
   }
 

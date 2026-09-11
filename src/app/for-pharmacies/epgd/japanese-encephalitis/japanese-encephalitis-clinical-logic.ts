@@ -4,78 +4,212 @@ import {
   JapaneseEncephalitisContraindications,
 } from './japanese-encephalitis-types';
 
+/** PGD strapline shown wherever the tool cites its authority. */
+export const JE_PGD_VERSION = 'Japanese Encephalitis Vaccine (Ixiaro) PGD v005, issued 11 September 2026';
+
+/** Whole months between the date of birth and today. Null when the date is missing or invalid. */
+export function calculateAgeInMonths(dob: string): number | null {
+  if (!dob) return null;
+  const birth = new Date(dob);
+  if (isNaN(birth.getTime())) return null;
+  const today = new Date();
+  let months = (today.getFullYear() - birth.getFullYear()) * 12 + (today.getMonth() - birth.getMonth());
+  if (today.getDate() < birth.getDate()) months--;
+  return months;
+}
+
+/** Dose volume per the PGD: 0.25 mL from 2 months to under 3 years, 0.5 mL from 3 years. */
+export function getDoseVolume(ageInMonths: number | null): string {
+  if (ageInMonths === null) return '';
+  return ageInMonths < 36 ? '0.25 mL' : '0.5 mL';
+}
+
+/** The day 0 and day 7 rapid course is licensed only for adults aged 18 to 64. */
+export function isRapidScheduleOffLabel(ageYears: number | null): boolean {
+  if (ageYears === null) return false;
+  return ageYears < 18 || ageYears >= 65;
+}
+
 export function evaluateJapaneseEncephalitisContraindications(
   screening: JapaneseEncephalitisScreening,
-  patientAge: number
+  ageInMonths: number | null,
+  ageYears: number | null
 ): { contraindications: JapaneseEncephalitisContraindications; alerts: ClinicalAlert[] } {
   const alerts: ClinicalAlert[] = [];
   const contraindications: JapaneseEncephalitisContraindications = {
     severeFebrileIllness: false,
     severeAllergy: false,
-    ageAppropriate: patientAge >= 2 / 12, // 2 months
+    hypersensitivityAfterFirstDose: false,
+    pregnancy: false,
+    lowRiskItinerary: false,
+    ageAppropriate: ageInMonths !== null && ageInMonths >= 2,
   };
 
-  // Hard stop: Severe febrile illness
+  // Exclusion: under 2 months of age
+  if (!contraindications.ageAppropriate) {
+    alerts.push({
+      severity: 'stop',
+      code: 'AGE_UNDER_2_MONTHS_JE',
+      message: 'Under 2 months of age',
+      detail: 'Ixiaro is licensed from 2 months of age. Do not vaccinate under this PGD.',
+    });
+  }
+
+  // Exclusion: acute severe febrile illness (postpone until recovered)
   if (screening.severeFebrileIllness || (screening.temperature !== null && screening.temperature >= 39)) {
     contraindications.severeFebrileIllness = true;
     alerts.push({
       severity: 'stop',
       code: 'SEVERE_FEBRILE_ILLNESS_JE',
-      message: 'Severe febrile illness',
-      detail: `Patient temperature is ${screening.temperature}°C or has severe febrile illness. Defer vaccination until acute illness resolves.`,
+      message: 'Acute severe febrile illness',
+      detail: `Temperature recorded ${screening.temperature ?? 'not recorded'} C. Postpone vaccination until recovered.`,
     });
   }
 
-  // Red flag: Pregnancy
-  if (screening.pregnant) {
+  // Exclusion: confirmed anaphylactic or serious systemic reaction to a previous dose or any component
+  if (screening.anaphylaxisToVaccineOrComponent) {
+    contraindications.severeAllergy = true;
     alerts.push({
-      severity: 'red-flag',
+      severity: 'stop',
+      code: 'ANAPHYLAXIS_JE',
+      message: 'Confirmed anaphylactic or serious systemic reaction to Ixiaro or a component',
+      detail:
+        'Components include the residues protamine sulphate, formaldehyde, bovine serum albumin, host cell DNA and protein, and sodium metabisulphite. Do not vaccinate; refer.',
+    });
+  }
+
+  // Exclusion: hypersensitivity reaction following the first dose
+  if (screening.hypersensitivityAfterFirstDose) {
+    contraindications.hypersensitivityAfterFirstDose = true;
+    alerts.push({
+      severity: 'stop',
+      code: 'HYPERSENSITIVITY_FIRST_DOSE_JE',
+      message: 'Hypersensitivity reaction following the first dose',
+      detail: 'Do not give the second dose. Refer.',
+    });
+  }
+
+  // Exclusion: pregnancy (refer for individual assessment rather than vaccinating under this PGD)
+  if (screening.pregnant) {
+    contraindications.pregnancy = true;
+    alerts.push({
+      severity: 'stop',
       code: 'PREGNANCY_JE',
       message: 'Patient is pregnant',
       detail:
-        'Japanese encephalitis vaccination in pregnancy is not recommended unless significant risk. Consult GP for risk-benefit assessment.',
+        'Pregnancy is an exclusion unless the risk of Japanese encephalitis is high and cannot be avoided. Refer for individual assessment rather than vaccinating under this PGD.',
     });
   }
 
-  // Red flag: Immunosuppression
+  // Exclusion: short stay of less than one month confined to urban areas with a low risk itinerary
+  if (screening.riskCategory === 'not-recommended-urban-short-stay') {
+    contraindications.lowRiskItinerary = true;
+    alerts.push({
+      severity: 'stop',
+      code: 'LOW_RISK_ITINERARY_JE',
+      message: 'Vaccination not recommended for this itinerary',
+      detail:
+        'A short stay of less than one month confined to urban areas with a low risk itinerary. Explain the reasoning and give bite avoidance advice rather than vaccinating.',
+    });
+  }
+
+  // Caution: breastfeeding
+  if (screening.breastfeeding) {
+    alerts.push({
+      severity: 'caution',
+      code: 'BREASTFEEDING_JE',
+      message: 'Patient is breastfeeding',
+      detail:
+        'Limited data. Avoid as a precaution unless the risk of exposure is significant, and record the risk assessment.',
+    });
+  }
+
+  // Caution: immunosuppression
   if (screening.immunosuppressed) {
     alerts.push({
-      severity: 'red-flag',
+      severity: 'caution',
       code: 'IMMUNOSUPPRESSED_JE',
       message: 'Patient is immunosuppressed',
-      detail: `Reason: ${screening.immunosuppressedDetails}. Vaccine response may be reduced. Consult GP for guidance and consider serological testing post-vaccination.`,
+      detail: `Reason: ${screening.immunosuppressedDetails}. An adequate immune response may not be achieved. Counsel accordingly and consider referral for serology where the risk is high.`,
     });
   }
 
-  // Caution: Rural/high-risk areas during monsoon
+  // Caution: bleeding disorders, thrombocytopenia or anticoagulation
+  if (screening.bleedingDisorder) {
+    alerts.push({
+      severity: 'caution',
+      code: 'BLEEDING_DISORDER_JE',
+      message: 'Bleeding disorder, thrombocytopenia or anticoagulation',
+      detail: 'Give by deep subcutaneous injection rather than intramuscularly. Select the deep subcutaneous route on the administration step.',
+    });
+  }
+
+  // Caution: age over 65
+  if (ageYears !== null && ageYears > 65) {
+    alerts.push({
+      severity: 'caution',
+      code: 'AGE_OVER_65_JE',
+      message: 'Age over 65',
+      detail:
+        'Seroconversion is lower, around 65% compared with over 96% in adults under 50, and titres are lower. Counsel that protection may be less reliable and consider the booster at 12 months.',
+    });
+  }
+
+  // Caution: time before travel
+  if (screening.departureDate) {
+    const departure = new Date(screening.departureDate);
+    const today = new Date();
+    if (!isNaN(departure.getTime())) {
+      const daysToDeparture = Math.floor((departure.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      if (daysToDeparture < 14) {
+        alerts.push({
+          severity: 'caution',
+          code: 'INSUFFICIENT_TIME_JE',
+          message: 'Insufficient time to complete the primary course before travel',
+          detail:
+            'Even the rapid course (day 0 and day 7) cannot be completed at least one week before departure. Risk assess; the second dose may still be given before exposure and the course should be completed rather than abandoned.',
+        });
+      } else if (daysToDeparture < 35) {
+        alerts.push({
+          severity: 'caution',
+          code: 'RAPID_SCHEDULE_NEEDED_JE',
+          message: 'Conventional course cannot be completed one week before travel',
+          detail:
+            'Consider the rapid course (day 0 and day 7). It is licensed only for adults aged 18 to 64; in children and in adults aged 65 and over it is off-label and requires explicit documented consent.',
+        });
+      }
+    }
+  }
+
+  // Caution: wet or monsoon season travel
   if (screening.seasonOfTravel.toLowerCase().includes('monsoon') || screening.seasonOfTravel.toLowerCase().includes('wet')) {
     alerts.push({
       severity: 'caution',
       code: 'MONSOON_SEASON_JE',
       message: 'Travel during monsoon/wet season',
       detail:
-        'Monsoon and wet season have increased mosquito populations. Outdoor activities in rice paddies particularly increase transmission risk.',
+        'The highest transmission rates occur during and just after wet seasons when mosquitoes are most active. Outdoor activities in rice paddies particularly increase transmission risk.',
     });
   }
 
-  // Caution: Outdoor/field activities
+  // Caution: outdoor or field activities
   if (screening.outdoorActivities) {
     alerts.push({
       severity: 'caution',
       code: 'OUTDOOR_ACTIVITIES_JE',
       message: 'Planned outdoor activities',
-      detail: `Activities: ${screening.activitiesDetails}. Ensure strict mosquito bite prevention measures, especially at dusk and dawn.`,
+      detail: `Activities: ${screening.activitiesDetails}. Ensure strict mosquito bite prevention measures, especially between dusk and dawn.`,
     });
   }
 
-  // Red flag: Continued risk - booster needed
+  // Continued risk: booster timing
   if (screening.continuedRisk) {
     alerts.push({
       severity: 'red-flag',
       code: 'CONTINUED_RISK_JE',
-      message: 'Continued risk - booster needed',
+      message: 'Continued risk: booster needed',
       detail:
-        'Patient will have ongoing exposure risk. Booster at 12-24 months is recommended to maintain immunity.',
+        'First booster 12 to 24 months after the primary course and before re-exposure. Those at continuous risk, such as long-term residents and laboratory staff, should have it at 12 months.',
     });
   }
 
@@ -85,17 +219,24 @@ export function evaluateJapaneseEncephalitisContraindications(
 export function hasHardStopContraindications(
   contraindications: JapaneseEncephalitisContraindications
 ): boolean {
-  return contraindications.severeFebrileIllness;
+  return (
+    contraindications.severeFebrileIllness ||
+    contraindications.severeAllergy ||
+    contraindications.hypersensitivityAfterFirstDose ||
+    contraindications.pregnancy ||
+    contraindications.lowRiskItinerary ||
+    !contraindications.ageAppropriate
+  );
 }
 
 export function getObservationPeriodRecommendation(
   screening: JapaneseEncephalitisScreening
 ): '15-min' | '30-min' {
-  // Extend observation for first dose in adults (30 minutes)
+  // The PGD minimum is 15 minutes seated; the tool keeps its stricter 30 minute default.
   if (screening.immunosuppressed) {
     return '30-min';
   }
-  return '30-min'; // Standard for first dose is 30 minutes
+  return '30-min';
 }
 
 export function calculateNextDoseDate(currentDate: string, schedule: 'standard' | 'accelerated'): string {

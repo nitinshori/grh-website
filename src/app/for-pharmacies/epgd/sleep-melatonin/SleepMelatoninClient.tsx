@@ -3,7 +3,7 @@
 import { useReducer, useMemo, useState, useCallback, useEffect } from "react";
 import type { SleepMelatoninConsultationState, SleepMelatoninAction } from "./lib/sleep-melatonin-types";
 import { STEP_LABELS, TOTAL_STEPS, createInitialSleepMelatoninState } from "./lib/sleep-melatonin-types";
-import { getAllAlerts, hasHardStops } from "./lib/sleep-melatonin-clinical-logic";
+import { getAllAlerts, hasHardStops, hasSecondaryCause } from "./lib/sleep-melatonin-clinical-logic";
 import { validateStep } from "./lib/sleep-melatonin-validation";
 import { calculateAge } from "../shared/types";
 import { ProgressBar } from "../shared/components/ProgressBar";
@@ -13,7 +13,7 @@ import { AlertBanner } from "../shared/components/AlertBanner";
 import { PatientDetailsStep } from "../shared/steps/PatientDetailsStep";
 import { ConsentStep } from "../shared/steps/ConsentStep";
 import { SleepMelatoninSummaryReport } from "./components/SleepMelatoninSummaryReport";
-import { TextInput, Checkbox, SelectInput, TextArea } from "../shared/components/FormInputs";
+import { TextInput, Checkbox, SelectInput, TextArea, NumberInput } from "../shared/components/FormInputs";
 
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 function reducer(state: SleepMelatoninConsultationState, action: SleepMelatoninAction): SleepMelatoninConsultationState {
@@ -29,12 +29,17 @@ function reducer(state: SleepMelatoninConsultationState, action: SleepMelatoninA
     case "UPDATE_ASSESSMENT":
       newState.assessment = { ...newState.assessment, [action.field]: action.value };
       break;
+    case "UPDATE_SECONDARY_CAUSES":
+      newState.secondaryCauses = { ...newState.secondaryCauses, [action.field]: action.value };
+      break;
     case "UPDATE_CONTRAINDICATIONS":
       newState.contraindications = { ...newState.contraindications, [action.field]: action.value };
       if (action.field !== "contraindicated") {
-        const hasCI = newState.contraindications.autoimmuneDiseaseActive || newState.contraindications.hepaticImpairment || newState.contraindications.pregnancy || newState.contraindications.breastfeeding;
-        newState.contraindications.contraindicated = hasCI;
+        newState.contraindications.contraindicated = hasHardStops(newState.contraindications);
       }
+      break;
+    case "UPDATE_PRESCRIPTION":
+      newState.prescription = { ...newState.prescription, [action.field]: action.value };
       break;
     case "UPDATE_COUNSELLING":
       newState.counselling = { ...newState.counselling, [action.field]: action.value };
@@ -65,12 +70,17 @@ export default function SleepMelatoninClient() {
 
   const [validationError, setValidationError] = useState<string | null>(null);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
-  const alerts = useMemo(() => getAllAlerts(state.assessment, state.contraindications), [state.assessment, state.contraindications]);
-  const isBlocked = hasHardStops(state.contraindications);
+  const alerts = useMemo(() => getAllAlerts(state.assessment, state.secondaryCauses, state.contraindications), [state.assessment, state.secondaryCauses, state.contraindications]);
+  const secondaryBlocked = hasSecondaryCause(state.secondaryCauses) || state.assessment.durationOfInsomnia === "less4w";
+  const isBlocked = hasHardStops(state.contraindications) || secondaryBlocked;
 
   const handleNext = useCallback(() => {
+    if (state.currentStep === 2 && secondaryBlocked) {
+      setValidationError("Cannot proceed: a secondary cause is apparent or the insomnia has lasted less than 4 weeks. Refer, do not supply");
+      return;
+    }
     if (state.currentStep === 3 && isBlocked) {
-      setValidationError("Cannot proceed — patient meets exclusion criteria");
+      setValidationError("Cannot proceed: patient meets exclusion criteria");
       return;
     }
     const error = validateStep(state.currentStep, state);
@@ -81,7 +91,7 @@ export default function SleepMelatoninClient() {
     setValidationError(null);
     setCompletedSteps((prev) => new Set([...prev, state.currentStep]));
     dispatch({ type: "SET_STEP", step: Math.min(state.currentStep + 1, TOTAL_STEPS - 1) });
-  }, [state, isBlocked]);
+  }, [state, isBlocked, secondaryBlocked]);
 
   const handlePrev = useCallback(() => {
     setValidationError(null);
@@ -161,7 +171,7 @@ export default function SleepMelatoninClient() {
         onPrev={handlePrev}
         canProceed={canProceed}
         validationError={validationError}
-        isBlocked={state.currentStep === 3 && isBlocked}
+        isBlocked={(state.currentStep === 2 && secondaryBlocked) || (state.currentStep === 3 && isBlocked)}
       >
         {state.currentStep === 0 && (
           <PatientDetailsStep
@@ -177,11 +187,20 @@ export default function SleepMelatoninClient() {
 
         {state.currentStep === 2 && (
           <div className="space-y-4">
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-900">
+              <p className="font-semibold mb-1">Primary insomnia only</p>
+              <p>
+                Circadin is licensed for primary insomnia characterised by poor
+                quality of sleep in patients aged 55 or over, and for nothing
+                else. Insomnia is very often secondary. Take a proper history
+                before supplying; if a cause is apparent, refer instead.
+              </p>
+            </div>
             <Checkbox
-              label="Age 55 years or older"
+              label="Age 55 years or older, confirmed"
               checked={state.assessment.ageConfirmed}
               onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "ageConfirmed", value: v })}
-              description="Confirm patient is aged 55 or above"
+              description="Circadin is licensed only from 55 years. This PGD does not authorise supply below that age on any basis; a patient aged 18 to 54 who needs melatonin is a prescriber decision."
             />
             <Checkbox
               label="Sleep onset difficulty"
@@ -201,90 +220,292 @@ export default function SleepMelatoninClient() {
               onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "durationOfInsomnia", value: v })}
               required
               options={[
-                { value: "less3m", label: "Less than 3 months" },
-                { value: "3-12m", label: "3-12 months" },
+                { value: "less4w", label: "Less than 4 weeks (excluded: sleep hygiene advice and review)" },
+                { value: "4w-3m", label: "4 weeks to 3 months" },
+                { value: "3-12m", label: "3 to 12 months" },
                 { value: "over12m", label: "Over 12 months" },
               ]}
             />
             <Checkbox
-              label="Sleep hygiene measures attempted"
+              label="Poor quality of sleep is affecting daytime functioning"
+              checked={state.assessment.daytimeFunctioningAffected}
+              onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "daytimeFunctioningAffected", value: v })}
+              required
+            />
+            <TextInput
+              label="How the insomnia affects daytime functioning"
+              value={state.assessment.daytimeImpact}
+              onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "daytimeImpact", value: v })}
+              placeholder="e.g. tired and irritable at work, poor concentration"
+            />
+
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg space-y-3">
+              <h4 className="font-semibold text-sm text-red-900">Secondary-cause history (each must be asked and recorded)</h4>
+              <p className="text-xs text-red-800">Where any of these is present the insomnia is likely secondary. Treating it here masks the cause. Refer, do not supply.</p>
+              <Checkbox
+                label="Low mood, loss of interest, anxiety, or any current or suspected mental health condition"
+                checked={state.secondaryCauses.lowMoodOrMentalHealth}
+                onChange={(v) => dispatch({ type: "UPDATE_SECONDARY_CAUSES", field: "lowMoodOrMentalHealth", value: v })}
+                description="Early morning waking with low mood is depression until proved otherwise."
+              />
+              <Checkbox
+                label="Snoring with daytime sleepiness, witnessed apnoeas, or morning headache"
+                checked={state.secondaryCauses.snoringDaytimeSleepiness}
+                onChange={(v) => dispatch({ type: "UPDATE_SECONDARY_CAUSES", field: "snoringDaytimeSleepiness", value: v })}
+                description="Suspect obstructive sleep apnoea and refer. The exclusion most often missed; carries cardiovascular and road-traffic risk."
+              />
+              <Checkbox
+                label="Pain of any cause that wakes the patient or prevents sleep"
+                checked={state.secondaryCauses.painDisturbingSleep}
+                onChange={(v) => dispatch({ type: "UPDATE_SECONDARY_CAUSES", field: "painDisturbingSleep", value: v })}
+              />
+              <Checkbox
+                label="An urge to move the legs at night, or leg discomfort relieved by movement"
+                checked={state.secondaryCauses.restlessLegs}
+                onChange={(v) => dispatch({ type: "UPDATE_SECONDARY_CAUSES", field: "restlessLegs", value: v })}
+                description="Suspect restless legs syndrome."
+              />
+              <Checkbox
+                label="Waking repeatedly to pass urine"
+                checked={state.secondaryCauses.nocturia}
+                onChange={(v) => dispatch({ type: "UPDATE_SECONDARY_CAUSES", field: "nocturia", value: v })}
+                description="Consider prostatic disease, diabetes or heart failure and refer."
+              />
+              <Checkbox
+                label="Shift work, or a sleep pattern driven by work or travel rather than by an inability to sleep"
+                checked={state.secondaryCauses.shiftWork}
+                onChange={(v) => dispatch({ type: "UPDATE_SECONDARY_CAUSES", field: "shiftWork", value: v })}
+              />
+              <Checkbox
+                label="Alcohol used to get to sleep, or any pattern of harmful drinking"
+                checked={state.secondaryCauses.alcoholToSleep}
+                onChange={(v) => dispatch({ type: "UPDATE_SECONDARY_CAUSES", field: "alcoholToSleep", value: v })}
+                description="Alcohol also reduces the effectiveness of Circadin."
+              />
+              <Checkbox
+                label="Caffeine late in the day, or a high total daily intake, not yet addressed"
+                checked={state.secondaryCauses.caffeineNotAddressed}
+                onChange={(v) => dispatch({ type: "UPDATE_SECONDARY_CAUSES", field: "caffeineNotAddressed", value: v })}
+              />
+              <Checkbox
+                label="A medicine that could be causing the insomnia (full medicine list reviewed)"
+                checked={state.secondaryCauses.medicineCausingInsomnia}
+                onChange={(v) => dispatch({ type: "UPDATE_SECONDARY_CAUSES", field: "medicineCausingInsomnia", value: v })}
+                description="For example a corticosteroid, a beta-agonist, an SSRI or SNRI, a stimulant, or a diuretic taken in the evening."
+              />
+              <Checkbox
+                label="History taken covering mood, pain, snoring and daytime sleepiness, restless legs, nocturia, shift work, alcohol, caffeine and the full medicine list; no secondary cause apparent"
+                checked={state.secondaryCauses.historyTaken}
+                onChange={(v) => dispatch({ type: "UPDATE_SECONDARY_CAUSES", field: "historyTaken", value: v })}
+                required
+              />
+            </div>
+
+            <Checkbox
+              label="Sleep hygiene advice given (Appendix 1) and, where not already tried, a period of trying it agreed before or alongside supply"
+              checked={state.assessment.sleepHygieneAdviceGiven}
+              onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "sleepHygieneAdviceGiven", value: v })}
+              required
+              description="Give this whether or not you supply. It has the better long-term evidence."
+            />
+            <Checkbox
+              label="Patient had already tried sleep hygiene measures"
               checked={state.assessment.sleepHygieneAttempted}
               onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "sleepHygieneAttempted", value: v })}
-              description="First-line behavioural interventions"
             />
+            <TextInput
+              label="What the patient had already tried"
+              value={state.assessment.sleepHygieneTried}
+              onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "sleepHygieneTried", value: v })}
+              placeholder="e.g. fixed wake time, no caffeine after midday, no screens in bed"
+            />
+            <Checkbox
+              label="Previous Circadin supply"
+              checked={state.assessment.previousCircadin}
+              onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "previousCircadin", value: v })}
+              description="A previous course under this PGD in the last 6 months, or 13 weeks already completed, is an exclusion (next step)."
+            />
+            {state.assessment.previousCircadin && (
+              <TextInput
+                label="Total weeks of Circadin treatment to date"
+                value={state.assessment.weeksTreatedToDate}
+                onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "weeksTreatedToDate", value: v })}
+                placeholder="e.g. 6"
+                required
+              />
+            )}
+            {secondaryBlocked && <div className="p-4 bg-red-50 border border-red-200 rounded-lg"><p className="text-sm font-semibold text-red-700">Refer, do not supply. Name the possible secondary cause and make the referral concrete. Give the sleep hygiene advice regardless. Document the advice given and the decision reached.</p></div>}
           </div>
         )}
 
         {state.currentStep === 3 && (
           <div className="space-y-4">
             <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-              <h4 className="font-semibold text-sm text-amber-900 mb-3">Check for Exclusion Criteria</h4>
+              <h4 className="font-semibold text-sm text-amber-900 mb-3">Exclusion criteria: refer, do not supply, where any applies</h4>
               <div className="space-y-3">
                 <Checkbox
-                  label="Active autoimmune disease"
-                  checked={state.contraindications.autoimmuneDiseaseActive}
-                  onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "autoimmuneDiseaseActive", value: v })}
-                  description="Absolute contraindication"
+                  label="Known hypersensitivity to melatonin or to any excipient of Circadin"
+                  checked={state.contraindications.hypersensitivity}
+                  onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "hypersensitivity", value: v })}
                 />
                 <Checkbox
-                  label="Hepatic impairment"
+                  label="Hepatic impairment of any degree"
                   checked={state.contraindications.hepaticImpairment}
                   onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "hepaticImpairment", value: v })}
-                  description="Significant liver disease"
+                  description="Not recommended by the SPC: the liver is the primary site of melatonin metabolism."
                 />
                 <Checkbox
-                  label="Pregnancy"
+                  label="Autoimmune disease"
+                  checked={state.contraindications.autoimmuneDiseaseActive}
+                  onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "autoimmuneDiseaseActive", value: v })}
+                  description="Not recommended by the SPC; no clinical data exist in this group."
+                />
+                <Checkbox
+                  label="Pregnancy, or planning pregnancy"
                   checked={state.contraindications.pregnancy}
                   onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "pregnancy", value: v })}
-                  description="Contraindicated in pregnancy"
+                  description="Not recommended by the SPC."
                 />
                 <Checkbox
                   label="Breastfeeding"
                   checked={state.contraindications.breastfeeding}
                   onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "breastfeeding", value: v })}
-                  description="Contraindicated during breastfeeding"
+                  description="Not recommended by the SPC."
+                />
+                <Checkbox
+                  label="Taking fluvoxamine"
+                  checked={state.contraindications.fluvoxamine}
+                  onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "fluvoxamine", value: v })}
+                  description="Avoid: fluvoxamine raises melatonin exposure roughly seventeen-fold."
+                />
+                <Checkbox
+                  label="Currently taking a benzodiazepine, a Z-drug (zopiclone, zolpidem, zaleplon), or any other hypnotic, sedative or treatment for insomnia"
+                  checked={state.contraindications.hypnoticOrSedative}
+                  onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "hypnoticOrSedative", value: v })}
+                  description="Circadin enhances their effect; co-dosing with zolpidem worsened attention, memory and co-ordination."
+                />
+                <Checkbox
+                  label="Taking 5-methoxypsoralen or 8-methoxypsoralen"
+                  checked={state.contraindications.methoxypsoralen}
+                  onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "methoxypsoralen", value: v })}
+                />
+                <Checkbox
+                  label="Rare hereditary galactose intolerance, total lactase deficiency or glucose-galactose malabsorption"
+                  checked={state.contraindications.lactoseIntolerance}
+                  onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "lactoseIntolerance", value: v })}
+                  description="Circadin contains 80mg lactose per tablet."
+                />
+                <Checkbox
+                  label="Renal impairment where the pharmacist is not satisfied it is mild and stable"
+                  checked={state.contraindications.renalImpairmentNotMildStable}
+                  onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "renalImpairmentNotMildStable", value: v })}
+                />
+                <Checkbox
+                  label="A previous course of Circadin supplied under this PGD in the last 6 months, or 13 weeks of treatment already completed"
+                  checked={state.contraindications.previousCourseWithin6Months}
+                  onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "previousCourseWithin6Months", value: v })}
+                  description="Refer for review rather than continuing."
                 />
               </div>
             </div>
-            {isBlocked && <div className="p-4 bg-red-50 border border-red-200 rounded-lg"><p className="text-sm font-semibold text-red-700">Patient meets exclusion criteria. Cannot proceed with supply.</p></div>}
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <h4 className="font-semibold text-sm text-blue-900 mb-3">Cautions: counsel, and consider referral</h4>
+              <div className="space-y-3">
+                <Checkbox
+                  label="Taking cimetidine, oestrogens (including combined contraceptives and HRT), or a quinolone antibiotic"
+                  checked={state.contraindications.cyp1a2Inhibitor}
+                  onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "cyp1a2Inhibitor", value: v })}
+                  description="These raise melatonin levels. Counsel on increased drowsiness and consider referral instead."
+                />
+                <Checkbox
+                  label="Taking carbamazepine or rifampicin, or smokes"
+                  checked={state.contraindications.cyp1a2Inducer}
+                  onChange={(v) => dispatch({ type: "UPDATE_CONTRAINDICATIONS", field: "cyp1a2Inducer", value: v })}
+                  description="These lower melatonin levels and may make the treatment ineffective."
+                />
+              </div>
+              <p className="text-xs text-blue-900 mt-3">Drowsiness and driving: Circadin has a moderate influence on the ability to drive and use machines. Alcohol should not be taken with Circadin. Take after food; swallow whole. Check the current SPC and BNF against the patient&apos;s full medicine list.</p>
+            </div>
+            {isBlocked && <div className="p-4 bg-red-50 border border-red-200 rounded-lg"><p className="text-sm font-semibold text-red-700">Patient meets exclusion criteria. Cannot proceed with supply. Explain why, give the sleep hygiene advice regardless, document the advice given and the decision reached, and inform or refer to the GP as appropriate.</p></div>}
           </div>
         )}
 
         {state.currentStep === 4 && (
-          <div className="space-y-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <h4 className="font-semibold text-sm text-blue-900">Prescription Details</h4>
-            <Row label="Product" value={state.prescription.product} />
-            <Row label="Dose" value={state.prescription.dose} />
-            <Row label="Frequency" value={state.prescription.frequency} />
-            <Row label="Duration" value={state.prescription.duration} />
+          <div className="space-y-4">
+            <div className="space-y-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <h4 className="font-semibold text-sm text-blue-900">Supply details (PGD version 005, 11 September 2026)</h4>
+              <Row label="Product" value={state.prescription.product} />
+              <Row label="Legal category" value="POM" />
+              <Row label="Dose" value={state.prescription.dose} />
+              <Row label="Frequency" value={state.prescription.frequency} />
+              <Row label="Route" value="Oral. Swallow whole with water. Do not crush, chew or halve." />
+              <Row label="Quantity" value="Up to 21 tablets per supply, being three weeks" />
+              <Row label="Maximum treatment" value={state.prescription.duration} />
+              <Row label="Storage" value="Do not store above 25 degrees Celsius. Store in the original package to protect from light." />
+            </div>
+            <NumberInput
+              label="Quantity supplied"
+              value={state.prescription.quantityTablets}
+              onChange={(v) => dispatch({ type: "UPDATE_PRESCRIPTION", field: "quantityTablets", value: v })}
+              min={1}
+              max={21}
+              placeholder="up to 21"
+              unit="tablets"
+              required
+            />
+            <p className="text-xs text-gray-600">13 weeks is the licensed maximum duration and there is no extension under this PGD. A patient still not sleeping at 13 weeks needs review, not a repeat. No further supply under this PGD within 6 months of completing a course.</p>
           </div>
         )}
 
         {state.currentStep === 5 && (
           <div className="space-y-4">
             <Checkbox
-              label="Sleep hygiene reinforced as first-line treatment"
-              checked={state.counselling.sleepHygieneReinforcedFirstLine}
-              onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "sleepHygieneReinforcedFirstLine", value: v })}
-              description="Regular sleep schedule, avoid napping, exercise during day"
+              label="One tablet a day, 1 to 2 hours before bed, after food; swallow whole, do not crush, chew or break"
+              checked={state.counselling.takeAfterFoodSwallowWhole}
+              onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "takeAfterFoodSwallowWhole", value: v })}
+              description="Food is what the licensed dosing is built around; crushing turns a night-long release into a single early peak."
             />
             <Checkbox
-              label="Avoid screens 1-2 hours before bed"
-              checked={state.counselling.avoidScreensAdvised}
-              onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "avoidScreensAdvised", value: v })}
-              description="Blue light can interfere with melatonin production"
+              label="Drowsiness and driving advised"
+              checked={state.counselling.drowsinessDrivingAdvised}
+              onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "drowsinessDrivingAdvised", value: v })}
+              description="Do not drive or use machinery if affected; take particular care the morning after the first few nights. Required record."
             />
             <Checkbox
-              label="Gradual tapering if stopping"
-              checked={state.counselling.taperedStoppingAdvised}
-              onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "taperedStoppingAdvised", value: v })}
-              description="Do not stop abruptly after prolonged use"
+              label="Alcohol advised"
+              checked={state.counselling.alcoholAdvised}
+              onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "alcoholAdvised", value: v })}
+              description="Do not drink alcohol with it; it makes the medicine work less well. Required record."
             />
             <Checkbox
-              label="Not a sedative — promotes natural sleep"
+              label="Not a sleeping tablet in the usual sense: works with the body clock and works gradually"
               checked={state.counselling.notASedativeExplained}
               onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "notASedativeExplained", value: v })}
-              description="Works with body's natural circadian rhythm"
+              description="Expect an improvement in the quality of sleep rather than being knocked out."
+            />
+            <Checkbox
+              label="Sleep hygiene reinforced: the measures matter more than the tablet over time, keep doing them"
+              checked={state.counselling.sleepHygieneReinforcedFirstLine}
+              onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "sleepHygieneReinforcedFirstLine", value: v })}
+              description="Written sleep hygiene advice (Appendix 1) supplied with the patient information leaflet."
+            />
+            <Checkbox
+              label="Avoid screens before bed; bed is for sleep"
+              checked={state.counselling.avoidScreensAdvised}
+              onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "avoidScreensAdvised", value: v })}
+              description="No screens, no work, no television in bed; wind down for an hour before bed."
+            />
+            <Checkbox
+              label="Short course, up to 13 weeks; not a long-term treatment"
+              checked={state.counselling.shortCourse13Weeks}
+              onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "shortCourse13Weeks", value: v })}
+              description="Return unused tablets to a pharmacy."
+            />
+            <Checkbox
+              label="When to see the GP rather than continuing"
+              checked={state.counselling.whenToSeekAdvice}
+              onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "whenToSeekAdvice", value: v })}
+              description="Sleep not improved after 3 weeks; low mood or waking very early; told you snore heavily or stop breathing in your sleep, or sleepy in the day; rash, swelling of the face, lips or tongue, or any reaction (stop the tablets). Routine queries: contact the pharmacy."
             />
           </div>
         )}

@@ -49,10 +49,52 @@ export function CovidBoosterSummaryReport({
       <SectionHeader>Vaccine Eligibility</SectionHeader>
       <div className="space-y-0.5">
         <Row label="Aged 12 or over" value={state.assessment.ageConfirmed ? "Yes" : "No"} />
-        <Row label="Previous COVID-19 Vaccine" value={state.assessment.previousCovidVaccine ? "Yes" : "No"} />
+        <Row
+          label="Previous COVID-19 Vaccine"
+          value={
+            state.assessment.previousCovidVaccine
+              ? `Yes${state.assessment.previousDoseDate ? ` (last dose ${state.assessment.previousDoseDate})` : " (date not known)"}`
+              : "No"
+          }
+        />
         <Row label="Immunosuppressed" value={state.assessment.immunosuppressed ? "Yes" : "No"} />
+        <Row label="Care home resident" value={state.assessment.careHomeResident ? "Yes" : "No"} />
+        <Row
+          label="NHS entitlement"
+          value={
+            state.assessment.nhsStatus === "not-eligible"
+              ? "Does not qualify for NHS vaccination"
+              : state.assessment.nhsStatus === "eligible-prefers-private"
+                ? "Qualifies for NHS vaccination, told of entitlement, prefers private"
+                : "Not recorded"
+          }
+        />
         <Row label="3 months since last dose, or first dose" value={state.assessment.timelinessEligible ? "Yes" : "No"} />
+        {state.assessment.shorterIntervalNationalGuidance && (
+          <Row label="Shorter interval" value="Under 3 months: shorter interval specifically advised in national guidance (see notes)" />
+        )}
       </div>
+
+      {state.patient.age !== null && state.patient.age < 16 && (
+        <>
+          <SectionHeader>Consent (under 16)</SectionHeader>
+          <div className="space-y-0.5">
+            <Row
+              label="Consent given by"
+              value={
+                state.supply.consentBasis === "parental"
+                  ? `Person with parental responsibility: ${state.supply.parentName} (${state.supply.parentRelationship})`
+                  : state.supply.consentBasis === "gillick"
+                    ? "Young person, assessed as Gillick competent"
+                    : "Not recorded"
+              }
+            />
+            {state.supply.consentBasis === "gillick" && (
+              <Row label="Gillick assessment basis" value={state.supply.gillickBasis || "Not recorded"} />
+            )}
+          </div>
+        </>
+      )}
 
       <SectionHeader>Vaccine Administered</SectionHeader>
       <div className="space-y-0.5">
@@ -85,6 +127,11 @@ export function CovidBoosterSummaryReport({
           }
         />
         <Row label="Time administered" value={state.supply.administrationTime || "Not recorded"} />
+        <Row label="Date administered" value={state.summary.consultationDate} />
+        <Row label="Route" value="Intramuscular, deltoid" />
+        {state.supply.coAdministeredVaccine && (
+          <Row label="Other vaccine given at this visit" value={state.supply.coAdministeredVaccine} />
+        )}
         {state.supply.vaccineProduct === "comirnaty-lp81" && (
           <Row
             label="Previous formulation explained"
@@ -119,6 +166,24 @@ export function CovidBoosterSummaryReport({
           </span>
           <span>No anaphylaxis to PEG or polysorbate</span>
         </div>
+        <div className="grid sm:grid-cols-2 gap-x-6 gap-y-0.5 mt-2">
+          <Row label="Acute severe febrile illness" value={state.assessment.severeFebrilIllness ? "Yes (postponed)" : "No"} />
+          <Row label="Current COVID-19 infection" value={state.assessment.currentCovidInfection ? "Yes (deferred)" : "No"} />
+          <Row label="Myocarditis or pericarditis after mRNA dose" value={state.assessment.myocarditisHistory ? "Yes (excluded)" : "No"} />
+          <Row
+            label="Bleeding disorder"
+            value={
+              state.assessment.bleedingDisorder
+                ? state.assessment.bleedingDisorderAssessedSafe
+                  ? "Yes, IM assessed as safe by a clinician"
+                  : "Yes, not assessed (excluded)"
+                : "No"
+            }
+          />
+          <Row label="Anticoagulants" value={state.assessment.onAnticoagulants ? "Yes (caution)" : "No"} />
+          <Row label="Pregnant" value={state.assessment.pregnant ? "Yes (caution)" : "No"} />
+          <Row label="Capillary leak syndrome history" value={state.assessment.capillaryLeakHistory ? "Yes (caution)" : "No"} />
+        </div>
       </div>
 
       <SectionHeader>Counselling Provided</SectionHeader>
@@ -127,8 +192,9 @@ export function CovidBoosterSummaryReport({
           ["Explained booster rationale (variant coverage)", state.counselling.explainedBoosterRationale],
           ["Discussed common reactions (arm soreness, fever)", state.counselling.discussedCommonReactions],
           ["Explained 15-minute observation requirement", state.counselling.explainedObservationPeriod],
-          ["Discussed serious reactions and reporting", state.counselling.discussedSeriousReactions],
-          ["Provided written information", state.counselling.providedWrittenInfo],
+          ["Cardiac warning signs and serious reactions: seek urgent medical attention", state.counselling.discussedSeriousReactions],
+          ["Yellow Card self-reporting explained", state.counselling.explainedYellowCard],
+          ["Leaflet for the product and variant given, plus written record", state.counselling.providedWrittenInfo],
         ]}
       />
 
@@ -147,6 +213,10 @@ export function CovidBoosterSummaryReport({
       <SectionHeader>Clinical Notes</SectionHeader>
       <p className="text-xs text-gray-700 whitespace-pre-wrap">
         {state.summary.clinicalNotes || "(No additional notes)"}
+      </p>
+
+      <p className="text-[10px] text-gray-500 mt-4">
+        Administered under the COVID-19 Vaccination 2026/27 Season Patient Group Direction, version 006, issued 11 September 2026.
       </p>
 
       <PharmacistDeclaration

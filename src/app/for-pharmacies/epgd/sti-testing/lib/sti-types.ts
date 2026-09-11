@@ -6,6 +6,38 @@ import type { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/
 
 export interface STIPatientDetails extends BasePatientDetails {
   genderIdentity: string; // male, female, trans-male, trans-female, non-binary
+  // PGD v002 (11 September 2026): aged 13 to 15 only with recorded Fraser
+  // competence and a safeguarding assessment with no concern. Under 13 is
+  // never supplied.
+  fraserCompetent: boolean;
+  safeguardingAssessed: boolean; // partner age, coercion, exploitation indicators asked
+  safeguardingConcern: boolean; // partner 18 or over, coercion, exploitation, learning disability
+  safeguardingNotes: string;
+}
+
+// ─── Chlamydia treatment under the PGD (doxycycline or azithromycin arm) ───
+
+export type STIChlamydiaDiagnosis = "" | "confirmed" | "strongly-suspected";
+export type STITreatmentMedicine = "" | "doxycycline" | "azithromycin";
+
+export interface STITreatment {
+  treatUnderPgd: boolean; // supply chlamydia treatment under this PGD
+  chlamydiaDiagnosis: STIChlamydiaDiagnosis;
+  // Exclusions common to both arms
+  pregnant: boolean;
+  breastfeeding: boolean;
+  severeHepaticImpairment: boolean;
+  complicatedInfection: boolean; // e.g. PID, epididymo-orchitis
+  // Doxycycline arm
+  tetracyclineHypersensitivity: boolean;
+  unableToComplyOrSwallow: boolean; // 7-day regimen or swallowing capsules
+  doxycyclineUnsuitable: boolean; // any other reason doxycycline is unsuitable
+  doxycyclineUnsuitableReason: string;
+  // Azithromycin arm
+  macrolideHypersensitivity: boolean;
+  qtProlongation: boolean; // history of QT prolongation or interacting QT-prolonging drugs
+  ergotDerivatives: boolean;
+  medicine: STITreatmentMedicine;
 }
 
 export interface STIRiskAssessment {
@@ -49,6 +81,14 @@ export interface STICounselling {
   resultsTimeline: boolean;
   positiveTestMeaning: boolean;
   followUp: boolean;
+  // Treatment counselling (PGD cautions and follow-up rows); required only
+  // when a medicine is supplied under the PGD.
+  medicineAdvice: boolean; // doxycycline: water, upright 30 minutes, sun; azithromycin: antacids 2 hours
+  abstinenceAdvice: boolean; // no sex until treatment and partner treatment completed (azithromycin: 7 days)
+  contraceptionAdvice: boolean; // doxycycline: effective contraception during and for 7 days after
+  testOfCureAdvice: boolean; // azithromycin: test of cure if symptoms persist or in pregnancy
+  worseningAdvice: boolean; // seek medical advice if worsening, no improvement in 3 to 4 weeks, systemically unwell
+  pilSupplied: boolean;
 }
 
 export interface STIConsultationState {
@@ -57,6 +97,7 @@ export interface STIConsultationState {
   riskAssessment: STIRiskAssessment;
   clinicalAssessment: STIClinicalAssessment;
   testSelection: STITestSelection;
+  treatment: STITreatment;
   counselling: STICounselling;
   summary: BaseSummary & { testsOrdered: string[] };
   currentStep: number;
@@ -68,6 +109,7 @@ export type STIAction =
   | { type: "UPDATE_RISK_ASSESSMENT"; field: keyof STIRiskAssessment; value: any }
   | { type: "UPDATE_CLINICAL_ASSESSMENT"; field: keyof STIClinicalAssessment; value: any }
   | { type: "UPDATE_TEST_SELECTION"; field: keyof STITestSelection; value: any }
+  | { type: "UPDATE_TREATMENT"; field: keyof STITreatment; value: STITreatment[keyof STITreatment] }
   | { type: "UPDATE_COUNSELLING"; field: keyof STICounselling; value: any }
   | { type: "UPDATE_SUMMARY"; field: string; value: any }
   | { type: "SET_STEP"; step: number };
@@ -80,11 +122,16 @@ export const STEP_LABELS = [
   "Risk Assessment",
   "Clinical Assessment",
   "Test Selection",
+  "Treatment",
   "Counselling",
   "Summary",
 ] as const;
 
 export const TOTAL_STEPS = STEP_LABELS.length;
+
+// PGD strapline shown on the record
+export const PGD_VERSION_LABEL =
+  "Chlamydia treatment PGD (doxycycline 100 mg / azithromycin 500 mg), version 002, issued 11 September 2026";
 
 // ─── Initial state ───
 
@@ -106,6 +153,10 @@ gpEmail: "",
       phone: "",
       email: "",
       genderIdentity: "",
+      fraserCompetent: false,
+      safeguardingAssessed: false,
+      safeguardingConcern: false,
+      safeguardingNotes: "",
     },
     consent: {
       informedConsentGiven: false,
@@ -144,6 +195,22 @@ gpEmail: "",
       hepatitisB: false,
       hepatitisC: false,
     },
+    treatment: {
+      treatUnderPgd: false,
+      chlamydiaDiagnosis: "",
+      pregnant: false,
+      breastfeeding: false,
+      severeHepaticImpairment: false,
+      complicatedInfection: false,
+      tetracyclineHypersensitivity: false,
+      unableToComplyOrSwallow: false,
+      doxycyclineUnsuitable: false,
+      doxycyclineUnsuitableReason: "",
+      macrolideHypersensitivity: false,
+      qtProlongation: false,
+      ergotDerivatives: false,
+      medicine: "",
+    },
     counselling: {
       windowPeriods: false,
       partnerNotification: false,
@@ -151,6 +218,12 @@ gpEmail: "",
       resultsTimeline: false,
       positiveTestMeaning: false,
       followUp: false,
+      medicineAdvice: false,
+      abstinenceAdvice: false,
+      contraceptionAdvice: false,
+      testOfCureAdvice: false,
+      worseningAdvice: false,
+      pilSupplied: false,
     },
     summary: {
       pharmacistName: "",

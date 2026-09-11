@@ -6,9 +6,10 @@ import type {
   ECMedicineSelection,
   ECCounselling,
   ECConsultationSummary,
+  ECConsultationState,
 } from "./ec-types";
 import type { BaseConsent } from "../../shared/types";
-import { calculateAge } from "../../shared/types";
+import { getMedicineAvailability, isHighWeightOrBmi } from "./ec-clinical-logic";
 
 // ─── Patient Details Validation ───
 
@@ -20,16 +21,29 @@ export function validatePatientDetailsStep(
   if (!patient.dateOfBirth) return "Date of birth is required";
   if (patient.age === null) return "Unable to calculate age";
 
-  // Emergency contraception is for females aged 13+
-  if (patient.age < 13)
-    return "This PGD is for patients aged 13 years or older";
-
   if (!patient.femaleConfirmed)
     return "Please confirm the patient is female";
 
-  // Fraser competence for ages 13-15
-  if (patient.age >= 13 && patient.age <= 15 && !patient.fraserCompetent) {
-    return "Fraser competence must be confirmed for patients aged 13-15";
+  // Under 13 is not supplied through this tool. PGD v003 says supply "may
+  // still be appropriate" with a mandatory safeguarding referral; the tool is
+  // deliberately stricter: a child under 13 is a same-day referral to the GP
+  // or sexual health service with a safeguarding referral, not a pharmacy
+  // supply. Get Real Health service decision, 11 September 2026.
+  if (patient.age < 13) {
+    return "Aged under 13: not supplied under this ePGD. Refer the same day to the GP or sexual health service and make a safeguarding referral; record both.";
+  }
+
+  // Aged 13 to 15: assess and record Fraser competence, ask about coercion,
+  // the age of the partner and any safeguarding concern; record the assessment.
+  if (patient.age >= 13 && patient.age <= 15) {
+    if (!patient.fraserCompetent)
+      return "Fraser competence must be assessed and recorded for patients aged 13 to 15";
+    if (!patient.coercionAsked)
+      return "Ask about coercion and record the answer for patients aged 13 to 15";
+    if (!patient.partnerAge.trim())
+      return "Record the age of the partner for patients aged 13 to 15";
+    if (!patient.safeguardingNotes.trim())
+      return "Record the safeguarding assessment for patients aged 13 to 15";
   }
 
   return null;
@@ -85,15 +99,9 @@ export function validateMedicalHistoryStep(
   if (!history.pregnancyTestResult)
     return "Pregnancy test result must be confirmed";
 
-  if (
-    history.pregnancyTestResult !== "not-done" &&
-    history.pregnancyTestResult !== "negative" &&
-    history.pregnancyTestResult !== "positive"
-  ) {
-    // If test was done, it's fine
-  } else if (history.pregnancyTestResult === "not-done") {
-    // Not done is acceptable with counselling
-  }
+  // Weight and BMI are PGD assessment factors (3 mg levonorgestrel rule)
+  if (history.weightKg === null)
+    return "Weight is required (ulipristal preferred at 70 kg or over, or BMI 26 or over)";
 
   return null;
 }
@@ -119,10 +127,40 @@ export function validateMedicationsStep(
 // ─── Medicine Selection Validation ───
 
 export function validateMedicineSelectionStep(
-  selection: ECMedicineSelection
+  selection: ECMedicineSelection,
+  state?: ECConsultationState
 ): string | null {
   if (!selection.medicine)
     return "A medicine must be selected or 'cannot supply' decision made";
+
+  if (state) {
+    const availability = getMedicineAvailability(state);
+    if (selection.medicine === "levonorgestrel" && !availability.canUseLNG)
+      return `Levonorgestrel cannot be supplied: ${availability.lngReasons.join(", ")}`;
+    if (selection.medicine === "ulipristal" && !availability.canUseUPA)
+      return `Ulipristal cannot be supplied: ${availability.upaReasons.join(", ")}`;
+
+    if (selection.medicine === "levonorgestrel") {
+      if (!selection.dose) return "Select the levonorgestrel dose";
+      const enzyme = state.medications.takesEnzymeInducers;
+      const highWeight = isHighWeightOrBmi(state);
+      if (enzyme && !selection.copperIudOffered)
+        return "Enzyme inducers: a copper IUD must be offered first; record that it was offered (and declined) before giving levonorgestrel 3 mg";
+      if (enzyme && selection.dose !== "3mg")
+        return "Enzyme inducers: levonorgestrel must be given as 3 mg (two tablets, licensed)";
+      if (selection.dose === "3mg") {
+        if (!selection.doubleDoseReason) return "Record the reason for the 3 mg dose";
+        if (selection.doubleDoseReason === "weight-bmi" && !highWeight)
+          return "Weight or BMI reason selected but weight is under 70 kg and BMI under 26";
+        if (selection.doubleDoseReason === "enzyme-inducers" && !enzyme)
+          return "Enzyme inducer reason selected but no enzyme inducer recorded";
+        if (selection.doubleDoseReason === "weight-bmi" && !selection.offLabelExplained)
+          return "Weight or BMI based 3 mg is off-label per FSRH: confirm this was explained to the patient and recorded";
+      }
+      if (selection.dose === "1.5mg" && highWeight && !selection.pharmacistOverride)
+        return "Weight 70 kg or over, or BMI 26 or over: ulipristal is preferred; if levonorgestrel is used give 3 mg (record an override reason to give 1.5 mg)";
+    }
+  }
 
   if (selection.pharmacistOverride && !selection.overrideReason)
     return "Override reason must be documented";
@@ -163,7 +201,7 @@ export function validateSummaryStep(summary: ECConsultationSummary): string | nu
 
 // ─── Step Validation Router ───
 
-export function validateStep(currentStep: number, state: any): string | null {
+export function validateStep(currentStep: number, state: ECConsultationState): string | null {
   switch (currentStep) {
     case 0:
       return validatePatientDetailsStep(state.patient);
@@ -179,7 +217,7 @@ export function validateStep(currentStep: number, state: any): string | null {
       // Contraindications review is read-only, no validation
       return null;
     case 6:
-      return validateMedicineSelectionStep(state.medicineSelection);
+      return validateMedicineSelectionStep(state.medicineSelection, state);
     case 7:
       return validateCounsellingStep(state.counselling);
     case 8:

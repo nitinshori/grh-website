@@ -14,26 +14,49 @@ import {
 // ─── Chickenpox-Specific Types ───
 
 export interface ChickenpoxEligibility {
+  /** Inclusion: no history of chickenpox infection. */
   noPriorVaricella: boolean;
   seronegative: boolean;
   healthcareWorker: boolean;
   closeContactImmunosuppressed: boolean;
+  /** Exclusion: history of chickenpox infection. */
+  historyOfChickenpox: boolean;
+  /** Exclusion: completed two-dose varicella course. */
+  completedTwoDoseCourse: boolean;
+  /** Dose 1 given elsewhere: dose 2 may be given under this PGD; record the date and brand of dose 1. */
+  dose1GivenElsewhere: boolean;
+  dose1ElsewhereDate: string;
+  dose1ElsewhereBrand: string;
 }
 
 export interface ChickenpoxMedicalHistory {
   pregnancy: boolean;
   immunosuppressed: boolean;
   severeFebrilIllness: boolean;
+  /** Hypersensitivity to neomycin, gelatin or any component of the vaccine (exclusion). */
   anaphylaxisNeomycin: boolean;
   anaphylaxisGelatin: boolean;
+  hypersensitivityComponent: boolean;
   activeTB: boolean;
+  /** MMR or another live vaccine within the previous 4 weeks, unless given on the same day (exclusion). */
+  liveVaccineWithin4Weeks: boolean;
+  /** Immunoglobulin or blood products in the previous 3 months (caution: vaccinate now, consider a further dose after 3 months, record the reason). */
+  bloodProductsWithin3Months: boolean;
+  bloodProductsReason: string;
+  /** Under 16 only: who gave consent (PGD consent in children block). */
+  consentBasis: "parental" | "gillick" | "";
+  consentGiverDetails: string;
 }
 
 export interface ChickenpoxVaccineAdmin {
   vaccine: string;
+  /** Which dose of the two-dose course this administration is. */
+  doseNumber: "1st" | "2nd" | "";
+  route: "subcutaneous" | "intramuscular" | "";
   dose1Date: string;
   dose1Site: string;
   dose1Lot: string;
+  expiryDate: string;
   dose2Scheduled: string;
   administeredBy: string;
 }
@@ -45,6 +68,10 @@ export interface ChickenpoxPostVaccine {
   contactWithImmunosuppressed: boolean;
   salicylatesAvoided: boolean;
   pregnancyAdviceGiven: boolean;
+  /** Observe every patient for 15 minutes, seated, and record that it was completed. */
+  observationCompleted: boolean;
+  leafletGiven: boolean;
+  followUpAdviceGiven: boolean;
 }
 
 export interface ChickenpoxCounselling {
@@ -100,6 +127,10 @@ export const STEP_LABELS = [
 
 export const TOTAL_STEPS = STEP_LABELS.length;
 
+/** PGD strapline shown wherever the tool cites its authority. */
+export const CHICKENPOX_PGD_VERSION =
+  "Varivax and Varilrix Chickenpox Vaccination PGD v004, issued 11 September 2026";
+
 // ─── Initial State ───
 
 export function createInitialChickenpoxState(): ChickenpoxConsultationState {
@@ -112,6 +143,11 @@ export function createInitialChickenpoxState(): ChickenpoxConsultationState {
       seronegative: false,
       healthcareWorker: false,
       closeContactImmunosuppressed: false,
+      historyOfChickenpox: false,
+      completedTwoDoseCourse: false,
+      dose1GivenElsewhere: false,
+      dose1ElsewhereDate: "",
+      dose1ElsewhereBrand: "",
     },
     medicalHistory: {
       pregnancy: false,
@@ -119,13 +155,22 @@ export function createInitialChickenpoxState(): ChickenpoxConsultationState {
       severeFebrilIllness: false,
       anaphylaxisNeomycin: false,
       anaphylaxisGelatin: false,
+      hypersensitivityComponent: false,
       activeTB: false,
+      liveVaccineWithin4Weeks: false,
+      bloodProductsWithin3Months: false,
+      bloodProductsReason: "",
+      consentBasis: "",
+      consentGiverDetails: "",
     },
     vaccineAdmin: {
       vaccine: "",
+      doseNumber: "",
+      route: "",
       dose1Date: "",
       dose1Site: "",
       dose1Lot: "",
+      expiryDate: "",
       dose2Scheduled: "",
       administeredBy: "",
     },
@@ -136,6 +181,9 @@ export function createInitialChickenpoxState(): ChickenpoxConsultationState {
       contactWithImmunosuppressed: false,
       salicylatesAvoided: false,
       pregnancyAdviceGiven: false,
+      observationCompleted: false,
+      leafletGiven: false,
+      followUpAdviceGiven: false,
     },
     counselling: {
       doseScheduleAdvice: false,

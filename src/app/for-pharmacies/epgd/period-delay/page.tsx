@@ -19,7 +19,7 @@ export default function PeriodDelayPage() {
             For registered pharmacy professionals only
           </p>
           <h1 className="text-3xl font-bold text-navy-900 mb-2">Period Delay Consultation</h1>
-          <p className="text-gray-600">Norethisterone 5mg for short-term delay of menstruation</p>
+          <p className="text-gray-600">Period Delay (Norethisterone) PGD, version 008, issued 11 September 2026. Norethisterone 5mg tablets, women aged 16 years and over. Maximum 14 days, maximum 42 tablets.</p>
         </div>
         <PeriodDelayClient />
       </div>

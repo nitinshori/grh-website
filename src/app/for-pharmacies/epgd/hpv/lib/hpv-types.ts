@@ -39,6 +39,8 @@ export interface HPVVaccineAssessment {
   anaphylaxisToComponent: boolean;
   /** Bleeding disorder / anticoagulation: technique caution, not a stop. */
   bleedingDisorderOrAnticoagulated: boolean;
+  /** Immunoglobulin or blood products in the previous three months: not a contraindication, record it (PGD v004 cautions). */
+  bloodProductsLast3Months: boolean;
   /** Told whether they could have this free on the NHS. */
   nhsEligibilityDiscussed: boolean;
 }
@@ -70,6 +72,8 @@ export interface HPVAdministration {
   site: string;
   doseNumber: string;
   nextDoseDue: string;
+  /** Where another vaccine was given at the same visit, its name and site (PGD v004 records row). */
+  otherVaccineSameVisit: string;
   adrenalineAvailable: boolean;
   observedFifteenMinutes: boolean;
 }
@@ -151,6 +155,7 @@ export function createInitialConsultationState(): HPVConsultationState {
       anaphylaxisToPreviousDose: false,
       anaphylaxisToComponent: false,
       bleedingDisorderOrAnticoagulated: false,
+      bloodProductsLast3Months: false,
       nhsEligibilityDiscussed: false,
     },
     counselling: {
@@ -168,6 +173,7 @@ export function createInitialConsultationState(): HPVConsultationState {
       site: "",
       doseNumber: "",
       nextDoseDue: "",
+      otherVaccineSameVisit: "",
       adrenalineAvailable: false,
       observedFifteenMinutes: false,
     },

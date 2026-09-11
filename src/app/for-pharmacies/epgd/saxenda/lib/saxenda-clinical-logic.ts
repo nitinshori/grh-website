@@ -18,7 +18,7 @@ export function getAllAlerts(state: SaxendaConsultationState): ClinicalAlert[] {
       severity: "stop",
       code: "SAXENDA_BMI",
       message: "BMI does not meet eligibility criteria",
-      detail: "BMI must be >30 kg/m² or >27 kg/m² with comorbidity (diabetes, hypertension, dyslipidaemia).",
+      detail: "BMI must be 30 kg/m² or above, or 27 kg/m² or above with at least one weight-related comorbidity (dysglycaemia, hypertension, dyslipidaemia, obstructive sleep apnoea).",
     });
   }
 
@@ -53,26 +53,26 @@ export function getAllAlerts(state: SaxendaConsultationState): ClinicalAlert[] {
     alerts.push({
       severity: "stop",
       code: "SAXENDA_T1DM",
-      message: "Type 1 diabetes",
-      detail: "Saxenda not approved for T1DM. Use only in Type 2 diabetes if applicable.",
+      message: "Type 1 diabetes, or insulin-treated diabetes",
+      detail: "Excluded under this PGD. Refer.",
     });
   }
 
   if (state.assessment.severeRenalDisease) {
     alerts.push({
-      severity: "caution",
+      severity: "stop",
       code: "SAXENDA_RENAL",
-      message: "Severe renal impairment",
-      detail: "Use with caution; no dose adjustment needed but monitor renal function.",
+      message: "Severe renal impairment (eGFR <30 mL/min/1.73m²)",
+      detail: "Excluded under this PGD. Mild to moderate renal impairment (eGFR 30 to 60) is a caution.",
     });
   }
 
   if (state.assessment.severeHepaticDisease) {
     alerts.push({
-      severity: "caution",
+      severity: "stop",
       code: "SAXENDA_HEPATIC",
-      message: "Severe hepatic disease",
-      detail: "Use with caution in severe hepatic impairment.",
+      message: "Severe hepatic impairment (Child-Pugh score C or equivalent)",
+      detail: "Excluded under this PGD. Mild to moderate hepatic impairment is a caution.",
     });
   }
 

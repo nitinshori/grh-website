@@ -21,6 +21,15 @@ export interface AnxietyMedicalHistory {
   diabetes: boolean;
   raynauds: boolean;
   hepaticImpairment: boolean;
+  // PGD v004 cautions (11 September 2026)
+  firstDegreeHeartBlock: boolean;
+  portalHypertension: boolean;
+  mildPeripheralVascularDisease: boolean;
+  psoriasis: boolean;
+  myastheniaGravis: boolean;
+  historyOfAnaphylaxis: boolean;
+  mildDepression: boolean;
+  renalImpairment: boolean;
 }
 
 export interface AnxietyContraindications {
@@ -39,6 +48,17 @@ export interface AnxietyContraindications {
   substanceOrAlcoholMisuse: boolean;
   otherBetaBlocker: boolean;
   verapamilOrDiltiazem: boolean;
+  // PGD v003/v004 exclusions (SmPC contraindications, pregnancy and
+  // breastfeeding) that the tool did not ask.
+  cardiogenicShock: boolean;
+  hypotension: boolean;
+  sickSinusSyndrome: boolean;
+  metabolicAcidosis: boolean;
+  hypersensitivity: boolean;
+  severePeripheralArterialDisease: boolean;
+  fastingOrHypoglycaemiaRisk: boolean;
+  pregnancyOrPlanning: boolean;
+  breastfeeding: boolean;
 }
 
 export interface AnxietyMedicineSupply {
@@ -50,6 +70,12 @@ export interface AnxietyMedicineSupply {
    */
   quantity: number | null;
   timing: string;
+  /**
+   * PGD dose row: 10-40mg 30-60 minutes before the anxiety-provoking
+   * situation, or 10-40mg two to three times daily for ongoing situational
+   * anxiety, maximum 120mg daily.
+   */
+  regimen: "" | "prn" | "regular";
 }
 
 export interface AnxietyCounselling {
@@ -58,6 +84,11 @@ export interface AnxietyCounselling {
   noDependence: boolean;
   noSuddenWithdrawal: boolean;
   avoidVerapamil: boolean;
+  // PGD follow-up advice row
+  reportWheeze: boolean;
+  coldExtremities: boolean;
+  notACure: boolean;
+  avoidAlcohol: boolean;
 }
 
 export interface AnxietyConsultationSummary extends BaseSummary {
@@ -147,6 +178,14 @@ gpEmail: "",
       diabetes: false,
       raynauds: false,
       hepaticImpairment: false,
+      firstDegreeHeartBlock: false,
+      portalHypertension: false,
+      mildPeripheralVascularDisease: false,
+      psoriasis: false,
+      myastheniaGravis: false,
+      historyOfAnaphylaxis: false,
+      mildDepression: false,
+      renalImpairment: false,
     },
     contraindications: {
       asthmaWithBronchospasm: false,
@@ -161,11 +200,21 @@ gpEmail: "",
       substanceOrAlcoholMisuse: false,
       otherBetaBlocker: false,
       verapamilOrDiltiazem: false,
+      cardiogenicShock: false,
+      hypotension: false,
+      sickSinusSyndrome: false,
+      metabolicAcidosis: false,
+      hypersensitivity: false,
+      severePeripheralArterialDisease: false,
+      fastingOrHypoglycaemiaRisk: false,
+      pregnancyOrPlanning: false,
+      breastfeeding: false,
     },
     medicineSupply: {
       propranololDose: "10-40mg",
       quantity: null,
       timing: "PRN 30-60 minutes before anxiety-provoking situation",
+      regimen: "",
     },
     counselling: {
       prnUseOnly: false,
@@ -173,6 +222,10 @@ gpEmail: "",
       noDependence: false,
       noSuddenWithdrawal: false,
       avoidVerapamil: false,
+      reportWheeze: false,
+      coldExtremities: false,
+      notACure: false,
+      avoidAlcohol: false,
     },
     summary: {
       pharmacistName: "",

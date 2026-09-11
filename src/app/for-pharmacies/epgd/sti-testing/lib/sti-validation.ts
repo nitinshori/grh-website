@@ -2,13 +2,23 @@
 
 import type { STIConsultationState } from "./sti-types";
 import { validatePatientStep, validateConsentStep, validateSummaryStep } from "../../shared/types";
+import { getAgeAlerts, getTreatmentAlerts } from "./sti-clinical-logic";
 
 export function validateStep(state: STIConsultationState, stepIndex: number): string | null {
   switch (stepIndex) {
-    case 0: // Patient Details
-      return validatePatientStep(state.patient, {
-        minAge: 16,
-      });
+    case 0: {
+      // Patient Details. PGD v002: 16 and over; 13 to 15 only with recorded
+      // Fraser competence and a safeguarding assessment with no concern;
+      // under 13 never supplied.
+      const base = validatePatientStep(state.patient);
+      if (base) return base;
+      const ageStop = getAgeAlerts(state).find((a) => a.severity === "stop");
+      if (ageStop) return ageStop.message;
+      if (state.patient.age !== null && state.patient.age <= 15 && !state.patient.safeguardingNotes.trim()) {
+        return "Record the safeguarding assessment (partner age, coercion, exploitation indicators)";
+      }
+      return null;
+    }
 
     case 1: // Consent
       return validateConsentStep(state.consent);
@@ -26,7 +36,9 @@ export function validateStep(state: STIConsultationState, stepIndex: number): st
       // At least assess for symptoms
       return null; // Flexible assessment
 
-    case 4: // Test Selection
+    case 4: {
+      // Test Selection. Testing is optional when the consultation is a
+      // treatment supply for a confirmed or strongly suspected diagnosis.
       const testCount = [
         state.testSelection.ctGc,
         state.testSelection.hiv,
@@ -35,8 +47,8 @@ export function validateStep(state: STIConsultationState, stepIndex: number): st
         state.testSelection.hepatitisC,
       ].filter(Boolean).length;
 
-      if (testCount === 0) {
-        return "At least one test must be selected";
+      if (testCount === 0 && !state.treatment.treatUnderPgd) {
+        return "At least one test must be selected (or tick treatment under the PGD on the next step)";
       }
 
       if (state.testSelection.ctGc && !state.testSelection.ctGcSampleType) {
@@ -48,8 +60,28 @@ export function validateStep(state: STIConsultationState, stepIndex: number): st
       }
 
       return null;
+    }
 
-    case 5: // Counselling
+    case 5: {
+      // Treatment
+      const t = state.treatment;
+      if (!t.treatUnderPgd) return null;
+      if (!t.chlamydiaDiagnosis) {
+        return "Confirm the diagnosis of genital chlamydia (confirmed or strongly suspected)";
+      }
+      if (t.doxycyclineUnsuitable && !t.doxycyclineUnsuitableReason.trim()) {
+        return "Record why doxycycline is unsuitable or contraindicated";
+      }
+      if (!t.medicine) {
+        return "Select the medicine to supply (doxycycline first line; azithromycin only where doxycycline is unsuitable)";
+      }
+      const stop = getTreatmentAlerts(state).find((a) => a.severity === "stop");
+      if (stop) return stop.message;
+      return null;
+    }
+
+    case 6: {
+      // Counselling
       if (
         !state.counselling.windowPeriods ||
         !state.counselling.partnerNotification ||
@@ -60,9 +92,22 @@ export function validateStep(state: STIConsultationState, stepIndex: number): st
       ) {
         return "All counselling points must be covered";
       }
+      if (state.treatment.treatUnderPgd && state.treatment.medicine) {
+        const c = state.counselling;
+        if (!c.medicineAdvice || !c.abstinenceAdvice || !c.worseningAdvice || !c.pilSupplied) {
+          return "All treatment counselling points must be covered and the PIL supplied";
+        }
+        if (state.treatment.medicine === "doxycycline" && !c.contraceptionAdvice) {
+          return "Advise effective contraception during and for 7 days after the doxycycline course";
+        }
+        if (state.treatment.medicine === "azithromycin" && !c.testOfCureAdvice) {
+          return "Reinforce the need for a test of cure if symptoms persist";
+        }
+      }
       return null;
+    }
 
-    case 6: // Summary
+    case 7: // Summary
       return validateSummaryStep(state.summary);
 
     default:

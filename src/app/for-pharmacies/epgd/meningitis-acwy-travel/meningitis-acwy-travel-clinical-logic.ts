@@ -1,29 +1,44 @@
 import type { ClinicalAlert } from '../shared/types';
 import type {
   MeningitisACWYPatientDetails,
-  MeningitisACWYConsent,
-  MeningitisACWYSummary,
+  MeningitisACWYMedicalHistory,
 } from './meningitis-acwy-travel-types';
+
+/** PGD strapline shown wherever the tool cites its authority. */
+export const MENACWY_PGD_VERSION = 'Meningococcal ACWY (Travel and Hajj/Umrah) PGD v006, issued 11 September 2026';
+
+/** Whole months between the date of birth and today. Null when missing or invalid. */
+export function calculateAgeInMonths(dob: string): number | null {
+  if (!dob) return null;
+  const birth = new Date(dob);
+  if (isNaN(birth.getTime())) return null;
+  const today = new Date();
+  let months = (today.getFullYear() - birth.getFullYear()) * 12 + (today.getMonth() - birth.getMonth());
+  if (today.getDate() < birth.getDate()) months--;
+  return months;
+}
+
+/** Whole days between the date of birth and today. Null when missing or invalid. */
+export function calculateAgeInDays(dob: string): number | null {
+  if (!dob) return null;
+  const birth = new Date(dob);
+  if (isNaN(birth.getTime())) return null;
+  return Math.floor((Date.now() - birth.getTime()) / (1000 * 60 * 60 * 24));
+}
 
 export function getMeningitisACWYClinicalAlerts(
   patient: MeningitisACWYPatientDetails,
-  medicalHistory: {
-    anaphylaxisToVaccine: boolean;
-    anaphylaxisToVaccineComponent: boolean;
-    severeFebrilleIllness: boolean;
-    bleedingDisorder: boolean;
-    immunosuppressed: boolean;
-  }
+  medicalHistory: MeningitisACWYMedicalHistory
 ): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
+  const ageMonths = calculateAgeInMonths(patient.dateOfBirth);
 
   if (medicalHistory.anaphylaxisToVaccine) {
     alerts.push({
       severity: 'stop',
       code: 'ANAPHYLAXIS_VACCINE',
-      message: 'Anaphylaxis to previous MenACWY dose',
-      detail:
-        'Absolute contraindication. Patient must be referred to GP. Do not supply.',
+      message: 'Confirmed anaphylactic reaction to a previous dose of the same vaccine',
+      detail: 'Exclusion. Refer, do not vaccinate.',
     });
   }
 
@@ -31,9 +46,18 @@ export function getMeningitisACWYClinicalAlerts(
     alerts.push({
       severity: 'stop',
       code: 'ANAPHYLAXIS_COMPONENT',
-      message: 'Anaphylaxis to vaccine component',
+      message: 'Confirmed anaphylactic reaction to any excipient or manufacturing residue',
+      detail: 'Exclusion. Refer, do not vaccinate.',
+    });
+  }
+
+  if (medicalHistory.diphtheriaToxoidHypersensitivity) {
+    alerts.push({
+      severity: 'caution',
+      code: 'DIPHTHERIA_TOXOID_HYPERSENSITIVITY',
+      message: 'Hypersensitivity to diphtheria toxoid or CRM197: Menveo excluded',
       detail:
-        'Absolute contraindication due to allergy to polysorbate 80 or other component. Refer to GP.',
+        'Menveo is conjugated to CRM197 and must not be used. Nimenrix and MenQuadfi are conjugated to tetanus toxoid instead; the administration step will refuse Menveo.',
     });
   }
 
@@ -41,9 +65,19 @@ export function getMeningitisACWYClinicalAlerts(
     alerts.push({
       severity: 'stop',
       code: 'SEVERE_FEBRILE_ILLNESS',
-      message: 'Severe acute febrile illness',
+      message: 'Acute severe febrile illness',
       detail:
-        'Absolute contraindication. Defer vaccination until recovery. Advise patient to return when well.',
+        'Postpone until recovered. A minor illness without fever is not a reason to defer. Arrange to vaccinate after recovery and, if travel is imminent, say plainly that protection may not be achieved in time.',
+    });
+  }
+
+  if (medicalHistory.outbreakOrContact) {
+    alerts.push({
+      severity: 'stop',
+      code: 'OUTBREAK_OR_CONTACT',
+      message: 'Outbreak or contact management',
+      detail:
+        'Directed by the local UKHSA Health Protection Team and outside a private travel PGD. Refer to the GP or the Health Protection Team.',
     });
   }
 
@@ -53,7 +87,7 @@ export function getMeningitisACWYClinicalAlerts(
       code: 'DEPARTURE_DATE_MISSING',
       message: 'Departure date not confirmed',
       detail:
-        'MenACWY must be given at least 10 days before travel to high-risk areas and within 3 years for Saudi entry. Confirm timing.',
+        'For Hajj or Umrah the dose must be given at least 10 days before arrival in Saudi Arabia. Confirm timing.',
     });
   } else {
     const departure = new Date(patient.departureDate);
@@ -65,7 +99,7 @@ export function getMeningitisACWYClinicalAlerts(
         severity: 'caution',
         code: 'INSUFFICIENT_TIME_BEFORE_TRAVEL',
         message: 'Less than 10 days until departure',
-        detail: `Only ${daysUntilTravel} days until travel. MenACWY should ideally be given ≥10 days before departure. Discuss risk/benefit with patient.`,
+        detail: `Only ${daysUntilTravel} days until travel. For Hajj or Umrah the dose must be given at least 10 days before arrival in Saudi Arabia; the certificate will not be accepted otherwise. Discuss with the patient.`,
       });
     }
 
@@ -79,29 +113,60 @@ export function getMeningitisACWYClinicalAlerts(
     }
   }
 
-  if (patient.previousMenACWYDose && patient.previousDoseDate) {
-    const previousDose = new Date(patient.previousDoseDate);
-    const today = new Date();
-    const yearsElapsed = (today.getTime() - previousDose.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
-
-    if (yearsElapsed >= 5) {
+  // Repeat doses: routine boosters are not recommended for most travellers. A repeat is
+  // authorised only where the previous dose was more than 5 years ago and a valid
+  // certificate is required for travel to Saudi Arabia. An infant under 12 months with
+  // a previous dose is completing a course, not repeating one.
+  if (patient.previousMenACWYDose && (ageMonths === null || ageMonths >= 12)) {
+    if (!patient.previousDoseDate) {
       alerts.push({
         severity: 'caution',
-        code: 'REVACCINATION_DUE',
-        message: '5 years or more since previous MenACWY dose',
-        detail:
-          'For Saudi entry and Hajj/Umrah, revaccination is required if >3 years have elapsed. Consider booster for continued protection.',
+        code: 'PREVIOUS_DOSE_DATE_MISSING',
+        message: 'Previous MenACWY dose: date not recorded',
+        detail: 'Record the date of the previous dose. A repeat is authorised only where it was more than 5 years ago and a valid certificate is required.',
       });
+    } else {
+      const previousDose = new Date(patient.previousDoseDate);
+      const today = new Date();
+      const yearsElapsed = (today.getTime() - previousDose.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+
+      if (yearsElapsed >= 5) {
+        alerts.push({
+          severity: 'caution',
+          code: 'REPEAT_FOR_CERTIFICATE',
+          message: 'Previous dose more than 5 years ago',
+          detail:
+            'A repeat dose is authorised under this PGD where a valid certificate is required for travel to Saudi Arabia (a conjugate vaccine is accepted within the last 5 years). Record the date of the previous dose and the reason for the repeat.',
+        });
+      } else {
+        alerts.push({
+          severity: 'stop',
+          code: 'REPEAT_NOT_AUTHORISED',
+          message: 'Previous dose within the last 5 years',
+          detail:
+            'Routine boosters are not recommended for most travellers, and a repeat is authorised under this PGD only where the previous dose was more than 5 years ago and a valid certificate is required. A conjugate vaccine given within the last 5 years is accepted for Hajj and Umrah. JCVI has not determined boosters for at-risk groups; do not invent an interval, assess individually and refer where there is doubt.',
+        });
+      }
     }
+  }
+
+  if (medicalHistory.pregnant) {
+    alerts.push({
+      severity: 'caution',
+      code: 'PREGNANCY',
+      message: 'Patient is pregnant',
+      detail:
+        'The Green Book position is that meningococcal vaccines may be given in pregnancy when clinically indicated, and there is no evidence of harm from inadvertent vaccination.',
+    });
   }
 
   if (medicalHistory.bleedingDisorder) {
     alerts.push({
       severity: 'caution',
       code: 'BLEEDING_DISORDER',
-      message: 'Bleeding disorder noted',
+      message: 'Bleeding disorder or anticoagulation',
       detail:
-        'Use subcutaneous injection instead of IM. Maintain pressure at injection site for ≥5 minutes. Advise patient to report excessive bleeding.',
+        'Give intramuscularly using a fine needle (23 gauge or finer) and apply firm pressure without rubbing for at least 2 minutes. Do not give subcutaneously.',
     });
   }
 
@@ -109,33 +174,46 @@ export function getMeningitisACWYClinicalAlerts(
     alerts.push({
       severity: 'caution',
       code: 'IMMUNOSUPPRESSED',
-      message: 'Patient immunosuppressed',
+      message: 'Immunosuppression, including HIV regardless of CD4 count',
       detail:
-        'Vaccine response may be reduced. Consider timing relative to immunosuppressive therapy. Advise patient of potentially reduced protection.',
+        'Vaccinate in accordance with the routine schedule, but the individual may not make a full antibody response. Advise the patient of potentially reduced protection.',
+    });
+  }
+
+  if (medicalHistory.nhsEligibleRiskGroup) {
+    alerts.push({
+      severity: 'caution',
+      code: 'NHS_FUNDED_RISK_GROUP',
+      message: 'Asplenia, complement deficiency or due to start a complement inhibitor',
+      detail:
+        'May be eligible for NHS-funded vaccination. Check before charging privately. Boosters in these groups have not been determined by JCVI; assess individually and refer where there is doubt.',
     });
   }
 
   return alerts;
 }
 
+/** Product schedule per the PGD, by age. */
 export function getMeningitisACWYDoseRecommendation(
   patient: MeningitisACWYPatientDetails
 ): string {
-  if (patient.age === null) return 'Age required to determine dose';
+  const ageDays = calculateAgeInDays(patient.dateOfBirth);
+  const ageMonths = calculateAgeInMonths(patient.dateOfBirth);
+  if (ageDays === null || ageMonths === null) return 'Age required to determine dose';
 
-  if (patient.age < 6 / 52) {
+  if (ageDays < 42) {
     return 'Below 6 weeks: no MenACWY product is licensed. Do not vaccinate under this PGD.';
   }
 
-  if (patient.age < 0.5) {
-    return 'Nimenrix only (6 weeks to under 6 months): two 0.5 mL doses at least 2 months apart, with a booster at 12 months of age if the course was completed before 12 months.';
+  if (ageMonths < 6) {
+    return 'Nimenrix only (6 weeks to under 6 months): two 0.5 mL doses at least 2 months apart, with a booster at 12 months of age if the primary course was completed before 12 months.';
   }
 
-  if (patient.age < 1) {
-    return 'Nimenrix only (6 to 11 months): a single 0.5 mL dose, with a booster at 12 months of age at least 2 months after it (SmPC; PGD v005).';
+  if (ageMonths < 12) {
+    return 'Nimenrix only (6 to 11 months): a single 0.5 mL dose, with a booster at 12 months of age at least 2 months after it.';
   }
 
-  if (patient.age < 2) {
+  if (ageMonths < 24) {
     return 'Nimenrix or MenQuadfi (12 months to under 2 years): a single 0.5 mL dose. Menveo is not licensed below 2 years.';
   }
 
@@ -174,25 +252,25 @@ export function getAdministrationGuidance(
     { vaccineName: string; route: string; site: string; guidance: string }
   > = {
     nimenrix: {
-      vaccineName: 'Nimenrix (Pfizer), licensed from 6 weeks',
+      vaccineName: 'Nimenrix (Pfizer), powder and solvent for solution for injection, licensed from 6 weeks',
       route: 'Intramuscular',
-      site: 'Deltoid muscle (preferred), anterolateral thigh (infants)',
+      site: 'Anterolateral thigh in infants under 1 year; deltoid from 1 year of age and in adults',
       guidance:
-        'Single 0.5 mL dose. Reconstitute with provided diluent. Use within 1 hour. Mark batch, expiry, site on patient record.',
+        '0.5 mL intramuscular. Reconstitute immediately before use and draw up the entire 0.5 mL; in-use stability after reconstitution is 8 hours but delay is not recommended. 6 weeks to under 6 months: two doses at least 2 months apart, booster at 12 months of age if the course was completed before 12 months. 6 to 11 months: a single dose, booster at 12 months of age at least 2 months after it. From 12 months: a single dose. Do not give intravascularly, subcutaneously or intradermally. Record batch, expiry, site, dose number and next due date.',
     },
     menquadfi: {
-      vaccineName: 'MenQuadfi (Sanofi), licensed from 12 months',
+      vaccineName: 'MenQuadfi (Sanofi), 0.5 mL solution for injection, single-dose vial or syringe, licensed from 12 months',
       route: 'Intramuscular',
-      site: 'Deltoid muscle (adults and children), anterolateral thigh (young children)',
+      site: 'Deltoid from 1 year of age and in adults',
       guidance:
-        'Single 0.5 mL dose from a single-dose vial or pre-filled syringe. No reconstitution. Record batch, expiry and site.',
+        '0.5 mL intramuscular, single dose. No reconstitution. Do not give intravascularly, subcutaneously or intradermally. Record batch, expiry and site.',
     },
     menveo: {
-      vaccineName: 'Menveo (GSK), licensed from 2 years',
+      vaccineName: 'Menveo (GSK), powder and solvent for solution for injection, licensed from 2 years',
       route: 'Intramuscular',
-      site: 'Deltoid muscle (adults/older children), anterolateral thigh (young children)',
+      site: 'Deltoid',
       guidance:
-        'Single 0.5 mL dose. Do not mix with other vaccines in same syringe. Use within 1 hour of reconstitution. Record all administration details.',
+        '0.5 mL intramuscular, single dose. Reconstitute immediately before use and draw up the entire 0.5 mL; in-use stability after reconstitution is 8 hours but delay is not recommended. Conjugated to CRM197 (diphtheria toxoid): excluded in hypersensitivity to diphtheria toxoid or CRM197. Do not give intravascularly, subcutaneously or intradermally. Record batch, expiry and site.',
     },
   };
 

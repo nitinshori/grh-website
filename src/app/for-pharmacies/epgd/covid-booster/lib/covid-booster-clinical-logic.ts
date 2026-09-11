@@ -2,8 +2,49 @@ import type { CovidBoosterConsultationState } from "./covid-booster-types";
 import { COVID_PRODUCTS } from "./covid-booster-types";
 import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
 
+// Aligned to the COVID-19 Vaccination 2026/27 PGD version 006, issued 11 September 2026.
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+/** Minimum interval between COVID-19 vaccine doses: 3 months, taken as 90 days. */
+export const MIN_INTERVAL_DAYS = 90;
+
+/** Days since an ISO date, or null when missing or invalid. */
+export function daysSince(date: string): number | null {
+  if (!date) return null;
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return null;
+  return Math.floor((Date.now() - d.getTime()) / DAY_MS);
+}
+
+/** True when the interval since the previous dose is known and under 3 months. */
+export function intervalTooShort(state: CovidBoosterConsultationState): boolean {
+  if (!state.assessment.previousCovidVaccine) return false;
+  const d = daysSince(state.assessment.previousDoseDate);
+  return d !== null && d < MIN_INTERVAL_DAYS;
+}
+
+/** NHS-eligible cohorts for autumn 2026 (PGD v006 guideline summary). */
+export function nhsEligible(state: CovidBoosterConsultationState): boolean {
+  const age = state.patient.age;
+  return (
+    state.assessment.immunosuppressed ||
+    state.assessment.careHomeResident ||
+    (age !== null && age >= 75)
+  );
+}
+
 export function getAllAlerts(state: CovidBoosterConsultationState): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
+
+  if (state.patient.age !== null && state.patient.age < 12) {
+    alerts.push({
+      severity: "stop",
+      code: "COVID_UNDER_12",
+      message: "Patient is under 12 years",
+      detail:
+        "Excluded. Refer to the GP or a service commissioned to vaccinate children. Age-specific presentations and dose volumes are outside this PGD.",
+    });
+  }
 
   // Anaphylaxis to previous COVID vaccine
   if (state.assessment.anaphylaxisToPreviousDose) {
@@ -15,34 +56,110 @@ export function getAllAlerts(state: CovidBoosterConsultationState): ClinicalAler
     });
   }
 
-  // Anaphylaxis to PEG/polysorbate
+  // Hypersensitivity to the active substance or an excipient (PEG for mRNA, polysorbate 80 for Nuvaxovid)
   if (state.assessment.anaphylaxisToPEG || state.assessment.anaphylaxisToPolysorbate) {
     alerts.push({
       severity: "stop",
       code: "COVID_ANAPHYLAXIS_COMPONENT",
-      message: "Anaphylaxis to vaccine component (PEG/polysorbate)",
-      detail: "Contraindicated. Do not administer booster.",
+      message: "Known hypersensitivity to the active substance or an excipient (PEG or polysorbate 80)",
+      detail: "Excluded under the PGD. Refer, do not vaccinate.",
     });
   }
 
-  // Severe febrile illness
+  // Acute severe febrile illness
   if (state.assessment.severeFebrilIllness) {
     alerts.push({
       severity: "stop",
       code: "COVID_FEBRILE",
-      message: "Severe febrile illness present",
-      detail: "Defer vaccination until patient has recovered and is afebrile.",
+      message: "Acute severe febrile illness",
+      detail: "Postpone until recovered. A minor infection without fever is not a contraindication.",
     });
   }
 
-  // Caution: Anticoagulants
-  if (state.assessment.onAnticoagulants) {
+  // Confirmed current COVID-19 infection
+  if (state.assessment.currentCovidInfection) {
+    alerts.push({
+      severity: "stop",
+      code: "COVID_CURRENT_INFECTION",
+      message: "Confirmed current COVID-19 infection",
+      detail:
+        "Defer until recovered. A 4 week interval from a positive test or symptom onset is commonly applied, and 12 weeks in 5 to 17 year olds who are not in a risk group.",
+    });
+  }
+
+  // Interval since the previous dose
+  if (intervalTooShort(state)) {
+    if (state.assessment.shorterIntervalNationalGuidance) {
+      alerts.push({
+        severity: "caution",
+        code: "COVID_INTERVAL_SHORT_ADVISED",
+        message: "Less than 3 months since the last COVID-19 vaccine dose",
+        detail:
+          "Permitted only because a shorter interval is specifically advised in national guidance for this individual. Record the guidance relied on in the clinical notes.",
+      });
+    } else {
+      alerts.push({
+        severity: "stop",
+        code: "COVID_INTERVAL_SHORT",
+        message: "Less than 3 months since the last COVID-19 vaccine dose",
+        detail:
+          "Excluded: a minimum interval of 3 months is required between COVID-19 vaccine doses, unless a shorter interval is specifically advised in national guidance for that individual.",
+      });
+    }
+  }
+
+  // Bleeding disorder not assessed as safe for IM injection
+  if (state.assessment.bleedingDisorder && !state.assessment.bleedingDisorderAssessedSafe) {
+    alerts.push({
+      severity: "stop",
+      code: "COVID_BLEEDING_DISORDER",
+      message: "Bleeding disorder without a clinical assessment that intramuscular injection is safe",
+      detail:
+        "Excluded until intramuscular injection has been assessed as safe by a clinician familiar with the individual's bleeding risk. Refer.",
+    });
+  }
+
+  // Caution: anticoagulation or an assessed bleeding disorder
+  if (state.assessment.onAnticoagulants || (state.assessment.bleedingDisorder && state.assessment.bleedingDisorderAssessedSafe)) {
     alerts.push({
       severity: "caution",
       code: "COVID_ANTICOAGULANT",
-      message: "Patient on anticoagulant therapy",
+      message: "Anticoagulation or bleeding disorder",
       detail:
-        "Increased bleeding risk at injection site. Apply firm pressure for 2-3 minutes post-injection. Counsel on bruising risk.",
+        "Vaccinate intramuscularly with a 23 gauge or finer needle, apply firm pressure without rubbing for at least 2 minutes, and advise on the risk of haematoma.",
+    });
+  }
+
+  // Caution: pregnancy
+  if (state.assessment.pregnant) {
+    alerts.push({
+      severity: "caution",
+      code: "COVID_PREGNANCY",
+      message: "Patient is pregnant",
+      detail:
+        "COVID-19 vaccination is recommended in pregnancy for those in an eligible group and is safe while breastfeeding. Confirm the vaccine and indication against current national guidance before proceeding.",
+    });
+  }
+
+  // Caution: capillary leak syndrome (Spikevax)
+  if (state.assessment.capillaryLeakHistory) {
+    alerts.push({
+      severity: "caution",
+      code: "COVID_CAPILLARY_LEAK",
+      message: "History of capillary leak syndrome",
+      detail:
+        "Flare-ups have been reported in the first days after Spikevax. Vaccination should be planned in collaboration with appropriate medical experts; Spikevax cannot be selected under this tool. Be alert to hypotension and oedema.",
+    });
+  }
+
+  // NHS entitlement must be explained before private supply
+  if (nhsEligible(state) && state.assessment.nhsStatus === "not-eligible") {
+    alerts.push({
+      severity: "stop",
+      code: "COVID_NHS_ENTITLEMENT",
+      message: "Patient is eligible for NHS vaccination but recorded as not eligible",
+      detail:
+        "Adults aged 75 and over, care home residents and the immunosuppressed are eligible under the NHS programme and must be told they can be vaccinated free of charge before any private supply proceeds.",
     });
   }
 
@@ -85,7 +202,7 @@ export function getAllAlerts(state: CovidBoosterConsultationState): ClinicalAler
       code: "COVID_LP81_HIGH_RISK",
       message: "Comirnaty LP.8.1 selected for a high-risk patient",
       detail:
-        "PGD v004 requires Comirnaty XFG, the current 2026/27 formulation, for anyone immunosuppressed or aged 75 and over. Use XFG stock, or rebook.",
+        "PGD v006 requires Comirnaty XFG, the current 2026/27 formulation, for anyone immunosuppressed or aged 75 and over. Use XFG stock, or rebook rather than substitute.",
     });
   }
 
@@ -95,7 +212,7 @@ export function getAllAlerts(state: CovidBoosterConsultationState): ClinicalAler
       code: "COVID_LP81_RUNOUT",
       message: "Comirnaty LP.8.1 is the previous seasonal formulation",
       detail:
-        "Permitted under PGD v004 from existing stock only, until that stock is used up or reaches its expiry date. Tell the patient this is the previous formulation and that XFG is the current one, and record that you did. Check the variant printed on the syringe label before injecting.",
+        "Permitted under PGD v006 from existing stock only, until that stock is used up or reaches its expiry date. Tell the patient this is the previous formulation and that XFG is the current one, and record that you did. Check the variant printed on the syringe label before injecting.",
     });
   }
 
@@ -138,7 +255,7 @@ export function calculateDoseRecommendation(state: CovidBoosterConsultationState
       frequency: "Single dose",
       duration: "One dose for the 2026/27 season",
       reason:
-        "Comirnaty XFG is the vaccine of choice under PGD v004. Comirnaty LP.8.1 may be used from existing stock only, and not for patients who are immunosuppressed or aged 75 and over.",
+        "Comirnaty XFG is the vaccine of choice under PGD v006. Comirnaty LP.8.1 may be used from existing stock only, and not for patients who are immunosuppressed or aged 75 and over. Spikevax LP.8.1 where Comirnaty is unavailable; Nuvaxovid JN.1 where the mRNA vaccines are unavailable or unsuitable.",
     };
   }
 
@@ -150,7 +267,7 @@ export function calculateDoseRecommendation(state: CovidBoosterConsultationState
     duration: "One dose for the 2026/27 season",
     reason:
       chosen === "comirnaty-lp81"
-        ? "Existing stock of the previous seasonal formulation. Permitted under PGD v004 until stock is exhausted or expires. The patient must be told."
-        : "Administered under COVID-19 PGD v004, 2026/27 season.",
+        ? "Existing stock of the previous seasonal formulation. Permitted under PGD v006 until stock is exhausted or expires. The patient must be told."
+        : "Administered under COVID-19 PGD v006, 2026/27 season.",
   };
 }

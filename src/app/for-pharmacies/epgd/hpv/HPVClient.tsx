@@ -291,6 +291,18 @@ export default function HPVClient() {
               description="Not an exclusion. Changes technique: 23 gauge or finer needle, firm pressure without rubbing for at least two minutes."
             />
             <Checkbox
+              label="Immunoglobulin or blood products received within the previous three months"
+              checked={state.assessment.bloodProductsLast3Months}
+              onChange={(v) =>
+                dispatch({
+                  type: "UPDATE_ASSESSMENT",
+                  field: "bloodProductsLast3Months",
+                  value: v,
+                })
+              }
+              description="Not studied. Not a contraindication, but the PGD requires it to be recorded."
+            />
+            <Checkbox
               label="Told the patient whether they could have this free on the NHS"
               checked={state.assessment.nhsEligibilityDiscussed}
               onChange={(v) =>
@@ -300,7 +312,8 @@ export default function HPVClient() {
                   value: v,
                 })
               }
-              description="Adolescents of any sex from 11 years in school year 8; eligible cohorts until their 25th birthday; all GBMSM up to and including 45 at specialist sexual health or HIV services."
+              description="Required before proceeding. Adolescents of any sex from 11 years in school year 8; eligible cohorts until their 25th birthday; all GBMSM up to and including 45 at specialist sexual health or HIV services. Where the patient is NHS-eligible, tell them so and record that you did."
+              required
             />
           </div>
         );
@@ -336,7 +349,7 @@ export default function HPVClient() {
               description="Contraindicated if a confirmed anaphylactic reaction to any HPV vaccine is documented."
             />
             <Checkbox
-              label="Confirmed anaphylaxis to a component of Gardasil 9: NOT documented"
+              label="Confirmed anaphylaxis to a component of Gardasil 9, or hypersensitivity following previous administration of Gardasil 9 or Gardasil / Silgard: NOT documented"
               checked={!state.assessment.anaphylaxisToComponent}
               onChange={(v) =>
                 dispatch({
@@ -345,7 +358,7 @@ export default function HPVClient() {
                   value: !v,
                 })
               }
-              description="Excipients: sodium chloride, histidine, polysorbate 80, borax, water for injections, with amorphous aluminium hydroxyphosphate sulfate adjuvant."
+              description="Excipients: sodium chloride, histidine, polysorbate 80, borax, water for injections, with amorphous aluminium hydroxyphosphate sulfate adjuvant. Untick if either applies: refer, do not vaccinate."
             />
           </div>
         );
@@ -517,7 +530,7 @@ export default function HPVClient() {
                   value: v,
                 })
               }
-              description="Protects against HPV 6, 11, 16, 18, 31, 33, 45, 52 and 58: most cervical and other anogenital cancers, most HPV-related throat cancers, and most genital warts."
+              description="Protects against HPV 6, 11, 16, 18, 31, 33, 45, 52 and 58: most cervical and other anogenital cancers, most HPV-related throat cancers, and most genital warts. It works best before exposure to the virus, but is still worth having later."
             />
             <Checkbox
               label="Discussed common reactions"
@@ -565,7 +578,7 @@ export default function HPVClient() {
                   value: v,
                 })
               }
-              description="Patient information leaflet, plus a written record of the vaccine, batch, date, site, dose number and either the next dose date or a clear statement that the course is complete."
+              description="Patient information leaflet, plus a written record of the vaccine, batch, date, site, dose number and either the next dose date or a clear statement that the course is complete. Follow-up: seek medical advice for any severe or persistent reaction, any rash or swelling that spreads, or any breathing difficulty; for routine queries contact the pharmacy."
             />
           </div>
         );
@@ -694,6 +707,19 @@ export default function HPVClient() {
                   ? "No further dose required"
                   : "DD/MM/YYYY"
               }
+            />
+
+            <TextInput
+              label="Other vaccine given at this visit, and its site (leave blank if none)"
+              value={state.administration.otherVaccineSameVisit}
+              onChange={(v) =>
+                dispatch({
+                  type: "UPDATE_ADMINISTRATION",
+                  field: "otherVaccineSameVisit",
+                  value: v,
+                })
+              }
+              placeholder="e.g. MenACWY, right deltoid"
             />
 
             <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg">

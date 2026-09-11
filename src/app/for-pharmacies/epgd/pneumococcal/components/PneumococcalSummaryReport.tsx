@@ -23,22 +23,46 @@ interface PneumococcalSummaryReportProps {
   riskAssessment: {
     previousPCV13: boolean;
     previousPCV13Date: string;
+    previousPCV20?: boolean;
+    previousPCV20Date?: string;
     previousPPV23: boolean;
     previousPPV23Date: string;
   };
   medicalHistory: {
     anaphylaxisToVaccine: boolean;
     anaphylaxisToVaccineComponent: boolean;
+    diphtheriaToxoidHypersensitivity?: boolean;
     severeFebrilleIllness: boolean;
+    bleedingDisorder?: boolean;
   };
   clinicalAlerts: ClinicalAlert[];
   postVaccineAdvice: {
     patientAdvised: boolean;
     counselledReactions: boolean;
     counselledBothVaccines: boolean;
+    pilSupplied?: boolean;
+    followUpAdviceGiven?: boolean;
   };
   onBack: () => void;
 }
+
+const SITE_LABELS: Record<string, string> = {
+  'left-deltoid': 'Left deltoid (IM)',
+  'right-deltoid': 'Right deltoid (IM)',
+  'left-arm-sc': 'Left upper arm (SC)',
+  'right-arm-sc': 'Right upper arm (SC)',
+};
+
+const RISK_LABELS: Record<string, string> = {
+  asplenia: 'Asplenia or splenic dysfunction',
+  ckd: 'Chronic kidney disease',
+  'chronic-disease': 'Chronic disease',
+  immunosuppressed: 'Immunosuppressed',
+  cochlear: 'Cochlear implant',
+  'csf-leak': 'Cerebrospinal fluid leak',
+  'age-65-plus': 'Adult aged 65 years and over',
+  'other-national-guidance': 'Other group eligible under national guidance',
+};
 
 export default function PneumococcalSummaryReport({
   patientDetails,
@@ -77,18 +101,29 @@ export default function PneumococcalSummaryReport({
         <div>
           <SectionHeader>Risk Assessment</SectionHeader>
           <div className="space-y-1.5">
-            <Row label="At-risk category" value={patientDetails.riskCategory || 'Not specified'} />
+            <Row label="Eligibility group" value={RISK_LABELS[patientDetails.riskCategory] || 'Not specified'} />
             {patientDetails.chronicDiseaseType && (
               <Row label="Chronic disease type" value={patientDetails.chronicDiseaseType} />
             )}
             {patientDetails.immunosuppressedReason && (
               <Row label="Immunosuppression reason" value={patientDetails.immunosuppressedReason} />
             )}
+            {patientDetails.otherEligibilityReason && (
+              <Row label="National guidance group" value={patientDetails.otherEligibilityReason} />
+            )}
             <Row
               label="Previous PCV13 (Prevenar 13)"
               value={
                 riskAssessment.previousPCV13
                   ? `Yes (${riskAssessment.previousPCV13Date})`
+                  : 'No'
+              }
+            />
+            <Row
+              label="Previous PCV20 (Prevenar 20)"
+              value={
+                riskAssessment.previousPCV20
+                  ? `Yes (${riskAssessment.previousPCV20Date})`
                   : 'No'
               }
             />
@@ -103,14 +138,38 @@ export default function PneumococcalSummaryReport({
           </div>
         </div>
 
+        {/* Consent basis, under 16 */}
+        {patientDetails.age !== null && patientDetails.age < 16 && (
+          <div>
+            <SectionHeader>Consent (under 16)</SectionHeader>
+            <div className="space-y-1.5">
+              <Row
+                label="Consent given by"
+                value={
+                  consent.consentBasis === 'parental'
+                    ? `Person with parental responsibility: ${consent.parentName} (${consent.parentRelationship})`
+                    : consent.consentBasis === 'gillick'
+                      ? 'Young person, assessed as Gillick competent'
+                      : 'Not recorded'
+                }
+              />
+              {consent.consentBasis === 'gillick' && (
+                <Row label="Gillick assessment basis" value={consent.gillickBasis || 'Not recorded'} />
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Medical History */}
         <div>
           <SectionHeader>Medical History & Contraindications</SectionHeader>
           <CounsellingGrid
             items={[
-              ['Anaphylaxis to previous pneumococcal vaccine', medicalHistory.anaphylaxisToVaccine],
-              ['Anaphylaxis to vaccine component', medicalHistory.anaphylaxisToVaccineComponent],
-              ['Severe acute febrile illness', medicalHistory.severeFebrilleIllness],
+              ['Severe allergic reaction to a previous pneumococcal vaccine', medicalHistory.anaphylaxisToVaccine],
+              ['Hypersensitivity to the vaccine or any component', medicalHistory.anaphylaxisToVaccineComponent],
+              ['Hypersensitivity to diphtheria toxoid (CRM197)', Boolean(medicalHistory.diphtheriaToxoidHypersensitivity)],
+              ['Acute illness with fever', medicalHistory.severeFebrilleIllness],
+              ['Bleeding disorder (caution)', Boolean(medicalHistory.bleedingDisorder)],
             ]}
           />
         </div>
@@ -129,6 +188,7 @@ export default function PneumococcalSummaryReport({
               label="Vaccine type"
               value={summary.vaccineType === 'pcv13' ? 'Prevenar 13 (PCV13)' : 'Pneumovax 23 (PPV23)'}
             />
+            <Row label="Dose and route" value={summary.vaccineType === 'pcv13' ? '0.5 mL intramuscular' : '0.5 mL intramuscular or subcutaneous'} />
             <Row
               label="Dose number"
               value={summary.doseNumber === '1' ? 'Dose 1' : 'Dose 2'}
@@ -137,11 +197,7 @@ export default function PneumococcalSummaryReport({
             <Row label="Expiry date" value={summary.expiryDate} />
             <Row
               label="Administration site"
-              value={
-                summary.administrationSite === 'left-deltoid'
-                  ? 'Left deltoid (IM)'
-                  : 'Right deltoid (IM)'
-              }
+              value={SITE_LABELS[summary.administrationSite] || 'Not recorded'}
             />
             <Row label="Administration time" value={summary.administrationTime} />
           </div>
@@ -158,11 +214,17 @@ export default function PneumococcalSummaryReport({
               ['Understands why vaccination needed', consent.understandsVaccineNeed],
               ['Understands vaccination schedule', consent.understandsSchedule],
               ['Aware of possible side effects', consent.understandsSideEffects],
-              ['Advised of common reactions', postVaccineAdvice.counselledReactions],
-              ['Understands may need both vaccines', postVaccineAdvice.counselledBothVaccines],
+              ['Informed of side effects and when to seek help', postVaccineAdvice.counselledReactions],
+              ['Follow-up advice given (worsening, no improvement in 3 to 4 weeks, systemically unwell)', Boolean(postVaccineAdvice.followUpAdviceGiven)],
+              ['Patient information leaflet supplied', Boolean(postVaccineAdvice.pilSupplied)],
+              ['Understands whether a second vaccine or revaccination is due', postVaccineAdvice.counselledBothVaccines],
             ]}
           />
         </div>
+
+        <p className="text-[10px] text-gray-500">
+          Patient Group Direction for Pneumovax 23 or Prevenar 13 (pneumococcal disease), version 004, issued 11 September 2026.
+        </p>
 
         {/* Clinical Notes */}
         {summary.clinicalNotes && (

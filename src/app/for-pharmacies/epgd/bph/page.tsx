@@ -28,10 +28,10 @@ export default function BPHToolPage() {
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-navy-900">
-            Benign Prostatic Hyperplasia — Tamsulosin PGD Consultation
+            Benign Prostatic Hyperplasia, Tamsulosin PGD Consultation
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Tamsulosin 400mcg MR supply for lower urinary tract symptoms under Patient Group Direction
+            Tamsulosin 400mcg MR capsules for Benign Prostatic Hyperplasia PGD, version 002, issued 11 September 2026. Men aged 45 and over with an IPSS of 8 or more.
           </p>
         </div>
 

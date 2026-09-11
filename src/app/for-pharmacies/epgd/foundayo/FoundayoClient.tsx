@@ -32,9 +32,11 @@ import {
 // ─────────────────────────────────────────────────────────────────────────
 // Foundayo (orforglipron) consultation tool.
 //
-// Built against PGD v002, signed 21 Aug 2026, which was itself reconciled
-// against the UK SPC. Two things in here exist because v001 got them wrong
-// and the SPC put them right:
+// Aligned to PGD v007, issued 11 September 2026 (v002 was reconciled
+// against the UK SPC; v003 widened the concurrent GLP-1 exclusion to any
+// indication; v006 made any sulfonylurea, meglitinide or insulin a blanket
+// exclusion with no GP-monitored route). Two things in here exist because
+// v001 got them wrong and the SPC put them right:
 //
 //   1. Oral hormonal contraception. Orforglipron reduces its efficacy, and
 //      the 30 day window reopens after EVERY dose increase, not just at
@@ -53,7 +55,7 @@ import {
 // remember the interaction from the document.
 // ─────────────────────────────────────────────────────────────────────────
 
-type VisitType = "" | "initiation" | "escalation" | "continuation";
+type VisitType = "" | "initiation" | "escalation" | "continuation" | "restart";
 
 /** Licensed titration ladder, in order. */
 const DOSE_LADDER = ["0.8", "2.5", "5.5", "9", "14.5", "17.2"] as const;
@@ -82,8 +84,10 @@ interface FoundayoState {
     bmi: number | null;
     hasComorbidity: boolean;
     comorbidities: string;
+    targetWeightKg: number | null;
     willingLifestyleChange: boolean;
     initialAssessmentDone: boolean;
+    canSwallowOnceDaily: boolean;
   };
   exclusions: {
     pregnancyOrPlanning: boolean;
@@ -97,15 +101,26 @@ interface FoundayoState {
     concurrentGlp1OrSecretagogue: boolean;
     type1Diabetes: boolean;
     diabeticRetinopathy: boolean;
-    insulinOrSuWithoutGpMonitoring: boolean;
+    insulinTreatedDiabetes: boolean;
     severeRenalImpairment: boolean;
     severeHepaticImpairment: boolean;
     heartFailureEfBelow40: boolean;
     activeEatingDisorder: boolean;
   };
+  cautions: {
+    mentalHealthHistory: boolean; // suicidal ideation history or active severe mental illness
+    psychiatricOversightInPlace: boolean;
+    mentalHealthConcern: boolean;
+    mildModerateRenalImpairment: boolean;
+    raisedRestingHeartRate: boolean;
+    sustainedHeartRateRise: boolean; // on treatment: discontinue
+    t2dmOnMetforminSglt2Dpp4: boolean;
+    gpInformed: boolean;
+  };
   interactions: {
     strongCyp3a4AndOatp1bInhibitor: boolean; // ritonavir, telaprevir
     strongCyp3a4Inducer: boolean; // rifampicin, carbamazepine, phenytoin, St John's wort
+    moderateCyp3a4Inducer: boolean; // bosentan, efavirenz
     strongCyp3a4Inhibitor: boolean; // clarithromycin, ketoconazole, itraconazole
     oatp1bInhibitor: boolean; // ciclosporin
     simvastatin: boolean;
@@ -113,15 +128,24 @@ interface FoundayoState {
     rosuvastatinOver20mg: boolean;
     oralTopotecan: boolean;
     warfarin: boolean;
-    sulfonylureaOrInsulin: boolean;
+    sulfonylureaOrInsulin: boolean; // any sulfonylurea, meglitinide or insulin: exclusion
     antihypertensives: boolean;
+    hypotensionSymptoms: boolean; // dizziness, light-headedness or falls on treatment
+    oralHrt: boolean;
     other: string;
   };
   dose: {
     currentDose: Dose;
     newDose: Dose;
     daysAtCurrentDose: number | null;
+    reassessedAtVisit: boolean;
     rationale: string;
+  };
+  record: {
+    productName: string;
+    batchNumber: string;
+    quantitySupplied: string;
+    adverseReactions: string;
   };
   contraception: {
     notApplicable: boolean;
@@ -138,10 +162,13 @@ interface FoundayoState {
     pancreatitisRedFlag: boolean;
     gallbladderRedFlag: boolean;
     hypotensionSymptoms: boolean;
-    hypoRiskIfDiabetic: boolean;
+    urgentWarningSymptoms: boolean;
+    weightLossExpectations: boolean;
     pregnancy3Weeks: boolean;
     anaesthesiaWarning: boolean;
     followUpPlan: boolean;
+    reassessmentAt6Months: boolean;
+    pilAndWrittenAdviceGiven: boolean;
   };
   summary: BaseSummary;
 }
@@ -160,7 +187,10 @@ const STEP_LABELS = [
 ];
 const TOTAL_STEPS = STEP_LABELS.length;
 const STEP_INFORMED_CONSENT = STEP_LABELS.indexOf("Informed Consent");
+const STEP_ELIGIBILITY = STEP_LABELS.indexOf("Eligibility & BMI");
+const STEP_DOSE = STEP_LABELS.indexOf("Dose");
 const STEP_CONTRACEPTION = STEP_LABELS.indexOf("Contraception");
+const STEP_COUNSELLING = STEP_LABELS.indexOf("Counselling");
 
 function initialState(): FoundayoState {
   return {
@@ -181,8 +211,10 @@ function initialState(): FoundayoState {
       bmi: null,
       hasComorbidity: false,
       comorbidities: "",
+      targetWeightKg: null,
       willingLifestyleChange: false,
       initialAssessmentDone: false,
+      canSwallowOnceDaily: false,
     },
     exclusions: {
       pregnancyOrPlanning: false,
@@ -196,15 +228,26 @@ function initialState(): FoundayoState {
       concurrentGlp1OrSecretagogue: false,
       type1Diabetes: false,
       diabeticRetinopathy: false,
-      insulinOrSuWithoutGpMonitoring: false,
+      insulinTreatedDiabetes: false,
       severeRenalImpairment: false,
       severeHepaticImpairment: false,
       heartFailureEfBelow40: false,
       activeEatingDisorder: false,
     },
+    cautions: {
+      mentalHealthHistory: false,
+      psychiatricOversightInPlace: false,
+      mentalHealthConcern: false,
+      mildModerateRenalImpairment: false,
+      raisedRestingHeartRate: false,
+      sustainedHeartRateRise: false,
+      t2dmOnMetforminSglt2Dpp4: false,
+      gpInformed: false,
+    },
     interactions: {
       strongCyp3a4AndOatp1bInhibitor: false,
       strongCyp3a4Inducer: false,
+      moderateCyp3a4Inducer: false,
       strongCyp3a4Inhibitor: false,
       oatp1bInhibitor: false,
       simvastatin: false,
@@ -214,13 +257,22 @@ function initialState(): FoundayoState {
       warfarin: false,
       sulfonylureaOrInsulin: false,
       antihypertensives: false,
+      hypotensionSymptoms: false,
+      oralHrt: false,
       other: "",
     },
     dose: {
       currentDose: "",
       newDose: "",
       daysAtCurrentDose: null,
+      reassessedAtVisit: false,
       rationale: "",
+    },
+    record: {
+      productName: "Foundayo (orforglipron) film-coated tablets",
+      batchNumber: "",
+      quantitySupplied: "",
+      adverseReactions: "",
     },
     contraception: {
       notApplicable: false,
@@ -237,10 +289,13 @@ function initialState(): FoundayoState {
       pancreatitisRedFlag: false,
       gallbladderRedFlag: false,
       hypotensionSymptoms: false,
-      hypoRiskIfDiabetic: false,
+      urgentWarningSymptoms: false,
+      weightLossExpectations: false,
       pregnancy3Weeks: false,
       anaesthesiaWarning: false,
       followUpPlan: false,
+      reassessmentAt6Months: false,
+      pilAndWrittenAdviceGiven: false,
     },
     summary: initialSummary(),
   };
@@ -253,8 +308,10 @@ type Action =
   | { type: "UPDATE_VISIT"; field: keyof FoundayoState["visit"]; value: VisitType }
   | { type: "UPDATE_ELIGIBILITY"; field: keyof FoundayoState["eligibility"]; value: unknown }
   | { type: "UPDATE_EXCLUSION"; field: keyof FoundayoState["exclusions"]; value: boolean }
+  | { type: "UPDATE_CAUTION"; field: keyof FoundayoState["cautions"]; value: boolean }
   | { type: "UPDATE_INTERACTION"; field: keyof FoundayoState["interactions"]; value: unknown }
   | { type: "UPDATE_DOSE"; field: keyof FoundayoState["dose"]; value: unknown }
+  | { type: "UPDATE_RECORD"; field: keyof FoundayoState["record"]; value: string }
   | { type: "UPDATE_CONTRACEPTION"; field: keyof FoundayoState["contraception"]; value: boolean }
   | { type: "UPDATE_COUNSELLING"; field: keyof FoundayoState["counselling"]; value: boolean }
   | { type: "UPDATE_SUMMARY"; field: keyof BaseSummary; value: unknown }
@@ -292,10 +349,14 @@ function reducer(state: FoundayoState, action: Action): FoundayoState {
     }
     case "UPDATE_EXCLUSION":
       return { ...state, exclusions: { ...state.exclusions, [action.field]: action.value } };
+    case "UPDATE_CAUTION":
+      return { ...state, cautions: { ...state.cautions, [action.field]: action.value } };
     case "UPDATE_INTERACTION":
       return { ...state, interactions: { ...state.interactions, [action.field]: action.value } };
     case "UPDATE_DOSE":
       return { ...state, dose: { ...state.dose, [action.field]: action.value } };
+    case "UPDATE_RECORD":
+      return { ...state, record: { ...state.record, [action.field]: action.value } };
     case "UPDATE_CONTRACEPTION":
       return { ...state, contraception: { ...state.contraception, [action.field]: action.value } };
     case "UPDATE_COUNSELLING":
@@ -327,23 +388,58 @@ function nineMgCeilingApplies(i: FoundayoState["interactions"]): boolean {
   return i.strongCyp3a4Inhibitor || i.oatp1bInhibitor;
 }
 
-const EXCLUSION_LABELS: [keyof FoundayoState["exclusions"], string][] = [
-  ["pregnancyOrPlanning", "Pregnant, planning pregnancy, or trying to conceive"],
+const EXCLUSION_LABELS: [keyof FoundayoState["exclusions"], string, string?][] = [
+  [
+    "pregnancyOrPlanning",
+    "Pregnant, planning pregnancy, or trying to conceive",
+    "Effective contraception is required throughout treatment. Orforglipron must be discontinued at least 3 weeks before a planned pregnancy and stopped immediately if pregnancy occurs or is suspected.",
+  ],
   ["breastfeeding", "Currently breastfeeding"],
-  ["hypersensitivity", "Hypersensitivity to orforglipron or any excipient"],
-  ["mtcOrMen2", "Personal or family history of medullary thyroid carcinoma or MEN 2"],
+  ["hypersensitivity", "Known hypersensitivity to orforglipron or to any of the excipients"],
+  ["mtcOrMen2", "Personal or family history of medullary thyroid carcinoma (MTC) or Multiple Endocrine Neoplasia syndrome type 2 (MEN 2)"],
   ["pancreatitisHistory", "History of pancreatitis, acute or chronic"],
-  ["severeGiDiseaseOrGastroparesis", "Severe gastrointestinal disease, including gastroparesis"],
-  ["gallstonesOrRecentCholecystectomy", "Current gallstones or cholecystitis, or cholecystectomy in the last 3 months"],
-  ["endocrineCauseOfObesity", "Obesity caused by an endocrinological disorder"],
-  ["concurrentGlp1OrSecretagogue", "Already taking another GLP-1 agonist or an insulin secretagogue, FOR ANY INDICATION. Ask about diabetes medicines by name: semaglutide (oral or injection), tirzepatide, liraglutide, dulaglutide, exenatide, sulfonylureas, meglitinides"],
+  ["severeGiDiseaseOrGastroparesis", "Severe gastrointestinal disease, including gastroparesis or severe persistent gastrointestinal disorder"],
+  ["gallstonesOrRecentCholecystectomy", "Current cholelithiasis (gallstones) or cholecystitis, or cholecystectomy within the last 3 months"],
+  [
+    "endocrineCauseOfObesity",
+    "Obesity caused by an endocrinological disorder",
+    "If the patient was already overweight prior to that diagnosis, this exclusion may not apply.",
+  ],
+  [
+    "concurrentGlp1OrSecretagogue",
+    "Concurrent use of any other GLP-1 receptor agonist or insulin secretagogue, FOR ANY INDICATION",
+    "Ask specifically about medicines taken for diabetes and name the products: oral or injectable semaglutide, tirzepatide, orforglipron, liraglutide, dulaglutide, exenatide, and the sulfonylureas and meglitinides. Patients do not always think of a diabetes medicine as the same kind of drug as a weight loss one.",
+  ],
   ["type1Diabetes", "Type 1 diabetes mellitus"],
-  ["diabeticRetinopathy", "Diabetic retinopathy"],
-  ["insulinOrSuWithoutGpMonitoring", "On insulin or a sulphonylurea, and the GP will not monitor and adjust it"],
-  ["severeRenalImpairment", "Severe renal impairment (eGFR below 30) or end-stage renal disease"],
-  ["severeHepaticImpairment", "Severe hepatic impairment (Child-Pugh C)"],
-  ["heartFailureEfBelow40", "Heart failure with ejection fraction below 40%"],
-  ["activeEatingDisorder", "Active eating disorder"],
+  ["diabeticRetinopathy", "Diabetic retinopathy", "Treatment may worsen retinopathy; defer or refer to a specialist."],
+  [
+    "insulinTreatedDiabetes",
+    "Insulin-treated diabetes",
+    "Refer: a pharmacy weight-management service cannot manage insulin dose reduction. There is no GP-monitored route under this PGD.",
+  ],
+  ["severeRenalImpairment", "Severe renal impairment (eGFR below 30 mL/min/1.73 m2) or end-stage renal disease"],
+  ["severeHepaticImpairment", "Severe hepatic impairment (Child-Pugh class C)", "Orforglipron is not recommended; refer."],
+  ["heartFailureEfBelow40", "Known diagnosis of heart failure with reduced ejection fraction below 40%"],
+  ["activeEatingDisorder", "Active eating disorder (anorexia nervosa, bulimia, or binge-eating disorder under specialist care)"],
+];
+
+/** Every counselling item must be confirmed before the record is made. */
+const COUNSELLING_KEYS: (keyof FoundayoState["counselling"])[] = [
+  "swallowWholeNoRestriction",
+  "oneTabletOnly",
+  "missedDose",
+  "giSideEffects",
+  "dehydrationAndKidney",
+  "pancreatitisRedFlag",
+  "gallbladderRedFlag",
+  "hypotensionSymptoms",
+  "urgentWarningSymptoms",
+  "weightLossExpectations",
+  "pregnancy3Weeks",
+  "anaesthesiaWarning",
+  "followUpPlan",
+  "reassessmentAt6Months",
+  "pilAndWrittenAdviceGiven",
 ];
 
 export function FoundayoClient() {
@@ -364,7 +460,7 @@ export function FoundayoClient() {
 
   const alerts = useMemo<Alert[]>(() => {
     const out: Alert[] = [];
-    const { patient, eligibility, exclusions, interactions, dose, contraception, visit } = state;
+    const { patient, eligibility, exclusions, cautions, interactions, dose, contraception, visit } = state;
 
     // ── Age. 18 to 85 inclusive under this PGD. ─────────────────────
     if (patient.age !== null && patient.age < 18) {
@@ -408,15 +504,61 @@ export function FoundayoClient() {
     }
 
     // ── Exclusions from the signed PGD. ─────────────────────────────
-    for (const [key, label] of EXCLUSION_LABELS) {
+    for (const [key, label, note] of EXCLUSION_LABELS) {
       if (exclusions[key]) {
         out.push({
           code: `excl-${key}`,
           severity: "stop",
           message: label,
-          detail: "Excluded under this PGD. Discuss the reason with the patient, advise on alternatives and refer as appropriate.",
+          detail: `${note ? `${note} ` : ""}Excluded under this PGD. Discuss the reason with the patient, advise on alternatives (GP, specialist weight management service or lifestyle programmes) and inform or refer to the GP as appropriate. Document the advice given.`,
         });
       }
+    }
+
+    // ── Sulfonylurea, meglitinide or insulin: blanket exclusion (v006). ──
+    if (interactions.sulfonylureaOrInsulin) {
+      out.push({
+        code: "su-insulin",
+        severity: "stop",
+        message: "Any sulfonylurea, meglitinide or insulin EXCLUDES",
+        detail: "There is no GP-monitored route for those patients under this PGD. Refer to the GP or a specialist weight management service.",
+      });
+    }
+
+    // ── Mental health caution, with its conditional stop. ────────────
+    if (cautions.mentalHealthHistory) {
+      if (cautions.mentalHealthConcern && !cautions.psychiatricOversightInPlace) {
+        out.push({
+          code: "mh-stop",
+          severity: "stop",
+          message: "Mental health concern with no psychiatric oversight",
+          detail: "Do not supply where oversight is absent and concern exists. Refer.",
+        });
+      } else {
+        out.push({
+          code: "mh",
+          severity: "caution",
+          message: "History of suicidal ideation, or active severe mental illness",
+          detail: "Ensure appropriate psychiatric oversight is in place, monitor mood at review, and refer if there is any concern. Do not supply where oversight is absent and concern exists.",
+        });
+      }
+    }
+
+    // ── Heart rate. ───────────────────────────────────────────────────
+    if (cautions.sustainedHeartRateRise) {
+      out.push({
+        code: "hr-stop",
+        severity: "stop",
+        message: "Clinically relevant sustained increase in resting heart rate",
+        detail: "Treatment should be discontinued and advice sought. Do not supply.",
+      });
+    } else if (cautions.raisedRestingHeartRate) {
+      out.push({
+        code: "hr",
+        severity: "caution",
+        message: "Pre-existing increased heart rate",
+        detail: "Cases of tachycardia have been reported. Use with caution and seek specialist advice before use.",
+      });
     }
 
     // ── Interactions that rule orforglipron out entirely. ───────────
@@ -506,11 +648,57 @@ export function FoundayoClient() {
           detail: `The ladder is 0.8, 2.5, 5.5, 9, 14.5 then 17.2 mg, one step at a time. Going from ${dose.currentDose} mg to ${dose.newDose} mg skips a step.`,
         });
       }
+      if (visit.type === "escalation" && to <= from) {
+        out.push({
+          code: "not-increase",
+          severity: "stop",
+          message: "Dose increase visit but the dose does not go up",
+          detail: `Current dose ${dose.currentDose} mg, dose to supply ${dose.newDose} mg. Select the next step up, or change the visit type to continuation. A step down to the previous dose for gastrointestinal symptoms is recorded as continuation, with the rationale.`,
+        });
+      }
+      if (visit.type === "continuation" && to > from) {
+        out.push({
+          code: "cont-increase",
+          severity: "stop",
+          message: "Continuation visit but the dose goes up",
+          detail: "Record the visit as a dose increase so the 30 day interval and the contraception advice are checked.",
+        });
+      }
+    }
+
+    // ── Initiation and restart always begin at 0.8 mg once daily. ────
+    if ((visit.type === "initiation" || visit.type === "restart") && dose.newDose && dose.newDose !== "0.8") {
+      out.push({
+        code: "start-dose",
+        severity: "stop",
+        message: `${visit.type === "restart" ? "Recommencing" : "Starting"} treatment must begin at 0.8 mg once daily`,
+        detail:
+          visit.type === "restart"
+            ? "If the patient recommences after stopping, the dose is titrated again starting at 0.8 mg (PGD dose row)."
+            : "Start at 0.8 mg once daily and increase only after at least 30 days at each step (PGD dose row).",
+      });
+    }
+    if ((visit.type === "initiation" || visit.type === "restart") && dose.currentDose) {
+      out.push({
+        code: "start-current",
+        severity: "stop",
+        message: "A current dose is recorded on a starting visit",
+        detail: "Leave the current dose blank when starting or recommencing, or change the visit type.",
+      });
+    }
+    if ((visit.type === "escalation" || visit.type === "continuation") && !dose.currentDose && dose.newDose) {
+      out.push({
+        code: "followup-current",
+        severity: "stop",
+        message: "Follow-up visit with no current dose recorded",
+        detail: "Record the dose the patient is currently taking, or change the visit type to initiation or recommencing.",
+      });
     }
 
     // ── Contraception. The reason this tool exists. ─────────────────
     const isDoseIncrease =
       visit.type === "initiation" ||
+      visit.type === "restart" ||
       (!!dose.currentDose && !!dose.newDose && dose.currentDose !== dose.newDose);
     if (state.currentStep > STEP_CONTRACEPTION) {
       if (!contraception.notApplicable && !contraception.usesOralHormonal) {
@@ -565,20 +753,54 @@ export function FoundayoClient() {
         detail: "Orforglipron delays gastric emptying. Monitor INR more frequently on initiation and after each dose increase.",
       });
     }
-    if (interactions.sulfonylureaOrInsulin) {
-      out.push({
-        code: "hypo",
-        severity: "caution",
-        message: "Sulphonylurea or insulin",
-        detail: "Increased risk of hypoglycaemia. A dose reduction may be needed and blood glucose self-monitoring is necessary. Refer to the prescriber.",
-      });
-    }
     if (interactions.antihypertensives) {
       out.push({
         code: "bp",
         severity: "caution",
         message: "On antihypertensive treatment",
-        detail: "Orforglipron may lower blood pressure and hypotension is reported more often in these patients. Ask about dizziness and falls at each review.",
+        detail: "Orforglipron may lower blood pressure, and hypotension has been reported more frequently in patients already taking antihypertensive medicines. Ask about dizziness, light-headedness and falls at each review.",
+      });
+    }
+    if (interactions.hypotensionSymptoms) {
+      out.push({
+        code: "bp-symptoms",
+        severity: "red-flag",
+        message: "Dizziness, light-headedness or falls reported on treatment",
+        detail: "Refer to the GP for review of antihypertensive therapy where symptoms occur.",
+      });
+    }
+    if (interactions.moderateCyp3a4Inducer) {
+      out.push({
+        code: "cyp-mod-inducer",
+        severity: "caution",
+        message: "Moderate CYP3A4 inducer",
+        detail: "For example bosentan or efavirenz. Monitor effectiveness and escalate the dose as needed. Check the full medication list at every visit, including over the counter products and St John's wort.",
+      });
+    }
+    if (interactions.oralHrt) {
+      out.push({
+        code: "hrt",
+        severity: "caution",
+        message: "Takes oral HRT",
+        detail: "Due to the lack of data regarding absorption, non-oral products (for example patch, gel, or levonorgestrel intrauterine device) may be considered.",
+      });
+    }
+    if (cautions.mildModerateRenalImpairment) {
+      out.push({
+        code: "renal-mild",
+        severity: "caution",
+        message: "Mild to moderate renal impairment",
+        detail: "No dose adjustment is needed. Monitor for dehydration secondary to gastrointestinal side effects and counsel on fluid intake.",
+      });
+    }
+    if (cautions.t2dmOnMetforminSglt2Dpp4) {
+      out.push({
+        code: "t2dm-gp",
+        severity: cautions.gpInformed ? "caution" : "red-flag",
+        message: "Type 2 diabetes on metformin, an SGLT2 inhibitor or a DPP-4 inhibitor only",
+        detail: cautions.gpInformed
+          ? "No dose adjustment is needed. GP informed of the supply."
+          : "No dose adjustment is needed, but inform the GP. Record that the GP has been informed before supply.",
       });
     }
 
@@ -586,7 +808,62 @@ export function FoundayoClient() {
   }, [state]);
 
   const hasStops = alerts.some((a) => a.severity === "stop");
-  const canProceed = !hasStops || state.currentStep >= TOTAL_STEPS - 2;
+
+  // Step-level completeness. These are the inclusion criteria and the
+  // record fields the PGD requires; a step cannot be left until they are
+  // met. Shown by StepWrapper once Next has been attempted.
+  const stepValidationError = useMemo<string | null>(() => {
+    const { visit, eligibility, dose, record, contraception, counselling, cautions } = state;
+    switch (state.currentStep) {
+      case STEP_ELIGIBILITY: {
+        const missing: string[] = [];
+        if (!visit.type) missing.push("type of visit");
+        if (eligibility.bmi === null) missing.push("height and weight (BMI must be calculated at this visit)");
+        if (eligibility.targetWeightKg === null) missing.push("target weight agreed");
+        if (!eligibility.willingLifestyleChange) missing.push("willing to follow the reduced-calorie diet and increased physical activity");
+        if (!eligibility.initialAssessmentDone) missing.push("initial assessment completed and documented");
+        if (!eligibility.canSwallowOnceDaily) missing.push("able to take one tablet once daily, swallowed whole");
+        return missing.length ? `Inclusion criteria not yet confirmed: ${missing.join("; ")}.` : null;
+      }
+      case STEP_DOSE: {
+        const missing: string[] = [];
+        if (!dose.newDose) missing.push("dose to supply");
+        if (visit.type === "escalation" && dose.daysAtCurrentDose === null) missing.push("days at the current dose");
+        if (visit.type !== "initiation" && visit.type !== "restart" && !dose.reassessedAtVisit)
+          missing.push("clinical benefit, tolerability and target weight reassessed at this visit");
+        if (!record.batchNumber.trim()) missing.push("batch number");
+        if (!record.quantitySupplied.trim()) missing.push("quantity supplied");
+        if (cautions.t2dmOnMetforminSglt2Dpp4 && !cautions.gpInformed) missing.push("GP informed (type 2 diabetes on metformin, SGLT2 or DPP-4 inhibitor)");
+        return missing.length ? `Before continuing, record: ${missing.join("; ")}.` : null;
+      }
+      case STEP_CONTRACEPTION: {
+        if (!contraception.notApplicable && !contraception.usesOralHormonal)
+          return "Record either that oral hormonal contraception is in use, or that it is not applicable for this patient.";
+        if (contraception.usesOralHormonal && !contraception.advisedNonOralOrBarrier)
+          return "Confirm the patient has been advised to switch to a non-oral method, or add a barrier method, for 30 days.";
+        const doseGoesUp =
+          visit.type === "initiation" ||
+          visit.type === "restart" ||
+          (!!dose.currentDose && !!dose.newDose && dose.currentDose !== dose.newDose);
+        if (contraception.usesOralHormonal && doseGoesUp && !contraception.advisedRepeatAfterEachIncrease)
+          return "Confirm the patient has been told the 30 day window applies again now and after every future dose increase.";
+        return null;
+      }
+      case STEP_COUNSELLING: {
+        const unticked = COUNSELLING_KEYS.filter((k) => !counselling[k]).length;
+        return unticked ? `Confirm every counselling item before continuing (${unticked} outstanding). The PGD requires the advice given to be recorded.` : null;
+      }
+      default:
+        return null;
+    }
+  }, [state]);
+
+  // Stops block every step except the summary, which is reached only once
+  // no stop remains. Previously the last two steps were exempt, which left
+  // the contraception gate (evaluated after the Contraception step) with
+  // nothing to block.
+  const canProceed =
+    (!hasStops || state.currentStep >= TOTAL_STEPS - 1) && stepValidationError === null;
 
   const markComplete = useCallback(() => {
     setCompletedSteps((prev) => new Set(prev).add(state.currentStep));
@@ -636,7 +913,7 @@ export function FoundayoClient() {
     onNext: handleNext,
     onPrev: handlePrev,
     canProceed,
-    validationError: null,
+    validationError: stepValidationError,
   };
 
   const renderStep = () => {
@@ -753,13 +1030,22 @@ export function FoundayoClient() {
                 value={state.visit.type}
                 onChange={(v) => dispatch({ type: "UPDATE_VISIT", field: "type", value: v as VisitType })}
                 options={[
-                  { value: "", label: "Select…" },
+                  { value: "", label: "Select" },
                   { value: "initiation", label: "Initiation, first supply of orforglipron" },
                   { value: "escalation", label: "Follow-up with a dose increase" },
-                  { value: "continuation", label: "Follow-up continuing the same dose" },
+                  { value: "continuation", label: "Follow-up continuing the same dose (or stepping down for tolerability)" },
+                  { value: "restart", label: "Recommencing after stopping treatment (titrate again from 0.8 mg)" },
                 ]}
                 required
               />
+              {state.visit.type === "restart" && (
+                <div className="p-3 rounded-md bg-amber-50 border border-amber-300 text-xs text-amber-900">
+                  Recommencing after a break: the dose is titrated again starting at
+                  0.8 mg. The BMI inclusion criteria for initiation must be applied if
+                  more than 2 months have passed since discontinuing treatment; this
+                  tool applies them at every visit.
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <NumberInput
                   label="Height (cm)"
@@ -800,15 +1086,35 @@ export function FoundayoClient() {
                 value={state.eligibility.comorbidities}
                 onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "comorbidities", value: v })}
               />
-              <Checkbox
-                label="Patient willing to follow a reduced-calorie diet and increase physical activity alongside the medicine"
-                checked={state.eligibility.willingLifestyleChange}
-                onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "willingLifestyleChange", value: v })}
+              <NumberInput
+                label="Target weight agreed (kg)"
+                value={state.eligibility.targetWeightKg}
+                onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "targetWeightKg", value: v })}
+                min={30}
+                max={300}
+                unit="kg"
+                required
               />
               <Checkbox
-                label="Initial assessment completed and documented (causes of weight gain, previous attempts, expectations, target weight)"
+                label="Patient is willing to follow a reduced-calorie diet and increase physical activity in line with the agreed lifestyle plan"
+                description="NICE NG246: the lifestyle plan is part of the consultation, not an optional extra."
+                checked={state.eligibility.willingLifestyleChange}
+                onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "willingLifestyleChange", value: v })}
+                required
+              />
+              <Checkbox
+                label="Initial assessment completed and documented, face to face"
+                description="Causes of weight gain (refer to the GP if prescribed medication is the cause); lifestyle, diet and exercise; previous attempts; mental health, environmental and psychological factors; other disease states; expectations; BMI, ideal weight, target weight and review intervals."
                 checked={state.eligibility.initialAssessmentDone}
                 onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "initialAssessmentDone", value: v })}
+                required
+              />
+              <Checkbox
+                label="Patient is able to take one tablet once daily, swallowed whole"
+                description="Unlike oral semaglutide, Foundayo may be taken with or without food and needs no fasting period or waiting time before other food, drink or medicines."
+                checked={state.eligibility.canSwallowOnceDaily}
+                onChange={(v) => dispatch({ type: "UPDATE_ELIGIBILITY", field: "canSwallowOnceDaily", value: v })}
+                required
               />
               <div className="p-3 rounded-md bg-gray-50 border border-gray-200 text-xs text-gray-600">
                 NICE guideline NG246 defines obesity from a lower BMI for some ethnic
@@ -827,14 +1133,82 @@ export function FoundayoClient() {
             {...stepProps}
           >
             <div className="space-y-2">
-              {EXCLUSION_LABELS.map(([key, label]) => (
+              {EXCLUSION_LABELS.map(([key, label, note]) => (
                 <Checkbox
                   key={key}
                   label={label}
+                  description={note}
                   checked={state.exclusions[key]}
                   onChange={(v) => dispatch({ type: "UPDATE_EXCLUSION", field: key, value: v })}
                 />
               ))}
+              <div className="p-3 rounded-md bg-gray-50 border border-gray-200 text-xs text-gray-600">
+                Also excluded: BMI below the PGD inclusion threshold (checked on the
+                previous step), and any patient who, in your clinical judgement, is not
+                suitable for the medication. If excluded, discuss the reason, advise on
+                alternatives (GP, specialist weight management service, lifestyle
+                programmes), recommend GP review for any undiagnosed or unmanaged
+                comorbidity, and document the advice and decision.
+              </div>
+            </div>
+            <div className="mt-6 space-y-2">
+              <h3 className="text-sm font-semibold text-navy-900">Cautions (from the PGD)</h3>
+              <Checkbox
+                label="History of suicidal ideation, or active severe mental illness"
+                description="Ensure appropriate psychiatric oversight is in place, monitor mood at review, and refer if there is any concern. Do not supply where oversight is absent and concern exists."
+                checked={state.cautions.mentalHealthHistory}
+                onChange={(v) => dispatch({ type: "UPDATE_CAUTION", field: "mentalHealthHistory", value: v })}
+              />
+              {state.cautions.mentalHealthHistory && (
+                <div className="ml-6 space-y-1">
+                  <Checkbox
+                    label="Appropriate psychiatric oversight is in place"
+                    checked={state.cautions.psychiatricOversightInPlace}
+                    onChange={(v) => dispatch({ type: "UPDATE_CAUTION", field: "psychiatricOversightInPlace", value: v })}
+                  />
+                  <Checkbox
+                    label="There is a current concern about mood or mental state"
+                    checked={state.cautions.mentalHealthConcern}
+                    onChange={(v) => dispatch({ type: "UPDATE_CAUTION", field: "mentalHealthConcern", value: v })}
+                  />
+                </div>
+              )}
+              <Checkbox
+                label="Mild to moderate renal impairment"
+                description="No dose adjustment, but monitor for dehydration secondary to gastrointestinal side effects."
+                checked={state.cautions.mildModerateRenalImpairment}
+                onChange={(v) => dispatch({ type: "UPDATE_CAUTION", field: "mildModerateRenalImpairment", value: v })}
+              />
+              <Checkbox
+                label="Pre-existing increased resting heart rate"
+                description="Cases of tachycardia have been reported. Use with caution and seek specialist advice before use."
+                checked={state.cautions.raisedRestingHeartRate}
+                onChange={(v) => dispatch({ type: "UPDATE_CAUTION", field: "raisedRestingHeartRate", value: v })}
+              />
+              {state.visit.type !== "initiation" && (
+                <Checkbox
+                  label="Clinically relevant sustained increase in resting heart rate since starting orforglipron"
+                  description="Treatment should be discontinued and advice sought."
+                  checked={state.cautions.sustainedHeartRateRise}
+                  onChange={(v) => dispatch({ type: "UPDATE_CAUTION", field: "sustainedHeartRateRise", value: v })}
+                />
+              )}
+              <Checkbox
+                label="Type 2 diabetes on metformin, an SGLT2 inhibitor or a DPP-4 inhibitor only"
+                description="No dose adjustment is needed, but inform the GP. Any sulfonylurea, meglitinide or insulin EXCLUDES."
+                checked={state.cautions.t2dmOnMetforminSglt2Dpp4}
+                onChange={(v) => dispatch({ type: "UPDATE_CAUTION", field: "t2dmOnMetforminSglt2Dpp4", value: v })}
+              />
+              {state.cautions.t2dmOnMetforminSglt2Dpp4 && (
+                <div className="ml-6">
+                  <Checkbox
+                    label="GP informed of the supply"
+                    checked={state.cautions.gpInformed}
+                    onChange={(v) => dispatch({ type: "UPDATE_CAUTION", field: "gpInformed", value: v })}
+                    required
+                  />
+                </div>
+              )}
             </div>
           </StepWrapper>
         );
@@ -858,12 +1232,17 @@ export function FoundayoClient() {
                 onChange={(v) => dispatch({ type: "UPDATE_INTERACTION", field: "strongCyp3a4Inducer", value: v })}
               />
               <Checkbox
-                label="Clarithromycin, ketoconazole or itraconazole (strong CYP3A4 inhibitor) — caps the dose at 9 mg"
+                label="Bosentan or efavirenz (moderate CYP3A4 inducer): monitor effectiveness and escalate the dose as needed"
+                checked={state.interactions.moderateCyp3a4Inducer}
+                onChange={(v) => dispatch({ type: "UPDATE_INTERACTION", field: "moderateCyp3a4Inducer", value: v })}
+              />
+              <Checkbox
+                label="Clarithromycin, ketoconazole or itraconazole (strong CYP3A4 inhibitor): caps the dose at 9 mg"
                 checked={state.interactions.strongCyp3a4Inhibitor}
                 onChange={(v) => dispatch({ type: "UPDATE_INTERACTION", field: "strongCyp3a4Inhibitor", value: v })}
               />
               <Checkbox
-                label="Ciclosporin or another clinical OATP1B inhibitor — caps the dose at 9 mg"
+                label="Ciclosporin or another clinical OATP1B inhibitor: caps the dose at 9 mg"
                 checked={state.interactions.oatp1bInhibitor}
                 onChange={(v) => dispatch({ type: "UPDATE_INTERACTION", field: "oatp1bInhibitor", value: v })}
               />
@@ -897,19 +1276,45 @@ export function FoundayoClient() {
               />
               <Checkbox
                 label="Warfarin"
+                description="Frequent INR monitoring is recommended on initiation of orforglipron."
                 checked={state.interactions.warfarin}
                 onChange={(v) => dispatch({ type: "UPDATE_INTERACTION", field: "warfarin", value: v })}
               />
               <Checkbox
-                label="Sulphonylurea or insulin"
+                label="Any sulfonylurea, meglitinide or insulin, for any indication: EXCLUDES"
+                description="There is no GP-monitored route for those patients under this PGD."
                 checked={state.interactions.sulfonylureaOrInsulin}
                 onChange={(v) => dispatch({ type: "UPDATE_INTERACTION", field: "sulfonylureaOrInsulin", value: v })}
               />
               <Checkbox
                 label="Any antihypertensive medicine"
+                description="Hypotension is reported more often in these patients. Ask about dizziness, light-headedness and falls at each review."
                 checked={state.interactions.antihypertensives}
                 onChange={(v) => dispatch({ type: "UPDATE_INTERACTION", field: "antihypertensives", value: v })}
               />
+              {state.visit.type !== "initiation" && (
+                <div className="ml-6">
+                  <Checkbox
+                    label="Dizziness, light-headedness or falls reported since starting orforglipron"
+                    description="Refer to the GP for review of antihypertensive therapy where symptoms occur."
+                    checked={state.interactions.hypotensionSymptoms}
+                    onChange={(v) => dispatch({ type: "UPDATE_INTERACTION", field: "hypotensionSymptoms", value: v })}
+                  />
+                </div>
+              )}
+              <Checkbox
+                label="Oral HRT"
+                description="Due to the lack of data regarding absorption, non-oral products (patch, gel, or levonorgestrel intrauterine device) may be considered."
+                checked={state.interactions.oralHrt}
+                onChange={(v) => dispatch({ type: "UPDATE_INTERACTION", field: "oralHrt", value: v })}
+              />
+              <div className="p-3 rounded-md bg-gray-50 border border-gray-200 text-xs text-gray-600">
+                Delayed gastric emptying may reduce the absorption of other oral
+                medicines, especially those with a narrow therapeutic index. Counsel
+                accordingly. Existing metformin, SGLT2 inhibitor or DPP-4 inhibitor
+                doses can be continued (inform the GP; see the Cautions on the previous
+                step).
+              </div>
               <TextArea
                 label="Other relevant medicines"
                 value={state.interactions.other}
@@ -947,6 +1352,16 @@ export function FoundayoClient() {
                   onChange={(v) => dispatch({ type: "UPDATE_DOSE", field: "daysAtCurrentDose", value: v })}
                   min={0}
                   max={365}
+                  required
+                />
+              )}
+              {state.visit.type !== "initiation" && state.visit.type !== "restart" && (
+                <Checkbox
+                  label="Clinical benefit, tolerability and target weight reassessed at this visit"
+                  description="If the patient has not lost at least 5% of their initial body weight after 6 months on the maximum tolerated dose, a decision is required on whether to continue treatment. When the patient reaches their target weight, discuss whether to continue treatment to maintain it. In case of significant gastrointestinal symptoms during titration, consider delaying a dose increase or lowering to the previous dose until symptoms have improved."
+                  checked={state.dose.reassessedAtVisit}
+                  onChange={(v) => dispatch({ type: "UPDATE_DOSE", field: "reassessedAtVisit", value: v })}
+                  required
                 />
               )}
               <SelectInput
@@ -954,7 +1369,7 @@ export function FoundayoClient() {
                 value={state.dose.newDose}
                 onChange={(v) => dispatch({ type: "UPDATE_DOSE", field: "newDose", value: v as Dose })}
                 options={[
-                  { value: "", label: "Select…" },
+                  { value: "", label: "Select" },
                   ...DOSE_LADDER.filter((d) => !(ceiling && ABOVE_CEILING.includes(d))).map((d) => ({
                     value: d,
                     label:
@@ -971,6 +1386,30 @@ export function FoundayoClient() {
                 One month of treatment at the current strength per appointment. This PGD
                 does not allow extra supply so the patient can stock up. Never more than
                 one tablet a day, and never combine lower strengths to make a higher dose.
+                Store in the original container, below 30 C unless the SPC states
+                otherwise.
+              </div>
+              <TextInput
+                label="Product name and brand"
+                value={state.record.productName}
+                onChange={(v) => dispatch({ type: "UPDATE_RECORD", field: "productName", value: v })}
+                required
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <TextInput
+                  label="Batch number"
+                  value={state.record.batchNumber}
+                  onChange={(v) => dispatch({ type: "UPDATE_RECORD", field: "batchNumber", value: v })}
+                  placeholder="From the pack"
+                  required
+                />
+                <TextInput
+                  label="Quantity supplied"
+                  value={state.record.quantitySupplied}
+                  onChange={(v) => dispatch({ type: "UPDATE_RECORD", field: "quantitySupplied", value: v })}
+                  placeholder="One month at this strength, e.g. number of tablets"
+                  required
+                />
               </div>
               <TextArea
                 label="Clinical rationale"
@@ -1012,21 +1451,25 @@ export function FoundayoClient() {
               {state.contraception.usesOralHormonal && (
                 <div className="ml-6 space-y-2">
                   <Checkbox
-                    label="Advised to switch to a non-oral method, or to add a barrier method, for 30 days"
+                    label="Advised to switch to a non-oral method, or to add a barrier method, for 30 days after starting orforglipron"
                     checked={state.contraception.advisedNonOralOrBarrier}
                     onChange={(v) => dispatch({ type: "UPDATE_CONTRACEPTION", field: "advisedNonOralOrBarrier", value: v })}
+                    required
                   />
                   <Checkbox
-                    label="Told that this applies again for 30 days after every future dose increase"
+                    label="Told that this applies again for 30 days after every dose increase (recorded at initiation and at each escalation)"
                     checked={state.contraception.advisedRepeatAfterEachIncrease}
                     onChange={(v) => dispatch({ type: "UPDATE_CONTRACEPTION", field: "advisedRepeatAfterEachIncrease", value: v })}
+                    required
                   />
                 </div>
               )}
               <div className="p-3 rounded-md bg-gray-50 border border-gray-200 text-xs text-gray-600">
-                Pregnancy is an exclusion under this PGD. Orforglipron must be stopped at
-                least 3 weeks before a planned pregnancy, and immediately if pregnancy
-                occurs or is suspected.
+                Pregnancy, breastfeeding and planning pregnancy are exclusions under this
+                PGD. Women of childbearing potential should use effective contraception
+                throughout treatment. Orforglipron must be stopped at least 3 weeks
+                before a planned pregnancy, and immediately if pregnancy occurs or is
+                suspected.
               </div>
             </div>
           </StepWrapper>
@@ -1036,22 +1479,30 @@ export function FoundayoClient() {
         return (
           <StepWrapper
             title="Counselling Checklist"
-            description="Confirm each item has been discussed."
+            description="Confirm each item has been discussed. Every item is required: the PGD requires the advice given to be recorded."
             {...stepProps}
           >
             <div className="space-y-2">
+              <Checkbox label="Expected pattern of weight loss explained, and that the medicine works alongside diet and activity, not instead of them." checked={state.counselling.weightLossExpectations} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "weightLossExpectations", value: v })} />
               <Checkbox label="Swallow whole, do not break, crush or chew. Any time of day, with or without food, no waiting period." checked={state.counselling.swallowWholeNoRestriction} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "swallowWholeNoRestriction", value: v })} />
               <Checkbox label="One tablet a day only. Never combine tablets to reach a higher dose." checked={state.counselling.oneTabletOnly} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "oneTabletOnly", value: v })} />
-              <Checkbox label="Missed dose: take it as soon as possible, but never two tablets in one day." checked={state.counselling.missedDose} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "missedDose", value: v })} />
-              <Checkbox label="Gastrointestinal effects (nausea, vomiting, diarrhoea, constipation) and how to manage them." checked={state.counselling.giSideEffects} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "giSideEffects", value: v })} />
-              <Checkbox label="Keep fluid intake up. Vomiting and diarrhoea can cause dehydration and affect the kidneys." checked={state.counselling.dehydrationAndKidney} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "dehydrationAndKidney", value: v })} />
-              <Checkbox label="Pancreatitis red flag: severe, persistent abdominal pain. Stop and seek urgent medical help." checked={state.counselling.pancreatitisRedFlag} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "pancreatitisRedFlag", value: v })} />
+              <Checkbox label="Missed dose: resume dosing as soon as possible, but never two tablets in one day and never double up." checked={state.counselling.missedDose} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "missedDose", value: v })} />
+              <Checkbox label="Gastrointestinal side effects (nausea, vomiting, diarrhoea, constipation) and how to manage them; gradual dose escalation reduces them." checked={state.counselling.giSideEffects} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "giSideEffects", value: v })} />
+              <Checkbox label="Adequate fluid intake. Vomiting and diarrhoea can cause dehydration and affect the kidneys." checked={state.counselling.dehydrationAndKidney} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "dehydrationAndKidney", value: v })} />
+              <Checkbox label="Pancreatitis red flag: severe, persistent abdominal pain. Stop and seek immediate medical attention." checked={state.counselling.pancreatitisRedFlag} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "pancreatitisRedFlag", value: v })} />
               <Checkbox label="Gallbladder red flag: right upper abdominal pain, jaundice or fever. Seek urgent review." checked={state.counselling.gallbladderRedFlag} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "gallbladderRedFlag", value: v })} />
+              <Checkbox label="Warning symptoms that need urgent attention: severe abdominal pain, persistent vomiting with dehydration, jaundice, sudden visual loss, or a sustained rise in resting heart rate." checked={state.counselling.urgentWarningSymptoms} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "urgentWarningSymptoms", value: v })} />
               <Checkbox label="Blood pressure may fall. Report dizziness, light-headedness or falls, particularly if on antihypertensives." checked={state.counselling.hypotensionSymptoms} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "hypotensionSymptoms", value: v })} />
-              <Checkbox label="Hypoglycaemia risk if taking a sulphonylurea or insulin, and what to do about it." checked={state.counselling.hypoRiskIfDiabetic} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "hypoRiskIfDiabetic", value: v })} />
-              <Checkbox label="Stop at least 3 weeks before a planned pregnancy, and immediately if pregnancy is suspected." checked={state.counselling.pregnancy3Weeks} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "pregnancy3Weeks", value: v })} />
-              <Checkbox label="Tell any anaesthetist about this medicine before surgery or a procedure under sedation." checked={state.counselling.anaesthesiaWarning} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "anaesthesiaWarning", value: v })} />
-              <Checkbox label="Follow-up agreed: weight and tolerability review before the next increase, and no increase inside 30 days." checked={state.counselling.followUpPlan} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "followUpPlan", value: v })} />
+              <Checkbox label="Stop at least 3 weeks before a planned pregnancy, and immediately if pregnancy occurs or is suspected. Use effective contraception throughout treatment." checked={state.counselling.pregnancy3Weeks} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "pregnancy3Weeks", value: v })} />
+              <Checkbox label="Tell any anaesthetist about this medicine before surgery or a procedure under general anaesthesia or deep sedation." checked={state.counselling.anaesthesiaWarning} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "anaesthesiaWarning", value: v })} />
+              <Checkbox label="When to return for review agreed: weight and tolerability review before the next increase, and no increase inside 30 days." checked={state.counselling.followUpPlan} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "followUpPlan", value: v })} />
+              <Checkbox label="Told that treatment will be reassessed if less than 5% of body weight has been lost after 6 months on the maintenance dose." checked={state.counselling.reassessmentAt6Months} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "reassessmentAt6Months", value: v })} />
+              <Checkbox label="Patient information leaflet supplied, with written lifestyle, diet and physical activity advice and the agreed target weight." checked={state.counselling.pilAndWrittenAdviceGiven} onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "pilAndWrittenAdviceGiven", value: v })} />
+              <div className="p-3 rounded-md bg-gray-50 border border-gray-200 text-xs text-gray-600">
+                Black triangle medicine: report all suspected adverse reactions via the
+                MHRA Yellow Card scheme (yellowcard.mhra.gov.uk) and inform the GP as
+                appropriate.
+              </div>
             </div>
           </StepWrapper>
         );
@@ -1073,18 +1524,30 @@ export function FoundayoClient() {
               <TextInput label="Pharmacist name" value={state.summary.pharmacistName} onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "pharmacistName", value: v })} required />
               <TextInput label="GPhC registration number" value={state.summary.pharmacistGPhC} onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "pharmacistGPhC", value: v })} required />
               <TextInput label="Pharmacy name" value={state.summary.pharmacyName} onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "pharmacyName", value: v })} />
+              <TextArea
+                label="Adverse drug reactions reported and actions taken (Yellow Card reference if reported)"
+                value={state.record.adverseReactions}
+                onChange={(v) => dispatch({ type: "UPDATE_RECORD", field: "adverseReactions", value: v })}
+                placeholder="None reported, or describe the reaction, the action taken and whether a Yellow Card was submitted"
+              />
               <TextArea label="Additional clinical notes" value={state.summary.clinicalNotes} onChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "clinicalNotes", value: v })} />
             </div>
             <div className="border-t border-gray-200 pt-6">
               <p className="text-sm text-gray-600 mb-4">
                 Record will be saved with PGD slug <code>foundayo</code>, against
-                document version v002.
+                document version v007 (issued 11 September 2026). Supplied via PGD.
               </p>
               <div className="p-4 bg-gray-50 rounded-md text-xs space-y-2">
                 <div><strong>Patient:</strong> {state.patient.firstName} {state.patient.lastName} ({state.patient.dateOfBirth})</div>
-                <div><strong>Visit:</strong> {state.visit.type || "—"}</div>
-                <div><strong>BMI:</strong> {state.eligibility.bmi ?? "—"}</div>
-                <div><strong>Dose supplied:</strong> {state.dose.newDose ? `${state.dose.newDose} mg once daily` : "—"}</div>
+                <div><strong>Visit:</strong> {state.visit.type || "not recorded"}</div>
+                <div>
+                  <strong>Height, weight, BMI:</strong>{" "}
+                  {state.eligibility.heightCm ?? "not recorded"} cm, {state.eligibility.weightKg ?? "not recorded"} kg, BMI {state.eligibility.bmi ?? "not recorded"}
+                </div>
+                <div><strong>Target weight agreed:</strong> {state.eligibility.targetWeightKg !== null ? `${state.eligibility.targetWeightKg} kg` : "not recorded"}</div>
+                <div><strong>Medicine:</strong> {state.record.productName || "not recorded"}, batch {state.record.batchNumber || "not recorded"}</div>
+                <div><strong>Dose, form and route:</strong> {state.dose.newDose ? `${state.dose.newDose} mg film-coated tablet, oral, once daily` : "not recorded"}</div>
+                <div><strong>Quantity supplied:</strong> {state.record.quantitySupplied || "not recorded"}</div>
                 <div>
                   <strong>Contraception:</strong>{" "}
                   {state.contraception.notApplicable
@@ -1093,9 +1556,10 @@ export function FoundayoClient() {
                     ? state.contraception.advisedNonOralOrBarrier
                       ? "Oral hormonal, advice given"
                       : "Oral hormonal, ADVICE NOT GIVEN"
-                    : "—"}
+                    : "not recorded"}
                 </div>
-                <div><strong>Written informed consent:</strong> {state.informedConsent.writtenConsentObtained ? "Yes" : "NO — cannot proceed"}</div>
+                <div><strong>Written informed consent:</strong> {state.informedConsent.writtenConsentObtained ? "Yes" : "NO, cannot proceed"}</div>
+                <div><strong>Adverse drug reactions:</strong> {state.record.adverseReactions || "None recorded"}</div>
                 <div><strong>Stops present:</strong> {hasStops ? "Yes" : "No"}</div>
               </div>
             </div>

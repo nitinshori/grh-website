@@ -22,14 +22,14 @@ export default function TyphoidPage() {
             <p className="text-gray-600 mb-4">PGD Consultation for UK Pharmacies</p>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-900">
-                This ePGD guides pharmacists in the supply and administration of Typhim Vi typhoid vaccine to adults aged 18 and over travelling to areas where typhoid is endemic, in line with the signed Travel Health PGD.
+                This ePGD guides pharmacists in the administration of Vi polysaccharide typhoid vaccine (Typhim Vi or equivalent) to travellers aged 2 years and over going to areas where typhoid is a risk, in line with the Typhoid (Vi Polysaccharide Vaccine) PGD v005, issued 11 September 2026. It does not cover oral live typhoid vaccine (Ty21a, Vivotif).
               </p>
             </div>
           </div>
         </div>
         <TyphoidClient />
         <div className="mt-8 text-center text-xs text-gray-500">
-          <p>Get Real Health ePGD — Typhoid | Confidential Patient Information</p>
+          <p>Get Real Health ePGD, Typhoid | Confidential Patient Information</p>
         </div>
       </div>
     </div>

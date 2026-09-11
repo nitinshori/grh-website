@@ -44,6 +44,59 @@ export interface TravelCoreConsultationSummary extends BaseSummary {
   preventiveAdviceSummary: string;
 }
 
+/** PGD version strapline shown on the page and printed on the record. */
+export const TRAVEL_CORE_PGD_VERSION =
+  "Hepatitis A (Havrix/Avaxim), Typhoid (Typhim Vi) and Cholera (Dukoral) Travel Health PGD v004, issued 11 September 2026";
+
+export type HepAProduct = "havrix" | "avaxim" | "";
+export type HepADose = "primary" | "booster" | "";
+export type CholeraDose = "1" | "2" | "booster" | "";
+export type InjectionSite = "left-deltoid" | "right-deltoid" | "";
+
+/**
+ * Vaccine administration under the signed PGD: Hepatitis A (Havrix Monodose
+ * 1440 EL.U/1.0 mL or Avaxim 160 U/0.5 mL), Typhoid (Typhim Vi 25 mcg/0.5 mL)
+ * and Cholera (Dukoral, oral). Adults 18 and over.
+ */
+export interface TravelCoreVaccineAdministration {
+  noVaccineToday: boolean;
+  // Exclusions and cautions common to the three PGDs
+  hypersensitivity: boolean;
+  acuteFebrileIllness: boolean;
+  pregnant: boolean;
+  immunocompromised: boolean;
+  bleedingDisorder: boolean;
+  // Cholera-specific exclusions and cautions
+  giSymptoms: boolean;
+  severeImmunocompromise: boolean;
+  recentAntibiotics: boolean;
+  // Hepatitis A
+  hepAGiven: boolean;
+  hepAProduct: HepAProduct;
+  hepADose: HepADose;
+  hepAPreviousCompleteCourse: boolean;
+  hepAImmunityDocumented: boolean;
+  hepABatch: string;
+  hepAExpiry: string;
+  hepASite: InjectionSite;
+  // Typhoid
+  typhoidGiven: boolean;
+  typhoidBatch: string;
+  typhoidExpiry: string;
+  typhoidSite: InjectionSite;
+  // Cholera
+  choleraGiven: boolean;
+  choleraRiskCriteriaMet: boolean;
+  choleraDose: CholeraDose;
+  choleraBatch: string;
+  choleraExpiry: string;
+  // Safety block and counselling
+  adrenalineAvailable: boolean;
+  observationCompleted: boolean;
+  pilSupplied: boolean;
+  followUpAdviceGiven: boolean;
+}
+
 export interface TravelCoreConsultationState {
   currentStep: number;
   patient: BasePatientDetails;
@@ -52,6 +105,7 @@ export interface TravelCoreConsultationState {
   malariaRisk: TravelCoreMalariaRisk;
   preventiveMeasures: TravelCorePreventiveMeasures;
   medicinesSupplied: TravelCoreMedicinesSupplied;
+  vaccines: TravelCoreVaccineAdministration;
   summary: TravelCoreConsultationSummary;
   completedSteps: Set<number>;
 }
@@ -63,8 +117,10 @@ export type TravelCoreAction =
   | { type: "UPDATE_MALARIA_RISK"; field: keyof TravelCoreMalariaRisk; value: unknown }
   | { type: "UPDATE_PREVENTIVE_MEASURES"; field: keyof TravelCorePreventiveMeasures; value: unknown }
   | { type: "UPDATE_MEDICINES_SUPPLIED"; field: keyof TravelCoreMedicinesSupplied; value: unknown }
+  | { type: "UPDATE_VACCINES"; field: keyof TravelCoreVaccineAdministration; value: unknown }
   | { type: "UPDATE_SUMMARY"; field: keyof TravelCoreConsultationSummary; value: unknown }
-  | { type: "SET_STEP"; step: number };
+  | { type: "SET_STEP"; step: number }
+  | { type: "RESET" };
 
 export const STEP_LABELS = [
   "Patient Details",
@@ -73,9 +129,45 @@ export const STEP_LABELS = [
   "Malaria Risk Assessment",
   "Preventive Measures",
   "Medicines & Supplies",
+  "Vaccine Administration",
   "Summary & Record",
   "Consultation Complete",
 ];
+
+export function createInitialVaccineAdministration(): TravelCoreVaccineAdministration {
+  return {
+    noVaccineToday: false,
+    hypersensitivity: false,
+    acuteFebrileIllness: false,
+    pregnant: false,
+    immunocompromised: false,
+    bleedingDisorder: false,
+    giSymptoms: false,
+    severeImmunocompromise: false,
+    recentAntibiotics: false,
+    hepAGiven: false,
+    hepAProduct: "",
+    hepADose: "",
+    hepAPreviousCompleteCourse: false,
+    hepAImmunityDocumented: false,
+    hepABatch: "",
+    hepAExpiry: "",
+    hepASite: "",
+    typhoidGiven: false,
+    typhoidBatch: "",
+    typhoidExpiry: "",
+    typhoidSite: "",
+    choleraGiven: false,
+    choleraRiskCriteriaMet: false,
+    choleraDose: "",
+    choleraBatch: "",
+    choleraExpiry: "",
+    adrenalineAvailable: false,
+    observationCompleted: false,
+    pilSupplied: false,
+    followUpAdviceGiven: false,
+  };
+}
 
 export const TOTAL_STEPS = STEP_LABELS.length;
 
@@ -137,6 +229,7 @@ gpEmail: "",
       skinCreamSupplied: false,
       otherMedicinesNotes: "",
     },
+    vaccines: createInitialVaccineAdministration(),
     summary: {
       pharmacistName: "",
       pharmacistGPhC: "",

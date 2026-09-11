@@ -20,14 +20,14 @@ export function validatePatientDetailsStep(
   if (!patient.dateOfBirth) return 'Date of birth is required';
   if (patient.age === null) return 'Unable to calculate age';
 
-  // Note: This PGD is for adults and children 12+
-  // Under 12 requires specialist medical advice, which will be covered in counselling
-  if (patient.age < 12) {
-    return 'This PGD applies to patients 12 years or older. Younger children require specialist medical assessment.';
+  // PGD v003 inclusion: adults aged 18 years and over.
+  if (patient.age < 18) {
+    return 'This PGD applies to adults aged 18 years and over';
   }
 
-  if (!patient.maleConfirmed && !patient.femaleConfirmed)
-    return 'Please confirm the patient\'s gender';
+  // Gender confirmation removed: no UI exists on the shared patient-details
+  // step to set maleConfirmed / femaleConfirmed, so the check trapped every
+  // consultation. Pregnancy / breastfeeding are asked on the medical-history step.
 
   return null;
 }
@@ -88,8 +88,13 @@ export function validateMedicineSelectionStep(
   if (!medicine.selectedApproach)
     return 'Please confirm whether standby treatment will be supplied';
   if (medicine.selectedApproach === 'standby') {
-    if (!medicine.loperamideDose.trim()) return 'Loperamide dose is required';
     if (!medicine.azithromycinDose.trim()) return 'Azithromycin dose is required';
+    if (medicine.azithromycinQuantity === null || medicine.azithromycinQuantity < 1)
+      return 'Azithromycin quantity (one to three 500 mg tablets) is required';
+    if (medicine.azithromycinQuantity > 3)
+      return 'The PGD allows a maximum of three 500 mg tablets (maximum course 3 days)';
+    if (!medicine.selectedForCriteria)
+      return 'Confirm the patient understands azithromycin is for moderate to severe symptoms';
   }
   if (!medicine.reason.trim())
     return 'Clinical reason for selection is required';
@@ -148,13 +153,15 @@ export function validateStep(stepIndex: number, data: any): string | null {
     case 3:
       return validateMedicalHistoryStep(data.medicalHistory);
     case 4:
+      return validateMedicationsStep(data.medications);
+    case 5:
       // Contraindications review: no input, just review
       return null;
-    case 5:
-      return validateMedicineSelectionStep(data.medicineSelection);
     case 6:
-      return validateCounsellingStep(data.counselling);
+      return validateMedicineSelectionStep(data.medicineSelection);
     case 7:
+      return validateCounsellingStep(data.counselling);
+    case 8:
       return validateSummaryStep(data.summary);
     default:
       return null;

@@ -13,29 +13,68 @@ import {
 
 // ─── Postnatal Contraception-Specific Types ───
 
+// Postnatal Contraception PGD v004 (11 September 2026). Two arms:
+// desogestrel 75 microgram tablets (women 16 and over, any time postpartum)
+// and medroxyprogesterone acetate 150 mg/mL injection, Depo-Provera (women
+// 18 and over; from 6 weeks if breastfeeding, from 21 days if not
+// breastfeeding and no additional VTE risk factor).
+export const PGD_VERSION_LABEL =
+  "Postnatal Contraception PGD (desogestrel 75 micrograms / Depo-Provera 150 mg), version 004, issued 11 September 2026";
+
+export type PostnatalMedicineChoice = "" | "desogestrel" | "depo-provera";
+
 export interface PostnatalAssessment {
-  weeksPostpartum: number;
+  weeksPostpartum: number; // derived from daysPostpartum for display
+  daysPostpartum: number | null;
   deliveryType: string;
   breastfeedingStatus: string;
-  vteRiskAssessment: string;
+  vteRiskAssessment: string; // legacy free field, no longer required
+  // Additional VTE risk factors named in the Depo-Provera inclusion criteria
+  previousVte: boolean;
+  thrombophilia: boolean;
+  immobility: boolean;
+  bmi30OrOver: boolean;
+  postpartumHaemorrhage: boolean;
+  preEclampsia: boolean;
+  smoking: boolean;
+  // From day 21 pregnancy must be reasonably excluded
+  unprotectedSexSinceDay21: boolean;
+  negativeTest21DaysAfterLastUpsi: boolean;
 }
 
 export interface PostnatalMedicalHistory {
-  currentBreastCancer: boolean;
-  severeLiverDisease: boolean;
-  unexplainedVaginalBleeding: boolean;
+  knownOrSuspectedPregnancy: boolean; // exclusion, both arms
+  currentBreastCancer: boolean; // exclusion, both arms
+  severeLiverDisease: boolean; // exclusion, both arms
+  unexplainedVaginalBleeding: boolean; // exclusion, both arms
   porphyria: boolean;
-  pastBreastCancer: boolean;
-  liverTumours: boolean;
+  pastBreastCancer: boolean; // caution (more than 5 years ago)
+  liverTumours: boolean; // desogestrel exclusion
   sleWithAntiphospholipidAntibodies: boolean;
+  activeThromboembolicDisorder: boolean; // desogestrel exclusion
+  desogestrelHypersensitivity: boolean; // desogestrel exclusion
+  mpaHypersensitivity: boolean; // Depo-Provera exclusion
+  severeCardiovascularDisease: boolean; // Depo-Provera exclusion
+  meningioma: boolean; // current or previous: Depo-Provera exclusion
+  functionalOvarianCysts: boolean; // caution
+  diabetes: boolean; // caution
+  hypertension: boolean; // caution
+  migraine: boolean; // caution
+  depression: boolean; // caution
 }
 
 export interface PostnatalMedicineSupply {
+  medicineChoice: PostnatalMedicineChoice;
   medicine: string;
   doseStrength: string;
-  quantity: number;
+  quantity: number; // desogestrel: tablets supplied (up to 84)
   startDate: string;
   administeredBy: string;
+  // Depo-Provera administration record
+  injectionSite: "" | "gluteal" | "deltoid";
+  batchNumber: string;
+  expiryDate: string;
+  nextInjectionDue: string;
 }
 
 export interface PostnatalCounselling {
@@ -47,6 +86,12 @@ export interface PostnatalCounselling {
   emergencyContactAdvice: boolean;
   sideEffectsExplained: boolean;
   pillfreeIntervalAdvice: boolean;
+  extraPrecautionsAdvice: boolean; // desogestrel started after day 21: barrier method for 2 days (SmPC 7 days)
+  dvtPeAdvice: boolean; // seek immediate attention for calf pain, swelling, breathlessness
+  unexpectedBleedingAdvice: boolean; // report any unexpected vaginal bleeding
+  longerTermOptionsAdvice: boolean;
+  depoFertilityAdvice: boolean; // fertility may take 5 to 6 months to return
+  depoRepeatAdvice: boolean; // repeat injection every 12 weeks
 }
 
 export interface PostnatalContraceptionState {
@@ -99,11 +144,22 @@ export function createInitialPostnatalContraceptionState(): PostnatalContracepti
     consent: { ...initialConsent },
     assessment: {
       weeksPostpartum: 0,
+      daysPostpartum: null,
       deliveryType: "",
       breastfeedingStatus: "",
       vteRiskAssessment: "",
+      previousVte: false,
+      thrombophilia: false,
+      immobility: false,
+      bmi30OrOver: false,
+      postpartumHaemorrhage: false,
+      preEclampsia: false,
+      smoking: false,
+      unprotectedSexSinceDay21: false,
+      negativeTest21DaysAfterLastUpsi: false,
     },
     medicalHistory: {
+      knownOrSuspectedPregnancy: false,
       currentBreastCancer: false,
       severeLiverDisease: false,
       unexplainedVaginalBleeding: false,
@@ -111,13 +167,28 @@ export function createInitialPostnatalContraceptionState(): PostnatalContracepti
       pastBreastCancer: false,
       liverTumours: false,
       sleWithAntiphospholipidAntibodies: false,
+      activeThromboembolicDisorder: false,
+      desogestrelHypersensitivity: false,
+      mpaHypersensitivity: false,
+      severeCardiovascularDisease: false,
+      meningioma: false,
+      functionalOvarianCysts: false,
+      diabetes: false,
+      hypertension: false,
+      migraine: false,
+      depression: false,
     },
     medicineSupply: {
-      medicine: "Desogestrel 75mcg (Cerazette/generic)",
-      doseStrength: "75mcg",
+      medicineChoice: "",
+      medicine: "",
+      doseStrength: "",
       quantity: 0,
       startDate: "",
       administeredBy: "",
+      injectionSite: "",
+      batchNumber: "",
+      expiryDate: "",
+      nextInjectionDue: "",
     },
     counselling: {
       timingAdvice: false,
@@ -128,6 +199,12 @@ export function createInitialPostnatalContraceptionState(): PostnatalContracepti
       emergencyContactAdvice: false,
       sideEffectsExplained: false,
       pillfreeIntervalAdvice: false,
+      extraPrecautionsAdvice: false,
+      dvtPeAdvice: false,
+      unexpectedBleedingAdvice: false,
+      longerTermOptionsAdvice: false,
+      depoFertilityAdvice: false,
+      depoRepeatAdvice: false,
     },
     summary: initialSummary(),
     alerts: [],

@@ -243,7 +243,7 @@ export function WegovyToolClient() {
         return (
           <StepWrapper
             title="Patient Details"
-            description="Confirm patient identity and age. Patient must be 18 or older."
+            description="Confirm patient identity and age. Patient must be aged 18 to 75 years (inclusive)."
             currentStep={state.currentStep}
             totalSteps={TOTAL_STEPS}
             onNext={handleNext}
@@ -285,7 +285,7 @@ export function WegovyToolClient() {
         return (
           <StepWrapper
             title="Weight Assessment"
-            description="Calculate BMI and assess weight-related comorbidities. BMI ≥30 or BMI ≥27 with comorbidities required."
+            description="Calculate BMI and assess weight-related comorbidities. BMI 30 or above, or BMI 27 or above with at least one weight-related comorbidity, is required. Adults aged 18 to 75."
             currentStep={state.currentStep}
             totalSteps={TOTAL_STEPS}
             onNext={handleNext}
@@ -357,7 +357,7 @@ export function WegovyToolClient() {
               )}
 
               <TextInput
-                label="Target weight loss"
+                label="Target weight agreed"
                 value={state.weightAssessment.targetWeightLoss}
                 onChange={(v) =>
                   dispatch({
@@ -366,7 +366,48 @@ export function WegovyToolClient() {
                     value: v,
                   })
                 }
-                placeholder="e.g., 10kg, 15% body weight reduction"
+                placeholder="e.g., target weight 85 kg, or 10 kg loss"
+                required
+              />
+
+              <Checkbox
+                label="Prescribed medication may be causing the weight gain"
+                checked={state.weightAssessment.medicationInducedWeightGain}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_WEIGHT_ASSESSMENT",
+                    field: "medicationInducedWeightGain",
+                    value: v,
+                  })
+                }
+                description="Refer the patient to their GP if prescribed medication is causing weight gain"
+              />
+
+              <Checkbox
+                label="Initial face-to-face assessment completed and documented"
+                checked={state.weightAssessment.initialAssessmentCompleted}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_WEIGHT_ASSESSMENT",
+                    field: "initialAssessmentCompleted",
+                    value: v,
+                  })
+                }
+                description="Causes of weight gain; lifestyle, diet and exercise; previous attempts; mental health, environmental and psychological factors; other disease states predisposing to weight gain; expectations and whether realistic; BMI, ideal weight, target weight and review intervals"
+                required
+              />
+
+              <Checkbox
+                label="Patient is willing to follow a reduced-calorie diet and increase physical activity in line with the agreed lifestyle plan"
+                checked={state.weightAssessment.lifestylePlanAgreed}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_WEIGHT_ASSESSMENT",
+                    field: "lifestylePlanAgreed",
+                    value: v,
+                  })
+                }
+                required
               />
             </div>
           </StepWrapper>
@@ -431,7 +472,32 @@ export function WegovyToolClient() {
               />
 
               <Checkbox
-                label="Severe gastrointestinal disease (gastroparesis, inflammatory bowel disease)"
+                label="Known hypersensitivity to semaglutide or to any of the excipients"
+                checked={state.medicalHistory.semaglutideHypersensitivity}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "semaglutideHypersensitivity",
+                    value: v,
+                  })
+                }
+              />
+
+              <Checkbox
+                label="History of pancreatitis, acute or chronic"
+                checked={state.medicalHistory.pancreatitisHistory}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "pancreatitisHistory",
+                    value: v,
+                  })
+                }
+                description="Exclusion under this PGD"
+              />
+
+              <Checkbox
+                label="Severe gastrointestinal disease, including gastroparesis or severe persistent gastrointestinal disorder"
                 checked={state.medicalHistory.severeGIDisease}
                 onChange={(v) =>
                   dispatch({
@@ -443,15 +509,80 @@ export function WegovyToolClient() {
               />
 
               <Checkbox
-                label="Active eating disorder"
-                checked={state.medicalHistory.eatingDisorder}
+                label="Current cholelithiasis (gallstones) or cholecystitis"
+                checked={state.medicalHistory.gallbladderDisease}
                 onChange={(v) =>
                   dispatch({
                     type: "UPDATE_MEDICAL_HISTORY",
-                    field: "eatingDisorder",
+                    field: "gallbladderDisease",
                     value: v,
                   })
                 }
+                description="Exclusion under this PGD"
+              />
+
+              <Checkbox
+                label="Cholecystectomy within the last 3 months"
+                checked={state.medicalHistory.recentCholecystectomy}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "recentCholecystectomy",
+                    value: v,
+                  })
+                }
+                description="Exclusion under this PGD"
+              />
+
+              <Checkbox
+                label="Obesity caused by an endocrinological disorder"
+                checked={state.medicalHistory.endocrineObesity}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "endocrineObesity",
+                    value: v,
+                  })
+                }
+                description="Exclusion. If the patient was already overweight prior to that diagnosis, this exclusion may not apply: leave unticked and document the reasoning in the clinical notes."
+              />
+
+              <Checkbox
+                label="Type 1 diabetes mellitus"
+                checked={state.medicalHistory.type1Diabetes}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "type1Diabetes",
+                    value: v,
+                  })
+                }
+              />
+
+              <Checkbox
+                label="Diabetic retinopathy"
+                checked={state.medicalHistory.diabeticRetinopathy}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "diabeticRetinopathy",
+                    value: v,
+                  })
+                }
+                description="Exclusion. Treatment may worsen retinopathy; defer or refer to a specialist."
+              />
+
+              <Checkbox
+                label="Severe renal impairment (eGFR below 30 mL/min/1.73 m²) or end-stage renal disease"
+                checked={state.medicalHistory.severeRenal}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "severeRenal",
+                    value: v,
+                  })
+                }
+                description="Exclusion under this PGD"
               />
 
               <Checkbox
@@ -467,6 +598,31 @@ export function WegovyToolClient() {
               />
 
               <Checkbox
+                label="Known diagnosis of heart failure with reduced ejection fraction below 40%"
+                checked={state.medicalHistory.heartFailureReducedEF}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "heartFailureReducedEF",
+                    value: v,
+                  })
+                }
+                description="EXCLUSION. HFpEF (preserved EF) is NOT excluded; semaglutide has shown benefit (STEP-HFpEF). If EF is unknown but patient is under cardiology review for heart failure, refer to GP to confirm."
+              />
+
+              <Checkbox
+                label="Active eating disorder (anorexia nervosa, bulimia, or binge-eating disorder under specialist care)"
+                checked={state.medicalHistory.eatingDisorder}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "eatingDisorder",
+                    value: v,
+                  })
+                }
+              />
+
+              <Checkbox
                 label="Current suicidal ideation"
                 checked={state.medicalHistory.suicidalIdeation}
                 onChange={(v) =>
@@ -476,7 +632,20 @@ export function WegovyToolClient() {
                     value: v,
                   })
                 }
-                description="URGENT RED FLAG: Do not proceed without psychiatric input"
+                description="URGENT RED FLAG: do not supply; refer urgently to mental health services"
+              />
+
+              <Checkbox
+                label="Not suitable for the medication in the clinical judgement of the healthcare professional"
+                checked={state.medicalHistory.clinicalJudgementUnsuitable}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "clinicalJudgementUnsuitable",
+                    value: v,
+                  })
+                }
+                description="Exclusion. Document the reason in the clinical notes."
               />
 
               <div className="border-t border-gray-300 pt-4 mt-4">
@@ -486,72 +655,7 @@ export function WegovyToolClient() {
               </div>
 
               <Checkbox
-                label="History of pancreatitis"
-                checked={state.medicalHistory.pancreatitisHistory}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_MEDICAL_HISTORY",
-                    field: "pancreatitisHistory",
-                    value: v,
-                  })
-                }
-                description="Monitor closely; advise on warning signs"
-              />
-
-              <Checkbox
-                label="Heart failure with reduced ejection fraction (HFrEF, LVEF ≤40%)"
-                checked={state.medicalHistory.heartFailureReducedEF}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_MEDICAL_HISTORY",
-                    field: "heartFailureReducedEF",
-                    value: v,
-                  })
-                }
-                description="EXCLUSION. HFpEF (preserved EF >40%) is NOT excluded — semaglutide has shown benefit (STEP-HFpEF). If EF is unknown but patient is under cardiology review for heart failure, refer to GP to confirm."
-              />
-
-              <Checkbox
-                label="Gallbladder disease (cholelithiasis / cholecystitis)"
-                checked={state.medicalHistory.gallbladderDisease}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_MEDICAL_HISTORY",
-                    field: "gallbladderDisease",
-                    value: v,
-                  })
-                }
-                description="Increased cholelithiasis risk"
-              />
-
-              <Checkbox
-                label="Cholecystectomy within the last 3 months"
-                checked={state.medicalHistory.recentCholecystectomy}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_MEDICAL_HISTORY",
-                    field: "recentCholecystectomy",
-                    value: v,
-                  })
-                }
-                description="Caution. Counsel on biliary warning signs; consider deferring initiation."
-              />
-
-              <Checkbox
-                label="Diabetic retinopathy"
-                checked={state.medicalHistory.diabeticRetinopathy}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_MEDICAL_HISTORY",
-                    field: "diabeticRetinopathy",
-                    value: v,
-                  })
-                }
-                description="May transiently worsen with rapid weight loss"
-              />
-
-              <Checkbox
-                label="Depression / mental health condition"
+                label="History of suicidal ideation, or active severe mental illness"
                 checked={state.medicalHistory.depression}
                 onChange={(v) =>
                   dispatch({
@@ -560,7 +664,61 @@ export function WegovyToolClient() {
                     value: v,
                   })
                 }
-                description="Requires enhanced psychiatric monitoring"
+                description="Caution. Ensure appropriate psychiatric oversight is in place, monitor mood at review, and refer if there is any concern. Do not supply where oversight is absent and concern exists."
+              />
+
+              {state.medicalHistory.depression && (
+                <div className="ml-6 space-y-3">
+                  <Checkbox
+                    label="Appropriate psychiatric oversight is in place"
+                    checked={state.medicalHistory.psychiatricOversightInPlace}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_MEDICAL_HISTORY",
+                        field: "psychiatricOversightInPlace",
+                        value: v,
+                      })
+                    }
+                  />
+                  <Checkbox
+                    label="There is concern about the patient's current mental state"
+                    checked={state.medicalHistory.mentalHealthConcern}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_MEDICAL_HISTORY",
+                        field: "mentalHealthConcern",
+                        value: v,
+                      })
+                    }
+                    description="Where concern exists and oversight is absent, do not supply"
+                  />
+                </div>
+              )}
+
+              <Checkbox
+                label="Mild to moderate renal impairment"
+                checked={state.medicalHistory.mildModerateRenal}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "mildModerateRenal",
+                    value: v,
+                  })
+                }
+                description="Monitor for dehydration secondary to gastrointestinal side effects"
+              />
+
+              <Checkbox
+                label="Procedure under general anaesthesia or deep sedation planned"
+                checked={state.medicalHistory.plannedAnaesthesia}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "plannedAnaesthesia",
+                    value: v,
+                  })
+                }
+                description="Pulmonary aspiration has been reported; the increased risk of residual gastric content due to delayed gastric emptying should be considered before the procedure"
               />
 
               <Checkbox
@@ -574,19 +732,6 @@ export function WegovyToolClient() {
                   })
                 }
                 description="Monitor thyroid function and warning signs"
-              />
-
-              <Checkbox
-                label="Severe renal impairment"
-                checked={state.medicalHistory.severeRenal}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_MEDICAL_HISTORY",
-                    field: "severeRenal",
-                    value: v,
-                  })
-                }
-                description="Risk of dehydration; monitor renal function"
               />
 
               <div className="border-t border-gray-300 pt-4 mt-4">
@@ -620,7 +765,7 @@ export function WegovyToolClient() {
               />
 
               <Checkbox
-                label="Planning pregnancy within 2 months"
+                label="Planning pregnancy"
                 checked={state.medicalHistory.planningPregnancy}
                 onChange={(v) =>
                   dispatch({
@@ -629,6 +774,7 @@ export function WegovyToolClient() {
                     value: v,
                   })
                 }
+                description="Exclusion. Effective contraception is required; advise discontinuation at least 2 months before planned conception."
               />
             </div>
           </StepWrapper>
@@ -647,8 +793,19 @@ export function WegovyToolClient() {
             validationError={validationError}
           >
             <div className="space-y-4">
+              <div className="p-3 bg-red-50 border border-red-200 rounded">
+                <p className="text-xs text-red-700">
+                  Ask specifically about medicines taken for diabetes and name the products:
+                  oral or injectable semaglutide, tirzepatide, orforglipron, liraglutide,
+                  dulaglutide, exenatide, and the sulfonylureas and meglitinides. Patients do
+                  not always think of a diabetes medicine as the same kind of drug as a weight
+                  loss one. Any GLP-1 receptor agonist, sulfonylurea, meglitinide or insulin
+                  EXCLUDES.
+                </p>
+              </div>
+
               <Checkbox
-                label="Currently taking insulin"
+                label="Currently taking insulin (insulin-treated diabetes)"
                 checked={state.medications.takesInsulin}
                 onChange={(v) =>
                   dispatch({
@@ -657,7 +814,7 @@ export function WegovyToolClient() {
                     value: v,
                   })
                 }
-                description="Risk of hypoglycaemia; may require dose reduction (~20%)"
+                description="Exclusion. Refer: a pharmacy weight-management service cannot manage insulin dose reduction."
               />
 
               {state.medications.takesInsulin && (
@@ -677,7 +834,7 @@ export function WegovyToolClient() {
               )}
 
               <Checkbox
-                label="Currently taking sulphonylureas"
+                label="Currently taking a sulfonylurea or meglitinide"
                 checked={state.medications.takesSulphonylureas}
                 onChange={(v) =>
                   dispatch({
@@ -686,12 +843,12 @@ export function WegovyToolClient() {
                     value: v,
                   })
                 }
-                description="Risk of hypoglycaemia; dose reduction or switch recommended"
+                description="Exclusion. Any sulfonylurea, meglitinide or insulin EXCLUDES; there is no GP-monitored route under this PGD."
               />
 
               {state.medications.takesSulphonylureas && (
                 <TextArea
-                  label="Sulphonylurea details"
+                  label="Sulfonylurea or meglitinide details"
                   value={state.medications.sulphonylureDetails}
                   onChange={(v) =>
                     dispatch({
@@ -700,26 +857,13 @@ export function WegovyToolClient() {
                       value: v,
                     })
                   }
-                  placeholder="e.g., gliclazide, glipizide"
+                  placeholder="e.g., gliclazide, glimepiride, repaglinide"
                   required
                 />
               )}
 
               <Checkbox
-                label="Taking oral contraceptives"
-                checked={state.medications.takesOralContraceptives}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_MEDICATIONS",
-                    field: "takesOralContraceptives",
-                    value: v,
-                  })
-                }
-                description="May reduce efficacy due to GI motility changes; backup contraception advised"
-              />
-
-              <Checkbox
-                label="Already taking another GLP-1 agonist or insulin secretagogue, for ANY indication (ask about diabetes medicines by name)"
+                label="Already taking another GLP-1 receptor agonist, for ANY indication"
                 checked={state.medications.currentGLP1}
                 onChange={(v) =>
                   dispatch({
@@ -728,7 +872,46 @@ export function WegovyToolClient() {
                     value: v,
                   })
                 }
-                description="Cannot combine with another GLP-1 for any indication, including one taken for diabetes: semaglutide, tirzepatide, liraglutide, dulaglutide, exenatide, orforglipron, or a sulfonylurea or meglitinide"
+                description="Exclusion. Oral or injectable semaglutide, tirzepatide, orforglipron, liraglutide, dulaglutide or exenatide, including when taken for diabetes."
+              />
+
+              <Checkbox
+                label="Type 2 diabetes on metformin, an SGLT2 inhibitor or a DPP-4 inhibitor only"
+                checked={state.medications.takesOtherDiabetesMeds}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICATIONS",
+                    field: "takesOtherDiabetesMeds",
+                    value: v,
+                  })
+                }
+                description="Caution. No dose adjustment is needed, but inform the GP."
+              />
+
+              <Checkbox
+                label="Warfarin or another coumarin anticoagulant, or another oral medicine with a narrow therapeutic index"
+                checked={state.medications.takesWarfarinOrNTI}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICATIONS",
+                    field: "takesWarfarinOrNTI",
+                    value: v,
+                  })
+                }
+                description="Caution. Delayed gastric emptying may reduce absorption of oral medicines; frequent INR monitoring is recommended on initiation in patients on warfarin."
+              />
+
+              <Checkbox
+                label="Takes HRT"
+                checked={state.medications.takesHRT}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICATIONS",
+                    field: "takesHRT",
+                    value: v,
+                  })
+                }
+                description="Caution. Due to the lack of data regarding absorption, non-oral products (patch, gel, or levonorgestrel intrauterine device) may be considered."
               />
 
               <TextArea
@@ -859,7 +1042,7 @@ export function WegovyToolClient() {
             canProceed={!hasStops}
             validationError={
               hasStops
-                ? "Hard stop contraindications present — cannot proceed to dose selection."
+                ? "Hard stop contraindications present, cannot proceed to dose selection."
                 : null
             }
             isBlocked={hasStops}
@@ -873,12 +1056,16 @@ export function WegovyToolClient() {
             {hasStops && (
               <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded">
                 <p className="text-sm font-semibold text-red-700 mb-2">
-                  Hard Stop — Cannot Supply
+                  Hard Stop: Cannot Supply
                 </p>
                 <p className="text-sm text-red-600">
-                  Based on the identified contraindications, Wegovy cannot be supplied. The
-                  patient should be referred back to their GP for further assessment and
-                  alternative weight management strategies.
+                  Based on the identified exclusion criteria, Wegovy cannot be supplied under
+                  this PGD. Discuss the reason for exclusion with the patient and ensure they
+                  understand. Advise on alternative treatment options and how these can be
+                  accessed (the GP, a specialist weight management service, or lifestyle
+                  programmes). If the exclusion relates to an undiagnosed or unmanaged
+                  comorbidity, recommend GP review. Document any advice given and the decision
+                  reached, and inform or refer to the GP as appropriate.
                 </p>
               </div>
             )}
@@ -943,6 +1130,97 @@ export function WegovyToolClient() {
 
             <div className="mt-6 space-y-4">
               <Checkbox
+                label="Patient has used Wegovy in the past and is recommencing treatment"
+                checked={state.doseSelection.recommencingAfterBreak}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_DOSE_SELECTION",
+                    field: "recommencingAfterBreak",
+                    value: v,
+                  })
+                }
+                description="The dose must be titrated again from the lowest dose (0.25 mg). The BMI inclusion criteria for initiation must be reapplied if more than 2 months have passed since discontinuing treatment."
+              />
+
+              {(state.doseSelection.previousDose !== "" ||
+                state.doseSelection.recommencingAfterBreak) && (
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <TextInput
+                    label="Treatment start date (current course)"
+                    type="date"
+                    value={state.doseSelection.treatmentStartDate}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_DOSE_SELECTION",
+                        field: "treatmentStartDate",
+                        value: v,
+                      })
+                    }
+                    required
+                  />
+                  <NumberInput
+                    label="Weight at initiation"
+                    value={state.doseSelection.initialWeight}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_DOSE_SELECTION",
+                        field: "initialWeight",
+                        value: v,
+                      })
+                    }
+                    min={20}
+                    max={300}
+                    unit="kg"
+                    required
+                  />
+                </div>
+              )}
+
+              {state.doseSelection.dose === "7.2mg" && (
+                <NumberInput
+                  label="Starting BMI (at initiation of treatment)"
+                  value={state.doseSelection.startingBMI}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_DOSE_SELECTION",
+                      field: "startingBMI",
+                      value: v,
+                    })
+                  }
+                  min={10}
+                  max={100}
+                  unit="kg/m²"
+                  required
+                />
+              )}
+
+              <TextInput
+                label="Batch number of the product supplied"
+                value={state.doseSelection.batchNumber}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_DOSE_SELECTION",
+                    field: "batchNumber",
+                    value: v,
+                  })
+                }
+                placeholder="Record the name and brand of medication, and batch number"
+                required
+              />
+
+              <div className="p-3 bg-gray-50 border border-gray-200 rounded text-xs text-gray-600">
+                <p className="font-semibold text-navy-900 mb-1">Monitoring and review</p>
+                <p>
+                  Reassess clinical benefit, tolerability and target weight at each visit. If
+                  the patient has not lost at least 5% of their initial body weight after 6
+                  months on the maximum tolerated dose, a decision is required on whether to
+                  continue treatment. Maximum treatment period: 2 years of continuous
+                  treatment under this PGD, after which the patient is referred to the GP or a
+                  specialist prescriber for a decision on continuation.
+                </p>
+              </div>
+
+              <Checkbox
                 label="Pharmacist override"
                 checked={state.doseSelection.pharmacistOverride}
                 onChange={(v) =>
@@ -1003,7 +1281,7 @@ export function WegovyToolClient() {
               />
 
               <Checkbox
-                label="Storage instructions provided (fridge 2-8°C)"
+                label="Storage instructions provided"
                 checked={state.counselling.storageFridge}
                 onChange={(v) =>
                   dispatch({
@@ -1012,6 +1290,7 @@ export function WegovyToolClient() {
                     value: v,
                   })
                 }
+                description="Store in a refrigerator (2°C to 8°C); do not freeze, discard if frozen. After first use the FlexTouch pen can be stored for up to 6 weeks below 30°C or in a refrigerator. Keep the pen cap on to protect from light. When flying, carry pens in hand luggage, not checked baggage; a travel letter may be required."
               />
 
               <Checkbox
@@ -1024,11 +1303,11 @@ export function WegovyToolClient() {
                     value: v,
                   })
                 }
-                description="When to take if dose is missed (within 5 days); restart weekly cycle if more delayed"
+                description="If a dose is missed, administer as soon as possible and within 5 days. If more than 5 days have passed, skip the missed dose and take the next dose on the regularly scheduled day. If more than 2 doses are missed, the dose is reduced and re-escalated."
               />
 
               <Checkbox
-                label="GI side effects discussed (nausea, vomiting, diarrhoea, constipation)"
+                label="GI side effects and fluid intake discussed (nausea, vomiting, diarrhoea, constipation)"
                 checked={state.counselling.giSideEffects}
                 onChange={(v) =>
                   dispatch({
@@ -1037,7 +1316,7 @@ export function WegovyToolClient() {
                     value: v,
                   })
                 }
-                description="Common side effects and management strategies"
+                description="Gradual dose escalation and how to manage GI side effects; consider delaying titration or reducing to the previous dose if significant symptoms occur. Risk of dehydration: counsel on adequate fluid intake during GI side effects."
               />
 
               <Checkbox
@@ -1050,7 +1329,7 @@ export function WegovyToolClient() {
                     value: v,
                   })
                 }
-                description="Severe abdominal pain radiating to back; when to seek urgent help"
+                description="Persistent, severe abdominal pain: seek immediate medical attention; treatment is discontinued and referred urgently if pancreatitis is suspected"
               />
 
               <Checkbox
@@ -1063,11 +1342,24 @@ export function WegovyToolClient() {
                     value: v,
                   })
                 }
-                description="Upper right quadrant pain, nausea; contact GP if develops"
+                description="Gallstones are a common adverse effect, cholecystitis uncommon: upper right quadrant pain, fever or jaundice need urgent attention"
               />
 
               <Checkbox
-                label="Suicidal ideation warning signs explained"
+                label="Urgent warning symptoms explained"
+                checked={state.counselling.urgentWarningSymptoms}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_COUNSELLING",
+                    field: "urgentWarningSymptoms",
+                    value: v,
+                  })
+                }
+                description="Severe abdominal pain, persistent vomiting with dehydration, jaundice, sudden visual loss (including partial loss; NAION has been reported, seek urgent review), or a sustained rise in resting heart rate"
+              />
+
+              <Checkbox
+                label="Mood and mental health: when to seek help explained"
                 checked={state.counselling.suicidalIdeationWarning}
                 onChange={(v) =>
                   dispatch({
@@ -1076,11 +1368,11 @@ export function WegovyToolClient() {
                     value: v,
                   })
                 }
-                description="When to seek urgent psychiatric help; contact details provided"
+                description="Report any low mood or suicidal thoughts; mood is monitored at review; when to seek urgent psychiatric help"
               />
 
               <Checkbox
-                label="OCP efficacy reduction and backup contraception advised"
+                label="Contraception and pregnancy advice given"
                 checked={state.counselling.contraceptionAdvice}
                 onChange={(v) =>
                   dispatch({
@@ -1089,13 +1381,12 @@ export function WegovyToolClient() {
                     value: v,
                   })
                 }
-                description="If taking oral contraceptives, use backup contraception"
+                description="Women of childbearing potential should use effective contraception. Semaglutide must not be used in pregnancy or breastfeeding, and must be discontinued at least 2 months before a planned pregnancy; stop and seek advice if pregnancy occurs."
               />
 
-              {(state.medications.takesInsulin ||
-                state.medications.takesSulphonylureas) && (
+              {state.medications.takesOtherDiabetesMeds && (
                 <Checkbox
-                  label="Hypoglycaemia risk explained (if on insulin/sulphonylurea)"
+                  label="Hypoglycaemia signs and symptoms explained (type 2 diabetes)"
                   checked={state.counselling.hypoglycaemiaRisk}
                   onChange={(v) =>
                     dispatch({
@@ -1104,12 +1395,12 @@ export function WegovyToolClient() {
                       value: v,
                     })
                   }
-                  description="Symptoms, management, and need for dose adjustment"
+                  description="Semaglutide lowers blood glucose; no dose adjustment is needed with metformin, an SGLT2 inhibitor or a DPP-4 inhibitor, but inform the GP"
                 />
               )}
 
               <Checkbox
-                label="Diet and exercise advice provided"
+                label="Diet and physical activity advice provided"
                 checked={state.counselling.dietExerciseAdvice}
                 onChange={(v) =>
                   dispatch({
@@ -1118,11 +1409,24 @@ export function WegovyToolClient() {
                     value: v,
                   })
                 }
-                description="Importance of balanced diet and regular physical activity"
+                description="Expected pattern of weight loss explained; the medicine works alongside a reduced-calorie diet and increased activity, not instead of them. The pharmacist provides the diet, activity and behavioural support in place of a specialist service."
               />
 
               <Checkbox
-                label="Follow-up schedule arranged"
+                label="Written information given"
+                checked={state.counselling.writtenInformationGiven}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_COUNSELLING",
+                    field: "writtenInformationGiven",
+                    value: v,
+                  })
+                }
+                description="Patient information leaflet supplied with the medicine, together with written lifestyle, diet and physical activity advice and the agreed target weight"
+              />
+
+              <Checkbox
+                label="Follow-up and review arranged"
                 checked={state.counselling.followUpSchedule}
                 onChange={(v) =>
                   dispatch({
@@ -1131,7 +1435,33 @@ export function WegovyToolClient() {
                     value: v,
                   })
                 }
-                description="Review at 4 weeks, then every 3 months; monitor weight, tolerability, and safety"
+                description="One month of treatment per appointment; advised when to return for review. Benefit, tolerability and target weight reassessed at each visit; treatment reassessed if less than 5% of body weight has been lost after 6 months on the maintenance dose; maximum 2 years under this PGD."
+              />
+
+              <Checkbox
+                label="Patient told that the NHS route exists and how to access it"
+                checked={state.counselling.nhsRouteExplained}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_COUNSELLING",
+                    field: "nhsRouteExplained",
+                    value: v,
+                  })
+                }
+                description="NICE TA875 recommends semaglutide within a specialist weight management service; this PGD authorises private supply outside that commissioning position"
+              />
+
+              <Checkbox
+                label="GP informed of this initiation or review"
+                checked={state.counselling.gpInformed}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_COUNSELLING",
+                    field: "gpInformed",
+                    value: v,
+                  })
+                }
+                description="The GP is informed at initiation and at each review"
               />
             </div>
           </StepWrapper>
@@ -1251,7 +1581,7 @@ export function WegovyToolClient() {
       />
 
       {/* Alert Banner */}
-      {alerts.length > 0 && state.currentStep < 6 && (
+      {alerts.length > 0 && (state.currentStep < 6 || state.currentStep === 7) && (
         <AlertBanner alerts={alerts} />
       )}
 

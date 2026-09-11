@@ -31,7 +31,7 @@ export default function ECToolPage() {
             Emergency Contraception — PGD Consultation
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Levonorgestrel &amp; Ulipristal supply under Patient Group Direction
+            Levonorgestrel 1.5 mg (Levonelle) and ulipristal acetate 30 mg (ellaOne) supply under Patient Group Direction, version 003, issued 11 September 2026
           </p>
         </div>
 

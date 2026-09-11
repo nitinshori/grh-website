@@ -1,73 +1,129 @@
 import type { ColdSoresConsultationState } from "./cold-sores-types";
 import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
 
+// Aligned to the Cold Sores (Herpes Labialis) PGD, version 002, issued
+// 11 September 2026: aciclovir 5% cream (P) and aciclovir 200 mg tablets (POM).
+
 export function getAllAlerts(state: ColdSoresConsultationState): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
+  const c = state.contraindications;
+  const age = state.patient.age;
 
-  // Hard stops
-  if (state.contraindications.childUnder12) {
+  // Hard stops (PGD inclusion and exclusion criteria)
+  if (c.childUnder12 || (age !== null && age < 12)) {
     alerts.push({
       severity: "stop",
       code: "CS_AGE",
       message: "Patient under 12 years old",
-      detail: "Oral aciclovir via PGD is for patients aged 12+. Refer to GP for paediatric dosing.",
+      detail: "This PGD covers adults and adolescents aged 12 years and over. Refer to the GP.",
     });
   }
 
-  if (state.contraindications.renalImpairmentSevere) {
+  if (state.symptomAssessment.isFirstEpisode) {
+    alerts.push({
+      severity: "stop",
+      code: "CS_FIRST_EPISODE",
+      message: "First episode: not a clinical diagnosis of recurrent herpes labialis",
+      detail:
+        "The PGD inclusion criterion is a clinical diagnosis of recurrent herpes labialis. A first episode should be assessed by the GP; refer rather than supply.",
+    });
+  }
+
+  if (c.hypersensitivity) {
+    alerts.push({
+      severity: "stop",
+      code: "CS_HYPERSENSITIVITY",
+      message: "Known hypersensitivity to aciclovir, valaciclovir or any excipient",
+      detail: "Excluded. Advise on alternatives and refer to the GP as appropriate.",
+    });
+  }
+
+  if (c.immunosuppressed || state.medicalHistory.immunosuppressed || state.medicalHistory.recentlyImmunosuppressed) {
+    alerts.push({
+      severity: "stop",
+      code: "CS_IMMUNOSUPPRESSED",
+      message: "Immunocompromised patient",
+      detail:
+        "Excluded from this PGD (risk of severe or systemic HSV). Refer to the GP or specialist.",
+    });
+  }
+
+  if (c.severeRecurrentEpisodes) {
+    alerts.push({
+      severity: "stop",
+      code: "CS_SEVERE_RECURRENT",
+      message: "Severe recurrent episodes",
+      detail: "Excluded from this PGD. Refer to the GP for assessment, which may include oral antiviral or suppressive therapy.",
+    });
+  }
+
+  if (c.pregnant) {
+    alerts.push({
+      severity: "stop",
+      code: "CS_PREGNANCY",
+      message: "Pregnancy: refer to a prescriber",
+      detail:
+        "The PGD excludes pregnancy unless assessed as appropriate by the prescriber. That assessment is not available under a PGD supply; refer to the GP.",
+    });
+  }
+
+  if (c.breastfeeding) {
+    alerts.push({
+      severity: "stop",
+      code: "CS_BREASTFEEDING",
+      message: "Breastfeeding: refer to a prescriber",
+      detail:
+        "The PGD excludes breastfeeding unless assessed as appropriate by the prescriber. That assessment is not available under a PGD supply; refer to the GP.",
+    });
+  }
+
+  if (c.mucousMembraneLesions) {
+    alerts.push({
+      severity: "stop",
+      code: "CS_MUCOUS_MEMBRANES",
+      message: "Lesions on mucous membranes (eyes, inside the mouth, genitals)",
+      detail:
+        "Excluded: the PGD covers herpes labialis of the lips and face only. Cream must not be used on mucous membranes. Eye involvement needs urgent ophthalmology referral.",
+    });
+  }
+
+  if (c.renalImpairmentSevere) {
     alerts.push({
       severity: "stop",
       code: "CS_RENAL_SEVERE",
-      message: "Severe renal impairment — refer to GP",
+      message: "Severe renal impairment: refer to GP",
       detail: "Aciclovir requires significant dose adjustment. Specialist assessment needed.",
     });
   }
 
-  // Red flags
-  if (state.symptomAssessment.isFirstEpisode) {
-    alerts.push({
-      severity: "red-flag",
-      code: "CS_FIRST_EPISODE",
-      message: "First episode of herpes labialis — consider GP referral for diagnosis",
-      detail: "First presentations should be confirmed by primary care. PGD is for recurrent herpes labialis.",
-    });
-  }
-
-  // Caution
-  if (state.contraindications.immunosuppressed) {
-    alerts.push({
-      severity: "caution",
-      code: "CS_IMMUNOSUPPRESSED",
-      message: "Patient immunosuppressed — may need higher dose",
-      detail: "Standard dosing may be insufficient. Consider GP/specialist referral for optimised regimen.",
-    });
-  }
-
-  if (state.contraindications.pregnant) {
-    alerts.push({
-      severity: "caution",
-      code: "CS_PREGNANCY",
-      message: "Pregnancy — benefit vs risk discussion required",
-      detail: "Aciclovir can be used in pregnancy if benefits outweigh risks. Ensure informed consent documented.",
-    });
-  }
-
-  if (state.medicalHistory.renalImpairment && !state.contraindications.renalImpairmentSevere) {
+  // Cautions
+  if (state.medicalHistory.renalImpairment && !c.renalImpairmentSevere) {
     alerts.push({
       severity: "caution",
       code: "CS_RENAL_MILD_MOD",
-      message: "Mild–moderate renal impairment — dose adjustment recommended",
-      detail: "Consider reduced frequency or dose. Ensure adequate hydration advised.",
+      message: "Impaired renal function: caution with oral aciclovir",
+      detail:
+        "The PGD advises caution when administering aciclovir to patients with impaired renal function; adequate hydration should be maintained.",
     });
   }
 
-  // Red flag for late presentation
+  if (age !== null && age >= 65) {
+    alerts.push({
+      severity: "caution",
+      code: "CS_ELDERLY",
+      message: "Elderly patient: likely reduced renal function",
+      detail: "Caution with oral aciclovir; advise adequate hydration.",
+    });
+  }
+
+  // Late presentation
   if (state.symptomAssessment.hoursFromProdrome !== null && state.symptomAssessment.hoursFromProdrome > 48) {
     alerts.push({
       severity: "red-flag",
       code: "CS_LATE_START",
-      message: "&gt;48 hours since prodrome — reduced efficacy",
-      detail: "Aciclovir is most effective if started within 24–48 hours of prodrome onset. Effectiveness diminishes beyond this window.",
+      message: "More than 48 hours since prodrome: reduced efficacy",
+      detail:
+        "Treatment should start at the first sign of symptoms (tingling or itching). Effectiveness diminishes beyond 48 hours.",
     });
   }
 
@@ -79,16 +135,28 @@ export function hasHardStops(alerts: ClinicalAlert[]): boolean {
 }
 
 export function calculateDoseRecommendation(state: ColdSoresConsultationState): DoseRecommendation | null {
-  if (!state.medicineSupply.doseChoice) return null;
+  const supply = state.medicineSupply;
+  if (!supply.product) return null;
 
-  const dose = state.medicineSupply.doseChoice;
+  if (supply.product === "cream") {
+    return {
+      medicine: `Aciclovir 5% cream${supply.tubeSize ? `, ${supply.tubeSize} tube` : ""}`,
+      dose: "Apply to the affected area of the lips or face",
+      frequency: "five times daily at approximately four-hour intervals",
+      duration: "5 days",
+      dosingRegimen:
+        "Apply five times daily at approximately four-hour intervals for 5 days. If lesions have not healed, continue for up to 10 days. If still present after 10 days, consult a doctor. Up to one 2 g or 5 g tube per episode.",
+      reason: "Recurrent herpes labialis of the lips and face. Legal category P; supplied and recorded to PGD standard.",
+    };
+  }
 
   return {
-    medicine: `Oral Aciclovir ${dose}mg`,
-    dose: dose,
-    frequency: "5 times daily (6-hourly)",
+    medicine: "Aciclovir 200 mg tablets",
+    dose: "200 mg",
+    frequency: "five times daily",
     duration: "5 days",
-    dosingRegimen: `Take ${dose}mg tablet 5 times daily for 5 days. Space doses at least 4 hours apart (6-hour intervals ideal).`,
-    reason: "Standard treatment for recurrent herpes labialis (cold sores)",
+    dosingRegimen:
+      "200 mg five times daily for 5 days: 25 tablets per episode. Tablets may be dispersed in a minimum of 50 mL of water or swallowed whole with a little water, with or without food.",
+    reason: "Recurrent herpes labialis of the lips and face. Legal category POM.",
   };
 }

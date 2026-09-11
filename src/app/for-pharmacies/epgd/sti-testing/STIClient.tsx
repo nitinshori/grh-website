@@ -14,6 +14,7 @@ import { STEP_LABELS, TOTAL_STEPS, createInitialConsultationState } from "./lib/
 import {
   getAllAlerts,
   getRecommendedTests,
+  getTreatmentPlan,
 } from "./lib/sti-clinical-logic";
 import { validateStep } from "./lib/sti-validation";
 import { calculateAge } from "../shared/types";
@@ -71,6 +72,13 @@ function reducer(state: STIConsultationState, action: STIAction): STIConsultatio
       };
       break;
 
+    case "UPDATE_TREATMENT":
+      newState.treatment = {
+        ...newState.treatment,
+        [action.field]: action.value,
+      };
+      break;
+
     case "UPDATE_COUNSELLING":
       newState.counselling = {
         ...newState.counselling,
@@ -112,6 +120,8 @@ export default function STIClient() {
 
   const alerts = useMemo(() => getAllAlerts(state), [state]);
   const recommendedTests = useMemo(() => getRecommendedTests(state), [state]);
+  const treatmentPlan = useMemo(() => getTreatmentPlan(state), [state]);
+  const hasStops = useMemo(() => alerts.some((a) => a.severity === "stop"), [alerts]);
 
   const validationError = useMemo(() => {
     return validateStep(state, state.currentStep);
@@ -163,7 +173,7 @@ export default function STIClient() {
         gpPractice: state.patient.gpPractice,
       },
       clinicalData: state as unknown as Record<string, unknown>,
-      outcome: "completed",
+      outcome: hasStops ? "not_supplied" : "completed",
       summary: {
         pharmacistName: state.summary.pharmacistName,
         pharmacistGPhC: state.summary.pharmacistGPhC,
@@ -171,7 +181,7 @@ export default function STIClient() {
         consultationTime: state.summary.consultationTime,
       },
     };
-  }, [state]);
+  }, [state, hasStops]);
 
   const renderStep = () => {
     switch (state.currentStep) {
@@ -221,9 +231,14 @@ export default function STIClient() {
                   {state.patient.age !== null ? (
                     <>
                       {state.patient.age} years
-                      {state.patient.age < 16 && (
+                      {state.patient.age < 13 && (
                         <span className="ml-2 text-red-500 text-xs font-medium">
-                          Minimum age 16
+                          Under 13: do not supply, refer the same day and make a safeguarding referral
+                        </span>
+                      )}
+                      {state.patient.age >= 13 && state.patient.age <= 15 && (
+                        <span className="ml-2 text-amber-600 text-xs font-medium">
+                          13 to 15: Fraser competence and safeguarding assessment required
                         </span>
                       )}
                     </>
@@ -233,6 +248,47 @@ export default function STIClient() {
                 </div>
               </div>
             </div>
+            {state.patient.age !== null && state.patient.age >= 13 && state.patient.age <= 15 && (
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg space-y-3">
+                <p className="text-sm font-semibold text-amber-900">
+                  Aged 13 to 15: supply only where Fraser competence is assessed and recorded and a
+                  safeguarding assessment is completed with no concern
+                </p>
+                <Checkbox
+                  label="Fraser competence assessed and recorded"
+                  checked={state.patient.fraserCompetent}
+                  onChange={(v) =>
+                    dispatch({ type: "UPDATE_PATIENT", field: "fraserCompetent", value: v })
+                  }
+                  description="The young person understands the advice, cannot be persuaded to involve a parent, and their best interests require supply."
+                />
+                <Checkbox
+                  label="Safeguarding assessment completed (partner age, coercion, exploitation indicators)"
+                  checked={state.patient.safeguardingAssessed}
+                  onChange={(v) =>
+                    dispatch({ type: "UPDATE_PATIENT", field: "safeguardingAssessed", value: v })
+                  }
+                />
+                <Checkbox
+                  label="Safeguarding concern identified (partner 18 or over, coercion, exploitation, learning disability)"
+                  checked={state.patient.safeguardingConcern}
+                  onChange={(v) =>
+                    dispatch({ type: "UPDATE_PATIENT", field: "safeguardingConcern", value: v })
+                  }
+                  description="If ticked: do not supply. Refer and follow the local safeguarding pathway."
+                />
+                <TextArea
+                  label="Safeguarding assessment record"
+                  value={state.patient.safeguardingNotes}
+                  onChange={(v) =>
+                    dispatch({ type: "UPDATE_PATIENT", field: "safeguardingNotes", value: v })
+                  }
+                  placeholder="Partner age, any coercion or exploitation indicators, outcome and any referral made"
+                  rows={3}
+                  required
+                />
+              </div>
+            )}
             <SelectInput
               label="Gender identity"
               value={state.patient.genderIdentity}
@@ -651,7 +707,156 @@ export default function STIClient() {
           </div>
         );
 
-      case 5: // Counselling
+      case 5: // Treatment (chlamydia PGD v002: doxycycline first line, azithromycin where doxycycline unsuitable)
+        return (
+          <div className="space-y-4">
+            <Checkbox
+              label="Supply chlamydia treatment under this PGD"
+              checked={state.treatment.treatUnderPgd}
+              onChange={(v) =>
+                dispatch({ type: "UPDATE_TREATMENT", field: "treatUnderPgd", value: v })
+              }
+              description="Uncomplicated genital Chlamydia trachomatis infection, confirmed or strongly suspected. Leave unticked for a testing-only consultation."
+            />
+            {state.treatment.treatUnderPgd && (
+              <>
+                <SelectInput
+                  label="Diagnosis of genital chlamydia"
+                  value={state.treatment.chlamydiaDiagnosis}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_TREATMENT",
+                      field: "chlamydiaDiagnosis",
+                      value: v as STIConsultationState["treatment"]["chlamydiaDiagnosis"],
+                    })
+                  }
+                  options={[
+                    { value: "confirmed", label: "Confirmed (positive NAAT)" },
+                    { value: "strongly-suspected", label: "Strongly suspected (e.g. partner of a confirmed case)" },
+                  ]}
+                  required
+                />
+
+                <p className="text-sm font-semibold text-red-700">Exclusions (both arms): tick any that apply</p>
+                <Checkbox
+                  label="Pregnant"
+                  checked={state.treatment.pregnant}
+                  onChange={(v) => dispatch({ type: "UPDATE_TREATMENT", field: "pregnant", value: v })}
+                  description="Excluded from doxycycline. Azithromycin arm: refer to the GP or sexual health service (test of cure and follow-up needed)."
+                />
+                <Checkbox
+                  label="Breastfeeding"
+                  checked={state.treatment.breastfeeding}
+                  onChange={(v) => dispatch({ type: "UPDATE_TREATMENT", field: "breastfeeding", value: v })}
+                  description="Excluded from both arms: refer to the GP or sexual health service."
+                />
+                <Checkbox
+                  label="Severe hepatic insufficiency or impairment"
+                  checked={state.treatment.severeHepaticImpairment}
+                  onChange={(v) =>
+                    dispatch({ type: "UPDATE_TREATMENT", field: "severeHepaticImpairment", value: v })
+                  }
+                />
+                <Checkbox
+                  label="Known or suspected complicated infection (e.g. PID, epididymo-orchitis)"
+                  checked={state.treatment.complicatedInfection}
+                  onChange={(v) =>
+                    dispatch({ type: "UPDATE_TREATMENT", field: "complicatedInfection", value: v })
+                  }
+                />
+
+                <p className="text-sm font-semibold text-navy-900 mt-2">Doxycycline arm (first line)</p>
+                <Checkbox
+                  label="Known hypersensitivity to tetracyclines"
+                  checked={state.treatment.tetracyclineHypersensitivity}
+                  onChange={(v) =>
+                    dispatch({ type: "UPDATE_TREATMENT", field: "tetracyclineHypersensitivity", value: v })
+                  }
+                />
+                <Checkbox
+                  label="Unable to comply with the 7-day regimen or to swallow capsules"
+                  checked={state.treatment.unableToComplyOrSwallow}
+                  onChange={(v) =>
+                    dispatch({ type: "UPDATE_TREATMENT", field: "unableToComplyOrSwallow", value: v })
+                  }
+                />
+                <Checkbox
+                  label="Doxycycline otherwise unsuitable or contraindicated"
+                  checked={state.treatment.doxycyclineUnsuitable}
+                  onChange={(v) =>
+                    dispatch({ type: "UPDATE_TREATMENT", field: "doxycyclineUnsuitable", value: v })
+                  }
+                  description="Record the reason. Azithromycin is only indicated where doxycycline is unsuitable or contraindicated."
+                />
+                {state.treatment.doxycyclineUnsuitable && (
+                  <TextInput
+                    label="Reason doxycycline is unsuitable"
+                    value={state.treatment.doxycyclineUnsuitableReason}
+                    onChange={(v) =>
+                      dispatch({ type: "UPDATE_TREATMENT", field: "doxycyclineUnsuitableReason", value: v })
+                    }
+                    required
+                  />
+                )}
+
+                <p className="text-sm font-semibold text-navy-900 mt-2">Azithromycin arm (where doxycycline is unsuitable)</p>
+                <Checkbox
+                  label="Known hypersensitivity to macrolides"
+                  checked={state.treatment.macrolideHypersensitivity}
+                  onChange={(v) =>
+                    dispatch({ type: "UPDATE_TREATMENT", field: "macrolideHypersensitivity", value: v })
+                  }
+                />
+                <Checkbox
+                  label="History of QT prolongation or taking interacting QT-prolonging drugs"
+                  checked={state.treatment.qtProlongation}
+                  onChange={(v) => dispatch({ type: "UPDATE_TREATMENT", field: "qtProlongation", value: v })}
+                />
+                <Checkbox
+                  label="Concurrent use of ergot derivatives"
+                  checked={state.treatment.ergotDerivatives}
+                  onChange={(v) => dispatch({ type: "UPDATE_TREATMENT", field: "ergotDerivatives", value: v })}
+                />
+
+                <SelectInput
+                  label="Medicine to supply"
+                  value={state.treatment.medicine}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_TREATMENT",
+                      field: "medicine",
+                      value: v as STIConsultationState["treatment"]["medicine"],
+                    })
+                  }
+                  options={[
+                    { value: "doxycycline", label: "Doxycycline 100mg capsules, 100 mg twice daily for 7 days (14 capsules)" },
+                    {
+                      value: "azithromycin",
+                      label: "Azithromycin 500mg tablets, 1 g on day 1 then 500 mg once daily on days 2 and 3 (4 tablets)",
+                    },
+                  ]}
+                  required
+                />
+
+                {treatmentPlan && (
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-900 space-y-1">
+                    <p className="font-semibold">{treatmentPlan.product}</p>
+                    <p>Dose and frequency: {treatmentPlan.dose}</p>
+                    <p>Quantity: {treatmentPlan.quantity}. Treatment period: {treatmentPlan.duration}.</p>
+                    <p>Route: {treatmentPlan.route}</p>
+                    <ul className="list-disc list-inside text-xs text-blue-800 mt-1">
+                      {treatmentPlan.cautions.map((c) => (
+                        <li key={c}>{c}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        );
+
+      case 6: // Counselling
         return (
           <div className="space-y-4">
             <Checkbox
@@ -725,10 +930,72 @@ export default function STIClient() {
               }
               description="Test-of-cure, repeat testing, partner follow-up"
             />
+
+            {state.treatment.treatUnderPgd && treatmentPlan && (
+              <div className="border-t pt-4 space-y-4">
+                <p className="text-sm font-semibold text-navy-900">
+                  Treatment counselling ({treatmentPlan.product})
+                </p>
+                <Checkbox
+                  label={
+                    treatmentPlan.medicine === "doxycycline"
+                      ? "Take with water and remain upright for 30 minutes; avoid sun exposure during and after treatment"
+                      : "Do not take antacids 2 hours before or after a dose; caution in mild to moderate liver or kidney impairment"
+                  }
+                  checked={state.counselling.medicineAdvice}
+                  onChange={(v) =>
+                    dispatch({ type: "UPDATE_COUNSELLING", field: "medicineAdvice", value: v })
+                  }
+                />
+                <Checkbox
+                  label={
+                    treatmentPlan.medicine === "doxycycline"
+                      ? "Abstain from sexual activity until treatment and partner treatment are completed"
+                      : "Abstain from sexual activity for 7 days after treatment and until partners are treated"
+                  }
+                  checked={state.counselling.abstinenceAdvice}
+                  onChange={(v) =>
+                    dispatch({ type: "UPDATE_COUNSELLING", field: "abstinenceAdvice", value: v })
+                  }
+                />
+                {treatmentPlan.medicine === "doxycycline" && (
+                  <Checkbox
+                    label="Use effective contraception during and for 7 days after completing the course"
+                    checked={state.counselling.contraceptionAdvice}
+                    onChange={(v) =>
+                      dispatch({ type: "UPDATE_COUNSELLING", field: "contraceptionAdvice", value: v })
+                    }
+                  />
+                )}
+                {treatmentPlan.medicine === "azithromycin" && (
+                  <Checkbox
+                    label="Reinforced the need for a test of cure if symptoms persist or in pregnancy"
+                    checked={state.counselling.testOfCureAdvice}
+                    onChange={(v) =>
+                      dispatch({ type: "UPDATE_COUNSELLING", field: "testOfCureAdvice", value: v })
+                    }
+                  />
+                )}
+                <Checkbox
+                  label="Seek medical advice if symptoms worsen rapidly or significantly, do not improve in 3 to 4 weeks, or they become systemically very unwell"
+                  checked={state.counselling.worseningAdvice}
+                  onChange={(v) =>
+                    dispatch({ type: "UPDATE_COUNSELLING", field: "worseningAdvice", value: v })
+                  }
+                />
+                <Checkbox
+                  label="Patient information leaflet (PIL) supplied with the medication"
+                  checked={state.counselling.pilSupplied}
+                  onChange={(v) =>
+                    dispatch({ type: "UPDATE_COUNSELLING", field: "pilSupplied", value: v })
+                  }
+                />
+              </div>
+            )}
           </div>
         );
 
-      case 6: // Summary
+      case 7: // Summary
         return (
           <div className="space-y-4">
             <TextInput

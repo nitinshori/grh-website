@@ -10,6 +10,8 @@ import type { ConsultationRecordData } from "../shared/hooks/useConsultationTrac
 import {
   STEP_LABELS,
   TOTAL_STEPS,
+  COMORBIDITY_OPTIONS,
+  DOSE_BY_STAGE,
   createInitialConsultationState,
 } from "./lib/mounjaro-types";
 import {
@@ -103,6 +105,11 @@ function reducer(state: MounjaroConsultationState, action: MounjaroAction): Moun
         ...newState.doseSelection,
         [action.field]: action.value,
       };
+      // Keep the recorded dose in step with the selected stage (previously the
+      // recorded dose stayed at 2.5 mg whatever stage was chosen).
+      if (action.field === "currentDoseStage") {
+        newState.doseSelection.dose = DOSE_BY_STAGE[action.value as string] ?? "";
+      }
       break;
 
     case "UPDATE_COUNSELLING":
@@ -222,10 +229,10 @@ export default function MounjaroClient() {
       clinicalData: state as unknown as Record<string, unknown>,
       outcome: hasStops ? "not_supplied" : "completed",
       medicine: {
-        name: `Mounjaro (tirzepatide) ${state.doseSelection.dose}`,
-        dose: state.doseSelection.dose,
-        duration: `${state.doseSelection.weeksAtCurrentDose ?? 0} weeks at current dose`,
-        quantity: "1 pen",
+        name: `Mounjaro (tirzepatide) KwikPen ${state.doseSelection.dose}${state.doseSelection.batchNumber ? `, batch ${state.doseSelection.batchNumber}` : ""}`,
+        dose: `${state.doseSelection.dose} once weekly by subcutaneous injection`,
+        duration: "4 weeks",
+        quantity: "1 KwikPen (4 x 0.6 mL doses)",
       },
       summary: {
         pharmacistName: state.summary.pharmacistName,
@@ -249,7 +256,7 @@ export default function MounjaroClient() {
         return (
           <StepWrapper
             title="Patient Details"
-            description="Confirm patient identity and age. Patient must be 18 or older."
+            description="Confirm patient identity and age. This PGD covers adults aged 18 to 75 years inclusive; over 75, refer to a specialist."
             currentStep={state.currentStep}
             totalSteps={TOTAL_STEPS}
             onNext={handleNext}
@@ -319,7 +326,7 @@ export default function MounjaroClient() {
         return (
           <StepWrapper
             title="Weight Assessment"
-            description="Calculate BMI and identify weight-related comorbidities. BMI ≥30 or ≥27 with comorbidity required."
+            description="Calculate BMI and identify weight-related comorbidities. BMI 30 or above, or 27 or above with at least one weight-related comorbidity, is required. Complete the face to face initial assessment and agree a target weight."
             currentStep={state.currentStep}
             totalSteps={TOTAL_STEPS}
             onNext={handleNext}
@@ -364,12 +371,7 @@ export default function MounjaroClient() {
                   Weight-Related Comorbidities
                 </p>
                 <div className="space-y-2">
-                  {[
-                    { id: "type2diabetes", label: "Type 2 diabetes" },
-                    { id: "hypertension", label: "Hypertension" },
-                    { id: "dyslipidaemia", label: "Dyslipidaemia" },
-                    { id: "osa", label: "Obstructive sleep apnoea (OSA)" },
-                  ].map((com) => (
+                  {COMORBIDITY_OPTIONS.map((com) => (
                     <Checkbox
                       key={com.id}
                       label={com.label}
@@ -392,6 +394,50 @@ export default function MounjaroClient() {
                   ))}
                 </div>
               </div>
+
+              <div className="border-t pt-4">
+                <p className="text-sm font-semibold text-navy-900 mb-3">
+                  Initial Assessment and Lifestyle Plan
+                </p>
+                <div className="space-y-3">
+                  <NumberInput
+                    label="Target weight agreed"
+                    value={state.weightAssessment.targetWeight}
+                    onChange={(v) =>
+                      dispatch({ type: "UPDATE_WEIGHT_ASSESSMENT", field: "targetWeight", value: v })
+                    }
+                    min={30}
+                    max={300}
+                    unit="kg"
+                    required
+                  />
+                  <Checkbox
+                    label="Face to face initial assessment completed and documented"
+                    checked={state.weightAssessment.initialAssessmentCompleted}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_WEIGHT_ASSESSMENT",
+                        field: "initialAssessmentCompleted",
+                        value: v,
+                      })
+                    }
+                    description="Causes of weight gain (refer to GP if prescribed medication is the cause); lifestyle, diet and exercise; previous attempts and what worked; mental health, environmental and psychological factors (consider signposting); other disease states predisposing to weight gain (consider GP referral); expectations of weight loss and whether realistic; BMI, ideal weight, target weight and review intervals agreed."
+                    required
+                  />
+                  <Checkbox
+                    label="Patient is willing to follow a reduced-calorie diet and increase physical activity in line with the agreed lifestyle plan"
+                    checked={state.weightAssessment.lifestylePlanAgreed}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_WEIGHT_ASSESSMENT",
+                        field: "lifestylePlanAgreed",
+                        value: v,
+                      })
+                    }
+                    required
+                  />
+                </div>
+              </div>
             </div>
           </StepWrapper>
         );
@@ -400,7 +446,7 @@ export default function MounjaroClient() {
         return (
           <StepWrapper
             title="Medical History"
-            description="Identify contraindications and cautions relevant to Mounjaro use."
+            description="Identify exclusion criteria and cautions relevant to Mounjaro use (PGD v007)."
             currentStep={state.currentStep}
             totalSteps={TOTAL_STEPS}
             onNext={handleNext}
@@ -411,12 +457,25 @@ export default function MounjaroClient() {
             <div className="space-y-4">
               <div className="p-3 bg-red-50 border border-red-200 rounded">
                 <p className="text-xs font-semibold text-red-700 mb-2">
-                  Absolute Contraindications
+                  Exclusion Criteria
                 </p>
                 <p className="text-xs text-red-600 mb-3">
-                  Check the following carefully. If any are present, patient cannot proceed.
+                  Check the following carefully. If any are present the patient cannot be supplied under this PGD.
                 </p>
               </div>
+
+              <Checkbox
+                label="Known hypersensitivity to tirzepatide or to any of the excipients"
+                checked={state.medicalHistory.hypersensitivity}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "hypersensitivity",
+                    value: v,
+                  })
+                }
+                description="Each 0.6 mL dose contains 5.4 mg benzyl alcohol (E1519), which may cause allergic reactions."
+              />
 
               <Checkbox
                 label="Personal history of medullary thyroid carcinoma (MTC)"
@@ -443,7 +502,7 @@ export default function MounjaroClient() {
               />
 
               <Checkbox
-                label="Multiple endocrine neoplasia type 2 (MEN2)"
+                label="Personal or family history of Multiple Endocrine Neoplasia syndrome type 2 (MEN 2)"
                 checked={state.medicalHistory.men2}
                 onChange={(v) =>
                   dispatch({
@@ -455,7 +514,7 @@ export default function MounjaroClient() {
               />
 
               <Checkbox
-                label="History of pancreatitis"
+                label="History of pancreatitis, acute or chronic"
                 checked={state.medicalHistory.pancreatitisHistory}
                 onChange={(v) =>
                   dispatch({
@@ -467,7 +526,7 @@ export default function MounjaroClient() {
               />
 
               <Checkbox
-                label="Severe gastrointestinal disease (gastroparesis, inflammatory bowel disease)"
+                label="Severe gastrointestinal disease, including gastroparesis or severe persistent gastrointestinal disorder"
                 checked={state.medicalHistory.severeGIDisease}
                 onChange={(v) =>
                   dispatch({
@@ -476,6 +535,45 @@ export default function MounjaroClient() {
                     value: v,
                   })
                 }
+              />
+
+              <Checkbox
+                label="Current cholelithiasis (gallstones) or cholecystitis"
+                checked={state.medicalHistory.gallbladderDisease}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "gallbladderDisease",
+                    value: v,
+                  })
+                }
+                description="Exclusion under this PGD."
+              />
+
+              <Checkbox
+                label="Cholecystectomy within the last 3 months"
+                checked={state.medicalHistory.recentCholecystectomy}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "recentCholecystectomy",
+                    value: v,
+                  })
+                }
+                description="Exclusion under this PGD."
+              />
+
+              <Checkbox
+                label="Obesity caused by an endocrinological disorder"
+                checked={state.medicalHistory.endocrineObesity}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "endocrineObesity",
+                    value: v,
+                  })
+                }
+                description="Exclusion. If the patient was already overweight prior to that diagnosis, this exclusion may not apply: leave unticked and document the reasoning in the clinical notes."
               />
 
               <Checkbox
@@ -490,9 +588,84 @@ export default function MounjaroClient() {
                 }
               />
 
+              <Checkbox
+                label="Diabetic retinopathy"
+                checked={state.medicalHistory.diabeticRetinopathy}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "diabeticRetinopathy",
+                    value: v,
+                  })
+                }
+                description="Exclusion. Treatment may worsen retinopathy; defer or refer to a specialist."
+              />
+
+              <Checkbox
+                label="Severe renal impairment (eGFR below 30 mL/min/1.73 m2) or end-stage renal disease"
+                checked={state.medicalHistory.severeRenalImpairment}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "severeRenalImpairment",
+                    value: v,
+                  })
+                }
+              />
+
+              <Checkbox
+                label="Severe hepatic impairment"
+                checked={state.medicalHistory.severeHepaticImpairment}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "severeHepaticImpairment",
+                    value: v,
+                  })
+                }
+              />
+
+              <Checkbox
+                label="Known diagnosis of heart failure with reduced ejection fraction (HFrEF, LVEF 40% or below)"
+                checked={state.medicalHistory.heartFailureReducedEF}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "heartFailureReducedEF",
+                    value: v,
+                  })
+                }
+                description="Exclusion. HFpEF (preserved EF) is NOT excluded. If EF is unknown but patient is under cardiology review for heart failure, refer to GP to confirm."
+              />
+
+              <Checkbox
+                label="Active eating disorder (anorexia nervosa, bulimia, or binge-eating disorder under specialist care)"
+                checked={state.medicalHistory.activeEatingDisorder}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "activeEatingDisorder",
+                    value: v,
+                  })
+                }
+              />
+
+              <Checkbox
+                label="In the clinical judgement of the healthcare professional, the patient is not suitable for the medication"
+                checked={state.medicalHistory.notSuitableClinicalJudgement}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "notSuitableClinicalJudgement",
+                    value: v,
+                  })
+                }
+                description="Document the reason and the advice given in the clinical notes."
+              />
+
               <div className="border-t border-gray-300 pt-4 mt-4">
                 <p className="text-xs font-semibold text-navy-900 mb-3">
-                  Pregnancy & Breastfeeding
+                  Pregnancy, Breastfeeding and Contraception (exclusions)
                 </p>
               </div>
 
@@ -521,7 +694,7 @@ export default function MounjaroClient() {
               />
 
               <Checkbox
-                label="Planning pregnancy within 2 months"
+                label="Planning pregnancy"
                 checked={state.medicalHistory.planningPregnancy}
                 onChange={(v) =>
                   dispatch({
@@ -530,6 +703,20 @@ export default function MounjaroClient() {
                     value: v,
                   })
                 }
+                description="Exclusion. Advise discontinuation at least 1 month before planned conception for tirzepatide."
+              />
+
+              <Checkbox
+                label="Woman of childbearing potential who is not using effective contraception"
+                checked={state.medicalHistory.noEffectiveContraception}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "noEffectiveContraception",
+                    value: v,
+                  })
+                }
+                description="Effective contraception is required. Non-oral contraception or a barrier method is advised during titration and for 4 weeks after each dose increase."
               />
 
               <div className="border-t border-gray-300 pt-4 mt-4">
@@ -539,46 +726,7 @@ export default function MounjaroClient() {
               </div>
 
               <Checkbox
-                label="Heart failure with reduced ejection fraction (HFrEF, LVEF ≤40%)"
-                checked={state.medicalHistory.heartFailureReducedEF}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_MEDICAL_HISTORY",
-                    field: "heartFailureReducedEF",
-                    value: v,
-                  })
-                }
-                description="EXCLUSION. HFpEF (preserved EF >40%) is NOT excluded. If EF is unknown but patient is under cardiology review for heart failure, refer to GP to confirm."
-              />
-
-              <Checkbox
-                label="Gallbladder disease (cholelithiasis / cholecystitis)"
-                checked={state.medicalHistory.gallbladderDisease}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_MEDICAL_HISTORY",
-                    field: "gallbladderDisease",
-                    value: v,
-                  })
-                }
-                description="Increased cholelithiasis risk"
-              />
-
-              <Checkbox
-                label="Cholecystectomy within the last 3 months"
-                checked={state.medicalHistory.recentCholecystectomy}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_MEDICAL_HISTORY",
-                    field: "recentCholecystectomy",
-                    value: v,
-                  })
-                }
-                description="Caution. Counsel on biliary warning signs; consider deferring initiation."
-              />
-
-              <Checkbox
-                label="Renal impairment"
+                label="Mild to moderate renal impairment"
                 checked={state.medicalHistory.renalImpairment}
                 onChange={(v) =>
                   dispatch({
@@ -587,24 +735,11 @@ export default function MounjaroClient() {
                     value: v,
                   })
                 }
-                description="Risk of dehydration; monitor renal function"
+                description="Caution. Monitor for dehydration secondary to gastrointestinal side effects. Severe renal impairment (eGFR below 30) or end-stage renal disease excludes (see above)."
               />
 
               <Checkbox
-                label="Diabetic retinopathy"
-                checked={state.medicalHistory.diabeticRetinopathy}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_MEDICAL_HISTORY",
-                    field: "diabeticRetinopathy",
-                    value: v,
-                  })
-                }
-                description="May transiently worsen with rapid weight loss"
-              />
-
-              <Checkbox
-                label="Depression or mental health condition"
+                label="History of suicidal ideation, or active severe mental illness"
                 checked={state.medicalHistory.depression}
                 onChange={(v) =>
                   dispatch({
@@ -613,11 +748,39 @@ export default function MounjaroClient() {
                     value: v,
                   })
                 }
-                description="Requires enhanced psychiatric monitoring"
+                description="Caution. Ensure appropriate psychiatric oversight is in place, monitor mood at review, and refer if there is any concern."
+              />
+
+              {state.medicalHistory.depression && (
+                <Checkbox
+                  label="Psychiatric oversight is absent and there is concern"
+                  checked={state.medicalHistory.mentalHealthOversightAbsent}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_MEDICAL_HISTORY",
+                      field: "mentalHealthOversightAbsent",
+                      value: v,
+                    })
+                  }
+                  description="Do not supply where oversight is absent and concern exists."
+                />
+              )}
+
+              <Checkbox
+                label="Pre-existing increased heart rate"
+                checked={state.medicalHistory.preExistingTachycardia}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICAL_HISTORY",
+                    field: "preExistingTachycardia",
+                    value: v,
+                  })
+                }
+                description="Caution. Cases of tachycardia have been reported; use with caution and seek specialist advice before use."
               />
 
               <Checkbox
-                label="Thyroid disease"
+                label="Thyroid disease (other than MTC or MEN 2)"
                 checked={state.medicalHistory.thyroidDisease}
                 onChange={(v) =>
                   dispatch({
@@ -636,7 +799,7 @@ export default function MounjaroClient() {
         return (
           <StepWrapper
             title="Current Medications & Interactions"
-            description="Check for drug interactions and medications requiring dose adjustment."
+            description="Ask specifically about medicines taken for diabetes and name the products. Patients do not always think of a diabetes medicine as the same kind of drug as a weight loss one."
             currentStep={state.currentStep}
             totalSteps={TOTAL_STEPS}
             onNext={handleNext}
@@ -646,7 +809,7 @@ export default function MounjaroClient() {
           >
             <div className="space-y-4">
               <Checkbox
-                label="Currently taking insulin"
+                label="Insulin-treated diabetes (currently taking insulin)"
                 checked={state.medications.takesInsulin}
                 onChange={(v) =>
                   dispatch({
@@ -655,7 +818,7 @@ export default function MounjaroClient() {
                     value: v,
                   })
                 }
-                description="Risk of hypoglycaemia; may require dose reduction (~20%)"
+                description="Exclusion. Refer: a pharmacy weight-management service cannot manage insulin dose reduction."
               />
 
               {state.medications.takesInsulin && (
@@ -684,12 +847,12 @@ export default function MounjaroClient() {
                     value: v,
                   })
                 }
-                description="Cannot combine with another GLP-1 for any indication, including one taken for diabetes: semaglutide, tirzepatide, liraglutide, dulaglutide, exenatide, orforglipron, or a sulfonylurea or meglitinide"
+                description="Exclusion for any indication, including one taken for diabetes: oral or injectable semaglutide, tirzepatide, orforglipron, liraglutide, dulaglutide, exenatide, and the sulfonylureas and meglitinides"
               />
 
               {state.medications.currentGLP1 && (
                 <TextArea
-                  label="Details of current GLP-1 agonist"
+                  label="Details of current GLP-1 agonist or insulin secretagogue"
                   value={state.medications.otherGLP1Details}
                   onChange={(v) =>
                     dispatch({
@@ -698,10 +861,23 @@ export default function MounjaroClient() {
                       value: v,
                     })
                   }
-                  placeholder="e.g., Wegovy, Ozempic, Victoza"
+                  placeholder="e.g., Wegovy, Ozempic, Rybelsus, Victoza, gliclazide"
                   required
                 />
               )}
+
+              <Checkbox
+                label="Type 2 diabetes on metformin, an SGLT2 inhibitor or a DPP-4 inhibitor only"
+                checked={state.medications.t2dmOralAgents}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICATIONS",
+                    field: "t2dmOralAgents",
+                    value: v,
+                  })
+                }
+                description="Caution. No dose adjustment is needed, but inform the GP. Any sulfonylurea, meglitinide or insulin excludes."
+              />
 
               <Checkbox
                 label="Taking warfarin"
@@ -713,7 +889,7 @@ export default function MounjaroClient() {
                     value: v,
                   })
                 }
-                description="Risk of interaction with Mounjaro"
+                description="Caution. Delayed gastric emptying may affect absorption of narrow therapeutic index medicines; frequent INR monitoring is recommended on initiation."
               />
 
               <Checkbox
@@ -726,7 +902,20 @@ export default function MounjaroClient() {
                     value: v,
                   })
                 }
-                description="May reduce efficacy; counsel on backup contraception"
+                description="Caution. Non-oral contraception or a barrier method is advised during titration and for 4 weeks after each dose increase."
+              />
+
+              <Checkbox
+                label="Taking oral HRT"
+                checked={state.medications.takesHRT}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_MEDICATIONS",
+                    field: "takesHRT",
+                    value: v,
+                  })
+                }
+                description="Caution. Due to the lack of data regarding absorption, non-oral products (patch, gel, or levonorgestrel intrauterine device) may be considered."
               />
 
               <TextArea
@@ -770,7 +959,7 @@ export default function MounjaroClient() {
             canProceed={!hasStops}
             validationError={
               hasStops
-                ? "Hard stop contraindications present — cannot proceed to dose selection."
+                ? "Exclusion criteria present: cannot proceed to dose selection."
                 : null
             }
             isBlocked={hasStops}
@@ -784,12 +973,15 @@ export default function MounjaroClient() {
             {hasStops && (
               <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded">
                 <p className="text-sm font-semibold text-red-700 mb-2">
-                  Hard Stop — Cannot Supply
+                  Excluded: Cannot Supply
                 </p>
                 <p className="text-sm text-red-600">
-                  Based on the identified contraindications, Mounjaro cannot be supplied. The
-                  patient should be referred back to their GP for further assessment and
-                  alternative weight management strategies.
+                  Mounjaro cannot be supplied under this PGD. Discuss the reason for exclusion
+                  with the patient and ensure they understand. Advise on alternative treatment
+                  options and how these can be accessed (the GP, a specialist weight management
+                  service, or lifestyle programmes). If the exclusion relates to an undiagnosed
+                  or unmanaged comorbidity, recommend GP review. Document any advice given and
+                  the decision reached; inform or refer to the GP as appropriate.
                 </p>
               </div>
             )}
@@ -812,13 +1004,50 @@ export default function MounjaroClient() {
             <div className="space-y-4">
               <div className="p-3 bg-blue-50 border border-blue-200 rounded">
                 <p className="text-xs text-blue-700">
-                  <strong>Titration Schedule:</strong> 2.5mg → 5mg → 7.5mg → 10mg → 12.5mg → 15mg<br />
-                  <strong>Escalation:</strong> Every 4 weeks if tolerated
+                  <strong>Medicine:</strong> Mounjaro (tirzepatide) solution for injection in a multi-dose pre-filled pen (KwikPen), 2.5 mg, 5 mg, 7.5 mg, 10 mg, 12.5 mg or 15 mg per 0.6 mL dose; each pen contains 4 doses (2.4 mL). POM.<br />
+                  <strong>Titration:</strong> 2.5 mg once weekly for 4 weeks (titration dose, not for sustained weight management), then 5 mg once weekly. Further increases of 2.5 mg after a minimum of 4 weeks on the current dose if additional weight management is required and the current dose is tolerated. Maintenance doses 5 mg, 10 mg or 15 mg. Maximum 15 mg once weekly.<br />
+                  <strong>Supply:</strong> ONE KwikPen (4 weeks of treatment) per patient appointment. No additional supply to stock up; a holiday appointment may be brought forward by a few days.<br />
+                  <strong>Route:</strong> Subcutaneous injection in the abdomen, thigh or upper arm, once weekly on the same day each week. Not intravenous or intramuscular.
                 </p>
               </div>
 
               <SelectInput
-                label="Current dose stage"
+                label="Nature of today's supply"
+                value={state.doseSelection.supplyType}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_DOSE_SELECTION",
+                    field: "supplyType",
+                    value: v,
+                  })
+                }
+                options={[
+                  { value: "new-start", label: "New start (2.5 mg titration dose)" },
+                  { value: "continue", label: "Continuing the same dose" },
+                  { value: "escalate", label: "Escalating to the next dose (minimum 4 weeks on current dose)" },
+                  { value: "reduce", label: "Reducing to the previous dose (significant GI symptoms)" },
+                  { value: "restart", label: "Restarting after a break (re-titrate from 2.5 mg)" },
+                ]}
+                required
+              />
+
+              {state.doseSelection.supplyType === "restart" && (
+                <Checkbox
+                  label="More than 2 months have passed since discontinuing treatment"
+                  checked={state.doseSelection.breakOverTwoMonths}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_DOSE_SELECTION",
+                      field: "breakOverTwoMonths",
+                      value: v,
+                    })
+                  }
+                  description="The BMI inclusion criteria for initiation must be reapplied (confirm the Weight Assessment step reflects today's BMI)."
+                />
+              )}
+
+              <SelectInput
+                label="Dose to supply (KwikPen strength)"
                 value={state.doseSelection.currentDoseStage}
                 onChange={(v) =>
                   dispatch({
@@ -828,18 +1057,18 @@ export default function MounjaroClient() {
                   })
                 }
                 options={[
-                  { value: "init", label: "Initial (2.5mg)" },
-                  { value: "1", label: "Stage 1 (5mg)" },
-                  { value: "2", label: "Stage 2 (7.5mg)" },
-                  { value: "3", label: "Stage 3 (10mg)" },
-                  { value: "4", label: "Stage 4 (12.5mg)" },
-                  { value: "5", label: "Stage 5/Maintenance (15mg)" },
+                  { value: "init", label: "2.5 mg once weekly (starting dose, 4 weeks)" },
+                  { value: "1", label: "5 mg once weekly (maintenance dose)" },
+                  { value: "2", label: "7.5 mg once weekly (titration step)" },
+                  { value: "3", label: "10 mg once weekly (maintenance dose)" },
+                  { value: "4", label: "12.5 mg once weekly (titration step)" },
+                  { value: "5", label: "15 mg once weekly (maintenance dose, maximum)" },
                 ]}
                 required
               />
 
               <NumberInput
-                label="Weeks at current dose"
+                label="Weeks on the current or previous dose"
                 value={state.doseSelection.weeksAtCurrentDose}
                 onChange={(v) =>
                   dispatch({
@@ -849,12 +1078,25 @@ export default function MounjaroClient() {
                   })
                 }
                 min={0}
-                max={52}
+                max={104}
                 unit="weeks"
               />
 
+              <Checkbox
+                label="More than 2 doses missed since the last supply"
+                checked={state.doseSelection.missedMoreThanTwoDoses}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_DOSE_SELECTION",
+                    field: "missedMoreThanTwoDoses",
+                    value: v,
+                  })
+                }
+                description="Reduce and re-escalate the dose to avoid unwanted side effects when treatment is re-initiated."
+              />
+
               <TextInput
-                label="Injection site"
+                label="Injection site advised"
                 value={state.doseSelection.injectionSite}
                 onChange={(v) =>
                   dispatch({
@@ -863,8 +1105,36 @@ export default function MounjaroClient() {
                     value: v,
                   })
                 }
-                placeholder="e.g., abdomen, thigh, upper arm"
+                placeholder="e.g., abdomen, thigh, upper arm (rotate sites)"
               />
+
+              <div className="grid sm:grid-cols-2 gap-4">
+                <TextInput
+                  label="Batch number"
+                  value={state.doseSelection.batchNumber}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_DOSE_SELECTION",
+                      field: "batchNumber",
+                      value: v,
+                    })
+                  }
+                  placeholder="Batch number of the pen supplied"
+                  required
+                />
+                <TextInput
+                  label="Expiry date"
+                  value={state.doseSelection.expiryDate}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_DOSE_SELECTION",
+                      field: "expiryDate",
+                      value: v,
+                    })
+                  }
+                  type="date"
+                />
+              </div>
 
               <Checkbox
                 label="Pharmacist override"
@@ -934,7 +1204,7 @@ export default function MounjaroClient() {
                     value: v,
                   })
                 }
-                description="Rotate between abdomen, thigh, and upper arm"
+                description="Rotate injection sites with each dose (abdomen, thigh or upper arm) to reduce local irritation"
               />
 
               <Checkbox
@@ -947,7 +1217,7 @@ export default function MounjaroClient() {
                     value: v,
                   })
                 }
-                description="Refrigerate at 2-8°C. After first use, the pen may be stored unrefrigerated for up to 30 days at no more than 30°C, then discard. Keep the cap on when not in use to protect from light. If travelling by plane, keep in hand luggage — do not put in the hold (risk of freezing). Discard if frozen."
+                description="Store in a refrigerator (2°C to 8°C). Do not freeze; discard if frozen. Once removed from refrigeration, may be stored unrefrigerated below 30°C for up to 21 days, then discard. Keep the pen in the outer carton to protect from light. Travel: carry pens in hand luggage when flying, not in checked baggage; a travel letter may be required."
               />
 
               <Checkbox
@@ -960,11 +1230,11 @@ export default function MounjaroClient() {
                     value: v,
                   })
                 }
-                description="If missed, take within 4 days; if longer, skip and continue weekly schedule"
+                description="If a dose is missed, administer as soon as possible within 4 days (96 hours). If more than 4 days have passed, skip the missed dose and resume the usual schedule. Do not administer two doses within 3 days. The dosing day can be changed if at least 3 days separate doses. If more than 2 doses are missed, the dose is reduced and re-escalated."
               />
 
               <Checkbox
-                label="GI side effects discussed (nausea, vomiting, diarrhoea, constipation)"
+                label="GI side effects, their management and adequate fluid intake discussed"
                 checked={state.counselling.giSideEffects}
                 onChange={(v) =>
                   dispatch({
@@ -973,7 +1243,22 @@ export default function MounjaroClient() {
                     value: v,
                   })
                 }
-                description="Common side effects and management strategies"
+                description="Very common: nausea, diarrhoea, vomiting, constipation, decreased appetite. Mostly during dose escalation. Dose escalation may be delayed or the dose reduced if significant symptoms occur. Counsel on adequate fluid intake to avoid dehydration and acute kidney injury."
+                required
+              />
+
+              <Checkbox
+                label="Warning symptoms needing urgent attention explained"
+                checked={state.counselling.warningSymptoms}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_COUNSELLING",
+                    field: "warningSymptoms",
+                    value: v,
+                  })
+                }
+                description="Severe abdominal pain, persistent vomiting with dehydration, jaundice, sudden visual loss, or a sustained rise in resting heart rate."
+                required
               />
 
               <Checkbox
@@ -986,7 +1271,7 @@ export default function MounjaroClient() {
                     value: v,
                   })
                 }
-                description="Severe abdominal pain radiating to back; when to seek urgent help"
+                description="Persistent, severe abdominal pain (may radiate to the back): seek immediate medical attention. Discontinue and refer urgently if suspected; do not restart if confirmed."
               />
 
               <Checkbox
@@ -999,7 +1284,7 @@ export default function MounjaroClient() {
                     value: v,
                   })
                 }
-                description="Upper right quadrant pain, nausea; contact GP if develops"
+                description="Upper right quadrant pain, fever, jaundice; contact GP if develops"
               />
 
               <Checkbox
@@ -1012,7 +1297,33 @@ export default function MounjaroClient() {
                     value: v,
                   })
                 }
-                description="If diabetic, monitor vision changes; notify eye clinic"
+                description="If diabetic, report any vision changes; sudden visual loss needs urgent attention"
+              />
+
+              <Checkbox
+                label="Reduced absorption of oral medicines, oral contraceptives and HRT discussed"
+                checked={state.counselling.oralMedicationAbsorption}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_COUNSELLING",
+                    field: "oralMedicationAbsorption",
+                    value: v,
+                  })
+                }
+                description="Delayed gastric emptying may reduce absorption of oral medicines, especially narrow therapeutic index drugs and oral contraceptives. Non-oral contraception or a barrier method during titration and for 4 weeks after each dose increase; non-oral HRT may be considered."
+              />
+
+              <Checkbox
+                label="General anaesthesia or deep sedation advice given"
+                checked={state.counselling.anaesthesiaWarning}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_COUNSELLING",
+                    field: "anaesthesiaWarning",
+                    value: v,
+                  })
+                }
+                description="Pulmonary aspiration has been reported. Tell the anaesthetist or surgical team about tirzepatide before any procedure under general anaesthesia or deep sedation."
               />
 
               <Checkbox
@@ -1025,7 +1336,7 @@ export default function MounjaroClient() {
                     value: v,
                   })
                 }
-                description="How to use the pre-filled injection pen"
+                description="How to use the KwikPen; read the instructions for use and package leaflet before administering"
               />
 
               <Checkbox
@@ -1038,7 +1349,7 @@ export default function MounjaroClient() {
                     value: v,
                   })
                 }
-                description="Importance of balanced diet and regular physical activity"
+                description="Explain the expected pattern of weight loss and that the medicine works alongside diet and activity, not instead of them."
               />
 
               <Checkbox
@@ -1051,7 +1362,35 @@ export default function MounjaroClient() {
                     value: v,
                   })
                 }
-                description="Review at 4 weeks, then every 3 months; monitor tolerance and efficacy"
+                description="Review at each 4-weekly supply: reassess clinical benefit, tolerability and target weight. Treatment will be reassessed if less than 5% of body weight has been lost after 6 months on the maintenance dose. When the target weight is reached, discuss whether to continue to maintain it."
+                required
+              />
+
+              <Checkbox
+                label="Written information given: PIL, written lifestyle, diet and physical activity advice, and the agreed target weight"
+                checked={state.counselling.writtenInfoProvided}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_COUNSELLING",
+                    field: "writtenInfoProvided",
+                    value: v,
+                  })
+                }
+                required
+              />
+
+              <Checkbox
+                label="GP informed"
+                checked={state.counselling.gpInformed}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_COUNSELLING",
+                    field: "gpInformed",
+                    value: v,
+                  })
+                }
+                description="Required where the patient has type 2 diabetes on metformin, an SGLT2 inhibitor or a DPP-4 inhibitor. Otherwise inform the GP as appropriate."
+                required={state.medications.t2dmOralAgents}
               />
             </div>
           </StepWrapper>

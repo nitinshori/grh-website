@@ -1,18 +1,35 @@
 import { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/types";
 
 export interface CovidBoosterAssessment {
-  /** PGD v004 covers 12 years and over, not 18 and over. */
+  /** PGD v006 covers 12 years and over, not 18 and over. */
   ageConfirmed: boolean;
   previousCovidVaccine: boolean;
+  /** Date of the previous COVID-19 vaccine dose, where known (PGD v006 records row). */
+  previousDoseDate: string;
   timelinessEligible: boolean;
+  /** Under 3 months since the last dose but a shorter interval is specifically advised in national guidance for this individual. */
+  shorterIntervalNationalGuidance: boolean;
+  /** PGD v006 inclusion: NHS entitlement. */
+  nhsStatus: '' | 'not-eligible' | 'eligible-prefers-private';
+  /** Resident in a care home for older adults (NHS-eligible cohort). */
+  careHomeResident: boolean;
   anaphylaxisToPreviousDose: boolean;
   anaphylaxisToPEG: boolean;
   anaphylaxisToPolysorbate: boolean;
   severeFebrilIllness: boolean;
+  /** Exclusion: confirmed current COVID-19 infection, defer until recovered. */
+  currentCovidInfection: boolean;
   onAnticoagulants: boolean;
+  /** Bleeding disorder (exclusion unless IM injection assessed as safe by a clinician familiar with the bleeding risk). */
+  bleedingDisorder: boolean;
+  bleedingDisorderAssessedSafe: boolean;
   myocarditisHistory: boolean;
+  /** Caution: pregnancy, confirm vaccine and indication against national guidance. */
+  pregnant: boolean;
+  /** Caution: history of capillary leak syndrome (Spikevax). */
+  capillaryLeakHistory: boolean;
   /**
-   * Needed for two separate rules in PGD v004: a primary course in someone
+   * Needed for two separate rules in PGD v006: a primary course in someone
    * unvaccinated AND immunosuppressed is excluded, and Comirnaty XFG must be
    * given in preference to LP.8.1 for anyone immunosuppressed or aged 75+.
    */
@@ -23,7 +40,7 @@ export interface CovidBoosterAssessment {
  * The product actually given. v003 of this tool recorded none of this: no
  * product, no batch number, no expiry, no site. A recall could not have been
  * actioned from these records, and nothing distinguished Comirnaty XFG from
- * Comirnaty LP.8.1, which is the whole point of the v004 changeover.
+ * Comirnaty LP.8.1, which is the whole point of the v004 to v006 changeover.
  */
 export type CovidVaccineProduct =
   | ''
@@ -40,6 +57,13 @@ export interface CovidBoosterSupply {
   administrationTime: string;
   /** Required when Comirnaty LP.8.1 is given in place of XFG. */
   lp81FormulationExplained: boolean;
+  /** Other vaccine given at the same visit and its site (PGD v006: record the site of each). */
+  coAdministeredVaccine: string;
+  /** PGD v006 consent block, under 16 only. */
+  consentBasis: '' | 'parental' | 'gillick';
+  parentName: string;
+  parentRelationship: string;
+  gillickBasis: string;
 }
 
 /** Dose volume and display name per product, taken from the UK SPCs. */
@@ -75,6 +99,8 @@ export interface CovidBoosterCounselling {
   explainedObservationPeriod: boolean;
   discussedSeriousReactions: boolean;
   providedWrittenInfo: boolean;
+  /** PGD v006 counselling: report any suspected side effect via the Yellow Card scheme. */
+  explainedYellowCard: boolean;
 }
 
 export interface CovidBoosterConsultationState {
@@ -90,7 +116,7 @@ export interface CovidBoosterConsultationState {
 export type CovidBoosterAction =
   | { type: "UPDATE_PATIENT"; field: keyof BasePatientDetails; value: string | number | boolean | null }
   | { type: "UPDATE_CONSENT"; field: keyof BaseConsent; value: string | boolean | undefined }
-  | { type: "UPDATE_ASSESSMENT"; field: keyof CovidBoosterAssessment; value: boolean }
+  | { type: "UPDATE_ASSESSMENT"; field: keyof CovidBoosterAssessment; value: boolean | string }
   | { type: "UPDATE_COUNSELLING"; field: keyof CovidBoosterCounselling; value: boolean }
   | { type: "UPDATE_SUPPLY"; field: keyof CovidBoosterSupply; value: string | boolean }
   | { type: "UPDATE_SUMMARY"; field: keyof BaseSummary; value: string }
@@ -136,13 +162,22 @@ gpEmail: "",
     assessment: {
       ageConfirmed: false,
       previousCovidVaccine: false,
+      previousDoseDate: "",
       timelinessEligible: false,
+      shorterIntervalNationalGuidance: false,
+      nhsStatus: "",
+      careHomeResident: false,
       anaphylaxisToPreviousDose: false,
       anaphylaxisToPEG: false,
       anaphylaxisToPolysorbate: false,
       severeFebrilIllness: false,
+      currentCovidInfection: false,
       onAnticoagulants: false,
+      bleedingDisorder: false,
+      bleedingDisorderAssessedSafe: false,
       myocarditisHistory: false,
+      pregnant: false,
+      capillaryLeakHistory: false,
       immunosuppressed: false,
     },
     supply: {
@@ -152,6 +187,11 @@ gpEmail: "",
       administrationSite: "",
       administrationTime: "",
       lp81FormulationExplained: false,
+      coAdministeredVaccine: "",
+      consentBasis: "",
+      parentName: "",
+      parentRelationship: "",
+      gillickBasis: "",
     },
     counselling: {
       explainedBoosterRationale: false,
@@ -159,6 +199,7 @@ gpEmail: "",
       explainedObservationPeriod: false,
       discussedSeriousReactions: false,
       providedWrittenInfo: false,
+      explainedYellowCard: false,
     },
     summary: {
       pharmacistName: "",

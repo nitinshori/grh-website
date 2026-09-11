@@ -5,7 +5,7 @@ import { PgdPageActions } from "@/components/PgdPageActions";
 export const metadata: Metadata = {
   title: "Hayfever (Prescription Strength) Consultation ePGD",
   description:
-    "Digital consultation tool for prescription-strength hayfever treatments. Guides pharmacists through symptom assessment, contraindication checks, and supply of fexofenadine, fluticasone nasal spray, or montelukast under UK Patient Group Direction.",
+    "Digital consultation tool for prescription-strength hayfever treatments. Guides pharmacists through symptom assessment, contraindication checks, and supply of fexofenadine 120 mg tablets and/or Dymista nasal spray under UK Patient Group Direction.",
 };
 
 export default function HayfeverToolPage() {
@@ -27,10 +27,11 @@ export default function HayfeverToolPage() {
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-navy-900">
-            Hayfever — Prescription Strength PGD Consultation
+            Hayfever, Prescription Strength PGD Consultation
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Prescription-strength treatments beyond OTC for seasonal and perennial allergic rhinitis
+            Fexofenadine 120 mg tablets and/or Dymista nasal spray for allergic rhinitis in patients aged 12 years and over.
+            PGD version 003, issued 11 September 2026.
           </p>
         </div>
 
@@ -41,7 +42,7 @@ export default function HayfeverToolPage() {
             This ePGD is provided as a clinical decision support aid and does
             not replace professional clinical judgement. The pharmacist retains
             full responsibility for each consultation. Based on UK medicines
-            guidance and the Get Real Health PGD for Hayfever Treatments.
+            guidance and the Get Real Health PGD for Fexofenadine and/or Dymista (Allergic Rhinitis), version 003, 11 September 2026.
           </p>
         </div>
       </div>

@@ -25,10 +25,11 @@ export default function AltitudeSicknessPage() {
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-900">
                 This ePGD guides pharmacists through the Patient Group Direction for supply of
-                acetazolamide (Diamox) to patients travelling to high-altitude destinations for
-                acute mountain sickness (AMS) prevention. Includes altitude assessment, medical
-                history screening, contraindications review, and patient counselling on altitude
-                acclimatisation and warning signs.
+                acetazolamide 250 mg tablets (version 003, issued 11 September 2026) to adults
+                travelling to, or at, altitudes above 2,500 metres, for prevention or symptomatic
+                treatment of acute mountain sickness (AMS). Use for AMS is off-label and the patient
+                must be told. Includes altitude assessment, medical history screening,
+                contraindications review, and patient counselling on acclimatisation and warning signs.
               </p>
             </div>
           </div>
@@ -39,7 +40,7 @@ export default function AltitudeSicknessPage() {
 
         {/* Footer */}
         <div className="mt-8 text-center text-xs text-gray-500">
-          <p>Get Real Health ePGD — Altitude Sickness | Confidential Patient Information</p>
+          <p>Get Real Health ePGD: Altitude Sickness | Confidential Patient Information</p>
         </div>
       </div>
     </div>

@@ -31,10 +31,13 @@ export default function TravelCorePage() {
             For registered pharmacy professionals only
           </p>
           <h1 className="text-2xl sm:text-3xl font-bold text-navy-900">
-            Travel Health Core Package — PGD Consultation
+            Travel Health Core Package, PGD Consultation
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Travel risk assessment &amp; supply of preventive supplies: anti-malarials advice, bite avoidance, first aid guidance
+            Pre-travel risk assessment and administration of Hepatitis A (Havrix/Avaxim), Typhoid (Typhim Vi) and Cholera (Dukoral) vaccines to adults aged 18 and over, with malaria, bite avoidance and food and water advice
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            Travel Health PGD v004, issued 11 September 2026
           </p>
         </div>
 
@@ -44,8 +47,8 @@ export default function TravelCorePage() {
           <p className="text-[11px] text-gray-400 max-w-2xl mx-auto">
             This ePGD is provided as a clinical decision support aid and does
             not replace professional clinical judgement. The pharmacist retains
-            full responsibility for each consultation. Based on Get Real Health
-            Travel Health PGD.
+            full responsibility for each consultation. Based on the Get Real Health
+            Hepatitis A, Typhoid and Cholera Travel Health PGD v004, issued 11 September 2026.
           </p>
         </div>
       </div>

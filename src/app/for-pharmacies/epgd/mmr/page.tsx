@@ -10,7 +10,7 @@ export default function MMRPage() {
           MMR Top-up Vaccination
         </h1>
         <p className="text-gray-600">
-          Patient Group Direction consultation tool for measles, mumps, and rubella catch-up vaccination.
+          Patient Group Direction consultation tool for measles, mumps and rubella vaccination with MMRVaxPRO or Priorix (version 004, issued 11 September 2026). Individuals aged 12 months and over without two documented doses. Two doses of 0.5 mL subcutaneously, at least 4 weeks apart.
         </p>
       </div>
       <MMRClient />

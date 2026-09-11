@@ -5,8 +5,9 @@ import type {
   MeningitiBConsultationState,
   MeningitiBAction,
 } from "./lib/meningitis-b-types";
-import { STEP_LABELS, TOTAL_STEPS, createInitialMeningitiBState } from "./lib/meningitis-b-types";
-import { getAllAlerts, hasHardStops } from "./lib/meningitis-b-clinical-logic";
+import { STEP_LABELS, TOTAL_STEPS, MENB_PGD_VERSION, createInitialMeningitiBState } from "./lib/meningitis-b-types";
+import type { MeningitiBVaccineAdmin, MeningitiBMedicalHistory } from "./lib/meningitis-b-types";
+import { getAllAlerts, hasHardStops, calculateAgeInMonths, getScheduleText } from "./lib/meningitis-b-clinical-logic";
 import { validateStep } from "./lib/meningitis-b-validation";
 import { calculateAge } from "../shared/types";
 import { ProgressBar } from "../shared/components/ProgressBar";
@@ -20,6 +21,7 @@ import {
   TextInput,
   Checkbox,
   TextArea,
+  SelectInput,
 } from "../shared/components/FormInputs";
 import {
   SectionHeader,
@@ -127,6 +129,9 @@ export default function MeningitiBClient() {
 
   // Validation
   const validationError = useMemo(() => validateStep(state.currentStep, state), [state.currentStep, state]);
+  const ageMonths = calculateAgeInMonths(state.patient.dateOfBirth);
+  const underSixteen = state.patient.age !== null && state.patient.age < 16;
+  const infantUnderOne = ageMonths !== null && ageMonths < 12;
 
   // Can proceed?
   const canProceed = !validationError && (!hasStops || state.currentStep >= 4);
@@ -230,14 +235,46 @@ export default function MeningitiBClient() {
                 dispatch({ type: "UPDATE_CONSENT", field, value })
               }
             />
+            {underSixteen && (
+              <div className="mt-6 space-y-3 p-4 rounded-lg border border-amber-300 bg-amber-50">
+                <p className="text-sm font-semibold text-amber-900">Under 16: consent basis (PGD inclusion criterion)</p>
+                <p className="text-xs text-amber-900">Valid informed consent from a person with parental responsibility where the individual is under 16 and not Gillick competent. No person with parental responsibility available to consent for a child under 16 who is not Gillick competent is an exclusion.</p>
+                <SelectInput
+                  label="Consent given by"
+                  value={state.medicalHistory.consentBasis}
+                  onChange={(v) =>
+                    dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "consentBasis", value: v as MeningitiBMedicalHistory["consentBasis"] })
+                  }
+                  options={[
+                    { value: "parental", label: "A person with parental responsibility" },
+                    { value: "gillick", label: "The young person, assessed as Gillick competent" },
+                  ]}
+                  required
+                />
+                <TextInput
+                  label={state.medicalHistory.consentBasis === "gillick" ? "Basis of the Gillick competence assessment" : "Name and relationship of the person with parental responsibility"}
+                  value={state.medicalHistory.consentGiverDetails}
+                  onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "consentGiverDetails", value: v })}
+                  placeholder={state.medicalHistory.consentBasis === "gillick" ? "Why the young person was judged competent" : "A parent accompanying a child does not automatically hold parental responsibility. Ask."}
+                  required
+                />
+                <Checkbox
+                  label="A person with parental responsibility, or a suitable adult authorised by them, is present for the vaccination"
+                  checked={state.medicalHistory.parentPresent}
+                  onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "parentPresent", value: v })}
+                  description="Inclusion criterion for a child under 16 years"
+                  required
+                />
+              </div>
+            )}
           </StepWrapper>
         );
 
       case 2: // Risk Assessment
         return (
           <StepWrapper
-            title="Risk Assessment"
-            description="Identify meningitis B risk factors."
+            title="Indication"
+            description="Record why protection against meningococcal group B disease is required, and screen out requests this PGD does not cover."
             currentStep={state.currentStep}
             totalSteps={TOTAL_STEPS}
             onNext={handleNext}
@@ -246,41 +283,17 @@ export default function MeningitiBClient() {
             validationError={validationError}
           >
             <div className="space-y-4">
+              <p className="text-sm font-semibold text-navy-900">PGD indications (tick all that apply)</p>
               <Checkbox
-                label="Close contact of meningitis B case"
-                checked={state.riskAssessment.closeContactOfCase}
+                label="Routine doses missed, or presenting outside the NHS programme"
+                checked={state.riskAssessment.missedRoutineDoses}
                 onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_RISK_ASSESSMENT",
-                    field: "closeContactOfCase",
-                    value: v,
-                  })
+                  dispatch({ type: "UPDATE_RISK_ASSESSMENT", field: "missedRoutineDoses", value: v })
                 }
+                description="The routine infant doses at 8 weeks, 12 weeks and 12 months are given by the NHS programme. Families should be directed there rather than paying privately."
               />
               <Checkbox
-                label="Complement deficiency (inherited or acquired)"
-                checked={state.riskAssessment.complementDeficiency}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_RISK_ASSESSMENT",
-                    field: "complementDeficiency",
-                    value: v,
-                  })
-                }
-              />
-              <Checkbox
-                label="Asplenia or functional asplenia"
-                checked={state.riskAssessment.asplenia}
-                onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_RISK_ASSESSMENT",
-                    field: "asplenia",
-                    value: v,
-                  })
-                }
-              />
-              <Checkbox
-                label="University fresher (private provision)"
+                label="Adolescent or student seeking protection"
                 checked={state.riskAssessment.universityFresher}
                 onChange={(v) =>
                   dispatch({
@@ -289,9 +302,60 @@ export default function MeningitiBClient() {
                     value: v,
                   })
                 }
+                description="Living in closed or semi-closed communities such as university halls raises the risk"
               />
               <Checkbox
-                label="Travel to hyperendemic area"
+                label="Asplenia or splenic dysfunction"
+                checked={state.riskAssessment.asplenia}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_RISK_ASSESSMENT",
+                    field: "asplenia",
+                    value: v,
+                  })
+                }
+                description="Adult at increased risk: vaccinate and involve the specialist team"
+              />
+              <Checkbox
+                label="Complement disorder (inherited or acquired)"
+                checked={state.riskAssessment.complementDeficiency}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_RISK_ASSESSMENT",
+                    field: "complementDeficiency",
+                    value: v,
+                  })
+                }
+                description="Adult at increased risk: vaccinate and involve the specialist team"
+              />
+              <Checkbox
+                label="Complement inhibitor therapy (such as eculizumab), or due to start one"
+                checked={state.riskAssessment.complementInhibitor}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_RISK_ASSESSMENT", field: "complementInhibitor", value: v })
+                }
+                description="Vaccinate at least 2 weeks before treatment begins; where treatment starts less than 2 weeks after vaccination, prophylactic antibiotics are required until 2 weeks after the vaccine"
+              />
+              <Checkbox
+                label="Laboratory staff handling Neisseria meningitidis"
+                checked={state.riskAssessment.laboratoryStaff}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_RISK_ASSESSMENT", field: "laboratoryStaff", value: v })
+                }
+                description="4CMenB two doses, with boosters every 5 years (and MenACWY under the relevant PGD)"
+              />
+              <TextInput
+                label="Other adult at increased risk (describe)"
+                value={state.riskAssessment.otherIndication}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_RISK_ASSESSMENT", field: "otherIndication", value: v })
+                }
+                placeholder="Indication in accordance with Green Book chapter 22"
+              />
+
+              <p className="text-sm font-semibold text-red-800 pt-2">Requests this PGD does not cover (exclusions)</p>
+              <Checkbox
+                label="Request is for travel purposes"
                 checked={state.riskAssessment.hyperendemicArea}
                 onChange={(v) =>
                   dispatch({
@@ -300,6 +364,19 @@ export default function MeningitiBClient() {
                     value: v,
                   })
                 }
+                description="Exclusion: MenB is not recommended for travel. Assess for MenACWY under the relevant PGD instead, including for Hajj and Umrah."
+              />
+              <Checkbox
+                label="Case, contact or outbreak of meningococcal disease"
+                checked={state.riskAssessment.closeContactOfCase}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_RISK_ASSESSMENT",
+                    field: "closeContactOfCase",
+                    value: v,
+                  })
+                }
+                description="Exclusion: directed by the local Health Protection Team and outside this PGD. Refer."
               />
             </div>
           </StepWrapper>
@@ -319,7 +396,7 @@ export default function MeningitiBClient() {
           >
             <div className="space-y-4">
               <Checkbox
-                label="Anaphylaxis to previous dose or vaccine component"
+                label="Confirmed anaphylactic reaction to a previous dose of the same vaccine, to any component, or to any residue from the manufacturing process"
                 checked={state.medicalHistory.anaphylaxisHistory}
                 onChange={(v) =>
                   dispatch({
@@ -328,11 +405,11 @@ export default function MeningitiBClient() {
                     value: v,
                   })
                 }
-                description="Contraindication to Bexsero vaccine."
+                description="Exclusion: do not vaccinate under this PGD."
               />
 
               <Checkbox
-                label="Severe acute febrile illness"
+                label="Acute severe febrile illness"
                 checked={state.medicalHistory.severeFebrilIllness}
                 onChange={(v) =>
                   dispatch({
@@ -341,11 +418,20 @@ export default function MeningitiBClient() {
                     value: v,
                   })
                 }
-                description="Defer vaccination until recovery."
+                description="Exclusion: postpone until recovered. A minor illness without fever or systemic upset is not a reason to postpone."
               />
 
               <Checkbox
-                label="Recent other vaccination (within 1 month)"
+                label="Previous systemic or local reaction to a meningococcal vaccine"
+                checked={state.medicalHistory.previousReaction}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "previousReaction", value: v })
+                }
+                description="Fever of any severity, a hypotonic-hyporesponsive episode, persistent crying for more than 3 hours, a severe local reaction, or a convulsion within 3 days does not prevent further doses."
+              />
+
+              <Checkbox
+                label="Other vaccine given today or recently"
                 checked={state.medicalHistory.recentVaccination}
                 onChange={(v) =>
                   dispatch({
@@ -354,7 +440,16 @@ export default function MeningitiBClient() {
                     value: v,
                   })
                 }
-                description="Bexsero can be given concurrently or at any interval."
+                description="May be given at the same time as any other vaccine required, at a separate site, preferably a different limb, or at least 2.5 cm apart. Record the site of each."
+              />
+
+              <Checkbox
+                label="Immunosuppression or HIV (regardless of CD4 count)"
+                checked={state.medicalHistory.immunosuppressed}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "immunosuppressed", value: v })
+                }
+                description="Caution: vaccinate in accordance with the routine schedule; the individual may not make a full antibody response. Not a reason to withhold."
               />
 
               <Checkbox
@@ -367,7 +462,16 @@ export default function MeningitiBClient() {
                     value: v,
                   })
                 }
-                description="No specific contraindication, but assess risk/benefit."
+                description="Caution: meningococcal vaccines may be given when clinically indicated. No evidence of risk from inactivated vaccines."
+              />
+
+              <Checkbox
+                label="Breastfeeding"
+                checked={state.medicalHistory.breastfeeding}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "breastfeeding", value: v })
+                }
+                description="Caution: may be given when clinically indicated. No evidence of risk from inactivated vaccines."
               />
             </div>
           </StepWrapper>
@@ -385,7 +489,7 @@ export default function MeningitiBClient() {
             canProceed={!hasStops}
             validationError={
               hasStops
-                ? "Hard stop contraindications present — cannot proceed to vaccine administration."
+                ? "Exclusion present: cannot proceed to vaccine administration."
                 : null
             }
             isBlocked={hasStops}
@@ -399,11 +503,10 @@ export default function MeningitiBClient() {
             {hasStops && (
               <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded">
                 <p className="text-sm font-semibold text-red-700 mb-2">
-                  Hard Stop — Cannot Vaccinate
+                  Excluded: do not vaccinate under this PGD
                 </p>
                 <p className="text-sm text-red-600">
-                  Based on the identified contraindications, Bexsero vaccination cannot be
-                  administered. Refer the patient to their GP or specialist clinic.
+                  Advise on alternative options and how these can be accessed, including the NHS routine programme for infants, their GP practice, and the MenACWY PGD where the request is travel related. Explain the risks of meningococcal disease and the benefit of vaccination. Document any advice given and the decision reached. Inform or refer to the GP as appropriate. Where the individual is at increased risk through asplenia, a complement disorder or complement inhibitor therapy, make the referral clear and timely.
                 </p>
               </div>
             )}
@@ -414,7 +517,7 @@ export default function MeningitiBClient() {
         return (
           <StepWrapper
             title="Vaccine Administration"
-            description="Record Bexsero doses administered (2 doses, 1 month apart for adults)."
+            description="One 0.5 ml dose per administration. Choose the product first, then follow that product's schedule. Book the next dose in the course at the same appointment."
             currentStep={state.currentStep}
             totalSteps={TOTAL_STEPS}
             onNext={handleNext}
@@ -424,20 +527,66 @@ export default function MeningitiBClient() {
             isBlocked={hasStops}
           >
             <div className="space-y-6">
+              <SelectInput
+                label="Product"
+                value={state.vaccineAdmin.product}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_VACCINE_ADMIN", field: "product", value: v as MeningitiBVaccineAdmin["product"] })
+                }
+                options={[
+                  { value: "bexsero", label: "Bexsero (4CMenB, GSK), licensed from 2 months" },
+                  { value: "trumenba", label: "Trumenba (MenB-fHbp, Pfizer), licensed from 10 years" },
+                ]}
+                required
+              />
+
               <div className="p-4 bg-blue-50 border border-blue-200 rounded">
                 <p className="text-sm font-semibold text-blue-900 mb-1">
-                  Bexsero (4CMenB) Vaccination Schedule
+                  Schedule for this product and age
                 </p>
                 <p className="text-sm text-blue-800">
-                  Two doses, 1 month apart for adults. Both doses required for full protection.
+                  {getScheduleText(state.vaccineAdmin.product, ageMonths)}
+                </p>
+                <p className="text-xs text-blue-800 mt-2">
+                  Green Book schedule guidance supersedes the SPC. This PGD does not authorise off-label use: administer within the licensed age and dose for the product supplied. Inspect visually before administration. Store at +2 to +8 C; do not freeze.
                 </p>
               </div>
 
+              {state.vaccineAdmin.product === "trumenba" && (
+                <SelectInput
+                  label="Trumenba schedule"
+                  value={state.vaccineAdmin.trumenbaSchedule}
+                  onChange={(v) =>
+                    dispatch({ type: "UPDATE_VACCINE_ADMIN", field: "trumenbaSchedule", value: v as MeningitiBVaccineAdmin["trumenbaSchedule"] })
+                  }
+                  options={[
+                    { value: "routine", label: "Routine use: 2 doses at 0 and 6 months" },
+                    { value: "increased-risk", label: "Increased risk, or outbreak setting where advised: 3 doses at 0, 1 to 2 months, and 6 months" },
+                  ]}
+                  required
+                />
+              )}
+
+              <SelectInput
+                label="Which dose in the course this represents"
+                value={state.vaccineAdmin.doseNumber}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_VACCINE_ADMIN", field: "doseNumber", value: v as MeningitiBVaccineAdmin["doseNumber"] })
+                }
+                options={[
+                  { value: "1st", label: "1st dose" },
+                  { value: "2nd", label: "2nd dose" },
+                  { value: "3rd", label: "3rd dose (Trumenba increased-risk schedule only)" },
+                  { value: "booster-12-months", label: "Booster at 12 months (Bexsero infant course)" },
+                ]}
+                required
+              />
+
               <div className="border-t-2 border-gray-200 pt-4">
-                <h4 className="font-semibold text-sm text-navy-900 mb-4">Dose 1</h4>
+                <h4 className="font-semibold text-sm text-navy-900 mb-4">This dose: 0.5 ml intramuscular</h4>
                 <div className="space-y-4">
                   <TextInput
-                    label="Dose 1 date"
+                    label="Date of administration"
                     value={state.vaccineAdmin.vaccinationDate1}
                     onChange={(v) =>
                       dispatch({
@@ -450,8 +599,8 @@ export default function MeningitiBClient() {
                     required
                   />
 
-                  <TextInput
-                    label="Dose 1 injection site"
+                  <SelectInput
+                    label="Anatomical site"
                     value={state.vaccineAdmin.injectionSite1}
                     onChange={(v) =>
                       dispatch({
@@ -460,12 +609,17 @@ export default function MeningitiBClient() {
                         value: v,
                       })
                     }
-                    placeholder="e.g. Left deltoid, Right deltoid"
+                    options={[
+                      { value: "Left anterolateral thigh", label: "Left anterolateral thigh (infants 1 year and under)" },
+                      { value: "Right anterolateral thigh", label: "Right anterolateral thigh (infants 1 year and under)" },
+                      { value: "Left deltoid", label: "Left deltoid (older children and adults)" },
+                      { value: "Right deltoid", label: "Right deltoid (older children and adults)" },
+                    ]}
                     required
                   />
 
                   <TextInput
-                    label="Dose 1 lot/batch number"
+                    label="Batch number"
                     value={state.vaccineAdmin.lotNumber1}
                     onChange={(v) =>
                       dispatch({
@@ -474,59 +628,53 @@ export default function MeningitiBClient() {
                         value: v,
                       })
                     }
-                    placeholder="Vaccine lot number"
+                    placeholder="Vaccine batch number"
+                    required
+                  />
+
+                  <TextInput
+                    label="Expiry date"
+                    value={state.vaccineAdmin.expiryDate}
+                    onChange={(v) =>
+                      dispatch({ type: "UPDATE_VACCINE_ADMIN", field: "expiryDate", value: v })
+                    }
+                    type="date"
+                    required
                   />
                 </div>
               </div>
 
               <div className="border-t-2 border-gray-200 pt-4">
-                <h4 className="font-semibold text-sm text-navy-900 mb-4">Dose 2 (1 month later)</h4>
+                <h4 className="font-semibold text-sm text-navy-900 mb-4">Next dose in the course</h4>
                 <div className="space-y-4">
-                  <TextInput
-                    label="Dose 2 date"
-                    value={state.vaccineAdmin.vaccinationDate2}
+                  <Checkbox
+                    label="Course complete with this dose (no further dose due)"
+                    checked={state.vaccineAdmin.courseComplete}
                     onChange={(v) =>
-                      dispatch({
-                        type: "UPDATE_VACCINE_ADMIN",
-                        field: "vaccinationDate2",
-                        value: v,
-                      })
+                      dispatch({ type: "UPDATE_VACCINE_ADMIN", field: "courseComplete", value: v })
                     }
-                    type="date"
-                    required
+                    description="The need for, and timing of, further booster doses in at-risk individuals has not been determined, other than 5 yearly boosters for laboratory staff."
                   />
-
-                  <TextInput
-                    label="Dose 2 injection site"
-                    value={state.vaccineAdmin.injectionSite2}
-                    onChange={(v) =>
-                      dispatch({
-                        type: "UPDATE_VACCINE_ADMIN",
-                        field: "injectionSite2",
-                        value: v,
-                      })
-                    }
-                    placeholder="e.g. Left deltoid, Right deltoid"
-                    required
-                  />
-
-                  <TextInput
-                    label="Dose 2 lot/batch number"
-                    value={state.vaccineAdmin.lotNumber2}
-                    onChange={(v) =>
-                      dispatch({
-                        type: "UPDATE_VACCINE_ADMIN",
-                        field: "lotNumber2",
-                        value: v,
-                      })
-                    }
-                    placeholder="Vaccine lot number"
-                  />
+                  {!state.vaccineAdmin.courseComplete && (
+                    <TextInput
+                      label="Date the next dose is due (book it at this appointment)"
+                      value={state.vaccineAdmin.vaccinationDate2}
+                      onChange={(v) =>
+                        dispatch({
+                          type: "UPDATE_VACCINE_ADMIN",
+                          field: "vaccinationDate2",
+                          value: v,
+                        })
+                      }
+                      type="date"
+                      required
+                    />
+                  )}
                 </div>
               </div>
 
               <TextInput
-                label="Administered by (name and credentials)"
+                label="Name of immuniser (name and credentials)"
                 value={state.vaccineAdmin.administeredBy}
                 onChange={(v) =>
                   dispatch({
@@ -557,6 +705,18 @@ export default function MeningitiBClient() {
           onNewConsultation={handleNewConsultation}
           >
             <div className="space-y-4">
+              <Checkbox
+                label="Observed for 15 minutes after vaccination, seated, and the observation period completed"
+                checked={state.postVaccine.observationCompleted}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_POST_VACCINE", field: "observationCompleted", value: v })
+                }
+                description="Anxiety-related reactions including vasovagal syncope are commonest in adolescents and are a response to the needle. Have procedures in place to prevent injury from a faint."
+                required
+              />
+
+              <p className="text-sm font-semibold text-navy-900 pt-2">Reactions observed during the observation period</p>
+
               <Checkbox
                 label="Injection site reaction observed"
                 checked={state.postVaccine.injectionSiteReaction}
@@ -606,33 +766,103 @@ export default function MeningitiBClient() {
                 }
               />
 
+              <p className="text-sm font-semibold text-navy-900 pt-2">Counselling and written information (PGD)</p>
+
               <Checkbox
-                label="Paracetamol advice given (if needed)"
-                checked={state.postVaccine.paracetamolAdvice}
+                label="Patient information leaflet offered and written record given (product, date, and when the next dose is due)"
+                checked={state.postVaccine.writtenRecordGiven}
                 onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_POST_VACCINE",
-                    field: "paracetamolAdvice",
-                    value: v,
-                  })
+                  dispatch({ type: "UPDATE_POST_VACCINE", field: "writtenRecordGiven", value: v })
                 }
-                description="Paracetamol not routinely required but can be used for symptom relief."
+                required
               />
 
               <Checkbox
-                label="Meningitis warning signs explained"
-                checked={state.postVaccine.meningitisSignsAdvice}
+                label="Course must be completed for full protection; next dose date confirmed"
+                checked={state.counselling.doseScheduleAdvice}
                 onChange={(v) =>
-                  dispatch({
-                    type: "UPDATE_POST_VACCINE",
-                    field: "meningitisSignsAdvice",
-                    value: v,
-                  })
+                  dispatch({ type: "UPDATE_COUNSELLING", field: "doseScheduleAdvice", value: v })
+                }
+                description={getScheduleText(state.vaccineAdmin.product, ageMonths)}
+                required
+              />
+
+              <Checkbox
+                label="Expected side effects and their management explained"
+                checked={state.counselling.commonReactionsAdvice}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_COUNSELLING", field: "commonReactionsAdvice", value: v })
+                }
+                description={
+                  state.vaccineAdmin.product === "trumenba"
+                    ? "Trumenba (10 years and over): headache, diarrhoea, nausea, muscle pain, joint pain, fatigue, chills, and injection site pain, swelling and redness."
+                    : "Bexsero in adolescents and adults: injection site pain, malaise and headache most common. In infants and children up to 10 years: injection site reactions, fever of 38 C or above and irritability very common; diarrhoea, vomiting, feeding problems, sleepiness, unusual crying and rash common. Fever peaks at around 6 hours and has usually gone by 48 hours."
+                }
+                required
+              />
+
+              <Checkbox
+                label="Injection site reactions explained"
+                checked={state.counselling.injectionSiteAdvice}
+                onChange={(v) =>
+                  dispatch({ type: "UPDATE_COUNSELLING", field: "injectionSiteAdvice", value: v })
                 }
               />
 
               <Checkbox
-                label="Dose 2 schedule review arranged"
+                label="Side effects explained and Yellow Card reporting counselled"
+                checked={state.counselling.sideEffectsExplained && state.postVaccine.yellowCardAdvice}
+                onChange={(v) => {
+                  dispatch({ type: "UPDATE_COUNSELLING", field: "sideEffectsExplained", value: v });
+                  dispatch({ type: "UPDATE_POST_VACCINE", field: "yellowCardAdvice", value: v });
+                }}
+                description="All suspected reactions in children, and serious reactions in adults, should be reported via https://yellowcard.mhra.gov.uk. Document any adverse reaction and inform the GP."
+                required
+              />
+
+              {infantUnderOne && state.vaccineAdmin.product === "bexsero" && (
+                <Checkbox
+                  label="Infant under one year: paracetamol schedule explained and written paracetamol advice given"
+                  checked={state.postVaccine.paracetamolAdvice}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_POST_VACCINE",
+                      field: "paracetamolAdvice",
+                      value: v,
+                    })
+                  }
+                  description="Give 2.5 ml of infant paracetamol 120mg/5ml as soon as possible after vaccination, a second dose after 4 to 6 hours and a third 4 to 6 hours after that. Ibuprofen is less effective and is not recommended. Seek medical advice if the child is noticeably unwell with a fever, or if fever occurs at other times."
+                  required
+                />
+              )}
+              {!(infantUnderOne && state.vaccineAdmin.product === "bexsero") && (
+                <Checkbox
+                  label="Paracetamol advice given (if needed)"
+                  checked={state.postVaccine.paracetamolAdvice}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_POST_VACCINE",
+                      field: "paracetamolAdvice",
+                      value: v,
+                    })
+                  }
+                  description="Prophylactic paracetamol is advised only where Bexsero is given to infants under one year."
+                />
+              )}
+
+              <Checkbox
+                label="Vaccine does not protect against all causes of meningitis and septicaemia; signs of meningococcal disease explained"
+                checked={state.postVaccine.meningitisSignsAdvice && state.counselling.meningitisWarningSignsAdvice}
+                onChange={(v) => {
+                  dispatch({ type: "UPDATE_POST_VACCINE", field: "meningitisSignsAdvice", value: v });
+                  dispatch({ type: "UPDATE_COUNSELLING", field: "meningitisWarningSignsAdvice", value: v });
+                }}
+                description="Seek urgent medical help for a fever with a rash that does not fade under pressure, severe headache, neck stiffness, dislike of bright light, drowsiness or confusion."
+                required
+              />
+
+              <Checkbox
+                label="Next dose in the course booked"
                 checked={state.postVaccine.reviewScheduleAdvice}
                 onChange={(v) =>
                   dispatch({
@@ -641,6 +871,7 @@ export default function MeningitiBClient() {
                     value: v,
                   })
                 }
+                description="Book the next dose in the course at the same appointment"
               />
             </div>
           </StepWrapper>
@@ -786,39 +1017,92 @@ function MeningitiBSummaryReport({
       <Row label="NHS Number" value={state.patient.nhsNumber} />
       <Row label="GP" value={state.patient.gpName} />
 
-      <SectionHeader>Meningitis B Risk Factors</SectionHeader>
+      {state.patient.age !== null && state.patient.age < 16 && (
+        <>
+          <Row
+            label="Under 16 consent basis"
+            value={
+              state.medicalHistory.consentBasis === "gillick"
+                ? `Gillick competent: ${state.medicalHistory.consentGiverDetails}`
+                : `Parental responsibility: ${state.medicalHistory.consentGiverDetails}`
+            }
+          />
+          <Row label="Parent or authorised adult present" value={state.medicalHistory.parentPresent ? "Yes" : "No"} />
+        </>
+      )}
+
+      <SectionHeader>Indication</SectionHeader>
       <Row
-        label="Close contact of case"
-        value={state.riskAssessment.closeContactOfCase ? "Yes" : "No"}
+        label="Routine doses missed or outside NHS programme"
+        value={state.riskAssessment.missedRoutineDoses ? "Yes" : "No"}
       />
       <Row
-        label="Complement deficiency"
-        value={state.riskAssessment.complementDeficiency ? "Yes" : "No"}
+        label="Adolescent or student seeking protection"
+        value={state.riskAssessment.universityFresher ? "Yes" : "No"}
       />
       <Row
-        label="Asplenia"
+        label="Asplenia or splenic dysfunction"
         value={state.riskAssessment.asplenia ? "Yes" : "No"}
       />
       <Row
-        label="University fresher"
-        value={state.riskAssessment.universityFresher ? "Yes" : "No"}
+        label="Complement disorder"
+        value={state.riskAssessment.complementDeficiency ? "Yes" : "No"}
+      />
+      <Row
+        label="Complement inhibitor therapy"
+        value={state.riskAssessment.complementInhibitor ? "Yes" : "No"}
+      />
+      <Row
+        label="Laboratory staff"
+        value={state.riskAssessment.laboratoryStaff ? "Yes" : "No"}
+      />
+      {state.riskAssessment.otherIndication && (
+        <Row label="Other indication" value={state.riskAssessment.otherIndication} />
+      )}
+      <Row
+        label="Travel request (exclusion)"
+        value={state.riskAssessment.hyperendemicArea ? "Yes" : "No"}
+      />
+      <Row
+        label="Case, contact or outbreak (exclusion)"
+        value={state.riskAssessment.closeContactOfCase ? "Yes" : "No"}
       />
 
       <SectionHeader>Medical History &amp; Contraindications</SectionHeader>
       <Row
-        label="Anaphylaxis history"
+        label="Anaphylaxis to previous dose, component or residue"
         value={state.medicalHistory.anaphylaxisHistory ? "Yes" : "No"}
       />
       <Row
-        label="Febrile illness"
+        label="Acute severe febrile illness"
         value={state.medicalHistory.severeFebrilIllness ? "Yes" : "No"}
       />
+      <Row label="Previous reaction to a meningococcal vaccine" value={state.medicalHistory.previousReaction ? "Yes" : "No"} />
+      <Row label="Immunosuppression or HIV" value={state.medicalHistory.immunosuppressed ? "Yes" : "No"} />
+      <Row label="Pregnancy" value={state.medicalHistory.pregnancy ? "Yes" : "No"} />
+      <Row label="Breastfeeding" value={state.medicalHistory.breastfeeding ? "Yes" : "No"} />
 
-      <SectionHeader>Bexsero Administration</SectionHeader>
-      <Row label="Dose 1 date" value={state.vaccineAdmin.vaccinationDate1} />
-      <Row label="Dose 1 site" value={state.vaccineAdmin.injectionSite1} />
-      <Row label="Dose 2 date" value={state.vaccineAdmin.vaccinationDate2} />
-      <Row label="Dose 2 site" value={state.vaccineAdmin.injectionSite2} />
+      <SectionHeader>Vaccine Administration</SectionHeader>
+      <Row
+        label="Product"
+        value={
+          state.vaccineAdmin.product === "bexsero"
+            ? "Bexsero (4CMenB, GSK)"
+            : state.vaccineAdmin.product === "trumenba"
+            ? `Trumenba (MenB-fHbp, Pfizer), ${state.vaccineAdmin.trumenbaSchedule === "increased-risk" ? "3 dose schedule" : "2 dose schedule"}`
+            : ""
+        }
+      />
+      <Row label="Dose in course" value={state.vaccineAdmin.doseNumber === "booster-12-months" ? "Booster at 12 months" : state.vaccineAdmin.doseNumber} />
+      <Row label="Date of administration" value={state.vaccineAdmin.vaccinationDate1} />
+      <Row label="Dose, form and route" value="0.5 ml suspension for injection, intramuscular; quantity administered one dose" />
+      <Row label="Anatomical site" value={state.vaccineAdmin.injectionSite1} />
+      <Row label="Batch number" value={state.vaccineAdmin.lotNumber1} />
+      <Row label="Expiry date" value={state.vaccineAdmin.expiryDate} />
+      <Row label="Next dose due" value={state.vaccineAdmin.courseComplete ? "Course complete" : state.vaccineAdmin.vaccinationDate2} />
+      <Row label="Immuniser" value={state.vaccineAdmin.administeredBy} />
+      <Row label="15 minute observation completed" value={state.postVaccine.observationCompleted ? "Yes" : "No"} />
+      <Row label="Administered via PGD" value={`Yes, ${MENB_PGD_VERSION}`} />
 
       <SectionHeader>Clinical Alerts</SectionHeader>
       <AlertSummary alerts={state.alerts} />
@@ -826,16 +1110,19 @@ function MeningitiBSummaryReport({
       <SectionHeader>Counselling Provided</SectionHeader>
       <CounsellingGrid
         items={[
-          ["2-dose schedule explained (1 month apart)", state.counselling.doseScheduleAdvice],
-          ["Common reactions explained", state.counselling.commonReactionsAdvice],
-          ["Injection site reactions (very common)", state.counselling.injectionSiteAdvice],
-          ["Meningitis warning signs", state.counselling.meningitisWarningSignsAdvice],
-          ["Side effects explained", state.counselling.sideEffectsExplained],
+          ["Course completion and next dose date explained", state.counselling.doseScheduleAdvice],
+          ["Expected side effects and management explained", state.counselling.commonReactionsAdvice],
+          ["Injection site reactions explained", state.counselling.injectionSiteAdvice],
+          ["Signs of meningococcal disease explained", state.counselling.meningitisWarningSignsAdvice],
+          ["Yellow Card reporting counselled", state.postVaccine.yellowCardAdvice],
+          ["PIL and written record given", state.postVaccine.writtenRecordGiven],
+          ["Infant paracetamol advice given", state.postVaccine.paracetamolAdvice],
+          ["Next dose booked", state.postVaccine.reviewScheduleAdvice],
         ]}
       />
 
       <PharmacistDeclaration
-        pgdName="Meningitis B (Bexsero)"
+        pgdName="Meningitis B (Bexsero and Trumenba)"
         pharmacistName={state.summary.pharmacistName}
         pharmacistGPhC={state.summary.pharmacistGPhC}
         pharmacyName={state.summary.pharmacyName}
@@ -850,6 +1137,7 @@ function MeningitiBSummaryReport({
         </>
       )}
 
+      <p className="text-[10px] text-gray-500 text-center">{MENB_PGD_VERSION}</p>
       <ReportFooter pgdName="Meningitis B Vaccination" />
     </div>
   );

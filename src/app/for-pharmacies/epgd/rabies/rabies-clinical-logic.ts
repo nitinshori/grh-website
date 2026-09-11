@@ -2,83 +2,177 @@ import { ClinicalAlert } from '../shared/types';
 import {
   RabiesScreening,
   RabiesContraindications,
+  RabiesVaccineAdministration,
 } from './rabies-types';
+
+/** PGD strapline shown wherever the tool cites its authority. */
+export const RABIES_PGD_VERSION = 'Rabies Vaccine (Rabipur or Verorab) Pre-exposure Prophylaxis PGD v005, issued 11 September 2026';
+
+/** The dose volumes differ: 1.0 mL for Rabipur, 0.5 mL for Verorab. */
+export function getDoseVolume(product: RabiesVaccineAdministration['product']): string {
+  if (product === 'rabipur') return '1.0 mL';
+  if (product === 'verorab') return '0.5 mL';
+  return '';
+}
+
+export function getProductLabel(product: RabiesVaccineAdministration['product']): string {
+  if (product === 'rabipur') return 'Rabipur (Bavarian Nordic), purified chick embryo cell vaccine, 1.0 mL';
+  if (product === 'verorab') return 'Verorab (Sanofi), purified Vero cell rabies vaccine, 0.5 mL';
+  return '';
+}
 
 export function evaluateRabiesContraindications(
   screening: RabiesScreening,
-  patientAge: number
+  patientAge: number | null
 ): { contraindications: RabiesContraindications; alerts: ClinicalAlert[] } {
   const alerts: ClinicalAlert[] = [];
   const contraindications: RabiesContraindications = {
+    priorExposure: false,
     anaphylaxisHistory: false,
     severeEggAllergy: false,
+    antibioticHypersensitivity: false,
     acuteFebrileIllness: false,
-    ageAppropriate: true, // No specific age restriction for rabies vaccine
+    // Cover of the PGD: from age 2 years onwards; children under 2 are not covered.
+    ageAppropriate: patientAge !== null && patientAge >= 2,
   };
 
-  // Hard stop: Anaphylaxis to previous dose
-  if (screening.eggAllergy && screening.eggAllergySeverity === 'severe') {
-    contraindications.severeEggAllergy = true;
+  if (!contraindications.ageAppropriate) {
     alerts.push({
       severity: 'stop',
-      code: 'SEVERE_EGG_ALLERGY_RABIES',
-      message: 'Severe egg allergy',
-      detail:
-        'Some rabies vaccines (Rabipur) contain gelatin. Patient with severe egg allergy may require specialist formulation or referral to allergy/immunology specialist.',
+      code: 'AGE_UNDER_2_RABIES',
+      message: 'Under 2 years of age',
+      detail: 'This PGD covers patients from age 2 years onwards. Children under 2 are not covered; refer to a travel clinic or the GP.',
     });
   }
 
-  // Hard stop: Acute febrile illness
-  if (screening.temperature !== null && screening.temperature >= 38.5) {
+  // Exclusion: any actual or possible exposure that has already occurred (post-exposure)
+  if (screening.priorExposure) {
+    contraindications.priorExposure = true;
+    alerts.push({
+      severity: 'stop',
+      code: 'PRIOR_EXPOSURE_RABIES',
+      message: 'Possible exposure has already occurred: this is post-exposure',
+      detail:
+        'Any bite, scratch or lick on broken skin from a mammal in a rabies risk area, however trivial and however long ago, is a post-exposure situation and a same-day medical emergency. Refer for urgent medical assessment today. Do not manage it here.',
+    });
+  }
+
+  // Exclusion: confirmed anaphylactic reaction to a previous dose or any component
+  if (screening.anaphylaxisToVaccineOrComponent) {
+    contraindications.anaphylaxisHistory = true;
+    alerts.push({
+      severity: 'stop',
+      code: 'ANAPHYLAXIS_RABIES',
+      message: 'Confirmed anaphylactic reaction to a previous dose of rabies vaccine or to a component',
+      detail: 'Do not vaccinate under this PGD. Refer.',
+    });
+  }
+
+  // Exclusion (Rabipur only): severe egg allergy
+  if (screening.eggAllergy && screening.eggAllergySeverity === 'severe') {
+    contraindications.severeEggAllergy = true;
+    alerts.push({
+      severity: screening.antibioticHypersensitivity ? 'stop' : 'caution',
+      code: 'SEVERE_EGG_ALLERGY_RABIES',
+      message: 'Severe egg allergy: Rabipur excluded',
+      detail:
+        'Rabipur contains chick embryo cell residues including ovalbumin and must not be used. Verorab may be a suitable alternative; select Verorab on the administration step.',
+    });
+  }
+
+  // Exclusion (Verorab only): hypersensitivity to polymyxin B, streptomycin or neomycin
+  if (screening.antibioticHypersensitivity) {
+    contraindications.antibioticHypersensitivity = true;
+    alerts.push({
+      severity: contraindications.severeEggAllergy ? 'stop' : 'caution',
+      code: 'ANTIBIOTIC_HYPERSENSITIVITY_RABIES',
+      message: 'Hypersensitivity to polymyxin B, streptomycin or neomycin: Verorab excluded',
+      detail:
+        'Verorab may contain traces of polymyxin B, streptomycin and neomycin and must not be used. Rabipur (traces of neomycin, chlortetracycline and amphotericin B) may be used only where the hypersensitivity does not extend to neomycin; otherwise refer.',
+    });
+  }
+
+  if (contraindications.severeEggAllergy && contraindications.antibioticHypersensitivity) {
+    alerts.push({
+      severity: 'stop',
+      code: 'NO_SUITABLE_PRODUCT_RABIES',
+      message: 'Neither product can be given',
+      detail: 'Rabipur is excluded by severe egg allergy and Verorab by antibiotic hypersensitivity. Refer to a travel clinic or specialist service.',
+    });
+  }
+
+  // Exclusion: acute severe febrile illness (postpone until recovered)
+  if (screening.acuteFebrileIllness || (screening.temperature !== null && screening.temperature >= 38.5)) {
     contraindications.acuteFebrileIllness = true;
     alerts.push({
       severity: 'stop',
       code: 'ACUTE_FEBRILE_ILLNESS_RABIES',
-      message: 'Acute febrile illness',
-      detail: `Patient temperature is ${screening.temperature}°C. Defer vaccination unless exposure to rabies has occurred (in which case, vaccine is given regardless).`,
+      message: 'Acute severe febrile illness',
+      detail: `Temperature recorded ${screening.temperature ?? 'not recorded'} C. Postpone until recovered, so that signs or symptoms of the illness are not wrongly attributed to the vaccine. A minor illness without fever is not a reason to defer.`,
     });
   }
 
-  // Caution: Mild egg allergy
+  // Caution: mild egg allergy (no exclusion in the PGD; tool keeps its extended observation)
   if (screening.eggAllergy && screening.eggAllergySeverity === 'mild') {
     alerts.push({
       severity: 'caution',
       code: 'MILD_EGG_ALLERGY_RABIES',
       message: 'Mild egg allergy noted',
       detail:
-        'Patient has mild egg allergy. Can proceed with rabies vaccine. Extend observation period to 30 minutes.',
+        'Only severe egg allergy excludes Rabipur. Can proceed; the tool extends the observation period to 30 minutes.',
     });
   }
 
-  // Red flag: Pregnancy
+  // Caution: pregnancy
   if (screening.pregnant) {
     alerts.push({
-      severity: 'red-flag',
+      severity: 'caution',
       code: 'PREGNANCY_RABIES',
       message: 'Patient is pregnant',
       detail:
-        'Rabies vaccination in pregnancy is not recommended unless there is exposure risk. Consult GP or specialist for risk-benefit assessment.',
+        'Give pre-exposure vaccine where the risk of exposure is high and rapid access to post-exposure treatment would be limited, and record the risk assessment. There is no identified harm signal but human data are limited.',
     });
   }
 
-  // Red flag: Immunosuppression
+  // Caution: breastfeeding
+  if (screening.breastfeeding) {
+    alerts.push({
+      severity: 'caution',
+      code: 'BREASTFEEDING_RABIES',
+      message: 'Patient is breastfeeding',
+      detail:
+        'The same principle as pregnancy applies: give where the risk of exposure is high and rapid access to post-exposure treatment would be limited, and record the risk assessment. No risk to the infant has been identified.',
+    });
+  }
+
+  // Caution: immunosuppression (conventional course only; post-course serology)
   if (screening.immunosuppressed) {
     alerts.push({
-      severity: 'red-flag',
+      severity: 'caution',
       code: 'IMMUNOSUPPRESSED_RABIES',
-      message: 'Patient is immunosuppressed',
-      detail: `Reason: ${screening.immunosuppressedDetails}. Vaccine response may be reduced. Consult GP for serological testing post-vaccination to confirm antibody response.`,
+      message: 'Immunosuppression, including HIV',
+      detail: `Reason: ${screening.immunosuppressedDetails}. A full response may not be mounted. Use the conventional three dose schedule rather than the accelerated one (the accelerated course is excluded), and refer for post-course serology to confirm a protective titre, taken as 0.5 IU/mL or above.`,
     });
   }
 
-  // Caution: Limited access to PEP
+  // Caution: bleeding disorders, thrombocytopenia or anticoagulation
+  if (screening.bleedingDisorder) {
+    alerts.push({
+      severity: 'caution',
+      code: 'BLEEDING_DISORDER_RABIES',
+      message: 'Bleeding disorder, thrombocytopenia or anticoagulation',
+      detail: 'Give by deep subcutaneous injection rather than intramuscularly. Select the deep subcutaneous route on the administration step.',
+    });
+  }
+
+  // Caution: limited access to post-exposure treatment (inclusion emphasis)
   if (!screening.accessToPEP) {
     alerts.push({
       severity: 'caution',
       code: 'LIMITED_PEP_ACCESS',
-      message: 'Limited access to post-exposure prophylaxis',
+      message: 'Post-exposure treatment and rabies biologics lacking or in short supply at destination',
       detail:
-        'Patient reports limited access to PEP at destination. Pre-exposure vaccination is strongly recommended. Ensure patient knows to seek medical attention immediately after any bite/scratch.',
+        'Pre-exposure vaccination is particularly indicated. Ensure the patient knows to wash any wound and seek medical help the same day after any bite, scratch or lick on broken skin.',
     });
   }
 
@@ -89,15 +183,18 @@ export function hasHardStopContraindications(
   contraindications: RabiesContraindications
 ): boolean {
   return (
-    contraindications.severeEggAllergy ||
-    contraindications.acuteFebrileIllness
+    contraindications.priorExposure ||
+    contraindications.anaphylaxisHistory ||
+    contraindications.acuteFebrileIllness ||
+    (contraindications.severeEggAllergy && contraindications.antibioticHypersensitivity) ||
+    !contraindications.ageAppropriate
   );
 }
 
 export function getObservationPeriodRecommendation(
   screening: RabiesScreening
 ): '15-min' | '30-min' {
-  // Extend observation if egg allergy or immunosuppressed
+  // PGD: observe every patient for 15 minutes. The tool extends this for egg allergy or immunosuppression.
   if (
     (screening.eggAllergy && screening.eggAllergySeverity === 'mild') ||
     screening.immunosuppressed
@@ -107,26 +204,47 @@ export function getObservationPeriodRecommendation(
   return '15-min';
 }
 
+function addDays(base: Date, days: number): string {
+  const d = new Date(base);
+  d.setDate(d.getDate() + days);
+  return d.toLocaleDateString();
+}
+
+/**
+ * Next due dates for the dose just given, per the PGD schedules.
+ * Conventional: day 0, day 7 and day 28 (third dose may be brought forward to day 21).
+ * Accelerated: day 0, day 3 and day 7, with a further dose at one year if travel to high risk areas continues.
+ */
 export function calculateNextDueDates(
   currentDate: string,
-  schedule: 'standard' | 'accelerated'
+  schedule: 'standard' | 'accelerated',
+  doseNumber: RabiesVaccineAdministration['doseNumber']
 ): string {
   const current = new Date(currentDate);
+  const oneYear = new Date(current);
+  oneYear.setFullYear(oneYear.getFullYear() + 1);
+
   if (schedule === 'standard') {
-    // Day 0, Day 7, Day 21-28
-    const day7 = new Date(current);
-    day7.setDate(day7.getDate() + 7);
-    const day21 = new Date(current);
-    day21.setDate(day21.getDate() + 21);
-    return `Day 7: ${day7.toLocaleDateString()}, Day 21-28: ${day21.toLocaleDateString()}`;
-  } else {
-    // Day 0, Day 3, Day 7, Booster at 1 year
-    const day3 = new Date(current);
-    day3.setDate(day3.getDate() + 3);
-    const day7 = new Date(current);
-    day7.setDate(day7.getDate() + 7);
-    const booster = new Date(current);
-    booster.setFullYear(booster.getFullYear() + 1);
-    return `Day 3: ${day3.toLocaleDateString()}, Day 7: ${day7.toLocaleDateString()}, Booster (1yr): ${booster.toLocaleDateString()}`;
+    if (doseNumber === '1st') {
+      return `Day 7: ${addDays(current, 7)}; Day 28: ${addDays(current, 28)} (may be brought forward to day 21: ${addDays(current, 21)})`;
+    }
+    if (doseNumber === '2nd') {
+      return `Day 28: ${addDays(current, 21)} (may be brought forward to day 21: ${addDays(current, 14)})`;
+    }
+    if (doseNumber === '3rd') {
+      return 'Primary course complete. Boosters are not routinely recommended for most travellers; a single booster may be considered after risk assessment if travelling again to an enzootic area more than a year after the course.';
+    }
+    return 'Booster given. Further boosters per risk assessment or serology.';
   }
+
+  if (doseNumber === '1st') {
+    return `Day 3: ${addDays(current, 3)}; Day 7: ${addDays(current, 7)}; further dose at one year if travel to high risk areas continues: ${oneYear.toLocaleDateString()}`;
+  }
+  if (doseNumber === '2nd') {
+    return `Day 7: ${addDays(current, 4)}; further dose at one year if travel to high risk areas continues: ${oneYear.toLocaleDateString()}`;
+  }
+  if (doseNumber === '3rd') {
+    return `Accelerated primary course complete. Further dose at one year if travel to high risk areas continues: ${oneYear.toLocaleDateString()}`;
+  }
+  return 'One year dose given. Further boosters per risk assessment or serology.';
 }

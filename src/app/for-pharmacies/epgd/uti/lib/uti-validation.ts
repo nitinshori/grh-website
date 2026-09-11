@@ -26,19 +26,33 @@ export function validateUTIConsentStep(consent: any): string | null {
 }
 
 export function validateUTISymptomStep(symptoms: UTISymptoms): string | null {
-  // At least one symptom must be checked (dysuria OR frequency OR urgency)
-  const hasMainSymptom = symptoms.dysuria || symptoms.frequency || symptoms.urgency;
+  // PGD v005 inclusion: two or more of dysuria, new nocturia, frequency, urgency
+  const coreSymptomCount = [
+    symptoms.dysuria,
+    symptoms.nocturia,
+    symptoms.frequency,
+    symptoms.urgency,
+  ].filter(Boolean).length;
 
-  if (!hasMainSymptom) {
-    return "Please select at least one main symptom: dysuria, frequency, or urgency";
+  if (coreSymptomCount < 2) {
+    return "Two or more of dysuria, new nocturia, frequency or urgency must be present. Where only one is present, refer rather than supply";
+  }
+
+  if (!symptoms.duration) {
+    return "Please record how long the symptoms have been present";
   }
 
   return null;
 }
 
-export function validateUTIMedicalHistoryStep(): string | null {
-  // Medical history is review/checkbox. No mandatory fields to validate
-  // User must review all conditions but can proceed with none checked
+export function validateUTIMedicalHistoryStep(medicalHistory: UTIMedicalHistory): string | null {
+  // PGD v005: ask both recurrent UTI questions and record both answers
+  if (!medicalHistory.utiEpisodesLast6Months) {
+    return "Please record the number of UTI episodes in the last 6 months";
+  }
+  if (!medicalHistory.utiEpisodesLast12Months) {
+    return "Please record the number of UTI episodes in the last 12 months";
+  }
   return null;
 }
 
@@ -48,8 +62,11 @@ export function validateUTIObservationsStep(): string | null {
   return null;
 }
 
-export function validateUTIRedFlagsStep(): string | null {
-  // Red flags screen is informational/review. No validation needed
+export function validateUTIRedFlagsStep(symptoms: UTISymptoms): string | null {
+  // PGD v005: the record must show the Appendix 1 red flags were asked about
+  if (!symptoms.redFlagsAsked) {
+    return "Confirm the Appendix 1 red flags have been asked about before supplying anything";
+  }
   return null;
 }
 
@@ -62,19 +79,36 @@ export function validateUTIMedicineSelectionStep(medicineSelection: UTIMedicineS
     return "Please select a dose";
   }
 
+  if (medicineSelection.duration !== "3 days") {
+    return "The course is 3 days. One course per episode";
+  }
+
+  if (medicineSelection.medicine === "trimethoprim" && !medicineSelection.trimethoprimReason) {
+    return "Trimethoprim is second line only. Record why nitrofurantoin is unsuitable for this patient";
+  }
+
   return null;
 }
 
-export function validateUTICounsellingStep(counselling: UTICounselling): string | null {
-  // All counselling points should be checked before proceeding
+export function validateUTICounsellingStep(
+  counselling: UTICounselling,
+  medicine: UTIMedicineSelection["medicine"]
+): string | null {
+  // All counselling points in the PGD must be given and recorded before proceeding
   const requiredCounselling = [
     counselling.completeCourse,
+    counselling.howToTake,
     counselling.hydrationAdvice,
+    counselling.stopAndSeekAdvice,
     counselling.symptomsToReturn,
+    counselling.immediateActionAdvice,
   ];
+  if (medicine === "nitrofurantoin") {
+    requiredCounselling.push(counselling.darkUrine);
+  }
 
   if (!requiredCounselling.every(Boolean)) {
-    return "Please confirm all counselling points have been given";
+    return "Please confirm all counselling points and the 48 hour safety netting have been given";
   }
 
   return null;
@@ -107,15 +141,15 @@ export function validateUTIStep(
     case 2:
       return validateUTISymptomStep(state.symptoms);
     case 3:
-      return validateUTIMedicalHistoryStep();
+      return validateUTIMedicalHistoryStep(state.medicalHistory);
     case 4:
       return validateUTIObservationsStep();
     case 5:
-      return validateUTIRedFlagsStep();
+      return validateUTIRedFlagsStep(state.symptoms);
     case 6:
       return validateUTIMedicineSelectionStep(state.medicineSelection);
     case 7:
-      return validateUTICounsellingStep(state.counselling);
+      return validateUTICounsellingStep(state.counselling, state.medicineSelection.medicine);
     case 8:
       return validateUTISummaryStep(state.summary);
     default:

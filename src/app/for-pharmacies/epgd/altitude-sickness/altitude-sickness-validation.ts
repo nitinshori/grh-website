@@ -9,6 +9,7 @@ import type {
   ASCounselling,
 } from './altitude-sickness-types';
 import type { BaseConsent } from '../shared/types';
+import { maxQuantityTablets } from './altitude-sickness-clinical-logic';
 
 // ─── Patient Details Validation ───
 
@@ -23,8 +24,10 @@ export function validatePatientDetailsStep(
   if (patient.age < 18)
     return 'This PGD applies to patients aged 18 years or older';
 
-  if (!patient.maleConfirmed && !patient.femaleConfirmed)
-    return 'Please confirm the patient\'s gender';
+  // Gender confirmation removed: no UI exists on the shared patient-details
+  // step to set maleConfirmed / femaleConfirmed, so the check trapped every
+  // consultation. Pregnancy / breastfeeding (the only clinical reason) is an
+  // explicit exclusion checkbox on the medical-history step.
 
   return null;
 }
@@ -48,7 +51,11 @@ export function validateTravelAssessmentStep(
   if (!travel.destinationCountry.trim())
     return 'Destination country is required';
   if (!travel.destinationAltitude)
-    return 'Destination altitude (in meters) is required';
+    return 'Destination altitude (in metres) is required';
+  if (travel.destinationAltitude <= 2500)
+    return 'This PGD covers altitudes above 2,500 metres only';
+  if (!travel.purpose)
+    return 'Confirm whether the patient is requesting prevention or symptomatic treatment of AMS';
   if (!travel.departureDate) return 'Departure date is required';
   if (!travel.ascentRate)
     return 'Ascent rate (slow/moderate/rapid) is required';
@@ -85,7 +92,8 @@ export function validateMedicationsStep(
 // ─── Medicine Selection Validation ───
 
 export function validateMedicineSelectionStep(
-  medicine: ASMedicineSelection
+  medicine: ASMedicineSelection,
+  travel?: ASTravelAssessment
 ): string | null {
   if (!medicine.selectedMedicine)
     return 'Please confirm acetazolamide selection';
@@ -93,6 +101,14 @@ export function validateMedicineSelectionStep(
   if (!medicine.startTiming.trim()) return 'Start timing is required';
   if (!medicine.continuationTiming.trim())
     return 'Continuation timing is required';
+  if (medicine.quantityTablets === null || medicine.quantityTablets <= 0)
+    return 'Quantity supplied (tablets) is required';
+  const purpose = travel ? travel.purpose : '';
+  const max = maxQuantityTablets(purpose, medicine.includeTreatmentCourse);
+  if (medicine.quantityTablets > max)
+    return `Quantity exceeds the PGD maximum of ${max} tablets for this regimen`;
+  if (!medicine.offLabelExplained)
+    return 'Confirm the patient was told that use for AMS is outside the marketing authorisation (off-label)';
   if (!medicine.reason.trim())
     return 'Clinical reason for selection is required';
 
@@ -149,13 +165,15 @@ export function validateStep(stepIndex: number, data: any): string | null {
     case 3:
       return validateMedicalHistoryStep(data.medicalHistory);
     case 4:
+      return validateMedicationsStep(data.medications);
+    case 5:
       // Contraindications review: no input, just review
       return null;
-    case 5:
-      return validateMedicineSelectionStep(data.medicineSelection);
     case 6:
-      return validateCounsellingStep(data.counselling);
+      return validateMedicineSelectionStep(data.medicineSelection, data.travelAssessment);
     case 7:
+      return validateCounsellingStep(data.counselling);
+    case 8:
       return validateSummaryStep(data.summary);
     default:
       return null;

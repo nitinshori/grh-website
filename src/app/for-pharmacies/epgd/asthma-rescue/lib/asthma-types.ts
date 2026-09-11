@@ -1,6 +1,11 @@
-// ─── Asthma Rescue (Salbutamol) ePGD Types ───
+// ─── Asthma Rescue ePGD Types ───
+// Aligned to the signed PGD version 005, issued 11 September 2026:
+// salbutamol 100mcg MDI and prednisolone 5mg tablets, adults 18 and over,
+// acute exacerbation of diagnosed asthma.
 
 import type { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/types";
+
+export const PGD_STRAPLINE = "Asthma Rescue PGD version 005, issued 11 September 2026";
 
 // ─── Extended types for Asthma Rescue PGD ───
 
@@ -8,9 +13,19 @@ export interface AsthmaPatientDetails extends BasePatientDetails {
   femaleConfirmed: boolean;
 }
 
+export type DiagnosisEvidence = "" | "gp-record" | "repeat-prescription" | "action-plan" | "none";
+
 export interface AsthmaAssessment {
   hasExistingDiagnosis: boolean;
+  diagnosisEvidence: DiagnosisEvidence; // GP record, repeat prescription for an asthma inhaler, or an asthma action plan
   normallyUsesSABA: boolean;
+  onPreventer: boolean; // current inhaled corticosteroid therapy asked about and recorded
+  preventerDetails: string;
+  rescueCoursesLast12Months: number | null; // more than one: refer to GP; max one rescue course in 12 months
+  acuteExacerbation: boolean; // wheezing, breathlessness, chest tightness
+  canUseInhalerOrSpacer: boolean;
+  ableToTakeOralMedication: boolean;
+  incompleteResponseToSalbutamol: boolean; // prednisolone arm entry
   frequentUse: boolean; // >3 days/week
   nocturnalSymptoms: boolean;
   activityLimitation: boolean;
@@ -18,11 +33,44 @@ export interface AsthmaAssessment {
   reasonForSupply: string; // "ran out" | "replacement" | "other"
 }
 
+export interface AsthmaObservations {
+  spo2: number | null; // below 92: acute severe, do not supply
+  respiratoryRate: number | null; // 25 or more: acute severe
+  heartRate: number | null; // 110 or more: acute severe
+  pefMeasured: boolean; // where a peak flow meter is available
+  pefPercentBest: number | null; // 33 to 50: acute severe; over 50 required for prednisolone
+  canCompleteSentences: boolean; // required
+  silentChest: boolean;
+  cyanosis: boolean;
+  exhaustion: boolean;
+  confusion: boolean;
+  poorRespiratoryEffort: boolean;
+}
+
 export interface AsthmaMedicalHistory {
   hasAsthmaRecord: boolean;
   otherRespiratoryConditions: string;
   allergies: string;
   otherConditions: string;
+  // Salbutamol cautions
+  cardiovascularDisease: boolean;
+  diabetes: boolean;
+  hyperthyroidism: boolean;
+  hypokalaemia: boolean;
+  pregnancy: boolean;
+  breastfeeding: boolean;
+  // Prednisolone exclusions
+  systemicInfectionUntreated: boolean;
+  liveVaccineDuringTreatment: boolean;
+  severeHepaticDysfunction: boolean;
+  uncontrolledHypertensionOrCardiac: boolean;
+  // Prednisolone cautions
+  osteoporosis: boolean;
+  pepticUlcer: boolean;
+  psychiatricHistory: boolean;
+  renalImpairment: boolean;
+  hypertension: boolean;
+  infection: boolean;
 }
 
 export interface AsthmaRedFlags {
@@ -31,13 +79,24 @@ export interface AsthmaRedFlags {
   activityLimitation: boolean;
   neverUsedSalbutamolBefore: boolean;
   noExistingDiagnosis: boolean;
+  salbutamolAllergy: boolean;
+  prednisoloneAllergy: boolean;
 }
+
+export type PrednisoloneDose = "" | "40" | "50";
+export type PrednisoloneDays = "" | "5" | "6" | "7";
 
 export interface AsthmaMedicineSupply {
   salbutamol100mcgPMDI: boolean;
+  salbutamolBrand: string;
   twoAsDoseUnit: boolean;
   maxEightPuffsDailyUnderstood: boolean;
   spacerRecommended: boolean;
+  prednisolone5mg: boolean;
+  prednisoloneBrand: string;
+  prednisoloneDoseMg: PrednisoloneDose;
+  prednisoloneDays: PrednisoloneDays;
+  prednisoloneTablets: number | null; // computed from dose and days, max 70
 }
 
 export interface AsthmaCounselling {
@@ -46,12 +105,21 @@ export interface AsthmaCounselling {
   rinseMouthAfterUse: boolean;
   spacerUse: boolean;
   seekUrgentCareIfNotResolving: boolean;
+  // PGD v005 follow-up advice
+  emergencyIfNoImprovement: boolean; // no improvement within 15 to 30 minutes of salbutamol
+  prednisoloneFullCourse: boolean;
+  prednisoloneWithFood: boolean;
+  prednisoloneDiabetes: boolean;
+  prednisoloneOtherMedicines: boolean;
+  seekImmediateAttention: boolean; // severe breathlessness, chest pain, confusion, exhaustion
+  reviewActionPlan: boolean;
 }
 
 export interface AsthmaConsultationState {
   patient: AsthmaPatientDetails;
   consent: BaseConsent;
   assessment: AsthmaAssessment;
+  observations: AsthmaObservations;
   medicalHistory: AsthmaMedicalHistory;
   redFlags: AsthmaRedFlags;
   medicineSupply: AsthmaMedicineSupply;
@@ -64,6 +132,7 @@ export type AsthmaAction =
   | { type: "UPDATE_PATIENT"; field: keyof AsthmaPatientDetails; value: any }
   | { type: "UPDATE_CONSENT"; field: keyof BaseConsent; value: any }
   | { type: "UPDATE_ASSESSMENT"; field: keyof AsthmaAssessment; value: any }
+  | { type: "UPDATE_OBSERVATIONS"; field: keyof AsthmaObservations; value: any }
   | { type: "UPDATE_MEDICAL_HISTORY"; field: keyof AsthmaMedicalHistory; value: any }
   | { type: "UPDATE_RED_FLAGS"; field: keyof AsthmaRedFlags; value: any }
   | { type: "UPDATE_MEDICINE_SUPPLY"; field: keyof AsthmaMedicineSupply; value: any }
@@ -78,7 +147,7 @@ export const STEP_LABELS = [
   "Consent",
   "Asthma Assessment",
   "Medical History",
-  "Contraindications",
+  "Observations & Exclusions",
   "Medicine Supply",
   "Counselling",
   "Summary",
@@ -99,7 +168,7 @@ export function createInitialConsultationState(): AsthmaConsultationState {
       gpPractice: "",
       gpAddress: "",
       gpPhone: "",
-gpEmail: "",
+      gpEmail: "",
       gpOdsCode: "",
       nhsNumber: "",
       address: "",
@@ -115,18 +184,55 @@ gpEmail: "",
     },
     assessment: {
       hasExistingDiagnosis: false,
+      diagnosisEvidence: "",
       normallyUsesSABA: false,
+      onPreventer: false,
+      preventerDetails: "",
+      rescueCoursesLast12Months: null,
+      acuteExacerbation: false,
+      canUseInhalerOrSpacer: false,
+      ableToTakeOralMedication: false,
+      incompleteResponseToSalbutamol: false,
       frequentUse: false,
       nocturnalSymptoms: false,
       activityLimitation: false,
       currentSABAMedication: "",
       reasonForSupply: "",
     },
+    observations: {
+      spo2: null,
+      respiratoryRate: null,
+      heartRate: null,
+      pefMeasured: false,
+      pefPercentBest: null,
+      canCompleteSentences: false,
+      silentChest: false,
+      cyanosis: false,
+      exhaustion: false,
+      confusion: false,
+      poorRespiratoryEffort: false,
+    },
     medicalHistory: {
       hasAsthmaRecord: false,
       otherRespiratoryConditions: "",
       allergies: "",
       otherConditions: "",
+      cardiovascularDisease: false,
+      diabetes: false,
+      hyperthyroidism: false,
+      hypokalaemia: false,
+      pregnancy: false,
+      breastfeeding: false,
+      systemicInfectionUntreated: false,
+      liveVaccineDuringTreatment: false,
+      severeHepaticDysfunction: false,
+      uncontrolledHypertensionOrCardiac: false,
+      osteoporosis: false,
+      pepticUlcer: false,
+      psychiatricHistory: false,
+      renalImpairment: false,
+      hypertension: false,
+      infection: false,
     },
     redFlags: {
       increasingUse: false,
@@ -134,12 +240,20 @@ gpEmail: "",
       activityLimitation: false,
       neverUsedSalbutamolBefore: false,
       noExistingDiagnosis: false,
+      salbutamolAllergy: false,
+      prednisoloneAllergy: false,
     },
     medicineSupply: {
       salbutamol100mcgPMDI: false,
+      salbutamolBrand: "",
       twoAsDoseUnit: false,
       maxEightPuffsDailyUnderstood: false,
       spacerRecommended: false,
+      prednisolone5mg: false,
+      prednisoloneBrand: "",
+      prednisoloneDoseMg: "",
+      prednisoloneDays: "",
+      prednisoloneTablets: null,
     },
     counselling: {
       relieverNotPreventer: false,
@@ -147,6 +261,13 @@ gpEmail: "",
       rinseMouthAfterUse: false,
       spacerUse: false,
       seekUrgentCareIfNotResolving: false,
+      emergencyIfNoImprovement: false,
+      prednisoloneFullCourse: false,
+      prednisoloneWithFood: false,
+      prednisoloneDiabetes: false,
+      prednisoloneOtherMedicines: false,
+      seekImmediateAttention: false,
+      reviewActionPlan: false,
     },
     summary: {
       pharmacistName: "",
