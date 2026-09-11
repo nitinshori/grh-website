@@ -1,7 +1,6 @@
 "use client";
 
 import type { EDConsultationState, ClinicalAlert } from "../lib/ed-types";
-import { tadalafil72HourApplies } from "../lib/ed-clinical-logic";
 
 interface EDSummaryReportProps {
   state: EDConsultationState;
@@ -56,44 +55,26 @@ function AlertSummary({ alerts }: { alerts: ClinicalAlert[] }) {
 }
 
 export function EDSummaryReport({ state }: EDSummaryReportProps) {
-  const stopsExist = state.alerts.some((a) => a.severity === "stop");
   const medicineName =
     state.medicineSelection.medicine === "sildenafil"
       ? "Sildenafil"
-      : state.medicineSelection.medicine === "tadalafil"
-        ? "Tadalafil"
-        : "";
-  // Never print a medicine when a stop exists or nothing was chosen
-  // (adversarial review, 11 Sep 2026).
-  const supplied = !stopsExist && medicineName !== "" && state.medicineSelection.dose !== "";
+      : "Tadalafil";
   const fullMedicine = `${medicineName} ${state.medicineSelection.dose}`;
   const regimenLabel =
     state.medicineSelection.dosingRegimen === "daily"
       ? "Once daily"
-      : tadalafil72HourApplies(state)
-        ? "On-demand, not more than 10mg in any 72 hours"
-        : "On-demand";
-  const prev = state.complaint;
-  const previousPDE5Label =
-    prev.previousPDE5Inhibitor === "sildenafil"
-      ? "Sildenafil"
-      : prev.previousPDE5Inhibitor === "tadalafil-on-demand"
-        ? "Tadalafil on-demand"
-        : prev.previousPDE5Inhibitor === "tadalafil-daily"
-          ? "Tadalafil once daily"
-          : prev.previousPDE5Inhibitor === "none"
-            ? "No previous PDE5 inhibitor"
-            : "";
+      : "On-demand";
 
   return (
     <div className="max-w-3xl mx-auto print:max-w-none">
       {/* Print header */}
       <div className="text-center mb-6 print:mb-4">
         <h1 className="text-xl font-bold text-navy-900 print:text-base">
-          Get Real Health, ED Consultation Record
+          Get Real Health — ED Consultation Record
         </h1>
         <p className="text-xs text-gray-500 mt-1">
-          Erectile Dysfunction Patient Group Direction (sildenafil and tadalafil), version 008, issued 11 September 2026
+          Patient Group Direction: Sildenafil / Tadalafil for Erectile
+          Dysfunction
         </p>
         <p className="text-xs text-gray-400">
           Date: {state.summary.consultationDate || new Date().toLocaleDateString("en-GB")} | Time:{" "}
@@ -117,14 +98,14 @@ export function EDSummaryReport({ state }: EDSummaryReportProps) {
           value={
             state.patient.dateOfBirth
               ? new Date(state.patient.dateOfBirth).toLocaleDateString("en-GB")
-              : "Not recorded"
+              : "—"
           }
         />
-        <Row label="Age" value={state.patient.age?.toString() ?? "Not recorded"} />
-        <Row label="NHS Number" value={state.patient.nhsNumber || "Not recorded"} />
-        <Row label="Address" value={state.patient.address || "Not recorded"} />
-        <Row label="Phone" value={state.patient.phone || "Not recorded"} />
-        <Row label="GP" value={`${state.patient.gpName} ${state.patient.gpPractice}`.trim() || "Not recorded"} />
+        <Row label="Age" value={state.patient.age?.toString() ?? "—"} />
+        <Row label="NHS Number" value={state.patient.nhsNumber || "—"} />
+        <Row label="Address" value={state.patient.address || "—"} />
+        <Row label="Phone" value={state.patient.phone || "—"} />
+        <Row label="GP" value={`${state.patient.gpName} — ${state.patient.gpPractice}`} />
       </dl>
 
       {/* Consent */}
@@ -138,7 +119,7 @@ export function EDSummaryReport({ state }: EDSummaryReportProps) {
           label="ID verified"
           value={
             state.consent.idVerified
-              ? `Yes: ${state.consent.idType || "type not specified"}`
+              ? `Yes — ${state.consent.idType || "type not specified"}`
               : "No"
           }
         />
@@ -153,10 +134,10 @@ export function EDSummaryReport({ state }: EDSummaryReportProps) {
       <dl>
         <Row
           label="Onset"
-          value={state.complaint.onsetType || "Not recorded"}
+          value={state.complaint.onsetType || "—"}
         />
-        <Row label="Duration" value={state.complaint.duration || "Not recorded"} />
-        <Row label="Severity" value={state.complaint.severity || "Not recorded"} />
+        <Row label="Duration" value={state.complaint.duration || "—"} />
+        <Row label="Severity" value={state.complaint.severity || "—"} />
         <Row
           label="Previous treatment"
           value={
@@ -165,16 +146,6 @@ export function EDSummaryReport({ state }: EDSummaryReportProps) {
               : "No"
           }
         />
-        {state.complaint.previousTreatment && (
-          <Row
-            label="Previous PDE5 inhibitor"
-            value={
-              previousPDE5Label
-                ? `${previousPDE5Label}${prev.previousPDE5Dose ? `, ${prev.previousPDE5Dose}` : ""}${prev.previousPDE5Inhibitor !== "none" ? `, tolerated: ${prev.previousPDE5Tolerated ? "yes" : "no"}` : ""}`
-                : "Not recorded"
-            }
-          />
-        )}
         {state.complaint.description && (
           <Row label="Notes" value={state.complaint.description} />
         )}
@@ -220,24 +191,8 @@ export function EDSummaryReport({ state }: EDSummaryReportProps) {
           value={state.medicalHistory.recentMIOrStroke ? "Yes" : "No"}
         />
         <Row
-          label="Last cardiovascular review"
-          value={state.medicalHistory.lastCvReviewDate || "Not known"}
-        />
-        <Row
-          label="HF NYHA 2+ in 6 months / structural heart disease / murmur"
-          value={state.medicalHistory.severeHeartFailure || state.medicalHistory.structuralHeartDisease ? "Yes" : "No"}
-        />
-        <Row
-          label="Previous priapism or erection over 4 hours"
-          value={state.medicalHistory.priapismHistory ? "Yes" : "No"}
-        />
-        <Row
           label="NAION history"
           value={state.medicalHistory.naionHistory ? "Yes" : "No"}
-        />
-        <Row
-          label="Sudden onset after trauma, surgery, new medicine, or with pain or deformity"
-          value={state.redFlags.suddenOnsetSecondaryCause ? "Yes" : "No"}
         />
       </dl>
 
@@ -245,44 +200,24 @@ export function EDSummaryReport({ state }: EDSummaryReportProps) {
       <SectionHeader>Current Medications</SectionHeader>
       <dl>
         <Row
-          label="Nitrates (GTN, isosorbide, nitroprusside)"
+          label="Nitrates"
           value={
             state.medications.takesNitrates
-              ? `Yes: ${state.medications.nitrateDetails || "details not specified"}`
+              ? `Yes — ${state.medications.nitrateDetails || "details not specified"}`
               : "No"
           }
         />
         <Row
-          label="Nicorandil"
-          value={state.medications.takesNicorandil ? "Yes" : "No"}
-        />
-        <Row
-          label="Poppers question asked"
-          value={state.medications.poppersQuestionAsked ? "Yes" : "No"}
-        />
-        <Row
-          label="Poppers (amyl or alkyl nitrite) used"
-          value={state.medications.usesPoppers ? "Yes" : "No"}
-        />
-        <Row
-          label="Riociguat or other sGC stimulator"
+          label="Riociguat"
           value={state.medications.takesRiociguat ? "Yes" : "No"}
-        />
-        <Row
-          label="Other PDE5 inhibitor"
-          value={state.medications.takesOtherPDE5Inhibitor ? "Yes" : "No"}
         />
         <Row
           label="Alpha-blockers"
           value={
             state.medications.takesAlphaBlockers
-              ? `Yes: ${state.medications.alphaBlockerDetails || "not specified"}; stable: ${state.medications.alphaBlockerStable ? "yes" : "no"}${state.medications.takesDoxazosin ? "; doxazosin (tadalafil excluded)" : ""}`
+              ? `Yes — ${state.medications.alphaBlockerDetails || "stable: " + (state.medications.alphaBlockerStable ? "yes" : "no")}`
               : "No"
           }
-        />
-        <Row
-          label="Ritonavir or cobicistat"
-          value={state.medications.takesRitonavirOrCobicistat ? "Yes (sildenafil excluded; tadalafil on-demand only, not more than 10mg in any 72 hours)" : "No"}
         />
         <Row
           label="CYP3A4 inhibitors"
@@ -300,41 +235,17 @@ export function EDSummaryReport({ state }: EDSummaryReportProps) {
           label="Allergies"
           value={state.medications.allergies || "NKDA"}
         />
-        <Row
-          label="Hypersensitivity to sildenafil, tadalafil or excipient"
-          value={state.medications.hypersensitivityPDE5 ? "Yes (excluded)" : "No"}
-        />
       </dl>
 
       {/* Observations */}
-      <SectionHeader>Cardiovascular Fitness (Appendix 1) and Observations</SectionHeader>
+      <SectionHeader>Observations</SectionHeader>
       <dl>
         <Row
-          label="Functional question (mile in 20 minutes or two flights of stairs)"
-          value={
-            state.observations.exerciseTolerance === "yes"
-              ? "Yes, comfortably"
-              : state.observations.exerciseTolerance === "no"
-                ? "No"
-                : state.observations.exerciseTolerance === "unknown"
-                  ? "Does not know"
-                  : "Not asked"
-          }
-        />
-        <Row
-          label="Answer in patient's terms"
-          value={state.observations.exerciseToleranceNotes || "Not recorded"}
-        />
-        <Row
-          label="Symptoms on exertion or during sex"
-          value={state.observations.symptomsOnExertionOrSex ? "Yes" : "No"}
-        />
-        <Row
-          label="Blood pressure measured today"
+          label="Blood pressure"
           value={
             state.observations.systolicBP !== null
-              ? `${state.observations.systolicBP}/${state.observations.diastolicBP} mmHg${state.observations.bpTakenToday ? "" : " (not measured today)"}`
-              : "Not recorded"
+              ? `${state.observations.systolicBP}/${state.observations.diastolicBP} mmHg`
+              : "—"
           }
         />
         <Row
@@ -342,7 +253,7 @@ export function EDSummaryReport({ state }: EDSummaryReportProps) {
           value={
             state.observations.heartRate !== null
               ? `${state.observations.heartRate} bpm`
-              : "Not recorded"
+              : "—"
           }
         />
       </dl>
@@ -352,37 +263,19 @@ export function EDSummaryReport({ state }: EDSummaryReportProps) {
       <AlertSummary alerts={state.alerts} />
 
       {/* Medicine supplied */}
-      <SectionHeader>{supplied ? "Medicine Supplied" : "Outcome"}</SectionHeader>
+      <SectionHeader>Medicine Supplied</SectionHeader>
       <dl>
-        {supplied ? (
-          <>
-            <Row label="Medicine" value={`${fullMedicine} film-coated tablets, oral`} />
-            <Row label="Brand" value={state.medicineSelection.brand || "Not recorded"} />
-            <Row label="Regimen" value={regimenLabel} />
-            <Row
-              label="Quantity"
-              value={`${state.medicineSelection.quantity} tablets`}
-            />
-            <Row label="Supplied under" value="Erectile Dysfunction PGD v008, 11 September 2026" />
-            {state.medicineSelection.overrideReason.trim() && (
-              <Row
-                label="Reason for choice"
-                value={state.medicineSelection.overrideReason}
-              />
-            )}
-          </>
-        ) : (
-          <>
-            <Row
-              label="Medicine"
-              value={
-                stopsExist
-                  ? "NOT SUPPLIED: exclusion criteria met (see clinical alerts above)"
-                  : "No medicine supplied"
-              }
-            />
-            <Row label="PGD" value="Erectile Dysfunction PGD v008, 11 September 2026" />
-          </>
+        <Row label="Medicine" value={fullMedicine} />
+        <Row label="Regimen" value={regimenLabel} />
+        <Row
+          label="Quantity"
+          value={`${state.medicineSelection.quantity} tablets`}
+        />
+        {state.medicineSelection.pharmacistOverride && (
+          <Row
+            label="Override reason"
+            value={state.medicineSelection.overrideReason || "—"}
+          />
         )}
       </dl>
 
@@ -395,17 +288,11 @@ export function EDSummaryReport({ state }: EDSummaryReportProps) {
           ["Food interactions", state.counselling.foodInteractions],
           ["Priapism warning", state.counselling.priapismWarning],
           ["Vision/hearing", state.counselling.visionHearingWarning],
-          ["No STI protection (advised)", state.counselling.noSTIProtection],
-          [tadalafil72HourApplies(state) ? "Not more than 10mg in any 72 hours" : "One dose in 24 hours", state.counselling.maxOneDoseIn24Hours],
-          ["Never with poppers or nitrates", state.counselling.nitrateWarningGiven],
-          ["Chest pain: no GTN, tell paramedics", state.counselling.chestPainAdvice],
+          ["No STI protection", state.counselling.noSTIProtection],
           ["Grapefruit avoidance", state.counselling.grapefruitAvoidance],
           ["Alcohol moderation", state.counselling.alcoholModeration],
           ["Side effects", state.counselling.sideEffectsExplained],
           ["Review advice", state.counselling.reviewAdvice],
-          ["PIL supplied", state.counselling.pilSupplied],
-          ["Return unused tablets to a pharmacy", state.counselling.disposalAdvice],
-          ["CV and diabetes check recommended", state.counselling.gpReviewRecommended],
         ].map(([label, checked]) => (
           <div key={label as string} className="flex items-center gap-2 py-0.5">
             <span
@@ -443,9 +330,10 @@ export function EDSummaryReport({ state }: EDSummaryReportProps) {
       {/* Pharmacist signature */}
       <SectionHeader>Pharmacist Declaration</SectionHeader>
       <p className="text-xs text-gray-600 mb-4">
-        {stopsExist
-          ? "I confirm that this consultation was conducted in accordance with the Patient Group Direction for Sildenafil/Tadalafil for Erectile Dysfunction, that exclusion criteria applied, that no medicine was supplied, and that the patient was given the advice recorded above."
-          : "I confirm that this consultation was conducted in accordance with the Patient Group Direction for Sildenafil/Tadalafil for Erectile Dysfunction, and that the patient met all inclusion criteria and no exclusion criteria applied."}
+        I confirm that this consultation was conducted in accordance with the
+        Patient Group Direction for Sildenafil/Tadalafil for Erectile
+        Dysfunction, and that the patient met all inclusion criteria and no
+        exclusion criteria applied.
       </p>
       <div className="grid grid-cols-2 gap-6">
         <div>
@@ -481,7 +369,7 @@ export function EDSummaryReport({ state }: EDSummaryReportProps) {
       {/* Footer */}
       <div className="mt-8 pt-4 border-t border-gray-300 text-center">
         <p className="text-[10px] text-gray-400">
-          Get Real Health ePGD Consultation Record | Confidential
+          Get Real Health ePGD — Consultation Record | Confidential
           Patient Information | Retain for 8 years (adults)
         </p>
       </div>

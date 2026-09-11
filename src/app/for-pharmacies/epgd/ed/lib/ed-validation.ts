@@ -1,11 +1,4 @@
 import type { EDConsultationState } from "./ed-types";
-import {
-  getAvailableDoses,
-  getDoseCaps,
-  getArmAvailability,
-  getMaxQuantity,
-  calculateDoseRecommendation,
-} from "./ed-clinical-logic";
 
 // Returns an error message if the step is invalid, or null if valid
 export function validateStep(
@@ -23,11 +16,6 @@ export function validateStep(
         return "Patient must be 18 years or older";
       if (!state.patient.genderConfirmed)
         return "Please confirm the patient is male";
-      // Records row: name, address, date of birth and the GP with whom he is registered
-      if (!state.patient.address.trim())
-        return "Patient address is required (PGD records row)";
-      if (!state.patient.gpName.trim() && !state.patient.gpPractice.trim())
-        return "Record the GP or practice with whom the patient is registered";
       return null;
 
     case 1: // Consent & ID
@@ -44,19 +32,6 @@ export function validateStep(
       if (!state.complaint.duration) return "Please select duration of ED";
       if (!state.complaint.severity)
         return "Please select severity";
-      if (!state.observations.exerciseTolerance)
-        return "The cardiovascular fitness question must be asked and the answer recorded (PGD v008 Appendix 1)";
-      if (!state.observations.exerciseToleranceNotes.trim())
-        return "Record the cardiovascular fitness answer in the patient's own terms (PGD records row)";
-      if (state.complaint.previousTreatment) {
-        if (!state.complaint.previousPDE5Inhibitor)
-          return "Record whether the previous treatment was a PDE5 inhibitor, and which";
-        if (
-          state.complaint.previousPDE5Inhibitor !== "none" &&
-          !state.complaint.previousPDE5Dose.trim()
-        )
-          return "Record the dose of the previous PDE5 inhibitor";
-      }
       return null;
 
     case 3: // Medical History
@@ -66,13 +41,6 @@ export function validateStep(
 
     case 4: // Current Medications
       // Critical check is done by clinical logic (nitrates = hard stop)
-      if (!state.medications.poppersQuestionAsked)
-        return "Ask the direct question about poppers and select the patient's answer (No, or Yes) before proceeding";
-      if (
-        (state.medications.takesAlphaBlockers || state.medications.takesDoxazosin) &&
-        !state.medications.alphaBlockerDetails.trim()
-      )
-        return "Record which alpha-blocker the patient takes";
       return null;
 
     case 5: // Observations
@@ -87,56 +55,33 @@ export function validateStep(
         state.observations.systolicBP < 60 ||
         state.observations.systolicBP > 250
       )
-        return "Systolic BP seems incorrect, please check";
+        return "Systolic BP seems incorrect — please check";
       if (
         state.observations.diastolicBP < 30 ||
         state.observations.diastolicBP > 160
       )
-        return "Diastolic BP seems incorrect, please check";
+        return "Diastolic BP seems incorrect — please check";
       return null;
 
     case 6: // Red Flags & Exclusions
       // No mandatory fields — it's all boolean checkboxes
       return null;
 
-    case 7: { // Medicine Selection
-      const sel = state.medicineSelection;
-      if (!sel.medicine)
+    case 7: // Medicine Selection
+      if (!state.medicineSelection.medicine)
         return "Please select a medicine";
-      const arms = getArmAvailability(state);
-      if (sel.medicine === "sildenafil" && !arms.sildenafil)
-        return "Sildenafil is excluded for this patient (ritonavir or cobicistat). Select tadalafil or refer";
-      if (sel.medicine === "tadalafil" && !arms.tadalafil)
-        return "Tadalafil is excluded for this patient (doxazosin). Select sildenafil or refer";
       if (
-        sel.medicine === "tadalafil" &&
-        !sel.dosingRegimen
+        state.medicineSelection.medicine === "tadalafil" &&
+        !state.medicineSelection.dosingRegimen
       )
         return "Please select a dosing regimen for tadalafil";
-      const caps = getDoseCaps(state);
-      if (sel.medicine === "tadalafil" && sel.dosingRegimen === "daily" && !caps.tadalafilDailyAllowed)
-        return "Tadalafil once-daily dosing is excluded in severe renal impairment";
-      if (!sel.dose) return "Please select a dose";
-      if (!getAvailableDoses(sel.medicine, sel.dosingRegimen, caps).includes(sel.dose))
-        return "The selected dose exceeds the limit the PGD sets for this patient";
-      const maxQty = getMaxQuantity(sel.medicine, sel.dosingRegimen, caps);
-      if (sel.quantity < 1 || sel.quantity > maxQty)
-        return `Please enter a valid quantity (1 to ${maxQty} tablets)`;
-      if (!sel.brand.trim())
-        return "Record the brand supplied";
-      // A choice between authorised regimens is allowed, but the reason must
-      // be on the record whenever it differs from the recommendation. The
-      // reason used to be required only if the pharmacist chose to tick a box.
-      const rec = calculateDoseRecommendation(state);
-      const differs =
-        rec !== null &&
-        (sel.medicine !== rec.medicine ||
-          sel.dose !== rec.dose ||
-          (sel.medicine === "tadalafil" && sel.dosingRegimen !== rec.dosingRegimen));
-      if (differs && !sel.overrideReason.trim())
-        return "Record the reason for choosing a different medicine, regimen or dose from the recommendation";
+      if (!state.medicineSelection.dose) return "Please select a dose";
+      if (
+        state.medicineSelection.quantity < 1 ||
+        state.medicineSelection.quantity > 28
+      )
+        return "Please enter a valid quantity (1-28 tablets)";
       return null;
-    }
 
     case 8: { // Counselling
       const c = state.counselling;
@@ -147,15 +92,10 @@ export function validateStep(
         c.priapismWarning &&
         c.visionHearingWarning &&
         c.noSTIProtection &&
-        c.maxOneDoseIn24Hours &&
-        c.nitrateWarningGiven &&
-        c.chestPainAdvice &&
         c.grapefruitAvoidance &&
         c.alcoholModeration &&
         c.sideEffectsExplained &&
-        c.reviewAdvice &&
-        c.pilSupplied &&
-        c.disposalAdvice;
+        c.reviewAdvice;
       if (!allChecked)
         return "All counselling points must be confirmed before proceeding";
       return null;

@@ -15,7 +15,7 @@ const severityConfig: Record<
     border: "border-red-300",
     text: "text-red-800",
     icon: "⛔",
-    label: "EXCLUSION: CANNOT SUPPLY",
+    label: "EXCLUSION — CANNOT SUPPLY",
   },
   caution: {
     bg: "bg-amber-50",
@@ -29,7 +29,7 @@ const severityConfig: Record<
     border: "border-orange-300",
     text: "text-orange-800",
     icon: "🚩",
-    label: "RED FLAG: CONSIDER REFERRAL",
+    label: "RED FLAG — CONSIDER REFERRAL",
   },
 };
 
@@ -84,7 +84,7 @@ export function EDAlertBanner({ alerts }: EDAlertBannerProps) {
       {hasStops && (
         <div className="bg-red-600 text-white rounded-lg px-4 py-3 text-center">
           <p className="font-bold text-sm">
-            CONSULTATION CANNOT PROCEED: EXCLUSION CRITERIA MET
+            CONSULTATION CANNOT PROCEED — EXCLUSION CRITERIA MET
           </p>
           <p className="text-xs mt-1 text-red-100">
             One or more absolute contraindications have been identified. The

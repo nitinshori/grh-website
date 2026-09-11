@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { TOTAL_STEPS } from "../lib/ed-types";
@@ -39,31 +39,11 @@ export function EDStepWrapper({
   onNewConsultation,
 }: EDStepWrapperProps) {
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const [hasAttemptedNext, setHasAttemptedNext] = useState(false);
   const pathname = usePathname();
   const pgdSlug = pathname?.split("/").pop() || "ed";
-  const { markComplete, saveRecord, reset } = useConsultationTracking(pgdSlug, currentStep);
-
-  useEffect(() => {
-    setHasAttemptedNext(false);
-  }, [currentStep]);
-
-  // A saved consultation that goes back to the first step is a new patient.
-  useEffect(() => {
-    if (currentStep === 0 && saveStatus === "saved") {
-      setSaveStatus("idle");
-      reset();
-    }
-  }, [currentStep, saveStatus, reset]);
+  const { markComplete, saveRecord } = useConsultationTracking(pgdSlug, currentStep);
 
   const handleCompleteAndSave = useCallback(async () => {
-    // Same rules as Next. Save & Print used to ignore validation and stops,
-    // so a record could be saved with a nitrate ticked (adversarial review,
-    // 11 Sep 2026).
-    if (!canProceed || isBlocked || validationError) {
-      setHasAttemptedNext(true);
-      return;
-    }
     markComplete();
     if (getConsultationData) {
       setSaveStatus("saving");
@@ -76,33 +56,14 @@ export function EDStepWrapper({
       }
     }
     window.print();
-  }, [markComplete, getConsultationData, saveRecord, canProceed, isBlocked, validationError]);
-
-  // The document requires the advice given to an excluded patient to be
-  // recorded. Any step with a stop can be saved as "not supplied", no print.
-  const handleSaveNotSupplied = useCallback(async () => {
-    if (!getConsultationData) return;
-    setSaveStatus("saving");
-    const data = getConsultationData();
-    if (!data) {
-      setSaveStatus("error");
-      return;
-    }
-    data.outcome = "not_supplied";
-    delete data.medicine;
-    (data.clinicalData as Record<string, unknown>).stoppedAtStep = currentStep;
-    (data.clinicalData as Record<string, unknown>).stopReason = validationError ?? "Exclusion criteria met";
-    const success = await saveRecord(data);
-    setSaveStatus(success ? "saved" : "error");
-  }, [getConsultationData, saveRecord, currentStep, validationError]);
+  }, [markComplete, getConsultationData, saveRecord]);
 
   const handleNewConsultation = useCallback(() => {
     if (window.confirm("Start a new consultation? The current consultation data will be cleared.")) {
       setSaveStatus("idle");
-      reset();
       onNewConsultation?.();
     }
-  }, [onNewConsultation, reset]);
+  }, [onNewConsultation]);
 
   const isFirstStep = currentStep === 0;
   const isLastStep = currentStep === TOTAL_STEPS - 1;
@@ -113,7 +74,7 @@ export function EDStepWrapper({
         <div className="mb-4 print:hidden">
           <Link
             href="/for-pharmacies/dashboard"
-            className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-[color:var(--tenant-primary)] transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-teal-600 transition-colors"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -133,15 +94,15 @@ export function EDStepWrapper({
       {/* Step content */}
       <div className="px-6 py-6">{children}</div>
 
-      {/* Validation error, shown once the pharmacist has tried to proceed */}
-      {hasAttemptedNext && validationError && (
+      {/* Validation error */}
+      {validationError && (
         <div className="mx-6 mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg">
           <p className="text-sm text-red-700">{validationError}</p>
         </div>
       )}
 
-      {/* Save status banner on final step, or after a not-supplied save */}
-      {(isLastStep || isBlocked) && saveStatus !== "idle" && (
+      {/* Save status banner on final step */}
+      {isLastStep && saveStatus !== "idle" && (
         <div
           className={`mx-6 mb-4 px-4 py-3 rounded-lg print:hidden ${
             saveStatus === "saving"
@@ -189,32 +150,18 @@ export function EDStepWrapper({
         <div className="flex items-center gap-3">
           {isBlocked && (
             <span className="text-xs text-red-500 font-medium">
-              Cannot proceed: exclusion criteria met
+              Cannot proceed — exclusion criteria met
             </span>
-          )}
-          {isBlocked && getConsultationData && saveStatus !== "saved" && (
-            <button
-              onClick={handleSaveNotSupplied}
-              disabled={saveStatus === "saving"}
-              className="px-4 py-2.5 rounded-lg text-sm font-semibold border border-red-300 text-red-700 hover:bg-red-50 transition-colors"
-            >
-              {saveStatus === "saving" ? "Saving..." : "Save as not supplied"}
-            </button>
           )}
           {!isLastStep ? (
             <button
-              onClick={() => {
-                if (!canProceed || isBlocked) {
-                  setHasAttemptedNext(true);
-                } else {
-                  onNext();
-                }
-              }}
+              onClick={onNext}
+              disabled={!canProceed || isBlocked}
               className={`
                 px-6 py-2.5 rounded-lg text-sm font-semibold transition-colors
                 ${
                   canProceed && !isBlocked
-                    ? "bg-[color:var(--tenant-primary)]/100 hover:bg-[color:var(--tenant-primary)]/15 text-white"
+                    ? "bg-teal-500 hover:bg-teal-600 text-white"
                     : "bg-gray-200 text-gray-400 cursor-not-allowed"
                 }
               `}
@@ -226,7 +173,7 @@ export function EDStepWrapper({
               {onNewConsultation && saveStatus === "saved" && (
                 <button
                   onClick={handleNewConsultation}
-                  className="px-5 py-2.5 rounded-lg text-sm font-medium text-[color:var(--tenant-primary)] border border-[color:var(--tenant-primary)]/30 hover:bg-[color:var(--tenant-primary)]/10 transition-colors"
+                  className="px-5 py-2.5 rounded-lg text-sm font-medium text-teal-600 border border-teal-300 hover:bg-teal-50 transition-colors"
                 >
                   New Consultation
                 </button>
