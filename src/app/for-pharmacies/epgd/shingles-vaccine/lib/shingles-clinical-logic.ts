@@ -1,4 +1,4 @@
-// Aligned to the Shingrix PGD version 007, issued 11 September 2026, as amended by
+// Aligned to the Shingrix PGD version 008, issued 11 September 2026, as amended by
 // the signatories' decisions 13, 14 and 15 of 11 September 2026 (two arms: aged 50
 // and over, and aged 18 to 49 severely immunosuppressed; late second dose given
 // without restarting; NHS-eligible patients told before a private supply).
@@ -153,32 +153,42 @@ export function getAllAlerts(state: ShinglesConsultationState): ClinicalAlert[] 
     });
   }
 
+  // Joint sign-off, 11 September 2026: pregnancy and breastfeeding are
+  // cautions in both arms, not exclusions. Shingrix is a non-live vaccine;
+  // the Green Book states it may be considered in pregnancy after discussion
+  // of the benefit and the lack of data; breastfeeding is not a
+  // contraindication. The discussion and the decision are recorded (the
+  // Eligibility step refuses Next until they are) and printed on the record.
+  const pregnancyDiscussed = state.assessment.pregnancyDiscussion.trim().length > 0;
+
   if (state.assessment.pregnancyStatus === "confirmed") {
     alerts.push({
-      severity: "stop",
+      severity: "caution",
       code: "SHINGLES_PREGNANCY",
-      message: "Patient is pregnant",
-      detail: "Pregnancy is an exclusion under this PGD (not routinely recommended). Refer to the GP.",
+      message: "Patient is pregnant: caution, record the discussion and the decision",
+      detail: `Shingrix is a non-live vaccine; the Green Book states it may be considered in pregnancy after discussion of the benefit and the lack of data. Record the discussion and the decision.${pregnancyDiscussed ? " Recorded on the Eligibility step." : " Not yet recorded: enter it on the Eligibility step."}`,
     });
   }
 
   if (state.assessment.pregnancyStatus === "breastfeeding") {
     alerts.push({
-      severity: "stop",
+      severity: "caution",
       code: "SHINGLES_BREASTFEEDING",
-      message: "Patient is breastfeeding",
-      detail: "Breastfeeding is an exclusion under this PGD (not routinely recommended). Refer to the GP.",
+      message: "Patient is breastfeeding: caution, record the discussion and the decision",
+      detail: `Shingrix is a non-live vaccine; breastfeeding is not a contraindication (Green Book). Record the discussion and the decision.${pregnancyDiscussed ? " Recorded on the Eligibility step." : " Not yet recorded: enter it on the Eligibility step."}`,
     });
   }
 
   if (state.assessment.pregnancyStatus === "unknown") {
-    // Pregnancy or breastfeeding is an exclusion; an unestablished status
-    // cannot satisfy it (adversarial review, 11 Sep 2026).
+    // The status must be established so that the pregnancy and breastfeeding
+    // caution can be applied and the discussion recorded where it arises.
+    // An unestablished status remains a stop (adversarial review, 11 Sep
+    // 2026; kept at the joint sign-off of 11 Sep 2026).
     alerts.push({
       severity: "stop",
       code: "SHINGLES_PREGNANCY_UNKNOWN",
       message: "Pregnancy or breastfeeding status not established",
-      detail: "Pregnancy or breastfeeding is an exclusion under this PGD. Establish the status before vaccinating; do not proceed until it is recorded as not pregnant and not breastfeeding.",
+      detail: "Pregnancy and breastfeeding are cautions under this PGD that require a recorded discussion and decision. Establish the status before vaccinating; do not proceed until it is recorded.",
     });
   }
 

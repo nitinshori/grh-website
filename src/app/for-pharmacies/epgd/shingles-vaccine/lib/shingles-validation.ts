@@ -1,4 +1,4 @@
-// Aligned to the Shingrix PGD version 007, issued 11 September 2026, as amended by
+// Aligned to the Shingrix PGD version 008, issued 11 September 2026, as amended by
 // the signatories' decisions 13, 14 and 15 of 11 September 2026.
 import type { ShinglesConsultationState } from "./shingles-types";
 import { SEVERE_IMMUNOSUPPRESSION_QUALIFYING } from "./shingles-types";
@@ -52,6 +52,16 @@ export function validateStep(state: ShinglesConsultationState, step: number): st
       }
       if (!state.assessment.pregnancyStatus) {
         return "Select the pregnancy or breastfeeding status";
+      }
+      // Joint sign-off, 11 September 2026: pregnancy and breastfeeding are
+      // cautions requiring a recorded discussion and decision, both arms.
+      if (
+        (state.assessment.pregnancyStatus === "confirmed" || state.assessment.pregnancyStatus === "breastfeeding") &&
+        !state.assessment.pregnancyDiscussion.trim()
+      ) {
+        return state.assessment.pregnancyStatus === "confirmed"
+          ? "Pregnant: record the discussion held (Shingrix is non-live; the Green Book states it may be considered in pregnancy after discussion of the benefit and the lack of data) and the decision reached"
+          : "Breastfeeding: record the discussion held (Shingrix is non-live; breastfeeding is not a contraindication) and the decision reached";
       }
       if (state.assessment.previousShingrix && !state.assessment.previousShingrixDate) {
         return "Record the date of dose 1 (the PGD requires it where dose 1 was given elsewhere)";

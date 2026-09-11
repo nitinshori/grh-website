@@ -115,7 +115,7 @@ export function getContraindicationAlerts(contraindications: SleepMelatoninContr
     alerts.push({ severity: "stop", code: "HYPNOTIC_CI", message: "STOP: Taking a benzodiazepine, a Z-drug (zopiclone, zolpidem, zaleplon), or any other hypnotic, sedative or treatment for insomnia", detail: "Circadin enhances their effect, and co-dosing with zolpidem measurably worsened attention, memory and co-ordination. Refer, do not supply." });
   }
   if (contraindications.methoxypsoralen) {
-    alerts.push({ severity: "stop", code: "PSORALEN_CI", message: "STOP: Taking 5-methoxypsoralen or 8-methoxypsoralen", detail: "Raises melatonin levels by inhibiting its metabolism. Refer, do not supply." });
+    alerts.push({ severity: "stop", code: "PSORALEN_CI", message: "STOP: Taking 5-methoxypsoralen or 8-methoxypsoralen", detail: "An exclusion under this PGD (not a caution): 5- and 8-methoxypsoralen raise melatonin levels by inhibiting its metabolism. Refer, do not supply." });
   }
   if (contraindications.lactoseIntolerance) {
     alerts.push({ severity: "stop", code: "LACTOSE_CI", message: "STOP: Rare hereditary galactose intolerance, total lactase deficiency or glucose-galactose malabsorption", detail: "Circadin contains 80mg lactose per tablet. Refer, do not supply." });

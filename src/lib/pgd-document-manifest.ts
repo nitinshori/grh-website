@@ -1,4 +1,4 @@
-// AUTO-GENERATED from public/pgd-documents (updated 11 Sep 2026: every live document reissued, rounds 3 to 5).
+// AUTO-GENERATED from public/pgd-documents (updated 11 Sep 2026: every live document reissued, rounds 3 to 6).
 // Maps PGD slug -> filename of the signed master PDF served from /pgd-documents/.
 // The HubRx-branded " 2" copies of the November 2025 originals were retired on 11 Sep 2026 when those originals were reissued; both maps now point at the masters.
 export const PGD_MASTER_FILES: Record<string, string> = {
@@ -101,8 +101,8 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   // shingles-treatment previously served the Shingrix VACCINE document, which
   // contains no antiviral at all. Now a genuine antiviral treatment PGD.
   "shingles-treatment": "shingles-treatment-v007.pdf",
-  "shingles-vaccine": "shingles-vaccine-v007.pdf",
-  "sleep-melatonin": "sleep-melatonin-v007.pdf",
+  "shingles-vaccine": "shingles-vaccine-v008.pdf",
+  "sleep-melatonin": "sleep-melatonin-v008.pdf",
   "smoking-nrt": "smoking-nrt-v003.pdf",
   "smoking-varenicline": "smoking-varenicline-v004.pdf",
   "sore-throat": "sore-throat-v005.pdf",
@@ -117,7 +117,7 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   // signed 13 Jul 2026 (Nitin Shori + Chris Pilkington)
   "travellers-diarrhoea": "travellers-diarrhoea-v005.pdf",
   // testosterone for women (postmenopausal HSDD) is covered by the signed HRT/Menopause PGD
-  "uti": "uti-v007.pdf",
+  "uti": "uti-v008.pdf",
   // v003 signed 9 Sep 2026: GLP-1 exclusion reads "for any indication".
   "wegovy": "wegovy-v009.pdf",
   // v004 signed 21 Aug 2026: reconciled against the UK SPC, which published
@@ -201,8 +201,8 @@ export const PGD_HUBRX_FILES: Record<string, string> = {
   "rsv": "rsv-v006.pdf",
   "saxenda": "saxenda-v004.pdf",
   "shingles-treatment": "shingles-treatment-v007.pdf",
-  "shingles-vaccine": "shingles-vaccine-v007.pdf",
-  "sleep-melatonin": "sleep-melatonin-v007.pdf",
+  "shingles-vaccine": "shingles-vaccine-v008.pdf",
+  "sleep-melatonin": "sleep-melatonin-v008.pdf",
   "smoking-nrt": "smoking-nrt-v003.pdf",
   "smoking-varenicline": "smoking-varenicline-v004.pdf",
   "sore-throat": "sore-throat-v005.pdf",
@@ -214,7 +214,7 @@ export const PGD_HUBRX_FILES: Record<string, string> = {
   // branded copy that goes stale silently is worse than no branding.
   "travel-core": "travel-core-v006.pdf",
   "typhoid": "typhoid-v006.pdf",
-  "uti": "uti-v007.pdf",
+  "uti": "uti-v008.pdf",
   // v003 signed 9 Sep 2026: GLP-1 exclusion reads "for any indication".
   "wegovy": "wegovy-v009.pdf",
   // v003 signed 9 Sep 2026: targeted correction of a doubled paediatric

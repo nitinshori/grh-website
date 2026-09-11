@@ -28,7 +28,7 @@ export function validateUTIConsentStep(consent: any): string | null {
 }
 
 export function validateUTISymptomStep(symptoms: UTISymptoms): string | null {
-  // PGD v007 inclusion: two or more of dysuria, new nocturia, frequency, urgency
+  // PGD v008 inclusion: two or more of dysuria, new nocturia, frequency, urgency
   const core: [boolean | null, string][] = [
     [symptoms.dysuria, "Dysuria (pain or burning on urination)"],
     [symptoms.nocturia, "New nocturia (new need to pass urine at night)"],
@@ -55,36 +55,17 @@ export function validateUTIMedicalHistoryStep(
   medicalHistory: UTIMedicalHistory,
   age: number | null = null
 ): string | null {
-  // PGD v007 renal row: the question is asked in set terms and the answer
+  // PGD v008 renal row: the question is asked in set terms and the answer
   // recorded. No default: an unasked question is not a NO.
   if (!medicalHistory.renalImpairment && !medicalHistory.kidneyDisease) {
     return "Select the Patient's answer to the kidney question (No, Does not know, or Yes)";
   }
-  // Decision 43: aged 60 to 64 with a NO answer, the eGFR result relied on
-  // must be recorded in full (value, date, where seen) before moving on. The
-  // clinical logic raises the stop where it does not qualify.
-  if (age !== null && age >= 60 && medicalHistory.renalImpairment === "none") {
-    if (medicalHistory.egfrResultSeen === null) {
-      return "Answer \"Has an eGFR result for this patient been seen (NHS App, GP summary or a letter)?\" (Yes or No)";
-    }
-  }
-  if (
-    age !== null &&
-    age >= 60 &&
-    medicalHistory.renalImpairment === "none" &&
-    medicalHistory.egfrResultSeen === true
-  ) {
-    if (medicalHistory.egfrValue === null) {
-      return "Enter the eGFR value seen (mL/min)";
-    }
-    if (!medicalHistory.egfrDate) {
-      return "Enter the Date of the result (eGFR)";
-    }
-    if (!medicalHistory.egfrSource.trim()) {
-      return "Select Where the result was seen (NHS App, GP summary record, or Letter)";
-    }
-  }
-  // PGD v007: ask both recurrent UTI questions and record both answers
+  // The eGFR result for a woman aged 60 to 64 (Decision 43) is a
+  // nitrofurantoin-only requirement since the joint sign-off of 11 September
+  // 2026, so it is asked and validated on the medicine step once
+  // nitrofurantoin is selected: see validateUTIMedicineSelectionStep.
+  void age;
+  // PGD v008: ask both recurrent UTI questions and record both answers
   if (medicalHistory.takingWarfarin && medicalHistory.anticoagulationServiceConsulted === null) {
     return "Answer \"Has the anticoagulation service been consulted and supply agreed?\" (Yes or No)";
   }
@@ -104,7 +85,7 @@ export function validateUTIObservationsStep(): string | null {
 }
 
 export function validateUTIRedFlagsStep(symptoms: UTISymptoms): string | null {
-  // PGD v007: the record must show the Appendix 1 red flags were asked about
+  // PGD v008: the record must show the Appendix 1 red flags were asked about
   if (!symptoms.redFlagsAsked) {
     return "Tick \"All Appendix 1 red flags have been asked about with this patient\" (tick any that are present above first)";
   }
@@ -113,10 +94,39 @@ export function validateUTIRedFlagsStep(symptoms: UTISymptoms): string | null {
 
 export function validateUTIMedicineSelectionStep(
   medicineSelection: UTIMedicineSelection,
-  medicalHistory?: UTIMedicalHistory
+  medicalHistory?: UTIMedicalHistory,
+  age: number | null = null
 ): string | null {
   if (!medicineSelection.medicine) {
     return "Select the Medicine";
+  }
+
+  // Decision 43, nitrofurantoin arm only (joint sign-off, 11 September 2026):
+  // aged 60 to 64 with a NO answer to the kidney question, the eGFR result
+  // relied on must be recorded in full (value, date, where seen) before
+  // nitrofurantoin is supplied. The clinical logic raises the stop where the
+  // result does not qualify. Trimethoprim has no eGFR requirement.
+  if (
+    medicineSelection.medicine === "nitrofurantoin" &&
+    medicalHistory &&
+    age !== null &&
+    age >= 60 &&
+    medicalHistory.renalImpairment === "none"
+  ) {
+    if (medicalHistory.egfrResultSeen === null) {
+      return "Nitrofurantoin, aged 60 to 64: answer \"Has an eGFR result for this patient been seen (NHS App, GP summary or a letter)?\" (Yes or No)";
+    }
+    if (medicalHistory.egfrResultSeen === true) {
+      if (medicalHistory.egfrValue === null) {
+        return "Enter the eGFR value seen (mL/min)";
+      }
+      if (!medicalHistory.egfrDate) {
+        return "Enter the Date of the result (eGFR)";
+      }
+      if (!medicalHistory.egfrSource.trim()) {
+        return "Select Where the result was seen (NHS App, GP summary record, or Letter)";
+      }
+    }
   }
 
   if (!medicineSelection.dose) {
@@ -210,7 +220,7 @@ export function validateUTIStep(
     case 5:
       return validateUTIRedFlagsStep(state.symptoms);
     case 6:
-      return validateUTIMedicineSelectionStep(state.medicineSelection, state.medicalHistory);
+      return validateUTIMedicineSelectionStep(state.medicineSelection, state.medicalHistory, state.patient.age);
     case 7:
       return validateUTICounsellingStep(state.counselling, state.medicineSelection.medicine);
     case 8:

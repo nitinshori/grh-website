@@ -314,12 +314,40 @@ export default function ShinglesClient() {
               }
               options={[
                 { value: "not-pregnant", label: "Not pregnant and not breastfeeding (or not applicable)" },
-                { value: "unknown", label: "Pregnancy status unknown" },
-                { value: "confirmed", label: "Confirmed pregnant (excluded)" },
-                { value: "breastfeeding", label: "Breastfeeding (excluded)" },
+                { value: "unknown", label: "Pregnancy status unknown (establish before vaccinating)" },
+                { value: "confirmed", label: "Pregnant (caution: record the discussion and the decision)" },
+                { value: "breastfeeding", label: "Breastfeeding (caution: record the discussion and the decision)" },
               ]}
               required
             />
+            {(state.assessment.pregnancyStatus === "confirmed" || state.assessment.pregnancyStatus === "breastfeeding") && (
+              <div className="space-y-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+                <p className="text-sm font-medium text-navy-900">
+                  {state.assessment.pregnancyStatus === "confirmed" ? "Pregnancy: caution, both arms" : "Breastfeeding: caution, both arms"}
+                </p>
+                <p className="text-xs text-gray-700">
+                  Shingrix is a non-live vaccine; the Green Book states it may be considered in pregnancy after discussion of the benefit and the lack of data; breastfeeding is not a contraindication. Record the discussion and the decision.
+                </p>
+                <TextArea
+                  label="Discussion held and decision reached"
+                  value={state.assessment.pregnancyDiscussion}
+                  onChange={(v) =>
+                    dispatch({
+                      type: "UPDATE_ASSESSMENT",
+                      field: "pregnancyDiscussion",
+                      value: v,
+                    })
+                  }
+                  placeholder={
+                    state.assessment.pregnancyStatus === "confirmed"
+                      ? "What was discussed (benefit of vaccination, lack of data in pregnancy) and the decision reached with the patient"
+                      : "What was discussed (non-live vaccine, breastfeeding is not a contraindication) and the decision reached with the patient"
+                  }
+                  rows={3}
+                  required
+                />
+              </div>
+            )}
 
             <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide pt-2">Vaccine history (check before administration)</p>
             <Checkbox
@@ -486,7 +514,7 @@ export default function ShinglesClient() {
                   value: v,
                 })
               }
-              description="Fatigue, headache, myalgia, shivering, fever, gastrointestinal symptoms (PGD v007 caution)"
+              description="Fatigue, headache, myalgia, shivering, fever, gastrointestinal symptoms (PGD v008 caution)"
             />
             <Checkbox
               label="Explained effectiveness"
@@ -623,7 +651,7 @@ export default function ShinglesClient() {
               required
             />
             <div className="border-t pt-4 space-y-4">
-              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Observation and adverse reactions (PGD v007 safety block)</p>
+              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Observation and adverse reactions (PGD v008 safety block)</p>
               <Checkbox
                 label="Patient observed, seated, for 15 minutes after vaccination and the observation period has been completed"
                 checked={state.supply.observedFifteenMinutes}

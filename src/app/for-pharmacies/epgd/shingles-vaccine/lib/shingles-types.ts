@@ -1,6 +1,6 @@
 import { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/types";
 
-// Aligned to the Shingrix PGD version 007, issued 11 September 2026.
+// Aligned to the Shingrix PGD version 008, issued 11 September 2026.
 
 /**
  * Green Book chapter 28a, Box 1: definition of severe immunosuppression for
@@ -54,15 +54,23 @@ export interface ShinglesAssessment {
   anaphylaxisToComponent: "" | "yes" | "no";
   /** Defer in acute illness with fever. Tri-state, as above. */
   severeAcuteIllness: "" | "yes" | "no";
-  /** "not-pregnant" | "unknown" | "confirmed" | "breastfeeding". Pregnancy or breastfeeding is an exclusion; unknown is a stop until established. */
+  /** "not-pregnant" | "unknown" | "confirmed" | "breastfeeding". Since the joint
+   *  sign-off of 11 September 2026 pregnancy and breastfeeding are cautions,
+   *  not exclusions: Shingrix is non-live, the Green Book states it may be
+   *  considered in pregnancy after discussion, and breastfeeding is not a
+   *  contraindication. Unknown remains a stop until the status is established. */
   pregnancyStatus: string;
+  /** Caution, both arms: where the patient is pregnant or breastfeeding, the
+   *  discussion held (benefit, lack of data) and the decision reached. Required
+   *  when pregnancyStatus is "confirmed" or "breastfeeding". */
+  pregnancyDiscussion: string;
   /** Dose 1 of Shingrix already given (here or elsewhere). */
   previousShingrix: boolean;
-  /** Date of dose 1, required when dose 2 is being given (PGD v007 inclusion: record the date of dose 1). */
+  /** Date of dose 1, required when dose 2 is being given (PGD v008 inclusion: record the date of dose 1). */
   previousShingrixDate: string;
   /** Exclusion: has already completed the two-dose course. */
   completedCourse: boolean;
-  /** Previous Zostavax is not an exclusion (PGD v007); recorded for the vaccine history. */
+  /** Previous Zostavax is not an exclusion (PGD v008); recorded for the vaccine history. */
   previousZostavax: boolean;
   /** Inclusion: no history of shingles in the past 12 months. Ticked means shingles within 12 months. */
   previousShinglesHistory: boolean;
@@ -91,12 +99,12 @@ export interface ShinglesSupply {
 export interface ShinglesCounselling {
   explainedDoseSchedule: boolean;
   explainedLocalReactions: boolean;
-  /** PGD v007 caution: systemic side effects are common and generally self-limiting. */
+  /** PGD v008 caution: systemic side effects are common and generally self-limiting. */
   explainedSystemicReactions: boolean;
   explainedEffectiveness: boolean;
   explainedNotLiveVaccine: boolean;
   offeredWrittenInfo: boolean;
-  /** PGD v007 follow-up advice given. */
+  /** PGD v008 follow-up advice given. */
   followUpAdviceGiven: boolean;
 }
 
@@ -169,6 +177,7 @@ gpEmail: "",
       anaphylaxisToComponent: "",
       severeAcuteIllness: "",
       pregnancyStatus: "",
+      pregnancyDiscussion: "",
       previousShingrix: false,
       previousShingrixDate: "",
       completedCourse: false,

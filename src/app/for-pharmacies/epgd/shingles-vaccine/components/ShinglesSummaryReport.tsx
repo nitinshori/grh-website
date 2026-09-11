@@ -118,16 +118,22 @@ export function ShinglesSummaryReport({
           label="Pregnancy or breastfeeding"
           value={
             state.assessment.pregnancyStatus === "confirmed"
-              ? "Pregnant (excluded)"
+              ? "Pregnant (caution, both arms: non-live vaccine; the Green Book states it may be considered in pregnancy after discussion of the benefit and the lack of data)"
               : state.assessment.pregnancyStatus === "breastfeeding"
-                ? "Breastfeeding (excluded)"
+                ? "Breastfeeding (caution, both arms: non-live vaccine; breastfeeding is not a contraindication)"
                 : state.assessment.pregnancyStatus === "unknown"
-                  ? "Unknown"
+                  ? "Unknown (not established)"
                   : state.assessment.pregnancyStatus === "not-pregnant"
                     ? "No"
                     : "Not recorded"
           }
         />
+        {(state.assessment.pregnancyStatus === "confirmed" || state.assessment.pregnancyStatus === "breastfeeding") && (
+          <Row
+            label="Discussion and decision recorded"
+            value={state.assessment.pregnancyDiscussion.trim() || "NOT RECORDED"}
+          />
+        )}
         <Row label="Two-dose course already completed" value={state.assessment.completedCourse ? "Yes (excluded)" : "No"} />
         <Row
           label="Dose 1 of Shingrix previously given"
@@ -246,7 +252,7 @@ export function ShinglesSummaryReport({
       </p>
 
       <p className="text-[10px] text-gray-500 mt-4">
-        Patient Group Direction for Shingrix (prevention of shingles), version 007, issued 11 September 2026.
+        Patient Group Direction for Shingrix (prevention of shingles), version 008, issued 11 September 2026.
       </p>
 
       {hasStop ? (

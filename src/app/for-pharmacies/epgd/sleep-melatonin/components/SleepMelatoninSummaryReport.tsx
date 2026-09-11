@@ -5,7 +5,7 @@ import type { ClinicalAlert } from "../../shared/types";
 import { SectionHeader, Row, AlertSummary, CounsellingGrid, PharmacistDeclaration, ReportFooter } from "../../shared/components/SummaryReportShell";
 
 const PGD_NAME = "Insomnia in Adults Aged 55 and Over (Circadin)";
-const PGD_VERSION = "PGD version 007, issued 11 September 2026";
+const PGD_VERSION = "PGD version 008, issued 11 September 2026";
 
 /**
  * Appendix 1 of the PGD, to be given to every patient whether or not

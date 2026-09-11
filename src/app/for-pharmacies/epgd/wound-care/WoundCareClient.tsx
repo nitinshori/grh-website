@@ -131,9 +131,11 @@ export interface WoundState {
     /** Under 12 only: a measured value, never a default (Appendix 1: "REFER if more than 2 seconds"). */
     capillaryRefill: "" | "2s-or-less" | "over-2s";
     alteredConsciousness: boolean;
-    /** Why human tetanus immunoglobulin is NOT indicated where the document
-     *  lists the finding (more than 6 hours) under the HTIG exclusion.
-     *  Required before supply. */
+    /** Why human tetanus immunoglobulin is NOT indicated for a wound presenting
+     *  more than 6 hours after injury (tetanus-prone, UKHSA). The document (v009)
+     *  makes a wound high-risk only where there is heavy contamination by material
+     *  likely to contain tetanus spores and/or extensive devitalised tissue; the
+     *  pharmacist records that neither applies. Required before supply. */
     htigNotIndicatedReason: string;
     /** Arm 1 only (bite or heavily contaminated wound): tetanus management
      *  for this wound, including any HTIG, completed and recorded; or the
@@ -367,7 +369,7 @@ function computeAlerts(state: WoundState): ClinicalAlert[] {
       severity: "stop",
       code: "HTIG",
       message: "High-risk tetanus-prone wound: immunoglobulin may be indicated. Refer the same day",
-      detail: "Heavy contamination, devitalised tissue, burns, sepsis, or more than 6 hours to treatment. Human tetanus immunoglobulin is not covered by this or any GRH PGD. Under Arm 1 only, a wound whose tetanus management, including any HTIG, has already been completed and recorded may be treated; record that management below.",
+      detail: "A tetanus-prone wound with heavy contamination by material likely to contain tetanus spores (for example soil or manure) and/or extensive devitalised tissue (UKHSA definition). Human tetanus immunoglobulin is not covered by this or any GRH PGD. Under Arm 1 only, a wound whose tetanus management, including any HTIG, has already been completed and recorded may be treated; record that management below.",
     });
   } else if (a.highRiskTetanusWound && arm1TetanusComplete) {
     newAlerts.push({
@@ -381,8 +383,8 @@ function computeAlerts(state: WoundState): ClinicalAlert[] {
     newAlerts.push({
       severity: "stop",
       code: "BURN",
-      message: "Burn: listed as a high-risk tetanus-prone wound where immunoglobulin may be indicated. Refer the same day",
-      detail: "The document lists burns among the high-risk tetanus-prone wounds that exclude supply.",
+      message: "Burn: outside this PGD. Refer",
+      detail: "Burns and wounds with systemic sepsis are outside this PGD in any case (v009 exclusions). A burn is also a tetanus-prone wound (UKHSA): establish the tetanus history and refer.",
     });
   }
   if (a.foreignBody || a.needsClosureOrSurgicalReview) {
@@ -491,8 +493,8 @@ function computeAlerts(state: WoundState): ClinicalAlert[] {
     newAlerts.push({
       severity: "caution",
       code: "WOUND_AGE",
-      message: "More than 6 hours since injury: tetanus-prone wound, and a finding the document lists under the HTIG exclusion",
-      detail: "Appendix 1 lists wounds presenting after 6 hours as tetanus-prone (vaccine dose where indicated) AND lists \"more than 6 hours to treatment\" among the high-risk features where immunoglobulin may be indicated, which is a same-day referral in both arms. Establish the tetanus history, record the action, and record why immunoglobulin is not indicated before any supply. If it may be, tick the high-risk tetanus-prone wound box and refer the same day.",
+      message: "More than 6 hours since injury: tetanus-prone wound (UKHSA). Confirm it is not high-risk",
+      detail: "Presentation more than 6 hours after injury makes a wound tetanus-prone, not high-risk (Appendix 1): a wound that needs only a vaccine dose is handled under the Tetanus (Td/IPV) PGD and does not exclude this supply. A wound is HIGH-RISK, with human tetanus immunoglobulin possibly indicated and a same-day referral in both arms, only where there is heavy contamination by material likely to contain tetanus spores (for example soil or manure) and/or extensive devitalised tissue. Establish the tetanus history, record the action, and record why immunoglobulin is not indicated before any supply. If either high-risk feature is present, tick the high-risk tetanus-prone wound box and refer the same day.",
     });
   }
   if (hoursOld !== null && hoursOld > 14 * 24) {
@@ -597,7 +599,7 @@ export default function WoundCareClient() {
     if (!a.tetanusStatus) return "Select the 'Tetanus status'";
     if (!a.tetanusAction.trim()) return "Complete 'Tetanus action taken'";
     if (htigReasonRequired && !a.htigNotIndicatedReason.trim())
-      return "The document lists this finding under the HTIG exclusion: complete 'Why human tetanus immunoglobulin is not indicated', or tick the high-risk tetanus-prone wound box and refer";
+      return "More than 6 hours since injury (tetanus-prone): complete 'Why human tetanus immunoglobulin is not indicated', or tick the high-risk tetanus-prone wound box and refer";
     if (arm === "co-amoxiclav" && !a.arm1TetanusManagement)
       return "Arm 1: select the 'Tetanus management for this wound' (completed and recorded, not tetanus-prone, or not completed)";
     if (arm === "co-amoxiclav" && a.arm1TetanusManagement === "completed-and-recorded" && !a.arm1TetanusManagementDetails.trim())
@@ -831,7 +833,7 @@ export default function WoundCareClient() {
                   { value: "puncture-wound", label: "Puncture wound (deep or penetrating: excluded)" },
                   { value: "bite-animal", label: "Bite wound (animal): co-amoxiclav arm, 12 and over" },
                   { value: "bite-human", label: "Bite wound (human): co-amoxiclav arm, 12 and over" },
-                  { value: "burn", label: "Burn (high-risk tetanus-prone: refer)" },
+                  { value: "burn", label: "Burn (outside this PGD: refer)" },
                 ]}
                 required
               />
@@ -918,9 +920,9 @@ export default function WoundCareClient() {
               <div className="p-4 bg-amber-50 rounded-lg border border-amber-200 space-y-2">
                 <p className="text-sm font-medium text-navy-900">Tetanus immunoglobulin assessment (required before supply)</p>
                 <p className="text-xs text-gray-700">
-                  More than 6 hours since injury appears in the document's HTIG exclusion: "High-risk tetanus-prone wound where human tetanus immunoglobulin may be indicated (heavy contamination, devitalised tissue, burns, sepsis, or more than 6 hours to treatment). Refer the same day." Record why immunoglobulin is not indicated for this wound. If it may be, tick the high-risk box below and refer the same day.
+                  More than 6 hours since injury makes this a tetanus-prone wound (UKHSA), not a high-risk one. The document defines a HIGH-RISK tetanus-prone wound, where human tetanus immunoglobulin may be indicated, as a tetanus-prone wound with heavy contamination by material likely to contain tetanus spores (for example soil or manure) and/or extensive devitalised tissue: refer the same day. Record why immunoglobulin is not indicated for this wound. If either high-risk feature is present, tick the high-risk box below and refer the same day.
                 </p>
-                <TextArea label="Why human tetanus immunoglobulin is not indicated" value={a.htigNotIndicatedReason} onChange={(v) => setA({ htigNotIndicatedReason: v })} rows={2} required placeholder="e.g. superficial graze, thoroughly irrigated, no devitalised tissue, immunisation up to date" />
+                <TextArea label="Why human tetanus immunoglobulin is not indicated" value={a.htigNotIndicatedReason} onChange={(v) => setA({ htigNotIndicatedReason: v })} rows={2} required placeholder="e.g. superficial graze, thoroughly irrigated, no contamination with soil or manure, no devitalised tissue, immunisation up to date" />
               </div>
             )}
 
@@ -1014,7 +1016,7 @@ export default function WoundCareClient() {
               <Checkbox label="Tendon or nerve damage suspected (loss of movement or sensation)" checked={a.tendonNerveDamage} onChange={(v) => setA({ tendonNerveDamage: v })} />
               <Checkbox label="Abscess requiring drainage" checked={a.abscess} onChange={(v) => setA({ abscess: v })} />
               <Checkbox
-                label="High-risk tetanus-prone wound where immunoglobulin may be indicated: heavy contamination, devitalised tissue, burns, sepsis, or more than 6 hours to treatment (refer the same day)"
+                label="High-risk tetanus-prone wound where immunoglobulin may be indicated: heavy contamination by material likely to contain tetanus spores (for example soil or manure) and/or extensive devitalised tissue (refer the same day). More than 6 hours, a puncture wound or a burn make a wound tetanus-prone, not high-risk"
                 checked={a.highRiskTetanusWound}
                 onChange={(v) => setA({ highRiskTetanusWound: v })}
               />

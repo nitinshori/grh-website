@@ -8,7 +8,7 @@ import type {
 } from "./uti-types";
 
 // ─── Clinical Logic for UTI Consultation ───
-// Aligned to the UTI in Women aged 16 to 64 PGD, version 007, issued
+// Aligned to the UTI in Women aged 16 to 64 PGD, version 008, issued
 // 11 September 2026. Nitrofurantoin is first line; trimethoprim only where
 // nitrofurantoin is unsuitable and the reason is recorded.
 
@@ -32,9 +32,11 @@ export function isNitrofurantoinContraindicated(medicalHistory: UTIMedicalHistor
   );
 }
 
-/** Decision 43: the eGFR result a woman aged 60 to 64 needs before supply.
+/** Decision 43, as narrowed by the joint sign-off of 11 September 2026: the
+ *  eGFR result a woman aged 60 to 64 needs before NITROFURANTOIN is supplied.
  *  45 mL/min or more, dated within the last 12 months of today. Returns the
- *  reason it does not satisfy the renal row, or null where it does. */
+ *  reason it does not satisfy the nitrofurantoin renal row, or null where it
+ *  does. The trimethoprim arm has no eGFR requirement. */
 export function egfrResultShortfall(medicalHistory: UTIMedicalHistory): string | null {
   // Only answers the pharmacist has given count. A blank Yes/No, a blank
   // value or a blank date is "not yet answered" and is handled by the
@@ -132,7 +134,7 @@ export function getUTIClinicalAlerts(
           ? "Only one of dysuria, new nocturia, frequency or urgency is present"
           : "None of dysuria, new nocturia, frequency or urgency is present",
       detail:
-        "PGD v007 requires two or more of: dysuria, new nocturia, urinary frequency or urgency. Where fewer are present, refer rather than supply.",
+        "PGD v008 requires two or more of: dysuria, new nocturia, urinary frequency or urgency. Where fewer are present, refer rather than supply.",
     });
   }
 
@@ -202,7 +204,7 @@ export function getUTIClinicalAlerts(
     });
   }
 
-  // "Previous UTI within 4 weeks" is not an exclusion in PGD v007, which
+  // "Previous UTI within 4 weeks" is not an exclusion in PGD v008, which
   // defines recurrence by the 6 and 12 month counts. The answer is recorded
   // and shown as a caution so the pharmacist checks the counts, nothing more.
   if (medicalHistory.previousUTIWithin4Weeks) {
@@ -320,7 +322,7 @@ export function getUTIClinicalAlerts(
     });
   }
 
-  // Renal function under PGD v007.
+  // Renal function under PGD v008.
   //
   // The PGD asks a question that can be answered at the counter: "Have you
   // ever been told you have kidney disease, or that your kidneys do not work
@@ -349,35 +351,61 @@ export function getUTIClinicalAlerts(
     });
   }
 
-  // Aged 60 to 64: a NO answer alone is not enough. Decision 43: the patient
+  // Aged 60 to 64 and the answer is NO. Decision 43, narrowed by the joint
+  // sign-off of 11 September 2026: in the NITROFURANTOIN arm the patient
   // proceeds only where an eGFR of 45 mL/min or more, dated within the last
-  // 12 months, has been seen by the pharmacist and recorded. Where no such
-  // result can be seen, or the patient does not know, exclude and refer for
-  // a renal function check first. Below 60, a NO answer is enough.
+  // 12 months, has been seen by the pharmacist and recorded; where no such
+  // result can be seen, exclude and refer for a renal function check first.
+  // The trimethoprim arm has no eGFR requirement: a NO answer proceeds at any
+  // age from 16 to 64. "Does not know" excludes from both arms at any age.
+  // The eGFR fields are asked on the medicine step once nitrofurantoin is
+  // selected, so the stop is raised only for that arm.
   if (patient.age !== null && patient.age >= 60 && medicalHistory.renalImpairment === "unknown") {
     alerts.push({
       severity: "stop",
       code: "RENAL_UNKNOWN_OLDER",
       message: "Aged 60 to 64: patient does not know whether they have kidney disease",
       detail:
-        "Renal row: aged 60 to 64 and the patient does not know: EXCLUDE. Refer for a renal function check first.",
+        "Renal row (both arms): the patient does not know: EXCLUDE. Refer for a renal function check first.",
     });
-  } else if (patient.age !== null && patient.age >= 60 && medicalHistory.renalImpairment === "none") {
+  } else if (
+    patient.age !== null &&
+    patient.age >= 60 &&
+    medicalHistory.renalImpairment === "none" &&
+    medicineSelection.medicine === "nitrofurantoin"
+  ) {
     const shortfall = egfrResultShortfall(medicalHistory);
     if (shortfall) {
       alerts.push({
         severity: "stop",
         code: "RENAL_UNKNOWN_OLDER",
-        message: "Aged 60 to 64: no qualifying eGFR result seen",
-        detail: `${shortfall}. Renal row: a woman aged 60 to 64 proceeds only where an eGFR of 45 mL/min or more, dated within the last 12 months, has been seen by the pharmacist (NHS App, GP summary or a letter) and the result, its date and where it was seen are recorded. Otherwise EXCLUDE and refer for a renal function check first.`,
+        message: "Nitrofurantoin, aged 60 to 64: no qualifying eGFR result seen",
+        detail: `${shortfall}. Nitrofurantoin renal row: a woman aged 60 to 64 proceeds only where an eGFR of 45 mL/min or more, dated within the last 12 months, has been seen by the pharmacist (NHS App, GP summary or a letter) and the result, its date and where it was seen are recorded. Otherwise EXCLUDE from the nitrofurantoin arm and refer for a renal function check first. This requirement applies to nitrofurantoin only.`,
       });
     }
+  } else if (
+    medicalHistory.renalImpairment === "none" &&
+    medicalHistory.egfrResultSeen === true &&
+    medicalHistory.egfrValue !== null &&
+    medicalHistory.egfrValue < 45
+  ) {
+    // Not a new rule: an eGFR below 45 that the pharmacist has actually seen
+    // is the "moderate impairment, eGFR 30 to 44" (or severe) answer the tool
+    // already excludes from both arms. Without this the result entered on
+    // the nitrofurantoin path would vanish on switching to trimethoprim.
+    alerts.push({
+      severity: "stop",
+      code: "RENAL_IMPAIRMENT",
+      message: `An eGFR of ${medicalHistory.egfrValue} mL/min has been seen: renal impairment`,
+      detail:
+        "The result seen is below 45 mL/min. Record the kidney question as a Yes answer (moderate or severe impairment). Known kidney disease excludes both arms of this PGD; trimethoprim is not an alternative. Refer.",
+    });
   } else if (patient.age !== null && patient.age < 60 && medicalHistory.renalImpairment === "unknown") {
     alerts.push({
       severity: "stop",
       code: "RENAL_UNKNOWN",
       message: "Patient does not know whether they have kidney disease",
-      detail: "PGD v007 renal row: the patient does not know: EXCLUDE. Refer for a renal function check first.",
+      detail: "PGD v008 renal row: the patient does not know: EXCLUDE. Refer for a renal function check first.",
     });
   }
 
@@ -531,7 +559,7 @@ export function getDoseRecommendation(
 }
 
 export function getMedicineQuantity(medicine: string, duration: string): number {
-  // PGD v007: one 3 day course, 6 capsules or 6 tablets. No repeat supply.
+  // PGD v008: one 3 day course, 6 capsules or 6 tablets. No repeat supply.
   void medicine;
   void duration;
   return 6;

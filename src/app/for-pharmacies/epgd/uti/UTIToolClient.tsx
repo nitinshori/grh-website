@@ -647,79 +647,12 @@ export function UTIToolClient() {
                 required
               />
               <p className="text-xs text-gray-600">
-                Any Yes answer, or under renal follow-up: exclude. Does not know: exclude and refer for a renal function check first. No and aged 16 to 59: proceed. No and aged 60 to 64: proceed only where an eGFR of 45 mL/min or more, dated within the last 12 months, has been seen by the pharmacist (NHS App, GP summary or a letter) and recorded below.
+                Any Yes answer, or under renal follow-up: exclude from both arms. Does not know: exclude from both arms and refer for a renal function check first. No and aged 16 to 59: proceed. No and aged 60 to 64: proceed; where NITROFURANTOIN is then selected, an eGFR of 45 mL/min or more, dated within the last 12 months, must have been seen by the pharmacist (NHS App, GP summary or a letter) and is recorded on the medicine step. Trimethoprim has no eGFR requirement.
               </p>
               {state.patient.age !== null && state.patient.age >= 60 && state.medicalHistory.renalImpairment === "none" && (
-                <div className="space-y-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
-                  <p className="text-sm font-medium text-navy-900">Aged 60 to 64: eGFR result seen by the pharmacist</p>
-                  <SelectInput
-                    label="Has an eGFR result for this patient been seen (NHS App, GP summary or a letter)?"
-                    value={state.medicalHistory.egfrResultSeen === null ? "" : state.medicalHistory.egfrResultSeen ? "yes" : "no"}
-                    onChange={(v) =>
-                      dispatch({
-                        type: "UPDATE_MEDICAL_HISTORY",
-                        payload: v === "yes"
-                          ? { egfrResultSeen: true }
-                          : { egfrResultSeen: v === "" ? null : false, egfrValue: null, egfrDate: "", egfrSource: "" },
-                      })
-                    }
-                    options={[
-                      { value: "yes", label: "Yes: I have seen the result and record it below" },
-                      { value: "no", label: "No: no result can be seen (exclude, refer for a renal function check first)" },
-                    ]}
-                    required
-                  />
-                  {state.medicalHistory.egfrResultSeen === true && (
-                    <div className="grid sm:grid-cols-3 gap-4">
-                      <NumberInput
-                        label="eGFR value seen"
-                        value={state.medicalHistory.egfrValue}
-                        onChange={(v) =>
-                          dispatch({
-                            type: "UPDATE_MEDICAL_HISTORY",
-                            payload: { egfrValue: v },
-                          })
-                        }
-                        min={0}
-                        max={150}
-                        unit="mL/min"
-                        placeholder="e.g. 72"
-                        required
-                      />
-                      <TextInput
-                        label="Date of the result"
-                        type="date"
-                        value={state.medicalHistory.egfrDate}
-                        onChange={(v) =>
-                          dispatch({
-                            type: "UPDATE_MEDICAL_HISTORY",
-                            payload: { egfrDate: v },
-                          })
-                        }
-                        required
-                      />
-                      <SelectInput
-                        label="Where the result was seen"
-                        value={state.medicalHistory.egfrSource}
-                        onChange={(v) =>
-                          dispatch({
-                            type: "UPDATE_MEDICAL_HISTORY",
-                            payload: { egfrSource: v },
-                          })
-                        }
-                        options={[
-                          { value: "NHS App", label: "NHS App" },
-                          { value: "GP summary", label: "GP summary record" },
-                          { value: "Letter", label: "Letter or printed result" },
-                        ]}
-                        required
-                      />
-                    </div>
-                  )}
-                  <p className="text-xs text-gray-600">
-                    Supply proceeds only where the result seen is 45 mL/min or more and dated within the last 12 months. Where no result can be seen, exclude and refer for a renal function check first.
-                  </p>
-                </div>
+                <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2">
+                  Aged 60 to 64, answer No: the eGFR result is asked for on the medicine step if nitrofurantoin is selected. It applies to nitrofurantoin only.
+                </p>
               )}
               <Checkbox
                 label="Known structural or functional abnormality of the urinary tract, or renal stones"
@@ -1145,6 +1078,84 @@ export function UTIToolClient() {
                 { value: "trimethoprim", label: "Trimethoprim 200mg tablets (second line, only where nitrofurantoin is unsuitable)" },
               ]}
             />
+            {state.medicineSelection.medicine === "nitrofurantoin" &&
+              state.patient.age !== null &&
+              state.patient.age >= 60 &&
+              state.medicalHistory.renalImpairment === "none" && (
+                <div className="space-y-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+                  <p className="text-sm font-medium text-navy-900">Nitrofurantoin, aged 60 to 64: eGFR result seen by the pharmacist</p>
+                  <p className="text-xs text-gray-600">
+                    Nitrofurantoin renal row: a woman aged 60 to 64 who answered No to the kidney question proceeds only where an eGFR of 45 mL/min or more, dated within the last 12 months, has been seen by the pharmacist and the result, its date and where it was seen are recorded. This requirement applies to nitrofurantoin only.
+                  </p>
+                  <SelectInput
+                    label="Has an eGFR result for this patient been seen (NHS App, GP summary or a letter)?"
+                    value={state.medicalHistory.egfrResultSeen === null ? "" : state.medicalHistory.egfrResultSeen ? "yes" : "no"}
+                    onChange={(v) =>
+                      dispatch({
+                        type: "UPDATE_MEDICAL_HISTORY",
+                        payload: v === "yes"
+                          ? { egfrResultSeen: true }
+                          : { egfrResultSeen: v === "" ? null : false, egfrValue: null, egfrDate: "", egfrSource: "" },
+                      })
+                    }
+                    options={[
+                      { value: "yes", label: "Yes: I have seen the result and record it below" },
+                      { value: "no", label: "No: no result can be seen (exclude from nitrofurantoin, refer for a renal function check first)" },
+                    ]}
+                    required
+                  />
+                  {state.medicalHistory.egfrResultSeen === true && (
+                    <div className="grid sm:grid-cols-3 gap-4">
+                      <NumberInput
+                        label="eGFR value seen"
+                        value={state.medicalHistory.egfrValue}
+                        onChange={(v) =>
+                          dispatch({
+                            type: "UPDATE_MEDICAL_HISTORY",
+                            payload: { egfrValue: v },
+                          })
+                        }
+                        min={0}
+                        max={150}
+                        unit="mL/min"
+                        placeholder="e.g. 72"
+                        required
+                      />
+                      <TextInput
+                        label="Date of the result"
+                        type="date"
+                        value={state.medicalHistory.egfrDate}
+                        onChange={(v) =>
+                          dispatch({
+                            type: "UPDATE_MEDICAL_HISTORY",
+                            payload: { egfrDate: v },
+                          })
+                        }
+                        required
+                      />
+                      <SelectInput
+                        label="Where the result was seen"
+                        value={state.medicalHistory.egfrSource}
+                        onChange={(v) =>
+                          dispatch({
+                            type: "UPDATE_MEDICAL_HISTORY",
+                            payload: { egfrSource: v },
+                          })
+                        }
+                        options={[
+                          { value: "NHS App", label: "NHS App" },
+                          { value: "GP summary", label: "GP summary record" },
+                          { value: "Letter", label: "Letter or printed result" },
+                        ]}
+                        required
+                      />
+                    </div>
+                  )}
+                  <p className="text-xs text-gray-600">
+                    Nitrofurantoin is supplied only where the result seen is 45 mL/min or more and dated within the last 12 months. Where no result can be seen, exclude from the nitrofurantoin arm and refer for a renal function check first. A missing eGFR result is not by itself one of the recorded reasons for using trimethoprim.
+                  </p>
+                </div>
+              )}
             {state.medicineSelection.medicine === "trimethoprim" && (
               <SelectInput
                 label="Reason nitrofurantoin is unsuitable (recorded)"
