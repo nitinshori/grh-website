@@ -1117,18 +1117,42 @@ export function EDToolClient() {
             onChange={(v) => updateMeds("takesNicorandil", v)}
             description="An angina medicine with no 'nitrate' in its name. It is a nitric oxide donor and the interaction is the same."
           />
-          <Checkbox
-            label="Direct question about poppers asked, and the answer recorded"
-            checked={state.medications.poppersQuestionAsked}
-            onChange={(v) => updateMeds("poppersQuestionAsked", v)}
-            description="Ask, without judgement: 'Some men use poppers, amyl nitrite, at the same time as these tablets. Taken together they can drop your blood pressure to a dangerous level. Do you ever use them, or think you might?' It is bought, not prescribed, so it will never appear on a medication list. Required before supply."
-          />
-          <Checkbox
-            label="🔴 Patient uses POPPERS (amyl, butyl, isobutyl or other alkyl nitrite), or thinks he might"
-            checked={state.medications.usesPoppers}
-            onChange={(v) => updateMeds("usesPoppers", v)}
-            description="Absolute exclusion while he is unwilling to stop. Explain that it is the combination that is dangerous, not either one alone."
-          />
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 space-y-2">
+            <p className="text-sm font-medium text-navy-900">
+              Direct question about poppers (required before supply)
+            </p>
+            <p className="text-xs text-gray-600">
+              Ask, without judgement: &lsquo;Some men use poppers, amyl nitrite, at the same time as these
+              tablets. Taken together they can drop your blood pressure to a dangerous level. Do you ever use
+              them, or think you might?&rsquo; Poppers are bought, not prescribed, so they never appear on a
+              medication list.
+            </p>
+            <SelectInput
+              label="Patient's answer"
+              value={
+                !state.medications.poppersQuestionAsked
+                  ? ""
+                  : state.medications.usesPoppers
+                    ? "yes"
+                    : "no"
+              }
+              onChange={(v) => {
+                updateMeds("poppersQuestionAsked", v !== "");
+                updateMeds("usesPoppers", v === "yes");
+              }}
+              options={[
+                { value: "no", label: "No: does not use poppers" },
+                { value: "yes", label: "Yes, or thinks he might (amyl, butyl, isobutyl or other alkyl nitrite)" },
+              ]}
+              required
+            />
+            {state.medications.usesPoppers && (
+              <p className="text-xs text-red-700">
+                Absolute exclusion while he is unwilling to stop. Explain that it is the combination that is
+                dangerous, not either one alone.
+              </p>
+            )}
+          </div>
           <Checkbox
             label="🔴 Patient takes RIOCIGUAT or any other soluble guanylate cyclase stimulator"
             checked={state.medications.takesRiociguat}

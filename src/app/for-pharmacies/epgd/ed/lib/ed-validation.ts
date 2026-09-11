@@ -67,7 +67,7 @@ export function validateStep(
     case 4: // Current Medications
       // Critical check is done by clinical logic (nitrates = hard stop)
       if (!state.medications.poppersQuestionAsked)
-        return "Ask the direct question about poppers and record the answer before proceeding";
+        return "Ask the direct question about poppers and select the patient's answer (No, or Yes) before proceeding";
       if (
         (state.medications.takesAlphaBlockers || state.medications.takesDoxazosin) &&
         !state.medications.alphaBlockerDetails.trim()
