@@ -302,7 +302,8 @@ NARRATION_HEADS = re.compile(
     r"^(What version 00\d got wrong|Why this document exists|What changed, and why.*|"
     r"Read this first: three things version 00\d got wrong|The three things this version adds|"
     r"A note on the safety requirements in this PGD|What this version fixes.*)$", re.I)
-DELETE_PARAS = re.compile(r"^A NOTE ON WHERE THE SAFETY REQUIREMENTS IN THIS PGD COME FROM")
+DELETE_PARAS = re.compile(r"^A NOTE ON WHERE THE SAFETY REQUIREMENTS IN THIS PGD COME FROM|"
+                          r"^This summary is part 2 of the house format")
 
 
 def _looks_like_heading(p, text):
@@ -342,7 +343,7 @@ def strip_narration(doc):
         t = (p.text or "").strip()
         if not t:
             continue
-        if t in ("Change history", RECORD_HEAD):
+        if t.startswith("Change history") or t == RECORD_HEAD:
             in_body = False
         if not in_body or KEEP.match(t):
             continue
@@ -392,7 +393,7 @@ def blank_adoption_block(doc):
             noted = False
             while j < len(paras):
                 t = (paras[j].text or "").strip()
-                if t in (SIGN_HEAD, "Change history", RECORD_HEAD):
+                if t == SIGN_HEAD or t == RECORD_HEAD or t.startswith("Change history"):
                     break
                 # the signature image itself, in whatever cell it landed
                 for el in list(paras[j]._p.iter()):
@@ -557,6 +558,133 @@ def strip_em_dashes(doc):
         print(f"  em dashes replaced in {n} run(s)")
 
 
+# ---------------------------------------------------------------------------
+# IDENTITY AND TRAINING, applied to every document on every reissue.
+#
+# Two adopting pharmacies wrote on 14 September 2026. One could not find the
+# name of the organisation that owns the direction anywhere in a document
+# except the "Signed on behalf of" line, and noted that the logo that used to
+# sit at the top had gone from the newer documents (52 of the 69 masters had
+# no header at all; the 17 November 2025 originals still carried the logo).
+# Schedule 16 Part 2 of the Human Medicines Regulations 2012 requires the
+# PGD to name the organisation that authorises it. The same pharmacy pointed
+# out that "must previously have used PGDs" bars a newly qualified pharmacist
+# who has done the training, which is not what either signatory intends.
+# ---------------------------------------------------------------------------
+
+LOGO = os.path.join(HERE, "logo", "grh-logo.jpeg")
+LOGO_WIDTH_CM = 4.77  # the size used in the November 2025 originals
+
+OWNER_HEAD = "Owner and authorising organisation: "
+OWNERSHIP = (
+    OWNER_HEAD + "Get Real Health Limited, company number 12744898, registered office Zenvite Health "
+    "Unit 23, St. Asaph Business Park, St. Asaph, Denbighshire, LL17 0LJ. This Patient Group Direction "
+    "is authorised on behalf of Get Real Health Limited by its Medical Director and its Head Pharmacist, "
+    "whose signatures for this version are on the authorisation page at the end of the document. It "
+    "applies to the registered healthcare professionals named under it by a pharmacy or clinic that has "
+    "adopted it through a Get Real Health service agreement, at the premises stated in that adoption, "
+    "and to no other organisation."
+)
+
+TRAINING_OLD = re.compile(
+    r"(All users )?[Mm]ust previously have (?:used PGD['’]?s to (?:supply or administer|supply|administer)"
+    r"(?: medication)?|(?:supplied or administered|supplied|administered) medicines under a PGD)")
+TRAINING_NEW = ("must have completed training in working under Patient Group Directions, for example the "
+                "CPPE PGD e-learning and e-assessment or an equivalent, and have been assessed as competent to "
+                "work under a PGD before first working under this one; previous experience of working under a "
+                "PGD is not required")
+
+
+def brand_header(doc):
+    """The Get Real Health logo at the top of every page, where the November
+    2025 originals had it. Documents that already carry an image in the
+    header are left alone."""
+    from docx.shared import Cm
+    n = 0
+    for s in doc.sections:
+        h = s.header
+        if h._element.xpath('.//*[local-name()="blip"]'):
+            continue
+        h.is_linked_to_previous = False
+        p = h.paragraphs[0] if h.paragraphs else h.add_paragraph()
+        if (p.text or "").strip():
+            p = p.insert_paragraph_before("")
+        p.add_run().add_picture(LOGO, width=Cm(LOGO_WIDTH_CM))
+        n += 1
+    if n:
+        print(f"  header logo added to {n} section(s)")
+
+
+def ownership_statement(doc):
+    """One paragraph under the strapline naming the organisation that owns
+    and authorises the direction. Runs after bump_version, so every document
+    has a strapline by now."""
+    paras = list(walk(doc, doc.element.body))
+    if any((p.text or "").strip().startswith(OWNER_HEAD) for p in paras):
+        return
+    strap = [p for p in paras if re.match(r"^Patient Group Direction, version \d{3}, issued ", (p.text or "").strip())]
+    if not strap:
+        raise SystemExit("no strapline to hang the ownership statement on")
+    insert_after(strap[0], [OWNERSHIP])
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    new = Paragraph(strap[0]._p.getnext(), strap[0]._parent)
+    new.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT  # some straplines are centred
+    for r in new.runs:
+        r.bold = False
+    print("  ownership statement added")
+
+
+def training_requirement(doc):
+    """'Must previously have used PGDs' becomes a training and competence
+    requirement. Every variant the estate used is matched, including the
+    ones that run on into ', must work in compliance with the SOPs ...'."""
+    n = 0
+    for p in walk(doc, doc.element.body):
+        t = p.text or ""
+        if not TRAINING_OLD.search(t):
+            continue
+
+        def repl(m):
+            return (m.group(1) + TRAINING_NEW) if m.group(1) else ("M" + TRAINING_NEW[1:])
+
+        set_text(p, TRAINING_OLD.sub(repl, t))
+        n += 1
+    if n:
+        print(f"  training requirement rewritten in {n} paragraph(s)")
+
+
+def retitle_change_history(doc, version):
+    """Every master carries an older 'Change history' table that stops at an
+    earlier version, with later versions in the 'Version and change record'
+    at the back. A reader seeing 'Change history: v004' in a v006 document
+    reads it as a mismatch. The heading now says which versions the table
+    covers and where the rest are."""
+    kids = list(doc.element.body.iterchildren())
+    n = 0
+    for i, c in enumerate(kids):
+        if not (c.tag.endswith("}p") and _elem_text(c).strip() == "Change history"):
+            continue
+        j = i + 1
+        while j < len(kids) and not kids[j].tag.endswith("}tbl"):
+            j += 1
+        if j >= len(kids):
+            continue
+        vers = sorted(set(re.findall(r"(?<![\w.])v?(\d{3})\b", " ".join(
+            cell.text[:14] for row in Table(kids[j], doc).rows for cell in row.cells))))
+        vers = [v for v in vers if v.startswith("0")]
+        if not vers or vers[-1] == version[1:]:
+            continue
+        head = Paragraph(c, doc)
+        set_text(head, f"Change history to version {vers[-1]}")
+        insert_after(head, ["Later versions are recorded in the Version and change record at the end of this document."])
+        note = Paragraph(c.getnext(), doc)
+        for r in note.runs:
+            r.bold = False
+        n += 1
+    if n:
+        print(f"  change history heading(s) retitled: {n}")
+
+
 def normalise(doc, version, date, supersedes):
     strip_em_dashes(doc)
     blank_adoption_block(doc)
@@ -564,6 +692,10 @@ def normalise(doc, version, date, supersedes):
     strip_old_sign_blocks(doc)
     refresh_authorisation_table(doc, version, date, supersedes)
     strip_narration(doc)
+    brand_header(doc)
+    ownership_statement(doc)
+    training_requirement(doc)
+    retitle_change_history(doc, version)
     return consolidate_change_records(doc)
 
 

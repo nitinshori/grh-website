@@ -1,4 +1,4 @@
-// Aligned to the Shingrix PGD version 008, issued 11 September 2026, as amended by
+// Aligned to the Shingrix PGD version 009, issued 14 September 2026, as amended by
 // the signatories' decisions 13, 14 and 15 of 11 September 2026 (two arms: aged 50
 // and over, and aged 18 to 49 severely immunosuppressed; late second dose given
 // without restarting; NHS-eligible patients told before a private supply).

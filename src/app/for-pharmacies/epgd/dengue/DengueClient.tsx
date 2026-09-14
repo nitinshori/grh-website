@@ -267,7 +267,7 @@ export default function DengueClient({
     }));
   }, []);
 
-  // Generic screening flag handler (PGD v006 inclusion / exclusion checkboxes)
+  // Generic screening flag handler (PGD v007 inclusion / exclusion checkboxes)
   const handleScreeningFlagChange = useCallback(
     (field: keyof DengueScreening, value: boolean): void => {
       setState((prev) => ({

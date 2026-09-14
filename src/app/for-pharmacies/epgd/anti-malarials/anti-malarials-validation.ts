@@ -34,13 +34,13 @@ export function validatePatientDetailsStep(
   const age = calculateAge(patient.dateOfBirth);
   if (age === null) return 'Unable to calculate age from the date of birth';
 
-  // The PGD (v010) covers children by weight band; this tool is deliberately
+  // The PGD (v011) covers children by weight band; this tool is deliberately
   // kept adult-only (stricter than the document) until parental consent and
   // paediatric dosing are built in.
   if (age < 18)
-    return 'This tool is for patients aged 18 years or older. For a child, work from the weight bands in Appendix 1 of the Malaria Chemoprophylaxis PGD v010 with consent from a person with parental responsibility';
+    return 'This tool is for patients aged 18 years or older. For a child, work from the weight bands in Appendix 1 of the Malaria Chemoprophylaxis PGD v011 with consent from a person with parental responsibility';
 
-  // PGD v010 records to be kept: patient name, address, date of birth and
+  // PGD v011 records to be kept: patient name, address, date of birth and
   // the GP with whom they are registered. Address and GP were optional.
   if (!patient.address.trim()) return 'Patient address is required (the PGD requires it to be recorded)';
   if (!patient.gpPractice.trim() && !patient.gpName.trim())
@@ -95,21 +95,21 @@ export function validateTravelAssessmentStep(
   if (travel.previousMalariaProphylaxis && !travel.previousProphylaxisType)
     return "'Previous Malaria Prophylaxis' is ticked: type 'Which Prophylaxis Was Used?'";
 
-  // PGD v010: weight, measured and recorded, determines the dose and the
+  // PGD v011: weight, measured and recorded, determines the dose and the
   // product strength; weight not obtainable is an exclusion.
   if (travel.weightKg === null || travel.weightKg <= 0)
     return "Enter the 'Body weight (kg)', measured today, not estimated";
   if (travel.weightKg > 300)
     return "'Body weight (kg)' above 300 cannot be right: check the figure";
 
-  // PGD v010 inclusion: destination risk assessment from current NaTHNaC /
+  // PGD v011 inclusion: destination risk assessment from current NaTHNaC /
   // TravelHealthPro guidance, and the source consulted must be recorded.
   if (!travel.riskAssessmentCompleted)
     return "Tick 'Destination risk assessment completed' once current NaTHNaC / TravelHealthPro guidance has been checked and chemoprophylaxis is recommended";
   if (!travel.riskAssessmentSource.trim())
     return "Type the 'Source consulted for the destination recommendation'";
 
-  // PGD v010 inclusion: able and willing to complete the whole course.
+  // PGD v011 inclusion: able and willing to complete the whole course.
   if (!travel.willingToCompleteCourse)
     return "Tick 'Able and willing to complete the full course' (inclusion criterion, including the post-travel tail)";
 

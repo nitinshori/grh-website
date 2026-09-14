@@ -153,7 +153,7 @@ export default function CovidBoosterClient() {
       },
       clinicalData: state as unknown as Record<string, unknown>,
       outcome: hardStops ? "not_supplied" : "completed",
-      // Brand AND variant designation, written in full (PGD v008 records row).
+      // Brand AND variant designation, written in full (PGD v009 records row).
       medicine:
         !hardStops && state.supply.vaccineProduct
           ? {
@@ -720,7 +720,7 @@ export default function CovidBoosterClient() {
             />
 
             <div className="border-t pt-4 space-y-4">
-              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Observation and adverse reactions (PGD v008)</p>
+              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Observation and adverse reactions (PGD v009)</p>
               <Checkbox
                 label="Patient observed, seated, for 15 minutes after vaccination and the observation period has been completed"
                 checked={state.supply.observedFifteenMinutes}

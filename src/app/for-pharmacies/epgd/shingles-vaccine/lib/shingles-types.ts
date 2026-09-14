@@ -1,6 +1,6 @@
 import { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/types";
 
-// Aligned to the Shingrix PGD version 008, issued 11 September 2026.
+// Aligned to the Shingrix PGD version 009, issued 14 September 2026.
 
 /**
  * Green Book chapter 28a, Box 1: definition of severe immunosuppression for
@@ -66,11 +66,11 @@ export interface ShinglesAssessment {
   pregnancyDiscussion: string;
   /** Dose 1 of Shingrix already given (here or elsewhere). */
   previousShingrix: boolean;
-  /** Date of dose 1, required when dose 2 is being given (PGD v008 inclusion: record the date of dose 1). */
+  /** Date of dose 1, required when dose 2 is being given (PGD v009 inclusion: record the date of dose 1). */
   previousShingrixDate: string;
   /** Exclusion: has already completed the two-dose course. */
   completedCourse: boolean;
-  /** Previous Zostavax is not an exclusion (PGD v008); recorded for the vaccine history. */
+  /** Previous Zostavax is not an exclusion (PGD v009); recorded for the vaccine history. */
   previousZostavax: boolean;
   /** Inclusion: no history of shingles in the past 12 months. Ticked means shingles within 12 months. */
   previousShinglesHistory: boolean;
@@ -99,12 +99,12 @@ export interface ShinglesSupply {
 export interface ShinglesCounselling {
   explainedDoseSchedule: boolean;
   explainedLocalReactions: boolean;
-  /** PGD v008 caution: systemic side effects are common and generally self-limiting. */
+  /** PGD v009 caution: systemic side effects are common and generally self-limiting. */
   explainedSystemicReactions: boolean;
   explainedEffectiveness: boolean;
   explainedNotLiveVaccine: boolean;
   offeredWrittenInfo: boolean;
-  /** PGD v008 follow-up advice given. */
+  /** PGD v009 follow-up advice given. */
   followUpAdviceGiven: boolean;
 }
 

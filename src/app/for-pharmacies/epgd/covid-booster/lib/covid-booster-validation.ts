@@ -2,11 +2,11 @@ import type { CovidBoosterConsultationState } from "./covid-booster-types";
 import { validatePatientStep, validateConsentStep, validateSummaryStep } from "../../shared/types";
 import { intervalTooShort, nhsEligible } from "./covid-booster-clinical-logic";
 
-// Aligned to the COVID-19 Vaccination 2026/27 PGD version 008, issued 11 September 2026.
+// Aligned to the COVID-19 Vaccination 2026/27 PGD version 009, issued 14 September 2026.
 
 export function validateStep(state: CovidBoosterConsultationState, step: number): string | null {
   switch (step) {
-    // PGD v008 covers 12 years and over. This tool previously enforced 18,
+    // PGD v009 covers 12 years and over. This tool previously enforced 18,
     // which turned away patients the PGD authorises.
     case 0: {
       const base = validatePatientStep(state.patient, { minAge: 12 });

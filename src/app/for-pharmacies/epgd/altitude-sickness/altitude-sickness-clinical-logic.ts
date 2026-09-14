@@ -1,6 +1,6 @@
 // ─── Altitude Sickness Clinical Logic ───
-// Aligned to the Acetazolamide for Altitude Sickness PGD, version 004,
-// issued 11 September 2026.
+// Aligned to the Acetazolamide for Altitude Sickness PGD, version 005,
+// issued 14 September 2026.
 
 import type { ClinicalAlert } from '../shared/types';
 import type {
@@ -9,9 +9,9 @@ import type {
   ASMedications,
 } from './altitude-sickness-types';
 
-export const AS_PGD_VERSION = 'Acetazolamide for Altitude Sickness PGD v004, issued 11 September 2026';
+export const AS_PGD_VERSION = 'Acetazolamide for Altitude Sickness PGD v005, issued 14 September 2026';
 
-// PGD v004 quantity limits (tablets per supply)
+// PGD v005 quantity limits (tablets per supply)
 export const AS_MAX_PREVENTION_TABLETS = 14;
 export const AS_TREATMENT_TABLETS = 6;
 export const AS_MAX_TOTAL_TABLETS = 20;
@@ -255,7 +255,7 @@ export function recommendMedicine(
   medications: ASMedications,
   travel: ASTravelAssessment
 ): AltitudeSicknessRecommendation | null {
-  // Check contraindications (PGD v004 exclusion criteria)
+  // Check contraindications (PGD v005 exclusion criteria)
   if (
     medical.sulfonamideAllergy ||
     medical.severeHepaticImpairment ||
@@ -296,7 +296,7 @@ export function recommendMedicine(
   };
 }
 
-// ─── Calculated quantity for the chosen regimen (PGD v004) ───
+// ─── Calculated quantity for the chosen regimen (PGD v005) ───
 //
 // Prevention: half a tablet twice daily for (1 to 2 lead-in days + days
 // ascending + 2 days), rounded up to whole tablets, maximum 14. Treatment: 6
@@ -359,7 +359,7 @@ export function calculateASQuantity(
   };
 }
 
-// ─── Maximum quantity for the chosen regimen (PGD v004) ───
+// ─── Maximum quantity for the chosen regimen (PGD v005) ───
 
 export function maxQuantityTablets(
   purpose: ASTravelAssessment['purpose'],

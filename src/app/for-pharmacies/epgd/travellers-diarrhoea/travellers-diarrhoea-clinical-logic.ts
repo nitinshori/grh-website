@@ -1,6 +1,6 @@
 // ─── Travellers' Diarrhoea Clinical Logic ───
-// Aligned to the Azithromycin for Traveller's Diarrhoea PGD, version 005,
-// issued 11 September 2026. The PGD supplies azithromycin only.
+// Aligned to the Azithromycin for Traveller's Diarrhoea PGD, version 006,
+// issued 14 September 2026. The PGD supplies azithromycin only.
 
 import type { ClinicalAlert } from '../shared/types';
 import type {
@@ -9,7 +9,7 @@ import type {
   TDMedications,
 } from './travellers-diarrhoea-types';
 
-export const TD_PGD_VERSION = "Azithromycin for Traveller's Diarrhoea PGD v005, issued 11 September 2026";
+export const TD_PGD_VERSION = "Azithromycin for Traveller's Diarrhoea PGD v006, issued 14 September 2026";
 
 // ─── Generate clinical alerts ───
 
@@ -216,7 +216,7 @@ export function recommendApproach(
   medical: TDMedicalHistory,
   medications: TDMedications
 ): TravellersDiarrhoeaRecommendation | null {
-  // Check if any hard stops exist (PGD v005 exclusion criteria)
+  // Check if any hard stops exist (PGD v006 exclusion criteria)
   if (
     medical.bloodInStool ||
     medical.feverAtOrAbove38C ||

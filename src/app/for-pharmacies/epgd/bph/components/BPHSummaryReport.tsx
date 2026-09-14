@@ -29,7 +29,7 @@ export function BPHSummaryReport({ state, alerts }: BPHSummaryReportProps) {
           BPH, Tamsulosin Consultation
         </h2>
         <p className="text-xs text-gray-500 mt-1">
-          ePGD Consultation Record. Tamsulosin 400mcg MR capsules for Benign Prostatic Hyperplasia PGD, version 004, issued 11 September 2026
+          ePGD Consultation Record. Tamsulosin 400mcg MR capsules for Benign Prostatic Hyperplasia PGD, version 005, issued 14 September 2026
         </p>
       </div>
 
@@ -216,7 +216,7 @@ export function BPHSummaryReport({ state, alerts }: BPHSummaryReportProps) {
                     : "Not recorded"
               }
             />
-            <Row label="Supplied under" value="Tamsulosin for BPH PGD v004, 11 September 2026" />
+            <Row label="Supplied under" value="Tamsulosin for BPH PGD v005, 14 September 2026" />
             <Row
               label="After food, preferably breakfast"
               value={state.medicineSupply.afterFood30mins ? "Yes" : "No"}
@@ -236,7 +236,7 @@ export function BPHSummaryReport({ state, alerts }: BPHSummaryReportProps) {
               label="Tamsulosin supplied"
               value={stopsExist ? "NOT SUPPLIED: exclusion criteria met (see clinical alerts above)" : "No"}
             />
-            <Row label="PGD" value="Tamsulosin for BPH PGD v004, 11 September 2026" />
+            <Row label="PGD" value="Tamsulosin for BPH PGD v005, 14 September 2026" />
           </>
         )}
       </div>

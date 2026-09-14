@@ -121,7 +121,7 @@ export default function RabiesClient({
     setState((prev) => ({ ...prev, contraindications, alerts }));
   }, [state.screening, patientAge]);
 
-  /** Generic setters for fields added for PGD v006. */
+  /** Generic setters for fields added for PGD v007. */
   const setScreening = useCallback(
     (patch: Partial<RabiesScreening>): void => {
       setState((prev) => ({

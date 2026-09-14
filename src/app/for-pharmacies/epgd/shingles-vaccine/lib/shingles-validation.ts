@@ -1,4 +1,4 @@
-// Aligned to the Shingrix PGD version 008, issued 11 September 2026, as amended by
+// Aligned to the Shingrix PGD version 009, issued 14 September 2026, as amended by
 // the signatories' decisions 13, 14 and 15 of 11 September 2026.
 import type { ShinglesConsultationState } from "./shingles-types";
 import { SEVERE_IMMUNOSUPPRESSION_QUALIFYING } from "./shingles-types";

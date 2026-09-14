@@ -1,11 +1,11 @@
 // ─── COPD Management ePGD Types ───
-// Aligned to the signed PGD version 004, issued 11 September 2026:
+// Aligned to the signed PGD version 005, issued 14 September 2026:
 // salbutamol 100mcg MDI (acute symptom relief) and amoxicillin 500mg capsules
 // (infective exacerbation with purulent sputum), adults 18 and over.
 
 import type { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/types";
 
-export const PGD_STRAPLINE = "COPD Management PGD version 004, issued 11 September 2026";
+export const PGD_STRAPLINE = "COPD Management PGD version 005, issued 14 September 2026";
 
 export type COPDPatientDetails = BasePatientDetails;
 
@@ -37,7 +37,7 @@ export interface COPDMedicalHistory {
   smokingStatus: string; // "current" | "former" | "never"
   otherRespiratoryConditions: string;
   otherConditions: string;
-  // Salbutamol cautions (PGD v004)
+  // Salbutamol cautions (PGD v005)
   cardiovascularDisease: boolean;
   hypertension: boolean;
   coronaryDiseaseOrRecentMI: boolean;
@@ -90,7 +90,7 @@ export interface COPDCounselling {
   inhalerTechniqueShown: boolean;
   smokingCessationAdvised: boolean;
   symptomMgmtExplained: boolean;
-  // PGD v004 follow-up advice
+  // PGD v005 follow-up advice
   relieverUseAndLimits: boolean; // as needed; max 8 puffs in 24 hours; referral and 999 thresholds
   spacerAdvice: boolean;
   completeCourse: boolean;

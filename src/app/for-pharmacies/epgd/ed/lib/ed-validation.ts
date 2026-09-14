@@ -47,7 +47,7 @@ export function validateStep(
       if (!state.complaint.severity)
         return "Please select severity";
       if (!state.observations.exerciseTolerance)
-        return "Cardiovascular fitness: select the answer to the walk-a-mile / two-flights question (PGD v008 Appendix 1)";
+        return "Cardiovascular fitness: select the answer to the walk-a-mile / two-flights question (PGD v009 Appendix 1)";
       if (!state.observations.exerciseToleranceNotes.trim())
         return "Cardiovascular fitness: type the 'Patient's answer in his own words' (PGD records row)";
       if (!state.observations.symptomsQuestionAsked)

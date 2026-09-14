@@ -1,6 +1,6 @@
 // ─── Hayfever Validation ───
 // Aligned to the Fexofenadine and/or Dymista Allergic Rhinitis PGD,
-// version 005, issued 11 September 2026.
+// version 006, issued 14 September 2026.
 
 import type { HayfeverConsultationState } from "./hayfever-types";
 import {

@@ -3,7 +3,7 @@ import { QUANTITY_BY_AREA } from "./eczema-types";
 import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
 
 /**
- * Clinical logic for the Eczema and Dermatitis PGD v006 (11 September 2026).
+ * Clinical logic for the Eczema and Dermatitis PGD v007 (14 September 2026).
  * Severity AND site decide the arm: mild anywhere permitted, or moderate on
  * the face, flexures or genital skin (7 days maximum there): clobetasone
  * butyrate 0.05% (Arm 1). Moderate on the trunk or limbs: betamethasone
@@ -229,7 +229,7 @@ export function calculateDoseRecommendation(state: EczemaConsultationState): Dos
   if (!arm) return null;
   const thinSkin = a.thinSkinSite;
   const quantity =
-    a.treatedArea && a.treatedArea !== "over-10-palms" ? QUANTITY_BY_AREA[a.treatedArea] : "sized to the treated area (15g, 30g or 60g)";
+    a.treatedArea && a.treatedArea !== "over-10-palms" ? QUANTITY_BY_AREA[a.treatedArea] : "sized to the treated area (one or two 30g tubes)";
 
   if (arm === "clobetasone") {
     return {

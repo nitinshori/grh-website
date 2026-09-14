@@ -4,7 +4,7 @@ import { validatePatientStep, validateConsentStep, validateSummaryStep } from ".
 export function validateStep(stepIndex: number, state: AnxietyPropranololConsultationState): string | null {
   switch (stepIndex) {
     case 0:
-      // PGD v006: adults aged 18 years and over.
+      // PGD v007: adults aged 18 years and over.
       return validatePatientStep(state.patient, { minAge: 18 });
 
     case 1:

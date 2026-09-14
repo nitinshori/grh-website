@@ -9,7 +9,7 @@ export function validateStep(state: BPHConsultationState, stepIndex: number): st
     case 0: { // Patient Details
       if (state.patient.dateOfBirth && state.patient.dateOfBirth > new Date().toISOString().split("T")[0])
         return "Date of birth cannot be in the future: check the date";
-      // PGD v004: inclusion 18 and over, but under 45 is an exclusion.
+      // PGD v005: inclusion 18 and over, but under 45 is an exclusion.
       const base = validatePatientStep(state.patient, {
         minAge: 45,
       });

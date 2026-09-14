@@ -1,7 +1,7 @@
 import type { OrlistatConsultationState } from "./orlistat-types";
 import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
 
-// PGD v004: review at 12 weeks from the start of treatment; continue only if
+// PGD v005: review at 12 weeks from the start of treatment; continue only if
 // at least 5% of body weight has been lost from baseline.
 export const ORLISTAT_REVIEW_WEEKS = 12;
 export const ORLISTAT_MIN_LOSS_PERCENT = 5;
@@ -209,7 +209,7 @@ export function getAllAlerts(state: OrlistatConsultationState): ClinicalAlert[] 
     });
   }
 
-  // PGD v004: concurrent ciclosporin therapy is an exclusion, not a caution.
+  // PGD v005: concurrent ciclosporin therapy is an exclusion, not a caution.
   if (state.medications.takesCiclosporin) {
     alerts.push({
       severity: "stop",

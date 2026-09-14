@@ -3,7 +3,7 @@ import type { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/
 // ─── UTI-Specific Data Structures ───
 
 export interface UTISymptoms {
-  /** PGD v008 inclusion: two or more of dysuria, new nocturia, frequency,
+  /** PGD v009 inclusion: two or more of dysuria, new nocturia, frequency,
    *  urgency. Each is asked as Yes/No with no default (null is unanswered):
    *  the stop is raised only once all four are answered and fewer than two
    *  are Yes (stop audit, 11 September 2026). */
@@ -15,13 +15,13 @@ export interface UTISymptoms {
   haematuria: boolean;
   vaginalDischarge: boolean;
   /** Pelvic pain, intermenstrual or post-coital bleeding, or a new or recent
-   *  sexual partner: PGD v008 excludes and refers for STI testing. */
+   *  sexual partner: PGD v009 excludes and refers for STI testing. */
   pelvicPain: boolean;
   abnormalBleeding: boolean;
   stiHistory: boolean;
   duration: string; // "< 3 days" | "3-7 days" | "> 7 days" | "unknown"
   additionalNotes: string;
-  // Appendix 1 red flags (PGD v008). Every one is a stop.
+  // Appendix 1 red flags (PGD v009). Every one is a stop.
   redFlagsAsked: boolean;
   feverRigors: boolean;
   loinFlankPain: boolean;
@@ -37,9 +37,9 @@ export interface UTIMedicalHistory {
   /** Indwelling catheter, or a catheter removed within the last 7 days. */
   catheterised: boolean;
   previousUTIWithin4Weeks: boolean;
-  /** PGD v008: an antibiotic already taken for this same episode, from anyone. */
+  /** PGD v009: an antibiotic already taken for this same episode, from anyone. */
   antibioticThisEpisode: boolean;
-  /** PGD v008 records both answers: episodes in the last 6 and last 12 months.
+  /** PGD v009 records both answers: episodes in the last 6 and last 12 months.
    *  Recurrent UTI (2 or more in 6 months, or 3 or more in 12 months) is derived. */
   utiEpisodesLast6Months: "" | "0" | "1" | "2+";
   utiEpisodesLast12Months: "" | "0" | "1" | "2" | "3+";
@@ -72,12 +72,12 @@ export interface UTIMedicalHistory {
   diabetesUncontrolled: boolean;
   immunosuppressed: boolean;
   knownAbnormalUrinaryTract: boolean;
-  // Nitrofurantoin arm exclusions (PGD v008)
+  // Nitrofurantoin arm exclusions (PGD v009)
   nitrofurantoinHypersensitivity: boolean;
   g6pdDeficiency: boolean;
   previousNitrofurantoinReaction: boolean;
   acutePorphyria: boolean;
-  // Trimethoprim arm exclusions (PGD v008)
+  // Trimethoprim arm exclusions (PGD v009)
   trimethoprimHypersensitivity: boolean;
   trimethoprimLast3Months: boolean;
   folateDeficiencyOrBloodDyscrasia: boolean;
@@ -102,7 +102,7 @@ export interface UTIMedicineSelection {
   dose: string;
   duration: string;
   quantity: number;
-  /** PGD v008 gate on the trimethoprim arm: the reason nitrofurantoin is
+  /** PGD v009 gate on the trimethoprim arm: the reason nitrofurantoin is
    *  unsuitable must be one of these and must be recorded. */
   trimethoprimReason: "" | "contraindicated" | "intolerance" | "unavailable";
 }

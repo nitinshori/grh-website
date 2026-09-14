@@ -31,7 +31,7 @@ export default function HPVToolPage() {
           </h1>
           <p className="text-sm text-gray-500 mt-1">
             Gardasil 9, intramuscular, from 9 years of age, all sexes. Schedule
-            selected from age and immune status. PGD version 006, issued 11
+            selected from age and immune status. PGD version 007, issued 14
             September 2026.
           </p>
         </div>

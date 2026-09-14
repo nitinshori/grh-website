@@ -55,7 +55,7 @@ export interface HPVVaccineAssessment {
   anaphylaxisToComponent: "" | "yes" | "no";
   /** Bleeding disorder / anticoagulation: technique caution, not a stop. */
   bleedingDisorderOrAnticoagulated: boolean;
-  /** Immunoglobulin or blood products in the previous three months: not a contraindication, record it (PGD v006 cautions). */
+  /** Immunoglobulin or blood products in the previous three months: not a contraindication, record it (PGD v007 cautions). */
   bloodProductsLast3Months: boolean;
   /** Told whether they could have this free on the NHS. */
   nhsEligibilityDiscussed: boolean;
@@ -91,7 +91,7 @@ export interface HPVAdministration {
   /** Date of the previous dose in this course; required for dose 2 or 3 so the minimum interval can be checked. */
   previousDoseDate: string;
   nextDoseDue: string;
-  /** Where another vaccine was given at the same visit, its name and site (PGD v006 records row). */
+  /** Where another vaccine was given at the same visit, its name and site (PGD v007 records row). */
   otherVaccineSameVisit: string;
   adrenalineAvailable: boolean;
   observedFifteenMinutes: boolean;

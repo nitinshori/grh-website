@@ -8,11 +8,11 @@ import type {
  * Clinical decision logic for the Skin Infection ePGD.
  *
  * Two documents are enforced here, selected by state.variant:
- *   "skin-infection": Skin and Soft Tissue Infection PGD v007, issued
- *     11 September 2026. From 2 years; cellulitis from 12 years. Observations
+ *   "skin-infection": Skin and Soft Tissue Infection PGD v008, issued
+ *     14 September 2026. From 2 years; cellulitis from 12 years. Observations
  *     are AGE-BANDED (Appendix 1). Flucloxacillin may be supplied in pregnancy
  *     and breastfeeding; clarithromycin and doxycycline may not.
- *   "cellulitis": Cellulitis PGD v004, issued 11 September 2026. Adults 18 and
+ *   "cellulitis": Cellulitis PGD v005, issued 14 September 2026. Adults 18 and
  *     over, MILD cellulitis (Eron class I) of a limb or the trunk only. Adult
  *     sepsis thresholds. Flucloxacillin may be supplied in pregnancy and
  *     breastfeeding (decision 26, 11 September 2026); clarithromycin and
@@ -682,7 +682,7 @@ export function calculateDoseRecommendation(
   const extensive = isMoreExtensiveInfection(a);
   const weight = num(a.weightKg);
 
-  // ── Cellulitis PGD v004: adults, mild cellulitis of a limb or the trunk ──
+  // ── Cellulitis PGD v005: adults, mild cellulitis of a limb or the trunk ──
   if (cellulitisPgd) {
     if (choice === "flucloxacillin")
       return {
@@ -716,7 +716,7 @@ export function calculateDoseRecommendation(
     };
   }
 
-  // ── Skin and Soft Tissue Infection PGD v007 ──────────────────────
+  // ── Skin and Soft Tissue Infection PGD v008 ──────────────────────
   if (choice === "flucloxacillin") {
     // The document states single doses, not ranges: 250mg four times daily
     // for ages 2 to 9 (5 mL of the 250mg/5mL suspension) and 500mg four

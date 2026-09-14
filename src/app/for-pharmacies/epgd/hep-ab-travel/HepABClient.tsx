@@ -16,7 +16,7 @@ import { HepABSummaryReport } from "./components/HepABSummaryReport"
 //
 // Aligned to the signed document: Hepatitis A and Hepatitis B Vaccination
 // (Havrix, Avaxim, Engerix B and Twinrix, for travel and lifestyle risk),
-// PGD version 008, issued 11 September 2026. Individuals aged 1 year and over.
+// PGD version 009, issued 14 September 2026. Individuals aged 1 year and over.
 //
 //   • Twinrix Adult (combined Hep A + Hep B, 16y and over)
 //   • Twinrix Paediatric (combined, 1 to 15y; standard schedule only)

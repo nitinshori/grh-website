@@ -31,7 +31,7 @@ export function checkExclusions(state: EDConsultationState): ClinicalAlert[] {
       code: "HYPERSENSITIVITY",
       message: "Known hypersensitivity to sildenafil, tadalafil or any excipient",
       detail:
-        "Exclusion in both arms of PGD v008. Do not supply. Refer to the GP.",
+        "Exclusion in both arms of PGD v009. Do not supply. Refer to the GP.",
     });
   }
 
@@ -47,7 +47,7 @@ export function checkExclusions(state: EDConsultationState): ClinicalAlert[] {
       code: "ALPHA_UNSTABLE",
       message: "Not yet stable on his alpha-blocker: do not supply",
       detail:
-        "PGD v008 (both arms): the patient must be stable on his alpha-blocker before starting a PDE5 inhibitor. Defer supply until he is, and record it.",
+        "PGD v009 (both arms): the patient must be stable on his alpha-blocker before starting a PDE5 inhibitor. Defer supply until he is, and record it.",
     });
   }
 
@@ -88,7 +88,7 @@ export function checkExclusions(state: EDConsultationState): ClinicalAlert[] {
       code: "CV_FITNESS",
       message: "Fails, or cannot answer, the cardiovascular fitness question",
       detail:
-        "PGD v008 Appendix 1: the patient must be able to walk a mile on the flat in about 20 minutes, or climb two flights of stairs briskly, without chest pain and without stopping for breath. Sexual activity carries a comparable cardiac workload. Refer to the GP for cardiovascular assessment.",
+        "PGD v009 Appendix 1: the patient must be able to walk a mile on the flat in about 20 minutes, or climb two flights of stairs briskly, without chest pain and without stopping for breath. Sexual activity carries a comparable cardiac workload. Refer to the GP for cardiovascular assessment.",
     });
   }
 
@@ -128,7 +128,7 @@ export function checkExclusions(state: EDConsultationState): ClinicalAlert[] {
       code: "OTHER_PDE5",
       message: "Already taking another PDE5 inhibitor",
       detail:
-        "Including one obtained online or from another supplier. Do not add a second. Excluded under PGD v008.",
+        "Including one obtained online or from another supplier. Do not add a second. Excluded under PGD v009.",
     });
   }
 
@@ -137,7 +137,7 @@ export function checkExclusions(state: EDConsultationState): ClinicalAlert[] {
       severity: "stop",
       code: "PRIAPISM_HISTORY",
       message: "Previous priapism, or an erection lasting more than 4 hours on any previous PDE5 inhibitor",
-      detail: "Excluded under PGD v008. Refer for specialist assessment.",
+      detail: "Excluded under PGD v009. Refer for specialist assessment.",
     });
   }
 
@@ -229,7 +229,7 @@ export function checkExclusions(state: EDConsultationState): ClinicalAlert[] {
       code: "SEVERE_HF",
       message: "Heart failure of NYHA class 2 or greater in the last 6 months, CANNOT supply",
       detail:
-        "Excluded under PGD v008 (Cialis SmPC 4.3). Refer to cardiology/GP.",
+        "Excluded under PGD v009 (Cialis SmPC 4.3). Refer to cardiology/GP.",
     });
   }
 
@@ -238,7 +238,7 @@ export function checkExclusions(state: EDConsultationState): ClinicalAlert[] {
       severity: "stop",
       code: "STRUCTURAL_HEART",
       message: "Hypertrophic cardiomyopathy, significant aortic stenosis or other moderate to severe valve disease, or a murmur of unknown cause",
-      detail: "Excluded under PGD v008 (BSSM high-risk group). Refer to cardiology/GP.",
+      detail: "Excluded under PGD v009 (BSSM high-risk group). Refer to cardiology/GP.",
     });
   }
 
@@ -323,7 +323,7 @@ export function checkCautions(state: EDConsultationState): ClinicalAlert[] {
       code: "AGE_65",
       message: "Aged over 65: sildenafil start at 25mg; tadalafil on-demand 10mg rather than escalating, once-daily 2.5mg",
       detail:
-        "PGD v008 dose reduction for the over-65s. Record the starting dose chosen.",
+        "PGD v009 dose reduction for the over-65s. Record the starting dose chosen.",
     });
   }
 
@@ -345,7 +345,7 @@ export function checkCautions(state: EDConsultationState): ClinicalAlert[] {
       code: "RENAL_SEVERE",
       message: "Severe renal impairment (creatinine clearance below 30 mL/min): sildenafil start at 25mg; tadalafil once-daily excluded, on-demand not more than 10mg",
       detail:
-        "PGD v008. Record the impairment and the starting dose chosen as a result.",
+        "PGD v009. Record the impairment and the starting dose chosen as a result.",
     });
   }
 
@@ -534,7 +534,7 @@ export function calculateDoseRecommendation(
       medicine: "sildenafil",
       dosingRegimen: "on-demand",
       dose: "25mg",
-      reason: `START AT 25mg (PGD v008) due to: ${reasons.join(", ")}`,
+      reason: `START AT 25mg (PGD v009) due to: ${reasons.join(", ")}`,
     };
   }
 
@@ -571,7 +571,7 @@ export const SILDENAFIL_DOSES = ["25mg", "50mg", "100mg"] as const;
 export const TADALAFIL_ON_DEMAND_DOSES = ["5mg", "10mg", "20mg"] as const;
 export const TADALAFIL_DAILY_DOSES = ["2.5mg", "5mg"] as const;
 
-/** Which arms of PGD v008 remain open for this patient, and why not. */
+/** Which arms of PGD v009 remain open for this patient, and why not. */
 export interface ArmAvailability {
   sildenafil: boolean;
   tadalafil: boolean;
@@ -593,7 +593,7 @@ export function getArmAvailability(state: EDConsultationState): ArmAvailability 
   };
 }
 
-/** Dose limits from the PGD v008 cautions and dose rows.
+/** Dose limits from the PGD v009 cautions and dose rows.
  *
  *  Starting-dose rules apply to a patient who has not used THAT medicine
  *  before: the document's dose rows give one starting dose (sildenafil 50mg,

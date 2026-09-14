@@ -24,8 +24,8 @@ export default function YellowFeverPage() {
               <p className="text-sm text-blue-900">
                 This tool supports vaccination with Stamaril, a live attenuated
                 yellow fever vaccine, at designated Yellow Fever Vaccination
-                Centres under the Get Real Health PGD (version 005, issued
-                11 September 2026). It applies the NaTHNaC contraindications and
+                Centres under the Get Real Health PGD (version 006, issued
+                14 September 2026). It applies the NaTHNaC contraindications and
                 precautions and Green Book chapter 35, and covers issue of the
                 International Certificate of Vaccination or Prophylaxis.
                 Pharmacists only: pharmacy technicians may not administer yellow

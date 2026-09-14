@@ -8,8 +8,8 @@ import type {
 } from "./uti-types";
 
 // ─── Clinical Logic for UTI Consultation ───
-// Aligned to the UTI in Women aged 16 to 64 PGD, version 008, issued
-// 11 September 2026. Nitrofurantoin is first line; trimethoprim only where
+// Aligned to the UTI in Women aged 16 to 64 PGD, version 009, issued
+// 14 September 2026. Nitrofurantoin is first line; trimethoprim only where
 // nitrofurantoin is unsuitable and the reason is recorded.
 
 /** Recurrent UTI as the PGD defines it: 2 or more episodes in the last
@@ -134,7 +134,7 @@ export function getUTIClinicalAlerts(
           ? "Only one of dysuria, new nocturia, frequency or urgency is present"
           : "None of dysuria, new nocturia, frequency or urgency is present",
       detail:
-        "PGD v008 requires two or more of: dysuria, new nocturia, urinary frequency or urgency. Where fewer are present, refer rather than supply.",
+        "PGD v009 requires two or more of: dysuria, new nocturia, urinary frequency or urgency. Where fewer are present, refer rather than supply.",
     });
   }
 
@@ -204,7 +204,7 @@ export function getUTIClinicalAlerts(
     });
   }
 
-  // "Previous UTI within 4 weeks" is not an exclusion in PGD v008, which
+  // "Previous UTI within 4 weeks" is not an exclusion in PGD v009, which
   // defines recurrence by the 6 and 12 month counts. The answer is recorded
   // and shown as a caution so the pharmacist checks the counts, nothing more.
   if (medicalHistory.previousUTIWithin4Weeks) {
@@ -322,7 +322,7 @@ export function getUTIClinicalAlerts(
     });
   }
 
-  // Renal function under PGD v008.
+  // Renal function under PGD v009.
   //
   // The PGD asks a question that can be answered at the counter: "Have you
   // ever been told you have kidney disease, or that your kidneys do not work
@@ -405,7 +405,7 @@ export function getUTIClinicalAlerts(
       severity: "stop",
       code: "RENAL_UNKNOWN",
       message: "Patient does not know whether they have kidney disease",
-      detail: "PGD v008 renal row: the patient does not know: EXCLUDE. Refer for a renal function check first.",
+      detail: "PGD v009 renal row: the patient does not know: EXCLUDE. Refer for a renal function check first.",
     });
   }
 
@@ -559,7 +559,7 @@ export function getDoseRecommendation(
 }
 
 export function getMedicineQuantity(medicine: string, duration: string): number {
-  // PGD v008: one 3 day course, 6 capsules or 6 tablets. No repeat supply.
+  // PGD v009: one 3 day course, 6 capsules or 6 tablets. No repeat supply.
   void medicine;
   void duration;
   return 6;

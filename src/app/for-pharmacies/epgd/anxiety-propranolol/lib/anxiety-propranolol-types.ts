@@ -26,7 +26,7 @@ export interface AnxietyMedicalHistory {
   currentMedications: string;
   raynauds: boolean;
   hepaticImpairment: boolean;
-  // PGD v006 cautions (11 September 2026)
+  // PGD v007 cautions (14 September 2026)
   firstDegreeHeartBlock: boolean;
   portalHypertension: boolean;
   mildPeripheralVascularDisease: boolean;
@@ -53,7 +53,7 @@ export interface AnxietyContraindications {
   substanceOrAlcoholMisuse: boolean;
   otherBetaBlocker: boolean;
   verapamilOrDiltiazem: boolean;
-  // PGD v003/v006 exclusions (SmPC contraindications, pregnancy and
+  // PGD v003/v007 exclusions (SmPC contraindications, pregnancy and
   // breastfeeding) that the tool did not ask.
   cardiogenicShock: boolean;
   hypotension: boolean;

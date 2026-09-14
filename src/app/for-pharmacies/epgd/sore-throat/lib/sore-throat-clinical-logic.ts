@@ -20,7 +20,7 @@ export function generateExclusionAlerts(
 ): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
 
-  // Age exclusion: under 18 years (PGD v005: adults aged 18 years and over)
+  // Age exclusion: under 18 years (PGD v006: adults aged 18 years and over)
   if (age !== null && age < 18) {
     alerts.push({
       severity: "stop",
@@ -433,7 +433,7 @@ export function recommendMedicine(
   // Determine if antibiotic is indicated
   let shouldPrescribe = false;
 
-  // PGD v005 inclusion: FeverPAIN 4 or more, OR positive RAST. A history of
+  // PGD v006 inclusion: FeverPAIN 4 or more, OR positive RAST. A history of
   // rheumatic fever does not lower the threshold under this PGD.
   void rheumaticFeverHistory;
   void age;

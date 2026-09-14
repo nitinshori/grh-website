@@ -417,7 +417,7 @@ export default function BPHClient() {
         return (
           <div className="space-y-4">
             <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-3 space-y-2">
-              <p className="text-sm font-semibold text-amber-900">Previous assessment (PGD v004)</p>
+              <p className="text-sm font-semibold text-amber-900">Previous assessment (PGD v005)</p>
               <SelectInput
                 label="Have these symptoms been assessed before by a GP or urologist?"
                 value={state.medicalHistory.previouslyAssessedByGp}
@@ -444,7 +444,7 @@ export default function BPHClient() {
                 </>
               )}
             </div>
-            <p className="text-sm font-semibold text-red-700">Exclusions (PGD v004). Any one excludes; refer.</p>
+            <p className="text-sm font-semibold text-red-700">Exclusions (PGD v005). Any one excludes; refer.</p>
             <Checkbox
               label="Known hypersensitivity to tamsulosin or any excipient in the formulation"
               checked={state.medicalHistory.hypersensitivity}
@@ -542,7 +542,7 @@ export default function BPHClient() {
               onChange={(v) => dispatch({ type: "UPDATE_MEDICAL_HISTORY", field: "neurologicalBladderDisease", value: v })}
               description="Exclusion. Refer"
             />
-            <p className="text-sm font-semibold text-amber-700 pt-2">Cautions (PGD v004)</p>
+            <p className="text-sm font-semibold text-amber-700 pt-2">Cautions (PGD v005)</p>
             <Checkbox
               label="Mild to moderate hepatic impairment"
               checked={state.medicalHistory.mildModerateHepaticImpairment}
@@ -581,7 +581,7 @@ export default function BPHClient() {
           <div className="space-y-4">
             <div className="bg-red-50 border border-red-200 rounded p-4 mb-4">
               <p className="text-xs text-red-700 font-medium">
-                Red flags are exclusions under PGD v004: refer, do not supply medicine
+                Red flags are exclusions under PGD v005: refer, do not supply medicine
               </p>
             </div>
             <Checkbox
@@ -712,7 +712,7 @@ export default function BPHClient() {
         return (
           <div className="space-y-4">
             <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-900 space-y-1">
-              <p className="font-semibold">Tamsulosin 400 micrograms modified-release capsules. PGD v004, 11 September 2026.</p>
+              <p className="font-semibold">Tamsulosin 400 micrograms modified-release capsules. PGD v005, 14 September 2026.</p>
               <p>400 micrograms once daily, after food, preferably with breakfast. Swallow whole with water; do not crush, chew or open. Up to 28 capsules per supply.</p>
               <p>Maximum under this PGD: an initial supply of 4 weeks, then, where the IPSS has improved by 3 points or more at the 4 to 6 week review and the patient has been examined by the GP, further supplies to a maximum of 12 months&apos; continuous treatment, after which the GP takes over prescribing. No improvement at 4 to 6 weeks, or any new exclusion, ends supply under this PGD.</p>
             </div>
@@ -881,7 +881,7 @@ export default function BPHClient() {
               label="Patient information leaflet supplied with the product"
               checked={state.counselling.pilSupplied}
               onChange={(v) => dispatch({ type: "UPDATE_COUNSELLING", field: "pilSupplied", value: v })}
-              description="Written information row of PGD v004. Required."
+              description="Written information row of PGD v005. Required."
             />
           </div>
         );

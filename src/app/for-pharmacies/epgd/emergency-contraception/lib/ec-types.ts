@@ -9,7 +9,7 @@ export interface ECPatientDetails extends BasePatientDetails {
   fraserCompetent?: boolean; // derived from fraserOutcome: true only when "competent"
   fraserOutcome: "" | "competent" | "not-competent"; // 13 to 15: the answer, not only that it was assessed
   coercionReported: "" | "no" | "yes"; // 13 to 15: the answer to the coercion question
-  // PGD v004 (11 September 2026) safeguarding. Under 13: the document says
+  // PGD v005 (14 September 2026) safeguarding. Under 13: the document says
   // supply may still be appropriate with a mandatory safeguarding referral;
   // this tool refuses supply under 13 (Get Real Health service decision,
   // 11 September 2026) and records the same-day and safeguarding referrals.
@@ -23,7 +23,7 @@ export interface ECPatientDetails extends BasePatientDetails {
 }
 
 export const PGD_VERSION_LABEL =
-  "Emergency Contraception PGD (levonorgestrel 1.5 mg, Levonelle / ulipristal acetate 30 mg, ellaOne), version 004, issued 11 September 2026";
+  "Emergency Contraception PGD (levonorgestrel 1.5 mg, Levonelle / ulipristal acetate 30 mg, ellaOne), version 005, issued 14 September 2026";
 
 // ─── Clinical Assessment ───
 

@@ -11,9 +11,9 @@ import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile"
 import { calculateAge, validatePatientStep, validateConsentStep, validateSummaryStep } from "../shared/types"
 import { PrintedRecord } from "./components/PrintedRecord"
 
-// Aligned to: Vitamin B12 and folate PGD v009 (PGD 1 of 3 hydroxocobalamin
-// injection; PGD 2 of 3 cyanocobalamin tablets), issued 11 September 2026.
-const PGD_VERSION_LINE = "Vitamin B12 and folate PGD v009 (PGD 1 of 3 and 2 of 3), issued 11 September 2026"
+// Aligned to: Vitamin B12 and folate PGD v010 (PGD 1 of 3 hydroxocobalamin
+// injection; PGD 2 of 3 cyanocobalamin tablets), issued 14 September 2026.
+const PGD_VERSION_LINE = "Vitamin B12 and folate PGD v010 (PGD 1 of 3 and 2 of 3), issued 14 September 2026"
 const INJECTION_NAME = "Hydroxocobalamin 1 mg/ml solution for injection"
 const TABLET_NAME = "Cyanocobalamin 50 microgram tablets"
 
@@ -92,7 +92,7 @@ export function B12InjectionClient() {
       potassiumMonitoringPlan: "",
       // Record: advice given if excluded or declines treatment
       referralAdvice: "",
-      // PGD v009: FBC, blood film and serum folate must have been obtained
+      // PGD v010: FBC, blood film and serum folate must have been obtained
       // and reviewed alongside the B12 result (a B12-only point of care
       // device does not satisfy the PGD).
       bloodsReviewed: "" as "" | "yes" | "no",
@@ -178,7 +178,7 @@ export function B12InjectionClient() {
   const handleNext = useCallback(() => setCurrentStep((s) => Math.min(s + 1, STEP_TITLES.length - 1)), [])
   const handlePrev = useCallback(() => setCurrentStep((s) => Math.max(s - 1, 0)), [])
 
-  // Eligibility logic (PGD v009, 11 September 2026): blocks if any
+  // Eligibility logic (PGD v010, 14 September 2026): blocks if any
   // exclusion shared by all three arms is ticked, requires a documented
   // deficiency basis and the full blood work-up (FBC, film, folate).
   const el = state.eligibility

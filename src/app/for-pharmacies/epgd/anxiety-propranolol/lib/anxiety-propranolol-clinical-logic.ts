@@ -14,7 +14,7 @@ export function getAllAlerts(state: AnxietyPropranololConsultationState): Clinic
     });
   }
 
-  // PGD v006 exclusions (11 September 2026)
+  // PGD v007 exclusions (14 September 2026)
   if (state.contraindications.cardiogenicShock) {
     alerts.push({
       severity: "stop",

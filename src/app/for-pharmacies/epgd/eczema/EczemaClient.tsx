@@ -657,14 +657,13 @@ export default function EczemaClient() {
                 value={state.medicineSelection.quantitySupplied}
                 onChange={(v) => dispatch({ type: "UPDATE_MEDICINE_SELECTION", field: "quantitySupplied", value: v })}
                 options={[
-                  { value: "15g", label: "15g (up to 2 adult palms)" },
-                  { value: "30g", label: "30g (2 to 5 adult palms)" },
-                  { value: "60g", label: "60g (5 to 10 adult palms)" },
+                  { value: "30g", label: "30g, one tube (up to 5 adult palms)" },
+                  { value: "60g", label: "60g, two 30g tubes (5 to 10 adult palms)" },
                 ]}
                 required
               />
               {areaQuantity && (
-                <p className="text-xs text-gray-600">Document quantity for the recorded treated area: {areaQuantity}. One supply per consultation.</p>
+                <p className="text-xs text-gray-600">Document quantity for the recorded treated area: {areaQuantity}. Both products come as 30g and 100g tubes only; supply 30g tubes. One supply per consultation.</p>
               )}
               <div className="grid sm:grid-cols-2 gap-3">
                 <TextInput

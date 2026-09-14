@@ -2,17 +2,18 @@ import { BasePatientDetails, BaseConsent, BaseSummary, ClinicalAlert, DoseRecomm
 
 /**
  * Eczema and Dermatitis ePGD, aligned to the Eczema and Dermatitis PGD
- * version 006, issued 11 September 2026. Two arms, 12 years and over:
+ * version 007, issued 14 September 2026. Two arms, 12 years and over:
  *   Arm 1, clobetasone butyrate 0.05%: mild disease at any permitted site, and
  *     moderate disease on the face, flexures or genital skin (7 days maximum
  *     at those sites).
  *   Arm 2, betamethasone valerate 0.1%: moderate disease on the trunk and
  *     limbs only.
  * The eyelids are excluded from both arms. Quantity is sized to the treated
- * area in adult palms (15g, 30g, 60g); above ten palms (10% of body surface)
+ * area in adult palms as marketed 30g tubes (one tube up to 5 palms, two tubes
+ * for 5 to 10 palms; PGD v007, 14 September 2026); above ten palms (10% of body surface)
  * refer.
  */
-export const ECZEMA_PGD_VERSION = "Eczema and Dermatitis PGD, version 006, issued 11 September 2026";
+export const ECZEMA_PGD_VERSION = "Eczema and Dermatitis PGD, version 007, issued 14 September 2026";
 
 export interface EczemaPatientDetails extends BasePatientDetails {}
 
@@ -108,7 +109,7 @@ export interface EczemaMedicineSelection {
   emollientFirst: boolean;
   steroidChoice: "" | "clobetasone" | "betamethasone";
   formulation: "" | "cream" | "ointment";
-  quantitySupplied: "" | "15g" | "30g" | "60g";
+  quantitySupplied: "" | "30g" | "60g";
   batchNumber: string;
   expiryDate: string;
 }
@@ -174,17 +175,19 @@ export const STEP_LABELS = [
 
 export const TOTAL_STEPS = STEP_LABELS.length;
 
-/** Quantity by treated area (Appendix 1). */
-export const QUANTITY_BY_AREA: Record<Exclude<TreatedArea, "" | "over-10-palms">, "15g" | "30g" | "60g"> = {
-  "up-to-2-palms": "15g",
+/** Quantity by treated area (Appendix 1). Both products are marketed as 30g and
+ *  100g tubes only, so the document supplies whole 30g tubes: one up to 5 palms,
+ *  two (60g) for 5 to 10 palms. The 15g supply in v006 did not exist as a pack. */
+export const QUANTITY_BY_AREA: Record<Exclude<TreatedArea, "" | "over-10-palms">, "30g" | "60g"> = {
+  "up-to-2-palms": "30g",
   "2-to-5-palms": "30g",
   "5-to-10-palms": "60g",
 };
 
 export const TREATED_AREA_LABEL: Record<Exclude<TreatedArea, "">, string> = {
-  "up-to-2-palms": "Up to 2 adult palms (about 2% of body surface): 1 fingertip unit per application. Supply 15g",
-  "2-to-5-palms": "2 to 5 adult palms: up to 2.5 fingertip units per application. Supply 30g",
-  "5-to-10-palms": "5 to 10 adult palms (up to the 10% maximum): up to 5 fingertip units per application. Supply 60g",
+  "up-to-2-palms": "Up to 2 adult palms (about 2% of body surface): 1 fingertip unit per application. Supply one 30g tube",
+  "2-to-5-palms": "2 to 5 adult palms: up to 2.5 fingertip units per application. Supply one 30g tube",
+  "5-to-10-palms": "5 to 10 adult palms (up to the 10% maximum): up to 5 fingertip units per application. Supply two 30g tubes (60g)",
   "over-10-palms": "More than 10 adult palms (over 10% of body surface): refer, do not supply",
 };
 

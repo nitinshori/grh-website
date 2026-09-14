@@ -28,7 +28,7 @@ export interface PEClinicalAssessment {
 export interface PEMedicalHistory {
   cardiacDisorder: boolean; // NYHA II-IV heart failure, significant valvular disease
   cardiacDisorderDetail: string;
-  /** PGD v005 exclusions: conduction abnormality or QT-prolonging condition; history of IHD. */
+  /** PGD v006 exclusions: conduction abnormality or QT-prolonging condition; history of IHD. */
   conductionOrQT: boolean;
   ischaemicHeartDisease: boolean;
   /** History of syncope or orthostatic hypotension (exclusion). */
@@ -54,7 +54,7 @@ export interface PEMedicalHistory {
   /** Premature ejaculation of recent onset together with another new symptom. */
   recentOnsetWithNewSymptom: boolean;
   uncontrolledEpilepsy: boolean;
-  // Cautions (PGD v005)
+  // Cautions (PGD v006)
   seizureHistory: boolean;
   bleedingDisorderOrAnticoagulant: boolean;
   orthostaticRiskFactors: boolean;
@@ -88,7 +88,7 @@ export interface PEMedicineSupply {
   mayIncreaseTo60mg: boolean;
   /** Strength supplied: 30mg starting dose; 60mg only where 30mg was insufficient and well tolerated. */
   strengthSupplied: "" | "30mg" | "60mg";
-  /** Up to 6 tablets per supply (PGD v005). */
+  /** Up to 6 tablets per supply (PGD v006). */
   quantity: number | null;
   brand: string;
   understandsUsage: boolean; // 1-3 hours before, max once per 24h, take with water

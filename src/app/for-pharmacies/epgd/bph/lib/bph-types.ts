@@ -24,7 +24,7 @@ export interface BPHLutsAssessment {
 }
 
 export interface BPHMedicalHistory {
-  /** PGD v004 exclusion: history of orthostatic hypotension. */
+  /** PGD v005 exclusion: history of orthostatic hypotension. */
   orthostasisHistory: boolean;
   /** Exclusion: severe hepatic impairment (Child-Pugh C). */
   severeHepaticImpairment: boolean;
@@ -86,7 +86,7 @@ export interface BPHMedicineSupply {
   supplyType: "" | "initial" | "continuation";
   quantity: number | null;
   brand: string;
-  // Continuation gate (PGD v004 maximum treatment period)
+  // Continuation gate (PGD v005 maximum treatment period)
   previousIpss: number | null;
   gpExaminedSinceStart: "" | "yes" | "no";
   monthsOnTreatment: number | null;

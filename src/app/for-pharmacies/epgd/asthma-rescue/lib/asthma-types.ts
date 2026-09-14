@@ -1,11 +1,11 @@
 // ─── Asthma Rescue ePGD Types ───
-// Aligned to the signed PGD version 007, issued 11 September 2026:
+// Aligned to the signed PGD version 008, issued 14 September 2026:
 // salbutamol 100mcg MDI and prednisolone 5mg tablets, adults 18 and over,
 // acute exacerbation of diagnosed asthma.
 
 import type { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/types";
 
-export const PGD_STRAPLINE = "Asthma Rescue PGD version 007, issued 11 September 2026";
+export const PGD_STRAPLINE = "Asthma Rescue PGD version 008, issued 14 September 2026";
 
 // ─── Extended types for Asthma Rescue PGD ───
 
@@ -116,7 +116,7 @@ export interface AsthmaCounselling {
   inhalerTechniqueDemonstration: boolean;
   spacerUse: boolean;
   seekUrgentCareIfNotResolving: boolean;
-  // PGD v007 follow-up advice
+  // PGD v008 follow-up advice
   emergencyIfNoImprovement: boolean; // no improvement within 15 to 30 minutes of salbutamol
   salbutamolLimits: boolean; // 8 puffs in 24 hours maximum; more often than 4-hourly or on most days is same-day GP; 10 puffs via spacer without relief is 999
   prednisoloneFullCourse: boolean;

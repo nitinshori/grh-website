@@ -38,8 +38,8 @@ import {
 import { TetanusSummaryReport } from "./components/TetanusSummaryReport";
 
 /**
- * Tetanus, Diphtheria and Polio ePGD (Td/IPV, Revaxis), PGD version 009,
- * issued 11 September 2026. Faithful to the signed PGD: 10 years and over,
+ * Tetanus, Diphtheria and Polio ePGD (Td/IPV, Revaxis), PGD version 010,
+ * issued 14 September 2026. Faithful to the signed PGD: 10 years and over,
  * single 0.5 mL intramuscular dose. Covers the missed adolescent booster,
  * incomplete or unknown history, the travel booster where the last dose was
  * over 10 years ago, and tetanus-prone wounds assessed by time since the last
@@ -284,7 +284,7 @@ export default function TetanusClient() {
         const age = calculateAge(patient.dateOfBirth);
         if (age === null) return "Unable to calculate age from the date of birth";
         if (age < 10) return "Patient must be 10 years or older";
-        // PGD v009 records: patient name, address, date of birth and the GP with whom they are registered.
+        // PGD v010 records: patient name, address, date of birth and the GP with whom they are registered.
         if (!patient.address.trim()) return "Patient address is required (the PGD requires it to be recorded)";
         if (!patient.gpPractice.trim() && !patient.gpName.trim()) return "The GP with whom the patient is registered is required: search for the practice, or enter \"Not registered\" as the GP name";
         return null;

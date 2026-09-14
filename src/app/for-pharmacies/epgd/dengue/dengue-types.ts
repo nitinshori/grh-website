@@ -5,32 +5,32 @@ export type YesNoAnswer = '' | 'yes' | 'no';
 
 export interface DengueScreening {
   destinationCountry: string;
-  endemicArea: boolean; // PGD v006 inclusion: travel to or residence in a dengue-endemic area
+  endemicArea: boolean; // PGD v007 inclusion: travel to or residence in a dengue-endemic area
   /** The answer as given (Yes / No / not yet answered). endemicArea is
    *  derived from it. A "No" is an inclusion criterion not met and stops. */
   endemicAreaAnswer: YesNoAnswer;
   departureDate: string;
   travelDuration: string;
-  /** PGD v006 inclusion: willing to receive two doses, 3 months apart. */
+  /** PGD v007 inclusion: willing to receive two doses, 3 months apart. */
   willingTwoDoses: boolean;
   /** The answer as given; willingTwoDoses is derived from it. */
   willingTwoDosesAnswer: YesNoAnswer;
   previousDengueInfection: boolean;
   dengueInfectionDetails: string;
-  currentIllness: boolean; // PGD v006 exclusion: acute fever or significant intercurrent illness
+  currentIllness: boolean; // PGD v007 exclusion: acute fever or significant intercurrent illness
   illnessDetails: string;
-  immunosuppressed: boolean; // PGD v006 exclusion: any congenital or acquired immune deficiency
+  immunosuppressed: boolean; // PGD v007 exclusion: any congenital or acquired immune deficiency
   immunosuppressedDetails: string;
   pregnant: boolean;
   breastfeeding: boolean;
   temperature: number | null;
-  /** PGD v006 exclusion: known hypersensitivity to any component of the vaccine. */
+  /** PGD v007 exclusion: known hypersensitivity to any component of the vaccine. */
   vaccineComponentAllergy: boolean;
-  /** PGD v006 exclusion: another live vaccine planned within 4 weeks before or after Qdenga. */
+  /** PGD v007 exclusion: another live vaccine planned within 4 weeks before or after Qdenga. */
   liveVaccineWithin4Weeks: boolean;
-  /** PGD v006 exclusion: history of Guillain-Barre syndrome following prior dengue vaccination. */
+  /** PGD v007 exclusion: history of Guillain-Barre syndrome following prior dengue vaccination. */
   gbsAfterDengueVaccine: boolean;
-  /** PGD v006 caution: anticoagulant therapy, assess bleeding risk. */
+  /** PGD v007 caution: anticoagulant therapy, assess bleeding risk. */
   anticoagulantTherapy: boolean;
 }
 
@@ -64,7 +64,7 @@ export interface DengueVaccineAdministration {
 
 export interface DenguePostVaccineObs {
   observationPeriod: '15-min' | '30-min' | '';
-  /** PGD v006: record that the seated observation period was completed. */
+  /** PGD v007: record that the seated observation period was completed. */
   observationCompleted: boolean;
   patientWell: boolean;
   adverseReaction: boolean;
@@ -79,9 +79,9 @@ export interface DengueAdvice {
   dengueSymptomsWarning: boolean;
   noOtherLiveVaccines: boolean;
   returnIfConcerned: boolean;
-  /** PGD v006: avoid pregnancy for at least 4 weeks after each dose. */
+  /** PGD v007: avoid pregnancy for at least 4 weeks after each dose. */
   avoidPregnancy4Weeks: boolean;
-  /** PGD v006: keep a record of vaccination dates and bring documentation when travelling. */
+  /** PGD v007: keep a record of vaccination dates and bring documentation when travelling. */
   keepVaccinationRecord: boolean;
 }
 

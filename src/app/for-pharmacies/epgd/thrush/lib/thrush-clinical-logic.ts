@@ -1,7 +1,7 @@
 import type { ThrushConsultationState } from "./thrush-types";
 import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
 
-// Vaginal Thrush PGD v005 (11 September 2026). Two arms: fluconazole 150 mg
+// Vaginal Thrush PGD v006 (14 September 2026). Two arms: fluconazole 150 mg
 // capsule and clotrimazole 500 mg vaginal pessary. Non-pregnant women aged 16
 // to 60 (the exclusion row governs; the inclusion row says 16 to 65, and the
 // tool shows that contradiction to the pharmacist on the patient step).

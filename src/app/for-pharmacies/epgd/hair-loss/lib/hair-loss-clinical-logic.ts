@@ -1,9 +1,9 @@
 // ─── Hair Loss (Finasteride) Clinical Logic ───
-// Aligned to the Finasteride (Androgenetic Alopecia) PGD, version 003,
-// issued 11 September 2026. One document serves both the 'hair-loss' and
+// Aligned to the Finasteride (Androgenetic Alopecia) PGD, version 004,
+// issued 14 September 2026. One document serves both the 'hair-loss' and
 // 'alopecia-minoxidil' catalogue entries.
 
-export const PGD_STRAPLINE = "Finasteride 1 mg (Androgenetic Alopecia) PGD, version 003, issued 11 September 2026";
+export const PGD_STRAPLINE = "Finasteride 1 mg (Androgenetic Alopecia) PGD, version 004, issued 14 September 2026";
 
 /** Plain-language descriptions of the Norwood-Hamilton stages, so a locum
  *  who does not know the chart can still pick the right stage. */

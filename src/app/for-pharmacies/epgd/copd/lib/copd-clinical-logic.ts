@@ -1,4 +1,4 @@
-// ─── COPD Management Clinical Logic (PGD v004, 11 September 2026) ───
+// ─── COPD Management Clinical Logic (PGD v005, 14 September 2026) ───
 
 import type { COPDConsultationState } from "./copd-types";
 import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
@@ -146,7 +146,7 @@ export function getAllAlerts(state: COPDConsultationState): ClinicalAlert[] {
     });
   }
 
-  // Salbutamol cautions (PGD v004)
+  // Salbutamol cautions (PGD v005)
   if (h.cardiovascularDisease || h.hypertension || h.coronaryDiseaseOrRecentMI) {
     alerts.push({
       severity: "caution",

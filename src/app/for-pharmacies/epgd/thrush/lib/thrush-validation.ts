@@ -5,7 +5,7 @@ import { getMedicineSelectionError } from "./thrush-clinical-logic";
 export function validateStep(step: number, state: ThrushConsultationState): string | null {
   switch (step) {
     case 0:
-      // PGD v005: women aged 16 to 60 (exclusion row: under 16 or over 60)
+      // PGD v006: women aged 16 to 60 (exclusion row: under 16 or over 60)
       return validatePatientStep(state.patient, {
         minAge: 16,
         maxAge: 60,

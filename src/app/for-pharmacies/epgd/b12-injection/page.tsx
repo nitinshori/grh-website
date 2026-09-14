@@ -22,7 +22,7 @@ export default function B12InjectionPage(): React.ReactNode {
               Hydroxocobalamin 1mg/ml intramuscular injection (PGD 1 of 3) and
               cyanocobalamin 50 microgram tablets (PGD 2 of 3), for confirmed
               B12 deficiency or established maintenance therapy. PGD version
-              008, issued 11 September 2026.
+              010, issued 14 September 2026.
             </p>
             <div className="bg-lime-50 border border-lime-200 rounded-lg p-4">
               <p className="text-sm text-lime-900 mb-3">

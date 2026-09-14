@@ -597,7 +597,7 @@ export function RSVClient() {
       {currentStep === 3 && (
         <>
           <div className="space-y-4">
-            <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Exclusion criteria (PGD v006)</p>
+            <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Exclusion criteria (PGD v007)</p>
 
             <Checkbox
               label="Already received a complete dose of an RSV vaccine"
@@ -649,7 +649,7 @@ export function RSVClient() {
               />
             )}
 
-            <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide pt-2">Cautions (PGD v006)</p>
+            <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide pt-2">Cautions (PGD v007)</p>
 
             <Checkbox
               label="Patient is immunocompromised"
@@ -824,7 +824,7 @@ export function RSVClient() {
         <>
           <div className="space-y-4">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm font-semibold text-blue-900">Possible side effects to advise the patient about (PGD v006):</p>
+              <p className="text-sm font-semibold text-blue-900">Possible side effects to advise the patient about (PGD v007):</p>
               <ul className="text-xs text-blue-800 mt-2 space-y-1 list-disc list-inside">
                 <li>Pain at the injection site</li>
                 <li>Fatigue, headache</li>
@@ -837,7 +837,7 @@ export function RSVClient() {
             </div>
 
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-              <p className="text-sm font-semibold text-amber-900">Follow-up advice (PGD v006):</p>
+              <p className="text-sm font-semibold text-amber-900">Follow-up advice (PGD v007):</p>
               <ul className="text-xs text-amber-800 mt-2 space-y-1 list-disc list-inside">
                 <li>Seek medical advice if symptoms worsen rapidly or significantly, do not improve in 3 to 4 weeks, or they become systemically very unwell</li>
                 <li>No vaccination is 100% effective</li>
@@ -903,7 +903,7 @@ export function RSVClient() {
             )}
 
             <div className="border-t pt-4 space-y-4">
-              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Observation and adverse reactions (PGD v006)</p>
+              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Observation and adverse reactions (PGD v007)</p>
               <Checkbox
                 label="Patient observed for 15 minutes after vaccination and the observation period has been completed"
                 checked={postVaccineAdvice.observedFifteenMinutes}

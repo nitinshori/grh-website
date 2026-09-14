@@ -1,8 +1,8 @@
 import type { ColdSoresConsultationState } from "./cold-sores-types";
 import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
 
-// Aligned to the Cold Sores (Herpes Labialis) PGD, version 003, issued
-// 11 September 2026: aciclovir 5% cream (P) and aciclovir 200 mg tablets (POM).
+// Aligned to the Cold Sores (Herpes Labialis) PGD, version 004, issued
+// 14 September 2026: aciclovir 5% cream (P) and aciclovir 200 mg tablets (POM).
 
 export function getAllAlerts(state: ColdSoresConsultationState): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];

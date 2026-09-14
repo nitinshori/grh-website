@@ -1,6 +1,6 @@
 // Shingles-specific types for PGD consultation
-// Aligned to the Shingles (Herpes Zoster) Treatment PGD, version 007,
-// issued 11 September 2026 (aciclovir, valaciclovir or famciclovir).
+// Aligned to the Shingles (Herpes Zoster) Treatment PGD, version 008,
+// issued 14 September 2026 (aciclovir, valaciclovir or famciclovir).
 import { BasePatientDetails, BaseConsent, BaseSummary } from '../shared/types';
 
 export type RashStage = 'prodromal' | 'vesicular' | 'pustular' | 'crusting' | '';
@@ -43,7 +43,7 @@ export interface ShinglesSymptoms {
   newVesiclesForming: '' | 'yes' | 'no';
   /** High risk of severe shingles, for example severe atopic eczema: a 7-day window criterion. Explicit answer: "" unanswered, "yes", "no". */
   highRiskSevereShingles: '' | 'yes' | 'no';
-  // Red flags requiring urgent referral rather than supply (PGD v007)
+  // Red flags requiring urgent referral rather than supply (PGD v008)
   /** Any visual symptom, unexplained red eye, eye pain or Hutchinson's sign. */
   eyeSymptoms: boolean;
   /** Rash in or around the ear, hearing loss, vertigo, altered taste or facial weakness (Ramsay Hunt). */
@@ -83,7 +83,7 @@ export interface ShinglesMedicalHistory {
   organTransplant: boolean;
   currentMedications: string;
   allergies: string;
-  // Exclusions (PGD v007)
+  // Exclusions (PGD v008)
   allergyAciclovirValaciclovir: boolean;
   allergyFamciclovirPenciclovir: boolean;
   previousDress: boolean;
@@ -94,7 +94,7 @@ export interface ShinglesMedicalHistory {
   neurologicalCondition: boolean;
   dehydrationRisk: boolean;
   failedAntiviralThisEpisode: boolean;
-  // Cautions (PGD v007)
+  // Cautions (PGD v008)
   nephrotoxicMedicines: boolean;
   tenofovir: boolean;
   probenecidOrCimetidine: boolean;

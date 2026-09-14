@@ -1,6 +1,6 @@
 // Yellow fever ePGD: clinical state shared by the client and the printed record.
 
-export const YF_PGD_VERSION = "Yellow fever vaccine (Stamaril) PGD v005, issued 11 September 2026";
+export const YF_PGD_VERSION = "Yellow fever vaccine (Stamaril) PGD v006, issued 14 September 2026";
 
 export const STEP_LABELS = [
   "Centre & Patient",
@@ -24,7 +24,7 @@ export interface Clinical {
   administeringClinician: string;
   /** NaTHNaC conditions of designation: pharmacists only. Pharmacy technicians may not administer. */
   pharmacistNotTechnicianConfirmed: boolean;
-  // Consent basis for under 16s (PGD v005 inclusion criterion)
+  // Consent basis for under 16s (PGD v006 inclusion criterion)
   consentBasis: "parental" | "gillick" | "";
   consentGiverDetails: string;
   // Travel
@@ -45,7 +45,7 @@ export interface Clinical {
   familyHistorySae: boolean;
   immunodeficiency: boolean;
   acuteFebrileIllness: boolean;
-  pregnant: boolean; // PGD v005: exclusion (moved from cautions)
+  pregnant: boolean; // PGD v006: exclusion (moved from cautions)
   // Precautions
   breastfeedingInfantUnder9m: boolean;
   hivPositive: boolean;

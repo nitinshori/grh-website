@@ -1,7 +1,7 @@
 // ─── Anti-malarials Clinical Logic ───
 //
-// Aligned to the Malaria Chemoprophylaxis PGD, version 010, issued
-// 11 September 2026. Three arms: atovaquone/proguanil, doxycycline,
+// Aligned to the Malaria Chemoprophylaxis PGD, version 011, issued
+// 14 September 2026. Three arms: atovaquone/proguanil, doxycycline,
 // mefloquine. Arm-level exclusions remove that arm from the medicine
 // selector; a hard stop is raised when the whole PGD excludes the
 // patient or when no arm remains.
@@ -15,7 +15,7 @@ import type {
   AMMedicineChoice,
 } from './anti-malarials-types';
 
-export const AM_PGD_VERSION = 'Malaria Chemoprophylaxis PGD v010, issued 11 September 2026';
+export const AM_PGD_VERSION = 'Malaria Chemoprophylaxis PGD v011, issued 14 September 2026';
 
 // ─── Calculate trip duration ───
 //
@@ -143,7 +143,7 @@ export function generateAMAlerts(
 
   // ─── Paediatric hard stop (tool is stricter than the PGD) ─────────
   //
-  // The PGD (v010) covers children by weight band. This tool is kept
+  // The PGD (v011) covers children by weight band. This tool is kept
   // adult-only: anyone under 18 is referred rather than dosed here.
   // Remove this stop only when parental consent capture and the
   // under-12 doxycycline exclusion are built into the tool.
@@ -154,7 +154,7 @@ export function generateAMAlerts(
       message: 'This tool does not supply to anyone under 18',
       detail:
         'Malaria chemoprophylaxis in children is dosed by body weight. Work from Appendix 1 of the Malaria ' +
-        'Chemoprophylaxis PGD (v010, 11 September 2026): one Malarone Paediatric 62.5mg/25mg tablet daily for 11 to 19.9kg, ' +
+        'Chemoprophylaxis PGD (v011, 14 September 2026): one Malarone Paediatric 62.5mg/25mg tablet daily for 11 to 19.9kg, ' +
         'two for 20 to 29.9kg, three for 30 to 39.9kg, and one adult 250mg/100mg tablet from 40kg. Doxycycline is not ' +
         'for under 12s. Weigh the child; do not estimate from age.',
     });

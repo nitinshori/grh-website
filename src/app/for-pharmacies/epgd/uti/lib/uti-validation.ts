@@ -28,7 +28,7 @@ export function validateUTIConsentStep(consent: any): string | null {
 }
 
 export function validateUTISymptomStep(symptoms: UTISymptoms): string | null {
-  // PGD v008 inclusion: two or more of dysuria, new nocturia, frequency, urgency
+  // PGD v009 inclusion: two or more of dysuria, new nocturia, frequency, urgency
   const core: [boolean | null, string][] = [
     [symptoms.dysuria, "Dysuria (pain or burning on urination)"],
     [symptoms.nocturia, "New nocturia (new need to pass urine at night)"],
@@ -55,7 +55,7 @@ export function validateUTIMedicalHistoryStep(
   medicalHistory: UTIMedicalHistory,
   age: number | null = null
 ): string | null {
-  // PGD v008 renal row: the question is asked in set terms and the answer
+  // PGD v009 renal row: the question is asked in set terms and the answer
   // recorded. No default: an unasked question is not a NO.
   if (!medicalHistory.renalImpairment && !medicalHistory.kidneyDisease) {
     return "Select the Patient's answer to the kidney question (No, Does not know, or Yes)";
@@ -65,7 +65,7 @@ export function validateUTIMedicalHistoryStep(
   // 2026, so it is asked and validated on the medicine step once
   // nitrofurantoin is selected: see validateUTIMedicineSelectionStep.
   void age;
-  // PGD v008: ask both recurrent UTI questions and record both answers
+  // PGD v009: ask both recurrent UTI questions and record both answers
   if (medicalHistory.takingWarfarin && medicalHistory.anticoagulationServiceConsulted === null) {
     return "Answer \"Has the anticoagulation service been consulted and supply agreed?\" (Yes or No)";
   }
@@ -85,7 +85,7 @@ export function validateUTIObservationsStep(): string | null {
 }
 
 export function validateUTIRedFlagsStep(symptoms: UTISymptoms): string | null {
-  // PGD v008: the record must show the Appendix 1 red flags were asked about
+  // PGD v009: the record must show the Appendix 1 red flags were asked about
   if (!symptoms.redFlagsAsked) {
     return "Tick \"All Appendix 1 red flags have been asked about with this patient\" (tick any that are present above first)";
   }

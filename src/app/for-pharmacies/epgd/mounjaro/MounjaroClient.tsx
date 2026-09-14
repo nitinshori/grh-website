@@ -558,7 +558,7 @@ export default function MounjaroClient() {
         return (
           <StepWrapper
             title="Medical History"
-            description="Identify exclusion criteria and cautions relevant to Mounjaro use (PGD v009)."
+            description="Identify exclusion criteria and cautions relevant to Mounjaro use (PGD v010)."
             currentStep={state.currentStep}
             totalSteps={TOTAL_STEPS}
             onNext={handleNext}
@@ -1222,7 +1222,7 @@ export default function MounjaroClient() {
                         Less than 5% of initial body weight lost after 6 months on the maximum tolerated dose
                       </p>
                       <p className="text-xs text-red-800">
-                        PGD v009: a decision is required on whether to continue treatment, taking into account the benefit-risk profile in this patient. Record it before any further supply.
+                        PGD v010: a decision is required on whether to continue treatment, taking into account the benefit-risk profile in this patient. Record it before any further supply.
                       </p>
                       <TextArea
                         label="Decision on continuation and reasoning"

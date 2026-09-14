@@ -2,7 +2,7 @@ import type { HPVConsultationState } from "./hpv-types";
 import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
 
 // ─────────────────────────────────────────────────────────────────────────
-// Clinical logic for the HPV PGD, aligned to signed document v006
+// Clinical logic for the HPV PGD, aligned to signed document v007
 // (11 Sep 2026), Green Book chapter 18a (June 2023) and the Gardasil 9
 // SPC (text revised 13 Sep 2024).
 //
@@ -75,7 +75,7 @@ export function selectSchedule(state: HPVConsultationState): HPVSchedule | null 
 
   const schedule = selectCourse(state, age);
 
-  // Exclusion (PGD v006): has already completed a full course of HPV vaccine
+  // Exclusion (PGD v007): has already completed a full course of HPV vaccine
   // appropriate to their age and immune status.
   if (priorDoseCount(state) >= schedule.doses) {
     return {
@@ -146,7 +146,7 @@ export function daysBetween(from: string, to: string): number | null {
 
 /**
  * Minimum interval in days before the given dose number under the schedule
- * (PGD v006 guidance summary): two-dose course, dose 2 at least 5 months
+ * (PGD v007 guidance summary): two-dose course, dose 2 at least 5 months
  * after dose 1; three-dose course, dose 2 at least 1 month after dose 1 and
  * dose 3 at least 3 months after dose 2. Returns null where no interval applies.
  */

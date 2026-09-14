@@ -11,9 +11,9 @@ import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile"
 import { calculateAge, validatePatientStep, validateConsentStep, validateSummaryStep } from "../shared/types"
 import { PrintedRecord } from "./components/PrintedRecord"
 
-// Aligned to: Vitamin B12 and folate PGD v009 (PGD 3 of 3, folic acid 5 mg
-// tablets), issued 11 September 2026.
-const PGD_VERSION_LINE = "Vitamin B12 and folate PGD v009 (PGD 3 of 3: folic acid 5 mg tablets), issued 11 September 2026"
+// Aligned to: Vitamin B12 and folate PGD v010 (PGD 3 of 3, folic acid 5 mg
+// tablets), issued 14 September 2026.
+const PGD_VERSION_LINE = "Vitamin B12 and folate PGD v010 (PGD 3 of 3: folic acid 5 mg tablets), issued 14 September 2026"
 const PRODUCT_NAME = "Folic acid 5 mg tablets"
 // Document: up to 4 months supply, one tablet daily.
 const MAX_TABLETS = 120
@@ -58,10 +58,10 @@ export function FolicAcidClient() {
       serumFolateResult: "",
       serumFolateDate: "",
       // FBC and blood film reviewed; abnormal picture beyond macrocytic
-      // anaemia, or unexplained anaemia, is an exclusion (PGD v009).
+      // anaemia, or unexplained anaemia, is an exclusion (PGD v010).
       fbcReviewed: "" as "" | "yes" | "no",
       abnormalBloodPicture: false,
-      // CRITICAL: B12 must be checked before folate replacement. PGD v009:
+      // CRITICAL: B12 must be checked before folate replacement. PGD v010:
       // B12 deficiency excluded, OR present and hydroxocobalamin started
       // first or at the same time under PGD 1 of 3. Unknown or untreated is
       // an exclusion.

@@ -16,8 +16,8 @@ import { WoundCareSummaryReport } from "./components/WoundCareSummaryReport";
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 
 /**
- * Minor Wound Care ePGD, aligned to the Minor Wound Care PGD version 009,
- * issued 11 September 2026. Two arms, chosen on the mechanism of the wound:
+ * Minor Wound Care ePGD, aligned to the Minor Wound Care PGD version 010,
+ * issued 14 September 2026. Two arms, chosen on the mechanism of the wound:
  *   Arm 1, co-amoxiclav 500/125mg tablets: infected bite wounds and heavily
  *     contaminated wounds, 12 years and over.
  *   Arm 2, flucloxacillin 500mg capsules or 250mg/5mL suspension: infected
@@ -26,7 +26,7 @@ import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
  * tetanus status is established and recorded for every patient; both arms are
  * beta-lactams so penicillin allergy is a referral with the alternative named.
  */
-export const WOUND_CARE_PGD_VERSION = "Minor Wound Care PGD, version 009, issued 11 September 2026";
+export const WOUND_CARE_PGD_VERSION = "Minor Wound Care PGD, version 010, issued 14 September 2026";
 
 export type AgeBand = "2-4" | "5-11" | "12+" | null;
 export function getAgeBand(age: number | null): AgeBand {
@@ -132,7 +132,7 @@ export interface WoundState {
     capillaryRefill: "" | "2s-or-less" | "over-2s";
     alteredConsciousness: boolean;
     /** Why human tetanus immunoglobulin is NOT indicated for a wound presenting
-     *  more than 6 hours after injury (tetanus-prone, UKHSA). The document (v009)
+     *  more than 6 hours after injury (tetanus-prone, UKHSA). The document (v010)
      *  makes a wound high-risk only where there is heavy contamination by material
      *  likely to contain tetanus spores and/or extensive devitalised tissue; the
      *  pharmacist records that neither applies. Required before supply. */
@@ -384,7 +384,7 @@ function computeAlerts(state: WoundState): ClinicalAlert[] {
       severity: "stop",
       code: "BURN",
       message: "Burn: outside this PGD. Refer",
-      detail: "Burns and wounds with systemic sepsis are outside this PGD in any case (v009 exclusions). A burn is also a tetanus-prone wound (UKHSA): establish the tetanus history and refer.",
+      detail: "Burns and wounds with systemic sepsis are outside this PGD in any case (v010 exclusions). A burn is also a tetanus-prone wound (UKHSA): establish the tetanus history and refer.",
     });
   }
   if (a.foreignBody || a.needsClosureOrSurgicalReview) {

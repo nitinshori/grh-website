@@ -32,7 +32,7 @@ import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 // ─────────────────────────────────────────────────────────────────────────
 // Chest Infection Service, acute bacterial bronchitis.
 //
-// Aligned to the signed PGD version 008, issued 11 September 2026 (three
+// Aligned to the signed PGD version 009, issued 14 September 2026 (three
 // arms: doxycycline, amoxicillin, clarithromycin; from age 12).
 //
 // Two things this tool takes seriously that a checklist would not:
@@ -54,7 +54,7 @@ import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 // ─────────────────────────────────────────────────────────────────────────
 
 export const PGD_STRAPLINE =
-  "Acute Bacterial Bronchitis PGD version 008, issued 11 September 2026";
+  "Acute Bacterial Bronchitis PGD version 009, issued 14 September 2026";
 
 export type Antibiotic = "" | "amoxicillin" | "doxycycline" | "clarithromycin";
 
@@ -122,7 +122,7 @@ export interface ChestState {
     breathless: boolean;
     wheeze: boolean;
     chestPain: boolean;
-    // PGD v008 inclusion: purulent sputum AND (comorbidity OR symptoms beyond 14 days).
+    // PGD v009 inclusion: purulent sputum AND (comorbidity OR symptoms beyond 14 days).
     // Several comorbidities may apply; "age-65" is derived from the date of birth.
     comorbidities: Comorbidity[];
     /** Explicit confirmation that no higher-risk comorbidity is present. */
@@ -497,7 +497,7 @@ export function ChestServiceClient() {
   );
   const isOver65 = state.patient.age !== null && state.patient.age >= 65;
 
-  /** PGD v008 inclusion: purulent sputum AND (higher-risk comorbidity OR symptoms beyond 14 days). */
+  /** PGD v009 inclusion: purulent sputum AND (higher-risk comorbidity OR symptoms beyond 14 days). */
   const inclusion = useMemo(() => {
     const p = state.presentation;
     const comorbidityMet = comorbidities.length > 0;
@@ -613,7 +613,7 @@ export function ChestServiceClient() {
     }
 
     // ── Pregnancy and breastfeeding: arm rules. ─────────────────────
-    // Amoxicillin may be supplied in pregnancy and in breastfeeding (v008
+    // Amoxicillin may be supplied in pregnancy and in breastfeeding (v009
     // cautions). Doxycycline and clarithromycin are excluded in both. A
     // pregnant or breastfeeding penicillin-allergic patient has no arm.
     const pregOrBf = exclusions.pregnancy || exclusions.breastfeeding;

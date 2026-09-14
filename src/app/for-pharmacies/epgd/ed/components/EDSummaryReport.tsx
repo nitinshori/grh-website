@@ -93,7 +93,7 @@ export function EDSummaryReport({ state }: EDSummaryReportProps) {
           Get Real Health, ED Consultation Record
         </h1>
         <p className="text-xs text-gray-500 mt-1">
-          Erectile Dysfunction Patient Group Direction (sildenafil and tadalafil), version 008, issued 11 September 2026
+          Erectile Dysfunction Patient Group Direction (sildenafil and tadalafil), version 009, issued 14 September 2026
         </p>
         <p className="text-xs text-gray-400">
           Date: {state.summary.consultationDate || new Date().toLocaleDateString("en-GB")} | Time:{" "}
@@ -387,7 +387,7 @@ export function EDSummaryReport({ state }: EDSummaryReportProps) {
               label="Quantity"
               value={`${state.medicineSelection.quantity} tablets`}
             />
-            <Row label="Supplied under" value="Erectile Dysfunction PGD v008, 11 September 2026" />
+            <Row label="Supplied under" value="Erectile Dysfunction PGD v009, 14 September 2026" />
             {state.medicineSelection.overrideReason.trim() && (
               <Row
                 label="Reason for choice"
@@ -405,7 +405,7 @@ export function EDSummaryReport({ state }: EDSummaryReportProps) {
                   : "No medicine supplied"
               }
             />
-            <Row label="PGD" value="Erectile Dysfunction PGD v008, 11 September 2026" />
+            <Row label="PGD" value="Erectile Dysfunction PGD v009, 14 September 2026" />
           </>
         )}
       </dl>

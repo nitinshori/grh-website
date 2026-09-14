@@ -201,7 +201,7 @@ gpOdsCode: '',
     }));
   }, []);
 
-  /** Generic setters for the fields added for PGD v005. */
+  /** Generic setters for the fields added for PGD v006. */
   const setScreeningField = useCallback(
     <K extends keyof FluScreening>(field: K, value: FluScreening[K]): void => {
       setState((prev) => ({ ...prev, screening: { ...prev.screening, [field]: value } }));
@@ -800,7 +800,7 @@ gpOdsCode: '',
             Flu Vaccination ePGD, 2026/27 season
           </h1>
           <p className="text-gray-600">
-            Seasonal influenza vaccines (IIVc, aIIV, IIVr and IIVe) under the Patient Group Direction, version 005, issued 11 September 2026. Privately funded vaccination, aged 2 years and over; single 0.5 ml intramuscular dose.
+            Seasonal influenza vaccines (IIVc, aIIV, IIVr and IIVe) under the Patient Group Direction, version 006, issued 14 September 2026. Privately funded vaccination, aged 2 years and over; single 0.5 ml intramuscular dose.
           </p>
         </div>
 

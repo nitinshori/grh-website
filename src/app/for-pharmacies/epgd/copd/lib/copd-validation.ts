@@ -1,4 +1,4 @@
-// ─── COPD Validation (PGD v004, 11 September 2026) ───
+// ─── COPD Validation (PGD v005, 14 September 2026) ───
 
 import type { COPDConsultationState } from "./copd-types";
 import {
@@ -109,7 +109,7 @@ export function validateStep(state: COPDConsultationState, step: number): string
         return "Tick 'Counselled: Not replacement for maintenance therapy'";
       }
       // Every line of the document's follow-up advice is required for the
-      // arm supplied (PGD v004, Follow-up advice to be given to patient or carer).
+      // arm supplied (PGD v005, Follow-up advice to be given to patient or carer).
       if (ms.supplySalbutamol && !c.relieverUseAndLimits) {
         return "Tick the reliever use advice (1 to 2 puffs, maximum 8 puffs in 24 hours, referral and 999 thresholds)";
       }

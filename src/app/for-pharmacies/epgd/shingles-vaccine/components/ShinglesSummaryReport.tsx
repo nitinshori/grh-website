@@ -252,7 +252,7 @@ export function ShinglesSummaryReport({
       </p>
 
       <p className="text-[10px] text-gray-500 mt-4">
-        Patient Group Direction for Shingrix (prevention of shingles), version 008, issued 11 September 2026.
+        Patient Group Direction for Shingrix (prevention of shingles), version 009, issued 14 September 2026.
       </p>
 
       {hasStop ? (
