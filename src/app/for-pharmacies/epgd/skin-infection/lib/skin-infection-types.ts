@@ -17,7 +17,7 @@ import {
  *   "skin-infection": Skin and Soft Tissue Infection PGD v008 (11 September
  *     2026). Impetigo, folliculitis, infected eczema and infected wounds from
  *     2 years; cellulitis from 12 years. Age-banded observations (Appendix 1).
- *   "cellulitis": Cellulitis PGD v005 (14 September 2026). Adults 18 and over
+ *   "cellulitis": Cellulitis PGD v006 (14 September 2026). Adults 18 and over
  *     only, MILD cellulitis (Eron class I) of a limb or the trunk, with its
  *     own exclusion list and adult sepsis thresholds.
  */
@@ -203,7 +203,7 @@ export const TOTAL_STEPS = STEP_LABELS.length;
 export const PGD_VERSION_LABEL: Record<SkinInfectionVariant, string> = {
   "skin-infection":
     "Skin and Soft Tissue Infection PGD, version 008, issued 14 September 2026",
-  cellulitis: "Cellulitis PGD, version 005, issued 14 September 2026",
+  cellulitis: "Cellulitis PGD, version 006, issued 14 September 2026",
 };
 
 export function createInitialConsultationState(

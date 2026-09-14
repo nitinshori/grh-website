@@ -94,7 +94,7 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   // 250mg/5mL suspension against a 250mg dose, which is double, and applied
   // adult observation thresholds to a service starting at age 2.
   "skin-infection": "skin-infection-v008.pdf",
-  "cellulitis": "cellulitis-v005.pdf",
+  "cellulitis": "cellulitis-v006.pdf",
   "fungal-infection": "fungal-infection-v005.pdf",
   "psoriasis": "psoriasis-v007.pdf",
   "period-pain": "period-pain-v006.pdf",

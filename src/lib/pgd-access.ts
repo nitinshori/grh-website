@@ -453,7 +453,7 @@ export const REISSUED_PGDS: Record<string, { version: string; date: string }> = 
   'b12-injection': { version: 'v010', date: '14 September 2026' },
   bph: { version: 'v005', date: '14 September 2026' },
   bv: { version: 'v005', date: '14 September 2026' },
-  cellulitis: { version: 'v005', date: '14 September 2026' },
+  cellulitis: { version: 'v006', date: '14 September 2026' },
   'chest-service': { version: 'v009', date: '14 September 2026' },
   chickenpox: { version: 'v006', date: '14 September 2026' },
   'cold-sores': { version: 'v004', date: '14 September 2026' },
