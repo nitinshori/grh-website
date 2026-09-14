@@ -401,7 +401,11 @@ def blank_adoption_block(doc):
                         el.getparent().remove(el)
                         n += 1
                 if t.startswith("This section must be signed by the superintendent") and not noted:
-                    set_text(paras[j], t + " " + ADOPTION_NOTE)
+                    # Idempotent: earlier reissues appended the note on every
+                    # pass, so 47 live documents carried it two to twelve
+                    # times by 14 September 2026. Strip every copy, add one.
+                    base_t = t.replace(" " + ADOPTION_NOTE, "").replace(ADOPTION_NOTE, "").strip()
+                    set_text(paras[j], base_t + " " + ADOPTION_NOTE)
                     noted = True
                 elif (t == "Chris Pilkington" or t == "Nitin Shori"
                       or t.startswith("Head Pharmacist, Get Real Health") or "GPhC: 2046322" in t
