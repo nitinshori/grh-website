@@ -29,7 +29,10 @@ export function SetPasswordClient({ uid, token }: { uid: string; token: string }
       });
       const data = (await res.json()) as { ok?: boolean; error?: string };
       if (!res.ok || !data.ok) {
-        setError(data.error || `Failed (${res.status})`);
+        setError(
+          (data.error || `Failed (${res.status})`) +
+            (res.status === 400 ? " You can request a fresh link from the Forgotten password page." : "")
+        );
         return;
       }
       setDone(true);

@@ -361,6 +361,12 @@ function LoginForm({ tenant }: Props) {
           )}
         </div>
 
+        <p className="text-center text-sm mt-4">
+          <a href="/forgot-password" className="underline" style={{ color: primary }}>
+            Forgotten your password?
+          </a>
+        </p>
+
         {/* Sign-up CTA — only on the default GRH tenant. Partner tenants
             (HubRx, etc) don't self-serve; their users only enter via SSO. */}
         {!isWhiteLabel && (

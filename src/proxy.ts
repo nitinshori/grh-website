@@ -26,6 +26,10 @@ const TENANT_ALLOWED_PREFIXES = [
   '/logout',
   '/sso',
   '/change-password',    // first-login forced password change (PPH bulk-import users)
+  '/forgot-password',    // self-service reset (18 Sep 2026), linked from the login page
+  '/set-password',       // the page a reset or invite link lands on
+  '/api/forgot-password',
+  '/api/set-password',
   '/for-pharmacies/consent', // first-use consent for SSO-provisioned users — the
                              // /sso flow redirects here before the dashboard, so
                              // hiding it 404'd every new HubRx user (found by
