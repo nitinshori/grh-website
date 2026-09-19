@@ -22,7 +22,7 @@ import crypto from 'crypto'
 import bcrypt from 'bcryptjs'
 import { eq, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { users } from '@/lib/db/schema'
+import { users, onboardingRequests } from '@/lib/db/schema'
 import { rateLimit } from '@/lib/rate-limit'
 import { sendEmail, escapeHtml } from '@/lib/email'
 
@@ -62,10 +62,65 @@ export async function POST(req: NextRequest) {
     .where(sql`LOWER(${users.email}) = ${email}`)
     .limit(1)
 
-  // Unknown or deactivated: same answer, nothing sent. HubRx-tenant users
-  // who were given direct logins ahead of the portal (Tina, Jonathan, Mark)
-  // log in with a password like everyone else, so they are not excluded.
-  if (!user || !user.isActive) return ok()
+  // No user yet, but an approved sign-up under this email: the customer
+  // never completed the setup link (lost email, or past its 7 days), so the
+  // pharmacy exists and is billed while nobody can log in. That was Burrage
+  // Pharmacy, 17 to 19 Sep 2026. Re-issue the setup link instead of the
+  // dead end.
+  if (!user) {
+    const [pending] = await db
+      .select({
+        id: onboardingRequests.id,
+        contactFirstName: onboardingRequests.contactFirstName,
+        contactEmail: onboardingRequests.contactEmail,
+        pharmacyName: onboardingRequests.pharmacyName,
+      })
+      .from(onboardingRequests)
+      .where(
+        sql`LOWER(${onboardingRequests.contactEmail}) = ${email}
+            AND ${onboardingRequests.status} = 'approved'
+            AND ${onboardingRequests.pharmacyId} IS NOT NULL
+            AND ${onboardingRequests.setupTokenUsedAt} IS NULL`,
+      )
+      .orderBy(sql`${onboardingRequests.updatedAt} DESC`)
+      .limit(1)
+    if (pending && pending.contactEmail) {
+      const rawToken = crypto.randomBytes(32).toString('hex')
+      const tokenHash = await bcrypt.hash(rawToken, 10)
+      await db
+        .update(onboardingRequests)
+        .set({
+          setupTokenHash: tokenHash,
+          setupTokenExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          updatedAt: new Date(),
+        })
+        .where(eq(onboardingRequests.id, pending.id))
+      const appUrl = process.env.APP_URL || 'https://getrealhealthpgd.co.uk'
+      const setupUrl = `${appUrl}/setup-account?id=${pending.id}&token=${rawToken}`
+      try {
+        await sendEmail({
+          to: pending.contactEmail,
+          subject: 'Finish setting up your Get Real Health account',
+          html:
+            `<p>Hi ${escapeHtml(pending.contactFirstName || 'there')},</p>` +
+            `<p>Your Get Real Health sign-up for ${escapeHtml(pending.pharmacyName)} was approved, but the ` +
+            `account was never finished. Choose your password here to complete it:</p>` +
+            `<p><a href="${setupUrl}">${setupUrl}</a></p>` +
+            `<p>The link works once and expires in 7 days.</p>` +
+            `<p>Get Real Health<br>info@getrealhealthpgd.co.uk</p>`,
+          replyTo: 'info@getrealhealthpgd.co.uk',
+        })
+      } catch (e) {
+        console.error('[forgot-password] setup re-send failed:', e instanceof Error ? e.message : e)
+      }
+    }
+    return ok()
+  }
+
+  // Deactivated: same answer, nothing sent. HubRx-tenant users who were
+  // given direct logins ahead of the portal (Tina, Jonathan, Mark) log in
+  // with a password like everyone else, so they are not excluded.
+  if (!user.isActive) return ok()
 
   const rawToken = crypto.randomBytes(32).toString('hex')
   const tokenHash = await bcrypt.hash(rawToken, 10)
