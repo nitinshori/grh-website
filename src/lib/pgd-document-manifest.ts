@@ -57,6 +57,7 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   // Signed 21 Aug 2026. hep-ab-travel was the only slug in the catalogue
   // with no document at all: the tool was live and assignable, so every
   // consultation through it was a supply with nothing authorising it.
+  "hepatitis-a": "hepatitis-a-v001.pdf",
   "hep-ab-travel": "hep-ab-travel-v009.pdf",
   "hep-b-occupational": "hep-b-occupational-v006.pdf",
   "herpes-management": "herpes-management-v006.pdf",

@@ -39,6 +39,7 @@ export const VACCINE_SLUGS = new Set([
   "chickenpox",
   "dengue",
   "hep-ab-travel",
+  "hepatitis-a",
   "hep-b-occupational",
   "japanese-encephalitis",
   "junior-travel",

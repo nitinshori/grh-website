@@ -111,7 +111,8 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
   { slug: 'meningitis-b', title: 'Meningitis B', subtitle: 'Bexsero (from 2 months) and Trumenba (from 10 years)', category: 'Vaccines' },
   { slug: 'meningitis-acwy-travel', title: 'Meningitis ACWY', subtitle: 'MenQuadfi / Nimenrix', category: 'Vaccines' },
   { slug: 'rsv', title: 'RSV Vaccine', subtitle: 'Abrysvo / Arexvy', category: 'Vaccines' },
-  { slug: 'hep-ab-travel', title: 'Hepatitis A/B (Travel)', subtitle: 'Twinrix / Havrix / Engerix-B', category: 'Vaccines' },
+  { slug: 'hepatitis-a', title: 'Hepatitis A Vaccine', subtitle: 'Havrix / Avaxim, from 1 year', category: 'Vaccines' },
+  { slug: 'hep-ab-travel', title: 'Hepatitis A/B (Travel)', subtitle: 'Twinrix / Havrix / Engerix-B / Avaxim (hepatitis A and B together)', category: 'Vaccines' },
   { slug: 'typhoid', title: 'Typhoid', subtitle: 'Typhim Vi / Vivotif', category: 'Vaccines' },
   { slug: 'yellow-fever', title: 'Yellow Fever', subtitle: 'Stamaril (registered YFVCs only)', category: 'Vaccines' },
 
@@ -474,6 +475,7 @@ export const REISSUED_PGDS: Record<string, { version: string; date: string }> = 
   'gonorrhoea-treatment': { version: 'v005', date: '14 September 2026' },
   'hair-loss': { version: 'v004', date: '14 September 2026' },
   hayfever: { version: 'v006', date: '14 September 2026' },
+  'hepatitis-a': { version: 'v001', date: '20 September 2026' },
   'hep-ab-travel': { version: 'v009', date: '14 September 2026' },
   'hep-b-occupational': { version: 'v006', date: '14 September 2026' },
   'herpes-management': { version: 'v006', date: '14 September 2026' },

@@ -345,7 +345,9 @@ function coverBlock(d){
   return [p(PRO_NOTICE,{i:true,color:GREY}),p(COMPETENCE,{i:true,color:GREY}),p(''),
     p(d.banner,{b:true,color:RED,size:22,align:AlignmentType.CENTER}),p(''),
     h('Patient Group Direction',HeadingLevel.HEADING_1),
-    p('for the '+(c.action||'supply')+' of '+c.drugs+' for the treatment of '+c.condition,{b:true,size:24}),
+    // Vaccines are not "for the treatment of" anything: cover.link lets a
+    // document say "for protection against hepatitis A" instead.
+    p('for the '+(c.action||'supply')+' of '+c.drugs+' '+(c.link||'for the treatment of')+' '+c.condition,{b:true,size:24}),
     p(''),
     h(c.condition,HeadingLevel.HEADING_1),
     p(c.age,{b:true}),
@@ -357,7 +359,7 @@ function armCover(d,a){
   return [new Paragraph({children:[new PageBreak()]}),
     p(PRO_NOTICE,{i:true,color:GREY}),p(COMPETENCE,{i:true,color:GREY}),p(''),
     h('Patient Group Direction',HeadingLevel.HEADING_1),
-    p('for the '+(a.action||c.action||'supply')+', for the treatment of '+c.condition+', of:',{b:true}),
+    p('for the '+(a.action||c.action||'supply')+', '+(c.link||'for the treatment of')+' '+c.condition+', of:',{b:true}),
     h(a.drug||a.title,HeadingLevel.HEADING_1)];
 }
 

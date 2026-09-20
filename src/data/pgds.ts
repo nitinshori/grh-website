@@ -129,6 +129,18 @@ export const pgds: PGD[] = [
     pharmadoctor: "Yes",
   },
   {
+    id: "hepatitis-a",
+    title: "Hepatitis A Vaccination",
+    category: "Travel",
+    priority: 1,
+    isNew: true,
+    revenueEstimate: "\u00a350\u201375 per dose",
+    consultTime: "15 min",
+    description:
+      "Standalone hepatitis A PGD: Havrix and Avaxim, adult and junior, from 1 year. Two-dose course, second dose at 6 to 12 months. Combined hepatitis A and B remains under the Hepatitis A/B (Travel) PGD.",
+    pharmadoctor: "Yes",
+  },
+  {
     id: "anti-malarials",
     title: "Anti-malarials",
     category: "Travel",
