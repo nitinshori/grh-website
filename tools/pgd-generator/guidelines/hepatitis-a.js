@@ -31,7 +31,7 @@ module.exports = {
    'A single dose protects for up to 12 months. The second dose at 6 to 12 months gives immunity for AT LEAST 25 YEARS.',
    'A booster 25 years after a completed course is generally not needed, except for those at ongoing risk or after exposure to a case.',
    'A delayed second dose does not mean restarting: successful boosting occurs even when the second dose is delayed for several years. The Havrix Monodose SmPC states that it is unnecessary to restart the primary schedule if the booster is given within 5 years of the first dose, and Havrix Junior Monodose within 3 years; Avaxim allows the booster up to 36 months after the first dose and Avaxim Junior between 6 months and 15 years after it.',
-   'Where rapid protection is needed, a single dose of MONOVALENT vaccine is recommended. The monovalent products contain more hepatitis A antigen and protect more quickly than the combined hepatitis A and B or hepatitis A and typhoid products.',
+   'Where rapid protection is needed, a single dose of MONOVALENT vaccine is recommended. Havrix Monodose and Havrix Junior Monodose contain more hepatitis A antigen than Twinrix Adult, Twinrix Paediatric or Avaxim Junior and therefore protect against hepatitis A more quickly.',
    'PHENYLALANINE: Avaxim and Havrix contain phenylalanine in small amounts. Advise a patient, parent or carer with phenylketonuria to account for it in meal planning on the day.',
   ]},
   {h:'Contraindications, pregnancy and immunosuppression',body:[
