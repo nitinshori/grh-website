@@ -86,7 +86,8 @@ function sig(d){
   return [new Paragraph({children:[new PageBreak()]}),
    h('Signed on behalf of Get Real Health',HeadingLevel.HEADING_1),
    p('Authorised by the Medical Director and the Head Pharmacist named below. This version is not valid without both signatures.',{color:GREY}),
-   tbl([row('Version',d.version),row('Supersedes',d.supersedes),row('Valid from date',d.validFrom||'7 September 2026'),row('Expiry date',d.expiry||'31 July 2027')]),
+   tbl([row('Version',d.version),row('Supersedes',d.supersedes),row('Valid from date',d.validFrom||'7 September 2026'),row('Expiry date',d.expiry||'31 July 2027'),
+        ...(d.reviewDate?[row('Review date',d.reviewDate)]:[])]),
    p(''),
    // The signatures themselves. "Signed: N. Shori" in text is not a
    // signature, and Nitin said so: "my and chris signatures are not on the

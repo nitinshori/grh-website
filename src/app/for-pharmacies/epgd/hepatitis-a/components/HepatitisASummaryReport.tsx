@@ -22,13 +22,23 @@ import type {
 } from '../hepatitis-a-types';
 import {
   PRODUCTS,
-  FIRST_DOSE_PRODUCT_LABEL,
   DOSE_NUMBER_LABEL,
   SITE_LABEL,
   REFERRAL_LABEL,
+  OFF_LABEL_BASIS,
   HEPATITIS_A_PGD_VERSION,
 } from '../hepatitis-a-types';
-import { assessSecondDoseTiming, bleedingCautionApplies, doseNumberFor } from '../hepatitis-a-clinical-logic';
+import {
+  anticoagulationApplies,
+  assessSecondDoseTiming,
+  bleedingDisorderApplies,
+  bleedingRouteReason,
+  doseNumberFor,
+  firstDoseIntervalText,
+  firstDoseProductLabel,
+  hepBSteer,
+  occupationalRiskText,
+} from '../hepatitis-a-clinical-logic';
 
 interface HepatitisASummaryReportProps {
   patientDetails: HepatitisAPatientDetails;
@@ -53,7 +63,7 @@ const CONSENT_BASIS_LABEL: Record<string, string> = {
 };
 
 const INDICATION_LABEL: Record<string, string> = {
-  travel: 'Travel to an area of moderate or high endemicity',
+  travel: 'Travel to a destination for which NaTHNaC TravelHealthPro recommends hepatitis A vaccination',
   'non-travel': 'Non-travel risk factor',
   both: 'Travel and a non-travel risk factor',
   none: 'No indication (exclusion)',
@@ -79,8 +89,8 @@ export default function HepatitisASummaryReport({
   const product = summary.product ? PRODUCTS[summary.product] : null;
   const doseNumber = doseNumberFor(course);
   const timing =
-    doseNumber === 'second' && course.firstDoseDateKnown === 'known'
-      ? assessSecondDoseTiming(course.firstDoseProduct, course.firstDoseDate, summary.product)
+    doseNumber === 'second'
+      ? assessSecondDoseTiming(course, summary.product)
       : null;
   const travel = indication.indicationType === 'travel' || indication.indicationType === 'both';
   const nonTravel = indication.indicationType === 'non-travel' || indication.indicationType === 'both';
@@ -89,15 +99,11 @@ export default function HepatitisASummaryReport({
     indication.haemophiliaClottingFactors ? 'haemophilia or receipt of plasma-derived clotting factors' : null,
     indication.injectsDrugs ? 'injects drugs' : null,
     indication.msm ? 'gay, bisexual or other man who has sex with men' : null,
-    indication.occupationalRisk ? `occupational risk: ${indication.occupationalRiskDetail || 'not recorded'}` : null,
+    indication.occupationalRisk ? `occupational: ${occupationalRiskText(indication)}` : null,
   ].filter((x): x is string => x !== null);
-
-  const firstDoseProductLabel =
-    course.firstDoseProduct === 'other'
-      ? course.firstDoseProductOther || 'Other brand, not recorded'
-      : course.firstDoseProduct
-      ? FIRST_DOSE_PRODUCT_LABEL[course.firstDoseProduct]
-      : 'Not recorded';
+  const steer = hepBSteer(indication);
+  const bleedingDisorder = bleedingDisorderApplies(indication, medicalHistory);
+  const anticoagulation = anticoagulationApplies(medicalHistory);
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 print:border-0">
@@ -137,7 +143,7 @@ export default function HepatitisASummaryReport({
               <>
                 <Row label="Destination" value={indication.travelDestination || 'Not recorded'} />
                 <Row label="Departure date" value={indication.departureDate || 'Not recorded'} />
-                <Row label="Moderate or high endemicity confirmed" value={indication.endemicityConfirmed ? 'Yes' : 'No'} />
+                <Row label="NaTHNaC TravelHealthPro recommends hepatitis A for this destination and itinerary" value={indication.travelHealthProRecommends ? 'Yes' : 'No'} />
                 {indication.shortNoticeAdvised && (
                   <Row label="Departing within 2 weeks" value="Dose given; told full protection comes after about 2 weeks" />
                 )}
@@ -151,17 +157,19 @@ export default function HepatitisASummaryReport({
               label="Hepatitis B also needed"
               value={
                 indication.hepBAlsoNeeded === 'yes'
-                  ? indication.hepBDecision === 'continue-hep-a-only'
-                    ? 'Yes: continued with hepatitis A only (decision recorded)'
+                  ? indication.hepBDecision === 'monovalent-now'
+                    ? `Yes: monovalent hepatitis A now under this PGD, hepatitis B arranged separately${steer.monovalentRecommended ? ` (recommended: ${steer.reason}; monovalent vaccine protects against hepatitis A sooner than Twinrix)` : ' (pharmacist\'s choice; the combined PGD was offered as convenient)'}`
                     : indication.hepBDecision === 'use-combined-pgd'
-                    ? 'Yes: seen under the Hepatitis A and B (Travel) PGD instead'
+                    ? `Yes: seen under the Hepatitis A and B (Travel) PGD instead${steer.monovalentRecommended ? ` (the tool recommended monovalent now: ${steer.reason})` : ''}`
                     : 'Yes: decision not recorded'
                   : indication.hepBAlsoNeeded === 'no'
                   ? 'No'
                   : 'Not recorded'
               }
             />
-            {indication.proofOfImmunityRequired && <Row label="Proof of immunity required" value="Yes (exclusion: serology out of scope)" />}
+            {indication.serologyRequested && (
+              <Row label="Proof of immunity requested" value="Serology is not provided under this PGD; vaccination may still proceed; referred for serology if needed" />
+            )}
           </div>
         </div>
 
@@ -177,23 +185,19 @@ export default function HepatitisASummaryReport({
                   : course.courseStatus === 'one-dose'
                   ? 'One previous dose'
                   : course.courseStatus === 'completed'
-                  ? 'Completed two dose course'
+                  ? 'Completed course (two doses at least 6 months apart, or a full Twinrix or Ambirix course)'
                   : 'Not recorded'
               }
             />
             {course.courseStatus === 'completed' && (
               <Row
                 label="Completed course"
-                value={
-                  course.completedCourseOngoingRisk25Years
-                    ? `Ongoing risk and 25 years passed: ${course.completedCourseNote || 'note not recorded'}`
-                    : 'Excluded: nothing to add'
-                }
+                value="Nothing is authorised under this PGD. A reinforcing dose for a patient at ongoing risk 25 years or more after the course is outside this PGD: refer to the GP or a travel clinic"
               />
             )}
             {course.courseStatus === 'one-dose' && (
               <>
-                <Row label="Product of the first dose" value={firstDoseProductLabel} />
+                <Row label="Product of the first dose" value={firstDoseProductLabel(course.firstDoseProduct)} />
                 <Row
                   label="Date of the first dose"
                   value={
@@ -204,15 +208,26 @@ export default function HepatitisASummaryReport({
                       : 'Not recorded'
                   }
                 />
-                {timing?.beyondWindow && (
-                  <Row
-                    label="Off-label decision"
-                    value={
-                      course.offLabelDecisionRecorded
-                        ? `Second dose beyond the licensed window (${timing.windowLabel}): informed off-label decision explained to the patient and recorded`
-                        : 'Second dose beyond the licensed window: off-label decision NOT recorded'
-                    }
-                  />
+                {timing?.windowLabel && (
+                  <Row label="Licensed window of the product given" value={timing.windowLabel} />
+                )}
+                {timing?.offLabel && (
+                  <>
+                    <Row label="Off-label second dose" value={`${OFF_LABEL_BASIS}: ${timing.offLabelReason}`} />
+                    <Row label="Interval since the first dose" value={firstDoseIntervalText(course)} />
+                    <Row label="First-dose product" value={firstDoseProductLabel(course.firstDoseProduct)} />
+                    <Row
+                      label="Off-label consent"
+                      value={
+                        course.offLabelConsent
+                          ? 'The patient was told it was off-label and why, and consented on that basis'
+                          : 'NOT recorded: the patient was not recorded as told and consenting'
+                      }
+                    />
+                    {medicalHistory.immunosuppressed && (
+                      <Row label="Off-label, immunosuppressed" value="Serology to be arranged (outside this PGD); included in the letter to the GP or specialist" />
+                    )}
+                  </>
                 )}
               </>
             )}
@@ -225,21 +240,40 @@ export default function HepatitisASummaryReport({
           <SectionHeader>Medical History and Cautions</SectionHeader>
           <CounsellingGrid
             items={[
-              ['Anaphylaxis to hepatitis A vaccine or component', medicalHistory.anaphylaxisHepAVaccineOrComponent],
-              ['Neomycin hypersensitivity', medicalHistory.neomycinHypersensitivity],
-              ['Previous hypersensitivity reaction to hepatitis A vaccine', medicalHistory.previousHypersensitivityReaction],
+              ['Confirmed anaphylaxis or other severe hypersensitivity to a hepatitis A-containing vaccine or component, including neomycin', medicalHistory.severeHypersensitivity],
               ['Acute severe febrile illness', medicalHistory.acuteSevereFebrileIllness],
               ['Pregnant', medicalHistory.pregnant],
               ['Breastfeeding', medicalHistory.breastfeeding],
-              ['Immunosuppression, including HIV', medicalHistory.immunosuppressed],
-              ['Bleeding disorder, thrombocytopenia or anticoagulation', bleedingCautionApplies(indication, medicalHistory)],
+              ['Immunosuppression, including HIV, immunosuppressive treatment and haemodialysis', medicalHistory.immunosuppressed],
+              ['Stable anticoagulation', anticoagulation],
+              ['Haemophilia or other bleeding disorder, or thrombocytopenia', bleedingDisorder],
               ['Phenylketonuria', medicalHistory.phenylketonuria],
               ['Latex sensitivity', medicalHistory.latexSensitivity],
             ]}
           />
           <div className="mt-2 space-y-1.5">
             {medicalHistory.breastfeeding && <Row label="Breastfeeding decision" value={medicalHistory.breastfeedingDecision || 'Not recorded'} />}
-            {medicalHistory.immunosuppressed && <Row label="Immunosuppression counselling" value={medicalHistory.immunosuppressionCounselling || 'Not recorded'} />}
+            {medicalHistory.immunosuppressed && (
+              <>
+                <Row label="Immunosuppression" value={medicalHistory.immunosuppressionDetail || 'Nature not recorded'} />
+                <Row
+                  label="Immunosuppression counselling"
+                  value={
+                    medicalHistory.immunosuppressionCounselled
+                      ? 'Told that serology and further doses may be needed, that both are outside this PGD, and that the GP or specialist will be written to; not told they are protected'
+                      : 'NOT recorded'
+                  }
+                />
+                <Row
+                  label="GP or specialist to be written to"
+                  value={
+                    consent.notifyGp
+                      ? 'Yes: consent to GP notification given'
+                      : `Patient refused GP notification: ${medicalHistory.gpNotificationRefusedNote || 'reason not recorded'}`
+                  }
+                />
+              </>
+            )}
             {medicalHistory.pregnant && (summary.product === 'avaxim' || summary.product === 'avaxim-junior') && (
               <Row label="Pregnancy, Avaxim: risk-benefit assessment" value={summary.pregnancyRiskBenefitNote || 'Not recorded'} />
             )}
@@ -278,8 +312,8 @@ export default function HepatitisASummaryReport({
               <Row label="Batch number" value={summary.batchNumber || 'Not recorded'} />
               <Row label="Expiry date" value={summary.expiryDate || 'Not recorded'} />
               <Row label="Route" value={ROUTE_LABEL[summary.route] || 'Not recorded'} />
-              {bleedingCautionApplies(indication, medicalHistory) && summary.route === 'intramuscular' && (
-                <Row label="Bleeding precautions" value={summary.bleedingPrecautionsConfirmed ? '23 gauge or finer needle, firm pressure for at least 2 minutes' : 'Not confirmed'} />
+              {(bleedingDisorder || anticoagulation) && (
+                <Row label="Route and why" value={bleedingRouteReason(indication, medicalHistory, summary) || 'Not recorded'} />
               )}
               <Row label="Administration site" value={summary.administrationSite ? SITE_LABEL[summary.administrationSite] : 'Not recorded'} />
               <Row label="Date of administration" value={summary.consultationDate} />
@@ -292,12 +326,10 @@ export default function HepatitisASummaryReport({
                     ? summary.secondDoseDue || 'Not recorded'
                     : doseNumber === 'second'
                     ? 'Course complete: no further routine booster'
-                    : doseNumber === 'booster-25-years'
-                    ? 'None: booster after a completed course'
                     : 'Not recorded'
                 }
               />
-              <Row label="Patient told the second dose date" value={postVaccineAdvice.toldSecondDoseDate ? 'Yes' : 'No'} />
+              <Row label={doseNumber === 'second' ? 'Patient told the course is complete and no further dose is due' : 'Patient told the second dose date'} value={postVaccineAdvice.toldSecondDoseDate ? 'Yes' : 'No'} />
               <Row label="Adrenaline 1 in 1,000, anaphylaxis protocol and telephone available" value={summary.adrenalineAvailable ? 'Confirmed' : 'Not confirmed'} />
               <Row label="15 minute observation completed" value={postVaccineAdvice.observationCompleted ? 'Yes' : 'No'} />
               <Row label="Adverse reaction" value={postVaccineAdvice.adverseReaction ? postVaccineAdvice.adverseReactionDetails || 'Yes, details not recorded' : 'None observed'} />
@@ -328,7 +360,7 @@ export default function HepatitisASummaryReport({
               ['One dose: protection from about 2 weeks for about a year', postVaccineAdvice.counselledOneDoseProtection],
               [doseNumber === 'first' ? 'Second dose in 6 to 12 months, at least 25 years; booked' : 'Course complete, at least 25 years', postVaccineAdvice.counselledSecondDose],
               ...(doseNumber === 'first'
-                ? [['Missed second dose: come anyway, no restart', postVaccineAdvice.counselledMissedDose] as [string, boolean]]
+                ? [['Missed second dose: come anyway, no restart; may be given outside the licence and told so', postVaccineAdvice.counselledMissedDose] as [string, boolean]]
                 : []),
               ['Food and water hygiene advice given', postVaccineAdvice.counselledFoodWater],
               ['Common self-limiting reactions explained', postVaccineAdvice.counselledReactions],

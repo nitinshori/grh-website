@@ -11,14 +11,20 @@ import type {
 import { PRODUCTS } from './hepatitis-a-types';
 import {
   ageBandFor,
+  anticoagulationApplies,
   assessSecondDoseTiming,
-  bleedingCautionApplies,
+  bleedingDisorderApplies,
   daysUntil,
   doseNumberFor,
+  hepBSteer,
   isExpired,
   monthsSinceFirstDose,
+  nonTravelIndicationApplies,
+  nonTravelIndicationSelected,
+  occupationalRequestUnsupported,
   parseLocalDate,
   secondDoseWindow,
+  travelIndicationSelected,
   SECOND_DOSE_MIN_MONTHS,
 } from './hepatitis-a-clinical-logic';
 
@@ -46,14 +52,17 @@ export function validateHepatitisAConsentStep(
   if (consent.patientDeclined)
     return 'Patient declines vaccination: record the advice given and the decision reached, then save the record';
   if (!patient.consentBasis) return 'Record who gave consent';
+  // Age first: a basis chosen before the date of birth was corrected can be
+  // one the current age no longer offers, and the fix is to re-select, not
+  // to stop.
+  if (!under16 && patient.consentBasis !== 'self')
+    return 'Aged 16 and over: the patient consents in their own right. Select "The patient (aged 16 and over)" under "Consent given by"';
   if (patient.consentBasis === 'unobtainable')
     return 'Under 16 and valid consent cannot be obtained: this is an exclusion. Record the advice given and save as not supplied';
   if (under16 && patient.consentBasis === 'self')
-    return 'Under 16: consent must come from a person with parental responsibility, or the young person must be assessed as Gillick competent';
+    return 'Under 16: re-select "Consent given by": a person with parental responsibility, or the young person assessed as Gillick competent';
   if (patient.consentBasis === 'gillick' && patient.age !== null && patient.age < GILLICK_MIN_AGE)
-    return `Gillick competence is offered from ${GILLICK_MIN_AGE} years; record consent from a person with parental responsibility`;
-  if (!under16 && patient.consentBasis !== 'self')
-    return 'Aged 16 and over: the patient consents in their own right';
+    return `Gillick competence is offered from ${GILLICK_MIN_AGE} years; re-select "Consent given by" and record consent from a person with parental responsibility`;
   if (patient.consentBasis === 'parental' && !patient.consentDetail.trim())
     return 'Record the name and relationship of the person with parental responsibility';
   if (patient.consentBasis === 'gillick' && !patient.consentDetail.trim())
@@ -80,49 +89,50 @@ export function validateHepatitisAIndicationStep(
   if (!indication.indicationType) return 'Select the "Indication under this PGD"';
   if (indication.indicationType === 'none')
     return 'No indication under this PGD: record the advice given and save as not supplied';
-  const travel = indication.indicationType === 'travel' || indication.indicationType === 'both';
-  const nonTravel = indication.indicationType === 'non-travel' || indication.indicationType === 'both';
+  const travel = travelIndicationSelected(indication);
+  const nonTravel = nonTravelIndicationSelected(indication);
   if (travel) {
     if (!indication.travelDestination.trim()) return '"Destination" is required';
     if (!indication.departureDate) return '"Departure date" is required';
-    if (!indication.endemicityConfirmed)
-      return 'Tick "The destination is an area of moderate or high hepatitis A endemicity..." (check TravelHealthPro where there is doubt)';
+    if (!indication.travelHealthProRecommends)
+      return 'Tick "NaTHNaC TravelHealthPro recommends hepatitis A for this destination and itinerary" (check the country page rather than assuming)';
     const days = daysUntil(indication.departureDate);
     if (days !== null && days >= 0 && days < 14 && !indication.shortNoticeAdvised)
       return 'Departing within 2 weeks: tick "The dose is being given and the patient has been told full protection comes after about 2 weeks"';
   }
   if (nonTravel) {
-    const any =
+    const anyTicked =
       indication.chronicLiverDisease ||
       indication.haemophiliaClottingFactors ||
       indication.injectsDrugs ||
       indication.msm ||
       indication.occupationalRisk;
-    if (!any) return 'Tick at least one non-travel risk factor from the document\'s list';
+    if (!anyTicked) return 'Tick at least one non-travel risk factor from the document\'s list';
+    if (indication.occupationalRisk && !indication.occupationalGroup)
+      return 'Select the "Occupational group" from the Green Book list, or "Other occupational request"';
     if (indication.occupationalRisk && !indication.occupationalRiskDetail.trim())
-      return 'Record the occupational risk (e.g. laboratory work with the virus, sewage work, work with susceptible primates)';
+      return 'Record the occupational risk (the role and employer, e.g. sewage worker with repeated exposure to raw sewage)';
+    // The only ticked factor is an "other occupational request" without
+    // occupational health or Health Protection Team backing: not an
+    // indication. With travel as well, the travel indication stands.
+    if (!nonTravelIndicationApplies(indication) && occupationalRequestUnsupported(indication) && !travel)
+      return 'Other occupational request without a request from occupational health or the Health Protection Team: not an indication. Refer; record the advice given and save the record';
   }
   if (!indication.hepBAlsoNeeded)
     return 'Answer "Does the patient also need hepatitis B protection?" (Yes or No)';
   if (indication.hepBAlsoNeeded === 'yes' && !indication.hepBDecision)
-    return 'Hepatitis B also needed: choose whether to continue with hepatitis A only or to use the Hepatitis A and B (Travel) PGD';
+    return hepBSteer(indication).monovalentRecommended
+      ? 'Hepatitis B also needed: the tool recommends monovalent hepatitis A now under this PGD. Select the "Decision"'
+      : 'Hepatitis B also needed: choose monovalent hepatitis A now with hepatitis B arranged separately, or the Hepatitis A and B (Travel) PGD';
   if (indication.hepBDecision === 'use-combined-pgd')
     return 'Continue in the Hepatitis A and B (Travel) PGD tool. Record the decision here and save as not supplied';
-  if (indication.proofOfImmunityRequired)
-    return 'Patient requires proof of immunity: serology is out of scope. Record the advice given and save as not supplied';
 
   // Course
   if (!course.courseStatus) return 'Select "Previous hepatitis A vaccination" (none, one dose, or a completed course)';
-  if (course.courseStatus === 'completed') {
-    if (!course.completedCourseOngoingRisk25Years)
-      return 'A completed two dose course excludes unless the patient is at ongoing risk and 25 years have passed. Record the advice given and save as not supplied, or tick the exception if it applies';
-    if (!course.completedCourseNote.trim())
-      return 'Record what the patient told you about the completed course, the ongoing risk and the time elapsed';
-  }
+  if (course.courseStatus === 'completed')
+    return 'A completed course: nothing is authorised. Refer to the GP or a travel clinic where the patient is at ongoing risk and 25 years or more have passed. Record the advice given and save the record';
   if (course.courseStatus === 'one-dose') {
-    if (!course.firstDoseProduct) return 'Select the "Product of the first dose"';
-    if (course.firstDoseProduct === 'other' && !course.firstDoseProductOther.trim())
-      return 'Record the brand of the first dose';
+    if (!course.firstDoseProduct) return 'Select the "Product of the first dose" (or "Not known")';
     if (!course.firstDoseDateKnown) return 'Answer whether the date of the first dose is known';
     if (course.firstDoseDateKnown === 'known') {
       if (!course.firstDoseDate) return '"Date of the first dose" is required';
@@ -130,22 +140,31 @@ export function validateHepatitisAIndicationStep(
       const months = monthsSinceFirstDose(course.firstDoseDate);
       if (months !== null && months < 0) return 'The date of the first dose is in the future: check the date';
       if (months !== null && months < SECOND_DOSE_MIN_MONTHS)
-        return 'Too early: the second dose is 6 to 12 months after the first. Book it for the window; record the advice given and save as not supplied';
+        return 'Too early: the second dose is 6 to 12 months after the first. Rebook it for the window; record the advice given and save as not supplied';
     } else {
       if (!course.firstDoseDateNote.trim())
         return 'Record what the patient reports about when and where the first dose was given';
       if (!course.firstDoseSixMonthsConfirmed)
         return 'Tick "The first dose was 6 months or more ago, as reliably reported by the patient"';
+      if (!course.firstDoseApproxInterval)
+        return 'Select "Roughly how long ago was the first dose" (or "cannot say")';
     }
   }
   return null;
 }
 
-export function validateHepatitisAMedicalHistoryStep(medicalHistory: HepatitisAMedicalHistory): string | null {
+export function validateHepatitisAMedicalHistoryStep(
+  medicalHistory: HepatitisAMedicalHistory,
+  consent: HepatitisAConsent
+): string | null {
   if (medicalHistory.breastfeeding && !medicalHistory.breastfeedingDecision.trim())
     return '"Breastfeeding: decision recorded" is required when "Breastfeeding" is ticked';
-  if (medicalHistory.immunosuppressed && !medicalHistory.immunosuppressionCounselling.trim())
-    return '"Immunosuppression: counselling recorded" is required when "Immunosuppression, including HIV" is ticked';
+  if (medicalHistory.immunosuppressed) {
+    if (!medicalHistory.immunosuppressionCounselled)
+      return 'Immunosuppression: tick "The patient was told that serology and further doses may be needed and that the GP or specialist will be written to"';
+    if (!consent.notifyGp && !medicalHistory.gpNotificationRefusedNote.trim())
+      return 'Immunosuppression: the GP or specialist must be written to. Go back to the Consent step and record consent to GP notification, or record the patient\'s refusal here';
+  }
   return null;
 }
 
@@ -169,24 +188,31 @@ export function validateHepatitisAAdministrationStep(
     (summary.product === 'avaxim' || summary.product === 'avaxim-junior') &&
     !summary.pregnancyRiskBenefitNote.trim()
   )
-    return 'Avaxim in pregnancy: record the assessment of risks and benefits (Havrix is preferred)';
+    return 'Avaxim in pregnancy: record the risk-benefit assessment (Havrix preferred where held; where only Avaxim is held, give after a recorded risk-benefit assessment rather than delaying)';
   if (medicalHistory.latexSensitivity && summary.product === 'avaxim' && !summary.latexPresentationChecked)
     return 'Latex sensitivity with adult Avaxim: tick that the presentation in hand was checked';
   const doseNumber = doseNumberFor(course);
-  if (doseNumber === 'second' && course.firstDoseDateKnown === 'known') {
-    const timing = assessSecondDoseTiming(course.firstDoseProduct, course.firstDoseDate, summary.product);
-    if (timing.beyondWindow && !course.offLabelDecisionRecorded)
-      return 'Second dose beyond the licensed window: tick "Informed off-label decision, explained to the patient and recorded"';
+  if (doseNumber === 'second') {
+    const timing = assessSecondDoseTiming(course, summary.product);
+    if (timing.offLabel && !course.offLabelConsent)
+      return 'Off-label second dose: tick "The patient was told this dose is off-label and why, and consented on that basis"';
   }
   if (!summary.batchNumber.trim()) return 'Batch number is required';
   if (!summary.expiryDate) return 'Expiry date is required';
   if (isExpired(summary.expiryDate)) return 'Vaccine batch has expired: do not administer, quarantine the stock and select an in-date batch';
   if (!summary.route) return 'Select the "Route"';
-  const bleeding = bleedingCautionApplies(indication, medicalHistory);
-  if (summary.route === 'subcutaneous' && !bleeding)
-    return 'The subcutaneous route is for a bleeding disorder, thrombocytopenia, anticoagulation or haemophilia on plasma-derived clotting factors only; otherwise the route is intramuscular';
-  if (bleeding && summary.route === 'intramuscular' && !summary.bleedingPrecautionsConfirmed)
-    return 'Bleeding disorder or anticoagulation, intramuscular route: tick "Fine needle, 23 gauge or finer, and firm pressure without rubbing for at least 2 minutes"';
+  const disorder = bleedingDisorderApplies(indication, medicalHistory);
+  const anticoag = anticoagulationApplies(medicalHistory);
+  if (summary.route === 'subcutaneous' && !disorder)
+    return 'The deep subcutaneous route is for haemophilia or other bleeding disorder, or thrombocytopenia, only; otherwise the route is intramuscular (stable anticoagulation: intramuscular with a 23 gauge or finer needle)';
+  if (disorder && summary.route === 'intramuscular') {
+    if (!summary.imAdvisedByDoctor)
+      return 'Bleeding disorder: give by deep subcutaneous injection, or intramuscularly only where a doctor familiar with the patient\'s bleeding risk has advised that route is safe. Select "Subcutaneous", or tick the doctor\'s advice';
+    if (!summary.imAdvisedBy.trim())
+      return 'Bleeding disorder, intramuscular route: record who advised that the intramuscular route is safe';
+  }
+  if ((disorder || anticoag) && summary.route === 'intramuscular' && !summary.bleedingPrecautionsConfirmed)
+    return 'Intramuscular route with anticoagulation or a bleeding disorder: tick "23 gauge or finer needle, and firm pressure without rubbing for at least 2 minutes"';
   if (!summary.administrationSite) return 'Select the "Administration site"';
   if (summary.coAdministered && !summary.coAdministeredDetails.trim())
     return 'Record the other vaccine given at this visit and its site';
@@ -219,7 +245,7 @@ export function validateHepatitisAPostVaccineStep(
   // The missed-date advice belongs to a first dose: after the second dose
   // there is no further date to miss.
   if (doseNumber === 'first' && !advice.counselledMissedDose)
-    return 'Tick "If the second dose date is missed, come anyway: the course does not need restarting" once explained';
+    return 'Tick "If you miss the second dose date, come anyway; the course does not need restarting..." once explained';
   if (!advice.counselledFoodWater)
     return 'Tick "Food and water hygiene advice given" (required in every case)';
   if (!advice.counselledReactions)
