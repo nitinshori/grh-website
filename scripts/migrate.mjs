@@ -21,6 +21,14 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const DIR = join(__dirname, "..", "src", "lib", "db", "migrations");
 const BASELINE_BEFORE = "019"; // files sorting below this are assumed applied
 
+// Only production builds may migrate. A pull request's preview build must
+// never touch the live database before the change is merged. Local builds
+// (VERCEL_ENV unset) behave as before.
+if (process.env.VERCEL_ENV && process.env.VERCEL_ENV !== "production") {
+  console.log(`[migrate] VERCEL_ENV=${process.env.VERCEL_ENV}: skipping migrations (production only).`);
+  process.exit(0);
+}
+
 const url = process.env.DATABASE_URL;
 if (!url) {
   console.log("[migrate] DATABASE_URL not set — skipping migrations.");

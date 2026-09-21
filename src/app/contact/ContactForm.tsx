@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { pushDataLayerEvent } from "@/lib/gtm";
 
 type Enquiry =
   | "demo"
@@ -50,6 +51,9 @@ export function ContactForm() {
       }
 
       setSubmitted(true);
+      pushDataLayerEvent("contact_submit", {
+        enquiry_type: formData.enquiryType || "unspecified",
+      });
     } catch {
       setError(
         "Unable to send your message. Please try again or email us directly at hello@getrealhealth.co.uk."

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { ALL_PGDS, PGD_CATEGORIES } from '@/lib/pgd-access'
 
@@ -45,12 +45,27 @@ interface PharmacyData {
 
 interface PharmacyDetailClientProps {
   pharmacy: PharmacyData
+  /** Custom PGDs from the admin PGD Builder — merged into the assignment grid */
+  customPgds?: { slug: string; title: string; subtitle: string; category: string }[]
 }
 
 type TabType = 'details' | 'pgds' | 'staff'
 
-export function PharmacyDetailClient({ pharmacy: initialPharmacy }: PharmacyDetailClientProps) {
+export function PharmacyDetailClient({ pharmacy: initialPharmacy, customPgds }: PharmacyDetailClientProps) {
   const router = useRouter()
+  // Built-in PGDs + custom PGDs from the PGD Builder. Custom ones must be in
+  // this list or saving the assignment grid would silently wipe their access.
+  const allPgds = useMemo(
+    () => [...ALL_PGDS, ...(customPgds ?? [])],
+    [customPgds],
+  )
+  const allCategories = useMemo(() => {
+    const known = new Set<string>(PGD_CATEGORIES)
+    const extra = Array.from(
+      new Set((customPgds ?? []).map((c) => c.category).filter((c) => !known.has(c))),
+    )
+    return [...PGD_CATEGORIES, ...extra]
+  }, [customPgds])
   const [pharmacy, setPharmacy] = useState<PharmacyData>(initialPharmacy)
   const [activeTab, setActiveTab] = useState<TabType>('details')
   const [loading, setLoading] = useState(false)
@@ -227,7 +242,7 @@ export function PharmacyDetailClient({ pharmacy: initialPharmacy }: PharmacyDeta
   }
 
   const selectAllInCategory = (category: string) => {
-    const categoryPgds = ALL_PGDS.filter((pgd) => pgd.category === category)
+    const categoryPgds = allPgds.filter((pgd) => pgd.category === category)
     setSelectedPgds((prev) => {
       const newSet = new Set(prev)
       categoryPgds.forEach((pgd) => newSet.add(pgd.slug))
@@ -236,7 +251,7 @@ export function PharmacyDetailClient({ pharmacy: initialPharmacy }: PharmacyDeta
   }
 
   const clearAllInCategory = (category: string) => {
-    const categoryPgds = ALL_PGDS.filter((pgd) => pgd.category === category)
+    const categoryPgds = allPgds.filter((pgd) => pgd.category === category)
     setSelectedPgds((prev) => {
       const newSet = new Set(prev)
       categoryPgds.forEach((pgd) => newSet.delete(pgd.slug))
@@ -245,7 +260,7 @@ export function PharmacyDetailClient({ pharmacy: initialPharmacy }: PharmacyDeta
   }
 
   const selectAllPgds = () => {
-    setSelectedPgds(new Set(ALL_PGDS.map((pgd) => pgd.slug)))
+    setSelectedPgds(new Set(allPgds.map((pgd) => pgd.slug)))
   }
 
   const clearAllPgds = () => {
@@ -288,12 +303,9 @@ export function PharmacyDetailClient({ pharmacy: initialPharmacy }: PharmacyDeta
     }
   }
 
-  // NB: JSON.stringify on a Set always yields "{}", which made this
-  // comparison permanently true and the Save button permanently disabled
-  // (bug found 10 Jul 2026). Compare sorted arrays instead.
   const isSaveDisabled =
-    JSON.stringify([...selectedPgds].sort()) ===
-    JSON.stringify([...pharmacy.pgdSlugs].sort())
+    JSON.stringify(selectedPgds) ===
+    JSON.stringify(new Set(pharmacy.pgdSlugs))
 
   // ────────────────────────────────────────────────────────────────
   // Render
@@ -497,7 +509,7 @@ export function PharmacyDetailClient({ pharmacy: initialPharmacy }: PharmacyDeta
                   const ranked = Object.entries(pharmacy.pgdUsage)
                     .map(([slug, u]) => ({
                       slug,
-                      title: ALL_PGDS.find((p) => p.slug === slug)?.title ?? slug,
+                      title: allPgds.find((p) => p.slug === slug)?.title ?? slug,
                       started: u.started,
                       completed: u.completed,
                       lastUsed: u.lastUsed,
@@ -557,7 +569,7 @@ export function PharmacyDetailClient({ pharmacy: initialPharmacy }: PharmacyDeta
                     className="px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors disabled:opacity-50"
                     style={{ backgroundColor: '#25b4b4' }}
                   >
-                    Select All ({ALL_PGDS.length})
+                    Select All ({allPgds.length})
                   </button>
                   <button
                     onClick={clearAllPgds}
@@ -570,8 +582,8 @@ export function PharmacyDetailClient({ pharmacy: initialPharmacy }: PharmacyDeta
 
                 {/* PGD Categories Grid */}
                 <div className="space-y-8">
-                  {PGD_CATEGORIES.map((category) => {
-                    const categoryPgds = ALL_PGDS.filter(
+                  {allCategories.map((category) => {
+                    const categoryPgds = allPgds.filter(
                       (pgd) => pgd.category === category
                     )
                     const selectedCount = categoryPgds.filter((pgd) =>
