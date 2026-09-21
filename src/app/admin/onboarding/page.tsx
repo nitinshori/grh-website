@@ -4,6 +4,7 @@ import { onboardingRequests } from '@/lib/db/schema'
 import { desc } from 'drizzle-orm'
 import { redirect } from 'next/navigation'
 import OnboardingQueueClient from './OnboardingQueueClient'
+import { hasCompletedSetup } from '@/lib/onboarding-setup'
 import { DonutChart } from '../components/Charts'
 
 export const metadata = { title: 'Onboarding queue — Admin' }
@@ -25,6 +26,17 @@ export default async function OnboardingQueuePage() {
     .from(onboardingRequests)
     .orderBy(desc(onboardingRequests.createdAt))
     .limit(200)
+
+  // Has the customer actually chosen a password? Approved-but-never-set-up
+  // is the state Burrage Pharmacy sat in unseen for days (Sep 2026), so it is
+  // shown on every approved row rather than inferred from status.
+  const setupDone = new Map<string, boolean>()
+  await Promise.all(
+    rows
+      .filter((r) => (r.status === 'approved' || r.status === 'completed') && r.contactEmail)
+      .map(async (r) => { setupDone.set(r.id, await hasCompletedSetup(r.contactEmail)) }),
+  )
+  const notSetUp = rows.filter((r) => (r.status === 'approved' || r.status === 'completed') && setupDone.get(r.id) === false).length
 
   // Aggregate for the visibility tiles
   let mActive = 0, mPending = 0, mFailed = 0, mNone = 0, mrrPence = 0
@@ -50,7 +62,7 @@ export default async function OnboardingQueuePage() {
         </p>
 
         {/* Visibility tiles */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
           <div className="bg-white rounded-lg shadow p-4">
             <p className="text-[11px] font-medium text-gray-600 uppercase tracking-wide">Total requests</p>
             <p className="text-2xl font-bold text-gray-900 mt-1">{rows.length}</p>
@@ -64,6 +76,11 @@ export default async function OnboardingQueuePage() {
             <p className="text-[11px] font-medium text-gray-600 uppercase tracking-wide">Pending DDs</p>
             <p className="text-2xl font-bold text-amber-700 mt-1">{mPending}</p>
             <p className="text-[10px] text-gray-500">Waiting on customer</p>
+          </div>
+          <div className={`bg-white rounded-lg shadow p-4 ${notSetUp ? 'ring-2 ring-red-300' : ''}`}>
+            <p className="text-[11px] font-medium text-gray-600 uppercase tracking-wide">Approved, not set up</p>
+            <p className={`text-2xl font-bold mt-1 ${notSetUp ? 'text-red-700' : 'text-gray-900'}`}>{notSetUp}</p>
+            <p className="text-[10px] text-gray-500">Billed, no password yet</p>
           </div>
           <div className="bg-white rounded-lg shadow p-4">
             <p className="text-[11px] font-medium text-gray-600 uppercase tracking-wide">Monthly recurring</p>
@@ -106,6 +123,10 @@ export default async function OnboardingQueuePage() {
             mandateStatus: r.gocardlessMandateStatus || '',
             createdAt: r.createdAt.toISOString(),
             rejectedReason: r.rejectedReason || '',
+            setupEmailSentAt: r.setupEmailSentAt ? r.setupEmailSentAt.toISOString() : '',
+            setupEmailError: r.setupEmailError || '',
+            setupEmailAttempts: r.setupEmailAttempts ?? 0,
+            setupDone: setupDone.get(r.id) ?? null,
           }))}
         />
       </div>

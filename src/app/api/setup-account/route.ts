@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     .where(eq(users.email, contactEmail))
     .limit(1)
   if (existing[0]) {
-    return NextResponse.json({ error: 'An account already exists for this email' }, { status: 409 })
+    return NextResponse.json({ error: 'An account already exists for this email. Use "Forgotten your password?" on the login page to set your password.' }, { status: 409 })
   }
 
   const passwordHash = await bcrypt.hash(body.password, BCRYPT_COST)

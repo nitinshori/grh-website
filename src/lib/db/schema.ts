@@ -543,6 +543,13 @@ export const onboardingRequests = pgTable('onboarding_requests', {
   setupTokenExpiresAt: timestamp('setup_token_expires_at'),
   setupTokenUsedAt: timestamp('setup_token_used_at'),
 
+  // Whether the setup email actually went (migration 065). Approval used to
+  // return this to the browser and forget it; Burrage Pharmacy was approved
+  // and billed with a setup email that never arrived and nothing showed it.
+  setupEmailSentAt: timestamp('setup_email_sent_at', { withTimezone: true }),
+  setupEmailError: text('setup_email_error'),
+  setupEmailAttempts: integer('setup_email_attempts').default(0).notNull(),
+
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })

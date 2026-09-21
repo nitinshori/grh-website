@@ -6,8 +6,8 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { users } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { users, onboardingRequests } from '@/lib/db/schema'
+import { and, eq, sql } from 'drizzle-orm'
 import bcrypt from 'bcryptjs'
 
 export const dynamic = 'force-dynamic'
@@ -41,6 +41,13 @@ export async function POST(req: NextRequest) {
     setupTokenUsedAt: new Date(),
     updatedAt: new Date(),
   }).where(eq(users.id, u.id))
+
+  // A first login created at approval (Sep 2026 onwards) completes the
+  // sign-up record too, so the onboarding queue stops showing it as not set up.
+  await db
+    .update(onboardingRequests)
+    .set({ status: 'completed', setupTokenUsedAt: new Date(), updatedAt: new Date() })
+    .where(and(sql`LOWER(${onboardingRequests.contactEmail}) = ${u.email.toLowerCase()}`, eq(onboardingRequests.status, 'approved')))
 
   return NextResponse.json({ ok: true, email: u.email })
 }

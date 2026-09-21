@@ -18,6 +18,12 @@ interface Row {
   mandateStatus: string;
   createdAt: string;
   rejectedReason: string;
+  /** ISO time the setup email last went, or '' if never sent. */
+  setupEmailSentAt: string;
+  setupEmailError: string;
+  setupEmailAttempts: number;
+  /** null until approved; then whether the customer has chosen a password. */
+  setupDone: boolean | null;
 }
 
 const STATUS_FILTERS = ['all', 'awaiting_approval', 'approved', 'completed', 'rejected'] as const;
@@ -78,6 +84,23 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
       }
       setSetupUrl(body.setupUrl || null);
       setList((prev) => prev.map((x) => x.id === id ? { ...x, status: 'approved' } : x));
+    } finally { setBusyId(null); }
+  }
+
+  async function handleResend(id: string) {
+    setBusyId(id);
+    try {
+      const r = await fetch(`/api/admin/onboarding/${id}/resend-setup`, { method: 'POST' });
+      const body = await r.json();
+      if (!r.ok) { alert(`Could not resend: ${body.error || r.status}`); return; }
+      setSetupUrl(body.setupUrl || null);
+      setList((prev) => prev.map((x) => x.id === id ? {
+        ...x,
+        setupEmailSentAt: body.emailed ? new Date().toISOString() : x.setupEmailSentAt,
+        setupEmailError: body.emailed ? '' : (body.emailError || 'unknown error'),
+        setupEmailAttempts: x.setupEmailAttempts + 1,
+      } : x));
+      if (!body.emailed) alert(`The email could not be sent: ${body.emailError}\n\nThe link is shown above; send it to the customer another way.`);
     } finally { setBusyId(null); }
   }
 
@@ -160,7 +183,29 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
                 {r.mandateId && <div className="text-xs text-gray-500">Mandate: <code className="text-[11px]">{r.mandateId}</code></div>}
                 <div className="text-xs text-gray-400 mt-1">Submitted {formatSubmitted(r.createdAt)}</div>
                 {r.rejectedReason && <div className="text-xs text-red-600 mt-1">Rejected: {r.rejectedReason}</div>}
+                {(r.status === 'approved' || r.status === 'completed') && (
+                  <div className="text-xs mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+                    {r.setupDone === true && <span className="text-green-700">Password set: customer can log in</span>}
+                    {r.setupDone === false && <span className="text-red-700 font-semibold">NOT SET UP: no password chosen yet</span>}
+                    {r.setupEmailError
+                      ? <span className="text-red-700">Setup email FAILED: {r.setupEmailError}</span>
+                      : r.setupEmailSentAt
+                        ? <span className="text-gray-600">Setup email sent {formatSubmitted(r.setupEmailSentAt)}{r.setupEmailAttempts > 1 ? ` (${r.setupEmailAttempts} sends)` : ''}</span>
+                        : <span className="text-amber-700">Setup email: no record of it being sent</span>}
+                  </div>
+                )}
               </div>
+              {(r.status === 'approved' || r.status === 'completed') && r.setupDone === false && (
+                <div className="flex gap-2 shrink-0">
+                  <button
+                    onClick={() => handleResend(r.id)}
+                    disabled={busyId === r.id}
+                    className="px-3 py-1.5 text-sm bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-md disabled:opacity-50"
+                  >
+                    {busyId === r.id ? '…' : 'Resend setup link'}
+                  </button>
+                </div>
+              )}
               {r.status === 'awaiting_approval' && (
                 <div className="flex gap-2 shrink-0">
                   <button

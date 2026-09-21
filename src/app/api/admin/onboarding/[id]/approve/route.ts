@@ -1,21 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import crypto from 'crypto'
-import bcrypt from 'bcryptjs'
 import { db } from '@/lib/db'
 import { onboardingRequests, pharmacies, pharmacyPgds } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
 import { ALL_PGDS } from '@/lib/pgd-access'
-import { Resend } from 'resend'
+import { ensureFirstUser, sendSetupEmail } from '@/lib/onboarding-setup'
 import { createSubscription } from '@/lib/gocardless'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * POST /api/admin/onboarding/[id]/approve
- * Admin-only. Creates the pharmacy + assigns all 60+ PGDs + emails the contact
- * a tokenised "set your password" link. The customer never sees this endpoint
- * directly — they're invited via email after we approve.
+ * Admin-only. Creates the pharmacy, assigns all PGDs, creates the first user
+ * (locked until they choose a password) and emails the contact a tokenised
+ * set-password link. The customer never sees this endpoint directly.
  */
 export async function POST(
   request: NextRequest,
@@ -56,7 +54,6 @@ export async function POST(
     )
   }
   const contactEmail = req.contactEmail
-  const contactFirstName = req.contactFirstName
 
   // 1. Create pharmacy row
   const slug = (req.pharmacyName.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 80) +
@@ -100,11 +97,9 @@ export async function POST(
     // separately. We still mark approved so the customer can set their password.
   }
 
-  // 4. Generate single-use setup token (signed URL)
-  const rawToken = crypto.randomBytes(32).toString('hex')
-  const tokenHash = await bcrypt.hash(rawToken, 10)
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
-
+  // 4. Mark approved. The login is created now, not when a link is clicked:
+  //    Burrage Pharmacy (Sep 2026) was approved and billed with a setup email
+  //    that never arrived, and there was no account for anything to reset.
   await db
     .update(onboardingRequests)
     .set({
@@ -112,37 +107,21 @@ export async function POST(
       approvedBy: session.user.id,
       approvedAt: new Date(),
       pharmacyId: newPharmacy.id,
-      setupTokenHash: tokenHash,
-      setupTokenExpiresAt: expiresAt,
       monthlyFeePence,
       gocardlessSubscriptionId: subscriptionId,
       updatedAt: new Date(),
     })
     .where(eq(onboardingRequests.id, req.id))
 
-  // 4. Email the contact with the setup link
-  const appUrl = process.env.APP_URL || 'https://getrealhealthpgd.co.uk'
-  const setupUrl = `${appUrl}/setup-account?id=${req.id}&token=${rawToken}`
-  let emailed = false
-  let emailError: string | undefined
-  if (process.env.RESEND_API_KEY) {
-    try {
-      const resend = new Resend(process.env.RESEND_API_KEY)
-      await resend.emails.send({
-        from: 'Get Real Health <noreply@getrealhealthpgd.co.uk>',
-        to: contactEmail,
-        subject: `Welcome to Get Real Health — set up your account`,
-        text:
-          `Hi ${contactFirstName},\n\n` +
-          `Your application for ${req.pharmacyName} has been approved. ` +
-          `Click the link below to set your password and access the Get Real Health PGD platform:\n\n` +
-          `${setupUrl}\n\n` +
-          `The link expires in 7 days. If it expires, reply to this email and we'll send a new one.\n\n` +
-          `— Dr Nitin Shori\nGet Real Health\n`,
-      })
-      emailed = true
-    } catch (e) { emailError = e instanceof Error ? e.message : String(e) }
+  const forSetup = { ...req, pharmacyId: newPharmacy.id }
+  const user = await ensureFirstUser(forSetup)
+  if (!user) {
+    return NextResponse.json({ error: 'Pharmacy created but the first user could not be: contact email missing.' }, { status: 500 })
   }
+
+  // 5. Email the contact the set-password link; the outcome is stored on the
+  //    request so the queue shows "sent" or the error, with a Resend button.
+  const { setupUrl, emailed, emailError } = await sendSetupEmail(forSetup, user, 'welcome')
 
   return NextResponse.json({
     ok: true,
