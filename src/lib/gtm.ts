@@ -7,14 +7,12 @@
 //   - book_demo_submit  : fires on /book discovery-call confirmation
 //   - onboard_complete  : fires on /onboard/dd-complete after the
 //                         GoCardless mandate is captured
-//   - contact_submit    : fires on /contact after a successful enquiry
-//                         (payload.enquiry_type = demo | pricing | ...)
 //
 // Calls are no-ops if GTM hasn't loaded (e.g. consent not given, or
 // NEXT_PUBLIC_GTM_ID env var unset). Safe to call from any client
 // component.
 
-type DataLayerEvent = "book_demo_submit" | "onboard_complete" | "contact_submit";
+type DataLayerEvent = "book_demo_submit" | "onboard_complete";
 
 interface DataLayerPayload {
   // Optional context. Keep keys simple and non-PII.
@@ -25,7 +23,6 @@ interface DataLayerPayload {
   currency?: string;
   pharmacy_size?: string;
   service_category?: string;
-  enquiry_type?: string;
 }
 
 declare global {

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { pharmacies, appointments, appointmentTypes, clinicians } from '@/lib/db/schema'
 import { eq, and, gt, lt, inArray } from 'drizzle-orm'
-import { notifyBookingEvent } from '@/lib/push'
 
 // ── POST /api/booking/[slug]/confirm ────────────────────────────
 // Public: book an appointment
@@ -153,22 +152,6 @@ export async function POST(
     minute: '2-digit',
     hour12: true,
   }).format(start)
-
-  // Push notification to pharmacy staff (best-effort — never blocks the booking)
-  const shortTime = new Intl.DateTimeFormat('en-GB', {
-    timeZone: 'Europe/London',
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  }).format(start)
-  await notifyBookingEvent({
-    pharmacyId: siteId,
-    title: `New booking — ${site.name}`,
-    body: `${apptType.name} · ${shortTime} · ${firstName.trim()} ${surname.trim()}`,
-  })
 
   return NextResponse.json({
     success: true,

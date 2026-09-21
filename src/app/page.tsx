@@ -58,7 +58,7 @@ export default function HomePage() {
               </div>
 
               <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold leading-tight mb-6">
-                60+ PGDs, paper and electronic.
+                60+ electronic PGDs.
                 <br />
                 <span className="text-teal-400">£100 per month, per pharmacy.</span>
                 <br />
@@ -69,10 +69,10 @@ export default function HomePage() {
               </p>
 
               <p className="text-lg sm:text-xl text-blue-200 leading-relaxed mb-8 max-w-xl">
-                Every PGD supplied as a signed paper PGD and a step-by-step
-                ePGD. Built-in training and consultation platform. One flat
-                monthly fee covers your whole team, permanent staff and locums
-                included. Zero per-consult charges. CQC and HIW registered.
+                Every PGD electronically enabled. Built-in training and
+                consultation platform. One flat monthly fee covers your whole
+                team &mdash; permanent staff and locums included. Zero
+                per-consult charges. CQC and HIW registered.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4">
@@ -270,9 +270,9 @@ export default function HomePage() {
                 </svg>
               </div>
               <div>
-                <h3 className="font-bold text-navy-900">Paper PGDs and ePGDs</h3>
+                <h3 className="font-bold text-navy-900">Digital ePGDs</h3>
                 <p className="text-sm text-gray-500 mt-1 leading-relaxed">
-                  Every PGD comes two ways: a signed paper PGD for your governance file, and a step-by-step ePGD, a guided digital consultation with built-in clinical safeguards.
+                  All 60+ PGDs are electronically enabled &mdash; a simple, step-by-step digital consultation process with built-in clinical safeguards.
                 </p>
               </div>
             </div>

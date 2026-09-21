@@ -3,7 +3,6 @@ import { pharmacies, users, pharmacyPgds, pgdConsultations } from '@/lib/db/sche
 import { eq, sql } from 'drizzle-orm'
 import { notFound } from 'next/navigation'
 import { PharmacyDetailClient } from './PharmacyDetailClient'
-import { listCustomPgds } from '@/lib/custom-pgd/queries'
 import { listPgdDocumentOverrides } from '@/lib/pgd-document-overrides'
 
 async function getPharmacyData(id: string) {
@@ -143,12 +142,5 @@ export default async function PharmacyDetailPage({
     notFound()
   }
 
-  const customPgds = (await listCustomPgds()).map((c) => ({
-    slug: c.slug,
-    title: c.status === 'draft' ? `${c.title} (draft)` : c.title,
-    subtitle: c.subtitle,
-    category: c.category,
-  }))
-
-  return <PharmacyDetailClient pharmacy={pharmacy} customPgds={customPgds} />
+  return <PharmacyDetailClient pharmacy={pharmacy} />
 }

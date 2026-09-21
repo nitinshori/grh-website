@@ -76,23 +76,16 @@ export function isEncrypted(payload: string): boolean {
  */
 export function tryEncrypt(plaintext: string): string {
   if (!process.env.DATA_ENCRYPTION_KEY) {
-    // No key configured. To enforce encryption (fail closed) rather than
-    // store plaintext, set REQUIRE_DATA_ENCRYPTION=true AND provide a key.
-    // By default we keep the pre-existing behaviour (plaintext + warning) so
-    // that deploying this change can never break record-saving on an
-    // environment that hasn't set up a key yet.
-    if (process.env.REQUIRE_DATA_ENCRYPTION === 'true') {
-      throw new Error(
-        '[encryption] REQUIRE_DATA_ENCRYPTION is on but DATA_ENCRYPTION_KEY is not set — refusing to store clinical_data unencrypted.'
-      )
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('[encryption] DATA_ENCRYPTION_KEY not set — clinical_data being stored as plaintext.')
     }
-    console.warn('[encryption] DATA_ENCRYPTION_KEY not set — clinical_data stored as plaintext. Set a key to enable encryption.')
     return plaintext
   }
-  // A key IS configured: encryption must succeed. Do NOT silently downgrade
-  // to plaintext on error — surface it. (This is the security fix: previously
-  // an encrypt() failure fell back to storing plaintext.)
-  return encrypt(plaintext)
+  try { return encrypt(plaintext) }
+  catch (e) {
+    console.error('[encryption] encrypt() failed, falling back to plaintext:', e)
+    return plaintext
+  }
 }
 
 /** Decrypt-or-passthrough: handles both encrypted and legacy plaintext rows. */

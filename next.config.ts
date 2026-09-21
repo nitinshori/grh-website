@@ -53,28 +53,6 @@ const nextConfig: NextConfig = {
         source: "/(.*)",
         headers: securityHeaders,
       },
-      {
-        // ePGD routes are pharmacist-facing consultation tools, not marketing
-        // pages. Serve an explicit noindex so search engines that DO crawl
-        // them (robots.txt no longer blocks the path, so Googlebot can fetch
-        // and honour this header) keep them out of the index entirely — rather
-        // than the previous state where they could be URL-indexed with no
-        // title. Same treatment for the authenticated partner/admin/client areas.
-        source: "/for-pharmacies/epgd/:path*",
-        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
-      },
-      {
-        source: "/for-pharmacies/dashboard/:path*",
-        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
-      },
-      {
-        source: "/admin/:path*",
-        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
-      },
-      {
-        source: "/client/:path*",
-        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
-      },
     ];
   },
 };

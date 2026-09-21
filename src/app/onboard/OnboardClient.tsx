@@ -305,7 +305,7 @@ export default function OnboardClient() {
                 We collect the monthly fee by direct debit through GoCardless. You'll be redirected to a secure GoCardless page where you enter your bank details. Nothing is charged until your account is approved and active.
               </p>
               <ul className="text-sm text-gray-600 space-y-1.5 list-disc list-inside ml-2">
-                <li>Minimum 12-month term, then cancel with 30 days' notice</li>
+                <li>You can cancel any time with 30 days' notice</li>
                 <li>Protected by the UK Direct Debit Guarantee</li>
                 <li>No charges while we review your application</li>
               </ul>

@@ -83,12 +83,12 @@ export default function PatientRecordsClient({ pgdTitles }: PatientRecordsClient
               placeholder="Search by patient name or NHS number..."
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
             />
           </div>
           <button
             type="submit"
-            className="px-5 py-2.5 rounded-lg text-sm font-semibold bg-[color:var(--tenant-primary)]/100 hover:bg-[color:var(--tenant-primary)]/15 text-white transition-colors"
+            className="px-5 py-2.5 rounded-lg text-sm font-semibold bg-teal-500 hover:bg-teal-600 text-white transition-colors"
           >
             Search
           </button>
@@ -116,7 +116,7 @@ export default function PatientRecordsClient({ pgdTitles }: PatientRecordsClient
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         {loading ? (
           <div className="p-12 text-center">
-            <div className="w-8 h-8 border-2 border-[color:var(--tenant-primary)]/30 border-t-transparent rounded-full animate-spin mx-auto" />
+            <div className="w-8 h-8 border-2 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto" />
             <p className="text-sm text-gray-500 mt-3">Loading records...</p>
           </div>
         ) : records.length === 0 ? (
@@ -147,7 +147,7 @@ export default function PatientRecordsClient({ pgdTitles }: PatientRecordsClient
                       <td className="py-3 px-4">
                         <Link
                           href={`/for-pharmacies/dashboard/records/${r.id}`}
-                          className="text-gray-900 font-medium group-hover:text-[color:var(--tenant-primary)] transition-colors"
+                          className="text-gray-900 font-medium group-hover:text-teal-600 transition-colors"
                         >
                           {r.patientFirstName} {r.patientLastName}
                         </Link>
