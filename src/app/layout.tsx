@@ -25,8 +25,6 @@ export const metadata: Metadata = {
     "Patient Group Direction",
     "ePGD",
     "electronic PGD",
-    "Wegovy PGD",
-    "Mounjaro PGD",
     "weight management PGD",
     "travel vaccination PGD",
     "pharmacy private services",
