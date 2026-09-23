@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { usePharmacistProfile } from "../hooks/usePharmacistProfile";
 import type { ClinicalAlert, AlertSeverity } from "../types";
 
 // ─── Reusable summary report building blocks ───
@@ -116,7 +117,13 @@ export function PharmacistDeclaration({
   // GPhC-registered pharmacy technicians as well as pharmacists, so the
   // person completing the consultation declares their own registration.
   // The radios are screen-only; the printed record shows the chosen role.
-  const [role, setRole] = useState<PractitionerRole>("pharmacist");
+  // Default to the role on the practitioner's own record, so a technician
+  // does not have to re-select it on every consultation. Until they choose,
+  // the profile's role is used; a click overrides it.
+  const profile = usePharmacistProfile();
+  const [chosenRole, setRole] = useState<PractitionerRole | null>(null);
+  const role: PractitionerRole =
+    chosenRole ?? (profile?.practitionerRole === "technician" ? "technician" : "pharmacist");
   const roleLabel =
     role === "technician" ? "Pharmacy technician" : "Pharmacist";
   return (
