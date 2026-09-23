@@ -1632,7 +1632,11 @@ export default function MounjaroClient() {
               <p className="text-sm text-gray-600 mb-4">
                 Review the summary below before printing the consultation record.
               </p>
-              <MounjaroSummaryReport state={updatedState} />
+              <MounjaroSummaryReport
+                state={updatedState}
+                onGphcChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "pharmacistGPhC", value: v })}
+                onNameChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "pharmacistName", value: v })}
+              />
             </div>
           </StepWrapper>
         );

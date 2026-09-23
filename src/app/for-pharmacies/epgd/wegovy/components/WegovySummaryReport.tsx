@@ -36,7 +36,15 @@ const DOSE_PRODUCT: Record<string, string> = {
   "7.2mg": "Wegovy 7.2 mg solution for injection in pre-filled pen (four single use pens)",
 };
 
-export function WegovySummaryReport({ state }: { state: WegovyConsultationState }) {
+export function WegovySummaryReport({
+  state,
+  onGphcChange,
+  onNameChange,
+}: {
+  state: WegovyConsultationState;
+  onGphcChange?: (v: string) => void;
+  onNameChange?: (v: string) => void;
+}) {
   const stopsExist = state.alerts.some((a) => a.severity === "stop");
   // Never print a supply, or the "no exclusion criteria applied" declaration,
   // when a stop exists (adversarial review, 11 Sep 2026).
@@ -556,6 +564,8 @@ export function WegovySummaryReport({ state }: { state: WegovyConsultationState 
           pharmacistName={state.summary.pharmacistName}
           pharmacistGPhC={state.summary.pharmacistGPhC}
           pharmacyName={state.summary.pharmacyName}
+          onGphcChange={onGphcChange}
+          onNameChange={onNameChange}
         />
       )}
 

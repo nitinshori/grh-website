@@ -98,11 +98,19 @@ export function PharmacistDeclaration({
   pharmacistName,
   pharmacistGPhC,
   pharmacyName,
+  onGphcChange,
+  onNameChange,
 }: {
   pgdName: string;
   pharmacistName: string;
   pharmacistGPhC: string;
   pharmacyName: string;
+  /** When given, the GPhC line is typed into directly on screen (printed as
+   *  text). Rachel Edwards at Smartway, 23 Sep 2026, tried to type her GPhC
+   *  number into this printed line, could not, and could not save; the
+   *  editable field was at the top of the step. */
+  onGphcChange?: (v: string) => void;
+  onNameChange?: (v: string) => void;
 }) {
   // Role selector (Rachel's request, Jul 2026): GRH PGDs authorise
   // GPhC-registered pharmacy technicians as well as pharmacists, so the
@@ -154,17 +162,52 @@ export function PharmacistDeclaration({
           <p className="text-xs font-medium text-gray-500 mb-1">
             {roleLabel} name
           </p>
-          <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">
-            {pharmacistName || ""}
-          </p>
+          {onNameChange ? (
+            <>
+              <input
+                type="text"
+                value={pharmacistName}
+                onChange={(e) => onNameChange(e.target.value)}
+                aria-label={`${roleLabel} name`}
+                className="print:hidden w-full text-sm text-navy-900 border-0 border-b border-gray-300 pb-1 min-h-[1.5rem] bg-transparent focus:outline-none focus:border-teal-500"
+              />
+              <p className="hidden print:block text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{pharmacistName || ""}</p>
+            </>
+          ) : (
+            <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">
+              {pharmacistName || ""}
+            </p>
+          )}
         </div>
         <div>
           <p className="text-xs font-medium text-gray-500 mb-1">
             GPhC number
           </p>
-          <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">
-            {pharmacistGPhC || ""}
-          </p>
+          {onGphcChange ? (
+            <>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={pharmacistGPhC}
+                onChange={(e) => onGphcChange(e.target.value)}
+                placeholder="Type your GPhC number"
+                aria-label="GPhC number"
+                className="print:hidden w-full text-sm text-navy-900 border-0 border-b border-gray-300 pb-1 min-h-[1.5rem] bg-transparent focus:outline-none focus:border-teal-500 placeholder:text-gray-400"
+              />
+              <p className="hidden print:block text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">{pharmacistGPhC || ""}</p>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-navy-900 border-b border-gray-300 pb-1 min-h-[1.5rem]">
+                {pharmacistGPhC || ""}
+              </p>
+              {!pharmacistGPhC && (
+                <p className="print:hidden text-[11px] text-amber-700 mt-1">
+                  Enter your GPhC number in the &quot;GPhC registration number&quot; field at the top of this step; it will appear here.
+                </p>
+              )}
+            </>
+          )}
         </div>
         <div>
           <p className="text-xs font-medium text-gray-500 mb-1">Pharmacy</p>
