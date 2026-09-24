@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { londonDateTime, londonDayStart, londonDayOfWeek, londonToday } from '@/lib/uk-time'
 import { db } from '@/lib/db'
 import {
   pharmacies,
@@ -64,20 +65,19 @@ export async function GET(
 
   const duration = apptType.durationMinutes
 
-  // Parse the requested date
-  const targetDate = new Date(dateStr + 'T00:00:00')
-  if (isNaN(targetDate.getTime())) {
+  // Parse the requested date. Everything here is UK wall-clock time: the
+  // server runs in UTC, so slots are built with londonDateTime rather than
+  // setHours (which put a 09:30 availability at 10:30 BST for patients).
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr) || isNaN(new Date(dateStr + 'T00:00:00Z').getTime())) {
     return NextResponse.json({ error: 'Invalid date' }, { status: 400 })
   }
 
   // Don't allow booking in the past
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  if (targetDate < today) {
+  if (dateStr < londonToday()) {
     return NextResponse.json({ slots: [] })
   }
 
-  const dayOfWeek = targetDate.getDay() // 0=Sun, 1=Mon...
+  const dayOfWeek = londonDayOfWeek(dateStr) // 0=Sun, 1=Mon...
 
   // Get all clinician availability for this site + day of week
   const availabilities = await db
@@ -103,8 +103,8 @@ export async function GET(
   }
 
   // Get existing booked appointments for this site on this date
-  const dayStart = new Date(dateStr + 'T00:00:00')
-  const dayEnd = new Date(dateStr + 'T23:59:59')
+  const dayStart = londonDayStart(dateStr)
+  const dayEnd = londonDateTime(dateStr, 23, 59)
 
   const existingAppointments = await db
     .select({
@@ -146,16 +146,8 @@ export async function GET(
     )
 
     for (let m = availStartMin; m + duration <= availEndMin; m += duration) {
-      const slotStart = new Date(targetDate)
-      slotStart.setHours(Math.floor(m / 60), m % 60, 0, 0)
-
-      const slotEnd = new Date(targetDate)
-      slotEnd.setHours(
-        Math.floor((m + duration) / 60),
-        (m + duration) % 60,
-        0,
-        0
-      )
+      const slotStart = londonDateTime(dateStr, Math.floor(m / 60), m % 60)
+      const slotEnd = londonDateTime(dateStr, Math.floor((m + duration) / 60), (m + duration) % 60)
 
       // Skip if in the past
       if (slotStart <= now) continue
