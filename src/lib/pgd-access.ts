@@ -489,7 +489,7 @@ export const REISSUED_PGDS: Record<string, { version: string; date: string }> = 
   mounjaro: { version: 'v010', date: '14 September 2026' },
   mysimba: { version: 'v006', date: '14 September 2026' },
   orlistat: { version: 'v005', date: '14 September 2026' },
-  'period-delay': { version: 'v010', date: '14 September 2026' },
+  'period-delay': { version: 'v011', date: '24 September 2026' },
   'period-pain': { version: 'v006', date: '14 September 2026' },
   pneumococcal: { version: 'v007', date: '14 September 2026' },
   'postnatal-contraception': { version: 'v007', date: '14 September 2026' },
