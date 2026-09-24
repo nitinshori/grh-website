@@ -4,13 +4,11 @@ import type {
   PneumococcalSummary,
 } from './pneumococcal-types';
 import {
-  revaccinationGroup,
-  weeksSince,
-  yearsSinceLastPolysaccharideOrPCV20,
+  getPneumococcalProductAvailability,
   type PneumococcalMedicalHistoryInput,
 } from './pneumococcal-clinical-logic';
 
-// Aligned to the Pneumovax 23 / Prevenar 13 PGD version 007, issued 14 September 2026.
+// Aligned to the Pneumovax 23 / Prevenar 20 PGD version 008, issued 24 September 2026.
 
 export function validatePneumococcalPatientStep(
   patient: PneumococcalPatientDetails
@@ -21,6 +19,11 @@ export function validatePneumococcalPatientStep(
   if (patient.age === null) return 'Unable to calculate age';
   if (patient.age < 2) return 'This PGD is for individuals aged 2 years and over';
   if (!patient.riskCategory) return 'Eligibility group under national guidance must be selected';
+  // 'not-eligible' is a complete answer: the stop it raises lets the visit be saved as not supplied.
+  if (patient.riskCategory === 'not-eligible') return null;
+  if (patient.riskCategory === 'ckd' && !patient.ckdCriterion) {
+    return 'CKD stage 3 or milder is not in the group: select the Green Book criterion that applies';
+  }
   if (patient.riskCategory === 'chronic-disease' && !patient.chronicDiseaseType?.trim()) {
     return 'Please specify the chronic disease type';
   }
@@ -30,8 +33,12 @@ export function validatePneumococcalPatientStep(
   if (patient.riskCategory === 'age-65-plus' && patient.age < 65) {
     return 'Patient is under 65: select the clinical risk group that applies';
   }
-  if (patient.riskCategory === 'other-national-guidance' && !patient.otherEligibilityReason?.trim()) {
-    return 'State the Green Book chapter 25 group under which the patient is eligible';
+  if (
+    patient.riskCategory === 'other-national-guidance' &&
+    patient.otherEligibilityReason !== 'metal-fumes' &&
+    patient.otherEligibilityReason !== 'homelessness'
+  ) {
+    return 'Select the Green Book chapter 25 group under which the patient is eligible (metal fumes or homelessness)';
   }
   return null;
 }
@@ -73,6 +80,8 @@ export function validatePneumococcalRiskAssessmentStep(data: {
   previousPCV20Date: string;
   previousPPV23: boolean;
   previousPPV23Date: string;
+  previousOtherPCV?: boolean;
+  previousOtherPCVDate?: string;
 }): string | null {
   if (!data.confirmedRiskCategory) return 'Tick "Risk category confirmed as documented"';
   const today = new Date().toISOString().split('T')[0];
@@ -82,17 +91,16 @@ export function validatePneumococcalRiskAssessmentStep(data: {
   if (data.previousPCV20 && data.previousPCV20Date > today) return 'Date of PCV20 dose cannot be in the future';
   if (data.previousPPV23 && !data.previousPPV23Date) return 'Enter the date of the PPV23 dose';
   if (data.previousPPV23 && data.previousPPV23Date > today) return 'Date of PPV23 dose cannot be in the future';
+  if (data.previousOtherPCV && !data.previousOtherPCVDate) return 'Enter the date of the Vaxneuvance or Capvaxive dose';
+  if (data.previousOtherPCV && (data.previousOtherPCVDate ?? '') > today) return 'Date of the Vaxneuvance or Capvaxive dose cannot be in the future';
   if (!data.reviewedVaccineHistory)
     return 'Tick "Vaccine history reviewed"';
   return null;
 }
 
-export function validatePneumococcalMedicalHistoryStep(data: {
-  anaphylaxisToVaccine: boolean;
-  anaphylaxisToVaccineComponent: boolean;
-  severeFebrilleIllness: boolean;
-}): string | null {
-  // Medical history step should always proceed to next
+export function validatePneumococcalMedicalHistoryStep(): string | null {
+  // Medical history step always proceeds: the exclusions it raises are stops
+  // enforced on the Review Contraindications step.
   return null;
 }
 
@@ -106,10 +114,17 @@ export function validatePneumococcalContraindicationsStep(data: {
 
 /**
  * Administration step. Enforces the product-specific exclusions and dose
- * rules in PGD v007 that depend on which vaccine is chosen:
- * Prevenar 13: not after any conjugate vaccine, not with CRM197 hypersensitivity, IM only.
- * Pneumovax 23: at least 8 weeks after a conjugate vaccine; no revaccination
- * except asplenia, splenic dysfunction or CKD after 5 years.
+ * rules in PGD v008 that depend on which vaccine is chosen:
+ * Prevenar 20: single lifetime dose (never after PCV20); not after PPV23
+ * except as the 5-yearly revaccination dose of asplenia, splenic dysfunction
+ * or CKD (nephrotic syndrome, stage 4 or 5, dialysis or transplant) where it
+ * has never been given; at least 8 weeks after any conjugate vaccine; not
+ * with CRM197 hypersensitivity; IM only (deltoid).
+ * Pneumovax 23: at least 8 weeks after any conjugate vaccine; no
+ * revaccination after PPV23 or PCV20 except those groups after 5 years;
+ * IM or SC.
+ * Both: Vaxneuvance or Capvaxive at 2 years or older excludes whatever the
+ * interval (validated through getPneumococcalProductAvailability).
  */
 export function validatePneumococcalAdministrationStep(
   summary: Partial<PneumococcalSummary>,
@@ -118,28 +133,31 @@ export function validatePneumococcalAdministrationStep(
 ): string | null {
   if (!summary.vaccineType) return 'Vaccine type must be selected';
   if (patient && history) {
-    if (summary.vaccineType === 'pcv13') {
-      if (history.diphtheriaToxoidHypersensitivity)
-        return 'Prevenar 13 is contraindicated: hypersensitivity to diphtheria toxoid (CRM197 carrier protein)';
-      if (history.previousPCV13 || history.previousPCV20)
-        return 'Prevenar 13 under this PGD is only for individuals who have not previously received a pneumococcal conjugate vaccine';
-      if (summary.administrationSite === 'left-arm-sc' || summary.administrationSite === 'right-arm-sc')
-        return 'Prevenar 13 is given by intramuscular injection only';
+    const availability = getPneumococcalProductAvailability(patient, history);
+    if (summary.vaccineType === 'pcv20') {
+      if (!availability.pcv20Possible)
+        return `Prevenar 20 cannot be given: ${availability.pcv20Reason}`;
     }
     if (summary.vaccineType === 'ppv23') {
-      const w = history.previousPCV13 ? weeksSince(history.previousPCV13Date) : null;
-      if (w !== null && w < 8)
-        return 'Pneumovax 23 must be given at least 8 weeks after the conjugate vaccine';
-      if (history.previousPPV23 || history.previousPCV20) {
-        if (!revaccinationGroup(patient))
-          return 'PPV23 or PCV20 already received: revaccination is only for asplenia, splenic dysfunction or chronic kidney disease';
-        const y = yearsSinceLastPolysaccharideOrPCV20(history);
-        if (y !== null && y < 5)
-          return 'PPV23 or PCV20 received within the last 5 years: revaccination is not yet due';
-      }
+      if (!availability.ppv23Possible)
+        return `Pneumovax 23 cannot be given: ${availability.ppv23Reason}`;
     }
   }
+  if (
+    summary.vaccineType === 'pcv20' &&
+    (summary.administrationSite === 'left-arm-sc' || summary.administrationSite === 'right-arm-sc')
+  ) {
+    return 'Prevenar 20 is given by intramuscular injection only, into the deltoid';
+  }
   if (!summary.doseNumber) return 'Select the dose number in sequence';
+  if (summary.vaccineType === 'pcv20' && summary.doseNumber === '2' && history && history.previousPCV20)
+    return 'Prevenar 20 is a single lifetime dose and has already been given: later 5-yearly revaccination cycles are Pneumovax 23';
+  if (summary.doseNumber === '2' && history && !history.previousPPV23 && !history.previousPCV20) {
+    return 'No previous PPV23 or PCV20 is recorded: this is the first dose, not a 5-yearly revaccination';
+  }
+  if (summary.doseNumber === '1' && history && (history.previousPPV23 || history.previousPCV20)) {
+    return 'A previous PPV23 or PCV20 is recorded: select the 5-yearly revaccination as the dose in sequence';
+  }
   if (!summary.batchNumber?.trim()) return 'Batch number is required';
   if (!summary.expiryDate) return 'Expiry date is required';
   {
@@ -149,34 +167,8 @@ export function validatePneumococcalAdministrationStep(
     if (!isNaN(exp.getTime()) && exp < today) return 'This batch has expired. Do not use it.';
   }
   if (!summary.administrationSite) return 'Administration site must be selected';
-  // PCV13 given to a patient in whom PPV23 also follows: the document
-  // specifies "at least 8 weeks after", so the next-due date is recorded and
-  // booked now rather than left to memory.
-  if (patient && history && ppv23FollowsPcv13(summary, patient, history)) {
-    if (!summary.counselledNextDue) return 'Pneumovax 23 follows Prevenar 13 in this patient: record the date it is due (at least 8 weeks from today) and book it';
-    const due = new Date(summary.counselledNextDue);
-    const earliest = new Date();
-    earliest.setHours(0, 0, 0, 0);
-    earliest.setDate(earliest.getDate() + 56);
-    if (isNaN(due.getTime())) return 'Next due date is not a valid date';
-    if (due < earliest) return 'Pneumovax 23 must be at least 8 weeks (56 days) after Prevenar 13: choose a later date';
-  }
   if (!summary.administrationTime) return 'Time of administration is required';
   return null;
-}
-
-/** True where Prevenar 13 is being given and the PGD sequence calls for Pneumovax 23 to follow. */
-export function ppv23FollowsPcv13(
-  summary: Partial<PneumococcalSummary>,
-  patient: PneumococcalPatientDetails,
-  history: PneumococcalMedicalHistoryInput
-): boolean {
-  return (
-    summary.vaccineType === 'pcv13' &&
-    (patient.riskCategory === 'asplenia' || patient.riskCategory === 'immunosuppressed') &&
-    !history.previousPPV23 &&
-    !history.previousPCV20
-  );
 }
 
 export function validatePneumococcalPostVaccineStep(data: {
