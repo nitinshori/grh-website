@@ -5,6 +5,7 @@ import { FooterShell } from "@/components/layout/FooterShell";
 import { CookieConsent } from "@/components/legal/CookieConsent";
 import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 import { GoogleTagManager } from "@/components/analytics/GoogleTagManager";
+import { GoogleAdsTag } from "@/components/analytics/GoogleAdsTag";
 import { AuthSessionProvider } from "@/components/providers/AuthSessionProvider";
 import { ChatWidget } from "@/components/chat/ChatWidget";
 
@@ -100,6 +101,7 @@ export default function RootLayout({
           <ChatWidget />
           <GoogleAnalytics />
           <GoogleTagManager />
+          <GoogleAdsTag />
         </AuthSessionProvider>
       </body>
     </html>

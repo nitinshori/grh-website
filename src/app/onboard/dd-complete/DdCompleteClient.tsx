@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { pushDataLayerEvent } from "@/lib/gtm";
+import { trackAdsConversion } from "@/lib/google-ads";
 
 type State = "loading" | "ok" | "error";
 
@@ -28,8 +29,12 @@ export default function DdCompleteClient() {
       .then(() => {
         if (!cancelled) {
           setState("ok");
-          // Google Ads conversion — onboarding + GoCardless mandate complete
+          // Google Ads conversion: onboarding and GoCardless mandate complete.
+          // The dataLayer push is for GTM, if a container is ever added.
+          // trackAdsConversion reports it to Google Ads directly, which is
+          // what actually records the conversion today.
           pushDataLayerEvent("onboard_complete");
+          trackAdsConversion("signup");
         }
       })
       .catch((e) => { if (!cancelled) { setState("error"); setErrorMsg(String(e.message || e)); } });
