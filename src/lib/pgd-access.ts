@@ -102,7 +102,7 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
   { slug: 'flu', title: 'Flu Vaccination', subtitle: 'Seasonal Influenza', category: 'Vaccines' },
   { slug: 'covid-booster', title: 'COVID-19 Booster', subtitle: 'mRNA / Protein Subunit', category: 'Vaccines' },
   { slug: 'shingles-vaccine', title: 'Shingles Vaccine', subtitle: 'Shingrix', category: 'Vaccines' },
-  { slug: 'pneumococcal', title: 'Pneumococcal Vaccine', subtitle: 'Prevenar 20 (PCV20) or Pneumovax 23, from 2 years', category: 'Vaccines' },
+  { slug: 'pneumococcal', title: 'Pneumococcal Vaccine', subtitle: 'PCV20 (Prevenar 20)', category: 'Vaccines' },
   // Subtitle corrected 8 Sep 2026: 'Gardasil 9' alone told a pharmacist
   // nothing about who the service is for, and the tool had quietly become
   // female-only. The v002 document covers all sexes from 9 years.
@@ -489,9 +489,9 @@ export const REISSUED_PGDS: Record<string, { version: string; date: string }> = 
   mounjaro: { version: 'v010', date: '14 September 2026' },
   mysimba: { version: 'v006', date: '14 September 2026' },
   orlistat: { version: 'v005', date: '14 September 2026' },
-  'period-delay': { version: 'v011', date: '24 September 2026' },
+  'period-delay': { version: 'v010', date: '14 September 2026' },
   'period-pain': { version: 'v006', date: '14 September 2026' },
-  pneumococcal: { version: 'v008', date: '24 September 2026' },
+  pneumococcal: { version: 'v007', date: '14 September 2026' },
   'postnatal-contraception': { version: 'v007', date: '14 September 2026' },
   'premature-ejaculation': { version: 'v006', date: '14 September 2026' },
   psoriasis: { version: 'v007', date: '14 September 2026' },

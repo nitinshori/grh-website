@@ -7,8 +7,6 @@ interface PharmacistProfile {
   email: string
   role: string
   gphcNumber: string
-  /** 'technician' when the clinician record says so; defaults the declaration role. */
-  practitionerRole?: 'pharmacist' | 'technician'
   pharmacyName: string
   pharmacyAddress: string
 }

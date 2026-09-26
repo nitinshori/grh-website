@@ -15,24 +15,18 @@ import type {
   PneumococcalConsent,
   PneumococcalSummary,
 } from '../pneumococcal-types';
-import { CKD_CRITERION_LABELS, OTHER_ELIGIBILITY_LABELS } from '../pneumococcal-types';
 
 interface PneumococcalSummaryReportProps {
   patientDetails: PneumococcalPatientDetails;
   consent: PneumococcalConsent;
   summary: PneumococcalSummary;
   riskAssessment: {
-    confirmedRiskCategory?: boolean;
-    reviewedVaccineHistory?: boolean;
     previousPCV13: boolean;
     previousPCV13Date: string;
     previousPCV20?: boolean;
     previousPCV20Date?: string;
     previousPPV23: boolean;
     previousPPV23Date: string;
-    previousOtherPCV?: boolean;
-    previousOtherPCVDate?: string;
-    pcv20Under2RiskSchedule?: boolean;
   };
   medicalHistory: {
     anaphylaxisToVaccine: boolean;
@@ -40,15 +34,8 @@ interface PneumococcalSummaryReportProps {
     diphtheriaToxoidHypersensitivity?: boolean;
     severeFebrilleIllness: boolean;
     bleedingDisorder?: boolean;
-    severeImmunocompromise?: boolean;
-    currentOrRecentChemoRadiotherapy?: boolean;
-    pregnant?: boolean;
-    requiredProductNotHeld?: boolean;
-    patientDeclined?: boolean;
   };
   clinicalAlerts: ClinicalAlert[];
-  /** Advice given and decision reached where the patient was excluded (PGD records row). */
-  exclusionAdvice?: string;
   postVaccineAdvice: {
     patientAdvised: boolean;
     counselledReactions: boolean;
@@ -72,14 +59,13 @@ const SITE_LABELS: Record<string, string> = {
 
 const RISK_LABELS: Record<string, string> = {
   asplenia: 'Asplenia or splenic dysfunction',
-  ckd: 'Chronic kidney disease (nephrotic syndrome, CKD stage 4 or 5, dialysis or kidney transplant)',
+  ckd: 'Chronic kidney disease',
   'chronic-disease': 'Chronic disease',
   immunosuppressed: 'Immunosuppressed',
   cochlear: 'Cochlear implant',
   'csf-leak': 'Cerebrospinal fluid leak',
   'age-65-plus': 'Adult aged 65 years and over',
   'other-national-guidance': 'Other group eligible under national guidance',
-  'not-eligible': 'Not in an eligible group (not authorised under this PGD)',
 };
 
 export default function PneumococcalSummaryReport({
@@ -89,7 +75,6 @@ export default function PneumococcalSummaryReport({
   riskAssessment,
   medicalHistory,
   clinicalAlerts,
-  exclusionAdvice,
   postVaccineAdvice,
   onBack,
   embedded = false,
@@ -124,35 +109,17 @@ export default function PneumococcalSummaryReport({
           <SectionHeader>Risk Assessment</SectionHeader>
           <div className="space-y-1.5">
             <Row label="Eligibility group" value={RISK_LABELS[patientDetails.riskCategory] || 'Not specified'} />
-            {patientDetails.riskCategory === 'ckd' && (
-              <Row
-                label="CKD criterion (Green Book Table 2)"
-                value={
-                  patientDetails.ckdCriterion
-                    ? CKD_CRITERION_LABELS[patientDetails.ckdCriterion]
-                    : 'Not recorded'
-                }
-              />
-            )}
             {patientDetails.chronicDiseaseType && (
               <Row label="Chronic disease type" value={patientDetails.chronicDiseaseType} />
             )}
             {patientDetails.immunosuppressedReason && (
               <Row label="Immunosuppression reason" value={patientDetails.immunosuppressedReason} />
             )}
-            {patientDetails.riskCategory === 'other-national-guidance' && (
-              <Row
-                label="National guidance group"
-                value={
-                  patientDetails.otherEligibilityReason
-                    ? OTHER_ELIGIBILITY_LABELS[patientDetails.otherEligibilityReason]
-                    : 'Not recorded'
-                }
-              />
+            {patientDetails.otherEligibilityReason && (
+              <Row label="National guidance group" value={patientDetails.otherEligibilityReason} />
             )}
-            <Row label="Risk category confirmed as documented" value={riskAssessment.confirmedRiskCategory ? 'Yes' : 'No'} />
             <Row
-              label="Previous PCV13 (Prevenar 13), history only"
+              label="Previous PCV13 (Prevenar 13)"
               value={
                 riskAssessment.previousPCV13
                   ? `Yes (${riskAssessment.previousPCV13Date})`
@@ -160,16 +127,12 @@ export default function PneumococcalSummaryReport({
               }
             />
             <Row
-              label="Previous PCV20 (Prevenar 20) at 2 years or older"
+              label="Previous PCV20 (Prevenar 20)"
               value={
                 riskAssessment.previousPCV20
                   ? `Yes (${riskAssessment.previousPCV20Date})`
                   : 'No'
               }
-            />
-            <Row
-              label="Prevenar 20 under 2 years on the risk-group schedule"
-              value={riskAssessment.pcv20Under2RiskSchedule ? 'Yes: referred to the GP to complete Green Book Table 3' : 'No'}
             />
             <Row
               label="Previous PPV23 (Pneumovax 23)"
@@ -179,15 +142,6 @@ export default function PneumococcalSummaryReport({
                   : 'No'
               }
             />
-            <Row
-              label="Vaxneuvance (PCV15) or Capvaxive (PCV21) at 2 years or older"
-              value={
-                riskAssessment.previousOtherPCV
-                  ? `Yes (${riskAssessment.previousOtherPCVDate || 'date not recorded'})`
-                  : 'No'
-              }
-            />
-            <Row label="Vaccine history reviewed" value={riskAssessment.reviewedVaccineHistory ? 'Yes' : 'No'} />
           </div>
         </div>
 
@@ -222,12 +176,7 @@ export default function PneumococcalSummaryReport({
               ['Hypersensitivity to the vaccine or any component', medicalHistory.anaphylaxisToVaccineComponent],
               ['Hypersensitivity to diphtheria toxoid (CRM197)', Boolean(medicalHistory.diphtheriaToxoidHypersensitivity)],
               ['Acute illness with fever', medicalHistory.severeFebrilleIllness],
-              ['Severe immunocompromise (BMT, leukaemia, myeloma, genetic immune disorder): referred', Boolean(medicalHistory.severeImmunocompromise)],
-              ['Current or recent chemotherapy or radiotherapy: not given, referred to the treating team', Boolean(medicalHistory.currentOrRecentChemoRadiotherapy)],
-              ['Pregnant (caution in both arms, not an exclusion; SmPC has no data, patient told)', Boolean(medicalHistory.pregnant)],
-              ['Bleeding disorder, thrombocytopenia or anticoagulation (caution)', Boolean(medicalHistory.bleedingDisorder)],
-              ['Only product the patient can have under the PGD not held today', Boolean(medicalHistory.requiredProductNotHeld)],
-              ['Patient declined vaccination', Boolean(medicalHistory.patientDeclined)],
+              ['Bleeding disorder (caution)', Boolean(medicalHistory.bleedingDisorder)],
             ]}
           />
         </div>
@@ -237,14 +186,6 @@ export default function PneumococcalSummaryReport({
           <SectionHeader>Clinical Alerts</SectionHeader>
           <AlertSummary alerts={clinicalAlerts} />
         </div>
-
-        {/* Advice given where excluded (PGD records row) */}
-        {exclusionAdvice && (
-          <div>
-            <SectionHeader>Advice Given and Decision Reached</SectionHeader>
-            <p className="text-xs text-gray-600 whitespace-pre-wrap">{exclusionAdvice}</p>
-          </div>
-        )}
 
         {/* Vaccine Administration */}
         {stopped ? (
@@ -263,18 +204,12 @@ export default function PneumococcalSummaryReport({
           <div className="space-y-1.5">
             <Row
               label="Vaccine type"
-              value={summary.vaccineType === 'pcv20' ? 'Prevenar 20 (PCV20)' : summary.vaccineType === 'ppv23' ? 'Pneumovax 23 (PPV23)' : 'Not recorded'}
+              value={summary.vaccineType === 'pcv13' ? 'Prevenar 13 (PCV13)' : summary.vaccineType === 'ppv23' ? 'Pneumovax 23 (PPV23)' : 'Not recorded'}
             />
             <Row label="Dose and route" value={`0.5 mL ${summary.administrationSite.endsWith('-sc') ? 'subcutaneous' : 'intramuscular'}`} />
             <Row
-              label="Dose in sequence"
-              value={
-                summary.doseNumber === '1'
-                  ? 'First pneumococcal dose under this PGD'
-                  : summary.doseNumber === '2'
-                    ? `5-yearly revaccination (asplenia, splenic dysfunction or chronic kidney disease)${summary.vaccineType === 'pcv20' ? ': Prevenar 20 given once, later cycles Pneumovax 23' : ''}`
-                    : 'Not recorded'
-              }
+              label="Dose number"
+              value={summary.doseNumber === '1' ? 'Dose 1' : 'Dose 2'}
             />
             <Row label="Batch number" value={summary.batchNumber} />
             <Row label="Expiry date" value={summary.expiryDate} />
@@ -283,6 +218,9 @@ export default function PneumococcalSummaryReport({
               value={SITE_LABELS[summary.administrationSite] || 'Not recorded'}
             />
             <Row label="Administration time" value={summary.administrationTime} />
+            {summary.counselledNextDue && (
+              <Row label="Pneumovax 23 due (booked)" value={summary.counselledNextDue} />
+            )}
             <Row label="15 minute observation completed" value={postVaccineAdvice.observationCompleted ? 'Yes' : 'No'} />
           </div>
         </div>
@@ -300,15 +238,15 @@ export default function PneumococcalSummaryReport({
               ['Understands vaccination schedule', consent.understandsSchedule],
               ['Aware of possible side effects', consent.understandsSideEffects],
               ['Informed of side effects and when to seek help', postVaccineAdvice.counselledReactions],
-              ['Follow-up advice given (seek medical advice for a severe or persistent injection site reaction, a fever not settling within 48 hours, or any sign of allergic reaction; 999 for difficulty breathing, face or throat swelling, or collapse; revaccination only for asplenia, splenic dysfunction and CKD every 5 years with Pneumovax 23 or via the GP)', Boolean(postVaccineAdvice.followUpAdviceGiven)],
+              ['Follow-up advice given (worsening, no improvement in 3 to 4 weeks, systemically unwell)', Boolean(postVaccineAdvice.followUpAdviceGiven)],
               ['Patient information leaflet supplied', Boolean(postVaccineAdvice.pilSupplied)],
-              ['Understands whether revaccination is due', postVaccineAdvice.counselledBothVaccines],
+              ['Understands whether a second vaccine or revaccination is due', postVaccineAdvice.counselledBothVaccines],
             ]}
           />
         </div>
 
         <p className="text-[10px] text-gray-500">
-          Patient Group Direction for Pneumovax 23 or Prevenar 20 (pneumococcal disease), version 008, issued 24 September 2026.
+          Patient Group Direction for Pneumovax 23 or Prevenar 13 (pneumococcal disease), version 007, issued 14 September 2026.
         </p>
 
         {/* Clinical Notes */}

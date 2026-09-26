@@ -18,13 +18,10 @@ import {
   initialPneumococcalPatientDetails,
   initialPneumococcalConsent,
   initialPneumococcalSummary,
-  CKD_CRITERION_LABELS,
-  OTHER_ELIGIBILITY_LABELS,
 } from './pneumococcal-types';
 import {
   getPneumococcalClinicalAlerts,
   getPneumococcalDoseSchedule,
-  getPneumococcalProductAvailability,
   shouldBlockConsultation,
   determinePneumococcalRiskLevel,
 } from './pneumococcal-clinical-logic';
@@ -34,6 +31,7 @@ import {
   validatePneumococcalRiskAssessmentStep,
   validatePneumococcalAdministrationStep,
   validatePneumococcalSummaryStep,
+  ppv23FollowsPcv13,
 } from './pneumococcal-validation';
 import { calculateAge } from '../shared/types';
 import PneumococcalSummaryReport from './components/PneumococcalSummaryReport';
@@ -68,11 +66,6 @@ export function PneumococcalClient() {
     previousPCV20Date: '',
     previousPPV23: false,
     previousPPV23Date: '',
-    /** Vaxneuvance (PCV15) or Capvaxive (PCV21) at 2 years or older: excludes both products. */
-    previousOtherPCV: false,
-    previousOtherPCVDate: '',
-    /** Prevenar 20 under 2 years on the risk-group schedule: refer to the GP (Green Book Table 3). */
-    pcv20Under2RiskSchedule: false,
   });
 
   const [medicalHistory, setMedicalHistory] = useState({
@@ -81,13 +74,6 @@ export function PneumococcalClient() {
     diphtheriaToxoidHypersensitivity: false,
     severeFebrilleIllness: false,
     bleedingDisorder: false,
-    severeImmunocompromise: false,
-    currentOrRecentChemoRadiotherapy: false,
-    pregnant: false,
-    /** The only product this patient can have under the PGD is not held today: stop, save as not supplied. */
-    requiredProductNotHeld: false,
-    /** Patient declined after the discussion: stop, record the decision. */
-    patientDeclined: false,
   });
 
   const [contraIndicationsReviewed, setContraIndicationsReviewed] = useState({
@@ -104,7 +90,6 @@ export function PneumococcalClient() {
   useEffect(() => {
     if (!__pharmProfile) return;
     if (summary.pharmacistName || summary.pharmacistGPhC) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- profile arrives asynchronously from the shared hook; same pattern as every other ePGD tool
     setSummary((prev) => ({
       ...prev,
       pharmacistName: __pharmProfile.name,
@@ -126,13 +111,13 @@ export function PneumococcalClient() {
 
   // Calculate age when DOB changes
   const handlePatientDetailsChange = useCallback(
-    (field: keyof PneumococcalPatientDetails, value: PneumococcalPatientDetails[keyof PneumococcalPatientDetails]) => {
-      // Functional update: GP-practice autofill sets several fields in one
+    (field: keyof PneumococcalPatientDetails, value: any) => {
+      // Functional update — GP-practice autofill sets several fields in one
       // tick; a closure spread would drop all but the last. See meningitis fix.
       setPatientDetails((prev) => {
         const updated = { ...prev, [field]: value };
         if (field === 'dateOfBirth') {
-          updated.age = calculateAge(String(value ?? ''));
+          updated.age = calculateAge(value);
         }
         return updated;
       });
@@ -148,20 +133,12 @@ export function PneumococcalClient() {
       diphtheriaToxoidHypersensitivity: medicalHistory.diphtheriaToxoidHypersensitivity,
       severeFebrilleIllness: medicalHistory.severeFebrilleIllness,
       bleedingDisorder: medicalHistory.bleedingDisorder,
-      severeImmunocompromise: medicalHistory.severeImmunocompromise,
-      currentOrRecentChemoRadiotherapy: medicalHistory.currentOrRecentChemoRadiotherapy,
-      pregnant: medicalHistory.pregnant,
-      requiredProductNotHeld: medicalHistory.requiredProductNotHeld,
-      patientDeclined: medicalHistory.patientDeclined,
       previousPCV13: riskAssessment.previousPCV13,
       previousPCV13Date: riskAssessment.previousPCV13Date,
       previousPCV20: riskAssessment.previousPCV20,
       previousPCV20Date: riskAssessment.previousPCV20Date,
       previousPPV23: riskAssessment.previousPPV23,
       previousPPV23Date: riskAssessment.previousPPV23Date,
-      previousOtherPCV: riskAssessment.previousOtherPCV,
-      previousOtherPCVDate: riskAssessment.previousOtherPCVDate,
-      pcv20Under2RiskSchedule: riskAssessment.pcv20Under2RiskSchedule,
     }),
     [medicalHistory, riskAssessment]
   );
@@ -174,21 +151,12 @@ export function PneumococcalClient() {
     return shouldBlockConsultation(clinicalAlerts);
   }, [clinicalAlerts]);
 
-  // Which products the PGD allows for this patient today. The vaccine
-  // dropdown hides a product that cannot be given and says why; the
-  // administration validation keeps the same rule as a backstop.
-  const productAvailability = useMemo(() => {
-    return getPneumococcalProductAvailability(patientDetails, historyInput);
-  }, [patientDetails, historyInput]);
-
   // Determine recommended dose
   const doseSchedule = useMemo(() => {
     return getPneumococcalDoseSchedule(patientDetails, {
       previousPCV13: riskAssessment.previousPCV13,
       previousPCV20: riskAssessment.previousPCV20,
       previousPPV23: riskAssessment.previousPPV23,
-      previousOtherPCV: riskAssessment.previousOtherPCV,
-      pcv20Under2RiskSchedule: riskAssessment.pcv20Under2RiskSchedule,
     });
   }, [patientDetails, riskAssessment]);
 
@@ -270,7 +238,7 @@ export function PneumococcalClient() {
   // chosen, so that an excluded patient can be saved as "not supplied".
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
     const stopped = clinicalAlerts.some((a) => a.severity === 'stop');
-    const productLabel = summary.vaccineType === 'pcv20' ? 'Prevenar 20 (PCV20)' : summary.vaccineType === 'ppv23' ? 'Pneumovax 23 (PPV23)' : '';
+    const productLabel = summary.vaccineType === 'pcv13' ? 'Prevenar 13 (PCV13)' : summary.vaccineType === 'ppv23' ? 'Pneumovax 23 (PPV23)' : '';
     return {
       patient: {
         firstName: patientDetails.firstName,
@@ -334,9 +302,6 @@ export function PneumococcalClient() {
       previousPCV20Date: '',
       previousPPV23: false,
       previousPPV23Date: '',
-      previousOtherPCV: false,
-      previousOtherPCVDate: '',
-      pcv20Under2RiskSchedule: false,
     });
     setMedicalHistory({
       anaphylaxisToVaccine: false,
@@ -344,11 +309,6 @@ export function PneumococcalClient() {
       diphtheriaToxoidHypersensitivity: false,
       severeFebrilleIllness: false,
       bleedingDisorder: false,
-      severeImmunocompromise: false,
-      currentOrRecentChemoRadiotherapy: false,
-      pregnant: false,
-      requiredProductNotHeld: false,
-      patientDeclined: false,
     });
     setContraIndicationsReviewed({ confirmedNoAbsoluteContraindications: false, exclusionAdvice: '' });
     setPostVaccineAdvice({
@@ -378,34 +338,9 @@ export function PneumococcalClient() {
         placeholder="e.g., Febrile illness today: advised to return once recovered."
         rows={3}
       />
-      <p className="text-xs text-red-700">Then use &quot;Save as not supplied&quot; below to record the consultation.</p>
+      <p className="text-xs text-red-700">Then use "Save as not supplied" below to record the consultation.</p>
     </div>
   ) : null;
-
-  // Two ways a visit can end without a supply that are not clinical
-  // exclusions. Each raises a stop so that "Save as not supplied" appears
-  // and the advice given is recorded. Shown on the Medical History and the
-  // Vaccine Administration steps (same state), because stock is usually
-  // checked and a patient usually declines once the product is in view.
-  const noSupplyControls = (
-    <div className="border-t pt-4 mt-4 space-y-3">
-      <h4 className="font-medium text-sm text-navy-900">No supply today</h4>
-      <Checkbox
-        label="The only product this patient can have under the PGD is not held today"
-        checked={medicalHistory.requiredProductNotHeld}
-        onChange={(v) =>
-          setMedicalHistory({ ...medicalHistory, requiredProductNotHeld: v })
-        }
-        description="For example Pneumovax 23 for a later 5-yearly cycle after Prevenar 20, or Pneumovax 23 where Prevenar 20 is excluded. Advise how the vaccine can be accessed through the GP, or book the patient to return when stock is held, and record the advice."
-      />
-      <Checkbox
-        label="Patient declined vaccination"
-        checked={medicalHistory.patientDeclined}
-        onChange={(v) => setMedicalHistory({ ...medicalHistory, patientDeclined: v })}
-        description="Record the advice given and the decision reached; inform the GP as appropriate."
-      />
-    </div>
-  );
 
   return (
     <>
@@ -458,40 +393,16 @@ export function PneumococcalClient() {
               }
               options={[
                 { value: 'asplenia', label: 'Asplenia or splenic dysfunction (including sickle cell disease)' },
-                { value: 'ckd', label: 'Chronic kidney disease: nephrotic syndrome, CKD stage 4 or 5, dialysis or kidney transplant' },
-                { value: 'chronic-disease', label: 'Chronic respiratory, heart, liver or neurological disease, or diabetes requiring insulin or anti-diabetic medication (not diet controlled only)' },
+                { value: 'ckd', label: 'Chronic kidney disease' },
+                { value: 'chronic-disease', label: 'Chronic respiratory, heart, liver or neurological disease, or diabetes' },
                 { value: 'immunosuppressed', label: 'Immunosuppressed' },
                 { value: 'cochlear', label: 'Cochlear implant' },
                 { value: 'csf-leak', label: 'Cerebrospinal fluid leak' },
                 { value: 'age-65-plus', label: 'Adult aged 65 years and over' },
-                { value: 'other-national-guidance', label: 'Other group eligible under national guidance (metal fumes or homelessness)' },
-                { value: 'not-eligible', label: 'Not in an eligible group (for example a healthy adult under 65 asking privately)' },
+                { value: 'other-national-guidance', label: 'Other group eligible under national guidance (specify)' },
               ]}
               required
             />
-
-            {patientDetails.riskCategory === 'ckd' && (
-              <>
-                <SelectInput
-                  label="Green Book criterion that applies (chronic kidney disease)"
-                  value={patientDetails.ckdCriterion || ''}
-                  onChange={(v) =>
-                    handlePatientDetailsChange(
-                      'ckdCriterion',
-                      v as PneumococcalPatientDetails['ckdCriterion']
-                    )
-                  }
-                  options={(Object.keys(CKD_CRITERION_LABELS) as Array<keyof typeof CKD_CRITERION_LABELS>).map((k) => ({
-                    value: k,
-                    label: CKD_CRITERION_LABELS[k],
-                  }))}
-                  required
-                />
-                <p className="text-xs text-gray-600">
-                  The chronic kidney disease group is nephrotic syndrome, CKD stage 4 or 5, dialysis or kidney transplant (Green Book Table 2). It is one of the three groups revaccinated every 5 years. Stage 3 CKD or milder is not in this group: select the eligibility group that applies, or refer.
-                </p>
-              </>
-            )}
 
             {patientDetails.riskCategory === 'chronic-disease' && (
               <TextInput
@@ -501,32 +412,20 @@ export function PneumococcalClient() {
                   handlePatientDetailsChange('chronicDiseaseType', v)
                 }
                 required
-                placeholder="e.g., COPD, asthma, heart disease, cirrhosis, or diabetes requiring insulin or anti-diabetic medication (not diet controlled only)"
+                placeholder="e.g., COPD, asthma, heart disease, diabetes, cirrhosis"
               />
             )}
 
             {patientDetails.riskCategory === 'other-national-guidance' && (
-              <SelectInput
+              <TextInput
                 label="Green Book chapter 25 group that applies"
                 value={patientDetails.otherEligibilityReason || ''}
                 onChange={(v) =>
-                  handlePatientDetailsChange(
-                    'otherEligibilityReason',
-                    v as PneumococcalPatientDetails['otherEligibilityReason']
-                  )
+                  handlePatientDetailsChange('otherEligibilityReason', v)
                 }
-                options={(Object.keys(OTHER_ELIGIBILITY_LABELS) as Array<keyof typeof OTHER_ELIGIBILITY_LABELS>).map((k) => ({
-                  value: k,
-                  label: OTHER_ELIGIBILITY_LABELS[k],
-                }))}
                 required
+                placeholder="e.g., occupational exposure to metal fumes (welders); people experiencing homelessness (JCVI June 2024)"
               />
-            )}
-
-            {patientDetails.riskCategory === 'not-eligible' && (
-              <p className="text-xs text-gray-600">
-                Not authorised under this PGD, whatever the product licence says. Explain, record the advice given below, and refer to the GP if there is a clinical question.
-              </p>
             )}
 
             {patientDetails.riskCategory === 'immunosuppressed' && (
@@ -633,7 +532,7 @@ export function PneumococcalClient() {
               label="Patient understands the vaccination schedule"
               checked={consent.understandsSchedule}
               onChange={(v) => setConsent({ ...consent, understandsSchedule: v })}
-              description="Single 0.5 mL dose of Prevenar 20 (one lifetime dose) or Pneumovax 23. Revaccination every 5 years only for asplenia, splenic dysfunction or chronic kidney disease (nephrotic syndrome, CKD stage 4 or 5, dialysis or kidney transplant): Prevenar 20 once if never given, otherwise Pneumovax 23. No other group is revaccinated."
+              description="Single 0.5 mL dose of each vaccine. Where both are indicated, Pneumovax 23 follows Prevenar 13 by at least 8 weeks. PPV23 revaccination every 5 years only for asplenia, splenic dysfunction or chronic kidney disease."
             />
             <Checkbox
               label="Patient is aware of possible side effects"
@@ -697,7 +596,7 @@ export function PneumococcalClient() {
                   onChange={(v) =>
                     setRiskAssessment({ ...riskAssessment, previousPCV13: v })
                   }
-                  description="Vaccine history only: Prevenar 13 is not given under this PGD. A previous course at any age (including the infant schedule) does not exclude, provided at least 8 weeks have elapsed. If yes, enter the date of the most recent dose below"
+                  description="If yes, enter date below"
                 />
 
                 {riskAssessment.previousPCV13 && (
@@ -717,12 +616,12 @@ export function PneumococcalClient() {
                 )}
 
                 <Checkbox
-                  label="Previous PCV20 (Prevenar 20) dose given at 2 years of age or older"
+                  label="Previous PCV20 (Prevenar 20) dose given"
                   checked={riskAssessment.previousPCV20}
                   onChange={(v) =>
                     setRiskAssessment({ ...riskAssessment, previousPCV20: v })
                   }
-                  description="A dose given at 2 years or older. Prevenar 20 is a single lifetime dose and is never repeated under this PGD; it also starts the 5-year count for Pneumovax 23 revaccination. Infant doses under 2 years are recorded with the checkbox below, not here. If yes, enter date below"
+                  description="Counts as a conjugate vaccine and, under the PGD, against PPV23 revaccination. If yes, enter date below"
                 />
 
                 {riskAssessment.previousPCV20 && (
@@ -742,21 +641,12 @@ export function PneumococcalClient() {
                 )}
 
                 <Checkbox
-                  label="Prevenar 20 given under 2 years on the risk-group schedule"
-                  checked={riskAssessment.pcv20Under2RiskSchedule}
-                  onChange={(v) =>
-                    setRiskAssessment({ ...riskAssessment, pcv20Under2RiskSchedule: v })
-                  }
-                  description="A child who had Prevenar 20 as an infant on the under-2 risk-group schedule is referred to the GP to complete Green Book Table 3; the remaining doses are not given under this PGD."
-                />
-
-                <Checkbox
                   label="Previous PPV23 (Pneumovax 23) dose given"
                   checked={riskAssessment.previousPPV23}
                   onChange={(v) =>
                     setRiskAssessment({ ...riskAssessment, previousPPV23: v })
                   }
-                  description="Any previous PPV23 excludes both products, except the 5-yearly revaccination of asplenia, splenic dysfunction or chronic kidney disease (nephrotic syndrome, CKD stage 4 or 5, dialysis or kidney transplant): that dose is Prevenar 20 where it has never been given, otherwise Pneumovax 23. If yes, enter date below"
+                  description="If yes, enter date below"
                 />
 
                 {riskAssessment.previousPPV23 && (
@@ -769,31 +659,6 @@ export function PneumococcalClient() {
                       value={riskAssessment.previousPPV23Date}
                       onChange={(e) =>
                         setRiskAssessment({ ...riskAssessment, previousPPV23Date: e.target.value })
-                      }
-                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
-                    />
-                  </div>
-                )}
-
-                <Checkbox
-                  label="Other pneumococcal vaccine (Vaxneuvance PCV15 or Capvaxive PCV21) at 2 years or older"
-                  checked={riskAssessment.previousOtherPCV}
-                  onChange={(v) =>
-                    setRiskAssessment({ ...riskAssessment, previousOtherPCV: v })
-                  }
-                  description="Excludes both Prevenar 20 and Pneumovax 23 whatever the interval: treated as a completed course, and the 5-yearly revaccination rule does not apply to it. Also counts as a conjugate vaccine for the 8-week interval. If yes, enter date below"
-                />
-
-                {riskAssessment.previousOtherPCV && (
-                  <div className="pl-6">
-                    <label className="block text-sm font-medium text-navy-900 mb-1">
-                      Date of Vaxneuvance or Capvaxive dose <span className="text-red-400">*</span>
-                    </label>
-                    <input
-                      type="date"
-                      value={riskAssessment.previousOtherPCVDate}
-                      onChange={(e) =>
-                        setRiskAssessment({ ...riskAssessment, previousOtherPCVDate: e.target.value })
                       }
                       className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
                     />
@@ -853,7 +718,7 @@ export function PneumococcalClient() {
             />
 
             <Checkbox
-              label="Known hypersensitivity to Pneumovax 23, Prevenar 20 or any of their components"
+              label="Known hypersensitivity to Pneumovax 23, Prevenar 13 or any of their components"
               checked={medicalHistory.anaphylaxisToVaccineComponent}
               onChange={(v) =>
                 setMedicalHistory({
@@ -861,7 +726,7 @@ export function PneumococcalClient() {
                   anaphylaxisToVaccineComponent: v,
                 })
               }
-              description="Excluded under the PGD: do not proceed. Prevenar 20 excipients: sodium chloride, succinic acid, polysorbate 80, aluminium phosphate."
+              description="Excluded under the PGD: do not proceed"
             />
 
             <Checkbox
@@ -870,7 +735,7 @@ export function PneumococcalClient() {
               onChange={(v) =>
                 setMedicalHistory({ ...medicalHistory, diphtheriaToxoidHypersensitivity: v })
               }
-              description="Prevenar 20 exclusion. Pneumovax 23 may still be given where indicated."
+              description="Prevenar 13 exclusion. Pneumovax 23 may still be given where indicated."
             />
 
             <Checkbox
@@ -879,46 +744,17 @@ export function PneumococcalClient() {
               onChange={(v) =>
                 setMedicalHistory({ ...medicalHistory, severeFebrilleIllness: v })
               }
-              description="Postpone vaccination until recovered. A minor illness without fever or systemic upset is not a reason to postpone."
+              description="Postpone vaccination until recovered"
             />
 
             <Checkbox
-              label="Severe immunocompromise: bone marrow transplant, acute or chronic leukaemia, multiple myeloma, or a genetic immune disorder (IRAK-4, NEMO)"
-              checked={medicalHistory.severeImmunocompromise}
-              onChange={(v) =>
-                setMedicalHistory({ ...medicalHistory, severeImmunocompromise: v })
-              }
-              description="Excluded under both arms: the Green Book multi-dose sequence needs specialist input. Refer. Other immunosuppression (HIV, systemic steroids, completed chemotherapy) is not an exclusion."
-            />
-
-            <Checkbox
-              label="Currently receiving chemotherapy or radiotherapy, or within 3 months of completing it (6 months after chemotherapy for leukaemia)"
-              checked={medicalHistory.currentOrRecentChemoRadiotherapy}
-              onChange={(v) =>
-                setMedicalHistory({ ...medicalHistory, currentOrRecentChemoRadiotherapy: v })
-              }
-              description="Not given under this PGD: refer to the treating team, which decides the timing (long-term maintenance treatment is not an indefinite deferral). Leave unticked where treatment is planned and has not started: give at least 2 weeks before it does."
-            />
-
-            <Checkbox
-              label="Pregnant"
-              checked={medicalHistory.pregnant}
-              onChange={(v) =>
-                setMedicalHistory({ ...medicalHistory, pregnant: v })
-              }
-              description="Caution, not an exclusion, in both arms (Prevenar 20 and Pneumovax 23). Inactivated vaccine; the SmPC has no data in pregnancy. Tell her that, record it, and give the vaccine. Breastfeeding is not a reason to withhold."
-            />
-
-            <Checkbox
-              label="Bleeding disorder, thrombocytopenia or anticoagulation"
+              label="Bleeding disorder"
               checked={medicalHistory.bleedingDisorder}
               onChange={(v) =>
                 setMedicalHistory({ ...medicalHistory, bleedingDisorder: v })
               }
-              description="Caution: intramuscular with a 23G or finer needle and firm pressure for at least 2 minutes. Where the haematology team advises against intramuscular injection, Pneumovax 23 subcutaneously or refer; Prevenar 20 is intramuscular only."
+              description="Caution: use with caution in individuals with bleeding disorders"
             />
-
-            {noSupplyControls}
           </div>
           {exclusionNotes}
         </StepWrapper>
@@ -1008,49 +844,25 @@ export function PneumococcalClient() {
             <SelectInput
               label="Vaccine type"
               value={summary.vaccineType}
-              onChange={(v) => {
-                const vaccineType = v as PneumococcalSummary['vaccineType'];
-                // Prevenar 20 is intramuscular only: drop a subcutaneous site
-                // chosen before the product was changed.
-                const administrationSite =
-                  vaccineType === 'pcv20' && summary.administrationSite.endsWith('-sc')
-                    ? ''
-                    : summary.administrationSite;
-                setSummary({ ...summary, vaccineType, administrationSite });
-              }}
+              onChange={(v) =>
+                setSummary({
+                  ...summary,
+                  vaccineType: v as 'pcv13' | 'ppv23' | '',
+                })
+              }
               options={[
-                ...(productAvailability.pcv20Possible
-                  ? [{ value: 'pcv20', label: 'Prevenar 20 (PCV20), 0.5 mL intramuscular (given in preference where held; once only)' }]
-                  : []),
-                ...(productAvailability.ppv23Possible
-                  ? [{ value: 'ppv23', label: 'Pneumovax 23 (PPV23), 0.5 mL intramuscular or subcutaneous (where Prevenar 20 is not held, the SC route is needed, or later 5-yearly cycles after Prevenar 20)' }]
-                  : []),
+                { value: 'pcv13', label: 'Prevenar 13 (PCV13), 0.5 mL intramuscular' },
+                { value: 'ppv23', label: 'Pneumovax 23 (PPV23), 0.5 mL intramuscular or subcutaneous' },
               ]}
               required
             />
-            {!productAvailability.pcv20Possible && (
-              <p className="text-xs text-red-700">
-                Prevenar 20 cannot be selected: {productAvailability.pcv20Reason}.
-              </p>
-            )}
-            {!productAvailability.ppv23Possible && (
-              <p className="text-xs text-red-700">
-                Pneumovax 23 cannot be selected: {productAvailability.ppv23Reason}.
-              </p>
-            )}
 
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-900">
               <p className="font-semibold">Dose: single 0.5 mL dose.</p>
               <p className="text-xs mt-1">
-                Product precedence: where Prevenar 20 is held it is given in preference. Pneumovax 23 is given where Prevenar 20 is not held, where the subcutaneous route is needed, or for later 5-yearly revaccination cycles once Prevenar 20 has been given once.
-              </p>
-              <p className="text-xs mt-1">
-                {summary.vaccineType === 'pcv20'
-                  ? 'Prevenar 20: intramuscular injection only, into the deltoid. Shake vigorously to a homogeneous white suspension; do not use if it cannot be resuspended or shows particles or discolouration. A single lifetime dose under this PGD, at least 8 weeks after any previous pneumococcal conjugate vaccine; never repeated. For asplenia, splenic dysfunction or chronic kidney disease (nephrotic syndrome, CKD stage 4 or 5, dialysis or kidney transplant) it may be the 5-yearly revaccination dose where it has never been given; later cycles are Pneumovax 23.'
-                  : 'Pneumovax 23: intramuscular or subcutaneous injection. Single dose; revaccination every 5 years ONLY for asplenia, splenic dysfunction or chronic kidney disease (nephrotic syndrome, CKD stage 4 or 5, dialysis or kidney transplant), counted from the last PPV23 or PCV20 dose; not recommended for any other group. At least 8 weeks after any pneumococcal conjugate vaccine.'}
-              </p>
-              <p className="text-xs mt-2">
-                <strong>Co-administration:</strong> may be given at the same time as any other vaccine (including influenza, COVID-19, shingles and RSV) at a separate site, preferably a different limb, or at least 2.5 cm apart; record the site of each vaccine. The Prevenar 20 SmPC notes that with adjuvanted influenza vaccine a gap of about 4 weeks may be considered in those at the highest risk of life-threatening pneumococcal disease; this is not a requirement and must not delay either vaccine.
+                {summary.vaccineType === 'pcv13'
+                  ? 'Prevenar 13: intramuscular injection, for individuals aged 2 years and over who have not previously received a pneumococcal conjugate vaccine. Where PPV23 is also indicated, give it at least 8 weeks after the conjugate vaccine.'
+                  : 'Pneumovax 23: intramuscular or subcutaneous injection. Revaccination every 5 years ONLY for asplenia, splenic dysfunction or chronic kidney disease; not recommended for any other group, and never within 3 years of a previous dose.'}
               </p>
             </div>
 
@@ -1059,8 +871,8 @@ export function PneumococcalClient() {
               value={summary.doseNumber}
               onChange={(v) => setSummary({ ...summary, doseNumber: v as '1' | '2' | '' })}
               options={[
-                { value: '1', label: 'First pneumococcal dose under this PGD (Prevenar 20 or Pneumovax 23)' },
-                { value: '2', label: '5-yearly revaccination (asplenia, splenic dysfunction or chronic kidney disease only): Prevenar 20 if never given, otherwise Pneumovax 23' },
+                { value: '1', label: 'Dose 1 (first pneumococcal vaccine)' },
+                { value: '2', label: 'Dose 2 (PPV23 at least 8 weeks after the conjugate vaccine, or 5-yearly PPV23 revaccination)' },
               ]}
               required
             />
@@ -1094,21 +906,24 @@ export function PneumococcalClient() {
                   administrationSite: v as PneumococcalSummary['administrationSite'],
                 })
               }
-              options={
-                summary.vaccineType === 'pcv20'
-                  ? [
-                      { value: 'left-deltoid', label: 'Left deltoid, intramuscular' },
-                      { value: 'right-deltoid', label: 'Right deltoid, intramuscular' },
-                    ]
-                  : [
-                      { value: 'left-deltoid', label: 'Left deltoid, intramuscular' },
-                      { value: 'right-deltoid', label: 'Right deltoid, intramuscular' },
-                      { value: 'left-arm-sc', label: 'Left upper arm, subcutaneous (Pneumovax 23 only)' },
-                      { value: 'right-arm-sc', label: 'Right upper arm, subcutaneous (Pneumovax 23 only)' },
-                    ]
-              }
+              options={[
+                { value: 'left-deltoid', label: 'Left deltoid, intramuscular' },
+                { value: 'right-deltoid', label: 'Right deltoid, intramuscular' },
+                { value: 'left-arm-sc', label: 'Left upper arm, subcutaneous (Pneumovax 23 only)' },
+                { value: 'right-arm-sc', label: 'Right upper arm, subcutaneous (Pneumovax 23 only)' },
+              ]}
               required
             />
+
+            {ppv23FollowsPcv13(summary, patientDetails, historyInput) && (
+              <TextInput
+                label="Pneumovax 23 due (at least 8 weeks after this dose; book it at this appointment)"
+                type="date"
+                value={summary.counselledNextDue ?? ''}
+                onChange={(v) => setSummary({ ...summary, counselledNextDue: v })}
+                required
+              />
+            )}
 
             <div>
               <label className="block text-sm font-medium text-navy-900 mb-1">
@@ -1121,10 +936,7 @@ export function PneumococcalClient() {
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
               />
             </div>
-
-            {noSupplyControls}
           </div>
-          {exclusionNotes}
         </StepWrapper>
       )}
 
@@ -1144,13 +956,12 @@ export function PneumococcalClient() {
         >
           <div className="space-y-4">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm font-semibold text-blue-900">Possible side effects to advise the patient about (PGD v008):</p>
+              <p className="text-sm font-semibold text-blue-900">Possible side effects to advise the patient about (PGD v007):</p>
               <ul className="text-xs text-blue-800 mt-2 space-y-1 list-disc list-inside">
                 <li>Injection site pain, redness or swelling</li>
-                <li>Fever, fatigue, headache; Prevenar 20 in adults also muscle pain and joint pain</li>
-                <li>Prevenar 20 in children aged 2 to 4: irritability, drowsiness, decreased appetite, fever</li>
-                <li>Uncommon with Prevenar 20: hypersensitivity including facial swelling, urticaria, chills, nausea, vomiting, diarrhoea</li>
-                <li>Rare: allergic or hypersensitivity reactions including anaphylaxis</li>
+                <li>Fever, fatigue, headache</li>
+                <li>Prevenar 13 in children: irritability, drowsiness, loss of appetite</li>
+                <li>Rare: allergic or hypersensitivity reactions</li>
               </ul>
             </div>
 
@@ -1158,11 +969,10 @@ export function PneumococcalClient() {
               <p className="text-sm font-semibold text-amber-900">Important information to share:</p>
               <ul className="text-xs text-amber-800 mt-2 space-y-1 list-disc list-inside">
                 <li>Most reactions are mild and resolve within 24-48 hours</li>
-                <li>This is a single dose: adults at 65 and most risk groups need no further pneumococcal vaccine</li>
-                <li>Asplenia, splenic dysfunction and chronic kidney disease (nephrotic syndrome, CKD stage 4 or 5, dialysis or kidney transplant) have a repeat dose every 5 years, given with Pneumovax 23 (Prevenar 20 is given once only) or through the GP</li>
+                <li>Where both vaccines are indicated, Pneumovax 23 follows Prevenar 13 by at least 8 weeks</li>
+                <li>PPV23 revaccination every 5 years only for asplenia, splenic dysfunction or chronic kidney disease; not recommended for any other group</li>
                 <li>Paracetamol or ibuprofen can be taken for fever or myalgia</li>
-                <li>Seek medical advice for a severe or persistent injection site reaction, a fever that does not settle within 48 hours, or any sign of an allergic reaction</li>
-                <li>Call 999 for difficulty breathing, swelling of the face or throat, or collapse</li>
+                <li>Seek medical advice if symptoms worsen rapidly or significantly, do not improve in 3 to 4 weeks, or they become systemically very unwell</li>
                 <li>Explain why vaccination is important for their specific risk group</li>
               </ul>
             </div>
@@ -1188,12 +998,11 @@ export function PneumococcalClient() {
             />
 
             <Checkbox
-              label="Follow-up advice given"
+              label="Follow-up advice given: seek medical advice if symptoms worsen rapidly or significantly, do not improve in 3 to 4 weeks, or they become systemically very unwell"
               checked={postVaccineAdvice.followUpAdviceGiven}
               onChange={(v) =>
                 setPostVaccineAdvice({ ...postVaccineAdvice, followUpAdviceGiven: v })
               }
-              description="Seek medical advice for a severe or persistent injection site reaction, a fever that does not settle within 48 hours, or any sign of an allergic reaction; call 999 for difficulty breathing, swelling of the face or throat, or collapse. Adults at 65 and most risk groups need no further pneumococcal vaccine; asplenia, splenic dysfunction and chronic kidney disease have a repeat dose every 5 years with Pneumovax 23 (Prevenar 20 once only) or through the GP."
               required
             />
 
@@ -1207,12 +1016,12 @@ export function PneumococcalClient() {
             />
 
             <Checkbox
-              label="Patient understands whether revaccination is due"
+              label="Patient understands whether a second vaccine or revaccination is due"
               checked={postVaccineAdvice.counselledBothVaccines}
               onChange={(v) =>
                 setPostVaccineAdvice({ ...postVaccineAdvice, counselledBothVaccines: v })
               }
-              description="Single dose for adults at 65 and most risk groups. Asplenia, splenic dysfunction and chronic kidney disease repeat every 5 years with Pneumovax 23 (Prevenar 20 once only) or via the GP."
+              description="Pneumovax 23 at least 8 weeks after Prevenar 13 where both are indicated; 5-yearly PPV23 only for asplenia, splenic dysfunction or chronic kidney disease"
             />
 
             <Checkbox
@@ -1295,7 +1104,6 @@ export function PneumococcalClient() {
               medicalHistory={medicalHistory}
               clinicalAlerts={clinicalAlerts}
               postVaccineAdvice={postVaccineAdvice}
-              exclusionAdvice={contraIndicationsReviewed.exclusionAdvice}
               embedded
             />
           </div>

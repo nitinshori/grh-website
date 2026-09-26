@@ -15,6 +15,7 @@ import {
   WITHDRAWN_SLUGS,
 } from '@/lib/pgd-access'
 import { PGD_MASTER_FILES } from '@/lib/pgd-document-manifest'
+import { HCP_GATED_ARTICLE_SLUGS } from '@/lib/hcp-gated-articles'
 
 // ── Per-tenant routing ───────────────────────────────────────────────
 // On non-default tenants (e.g. hubrx.getrealhealthpgd.co.uk), the public
@@ -67,13 +68,30 @@ const HCP_GATED_PREFIXES = [
   '/for-pharmacies/pgd-catalogue',
   '/for-pharmacies/epgd',
   '/pharmacy-plus-health',
-  '/resources',
 ]
 
+// /resources used to sit in the list above, which meant the whole education
+// hub redirected anonymous visitors to /healthcare-professional. That page is
+// noindex, nofollow, so Googlebot was turned away from all twelve guides and
+// none of them were indexed. The gate is there for reg 279 (advertising a
+// prescription-only medicine to people qualified to supply it), not for
+// business content, so it now applies per article: see
+// src/lib/hcp-gated-articles.ts.
 function isHcpGatedPath(pathname: string): boolean {
-  return HCP_GATED_PREFIXES.some(
-    (p) => pathname === p || pathname.startsWith(p + '/') || pathname.startsWith(p + '?'),
-  )
+  if (
+    HCP_GATED_PREFIXES.some(
+      (p) => pathname === p || pathname.startsWith(p + '/') || pathname.startsWith(p + '?'),
+    )
+  ) {
+    return true
+  }
+
+  if (pathname.startsWith('/resources/')) {
+    const slug = pathname.split('/')[2] ?? ''
+    return HCP_GATED_ARTICLE_SLUGS.has(slug)
+  }
+
+  return false
 }
 
 // ── Just-in-time is_active check (forced session revocation) ────────

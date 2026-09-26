@@ -82,7 +82,7 @@ export default async function AdminDashboard() {
     monthlyRevenuePence: 0,
   }
   const attention = settled[4].status === 'fulfilled' ? settled[4].value : {
-    awaitingApproval: 0, payingWithoutAccount: 0, activeWithoutPgds: 0, setupEmailFailed: 0,
+    awaitingApproval: 0, payingWithoutAccount: 0, activeWithoutPgds: 0,
   }
 
   const signupSparkline = signupsByWeek.map((b) => b.count)
@@ -100,20 +100,10 @@ export default async function AdminDashboard() {
 
         {(attention.awaitingApproval > 0 ||
           attention.payingWithoutAccount > 0 ||
-          attention.activeWithoutPgds > 0 ||
-          attention.setupEmailFailed > 0) && (
+          attention.activeWithoutPgds > 0) && (
           <div className="mb-6 rounded-xl border-2 border-amber-400 bg-amber-50 p-5">
             <p className="text-sm font-bold text-amber-900 mb-2">Needs attention</p>
             <ul className="text-sm text-amber-900 space-y-1">
-              {attention.setupEmailFailed > 0 && (
-                <li>
-                  <a href="/admin/onboarding" className="font-semibold underline">
-                    {attention.setupEmailFailed} approved pharmac
-                    {attention.setupEmailFailed === 1 ? 'y' : 'ies'} whose setup email failed to send
-                  </a>
-                  {' '}: they are billed and cannot log in. Open the queue, fix the cause, and press Resend setup link.
-                </li>
-              )}
               {attention.awaitingApproval > 0 && (
                 <li>
                   <a href="/admin/onboarding" className="font-semibold underline">

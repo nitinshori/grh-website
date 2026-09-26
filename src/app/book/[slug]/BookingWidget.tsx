@@ -53,12 +53,10 @@ type Step = 'location' | 'service' | 'datetime' | 'details' | 'submitting' | 'co
 // ── Helpers ─────────────────────────────────────────────────────
 
 function formatTime(iso: string): string {
-  // Always the pharmacy's clock, whatever the patient's device is set to.
   return new Intl.DateTimeFormat('en-GB', {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
-    timeZone: 'Europe/London',
   }).format(new Date(iso))
 }
 

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { consultationRecords, pharmacies, clinicians } from '@/lib/db/schema'
+import { consultationRecords, pharmacies } from '@/lib/db/schema'
 import { eq, and, or, desc, ilike, sql, isNull, gte, lte } from 'drizzle-orm'
 import { audit } from '@/lib/audit'
 import { rateLimit } from '@/lib/rate-limit'
@@ -58,34 +58,6 @@ export async function POST(request: Request) {
     const consultationDate = summary.consultationDate
       ? new Date(summary.consultationDate)
       : new Date()
-
-    // Remember the GPhC number the practitioner typed, so /api/me can
-    // autofill it next time. Autofill matches a clinicians row on the
-    // practitioner's name and the pharmacy group; Rachel Edwards (Smartway,
-    // 23 Sep 2026) had no row, so every consultation asked again.
-    try {
-      const [ph] = await db
-        .select({ groupSlug: pharmacies.groupSlug })
-        .from(pharmacies)
-        .where(eq(pharmacies.id, session.user.pharmacyId))
-        .limit(1)
-      const name = summary.pharmacistName.trim()
-      const gphc = summary.pharmacistGPhC.trim()
-      if (ph?.groupSlug && name && gphc) {
-        const [existing] = await db
-          .select({ id: clinicians.id, gphcNumber: clinicians.gphcNumber })
-          .from(clinicians)
-          .where(and(eq(clinicians.groupSlug, ph.groupSlug), eq(clinicians.name, name)))
-          .limit(1)
-        if (!existing) {
-          await db.insert(clinicians).values({ groupSlug: ph.groupSlug, name, gphcNumber: gphc, isActive: true })
-        } else if (!existing.gphcNumber) {
-          await db.update(clinicians).set({ gphcNumber: gphc }).where(eq(clinicians.id, existing.id))
-        }
-      }
-    } catch {
-      // Best effort only; never block the clinical record.
-    }
 
     // Capture network fingerprint for fair-use checks (per-location billing)
     const ipAddress =

@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { patientCategories } from "@/data/patient-services";
 import { articles } from "@/data/articles";
 import { SERVICE_PAGES } from "@/data/service-pages";
+import { HCP_GATED_ARTICLE_SLUGS } from "@/lib/hcp-gated-articles";
 
 const BASE_URL = "https://getrealhealthpgd.co.uk";
 
@@ -26,7 +27,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const staticPages: MetadataRoute.Sitemap = [
     { url: BASE_URL, lastModified: now, changeFrequency: "weekly", priority: 1.0 },
     { url: `${BASE_URL}/for-pharmacies`, lastModified: now, changeFrequency: "weekly", priority: 0.9 },
-    { url: `${BASE_URL}/for-pharmacies/pgd-catalogue`, lastModified: now, changeFrequency: "weekly", priority: 0.9 },
     { url: `${BASE_URL}/for-pharmacies/pricing`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${BASE_URL}/for-pharmacies/platform`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${BASE_URL}/for-pharmacies/growth`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
@@ -63,13 +63,21 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.7,
   }));
 
-  // Article pages
-  const articlePages: MetadataRoute.Sitemap = articles.map((article) => ({
-    url: `${BASE_URL}/resources/${article.slug}`,
-    lastModified: article.publishDate,
-    changeFrequency: "monthly" as const,
-    priority: 0.7,
-  }));
+  // Article pages.
+  //
+  // Only the ungated ones. Articles that name a prescription-only medicine
+  // stay behind the healthcare-professional gate, which redirects anonymous
+  // crawlers to a noindex page, so listing them here would be telling Google
+  // to fetch pages it is then told not to index. Same reason
+  // /for-pharmacies/pgd-catalogue is no longer listed above.
+  const articlePages: MetadataRoute.Sitemap = articles
+    .filter((article) => !HCP_GATED_ARTICLE_SLUGS.has(article.slug))
+    .map((article) => ({
+      url: `${BASE_URL}/resources/${article.slug}`,
+      lastModified: article.publishDate,
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    }));
 
   return [...staticPages, ...servicePages, ...categoryPages, ...articlePages];
 }

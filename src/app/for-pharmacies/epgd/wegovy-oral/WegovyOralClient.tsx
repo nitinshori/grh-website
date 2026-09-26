@@ -977,13 +977,7 @@ export function WegovyOralClient() {
             </div>
             <div className="border-t border-gray-200 pt-6">
               <p className="text-sm text-gray-600 mb-4 print:hidden">Review the record below before saving and printing. Supplied under {PGD_VERSION_LABEL}.</p>
-              <WegovyOralSummaryReport
-                state={state}
-                alerts={alerts}
-                pctChange={pctChange}
-                onGphcChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "pharmacistGPhC", value: v })}
-                onNameChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "pharmacistName", value: v })}
-              />
+              <WegovyOralSummaryReport state={state} alerts={alerts} pctChange={pctChange} />
             </div>
           </StepWrapper>
         );
