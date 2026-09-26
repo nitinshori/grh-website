@@ -115,6 +115,28 @@ export async function sendSetupEmail(
     emailError = e instanceof Error ? e.message : String(e)
   }
 
+  if (!emailed) {
+    // Tell the admin, on a channel that does not depend on the same failure
+    // where possible: the Vercel log always, and an email to the admin
+    // address, which will itself fail if Resend is the problem but succeeds
+    // when the fault is the customer's address.
+    console.error(`[onboarding-setup] setup email to ${user.email} for ${req.pharmacyName} failed: ${emailError}`)
+    try {
+      await sendEmail({
+        to: process.env.ADMIN_NOTIFY_EMAIL || 'info@getrealhealthpgd.co.uk',
+        subject: `Setup email FAILED: ${req.pharmacyName}`,
+        html:
+          `<p>The account setup email for <strong>${escapeHtml(req.pharmacyName)}</strong> (${escapeHtml(user.email)}) could not be sent.</p>` +
+          `<p>Error: ${escapeHtml(emailError ?? 'unknown')}</p>` +
+          `<p>The pharmacy is approved and billed but cannot log in until they receive a link. Open ` +
+          `<a href="${appUrl}/admin/onboarding">${appUrl}/admin/onboarding</a>, fix the cause, and press Resend setup link; ` +
+          `the link is also shown on screen there so it can be sent by hand.</p>`,
+      })
+    } catch (notifyErr) {
+      console.error('[onboarding-setup] admin failure notice could not be sent either:', notifyErr)
+    }
+  }
+
   await db
     .update(onboardingRequests)
     .set({

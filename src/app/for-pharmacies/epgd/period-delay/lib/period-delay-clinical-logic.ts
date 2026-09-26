@@ -1,9 +1,10 @@
 import type { PeriodDelayConsultationState } from "./period-delay-types";
 import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
 
-// Aligned to the Period Delay (Norethisterone) PGD, version 010, issued
-// 14 September 2026. Maximum 14 days, maximum 42 tablets, VTE risk factors
-// are exclusions, twice in 6 months and 30 days in 6 months are limits.
+// Aligned to the Period Delay (Norethisterone) PGD, version 011, issued
+// 24 September 2026. Maximum 14 days, maximum 42 tablets, most VTE risk
+// factors are exclusions (a long journey and age 40 plus are counted, not
+// excluded), twice in 6 months and 30 days in 6 months are limits.
 
 export const MAX_TREATMENT_DAYS = 14;
 export const MAX_TABLETS = 42;
@@ -50,7 +51,7 @@ export function calculateBmi(heightCm: number | null, weightKg: number | null): 
   return heightCm && weightKg && heightCm > 0 ? weightKg / Math.pow(heightCm / 100, 2) : null;
 }
 
-/** PGD v010: pregnancy can be excluded on history where the last period was
+/** PGD v011: pregnancy can be excluded on history where the last period was
  *  normal, on time, and there has been no unprotected sex since. Otherwise a
  *  negative test taken no earlier than 21 days after the last unprotected sex. */
 export function isPregnancyExcluded(state: PeriodDelayConsultationState): boolean | "unanswered" {
@@ -95,7 +96,7 @@ export function getAllAlerts(state: PeriodDelayConsultationState): ClinicalAlert
   const mh = state.medicalHistory;
   const step = state.currentStep;
 
-  // Hard stops: SPC contraindications and PGD v010 exclusions
+  // Hard stops: SPC contraindications and PGD v011 exclusions
   if (mh.pregnancy) {
     alerts.push({ severity: "stop", code: "PREGNANCY", message: "Known or suspected pregnancy, or pregnancy cannot be excluded", detail: "Norethisterone is contraindicated in pregnancy. Excluded. Refer." });
   }
@@ -117,7 +118,7 @@ export function getAllAlerts(state: PeriodDelayConsultationState): ClinicalAlert
   }
 
   if (mh.brcaCarrier) {
-    alerts.push({ severity: "stop", code: "BRCA", message: "Known BRCA1 or BRCA2 carrier status", detail: "Excluded under PGD v010. Refer." });
+    alerts.push({ severity: "stop", code: "BRCA", message: "Known BRCA1 or BRCA2 carrier status", detail: "Excluded under PGD v011. Refer." });
   }
 
   if (mh.historyOfDVT || mh.historyOfPE) {
@@ -150,7 +151,7 @@ export function getAllAlerts(state: PeriodDelayConsultationState): ClinicalAlert
 
   // ── Venous thromboembolism gate, Appendix 1: any single YES excludes ──
   if (mh.familyVteUnder45) {
-    alerts.push({ severity: "stop", code: "FAMILY_VTE", message: "Known thrombophilia, or first degree relative with VTE under 45", detail: "Excluded under PGD v010. Refer." });
+    alerts.push({ severity: "stop", code: "FAMILY_VTE", message: "Known thrombophilia, or first degree relative with VTE under 45", detail: "Excluded under PGD v011. Refer." });
   }
 
   if (mh.currentSmoker) {
@@ -159,7 +160,7 @@ export function getAllAlerts(state: PeriodDelayConsultationState): ClinicalAlert
       code: "SMOKER",
       message: "Currently smokes, any amount, any age",
       detail:
-        "PGD v010 excludes all current smokers, because this is a lifestyle supply and the risk is avoidable. Refer.",
+        "PGD v011 excludes all current smokers, because this is a lifestyle supply and the risk is avoidable. Refer.",
     });
   }
 
@@ -168,7 +169,7 @@ export function getAllAlerts(state: PeriodDelayConsultationState): ClinicalAlert
       severity: "stop",
       code: "QUIT_UNDER_1YR",
       message: "Stopped smoking less than a year ago, any age",
-      detail: "Excluded under PGD v010. Refer.",
+      detail: "Excluded under PGD v011. Refer.",
     });
   }
 
@@ -178,17 +179,7 @@ export function getAllAlerts(state: PeriodDelayConsultationState): ClinicalAlert
       severity: "stop",
       code: "BMI_30_PLUS",
       message: `BMI ${bmi.toFixed(1)}, which is 30 or above`,
-      detail: "PGD v010 excludes from BMI 30. Measure or ask for height and weight; do not estimate. Refer.",
-    });
-  }
-
-  if (mh.longJourney) {
-    alerts.push({
-      severity: "stop",
-      code: "LONG_JOURNEY",
-      message: "Flight, coach, train or car journey of 4 hours or more during the course, or within 2 weeks of finishing it",
-      detail:
-        "Excluded under PGD v010. This will exclude many holiday requests; that is intended. Give the alternatives in Appendix 2: monophasic combined pill packs run back to back, menstrual cups or period underwear, tranexamic acid or an NSAID for the bleeding, and the GP can assess individually.",
+      detail: "PGD v011 excludes from BMI 30. Measure or ask for height and weight; do not estimate. Refer.",
     });
   }
 
@@ -204,28 +195,33 @@ export function getAllAlerts(state: PeriodDelayConsultationState): ClinicalAlert
     alerts.push({ severity: "stop", code: "CANCER", message: "Active cancer, or cancer treated within the last 12 months", detail: "Excluded. Refer." });
   }
 
-  // ── Aged 40 or over is the one UKMEC 2 factor this PGD does not exclude ──
+  // ── Counted VTE risk factors: neither excludes on its own ──
+  // PGD v011 (24 Sep 2026): a seated journey of 4 hours or more is counted,
+  // not excluded. It was an exclusion from v007 to v011, which turned the
+  // service away from most of the women it exists for.
   const patientAge = state.patient.age;
   const riskFactors: string[] = [];
   if (patientAge !== null && patientAge >= 40) riskFactors.push("aged 40 or over");
   if (patientAge !== null && patientAge >= 35 && mh.stoppedSmokingOverOneYear)
     riskFactors.push("aged 35 or over, stopped smoking a year or more ago");
+  if (mh.longJourney)
+    riskFactors.push("seated journey of 4 hours or more during the course or within 2 weeks of it (give the journey precautions and record that they were given)");
 
   if (riskFactors.length === 1) {
     alerts.push({
       severity: "caution",
       code: "UKMEC2_SINGLE",
-      message: `One UKMEC 2 risk factor: ${riskFactors[0]}`,
+      message: `One counted VTE risk factor: ${riskFactors[0]}`,
       detail:
         "On its own this does not exclude. Supply, and counsel on the precautions: move around at least hourly on any journey, keep well hydrated, avoid alcohol and sedatives on the journey, and consider graduated compression stockings. Seek urgent help for a painful swollen calf, sudden breathlessness or chest pain. Record the risk factor, not only the conclusion.",
     });
   } else if (riskFactors.length >= 2) {
-    // Not an exclusion in PGD v010 (neither age 40 plus nor a long-quit
-    // ex-smoker is listed): a caution for the pharmacist's judgement.
+    // Not an exclusion in PGD v011: a caution for the pharmacist's judgement,
+    // with the decision recorded.
     alerts.push({
       severity: "caution",
       code: "UKMEC2_CUMULATIVE",
-      message: `${riskFactors.length} UKMEC 2 risk factors together: ${riskFactors.join(", ")}`,
+      message: `${riskFactors.length} counted VTE risk factors together: ${riskFactors.join(", ")}`,
       detail:
         "UKMEC 2025 states that where multiple category 2 conditions relate to the same risk, clinical judgement must decide whether the risks outweigh the benefits. Not an exclusion in the PGD. Use judgement, counsel on the VTE precautions, and record which factors were present and the decision.",
     });
@@ -237,7 +233,7 @@ export function getAllAlerts(state: PeriodDelayConsultationState): ClinicalAlert
   }
 
   if (mh.diabetesWithVascularComplications) {
-    alerts.push({ severity: "stop", code: "DIABETES_VASCULAR", message: "Diabetes with vascular complications", detail: "Excluded under PGD v010. Refer." });
+    alerts.push({ severity: "stop", code: "DIABETES_VASCULAR", message: "Diabetes with vascular complications", detail: "Excluded under PGD v011. Refer." });
   }
 
   const bpHigh =
@@ -249,16 +245,16 @@ export function getAllAlerts(state: PeriodDelayConsultationState): ClinicalAlert
       message: mh.hypertension
         ? "Hypertension of any grade, treated or untreated, or a history of hypertension in pregnancy"
         : `Blood pressure ${mh.systolicBP ?? "?"}/${mh.diastolicBP ?? "?"} measured today, 140/90 or above`,
-      detail: "Excluded under PGD v010. Refer.",
+      detail: "Excluded under PGD v011. Refer.",
     });
   }
 
   if (mh.atrialFibrillationOrValvularDisease) {
-    alerts.push({ severity: "stop", code: "AF_VALVULAR", message: "Atrial fibrillation, or valvular or congenital heart disease", detail: "Excluded under PGD v010. Refer." });
+    alerts.push({ severity: "stop", code: "AF_VALVULAR", message: "Atrial fibrillation, or valvular or congenital heart disease", detail: "Excluded under PGD v011. Refer." });
   }
 
   if (mh.sleOrAntiphospholipid) {
-    alerts.push({ severity: "stop", code: "SLE_APS", message: "Systemic lupus erythematosus, antiphospholipid antibodies or antiphospholipid syndrome", detail: "Excluded under PGD v010. Refer." });
+    alerts.push({ severity: "stop", code: "SLE_APS", message: "Systemic lupus erythematosus, antiphospholipid antibodies or antiphospholipid syndrome", detail: "Excluded under PGD v011. Refer." });
   }
 
   if (mh.dyslipidaemiaWithRiskFactor) {
@@ -266,7 +262,7 @@ export function getAllAlerts(state: PeriodDelayConsultationState): ClinicalAlert
       severity: "stop",
       code: "DYSLIPIDAEMIA",
       message: "Dyslipidaemia together with another cardiovascular risk factor",
-      detail: "Obesity below the BMI threshold, diabetes, hypertension or family history. Excluded under PGD v010. Refer.",
+      detail: "Obesity below the BMI threshold, diabetes, hypertension or family history. Excluded under PGD v011. Refer.",
     });
   }
 
@@ -281,11 +277,11 @@ export function getAllAlerts(state: PeriodDelayConsultationState): ClinicalAlert
   }
 
   if (mh.ciclosporin || state.medications.ciclosporin) {
-    alerts.push({ severity: "stop", code: "CICLOSPORIN", message: "Taking ciclosporin", detail: "Excluded under PGD v010. Refer." });
+    alerts.push({ severity: "stop", code: "CICLOSPORIN", message: "Taking ciclosporin", detail: "Excluded under PGD v011. Refer." });
   }
 
   if (mh.lamotrigineMonotherapy) {
-    alerts.push({ severity: "stop", code: "LAMOTRIGINE", message: "Taking lamotrigine as monotherapy", detail: "Excluded under PGD v010. Refer." });
+    alerts.push({ severity: "stop", code: "LAMOTRIGINE", message: "Taking lamotrigine as monotherapy", detail: "Excluded under PGD v011. Refer." });
   }
 
   if (mh.severeDepressionOrSuicidalIdeation) {
@@ -413,6 +409,6 @@ export function calculateDoseRecommendation(state: PeriodDelayConsultationState)
     frequency: "Three times daily",
     duration: `${days} days, ${tablets} tablets (period expected 2 to 3 days after stopping)`,
     dosingRegimen: `One 5mg tablet three times daily, starting 3 days before the expected period, for ${days} days (${tablets} tablets). Maximum 14 days, 42 tablets.`,
-    reason: "Short-term delay of menstruation, PGD v010",
+    reason: "Short-term delay of menstruation, PGD v011",
   };
 }

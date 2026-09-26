@@ -15,6 +15,7 @@ export async function GET() {
 
   const user = session.user
   let gphcNumber = ''
+  let practitionerRole: 'pharmacist' | 'technician' = 'pharmacist'
   let pharmacyName = ''
   let pharmacyAddress = ''
 
@@ -38,7 +39,7 @@ export async function GET() {
         // Get clinician GPhC by matching name + pharmacy group
         if (pharmacy.groupSlug) {
           const [clinician] = await db
-            .select({ gphcNumber: clinicians.gphcNumber })
+            .select({ gphcNumber: clinicians.gphcNumber, role: clinicians.role })
             .from(clinicians)
             .where(
               and(
@@ -50,6 +51,11 @@ export async function GET() {
 
           if (clinician?.gphcNumber) {
             gphcNumber = clinician.gphcNumber
+          }
+          // Pharmacy technicians declare as such on every consultation
+          // record (Rachel Edwards, Smartway, 23 Sep 2026).
+          if (clinician?.role && /technician/i.test(clinician.role)) {
+            practitionerRole = 'technician'
           }
         }
       }
@@ -63,6 +69,7 @@ export async function GET() {
     email: user.email || '',
     role: user.role || '',
     gphcNumber,
+    practitionerRole,
     pharmacyName,
     pharmacyAddress,
   })

@@ -277,7 +277,7 @@ export const pgds: PGD[] = [
   },
   {
     id: "pneumococcal",
-    title: "Pneumococcal (Prevenar 20)",
+    title: "Pneumococcal (Prevenar 20 or Pneumovax 23)",
     category: "Vaccines",
     priority: 1,
     isNew: false,

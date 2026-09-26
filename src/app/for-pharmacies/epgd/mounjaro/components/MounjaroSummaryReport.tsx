@@ -22,7 +22,15 @@ const SUPPLY_TYPE_LABELS: Record<string, string> = {
   restart: "Restarting after a break (re-titrated from 2.5 mg)",
 };
 
-export function MounjaroSummaryReport({ state }: { state: MounjaroConsultationState }) {
+export function MounjaroSummaryReport({
+  state,
+  onGphcChange,
+  onNameChange,
+}: {
+  state: MounjaroConsultationState;
+  onGphcChange?: (v: string) => void;
+  onNameChange?: (v: string) => void;
+}) {
   const comorbidityLabels = state.weightAssessment.comorbidities.map(
     (id) => COMORBIDITY_OPTIONS.find((c) => c.id === id)?.label ?? id
   );
@@ -270,6 +278,8 @@ export function MounjaroSummaryReport({ state }: { state: MounjaroConsultationSt
           pharmacistName={state.summary.pharmacistName}
           pharmacistGPhC={state.summary.pharmacistGPhC}
           pharmacyName={state.summary.pharmacyName}
+          onGphcChange={onGphcChange}
+          onNameChange={onNameChange}
         />
       )}
 

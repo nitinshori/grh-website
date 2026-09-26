@@ -1750,7 +1750,11 @@ export function WegovyToolClient() {
               <p className="text-sm text-gray-600 mb-4 print:hidden">
                 Review the summary below before saving and printing the consultation record.
               </p>
-              <WegovySummaryReport state={updatedState} />
+              <WegovySummaryReport
+                state={updatedState}
+                onGphcChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "pharmacistGPhC", value: v })}
+                onNameChange={(v) => dispatch({ type: "UPDATE_SUMMARY", field: "pharmacistName", value: v })}
+              />
             </div>
           </StepWrapper>
         );

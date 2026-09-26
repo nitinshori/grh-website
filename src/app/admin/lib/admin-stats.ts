@@ -237,6 +237,13 @@ export interface NeedsAttention {
   payingWithoutAccount: number
   /** Active pharmacy with no PGDs assigned, so nothing to use. */
   activeWithoutPgds: number
+  /**
+   * Approved or completed sign-ups whose last setup email failed to send.
+   * Added 24 Sep 2026: every welcome and reset email had been failing since
+   * the site went live (the Resend domain sat in someone else's team) and the
+   * only place that showed was the onboarding queue, which nobody opened.
+   */
+  setupEmailFailed: number
 }
 
 export async function getNeedsAttention(): Promise<NeedsAttention> {
@@ -266,10 +273,16 @@ export async function getNeedsAttention(): Promise<NeedsAttention> {
   `)) as unknown as { rows: { n: number }[] }
   const noPgds = (noPgdsRaw?.rows ?? [])[0]
 
+  const [emailFailed] = await db
+    .select({ n: sql<number>`COUNT(*)::int` })
+    .from(onboardingRequests)
+    .where(sql`status IN ('approved', 'completed') AND setup_email_error IS NOT NULL AND setup_email_error <> '' AND setup_email_sent_at IS NULL`)
+
   return {
     awaitingApproval: awaiting?.n ?? 0,
     payingWithoutAccount: paying?.n ?? 0,
     activeWithoutPgds: noPgds?.n ?? 0,
+    setupEmailFailed: emailFailed?.n ?? 0,
   }
 }
 
@@ -283,6 +296,6 @@ export async function getNeedsAttentionSafe(): Promise<NeedsAttention> {
     return await getNeedsAttention()
   } catch (err) {
     console.error('[admin] getNeedsAttention failed, returning zeros:', err)
-    return { awaitingApproval: 0, payingWithoutAccount: 0, activeWithoutPgds: 0 }
+    return { awaitingApproval: 0, payingWithoutAccount: 0, activeWithoutPgds: 0, setupEmailFailed: 0 }
   }
 }

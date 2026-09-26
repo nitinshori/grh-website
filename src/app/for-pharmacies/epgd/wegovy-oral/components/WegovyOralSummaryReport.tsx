@@ -56,10 +56,14 @@ export function WegovyOralSummaryReport({
   state,
   alerts,
   pctChange,
+  onGphcChange,
+  onNameChange,
 }: {
   state: WegovyOralState;
   alerts: ClinicalAlert[];
   pctChange: number | null;
+  onGphcChange?: (v: string) => void;
+  onNameChange?: (v: string) => void;
 }) {
   const stopsExist = alerts.some((a) => a.severity === "stop");
   const supplied = !stopsExist && state.doseSelection.product !== "";
@@ -294,6 +298,8 @@ export function WegovyOralSummaryReport({
           pharmacistName={state.summary.pharmacistName}
           pharmacistGPhC={state.summary.pharmacistGPhC}
           pharmacyName={state.summary.pharmacyName}
+          onGphcChange={onGphcChange}
+          onNameChange={onNameChange}
         />
       )}
 

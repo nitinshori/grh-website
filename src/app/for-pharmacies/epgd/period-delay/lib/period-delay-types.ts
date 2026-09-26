@@ -21,13 +21,13 @@ export interface PeriodDelayAssessment {
   daysUntilExpected: number | null;
   previousUse: boolean;
   previousIssues: string;
-  /** PGD v010 records the dates the delay is needed for. */
+  /** PGD v011 records the dates the delay is needed for. */
   datesNeededFor: string;
-  /** PGD v010: previous supplies for period delay in the last 6 months.
+  /** PGD v011: previous supplies for period delay in the last 6 months.
    *  Twice already excludes; total treatment must not exceed 30 days in 6 months. */
   previousSuppliesLast6Months: "" | "0" | "1" | "2+";
   daysSuppliedLast6Months: number | null;
-  // Excluding pregnancy, PGD v010: the two questions, and the test where needed.
+  // Excluding pregnancy, PGD v011: the two questions, and the test where needed.
   /** Yes / No, no default. Either answered No opens the pregnancy test fields. */
   lastPeriodNormalOnTime: boolean | null;
   noUnprotectedSexSince: boolean | null;
@@ -104,7 +104,7 @@ export interface PeriodDelayMedicalHistory {
   hormonalContraception: boolean;
   hormonalContraceptionType: string;
   ageUnder16: boolean;
-  /** PGD v010 excludes male patients. */
+  /** PGD v011 excludes male patients. */
   femaleConfirmed: boolean | null; // "Patient is female" asked as Yes/No with no default; only No is the MALE stop
   hypersensitivity: boolean;
   /** Liver dysfunction, active liver disease, jaundice in pregnancy, or a liver tumour. */
@@ -142,7 +142,7 @@ export interface PeriodDelayMedicalHistory {
   cigarettesPerDay: number | null;
   heightCm: number | null;
   weightKg: number | null;
-  /** Journey of 4+ hours seated, during the course or within 2 weeks after. */
+  /** Journey of 4+ hours seated, during the course or within 2 weeks after. Counted VTE risk factor from v011, not an exclusion. */
   longJourney: boolean;
   recentOrPlannedSurgery: boolean;
   immobility: boolean;
