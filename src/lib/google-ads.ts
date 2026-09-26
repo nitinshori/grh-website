@@ -22,6 +22,11 @@ export const CONVERSIONS = {
   // /onboard/dd-complete once the GoCardless mandate is captured, which is
   // the first moment a pharmacy is genuinely signed up.
   signup: "AW-18464140413/NuStCOn-iYYdEP3YseRE",
+
+  // "Contact enquiry" conversion action, created 26 Sep 2026. Fires on the
+  // /contact form once the API has accepted the message. Counted once per
+  // click, so a visitor who sends two messages is still one enquiry.
+  contact: "AW-18464140413/co7xCJK0uYYdEP3YseRE",
 } as const;
 
 export type ConversionName = keyof typeof CONVERSIONS;

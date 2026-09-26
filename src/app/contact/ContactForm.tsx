@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 
+import { trackAdsConversion } from "@/lib/google-ads";
+import { pushDataLayerEvent } from "@/lib/gtm";
+
 type Enquiry =
   | "demo"
   | "pricing"
@@ -48,6 +51,12 @@ export function ContactForm() {
         setLoading(false);
         return;
       }
+
+      // A contact enquiry is a lead. The dataLayer push is there for GTM if
+      // it is ever set up; trackAdsConversion reports it to Google Ads now.
+      // Both are no-ops without analytics consent, which is intended.
+      pushDataLayerEvent("contact_submit");
+      trackAdsConversion("contact");
 
       setSubmitted(true);
     } catch {
