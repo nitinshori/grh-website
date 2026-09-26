@@ -137,7 +137,8 @@ export default function HomePage() {
                   />
                   <p className="text-center text-blue-200 text-xs mt-3 px-2">
                     Dr Nitin Shori &mdash; Founder &amp; Medical Director.
-                    NHS GP Partner. Medical Director of Pharmacy2U for 10+ years.
+                    NHS GP Partner. Founded the Pharmacy2U Online Doctor service and
+                    was its Medical Director for 10+ years.
                   </p>
                 </div>
               </div>
@@ -469,8 +470,9 @@ export default function HomePage() {
               </h3>
               <p className="text-gray-600 leading-relaxed mb-4">
                 Our founder helped build some of the UK&apos;s earliest
-                large-scale online prescribing services, as Medical Director
-                at Pharmacy2U. That clinical and regulatory
+                large-scale online prescribing services: he founded the Pharmacy2U
+                Online Doctor service and was its Medical Director for over
+                10 years. That clinical and regulatory
                 experience is behind every PGD we write.
               </p>
               <p className="text-sm font-semibold text-teal-600">
@@ -581,9 +583,9 @@ export default function HomePage() {
               </p>
 
               <p className="text-gray-600 leading-relaxed mb-4">
-                Nitin spent years as Medical Director of the Pharmacy2U Online
-                Doctor Service, helping build out online prescribing safely,
-                at scale, under full CQC oversight.
+                Nitin founded the Pharmacy2U Online Doctor Service and was its
+                Medical Director for over 10 years, helping build out online
+                prescribing safely, at scale, under full CQC oversight.
               </p>
 
               <p className="text-gray-600 leading-relaxed mb-4">
