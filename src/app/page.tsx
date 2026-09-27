@@ -147,72 +147,63 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── 1.5 TESTIMONIALS ────────────────────────────────── */}
-      {/* TEMPORARILY HIDDEN — restore by removing the `false &&` guard
-          immediately below and the matching `)}` at the section close. */}
-      {false && (
+      {/* ── 1.5 TESTIMONIALS ────────────────────── */}
+      {/* Quotes are verbatim excerpts from recorded conversations with
+          pharmacies using GRH. Transcripts are held as the evidence the CAP
+          Code requires. Names and pharmacies are being collected; when they
+          arrive, add a bold name line above each role line. */}
       <section className="bg-gradient-to-b from-white to-gray-50 border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
-          <h2 className="text-center text-xs sm:text-sm font-semibold uppercase tracking-wider text-teal-700 mb-8">
-            What our customers say
+          <h2 className="text-center text-xs sm:text-sm font-semibold uppercase tracking-wider text-teal-700 mb-2">
+            What pharmacists say
           </h2>
+          <p className="text-center text-sm text-gray-500 mb-8">
+            Taken from recorded conversations with pharmacies using Get Real Health.
+          </p>
           <div className="grid md:grid-cols-3 gap-6">
-            {/* Dan — large chain owner */}
             <figure className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
               <svg className="w-7 h-7 text-teal-500 mb-3" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M6 17h3l2-4V7H5v6h3l-2 4zm10 0h3l2-4V7h-6v6h3l-2 4z" />
               </svg>
               <blockquote className="text-gray-800 leading-relaxed">
-                &ldquo;We were paying Pharmadoctor north of £15,000 a year by the time
-                we&apos;d added per-pharmacist training fees on Wegovy and Mounjaro.
-                GRH is £100 per store, flat. The annual saving across our estate is
-                substantial &mdash; and I get every PGD I&apos;d ever want, not a
-                tiered subset.&rdquo;
+                &ldquo;Previously we had PGDs from different places, different documents and
+                different renewal dates. Having one system is much easier to
+                manage.&rdquo;
               </blockquote>
               <figcaption className="mt-4 text-sm">
-                <span className="font-bold text-gray-900">Dan</span>
-                <span className="block text-gray-500 text-xs">Owner, multi-site pharmacy group</span>
+                <span className="block text-gray-500 text-xs">Community pharmacist</span>
               </figcaption>
             </figure>
 
-            {/* Mohammed — small chain owner */}
             <figure className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
               <svg className="w-7 h-7 text-teal-500 mb-3" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M6 17h3l2-4V7H5v6h3l-2 4zm10 0h3l2-4V7h-6v6h3l-2 4z" />
               </svg>
               <blockquote className="text-gray-800 leading-relaxed">
-                &ldquo;The reason we switched was the Wegovy PGD &mdash; proper
-                clinical authority, audit-ready records, training built in. We
-                launched the weight-management service across all three stores in
-                a week. Onboarding was 10 minutes.&rdquo;
+                &ldquo;I like the fact that the pricing is clear. We know what the service
+                costs and we&apos;re not giving away part of the consultation fee
+                every time we see a patient.&rdquo;
               </blockquote>
               <figcaption className="mt-4 text-sm">
-                <span className="font-bold text-gray-900">Mohammed</span>
-                <span className="block text-gray-500 text-xs">Owner, three-site independent</span>
+                <span className="block text-gray-500 text-xs">Community pharmacist</span>
               </figcaption>
             </figure>
 
-            {/* Adam — locum pharmacist */}
             <figure className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
               <svg className="w-7 h-7 text-teal-500 mb-3" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M6 17h3l2-4V7H5v6h3l-2 4zm10 0h3l2-4V7h-6v6h3l-2 4z" />
               </svg>
               <blockquote className="text-gray-800 leading-relaxed">
-                &ldquo;Locums normally have to redo Pharmadoctor training at every
-                pharmacy we cover. With GRH it&apos;s one set of credentials &mdash;
-                every store I work at suddenly has me PGD-ready from day one. The
-                best thing that&apos;s happened to my locum work in years.&rdquo;
+                &ldquo;It feels like there are clinicians behind the platform rather than
+                just a software company.&rdquo;
               </blockquote>
               <figcaption className="mt-4 text-sm">
-                <span className="font-bold text-gray-900">Adam</span>
-                <span className="block text-gray-500 text-xs">Locum pharmacist</span>
+                <span className="block text-gray-500 text-xs">Community pharmacist</span>
               </figcaption>
             </figure>
           </div>
         </div>
       </section>
-      )}
-      {/* end TEMPORARILY HIDDEN testimonials */}
 
       {/* ── 2. KEY USP HIGHLIGHTS ────────────────────────────── */}
       <section className="bg-white border-b border-gray-100">
