@@ -185,7 +185,7 @@ export default function HomePage() {
                 every time we see a patient.&rdquo;
               </blockquote>
               <figcaption className="mt-4 text-sm">
-                <span className="block text-gray-500 text-xs">Community pharmacist</span>
+                <span className="block text-gray-500 text-xs">Owner, multi-site pharmacy group</span>
               </figcaption>
             </figure>
 
