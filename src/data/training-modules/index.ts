@@ -10,6 +10,7 @@ import { mounjaroModule } from "./mounjaro";
 import { utiModule } from "./uti";
 import { emergencyContraceptionModule } from "./emergency-contraception";
 import { hairLossModule } from "./hair-loss";
+import { oralMinoxidilModule } from "./oral-minoxidil";
 import { travelCoreModule } from "./travel-core";
 // Tier 2 — weight management family + men's & women's health
 import { saxendaModule } from "./saxenda";
@@ -79,6 +80,7 @@ export const modules: TrainingModule[] = [
   utiModule,
   emergencyContraceptionModule,
   hairLossModule,
+  oralMinoxidilModule,
   travelCoreModule,
   // Tier 2 — high-volume + weight management family + men's & women's health
   saxendaModule,

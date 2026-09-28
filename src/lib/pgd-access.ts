@@ -48,6 +48,7 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
 
   // Skin
   { slug: 'acne', title: 'Acne', subtitle: 'Adapalene / Lymecycline', category: 'Skin' },
+  { slug: 'oral-minoxidil', title: 'Pattern Hair Loss (Low-Dose Oral Minoxidil)', subtitle: 'Off-label, men and women 18 to 65, pharmacists only', category: 'Skin' },
   // Built from the PPH-signed PGD (J. Wilkins), 29 Jul 2026 — assigned to
   // PPH only via migration 036; no GRH master document yet.
   { slug: 'skin-infection', title: 'Skin Infection', subtitle: 'Flucloxacillin / Clarithromycin / Doxycycline', category: 'Skin' },
@@ -476,6 +477,7 @@ export const REISSUED_PGDS: Record<string, { version: string; date: string }> = 
   'hair-loss': { version: 'v004', date: '14 September 2026' },
   hayfever: { version: 'v006', date: '14 September 2026' },
   'hepatitis-a': { version: 'v001', date: '20 September 2026' },
+  'oral-minoxidil': { version: 'v001', date: '28 September 2026' },
   'hep-ab-travel': { version: 'v009', date: '14 September 2026' },
   'hep-b-occupational': { version: 'v006', date: '14 September 2026' },
   'herpes-management': { version: 'v006', date: '14 September 2026' },

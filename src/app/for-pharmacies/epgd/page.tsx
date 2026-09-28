@@ -42,6 +42,7 @@ const epgds = [
 
   // ── Skin ──
   { slug: 'acne', title: 'Acne Treatment', subtitle: 'Topical Retinoids / Antibiotics', category: 'Skin', color: 'bg-amber-500' },
+  { slug: 'oral-minoxidil', title: 'Pattern Hair Loss (Low-Dose Oral Minoxidil)', subtitle: 'Off-label, men and women 18 to 65. Pharmacists only', category: 'Skin', color: 'bg-amber-600' },
   { slug: 'cold-sores', title: 'Cold Sores', subtitle: 'Aciclovir Cream / Oral', category: 'Skin', color: 'bg-amber-500' },
   { slug: 'eczema', title: 'Eczema Management', subtitle: 'Emollients & Topical Steroids', category: 'Skin', color: 'bg-amber-500' },
   { slug: 'skin-infection', title: 'Skin Infection', subtitle: 'Flucloxacillin / Clarithromycin / Doxycycline', category: 'Skin', color: 'bg-orange-600' },
@@ -77,6 +78,7 @@ const epgds = [
 
   // ── Vaccines ──
   { slug: 'flu', title: 'Flu Vaccination', subtitle: 'Private Flu Vaccine Administration', category: 'Vaccines', color: 'bg-sky-500' },
+  { slug: 'hepatitis-a', title: 'Hepatitis A Vaccine', subtitle: 'Havrix / Avaxim, from 1 year', category: 'Vaccines', color: 'bg-sky-500' },
   { slug: 'covid-booster', title: 'COVID-19 Booster', subtitle: 'mRNA / Protein Subunit Vaccines', category: 'Vaccines', color: 'bg-sky-500' },
   { slug: 'shingles-vaccine', title: 'Shingles Vaccine (Shingrix)', subtitle: 'Recombinant Zoster Vaccine', category: 'Vaccines', color: 'bg-sky-500' },
   { slug: 'hpv', title: 'HPV Vaccination', subtitle: 'Gardasil 9 (9-Valent)', category: 'Vaccines', color: 'bg-sky-500' },

@@ -129,6 +129,18 @@ export const pgds: PGD[] = [
     pharmadoctor: "Yes",
   },
   {
+    id: "oral-minoxidil",
+    title: "Pattern Hair Loss (Low-Dose Oral Minoxidil)",
+    category: "Skin",
+    priority: 2,
+    isNew: true,
+    revenueEstimate: "\u00a340\u201360 per supply",
+    consultTime: "25 min",
+    description:
+      "Off-label low-dose oral minoxidil for male and female pattern hair loss, adults 18 to 65, with blood pressure, pulse and weight checks at every 8-week supply. Pharmacists only.",
+    pharmadoctor: "No",
+  },
+  {
     id: "hepatitis-a",
     title: "Hepatitis A Vaccination",
     category: "Travel",

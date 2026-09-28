@@ -53,6 +53,7 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   "genital-warts": "genital-warts-v006.pdf",
   "gonorrhoea-treatment": "gonorrhoea-treatment-v005.pdf",
   "hair-loss": "hair-loss-v004.pdf",
+  "oral-minoxidil": "oral-minoxidil-v001.pdf",
   "hayfever": "hayfever-v006.pdf",
   // Signed 21 Aug 2026. hep-ab-travel was the only slug in the catalogue
   // with no document at all: the tool was live and assignable, so every
@@ -177,6 +178,7 @@ export const PGD_HUBRX_FILES: Record<string, string> = {
   "genital-warts": "genital-warts-v006.pdf",
   "gonorrhoea-treatment": "gonorrhoea-treatment-v005.pdf",
   "hair-loss": "hair-loss-v004.pdf",
+  "oral-minoxidil": "oral-minoxidil-v001.pdf",
   "hayfever": "hayfever-v006.pdf",
   "hep-b-occupational": "hep-b-occupational-v006.pdf",
   "herpes-management": "herpes-management-v006.pdf",
