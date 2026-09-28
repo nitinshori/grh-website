@@ -189,10 +189,19 @@ async function pharmacyPgdAccess(
   return entry
 }
 
+/**
+ * Why a tool URL was refused. Carried to the index page as ?denied=<segment>
+ * &why=<reason> so the banner can say what was wrong and the refusal can be
+ * recorded (28 Sep 2026: HubRx built a catalogue of links to our tools and
+ * one of them bounced with a message that told nobody, us included, which
+ * link or why).
+ */
+type EpgdRefusal = 'withdrawn' | 'no-document' | 'not-assigned' | null
+
 async function mayUseEpgdTool(
   pharmacyId: string,
   segment: string,
-): Promise<boolean> {
+): Promise<EpgdRefusal> {
   const candidates = [segment, ...(EPGD_SEGMENT_ALIASES[segment] ?? [])]
 
   // Withdrawn PGDs are refused to everyone, before any tenant or assignment
@@ -206,7 +215,7 @@ async function mayUseEpgdTool(
   // every withdrawn tool open to HubRx pharmacies — which is precisely how
   // threadworms stayed reachable for them after migration 051.
   if (candidates.some((s) => WITHDRAWN_SLUGS.has(s))) {
-    return false
+    return 'withdrawn'
   }
 
   // A tool with no signed document behind it is a supply with nothing
@@ -225,7 +234,7 @@ async function mayUseEpgdTool(
   // only route it closes is chikungunya, which had a complete 447 line tool
   // deployed and no PGD behind it.
   if (!candidates.some((s) => DOCUMENTED_SLUGS.has(s))) {
-    return false
+    return 'no-document'
   }
 
   try {
@@ -239,16 +248,16 @@ async function mayUseEpgdTool(
       authSource === 'hubrx' &&
       candidates.some((s) => CATALOGUE_SLUGS.has(s))
     ) {
-      return true
+      return null
     }
 
-    return candidates.some((s) => slugs.has(s))
+    return candidates.some((s) => slugs.has(s)) ? null : 'not-assigned'
   } catch (err) {
     console.error(
       '[middleware] PGD access check failed, allowing through:',
       err,
     )
-    return true
+    return null
   }
 }
 
@@ -367,18 +376,23 @@ export default auth(async (req: NextRequest & { auth: { user: { id?: string; rol
       !EPGD_UNGATED_SEGMENTS.has(segment) &&
       role !== 'super_admin'
     ) {
-      const allowed = pharmacyId
+      const refusal: EpgdRefusal = pharmacyId
         ? await mayUseEpgdTool(pharmacyId, segment)
-        : false
+        : 'not-assigned'
 
-      if (!allowed) {
+      if (refusal) {
         // Logged so that a wrongly-denied pharmacy shows up in the Vercel
         // logs rather than only in a support call.
         console.warn(
-          `[middleware] ePGD denied: segment=${segment} pharmacy=${pharmacyId ?? 'none'}`,
+          `[middleware] ePGD denied: segment=${segment} why=${refusal} pharmacy=${pharmacyId ?? 'none'}`,
         )
         const denied = new URL('/for-pharmacies/epgd', req.nextUrl.origin)
         denied.searchParams.set('denied', segment)
+        denied.searchParams.set('why', refusal)
+        // Where the link came from, so a partner's catalogue page can be
+        // identified without asking them.
+        const ref = req.headers.get('referer')
+        if (ref) denied.searchParams.set('from', ref.slice(0, 300))
         return NextResponse.redirect(denied)
       }
     }

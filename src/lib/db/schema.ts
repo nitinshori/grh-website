@@ -215,6 +215,24 @@ export const clinicians = pgTable('clinicians', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 
+// ── ePGD refusals (tool links the middleware turned away) ───────
+// Migration 067. One row per bounce, so a partner's broken catalogue link
+// shows up here rather than in a screenshot.
+
+export const epgdRefusals = pgTable('epgd_refusals', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  userId: uuid('user_id'),
+  userEmail: text('user_email'),
+  pharmacyId: uuid('pharmacy_id'),
+  pharmacyName: text('pharmacy_name'),
+  authSource: text('auth_source'),
+  segment: text('segment').notNull(),
+  reason: text('reason').notNull(),
+  referer: text('referer'),
+  host: text('host'),
+})
+
 // ── User Consents (SSO first-use terms/DPA acceptance) ─────────
 
 export const userConsents = pgTable('user_consents', {

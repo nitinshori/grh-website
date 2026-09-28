@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { getPharmacyPgdSlugs, isViewOnlyUser } from '@/lib/pgd-queries'
+import { recordEpgdRefusal, describeEpgdRefusal } from '@/lib/epgd-refusals'
+import { headers } from 'next/headers'
 
 export const metadata: Metadata = {
   title: 'ePGD Consultations',
@@ -129,13 +131,29 @@ export default async function EPGDIndexPage({
   // Set by the middleware when it turns someone away from a tool their
   // pharmacy does not hold. Without this they would land back on the list
   // with no idea why, which is how a security fix becomes a support call.
-  searchParams: Promise<{ denied?: string }>
+  searchParams: Promise<{ denied?: string; why?: string; from?: string }>
 }) {
-  const { denied } = await searchParams
+  const { denied, why, from } = await searchParams
   const session = await auth()
 
   if (!session?.user) {
     redirect('/login')
+  }
+
+  // Record the bounce before anything else, so it is kept even if the rest
+  // of the page fails. Best effort: a failed insert must not break the index.
+  if (denied) {
+    const h = await headers()
+    await recordEpgdRefusal({
+      userId: session.user.id,
+      userEmail: session.user.email ?? null,
+      pharmacyId: session.user.pharmacyId ?? null,
+      authSource: (session.user as { authSource?: string }).authSource ?? null,
+      segment: denied,
+      reason: why ?? 'unknown',
+      referer: from ?? h.get('referer'),
+      host: h.get('host'),
+    })
   }
 
   const isSuperAdmin = session.user.role === 'super_admin'
@@ -220,12 +238,11 @@ export default async function EPGDIndexPage({
         {denied && (
           <div className="-mt-4 mb-8 rounded-lg border border-gray-300 bg-white px-4 py-3">
             <p className="text-sm text-gray-800">
-              That ePGD is not enabled for your pharmacy, so it could not be
-              opened.
+              {describeEpgdRefusal(denied, why)}
             </p>
             <p className="text-xs text-gray-500 mt-1">
-              If you believe it should be, contact Get Real Health and we will
-              add it to your account.
+              The link pointed at <code className="font-mono">/for-pharmacies/epgd/{denied}</code>.
+              {' '}If you believe it should open, contact Get Real Health quoting that address; this refusal has been logged for us.
             </p>
           </div>
         )}

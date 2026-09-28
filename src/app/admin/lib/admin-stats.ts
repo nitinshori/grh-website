@@ -244,6 +244,8 @@ export interface NeedsAttention {
    * only place that showed was the onboarding queue, which nobody opened.
    */
   setupEmailFailed: number
+  /** ePGD links refused in the last 7 days (partner catalogue links that do not resolve, mostly). */
+  epgdRefusals7d: number
 }
 
 export async function getNeedsAttention(): Promise<NeedsAttention> {
@@ -278,11 +280,17 @@ export async function getNeedsAttention(): Promise<NeedsAttention> {
     .from(onboardingRequests)
     .where(sql`status IN ('approved', 'completed') AND setup_email_error IS NOT NULL AND setup_email_error <> '' AND setup_email_sent_at IS NULL`)
 
+  const refusalsRaw = (await db.execute(sql`
+    SELECT COUNT(*)::int AS n FROM epgd_refusals WHERE created_at > now() - interval '7 days'
+  `)) as unknown as { rows: { n: number }[] }
+  const refusals = (refusalsRaw?.rows ?? [])[0]
+
   return {
     awaitingApproval: awaiting?.n ?? 0,
     payingWithoutAccount: paying?.n ?? 0,
     activeWithoutPgds: noPgds?.n ?? 0,
     setupEmailFailed: emailFailed?.n ?? 0,
+    epgdRefusals7d: refusals?.n ?? 0,
   }
 }
 
@@ -296,6 +304,6 @@ export async function getNeedsAttentionSafe(): Promise<NeedsAttention> {
     return await getNeedsAttention()
   } catch (err) {
     console.error('[admin] getNeedsAttention failed, returning zeros:', err)
-    return { awaitingApproval: 0, payingWithoutAccount: 0, activeWithoutPgds: 0, setupEmailFailed: 0 }
+    return { awaitingApproval: 0, payingWithoutAccount: 0, activeWithoutPgds: 0, setupEmailFailed: 0, epgdRefusals7d: 0 }
   }
 }

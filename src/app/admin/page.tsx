@@ -82,7 +82,7 @@ export default async function AdminDashboard() {
     monthlyRevenuePence: 0,
   }
   const attention = settled[4].status === 'fulfilled' ? settled[4].value : {
-    awaitingApproval: 0, payingWithoutAccount: 0, activeWithoutPgds: 0, setupEmailFailed: 0,
+    awaitingApproval: 0, payingWithoutAccount: 0, activeWithoutPgds: 0, setupEmailFailed: 0, epgdRefusals7d: 0,
   }
 
   const signupSparkline = signupsByWeek.map((b) => b.count)
@@ -101,7 +101,8 @@ export default async function AdminDashboard() {
         {(attention.awaitingApproval > 0 ||
           attention.payingWithoutAccount > 0 ||
           attention.activeWithoutPgds > 0 ||
-          attention.setupEmailFailed > 0) && (
+          attention.setupEmailFailed > 0 ||
+          attention.epgdRefusals7d > 0) && (
           <div className="mb-6 rounded-xl border-2 border-amber-400 bg-amber-50 p-5">
             <p className="text-sm font-bold text-amber-900 mb-2">Needs attention</p>
             <ul className="text-sm text-amber-900 space-y-1">
@@ -112,6 +113,14 @@ export default async function AdminDashboard() {
                     {attention.setupEmailFailed === 1 ? 'y' : 'ies'} whose setup email failed to send
                   </a>
                   {' '}: they are billed and cannot log in. Open the queue, fix the cause, and press Resend setup link.
+                </li>
+              )}
+              {attention.epgdRefusals7d > 0 && (
+                <li>
+                  <a href="/admin/epgd-refusals" className="font-semibold underline">
+                    {attention.epgdRefusals7d} refused ePGD link{attention.epgdRefusals7d === 1 ? '' : 's'} in the last 7 days
+                  </a>
+                  {' '}: someone clicked a tool address that did not open. The list shows which link, who, and where it came from.
                 </li>
               )}
               {attention.awaitingApproval > 0 && (
