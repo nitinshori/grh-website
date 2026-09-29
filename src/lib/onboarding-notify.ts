@@ -15,6 +15,9 @@ interface StepPayload {
   contactEmail?: string | null
   contactPhone?: string | null
   contactRole?: string | null
+  /** Names of any extra branches on a multi-branch sign-up (migration 069). */
+  branchNames?: string[]
+  groupName?: string | null
 }
 
 const FALLBACK_TO = "info@getrealhealthpgd.co.uk"
@@ -44,7 +47,8 @@ export async function sendOnboardingStepEmail(p: StepPayload): Promise<void> {
 
   const stepLabel = p.step === 1 ? "Step 1 — Pharmacy details captured" : p.step === 2 ? "Step 2 — Pharmacist details captured" : `Step ${p.step}`
   const stage = p.step === 1 ? "New lead started onboarding" : "Lead progressed to pharmacist details"
-  const subject = `${stage}: ${p.pharmacyName}`
+  const extra = p.branchNames && p.branchNames.length > 0 ? ` (+${p.branchNames.length} branches)` : ""
+  const subject = `${stage}: ${p.pharmacyName}${extra}`
 
   const adminLink = `${appUrl}/admin/onboarding/${p.onboardingId}`
 
@@ -56,6 +60,12 @@ export async function sendOnboardingStepEmail(p: StepPayload): Promise<void> {
     ["Pharmacy phone", p.pharmacyPhone],
     ["Pharmacy email", p.pharmacyEmail],
   ]
+  if (p.branchNames && p.branchNames.length > 0) {
+    rows.push(
+      ["Group name", p.groupName],
+      [`Other branches (${p.branchNames.length})`, p.branchNames.join("; ")],
+    )
+  }
   if (p.step >= 2) {
     rows.push(
       ["Contact name", `${p.contactFirstName ?? ""} ${p.contactLastName ?? ""}`.trim() || null],

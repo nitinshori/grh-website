@@ -42,7 +42,10 @@ export async function POST(
   let flow
   try {
     flow = await createRedirectFlow({
-      description: `Get Real Health subscription — ${req.pharmacyName}`,
+      description:
+        req.branches.length > 0
+          ? `Get Real Health subscription: ${req.groupName || req.pharmacyName} (${req.branches.length + 1} pharmacies)`
+          : `Get Real Health subscription: ${req.pharmacyName}`,
       sessionToken,
       successRedirectUrl: successUrl,
       prefilledCustomer: {

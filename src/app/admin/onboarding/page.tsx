@@ -5,6 +5,7 @@ import { desc } from 'drizzle-orm'
 import { redirect } from 'next/navigation'
 import OnboardingQueueClient from './OnboardingQueueClient'
 import { hasCompletedSetup } from '@/lib/onboarding-setup'
+import { monthlyRecurringPence } from '@/lib/billing'
 import { DonutChart } from '../components/Charts'
 
 export const metadata = { title: 'Onboarding queue — Admin' }
@@ -39,7 +40,10 @@ export default async function OnboardingQueuePage() {
   const notSetUp = rows.filter((r) => (r.status === 'approved' || r.status === 'completed') && setupDone.get(r.id) === false).length
 
   // Aggregate for the visibility tiles
-  let mActive = 0, mPending = 0, mFailed = 0, mNone = 0, mrrPence = 0
+  let mActive = 0, mPending = 0, mFailed = 0, mNone = 0
+  // From pharmacy_subscriptions (migration 069): every active pharmacy with
+  // a live GoCardless subscription, at its current per-branch fee.
+  const mrrPence = await monthlyRecurringPence()
   const byStatus = new Map<string, number>()
   for (const r of rows) {
     byStatus.set(r.status, (byStatus.get(r.status) ?? 0) + 1)
@@ -49,7 +53,6 @@ export default async function OnboardingQueuePage() {
     else if (['pending_submission', 'pending_customer_approval', 'submitted'].includes(m)) mPending += 1
     else if (['cancelled', 'failed', 'expired'].includes(m)) mFailed += 1
     else mNone += 1
-    if (r.status === 'completed' && r.monthlyFeePence) mrrPence += r.monthlyFeePence
   }
   const mrr = '£' + (mrrPence / 100).toLocaleString('en-GB')
 
@@ -85,7 +88,7 @@ export default async function OnboardingQueuePage() {
           <div className="bg-white rounded-lg shadow p-4">
             <p className="text-[11px] font-medium text-gray-600 uppercase tracking-wide">Monthly recurring</p>
             <p className="text-2xl font-bold text-teal-700 mt-1">{mrr}</p>
-            <p className="text-[10px] text-gray-500">From completed subs</p>
+            <p className="text-[10px] text-gray-500">Live subscriptions, active pharmacies</p>
           </div>
         </div>
 
@@ -127,6 +130,11 @@ export default async function OnboardingQueuePage() {
             setupEmailError: r.setupEmailError || '',
             setupEmailAttempts: r.setupEmailAttempts ?? 0,
             setupDone: setupDone.get(r.id) ?? null,
+            branchNames: (Array.isArray(r.branches) ? r.branches : []).map((b) => b.name),
+            groupName: r.groupName || '',
+            monthlyFeePence: r.monthlyFeePence ?? null,
+            feeChangePence: r.feeChangePence ?? null,
+            feeChangeOn: r.feeChangeOn || '',
           }))}
         />
       </div>

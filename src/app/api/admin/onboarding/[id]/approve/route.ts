@@ -1,20 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { onboardingRequests, pharmacies, pharmacyPgds } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { onboardingRequests, pharmacies, pharmacyPgds, users, type OnboardingBranch } from '@/lib/db/schema'
+import { and, eq, sql } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
 import { ALL_PGDS } from '@/lib/pgd-access'
 import { ensureFirstUser, sendSetupEmail } from '@/lib/onboarding-setup'
-import { createSubscription } from '@/lib/gocardless'
+import { isValidFeePence, isValidIsoDate, MAX_FEE_PENCE, MIN_FEE_PENCE, pounds, startBranchBilling, todayLondon } from '@/lib/billing'
 
 export const dynamic = 'force-dynamic'
+// A group is N pharmacies, N×70 PGD rows and N GoCardless calls in series.
+export const maxDuration = 60
 
 /**
  * POST /api/admin/onboarding/[id]/approve
- * Admin-only. Creates the pharmacy, assigns all PGDs, creates the first user
- * (locked until they choose a password) and emails the contact a tokenised
- * set-password link. The customer never sees this endpoint directly.
+ * Admin-only. Creates the pharmacy (or every branch of a multi-branch
+ * sign-up, all under one group_slug), assigns all PGDs, starts one
+ * GoCardless subscription per branch on the customer's single mandate,
+ * creates the first user (locked until they choose a password) and emails
+ * the contact a tokenised set-password link.
+ *
+ * Body: {
+ *   monthlyFeePence: number        per branch, per month, ex VAT
+ *   feeChangePence?: number|null   scheduled change, per branch (e.g. a
+ *   feeChangeOn?: 'YYYY-MM-DD'     first-year group rate moving to standard)
+ *   feeNote?: string               why, for the billing page
+ * }
  */
+
+interface ApproveBody {
+  monthlyFeePence?: number
+  feeChangePence?: number | null
+  feeChangeOn?: string | null
+  feeNote?: string | null
+}
+
+function slugify(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80)
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -25,98 +48,188 @@ export async function POST(
   }
 
   const { id } = await params
-  const body = await request.json().catch(() => ({})) as { monthlyFeePence?: number }
-  const monthlyFeePence = Number.isFinite(body.monthlyFeePence) ? Math.floor(body.monthlyFeePence as number) : null
-  if (!monthlyFeePence || monthlyFeePence < 100) {
-    return NextResponse.json({ error: 'Monthly fee (in pence) is required and must be at least £1.00' }, { status: 400 })
+  const body = await request.json().catch(() => ({})) as ApproveBody
+  const monthlyFeePence = typeof body.monthlyFeePence === 'number' ? Math.floor(body.monthlyFeePence) : NaN
+  if (!isValidFeePence(monthlyFeePence)) {
+    return NextResponse.json({ error: `Monthly fee per pharmacy must be between ${pounds(MIN_FEE_PENCE)} and ${pounds(MAX_FEE_PENCE)}` }, { status: 400 })
   }
+  const feeChangePence = body.feeChangePence == null ? null : Math.floor(Number(body.feeChangePence))
+  const feeChangeOn = body.feeChangeOn == null || body.feeChangeOn === '' ? null : body.feeChangeOn
+  if ((feeChangePence == null) !== (feeChangeOn == null)) {
+    return NextResponse.json({ error: 'A scheduled fee change needs both a new fee and a date' }, { status: 400 })
+  }
+  if (feeChangePence != null && !isValidFeePence(feeChangePence)) {
+    return NextResponse.json({ error: `Scheduled fee must be between ${pounds(MIN_FEE_PENCE)} and ${pounds(MAX_FEE_PENCE)}` }, { status: 400 })
+  }
+  if (feeChangeOn != null && (!isValidIsoDate(feeChangeOn) || feeChangeOn <= todayLondon())) {
+    return NextResponse.json({ error: 'Scheduled fee change date must be a real future date (YYYY-MM-DD)' }, { status: 400 })
+  }
+  const feeNote = typeof body.feeNote === 'string' && body.feeNote.trim() ? body.feeNote.trim().slice(0, 1000) : null
 
-  const [req] = await db
+  const [pre] = await db
     .select()
     .from(onboardingRequests)
     .where(eq(onboardingRequests.id, id))
     .limit(1)
-  if (!req) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  if (req.status === 'approved' || req.status === 'completed') {
+  if (!pre) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  if (pre.status === 'approved' || pre.status === 'completed') {
     return NextResponse.json({ error: 'Already approved' }, { status: 409 })
   }
-  if (!req.gocardlessMandateId) {
+  if (pre.status !== 'awaiting_approval') {
+    return NextResponse.json({ error: `Only a sign-up awaiting approval can be approved (this one is "${pre.status}")` }, { status: 409 })
+  }
+  if (!pre.gocardlessMandateId) {
     return NextResponse.json({ error: 'No GoCardless mandate on record — direct debit not set up.' }, { status: 400 })
   }
-  // Contact fields are nullable since migration 018 (drafts at step 1 may not
-  // have them). By the time we get to approval the customer should have filled
-  // step 2; refuse approval if they haven't, since we need contactEmail to
-  // send the set-password invite.
-  if (!req.contactEmail || !req.contactFirstName) {
+  if (!pre.contactEmail || !pre.contactFirstName) {
     return NextResponse.json(
       { error: 'Onboarding draft is incomplete — contact details missing. The customer has not finished step 2.' },
       { status: 400 },
     )
   }
+
+  // The contact email is customer-typed. If it already belongs to a user at
+  // another pharmacy, approving would attach a stranger's account to this
+  // sign-up (and, for a group, promote them). Refuse and let the admin sort
+  // it out by hand.
+  const [clash] = await db
+    .select({ id: users.id, pharmacyId: users.pharmacyId, role: users.role })
+    .from(users)
+    .where(sql`LOWER(${users.email}) = ${pre.contactEmail.trim().toLowerCase()}`)
+    .limit(1)
+  if (clash && (clash.pharmacyId || clash.role !== 'pharmacist')) {
+    return NextResponse.json(
+      { error: `The contact email ${pre.contactEmail} already belongs to an existing user${clash.pharmacyId ? ' at another pharmacy' : ` with role ${clash.role}`}. Approval refused; resolve the account first.` },
+      { status: 409 },
+    )
+  }
+
+  // Claim the request before anything is created: exactly one approve can
+  // flip it from awaiting_approval, so a double click, a second tab or a
+  // platform retry gets a 409 instead of a second set of pharmacies and
+  // subscriptions on the same mandate.
+  const [req] = await db
+    .update(onboardingRequests)
+    .set({ status: 'approved', approvedBy: session.user.id, approvedAt: new Date(), updatedAt: new Date() })
+    .where(and(eq(onboardingRequests.id, id), eq(onboardingRequests.status, 'awaiting_approval')))
+    .returning()
+  if (!req) return NextResponse.json({ error: 'This sign-up is being approved already' }, { status: 409 })
+  if (!req.gocardlessMandateId || !req.contactEmail) {
+    return NextResponse.json({ error: 'Sign-up changed underneath us; reload and try again' }, { status: 409 })
+  }
   const contactEmail = req.contactEmail
+  const mandateId = req.gocardlessMandateId
+  const extraBranches: OnboardingBranch[] = Array.isArray(req.branches) ? req.branches : []
+  const isGroup = extraBranches.length > 0
 
-  // 1. Create pharmacy row
-  const slug = (req.pharmacyName.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 80) +
-                '-' + req.id.slice(0, 4))
-  const [newPharmacy] = await db
-    .insert(pharmacies)
-    .values({
-      name: req.pharmacyName,
-      slug,
-      groupSlug: slug, // single-site default; admin can change later
-      address: req.pharmacyAddress,
-      phone: req.pharmacyPhone,
-      email: req.pharmacyEmail || contactEmail,
-      isActive: true,
-    })
-    .returning({ id: pharmacies.id })
+  // 1. Create the pharmacy rows. A single site keeps the old behaviour
+  //    (group_slug = its own slug). A multi-branch sign-up puts every branch
+  //    under one group slug so the group overview, shared diary and staff
+  //    pages work from day one.
+  const idTail = req.id.slice(0, 4)
+  const groupSlug = isGroup
+    ? `${slugify(req.groupName || req.pharmacyName)}-${idTail}`
+    : `${slugify(req.pharmacyName)}-${idTail}`
 
-  // 2. Assign all canonical PGDs
-  const slugs = ALL_PGDS.map((p) => p.slug)
-  for (const s of slugs) {
-    await db.insert(pharmacyPgds).values({ pharmacyId: newPharmacy.id, pgdSlug: s }).onConflictDoNothing()
-  }
+  const allBranches: Array<{ name: string; address: string | null; phone: string | null; email: string | null }> = [
+    { name: req.pharmacyName, address: req.pharmacyAddress, phone: req.pharmacyPhone, email: req.pharmacyEmail || contactEmail },
+    ...extraBranches.map((b) => ({
+      name: b.name,
+      address: [b.address, b.postcode].filter(Boolean).join(', ') || null,
+      phone: b.phone ?? null,
+      email: b.email || req.pharmacyEmail || contactEmail,
+    })),
+  ]
 
-  // 3. Create the GoCardless subscription with the admin-set fee
-  let subscriptionId: string | null = null
-  let subscriptionError: string | null = null
+  // Every pharmacy row in one statement: either the whole group exists or
+  // none of it does. If this fails nothing has been billed, so the claim is
+  // released and the admin can try again.
+  let created: Array<{ id: string; name: string }>
   try {
-    const sub = await createSubscription({
-      mandateId: req.gocardlessMandateId,
-      amountPence: monthlyFeePence,
-      name: `Get Real Health monthly subscription — ${req.pharmacyName}`,
-      metadata: {
-        pharmacy_id: newPharmacy.id,
-        onboarding_id: req.id,
-      },
-    })
-    subscriptionId = sub.id
+    created = await db
+      .insert(pharmacies)
+      .values(allBranches.map((b, i) => ({
+        name: b.name,
+        slug: `${slugify(b.name)}-${idTail}${i > 0 ? `-${i}` : ''}`,
+        groupSlug,
+        address: b.address,
+        phone: b.phone,
+        email: b.email,
+        isActive: true,
+      })))
+      .returning({ id: pharmacies.id, name: pharmacies.name })
   } catch (e) {
-    subscriptionError = e instanceof Error ? e.message : String(e)
-    // Don't abort — pharmacy is provisioned, admin can retry the subscription
-    // separately. We still mark approved so the customer can set their password.
+    await db
+      .update(onboardingRequests)
+      .set({ status: 'awaiting_approval', approvedBy: null, approvedAt: null, updatedAt: new Date() })
+      .where(eq(onboardingRequests.id, req.id))
+    return NextResponse.json({ error: `Could not create the pharmacy rows: ${e instanceof Error ? e.message : String(e)}. Nothing was billed; try again.` }, { status: 500 })
+  }
+  // insert().returning() keeps input order in Postgres for a single VALUES list
+  const primary = created[0]
+
+  await db
+    .update(onboardingRequests)
+    .set({ pharmacyId: primary.id, groupSlug, updatedAt: new Date() })
+    .where(eq(onboardingRequests.id, req.id))
+
+  // 2. Assign all canonical PGDs to every branch (one statement per branch)
+  const slugs = ALL_PGDS.map((p) => p.slug)
+  for (const ph of created) {
+    await db.insert(pharmacyPgds).values(slugs.map((s) => ({ pharmacyId: ph.id, pgdSlug: s }))).onConflictDoNothing()
   }
 
-  // 4. Mark approved. The login is created now, not when a link is clicked:
-  //    Burrage Pharmacy (Sep 2026) was approved and billed with a setup email
-  //    that never arrived, and there was no account for anything to reset.
+  // 3. One GoCardless subscription per branch, all on the same mandate, at
+  //    the admin-set per-branch fee. Failures are recorded, not fatal.
+  const billing: Array<{ pharmacyId: string; name: string; subscriptionId: string | null; error: string | null }> = []
+  for (const ph of created) {
+    const r = await startBranchBilling({
+      pharmacyId: ph.id,
+      pharmacyName: ph.name,
+      onboardingId: req.id,
+      mandateId,
+      monthlyFeePence,
+      feeChangePence,
+      feeChangeOn,
+      notes: feeNote,
+    })
+    billing.push({ pharmacyId: ph.id, name: ph.name, ...r })
+  }
+  const subscriptionErrors = billing.filter((b) => b.error).map((b) => `${b.name}: ${b.error}`)
+
+  // 4. Record what was created against the (already claimed) request. The
+  //    login is created now, not when a link is clicked: Burrage Pharmacy
+  //    (Sep 2026) was approved and billed with a setup email that never
+  //    arrived, and there was no account for anything to reset.
   await db
     .update(onboardingRequests)
     .set({
-      status: 'approved',
-      approvedBy: session.user.id,
-      approvedAt: new Date(),
-      pharmacyId: newPharmacy.id,
+      pharmacyId: primary.id,
+      groupSlug,
       monthlyFeePence,
-      gocardlessSubscriptionId: subscriptionId,
+      feeChangePence,
+      feeChangeOn,
+      feeNote,
+      gocardlessSubscriptionId: billing[0]?.subscriptionId ?? null,
       updatedAt: new Date(),
     })
     .where(eq(onboardingRequests.id, req.id))
 
-  const forSetup = { ...req, pharmacyId: newPharmacy.id }
+  const forSetup = { ...req, pharmacyId: primary.id }
   const user = await ensureFirstUser(forSetup)
   if (!user) {
     return NextResponse.json({ error: 'Pharmacy created but the first user could not be: contact email missing.' }, { status: 500 })
+  }
+  // The contact on a multi-branch sign-up runs the group (Delmergate's is a
+  // business support manager, not a pharmacist): pharmacy_admin gives them
+  // the group overview, staff management and every branch's diary.
+  // Only a plain pharmacist attached to this group's primary is promoted
+  // (the clash check above already refused any other existing account).
+  if (isGroup) {
+    await db
+      .update(users)
+      .set({ role: 'pharmacy_admin', updatedAt: new Date() })
+      .where(and(eq(users.id, user.id), eq(users.role, 'pharmacist'), eq(users.pharmacyId, primary.id)))
   }
 
   // 5. Email the contact the set-password link; the outcome is stored on the
@@ -125,11 +238,14 @@ export async function POST(
 
   return NextResponse.json({
     ok: true,
-    pharmacyId: newPharmacy.id,
+    pharmacyId: primary.id,
+    pharmacies: created,
+    groupSlug,
     setupUrl,
     emailed,
     emailError,
-    subscriptionId,
-    subscriptionError,
+    subscriptionId: billing[0]?.subscriptionId ?? null,
+    subscriptionError: subscriptionErrors.length ? subscriptionErrors.join('; ') : null,
+    billing,
   })
 }

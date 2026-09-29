@@ -35,7 +35,21 @@ interface FormState {
   contactRole: string;
   heardAbout: string;
   heardAboutDetail: string;
+  groupName: string;
 }
+
+/** An extra branch on a multi-branch sign-up. Same fields as the primary pharmacy. */
+interface Branch {
+  name: string;
+  gphc: string;
+  odsCode: string;
+  address: string;
+  postcode: string;
+  phone: string;
+  email: string;
+}
+
+const emptyBranch: Branch = { name: "", gphc: "", odsCode: "", address: "", postcode: "", phone: "", email: "" };
 
 const initial: FormState = {
   pharmacyName: "",
@@ -53,11 +67,15 @@ const initial: FormState = {
   contactRole: "owner",
   heardAbout: "",
   heardAboutDetail: "",
+  groupName: "",
 };
 
 export default function OnboardClient() {
   const [step, setStep] = useState<Step>(1);
   const [form, setForm] = useState<FormState>(initial);
+  // Extra branches beyond the primary pharmacy. Empty rows (no name) are
+  // ignored by the server, so an unused "Add another branch" row is harmless.
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
@@ -101,7 +119,13 @@ export default function OnboardClient() {
   const set = (field: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [field]: e.target.value }));
 
-  const canStep1 = form.pharmacyName.trim().length > 1 && form.pharmacyEmail.includes("@");
+  const namedBranches = branches.filter((b) => b.name.trim().length > 1);
+  const branchesOk = branches.every(
+    (b) => b.name.trim().length > 1 || Object.values(b).every((v) => v.trim() === ""),
+  );
+  const canStep1 = form.pharmacyName.trim().length > 1 && form.pharmacyEmail.includes("@") && branchesOk;
+  const setBranch = (i: number, field: keyof Branch) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setBranches((list) => list.map((b, j) => (j === i ? { ...b, [field]: e.target.value } : b)));
   const canStep2 =
     form.contactFirstName.trim().length > 0 &&
     form.contactLastName.trim().length > 0 &&
@@ -124,6 +148,7 @@ export default function OnboardClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
+          branches: namedBranches,
           step: stepNum,
           id: onboardingId ?? undefined,
         }),
@@ -166,6 +191,7 @@ export default function OnboardClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
+          branches: namedBranches,
           step: 2,
           id: onboardingId ?? undefined,
           turnstileToken,
@@ -197,7 +223,7 @@ export default function OnboardClient() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Sign up your pharmacy</h1>
           <p className="text-sm text-gray-600 mt-2">
-            Three short steps. One flat monthly fee. Every PGD included.
+            Three short steps. One flat monthly fee per pharmacy. Every PGD included. Signing up several branches? Add them all here and set up one Direct Debit.
           </p>
         </div>
 
@@ -235,6 +261,60 @@ export default function OnboardClient() {
                 <Input label="Phone" value={form.pharmacyPhone} onChange={set("pharmacyPhone")} placeholder="01234 567890" type="tel" />
               </div>
               <Input label="Pharmacy email *" value={form.pharmacyEmail} onChange={set("pharmacyEmail")} placeholder="info@pharmacy.co.uk" type="email" />
+
+              {/* Multi-branch groups: every branch becomes its own pharmacy
+                  on the platform, sharing one account holder and one Direct
+                  Debit. The primary pharmacy above is branch 1. */}
+              <div className="pt-4 border-t border-gray-200">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-900">More than one branch?</h3>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Add each branch here. Each gets its own PGD access and records; you set up one Direct Debit for all of them.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setBranches((list) => [...list, { ...emptyBranch }])}
+                    className="shrink-0 text-sm font-medium text-teal-700 hover:text-teal-800 border border-teal-200 rounded-lg px-3 py-1.5 hover:bg-teal-50"
+                  >
+                    + Add a branch
+                  </button>
+                </div>
+                {branches.length > 0 && (
+                  <div className="mt-3">
+                    <Input label="Group or company name (optional)" value={form.groupName} onChange={set("groupName")} placeholder="Shown on your group dashboard" />
+                  </div>
+                )}
+                {branches.map((b, i) => (
+                  <div key={i} className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-gray-800">Branch {i + 2}</span>
+                      <button
+                        type="button"
+                        onClick={() => setBranches((list) => list.filter((_, j) => j !== i))}
+                        className="text-xs text-gray-500 hover:text-red-600"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    <Input label="Pharmacy name *" value={b.name} onChange={setBranch(i, "name")} placeholder="Station Road Pharmacy" />
+                    <div className="grid sm:grid-cols-2 gap-3">
+                      <Input label="GPhC premises number" value={b.gphc} onChange={setBranch(i, "gphc")} placeholder="1234567" />
+                      <Input label="ODS code (optional)" value={b.odsCode} onChange={setBranch(i, "odsCode")} placeholder="FXXXX" />
+                    </div>
+                    <Input label="Address" value={b.address} onChange={setBranch(i, "address")} placeholder="45 Station Road, Town" />
+                    <div className="grid sm:grid-cols-2 gap-3">
+                      <Input label="Postcode" value={b.postcode} onChange={setBranch(i, "postcode")} placeholder="ME5 9UR" />
+                      <Input label="Phone" value={b.phone} onChange={setBranch(i, "phone")} placeholder="01634 000000" type="tel" />
+                    </div>
+                    <Input label="Branch email (optional)" value={b.email} onChange={setBranch(i, "email")} placeholder="Defaults to the pharmacy email above" type="email" />
+                    {b.name.trim().length < 2 && Object.values(b).some((v) => v.trim() !== "") && (
+                      <p className="text-xs text-red-600">This branch needs a name, or remove it.</p>
+                    )}
+                  </div>
+                ))}
+              </div>
               {error && (
                 <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
                   {error}
@@ -254,7 +334,7 @@ export default function OnboardClient() {
             <div className="space-y-4">
               <h2 className="text-lg font-semibold text-gray-900">About you</h2>
               <p className="text-sm text-gray-500">
-                You'll be the primary account holder. Other pharmacists at this site can be added later.
+                You&apos;ll be the primary account holder{namedBranches.length > 0 ? ` for all ${namedBranches.length + 1} branches, with a group dashboard across them` : ""}. Other pharmacists can be added later.
               </p>
               <div className="grid sm:grid-cols-2 gap-4">
                 <Input label="First name *" value={form.contactFirstName} onChange={set("contactFirstName")} />
@@ -301,11 +381,21 @@ export default function OnboardClient() {
           {step === 3 && (
             <div className="space-y-4">
               <h2 className="text-lg font-semibold text-gray-900">Set up your direct debit</h2>
+              {namedBranches.length > 0 && (
+                <div className="rounded-lg bg-teal-50 border border-teal-200 p-3 text-sm text-teal-900">
+                  <div className="font-semibold">{namedBranches.length + 1} pharmacies on one Direct Debit</div>
+                  <ul className="mt-1 text-xs list-disc list-inside">
+                    <li>{form.pharmacyName}</li>
+                    {namedBranches.map((b, i) => <li key={i}>{b.name}</li>)}
+                  </ul>
+                  <p className="text-xs mt-1">Each branch is billed at the per-pharmacy rate we agree with you; the mandate covers all of them.</p>
+                </div>
+              )}
               <p className="text-sm text-gray-600">
-                We collect the monthly fee by direct debit through GoCardless. You'll be redirected to a secure GoCardless page where you enter your bank details. Nothing is charged until your account is approved and active.
+                We collect the monthly fee by direct debit through GoCardless. You&apos;ll be redirected to a secure GoCardless page where you enter your bank details. Nothing is charged until your account is approved and active.
               </p>
               <ul className="text-sm text-gray-600 space-y-1.5 list-disc list-inside ml-2">
-                <li>You can cancel any time with 30 days' notice</li>
+                <li>You can cancel any time with 30 days&apos; notice</li>
                 <li>Protected by the UK Direct Debit Guarantee</li>
                 <li>No charges while we review your application</li>
               </ul>

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { onboardingRequests } from '@/lib/db/schema'
+import { onboardingRequests, type OnboardingBranch } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { verifyTurnstile } from '@/lib/turnstile'
 import { sendOnboardingStepEmail } from '@/lib/onboarding-notify'
@@ -25,11 +25,54 @@ export const dynamic = 'force-dynamic'
  * Each save fires an admin email to ADMIN_NOTIFY_EMAIL (or info@getrealhealthpgd.co.uk
  * as a sensible fallback) so the founder sees abandoned-cart leads.
  */
+const MAX_BRANCHES = 12
+
+const str = (v: unknown, max: number): string | null =>
+  typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : null
+
+/**
+ * Extra branches from the wizard (migration 069). The primary pharmacy is
+ * in the top-level pharmacy_* fields; these are the others. A branch with
+ * no name is dropped rather than rejected, since the wizard shows an empty
+ * row the customer may not have used.
+ */
+function cleanBranches(raw: unknown, primaryName: string): OnboardingBranch[] | { error: string } {
+  if (raw == null) return []
+  if (!Array.isArray(raw)) return { error: 'branches must be a list' }
+  if (raw.length > MAX_BRANCHES) return { error: `At most ${MAX_BRANCHES} additional branches per sign-up; contact us for a larger group` }
+  const out: OnboardingBranch[] = []
+  const seen = new Set([primaryName.trim().toLowerCase()])
+  for (const b of raw) {
+    if (!b || typeof b !== 'object') continue
+    const o = b as Record<string, unknown>
+    const name = str(o.name, 255)
+    if (!name || name.length < 2) continue
+    const key = name.toLowerCase()
+    if (seen.has(key)) return { error: `"${name}" is listed twice; give each branch a distinct name (add the town or road)` }
+    seen.add(key)
+    const email = str(o.email, 255)?.toLowerCase() ?? null
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: `The email for ${name} does not look right` }
+    out.push({
+      name,
+      gphc: str(o.gphc, 50),
+      odsCode: str(o.odsCode, 20),
+      address: str(o.address, 500),
+      postcode: str(o.postcode, 20),
+      phone: str(o.phone, 50),
+      email,
+    })
+  }
+  return out
+}
+
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null) as
-    | (Record<string, string | number | undefined> & { step?: number; id?: string; turnstileToken?: string })
+    | (Record<string, unknown> & { step?: number; id?: string; turnstileToken?: string; branches?: unknown })
     | null
   if (!body) return NextResponse.json({ error: 'Bad body' }, { status: 400 })
+
+  const branches = cleanBranches(body.branches, typeof body.pharmacyName === 'string' ? body.pharmacyName : '')
+  if (!Array.isArray(branches)) return NextResponse.json({ error: branches.error }, { status: 400 })
 
   const step = Number(body.step) === 2 ? 2 : 1
 
@@ -109,6 +152,8 @@ export async function POST(request: NextRequest) {
     heardAbout: (body.heardAbout as string | undefined)?.trim().slice(0, 60) || null,
     heardAboutDetail:
       (body.heardAboutDetail as string | undefined)?.trim().slice(0, 500) || null,
+    branches,
+    groupName: branches.length > 0 ? str(body.groupName, 255) : null,
     lastStepCompleted: Math.max(existingStep, step),
     status: 'started' as const,
     updatedAt: new Date(),
@@ -167,6 +212,8 @@ export async function POST(request: NextRequest) {
       contactEmail: values.contactEmail,
       contactPhone: values.contactPhone,
       contactRole: values.contactRole,
+      branchNames: branches.map((b) => b.name),
+      groupName: values.groupName,
     }).catch((e) => {
       console.error('[onboarding] admin notify failed (non-fatal):', e)
     })

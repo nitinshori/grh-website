@@ -24,6 +24,33 @@ interface Row {
   setupEmailAttempts: number;
   /** null until approved; then whether the customer has chosen a password. */
   setupDone: boolean | null;
+  /** Extra branches on a multi-branch sign-up (names only here). */
+  branchNames: string[];
+  groupName: string;
+  /** Per-branch monthly fee in pence once approved, else null. */
+  monthlyFeePence: number | null;
+  feeChangePence: number | null;
+  feeChangeOn: string;
+}
+
+interface ApproveForm {
+  feePounds: string;
+  changePounds: string;
+  changeOn: string;
+  note: string;
+}
+
+const STANDARD_FEE_POUNDS = 100;
+
+function gbp(pence: number): string {
+  return '£' + (pence / 100).toLocaleString('en-GB', { maximumFractionDigits: 2 });
+}
+
+/** One year from today, Europe/London, as YYYY-MM-DD: the usual first-year rate end. */
+function oneYearFromToday(): string {
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  const y = Number(parts.slice(0, 4)) + 1;
+  return `${y}${parts.slice(4)}`;
 }
 
 const STATUS_FILTERS = ['all', 'awaiting_approval', 'approved', 'completed', 'rejected'] as const;
@@ -60,30 +87,68 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
 
   const visible = filter === 'all' ? list : list.filter((r) => r.status === filter);
 
-  async function handleApprove(id: string) {
-    const feeStr = window.prompt("Monthly fee for this pharmacy in £ (ex. VAT)?\n\nThe customer's GoCardless mandate will be billed this amount monthly. Enter as a number, e.g. 495 for £495/month.");
-    if (feeStr === null) return;
-    const feePounds = parseFloat(feeStr.trim());
-    if (!Number.isFinite(feePounds) || feePounds < 1) {
-      alert('That doesn\'t look like a valid fee. Try again, e.g. 495');
-      return;
-    }
+  // The approval form replaces a window.prompt: a multi-branch sign-up needs
+  // a per-branch fee, an optional scheduled change (first-year group rate to
+  // standard) and a note, which a prompt cannot carry.
+  const [approving, setApproving] = useState<string | null>(null);
+  const [af, setAf] = useState<ApproveForm>({ feePounds: String(STANDARD_FEE_POUNDS), changePounds: '', changeOn: '', note: '' });
+
+  function openApprove(r: Row) {
+    setApproving(r.id);
+    setAf({ feePounds: String(STANDARD_FEE_POUNDS), changePounds: '', changeOn: '', note: '' });
+  }
+
+  async function handleApprove(r: Row) {
+    const feePounds = parseFloat(af.feePounds.trim());
+    if (!Number.isFinite(feePounds) || feePounds < 1) { alert('Enter a monthly fee per pharmacy, e.g. 100'); return; }
     const monthlyFeePence = Math.round(feePounds * 100);
-    if (!window.confirm(`Approve this pharmacy at £${feePounds}/month?\n\nThis will:\n  • Create the pharmacy + first user, assign all PGDs\n  • Create a £${feePounds}/month subscription in GoCardless\n  • Email the contact a setup link.`)) return;
-    setBusyId(id);
+    const hasChange = af.changePounds.trim() !== '' || af.changeOn.trim() !== '';
+    let feeChangePence: number | null = null;
+    let feeChangeOn: string | null = null;
+    if (hasChange) {
+      const cp = parseFloat(af.changePounds.trim());
+      if (!Number.isFinite(cp) || cp < 1) { alert('The scheduled fee needs an amount, e.g. 100'); return; }
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(af.changeOn.trim())) { alert('The scheduled fee needs a date'); return; }
+      feeChangePence = Math.round(cp * 100);
+      feeChangeOn = af.changeOn.trim();
+    }
+    const n = r.branchNames.length + 1;
+    const lines = [
+      `Approve ${r.groupName || r.pharmacyName} (${n} ${n === 1 ? 'pharmacy' : 'pharmacies'}) at ${gbp(monthlyFeePence)} per pharmacy per month?`,
+      '',
+      `Total ${gbp(monthlyFeePence * n)}/month on the customer's mandate (${n} GoCardless ${n === 1 ? 'subscription' : 'subscriptions'}).`,
+      feeChangePence != null ? `Changes to ${gbp(feeChangePence)} per pharmacy on ${feeChangeOn}.` : 'No scheduled change.',
+      '',
+      n > 1
+        ? `This will create ${n} pharmacies under one group, make ${r.contactFirstName} ${r.contactLastName} the pharmacy admin for all of them, assign all PGDs, start billing and email the setup link.`
+        : 'This will create the pharmacy and first user, assign all PGDs, start billing and email the setup link.',
+    ];
+    if (!window.confirm(lines.join('\n'))) return;
+    setBusyId(r.id);
     try {
-      const r = await fetch(`/api/admin/onboarding/${id}/approve`, {
+      const res = await fetch(`/api/admin/onboarding/${r.id}/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ monthlyFeePence }),
+        body: JSON.stringify({ monthlyFeePence, feeChangePence, feeChangeOn, feeNote: af.note.trim() || null }),
       });
-      const body = await r.json();
-      if (!r.ok) { alert(`Could not approve: ${body.error || r.status}`); return; }
+      const body = await res.json();
+      if (!res.ok) { alert(`Could not approve: ${body.error || res.status}`); return; }
       if (body.subscriptionError) {
-        alert(`Pharmacy provisioned but the GoCardless subscription failed: ${body.subscriptionError}\n\nCreate it manually in the GoCardless dashboard.`);
+        alert(`Pharmacies provisioned but GoCardless billing failed for: ${body.subscriptionError}\n\nRetry from Admin > Billing.`);
       }
       setSetupUrl(body.setupUrl || null);
-      setList((prev) => prev.map((x) => x.id === id ? { ...x, status: 'approved' } : x));
+      setApproving(null);
+      setList((prev) => prev.map((x) => x.id === r.id ? {
+        ...x,
+        status: 'approved',
+        monthlyFeePence,
+        feeChangePence,
+        feeChangeOn: feeChangeOn ?? '',
+        setupDone: false,
+        setupEmailSentAt: body.emailed ? new Date().toISOString() : '',
+        setupEmailError: body.emailed ? '' : (body.emailError || 'unknown error'),
+        setupEmailAttempts: x.setupEmailAttempts + 1,
+      } : x));
     } finally { setBusyId(null); }
   }
 
@@ -138,7 +203,7 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
       {setupUrl && (
         <div className="bg-amber-50 border border-amber-300 rounded-lg p-4">
           <div className="text-sm font-semibold text-amber-900">Setup link generated</div>
-          <p className="text-xs text-amber-800 mt-1">An email was sent to the contact. If they don't get it, share this link directly:</p>
+          <p className="text-xs text-amber-800 mt-1">An email was sent to the contact. If they don&apos;t get it, share this link directly:</p>
           <div className="mt-2 flex gap-2 items-center">
             <code className="flex-1 text-xs bg-white border border-amber-200 px-2 py-1.5 rounded overflow-x-auto">{setupUrl}</code>
             <button
@@ -174,6 +239,18 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
                 </div>
                 {r.pharmacyAddress && <div className="text-xs text-gray-500 mt-0.5">{r.pharmacyAddress}</div>}
                 {r.pharmacyGphc && <div className="text-xs text-gray-500">Premises GPhC: {r.pharmacyGphc}</div>}
+                {r.branchNames.length > 0 && (
+                  <div className="text-xs text-indigo-800 bg-indigo-50 border border-indigo-100 rounded px-2 py-1 mt-1">
+                    <span className="font-semibold">Group of {r.branchNames.length + 1}{r.groupName ? `: ${r.groupName}` : ''}.</span>{' '}
+                    Also {r.branchNames.join('; ')}
+                  </div>
+                )}
+                {r.monthlyFeePence != null && (
+                  <div className="text-xs text-gray-600 mt-0.5">
+                    Fee {gbp(r.monthlyFeePence)} per pharmacy per month
+                    {r.feeChangePence != null && r.feeChangeOn ? `, ${gbp(r.feeChangePence)} from ${r.feeChangeOn}` : ''}
+                  </div>
+                )}
                 {r.heardAbout && (
                   <div className="text-xs text-teal-700 mt-0.5">
                     Heard about us: {HEARD_ABOUT_LABELS[r.heardAbout] ?? r.heardAbout}
@@ -209,11 +286,11 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
               {r.status === 'awaiting_approval' && (
                 <div className="flex gap-2 shrink-0">
                   <button
-                    onClick={() => handleApprove(r.id)}
+                    onClick={() => (approving === r.id ? setApproving(null) : openApprove(r))}
                     disabled={busyId === r.id}
                     className="px-3 py-1.5 text-sm bg-teal-600 hover:bg-teal-700 text-white font-medium rounded-md disabled:opacity-50"
                   >
-                    {busyId === r.id ? '…' : 'Approve'}
+                    {busyId === r.id ? '…' : approving === r.id ? 'Close' : 'Approve'}
                   </button>
                   <button
                     onClick={() => handleReject(r.id)}
@@ -225,6 +302,59 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
                 </div>
               )}
             </div>
+            {approving === r.id && r.status === 'awaiting_approval' && (
+              <div className="mt-4 border-t border-gray-200 pt-4 grid sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700">Monthly fee per pharmacy (£, ex VAT)</label>
+                  <input
+                    type="number" min={1} step="0.01" value={af.feePounds}
+                    onChange={(e) => setAf((f) => ({ ...f, feePounds: e.target.value }))}
+                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  />
+                  <p className="text-[11px] text-gray-500 mt-1">
+                    Standard {gbp(STANDARD_FEE_POUNDS * 100)}. {r.branchNames.length + 1} {r.branchNames.length ? 'pharmacies' : 'pharmacy'}: total {gbp(Math.round((parseFloat(af.feePounds) || 0) * 100) * (r.branchNames.length + 1))}/month.
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700">Scheduled change (optional)</label>
+                  <div className="mt-1 flex gap-2">
+                    <input
+                      type="number" min={1} step="0.01" placeholder="£ per pharmacy" value={af.changePounds}
+                      onChange={(e) => setAf((f) => ({ ...f, changePounds: e.target.value }))}
+                      className="w-1/2 px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    />
+                    <input
+                      type="date" value={af.changeOn}
+                      onChange={(e) => setAf((f) => ({ ...f, changeOn: e.target.value }))}
+                      className="w-1/2 px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    />
+                  </div>
+                  <p className="text-[11px] text-gray-500 mt-1">
+                    e.g. a first-year rate moving to standard.{' '}
+                    <button type="button" className="text-teal-700 underline" onClick={() => setAf((f) => ({ ...f, changePounds: String(STANDARD_FEE_POUNDS), changeOn: oneYearFromToday() }))}>
+                      Standard rate in one year
+                    </button>
+                  </p>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-medium text-gray-700">Note for the billing page (optional)</label>
+                  <input
+                    type="text" value={af.note} placeholder="e.g. 10% group rate agreed for year one"
+                    onChange={(e) => setAf((f) => ({ ...f, note: e.target.value }))}
+                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  />
+                </div>
+                <div className="sm:col-span-2 flex justify-end">
+                  <button
+                    onClick={() => handleApprove(r)}
+                    disabled={busyId === r.id}
+                    className="px-4 py-2 text-sm bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-md disabled:opacity-50"
+                  >
+                    {busyId === r.id ? 'Approving…' : `Approve and start billing`}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ))}
       </div>

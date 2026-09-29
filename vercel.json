@@ -4,6 +4,10 @@
     {
       "path": "/api/cron/retention",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/fee-changes",
+      "schedule": "30 6 * * *"
     }
   ]
 }

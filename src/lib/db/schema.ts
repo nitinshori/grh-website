@@ -11,6 +11,7 @@ import {
   uniqueIndex,
   index,
   jsonb,
+  date,
 } from 'drizzle-orm/pg-core'
 
 // ── Enums ───────────────────────────────────────────────────────
@@ -442,6 +443,10 @@ export const auditActionEnum = pgEnum('audit_action', [
   'logout',
   'password_change',
   'sso_user_deactivated',
+  'billing_edited',
+  'billing_fee_change_applied',
+  'billing_subscription_retried',
+  'billing_cancelled',
 ])
 
 export const auditLogs = pgTable('audit_logs', {
@@ -552,6 +557,19 @@ export const onboardingRequests = pgTable('onboarding_requests', {
   /** Monthly fee in pence (e.g. 49500 = £495). Captured at approval time. */
   monthlyFeePence: integer('monthly_fee_pence'),
 
+  // ── Multi-branch sign-up (migration 069) ─────────────────────
+  // Extra branches beyond the primary pharmacy in the pharmacy_* columns.
+  // Each is provisioned as its own pharmacies row at approval, sharing
+  // group_slug with the primary, billed on the same mandate.
+  branches: jsonb('branches').$type<OnboardingBranch[]>().default([]).notNull(),
+  groupName: varchar('group_name', { length: 255 }),
+  groupSlug: varchar('group_slug', { length: 100 }),
+  // Scheduled fee change agreed at approval, e.g. a first-year group rate
+  // that moves to the standard rate on a date. Applied to every branch.
+  feeChangePence: integer('fee_change_pence'),
+  feeChangeOn: date('fee_change_on'),
+  feeNote: text('fee_note'),
+
   pharmacyId: uuid('pharmacy_id').references(() => pharmacies.id, { onDelete: 'set null' }),
   approvedBy: uuid('approved_by').references(() => users.id, { onDelete: 'set null' }),
   approvedAt: timestamp('approved_at'),
@@ -571,6 +589,39 @@ export const onboardingRequests = pgTable('onboarding_requests', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
+
+/** One extra branch captured by the /onboard wizard (onboarding_requests.branches). */
+export interface OnboardingBranch {
+  name: string
+  gphc?: string | null
+  odsCode?: string | null
+  address?: string | null
+  postcode?: string | null
+  phone?: string | null
+  email?: string | null
+}
+
+// ── Pharmacy subscriptions (migration 069) ──────────────────────
+// One row per billed branch: the mandate it is collected on, the GoCardless
+// subscription, the fee being charged now, and any scheduled change. This
+// is the editable record of what each pharmacy pays; onboarding_requests
+// only keeps what was typed at approval.
+export const pharmacySubscriptions = pgTable('pharmacy_subscriptions', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  pharmacyId: uuid('pharmacy_id').notNull().references(() => pharmacies.id, { onDelete: 'cascade' }),
+  onboardingId: uuid('onboarding_id').references(() => onboardingRequests.id, { onDelete: 'set null' }),
+  gocardlessMandateId: varchar('gocardless_mandate_id', { length: 100 }),
+  gocardlessSubscriptionId: varchar('gocardless_subscription_id', { length: 100 }),
+  subscriptionError: text('subscription_error'),
+  monthlyFeePence: integer('monthly_fee_pence').notNull(),
+  feeChangePence: integer('fee_change_pence'),
+  feeChangeOn: date('fee_change_on'),
+  feeChangeAppliedAt: timestamp('fee_change_applied_at', { withTimezone: true }),
+  cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
+  notes: text('notes'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [uniqueIndex('pharmacy_subscriptions_pharmacy_idx').on(t.pharmacyId)])
 
 // ── Training attempts ───────────────────────────────────────────
 // One row per quiz attempt at a training module. Used both for the live

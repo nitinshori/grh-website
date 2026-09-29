@@ -45,10 +45,22 @@ async function gcFetch<T>(path: string, init?: RequestInit): Promise<T> {
   let body: unknown
   try { body = text ? JSON.parse(text) : {} } catch { body = { raw: text } }
   if (!res.ok) {
-    const err = (body as { error?: { message?: string } }).error
-    throw new Error(`GoCardless ${res.status}: ${err?.message ?? text.slice(0, 200)}`)
+    const err = (body as { error?: { message?: string; type?: string; errors?: Array<{ reason?: string; message?: string; field?: string; links?: { conflicting_resource_id?: string } }> } }).error
+    const reasons = (err?.errors ?? []).map((e) => e.reason).filter(Boolean)
+    // An idempotent re-send of a create returns 409 with the id of the
+    // resource the first send made. Surface it so callers can adopt it
+    // instead of creating a duplicate.
+    const conflict = err?.errors?.find((e) => e.reason === 'idempotent_creation_conflict')?.links?.conflicting_resource_id
+    throw new GoCardlessError(`GoCardless ${res.status}: ${err?.message ?? text.slice(0, 200)}${reasons.length ? ` [${reasons.join(', ')}]` : ''}`, res.status, reasons as string[], conflict ?? null)
   }
   return body as T
+}
+
+export class GoCardlessError extends Error {
+  constructor(message: string, public status: number, public reasons: string[], public conflictingResourceId: string | null) {
+    super(message)
+    this.name = 'GoCardlessError'
+  }
 }
 
 interface CreateRedirectFlowOptions {
@@ -117,6 +129,13 @@ interface CreateSubscriptionOptions {
   interval?: number                    // default 1
   name: string                         // shown to customer
   metadata?: Record<string, string>
+  /**
+   * Sent as the Idempotency-Key header. GoCardless keeps it for 24 hours:
+   * a retry with the same key (a double-clicked Approve, a Vercel retry, an
+   * admin pressing Retry twice) returns the subscription the first call
+   * made instead of a second one on the same mandate.
+   */
+  idempotencyKey?: string
 }
 
 export async function createSubscription(opts: CreateSubscriptionOptions) {
@@ -131,9 +150,49 @@ export async function createSubscription(opts: CreateSubscriptionOptions) {
       ...(opts.metadata ? { metadata: opts.metadata } : {}),
     },
   }
+  try {
+    const out = await gcFetch<{ subscriptions: { id: string; status: string; amount: number } }>(
+      '/subscriptions',
+      {
+        method: 'POST',
+        body: JSON.stringify(body),
+        headers: opts.idempotencyKey ? { 'Idempotency-Key': opts.idempotencyKey } : {},
+      },
+    )
+    return out.subscriptions
+  } catch (e) {
+    if (e instanceof GoCardlessError && e.conflictingResourceId) {
+      return getSubscription(e.conflictingResourceId)
+    }
+    throw e
+  }
+}
+
+export async function getSubscription(subscriptionId: string) {
   const out = await gcFetch<{ subscriptions: { id: string; status: string; amount: number } }>(
-    '/subscriptions',
-    { method: 'POST', body: JSON.stringify(body) },
+    `/subscriptions/${subscriptionId}`,
+  )
+  return out.subscriptions
+}
+
+/**
+ * Change the amount collected by an existing subscription. GoCardless
+ * applies it to the next payment that has not yet been created. Used by the
+ * billing page (manual fee edit) and the fee-change cron (a first-year
+ * group rate moving to the standard rate).
+ */
+export async function updateSubscriptionAmount(subscriptionId: string, amountPence: number) {
+  const out = await gcFetch<{ subscriptions: { id: string; status: string; amount: number } }>(
+    `/subscriptions/${subscriptionId}`,
+    { method: 'PUT', body: JSON.stringify({ subscriptions: { amount: amountPence } }) },
+  )
+  return out.subscriptions
+}
+
+export async function cancelSubscription(subscriptionId: string) {
+  const out = await gcFetch<{ subscriptions: { id: string; status: string } }>(
+    `/subscriptions/${subscriptionId}/actions/cancel`,
+    { method: 'POST', body: JSON.stringify({}) },
   )
   return out.subscriptions
 }

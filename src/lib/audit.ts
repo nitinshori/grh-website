@@ -13,6 +13,10 @@ export type AuditAction =
   | 'logout'
   | 'password_change'
   | 'sso_user_deactivated'
+  | 'billing_edited'
+  | 'billing_fee_change_applied'
+  | 'billing_subscription_retried'
+  | 'billing_cancelled'
 
 export interface AuditEntry {
   pharmacyId?: string | null
