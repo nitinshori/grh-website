@@ -59,7 +59,10 @@ export default async function OnboardingQueuePage() {
   return (
     <div className="bg-gray-50 min-h-screen">
       <div className="max-w-5xl mx-auto p-6 sm:p-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Onboarding queue</h1>
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <h1 className="text-2xl font-bold text-gray-900">Onboarding queue</h1>
+          <a href="/admin/onboarding/new" className="text-sm px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white font-medium rounded-md">Create a sign-up for a customer</a>
+        </div>
         <p className="text-sm text-gray-500 mb-6">
           Pharmacies that have signed up via /onboard. Approve them to provision a pharmacy + send a set-password email.
         </p>
@@ -135,6 +138,10 @@ export default async function OnboardingQueuePage() {
             monthlyFeePence: r.monthlyFeePence ?? null,
             feeChangePence: r.feeChangePence ?? null,
             feeChangeOn: r.feeChangeOn || '',
+            feeNote: r.feeNote || '',
+            resumeLink: r.resumeKey && r.status !== 'approved' && r.status !== 'completed' && r.status !== 'rejected'
+              ? `${process.env.APP_URL || 'https://getrealhealthpgd.co.uk'}/onboard/dd?id=${r.id}&key=${r.resumeKey}`
+              : '',
           }))}
         />
       </div>

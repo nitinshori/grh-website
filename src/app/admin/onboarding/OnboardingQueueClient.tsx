@@ -31,6 +31,9 @@ interface Row {
   monthlyFeePence: number | null;
   feeChangePence: number | null;
   feeChangeOn: string;
+  feeNote: string;
+  /** Direct Debit link for an admin-created sign-up still awaiting its mandate, else ''. */
+  resumeLink: string;
 }
 
 interface ApproveForm {
@@ -97,7 +100,14 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
 
   function openApprove(r: Row) {
     setApproving(r.id);
-    setAf({ feePounds: String(STANDARD_FEE_POUNDS), changePounds: '', changeOn: '', note: '', joinGroupSlug: '' });
+    // An admin-created sign-up carries the agreed fee already.
+    setAf({
+      feePounds: r.monthlyFeePence != null ? String(r.monthlyFeePence / 100) : String(STANDARD_FEE_POUNDS),
+      changePounds: r.feeChangePence != null ? String(r.feeChangePence / 100) : '',
+      changeOn: r.feeChangeOn || '',
+      note: r.feeNote || '',
+      joinGroupSlug: '',
+    });
   }
 
   async function handleApprove(r: Row) {
@@ -252,9 +262,14 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
                     Also {r.branchNames.join('; ')}
                   </div>
                 )}
+                {r.resumeLink && (
+                  <div className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-1">
+                    Set up by us; waiting for the customer to complete the Direct Debit. Link: <code className="select-all break-all">{r.resumeLink}</code>
+                  </div>
+                )}
                 {r.monthlyFeePence != null && (
                   <div className="text-xs text-gray-600 mt-0.5">
-                    Fee {gbp(r.monthlyFeePence)} per pharmacy per month
+                    {r.status === 'awaiting_approval' || r.status === 'started' || r.status === 'dd_pending' ? 'Agreed fee' : 'Fee'} {gbp(r.monthlyFeePence)} per pharmacy per month
                     {r.feeChangePence != null && r.feeChangeOn ? `, ${gbp(r.feeChangePence)} from ${r.feeChangeOn}` : ''}
                   </div>
                 )}

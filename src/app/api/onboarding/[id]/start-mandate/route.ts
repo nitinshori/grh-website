@@ -54,7 +54,9 @@ export async function POST(
         given_name: req.contactFirstName ?? undefined,
         family_name: req.contactLastName ?? undefined,
         email: req.contactEmail ?? undefined,
-        company_name: req.pharmacyName,
+        // The mandate belongs to the legal entity: the group or company
+        // name when there is one, else the pharmacy.
+        company_name: req.groupName || req.pharmacyName,
         ...(req.pharmacyAddress ? { address_line1: req.pharmacyAddress } : {}),
         ...(req.pharmacyPostcode ? { postal_code: req.pharmacyPostcode } : {}),
       },

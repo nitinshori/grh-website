@@ -569,6 +569,10 @@ export const onboardingRequests = pgTable('onboarding_requests', {
   feeChangePence: integer('fee_change_pence'),
   feeChangeOn: date('fee_change_on'),
   feeNote: text('fee_note'),
+  // Admin-created sign-up (migration 070): the customer opens
+  // /onboard/dd?id=<id>&key=<resume_key> to set up the Direct Debit.
+  resumeKey: varchar('resume_key', { length: 64 }),
+  createdByAdmin: uuid('created_by_admin').references(() => users.id, { onDelete: 'set null' }),
 
   pharmacyId: uuid('pharmacy_id').references(() => pharmacies.id, { onDelete: 'set null' }),
   approvedBy: uuid('approved_by').references(() => users.id, { onDelete: 'set null' }),
