@@ -338,7 +338,12 @@ export default auth(async (req: NextRequest & { auth: { user: { id?: string; rol
   // Authenticated users (logged-in pharmacy customers, admins, clients)
   // implicitly count as healthcare professionals — the soft gate is
   // about catching anonymous visitors.
-  if (isHcpGatedPath(pathname) && !session) {
+  // Partner tenants (HubRx) have no public marketing site and every
+  // visitor is a pharmacist sent by the partner, so the self-cert gate is
+  // skipped there: an anonymous tool link must go to the session handling
+  // below, not to a "are you a healthcare professional" page on the main
+  // domain (seen 29 Sep 2026 on hubrx.getrealhealthpgd.co.uk).
+  if (isHcpGatedPath(pathname) && !session && !tenant.hideMarketing) {
     const hcpCookie = req.cookies.get(HCP_COOKIE_NAME)?.value
     if (hcpCookie !== '1') {
       const gateUrl = new URL('/healthcare-professional', req.nextUrl.origin)
