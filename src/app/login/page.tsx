@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import LoginClient from './LoginClient'
 import { getTenant } from '@/lib/tenant-context'
+import { tenantLaunchUrl } from '@/lib/tenants'
 
 export const metadata: Metadata = {
   title: 'Sign In | Get Real Health',
@@ -9,5 +10,5 @@ export const metadata: Metadata = {
 
 export default async function LoginPage() {
   const tenant = await getTenant()
-  return <LoginClient tenant={tenant} />
+  return <LoginClient tenant={tenant} launchUrl={tenantLaunchUrl(tenant)} />
 }

@@ -8,6 +8,7 @@ import type { TenantConfig } from '@/lib/tenants'
 
 interface Props {
   tenant: TenantConfig
+  launchUrl?: string | null
 }
 
 // ── Native biometric bridge (GRH mobile app only) ────────────────
@@ -51,10 +52,11 @@ function getNativeBiometric(): NativeBiometricPlugin | null {
   return cap.Plugins?.NativeBiometric ?? null
 }
 
-function LoginForm({ tenant }: Props) {
+function LoginForm({ tenant, launchUrl }: Props) {
   const searchParams = useSearchParams()
   const callbackUrl = searchParams.get('callbackUrl') || ''
   const error = searchParams.get('error')
+  const reason = searchParams.get('reason')
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -243,8 +245,29 @@ function LoginForm({ tenant }: Props) {
           )}
         </div>
 
+        {/* Partner tenant: the session behind a direct link has ended. */}
+        {isWhiteLabel && tenant.sso.enabled && reason === 'session' && (
+          <div className="mb-6 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+            <p className="font-semibold mb-1">Your {tenant.displayName} session has ended</p>
+            <p>
+              The PGD link you followed needs a fresh sign-in from HubRx Insights.
+              Go back to Insights and click the PGD again; you will be signed in automatically
+              and taken straight to it. There is no need to enter a password here.
+            </p>
+            {launchUrl && (
+              <a
+                href={`${launchUrl}${launchUrl.includes('?') ? '&' : '?'}next=${encodeURIComponent(callbackUrl || '/for-pharmacies/dashboard')}`}
+                className="mt-3 inline-block rounded-lg px-4 py-2 text-sm font-semibold text-white"
+                style={{ backgroundColor: primary }}
+              >
+                Reopen from HubRx Insights
+              </a>
+            )}
+          </div>
+        )}
+
         {/* HubRx callout: explain the SSO route */}
-        {isWhiteLabel && tenant.sso.enabled && (
+        {isWhiteLabel && tenant.sso.enabled && reason !== 'session' && (
           <div
             className="mb-6 rounded-xl border p-4 text-sm"
             style={{
@@ -392,7 +415,7 @@ function LoginForm({ tenant }: Props) {
   )
 }
 
-export default function LoginClient({ tenant }: Props) {
+export default function LoginClient({ tenant, launchUrl }: Props) {
   return (
     <Suspense
       fallback={
@@ -401,7 +424,7 @@ export default function LoginClient({ tenant }: Props) {
         </div>
       }
     >
-      <LoginForm tenant={tenant} />
+      <LoginForm tenant={tenant} launchUrl={launchUrl} />
     </Suspense>
   )
 }

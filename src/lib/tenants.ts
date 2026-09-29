@@ -68,6 +68,12 @@ export interface TenantConfig {
     /** Where to send users after a successful SSO if they HAVE completed
      *  training. Usually the main dashboard. */
     dashboardRedirect: string
+    /** Env var naming the partner's launch URL (their pgd-go page). When
+     *  set, a user who arrives at a tool without a session is sent back
+     *  there with ?next=<path> to be re-signed-in, instead of to our login
+     *  page. Added 29 Sep 2026 after a HubRx tester landed on our login
+     *  page from links that had not gone through /sso. */
+    launchUrlEnvVar?: string
   }
   /** When true, the public marketing routes (/, /about, /for-pharmacies/*
    *  excluding the auth'd dashboard) are 404'd on this tenant's hostname.
@@ -165,6 +171,7 @@ const hubrxTenant: TenantConfig = {
     secretEnvVar: 'HUBRX_SSO_SECRET',
     onboardingRedirect: '/for-pharmacies/dashboard/training',
     dashboardRedirect: '/for-pharmacies/dashboard',
+    launchUrlEnvVar: 'HUBRX_LAUNCH_URL',
   },
   hideMarketing: true,
   footerLegalEntity:
@@ -191,6 +198,7 @@ const hubrxSandboxTenant: TenantConfig = {
   sso: {
     ...hubrxTenant.sso,
     secretEnvVar: 'HUBRX_SSO_SECRET_SANDBOX',
+    launchUrlEnvVar: 'HUBRX_LAUNCH_URL_SANDBOX',
   },
 }
 
@@ -296,3 +304,15 @@ export function getTenantBySlug(slug: TenantSlug): TenantConfig {
 }
 
 export const ALL_TENANT_SLUGS = Object.keys(TENANTS) as TenantSlug[]
+
+/**
+ * The partner's launch URL for this tenant, if configured: the page on the
+ * partner side that mints a fresh SSO token and sends the user back to
+ * /sso?token=...&next=<path>. Null on tenants without SSO or where the env
+ * var is not set.
+ */
+export function tenantLaunchUrl(tenant: TenantConfig): string | null {
+  if (!tenant.sso.enabled || !tenant.sso.launchUrlEnvVar) return null
+  const v = process.env[tenant.sso.launchUrlEnvVar]
+  return v && /^https:\/\//.test(v) ? v : null
+}

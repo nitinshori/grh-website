@@ -6,7 +6,7 @@ import { auth } from '@/lib/auth-edge'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { neon } from '@neondatabase/serverless'
-import { tenantFromHost } from '@/lib/tenants'
+import { tenantFromHost, tenantLaunchUrl } from '@/lib/tenants'
 import { TENANT_HEADER } from '@/lib/tenant-context'
 import {
   ALL_PGDS,
@@ -358,8 +358,19 @@ export default auth(async (req: NextRequest & { auth: { user: { id?: string; rol
     !pathname.startsWith('/for-pharmacies/epgd/shared')
 
   if (isEpgdTool && !session) {
+    // On a partner tenant, send the user back through the partner's
+    // launch page to be re-signed-in with a fresh token, so a direct or
+    // stale link recovers on its own. Our login page is the fallback when
+    // no launch URL is configured.
+    const launch = tenantLaunchUrl(tenant)
+    if (launch) {
+      const back = new URL(launch)
+      back.searchParams.set('next', pathname)
+      return NextResponse.redirect(back)
+    }
     const loginUrl = new URL('/login', req.nextUrl.origin)
     loginUrl.searchParams.set('callbackUrl', pathname)
+    loginUrl.searchParams.set('reason', 'session')
     return NextResponse.redirect(loginUrl)
   }
 
