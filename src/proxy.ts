@@ -261,6 +261,19 @@ async function mayUseEpgdTool(
   }
 }
 
+// Origin for same-site redirects. On Vercel `req.nextUrl.origin` inside the
+// middleware is the project's primary domain, not the host the visitor used,
+// so a redirect built from it silently moved a hubrx.getrealhealthpgd.co.uk
+// visitor onto getrealhealthpgd.co.uk (login page without the tenant
+// branding or the session-ended message, 29 Sep 2026). Tenant resolution
+// already trusts the Host header, so redirects use the same host.
+function requestOrigin(req: NextRequest): string {
+  const host = req.headers.get('x-forwarded-host') ?? req.headers.get('host')
+  if (!host) return req.nextUrl.origin
+  const proto = req.headers.get('x-forwarded-proto') ?? req.nextUrl.protocol.replace(':', '')
+  return `${proto}://${host}`
+}
+
 function buildBlockedResponse(origin: string): NextResponse {
   const loginUrl = new URL('/login', origin)
   loginUrl.searchParams.set('error', 'blocked')
@@ -280,6 +293,7 @@ function buildBlockedResponse(origin: string): NextResponse {
 export default auth(async (req: NextRequest & { auth: { user: { id?: string; role: string; mustChangePassword?: boolean } } | null }) => {
   const { pathname } = req.nextUrl
   const session = req.auth
+  const origin = requestOrigin(req)
 
   // ── Forced password change gate ─────────────────────────────
   // PPH (and other bulk-imported) users are created with a temporary
@@ -300,7 +314,7 @@ export default auth(async (req: NextRequest & { auth: { user: { id?: string; rol
       (p) => pathname === p || pathname.startsWith(p + '/'),
     )
     if (!allowed) {
-      return NextResponse.redirect(new URL('/change-password', req.nextUrl.origin))
+      return NextResponse.redirect(new URL('/change-password', origin))
     }
   }
 
@@ -320,7 +334,7 @@ export default auth(async (req: NextRequest & { auth: { user: { id?: string; rol
   // Special case: the bare root '/' is the most natural URL someone
   // types — bounce it to the tenant login rather than 404.
   if (tenant.hideMarketing && pathname === '/') {
-    return NextResponse.redirect(new URL('/login', req.nextUrl.origin))
+    return NextResponse.redirect(new URL('/login', origin))
   }
   if (tenant.hideMarketing && !isTenantAllowedPath(pathname)) {
     return new NextResponse('Not found', { status: 404 })
@@ -330,7 +344,7 @@ export default auth(async (req: NextRequest & { auth: { user: { id?: string; rol
   if (session?.user?.id) {
     const active = await isUserActive(session.user.id)
     if (!active) {
-      return buildBlockedResponse(req.nextUrl.origin)
+      return buildBlockedResponse(origin)
     }
   }
 
@@ -346,7 +360,7 @@ export default auth(async (req: NextRequest & { auth: { user: { id?: string; rol
   if (isHcpGatedPath(pathname) && !session && !tenant.hideMarketing) {
     const hcpCookie = req.cookies.get(HCP_COOKIE_NAME)?.value
     if (hcpCookie !== '1') {
-      const gateUrl = new URL('/healthcare-professional', req.nextUrl.origin)
+      const gateUrl = new URL('/healthcare-professional', origin)
       // Preserve any querystring on the original request so the user
       // is returned exactly where they were trying to go.
       const fullPath = pathname + req.nextUrl.search
@@ -373,7 +387,7 @@ export default auth(async (req: NextRequest & { auth: { user: { id?: string; rol
       back.searchParams.set('next', pathname)
       return NextResponse.redirect(back)
     }
-    const loginUrl = new URL('/login', req.nextUrl.origin)
+    const loginUrl = new URL('/login', origin)
     loginUrl.searchParams.set('callbackUrl', pathname)
     loginUrl.searchParams.set('reason', 'session')
     return NextResponse.redirect(loginUrl)
@@ -402,7 +416,7 @@ export default auth(async (req: NextRequest & { auth: { user: { id?: string; rol
         console.warn(
           `[middleware] ePGD denied: segment=${segment} why=${refusal} pharmacy=${pharmacyId ?? 'none'}`,
         )
-        const denied = new URL('/for-pharmacies/epgd', req.nextUrl.origin)
+        const denied = new URL('/for-pharmacies/epgd', origin)
         denied.searchParams.set('denied', segment)
         denied.searchParams.set('why', refusal)
         // Where the link came from, so a partner's catalogue page can be
@@ -417,7 +431,7 @@ export default auth(async (req: NextRequest & { auth: { user: { id?: string; rol
   // ── Protect pharmacy dashboard ───────────────────────────────
   if (pathname.startsWith('/for-pharmacies/dashboard')) {
     if (!session) {
-      const loginUrl = new URL('/login', req.nextUrl.origin)
+      const loginUrl = new URL('/login', origin)
       loginUrl.searchParams.set('callbackUrl', pathname)
       return NextResponse.redirect(loginUrl)
     }
@@ -426,28 +440,28 @@ export default auth(async (req: NextRequest & { auth: { user: { id?: string; rol
   // ── Protect admin routes ──────────────────────────────────────
   if (pathname.startsWith('/admin')) {
     if (!session) {
-      const loginUrl = new URL('/login', req.nextUrl.origin)
+      const loginUrl = new URL('/login', origin)
       loginUrl.searchParams.set('callbackUrl', pathname)
       return NextResponse.redirect(loginUrl)
     }
     if (session.user.role !== 'super_admin') {
-      return NextResponse.redirect(new URL('/for-pharmacies/dashboard', req.nextUrl.origin))
+      return NextResponse.redirect(new URL('/for-pharmacies/dashboard', origin))
     }
   }
 
   // ── Protect client routes ─────────────────────────────────────
   if (pathname.startsWith('/client/')) {
     if (!session) {
-      const loginUrl = new URL('/login', req.nextUrl.origin)
+      const loginUrl = new URL('/login', origin)
       loginUrl.searchParams.set('callbackUrl', pathname)
       return NextResponse.redirect(loginUrl)
     }
     if (session.user.role !== 'client') {
       // Non-client users can't access client pages
       if (session.user.role === 'super_admin') {
-        return NextResponse.redirect(new URL('/admin', req.nextUrl.origin))
+        return NextResponse.redirect(new URL('/admin', origin))
       }
-      return NextResponse.redirect(new URL('/for-pharmacies/dashboard', req.nextUrl.origin))
+      return NextResponse.redirect(new URL('/for-pharmacies/dashboard', origin))
     }
   }
 
