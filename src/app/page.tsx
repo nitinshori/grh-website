@@ -96,6 +96,12 @@ export default function HomePage() {
                   </svg>
                 </Link>
                 <Link
+                  href="/onboard?group=1"
+                  className="inline-flex items-center justify-center px-7 py-3.5 border border-blue-300/40 text-blue-100 hover:bg-white/10 font-semibold rounded-lg transition-colors text-lg"
+                >
+                  Sign up a pharmacy group
+                </Link>
+                <Link
                   href="/for-pharmacies/pgd-catalogue"
                   className="inline-flex items-center justify-center gap-2 px-7 py-3.5 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-lg transition-colors text-lg border border-white/20"
                 >

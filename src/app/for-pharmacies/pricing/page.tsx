@@ -37,7 +37,7 @@ const faqs = [
   },
   {
     q: "How does pricing work if I have multiple pharmacies?",
-    a: "£100 per pharmacy per month. So if you have 10 pharmacies, that’s £1,000/month. No setup fees, no platform surcharges. For larger networks (30+ sites), get in touch for custom pricing.",
+    a: "£100 per pharmacy per month. So if you have 10 pharmacies, that’s £1,000/month. No setup fees, no platform surcharges. Groups sign up once: add every branch on the form, set up one Direct Debit, and each branch gets its own PGD access with a group dashboard across all of them. For larger networks (30+ sites), get in touch for custom pricing.",
   },
   {
     q: "Why do you charge per store instead of per pharmacist?",
@@ -157,17 +157,23 @@ export default function PricingPage() {
             ))}
           </ul>
 
-          <div className="text-center">
+          <div className="text-center flex flex-col sm:flex-row gap-3 justify-center">
             <Link
-              href="/contact"
+              href="/onboard"
               className="inline-block px-8 py-3 bg-[color:var(--tenant-primary)]/100 hover:bg-[color:var(--tenant-primary)]/15 text-white rounded-lg font-semibold text-sm transition-colors"
             >
-              Get started
+              Sign up your pharmacy
+            </Link>
+            <Link
+              href="/onboard?group=1"
+              className="inline-block px-8 py-3 border border-[color:var(--tenant-primary)]/30 text-[color:var(--tenant-primary)] hover:bg-[color:var(--tenant-primary)]/10 rounded-lg font-semibold text-sm transition-colors"
+            >
+              Sign up a pharmacy group
             </Link>
           </div>
 
           <p className="text-center text-xs text-gray-400 mt-4">
-            For networks of 30+ pharmacies,{" "}
+            Groups: add every branch in one sign-up, one Direct Debit, £100 per pharmacy per month. For networks of 30+ pharmacies,{" "}
             <Link href="/contact" className="underline">
               contact us
             </Link>{" "}

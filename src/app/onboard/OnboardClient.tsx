@@ -70,12 +70,13 @@ const initial: FormState = {
   groupName: "",
 };
 
-export default function OnboardClient() {
+export default function OnboardClient({ groupMode = false }: { groupMode?: boolean }) {
   const [step, setStep] = useState<Step>(1);
   const [form, setForm] = useState<FormState>(initial);
   // Extra branches beyond the primary pharmacy. Empty rows (no name) are
   // ignored by the server, so an unused "Add another branch" row is harmless.
-  const [branches, setBranches] = useState<Branch[]>([]);
+  // Group mode (/onboard?group=1) starts with one extra row open.
+  const [branches, setBranches] = useState<Branch[]>(groupMode ? [{ ...emptyBranch }] : []);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
@@ -221,10 +222,17 @@ export default function OnboardClient() {
     <div className="bg-gray-50 min-h-screen">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-10">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Sign up your pharmacy</h1>
+          <h1 className="text-3xl font-bold text-gray-900">{groupMode ? "Sign up your pharmacy group" : "Sign up your pharmacy"}</h1>
           <p className="text-sm text-gray-600 mt-2">
-            Three short steps. One flat monthly fee per pharmacy. Every PGD included. Signing up several branches? Add them all here and set up one Direct Debit.
+            {groupMode
+              ? "Three short steps for the whole group. £100 per pharmacy per month, every PGD included at every branch, one account holder, one Direct Debit. Each branch gets its own PGD access and records, with a group dashboard across all of them."
+              : "Three short steps. One flat monthly fee per pharmacy. Every PGD included."}
           </p>
+          {!groupMode && (
+            <p className="text-sm mt-2">
+              <a href="/onboard?group=1" className="text-teal-700 font-medium hover:underline">Signing up a pharmacy group with several branches? Start here instead.</a>
+            </p>
+          )}
         </div>
 
         {/* Progress */}
@@ -249,7 +257,8 @@ export default function OnboardClient() {
         <div className="bg-white border border-gray-200 rounded-xl p-6 sm:p-8 shadow-sm">
           {step === 1 && (
             <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-gray-900">Pharmacy details</h2>
+              <h2 className="text-lg font-semibold text-gray-900">{groupMode ? "First branch" : "Pharmacy details"}</h2>
+              {groupMode && <p className="text-sm text-gray-500">Start with any branch; add the rest below.</p>}
               <Input label="Pharmacy name *" value={form.pharmacyName} onChange={set("pharmacyName")} placeholder="High Street Pharmacy" />
               <div className="grid sm:grid-cols-2 gap-4">
                 <Input label="GPhC premises number" value={form.pharmacyGphc} onChange={set("pharmacyGphc")} placeholder="1234567" />
@@ -268,9 +277,9 @@ export default function OnboardClient() {
               <div className="pt-4 border-t border-gray-200">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h3 className="text-sm font-semibold text-gray-900">More than one branch?</h3>
+                    <h3 className="text-sm font-semibold text-gray-900">{groupMode ? "Your other branches" : "More than one branch?"}</h3>
                     <p className="text-xs text-gray-500 mt-0.5">
-                      Add each branch here. Each gets its own PGD access and records; you set up one Direct Debit for all of them.
+                      Add each branch here. Each gets its own PGD access and records at £100 per pharmacy per month; you set up one Direct Debit for all of them.
                     </p>
                   </div>
                   <button

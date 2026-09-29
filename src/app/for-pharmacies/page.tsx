@@ -279,6 +279,12 @@ export default function ForPharmaciesPage() {
             Sign up your pharmacy
           </Link>
           <Link
+            href="/onboard?group=1"
+            className="px-7 py-3.5 border border-[color:var(--tenant-primary)]/30 text-[color:var(--tenant-primary)] hover:bg-[color:var(--tenant-primary)]/10 font-semibold rounded-lg transition-colors text-lg"
+          >
+            Sign up a pharmacy group
+          </Link>
+          <Link
             href="/for-pharmacies/pgd-catalogue"
             className="px-7 py-3.5 border border-[color:var(--tenant-primary)]/30 text-[color:var(--tenant-primary)] hover:bg-[color:var(--tenant-primary)]/10 font-semibold rounded-lg transition-colors text-lg"
           >
