@@ -24,6 +24,7 @@ export const maxDuration = 60
  *   feeChangePence?: number|null   scheduled change, per branch (e.g. a
  *   feeChangeOn?: 'YYYY-MM-DD'     first-year group rate moving to standard)
  *   feeNote?: string               why, for the billing page
+ *   joinGroupSlug?: string         attach to an existing group's slug
  * }
  */
 
@@ -32,6 +33,13 @@ interface ApproveBody {
   feeChangePence?: number | null
   feeChangeOn?: string | null
   feeNote?: string | null
+  /**
+   * Attach this sign-up to an existing group instead of starting a new
+   * one: the pharmacies.group_slug of a pharmacy already on the platform.
+   * For a group whose branches signed up one at a time (Delmergate, 29 Sep
+   * 2026, before the multi-branch wizard existed).
+   */
+  joinGroupSlug?: string | null
 }
 
 function slugify(name: string): string {
@@ -65,6 +73,20 @@ export async function POST(
     return NextResponse.json({ error: 'Scheduled fee change date must be a real future date (YYYY-MM-DD)' }, { status: 400 })
   }
   const feeNote = typeof body.feeNote === 'string' && body.feeNote.trim() ? body.feeNote.trim().slice(0, 1000) : null
+  const joinGroupSlug = typeof body.joinGroupSlug === 'string' && body.joinGroupSlug.trim() ? body.joinGroupSlug.trim().toLowerCase() : null
+  let joinGroupName: string | null = null
+  if (joinGroupSlug) {
+    if (!/^[a-z0-9-]{3,100}$/.test(joinGroupSlug)) {
+      return NextResponse.json({ error: 'Group slug must be lower-case letters, digits and hyphens' }, { status: 400 })
+    }
+    const [member] = await db
+      .select({ name: pharmacies.name })
+      .from(pharmacies)
+      .where(eq(pharmacies.groupSlug, joinGroupSlug))
+      .limit(1)
+    if (!member) return NextResponse.json({ error: `No pharmacy has the group slug "${joinGroupSlug}"; check it on Admin, Billing` }, { status: 400 })
+    joinGroupName = member.name
+  }
 
   const [pre] = await db
     .select()
@@ -92,14 +114,20 @@ export async function POST(
   // another pharmacy, approving would attach a stranger's account to this
   // sign-up (and, for a group, promote them). Refuse and let the admin sort
   // it out by hand.
+  // The one legitimate case: the contact already runs another branch of
+  // the group this sign-up is joining. Then no new login is made and no
+  // setup email is sent; their existing account already reaches the whole
+  // group.
   const [clash] = await db
-    .select({ id: users.id, pharmacyId: users.pharmacyId, role: users.role })
+    .select({ id: users.id, pharmacyId: users.pharmacyId, role: users.role, groupSlug: pharmacies.groupSlug })
     .from(users)
+    .leftJoin(pharmacies, eq(pharmacies.id, users.pharmacyId))
     .where(sql`LOWER(${users.email}) = ${pre.contactEmail.trim().toLowerCase()}`)
     .limit(1)
-  if (clash && (clash.pharmacyId || clash.role !== 'pharmacist')) {
+  const contactAlreadyInGroup = !!(clash && joinGroupSlug && clash.groupSlug === joinGroupSlug && (clash.role === 'pharmacist' || clash.role === 'pharmacy_admin'))
+  if (clash && !contactAlreadyInGroup && (clash.pharmacyId || clash.role !== 'pharmacist')) {
     return NextResponse.json(
-      { error: `The contact email ${pre.contactEmail} already belongs to an existing user${clash.pharmacyId ? ' at another pharmacy' : ` with role ${clash.role}`}. Approval refused; resolve the account first.` },
+      { error: `The contact email ${pre.contactEmail} already belongs to an existing user${clash.pharmacyId ? ' at another pharmacy' : ` with role ${clash.role}`}. Approval refused; resolve the account first${clash.groupSlug ? `, or attach this sign-up to group "${clash.groupSlug}" if it is another branch of theirs` : ''}.` },
       { status: 409 },
     )
   }
@@ -120,16 +148,18 @@ export async function POST(
   const contactEmail = req.contactEmail
   const mandateId = req.gocardlessMandateId
   const extraBranches: OnboardingBranch[] = Array.isArray(req.branches) ? req.branches : []
-  const isGroup = extraBranches.length > 0
+  const isGroup = extraBranches.length > 0 || !!joinGroupSlug
 
   // 1. Create the pharmacy rows. A single site keeps the old behaviour
-  //    (group_slug = its own slug). A multi-branch sign-up puts every branch
-  //    under one group slug so the group overview, shared diary and staff
-  //    pages work from day one.
+  //    (group_slug = its own slug). A multi-branch sign-up, or one joining
+  //    an existing group, puts every branch under one group slug so the
+  //    group overview, shared diary and staff pages work from day one.
   const idTail = req.id.slice(0, 4)
-  const groupSlug = isGroup
-    ? `${slugify(req.groupName || req.pharmacyName)}-${idTail}`
-    : `${slugify(req.pharmacyName)}-${idTail}`
+  const groupSlug = joinGroupSlug
+    ? joinGroupSlug
+    : isGroup
+      ? `${slugify(req.groupName || req.pharmacyName)}-${idTail}`
+      : `${slugify(req.pharmacyName)}-${idTail}`
 
   const allBranches: Array<{ name: string; address: string | null; phone: string | null; email: string | null }> = [
     { name: req.pharmacyName, address: req.pharmacyAddress, phone: req.pharmacyPhone, email: req.pharmacyEmail || contactEmail },
@@ -216,6 +246,29 @@ export async function POST(
     .where(eq(onboardingRequests.id, req.id))
 
   const forSetup = { ...req, pharmacyId: primary.id }
+
+  // Contact already has a login at another branch of this group: nothing
+  // to create or email. Their group access covers the new branch.
+  if (contactAlreadyInGroup && clash) {
+    if (clash.role === 'pharmacist') {
+      await db.update(users).set({ role: 'pharmacy_admin', updatedAt: new Date() }).where(eq(users.id, clash.id))
+    }
+    return NextResponse.json({
+      ok: true,
+      pharmacyId: primary.id,
+      pharmacies: created,
+      groupSlug,
+      joinedGroup: joinGroupName,
+      setupUrl: null,
+      emailed: false,
+      emailError: null,
+      existingUser: true,
+      subscriptionId: billing[0]?.subscriptionId ?? null,
+      subscriptionError: subscriptionErrors.length ? subscriptionErrors.join('; ') : null,
+      billing,
+    })
+  }
+
   const user = await ensureFirstUser(forSetup)
   if (!user) {
     return NextResponse.json({ error: 'Pharmacy created but the first user could not be: contact email missing.' }, { status: 500 })
@@ -241,6 +294,7 @@ export async function POST(
     pharmacyId: primary.id,
     pharmacies: created,
     groupSlug,
+    joinedGroup: joinGroupName,
     setupUrl,
     emailed,
     emailError,

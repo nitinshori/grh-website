@@ -38,6 +38,8 @@ interface ApproveForm {
   changePounds: string;
   changeOn: string;
   note: string;
+  /** Existing pharmacies.group_slug to attach this sign-up to, or ''. */
+  joinGroupSlug: string;
 }
 
 const STANDARD_FEE_POUNDS = 100;
@@ -91,11 +93,11 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
   // a per-branch fee, an optional scheduled change (first-year group rate to
   // standard) and a note, which a prompt cannot carry.
   const [approving, setApproving] = useState<string | null>(null);
-  const [af, setAf] = useState<ApproveForm>({ feePounds: String(STANDARD_FEE_POUNDS), changePounds: '', changeOn: '', note: '' });
+  const [af, setAf] = useState<ApproveForm>({ feePounds: String(STANDARD_FEE_POUNDS), changePounds: '', changeOn: '', note: '', joinGroupSlug: '' });
 
   function openApprove(r: Row) {
     setApproving(r.id);
-    setAf({ feePounds: String(STANDARD_FEE_POUNDS), changePounds: '', changeOn: '', note: '' });
+    setAf({ feePounds: String(STANDARD_FEE_POUNDS), changePounds: '', changeOn: '', note: '', joinGroupSlug: '' });
   }
 
   async function handleApprove(r: Row) {
@@ -113,15 +115,19 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
       feeChangeOn = af.changeOn.trim();
     }
     const n = r.branchNames.length + 1;
+    const joining = af.joinGroupSlug.trim();
+    if (joining && !/^[a-z0-9-]{3,100}$/.test(joining)) { alert('Group slug: lower-case letters, digits and hyphens only'); return; }
     const lines = [
       `Approve ${r.groupName || r.pharmacyName} (${n} ${n === 1 ? 'pharmacy' : 'pharmacies'}) at ${gbp(monthlyFeePence)} per pharmacy per month?`,
       '',
       `Total ${gbp(monthlyFeePence * n)}/month on the customer's mandate (${n} GoCardless ${n === 1 ? 'subscription' : 'subscriptions'}).`,
       feeChangePence != null ? `Changes to ${gbp(feeChangePence)} per pharmacy on ${feeChangeOn}.` : 'No scheduled change.',
       '',
-      n > 1
-        ? `This will create ${n} pharmacies under one group, make ${r.contactFirstName} ${r.contactLastName} the pharmacy admin for all of them, assign all PGDs, start billing and email the setup link.`
-        : 'This will create the pharmacy and first user, assign all PGDs, start billing and email the setup link.',
+      joining
+        ? `Attaches to existing group "${joining}". If ${r.contactFirstName} ${r.contactLastName} already has a login in that group, no new login or email; otherwise they become pharmacy admin of the group.`
+        : n > 1
+          ? `This will create ${n} pharmacies under one group, make ${r.contactFirstName} ${r.contactLastName} the pharmacy admin for all of them, assign all PGDs, start billing and email the setup link.`
+          : 'This will create the pharmacy and first user, assign all PGDs, start billing and email the setup link.',
     ];
     if (!window.confirm(lines.join('\n'))) return;
     setBusyId(r.id);
@@ -129,7 +135,7 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
       const res = await fetch(`/api/admin/onboarding/${r.id}/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ monthlyFeePence, feeChangePence, feeChangeOn, feeNote: af.note.trim() || null }),
+        body: JSON.stringify({ monthlyFeePence, feeChangePence, feeChangeOn, feeNote: af.note.trim() || null, joinGroupSlug: joining || null }),
       });
       const body = await res.json();
       if (!res.ok) { alert(`Could not approve: ${body.error || res.status}`); return; }
@@ -137,6 +143,7 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
         alert(`Pharmacies provisioned but GoCardless billing failed for: ${body.subscriptionError}\n\nRetry from Admin > Billing.`);
       }
       setSetupUrl(body.setupUrl || null);
+      if (body.existingUser) alert(`Approved and attached to group "${body.groupSlug}". ${r.contactFirstName} already has a login there, so no setup email was sent.`);
       setApproving(null);
       setList((prev) => prev.map((x) => x.id === r.id ? {
         ...x,
@@ -144,10 +151,10 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
         monthlyFeePence,
         feeChangePence,
         feeChangeOn: feeChangeOn ?? '',
-        setupDone: false,
+        setupDone: body.existingUser ? true : false,
         setupEmailSentAt: body.emailed ? new Date().toISOString() : '',
-        setupEmailError: body.emailed ? '' : (body.emailError || 'unknown error'),
-        setupEmailAttempts: x.setupEmailAttempts + 1,
+        setupEmailError: body.emailed || body.existingUser ? '' : (body.emailError || 'unknown error'),
+        setupEmailAttempts: body.existingUser ? x.setupEmailAttempts : x.setupEmailAttempts + 1,
       } : x));
     } finally { setBusyId(null); }
   }
@@ -335,6 +342,15 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
                       Standard rate in one year
                     </button>
                   </p>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-medium text-gray-700">Attach to an existing group (optional)</label>
+                  <input
+                    type="text" value={af.joinGroupSlug} placeholder="group slug from Admin, Billing, e.g. delmergate-1a2b"
+                    onChange={(e) => setAf((f) => ({ ...f, joinGroupSlug: e.target.value }))}
+                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm font-mono"
+                  />
+                  <p className="text-[11px] text-gray-500 mt-1">For a branch of a group whose other branches are already on the platform. Leave blank for a new pharmacy or a new group.</p>
                 </div>
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-medium text-gray-700">Note for the billing page (optional)</label>

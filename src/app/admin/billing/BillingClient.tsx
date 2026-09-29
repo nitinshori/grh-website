@@ -119,7 +119,7 @@ export default function BillingClient({ rows: initial, today }: { rows: BillingR
             <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between gap-3 flex-wrap">
               <div>
                 <h2 className="text-sm font-semibold text-gray-900">{title}</h2>
-                {list.length > 1 && <p className="text-xs text-gray-500">Group of {list.length}, group slug <code>{key}</code></p>}
+                <p className="text-xs text-gray-500">{list.length > 1 ? `Group of ${list.length}, ` : ''}group slug <code className="select-all">{list[0].groupSlug ?? 'none'}</code></p>
               </div>
               <div className="text-sm font-semibold text-teal-700">{gbp(total)}/month</div>
             </div>
