@@ -82,6 +82,17 @@ export async function GET(req: NextRequest) {
       typeof (err as { digest: string }).digest === 'string' &&
       (err as { digest: string }).digest.startsWith('NEXT_REDIRECT')
     ) {
+      // A failed credentials sign-in is ALSO a NEXT_REDIRECT, to
+      // /login?error=CredentialsSignin. Rethrowing it dropped HubRx users on
+      // the GRH login page with no explanation (29 Sep 2026). Show the SSO
+      // error page instead; the reason is in the audit log (login_failed).
+      const digest = (err as { digest: string }).digest
+      if (digest.includes('/login') || digest.includes('error=')) {
+        return errorPage(
+          'Sign-in failed',
+          'Your HubRx sign-in token was not accepted. Tokens are valid for 5 minutes from the moment the link is generated, so a catalogue page that was opened a while ago will need refreshing. If it still fails, please tell Get Real Health the time of the click; the reason is recorded on our side.',
+        )
+      }
       throw err
     }
     return errorPage(
