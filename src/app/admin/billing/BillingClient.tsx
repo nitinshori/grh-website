@@ -84,6 +84,29 @@ export default function BillingClient({ rows: initial, today }: { rows: BillingR
     } finally { setBusy(null) }
   }
 
+  async function addBranch(r: BillingRow) {
+    const name = window.prompt(`Add a branch billed on ${r.pharmacyName}'s Direct Debit.\n\nBranch name (as it should appear on the platform):`)
+    if (!name || name.trim().length < 2) return
+    const address = window.prompt('Address and postcode (optional):', '') ?? ''
+    const gphc = window.prompt('GPhC premises number (optional):', '') ?? ''
+    const feeStr = window.prompt('Monthly fee in £ ex VAT:', String(r.monthlyFeePence / 100))
+    if (feeStr === null) return
+    const fee = Math.round(parseFloat(feeStr) * 100)
+    if (!Number.isFinite(fee) || fee < 100) { alert('Enter a fee, e.g. 100'); return }
+    if (!window.confirm(`Create "${name.trim()}" in group ${r.groupSlug ?? '(none)'}, assign every PGD, and start a ${gbp(fee)}/month subscription on mandate ${r.mandateId}?`)) return
+    setBusy(r.id)
+    try {
+      const res = await fetch('/api/admin/billing/add-branch', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sourceRowId: r.id, name: name.trim(), address: address.trim() || null, gphc: gphc.trim() || null, monthlyFeePence: fee }),
+      })
+      const body = await res.json()
+      if (!res.ok) { alert(body.error || 'Failed'); return }
+      if (body.error) alert(`Branch created but the GoCardless subscription failed: ${body.error}. Use Retry on its row.`)
+      window.location.reload()
+    } finally { setBusy(null) }
+  }
+
   async function act(r: BillingRow, action: 'apply' | 'retry' | 'cancel') {
     const msg = action === 'apply'
       ? `Apply the scheduled change for ${r.pharmacyName} now: ${gbp(r.monthlyFeePence)} to ${gbp(r.feeChangePence)} per month?`
@@ -156,6 +179,9 @@ export default function BillingClient({ rows: initial, today }: { rows: BillingR
                         )}
                         {pendingChange && (
                           <button onClick={() => act(r, 'apply')} disabled={busy === r.id} className="px-3 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-md disabled:opacity-50">Apply change now</button>
+                        )}
+                        {r.mandateId && !r.cancelledAt && (
+                          <button onClick={() => addBranch(r)} disabled={busy === r.id} className="px-3 py-1.5 text-xs bg-white border border-teal-300 text-teal-700 hover:bg-teal-50 font-medium rounded-md disabled:opacity-50">Add a branch on this DD</button>
                         )}
                         {r.subscriptionId && !r.cancelledAt && (
                           <button onClick={() => act(r, 'cancel')} disabled={busy === r.id} className="px-3 py-1.5 text-xs bg-white border border-red-200 text-red-600 hover:bg-red-50 font-medium rounded-md disabled:opacity-50">Cancel billing</button>

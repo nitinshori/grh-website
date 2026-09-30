@@ -54,7 +54,7 @@ const subscriptionName = (pharmacyName: string) => `Get Real Health monthly subs
 export interface StartBranchBillingInput {
   pharmacyId: string
   pharmacyName: string
-  onboardingId: string
+  onboardingId: string | null
   mandateId: string
   monthlyFeePence: number
   feeChangePence?: number | null
@@ -73,7 +73,7 @@ export async function startBranchBilling(input: StartBranchBillingInput): Promis
     .insert(pharmacySubscriptions)
     .values({
       pharmacyId: input.pharmacyId,
-      onboardingId: input.onboardingId,
+      onboardingId: input.onboardingId ?? null,
       gocardlessMandateId: input.mandateId,
       monthlyFeePence: input.monthlyFeePence,
       feeChangePence: input.feeChangePence ?? null,
