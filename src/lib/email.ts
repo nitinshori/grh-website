@@ -19,6 +19,7 @@ export interface SendEmailParams {
   html: string
   from?: string
   replyTo?: string
+  cc?: string[]
 }
 
 const DEFAULT_FROM = 'Get Real Health <noreply@getrealhealthpgd.co.uk>'
@@ -33,6 +34,7 @@ export async function sendEmail({
   html,
   from = DEFAULT_FROM,
   replyTo,
+  cc,
 }: SendEmailParams): Promise<{ id: string | undefined }> {
   const resend = getResend()
   const result = await resend.emails.send({
@@ -41,6 +43,7 @@ export async function sendEmail({
     subject,
     html,
     ...(replyTo ? { replyTo } : {}),
+    ...(cc && cc.length ? { cc } : {}),
   })
 
   if (result.error) {

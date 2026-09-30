@@ -169,6 +169,21 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
     } finally { setBusyId(null); }
   }
 
+  async function handleSendDdLink(r: Row) {
+    const ccRaw = window.prompt(`Email the Direct Debit link to ${r.contactEmail}.\n\nCc anyone? (comma-separated, or leave blank)`, '');
+    if (ccRaw === null) return;
+    const cc = ccRaw.split(',').map((x) => x.trim()).filter(Boolean);
+    setBusyId(r.id);
+    try {
+      const res = await fetch(`/api/admin/onboarding/${r.id}/send-dd-link`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cc }),
+      });
+      const body = await res.json();
+      if (!res.ok) { alert(`Could not send: ${body.error || res.status}`); return; }
+      alert(`Sent to ${body.to}${body.cc?.length ? `, cc ${body.cc.join(', ')}` : ''}.`);
+    } finally { setBusyId(null); }
+  }
+
   async function handleResend(id: string) {
     setBusyId(id);
     try {
@@ -263,8 +278,15 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
                   </div>
                 )}
                 {r.resumeLink && (
-                  <div className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-1">
-                    Set up by us; waiting for the customer to complete the Direct Debit. Link: <code className="select-all break-all">{r.resumeLink}</code>
+                  <div className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-1 flex items-start gap-2 flex-wrap">
+                    <span>Set up by us; waiting for the customer to complete the Direct Debit. Link: <code className="select-all break-all">{r.resumeLink}</code></span>
+                    <button
+                      onClick={() => handleSendDdLink(r)}
+                      disabled={busyId === r.id}
+                      className="shrink-0 px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded disabled:opacity-50"
+                    >
+                      {busyId === r.id ? '…' : 'Email the link to the contact'}
+                    </button>
                   </div>
                 )}
                 {r.monthlyFeePence != null && (
