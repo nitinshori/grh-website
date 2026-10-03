@@ -25,6 +25,13 @@ export default function BillingClient({ rows: initial, today }: { rows: BillingR
   const [editing, setEditing] = useState<string | null>(null)
   const [form, setForm] = useState<EditState>({ feePounds: '', changePounds: '', changeOn: '', notes: '' })
   const [busy, setBusy] = useState<string | null>(null)
+  // In-page confirmation and messages: Chrome silences alert/confirm/prompt
+  // for a site once "prevent this page from creating additional dialogs"
+  // has been ticked (3 Oct 2026), so nothing here uses a browser dialog.
+  const [notice, setNotice] = useState<{ kind: 'error' | 'ok'; text: string } | null>(null)
+  const [pending, setPending] = useState<{ rowId: string; text: string; run: () => Promise<void> } | null>(null)
+  const [adding, setAdding] = useState<string | null>(null)
+  const [branch, setBranch] = useState({ name: '', address: '', gphc: '', feePounds: '' })
   const [filter, setFilter] = useState('')
 
   // Group by group_slug; a single-site pharmacy is a group of one.
@@ -50,11 +57,11 @@ export default function BillingClient({ rows: initial, today }: { rows: BillingR
 
   async function save(r: BillingRow) {
     const fee = Math.round(parseFloat(form.feePounds) * 100)
-    if (!Number.isFinite(fee) || fee < 100) { alert('Monthly fee must be at least £1'); return }
+    if (!Number.isFinite(fee) || fee < 100) { setNotice({ kind: 'error', text: 'Monthly fee must be at least £1' }); return }
     const hasChange = form.changePounds.trim() !== '' || form.changeOn.trim() !== ''
     const changePence = hasChange ? Math.round(parseFloat(form.changePounds) * 100) : null
     if (hasChange && (!Number.isFinite(changePence as number) || (changePence as number) < 100 || !form.changeOn)) {
-      alert('A scheduled change needs both a fee and a date'); return
+      setNotice({ kind: 'error', text: 'A scheduled change needs both a fee and a date' }); return
     }
     // Only send the schedule when it differs from the pending one, so a
     // notes-only edit does not erase an already-applied change's history.
@@ -64,7 +71,16 @@ export default function BillingClient({ rows: initial, today }: { rows: BillingR
     const payload: Record<string, unknown> = { notes: form.notes.trim() || null }
     if (fee !== r.monthlyFeePence) payload.monthlyFeePence = fee
     if (scheduleChanged) { payload.feeChangePence = changePence; payload.feeChangeOn = hasChange ? form.changeOn : null }
-    if (fee !== r.monthlyFeePence && !window.confirm(`Change ${r.pharmacyName} from ${gbp(r.monthlyFeePence)} to ${gbp(fee)} per month in GoCardless now?\n\nGoCardless allows 10 amount changes over a subscription's life, and the new amount applies to payments not yet created (they are created a few working days before collection).`)) return
+    const doSave = async () => { await saveConfirmed(r, fee, changePence, hasChange, scheduleChanged, payload) }
+    if (fee !== r.monthlyFeePence && !pending) {
+      setPending({ rowId: r.id, text: `Change ${r.pharmacyName} from ${gbp(r.monthlyFeePence)} to ${gbp(fee)} per month in GoCardless now? GoCardless allows 10 amount changes over a subscription's life, and the new amount applies to payments not yet created (they are created a few working days before collection).`, run: doSave })
+      return
+    }
+    await doSave()
+  }
+
+  async function saveConfirmed(r: BillingRow, fee: number, changePence: number | null, hasChange: boolean, scheduleChanged: boolean, payload: Record<string, unknown>) {
+    setPending(null)
     setBusy(r.id)
     try {
       const res = await fetch(`/api/admin/billing/${r.id}`, {
@@ -73,7 +89,8 @@ export default function BillingClient({ rows: initial, today }: { rows: BillingR
         body: JSON.stringify(payload),
       })
       const body = await res.json()
-      if (!res.ok) { alert(body.error || 'Could not save'); if (/no longer active/.test(body.error || '')) window.location.reload(); return }
+      if (!res.ok) { setNotice({ kind: 'error', text: body.error || 'Could not save' }); if (/no longer active/.test(body.error || '')) setTimeout(() => window.location.reload(), 2500); return }
+      setNotice({ kind: 'ok', text: `${r.pharmacyName} saved.` })
       setRows((prev) => prev.map((x) => x.id === r.id ? {
         ...x,
         monthlyFeePence: fee,
@@ -84,27 +101,35 @@ export default function BillingClient({ rows: initial, today }: { rows: BillingR
     } finally { setBusy(null) }
   }
 
+  function openAddBranch(r: BillingRow) {
+    setAdding(r.id)
+    setBranch({ name: '', address: '', gphc: '', feePounds: String(r.monthlyFeePence / 100) })
+    setNotice(null)
+  }
+
   async function addBranch(r: BillingRow) {
-    const name = window.prompt(`Add a branch billed on ${r.pharmacyName}'s Direct Debit.\n\nBranch name (as it should appear on the platform):`)
-    if (!name || name.trim().length < 2) return
-    const address = window.prompt('Address and postcode (optional):', '') ?? ''
-    const gphc = window.prompt('GPhC premises number (optional):', '') ?? ''
-    const feeStr = window.prompt('Monthly fee in £ ex VAT:', String(r.monthlyFeePence / 100))
-    if (feeStr === null) return
-    const fee = Math.round(parseFloat(feeStr) * 100)
-    if (!Number.isFinite(fee) || fee < 100) { alert('Enter a fee, e.g. 100'); return }
-    if (!window.confirm(`Create "${name.trim()}" in group ${r.groupSlug ?? '(none)'}, assign every PGD, and start a ${gbp(fee)}/month subscription on mandate ${r.mandateId}?`)) return
-    setBusy(r.id)
-    try {
-      const res = await fetch('/api/admin/billing/add-branch', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sourceRowId: r.id, name: name.trim(), address: address.trim() || null, gphc: gphc.trim() || null, monthlyFeePence: fee }),
-      })
-      const body = await res.json()
-      if (!res.ok) { alert(body.error || 'Failed'); return }
-      if (body.error) alert(`Branch created but the GoCardless subscription failed: ${body.error}. Use Retry on its row.`)
-      window.location.reload()
-    } finally { setBusy(null) }
+    const name = branch.name.trim()
+    if (name.length < 2) { setNotice({ kind: 'error', text: 'Give the branch a name' }); return }
+    const fee = Math.round(parseFloat(branch.feePounds) * 100)
+    if (!Number.isFinite(fee) || fee < 100) { setNotice({ kind: 'error', text: 'Enter a fee, e.g. 100' }); return }
+    const run = async () => {
+      setPending(null)
+      setBusy(r.id)
+      try {
+        const res = await fetch('/api/admin/billing/add-branch', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sourceRowId: r.id, name, address: branch.address.trim() || null, gphc: branch.gphc.trim() || null, monthlyFeePence: fee }),
+        })
+        const body = await res.json()
+        if (!res.ok) { setNotice({ kind: 'error', text: body.error || 'Failed' }); return }
+        setNotice(body.error
+          ? { kind: 'error', text: `Branch created but the GoCardless subscription failed: ${body.error}. Use Retry on its row.` }
+          : { kind: 'ok', text: `${name} created on ${r.pharmacyName}'s Direct Debit at ${gbp(fee)}/month. Reloading…` })
+        setAdding(null)
+        setTimeout(() => window.location.reload(), 1500)
+      } finally { setBusy(null) }
+    }
+    setPending({ rowId: r.id, text: `Create "${name}" in group ${r.groupSlug ?? '(none)'}, assign every PGD, and start a ${gbp(fee)}/month subscription on mandate ${r.mandateId}?`, run })
   }
 
   async function act(r: BillingRow, action: 'apply' | 'retry' | 'cancel') {
@@ -113,12 +138,17 @@ export default function BillingClient({ rows: initial, today }: { rows: BillingR
       : action === 'retry'
         ? `Create the GoCardless subscription for ${r.pharmacyName} at ${gbp(r.monthlyFeePence)} per month?`
         : `Cancel billing for ${r.pharmacyName}? The GoCardless subscription is cancelled; no further payments are collected.`
-    if (!window.confirm(msg)) return
+    setPending({ rowId: r.id, text: msg, run: () => actConfirmed(r, action) })
+  }
+
+  async function actConfirmed(r: BillingRow, action: 'apply' | 'retry' | 'cancel') {
+    setPending(null)
     setBusy(r.id)
     try {
       const res = await fetch(`/api/admin/billing/${r.id}?action=${action}`, { method: 'POST' })
       const body = await res.json()
-      if (!res.ok) { alert(body.error || 'Failed'); return }
+      if (!res.ok) { setNotice({ kind: 'error', text: body.error || 'Failed' }); return }
+      setNotice({ kind: 'ok', text: action === 'cancel' ? `Billing cancelled for ${r.pharmacyName}.` : action === 'retry' ? `Subscription created for ${r.pharmacyName}.` : `Fee change applied for ${r.pharmacyName}.` })
       setRows((prev) => prev.map((x) => x.id !== r.id ? x : action === 'apply'
         ? { ...x, monthlyFeePence: x.feeChangePence ?? x.monthlyFeePence, feeChangeAppliedAt: new Date().toISOString() }
         : action === 'retry'
@@ -133,6 +163,12 @@ export default function BillingClient({ rows: initial, today }: { rows: BillingR
         type="search" value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Filter by pharmacy or group"
         className="w-full sm:w-80 px-3 py-2 border border-gray-300 rounded-md text-sm"
       />
+      {notice && (
+        <div className={`rounded-lg p-3 text-sm border ${notice.kind === 'error' ? 'bg-red-50 border-red-300 text-red-800' : 'bg-green-50 border-green-300 text-green-800'}`}>
+          {notice.text}
+          <button onClick={() => setNotice(null)} className="ml-3 text-xs underline">Dismiss</button>
+        </div>
+      )}
       {groups.length === 0 && <div className="bg-white border border-gray-200 rounded-lg p-8 text-center text-sm text-gray-500">No billed pharmacies yet.</div>}
       {groups.map(([key, list]) => {
         const total = list.filter((r) => r.isActive && r.subscriptionId && !r.cancelledAt).reduce((s, r) => s + r.monthlyFeePence, 0)
@@ -181,7 +217,7 @@ export default function BillingClient({ rows: initial, today }: { rows: BillingR
                           <button onClick={() => act(r, 'apply')} disabled={busy === r.id} className="px-3 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-md disabled:opacity-50">Apply change now</button>
                         )}
                         {r.mandateId && !r.cancelledAt && (
-                          <button onClick={() => addBranch(r)} disabled={busy === r.id} className="px-3 py-1.5 text-xs bg-white border border-teal-300 text-teal-700 hover:bg-teal-50 font-medium rounded-md disabled:opacity-50">Add a branch on this DD</button>
+                          <button onClick={() => (adding === r.id ? setAdding(null) : openAddBranch(r))} disabled={busy === r.id} className="px-3 py-1.5 text-xs bg-white border border-teal-300 text-teal-700 hover:bg-teal-50 font-medium rounded-md disabled:opacity-50">{adding === r.id ? 'Close' : 'Add a branch on this DD'}</button>
                         )}
                         {r.subscriptionId && !r.cancelledAt && (
                           <button onClick={() => act(r, 'cancel')} disabled={busy === r.id} className="px-3 py-1.5 text-xs bg-white border border-red-200 text-red-600 hover:bg-red-50 font-medium rounded-md disabled:opacity-50">Cancel billing</button>
@@ -191,6 +227,39 @@ export default function BillingClient({ rows: initial, today }: { rows: BillingR
                         </button>
                       </div>
                     </div>
+                    {pending && pending.rowId === r.id && (
+                      <div className="mt-3 rounded-lg border border-teal-300 bg-teal-50 p-3 text-sm text-teal-900">
+                        <p>{pending.text}</p>
+                        <div className="mt-2 flex gap-2 justify-end">
+                          <button onClick={() => setPending(null)} disabled={busy === r.id} className="px-3 py-1.5 text-xs bg-white border border-gray-300 text-gray-700 rounded-md">Cancel</button>
+                          <button onClick={() => pending.run()} disabled={busy === r.id} className="px-3 py-1.5 text-xs bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-md disabled:opacity-50">{busy === r.id ? 'Working…' : 'Yes, go ahead'}</button>
+                        </div>
+                      </div>
+                    )}
+                    {adding === r.id && (
+                      <div className="mt-3 grid sm:grid-cols-2 gap-3 bg-teal-50 border border-teal-200 rounded-lg p-3">
+                        <div className="sm:col-span-2 text-xs text-teal-900">New branch billed on <strong>{r.pharmacyName}</strong>&apos;s Direct Debit (mandate <code>{r.mandateId}</code>), in group <code>{r.groupSlug ?? 'none'}</code>, with every PGD.</div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700">Branch name</label>
+                          <input type="text" value={branch.name} onChange={(e) => setBranch((b) => ({ ...b, name: e.target.value }))} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700">Monthly fee (£ ex VAT)</label>
+                          <input type="number" min={1} step="0.01" value={branch.feePounds} onChange={(e) => setBranch((b) => ({ ...b, feePounds: e.target.value }))} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700">Address and postcode</label>
+                          <input type="text" value={branch.address} onChange={(e) => setBranch((b) => ({ ...b, address: e.target.value }))} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700">GPhC premises number (and ODS if known)</label>
+                          <input type="text" value={branch.gphc} onChange={(e) => setBranch((b) => ({ ...b, gphc: e.target.value }))} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
+                        </div>
+                        <div className="sm:col-span-2 flex justify-end">
+                          <button onClick={() => addBranch(r)} disabled={busy === r.id} className="px-4 py-2 text-sm bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-md disabled:opacity-50">Create branch and start billing</button>
+                        </div>
+                      </div>
+                    )}
                     {editing === r.id && (
                       <div className="mt-3 grid sm:grid-cols-3 gap-3 bg-gray-50 border border-gray-200 rounded-lg p-3">
                         <div>
