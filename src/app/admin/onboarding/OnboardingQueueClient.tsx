@@ -96,10 +96,18 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
   // a per-branch fee, an optional scheduled change (first-year group rate to
   // standard) and a note, which a prompt cannot carry.
   const [approving, setApproving] = useState<string | null>(null);
+  // In-page confirmation and messages. Chrome silences alert/confirm for a
+  // site once "prevent this page from creating additional dialogs" has been
+  // ticked, after which the old confirm() returned false and approvals
+  // looked dead (3 Oct 2026). Nothing here depends on a browser dialog.
+  const [confirmText, setConfirmText] = useState<string[] | null>(null);
+  const [notice, setNotice] = useState<{ kind: 'error' | 'ok'; text: string } | null>(null);
   const [af, setAf] = useState<ApproveForm>({ feePounds: String(STANDARD_FEE_POUNDS), changePounds: '', changeOn: '', note: '', joinGroupSlug: '' });
 
   function openApprove(r: Row) {
     setApproving(r.id);
+    setConfirmText(null);
+    setNotice(null);
     // An admin-created sign-up carries the agreed fee already.
     setAf({
       feePounds: r.monthlyFeePence != null ? String(r.monthlyFeePence / 100) : String(STANDARD_FEE_POUNDS),
@@ -110,23 +118,23 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
     });
   }
 
-  async function handleApprove(r: Row) {
+  function approvalPlan(r: Row): { error?: string; monthlyFeePence?: number; feeChangePence?: number | null; feeChangeOn?: string | null; joining?: string; lines?: string[] } {
     const feePounds = parseFloat(af.feePounds.trim());
-    if (!Number.isFinite(feePounds) || feePounds < 1) { alert('Enter a monthly fee per pharmacy, e.g. 100'); return; }
+    if (!Number.isFinite(feePounds) || feePounds < 1) return { error: 'Enter a monthly fee per pharmacy, e.g. 100' };
     const monthlyFeePence = Math.round(feePounds * 100);
     const hasChange = af.changePounds.trim() !== '' || af.changeOn.trim() !== '';
     let feeChangePence: number | null = null;
     let feeChangeOn: string | null = null;
     if (hasChange) {
       const cp = parseFloat(af.changePounds.trim());
-      if (!Number.isFinite(cp) || cp < 1) { alert('The scheduled fee needs an amount, e.g. 100'); return; }
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(af.changeOn.trim())) { alert('The scheduled fee needs a date'); return; }
+      if (!Number.isFinite(cp) || cp < 1) return { error: 'The scheduled fee needs an amount, e.g. 100' };
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(af.changeOn.trim())) return { error: 'The scheduled fee needs a date' };
       feeChangePence = Math.round(cp * 100);
       feeChangeOn = af.changeOn.trim();
     }
     const n = r.branchNames.length + 1;
     const joining = af.joinGroupSlug.trim();
-    if (joining && !/^[a-z0-9-]{3,100}$/.test(joining)) { alert('Group slug: lower-case letters, digits and hyphens only'); return; }
+    if (joining && !/^[a-z0-9-]{3,100}$/.test(joining)) return { error: 'Group slug: lower-case letters, digits and hyphens only' };
     const lines = [
       `Approve ${r.groupName || r.pharmacyName} (${n} ${n === 1 ? 'pharmacy' : 'pharmacies'}) at ${gbp(monthlyFeePence)} per pharmacy per month?`,
       '',
@@ -139,7 +147,21 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
           ? `This will create ${n} pharmacies under one group, make ${r.contactFirstName} ${r.contactLastName} the pharmacy admin for all of them, assign all PGDs, start billing and email the setup link.`
           : 'This will create the pharmacy and first user, assign all PGDs, start billing and email the setup link.',
     ];
-    if (!window.confirm(lines.join('\n'))) return;
+    return { monthlyFeePence, feeChangePence, feeChangeOn, joining, lines };
+  }
+
+  function handleApprove(r: Row) {
+    const plan = approvalPlan(r);
+    if (plan.error) { setNotice({ kind: 'error', text: plan.error }); return; }
+    setNotice(null);
+    setConfirmText(plan.lines ?? []);
+  }
+
+  async function handleApproveConfirmed(r: Row) {
+    const plan = approvalPlan(r);
+    if (plan.error) { setNotice({ kind: 'error', text: plan.error }); return; }
+    const { monthlyFeePence, feeChangePence, feeChangeOn, joining } = plan as Required<ReturnType<typeof approvalPlan>>;
+    setConfirmText(null);
     setBusyId(r.id);
     try {
       const res = await fetch(`/api/admin/onboarding/${r.id}/approve`, {
@@ -148,12 +170,13 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
         body: JSON.stringify({ monthlyFeePence, feeChangePence, feeChangeOn, feeNote: af.note.trim() || null, joinGroupSlug: joining || null }),
       });
       const body = await res.json();
-      if (!res.ok) { alert(`Could not approve: ${body.error || res.status}`); return; }
-      if (body.subscriptionError) {
-        alert(`Pharmacies provisioned but GoCardless billing failed for: ${body.subscriptionError}\n\nRetry from Admin > Billing.`);
-      }
+      if (!res.ok) { setNotice({ kind: 'error', text: `Could not approve: ${body.error || res.status}` }); return; }
+      const parts: string[] = [];
+      if (body.subscriptionError) parts.push(`Pharmacies provisioned but GoCardless billing failed for: ${body.subscriptionError}. Retry from Admin, Billing.`);
+      if (body.existingUser) parts.push(`Approved and attached to group "${body.groupSlug}". ${r.contactFirstName} already has a login there, so no setup email was sent.`);
+      else parts.push(`Approved. ${body.emailed ? 'Setup email sent.' : `Setup email FAILED: ${body.emailError || 'unknown error'}; the link is shown below.`}`);
+      setNotice({ kind: body.subscriptionError ? 'error' : 'ok', text: parts.join(' ') });
       setSetupUrl(body.setupUrl || null);
-      if (body.existingUser) alert(`Approved and attached to group "${body.groupSlug}". ${r.contactFirstName} already has a login there, so no setup email was sent.`);
       setApproving(null);
       setList((prev) => prev.map((x) => x.id === r.id ? {
         ...x,
@@ -170,17 +193,15 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
   }
 
   async function handleSendDdLink(r: Row) {
-    const ccRaw = window.prompt(`Email the Direct Debit link to ${r.contactEmail}.\n\nCc anyone? (comma-separated, or leave blank)`, '');
-    if (ccRaw === null) return;
-    const cc = ccRaw.split(',').map((x) => x.trim()).filter(Boolean);
+    const cc = (ccFor[r.id] ?? '').split(',').map((x) => x.trim()).filter(Boolean);
     setBusyId(r.id);
     try {
       const res = await fetch(`/api/admin/onboarding/${r.id}/send-dd-link`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cc }),
       });
       const body = await res.json();
-      if (!res.ok) { alert(`Could not send: ${body.error || res.status}`); return; }
-      alert(`Sent to ${body.to}${body.cc?.length ? `, cc ${body.cc.join(', ')}` : ''}.`);
+      if (!res.ok) { setNotice({ kind: 'error', text: `Could not send: ${body.error || res.status}` }); return; }
+      setNotice({ kind: 'ok', text: `Sent to ${body.to}${body.cc?.length ? `, cc ${body.cc.join(', ')}` : ''}.` });
     } finally { setBusyId(null); }
   }
 
@@ -189,7 +210,7 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
     try {
       const r = await fetch(`/api/admin/onboarding/${id}/resend-setup`, { method: 'POST' });
       const body = await r.json();
-      if (!r.ok) { alert(`Could not resend: ${body.error || r.status}`); return; }
+      if (!r.ok) { setNotice({ kind: 'error', text: `Could not resend: ${body.error || r.status}` }); return; }
       setSetupUrl(body.setupUrl || null);
       setList((prev) => prev.map((x) => x.id === id ? {
         ...x,
@@ -197,13 +218,18 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
         setupEmailError: body.emailed ? '' : (body.emailError || 'unknown error'),
         setupEmailAttempts: x.setupEmailAttempts + 1,
       } : x));
-      if (!body.emailed) alert(`The email could not be sent: ${body.emailError}\n\nThe link is shown above; send it to the customer another way.`);
+      setNotice(body.emailed ? { kind: 'ok', text: 'Setup link re-sent.' } : { kind: 'error', text: `The email could not be sent: ${body.emailError}. The link is shown above; send it to the customer another way.` });
     } finally { setBusyId(null); }
   }
 
+  const [ccFor, setCcFor] = useState<Record<string, string>>({});
+  const [rejecting, setRejecting] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+
   async function handleReject(id: string) {
-    const reason = window.prompt("Reason for rejection (will be visible to admins, not the customer):");
-    if (reason === null) return;
+    const reason = rejectReason.trim();
+    if (!reason) { setNotice({ kind: 'error', text: 'Give a reason for the rejection' }); return; }
+    setRejecting(null);
     setBusyId(id);
     try {
       const r = await fetch(`/api/admin/onboarding/${id}/reject`, {
@@ -211,7 +237,7 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason }),
       });
-      if (!r.ok) { alert('Could not reject'); return; }
+      if (!r.ok) { setNotice({ kind: 'error', text: 'Could not reject' }); return; }
       setList((prev) => prev.map((x) => x.id === id ? { ...x, status: 'rejected', rejectedReason: reason } : x));
     } finally { setBusyId(null); }
   }
@@ -244,6 +270,13 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
             >Copy</button>
             <button onClick={() => setSetupUrl(null)} className="text-xs px-2 py-1.5 text-amber-800">Dismiss</button>
           </div>
+        </div>
+      )}
+
+      {notice && (
+        <div className={`rounded-lg p-3 text-sm border ${notice.kind === 'error' ? 'bg-red-50 border-red-300 text-red-800' : 'bg-green-50 border-green-300 text-green-800'}`}>
+          {notice.text}
+          <button onClick={() => setNotice(null)} className="ml-3 text-xs underline">Dismiss</button>
         </div>
       )}
 
@@ -280,13 +313,20 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
                 {r.resumeLink && (
                   <div className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-1 flex items-start gap-2 flex-wrap">
                     <span>Set up by us; waiting for the customer to complete the Direct Debit. Link: <code className="select-all break-all">{r.resumeLink}</code></span>
-                    <button
-                      onClick={() => handleSendDdLink(r)}
-                      disabled={busyId === r.id}
-                      className="shrink-0 px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded disabled:opacity-50"
-                    >
-                      {busyId === r.id ? '…' : 'Email the link to the contact'}
-                    </button>
+                    <span className="flex items-center gap-1 shrink-0">
+                      <input
+                        type="text" placeholder="cc (optional)" value={ccFor[r.id] ?? ''}
+                        onChange={(e) => setCcFor((m) => ({ ...m, [r.id]: e.target.value }))}
+                        className="w-44 px-2 py-1 border border-amber-300 rounded text-xs bg-white"
+                      />
+                      <button
+                        onClick={() => handleSendDdLink(r)}
+                        disabled={busyId === r.id}
+                        className="px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded disabled:opacity-50"
+                      >
+                        {busyId === r.id ? '…' : 'Email the link to the contact'}
+                      </button>
+                    </span>
                   </div>
                 )}
                 {r.monthlyFeePence != null && (
@@ -336,13 +376,21 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
                   >
                     {busyId === r.id ? '…' : approving === r.id ? 'Close' : 'Approve'}
                   </button>
-                  <button
-                    onClick={() => handleReject(r.id)}
-                    disabled={busyId === r.id}
-                    className="px-3 py-1.5 text-sm bg-white border border-red-200 text-red-600 hover:bg-red-50 font-medium rounded-md disabled:opacity-50"
-                  >
-                    Reject
-                  </button>
+                  {rejecting === r.id ? (
+                    <span className="flex items-center gap-1">
+                      <input type="text" autoFocus placeholder="Reason (admins only)" value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} className="w-48 px-2 py-1.5 border border-red-300 rounded-md text-sm" />
+                      <button onClick={() => handleReject(r.id)} disabled={busyId === r.id} className="px-3 py-1.5 text-sm bg-red-600 text-white font-medium rounded-md disabled:opacity-50">Confirm reject</button>
+                      <button onClick={() => setRejecting(null)} className="px-2 py-1.5 text-sm text-gray-600">Cancel</button>
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => { setRejecting(r.id); setRejectReason(''); }}
+                      disabled={busyId === r.id}
+                      className="px-3 py-1.5 text-sm bg-white border border-red-200 text-red-600 hover:bg-red-50 font-medium rounded-md disabled:opacity-50"
+                    >
+                      Reject
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -397,15 +445,27 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
                     className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                   />
                 </div>
-                <div className="sm:col-span-2 flex justify-end">
-                  <button
-                    onClick={() => handleApprove(r)}
-                    disabled={busyId === r.id}
-                    className="px-4 py-2 text-sm bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-md disabled:opacity-50"
-                  >
-                    {busyId === r.id ? 'Approving…' : `Approve and start billing`}
-                  </button>
-                </div>
+                {confirmText ? (
+                  <div className="sm:col-span-2 rounded-lg border border-teal-300 bg-teal-50 p-3 text-sm text-teal-900">
+                    {confirmText.filter(Boolean).map((l, i) => <p key={i} className={i === 0 ? 'font-semibold' : 'mt-1'}>{l}</p>)}
+                    <div className="mt-3 flex gap-2 justify-end">
+                      <button onClick={() => setConfirmText(null)} disabled={busyId === r.id} className="px-3 py-1.5 text-sm bg-white border border-gray-300 text-gray-700 rounded-md">Cancel</button>
+                      <button onClick={() => handleApproveConfirmed(r)} disabled={busyId === r.id} className="px-4 py-1.5 text-sm bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-md disabled:opacity-50">
+                        {busyId === r.id ? 'Approving…' : 'Yes, approve and start billing'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="sm:col-span-2 flex justify-end">
+                    <button
+                      onClick={() => handleApprove(r)}
+                      disabled={busyId === r.id}
+                      className="px-4 py-2 text-sm bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-md disabled:opacity-50"
+                    >
+                      {busyId === r.id ? 'Approving…' : `Approve and start billing`}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
