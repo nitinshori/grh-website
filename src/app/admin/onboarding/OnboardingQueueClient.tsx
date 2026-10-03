@@ -170,7 +170,17 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
         body: JSON.stringify({ monthlyFeePence, feeChangePence, feeChangeOn, feeNote: af.note.trim() || null, joinGroupSlug: joining || null }),
       });
       const body = await res.json();
-      if (!res.ok) { setNotice({ kind: 'error', text: `Could not approve: ${body.error || res.status}` }); return; }
+      if (!res.ok) {
+        if (body.suggestedGroupSlug) {
+          // The contact already runs another branch of a group: fill the slug
+          // in and offer to go straight back round with it.
+          setAf((f) => ({ ...f, joinGroupSlug: body.suggestedGroupSlug }));
+          setNotice({ kind: 'error', text: `${body.error} The group slug has been filled in for you: press "Approve and start billing" again to attach this sign-up to ${body.suggestedGroupSlug}.` });
+        } else {
+          setNotice({ kind: 'error', text: `Could not approve: ${body.error || res.status}` });
+        }
+        return;
+      }
       const parts: string[] = [];
       if (body.subscriptionError) parts.push(`Pharmacies provisioned but GoCardless billing failed for: ${body.subscriptionError}. Retry from Admin, Billing.`);
       if (body.existingUser) parts.push(`Approved and attached to group "${body.groupSlug}". ${r.contactFirstName} already has a login there, so no setup email was sent.`);

@@ -127,7 +127,11 @@ export async function POST(
   const contactAlreadyInGroup = !!(clash && joinGroupSlug && clash.groupSlug === joinGroupSlug && (clash.role === 'pharmacist' || clash.role === 'pharmacy_admin'))
   if (clash && !contactAlreadyInGroup && (clash.pharmacyId || clash.role !== 'pharmacist')) {
     return NextResponse.json(
-      { error: `The contact email ${pre.contactEmail} already belongs to an existing user${clash.pharmacyId ? ' at another pharmacy' : ` with role ${clash.role}`}. Approval refused; resolve the account first${clash.groupSlug ? `, or attach this sign-up to group "${clash.groupSlug}" if it is another branch of theirs` : ''}.` },
+      {
+        error: `The contact email ${pre.contactEmail} already belongs to an existing user${clash.pharmacyId ? ' at another pharmacy' : ` with role ${clash.role}`}. Approval refused; resolve the account first${clash.groupSlug ? `, or attach this sign-up to group "${clash.groupSlug}" if it is another branch of theirs` : ''}.`,
+        // Lets the queue fill the slug in rather than make the admin type it.
+        suggestedGroupSlug: clash.groupSlug && (clash.role === 'pharmacist' || clash.role === 'pharmacy_admin') ? clash.groupSlug : null,
+      },
       { status: 409 },
     )
   }
