@@ -36,6 +36,7 @@ import { OrlistatSummaryReport } from "./components/OrlistatSummaryReport";
 
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 import { usePreviousWeightConsultation, describePrevious } from "../shared/hooks/usePreviousWeightConsultation";
+import DateInput from '@/components/DateInput'
 function reducer(state: OrlistatConsultationState, action: OrlistatAction): OrlistatConsultationState {
   const newState = { ...state };
 
@@ -347,8 +348,7 @@ export default function OrlistatClient() {
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-navy-900 mb-1">Treatment start date (first orlistat supply) <span className="text-red-400">*</span></label>
-                      <input
-                        type="date"
+                      <DateInput
                         value={state.weightAssessment.treatmentStartDate}
                         onChange={(e) => dispatch({ type: "UPDATE_WEIGHT_ASSESSMENT", field: "treatmentStartDate", value: e.target.value })}
                         max={new Date().toISOString().split("T")[0]}

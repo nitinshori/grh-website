@@ -1,5 +1,7 @@
 "use client";
 
+import DateInput from "@/components/DateInput";
+
 // ─── Shared Form Input Components ───
 // Used across all PGD consultation ePGDs
 
@@ -31,6 +33,16 @@ export function TextInput({
       <label className="block text-sm font-medium text-navy-900 mb-1">
         {label} {required && <span className="text-red-400">*</span>}
       </label>
+      {type === "date" ? (
+        // Typeable DD/MM/YYYY with the browser picker as a fallback (3 Oct 2026)
+        <DateInput
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onBlur={onBlur}
+          disabled={disabled}
+          className={`w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent ${disabled ? "bg-gray-100 text-gray-500" : ""}`}
+        />
+      ) : (
       <input
         type={type}
         value={value}
@@ -40,6 +52,7 @@ export function TextInput({
         disabled={disabled}
         className={`w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent ${disabled ? "bg-gray-100 text-gray-500" : ""}`}
       />
+      )}
     </div>
   );
 }

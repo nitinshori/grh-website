@@ -10,6 +10,7 @@ import { TextInput, TextArea, Checkbox, NumberInput, SelectInput } from "../shar
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile"
 import { calculateAge, validatePatientStep, validateConsentStep, validateSummaryStep } from "../shared/types"
 import { PrintedRecord } from "./components/PrintedRecord"
+import DateInput from '@/components/DateInput'
 
 // Aligned to: Vitamin B12 and folate PGD v010 (PGD 1 of 3 hydroxocobalamin
 // injection; PGD 2 of 3 cyanocobalamin tablets), issued 14 September 2026.
@@ -532,8 +533,7 @@ export function B12InjectionClient() {
                         <label className="block text-sm font-medium text-navy-900 mb-1">
                           Date sample taken <span className="text-red-400">*</span>
                         </label>
-                        <input
-                          type="date"
+                        <DateInput
                           value={el.labDate}
                           onChange={(e) => updateEligibility("labDate", e.target.value)}
                           max={today}
@@ -980,8 +980,7 @@ export function B12InjectionClient() {
                 <label className="block text-sm font-medium text-navy-900 mb-1">
                   Date of previous injection <span className="text-red-400">*</span>
                 </label>
-                <input
-                  type="date"
+                <DateInput
                   value={tr.previousInjectionDate}
                   onChange={(e) => updateTreatment("previousInjectionDate", e.target.value)}
                   max={today}
@@ -997,8 +996,7 @@ export function B12InjectionClient() {
               <label className="block text-sm font-medium text-navy-900 mb-1">
                 {isOralTablets ? "Review date (before further supply)" : "Next injection due"} <span className="text-red-400">*</span>
               </label>
-              <input
-                type="date"
+              <DateInput
                 value={state.treatment.nextDueDate}
                 onChange={(e) => updateTreatment("nextDueDate", e.target.value)}
                 min={new Date().toISOString().split("T")[0]}
@@ -1035,8 +1033,7 @@ export function B12InjectionClient() {
                 <label className="block text-sm font-medium text-navy-900 mb-1">
                   Expiry date <span className="text-red-400">*</span>
                 </label>
-                <input
-                  type="date"
+                <DateInput
                   value={state.administration.expiryDate}
                   onChange={(e) => updateAdmin("expiryDate", e.target.value)}
                   min={new Date().toISOString().split("T")[0]}

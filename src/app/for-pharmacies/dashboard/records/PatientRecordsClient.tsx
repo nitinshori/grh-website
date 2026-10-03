@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import DateInput from '@/components/DateInput'
 
 interface PatientRecord {
   id: string
@@ -176,8 +177,7 @@ export default function PatientRecordsClient({ pgdTitles }: PatientRecordsClient
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Date from</label>
-            <input
-              type="date"
+            <DateInput
               value={dateFrom}
               onChange={(e) => { setDateFrom(e.target.value); setPage(1) }}
               className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm bg-white"
@@ -185,8 +185,7 @@ export default function PatientRecordsClient({ pgdTitles }: PatientRecordsClient
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Date to</label>
-            <input
-              type="date"
+            <DateInput
               value={dateTo}
               onChange={(e) => { setDateTo(e.target.value); setPage(1) }}
               className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm bg-white"

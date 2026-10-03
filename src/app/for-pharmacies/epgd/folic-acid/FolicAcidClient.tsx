@@ -10,6 +10,7 @@ import { TextInput, TextArea, Checkbox, NumberInput, SelectInput } from "../shar
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile"
 import { calculateAge, validatePatientStep, validateConsentStep, validateSummaryStep } from "../shared/types"
 import { PrintedRecord } from "./components/PrintedRecord"
+import DateInput from '@/components/DateInput'
 
 // Aligned to: Vitamin B12 and folate PGD v010 (PGD 3 of 3, folic acid 5 mg
 // tablets), issued 14 September 2026.
@@ -396,7 +397,7 @@ export function FolicAcidClient() {
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-navy-900 mb-1">B12 test date <span className="text-red-400">*</span></label>
-                  <input type="date" value={el.b12Date} onChange={(e) => updateEligibility("b12Date", e.target.value)} max={today} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
+                  <DateInput value={el.b12Date} onChange={(e) => updateEligibility("b12Date", e.target.value)} max={today} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
                 </div>
                 <TextInput label="Laboratory or device used" value={el.labDevice} onChange={(v) => updateEligibility("labDevice", v)} placeholder="e.g. NHS lab via GP" required />
               </div>
@@ -419,7 +420,7 @@ export function FolicAcidClient() {
                   <TextInput label="Serum folate result" value={state.eligibility.serumFolateResult} onChange={(v) => updateEligibility("serumFolateResult", v)} placeholder="e.g. 5.2 nmol/L" required />
                   <div>
                     <label className="block text-sm font-medium text-navy-900 mb-1">Folate test date <span className="text-red-400">*</span></label>
-                    <input type="date" value={state.eligibility.serumFolateDate} onChange={(e) => updateEligibility("serumFolateDate", e.target.value)} max={today} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
+                    <DateInput value={state.eligibility.serumFolateDate} onChange={(e) => updateEligibility("serumFolateDate", e.target.value)} max={today} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
                   </div>
                 </div>
               )}
@@ -592,8 +593,7 @@ export function FolicAcidClient() {
                 <label className="block text-sm font-medium text-navy-900 mb-1">
                   Expiry date of pack supplied <span className="text-red-400">*</span>
                 </label>
-                <input
-                  type="date"
+                <DateInput
                   value={state.treatment.expiryDate}
                   onChange={(e) => updateTreatment("expiryDate", e.target.value)}
                   min={new Date().toISOString().split("T")[0]}
@@ -606,8 +606,7 @@ export function FolicAcidClient() {
               <label className="block text-sm font-medium text-navy-900 mb-1">
                 Review date (repeat full blood count and folate) <span className="text-red-400">*</span>
               </label>
-              <input
-                type="date"
+              <DateInput
                 value={state.treatment.nextReviewDate}
                 onChange={(e) => updateTreatment("nextReviewDate", e.target.value)}
                 min={new Date().toISOString().split("T")[0]}

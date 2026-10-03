@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import DateInput from '@/components/DateInput'
 
 interface Draft {
   id: string;
@@ -399,8 +400,7 @@ function PhoneBookingForm({ pgdOptions, onCreated, onCancel }: FormProps) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Date of birth</label>
-              <input
-                type="date"
+              <DateInput
                 value={dob}
                 onChange={(e) => setDob(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
@@ -420,8 +420,7 @@ function PhoneBookingForm({ pgdOptions, onCreated, onCancel }: FormProps) {
 
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">Expected visit date</label>
-            <input
-              type="date"
+            <DateInput
               value={visitDate}
               onChange={(e) => setVisitDate(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"

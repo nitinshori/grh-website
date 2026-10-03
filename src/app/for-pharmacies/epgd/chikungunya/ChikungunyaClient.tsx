@@ -8,6 +8,7 @@ import { PatientDetailsStep } from "../shared/steps/PatientDetailsStep"
 import { ConsentStep } from "../shared/steps/ConsentStep"
 import { TextInput, TextArea, Checkbox } from "../shared/components/FormInputs"
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile"
+import DateInput from '@/components/DateInput'
 
 const STEP_TITLES = [
   "Patient Details",
@@ -185,8 +186,7 @@ export function ChikungunyaClient() {
                 <label className="block text-sm font-medium text-navy-900 mb-1">
                   Departure date <span className="text-red-400">*</span>
                 </label>
-                <input
-                  type="date"
+                <DateInput
                   value={state.travel.departureDate}
                   onChange={(e) => updateTravel("departureDate", e.target.value)}
                   className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
@@ -320,8 +320,7 @@ export function ChikungunyaClient() {
                 <label className="block text-sm font-medium text-navy-900 mb-1">
                   Expiry date <span className="text-red-400">*</span>
                 </label>
-                <input
-                  type="date"
+                <DateInput
                   value={state.administration.expiryDate}
                   onChange={(e) => updateAdmin("expiryDate", e.target.value)}
                   min={new Date().toISOString().split("T")[0]}

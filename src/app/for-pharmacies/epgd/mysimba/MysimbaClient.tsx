@@ -10,6 +10,7 @@ import { TextInput, TextArea, Checkbox, NumberInput, SelectInput } from "../shar
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile"
 import { calculateAge, validatePatientStep, validateConsentStep, validateSummaryStep } from "../shared/types"
 import { PrintedRecord } from "./components/PrintedRecord"
+import DateInput from '@/components/DateInput'
 
 // Aligned to: Mysimba (Naltrexone 8mg / Bupropion 90mg) prolonged-release
 // tablets PGD, version 006, issued 14 September 2026.
@@ -633,7 +634,7 @@ export function MysimbaClient() {
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-navy-900 mb-1">Treatment start date (first Mysimba supply) <span className="text-red-400">*</span></label>
-                <input type="date" value={t.treatmentStartDate} onChange={(ev) => updateTreatment("treatmentStartDate", ev.target.value)} max={today} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
+                <DateInput value={t.treatmentStartDate} onChange={(ev) => updateTreatment("treatmentStartDate", ev.target.value)} max={today} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
                 <p className="mt-1 text-xs text-gray-500">
                   {weeksSinceStart === null ? "Enter today's date for an initiation." : `Week ${weeksSinceStart + 1} of treatment (maximum 16 weeks under this PGD).`}
                 </p>
@@ -659,13 +660,13 @@ export function MysimbaClient() {
               <TextInput label="Batch number" value={t.productBatch} onChange={(v) => updateTreatment("productBatch", v)} required />
               <div>
                 <label className="block text-sm font-medium text-navy-900 mb-1">Expiry date <span className="text-red-400">*</span></label>
-                <input type="date" value={t.productExpiry} onChange={(ev) => updateTreatment("productExpiry", ev.target.value)} min={today} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
+                <DateInput value={t.productExpiry} onChange={(ev) => updateTreatment("productExpiry", ev.target.value)} min={today} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-navy-900 mb-1">16-week review date (mandatory) <span className="text-red-400">*</span></label>
-              <input type="date" value={t.sixteenWeekReviewDate} onChange={(ev) => updateTreatment("sixteenWeekReviewDate", ev.target.value)} min={today} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
+              <DateInput value={t.sixteenWeekReviewDate} onChange={(ev) => updateTreatment("sixteenWeekReviewDate", ev.target.value)} min={today} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
               {expectedReviewDate && <p className="mt-1 text-xs text-gray-700">16 weeks from the start date is {expectedReviewDate}.</p>}
               <p className="mt-1 text-xs text-gray-500">Follow-up: weight, blood pressure and pulse at 4 weeks (end of titration) and at 16 weeks. Discontinue if less than 5% of initial body weight has been lost at 16 weeks.</p>
             </div>

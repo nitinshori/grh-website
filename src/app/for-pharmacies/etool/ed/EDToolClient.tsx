@@ -28,6 +28,7 @@ import { EDAlertBanner } from "./components/EDAlertBanner";
 import { EDMedicineSelector } from "./components/EDMedicineSelector";
 import { EDCounsellingChecklist } from "./components/EDCounsellingChecklist";
 import { EDSummaryReport } from "./components/EDSummaryReport";
+import DateInput from '@/components/DateInput'
 
 // ─── Initial state ───
 
@@ -268,6 +269,13 @@ function TextInput({
       <label className="block text-sm font-medium text-navy-900 mb-1">
         {label} {required && <span className="text-red-400">*</span>}
       </label>
+      {type === "date" ? (
+        <DateInput
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
+        />
+      ) : (
       <input
         type={type}
         value={value}
@@ -275,6 +283,7 @@ function TextInput({
         placeholder={placeholder}
         className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
       />
+      )}
     </div>
   );
 }
@@ -546,8 +555,7 @@ export function EDToolClient() {
             <label className="block text-sm font-medium text-navy-900 mb-1">
               Date of birth <span className="text-red-400">*</span>
             </label>
-            <input
-              type="date"
+            <DateInput
               value={state.patient.dateOfBirth}
               onChange={(e) => updatePatient("dateOfBirth", e.target.value)}
               max={new Date().toISOString().split("T")[0]}

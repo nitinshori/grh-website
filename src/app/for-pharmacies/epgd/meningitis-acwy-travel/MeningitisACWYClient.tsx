@@ -43,6 +43,7 @@ import { calculateAge } from '../shared/types';
 import { usePharmacistProfile } from '../shared/hooks/usePharmacistProfile';
 import { useFormPersistence } from '../shared/hooks/useFormPersistence';
 import MeningitisACWYSummaryReport from './components/MeningitisACWYSummaryReport';
+import DateInput from '@/components/DateInput'
 
 const STEP_LABELS = [
   'Patient Details',
@@ -570,8 +571,7 @@ export function MeningitisACWYClient() {
               <label className="block text-sm font-medium text-navy-900 mb-1">
                 Departure date <span className="text-red-400">*</span>
               </label>
-              <input
-                type="date"
+              <DateInput
                 value={patientDetails.departureDate}
                 onChange={(e) => handlePatientDetailsChange('departureDate', e.target.value)}
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
@@ -870,8 +870,7 @@ export function MeningitisACWYClient() {
               <label className="block text-sm font-medium text-navy-900 mb-1">
                 Expiry date <span className="text-red-400">*</span>
               </label>
-              <input
-                type="date"
+              <DateInput
                 value={summary.expiryDate}
                 onChange={(e) => setSummary({ ...summary, expiryDate: e.target.value })}
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"

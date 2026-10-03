@@ -1,4 +1,5 @@
 'use client';
+import DateInput from '@/components/DateInput'
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { TextInput, Checkbox, SelectInput, TextArea, NumberInput } from '../shared/components/FormInputs';
@@ -140,7 +141,7 @@ function DateField({ label, value, onChange, required, max, min, hint }: { label
       <label className="block text-sm font-medium text-navy-900 mb-1">
         {label} {required && <span className="text-red-400">*</span>}
       </label>
-      <input type="date" value={value} max={max} min={min} onChange={(e) => onChange(e.target.value)} className={DATE_INPUT_CLASS} />
+      <DateInput value={value} max={max} min={min} onChange={(e) => onChange(e.target.value)} className={DATE_INPUT_CLASS} />
       {hint && <p className="text-xs text-gray-500 mt-1">{hint}</p>}
     </div>
   );

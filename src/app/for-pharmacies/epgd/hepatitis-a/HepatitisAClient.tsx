@@ -1,4 +1,5 @@
 'use client';
+import DateInput from '@/components/DateInput'
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import Link from 'next/link';
@@ -803,8 +804,7 @@ export function HepatitisAClient() {
                   <label className="block text-sm font-medium text-navy-900 mb-1">
                     Departure date <span className="text-red-400">*</span>
                   </label>
-                  <input
-                    type="date"
+                  <DateInput
                     value={indication.departureDate}
                     onChange={(e) => setIndication({ ...indication, departureDate: e.target.value })}
                     className={DATE_INPUT_CLASS}
@@ -1073,8 +1073,7 @@ export function HepatitisAClient() {
                       <label className="block text-sm font-medium text-navy-900 mb-1">
                         Date of the first dose <span className="text-red-400">*</span>
                       </label>
-                      <input
-                        type="date"
+                      <DateInput
                         value={course.firstDoseDate}
                         onChange={(e) => setCourse({ ...course, firstDoseDate: e.target.value, offLabelConsent: false })}
                         className={DATE_INPUT_CLASS}
@@ -1483,8 +1482,7 @@ export function HepatitisAClient() {
               <label className="block text-sm font-medium text-navy-900 mb-1">
                 Expiry date <span className="text-red-400">*</span>
               </label>
-              <input
-                type="date"
+              <DateInput
                 value={summary.expiryDate}
                 onChange={(e) => setSummary({ ...summary, expiryDate: e.target.value })}
                 className={DATE_INPUT_CLASS}
@@ -1613,8 +1611,7 @@ export function HepatitisAClient() {
                 <label className="block text-sm font-medium text-navy-900 mb-1">
                   Second dose due <span className="text-red-400">*</span>
                 </label>
-                <input
-                  type="date"
+                <DateInput
                   value={summary.secondDoseDue}
                   min={dueWindow.earliest}
                   max={dueWindow.latest}

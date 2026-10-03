@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import DateInput from '@/components/DateInput'
 
 // ── Types ───────────────────────────────────────────────────────
 
@@ -716,8 +717,7 @@ export default function AppointmentDiary() {
               )}
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Day <span className="text-red-500">*</span></label>
-                <input
-                  type="date"
+                <DateInput
                   value={aDate}
                   onChange={(e) => setADate(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
@@ -840,8 +840,7 @@ export default function AppointmentDiary() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Date</label>
-                  <input
-                    type="date"
+                  <DateInput
                     value={fDate}
                     onChange={(e) => setFDate(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
@@ -976,8 +975,7 @@ export default function AppointmentDiary() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Date of birth <span className="text-red-500">*</span></label>
-                  <input
-                    type="date"
+                  <DateInput
                     value={fPatientDob}
                     onChange={(e) => setFPatientDob(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"

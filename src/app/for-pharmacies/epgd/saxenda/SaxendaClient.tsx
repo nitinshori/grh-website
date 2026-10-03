@@ -11,6 +11,7 @@ import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile"
 import { usePreviousWeightConsultation, describePrevious } from "../shared/hooks/usePreviousWeightConsultation"
 import { calculateAge, validatePatientStep, validateConsentStep, validateSummaryStep } from "../shared/types"
 import { PrintedRecord } from "./components/PrintedRecord"
+import DateInput from '@/components/DateInput'
 
 // Saxenda PGD v005, issued 14 September 2026. Adults 18 years and over; aged 75 or over excludes.
 const PGD_MIN_AGE = 18
@@ -505,7 +506,7 @@ export function SaxendaClient() {
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-navy-900 mb-1">Treatment start date (first Saxenda supply) <span className="text-red-400">*</span></label>
-                    <input type="date" value={state.assessment.treatmentStartDate} onChange={(e) => updateAssessment("treatmentStartDate", e.target.value)} max={today} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
+                    <DateInput value={state.assessment.treatmentStartDate} onChange={(e) => updateAssessment("treatmentStartDate", e.target.value)} max={today} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
                   </div>
                   <NumberInput label="Initial body weight at start of treatment (kg)" value={state.assessment.initialWeightKg} onChange={(v) => updateAssessment("initialWeightKg", v)} min={40} max={250} unit="kg" required />
                 </div>
@@ -623,7 +624,7 @@ export function SaxendaClient() {
                 {t.doseStage === "5" && (
                   <div>
                     <label className="block text-sm font-medium text-navy-900 mb-1">Date the 3.0 mg maintenance dose was reached <span className="text-red-400">*</span></label>
-                    <input type="date" value={t.maintenanceStartDate} onChange={(e) => updateTreatment("maintenanceStartDate", e.target.value)} min={state.assessment.treatmentStartDate || undefined} max={today} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
+                    <DateInput value={t.maintenanceStartDate} onChange={(e) => updateTreatment("maintenanceStartDate", e.target.value)} min={state.assessment.treatmentStartDate || undefined} max={today} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
                   </div>
                 )}
                 <p className="text-xs text-gray-600">
@@ -656,7 +657,7 @@ export function SaxendaClient() {
               <TextInput label="Pen batch number" value={state.treatment.batchNumber} onChange={(v) => updateTreatment("batchNumber", v)} required />
               <div>
                 <label className="block text-sm font-medium text-navy-900 mb-1">Pen expiry date <span className="text-red-400">*</span></label>
-                <input type="date" value={state.treatment.expiryDate} onChange={(e) => updateTreatment("expiryDate", e.target.value)} min={new Date().toISOString().split("T")[0]} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
+                <DateInput value={state.treatment.expiryDate} onChange={(e) => updateTreatment("expiryDate", e.target.value)} min={new Date().toISOString().split("T")[0]} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
               </div>
             </div>
 
@@ -685,7 +686,7 @@ export function SaxendaClient() {
 
             <div>
               <label className="block text-sm font-medium text-navy-900 mb-1">Next review date</label>
-              <input type="date" value={state.treatment.nextReviewDate} onChange={(e) => updateTreatment("nextReviewDate", e.target.value)} min={new Date().toISOString().split("T")[0]} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
+              <DateInput value={state.treatment.nextReviewDate} onChange={(e) => updateTreatment("nextReviewDate", e.target.value)} min={new Date().toISOString().split("T")[0]} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
               <p className="mt-1 text-xs text-gray-500">Review at 12 weeks on the maintenance dose (3.0 mg daily): discontinue if &lt;5% body weight loss has been achieved. If treatment is continued, review at least every 6 months thereafter. Longer treatment may be considered in patients achieving sustained weight loss of ≥5% body weight.</p>
             </div>
           </div>

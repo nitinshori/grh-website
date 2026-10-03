@@ -43,6 +43,7 @@ import { calculateAge } from '../shared/types';
 import { usePharmacistProfile } from '../shared/hooks/usePharmacistProfile';
 import { useFormPersistence } from '../shared/hooks/useFormPersistence';
 import TyphoidSummaryReport from './components/TyphoidSummaryReport';
+import DateInput from '@/components/DateInput'
 
 const STEP_LABELS = [
   'Patient Details',
@@ -559,8 +560,7 @@ export function TyphoidClient() {
               <label className="block text-sm font-medium text-navy-900 mb-1">
                 Departure date <span className="text-red-400">*</span>
               </label>
-              <input
-                type="date"
+              <DateInput
                 value={patientDetails.departureDate}
                 onChange={(e) => handlePatientDetailsChange('departureDate', e.target.value)}
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
@@ -634,8 +634,7 @@ export function TyphoidClient() {
                     <label className="block text-sm font-medium text-navy-900 mb-1">
                       Date of previous dose <span className="text-red-400">*</span>
                     </label>
-                    <input
-                      type="date"
+                    <DateInput
                       value={patientDetails.previousDoseDate || ''}
                       onChange={(e) => handlePatientDetailsChange('previousDoseDate', e.target.value)}
                       className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
@@ -918,8 +917,7 @@ export function TyphoidClient() {
               <label className="block text-sm font-medium text-navy-900 mb-1">
                 Expiry date <span className="text-red-400">*</span>
               </label>
-              <input
-                type="date"
+              <DateInput
                 value={summary.expiryDate}
                 onChange={(e) => setSummary({ ...summary, expiryDate: e.target.value })}
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
@@ -967,8 +965,7 @@ export function TyphoidClient() {
               <label className="block text-sm font-medium text-navy-900 mb-1">
                 Next booster due (3 years) <span className="text-red-400">*</span>
               </label>
-              <input
-                type="date"
+              <DateInput
                 value={summary.nextBoosterDue}
                 onChange={(e) => setSummary({ ...summary, nextBoosterDue: e.target.value })}
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"

@@ -42,6 +42,7 @@ import {
   SelectInput,
   TextArea,
 } from "../shared/components/FormInputs";
+import DateInput from '@/components/DateInput'
 
 // ─── Reducer ───
 
@@ -386,8 +387,7 @@ export default function TravelCoreClient() {
                 <label className="block text-sm font-medium text-navy-900 mb-1">
                   Departure date <span className="text-red-400">*</span>
                 </label>
-                <input
-                  type="date"
+                <DateInput
                   value={state.destination.departureDate}
                   onChange={(e) =>
                     dispatch({
@@ -403,8 +403,7 @@ export default function TravelCoreClient() {
                 <label className="block text-sm font-medium text-navy-900 mb-1">
                   Return date <span className="text-red-400">*</span>
                 </label>
-                <input
-                  type="date"
+                <DateInput
                   value={state.destination.returnDate}
                   onChange={(e) =>
                     dispatch({

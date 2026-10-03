@@ -37,6 +37,7 @@ import {
 } from './pneumococcal-validation';
 import { calculateAge } from '../shared/types';
 import PneumococcalSummaryReport from './components/PneumococcalSummaryReport';
+import DateInput from '@/components/DateInput'
 
 const STEP_LABELS = [
   'Patient Details',
@@ -705,8 +706,7 @@ export function PneumococcalClient() {
                     <label className="block text-sm font-medium text-navy-900 mb-1">
                       Date of PCV13 dose <span className="text-red-400">*</span>
                     </label>
-                    <input
-                      type="date"
+                    <DateInput
                       value={riskAssessment.previousPCV13Date}
                       onChange={(e) =>
                         setRiskAssessment({ ...riskAssessment, previousPCV13Date: e.target.value })
@@ -730,8 +730,7 @@ export function PneumococcalClient() {
                     <label className="block text-sm font-medium text-navy-900 mb-1">
                       Date of PCV20 dose <span className="text-red-400">*</span>
                     </label>
-                    <input
-                      type="date"
+                    <DateInput
                       value={riskAssessment.previousPCV20Date}
                       onChange={(e) =>
                         setRiskAssessment({ ...riskAssessment, previousPCV20Date: e.target.value })
@@ -764,8 +763,7 @@ export function PneumococcalClient() {
                     <label className="block text-sm font-medium text-navy-900 mb-1">
                       Date of PPV23 dose <span className="text-red-400">*</span>
                     </label>
-                    <input
-                      type="date"
+                    <DateInput
                       value={riskAssessment.previousPPV23Date}
                       onChange={(e) =>
                         setRiskAssessment({ ...riskAssessment, previousPPV23Date: e.target.value })
@@ -789,8 +787,7 @@ export function PneumococcalClient() {
                     <label className="block text-sm font-medium text-navy-900 mb-1">
                       Date of Vaxneuvance or Capvaxive dose <span className="text-red-400">*</span>
                     </label>
-                    <input
-                      type="date"
+                    <DateInput
                       value={riskAssessment.previousOtherPCVDate}
                       onChange={(e) =>
                         setRiskAssessment({ ...riskAssessment, previousOtherPCVDate: e.target.value })
@@ -1077,8 +1074,7 @@ export function PneumococcalClient() {
               <label className="block text-sm font-medium text-navy-900 mb-1">
                 Expiry date <span className="text-red-400">*</span>
               </label>
-              <input
-                type="date"
+              <DateInput
                 value={summary.expiryDate}
                 onChange={(e) => setSummary({ ...summary, expiryDate: e.target.value })}
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"

@@ -39,6 +39,7 @@ import {
 } from './rsv-validation';
 import { calculateAge } from '../shared/types';
 import RSVSummaryReport from './components/RSVSummaryReport';
+import DateInput from '@/components/DateInput'
 
 const STEP_LABELS = [
   'Patient Details',
@@ -780,8 +781,7 @@ export function RSVClient() {
               <label className="block text-sm font-medium text-navy-900 mb-1">
                 Expiry date <span className="text-red-400">*</span>
               </label>
-              <input
-                type="date"
+              <DateInput
                 value={summary.expiryDate}
                 onChange={(e) => setSummary({ ...summary, expiryDate: e.target.value })}
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"

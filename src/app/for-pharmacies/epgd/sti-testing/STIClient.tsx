@@ -33,6 +33,7 @@ import {
   NumberInput,
   TextArea,
 } from "../shared/components/FormInputs";
+import DateInput from '@/components/DateInput'
 
 // ─── Reducer ───
 
@@ -314,8 +315,7 @@ export default function STIClient() {
                 <label className="block text-sm font-medium text-navy-900 mb-1">
                   Date of birth <span className="text-red-400">*</span>
                 </label>
-                <input
-                  type="date"
+                <DateInput
                   value={state.patient.dateOfBirth}
                   onChange={(e) =>
                     dispatch({ type: "UPDATE_PATIENT", field: "dateOfBirth", value: e.target.value })

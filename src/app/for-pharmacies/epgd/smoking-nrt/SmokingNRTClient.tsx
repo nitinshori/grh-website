@@ -35,6 +35,7 @@ import {
   NumberInput,
   TextArea,
 } from "../shared/components/FormInputs";
+import DateInput from '@/components/DateInput'
 
 function reducer(state: SmokingNRTConsultationState, action: SmokingNRTAction): SmokingNRTConsultationState {
   const newState = { ...state };
@@ -279,8 +280,7 @@ export default function SmokingNRTClient() {
 
               <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
                 <label className="block text-sm font-medium text-navy-900 mb-2">Quit date (today or later; the PGD guidance is 1 to 2 weeks from assessment) <span className="text-red-400">*</span></label>
-                <input
-                  type="date"
+                <DateInput
                   value={state.assessment.quitDate}
                   onChange={(e) => dispatch({ type: "UPDATE_ASSESSMENT", field: "quitDate", value: e.target.value })}
                   min={new Date().toISOString().split("T")[0]}

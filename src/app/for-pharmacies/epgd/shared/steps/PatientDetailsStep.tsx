@@ -6,6 +6,7 @@ import { TextInput, Checkbox } from "../components/FormInputs";
 import { GPPracticeSearch } from "../components/GPPracticeSearch";
 import { ReturningPatientSearch } from "../components/ReturningPatientSearch";
 import { PostcodeLookup } from "../components/PostcodeLookup";
+import DateInput from '@/components/DateInput'
 
 interface PatientDetailsStepProps {
   patient: BasePatientDetails;
@@ -134,8 +135,7 @@ export function PatientDetailsStep({ patient, onChange, genderOption, requireAdu
             Date of birth <span className="text-red-400">*</span>
             <span className="ml-1 text-xs font-normal text-gray-500">(day / month / year; cannot be a future date)</span>
           </label>
-          <input
-            type="date"
+          <DateInput
             value={patient.dateOfBirth}
             onChange={(e) => onChange("dateOfBirth", e.target.value)}
             max={new Date().toISOString().split("T")[0]}

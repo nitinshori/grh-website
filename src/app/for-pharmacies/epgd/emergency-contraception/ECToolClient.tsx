@@ -44,6 +44,7 @@ import {
   NumberInput,
   TextArea,
 } from "../shared/components/FormInputs";
+import DateInput from '@/components/DateInput'
 
 // ─── Reducer ───
 
@@ -503,8 +504,7 @@ export function ECToolClient() {
                   <label className="block text-sm font-medium text-navy-900 mb-1">
                     Date of UPSI <span className="text-red-400">*</span>
                   </label>
-                  <input
-                    type="date"
+                  <DateInput
                     value={state.clinicalAssessment.upsiDate}
                     onChange={(e) =>
                       dispatch({
@@ -540,8 +540,7 @@ export function ECToolClient() {
                 <label className="block text-sm font-medium text-navy-900 mb-1">
                   Last menstrual period <span className="text-red-400">*</span>
                 </label>
-                <input
-                  type="date"
+                <DateInput
                   value={state.clinicalAssessment.lastMenstrualPeriod}
                   onChange={(e) =>
                     dispatch({
