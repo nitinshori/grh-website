@@ -139,7 +139,9 @@ export default async function OnboardingQueuePage() {
             feeChangePence: r.feeChangePence ?? null,
             feeChangeOn: r.feeChangeOn || '',
             feeNote: r.feeNote || '',
-            resumeLink: r.resumeKey && r.status !== 'approved' && r.status !== 'completed' && r.status !== 'rejected'
+            // Only while the Direct Debit is still outstanding: once the
+            // mandate is in, the row is an ordinary approval.
+            resumeLink: r.resumeKey && !r.gocardlessMandateId && r.status !== 'approved' && r.status !== 'completed' && r.status !== 'rejected'
               ? `${process.env.APP_URL || 'https://getrealhealthpgd.co.uk'}/onboard/dd?id=${r.id}&key=${r.resumeKey}`
               : '',
           }))}
