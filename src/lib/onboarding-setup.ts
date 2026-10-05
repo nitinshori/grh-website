@@ -35,6 +35,17 @@ export interface OnboardingForSetup {
   contactFirstName: string | null
   contactLastName: string | null
   contactEmail: string | null
+  /** Multi-branch sign-up: the other branches, so the welcome names them all. */
+  branches?: Array<{ name: string }> | null
+  groupName?: string | null
+}
+
+/** "Delmergate Ltd (Eureka, Repton)" for a group, else the pharmacy name. */
+function describeAccount(req: OnboardingForSetup): string {
+  const extra = (req.branches ?? []).map((b) => b.name)
+  if (extra.length === 0) return req.pharmacyName
+  const all = [req.pharmacyName, ...extra]
+  return `${req.groupName ? `${req.groupName}: ` : ''}${all.join(', ')}`
 }
 
 export async function ensureFirstUser(req: OnboardingForSetup): Promise<{ id: string; email: string; firstName: string } | null> {
@@ -101,9 +112,12 @@ export async function sendSetupEmail(
       html:
         `<p>Hi ${escapeHtml(user.firstName)},</p>` +
         (kind === 'welcome'
-          ? `<p>Your application for ${escapeHtml(req.pharmacyName)} has been approved. `
-          : `<p>Here is a new link to finish setting up your Get Real Health account for ${escapeHtml(req.pharmacyName)}. `) +
+          ? `<p>Your application for ${escapeHtml(describeAccount(req))} has been approved. `
+          : `<p>Here is a new link to finish setting up your Get Real Health account for ${escapeHtml(describeAccount(req))}. `) +
         `Choose your password here to log in to the Get Real Health PGD platform:</p>` +
+        ((req.branches ?? []).length > 0
+          ? `<p>This one login covers every branch listed above. Once in, use the branch switcher on your dashboard to move between them, and Staff to add the pharmacists at each branch.</p>`
+          : '') +
         `<p><a href="${setupUrl}">${setupUrl}</a></p>` +
         `<p>The link works once and expires in 14 days. If it expires, use "Forgotten your password?" on the login page ` +
         `with this email address and a new link will be sent, or reply to this email.</p>` +
