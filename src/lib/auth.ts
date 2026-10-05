@@ -188,9 +188,62 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const u = user as any
         token.role = u.role as string
         token.pharmacyId = u.pharmacyId as string | null
+        // The branch they signed in from is home; pharmacyId is the branch
+        // being worked at and can be switched below (migration 073).
+        token.homePharmacyId = u.pharmacyId as string | null
         token.pharmacySlug = u.pharmacySlug as string | null
         token.mustChangePassword = !!u.mustChangePassword
         token.authSource = (u.authSource as string | undefined) ?? 'grh'
+      }
+      // "Working at" switch: the dashboard calls useSession().update({
+      // activePharmacyId }). Only a branch the user is allowed to work at
+      // (home, or granted in user_pharmacy_access) is accepted; anything
+      // else leaves the token untouched.
+      const wanted = session && typeof (session as { activePharmacyId?: unknown }).activePharmacyId === 'string'
+        ? (session as { activePharmacyId: string }).activePharmacyId
+        : null
+      if (trigger === 'update' && token.sub && wanted) {
+        try {
+          const { canWorkAt } = await import('@/lib/branch-access')
+          const check = await canWorkAt(token.sub, wanted)
+          if (check.ok) {
+            token.pharmacyId = wanted
+            token.pharmacySlug = check.slug
+            token.branchCheckedAt = Date.now()
+          } else {
+            console.warn(`[jwt] refused branch switch for ${token.sub} to ${wanted}`)
+          }
+        } catch (err) {
+          console.warn('[jwt] branch switch check failed:', err)
+        }
+      }
+      // A session working away from home is re-checked every few minutes
+      // (this callback runs on every auth() call): a revoked grant or a
+      // deactivated branch drops them back to home, or to the first branch
+      // they may still use. Home-branch sessions are covered by the
+      // middleware's is_active check and need no extra query.
+      const BRANCH_RECHECK_MS = 5 * 60 * 1000
+      if (
+        !user &&
+        token.sub &&
+        token.pharmacyId &&
+        token.homePharmacyId !== undefined &&
+        token.pharmacyId !== token.homePharmacyId &&
+        (typeof token.branchCheckedAt !== 'number' || Date.now() - token.branchCheckedAt > BRANCH_RECHECK_MS)
+      ) {
+        try {
+          const { canWorkAt, fallbackBranch } = await import('@/lib/branch-access')
+          const check = await canWorkAt(token.sub, token.pharmacyId as string)
+          if (!check.ok) {
+            const fb = await fallbackBranch(token.sub)
+            token.pharmacyId = fb?.id ?? (token.homePharmacyId as string | null)
+            token.pharmacySlug = fb?.slug ?? null
+            console.warn(`[jwt] branch no longer usable for ${token.sub}; moved to ${token.pharmacyId}`)
+          }
+          token.branchCheckedAt = Date.now()
+        } catch (err) {
+          console.warn('[jwt] branch re-check failed:', err)
+        }
       }
       // When the client calls `useSession().update()` (e.g. after the
       // change-password flow completes) re-read the mustChangePassword
@@ -213,6 +266,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             .where(eq(usersTable.id, token.sub))
             .limit(1)
           if (freshUser) {
+            // A deactivated user calling update() gets no fresh token.
+            if (!freshUser.isActive) return null
             token.mustChangePassword = !!freshUser.mustChangePassword
           }
         } catch (err) {
@@ -232,6 +287,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.id = token.sub!
         session.user.role = token.role as string
         session.user.pharmacyId = token.pharmacyId as string | null
+        session.user.homePharmacyId = (token.homePharmacyId as string | null | undefined) ?? (token.pharmacyId as string | null)
         session.user.pharmacySlug = token.pharmacySlug as string | null
         session.user.mustChangePassword = !!token.mustChangePassword
         ;(session.user as { authSource?: string }).authSource =

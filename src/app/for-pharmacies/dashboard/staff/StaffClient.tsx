@@ -11,10 +11,18 @@ interface StaffRow {
   isActive: boolean;
   createdAt: string;
   inviteStatus: "active" | "pending" | "expired";
+  pharmacyId: string | null;
+  pharmacyName: string | null;
+  alsoWorksAt: Array<{ id: string; name: string }>;
 }
+
+interface Branch { id: string; name: string }
 
 export function StaffClient({ currentUserId }: { currentUserId: string }) {
   const [staff, setStaff] = useState<StaffRow[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [editingBranches, setEditingBranches] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showInvite, setShowInvite] = useState(false);
@@ -24,9 +32,10 @@ export function StaffClient({ currentUserId }: { currentUserId: string }) {
     setError(null);
     try {
       const res = await fetch("/api/dashboard/staff");
-      const data = (await res.json()) as { staff?: StaffRow[]; error?: string };
+      const data = (await res.json()) as { staff?: StaffRow[]; branches?: Branch[]; error?: string };
       if (!res.ok) throw new Error(data.error || `Failed (${res.status})`);
       setStaff(data.staff ?? []);
+      setBranches(data.branches ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -64,6 +73,21 @@ export function StaffClient({ currentUserId }: { currentUserId: string }) {
     refresh();
   }
 
+  async function saveBranches(id: string, pharmacyId: string, alsoWorksAt: string[]) {
+    const res = await fetch(`/api/dashboard/staff/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pharmacyId, alsoWorksAt }),
+    });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      setError(d.error || `Failed (${res.status})`);
+      return;
+    }
+    setEditingBranches(null);
+    refresh();
+  }
+
   async function resendInvite(id: string) {
     const res = await fetch(`/api/dashboard/staff/${id}`, {
       method: "POST",
@@ -75,12 +99,7 @@ export function StaffClient({ currentUserId }: { currentUserId: string }) {
       setError(data.error || `Failed (${res.status})`);
       return;
     }
-    if (data.emailed) {
-      alert("Invite re-sent by email.");
-    } else if (data.setupUrl) {
-      // Fallback: copy URL for hand-delivery
-      window.prompt("Email not sent. Copy this link to the user:", data.setupUrl);
-    }
+    setNotice(data.emailed ? "Invite re-sent by email." : `Email not sent. Send this link to them: ${data.setupUrl ?? ""}`);
     refresh();
   }
 
@@ -101,6 +120,12 @@ export function StaffClient({ currentUserId }: { currentUserId: string }) {
       {error && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-900">{error}</div>
       )}
+      {notice && (
+        <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md text-sm text-green-900 break-all">{notice} <button onClick={() => setNotice(null)} className="ml-2 text-xs underline">Dismiss</button></div>
+      )}
+      {branches.length > 1 && (
+        <p className="mb-3 text-xs text-gray-500">Showing staff across all {branches.length} branches in your group. Each person has a home branch; tick any other branches they also work at and they can switch between them from their dashboard.</p>
+      )}
 
       {/* Staff table */}
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
@@ -110,6 +135,7 @@ export function StaffClient({ currentUserId }: { currentUserId: string }) {
               <tr>
                 <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Name</th>
                 <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Email</th>
+                <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Branch</th>
                 <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Role</th>
                 <th className="text-left px-4 py-2.5 text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Status</th>
                 <th className="text-right px-4 py-2.5 text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Actions</th>
@@ -118,7 +144,7 @@ export function StaffClient({ currentUserId }: { currentUserId: string }) {
             <tbody className="divide-y divide-gray-100">
               {staff.length === 0 && !loading && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-gray-500 italic text-sm">
+                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500 italic text-sm">
                     No staff yet. Click "Invite staff" to add your first one.
                   </td>
                 </tr>
@@ -132,6 +158,27 @@ export function StaffClient({ currentUserId }: { currentUserId: string }) {
                       {isSelf && <div className="text-[11px] text-[color:var(--tenant-primary)]">(you)</div>}
                     </td>
                     <td className="px-4 py-3 text-gray-700">{s.email}</td>
+                    <td className="px-4 py-3">
+                      {editingBranches === s.id ? (
+                        <BranchEditor
+                          branches={branches}
+                          homeId={s.pharmacyId}
+                          alsoIds={s.alsoWorksAt.map((b) => b.id)}
+                          onCancel={() => setEditingBranches(null)}
+                          onSave={(home, also) => saveBranches(s.id, home, also)}
+                        />
+                      ) : (
+                        <div className="text-gray-700">
+                          <div>{s.pharmacyName ?? "—"}</div>
+                          {s.alsoWorksAt.length > 0 && (
+                            <div className="text-[11px] text-gray-500">also {s.alsoWorksAt.map((b) => b.name).join(", ")}</div>
+                          )}
+                          {branches.length > 1 && !isSelf && (
+                            <button type="button" onClick={() => setEditingBranches(s.id)} className="text-[11px] text-[color:var(--tenant-primary)] hover:underline">Change branches</button>
+                          )}
+                        </div>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       {isSelf ? (
                         <span className="text-gray-700">{labelForRole(s.role)}</span>
@@ -178,7 +225,41 @@ export function StaffClient({ currentUserId }: { currentUserId: string }) {
         </div>
       </div>
 
-      {showInvite && <InviteModal onClose={() => setShowInvite(false)} onCreated={refresh} />}
+      {showInvite && <InviteModal branches={branches} onClose={() => setShowInvite(false)} onCreated={refresh} />}
+    </div>
+  );
+}
+
+function BranchEditor({ branches, homeId, alsoIds, onCancel, onSave }: {
+  branches: Branch[];
+  homeId: string | null;
+  alsoIds: string[];
+  onCancel: () => void;
+  onSave: (home: string, also: string[]) => void;
+}) {
+  const [home, setHome] = useState(homeId ?? branches[0]?.id ?? "");
+  const [also, setAlso] = useState<Set<string>>(new Set(alsoIds));
+  return (
+    <div className="space-y-2 text-xs">
+      <div>
+        <label className="block text-[11px] font-medium text-gray-600">Home branch</label>
+        <select value={home} onChange={(e) => { setHome(e.target.value); setAlso((prev) => { const n = new Set(prev); n.delete(e.target.value); return n; }); }} className="px-2 py-1 border border-gray-300 rounded text-xs">
+          {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+        </select>
+      </div>
+      <div>
+        <div className="text-[11px] font-medium text-gray-600">Also works at</div>
+        {branches.filter((b) => b.id !== home).map((b) => (
+          <label key={b.id} className="flex items-center gap-1.5">
+            <input type="checkbox" checked={also.has(b.id)} onChange={(e) => setAlso((prev) => { const n = new Set(prev); if (e.target.checked) n.add(b.id); else n.delete(b.id); return n; })} />
+            {b.name}
+          </label>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <button type="button" onClick={() => onSave(home, [...also])} className="px-2 py-1 bg-[color:var(--tenant-primary)] text-white rounded">Save</button>
+        <button type="button" onClick={onCancel} className="px-2 py-1 text-gray-600">Cancel</button>
+      </div>
     </div>
   );
 }
@@ -203,11 +284,13 @@ function StatusPill({ row }: { row: StaffRow }) {
   return <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-800 text-[10px] font-semibold uppercase">Active</span>;
 }
 
-function InviteModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+function InviteModal({ branches, onClose, onCreated }: { branches: Branch[]; onClose: () => void; onCreated: () => void }) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"pharmacist" | "pharmacy_admin">("pharmacist");
+  const [pharmacyId, setPharmacyId] = useState<string>(branches[0]?.id ?? "");
+  const [also, setAlso] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ setupUrl: string; emailed: boolean } | null>(null);
@@ -220,13 +303,14 @@ function InviteModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
       const res = await fetch("/api/dashboard/staff", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ firstName, lastName, email, role }),
+        body: JSON.stringify({ firstName, lastName, email, role, pharmacyId: pharmacyId || undefined, alsoWorksAt: [...also] }),
       });
-      const data = (await res.json()) as { ok?: boolean; setupUrl?: string; emailed?: boolean; error?: string };
+      const data = (await res.json()) as { ok?: boolean; setupUrl?: string; emailed?: boolean; error?: string; warnings?: string[] };
       if (!res.ok || !data.ok) {
         setError(data.error || `Failed (${res.status})`);
         return;
       }
+      if (data.warnings?.length) setError(`Account created, but: ${data.warnings.join("; ")}. Use "Change branches" to fix their branch list.`);
       setResult({ setupUrl: data.setupUrl ?? "", emailed: Boolean(data.emailed) });
       onCreated();
     } catch (err) {
@@ -282,6 +366,24 @@ function InviteModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
               <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]" />
               <p className="text-[11px] text-gray-500 mt-1">They'll get a set-password link at this address.</p>
             </div>
+            {branches.length > 1 && (
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Home branch</label>
+                <select value={pharmacyId} onChange={(e) => { setPharmacyId(e.target.value); setAlso((prev) => { const n = new Set(prev); n.delete(e.target.value); return n; }); }} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                  {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                </select>
+                <div className="mt-2 text-xs font-medium text-gray-700">Also works at</div>
+                <div className="mt-1 grid grid-cols-2 gap-1">
+                  {branches.filter((b) => b.id !== pharmacyId).map((b) => (
+                    <label key={b.id} className="flex items-center gap-1.5 text-xs text-gray-700">
+                      <input type="checkbox" checked={also.has(b.id)} onChange={(e) => setAlso((prev) => { const n = new Set(prev); if (e.target.checked) n.add(b.id); else n.delete(b.id); return n; })} />
+                      {b.name}
+                    </label>
+                  ))}
+                </div>
+                <p className="text-[11px] text-gray-500 mt-1">Their records are filed under whichever branch they choose to work at when they log in.</p>
+              </div>
+            )}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Role</label>
               <select value={role} onChange={(e) => setRole(e.target.value as "pharmacist" | "pharmacy_admin")} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">

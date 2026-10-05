@@ -12,7 +12,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { users, pharmacies } from '@/lib/db/schema'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
+import { extraBranchesFor, grantBranch, managedBranches, rehomeUser, revokeBranch } from '@/lib/branch-access'
+import { audit } from '@/lib/audit'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 import { Resend } from 'resend'
@@ -24,9 +26,19 @@ function canManageStaff(role?: string | null): boolean {
   return role === 'pharmacy_admin' || role === 'super_admin'
 }
 
-async function assertStaffBelongsToPharmacy(userId: string, pharmacyId: string) {
+/** Roles a pharmacy admin may manage. A super_admin homed in the group is never touchable here. */
+const STAFF_ROLES = ['pharmacist', 'pharmacy_admin'] as const
+
+/** True when the user is staff whose home branch is one the admin manages (their group). */
+async function assertStaffBelongsToPharmacy(userId: string, adminPharmacyId: string) {
+  const managed = await managedBranches(adminPharmacyId)
+  if (managed.length === 0) return false
   const [row] = await db.select({ id: users.id }).from(users)
-    .where(and(eq(users.id, userId), eq(users.pharmacyId, pharmacyId))).limit(1)
+    .where(and(
+      eq(users.id, userId),
+      inArray(users.pharmacyId, managed.map((m) => m.id)),
+      inArray(users.role, [...STAFF_ROLES]),
+    )).limit(1)
   return !!row
 }
 
@@ -53,16 +65,72 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     isActive?: boolean
     firstName?: string
     lastName?: string
+    /** Home branch (must be in the admin's group). */
+    pharmacyId?: string
+    /** Full set of extra branches; omitted means unchanged. */
+    alsoWorksAt?: string[]
   } | null
   if (!body) return NextResponse.json({ error: 'Bad body' }, { status: 400 })
+
+  const managed = await managedBranches(pharmacyId)
+  // Only an active branch can become a home or an extra branch.
+  const managedIds = new Set(managed.filter((m) => m.isActive).map((m) => m.id))
 
   const updates: Record<string, unknown> = { updatedAt: new Date() }
   if (body.role === 'pharmacist' || body.role === 'pharmacy_admin') updates.role = body.role
   if (typeof body.isActive === 'boolean') updates.isActive = body.isActive
   if (typeof body.firstName === 'string') updates.firstName = body.firstName.trim()
   if (typeof body.lastName === 'string') updates.lastName = body.lastName.trim()
+  let homeMovedTo: string | null = null
+  if (typeof body.pharmacyId === 'string') {
+    if (!managedIds.has(body.pharmacyId)) return NextResponse.json({ error: 'That branch is not in your group' }, { status: 400 })
+    homeMovedTo = body.pharmacyId
+  }
+  // Validate the extra-branch set before writing anything.
+  let wanted: Set<string> | null = null
+  if (Array.isArray(body.alsoWorksAt)) {
+    const [u] = await db.select({ home: users.pharmacyId }).from(users).where(eq(users.id, id)).limit(1)
+    const home = homeMovedTo ?? u?.home
+    wanted = new Set(body.alsoWorksAt.filter((x): x is string => typeof x === 'string' && x !== home))
+    if ([...wanted].some((x) => !managedIds.has(x))) return NextResponse.json({ error: 'An extra branch is not in your group' }, { status: 400 })
+  }
 
   await db.update(users).set(updates).where(eq(users.id, id))
+  // rehomeUser also prunes grants that the move makes invalid.
+  if (homeMovedTo) await rehomeUser(id, homeMovedTo)
+
+  const granted: string[] = []
+  const revoked: string[] = []
+  const failed: string[] = []
+  if (wanted) {
+    const current = new Set((await extraBranchesFor([id])).get(id)?.map((b) => b.id) ?? [])
+    for (const x of wanted) {
+      if (current.has(x)) continue
+      const r = await grantBranch(id, x, session.user.id)
+      if (r.ok) granted.push(x)
+      else failed.push(r.error)
+    }
+    for (const x of current) {
+      if (wanted.has(x)) continue
+      await revokeBranch(id, x)
+      revoked.push(x)
+    }
+    // A revoked branch may be the one they are working at: the middleware
+    // (60s cache) and the JWT re-check (5 min) move them off it.
+  }
+  if (homeMovedTo || granted.length || revoked.length || failed.length) {
+    await audit({
+      action: 'branch_access_changed',
+      userId: session.user.id,
+      userEmail: session.user.email,
+      pharmacyId,
+      request: req,
+      details: { toUser: id, homeMovedTo, granted, revoked, failed, via: 'staff_edit' },
+    })
+  }
+  if (failed.length > 0) {
+    return NextResponse.json({ error: failed.join('; '), partial: true }, { status: 400 })
+  }
   return NextResponse.json({ ok: true })
 }
 
@@ -89,7 +157,10 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const [u] = await db.select().from(users).where(eq(users.id, id)).limit(1)
   if (!u) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const [pharmacy] = await db.select({ name: pharmacies.name }).from(pharmacies).where(eq(pharmacies.id, pharmacyId)).limit(1)
+  // Name the person's own home branch, not the branch the admin is working at.
+  const [pharmacy] = u.pharmacyId
+    ? await db.select({ name: pharmacies.name }).from(pharmacies).where(eq(pharmacies.id, u.pharmacyId)).limit(1)
+    : []
   const pharmacyName = pharmacy?.name ?? 'your pharmacy'
 
   const rawToken = crypto.randomBytes(32).toString('hex')

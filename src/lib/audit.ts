@@ -17,6 +17,10 @@ export type AuditAction =
   | 'billing_fee_change_applied'
   | 'billing_subscription_retried'
   | 'billing_cancelled'
+  | 'branch_access_changed'
+  | 'training_declared'
+  | 'training_declaration_revoked'
+  | 'training_records_export'
 
 export interface AuditEntry {
   pharmacyId?: string | null

@@ -14,7 +14,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { users, pharmacies } from '@/lib/db/schema'
-import { and, eq, desc } from 'drizzle-orm'
+import { and, eq, desc, inArray } from 'drizzle-orm'
+import { extraBranchesFor, grantBranch, managedBranches } from '@/lib/branch-access'
+import { audit } from '@/lib/audit'
+
+/** Roles a pharmacy admin may see and manage. Never super_admin. */
+const STAFF_ROLES = ['pharmacist', 'pharmacy_admin'] as const
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 import { Resend } from 'resend'
@@ -36,6 +41,12 @@ export async function GET() {
   const pharmacyId = session.user.pharmacyId
   if (!pharmacyId) return NextResponse.json({ error: 'No pharmacy assigned' }, { status: 400 })
 
+  // A pharmacy admin manages every branch of their group (migration 073),
+  // not just the one they are working at.
+  const branches = await managedBranches(pharmacyId)
+  const branchIds = branches.map((b) => b.id)
+  const branchName = new Map(branches.map((b) => [b.id, b.name]))
+
   const rows = await db
     .select({
       id: users.id,
@@ -45,12 +56,14 @@ export async function GET() {
       role: users.role,
       isActive: users.isActive,
       createdAt: users.createdAt,
+      pharmacyId: users.pharmacyId,
       setupTokenUsedAt: users.setupTokenUsedAt,
       setupTokenExpiresAt: users.setupTokenExpiresAt,
     })
     .from(users)
-    .where(eq(users.pharmacyId, pharmacyId))
+    .where(and(inArray(users.pharmacyId, branchIds), inArray(users.role, [...STAFF_ROLES])))
     .orderBy(desc(users.createdAt))
+  const extras = await extraBranchesFor(rows.map((r) => r.id))
 
   // Annotate each row with invite status (active / pending / expired)
   const now = Date.now()
@@ -68,10 +81,18 @@ export async function GET() {
       isActive: u.isActive,
       createdAt: u.createdAt,
       inviteStatus,
+      pharmacyId: u.pharmacyId,
+      pharmacyName: u.pharmacyId ? branchName.get(u.pharmacyId) ?? null : null,
+      alsoWorksAt: extras.get(u.id) ?? [],
     }
   })
 
-  return NextResponse.json({ staff })
+  // Pickable branches are the active ones; staff homed at a closed branch
+  // still appear above (named) so they can be moved.
+  return NextResponse.json({
+    staff,
+    branches: branches.filter((b) => b.isActive).map((b) => ({ id: b.id, name: b.name })),
+  })
 }
 
 // ── POST — invite a new staff member ───────────────────────────
@@ -82,6 +103,10 @@ interface CreateBody {
   email?: string
   role?: 'pharmacist' | 'pharmacy_admin'
   gphcNumber?: string
+  /** Home branch; must be one the admin manages. Defaults to the admin's current branch. */
+  pharmacyId?: string
+  /** Further branches in the group the person also works at. */
+  alsoWorksAt?: string[]
 }
 
 export async function POST(req: NextRequest) {
@@ -89,11 +114,20 @@ export async function POST(req: NextRequest) {
   if (!session?.user || !canManageStaff(session.user.role)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
-  const pharmacyId = session.user.pharmacyId
-  if (!pharmacyId) return NextResponse.json({ error: 'No pharmacy assigned' }, { status: 400 })
+  const adminPharmacyId = session.user.pharmacyId
+  if (!adminPharmacyId) return NextResponse.json({ error: 'No pharmacy assigned' }, { status: 400 })
 
   const body = (await req.json().catch(() => null)) as CreateBody | null
   if (!body) return NextResponse.json({ error: 'Bad body' }, { status: 400 })
+
+  const managed = await managedBranches(adminPharmacyId)
+  const managedIds = new Set(managed.filter((b) => b.isActive).map((b) => b.id))
+  const pharmacyId = body.pharmacyId && typeof body.pharmacyId === 'string' ? body.pharmacyId : adminPharmacyId
+  if (!managedIds.has(pharmacyId)) return NextResponse.json({ error: 'That branch is not in your group' }, { status: 400 })
+  const alsoWorksAt = Array.isArray(body.alsoWorksAt)
+    ? [...new Set(body.alsoWorksAt.filter((x): x is string => typeof x === 'string' && x !== pharmacyId))]
+    : []
+  if (alsoWorksAt.some((x) => !managedIds.has(x))) return NextResponse.json({ error: 'An extra branch is not in your group' }, { status: 400 })
   const firstName = (body.firstName ?? '').trim()
   const lastName = (body.lastName ?? '').trim()
   const email = (body.email ?? '').trim().toLowerCase()
@@ -139,6 +173,24 @@ export async function POST(req: NextRequest) {
     })
     .returning({ id: users.id, email: users.email, firstName: users.firstName })
 
+  const granted: string[] = []
+  const grantErrors: string[] = []
+  for (const extra of alsoWorksAt) {
+    const r = await grantBranch(created.id, extra, session.user.id)
+    if (r.ok) granted.push(extra)
+    else grantErrors.push(r.error)
+  }
+  if (granted.length > 0 || grantErrors.length > 0) {
+    await audit({
+      action: 'branch_access_changed',
+      userId: session.user.id,
+      userEmail: session.user.email,
+      pharmacyId,
+      request: req,
+      details: { toUser: created.id, home: pharmacyId, granted, failed: grantErrors, via: 'staff_invite' },
+    })
+  }
+
   const appUrl = process.env.APP_URL || 'https://getrealhealthpgd.co.uk'
   const setupUrl = `${appUrl}/set-password?uid=${created.id}&token=${rawToken}`
   let emailed = false
@@ -170,5 +222,8 @@ export async function POST(req: NextRequest) {
     setupUrl,
     emailed,
     emailError,
+    // The account exists even if an extra branch could not be granted;
+    // the UI shows these so the admin can fix the branch list.
+    warnings: grantErrors.length > 0 ? grantErrors : undefined,
   })
 }

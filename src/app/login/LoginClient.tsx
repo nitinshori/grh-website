@@ -65,7 +65,9 @@ function LoginForm({ tenant, launchUrl }: Props) {
   const [loginError, setLoginError] = useState(
     error === 'blocked'
       ? 'Your account has been deactivated. Contact your administrator.'
-      : error
+      : error === 'branch'
+        ? 'The branch you were working at is no longer available to you. Sign in again to continue at your home branch.'
+        : error
         ? 'Invalid email or password.'
         : '',
   )

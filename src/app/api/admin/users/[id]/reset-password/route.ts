@@ -74,12 +74,15 @@ export async function POST(
     const callerPharmacyId = session.user.pharmacyId
 
     // Authorisation: super_admin always allowed; pharmacy_admin only allowed
-    // to reset users in their own pharmacy.
+    // to reset users homed in a branch of their group (the same scope as the
+    // Staff page, migration 073).
     const isSuperAdmin = callerRole === 'super_admin'
-    const isPharmacyAdmin =
-      callerRole === 'pharmacy_admin' &&
-      callerPharmacyId !== null &&
-      callerPharmacyId === targetUser.pharmacyId
+    let isPharmacyAdmin = false
+    if (callerRole === 'pharmacy_admin' && callerPharmacyId && targetUser.pharmacyId) {
+      const { managedBranches } = await import('@/lib/branch-access')
+      const managed = await managedBranches(callerPharmacyId)
+      isPharmacyAdmin = managed.some((m) => m.id === targetUser.pharmacyId)
+    }
 
     if (!isSuperAdmin && !isPharmacyAdmin) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })

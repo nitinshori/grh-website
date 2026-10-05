@@ -137,6 +137,40 @@ async function isUserActive(userId: string): Promise<boolean> {
   }
 }
 
+// ── Is a session still allowed at the branch it is working at? ─────
+// Only consulted when the token's pharmacyId differs from home (a switched
+// session, migration 073). Cached 60s like is_active, so a revoked grant or
+// deactivated branch is locked out within a minute. Fails open like the
+// is_active check.
+const branchCache = new Map<string, { ok: boolean; expiresAt: number }>()
+
+async function mayStillWorkAt(userId: string, pharmacyId: string): Promise<boolean> {
+  const key = `${userId}:${pharmacyId}`
+  const cached = branchCache.get(key)
+  if (cached && cached.expiresAt > Date.now()) return cached.ok
+  try {
+    const rows = (await sql`
+      SELECT 1 AS ok
+      FROM user_pharmacy_access a
+      JOIN pharmacies p ON p.id = a.pharmacy_id
+      JOIN users u ON u.id = a.user_id
+      JOIN pharmacies h ON h.id = u.pharmacy_id
+      WHERE a.user_id = ${userId}
+        AND a.pharmacy_id = ${pharmacyId}
+        AND p.is_active = true
+        AND h.group_slug IS NOT NULL
+        AND p.group_slug = h.group_slug
+      LIMIT 1
+    `) as Array<{ ok: number }>
+    const ok = rows.length > 0
+    branchCache.set(key, { ok, expiresAt: Date.now() + ACTIVE_CACHE_TTL_MS })
+    return ok
+  } catch (err) {
+    console.error('Middleware branch check failed (failing open):', err)
+    return true
+  }
+}
+
 // ── Per-PGD authorisation for ePGD tools ────────────────────────────
 // Until 26 Aug 2026 this did not exist. Only 7 of the 95 tool routes wrapped
 // themselves in PgdGate; the other 88 checked nothing, and the middleware
@@ -274,9 +308,9 @@ function requestOrigin(req: NextRequest): string {
   return `${proto}://${host}`
 }
 
-function buildBlockedResponse(origin: string): NextResponse {
+function buildBlockedResponse(origin: string, error: 'blocked' | 'branch' = 'blocked'): NextResponse {
   const loginUrl = new URL('/login', origin)
-  loginUrl.searchParams.set('error', 'blocked')
+  loginUrl.searchParams.set('error', error)
   const res = NextResponse.redirect(loginUrl)
   // Clear every plausible session-cookie name across NextAuth v4/v5 + dev/prod
   for (const name of [
@@ -345,6 +379,13 @@ export default auth(async (req: NextRequest & { auth: { user: { id?: string; rol
     const active = await isUserActive(session.user.id)
     if (!active) {
       return buildBlockedResponse(origin)
+    }
+    const su = session.user as { pharmacyId?: string | null; homePharmacyId?: string | null }
+    if (su.pharmacyId && su.homePharmacyId && su.pharmacyId !== su.homePharmacyId) {
+      const ok = await mayStillWorkAt(session.user.id, su.pharmacyId)
+      // Sign them out rather than guess a branch: the login page explains,
+      // and signing back in lands them on home.
+      if (!ok) return buildBlockedResponse(origin, 'branch')
     }
   }
 

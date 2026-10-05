@@ -8,6 +8,8 @@ import { SignOutButton } from '@/app/admin/SignOutButton'
 import { getTenant } from '@/lib/tenant-context'
 import { isAppointmentsOnlyGroup, getGroupBranding } from '@/lib/access-pharmacies'
 import AppBridge from '@/components/AppBridge'
+import BranchSwitcher from '@/components/BranchSwitcher'
+import { workablePharmacies } from '@/lib/branch-access'
 
 // Metadata is set dynamically from the tenant in generateMetadata below.
 export async function generateMetadata() {
@@ -66,6 +68,12 @@ export default async function PharmacyDashboardLayout({
 
   // Appointments-only groups (e.g. Pritchards) shouldn't see PGD nav items.
   const hidePgds = isAppointmentsOnlyGroup(pharmacyGroupSlug)
+
+  // Branches this login may work at (home plus any granted). The switcher
+  // only appears when there is more than one.
+  const branches = session.user.id && session.user.role !== 'super_admin'
+    ? await workablePharmacies(session.user.id).catch(() => [])
+    : []
   // Partner branding (e.g. Pritchards Pharmacy logo). Shown as a strip
   // at the top of the sidebar under the tenant BrandMark.
   const groupBranding = getGroupBranding(pharmacyGroupSlug)
@@ -115,6 +123,7 @@ export default async function PharmacyDashboardLayout({
                   />
                 </div>
               )}
+              <BranchSwitcher options={branches} currentId={session.user.pharmacyId} />
               <div className="w-full">
                 <p className="text-sm font-medium text-gray-900 truncate">
                   {userName}
@@ -238,7 +247,15 @@ export default async function PharmacyDashboardLayout({
 
           {/* Main Content */}
           <main className="flex-1 overflow-auto">
-            <div className="h-full">{children}</div>
+            {(branches.length > 1 || (branches.length === 1 && branches[0].id !== session.user.pharmacyId)) && (
+              <div className="md:hidden px-4 pt-3">
+                <BranchSwitcher options={branches} currentId={session.user.pharmacyId} />
+              </div>
+            )}
+            {/* Keyed on the active branch so client-fetched pages (records,
+                staff) remount and refetch after a switch rather than
+                keeping the previous branch's data on screen. */}
+            <div key={session.user.pharmacyId ?? 'none'} className="h-full">{children}</div>
           </main>
         </div>
       </body>

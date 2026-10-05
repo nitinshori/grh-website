@@ -447,6 +447,11 @@ export const auditActionEnum = pgEnum('audit_action', [
   'billing_fee_change_applied',
   'billing_subscription_retried',
   'billing_cancelled',
+  'branch_access_changed',
+  // migration 072
+  'training_declared',
+  'training_declaration_revoked',
+  'training_records_export',
 ])
 
 export const auditLogs = pgTable('audit_logs', {
@@ -627,6 +632,21 @@ export const pharmacySubscriptions = pgTable('pharmacy_subscriptions', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [uniqueIndex('pharmacy_subscriptions_pharmacy_idx').on(t.pharmacyId)])
 
+// ── Additional branches a user may work at (migration 073) ─────
+// users.pharmacy_id is the home branch; these rows add others in the
+// same group. The session's pharmacyId is whichever of them the user has
+// chosen to work at (see src/lib/branch-access.ts).
+export const userPharmacyAccess = pgTable('user_pharmacy_access', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  pharmacyId: uuid('pharmacy_id').notNull().references(() => pharmacies.id, { onDelete: 'cascade' }),
+  grantedBy: uuid('granted_by').references(() => users.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('user_pharmacy_access_unique').on(t.userId, t.pharmacyId),
+  index('user_pharmacy_access_pharmacy_idx').on(t.pharmacyId),
+])
+
 // ── Training attempts ───────────────────────────────────────────
 // One row per quiz attempt at a training module. Used both for the live
 // "is this pharmacist currently certified to deliver PGD X?" lookup and
@@ -672,6 +692,39 @@ export const trainingAttempts = pgTable(
     ),
   }),
 )
+
+// ── Training declarations (migration 072) ───────────────────────
+// Equivalent training or experience a practitioner brings from elsewhere,
+// recorded with the date it was completed. Together with passed
+// training_attempts this is the dated training record for every
+// practitioner and PGD (see src/lib/training-records.ts). Never deleted;
+// revoked with a reason instead. Training is recorded, never a gate.
+
+export const trainingDeclarations = pgTable(
+  'training_declarations',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    pharmacyId: uuid('pharmacy_id').references(() => pharmacies.id, { onDelete: 'set null' }),
+    pgdSlug: varchar('pgd_slug', { length: 100 }).notNull(),
+    /** The date the equivalent training was completed (not the date recorded). */
+    completedOn: date('completed_on').notNull(),
+    trainingDescription: text('training_description').notNull(),
+    provider: varchar('provider', { length: 200 }),
+    evidenceNote: text('evidence_note'),
+    recordedByUserId: uuid('recorded_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+    recordedAt: timestamp('recorded_at', { withTimezone: true }).defaultNow().notNull(),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    revokedByUserId: uuid('revoked_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+    revokeReason: text('revoke_reason'),
+  },
+  (t) => ({
+    userPgdIdx: index('idx_training_declarations_user_pgd').on(t.userId, t.pgdSlug),
+    pharmacyIdx: index('idx_training_declarations_pharmacy').on(t.pharmacyId),
+  }),
+)
+
+export type TrainingDeclaration = typeof trainingDeclarations.$inferSelect
 
 // ── Custom PGDs (admin PGD Builder) ─────────────────────────────
 // Self-serve PGDs authored in /admin/pgd-builder. Each row holds the

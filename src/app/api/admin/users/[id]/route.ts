@@ -183,6 +183,13 @@ export async function PUT(
       .where(eq(users.id, id))
       .returning()
 
+    // A home-branch move prunes "also works at" grants outside the new
+    // group (migration 073), so a stale grant can never be switched into.
+    if (pharmacyId !== undefined && pharmacyId && updatedUser[0] && existingUser[0].pharmacyId !== pharmacyId) {
+      const { rehomeUser } = await import('@/lib/branch-access')
+      await rehomeUser(id, pharmacyId)
+    }
+
     if (!updatedUser[0]) {
       return NextResponse.json(
         { error: 'Failed to update user' },
