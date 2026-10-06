@@ -7,8 +7,12 @@ import { getSubscription, listPayments, type GoCardlessPayment } from '@/lib/goc
 import { gbp, longDate, renderInvoicePdf, type InvoicePdfInput } from '@/lib/invoice-pdf'
 import { todayLondon } from '@/lib/billing'
 
-/** Nothing before this month is ever invoiced: GoCardless had already collected it. */
-export const FIRST_INVOICE_MONTH = '2026-10-01'
+/**
+ * Nothing before this month is ever invoiced. Nitin chose a November 2026
+ * start (6 Oct 2026): October was already collected by GoCardless before
+ * invoicing existed, and the first automatic run is 1 November.
+ */
+export const FIRST_INVOICE_MONTH = '2026-11-01'
 
 function londonDate(d: Date): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d)
