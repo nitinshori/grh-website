@@ -159,6 +159,9 @@ export default async function PharmacyDashboardLayout({
               {(session.user.role === 'pharmacy_admin' || session.user.role === 'super_admin') && (
                 <NavItem href="/for-pharmacies/dashboard/group" label="Group Overview" iconPath="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
               )}
+              {session.user.role === 'pharmacy_admin' && (
+                <NavItem href="/for-pharmacies/dashboard/billing" label="Billing & invoices" iconPath="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
+              )}
             </nav>
 
             {/* Bottom Navigation */}

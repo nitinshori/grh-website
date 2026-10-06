@@ -1,6 +1,9 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { listBilling, monthlyRecurringPence, pounds, todayLondon } from '@/lib/billing'
+import { db } from '@/lib/db'
+import { pharmacies, pharmacySubscriptions } from '@/lib/db/schema'
+import { and, eq, isNull, notInArray } from 'drizzle-orm'
 import BillingClient from './BillingClient'
 
 export const metadata = { title: 'Billing — Admin' }
@@ -20,6 +23,14 @@ export default async function BillingPage() {
 
   const rows = await listBilling()
   const mrr = await monthlyRecurringPence()
+  // Active, non-partner pharmacies with no billing row: candidates for
+  // invoiced (bank transfer) billing.
+  const billedIds = (await db.select({ id: pharmacySubscriptions.pharmacyId }).from(pharmacySubscriptions)).map((r) => r.id)
+  const unbilled = await db
+    .select({ id: pharmacies.id, name: pharmacies.name, email: pharmacies.email, address: pharmacies.address })
+    .from(pharmacies)
+    .where(and(eq(pharmacies.isActive, true), isNull(pharmacies.externalId), billedIds.length ? notInArray(pharmacies.id, billedIds) : undefined))
+    .orderBy(pharmacies.name)
   const today = todayLondon()
   const live = rows.filter((r) => !r.cancelledAt)
   const failed = live.filter((r) => !r.subscriptionId).length
@@ -39,7 +50,7 @@ export default async function BillingPage() {
           <Tile label="Scheduled changes" value={String(scheduled)} sub="Not yet due" cls="text-indigo-700" />
           <Tile label="Needs attention" value={String(failed + due)} sub={`${failed} no subscription, ${due} change overdue`} cls={failed + due ? 'text-red-700' : 'text-gray-900'} ring={failed + due > 0} />
         </div>
-        <BillingClient rows={rows} today={today} />
+        <BillingClient rows={rows} today={today} unbilled={unbilled} />
       </div>
     </div>
   )

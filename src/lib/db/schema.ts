@@ -452,6 +452,9 @@ export const auditActionEnum = pgEnum('audit_action', [
   'training_declared',
   'training_declaration_revoked',
   'training_records_export',
+  // migration 074
+  'invoice_issued',
+  'invoice_updated',
 ])
 
 export const auditLogs = pgTable('audit_logs', {
@@ -628,9 +631,49 @@ export const pharmacySubscriptions = pgTable('pharmacy_subscriptions', {
   feeChangeAppliedAt: timestamp('fee_change_applied_at', { withTimezone: true }),
   cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
   notes: text('notes'),
+  // migration 074: how this branch pays and who the invoice is addressed to
+  billingMethod: varchar('billing_method', { length: 20 }).default('direct_debit').notNull(), // direct_debit | bank_transfer
+  billingName: varchar('billing_name', { length: 255 }),
+  billingAddress: text('billing_address'),
+  billingEmail: varchar('billing_email', { length: 255 }),
+  invoiceFrom: date('invoice_from'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [uniqueIndex('pharmacy_subscriptions_pharmacy_idx').on(t.pharmacyId)])
+
+// ── Invoices (migration 074) ────────────────────────────────────
+// One per branch per month. Numbered from invoice_number_seq. Never
+// deleted: void and re-issue. No VAT (Get Real Health Limited is not VAT
+// registered).
+export const invoices = pgTable('invoices', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  invoiceNumber: varchar('invoice_number', { length: 20 }).notNull().unique(),
+  pharmacyId: uuid('pharmacy_id').notNull().references(() => pharmacies.id, { onDelete: 'restrict' }),
+  subscriptionRowId: uuid('subscription_row_id').references(() => pharmacySubscriptions.id, { onDelete: 'set null' }),
+  billToName: varchar('bill_to_name', { length: 255 }).notNull(),
+  billToAddress: text('bill_to_address'),
+  billToEmail: varchar('bill_to_email', { length: 255 }),
+  periodStart: date('period_start').notNull(),
+  periodEnd: date('period_end').notNull(),
+  issuedOn: date('issued_on').notNull(),
+  dueOn: date('due_on').notNull(),
+  description: text('description').notNull(),
+  amountPence: integer('amount_pence').notNull(),
+  paymentMethod: varchar('payment_method', { length: 20 }).notNull(), // direct_debit | bank_transfer
+  status: varchar('status', { length: 20 }).default('issued').notNull(), // issued | paid | void
+  paidAt: timestamp('paid_at', { withTimezone: true }),
+  paidNote: text('paid_note'),
+  gocardlessPaymentId: varchar('gocardless_payment_id', { length: 100 }),
+  emailedAt: timestamp('emailed_at', { withTimezone: true }),
+  emailedTo: varchar('emailed_to', { length: 255 }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [
+  index('invoices_pharmacy_idx').on(t.pharmacyId, t.periodStart),
+  index('invoices_status_idx').on(t.status, t.dueOn),
+])
+
+export type Invoice = typeof invoices.$inferSelect
 
 // ── Additional branches a user may work at (migration 073) ─────
 // users.pharmacy_id is the home branch; these rows add others in the

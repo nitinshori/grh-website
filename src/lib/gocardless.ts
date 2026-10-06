@@ -168,8 +168,18 @@ export async function createSubscription(opts: CreateSubscriptionOptions) {
   }
 }
 
-export async function getSubscription(subscriptionId: string) {
-  const out = await gcFetch<{ subscriptions: { id: string; status: string; amount: number } }>(
+export interface GoCardlessSubscription {
+  id: string
+  /** pending_customer_approval | customer_approval_denied | active | finished | cancelled | paused */
+  status: string
+  amount: number
+  start_date?: string | null
+  /** Next charge dates GoCardless has scheduled (up to 10). */
+  upcoming_payments?: Array<{ charge_date: string; amount: number }>
+}
+
+export async function getSubscription(subscriptionId: string): Promise<GoCardlessSubscription> {
+  const out = await gcFetch<{ subscriptions: GoCardlessSubscription }>(
     `/subscriptions/${subscriptionId}`,
   )
   return out.subscriptions

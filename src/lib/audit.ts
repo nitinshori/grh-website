@@ -21,6 +21,8 @@ export type AuditAction =
   | 'training_declared'
   | 'training_declaration_revoked'
   | 'training_records_export'
+  | 'invoice_issued'
+  | 'invoice_updated'
 
 export interface AuditEntry {
   pharmacyId?: string | null

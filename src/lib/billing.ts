@@ -148,6 +148,12 @@ export interface FeeEdit {
   feeChangePence?: number | null
   feeChangeOn?: string | null
   notes?: string | null
+  /** Invoice fields (migration 074). */
+  billingMethod?: 'direct_debit' | 'bank_transfer'
+  billingName?: string | null
+  billingAddress?: string | null
+  billingEmail?: string | null
+  invoiceFrom?: string | null
 }
 
 /**
@@ -182,6 +188,25 @@ export async function editBranchBilling(rowId: string, edit: FeeEdit): Promise<{
     set.feeChangeAppliedAt = null
   }
   if (edit.notes !== undefined) set.notes = edit.notes
+  if (edit.billingMethod !== undefined && edit.billingMethod !== row.billingMethod) {
+    // bank_transfer -> direct_debit needs a mandate (and then Retry creates
+    // the subscription); direct_debit -> bank_transfer needs the GoCardless
+    // subscription gone first, so nothing is collected twice.
+    if (edit.billingMethod === 'direct_debit' && !row.gocardlessMandateId) return { ok: false, error: 'No mandate on record: add the pharmacy to a Direct Debit first' }
+    if (edit.billingMethod === 'bank_transfer' && row.gocardlessSubscriptionId && !row.cancelledAt) return { ok: false, error: 'Cancel the GoCardless subscription first, then switch to invoices' }
+    set.billingMethod = edit.billingMethod
+    if (edit.billingMethod === 'bank_transfer' && row.cancelledAt) set.cancelledAt = null
+  }
+  if (edit.billingName !== undefined) set.billingName = edit.billingName
+  if (edit.billingAddress !== undefined) set.billingAddress = edit.billingAddress
+  if (edit.billingEmail !== undefined) {
+    if (edit.billingEmail && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(edit.billingEmail)) return { ok: false, error: 'Billing email is not a valid address' }
+    set.billingEmail = edit.billingEmail ? edit.billingEmail.toLowerCase() : null
+  }
+  if (edit.invoiceFrom !== undefined) {
+    if (edit.invoiceFrom !== null && !isValidIsoDate(edit.invoiceFrom)) return { ok: false, error: 'Invoice-from must be a real date (YYYY-MM-DD)' }
+    set.invoiceFrom = edit.invoiceFrom
+  }
 
   if (edit.monthlyFeePence !== undefined && edit.monthlyFeePence !== row.monthlyFeePence) {
     if (!isValidFeePence(edit.monthlyFeePence)) return { ok: false, error: `Monthly fee must be between ${pounds(MIN_FEE_PENCE)} and ${pounds(MAX_FEE_PENCE)}` }
@@ -253,6 +278,15 @@ export async function cancelBranchBilling(rowId: string): Promise<{ ok: true } |
   return { ok: true }
 }
 
+/** Clear a cancellation so billing can be restarted (Retry for direct debit, or invoices resume). */
+export async function uncancelBranchBilling(rowId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const [row] = await db.select().from(pharmacySubscriptions).where(eq(pharmacySubscriptions.id, rowId)).limit(1)
+  if (!row) return { ok: false, error: 'Not found' }
+  if (!row.cancelledAt) return { ok: false, error: 'Not cancelled' }
+  await db.update(pharmacySubscriptions).set({ cancelledAt: null, gocardlessSubscriptionId: null, subscriptionError: null, updatedAt: new Date() }).where(eq(pharmacySubscriptions.id, rowId))
+  return { ok: true }
+}
+
 /** Rows whose scheduled change is due today or earlier and not yet applied. */
 export async function dueFeeChanges() {
   return db
@@ -285,6 +319,51 @@ export interface BillingRow {
   cancelledAt: string | null
   notes: string | null
   onboardingId: string | null
+  billingMethod: 'direct_debit' | 'bank_transfer'
+  billingName: string | null
+  billingAddress: string | null
+  billingEmail: string | null
+  invoiceFrom: string | null
+}
+
+export interface StartInvoicedBillingInput {
+  pharmacyId: string
+  monthlyFeePence: number
+  billingName?: string | null
+  billingAddress?: string | null
+  billingEmail?: string | null
+  /** First month to invoice; defaults to this month. */
+  invoiceFrom?: string | null
+  notes?: string | null
+}
+
+/**
+ * Put a pharmacy with no Direct Debit on invoiced billing (bank transfer,
+ * 14 days). One row per pharmacy as for direct debit; refuses a pharmacy
+ * that already has a billing row.
+ */
+export async function startInvoicedBilling(input: StartInvoicedBillingInput): Promise<{ ok: true; rowId: string } | { ok: false; error: string }> {
+  if (!isValidFeePence(input.monthlyFeePence)) return { ok: false, error: `Monthly fee must be between ${pounds(MIN_FEE_PENCE)} and ${pounds(MAX_FEE_PENCE)}` }
+  if (input.invoiceFrom && !isValidIsoDate(input.invoiceFrom)) return { ok: false, error: 'Invoice-from must be a real date (YYYY-MM-DD)' }
+  if (input.billingEmail && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(input.billingEmail)) return { ok: false, error: 'Billing email is not a valid address' }
+  const [p] = await db.select({ id: pharmacies.id }).from(pharmacies).where(eq(pharmacies.id, input.pharmacyId)).limit(1)
+  if (!p) return { ok: false, error: 'Pharmacy not found' }
+  const [row] = await db
+    .insert(pharmacySubscriptions)
+    .values({
+      pharmacyId: input.pharmacyId,
+      monthlyFeePence: input.monthlyFeePence,
+      billingMethod: 'bank_transfer',
+      billingName: input.billingName ?? null,
+      billingAddress: input.billingAddress ?? null,
+      billingEmail: input.billingEmail ? input.billingEmail.toLowerCase() : null,
+      invoiceFrom: input.invoiceFrom ?? todayLondon().slice(0, 8) + '01',
+      notes: input.notes ?? null,
+    })
+    .onConflictDoNothing({ target: pharmacySubscriptions.pharmacyId })
+    .returning({ id: pharmacySubscriptions.id })
+  if (!row) return { ok: false, error: 'This pharmacy already has a billing row; edit it instead' }
+  return { ok: true, rowId: row.id }
 }
 
 export async function listBilling(): Promise<BillingRow[]> {
@@ -306,6 +385,11 @@ export async function listBilling(): Promise<BillingRow[]> {
       cancelledAt: pharmacySubscriptions.cancelledAt,
       notes: pharmacySubscriptions.notes,
       onboardingId: pharmacySubscriptions.onboardingId,
+      billingMethod: pharmacySubscriptions.billingMethod,
+      billingName: pharmacySubscriptions.billingName,
+      billingAddress: pharmacySubscriptions.billingAddress,
+      billingEmail: pharmacySubscriptions.billingEmail,
+      invoiceFrom: pharmacySubscriptions.invoiceFrom,
     })
     .from(pharmacySubscriptions)
     .innerJoin(pharmacies, eq(pharmacies.id, pharmacySubscriptions.pharmacyId))
@@ -313,6 +397,7 @@ export async function listBilling(): Promise<BillingRow[]> {
     .orderBy(asc(pharmacies.groupSlug), asc(pharmacies.name))
   return rows.map((r) => ({
     ...r,
+    billingMethod: r.billingMethod === 'bank_transfer' ? 'bank_transfer' as const : 'direct_debit' as const,
     feeChangeAppliedAt: r.feeChangeAppliedAt ? r.feeChangeAppliedAt.toISOString() : null,
     cancelledAt: r.cancelledAt ? r.cancelledAt.toISOString() : null,
   }))
@@ -331,7 +416,7 @@ export async function monthlyRecurringPence(): Promise<number> {
     .where(and(
       eq(pharmacies.isActive, true),
       isNull(pharmacySubscriptions.cancelledAt),
-      sql`${pharmacySubscriptions.gocardlessSubscriptionId} IS NOT NULL`,
+      sql`(${pharmacySubscriptions.gocardlessSubscriptionId} IS NOT NULL OR ${pharmacySubscriptions.billingMethod} = 'bank_transfer')`,
     ))
   return row?.n ?? 0
 }
