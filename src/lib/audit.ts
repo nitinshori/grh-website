@@ -23,6 +23,10 @@ export type AuditAction =
   | 'training_records_export'
   | 'invoice_issued'
   | 'invoice_updated'
+  | 'practitioner_signed'
+  | 'practitioner_countersigned'
+  | 'practitioner_authorisation_revoked'
+  | 'authorisation_register_export'
 
 export interface AuditEntry {
   pharmacyId?: string | null

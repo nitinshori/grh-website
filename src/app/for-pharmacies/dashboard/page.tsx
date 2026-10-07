@@ -10,6 +10,7 @@ import { pgds as PGD_CATALOGUE, isPgdAccessibleByEmail } from '@/data/pgds'
 import { getPharmacyStats } from '@/lib/analytics'
 import { hasPgdDocument } from '@/lib/pgd-documents'
 import { isAppointmentsOnlyGroup } from '@/lib/access-pharmacies'
+import { myAuthorisations } from '@/lib/authorisations'
 
 // Map slug → friendly title
 const pgdTitleMap = new Map(ALL_PGDS.map((p) => [p.slug, p.title]))
@@ -76,6 +77,18 @@ export default async function PharmacyDashboard() {
     ? await getPharmacyPgdSlugs(session.user.pharmacyId)
     : []
   const slugSet = new Set(assignedSlugs)
+
+  // Practitioner sign-off: how many PGDs this person still has to sign (or
+  // re-sign after a reissue). Informational only; nothing is gated on it.
+  let signOffTodo = 0
+  if (session.user.pharmacyId && (session.user.role === 'pharmacist' || session.user.role === 'pharmacy_admin')) {
+    try {
+      const rows = await myAuthorisations(session.user.id, session.user.pharmacyId)
+      signOffTodo = rows.filter((r) => r.state !== 'signed').length
+    } catch (e) {
+      console.error('[dashboard] sign-off count failed:', e)
+    }
+  }
 
   // Build a lookup of restrictedToEmails by slug from the catalogue
   const restrictedSlugs = new Map<string, string[]>()
@@ -661,6 +674,15 @@ export default async function PharmacyDashboard() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {signOffTodo > 0 && (
+        <div className="mt-8 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
+          <p className="text-sm text-amber-900">
+            <strong>{signOffTodo}</strong> PGD{signOffTodo === 1 ? '' : 's'} to sign: your signed authorisation for each PGD goes on your pharmacy&apos;s register.
+          </p>
+          <Link href="/for-pharmacies/dashboard/authorisations" className="px-3 py-1.5 text-xs font-semibold rounded-md bg-amber-600 text-white hover:bg-amber-700">Go to PGD sign-off</Link>
         </div>
       )}
 

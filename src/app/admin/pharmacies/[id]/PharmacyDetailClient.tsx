@@ -761,6 +761,12 @@ export function PharmacyDetailClient({ pharmacy: initialPharmacy }: PharmacyDeta
                     Pharmacy Staff
                   </h3>
                   <a
+                    href={`/for-pharmacies/dashboard/authorisations/team?pharmacyId=${pharmacy.id}`}
+                    className="inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 mr-2"
+                  >
+                    PGD sign-off register
+                  </a>
+                  <a
                     href={`/admin/users/new?pharmacy=${pharmacy.id}`}
                     className="inline-flex items-center px-4 py-2 rounded-lg font-medium transition-colors text-white"
                     style={{ backgroundColor: '#25b4b4' }}

@@ -13,6 +13,7 @@ import {
   jsonb,
   date,
 } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
 
 // ── Enums ───────────────────────────────────────────────────────
 
@@ -74,6 +75,8 @@ export const users = pgTable('users', {
   // enforced per tool by PgdGate, and note that /pgd-documents is
   // currently served without authentication at all.
   viewOnly: boolean('view_only').default(false).notNull(),
+  // migration 075: GPhC registration number, captured at first PGD sign-off
+  gphcNumber: varchar('gphc_number', { length: 20 }),
   // Two-factor auth (TOTP / authenticator app). When totpEnabled is true the
   // login flow requires a 6-digit code in addition to email + password.
   totpSecret: varchar('totp_secret', { length: 64 }),
@@ -455,6 +458,11 @@ export const auditActionEnum = pgEnum('audit_action', [
   // migration 074
   'invoice_issued',
   'invoice_updated',
+  // migration 075
+  'practitioner_signed',
+  'practitioner_countersigned',
+  'practitioner_authorisation_revoked',
+  'authorisation_register_export',
 ])
 
 export const auditLogs = pgTable('audit_logs', {
@@ -896,3 +904,38 @@ export const gpPracticeContacts = pgTable('gp_practice_contacts', {
 })
 export type GpPracticeContact = typeof gpPracticeContacts.$inferSelect
 export type NewGpPracticeContact = typeof gpPracticeContacts.$inferInsert
+
+// ── Practitioner authorisations (migration 075) ─────────────────
+// One row per pharmacist signature per PGD version: "I have read this
+// PGD and agree to work under it", countersigned by the pharmacy's
+// authorising manager. Never deleted; revoked_at withdraws. See
+// src/lib/authorisations.ts.
+export const practitionerAuthorisations = pgTable('practitioner_authorisations', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  pharmacyId: uuid('pharmacy_id').notNull().references(() => pharmacies.id, { onDelete: 'cascade' }),
+  pgdSlug: varchar('pgd_slug', { length: 255 }).notNull(),
+  pgdTitle: varchar('pgd_title', { length: 255 }).notNull(),
+  pgdVersion: varchar('pgd_version', { length: 50 }).notNull(),
+  documentSource: varchar('document_source', { length: 20 }).notNull(), // master | override
+  documentRef: text('document_ref').notNull(),
+  declaration: text('declaration').notNull(),
+  signedName: varchar('signed_name', { length: 255 }).notNull(),
+  gphcNumber: varchar('gphc_number', { length: 20 }),
+  signedAt: timestamp('signed_at', { withTimezone: true }).defaultNow().notNull(),
+  ipAddress: varchar('ip_address', { length: 64 }),
+  userAgent: text('user_agent'),
+  countersignedByUserId: uuid('countersigned_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+  countersignedName: varchar('countersigned_name', { length: 255 }),
+  countersignedAt: timestamp('countersigned_at', { withTimezone: true }),
+  revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  revokedByUserId: uuid('revoked_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+  revokeReason: text('revoke_reason'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('practitioner_authorisations_live').on(t.userId, t.pgdSlug, t.documentRef).where(sql`revoked_at IS NULL`),
+  index('practitioner_authorisations_pharmacy_idx').on(t.pharmacyId, t.signedAt.desc()),
+  index('practitioner_authorisations_user_idx').on(t.userId, t.pgdSlug, t.signedAt.desc()),
+])
+
+export type PractitionerAuthorisation = typeof practitionerAuthorisations.$inferSelect
