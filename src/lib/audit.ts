@@ -27,6 +27,7 @@ export type AuditAction =
   | 'practitioner_countersigned'
   | 'practitioner_authorisation_revoked'
   | 'authorisation_register_export'
+  | 'patient_invite_sent'
 
 export interface AuditEntry {
   pharmacyId?: string | null

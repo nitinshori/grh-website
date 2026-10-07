@@ -129,7 +129,7 @@ export default function BookingWidget({
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [serviceDetails, setServiceDetails] = useState('')
-  const [emailConfirmation, setEmailConfirmation] = useState(false)
+  const [emailConfirmation, setEmailConfirmation] = useState(true)
   const [consentGiven, setConsentGiven] = useState(false)
 
   // Confirmation
@@ -694,8 +694,8 @@ export default function BookingWidget({
                   className="mt-0.5 w-4 h-4 rounded border-gray-300"
                 />
                 <label htmlFor="emailConfirm" className="text-sm text-gray-600">
-                  Tick the box if you would like to receive an e-mail confirming the
-                  form has been received by {config.brandName}.
+                  Email me a confirmation of this appointment and a reminder the day before (needs an email address above).
+                  The pharmacy keeps your details under its privacy notice; nothing is shared with anyone else.
                 </label>
               </div>
 

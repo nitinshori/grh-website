@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { pharmacies, appointments, appointmentTypes, clinicians } from '@/lib/db/schema'
 import { eq, and, gt, lt, inArray } from 'drizzle-orm'
+import { sendBookingConfirmation } from '@/lib/appointment-emails'
 
 // ── POST /api/booking/[slug]/confirm ────────────────────────────
 // Public: book an appointment
@@ -141,6 +142,15 @@ export async function POST(
     })
     .returning()
 
+  // Confirmation email when the patient gave an address. Best effort:
+  // the booking stands whether or not the email goes.
+  let emailSent = false
+  if (created.patientEmail && created.emailConfirmation) {
+    const r = await sendBookingConfirmation(created.id)
+    emailSent = r.ok
+    if (!r.ok && r.reason !== 'no patient email') console.error(`[booking] confirmation for ${created.id} failed: ${r.reason}`)
+  }
+
   // Format confirmation details
   const formattedTime = new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Europe/London',
@@ -163,6 +173,7 @@ export async function POST(
       appointmentType: apptType.name,
       formattedTime,
       durationMinutes: apptType.durationMinutes,
+      emailSent,
     },
   })
 }

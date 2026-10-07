@@ -358,6 +358,9 @@ export const appointments = pgTable('appointments', {
   bookedOnline: boolean('booked_online').default(false).notNull(),
   consentGiven: boolean('consent_given').default(false).notNull(),
   emailConfirmation: boolean('email_confirmation').default(false).notNull(),
+  // migration 076: set once the patient email has gone, so it never repeats
+  confirmationSentAt: timestamp('confirmation_sent_at', { withTimezone: true }),
+  reminderSentAt: timestamp('reminder_sent_at', { withTimezone: true }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
@@ -463,6 +466,8 @@ export const auditActionEnum = pgEnum('audit_action', [
   'practitioner_countersigned',
   'practitioner_authorisation_revoked',
   'authorisation_register_export',
+  // migration 076
+  'patient_invite_sent',
 ])
 
 export const auditLogs = pgTable('audit_logs', {
@@ -939,3 +944,17 @@ export const practitionerAuthorisations = pgTable('practitioner_authorisations',
 ])
 
 export type PractitionerAuthorisation = typeof practitionerAuthorisations.$inferSelect
+
+// ── Patient invites (migration 076) ──────────────────────────────
+// An email a pharmacy sends a patient with its booking link.
+export const patientInvites = pgTable('patient_invites', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  pharmacyId: uuid('pharmacy_id').notNull().references(() => pharmacies.id, { onDelete: 'cascade' }),
+  sentByUserId: uuid('sent_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+  toEmail: varchar('to_email', { length: 255 }).notNull(),
+  patientName: varchar('patient_name', { length: 255 }),
+  serviceName: varchar('service_name', { length: 255 }),
+  message: text('message'),
+  sentAt: timestamp('sent_at', { withTimezone: true }).defaultNow().notNull(),
+  error: text('error'),
+}, (t) => [index('patient_invites_pharmacy_idx').on(t.pharmacyId, t.sentAt.desc())])

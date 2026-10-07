@@ -127,5 +127,13 @@ export async function POST(req: NextRequest) {
     })
     .returning()
 
+  // A staff booking with an email address gets the same confirmation as
+  // an online one. Best effort; the booking stands regardless.
+  if (created.status === 'booked' && created.patientEmail) {
+    const { sendBookingConfirmation } = await import('@/lib/appointment-emails')
+    const r = await sendBookingConfirmation(created.id)
+    if (!r.ok && r.reason !== 'no patient email') console.error(`[appointments] confirmation for ${created.id} failed: ${r.reason}`)
+  }
+
   return NextResponse.json({ appointment: created }, { status: 201 })
 }
