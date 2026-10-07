@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { resolvePgdDocumentUrl } from '@/lib/pgd-document-overrides'
 import { WITHDRAWN_SLUGS } from '@/lib/pgd-access'
+import { streamPrivateBlob } from '@/lib/blob-stream'
 
 export const dynamic = 'force-dynamic'
 
@@ -58,11 +59,16 @@ export async function GET(
     return NextResponse.json({ error: 'No PGD document available' }, { status: 404 })
   }
 
-  // Absolute URLs (Vercel Blob overrides) — 302 to them
-  // Relative URLs (master /pgd-documents/<slug>.pdf) — resolve against host
-  const target = resolved.url.startsWith('http')
-    ? resolved.url
-    : new URL(resolved.url, req.nextUrl.origin).toString()
-
-  return NextResponse.redirect(target, 302)
+  // A pharmacy's own upload lives in the private Blob store, so it is
+  // streamed here rather than linked. The GRH master is a public file
+  // under /pgd-documents/<slug>.pdf and is redirected to.
+  if (resolved.source === 'override') {
+    try {
+      return await streamPrivateBlob(resolved.url, resolved.filename || `${slug}.pdf`)
+    } catch (e) {
+      console.error(`[pgd-document] stream failed for ${slug}:`, e)
+      return NextResponse.json({ error: 'Could not read the document from storage' }, { status: 502 })
+    }
+  }
+  return NextResponse.redirect(new URL(resolved.url, req.nextUrl.origin).toString(), 302)
 }

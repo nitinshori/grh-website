@@ -114,7 +114,7 @@ export default async function AdminPgdDocumentsPage() {
                     {ovs.map((o) => (
                       <a
                         key={o.id}
-                        href={o.documentUrl}
+                        href={`/api/pgd-documents/${o.id}/file`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-violet-50 text-violet-700 hover:bg-violet-100"

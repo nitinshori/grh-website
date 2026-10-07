@@ -83,7 +83,7 @@ async function getPharmacyData(id: string) {
   for (const [slug, o] of overridesMap.entries()) {
     pgdOverrides[slug] = {
       id: o.id,
-      url: o.url,
+      url: `/api/pgd-documents/${o.id}/file`,
       filename: o.filename,
       fileSizeBytes: o.fileSizeBytes,
       version: o.version,

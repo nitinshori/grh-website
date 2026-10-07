@@ -17,11 +17,13 @@ import { hasPgdDocument, getPgdDocumentUrl } from "@/lib/pgd-documents"
 export async function resolvePgdDocumentUrl(
   pharmacyId: string | null | undefined,
   pgdSlug: string,
-): Promise<{ url: string; source: 'override' | 'master' } | null> {
+): Promise<{ url: string; source: 'override' | 'master'; id?: string; filename?: string | null } | null> {
   if (pharmacyId) {
     const [override] = await db
       .select({
+        id: pharmacyPgdDocuments.id,
         url: pharmacyPgdDocuments.documentUrl,
+        filename: pharmacyPgdDocuments.filename,
       })
       .from(pharmacyPgdDocuments)
       .where(
@@ -32,7 +34,7 @@ export async function resolvePgdDocumentUrl(
         ),
       )
       .limit(1)
-    if (override?.url) return { url: override.url, source: 'override' }
+    if (override?.url) return { url: override.url, source: 'override', id: override.id, filename: override.filename }
   }
 
   if (hasPgdDocument(pgdSlug)) {

@@ -96,7 +96,7 @@ export function PharmacyDetailClient({ pharmacy: initialPharmacy }: PharmacyDeta
         ...prev,
         [slug]: {
           id: data.documentId,
-          url: data.url,
+          url: `/api/pgd-documents/${data.documentId}/file`,
           filename: file.name,
           fileSizeBytes: file.size,
           version: data.version,

@@ -336,7 +336,7 @@ export function PgdDocumentsClient() {
                         <td className="py-3 pr-3 align-top">{label}</td>
                         <td className="py-3 pr-3 align-top">
                           <a
-                            href={d.documentUrl}
+                            href={`/api/pgd-documents/${d.id}/file`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-[color:var(--tenant-primary)] hover:underline"

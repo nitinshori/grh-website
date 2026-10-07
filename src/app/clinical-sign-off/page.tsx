@@ -207,6 +207,7 @@ export default async function ClinicalSignOffPage() {
       getPharmacyNonApprovedSlugs(viewer.pharmacyId),
       db
         .select({
+          id: pharmacyPgdDocuments.id,
           pgdSlug: pharmacyPgdDocuments.pgdSlug,
           documentUrl: pharmacyPgdDocuments.documentUrl,
           filename: pharmacyPgdDocuments.filename,
@@ -239,7 +240,7 @@ export default async function ClinicalSignOffPage() {
         slug,
         title: pgdBySlug.get(slug)?.title ?? slug,
         subtitle: pgdBySlug.get(slug)?.subtitle ?? '',
-        viewHref: own?.documentUrl ?? getPgdDocumentUrl(slug),
+        viewHref: own ? `/api/pgd-documents/${own.id}/file` : getPgdDocumentUrl(slug),
         // Own uploads already carry a version number that changes on reissue.
         // Master documents did not, so a v001 signature kept reading as
         // current after v002 went live. See withReissueVersion.
@@ -250,7 +251,7 @@ export default async function ClinicalSignOffPage() {
       slug,
       title: pgdBySlug.get(slug)?.title ?? slug,
       subtitle: pgdBySlug.get(slug)?.subtitle ?? '',
-      viewHref: ownDocBySlug.get(slug)?.documentUrl ?? getPgdDocumentUrl(slug),
+      viewHref: ownDocBySlug.has(slug) ? `/api/pgd-documents/${ownDocBySlug.get(slug)!.id}/file` : getPgdDocumentUrl(slug),
     }))
     const signable = approvedRows.filter((r) => r.viewHref)
     // A signature against a superseded version is not a signature. The counter
@@ -379,15 +380,15 @@ export default async function ClinicalSignOffPage() {
   // ── GRH clinician: one row per PGD (document · tool · training) ──
   const uploaded = await db
     .select({
+      id: pharmacyPgdDocuments.id,
       pgdSlug: pharmacyPgdDocuments.pgdSlug,
-      documentUrl: pharmacyPgdDocuments.documentUrl,
       uploadedAt: pharmacyPgdDocuments.uploadedAt,
     })
     .from(pharmacyPgdDocuments)
     .where(eq(pharmacyPgdDocuments.isCurrent, true))
     .orderBy(desc(pharmacyPgdDocuments.uploadedAt))
   const uploadedBySlug = new Map<string, string>()
-  for (const u of uploaded) if (!uploadedBySlug.has(u.pgdSlug)) uploadedBySlug.set(u.pgdSlug, u.documentUrl)
+  for (const u of uploaded) if (!uploadedBySlug.has(u.pgdSlug)) uploadedBySlug.set(u.pgdSlug, `/api/pgd-documents/${u.id}/file`)
 
   // training module matched to each PGD (a module can serve several PGDs)
   const moduleForPgd = new Map<string, (typeof modules)[number]>()

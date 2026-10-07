@@ -72,7 +72,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const blobPath = `pgd-overrides/${pharmacyId}/${pgdSlug}/v${nextVersion}-${Date.now()}.pdf`
   let blob
   try {
-    blob = await put(blobPath, file, { access: 'public' })
+    // The store is private (7 Oct 2026); files are served by
+    // /api/pgd-documents/[id]/file after an access check.
+    blob = await put(blobPath, file, { access: 'private' })
   } catch (e) {
     const detail = e instanceof Error ? e.message : String(e)
     console.error(`[admin pgd-documents] blob put failed (${file.size} bytes):`, detail)
