@@ -162,10 +162,12 @@ export async function POST(req: NextRequest) {
   try {
     blob = await put(blobPath, file, { access: 'public' })
   } catch (e) {
+    const detail = e instanceof Error ? e.message : String(e)
+    console.error(`[pgd-documents] blob put failed for ${pharmacyId}/${pgdSlug} (${file.size} bytes):`, detail)
     return NextResponse.json(
       {
-        error: 'Upload to file storage failed',
-        detail: e instanceof Error ? e.message : String(e),
+        error: `Upload to file storage failed: ${detail}`,
+        detail,
       },
       { status: 502 },
     )

@@ -74,9 +74,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try {
     blob = await put(blobPath, file, { access: 'public' })
   } catch (e) {
+    const detail = e instanceof Error ? e.message : String(e)
+    console.error(`[admin pgd-documents] blob put failed (${file.size} bytes):`, detail)
     return NextResponse.json({
-      error: 'Upload to Vercel Blob failed',
-      detail: e instanceof Error ? e.message : String(e),
+      error: `Upload to Vercel Blob failed: ${detail}`,
+      detail,
     }, { status: 502 })
   }
 
