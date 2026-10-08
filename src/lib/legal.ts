@@ -54,7 +54,7 @@ export const legal = {
   icoRegistration: "ZB498920" as string | null,
 
   /** Public-facing email shown on policy pages and footer */
-  contactEmail: "hello@getrealhealth.co.uk",
+  contactEmail: "info@getrealhealthpgd.co.uk",
 
   /** Privacy / data subject access request email */
   privacyEmail: "privacy@getrealhealth.co.uk",

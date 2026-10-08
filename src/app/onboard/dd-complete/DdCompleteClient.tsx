@@ -66,7 +66,7 @@ export default function DdCompleteClient() {
                 You'll get an email with a link to set your password and access the platform once we've approved you.
               </p>
               <p className="text-xs text-gray-500 mt-6">
-                If you don't see anything within 24 hours, check your spam folder or contact <a href="mailto:hello@getrealhealthpgd.co.uk" className="text-teal-700 underline">hello@getrealhealthpgd.co.uk</a>.
+                If you don't see anything within 24 hours, check your spam folder or contact <a href="mailto:info@getrealhealthpgd.co.uk" className="text-teal-700 underline">info@getrealhealthpgd.co.uk</a>.
               </p>
             </>
           )}
@@ -82,7 +82,7 @@ export default function DdCompleteClient() {
                 We couldn't finalise your direct debit. Detail: <code className="text-xs bg-gray-100 px-2 py-0.5 rounded">{errorMsg}</code>
               </p>
               <p className="text-sm text-gray-600 mt-3">
-                Please email <a href="mailto:hello@getrealhealthpgd.co.uk" className="text-teal-700 underline">hello@getrealhealthpgd.co.uk</a> and we'll sort it.
+                Please email <a href="mailto:info@getrealhealthpgd.co.uk" className="text-teal-700 underline">info@getrealhealthpgd.co.uk</a> and we'll sort it.
               </p>
             </>
           )}
