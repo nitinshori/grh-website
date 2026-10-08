@@ -57,7 +57,7 @@ export const legal = {
   contactEmail: "info@getrealhealthpgd.co.uk",
 
   /** Privacy / data subject access request email */
-  privacyEmail: "privacy@getrealhealth.co.uk",
+  privacyEmail: "info@getrealhealthpgd.co.uk",
 
   /** Public-facing phone number (optional) */
   phone: null as string | null,
