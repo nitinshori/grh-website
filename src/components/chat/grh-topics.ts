@@ -142,7 +142,7 @@ export const TOPICS: Topic[] = [
     answer:
       "<p>We don't run a free trial in the traditional sense, but you can:</p>" +
       "<ul>" +
-      "<li><strong>Book a 30-minute discovery call</strong> — see the platform end-to-end with one of the team: <a href=\"/book\">getrealhealthpgd.co.uk/book</a></li>" +
+      "<li><strong>See a demo</strong> of the platform end-to-end: <a href=\"/demo\">getrealhealthpgd.co.uk/demo</a></li>" +
       "<li><strong>Browse the PGD catalogue</strong> at <a href=\"/for-pharmacies/pgd-catalogue\">/for-pharmacies/pgd-catalogue</a></li>" +
       "<li><strong>See the comparison vs Pharmacy First</strong> at <a href=\"/services/comparison\">/services/comparison</a></li>" +
       "</ul>" +
@@ -296,11 +296,10 @@ export const TOPICS: Topic[] = [
       "demo", "book a demo",
     ],
     answer:
-      "<p>Three ways:</p>" +
+      "<p>Two ways:</p>" +
       "<ul>" +
-      "<li><strong>Book a 30-min discovery call</strong>: <a href=\"/book\">getrealhealthpgd.co.uk/book</a></li>" +
+      "<li><strong>See a demo</strong>: <a href=\"/demo\">getrealhealthpgd.co.uk/demo</a></li>" +
       "<li><strong>Email</strong>: <a href=\"mailto:info@getrealhealthpgd.co.uk\">info@getrealhealthpgd.co.uk</a></li>" +
-      "<li><strong>Talk to our AI receptionist Eva</strong>: <a href=\"tel:01135198330\">0113 519 8330</a> (24/7, books call-backs)</li>" +
       "</ul>",
   },
   {
