@@ -123,10 +123,13 @@ export async function signAuthorisations(input: SignInput): Promise<{ ok: true; 
 
   const signed: Array<{ id: string; slug: string; version: string }> = []
   const skipped: string[] = []
-  await db.transaction(async (tx) => {
+  // No transaction: the neon-http driver has none (a wrapped version of
+  // this threw 500 on the first real signing, Delmergate, 8 Oct 2026).
+  // Each insert is idempotent through the partial unique index, so a
+  // failure part-way leaves a correct, re-runnable state.
   for (const slug of wanted) {
     const v = versions.get(slug)!
-    const [row] = await tx
+    const [row] = await db
       .insert(practitionerAuthorisations)
       .values({
         userId: input.userId,
@@ -149,8 +152,7 @@ export async function signAuthorisations(input: SignInput): Promise<{ ok: true; 
   }
   // The number they typed is the one on their signature; keep the user
   // record in step so the team page and the register agree.
-  if (gphc) await tx.update(users).set({ gphcNumber: gphc }).where(eq(users.id, input.userId))
-  })
+  if (gphc) await db.update(users).set({ gphcNumber: gphc }).where(eq(users.id, input.userId))
   return { ok: true, signed, skipped }
 }
 
