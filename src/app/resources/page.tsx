@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { articles, ARTICLE_CATEGORIES } from "@/data/articles";
+import { articles, ARTICLE_CATEGORIES, type Article } from "@/data/articles";
+import { isHcpGatedArticle } from "@/lib/hcp-gated-articles";
 
 export const metadata: Metadata = {
   // Self-referencing canonical. A site-wide canonical in the root
@@ -12,6 +13,22 @@ export const metadata: Metadata = {
   description:
     "Everything you need to know about PGDs — written for pharmacists. Free guides, articles, and compliance checklists.",
 };
+
+// This index is public. Articles behind the healthcare-professional gate
+// can name prescription-only medicines, so their cards show a neutral
+// title and description here; the full text is only shown past the gate.
+const GATED_DESCRIPTION =
+  "A guide for healthcare professionals. You will be asked to confirm you are a healthcare professional before reading.";
+
+function publicCard(article: Article): { title: string; description: string } {
+  if (!isHcpGatedArticle(article.slug)) {
+    return { title: article.title, description: article.description };
+  }
+  return {
+    title: article.publicTitle ?? article.title,
+    description: GATED_DESCRIPTION,
+  };
+}
 
 const categoryColors: Record<string, string> = {
   "PGD Fundamentals": "bg-blue-100 text-blue-700",
@@ -66,10 +83,10 @@ export default function ResourcesPage() {
             {featured.category}
           </span>
           <h2 className="text-xl sm:text-2xl font-bold text-navy-900 group-hover:text-teal-700 transition-colors mb-2">
-            {featured.title}
+            {publicCard(featured).title}
           </h2>
           <p className="text-gray-600 leading-relaxed mb-3 max-w-2xl">
-            {featured.description}
+            {publicCard(featured).description}
           </p>
           <span className="text-sm text-gray-400">{featured.readTime}</span>
         </Link>
@@ -90,10 +107,10 @@ export default function ResourcesPage() {
                 {article.category}
               </span>
               <h3 className="font-bold text-navy-900 group-hover:text-teal-700 transition-colors mb-2 leading-snug">
-                {article.title}
+                {publicCard(article).title}
               </h3>
               <p className="text-gray-500 text-sm leading-relaxed mb-3 flex-1">
-                {article.description}
+                {publicCard(article).description}
               </p>
               <span className="text-xs text-gray-400">
                 {article.readTime}

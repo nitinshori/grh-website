@@ -32,6 +32,7 @@ const SESSION_EXPIRY_MS = 4 * 60 * 60 * 1000; // 4 hours
 const GREETING_HTML =
   "<p><strong>Hi — I'm the Get Real Health assistant.</strong></p>" +
   "<p>I help pharmacy owners and pharmacists with questions about our private PGD platform — pricing, services, onboarding, compliance.</p>" +
+  "<p class=\"mt-2 text-xs text-gray-500\">Answers come from an AI assistant. Please do not share patient or personal health details.</p>" +
   "<p class=\"mt-2 text-xs text-gray-500\">Try one of these, or type your question:</p>" +
   "<div class=\"flex flex-wrap gap-2 mt-2\">" +
     "<button type=\"button\" class=\"chat-chip\" data-q=\"How much does it cost?\">Pricing</button>" +
@@ -208,7 +209,7 @@ export function ChatWidget() {
             {
               role: "assistant",
               html:
-                "<p>Sorry — I couldn't reach the assistant right now. Please try again in a moment, or <a href=\"/book\">book a discovery call</a>.</p>",
+                "<p>Sorry, I couldn't reach the assistant right now. Please try again in a moment, <a href=\"/demo\">see the demo</a> or <a href=\"/contact\">contact us</a>.</p>",
             },
           ]);
         })

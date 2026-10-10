@@ -40,12 +40,12 @@ export default function AboutPage() {
       <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
         <div className="prose prose-lg max-w-none">
           <p className="text-lg text-gray-700 leading-relaxed mb-6">
-            Our founder spent years as Medical Director of Pharmacy2U &mdash;
-            one of the UK&apos;s largest online pharmacies &mdash; helping
-            build out its online doctor service. That work involved designing
-            clinical governance for online prescribing of GLP-1 weight
-            management, testosterone replacement therapy and other private
-            prescribing services in the earlier years of UK online pharmacy.
+            Our founder, Dr Nitin Shori, founded the Pharmacy2U Online Doctor
+            service and was its Medical Director for over 10 years, at one of
+            the UK&apos;s largest online pharmacies. That work involved
+            designing clinical governance for online prescribing of GLP-1
+            weight management and other private prescribing services in the
+            earlier years of UK online pharmacy.
           </p>
           <p className="text-lg text-gray-700 leading-relaxed mb-6">
             What that experience taught us is that clinical governance isn&apos;t
@@ -113,9 +113,10 @@ export default function AboutPage() {
                 Founder &amp; Medical Director
               </p>
               <p className="text-sm text-gray-600">
-                NHS GP Partner. Former Medical Director of Pharmacy2U, where
-                he helped build out online prescribing services for GLP-1
-                weight management and TRT. Law degree holder.
+                NHS GP Partner. Founded the Pharmacy2U Online Doctor service
+                and was its Medical Director for over 10 years, covering GLP-1
+                weight management and other private prescribing services. Law
+                degree holder.
               </p>
             </div>
           </div>

@@ -7,6 +7,8 @@ import { createRedirectFlow } from '@/lib/gocardless'
 
 export const dynamic = 'force-dynamic'
 
+const DD_ERROR = 'We could not open the Direct Debit page. Please try again, or email info@getrealhealthpgd.co.uk.'
+
 /**
  * POST /api/onboarding/[id]/start-mandate
  * Creates a GoCardless redirect flow for the onboarding request and returns
@@ -19,16 +21,16 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params
-  if (!id) return NextResponse.json({ error: 'Bad id' }, { status: 400 })
+  if (!id) return NextResponse.json({ error: DD_ERROR }, { status: 400 })
 
   const [req] = await db
     .select()
     .from(onboardingRequests)
     .where(eq(onboardingRequests.id, id))
     .limit(1)
-  if (!req) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  if (!req) return NextResponse.json({ error: DD_ERROR }, { status: 404 })
   if (req.status === 'rejected') {
-    return NextResponse.json({ error: 'This sign-up was rejected' }, { status: 400 })
+    return NextResponse.json({ error: 'This sign-up is closed. Please email info@getrealhealthpgd.co.uk.' }, { status: 400 })
   }
 
   // session_token is a per-flow nonce we own — anti-CSRF for the GoCardless callback
@@ -62,10 +64,8 @@ export async function POST(
       },
     })
   } catch (err) {
-    return NextResponse.json(
-      { error: 'GoCardless flow could not be created', detail: err instanceof Error ? err.message : String(err) },
-      { status: 502 },
-    )
+    console.error('[onboarding/start-mandate] GoCardless flow could not be created:', err)
+    return NextResponse.json({ error: DD_ERROR }, { status: 502 })
   }
 
   // Stash the redirect-flow id and session token (token in mandateStatus
@@ -82,10 +82,7 @@ export async function POST(
       .where(eq(onboardingRequests.id, req.id))
   } catch (err) {
     console.error('[onboarding/start-mandate] DB update failed:', err)
-    return NextResponse.json(
-      { error: 'Could not save flow id', detail: err instanceof Error ? err.message : String(err) },
-      { status: 500 },
-    )
+    return NextResponse.json({ error: DD_ERROR }, { status: 500 })
   }
 
   return NextResponse.json({ redirectUrl: flow.redirectUrl })

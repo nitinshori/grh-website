@@ -11,9 +11,27 @@ import {
   type PGD,
 } from "@/data/pgds";
 import { getPgdDocumentUrl } from "@/lib/pgd-documents";
+import { isPubliclyListedPgd } from "@/lib/pgd-access";
 
-// Public catalogue must never advertise restricted (private/pilot) PGDs.
-const pgds = allPgds.filter((p) => !p.restrictedToEmails || p.restrictedToEmails.length === 0);
+// Public catalogue must never advertise restricted (private/pilot) PGDs,
+// withdrawn or retired services, or PGDs not yet signed or released for
+// public listing (see NOT_PUBLICLY_LISTED_SLUGS in pgd-access.ts).
+const pgds = allPgds.filter(
+  (p) =>
+    (!p.restrictedToEmails || p.restrictedToEmails.length === 0) &&
+    isPubliclyListedPgd(p.id),
+);
+
+// "Exclusive" means not offered by Pharmadoctor, per the pharmadoctor field.
+function isExclusive(p: PGD): boolean {
+  return p.pharmadoctor === "No" || p.pharmadoctor.startsWith("No ");
+}
+
+// Only categories that actually have a card. An empty category (CVD, for
+// example, after the 8 Sep 2026 retirements) must not show as a filter.
+const CATEGORIES_WITH_CARDS = ALL_CATEGORIES.filter((c) =>
+  pgds.some((p) => p.category === c),
+);
 
 type FilterOption = "All" | "Exclusives" | PGDCategory;
 
@@ -55,12 +73,12 @@ export function PGDCatalogueClient() {
 
   const filtered = useMemo(() => {
     if (activeFilter === "All") return sortedForAllView(pgds);
-    if (activeFilter === "Exclusives") return pgds.filter((p) => p.isNew);
+    if (activeFilter === "Exclusives") return pgds.filter(isExclusive);
     return pgds.filter((p) => p.category === activeFilter);
   }, [activeFilter]);
 
-  const exclusiveCount = pgds.filter((p) => p.isNew).length;
-  const filterOptions: FilterOption[] = ["All", "Exclusives", ...ALL_CATEGORIES];
+  const exclusiveCount = pgds.filter(isExclusive).length;
+  const filterOptions: FilterOption[] = ["All", "Exclusives", ...CATEGORIES_WITH_CARDS];
 
   return (
     <>
@@ -72,7 +90,7 @@ export function PGDCatalogueClient() {
           </p>
           <h1 className="text-3xl sm:text-4xl font-bold mb-3">PGD Catalogue</h1>
           <p className="text-lg text-blue-200 max-w-2xl mb-6">
-            {pgds.length}+ PGDs across {ALL_CATEGORIES.length} categories.
+            65+ PGDs across {CATEGORIES_WITH_CARDS.length} categories.
             One flat-fee package. Every PGD included. No per-consultation
             charges, no hidden extras.
           </p>
@@ -149,7 +167,7 @@ export function PGDCatalogueClient() {
           <p className="text-gray-600 mb-6 max-w-xl mx-auto">
             No per-consultation charges. No picking and choosing. Your team
             gets access to the full catalogue, the consultation tool, training
-            and clinical governance &mdash; all included.
+            and clinical governance, all included.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link
@@ -176,7 +194,10 @@ function PGDCard({ pgd }: { pgd: PGD }) {
   const catBg = CATEGORY_BG_LIGHT[pgd.category] || "bg-gray-50";
 
   return (
-    <div className="border border-gray-100 rounded-xl p-5 bg-white hover:shadow-sm transition-all flex flex-col">
+    <div
+      id={pgd.id}
+      className="scroll-mt-36 border border-gray-100 rounded-xl p-5 bg-white hover:shadow-sm transition-all flex flex-col"
+    >
       {/* Badges */}
       <div className="flex items-center gap-2 mb-3">
         <span
@@ -184,14 +205,9 @@ function PGDCard({ pgd }: { pgd: PGD }) {
         >
           {pgd.category}
         </span>
-        {pgd.isNew && (
+        {isExclusive(pgd) && (
           <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-[color:var(--tenant-primary)]/15 text-[color:var(--tenant-primary)]">
             Exclusive
-          </span>
-        )}
-        {pgd.pharmadoctor.startsWith("No") && (
-          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-red-50 text-red-600">
-            Not on competitor
           </span>
         )}
       </div>
@@ -213,13 +229,19 @@ function PGDCard({ pgd }: { pgd: PGD }) {
 
       {/* Action links */}
       <div className="mt-auto flex flex-col gap-2">
-        <Link
-          href={`/for-pharmacies/epgd/${pgd.id}`}
-          className="w-full text-center px-3 py-2 rounded-lg text-sm font-medium bg-[color:var(--tenant-primary)]/100 text-white hover:bg-[color:var(--tenant-primary)]/15 transition-colors"
-        >
-          Open ePGD tool
-        </Link>
-        {getPgdDocumentUrl(pgd.id) ? (
+        {pgd.comingSoon ? (
+          <span className="w-full text-center px-3 py-2 rounded-lg text-sm font-medium bg-gray-50 text-gray-400 border border-gray-200">
+            Coming soon
+          </span>
+        ) : (
+          <Link
+            href={`/for-pharmacies/epgd/${pgd.id}`}
+            className="w-full text-center px-3 py-2 rounded-lg text-sm font-medium bg-[color:var(--tenant-primary)]/100 text-white hover:bg-[color:var(--tenant-primary)]/15 transition-colors"
+          >
+            Open ePGD tool
+          </Link>
+        )}
+        {pgd.comingSoon ? null : getPgdDocumentUrl(pgd.id) ? (
           // The signed PGD PDF itself — this used to point at the contact
           // page ("Let's Talk"), which read as a broken link to pharmacists
           // wanting to review the clinical document (reported by Moin).

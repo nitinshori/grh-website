@@ -5,12 +5,12 @@ import { GrowthForm } from "./GrowthForm";
 export const metadata: Metadata = {
   title: "Practice Digital | Pharmacy Websites by Clinicians — Get Real Health",
   description:
-    "Practice Digital, Get Real Health's sister company, builds pharmacy websites that drive Pharmacy First walk-ins — clinic booking, repeat ordering, six languages and an AI patient chatbot. £399 a year, £0 setup, price locked for 5 years.",
+    "Practice Digital, Get Real Health's sister company, builds pharmacy websites that drive Pharmacy First walk-ins — clinic booking, repeat ordering, six languages and an AI patient chatbot. £399 a year, £0 setup, price locked for five years.",
   alternates: { canonical: "/for-pharmacies/growth" },
   openGraph: {
     title: "Practice Digital — the pharmacy website that drives walk-ins",
     description:
-      "Built by working clinicians. £399/year, price locked 5 years, AI chatbot add-on. See the Bridgegate Pharmacy demo.",
+      "Built by working clinicians. £399 a year, £0 setup, price locked for five years, AI chatbot add-on. See a working demo site.",
   },
 };
 
@@ -71,7 +71,7 @@ export default function GrowthPage() {
               AI chatbot that answers patients while you sleep.
             </p>
             <p className="text-blue-200 font-semibold mb-8">
-              £399 a year · £0 setup · price locked 5 years · 6 languages built in
+              £399 a year · £0 setup · price locked for five years · 6 languages built in
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <a
@@ -93,7 +93,7 @@ export default function GrowthPage() {
         </div>
       </section>
 
-      {/* ── BRIDGEGATE SHOWCASE ───────────────────────────── */}
+      {/* ── DEMO SITE SHOWCASE ────────────────────────────── */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid md:grid-cols-2 gap-10 items-center">
           <div>
@@ -101,11 +101,11 @@ export default function GrowthPage() {
               See it in action
             </p>
             <h2 className="text-2xl sm:text-3xl font-bold text-navy-900 mb-4">
-              Bridgegate Pharmacy — one of ours.
+              A working demo site.
             </h2>
             <p className="text-gray-600 leading-relaxed mb-4">
-              A working demo built on the exact stack you&apos;d get: an
-              independent Yorkshire community pharmacy with Pharmacy First
+              A working demo built on the exact stack you&apos;d get: a
+              community pharmacy site with Pharmacy First
               walk-in, travel clinic and weight-management booking, repeat
               ordering, free home-delivery sign-up and GPhC registration
               displayed properly.
@@ -138,14 +138,14 @@ export default function GrowthPage() {
                 <span className="w-2.5 h-2.5 rounded-full bg-red-400" />
                 <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
                 <span className="w-2.5 h-2.5 rounded-full bg-green-400" />
-                <span className="text-xs text-gray-500 ml-2 truncate">bridgegate-pharmacy.pages.dev</span>
+                <span className="text-xs text-gray-500 ml-2 truncate">Demo pharmacy website</span>
               </div>
               <div className="p-6">
                 <div className="flex items-center gap-3 mb-4">
-                  <span className="w-10 h-10 rounded-lg bg-teal-500 text-white font-bold flex items-center justify-center">BP</span>
+                  <span className="w-10 h-10 rounded-lg bg-teal-500 text-white font-bold flex items-center justify-center">YP</span>
                   <div>
-                    <p className="font-bold text-navy-900">Bridgegate Pharmacy</p>
-                    <p className="text-xs text-gray-500">Knaresborough · since 1978</p>
+                    <p className="font-bold text-navy-900">Your Pharmacy</p>
+                    <p className="text-xs text-gray-500">Working demo site</p>
                   </div>
                 </div>
                 <p className="text-sm font-semibold text-navy-900 mb-2">Walk in. We&apos;ll see you today.</p>
@@ -208,8 +208,8 @@ export default function GrowthPage() {
             do that instead.&rdquo;
           </blockquote>
           <p className="text-sm text-blue-300 font-medium">
-            &mdash; Practice Digital · the only healthcare website service
-            built and owned by practising doctors
+            Practice Digital · a healthcare website service built and owned
+            by practising doctors
           </p>
         </div>
       </section>
@@ -221,7 +221,7 @@ export default function GrowthPage() {
             Get yours built
           </h2>
           <p className="text-gray-600">
-            Tell us about your pharmacy and we&apos;ll reply the same working
+            Tell us about your pharmacy and we&apos;ll reply within one working
             day. Or go straight to{" "}
             <a
               href="https://practicedigital.co.uk/"

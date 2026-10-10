@@ -21,12 +21,10 @@
 // middleware and must not import src/data/articles.ts, which carries the
 // full text of every article.
 export const HCP_GATED_ARTICLE_SLUGS = new Set<string>([
-  'most-profitable-pgds-for-pharmacy',          // Wegovy, Mounjaro, Shingrix, HRT, PrEP
+  'most-profitable-pgds-for-pharmacy',          // Wegovy, Mounjaro, Shingrix
   'how-to-start-a-travel-clinic-in-your-pharmacy', // doxycycline
-  'hrt-through-pharmacy-what-is-possible-under-pgd', // HRT, oestrogen
   'glp1-weight-management-pharmacy-complete-guide',  // Wegovy, Mounjaro, semaglutide, tirzepatide
-  'how-to-switch-pgd-providers',                // HRT
-  'how-to-add-private-services-to-a-uk-community-pharmacy', // Wegovy, Mounjaro, Saxenda, orlistat, Mysimba, testosterone
+  'how-to-add-private-services-to-a-uk-community-pharmacy', // Wegovy, Mounjaro, Saxenda, orlistat, Mysimba
 ])
 
 export function isHcpGatedArticle(slug: string): boolean {

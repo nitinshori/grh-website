@@ -20,12 +20,13 @@ export function ForgotPasswordClient() {
       });
       const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
       if (!res.ok || !data.ok) {
-        setError(data.error || `Something went wrong (${res.status}). Please try again.`);
+        setError(res.status === 400 && data.error ? data.error : "Something went wrong. Please try again, or email info@getrealhealthpgd.co.uk.");
         return;
       }
       setSent(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      console.error("[forgot-password]", err);
+      setError("Something went wrong. Please try again, or email info@getrealhealthpgd.co.uk.");
     } finally {
       setBusy(false);
     }

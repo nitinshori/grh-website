@@ -26,8 +26,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const name = site?.brandName || site?.name || 'Pharmacy'
   return {
-    title: `Book an Appointment — ${name}`,
-    description: `Request an appointment at ${name}. Choose your preferred branch, service, and time.`,
+    title: `Book an appointment at ${name}`,
+    description: `Book an appointment at ${name}. Choose your preferred branch, service and time.`,
   }
 }
 
@@ -90,7 +90,7 @@ export default async function BookingPage({ params, searchParams }: Props) {
     : null
 
   // If site + type + date are all provided, fetch available slots server-side
-  let initialSlots: { clinicianId: string; clinicianName: string; startTime: string; endTime: string }[] = []
+  const initialSlots: { clinicianId: string; clinicianName: string; startTime: string; endTime: string }[] = []
   const preSelectedDate = dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : null
 
   if (preSelectedSite && preSelectedType && preSelectedDate) {

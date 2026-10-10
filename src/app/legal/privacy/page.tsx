@@ -69,9 +69,11 @@ export default function PrivacyPolicyPage() {
           your account on our platform.
         </li>
         <li>
-          <strong>Communications</strong> &mdash; the content of emails,
-          chat, or call transcripts you exchange with us, including AI voice
-          receptionist call recordings and transcripts where applicable.
+          <strong>Communications</strong>: the content of emails and
+          website chat messages you exchange with us, and recordings and
+          transcripts of calls to our former telephone line, which is no
+          longer in use; we keep these only as long as needed and then
+          delete them.
         </li>
         <li>
           <strong>Technical / device data</strong> &mdash; IP address,
@@ -86,10 +88,15 @@ export default function PrivacyPolicyPage() {
         </li>
       </ul>
       <p>
-        We do not knowingly collect or process patient health data through
-        this website. Patient consultations carried out via the Get Real
-        Health clinical platform are governed by a separate processing
-        agreement between us and the operating pharmacy.
+        When pharmacies use our platform for consultations and bookings, we
+        process patient information on the pharmacy&apos;s behalf; the
+        pharmacy is the data controller and we act as its processor.
+      </p>
+      <h3>Website chat</h3>
+      <p>
+        The chat on our website is an AI assistant. Its answers are generated
+        by Anthropic on our behalf. Please do not enter patient details or
+        other health information into the chat.
       </p>
 
       <h2>3. Lawful bases for processing</h2>
@@ -144,11 +151,24 @@ export default function PrivacyPolicyPage() {
       </p>
       <ul>
         <li>
-          <strong>Hosting and infrastructure providers</strong> &mdash; for
-          example our web hosting, database, email and analytics providers.
-        </li>
-        <li>
-          <strong>Payment processors</strong> &mdash; for customer billing.
+          <strong>Service providers (processors)</strong> who run parts of
+          our website and platform for us:
+          <ul>
+            <li>Vercel: website hosting and file storage;</li>
+            <li>Neon: database;</li>
+            <li>Resend: sending email;</li>
+            <li>GoCardless: Direct Debit payments;</li>
+            <li>Anthropic: answers from the website chat assistant;</li>
+            <li>Cloudflare: Turnstile security check on the sign-up form;</li>
+            <li>
+              Google: Google Analytics and Google Ads, only if you accept
+              cookies (see our <a href="/legal/cookies">Cookie Policy</a>);
+            </li>
+            <li>
+              Ideal Postcodes, getAddress.io and Postcodes.io: looking up
+              addresses from a postcode when you enter one.
+            </li>
+          </ul>
         </li>
         <li>
           <strong>Professional advisers</strong> &mdash; lawyers, accountants

@@ -29,15 +29,19 @@ const securityHeaders = [
     // Content-Security-Policy: defence-in-depth against XSS/data exfiltration.
     // 'unsafe-inline' on scripts is required by Next.js (it ships hydration
     // payloads inline). 'unsafe-eval' kept off. Connect-src whitelists the
-    // outbound APIs we actually call (NHS ODS, GoCardless, Vapi, Resend).
+    // outbound APIs we actually call (NHS ODS, GoCardless, Resend) plus the
+    // Google Analytics / Ads endpoints, which load only after cookie consent.
+    // Cloudflare Turnstile (sign-up security check) needs script-src and
+    // frame-src. Vapi was removed when the AI phone receptionist was retired.
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' https://va.vercel-scripts.com",
+      "script-src 'self' 'unsafe-inline' https://va.vercel-scripts.com https://www.googletagmanager.com https://challenges.cloudflare.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: https:",
       "font-src 'self' data: https://fonts.gstatic.com",
-      "connect-src 'self' https://directory.spineservices.nhs.uk https://api.gocardless.com https://api-sandbox.gocardless.com https://api.resend.com https://api.vapi.ai",
+      "connect-src 'self' https://directory.spineservices.nhs.uk https://api.gocardless.com https://api-sandbox.gocardless.com https://api.resend.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://googleads.g.doubleclick.net https://www.google.com https://*.doubleclick.net",
+      "frame-src https://www.googletagmanager.com https://td.doubleclick.net https://challenges.cloudflare.com",
       "frame-ancestors 'none'",
       "form-action 'self' https://pay.gocardless.com https://pay-sandbox.gocardless.com",
       "base-uri 'self'",

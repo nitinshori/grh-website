@@ -4,8 +4,11 @@ import { onboardingRequests } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { completeRedirectFlow, getMandate } from '@/lib/gocardless'
 import { Resend } from 'resend'
+import { sendEmail, escapeHtml } from '@/lib/email'
 
 export const dynamic = 'force-dynamic'
+
+const CONFIRM_ERROR = 'We could not confirm your Direct Debit. Please email info@getrealhealthpgd.co.uk and we will sort it.'
 
 /**
  * POST /api/onboarding/[id]/complete-mandate
@@ -23,31 +26,38 @@ export async function POST(
   const { id } = await params
   const body = await request.json().catch(() => null) as { token?: string } | null
   const token = body?.token
-  if (!id || !token) return NextResponse.json({ error: 'Missing id/token' }, { status: 400 })
+  if (!id || !token) return NextResponse.json({ error: CONFIRM_ERROR }, { status: 400 })
 
   const [req] = await db
     .select()
     .from(onboardingRequests)
     .where(eq(onboardingRequests.id, id))
     .limit(1)
-  if (!req) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  if (!req) return NextResponse.json({ error: CONFIRM_ERROR }, { status: 404 })
+
+  // Already completed (the customer refreshed the page or opened the return
+  // link twice). The session token was replaced by the mandate status on the
+  // first completion, so it can no longer match; just confirm the mandate is
+  // in place. No emails or conversion tracking on this path.
+  if (req.gocardlessMandateId) {
+    return NextResponse.json({ ok: true, alreadySetUp: true })
+  }
 
   // Verify token matches what we stashed in start-mandate
   if (req.gocardlessMandateStatus !== `session:${token}`) {
-    return NextResponse.json({ error: 'Token mismatch' }, { status: 403 })
+    console.warn('[onboarding/complete-mandate] token mismatch for', req.id)
+    return NextResponse.json({ error: CONFIRM_ERROR }, { status: 403 })
   }
   if (!req.gocardlessRedirectFlowId) {
-    return NextResponse.json({ error: 'No redirect flow on record' }, { status: 400 })
+    return NextResponse.json({ error: CONFIRM_ERROR }, { status: 400 })
   }
 
   let result
   try {
     result = await completeRedirectFlow(req.gocardlessRedirectFlowId, token)
   } catch (err) {
-    return NextResponse.json(
-      { error: 'GoCardless completion failed', detail: err instanceof Error ? err.message : String(err) },
-      { status: 502 },
-    )
+    console.error('[onboarding/complete-mandate] GoCardless completion failed:', err)
+    return NextResponse.json({ error: CONFIRM_ERROR }, { status: 502 })
   }
 
   // Look up mandate status (new mandates start as `pending_submission`)
@@ -85,6 +95,25 @@ export async function POST(
           `Review and approve: ${appUrl}/admin/onboarding/${req.id}\n`,
       })
     } catch { /* swallow */ }
+  }
+
+  // Best-effort confirmation to the customer (first completion only).
+  if (req.contactEmail) {
+    try {
+      await sendEmail({
+        to: req.contactEmail,
+        subject: 'We have your Direct Debit',
+        html:
+          `<p>Hi ${escapeHtml(req.contactFirstName || '')},</p>` +
+          `<p>Thank you for setting up your Direct Debit with Get Real Health${req.groupName || req.pharmacyName ? ` for <strong>${escapeHtml(req.groupName || req.pharmacyName)}</strong>` : ''}.</p>` +
+          `<p>We usually approve accounts the same working day, then email your login link.</p>` +
+          `<p>If you have any questions, email <a href="mailto:info@getrealhealthpgd.co.uk">info@getrealhealthpgd.co.uk</a>.</p>` +
+          `<p>Get Real Health</p>`,
+        replyTo: 'info@getrealhealthpgd.co.uk',
+      })
+    } catch (e) {
+      console.error('[onboarding/complete-mandate] customer email failed (non-fatal):', e)
+    }
   }
 
   return NextResponse.json({ ok: true })

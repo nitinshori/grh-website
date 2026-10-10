@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { validatePassword, passwordErrorMessage, PASSWORD_RULE_TEXT } from "@/lib/password-policy";
+
+const LINK_ERROR = "This link is not valid any more. Use 'Forgotten your password?' on the login page, or email info@getrealhealthpgd.co.uk.";
 
 export default function SetupAccountClient() {
   const params = useSearchParams();
@@ -18,8 +21,8 @@ export default function SetupAccountClient() {
     return (
       <div className="bg-gray-50 min-h-screen p-8">
         <div className="max-w-md mx-auto bg-white border rounded-xl p-8 text-center">
-          <h1 className="text-xl font-bold">Invalid setup link</h1>
-          <p className="text-sm text-gray-600 mt-2">Please use the link from the welcome email.</p>
+          <h1 className="text-xl font-bold">This link is not valid any more</h1>
+          <p className="text-sm text-gray-600 mt-2">Use &apos;Forgotten your password?&apos; on the <a href="/login" className="text-teal-700 underline">login page</a>, or email info@getrealhealthpgd.co.uk.</p>
         </div>
       </div>
     );
@@ -28,8 +31,9 @@ export default function SetupAccountClient() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (pwd.length < 10) { setError("Password must be at least 10 characters."); return; }
-    if (pwd !== pwd2) { setError("Passwords don't match."); return; }
+    const v = validatePassword(pwd);
+    if (!v.ok) { setError(passwordErrorMessage(v)); return; }
+    if (pwd !== pwd2) { setError("The two passwords do not match."); return; }
     setBusy(true);
     try {
       const r = await fetch("/api/setup-account", {
@@ -38,9 +42,12 @@ export default function SetupAccountClient() {
         body: JSON.stringify({ id, token, password: pwd }),
       });
       const body = (await r.json().catch(() => ({}))) as { error?: string };
-      if (!r.ok) { setError(body.error || `${r.status}`); return; }
+      if (!r.ok) { setError(body.error || LINK_ERROR); return; }
       setDone(true);
       setTimeout(() => router.push("/login"), 2000);
+    } catch (err) {
+      console.error("[setup-account]", err);
+      setError(LINK_ERROR);
     } finally { setBusy(false); }
   }
 
@@ -61,11 +68,11 @@ export default function SetupAccountClient() {
         <div className="bg-white border border-gray-200 rounded-xl p-8 shadow-sm">
           <h1 className="text-2xl font-bold text-gray-900">Set your password</h1>
           <p className="text-sm text-gray-600 mt-2">
-            Welcome — choose a password to finish setting up your account.
+            Welcome. Choose a password to finish setting up your account.
           </p>
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">Password (10+ characters)</label>
+              <label className="block text-sm font-medium text-gray-900 mb-1">Password</label>
               <input
                 type="password"
                 value={pwd}
@@ -74,6 +81,7 @@ export default function SetupAccountClient() {
                 autoComplete="new-password"
                 required
               />
+              <p className="text-xs text-gray-500 mt-1">{PASSWORD_RULE_TEXT}</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-1">Confirm password</label>
@@ -85,6 +93,7 @@ export default function SetupAccountClient() {
                 autoComplete="new-password"
                 required
               />
+              <p className="text-xs text-gray-500 mt-1">{PASSWORD_RULE_TEXT}</p>
             </div>
             {error && (
               <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">{error}</div>

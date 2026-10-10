@@ -6,7 +6,7 @@ import { SavingsCalculator } from "./for-pharmacies/pricing/SavingsCalculator";
 export const metadata: Metadata = {
   title: "Get Real Health | PGDs, Clinical Training & Governance for UK Pharmacies",
   description:
-    "60+ PGDs with built-in clinical training and competency assessments. CQC and HIW registered. One flat annual fee \u2014 no per-consult charges, no revenue share. Founded by clinicians with 20 years of UK pharmacy experience.",
+    "65+ PGDs with built-in clinical training and competency assessments. CQC and HIW registered. One flat £100 monthly fee per pharmacy, no per-consult charges, no revenue share. Founded by clinicians with 20 years of UK pharmacy experience.",
   alternates: { canonical: "/" },
 };
 
@@ -58,14 +58,14 @@ export default function HomePage() {
               </div>
 
               <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold leading-tight mb-6">
-                60+ PGDs, paper and electronic.
+                65+ PGDs, paper and electronic.
                 <br />
                 <span className="text-teal-400">£100 per month, per pharmacy.</span>
                 <br />
                 No per-pharmacist charge &mdash; locums included.
               </h1>
               <p className="text-xs text-blue-300/80 -mt-3 mb-6">
-                + VAT (if applicable). One flat monthly fee per store.
+                No VAT. One flat monthly fee per pharmacy.
               </p>
 
               <p className="text-lg sm:text-xl text-blue-200 leading-relaxed mb-8 max-w-xl">
@@ -144,7 +144,7 @@ export default function HomePage() {
                   <p className="text-center text-blue-200 text-xs mt-3 px-2">
                     Dr Nitin Shori &mdash; Founder &amp; Medical Director.
                     NHS GP Partner. Founded the Pharmacy2U Online Doctor service and
-                    was its Medical Director for 10+ years.
+                    was its Medical Director for over 10 years.
                   </p>
                 </div>
               </div>
@@ -324,7 +324,7 @@ export default function HomePage() {
                 </svg>
               </div>
               <p className="text-3xl sm:text-4xl font-bold text-navy-900">
-                60+
+                65+
               </p>
               <p className="text-sm text-gray-500 mt-1">
                 PGD services from day one
@@ -375,7 +375,7 @@ export default function HomePage() {
                 10 min
               </p>
               <p className="text-sm text-gray-500 mt-1">
-                Self-serve sign-up via /onboard. Authorised same business day.
+                Sign up in about 10 minutes; we usually approve the same working day.
               </p>
             </div>
           </div>
@@ -397,7 +397,7 @@ export default function HomePage() {
               <p className="text-sm text-blue-200 mt-1">of consultations delivered under our PGDs</p>
             </div>
             <div className="text-center">
-              <p className="text-3xl sm:text-4xl font-bold text-white">60+</p>
+              <p className="text-3xl sm:text-4xl font-bold text-white">65+</p>
               <p className="text-sm text-blue-200 mt-1">PGD services available</p>
             </div>
             <div className="text-center">
@@ -587,10 +587,11 @@ export default function HomePage() {
 
               <p className="text-gray-600 leading-relaxed mb-4">
                 Through Get Real Health, we work with pharmacy chains,
-                supermarkets and independent pharmacies of all sizes. Every
-                pharmacist we work with completes the same structured
-                clinical training and assessment &mdash; so the standard of
-                care is consistent regardless of the size of the operation.
+                supermarkets and independent pharmacies of all sizes.
+                Pharmacists must be trained and competent to work under each
+                PGD. Our online training modules, with CPD certificates, are an
+                optional way to do that, and they are the same whatever the
+                size of the operation.
               </p>
 
               <p className="text-gray-600 leading-relaxed mb-6">
@@ -739,10 +740,9 @@ export default function HomePage() {
                 Online training with every PGD
               </h2>
               <p className="text-blue-200 leading-relaxed mb-4">
-                Every PGD comes with online training and a written
-                competency assessment, so every clinician using our PGDs is
-                demonstrably ready to deliver safe, effective consultations
-                before they go live.
+                Pharmacists must be trained and competent to work under each
+                PGD. Our online training modules, with CPD certificates, are an
+                optional way to do that.
               </p>
               <div className="flex flex-wrap gap-4 justify-center md:justify-start text-sm">
                 <span className="inline-flex items-center gap-1.5 text-teal-300">
@@ -755,7 +755,7 @@ export default function HomePage() {
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  Written competency assessment
+                  CPD certificates
                 </span>
                 <span className="inline-flex items-center gap-1.5 text-teal-300">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -807,8 +807,8 @@ export default function HomePage() {
                 Get authorised
               </h3>
               <p className="text-sm text-gray-500 leading-relaxed">
-                Complete our online CPD training and receive your PGD
-                authorisation certificates.
+                Each pharmacist signs the PGDs they will use. Optional CPD
+                training is there if they want it.
               </p>
             </div>
 
@@ -935,9 +935,9 @@ export default function HomePage() {
               Compare the true cost
             </h2>
             <p className="text-gray-500 max-w-2xl mx-auto">
-              Other providers charge &pound;2,592&ndash;&pound;2,639 per
-              pharmacy per year (inc. VAT), paid upfront. With GRH you pay a
-              lower flat monthly fee + VAT &mdash; minimum 12-month contract, no upfront lump sum.
+              Other providers charge around &pound;2,000 to &pound;2,639 per
+              pharmacy per year, often paid upfront. With GRH you pay a lower
+              flat monthly fee with no VAT: minimum 12-month contract, no upfront lump sum.
             </p>
           </div>
           <SavingsCalculator compact />
@@ -966,7 +966,7 @@ export default function HomePage() {
               Get Real Health
             </h3>
             <p className="text-gray-600 text-sm leading-relaxed mb-5">
-              60+ PGDs, training, competency assessment and the ePGD
+              65+ PGDs, optional CPD training and the ePGD
               consultation platform. Everything you need to deliver private
               services safely — one flat fee.
             </p>
@@ -1024,10 +1024,10 @@ export default function HomePage() {
               View PGD Catalogue
             </Link>
             <Link
-              href="/contact"
+              href="/demo"
               className="px-7 py-3.5 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-lg transition-colors text-lg border border-white/20"
             >
-              Book a Demo
+              See a demo
             </Link>
           </div>
         </div>

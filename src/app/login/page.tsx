@@ -4,7 +4,7 @@ import { getTenant } from '@/lib/tenant-context'
 import { tenantLaunchUrl } from '@/lib/tenants'
 
 export const metadata: Metadata = {
-  title: 'Sign In | Get Real Health',
+  title: 'Sign in',
   description: 'Sign in to access your PGD consultation tools.',
 }
 

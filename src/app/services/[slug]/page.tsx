@@ -5,6 +5,13 @@ import { SERVICE_PAGES, getServicePage } from "@/data/service-pages";
 
 const BASE_URL = "https://getrealhealthpgd.co.uk";
 
+// Get Real Health is registered with the CQC and HIW and serves England and
+// Wales only.
+const AREA_SERVED = [
+  { "@type": "AdministrativeArea", name: "England" },
+  { "@type": "AdministrativeArea", name: "Wales" },
+];
+
 // Pre-render all known service pages at build time.
 export function generateStaticParams() {
   return SERVICE_PAGES.map((p) => ({ slug: p.slug }));
@@ -65,12 +72,12 @@ export default async function ServicePage({
       "@type": "Organization",
       name: "Get Real Health",
       url: BASE_URL,
-      areaServed: { "@type": "Country", name: "United Kingdom" },
+      areaServed: AREA_SERVED,
     },
-    areaServed: { "@type": "Country", name: "United Kingdom" },
+    areaServed: AREA_SERVED,
     audience: {
       "@type": "Audience",
-      audienceType: "UK community pharmacies and pharmacists",
+      audienceType: "Community pharmacies and pharmacists in England and Wales",
     },
     offers: {
       "@type": "Offer",
@@ -85,7 +92,7 @@ export default async function ServicePage({
       },
       availability: "https://schema.org/InStock",
       url: pageUrl,
-      eligibleRegion: [{ "@type": "Country", name: "United Kingdom" }],
+      eligibleRegion: AREA_SERVED,
     },
     url: pageUrl,
   };

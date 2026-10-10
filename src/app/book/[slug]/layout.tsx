@@ -4,11 +4,13 @@ import type { ReactNode } from 'react'
 export default function BookingLayout({ children }: { children: ReactNode }) {
   return (
     <>
-      {/* Hide the parent layout's header, footer, and cookie consent */}
+      {/* Hide the parent layout's header, footer, cookie consent and the
+          Get Real Health chat assistant (this is the pharmacy's page). */}
       <style
         dangerouslySetInnerHTML={{
           __html: `
             header, footer:not(.booking-footer), [data-cookie-consent] { display: none !important; }
+            button[aria-label="Open chat assistant"], #grh-chat-panel { display: none !important; }
             main { padding: 0 !important; margin: 0 !important; }
             body { background-color: #f9fafb !important; }
           `,

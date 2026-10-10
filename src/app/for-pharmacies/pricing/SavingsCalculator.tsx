@@ -3,23 +3,15 @@
 import { useState } from "react";
 
 /* ── Competitor benchmarks ──────────────────────────────────────
-   Based on publicly listed pricing from two leading UK PGD providers.
+   Same base figures as the /cost-calculator page (source of truth).
 
-   Competitor A — "All-in-one provider"
-     • £2,639 per pharmacy per year (inc. VAT)
-     • 60+ services, paid upfront annually
-     • No per-consultation fee on unlimited package
+   Competitor A: ~£2,639 per pharmacy per year (inc. VAT), paid upfront
+   Competitor B: ~£2,000 per pharmacy per year, modular PGD pricing
+   (both before per-pharmacist training fees)                        */
+const COMPETITOR_A_ANNUAL = 2639; // inc. VAT
+const COMPETITOR_B_ANNUAL = 2000; // modular base licence
 
-   Competitor B — "Per-PGD + platform provider"
-     • £2,160 per pharmacy per year for their Advanced bundle
-       (appointments, Rx, deliveries, PGDs, eCommerce)
-     • Or lower tiers from £1,699/yr (PGD-only plan)
-     • Separate platform subscription required for digital workflow      */
-const VAT_RATE = 0.2;
-const COMPETITOR_A_ANNUAL = 2639; // all-in-one, inc. VAT
-const COMPETITOR_B_ANNUAL = 2592; // Advanced bundle inc. VAT (£2,160 + VAT)
-
-// GRH pricing: flat £100/pharmacy/month (ex-VAT)
+// GRH pricing: flat £100/pharmacy/month. GRH is not VAT registered, no VAT.
 const GRH_MONTHLY_PER_PHARMACY = 100;
 
 export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
@@ -33,14 +25,10 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
   const compBAnnualTotal = COMPETITOR_B_ANNUAL * pharmacyCount;
   const compBMonthlyEquiv = compBAnnualTotal / 12;
 
-  // ── GRH costs (inc. VAT for fair comparison) ──────────────
-  const isCustom = pharmacyCount > 30;
-  const grhMonthlyExVat = isCustom
-    ? 0
-    : GRH_MONTHLY_PER_PHARMACY * pharmacyCount;
-  const grhMonthlyFee = Math.round(grhMonthlyExVat * (1 + VAT_RATE));
-  const grhAnnualFee = Math.round(grhMonthlyExVat * 12 * (1 + VAT_RATE));
-  const grhMonthlyPerPharmacyIncVat = Math.round(GRH_MONTHLY_PER_PHARMACY * (1 + VAT_RATE));
+  // ── GRH costs (no VAT is charged) ─────────────────────────
+  const isLargeGroup = pharmacyCount > 30;
+  const grhMonthlyFee = GRH_MONTHLY_PER_PHARMACY * pharmacyCount;
+  const grhAnnualFee = grhMonthlyFee * 12;
 
   // ── Savings (vs most expensive competitor) ────────────────
   const savingVsA = compAAnnualTotal - grhAnnualFee;
@@ -160,7 +148,7 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
               Provider B
             </p>
             <p className="text-[11px] text-blue-300 mb-4">
-              PGDs + platform bundle
+              Modular PGD pricing
             </p>
             <div className="space-y-2.5">
               <div className="flex justify-between items-baseline gap-2">
@@ -175,7 +163,7 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
                 <span className="text-xs text-blue-200">
                   Services
                 </span>
-                <span className="text-xs text-blue-200">44+</span>
+                <span className="text-xs text-blue-200">Sold separately</span>
               </div>
               <div className="flex justify-between items-baseline gap-2">
                 <span className="text-xs text-blue-200">Payment</span>
@@ -221,22 +209,16 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
                 <span className="text-xs text-blue-200">
                   Monthly fee
                 </span>
-                {isCustom ? (
-                  <span className="text-xs font-semibold text-[color:var(--tenant-primary)]">
-                    Custom
-                  </span>
-                ) : (
-                  <span className="text-xs font-semibold text-white">
-                    &pound;{GRH_MONTHLY_PER_PHARMACY}/pharmacy
-                    <span className="text-[10px] text-blue-300 ml-1">+ VAT (if applicable)</span>
-                  </span>
-                )}
+                <span className="text-xs font-semibold text-white">
+                  &pound;{GRH_MONTHLY_PER_PHARMACY}/pharmacy
+                  <span className="text-[10px] text-blue-300 ml-1">No VAT is charged.</span>
+                </span>
               </div>
               <div className="flex justify-between items-baseline gap-2">
                 <span className="text-xs text-blue-200">
                   Services
                 </span>
-                <span className="text-xs font-bold text-[color:var(--tenant-primary)]">60+</span>
+                <span className="text-xs font-bold text-[color:var(--tenant-primary)]">65+</span>
               </div>
               <div className="flex justify-between items-baseline gap-2">
                 <span className="text-xs text-blue-200">Payment</span>
@@ -253,20 +235,14 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
               <div className="pt-2.5 border-t border-white/10">
                 <div className="flex justify-between items-baseline gap-2">
                   <span className="text-xs text-blue-200">Monthly total</span>
-                  {isCustom ? (
-                    <span className="text-base font-bold text-[color:var(--tenant-primary)]">
-                      Custom
-                    </span>
-                  ) : (
-                    <span className="text-base font-bold text-[color:var(--tenant-primary)]">
-                      &pound;{fmt(grhMonthlyFee)}
-                    </span>
-                  )}
+                  <span className="text-base font-bold text-[color:var(--tenant-primary)]">
+                    &pound;{fmt(grhMonthlyFee)}
+                  </span>
                 </div>
-                {!isCustom && pharmacyCount > 1 && (
+                {pharmacyCount > 1 && (
                   <p className="text-[10px] text-blue-300 mt-0.5 text-right">
                     &pound;{GRH_MONTHLY_PER_PHARMACY} &times;{" "}
-                    {pharmacyCount} pharmacies + VAT, shown inc VAT for like-for-like
+                    {pharmacyCount} pharmacies. No VAT is charged.
                   </p>
                 )}
               </div>
@@ -274,22 +250,16 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
                 <span className="text-xs font-semibold text-blue-200">
                   Annual total
                 </span>
-                {isCustom ? (
-                  <span className="text-lg font-bold text-[color:var(--tenant-primary)]">
-                    Custom
-                  </span>
-                ) : (
-                  <span className="text-lg font-bold text-[color:var(--tenant-primary)]">
-                    &pound;{fmt(grhAnnualFee)}
-                  </span>
-                )}
+                <span className="text-lg font-bold text-[color:var(--tenant-primary)]">
+                  &pound;{fmt(grhAnnualFee)}
+                </span>
               </div>
             </div>
           </div>
         </div>
 
         {/* ── Savings banner ──────────────────────────────────── */}
-        {!isCustom && savingVsA > 0 && (
+        {savingVsA > 0 && (
           <div className="bg-green-500/10 border border-green-400/20 rounded-xl p-6 text-center">
             <p className="text-xs text-green-300 uppercase tracking-wide font-semibold mb-2">
               Your estimated annual savings
@@ -323,16 +293,17 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
           </div>
         )}
 
-        {isCustom && (
-          <div className="bg-white/5 border border-white/10 rounded-xl p-6 text-center">
+        {isLargeGroup && (
+          <div className="mt-4 bg-white/5 border border-white/10 rounded-xl p-6 text-center">
             <p className="text-blue-200 mb-3">
-              Your network qualifies for custom pricing.
+              &pound;100 per pharmacy per month as standard. Group discounts
+              are agreed case by case when your sign-up is approved.
             </p>
             <a
               href="/contact"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-[color:var(--tenant-primary)]/100 hover:bg-[color:var(--tenant-primary)]/15 text-white font-semibold rounded-lg transition-colors"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-[color:var(--tenant-primary)] hover:opacity-90 text-white font-semibold rounded-lg transition-opacity"
             >
-              Get a tailored quote
+              Talk to us about your group
               <svg
                 className="w-4 h-4"
                 fill="none"
@@ -350,7 +321,6 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
           </div>
         )}
 
-        {!isCustom && (
           <div className="mt-6 pt-5 border-t border-blue-900">
             <p className="text-xs text-blue-300 text-center mb-4">
               Plus, with GRH you also get &mdash; included in your monthly fee:
@@ -384,17 +354,16 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
               ))}
             </div>
           </div>
-        )}
 
         <p className="text-center text-[11px] text-blue-300 mt-6 pt-4 border-t border-blue-900">
-          GRH headline price: <strong className="text-[color:var(--tenant-primary)]">£100 per pharmacy per month + VAT (if applicable)</strong>.
-          Totals above are shown inc. VAT for like-for-like comparison with
-          competitor pricing (which is publicly listed inc. VAT). Provider A:
-          all-in-one annual package. Provider B: full platform bundle with
-          ePGDs (44+ services). GRH includes 60+ PGDs, training, and the ePGD
-          consultation tool. Your actual savings may vary.{" "}
+          GRH headline price: <strong className="text-[color:var(--tenant-primary)]">£100 per pharmacy per month</strong>.
+          No VAT is charged. Provider A: all-in-one annual package (inc.
+          VAT). Provider B: modular PGD pricing. Competitor figures are base
+          licences only, before per-pharmacist training fees. GRH includes
+          65+ PGDs, training, and the ePGD consultation tool. Your actual
+          savings may vary.{" "}
           <a href="/contact" className="text-[color:var(--tenant-primary)] underline">
-            Get your exact quote &rarr;
+            Questions? Get in touch &rarr;
           </a>
         </p>
       </div>

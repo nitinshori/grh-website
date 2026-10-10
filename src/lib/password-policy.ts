@@ -36,3 +36,16 @@ export function validatePassword(password: string, opts?: { allowShorterForLegac
   if (banned.some((b) => lower.includes(b))) errors.push('Password contains a banned phrase. Choose something less guessable.')
   return { ok: errors.length === 0, errors }
 }
+
+/** The rule as shown under every password box. Safe to import in client components. */
+export const PASSWORD_RULE_TEXT = 'At least 12 characters, using 3 of: upper case, lower case, numbers, symbols.'
+
+/** One plain sentence for a failed validatePassword(), for showing to users. */
+export function passwordErrorMessage(v: PasswordValidation): string {
+  if (v.ok) return ''
+  if (v.errors.some((e) => e.includes('banned phrase'))) {
+    return 'That password is too easy to guess. Please choose something else.'
+  }
+  if (v.errors.some((e) => e.includes('too long'))) return 'That password is too long.'
+  return `Please choose a stronger password. ${PASSWORD_RULE_TEXT}`
+}

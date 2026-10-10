@@ -48,13 +48,18 @@ export function CookieConsent() {
   if (!visible) return null;
 
   const accept = (value: ConsentValue) => {
+    const previous = readConsent();
     writeConsent(value);
     setVisible(false);
+    // A changed choice takes effect straight away: reload so the Google
+    // tags load (or stop loading) to match it.
+    if (previous !== null && previous !== value) window.location.reload();
   };
 
   return (
     <div
       role="dialog"
+      data-cookie-consent=""
       aria-live="polite"
       aria-label="Cookie consent"
       className="fixed inset-x-0 bottom-0 z-[60] p-4 sm:p-6 pointer-events-none"
@@ -67,9 +72,10 @@ export function CookieConsent() {
             </h2>
             <p className="text-sm text-gray-600 leading-relaxed">
               We use essential cookies to make this site work. With your
-              permission, we&apos;d also like to use analytics cookies to
-              understand how the site is being used so we can improve it. You
-              can change your choice any time on our{" "}
+              permission, we would also like to use Google Analytics and
+              Google Ads cookies to measure visits to the site and how our
+              advertising performs. You can change your choice any time on
+              our{" "}
               <Link
                 href="/legal/cookies"
                 className="text-teal-600 hover:underline font-medium"

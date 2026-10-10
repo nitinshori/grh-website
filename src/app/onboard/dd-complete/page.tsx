@@ -3,8 +3,8 @@ import DdCompleteClient from './DdCompleteClient'
 import { Suspense } from 'react'
 
 export const metadata: Metadata = {
-  title: 'Application received — Get Real Health',
-  description: 'Your direct debit is set up. We review and activate within one working day.',
+  title: 'Direct Debit complete',
+  description: 'Your Direct Debit is set up. We usually approve accounts the same working day, then email your login link.',
 }
 
 export default function DdCompletePage() {

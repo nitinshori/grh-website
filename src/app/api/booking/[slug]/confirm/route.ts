@@ -4,6 +4,8 @@ import { pharmacies, appointments, appointmentTypes, clinicians } from '@/lib/db
 import { eq, and, gt, lt, inArray } from 'drizzle-orm'
 import { sendBookingConfirmation } from '@/lib/appointment-emails'
 
+const BOOKING_ERROR = 'Sorry, we could not book that. Please try again or contact the pharmacy.'
+
 // ── POST /api/booking/[slug]/confirm ────────────────────────────
 // Public: book an appointment
 
@@ -12,7 +14,10 @@ export async function POST(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   const { slug } = await params
-  const body = await req.json()
+  const body = await req.json().catch(() => null)
+  if (!body || typeof body !== 'object') {
+    return NextResponse.json({ error: BOOKING_ERROR }, { status: 400 })
+  }
 
   const {
     siteId,
@@ -32,7 +37,7 @@ export async function POST(
   // Validate required fields
   if (!siteId || !appointmentTypeId || !clinicianId || !startTime || !firstName || !surname || !dob || !phone) {
     return NextResponse.json(
-      { error: 'Missing required fields' },
+      { error: BOOKING_ERROR },
       { status: 400 }
     )
   }
@@ -58,7 +63,7 @@ export async function POST(
     .limit(1)
 
   if (!site) {
-    return NextResponse.json({ error: 'Site not found' }, { status: 404 })
+    return NextResponse.json({ error: BOOKING_ERROR }, { status: 404 })
   }
 
   // Get appointment type for duration (scoped to this group)
@@ -74,7 +79,7 @@ export async function POST(
     .limit(1)
 
   if (!apptType) {
-    return NextResponse.json({ error: 'Appointment type not found' }, { status: 404 })
+    return NextResponse.json({ error: BOOKING_ERROR }, { status: 404 })
   }
 
   // Validate clinician
@@ -91,7 +96,7 @@ export async function POST(
     .limit(1)
 
   if (!clinician) {
-    return NextResponse.json({ error: 'Clinician not found' }, { status: 404 })
+    return NextResponse.json({ error: BOOKING_ERROR }, { status: 404 })
   }
 
   const start = new Date(startTime)

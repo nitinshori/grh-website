@@ -44,8 +44,8 @@ export default function ForPatientsPage() {
             Private health services at your local pharmacy.
           </h1>
           <p className="text-lg text-teal-100 max-w-2xl mx-auto mb-8">
-            No GP referral. No waiting weeks. Over 60 services available at
-            pharmacies across the UK — from travel jabs to weight management.
+            No GP referral. No waiting weeks. Private services available at
+            pharmacies in England and Wales, from travel jabs to weight management.
           </p>
           <Link
             href="/for-patients/find-service"

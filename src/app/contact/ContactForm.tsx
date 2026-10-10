@@ -170,7 +170,7 @@ export function ContactForm() {
             value={formData.pharmacyName}
             onChange={(e) => update("pharmacyName", e.target.value)}
             className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent"
-            placeholder="e.g. Well Pharmacy, Kamsons"
+            placeholder="e.g. High Street Pharmacy"
           />
         </div>
       </div>
@@ -193,7 +193,7 @@ export function ContactForm() {
           <option value="" disabled>
             Select an option
           </option>
-          <option value="demo">Book a demo</option>
+          <option value="demo">Questions about the demo</option>
           <option value="pricing">Pricing question</option>
           <option value="pgd-enquiry">PGD enquiry (pharmacists)</option>
           <option value="patient-enquiry">Patient enquiry</option>

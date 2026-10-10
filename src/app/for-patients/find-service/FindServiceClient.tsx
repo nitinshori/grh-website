@@ -4,16 +4,8 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { patientCategories } from "@/data/patient-services";
 
-/**
- * Placeholder pharmacy data — in production this would come from the backend API.
- * For the static marketing site we show a "coming soon" state for the postcode search
- * while making the service discovery/browsing fully functional.
- */
-
 export function FindServiceClient() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [postcode, setPostcode] = useState("");
-  const [postcodeSubmitted, setPostcodeSubmitted] = useState(false);
 
   // Filter categories based on search query
   const filteredCategories = useMemo(() => {
@@ -39,7 +31,7 @@ export function FindServiceClient() {
             Search by condition or service, or browse categories below.
           </p>
 
-          {/* Search + Postcode */}
+          {/* Search */}
           <div className="flex flex-col sm:flex-row gap-3 max-w-2xl mx-auto">
             <div className="flex-1 relative">
               <svg
@@ -63,69 +55,9 @@ export function FindServiceClient() {
                 className="w-full pl-10 pr-4 py-3 rounded-lg text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"
               />
             </div>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                placeholder="Postcode"
-                value={postcode}
-                onChange={(e) => {
-                  setPostcode(e.target.value.toUpperCase());
-                  setPostcodeSubmitted(false);
-                }}
-                className="w-28 sm:w-32 px-3 py-3 rounded-lg text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"
-              />
-              <button
-                onClick={() => postcode.trim() && setPostcodeSubmitted(true)}
-                className="px-5 py-3 bg-navy-950 hover:bg-navy-900 text-white font-semibold rounded-lg transition-colors text-sm whitespace-nowrap"
-              >
-                Search
-              </button>
-            </div>
           </div>
         </div>
       </section>
-
-      {/* Postcode results placeholder */}
-      {postcodeSubmitted && (
-        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-          <div className="bg-teal-50 border border-teal-200 rounded-xl p-6 text-center">
-            <svg
-              className="w-10 h-10 text-teal-500 mx-auto mb-3"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-              />
-            </svg>
-            <h3 className="font-bold text-navy-900 mb-1">
-              Pharmacy finder coming soon
-            </h3>
-            <p className="text-sm text-gray-600 max-w-md mx-auto">
-              We&apos;re onboarding partner pharmacies across the UK right now.
-              Enter your postcode below to register your interest and
-              we&apos;ll notify you when services go live in{" "}
-              <strong>{postcode}</strong>.
-            </p>
-            <Link
-              href="/contact"
-              className="inline-block mt-4 px-6 py-2.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold rounded-lg transition-colors"
-            >
-              Register interest
-            </Link>
-          </div>
-        </section>
-      )}
 
       {/* Category cards */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">

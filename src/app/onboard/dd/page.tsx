@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm'
 import DdLinkClient from './DdLinkClient'
 
 export const metadata: Metadata = {
-  title: 'Set up your Direct Debit — Get Real Health',
+  title: 'Set up your Direct Debit',
   description: 'Confirm your pharmacies and set up the Direct Debit for your Get Real Health subscription.',
 }
 export const dynamic = 'force-dynamic'
@@ -43,7 +43,7 @@ export default async function DdLinkPage({ searchParams }: { searchParams: Promi
   const n = names.length
   const fee = req.monthlyFeePence
   const feeLine = fee != null
-    ? `${gbp(fee)} per pharmacy per month ex VAT (${gbp(fee * n)} per month for ${n} ${n === 1 ? 'pharmacy' : 'pharmacies'})` +
+    ? `${gbp(fee)} per pharmacy per month (${gbp(fee * n)} per month for ${n} ${n === 1 ? 'pharmacy' : 'pharmacies'})` +
       (req.feeChangePence != null && req.feeChangeOn ? `, changing to ${gbp(req.feeChangePence)} per pharmacy from ${new Date(req.feeChangeOn + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })}` : '')
     : null
 

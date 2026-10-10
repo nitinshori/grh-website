@@ -198,7 +198,7 @@ export default function BookingWidget({
         }),
       })
 
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
 
       if (!res.ok) {
         if (res.status === 409) {
@@ -207,13 +207,14 @@ export default function BookingWidget({
           fetchSlots(selectedDate)
           return
         }
-        throw new Error(data.error || 'Booking failed')
+        throw new Error('Booking failed')
       }
 
       setConfirmation(data.appointment)
       setStep('confirmed')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong.')
+      console.error('[booking]', err)
+      setError('Sorry, we could not book that. Please try again or contact the pharmacy.')
       setStep('details')
     }
   }
@@ -302,7 +303,7 @@ export default function BookingWidget({
         <h1 className="text-2xl font-bold" style={{ color: brandColor }}>
           {config.brandName}
         </h1>
-        <p className="text-gray-500 text-sm mt-1">Request an Appointment</p>
+        <p className="text-gray-500 text-sm mt-1">Book an appointment</p>
       </div>
 
       {/* Step indicator */}
@@ -695,7 +696,7 @@ export default function BookingWidget({
                 />
                 <label htmlFor="emailConfirm" className="text-sm text-gray-600">
                   Email me a confirmation of this appointment and a reminder the day before (needs an email address above).
-                  The pharmacy keeps your details under its privacy notice; nothing is shared with anyone else.
+                  Your details go to {config.brandName} and the secure systems it uses to run bookings. They are kept in line with the pharmacy&apos;s privacy notice.
                 </label>
               </div>
 
@@ -715,9 +716,9 @@ export default function BookingWidget({
                     private key and is accessed over a secure connection by nominated
                     staff. We have a strict confidentiality policy.
                   </p>
-                  <p>This information is not shared with any third party organisations.</p>
-                  <p className="text-xs text-gray-400">
-                    This information is retained for up to 28 days.
+                  <p>
+                    Your details go to {config.brandName} and the secure systems it uses to
+                    run bookings. They are kept in line with the pharmacy&apos;s privacy notice.
                   </p>
                 </div>
 

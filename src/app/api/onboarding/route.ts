@@ -38,8 +38,8 @@ const str = (v: unknown, max: number): string | null =>
  */
 function cleanBranches(raw: unknown, primaryName: string): OnboardingBranch[] | { error: string } {
   if (raw == null) return []
-  if (!Array.isArray(raw)) return { error: 'branches must be a list' }
-  if (raw.length > MAX_BRANCHES) return { error: `At most ${MAX_BRANCHES} additional branches per sign-up; contact us for a larger group` }
+  if (!Array.isArray(raw)) return { error: 'Please check your branch list and try again.' }
+  if (raw.length > MAX_BRANCHES) return { error: `You can add up to ${MAX_BRANCHES} extra branches here. For a larger group, please email info@getrealhealthpgd.co.uk.` }
   const out: OnboardingBranch[] = []
   const seen = new Set([primaryName.trim().toLowerCase()])
   for (const b of raw) {
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null) as
     | (Record<string, unknown> & { step?: number; id?: string; turnstileToken?: string; branches?: unknown })
     | null
-  if (!body) return NextResponse.json({ error: 'Bad body' }, { status: 400 })
+  if (!body) return NextResponse.json({ error: 'Something went wrong. Please try again.' }, { status: 400 })
 
   const branches = cleanBranches(body.branches, typeof body.pharmacyName === 'string' ? body.pharmacyName : '')
   if (!Array.isArray(branches)) return NextResponse.json({ error: branches.error }, { status: 400 })
@@ -81,8 +81,9 @@ export async function POST(request: NextRequest) {
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
     const captcha = await verifyTurnstile(body.turnstileToken as string | undefined, ip)
     if (!captcha.ok) {
+      console.warn('[onboarding] captcha failed:', captcha.error)
       return NextResponse.json(
-        { error: 'Captcha verification failed', detail: captcha.error },
+        { error: 'Please complete the security check and try again.' },
         { status: 400 },
       )
     }
@@ -91,20 +92,25 @@ export async function POST(request: NextRequest) {
   // Step 1 must have a pharmacy name; step 2 must additionally have contact email + names
   const pharmacyName = (body.pharmacyName as string | undefined)?.trim()
   if (!pharmacyName || pharmacyName.length < 2) {
-    return NextResponse.json({ error: 'Missing required field: pharmacyName' }, { status: 400 })
+    return NextResponse.json({ error: 'Please enter the pharmacy name.' }, { status: 400 })
   }
 
   if (step === 2) {
-    const required: Array<keyof typeof body> = ['contactFirstName', 'contactLastName', 'contactEmail']
-    for (const f of required) {
+    // Same rule as the wizard: any non-blank value (a 1-character name is fine).
+    const required: Array<[keyof typeof body, string]> = [
+      ['contactFirstName', 'Please enter your first name.'],
+      ['contactLastName', 'Please enter your last name.'],
+      ['contactEmail', 'Please enter your email address.'],
+    ]
+    for (const [f, message] of required) {
       const v = body[f] as string | undefined
-      if (!v || typeof v !== 'string' || v.trim().length < 2) {
-        return NextResponse.json({ error: `Missing required field: ${String(f)}` }, { status: 400 })
+      if (!v || typeof v !== 'string' || v.trim().length < 1) {
+        return NextResponse.json({ error: message }, { status: 400 })
       }
     }
     const email = (body.contactEmail as string).trim().toLowerCase()
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return NextResponse.json({ error: 'Invalid contact email' }, { status: 400 })
+      return NextResponse.json({ error: 'Please check your email address.' }, { status: 400 })
     }
   }
 
@@ -125,7 +131,7 @@ export async function POST(request: NextRequest) {
       // Stale id from previous browser session — drop it and create fresh
       id = undefined
     } else if (existing.status === 'rejected' || existing.status === 'completed') {
-      return NextResponse.json({ error: 'This sign-up is already closed' }, { status: 409 })
+      return NextResponse.json({ error: 'This sign-up is already closed. Please email info@getrealhealthpgd.co.uk if you need help.' }, { status: 409 })
     } else {
       existingStep = existing.step ?? 0
     }

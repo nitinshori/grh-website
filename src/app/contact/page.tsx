@@ -135,8 +135,9 @@ export default function ContactPage() {
                     How long does onboarding take?
                   </p>
                   <p className="text-gray-500">
-                    10 minutes via the self-serve sign-up at{" "}
-                    <a href="/onboard" className="text-teal-700 hover:underline">/onboard</a>.
+                    Sign up in about 10 minutes at{" "}
+                    <a href="/onboard" className="text-teal-700 hover:underline">/onboard</a>;
+                    we usually approve the same working day.
                   </p>
                 </div>
                 <div>

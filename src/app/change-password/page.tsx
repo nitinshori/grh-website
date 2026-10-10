@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth'
 import { ChangePasswordClient } from './ChangePasswordClient'
 
 export const metadata = {
-  title: 'Change your password | Get Real Health',
+  title: 'Change password',
   description: 'Set a new password for your account.',
   robots: { index: false, follow: false },
 }

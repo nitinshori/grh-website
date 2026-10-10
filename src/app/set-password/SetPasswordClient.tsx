@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { validatePassword, passwordErrorMessage, PASSWORD_RULE_TEXT } from "@/lib/password-policy";
 
 export function SetPasswordClient({ uid, token }: { uid: string; token: string }) {
   const [password, setPassword] = useState("");
@@ -12,12 +13,13 @@ export function SetPasswordClient({ uid, token }: { uid: string; token: string }
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+    const v = validatePassword(password);
+    if (!v.ok) {
+      setError(passwordErrorMessage(v));
       return;
     }
     if (password !== confirm) {
-      setError("Passwords don't match.");
+      setError("The two passwords do not match.");
       return;
     }
     setBusy(true);
@@ -27,17 +29,15 @@ export function SetPasswordClient({ uid, token }: { uid: string; token: string }
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ uid, token, password }),
       });
-      const data = (await res.json()) as { ok?: boolean; error?: string };
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
       if (!res.ok || !data.ok) {
-        setError(
-          (data.error || `Failed (${res.status})`) +
-            (res.status === 400 ? " You can request a fresh link from the Forgotten password page." : "")
-        );
+        setError(data.error || "Something went wrong. Please try again, or email info@getrealhealthpgd.co.uk.");
         return;
       }
       setDone(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      console.error("[set-password]", err);
+      setError("Something went wrong. Please try again, or email info@getrealhealthpgd.co.uk.");
     } finally {
       setBusy(false);
     }
@@ -68,11 +68,11 @@ export function SetPasswordClient({ uid, token }: { uid: string; token: string }
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
-          minLength={8}
+          minLength={12}
           autoComplete="new-password"
           className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
         />
-        <p className="text-xs text-gray-500 mt-1">At least 8 characters.</p>
+        <p className="text-xs text-gray-500 mt-1">{PASSWORD_RULE_TEXT}</p>
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Confirm password</label>
@@ -81,10 +81,11 @@ export function SetPasswordClient({ uid, token }: { uid: string; token: string }
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}
           required
-          minLength={8}
+          minLength={12}
           autoComplete="new-password"
           className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
         />
+        <p className="text-xs text-gray-500 mt-1">{PASSWORD_RULE_TEXT}</p>
       </div>
       {error && (
         <div className="p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-900">{error}</div>

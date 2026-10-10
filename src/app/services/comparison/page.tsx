@@ -29,13 +29,13 @@ export default function ServiceComparisonPage() {
             What can your pharmacy offer?
           </h1>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-            How Get Real Health&apos;s 60+ private PGDs compare with the NHS-funded
+            How Get Real Health&apos;s 65+ private PGDs compare with the NHS-funded
             Pharmacy First (England), Pharmacy First Scotland, and the Welsh
             Common Ailment Service. Use this to see what you can already deliver
             on the NHS — and where private PGDs unlock additional revenue.
           </p>
           <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl mx-auto">
-            <CountTile label="GRH PGDs" value={counts.grh} accent="text-teal-700" />
+            <CountTile label="GRH services compared" value={counts.grh} accent="text-teal-700" />
             <CountTile label="Pharmacy First (Eng)" value={counts.pfe} accent="text-blue-700" />
             <CountTile label="Pharmacy First (Sct)" value={counts.pfs} accent="text-indigo-700" />
             <CountTile label="Welsh CAS / IPS" value={counts.wales} accent="text-rose-700" />
@@ -56,7 +56,7 @@ export default function ServiceComparisonPage() {
             </span>
             <span className="block sm:inline sm:ml-3 mt-2 sm:mt-0 text-xs text-gray-500">
               GRH services are private/paid. NHS schemes are free at point of
-              use for eligible patients but limited in scope. Reviewed May 2026.
+              use for eligible patients but limited in scope. Reviewed October 2026.
             </span>
           </div>
         </div>
@@ -158,8 +158,8 @@ export default function ServiceComparisonPage() {
           </h2>
           <p className="text-gray-600 mb-6">
             NHS schemes are free for patients but cover only a handful of
-            conditions. Adding GRH&apos;s 60+ private PGDs lets you serve patients
-            who fall outside NHS criteria — and capture the revenue.
+            conditions. Adding GRH&apos;s 65+ private PGDs lets you serve patients
+            who fall outside NHS criteria, and capture the revenue.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link

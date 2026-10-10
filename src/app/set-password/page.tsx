@@ -1,7 +1,7 @@
 import { SetPasswordClient } from "./SetPasswordClient";
 
 export const metadata = {
-  title: "Set your password — Get Real Health",
+  title: "Set your password",
   robots: { index: false, follow: false },
 };
 
@@ -26,7 +26,7 @@ export default async function SetPasswordPage({
         </p>
         {!uid || !token ? (
           <p className="text-sm text-red-600">
-            Invalid link. <a href="/forgot-password" className="underline">Request a new one</a>, or ask your pharmacy admin to resend the invite.
+            This link has expired or has already been used. Use <a href="/forgot-password" className="underline">Forgotten your password?</a> on the login page to get a new one.
           </p>
         ) : (
           <SetPasswordClient uid={uid} token={token} />

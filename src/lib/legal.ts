@@ -66,5 +66,5 @@ export const legal = {
   jurisdiction: "England and Wales",
 
   /** Date these policies were last updated */
-  policiesLastUpdated: "April 2026",
+  policiesLastUpdated: "October 2026",
 } as const;

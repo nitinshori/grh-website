@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useSession } from 'next-auth/react'
+import { validatePassword, passwordErrorMessage, PASSWORD_RULE_TEXT } from '@/lib/password-policy'
 
 export function ChangePasswordClient() {
   const { update } = useSession()
@@ -15,12 +16,13 @@ export function ChangePasswordClient() {
     e.preventDefault()
     setError('')
 
-    if (newPassword.length < 12) {
-      setError('New password must be at least 12 characters.')
+    const v = validatePassword(newPassword)
+    if (!v.ok) {
+      setError(passwordErrorMessage(v))
       return
     }
     if (newPassword !== confirmPassword) {
-      setError("New passwords don't match.")
+      setError('The two new passwords do not match.')
       return
     }
     if (newPassword === currentPassword) {
@@ -64,7 +66,7 @@ export function ChangePasswordClient() {
         window.location.href = '/login?callbackUrl=/for-pharmacies/dashboard'
       }
     } catch {
-      setError('Network error. Please try again.')
+      setError('Something went wrong. Please try again, or email info@getrealhealthpgd.co.uk.')
       setLoading(false)
     }
   }
@@ -123,10 +125,7 @@ export function ChangePasswordClient() {
                 onChange={(e) => setNewPassword(e.target.value)}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500"
               />
-              <p className="mt-1 text-xs text-gray-500">
-                Minimum 12 characters. Mix of upper/lower case, numbers and
-                punctuation strongly recommended.
-              </p>
+              <p className="mt-1 text-xs text-gray-500">{PASSWORD_RULE_TEXT}</p>
             </div>
             <div>
               <label
@@ -145,6 +144,7 @@ export function ChangePasswordClient() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500"
               />
+              <p className="mt-1 text-xs text-gray-500">{PASSWORD_RULE_TEXT}</p>
             </div>
             <button
               type="submit"

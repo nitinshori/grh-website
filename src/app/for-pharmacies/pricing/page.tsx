@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 };
 
 const features = [
-  "All PGDs included — 60+ across every category",
+  "All PGDs included: 65+ across every category",
   "Unlimited consultations — zero per-consult fees",
   "Platform access via web and mobile",
   "Online training with CPD certificates for every PGD",
@@ -33,11 +33,11 @@ const faqs = [
   },
   {
     q: "Are there any hidden fees?",
-    a: "No. £100 per pharmacy per month is the price. We do not charge per consultation, per patient, per service, or per PGD. VAT is added where applicable.",
+    a: "No. £100 per pharmacy per month is the price. We do not charge per consultation, per patient, per service, or per PGD. Get Real Health is not VAT registered, so no VAT is added.",
   },
   {
     q: "How does pricing work if I have multiple pharmacies?",
-    a: "£100 per pharmacy per month. So if you have 10 pharmacies, that’s £1,000/month. No setup fees, no platform surcharges. Groups sign up once: add every branch on the form, set up one Direct Debit, and each branch gets its own PGD access with a group dashboard across all of them. For larger networks (30+ sites), get in touch for custom pricing.",
+    a: "£100 per pharmacy per month. So if you have 10 pharmacies, that’s £1,000/month. No setup fees, no platform surcharges. Groups sign up once: add every branch on the form, set up one Direct Debit, and each branch gets its own PGD access with a group dashboard across all of them. £100 per pharmacy per month as standard. Group discounts are agreed case by case when your sign-up is approved.",
   },
   {
     q: "Why do you charge per store instead of per pharmacist?",
@@ -45,7 +45,7 @@ const faqs = [
   },
   {
     q: "How does your pricing compare to other PGD providers?",
-    a: "Some providers charge per pharmacist — so if you have two pharmacists or use locums, your costs double. Others charge £2,639 per pharmacy per year (inc. VAT) upfront. GRH is £100/month per store — all pharmacists and locums included, all 60+ PGDs, the ePGD platform and training. Use the savings calculator above to compare.",
+    a: "Some providers charge per pharmacist — so if you have two pharmacists or use locums, your costs double. Others charge £2,639 per pharmacy per year (inc. VAT) upfront. GRH is £100/month per store — all pharmacists and locums included, all 65+ PGDs, the ePGD platform and training. Use the savings calculator above to compare.",
   },
   {
     q: "Can I cancel?",
@@ -74,7 +74,7 @@ const offerJsonLd = {
   "@type": "Product",
   name: "Get Real Health PGD Platform",
   description:
-    "All-inclusive PGD platform for UK community pharmacies. 60+ PGDs, ePGD consultation tool, training, clinical governance.",
+    "All-inclusive PGD platform for community pharmacies in England and Wales. 65+ PGDs, ePGD consultation tool, training, clinical governance.",
   brand: { "@type": "Brand", name: "Get Real Health" },
   offers: {
     "@type": "Offer",
@@ -88,7 +88,8 @@ const offerJsonLd = {
       referenceQuantity: { "@type": "QuantitativeValue", value: 1, unitCode: "C62" },
     },
     eligibleRegion: [
-      { "@type": "Country", name: "United Kingdom" },
+      { "@type": "AdministrativeArea", name: "England" },
+      { "@type": "AdministrativeArea", name: "Wales" },
     ],
     availability: "https://schema.org/InStock",
     url: "https://getrealhealthpgd.co.uk/for-pharmacies/pricing",
@@ -132,7 +133,10 @@ export default function PricingPage() {
             </p>
             <p className="text-gray-500 mt-1">per pharmacy / month</p>
             <p className="text-sm text-gray-400 mt-1">
-              + VAT where applicable
+              No VAT. One flat monthly fee per pharmacy.
+            </p>
+            <p className="text-sm text-gray-400 mt-1">
+              Pay monthly by Direct Debit, or by monthly invoice and bank transfer.
             </p>
           </div>
 
@@ -160,7 +164,7 @@ export default function PricingPage() {
           <div className="text-center flex flex-col sm:flex-row gap-3 justify-center">
             <Link
               href="/onboard"
-              className="inline-block px-8 py-3 bg-[color:var(--tenant-primary)]/100 hover:bg-[color:var(--tenant-primary)]/15 text-white rounded-lg font-semibold text-sm transition-colors"
+              className="inline-block px-8 py-3 bg-[color:var(--tenant-primary)] hover:opacity-90 text-white rounded-lg font-semibold text-sm transition-opacity"
             >
               Sign up your pharmacy
             </Link>
@@ -173,11 +177,13 @@ export default function PricingPage() {
           </div>
 
           <p className="text-center text-xs text-gray-400 mt-4">
-            Groups: add every branch in one sign-up, one Direct Debit, £100 per pharmacy per month. For networks of 30+ pharmacies,{" "}
+            Groups: add every branch in one sign-up, one Direct Debit. £100 per
+            pharmacy per month as standard. Group discounts are agreed case by
+            case when your sign-up is approved. Questions?{" "}
             <Link href="/contact" className="underline">
-              contact us
-            </Link>{" "}
-            for custom pricing.
+              Contact us
+            </Link>
+            .
           </p>
         </div>
       </section>
@@ -201,9 +207,10 @@ export default function PricingPage() {
               weight management &mdash; everything covered by one fee.
             </li>
             <li>
-              <strong>Zero per-consultation fees ever.</strong> Other providers
-              charge &pound;2,592&ndash;&pound;2,639 per pharmacy per year (inc.
-              VAT), paid upfront. GRH is a simple &pound;100/month subscription.
+              <strong>No big annual bill.</strong> Other providers charge
+              around &pound;2,000 to &pound;2,639 per pharmacy per year, often
+              paid upfront, before per-pharmacist training fees. GRH is a
+              simple &pound;100/month subscription: &pound;1,200 a year, no VAT.
             </li>
             <li>
               <strong>All your locums included.</strong> One fee per store covers

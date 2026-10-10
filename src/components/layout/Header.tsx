@@ -14,7 +14,7 @@ const pharmacyLinks = [
   {
     href: "/for-pharmacies/pgd-catalogue",
     label: "PGD Catalogue",
-    description: "60+ PGDs across travel, weight, sexual health and more.",
+    description: "65+ PGDs across travel, weight, sexual health and more.",
   },
   {
     href: "/services/comparison",
@@ -24,18 +24,12 @@ const pharmacyLinks = [
   {
     href: "/for-pharmacies/pricing",
     label: "Pricing",
-    description: "Flat annual fee. Get in touch for a quote.",
+    description: "£100 per pharmacy per month, every PGD included.",
   },
   {
     href: "/for-pharmacies/platform",
     label: "Our Platform",
     description: "The consultation tool, training hub, and dashboard.",
-  },
-  {
-    href: "/pharmacy-plus-health",
-    label: "Pharmacy+ Health Hub",
-    description:
-      "Our patient-facing directory \u2014 helps your customers find you.",
   },
   {
     href: "/for-pharmacies/growth",

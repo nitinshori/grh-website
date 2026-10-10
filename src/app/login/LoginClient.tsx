@@ -64,11 +64,11 @@ function LoginForm({ tenant, launchUrl }: Props) {
   const [biometricReady, setBiometricReady] = useState(false)
   const [loginError, setLoginError] = useState(
     error === 'blocked'
-      ? 'Your account has been deactivated. Contact your administrator.'
+      ? "Your account is switched off. Please contact your pharmacy's account holder or info@getrealhealthpgd.co.uk."
       : error === 'branch'
         ? 'The branch you were working at is no longer available to you. Sign in again to continue at your home branch.'
         : error
-        ? 'Invalid email or password.'
+        ? 'Email, GPhC number or password not recognised.'
         : '',
   )
 
@@ -207,7 +207,7 @@ function LoginForm({ tenant, launchUrl }: Props) {
 
     const outcome = await completeSignIn(email, password)
     if (outcome === 'invalid') {
-      setLoginError('Invalid email/GPHC number or password.')
+      setLoginError('Email, GPhC number or password not recognised.')
       setLoading(false)
     }
   }
@@ -303,7 +303,7 @@ function LoginForm({ tenant, launchUrl }: Props) {
                 htmlFor="email"
                 className="block text-sm font-medium text-gray-700 mb-1.5"
               >
-                Email or GPHC number
+                Email or GPhC number
               </label>
               <input
                 id="email"

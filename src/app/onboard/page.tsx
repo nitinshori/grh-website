@@ -2,9 +2,9 @@ import type { Metadata } from 'next'
 import OnboardClient from './OnboardClient'
 
 export const metadata: Metadata = {
-  title: 'Sign up — Get Real Health',
+  title: 'Sign up',
   description:
-    'Sign up your pharmacy for the Get Real Health PGD platform. One flat monthly fee, every PGD included, set up in minutes.',
+    'Sign up your pharmacy for the Get Real Health PGD platform. One flat monthly fee, every PGD included. Sign up in about 10 minutes; we usually approve the same working day.',
 }
 
 /**

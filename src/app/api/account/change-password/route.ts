@@ -13,6 +13,7 @@ import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { users } from '@/lib/db/schema'
 import { audit } from '@/lib/audit'
+import { validatePassword, passwordErrorMessage } from '@/lib/password-policy'
 
 export const runtime = 'nodejs'
 
@@ -38,11 +39,9 @@ export async function POST(req: Request) {
       { status: 400 },
     )
   }
-  if (newPassword.length < 12) {
-    return NextResponse.json(
-      { error: 'New password must be at least 12 characters' },
-      { status: 400 },
-    )
+  const check = validatePassword(newPassword)
+  if (!check.ok) {
+    return NextResponse.json({ error: passwordErrorMessage(check) }, { status: 400 })
   }
   if (newPassword === currentPassword) {
     return NextResponse.json(

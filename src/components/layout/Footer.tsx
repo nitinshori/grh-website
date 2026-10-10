@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { legal } from "@/lib/legal";
+import { CookiePreferencesButton } from "@/components/legal/CookiePreferencesButton";
 
 const pharmacyLinks = [
   { href: "/for-pharmacies", label: "Why Partner With Us" },
   { href: "/for-pharmacies/pgd-catalogue", label: "PGD Catalogue" },
   { href: "/for-pharmacies/pricing", label: "Pricing" },
   { href: "/for-pharmacies/platform", label: "Our Platform" },
-  { href: "/pharmacy-plus-health", label: "Pharmacy+ Health Hub" },
   { href: "/for-pharmacies/growth", label: "Grow Your Pharmacy (Practice Digital)" },
 ];
 
@@ -67,6 +67,14 @@ export function Footer() {
             </Link>
             <p className="text-sm text-blue-200 leading-relaxed mb-4">
               UK pharmacy PGD provider. Flat fee. Your data. Your business.
+            </p>
+            <p className="text-sm mb-4">
+              <a
+                href="mailto:info@getrealhealthpgd.co.uk"
+                className="text-blue-200 hover:text-teal-300 transition-colors"
+              >
+                info@getrealhealthpgd.co.uk
+              </a>
             </p>
             <a
               href="https://www.linkedin.com/company/get-real-health-uk"
@@ -204,9 +212,7 @@ export function Footer() {
             reserved.
           </p>
           <p className="text-xs text-blue-500">
-            <Link href="/legal/cookies" className="hover:text-teal-300">
-              Cookie preferences
-            </Link>
+            <CookiePreferencesButton className="hover:text-teal-300" />
           </p>
         </div>
       </div>

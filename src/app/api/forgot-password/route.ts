@@ -25,6 +25,7 @@ import { db } from '@/lib/db'
 import { users, onboardingRequests } from '@/lib/db/schema'
 import { rateLimit } from '@/lib/rate-limit'
 import { sendEmail, escapeHtml } from '@/lib/email'
+import { ensureFirstUser, sendSetupEmail } from '@/lib/onboarding-setup'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -63,7 +64,7 @@ export async function POST(req: NextRequest) {
     .limit(1)
 
   // No user yet, but an approved sign-up under this email: the customer
-  // never completed the setup link (lost email, or past its 7 days), so the
+  // never completed the setup link (lost email, or it expired), so the
   // pharmacy exists and is billed while nobody can log in. That was Burrage
   // Pharmacy, 17 to 19 Sep 2026. Re-issue the setup link instead of the
   // dead end.
@@ -71,9 +72,13 @@ export async function POST(req: NextRequest) {
     const [pending] = await db
       .select({
         id: onboardingRequests.id,
-        contactFirstName: onboardingRequests.contactFirstName,
-        contactEmail: onboardingRequests.contactEmail,
         pharmacyName: onboardingRequests.pharmacyName,
+        pharmacyId: onboardingRequests.pharmacyId,
+        contactFirstName: onboardingRequests.contactFirstName,
+        contactLastName: onboardingRequests.contactLastName,
+        contactEmail: onboardingRequests.contactEmail,
+        branches: onboardingRequests.branches,
+        groupName: onboardingRequests.groupName,
       })
       .from(onboardingRequests)
       .where(
@@ -85,31 +90,12 @@ export async function POST(req: NextRequest) {
       .orderBy(sql`${onboardingRequests.updatedAt} DESC`)
       .limit(1)
     if (pending && pending.contactEmail) {
-      const rawToken = crypto.randomBytes(32).toString('hex')
-      const tokenHash = await bcrypt.hash(rawToken, 10)
-      await db
-        .update(onboardingRequests)
-        .set({
-          setupTokenHash: tokenHash,
-          setupTokenExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-          updatedAt: new Date(),
-        })
-        .where(eq(onboardingRequests.id, pending.id))
-      const appUrl = process.env.APP_URL || 'https://getrealhealthpgd.co.uk'
-      const setupUrl = `${appUrl}/setup-account?id=${pending.id}&token=${rawToken}`
+      // Same mechanism as approval and the admin resend: create (or adopt)
+      // the login and send the current /set-password link. The legacy
+      // /setup-account link is no longer issued.
       try {
-        await sendEmail({
-          to: pending.contactEmail,
-          subject: 'Finish setting up your Get Real Health account',
-          html:
-            `<p>Hi ${escapeHtml(pending.contactFirstName || 'there')},</p>` +
-            `<p>Your Get Real Health sign-up for ${escapeHtml(pending.pharmacyName)} was approved, but the ` +
-            `account was never finished. Choose your password here to complete it:</p>` +
-            `<p><a href="${setupUrl}">${setupUrl}</a></p>` +
-            `<p>The link works once and expires in 7 days.</p>` +
-            `<p>Get Real Health<br>info@getrealhealthpgd.co.uk</p>`,
-          replyTo: 'info@getrealhealthpgd.co.uk',
-        })
+        const firstUser = await ensureFirstUser(pending)
+        if (firstUser) await sendSetupEmail(pending, firstUser, 'resend')
       } catch (e) {
         console.error('[forgot-password] setup re-send failed:', e instanceof Error ? e.message : e)
       }

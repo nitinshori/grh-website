@@ -47,11 +47,11 @@ export default function ForPharmaciesPage() {
       <section className="bg-navy-900 text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
           <p className="text-lg leading-relaxed text-blue-100">
-            Our founder spent years as Medical Director of Pharmacy2U &mdash;
-            one of the UK&apos;s largest online pharmacies &mdash; helping
-            build out its online doctor service. That work included some of
-            the UK&apos;s earliest large-scale online prescribing programmes
-            for GLP-1 weight management and testosterone replacement therapy.
+            Our founder, Dr Nitin Shori, founded the Pharmacy2U Online Doctor
+            service and was its Medical Director for over 10 years, at one of
+            the UK&apos;s largest online pharmacies. That work included some of the
+            UK&apos;s earliest large-scale online prescribing programmes for
+            GLP-1 weight management and other private prescribing services.
           </p>
           <p className="text-lg leading-relaxed text-blue-200 mt-4">
             That&apos;s not a CV line. It&apos;s the clinical experience behind
@@ -112,7 +112,7 @@ export default function ForPharmaciesPage() {
               One flat fee per store
             </h3>
             <p className="text-gray-600 leading-relaxed">
-              Most PGD providers charge per pharmacist or per consultation.
+              Most PGD providers charge per pharmacist, through training fees.
               The more staff you have, the more they earn. We charge one flat
               monthly fee per store &mdash; covering all your pharmacists,
               locums included. Zero per-consultation fees. Your 500th consult
@@ -145,7 +145,7 @@ export default function ForPharmaciesPage() {
               licensed from a third party. PGD governance, clinical workflows,
               training and audit-ready records sit in the same product, from
               the same team. No third-party platform contracts or lock-in. No
-              integration risk. One login, one fee, one support number.
+              integration risk. One login, one fee, one support inbox.
               Designed to work alongside your PMR, not replace it.
             </p>
           </div>
@@ -224,8 +224,9 @@ export default function ForPharmaciesPage() {
       <section className="bg-navy-900 text-white">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
           <blockquote className="text-lg sm:text-xl italic leading-relaxed text-blue-100 mb-6">
-            &ldquo;I spent years as Medical Director at Pharmacy2U, helping
-            build out online prescribing services at scale. That work taught
+            &ldquo;I founded the Pharmacy2U Online Doctor service and was its
+            Medical Director for over 10 years, building online prescribing
+            services at scale. That work taught
             me what good clinical governance actually looks like in practice
             &mdash; and how much it matters when something goes wrong.&rdquo;
           </blockquote>
@@ -254,7 +255,7 @@ export default function ForPharmaciesPage() {
               Our sister company Practice Digital builds your pharmacy&apos;s
               website — Pharmacy First foregrounded, clinic booking, repeat
               ordering and an AI chatbot. £399 a year, £0 setup, built by
-              working clinicians. See the Bridgegate Pharmacy demo.
+              working clinicians. See a working demo site.
             </p>
           </div>
           <Link
@@ -274,7 +275,7 @@ export default function ForPharmaciesPage() {
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link
             href="/onboard"
-            className="px-7 py-3.5 bg-[color:var(--tenant-primary)]/100 hover:bg-[color:var(--tenant-primary)]/15 text-white font-semibold rounded-lg transition-colors text-lg shadow-sm"
+            className="px-7 py-3.5 bg-[color:var(--tenant-primary)] hover:opacity-90 text-white font-semibold rounded-lg transition-opacity text-lg shadow-sm"
           >
             Sign up your pharmacy
           </Link>

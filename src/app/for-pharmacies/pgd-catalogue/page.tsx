@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import { PGDCatalogueClient } from "./PGDCatalogueClient";
-import { ALL_PGDS } from "@/lib/pgd-access";
+import { ALL_PGDS, COMING_SOON_SLUGS, isPubliclyListedPgd } from "@/lib/pgd-access";
 
 const BASE_URL = "https://getrealhealthpgd.co.uk";
 
 export const metadata: Metadata = {
-  title: "PGD Catalogue — 60+ Services for UK Pharmacies",
+  title: "PGD Catalogue: 65+ Services for Pharmacies in England and Wales",
   description:
-    "60+ PGDs for UK community pharmacies: weight management (Wegovy, Mounjaro, Saxenda), travel vaccines, ED, hair loss, contraception, UTI and more. All included in the £100/month flat fee.",
+    "65+ PGDs for community pharmacies in England and Wales: weight management (Wegovy, Mounjaro, Saxenda), travel vaccines, ED, hair loss, contraception, UTI and more. All included in the £100/month flat fee.",
   alternates: { canonical: `${BASE_URL}/for-pharmacies/pgd-catalogue` },
 };
 
@@ -16,19 +16,19 @@ export const metadata: Metadata = {
 const faqs = [
   {
     q: "What PGD services does Get Real Health provide?",
-    a: "60+ PGDs across weight management (Wegovy, Mounjaro, Saxenda, Mysimba, Orlistat), travel vaccines (yellow fever, rabies, Japanese encephalitis, anti-malarials), sexual health (ED, contraception, emergency contraception, STI testing, BV, thrush, gonorrhoea, herpes management), respiratory (asthma rescue, COPD, hayfever), dermatology (acne, eczema, rosacea, impetigo, cold sores), smoking cessation, dental bridging, alopecia treatment, and many more.",
+    a: "65+ PGDs across weight management (Wegovy, Mounjaro, Saxenda, Mysimba, Orlistat), travel vaccines (yellow fever, rabies, Japanese encephalitis, anti-malarials), sexual health (ED, contraception, emergency contraception, STI testing, BV, thrush, genital warts), respiratory (asthma rescue, COPD, hayfever), dermatology (acne, eczema, rosacea, impetigo, cold sores), smoking cessation, dental bridging, male pattern hair loss (finasteride), and many more. Gonorrhoea treatment and genital herpes are coming soon.",
   },
   {
     q: "Are weight-loss PGDs like Wegovy and Mounjaro included?",
-    a: "Yes. Wegovy, Mounjaro, Saxenda, Mysimba, and Orlistat are all included PGDs. There is also a GLP-1 monitoring PGD for dose-titration follow-ups. All weight-management services share the same £100/month flat fee — no extra fees per consultation or per service.",
+    a: "Yes. Wegovy, Wegovy tablets, Foundayo, Mounjaro, Saxenda, Mysimba, and Orlistat are all included PGDs. All weight-management services share the same £100/month flat fee, with no extra fees per consultation or per service.",
   },
   {
     q: "Are travel vaccinations included?",
-    a: "Yes. The travel-core PGD covers the routine travel vaccines, plus dedicated PGDs for yellow fever, rabies, Japanese encephalitis, meningitis ACWY, dengue, altitude sickness, anti-malarials, and travellers' diarrhoea — all included in the £100/month fee.",
+    a: "Yes. The travel-core PGD covers hepatitis A, typhoid and oral cholera vaccine, plus dedicated PGDs for hepatitis A and B, typhoid, tetanus, diphtheria and polio, junior travel vaccines, yellow fever, rabies, Japanese encephalitis, meningitis ACWY, dengue, altitude sickness, anti-malarials, and travellers' diarrhoea, all included in the £100/month fee.",
   },
   {
     q: "Which sexual-health services are covered?",
-    a: "ED treatment, contraception (including emergency and postnatal), STI testing, gonorrhoea treatment, herpes management, premature ejaculation, BV, thrush, and HPV vaccination. PrEP for HIV prevention is on the roadmap.",
+    a: "ED treatment, contraception (including emergency and postnatal), STI testing with chlamydia treatment, genital warts, premature ejaculation, BV, thrush, and HPV vaccination. Gonorrhoea treatment and genital herpes are coming soon.",
   },
   {
     q: "Is BPH included?",
@@ -72,6 +72,20 @@ const provider = {
   url: BASE_URL,
 };
 
+// Get Real Health is registered with the CQC and HIW and serves England and
+// Wales only.
+const AREA_SERVED = [
+  { "@type": "AdministrativeArea", name: "England" },
+  { "@type": "AdministrativeArea", name: "Wales" },
+];
+
+// Only PGDs that are live and released for public listing: no withdrawn or
+// retired services, no drafts, nothing awaiting release (oral minoxidil, ear)
+// and no coming-soon placeholders.
+const LISTED_PGDS = ALL_PGDS.filter(
+  (pgd) => isPubliclyListedPgd(pgd.slug) && !COMING_SOON_SLUGS.has(pgd.slug),
+);
+
 const offer = {
   "@type": "Offer",
   price: "100",
@@ -83,7 +97,7 @@ const offer = {
     unitCode: "MON",
   },
   availability: "https://schema.org/InStock",
-  eligibleRegion: [{ "@type": "Country", name: "United Kingdom" }],
+  eligibleRegion: AREA_SERVED,
   url: `${BASE_URL}/for-pharmacies/pricing`,
 };
 
@@ -92,22 +106,22 @@ const itemListJsonLd = {
   "@type": "ItemList",
   name: "Get Real Health — PGD Catalogue",
   description:
-    "Patient Group Directions available to GRH-subscribed UK community pharmacies. All included in the single £100/month per pharmacy fee.",
-  numberOfItems: ALL_PGDS.length,
-  itemListElement: ALL_PGDS.map((pgd, i) => ({
+    "Patient Group Directions available to GRH-subscribed community pharmacies in England and Wales. All included in the single £100/month per pharmacy fee.",
+  numberOfItems: LISTED_PGDS.length,
+  itemListElement: LISTED_PGDS.map((pgd, i) => ({
     "@type": "ListItem",
     position: i + 1,
     item: {
       "@type": "Service",
       name: `${pgd.title} PGD`,
-      description: `${pgd.title} (${pgd.subtitle}) — ${pgd.category} Patient Group Direction for UK community pharmacies. Includes electronic consultation tool, training and clinical governance.`,
+      description: `${pgd.title} (${pgd.subtitle}): ${pgd.category} Patient Group Direction for community pharmacies in England and Wales. Includes electronic consultation tool, optional training and clinical governance.`,
       category: pgd.category,
       serviceType: "Patient Group Direction",
       provider,
-      areaServed: { "@type": "Country", name: "United Kingdom" },
+      areaServed: AREA_SERVED,
       audience: {
         "@type": "Audience",
-        audienceType: "UK community pharmacies and pharmacists",
+        audienceType: "Community pharmacies and pharmacists in England and Wales",
       },
       offers: offer,
     },

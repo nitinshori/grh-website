@@ -23,8 +23,8 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
 
   // Women's Health
   { slug: 'emergency-contraception', title: 'Emergency Contraception', subtitle: 'Levonorgestrel / Ulipristal', category: "Women's Health" },
-  { slug: 'postnatal-contraception', title: 'Postnatal Contraception', subtitle: 'Desogestrel', category: "Women's Health" },
-  { slug: 'thrush', title: 'Vaginal Thrush', subtitle: 'Fluconazole', category: "Women's Health" },
+  { slug: 'postnatal-contraception', title: 'Postnatal Contraception', subtitle: 'Desogestrel / Medroxyprogesterone injection', category: "Women's Health" },
+  { slug: 'thrush', title: 'Vaginal Thrush', subtitle: 'Fluconazole / Clotrimazole pessary', category: "Women's Health" },
   { slug: 'period-delay', title: 'Period Delay', subtitle: 'Norethisterone 5mg', category: "Women's Health" },
   { slug: 'bv', title: 'Bacterial Vaginosis', subtitle: 'Metronidazole', category: "Women's Health" },
   { slug: 'alopecia-minoxidil', title: 'Female Pattern Hair Loss', subtitle: 'Minoxidil', category: "Women's Health" },
@@ -47,7 +47,7 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
   // glp1-monitoring: Retired 8 Sep 2026. See RETIRED_SLUGS.
 
   // Skin
-  { slug: 'acne', title: 'Acne', subtitle: 'Adapalene / Lymecycline', category: 'Skin' },
+  { slug: 'acne', title: 'Acne', subtitle: 'Adapalene + benzoyl peroxide / Clindamycin + benzoyl peroxide (Duac)', category: 'Skin' },
   { slug: 'oral-minoxidil', title: 'Pattern Hair Loss (Low-Dose Oral Minoxidil)', subtitle: 'Off-label, men and women 18 to 65, pharmacists only', category: 'Skin' },
   // Built from the PPH-signed PGD (J. Wilkins), 29 Jul 2026 — assigned to
   // PPH only via migration 036; no GRH master document yet.
@@ -56,21 +56,21 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
   { slug: 'fungal-infection', title: 'Fungal Skin Infection', subtitle: 'Miconazole / Trimovate', category: 'Skin' },
   { slug: 'psoriasis', title: 'Psoriasis', subtitle: 'Calcipotriol 50 micrograms/g with betamethasone 0.5 mg/g, stable plaque psoriasis', category: 'Skin' },
   { slug: 'period-pain', title: 'Period Pain', subtitle: "Naproxen / Mefenamic Acid", category: "Women's Health" },
-  { slug: 'rosacea', title: 'Rosacea', subtitle: 'Ivermectin / Doxycycline', category: 'Skin' },
+  { slug: 'rosacea', title: 'Rosacea', subtitle: 'Metronidazole gel / Azelaic acid gel', category: 'Skin' },
   // Subtitle corrected 8 Sep 2026: the v002 document authorises betamethasone
   // and clobetasone. It contains no pimecrolimus (Elidel), no hydrocortisone and
   // no fusidic acid, so the catalogue was advertising a product the PGD does not
   // cover, in the same way the ear service advertised amoxicillin.
   { slug: 'eczema', title: 'Eczema', subtitle: 'Betamethasone / Clobetasone (Eumovate)', category: 'Skin' },
   { slug: 'impetigo', title: 'Impetigo', subtitle: 'Fusidic acid / Flucloxacillin / Clarithromycin (penicillin allergy)', category: 'Skin' },
-  { slug: 'cold-sores', title: 'Cold Sores', subtitle: 'Valaciclovir', category: 'Skin' },
-  { slug: 'shingles-treatment', title: 'Shingles Treatment', subtitle: 'Valaciclovir', category: 'Skin' },
-  { slug: 'wound-care', title: 'Wound Care', subtitle: 'Assessment & Dressing', category: 'Skin' },
+  { slug: 'cold-sores', title: 'Cold Sores', subtitle: 'Aciclovir cream / Aciclovir tablets', category: 'Skin' },
+  { slug: 'shingles-treatment', title: 'Shingles Treatment', subtitle: 'Aciclovir / Valaciclovir / Famciclovir', category: 'Skin' },
+  { slug: 'wound-care', title: 'Wound Care', subtitle: 'Co-amoxiclav (bites) / Flucloxacillin (non-bite wounds)', category: 'Skin' },
 
   // Acute & Infection
   { slug: 'uti', title: 'Uncomplicated UTI', subtitle: 'Nitrofurantoin / Trimethoprim', category: 'Acute & Infection' },
-  { slug: 'sore-throat', title: 'Acute Sore Throat', subtitle: 'Phenoxymethylpenicillin', category: 'Acute & Infection' },
-  { slug: 'ear-infection', title: 'Acute Otitis Externa', subtitle: 'Ciprofloxacin ear drops / Dexamethasone-neomycin spray', category: 'Acute & Infection' },
+  { slug: 'sore-throat', title: 'Acute Sore Throat', subtitle: 'Phenoxymethylpenicillin / Clarithromycin', category: 'Acute & Infection' },
+  { slug: 'ear-infection', title: 'Acute Otitis Externa', subtitle: 'Ciprofloxacin ear drops', category: 'Acute & Infection' },
   // eye-infections removed from public catalogue — chloramphenicol OTC (Apr 2026)
   // threadworms: Retired 8 Sep 2026 as a PGD. Mebendazole for threadworm at 2 years and over is a P medicine (Ovex), and a PGD is only required for a POM. Handled as a P sale under pharmacy protocol, following the same ruling made on the ibuprofen arm of the dental PGD. See RETIRED_SLUGS.
   // Corrected 28 Jul 2026: this PGD is the Varivax/Varilrix VACCINATION
@@ -80,8 +80,8 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
   { slug: 'chickenpox', title: 'Chickenpox (Varicella) Vaccine', subtitle: 'Varivax / Varilrix', category: 'Vaccines' },
 
   // Respiratory
-  { slug: 'asthma-rescue', title: 'Asthma Rescue', subtitle: 'Salbutamol', category: 'Respiratory' },
-  { slug: 'copd', title: 'COPD', subtitle: 'Rescue Inhalers & Monitoring', category: 'Respiratory' },
+  { slug: 'asthma-rescue', title: 'Asthma Rescue', subtitle: 'Salbutamol / Prednisolone', category: 'Respiratory' },
+  { slug: 'copd', title: 'COPD', subtitle: 'Salbutamol rescue inhaler / Amoxicillin (infective exacerbation)', category: 'Respiratory' },
   { slug: 'smoking-nrt', title: 'Smoking Cessation (NRT)', subtitle: 'Patches / Gum / Lozenges', category: 'Respiratory' },
   { slug: 'chest-service', title: 'Chest Infection Service', subtitle: 'Acute Bacterial Bronchitis (Doxycycline / Amoxicillin / Clarithromycin)', category: 'Respiratory' },
 
@@ -95,13 +95,13 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
   { slug: 'sleep-melatonin', title: 'Insomnia (Circadin)', subtitle: 'Melatonin 2mg prolonged-release, primary insomnia, 55 and over', category: 'Mental Health & Wellbeing' },
   // adhd-monitoring removed from public catalogue — clinical review (Apr 2026)
   { slug: 'anxiety-propranolol', title: 'Situational Anxiety', subtitle: 'Propranolol', category: 'Mental Health & Wellbeing' },
-  { slug: 'hayfever', title: 'Hayfever (Severe)', subtitle: 'Fexofenadine / Mometasone', category: 'Mental Health & Wellbeing' },
+  { slug: 'hayfever', title: 'Hayfever (Severe)', subtitle: 'Fexofenadine / Dymista (azelastine and fluticasone)', category: 'Mental Health & Wellbeing' },
   { slug: 'b12-injection', title: 'Vitamin B12 Injection', subtitle: 'Hydroxocobalamin injection and cyanocobalamin tablets (B12 deficiency)', category: 'Mental Health & Wellbeing' },
   { slug: 'folic-acid', title: 'Folate Deficiency', subtitle: 'Folic acid 5mg tablets (B12 status must be checked first)', category: 'Mental Health & Wellbeing' },
 
   // Vaccines
-  { slug: 'flu', title: 'Flu Vaccination', subtitle: 'Seasonal Influenza', category: 'Vaccines' },
-  { slug: 'covid-booster', title: 'COVID-19 Booster', subtitle: 'mRNA / Protein Subunit', category: 'Vaccines' },
+  { slug: 'flu', title: 'Flu Vaccination', subtitle: 'Seasonal influenza, 2026/27 trivalent inactivated vaccines', category: 'Vaccines' },
+  { slug: 'covid-booster', title: 'COVID-19 Booster', subtitle: 'Comirnaty / Spikevax (mRNA), Nuvaxovid (protein)', category: 'Vaccines' },
   { slug: 'shingles-vaccine', title: 'Shingles Vaccine', subtitle: 'Shingrix', category: 'Vaccines' },
   { slug: 'pneumococcal', title: 'Pneumococcal Vaccine', subtitle: 'Prevenar 20 (PCV20) or Pneumovax 23, from 2 years', category: 'Vaccines' },
   // Subtitle corrected 8 Sep 2026: 'Gardasil 9' alone told a pharmacist
@@ -110,28 +110,28 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
   { slug: 'hpv', title: 'HPV Vaccine', subtitle: 'Gardasil 9, all sexes from 9 years, schedule set by age and immune status', category: 'Vaccines' },
   { slug: 'mmr', title: 'MMR Vaccine', subtitle: 'Measles, Mumps, Rubella', category: 'Vaccines' },
   { slug: 'meningitis-b', title: 'Meningitis B', subtitle: 'Bexsero (from 2 months) and Trumenba (from 10 years)', category: 'Vaccines' },
-  { slug: 'meningitis-acwy-travel', title: 'Meningitis ACWY', subtitle: 'MenQuadfi / Nimenrix', category: 'Vaccines' },
+  { slug: 'meningitis-acwy-travel', title: 'Meningitis ACWY', subtitle: 'MenQuadfi / Nimenrix / Menveo', category: 'Vaccines' },
   { slug: 'rsv', title: 'RSV Vaccine', subtitle: 'Abrysvo / Arexvy', category: 'Vaccines' },
   { slug: 'hepatitis-a', title: 'Hepatitis A Vaccine', subtitle: 'Havrix / Avaxim, from 1 year', category: 'Vaccines' },
-  { slug: 'hep-ab-travel', title: 'Hepatitis A/B (Travel)', subtitle: 'Twinrix / Havrix / Engerix-B / Avaxim (hepatitis A and B together)', category: 'Vaccines' },
-  { slug: 'typhoid', title: 'Typhoid', subtitle: 'Typhim Vi / Vivotif', category: 'Vaccines' },
+  { slug: 'hep-ab-travel', title: 'Hepatitis A/B (Travel)', subtitle: 'Twinrix / Havrix / Engerix B / Avaxim, hepatitis A, B or both', category: 'Vaccines' },
+  { slug: 'typhoid', title: 'Typhoid', subtitle: 'Typhim Vi (Vi polysaccharide), from 2 years', category: 'Vaccines' },
   { slug: 'yellow-fever', title: 'Yellow Fever', subtitle: 'Stamaril (registered YFVCs only)', category: 'Vaccines' },
 
   // Travel Health
-  { slug: 'travel-core', title: 'Travel Health Assessment', subtitle: 'Risk Assessment & Advice', category: 'Travel Health' },
-  { slug: 'anti-malarials', title: 'Anti-Malarials', subtitle: 'Atovaquone-Proguanil / Doxycycline', category: 'Travel Health' },
-  { slug: 'hep-b-occupational', title: 'Hepatitis B', subtitle: 'Engerix-B / Fendrix', category: 'Travel Health' },
-  { slug: 'rabies', title: 'Rabies Vaccine', subtitle: 'Pre-exposure Prophylaxis', category: 'Travel Health' },
+  { slug: 'travel-core', title: 'Travel Health Assessment', subtitle: 'Hepatitis A (Havrix / Avaxim), Typhoid (Typhim Vi), Cholera (Dukoral)', category: 'Travel Health' },
+  { slug: 'anti-malarials', title: 'Anti-Malarials', subtitle: 'Atovaquone-Proguanil / Doxycycline / Mefloquine', category: 'Travel Health' },
+  { slug: 'hep-b-occupational', title: 'Hepatitis B', subtitle: 'Engerix B', category: 'Travel Health' },
+  { slug: 'rabies', title: 'Rabies Vaccine', subtitle: 'Rabipur / Verorab, pre-exposure prophylaxis', category: 'Travel Health' },
   { slug: 'tetanus', title: 'Tetanus, Diphtheria and Polio', subtitle: 'Td/IPV (Revaxis), 10 years and over', category: 'Travel Health' },
   { slug: 'junior-travel', title: 'Junior Travel Vaccines', subtitle: 'Paediatric travel vaccines, 12 months to 17 years', category: 'Travel Health' },
   { slug: 'japanese-encephalitis', title: 'Japanese Encephalitis', subtitle: 'Ixiaro', category: 'Travel Health' },
-  { slug: 'dengue', title: 'Dengue Vaccine', subtitle: 'Qdenga', category: 'Travel Health' },
+  { slug: 'dengue', title: 'Dengue Vaccine', subtitle: 'Qdenga, adults 18 and over', category: 'Travel Health' },
   { slug: 'altitude-sickness', title: 'Altitude Sickness', subtitle: 'Acetazolamide', category: 'Travel Health' },
-  { slug: 'travellers-diarrhoea', title: "Traveller's Diarrhoea", subtitle: 'Ciprofloxacin / Azithromycin', category: 'Travel Health' },
+  { slug: 'travellers-diarrhoea', title: "Traveller's Diarrhoea", subtitle: 'Azithromycin (standby)', category: 'Travel Health' },
 
   // Occupational Health
   // needlestick-pep removed from public catalogue — not suitable for pharmacy-level supply (Apr 2026)
-  { slug: 'dental-bridging', title: 'Dental Bridging Rx', subtitle: 'Emergency Dental Treatment', category: 'Occupational Health' },
+  { slug: 'dental-bridging', title: 'Dental Bridging Rx', subtitle: 'Amoxicillin / Metronidazole (bridging)', category: 'Occupational Health' },
 
   // Paediatrics
 ]
@@ -348,6 +348,23 @@ export const REBUILDING_SLUGS = new Set<string>([
 ])
 
 /**
+ * Live in the system but NOT for public listing (the public PGD catalogue,
+ * its JSON-LD and the comparison table) until signed or released:
+ *   oral-minoxidil           awaiting specialist read and wider release
+ *   chikungunya, cholera,
+ *   tick-borne-encephalitis  drafts, not yet signed
+ *   ear-infection            no valid signed document for what the tool does
+ * Display only. This set grants or removes no access.
+ */
+export const NOT_PUBLICLY_LISTED_SLUGS = new Set([
+  'oral-minoxidil',
+  'chikungunya',
+  'cholera',
+  'tick-borne-encephalitis',
+  'ear-infection',
+])
+
+/**
  * The enforcement set. Union of the three above; do not add slugs here
  * directly, add them to whichever set describes the reason.
  */
@@ -356,6 +373,14 @@ export const WITHDRAWN_SLUGS = new Set([
   ...PAUSED_SLUGS,
   ...REBUILDING_SLUGS,
 ])
+
+/**
+ * True when a PGD may appear on public listings (catalogue cards, catalogue
+ * JSON-LD). Display only: does not affect access control.
+ */
+export function isPubliclyListedPgd(slug: string): boolean {
+  return !WITHDRAWN_SLUGS.has(slug) && !NOT_PUBLICLY_LISTED_SLUGS.has(slug)
+}
 
 /**
  * ── Route-level access control for ePGD tools ──────────────────────

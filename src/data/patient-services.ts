@@ -36,7 +36,7 @@ export const patientCategories: PatientCategory[] = [
       "Japanese encephalitis vaccination",
       "Meningitis ACWY (travel & Hajj/Umrah)",
       "Altitude sickness prevention",
-      "Traveller's diarrhoea standby treatment",
+      "Travellers' diarrhoea standby treatment",
     ],
     whyPharmacy:
       "GP travel clinics have long waits and limited availability. Your pharmacy can see you this week — often the same day — and provide everything in one appointment.",
@@ -103,7 +103,6 @@ export const patientCategories: PatientCategory[] = [
     popularServices: [
       "Emergency contraception (morning after pill)",
       "UTI treatment (same-day antibiotics)",
-      "Recurrent UTI prevention",
       "Thrush treatment",
       "Bacterial vaginosis treatment",
     ],
@@ -140,14 +139,13 @@ export const patientCategories: PatientCategory[] = [
     name: "Sexual Health",
     tagline: "Testing, treatment, and prevention — fast",
     description:
-      "Sexually transmitted infection (STI) testing, treatment for common infections, and sexual health support — available privately at your local pharmacy. Confidential, quick, and no referral needed. PrEP for HIV prevention coming soon.",
+      "Sexually transmitted infection (STI) testing, treatment for common infections, and sexual health support — available privately at your local pharmacy. Confidential, quick, and no referral needed.",
     icon: "🛡️",
     color: "bg-indigo-50",
     textColor: "text-indigo-700",
     popularServices: [
       "STI testing (Chlamydia, Gonorrhoea, HIV)",
-      "PrEP — coming soon (HIV pre-exposure prophylaxis)",
-      "Herpes management",
+      "Genital herpes treatment (coming soon)",
       "Genital warts treatment",
     ],
     whyPharmacy:
@@ -155,29 +153,28 @@ export const patientCategories: PatientCategory[] = [
     pomDisclaimer: true,
     seoTitle: "Sexual Health Services at Your Local Pharmacy",
     seoDescription:
-      "Sexually transmitted infection (STI) testing, PrEP, and sexual health treatment at a pharmacy near you. Confidential, fast, no GP referral needed.",
+      "Sexually transmitted infection (STI) testing and sexual health treatment at a pharmacy near you. Confidential, fast, no GP referral needed.",
   },
   {
     slug: "mental-wellbeing",
     name: "Mental Wellbeing",
     tagline: "Smoking, anxiety, sleep — practical pharmacy support",
     description:
-      "Your pharmacy can help with smoking cessation, short-term anxiety relief, sleep support, and alcohol reduction — practical, accessible help without long NHS waits.",
+      "Your pharmacy can help with smoking cessation, short-term anxiety relief and sleep support: practical, accessible help without long NHS waits.",
     icon: "🧠",
     color: "bg-violet-50",
     textColor: "text-violet-700",
     popularServices: [
       "Smoking cessation support (with prescription options where suitable)",
-      "Alcohol reduction support",
-      "Short-term physical anxiety symptom relief (propranolol for situational anxiety)",
-      "Short-term sleep support (prescription melatonin — POM in the UK)",
+      "Short-term support for situational anxiety",
+      "Sleep support for adults 55 and over",
     ],
     whyPharmacy:
       "NHS mental health services have some of the longest waits in healthcare. Your pharmacy provides quick, practical support for everyday wellbeing concerns.",
     pomDisclaimer: true,
     seoTitle: "Mental Wellbeing Support at Your Pharmacy",
     seoDescription:
-      "Smoking cessation, anxiety relief, sleep support, and alcohol reduction at a pharmacy near you. Quick, practical help.",
+      "Smoking cessation, anxiety relief and sleep support at a pharmacy near you. Quick, practical help.",
   },
   {
     slug: "skin",
@@ -223,31 +220,11 @@ export const patientCategories: PatientCategory[] = [
       "Hayfever, asthma, sore throat, and respiratory treatment at a pharmacy near you. Same-day access, no GP referral.",
   },
   {
-    slug: "heart-health",
-    name: "Heart & Diabetes",
-    tagline: "Convenient monitoring for long-term conditions",
-    description:
-      "Blood pressure checks, cholesterol management and diabetes monitoring at your local pharmacy &mdash; complementing your GP care and making it easier to stay on top of long-term conditions between appointments.",
-    icon: "❤️",
-    color: "bg-red-50",
-    textColor: "text-red-700",
-    popularServices: [
-      "Blood pressure monitoring and treatment",
-      "Statin continuation",
-      "Diabetes type 2 monitoring",
-    ],
-    whyPharmacy:
-      "Pharmacies are well placed to provide continuation supply and regular check-ups for long-term conditions, working alongside your existing GP care.",
-    seoTitle: "Heart & Diabetes Monitoring at Your Pharmacy",
-    seoDescription:
-      "Blood pressure, cholesterol and diabetes monitoring at a pharmacy near you. Bridging supply and check-ups to support your existing care.",
-  },
-  {
     slug: "children",
     name: "Children's Health",
     tagline: "Fast treatment for common childhood illnesses",
     description:
-      "When your child is unwell, you want a quick clinical assessment from someone you trust. Your pharmacy can assess and treat a range of common childhood conditions &mdash; impetigo, urinary tract infections (UTIs), and more.",
+      "When your child is unwell, you want a quick clinical assessment from someone you trust. Your pharmacy can assess and treat a range of common childhood conditions, such as impetigo.",
     icon: "👶",
     color: "bg-rose-50",
     textColor: "text-rose-700",
@@ -258,20 +235,18 @@ export const patientCategories: PatientCategory[] = [
       "Parents know how stressful it is when your child is unwell. Your pharmacy can often see and treat children the same day.",
     seoTitle: "Children's Health Services at Your Local Pharmacy",
     seoDescription:
-      "Quick treatment for childhood impetigo, urinary tract infections (UTIs) at a pharmacy near you. Same-day access for parents.",
+      "Quick treatment for childhood impetigo and other common conditions at a pharmacy near you. Same-day access for parents.",
   },
   {
     slug: "minor-ailments",
     name: "Minor Ailments",
-    tagline: "Ear infections, eye infections, shingles — sorted fast",
+    tagline: "Shingles and dental pain, sorted fast",
     description:
-      "Common ailments that don't need a GP but do need prescription treatment. Your pharmacy can diagnose and treat ear infections, eye infections, shingles, and dental pain — often the same day.",
+      "Common ailments that don't need a GP but do need prescription treatment. Your pharmacy can assess and treat shingles and dental pain, often the same day.",
     icon: "🩹",
     color: "bg-emerald-50",
     textColor: "text-emerald-700",
     popularServices: [
-      "Ear infection treatment",
-      "Eye infection treatment (prescription strength)",
       "Shingles treatment (time-critical)",
       "Dental pain bridging antibiotics",
     ],
@@ -279,7 +254,7 @@ export const patientCategories: PatientCategory[] = [
       "These conditions often need treatment quickly &mdash; shingles, for example, is most effective when started within 72 hours. Your pharmacy can often assess and treat you the same day.",
     seoTitle: "Minor Ailment Treatment at Your Local Pharmacy",
     seoDescription:
-      "Ear infections, eye infections, shingles, and dental pain treated at a pharmacy near you. Fast, no GP referral.",
+      "Shingles and dental pain treated at a pharmacy near you. Fast, no GP referral.",
   },
 ];
 

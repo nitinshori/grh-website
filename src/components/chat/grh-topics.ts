@@ -89,8 +89,8 @@ export const TOPICS: Topic[] = [
       "what is get real health", "tell me about you",
     ],
     answer:
-      "<p>I'm the Get Real Health assistant — a small program that answers questions about our private PGD platform for UK pharmacies, based on the information on this site.</p>" +
-      "<p>For anything I can't answer, <a href=\"/book\">book a discovery call</a> or email <a href=\"mailto:info@getrealhealthpgd.co.uk\">info@getrealhealthpgd.co.uk</a>.</p>",
+      "<p>I'm the Get Real Health assistant, an AI assistant that answers questions about our private PGD platform for pharmacies in England and Wales, based on the information on this site.</p>" +
+      "<p>For anything I can't answer, <a href=\"/demo\">see the demo</a>, use our <a href=\"/contact\">contact page</a> or email <a href=\"mailto:info@getrealhealthpgd.co.uk\">info@getrealhealthpgd.co.uk</a>.</p>",
   },
   {
     id: "what-is-grh",
@@ -100,8 +100,8 @@ export const TOPICS: Topic[] = [
       "what is the company", "about the company",
     ],
     answer:
-      "<p><strong>Get Real Health (GRH)</strong> is a private PGD platform for UK community pharmacies. We give your pharmacy 60+ Patient Group Directions across weight management, travel, sexual health, hormones, dermatology, vaccines and more — under one flat monthly fee.</p>" +
-      "<p>CQC + HIW registered. Built and clinically led by Dr Nitin Shori (NHS GP and former Medical Director of Pharmacy2U Online Doctor Service).</p>" +
+      "<p><strong>Get Real Health (GRH)</strong> is a private PGD platform for community pharmacies in England and Wales. We give your pharmacy 65+ Patient Group Directions across weight management, travel and vaccines, sexual health, skin, respiratory, men's health and more, under one flat monthly fee.</p>" +
+      "<p>CQC and HIW registered. Built and clinically led by Dr Nitin Shori (NHS GP partner for over 20 years, who founded the Pharmacy2U Online Doctor service and was its Medical Director for over 10 years).</p>" +
       "<p>See the <a href=\"/for-pharmacies/pgd-catalogue\">full PGD catalogue</a> or <a href=\"/services/comparison\">how we compare with NHS Pharmacy First</a>.</p>",
   },
   {
@@ -112,9 +112,8 @@ export const TOPICS: Topic[] = [
       "chris pilkington", "head pharmacist",
     ],
     answer:
-      "<p><strong>Dr Nitin Shori</strong> founded GRH — NHS GP partner and previously Medical Director of Pharmacy2U Online Doctor Service for 10+ years. He is the named clinician on every PGD.</p>" +
-      "<p><strong>Chris Pilkington</strong> is Head Pharmacist — 30+ years in community pharmacy and independent prescribing; oversees implementation, training, and clinical governance.</p>" +
-      "<p><strong>Jane Wilkins</strong> is Clinical Lead — sign-off on all clinical content.</p>",
+      "<p><strong>Dr Nitin Shori</strong> founded GRH and is Medical Director. He has been an NHS GP partner for over 20 years, and founded the Pharmacy2U Online Doctor service and was its Medical Director for over 10 years. He is the named clinician on every PGD.</p>" +
+      "<p><strong>Christopher Pilkington</strong> is Head Pharmacist: 30+ years in community pharmacy and independent prescribing; oversees implementation, training, and clinical governance.</p>",
   },
 
   // ── Pricing ─────────────────────────────────────────────────
@@ -128,12 +127,13 @@ export const TOPICS: Topic[] = [
     answer:
       "<p><strong>£100/month flat</strong> per pharmacy. That's it.</p>" +
       "<ul>" +
-      "<li>Covers your whole team — every pharmacist, technician, and locum on your premises</li>" +
-      "<li>All 60+ PGDs included, no per-service add-ons</li>" +
-      "<li>No per-consultation fees</li>" +
+      "<li>Covers every pharmacist, including locums, working at your pharmacy</li>" +
+      "<li>All 65+ PGDs included, no per-service add-ons</li>" +
+      "<li>No per-consultation or per-pharmacist fees</li>" +
       "<li>No revenue-sharing</li>" +
-      "<li>Direct Debit via GoCardless, monthly</li>" +
+      "<li>Pay monthly by Direct Debit (GoCardless), or monthly invoice and bank transfer</li>" +
       "</ul>" +
+      "<p>We are not VAT registered, so no VAT is added. Group discounts are agreed case by case at approval.</p>" +
       "<p>Full pricing details at <a href=\"/for-pharmacies/pricing\">getrealhealthpgd.co.uk/for-pharmacies/pricing</a>.</p>",
   },
   {
@@ -146,7 +146,7 @@ export const TOPICS: Topic[] = [
       "<li><strong>Browse the PGD catalogue</strong> at <a href=\"/for-pharmacies/pgd-catalogue\">/for-pharmacies/pgd-catalogue</a></li>" +
       "<li><strong>See the comparison vs Pharmacy First</strong> at <a href=\"/services/comparison\">/services/comparison</a></li>" +
       "</ul>" +
-      "<p>If you want a preview-only login to click around before committing, mention it on the discovery call.</p>",
+      "<p>If you want a preview-only login to click around before committing, email <a href=\"mailto:info@getrealhealthpgd.co.uk\">info@getrealhealthpgd.co.uk</a>.</p>",
   },
 
   // ── PGD catalogue / services ────────────────────────────────
@@ -158,15 +158,17 @@ export const TOPICS: Topic[] = [
       "what can i offer", "what services can i offer",
     ],
     answer:
-      "<p>60+ PGDs across:</p>" +
+      "<p>65+ PGDs across:</p>" +
       "<ul>" +
-      "<li><strong>Weight management</strong> — Wegovy, Mounjaro, Saxenda, Mysimba, Orlistat, GLP-1 monitoring</li>" +
-      "<li><strong>Travel</strong> — yellow fever, rabies, JE, MenACWY, dengue, anti-malarials, traveller's diarrhoea, altitude, typhoid</li>" +
-      "<li><strong>Sexual health</strong> — ED, PE, BPH, contraception, STI testing, gonorrhoea, herpes, genital warts</li>" +
-      "<li><strong>Vaccines</strong> — flu, COVID, shingles, pneumococcal, HPV, MMR, chickenpox, MenB, RSV, occupational hep B</li>" +
-      "<li><strong>Skin</strong> — acne, rosacea, eczema, cold sores, impetigo, wound care, alopecia</li>" +
-      "<li><strong>Respiratory / CVD / mental health / paediatric / dental</strong> — full list at <a href=\"/for-pharmacies/pgd-catalogue\">the catalogue</a></li>" +
-      "</ul>",
+      "<li><strong>Weight management</strong>: injectable and oral options</li>" +
+      "<li><strong>Travel and vaccines</strong>: hepatitis A, typhoid, yellow fever, tetanus, rabies, Japanese encephalitis, junior travel, MenB, chickenpox, flu and COVID (2026-27), pneumococcal, shingles, anti-malarials, travellers' diarrhoea, altitude sickness</li>" +
+      "<li><strong>Sexual health</strong>: erectile dysfunction, premature ejaculation, emergency and postnatal contraception, bacterial vaginosis, thrush, genital warts, STI testing (gonorrhoea and herpes coming soon)</li>" +
+      "<li><strong>Skin</strong>: acne, rosacea, eczema, psoriasis, cellulitis, skin infection, fungal infection, impetigo, cold sores, wound care</li>" +
+      "<li><strong>Respiratory</strong>: asthma and COPD rescue, hay fever</li>" +
+      "<li><strong>Men's health</strong>: BPH, male pattern hair loss</li>" +
+      "<li><strong>Other</strong>: period delay, period pain, situational anxiety, insomnia (55+), smoking cessation, B12 and folic acid, dental bridging</li>" +
+      "</ul>" +
+      "<p>Healthcare professionals can see the full list, with medicine names, in <a href=\"/for-pharmacies/pgd-catalogue\">the catalogue</a>.</p>",
   },
   {
     id: "wegovy-mounjaro",
@@ -175,8 +177,8 @@ export const TOPICS: Topic[] = [
       "glp-1", "glp1", "glp 1", "weight loss injection",
     ],
     answer:
-      "<p>Yes — Wegovy injection (semaglutide) and Mounjaro (tirzepatide) are both included under your £100/month, alongside Saxenda, Orlistat and Mysimba. <strong>Wegovy tablets (oral semaglutide 1.5–25 mg)</strong> has been approved in the UK and is now available as a licensed PGD on the platform.</p>" +
-      "<p>The Wegovy injection PGD covers titration up to 7.2 mg. The Mounjaro PGD covers 2.5–15 mg weekly. Oral Wegovy uses a 25 mg / 50 mg tablet titration with empty-stomach administration. All have full training modules and audit trail.</p>",
+      "<p>Yes. Weight management PGDs, covering injectable and oral weight-management options, are included in your £100 a month, with a training module for each and a full audit trail.</p>" +
+      "<p>Healthcare professionals can see the named medicines and PGD details in <a href=\"/for-pharmacies/pgd-catalogue\">the catalogue</a>.</p>",
   },
   {
     id: "hrt-trt",
@@ -185,7 +187,8 @@ export const TOPICS: Topic[] = [
       "testosterone for women", "androfeme",
     ],
     answer:
-      "<p>Get Real Health does not currently offer HRT, testosterone replacement or testosterone for women under a PGD. Testosterone is a Schedule 4 Part II controlled drug and these services were withdrawn on 10 September 2026. Our women's health PGDs cover emergency contraception, period delay, urinary tract infection, bacterial vaginosis, thrush and more.</p>",
+      "<p>We cannot offer testosterone under a PGD: UK law (Misuse of Drugs Regulations 2001, regulation 9(8)) excludes it. HRT is not offered.</p>" +
+      "<p>Our women's health PGDs cover emergency and postnatal contraception, period delay, period pain, bacterial vaginosis, thrush and more.</p>",
   },
 
   // ── How does it work / onboarding ───────────────────────────
@@ -199,8 +202,8 @@ export const TOPICS: Topic[] = [
     answer:
       "<p>Two ways:</p>" +
       "<ol>" +
-      "<li><strong>Self-serve</strong> — fill in the form at <a href=\"/onboard\">/onboard</a>, set up Direct Debit via GoCardless, and we'll approve your account within 1 business day. Total time: usually 48 hours from form-fill to first consultation.</li>" +
-      "<li><strong>Book a discovery call</strong> — 30 minutes with the team to walk through the platform and answer questions: <a href=\"/book\">/book</a>. Then onboard at your own pace.</li>" +
+      "<li><strong>Sign up</strong> at <a href=\"/onboard\">/onboard</a>. Sign up in about 10 minutes; we usually approve the same working day.</li>" +
+      "<li><strong>See the demo first</strong>: watch the self-serve demo video at <a href=\"/demo\">/demo</a>, then sign up at your own pace. Questions? Use our <a href=\"/contact\">contact page</a>.</li>" +
       "</ol>",
   },
   {
@@ -211,7 +214,7 @@ export const TOPICS: Topic[] = [
     ],
     answer:
       "<p>GRH is registered with the <strong>Care Quality Commission (CQC)</strong> in England and <strong>Healthcare Inspectorate Wales (HIW)</strong> in Wales. We are not currently regulated for Scotland or Northern Ireland.</p>" +
-      "<p>Every consultation is recorded in the platform's audit log (timestamped, immutable). Every PGD is named-clinician signed (Dr Nitin Shori). Every pharmacist must complete the training module + quiz before delivering a PGD.</p>" +
+      "<p>Every consultation is recorded in the platform's audit log (timestamped, immutable). Every PGD is named-clinician signed (Dr Nitin Shori). Pharmacists must be trained and competent to work under each PGD. Our online training modules, with CPD certificates, are an optional way to do that.</p>" +
       "<p>Pharmacists and pharmacies remain responsible for their own GPhC registration and indemnity insurance.</p>",
   },
   {
@@ -234,7 +237,7 @@ export const TOPICS: Topic[] = [
     ],
     answer:
       "<p>Pharmacy First (England) covers <strong>7 conditions</strong>: sore throat, otitis media, sinusitis, infected insect bites, impetigo, shingles, uncomplicated UTI in women. Scotland's is a bit broader. The Welsh Common Ailments Service covers ~26 conditions free-OTC.</p>" +
-      "<p>GRH adds 60+ <strong>private</strong> PGDs on top — Wegovy, Mounjaro, ED, travel vaccines, STI testing, and many more. Patients pay for the consultation; you keep all the revenue (no per-consultation fee from us).</p>" +
+      "<p>GRH adds 65+ <strong>private</strong> PGDs on top: weight management, erectile dysfunction, travel vaccines, STI testing, and many more. Patients pay for the consultation; you keep all the revenue (no per-consultation fee from us).</p>" +
       "<p>Side-by-side comparison at <a href=\"/services/comparison\">/services/comparison</a>.</p>",
   },
   {
@@ -244,9 +247,9 @@ export const TOPICS: Topic[] = [
       "alternative", "alternatives",
     ],
     answer:
-      "<p>The main UK private-PGD alternative is PharmaDoctor, who charge per-service and per-consultation. GRH is <strong>£100/month flat, all services included</strong>.</p>" +
-      "<p>Practically: if you do more than a few consultations a month across a couple of services, GRH is materially cheaper. We also include training modules + audit trail in the platform rather than charging separately.</p>" +
-      "<p>Built specifically for owner-led independent and small group pharmacies, not multiples.</p>",
+      "<p>Competitor pricing models vary, and many private-PGD providers charge annual or per-service fees. GRH is <strong>£100 per pharmacy per month, flat, with every PGD included</strong> and no per-consultation or per-pharmacist fees.</p>" +
+      "<p>Practically: if you offer more than a couple of services, a single flat fee is usually simpler and cheaper. We also include optional training modules and an audit trail in the platform rather than charging separately.</p>" +
+      "<p>Built for independents and groups of any size.</p>",
   },
 
   // ── Operational ─────────────────────────────────────────────
@@ -257,14 +260,14 @@ export const TOPICS: Topic[] = [
       "how do my pharmacists train", "how does training work",
     ],
     answer:
-      "<p>67 training modules included, one per PGD. Each module covers the clinical background, eligibility, contraindications, dosing, counselling, plus a quiz with critical safety questions. 80% pass mark; unlimited attempts; the platform records who passed which module + version.</p>" +
-      "<p>Pharmacists must pass the relevant module before delivering a consultation under that PGD.</p>",
+      "<p>A training module for every PGD is included. Each module covers the clinical background, eligibility, contraindications, dosing and counselling, plus a quiz with critical safety questions, and comes with a CPD certificate. The platform records who completed which module and version.</p>" +
+      "<p>Pharmacists must be trained and competent to work under each PGD. Our online training modules, with CPD certificates, are an optional way to do that.</p>",
   },
   {
     id: "locums",
     keywords: ["locum", "locums", "agency", "casual staff", "freelance pharmacist"],
     answer:
-      "<p>Locums are covered for free. The £100/month flat fee is <strong>per pharmacy</strong>, not per pharmacist — so any registered pharmacist or technician working in your store can deliver consultations under your PGDs (after passing the relevant training modules).</p>",
+      "<p>Locums are covered at no extra cost. The £100 a month flat fee is <strong>per pharmacy</strong>, not per pharmacist, so every pharmacist, including locums, working at your pharmacy can deliver consultations under your PGDs. Pharmacists must be trained and competent to work under each PGD. Our online training modules, with CPD certificates, are an optional way to do that.</p>",
   },
   {
     id: "tech-stack",
@@ -299,8 +302,9 @@ export const TOPICS: Topic[] = [
       "<p>Two ways:</p>" +
       "<ul>" +
       "<li><strong>See a demo</strong>: <a href=\"/demo\">getrealhealthpgd.co.uk/demo</a></li>" +
-      "<li><strong>Email</strong>: <a href=\"mailto:info@getrealhealthpgd.co.uk\">info@getrealhealthpgd.co.uk</a></li>" +
-      "</ul>",
+      "<li><strong>Email</strong>: <a href=\"mailto:info@getrealhealthpgd.co.uk\">info@getrealhealthpgd.co.uk</a>, or use our <a href=\"/contact\">contact page</a></li>" +
+      "</ul>" +
+      "<p>We handle enquiries by email, so we don't take phone calls.</p>",
   },
   {
     id: "location",
@@ -318,9 +322,9 @@ export const FALLBACK_HTML =
     "<button type=\"button\" class=\"chat-chip\" data-q=\"How do I get started?\">Onboarding</button>" +
     "<button type=\"button\" class=\"chat-chip\" data-q=\"How does GRH compare with Pharmacy First?\">vs Pharmacy First</button>" +
     "<button type=\"button\" class=\"chat-chip\" data-q=\"Are you regulated?\">Compliance</button>" +
-    "<button type=\"button\" class=\"chat-chip\" data-q=\"Book a discovery call\">Talk to us</button>" +
+    "<button type=\"button\" class=\"chat-chip\" data-q=\"Can I see a demo?\">See a demo</button>" +
   "</div>" +
-  "<p class=\"mt-3\">Or <a href=\"/book\">book a discovery call</a> / email <a href=\"mailto:info@getrealhealthpgd.co.uk\">info@getrealhealthpgd.co.uk</a>.</p>";
+  "<p class=\"mt-3\">Or <a href=\"/demo\">see the demo</a>, use our <a href=\"/contact\">contact page</a> or email <a href=\"mailto:info@getrealhealthpgd.co.uk\">info@getrealhealthpgd.co.uk</a>.</p>";
 
 // ── Matcher ──────────────────────────────────────────────────
 

@@ -85,6 +85,14 @@ export default function TermsPage() {
         the Service Agreement prevails in respect of those services.
       </p>
 
+      <h3>Subscription</h3>
+      <p>
+        If your pharmacy subscribes, the fee is £100 per pharmacy per month
+        unless we agree a different rate in writing. We are not VAT
+        registered, so no VAT is added. Fees are collected monthly by Direct
+        Debit, or by invoice and bank transfer if agreed.
+      </p>
+
       <h2>5. Intellectual property</h2>
       <p>
         All content on this site, including text, graphics, logos, icons,

@@ -40,7 +40,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const n = names.length
   const gbp = (p: number) => '£' + (p / 100).toLocaleString('en-GB')
   const feeLine = req.monthlyFeePence != null
-    ? `${gbp(req.monthlyFeePence)} per pharmacy per month ex VAT (${gbp(req.monthlyFeePence * n)} per month for ${n} ${n === 1 ? 'pharmacy' : 'pharmacies'})` +
+    ? `${gbp(req.monthlyFeePence)} per pharmacy per month (${gbp(req.monthlyFeePence * n)} per month for ${n} ${n === 1 ? 'pharmacy' : 'pharmacies'})` +
       (req.feeChangePence != null && req.feeChangeOn ? `, moving to ${gbp(req.feeChangePence)} per pharmacy from ${new Date(req.feeChangeOn + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })}` : '')
     : null
 
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         (feeLine ? `<p>Agreed fee: ${escapeHtml(feeLine)}. Every PGD, ePGD tool and training module is included; no per-consultation charges.</p>` : '') +
         `<p>The last step is the Direct Debit for ${escapeHtml(company)}. Open this link, check the details and press the button to enter the company bank details on the secure GoCardless page. Nothing is collected until the account is approved.</p>` +
         `<p><a href="${link}">${link}</a></p>` +
-        `<p>Once the Direct Debit is in place we approve the account the same working day and email your login.</p>` +
+        `<p>We usually approve accounts the same working day, then email your login link.</p>` +
         `<p>Dr Nitin Shori<br>Get Real Health<br>info@getrealhealthpgd.co.uk</p>`,
       replyTo: 'info@getrealhealthpgd.co.uk',
     })

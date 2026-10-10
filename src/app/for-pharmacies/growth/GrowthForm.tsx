@@ -8,7 +8,7 @@ import { useState } from "react";
 // the message body.
 
 const SERVICES = [
-  "Pharmacy website (£399/yr, £0 setup)",
+  "Pharmacy website (£399 a year, £0 setup)",
   "AI patient chatbot add-on",
   "Clinic booking for my services",
   "Not sure — talk me through it",

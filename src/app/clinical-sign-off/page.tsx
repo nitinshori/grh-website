@@ -13,7 +13,7 @@ import { getPgdDocumentUrl } from '@/lib/pgd-documents'
 import { PGD_DRAFTS } from '@/lib/pgd-drafts'
 import { modules } from '@/data/training-modules'
 
-export const metadata = { title: 'Clinical Sign-off | Get Real Health' }
+export const metadata = { title: 'Clinical sign-off' }
 export const dynamic = 'force-dynamic'
 
 // ── Clinical sign-off register ──────────────────────────────────────────

@@ -2,6 +2,7 @@
 
 import Script from "next/script";
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { GOOGLE_ADS_ID } from "@/lib/google-ads";
 
 /**
@@ -30,12 +31,16 @@ function hasAnalyticsConsent(): boolean {
 
 export function GoogleAdsTag() {
   const [consent, setConsent] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     setConsent(hasAnalyticsConsent());
   }, []);
 
   if (!consent) return null;
+  // Pharmacy booking pages (/book/...) are white-label patient pages: no
+  // Get Real Health advertising or analytics tags there.
+  if (pathname?.startsWith("/book/")) return null;
 
   return (
     <>

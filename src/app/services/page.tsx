@@ -5,9 +5,9 @@ import { SERVICE_PAGES } from "@/data/service-pages";
 const BASE_URL = "https://getrealhealthpgd.co.uk";
 
 export const metadata: Metadata = {
-  title: "Pharmacy PGD Services | Wegovy, Mounjaro, ED, Travel — Get Real Health",
+  title: "Pharmacy PGD Services | Wegovy, Mounjaro, Travel | Get Real Health",
   description:
-    "Headline PGD services for UK community pharmacies — Wegovy, Mounjaro, ED, and Travel Vaccinations. PGD, training, electronic consultation tool and clinical governance — all for £100 per pharmacy per month.",
+    "Three headline PGD services for community pharmacies in England and Wales: Wegovy, Mounjaro and travel vaccinations. PGD, optional training, electronic consultation tool and clinical governance, all for £100 per pharmacy per month.",
   keywords: [
     "pharmacy PGD services",
     "Wegovy PGD",
@@ -34,7 +34,7 @@ const collectionJsonLd = {
   name: "Get Real Health — Pharmacy PGD Services",
   url: `${BASE_URL}/services`,
   description:
-    "Headline PGD services for UK community pharmacies. Each service includes the PGD document, pharmacist training, electronic consultation tool and clinical governance pack.",
+    "Headline PGD services for community pharmacies in England and Wales. Each service includes the PGD document, optional pharmacist training, electronic consultation tool and clinical governance pack.",
   hasPart: SERVICE_PAGES.map((p) => ({
     "@type": "Service",
     name: p.h1,
@@ -73,9 +73,10 @@ export default function ServicesIndexPage() {
             Headline pharmacy PGD services
           </h1>
           <p className="text-lg text-blue-100 max-w-3xl">
-            The highest-demand private services UK community pharmacies launch with — each one
-            comes with the PGD document, pharmacist training, electronic consultation tool and the
-            clinical governance pack. All for £100 per pharmacy per month, flat.
+            Three of the highest-demand private services community pharmacies in England and
+            Wales launch with. Each one comes with the PGD document, optional pharmacist training,
+            electronic consultation tool and the clinical governance pack. All for £100 per
+            pharmacy per month, flat.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
@@ -88,7 +89,7 @@ export default function ServicesIndexPage() {
               href="/for-pharmacies/pgd-catalogue"
               className="inline-flex items-center justify-center border border-blue-300 text-white hover:bg-white/10 font-semibold px-6 py-3 rounded-lg transition-colors"
             >
-              See all 60+ PGDs
+              See all 65+ PGDs
             </Link>
           </div>
         </div>
@@ -121,13 +122,13 @@ export default function ServicesIndexPage() {
       <section className="bg-gray-50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16 text-center">
           <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
-            60+ PGDs included
+            65+ PGDs included
           </h2>
           <p className="text-gray-700 max-w-2xl mx-auto mb-6">
-            The five services above are our most-asked-about. The full catalogue covers
-            men&apos;s and women&apos;s health, sexual health, weight management, dermatology,
-            acute infection, respiratory, cardiovascular, mental health, vaccines, travel and
-            paediatrics — every PGD included in the same flat monthly fee.
+            The {SERVICE_PAGES.length} services above are our most-asked-about. The full catalogue
+            covers men&apos;s and women&apos;s health, sexual health, weight management, dermatology,
+            acute infection, respiratory, mental health, vaccines, travel and paediatrics, with
+            every PGD included in the same flat monthly fee.
           </p>
           <Link
             href="/for-pharmacies/pgd-catalogue"

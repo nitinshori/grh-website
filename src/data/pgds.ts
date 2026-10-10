@@ -107,7 +107,6 @@ export const ALL_CATEGORIES: PGDCategory[] = [
   "Mental Health",
   "Skin",
   "Respiratory",
-  "CVD",
   "Occupational",
   "Paediatrics",
   "Minor Ailments",
@@ -125,7 +124,7 @@ export const pgds: PGD[] = [
     revenueEstimate: "\u00a3150\u2013300 per patient",
     consultTime: "30\u201345 min",
     description:
-      "Typhoid, hepatitis A, diphtheria, polio, tetanus, cholera, yellow fever, hepatitis B. Highest volume PGD service. Average pharmacy earns \u00a346k/yr from travel alone.",
+      "Hepatitis A (Havrix or Avaxim), typhoid (Typhim Vi) and oral cholera vaccine (Dukoral) for travel-related protection. Highest volume PGD service. Average pharmacy earns \u00a346k/yr from travel alone.",
     pharmadoctor: "Yes",
   },
   {
@@ -161,7 +160,7 @@ export const pgds: PGD[] = [
     revenueEstimate: "\u00a340\u201380 per course",
     consultTime: "15\u201320 min",
     description:
-      "Malarone, Doxycycline, Lariam. High margin. Prescribe under PGD with pre-travel consultation.",
+      "Atovaquone/proguanil (Malarone), doxycycline and mefloquine. High margin. Supply under PGD with pre-travel consultation.",
     pharmadoctor: "Yes",
   },
   {
@@ -245,7 +244,7 @@ export const pgds: PGD[] = [
     revenueEstimate: "\u00a325\u201340 per consultation",
     consultTime: "10 min",
     description:
-      "Ciprofloxacin and Azithromycin standby packs, plus OTC loperamide for symptomatic relief. High demand, simple consultation, strong margin.",
+      "Standby azithromycin, with advice on oral rehydration and OTC loperamide. High demand, simple consultation, strong margin.",
     pharmadoctor: "Partial",
   },
 
@@ -272,6 +271,67 @@ export const pgds: PGD[] = [
     description:
       "TicoVac / TicoVac Junior for travellers to TBE-endemic areas (central/eastern Europe, Scandinavia, Baltics) with outdoor or occupational exposure. 3-dose IM course. DRAFT — pending clinical sign-off.",
     pharmadoctor: "Yes",
+  },
+
+  {
+    id: "hep-ab-travel",
+    title: "Hepatitis A and B (Travel)",
+    category: "Travel",
+    priority: 1,
+    isNew: true,
+    revenueEstimate: "Varies",
+    consultTime: "15 min",
+    description:
+      "Havrix, Avaxim, Engerix B and Twinrix for hepatitis A, hepatitis B or both, from 1 year, for travel and lifestyle risk.",
+    pharmadoctor: "Unverified",
+  },
+  {
+    id: "typhoid",
+    title: "Typhoid Vaccination (Typhim Vi)",
+    category: "Travel",
+    priority: 1,
+    isNew: true,
+    revenueEstimate: "Varies",
+    consultTime: "15 min",
+    description:
+      "Vi polysaccharide typhoid vaccine (Typhim Vi) for travellers aged 2 years and over going to areas where typhoid is a risk.",
+    pharmadoctor: "Unverified",
+  },
+  {
+    id: "yellow-fever",
+    title: "Yellow Fever (Stamaril)",
+    category: "Travel",
+    priority: 2,
+    isNew: true,
+    revenueEstimate: "Varies",
+    consultTime: "20 min",
+    description:
+      "Stamaril live attenuated vaccine from 9 months, with the International Certificate of Vaccination. Registered Yellow Fever Vaccination Centres only.",
+    pharmadoctor: "Unverified",
+  },
+  {
+    id: "tetanus",
+    title: "Tetanus, Diphtheria and Polio (Revaxis)",
+    category: "Travel",
+    priority: 2,
+    isNew: true,
+    revenueEstimate: "Varies",
+    consultTime: "10 min",
+    description:
+      "Td/IPV (Revaxis) booster or primary course for travellers and others aged 10 years and over.",
+    pharmadoctor: "Unverified",
+  },
+  {
+    id: "junior-travel",
+    title: "Junior Travel Vaccines",
+    category: "Travel",
+    priority: 2,
+    isNew: true,
+    revenueEstimate: "Varies",
+    consultTime: "20 min",
+    description:
+      "Travel vaccines for children and young people aged 12 months to 17 years: hepatitis A, hepatitis A and B, typhoid, MenACWY, rabies, Japanese encephalitis and cholera.",
+    pharmadoctor: "Unverified",
   },
 
   // ═══ VACCINES ═══
@@ -320,7 +380,7 @@ export const pgds: PGD[] = [
     revenueEstimate: "\u00a3150\u2013200 per course",
     consultTime: "15 min",
     description:
-      "High uptake in 50+ private market. NHS only covers up to age 70 \u2014 private fills the gap above that.",
+      "High uptake in the 50+ private market. Shingrix for adults outside NHS eligibility.",
     pharmadoctor: "Yes",
   },
   {
@@ -349,7 +409,7 @@ export const pgds: PGD[] = [
   },
   {
     id: "meningitis-b",
-    title: "Meningitis B (Bexsero)",
+    title: "Meningitis B (Bexsero / Trumenba)",
     category: "Vaccines",
     priority: 2,
     isNew: false,
@@ -457,6 +517,19 @@ export const pgds: PGD[] = [
     pharmadoctor: "Yes",
   },
 
+  {
+    id: "foundayo",
+    title: "Foundayo (Orforglipron) Tablets",
+    category: "Weight Management",
+    priority: 2,
+    isNew: true,
+    revenueEstimate: "Varies",
+    consultTime: "30 min initial, 15 min follow-up",
+    description:
+      "Once-daily oral GLP-1 tablet for weight management in adults aged 18 to 85, with no food or timing restrictions.",
+    pharmadoctor: "Unverified",
+  },
+
   // ═══ WOMEN'S HEALTH ═══
   {
     id: "emergency-contraception",
@@ -527,7 +600,7 @@ export const pgds: PGD[] = [
   },
   {
     id: "postnatal-contraception",
-    title: "Postnatal Contraception Advice + Supply (POP)",
+    title: "Postnatal Contraception Advice + Supply (POP or Injection)",
     category: "Women's Health",
     priority: 2,
     isNew: false,
@@ -536,6 +609,19 @@ export const pgds: PGD[] = [
     description:
       "Gap in NHS capacity at 6-week checks. Pharmacy can fill this need.",
     pharmadoctor: "Partial",
+  },
+
+  {
+    id: "period-pain",
+    title: "Period Pain (Naproxen / Mefenamic Acid)",
+    category: "Women's Health",
+    priority: 2,
+    isNew: true,
+    revenueEstimate: "Varies",
+    consultTime: "10 min",
+    description:
+      "Naproxen or mefenamic acid for primary dysmenorrhoea in women aged 16 and over.",
+    pharmadoctor: "Unverified",
   },
 
   // ═══ MEN'S HEALTH ═══
@@ -560,7 +646,7 @@ export const pgds: PGD[] = [
     revenueEstimate: "\u00a325\u201345 per month",
     consultTime: "15 min",
     description:
-      "Growing market especially 25\u201345 demographic. Repeat prescriptions = sticky revenue.",
+      "Growing market especially 25\u201345 demographic. Repeat supplies = sticky revenue.",
     pharmadoctor: "Yes",
   },
   {
@@ -572,7 +658,7 @@ export const pgds: PGD[] = [
     revenueEstimate: "\u00a335\u201360 per consultation",
     consultTime: "15 min",
     description:
-      "Underserved. Limited GP willingness to discuss. Pharmacy is neutral ground. Note: verify current UK marketing authorisation status before supply.",
+      "Underserved. Limited GP willingness to discuss. Pharmacy is neutral ground.",
     pharmadoctor: "Partial",
   },
   {
@@ -598,7 +684,7 @@ export const pgds: PGD[] = [
     revenueEstimate: "\u00a340\u201380 per test panel",
     consultTime: "15\u201320 min",
     description:
-      "Chlamydia, gonorrhoea, HIV point-of-care. High demand in under-30s. Test and treat model.",
+      "Test and treat: chlamydia treated with doxycycline or azithromycin under PGD, with full STI screening including HIV and syphilis offered. High demand in under-30s.",
     pharmadoctor: "Yes",
   },
   {
@@ -629,11 +715,10 @@ export const pgds: PGD[] = [
   },
   {
     id: "genital-warts",
-    title: "Genital Warts (Podophyllotoxin)",
+    title: "Genital Warts (Podophyllotoxin / Imiquimod)",
     category: "Sexual Health",
     priority: 2,
     isNew: false,
-    comingSoon: true,
     revenueEstimate: "\u00a325\u201345 per consultation",
     consultTime: "15 min",
     description:
@@ -680,14 +765,14 @@ export const pgds: PGD[] = [
   },
   {
     id: "sleep-melatonin",
-    title: "Sleep Support (Low-dose Melatonin \u2014 Private)",
+    title: "Insomnia (Circadin 2 mg Prolonged-Release)",
     category: "Mental Health",
     priority: 2,
     isNew: true,
     revenueEstimate: "\u00a320\u201335 per consultation",
     consultTime: "10 min",
     description:
-      "DIFFERENTIATION. Melatonin is a prescription-only medicine (POM) in the UK, unlike most of Europe and the USA. Private PGD route fills this gap. Large demand from shift workers, jet lag, insomnia. Supply requires appropriate clinical assessment.",
+      "DIFFERENTIATION. Circadin 2 mg prolonged-release melatonin for the short-term treatment of primary insomnia in adults aged 55 and over. Melatonin is prescription-only in the UK, so a private PGD route fills a real gap.",
     pharmadoctor: "No",
   },
   // ADHD monitoring removed from public catalogue per head-pharmacist
@@ -709,7 +794,7 @@ export const pgds: PGD[] = [
     revenueEstimate: "\u00a325\u201350 per consultation",
     consultTime: "15 min",
     description:
-      "Topical retinoids, antibiotics, oral doxycycline. High demand 16\u201335.",
+      "Adapalene with benzoyl peroxide gel, or clindamycin with benzoyl peroxide gel (Duac). High demand 16\u201335.",
     pharmadoctor: "Yes",
   },
   {
@@ -721,12 +806,12 @@ export const pgds: PGD[] = [
     revenueEstimate: "\u00a325\u201345 per consultation",
     consultTime: "15 min",
     description:
-      "Topical metronidazole and ivermectin. Long NHS waits for dermatology.",
+      "Metronidazole 0.75% gel or azelaic acid 15% gel. Long NHS waits for dermatology.",
     pharmadoctor: "Yes",
   },
   {
     id: "cold-sores",
-    title: "Cold Sores (Aciclovir Oral)",
+    title: "Cold Sores (Aciclovir Cream and Tablets)",
     category: "Skin",
     priority: 1,
     isNew: false,
@@ -757,8 +842,56 @@ export const pgds: PGD[] = [
     revenueEstimate: "\u00a315\u201330 per consultation",
     consultTime: "10 min",
     description:
-      "Mupirocin and fusidic acid. Natural extension of pharmacy role. High footfall.",
+      "Co-amoxiclav for infected bites and heavily contaminated wounds; flucloxacillin for infected non-bite wounds. Natural extension of pharmacy role.",
     pharmadoctor: "Partial",
+  },
+  {
+    id: "cellulitis",
+    title: "Cellulitis",
+    category: "Skin",
+    priority: 1,
+    isNew: true,
+    revenueEstimate: "Varies",
+    consultTime: "15 min",
+    description:
+      "Flucloxacillin for cellulitis in adults, with clarithromycin or doxycycline where flucloxacillin is unsuitable. Red-flag and severity screening built in.",
+    pharmadoctor: "Unverified",
+  },
+  {
+    id: "skin-infection",
+    title: "Bacterial Skin Infection",
+    category: "Skin",
+    priority: 2,
+    isNew: true,
+    revenueEstimate: "Varies",
+    consultTime: "15 min",
+    description:
+      "Flucloxacillin for impetigo, folliculitis, infected eczema and infected wounds, with clarithromycin or doxycycline where flucloxacillin is unsuitable. From 2 years (cellulitis 12 and over).",
+    pharmadoctor: "Unverified",
+  },
+  {
+    id: "fungal-infection",
+    title: "Fungal Skin Infection",
+    category: "Skin",
+    priority: 2,
+    isNew: true,
+    revenueEstimate: "Varies",
+    consultTime: "10 min",
+    description:
+      "Miconazole 2% cream for fungal skin infections, and Trimovate cream for inflamed intertrigo or infected eczema with a suspected secondary component. Aged 16 and over.",
+    pharmadoctor: "Unverified",
+  },
+  {
+    id: "psoriasis",
+    title: "Psoriasis (Calcipotriol with Betamethasone)",
+    category: "Skin",
+    priority: 2,
+    isNew: true,
+    revenueEstimate: "Varies",
+    consultTime: "15 min",
+    description:
+      "Calcipotriol with betamethasone (Dovobet, Enstilar) for stable plaque psoriasis in adults, once daily for up to 4 weeks.",
+    pharmadoctor: "Unverified",
   },
   // alopecia-minoxidil withdrawn 11 Sep 2026: no minoxidil PGD exists; the
   // entry served the finasteride document. See REBUILDING_SLUGS in pgd-access.ts.
@@ -797,7 +930,7 @@ export const pgds: PGD[] = [
     revenueEstimate: "\u00a325\u201345 per consultation",
     consultTime: "15 min",
     description:
-      "Short-acting bronchodilator for diagnosed patients. High repeat value.",
+      "Salbutamol rescue inhaler for adults with diagnosed COPD, plus amoxicillin for an infective exacerbation with purulent sputum.",
     pharmadoctor: "Partial",
   },
   {
@@ -809,7 +942,7 @@ export const pgds: PGD[] = [
     revenueEstimate: "\u00a315\u201330 per consultation",
     consultTime: "10 min",
     description:
-      "Prescription antihistamines and nasal steroids. Seasonal peak demand. Much better outcomes than OTC.",
+      "Fexofenadine 120 mg tablets and Dymista nasal spray (azelastine with fluticasone). Seasonal peak demand.",
     pharmadoctor: "Partial",
   },
   {
@@ -824,8 +957,6 @@ export const pgds: PGD[] = [
       "FeverPAIN scoring + antibiotics. NHS PGD from 2024 \u2014 private version extends with no referral cap.",
     pharmadoctor: "Yes (Pharmacy First)",
   },
-
-  // ═══ CVD ═══
 
   // ═══ OCCUPATIONAL ═══
   {
@@ -854,7 +985,7 @@ export const pgds: PGD[] = [
     revenueEstimate: "\u00a320\u201335 per consultation",
     consultTime: "10 min",
     description:
-      "Fusidic acid and mupirocin. Very high demand. Often first pharmacy contact for parents.",
+      "Fusidic acid cream, with oral flucloxacillin (or clarithromycin if penicillin-allergic) for widespread or bullous impetigo. Often first pharmacy contact for parents.",
     pharmadoctor: "Yes (Pharmacy First)",
   },
 
@@ -893,7 +1024,7 @@ export const pgds: PGD[] = [
   },
   {
     id: "shingles-treatment",
-    title: "Shingles Acute Treatment (Valaciclovir)",
+    title: "Shingles Acute Treatment (Aciclovir / Valaciclovir / Famciclovir)",
     category: "Minor Ailments",
     priority: 1,
     isNew: false,
@@ -914,7 +1045,7 @@ export const pgds: PGD[] = [
     revenueEstimate: "\u00a325\u201345 per injection",
     consultTime: "15 min",
     description:
-      "Hydroxocobalamin 1 mg IM for confirmed B12 deficiency. Loading regime + lifelong maintenance via PGD. Annual pharmacy review. High recurring revenue.",
+      "Hydroxocobalamin 1 mg IM for confirmed B12 deficiency without neurological involvement: a 2-week loading course, then maintenance injections every 2 to 3 months with review at 3 months and at least annually. Cyanocobalamin tablets for diet-related deficiency. GP referral if there is no response.",
     pharmadoctor: "Partial",
   },
   {

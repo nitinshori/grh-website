@@ -21,11 +21,12 @@ export default function DdLinkClient({ id, companyName, contactName, pharmacies,
     setError(null)
     try {
       const res = await fetch(`/api/onboarding/${id}/start-mandate`, { method: 'POST' })
-      const body = (await res.json()) as { redirectUrl?: string; error?: string; detail?: string }
-      if (!res.ok || !body.redirectUrl) throw new Error(body.error || 'Could not start the Direct Debit')
+      const body = (await res.json().catch(() => ({}))) as { redirectUrl?: string; error?: string }
+      if (!res.ok || !body.redirectUrl) throw new Error('start-mandate failed')
       window.location.href = body.redirectUrl
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      console.error('[dd-link]', e)
+      setError('We could not open the Direct Debit page. Please try again, or email info@getrealhealthpgd.co.uk.')
       setBusy(false)
     }
   }
@@ -52,7 +53,7 @@ export default function DdLinkClient({ id, companyName, contactName, pharmacies,
         </p>
       ) : mandateDone ? (
         <p className="text-sm text-green-800 bg-green-50 border border-green-200 rounded-lg p-3">
-          Your Direct Debit is set up. We approve accounts within one working day and will email your login link.
+          Your Direct Debit is set up. We usually approve accounts the same working day, then email your login link.
         </p>
       ) : (
         <div className="space-y-3">

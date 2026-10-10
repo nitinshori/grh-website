@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { articles, getArticleBySlug } from "@/data/articles";
+import { isHcpGatedArticle } from "@/lib/hcp-gated-articles";
 
 // Build all article pages statically
 export function generateStaticParams() {
@@ -188,8 +189,8 @@ export default async function ArticlePage({
               Want to offer these services?
             </h3>
             <p className="text-gray-600 text-sm mb-4">
-              Get Real Health provides 60+ PGDs, built-in training, and a
-              consultation platform — all for one flat £100/month fee per
+              Get Real Health provides 65+ PGDs, optional online training and
+              a consultation platform, all for one flat £100/month fee per
               pharmacy. No per-consult charges.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
@@ -230,7 +231,9 @@ export default async function ArticlePage({
                     {rel.category}
                   </span>
                   <h3 className="font-semibold text-navy-900 text-sm group-hover:text-teal-700 transition-colors leading-snug">
-                    {rel.title}
+                    {isHcpGatedArticle(rel.slug)
+                      ? (rel.publicTitle ?? rel.title)
+                      : rel.title}
                   </h3>
                 </Link>
               ))}

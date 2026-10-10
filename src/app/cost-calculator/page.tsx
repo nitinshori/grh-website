@@ -46,7 +46,7 @@ const features: { label: string; grh: string; pharmadoctor: string; ecg: string 
   },
   {
     label: "PGDs included",
-    grh: "60+ across every category",
+    grh: "65+ across every category",
     pharmadoctor: "Tiered packages — pay for what you use",
     ecg: "Modular — individual PGDs sold separately",
   },
@@ -94,13 +94,13 @@ const features: { label: string; grh: string; pharmadoctor: string; ecg: string 
   },
   {
     label: "Onboarding",
-    grh: "10-minute self-serve via /onboard",
+    grh: "Sign up in about 10 minutes; we usually approve the same working day.",
     pharmadoctor: "Sales call + paperwork",
     ecg: "Sales call + paperwork",
   },
   {
     label: "Clinical authority",
-    grh: "Dr Nitin Shori (NHS GP, ex-Pharmacy2U Medical Director, 10+ yrs)",
+    grh: "Dr Nitin Shori (NHS GP; founded the Pharmacy2U Online Doctor service and was its Medical Director for over 10 years)",
     pharmadoctor: "Clinical board",
     ecg: "Clinical board",
   },
@@ -209,7 +209,7 @@ export default function CostCalculatorPage() {
           pharmacist per year across services. ECG Training &mdash; based on their published
           modular PGD pricing plus training bundles. Both providers run multiple tiers; the
           figures above reflect what most single-site independent customers report paying.
-          GRH figures are exact &mdash; £100 per pharmacy per month, all-in.
+          GRH figures are exact: £100 per pharmacy per month, all-in, with no VAT charged.
         </p>
       </section>
 
@@ -217,10 +217,10 @@ export default function CostCalculatorPage() {
       <section className="bg-navy-950 text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-14 md:py-20 text-center">
           <h2 className="text-2xl md:text-3xl font-bold mb-4">
-            60+ electronic PGDs. £100 per month, per pharmacy. No per-pharmacist charge &mdash; locums included.
+            65+ electronic PGDs. £100 per month, per pharmacy. No per-pharmacist charge &mdash; locums included.
           </h2>
           <p className="text-blue-200 text-lg mb-8 max-w-2xl mx-auto">
-            That&apos;s the headline. Onboard in 10 minutes, see your first private patient this week.
+            That&apos;s the headline. Sign up in about 10 minutes; we usually approve the same working day.
           </p>
           <div className="flex flex-wrap justify-center gap-3">
             <Link

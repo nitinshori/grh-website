@@ -19,6 +19,19 @@ declare global {
 
 type Step = 1 | 2 | 3;
 
+const SAVE_ERROR = "We could not save your details. Please try again, or email info@getrealhealthpgd.co.uk.";
+const DD_ERROR = "We could not open the Direct Debit page. Please try again, or email info@getrealhealthpgd.co.uk.";
+
+/** An error whose message is already plain English and safe to show. */
+function plainError(message: string): Error {
+  const e = new Error(message);
+  e.name = "PlainError";
+  return e;
+}
+function shownMessage(e: unknown, fallback: string): string {
+  return e instanceof Error && e.name === "PlainError" ? e.message : fallback;
+}
+
 interface FormState {
   pharmacyName: string;
   pharmacyAddress: string;
@@ -154,15 +167,15 @@ export default function OnboardClient({ groupMode = false }: { groupMode?: boole
           id: onboardingId ?? undefined,
         }),
       });
-      const body = (await res.json()) as { id?: string; error?: string };
+      const body = (await res.json().catch(() => ({}))) as { id?: string; error?: string };
       if (!res.ok || !body.id) {
-        throw new Error(body.error || "Couldn't save your progress. Please try again.");
+        throw plainError(body.error || SAVE_ERROR);
       }
       if (body.id !== onboardingId) setOnboardingId(body.id);
       setBusy(false);
       return true;
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(shownMessage(e, SAVE_ERROR));
       setBusy(false);
       return false;
     }
@@ -198,22 +211,22 @@ export default function OnboardClient({ groupMode = false }: { groupMode?: boole
           turnstileToken,
         }),
       });
-      const body = (await res.json()) as { id?: string; error?: string };
+      const body = (await res.json().catch(() => ({}))) as { id?: string; error?: string };
       if (!res.ok || !body.id) {
-        throw new Error(body.error || "Could not start sign-up");
+        throw plainError(body.error || SAVE_ERROR);
       }
       const id = body.id;
       if (id !== onboardingId) setOnboardingId(id);
 
       // Now create the GoCardless redirect flow
       const ddRes = await fetch(`/api/onboarding/${id}/start-mandate`, { method: "POST" });
-      const ddBody = (await ddRes.json()) as { redirectUrl?: string; error?: string };
+      const ddBody = (await ddRes.json().catch(() => ({}))) as { redirectUrl?: string; error?: string };
       if (!ddRes.ok || !ddBody.redirectUrl) {
-        throw new Error(ddBody.error || "Could not start direct debit");
+        throw plainError(ddBody.error || DD_ERROR);
       }
       window.location.href = ddBody.redirectUrl;
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(shownMessage(e, DD_ERROR));
       setBusy(false);
     }
   }
@@ -225,8 +238,8 @@ export default function OnboardClient({ groupMode = false }: { groupMode?: boole
           <h1 className="text-3xl font-bold text-gray-900">{groupMode ? "Sign up your pharmacy group" : "Sign up your pharmacy"}</h1>
           <p className="text-sm text-gray-600 mt-2">
             {groupMode
-              ? "Three short steps for the whole group. £100 per pharmacy per month, every PGD included at every branch, one account holder, one Direct Debit. Each branch gets its own PGD access and records, with a group dashboard across all of them."
-              : "Three short steps. One flat monthly fee per pharmacy. Every PGD included."}
+              ? "Three short steps for the whole group. £100 per pharmacy per month as standard. Any group discount is agreed when we approve your account. Every PGD included at every branch, one account holder, and one Direct Debit per company. Each branch gets its own PGD access and records, with a group dashboard across all of them."
+              : "Three short steps. £100 per pharmacy per month as standard. Every PGD included."}
           </p>
           {!groupMode && (
             <p className="text-sm mt-2">
@@ -272,14 +285,14 @@ export default function OnboardClient({ groupMode = false }: { groupMode?: boole
               <Input label="Pharmacy email *" value={form.pharmacyEmail} onChange={set("pharmacyEmail")} placeholder="info@pharmacy.co.uk" type="email" />
 
               {/* Multi-branch groups: every branch becomes its own pharmacy
-                  on the platform, sharing one account holder and one Direct
-                  Debit. The primary pharmacy above is branch 1. */}
+                  on the platform, sharing one account holder. One Direct Debit
+                  per company. The primary pharmacy above is branch 1. */}
               <div className="pt-4 border-t border-gray-200">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h3 className="text-sm font-semibold text-gray-900">{groupMode ? "Your other branches" : "More than one branch?"}</h3>
                     <p className="text-xs text-gray-500 mt-0.5">
-                      Add each branch here. Each gets its own PGD access and records at £100 per pharmacy per month; you set up one Direct Debit for all of them.
+                      Add each branch here. Each gets its own PGD access and records. £100 per pharmacy per month as standard. Any group discount is agreed when we approve your account. One Direct Debit per company. If your branches belong to different companies, tell us and we will send a separate Direct Debit link for each.
                     </p>
                   </div>
                   <button
@@ -392,12 +405,13 @@ export default function OnboardClient({ groupMode = false }: { groupMode?: boole
               <h2 className="text-lg font-semibold text-gray-900">Set up your direct debit</h2>
               {namedBranches.length > 0 && (
                 <div className="rounded-lg bg-teal-50 border border-teal-200 p-3 text-sm text-teal-900">
-                  <div className="font-semibold">{namedBranches.length + 1} pharmacies on one Direct Debit</div>
+                  <div className="font-semibold">{namedBranches.length + 1} pharmacies</div>
                   <ul className="mt-1 text-xs list-disc list-inside">
                     <li>{form.pharmacyName}</li>
                     {namedBranches.map((b, i) => <li key={i}>{b.name}</li>)}
                   </ul>
-                  <p className="text-xs mt-1">Each branch is billed at the per-pharmacy rate we agree with you; the mandate covers all of them.</p>
+                  <p className="text-xs mt-1">£100 per pharmacy per month as standard. Any group discount is agreed when we approve your account.</p>
+                  <p className="text-xs mt-1">One Direct Debit per company. If your branches belong to different companies, tell us and we will send a separate Direct Debit link for each.</p>
                 </div>
               )}
               <p className="text-sm text-gray-600">
@@ -408,6 +422,13 @@ export default function OnboardClient({ groupMode = false }: { groupMode?: boole
                 <li>Protected by the UK Direct Debit Guarantee</li>
                 <li>No charges while we review your application</li>
               </ul>
+              <p className="text-sm text-gray-600">
+                After your Direct Debit is set up we usually approve your account the same working day and email you a login link. You then add your pharmacists from the Staff page of your dashboard.
+              </p>
+              <p className="text-sm text-gray-600">
+                Prefer to pay by monthly invoice and bank transfer? Email{" "}
+                <a href="mailto:info@getrealhealthpgd.co.uk" className="text-teal-700 hover:underline">info@getrealhealthpgd.co.uk</a>.
+              </p>
               {/* Optional, and genuinely optional: no validation depends on
                   it and the Continue button ignores it entirely. Placed on
                   the last step so it can never interrupt someone part-way
@@ -483,7 +504,7 @@ export default function OnboardClient({ groupMode = false }: { groupMode?: boole
                   onClick={handleStartDirectDebit}
                   disabled={busy || (!!siteKey && !turnstileToken)}
                   className="flex-1 py-3 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-300 text-white font-semibold rounded-lg transition-colors"
-                  title={siteKey && !turnstileToken ? "Complete the captcha first" : undefined}
+                  title={siteKey && !turnstileToken ? "Please complete the security check first" : undefined}
                 >
                   {busy ? "Redirecting to GoCardless…" : "Continue to GoCardless →"}
                 </button>

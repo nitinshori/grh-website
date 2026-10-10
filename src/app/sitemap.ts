@@ -1,7 +1,6 @@
 import type { MetadataRoute } from "next";
 import { patientCategories } from "@/data/patient-services";
 import { articles } from "@/data/articles";
-import { SERVICE_PAGES } from "@/data/service-pages";
 import { HCP_GATED_ARTICLE_SLUGS } from "@/lib/hcp-gated-articles";
 
 const BASE_URL = "https://getrealhealthpgd.co.uk";
@@ -11,7 +10,7 @@ const BASE_URL = "https://getrealhealthpgd.co.uk";
 // Google a fresh lastModified on every deploy, which is a meaningless — and
 // eventually distrusted — freshness signal. Article pages use their own
 // publishDate below.
-const SITE_UPDATED = "2026-07-01T00:00:00.000Z";
+const SITE_UPDATED = "2026-10-10";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = SITE_UPDATED;
@@ -37,8 +36,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE_URL}/resources`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
     { url: `${BASE_URL}/onboard`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: `${BASE_URL}/demo`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
-    { url: `${BASE_URL}/services`, lastModified: now, changeFrequency: "weekly", priority: 0.9 },
-    { url: `${BASE_URL}/services/comparison`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: `${BASE_URL}/cost-calculator`, lastModified: now, changeFrequency: "monthly", priority: 0.85 },
     { url: `${BASE_URL}/for-welsh-pharmacies`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: `${BASE_URL}/legal/privacy`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
@@ -46,14 +43,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE_URL}/legal/cookies`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
   ];
 
-  // Headline SEO landing pages — /services/<slug>. Distinct from the
-  // /for-pharmacies/epgd/* consultation tools (which are noindex).
-  const servicePages: MetadataRoute.Sitemap = SERVICE_PAGES.map((p) => ({
-    url: `${BASE_URL}/services/${p.slug}`,
-    lastModified: now,
-    changeFrequency: "weekly" as const,
-    priority: 0.85,
-  }));
+  // /services, /services/<slug> and /services/comparison are not listed:
+  // they name prescription-only medicines and sit behind the
+  // healthcare-professional gate (see HCP_GATED_PREFIXES in src/proxy.ts).
 
   // Patient category pages
   const categoryPages: MetadataRoute.Sitemap = patientCategories.map((cat) => ({
@@ -79,5 +71,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.7,
     }));
 
-  return [...staticPages, ...servicePages, ...categoryPages, ...articlePages];
+  return [...staticPages, ...categoryPages, ...articlePages];
 }

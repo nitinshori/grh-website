@@ -1,7 +1,7 @@
 import { ForgotPasswordClient } from "./ForgotPasswordClient";
 
 export const metadata = {
-  title: "Forgotten password | Get Real Health",
+  title: "Forgotten password",
   robots: { index: false, follow: false },
 };
 

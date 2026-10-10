@@ -96,6 +96,40 @@ const capabilities = [
   },
 ];
 
+const liveFeatures = [
+  {
+    title: "Patient booking page",
+    details: [
+      "Your own online booking page for private services",
+      "Email confirmations sent to patients",
+      "Day-before reminders",
+      "Patient invitations sent from the dashboard",
+    ],
+  },
+  {
+    title: "PGD sign-off register",
+    details: [
+      "Each pharmacist signs the PGDs they will use",
+      "Manager countersigns",
+      "Downloadable register for your governance file",
+    ],
+  },
+  {
+    title: "Multi-branch logins for groups",
+    details: [
+      "Group logins that cover every branch",
+      "Oversight across all your branches in one dashboard",
+    ],
+  },
+  {
+    title: "Billing in the dashboard",
+    details: [
+      "Monthly invoices for every branch",
+      "Pay by Direct Debit, or by monthly invoice and bank transfer",
+    ],
+  },
+];
+
 const comparisonPoints = [
   {
     label: "Consultation tool",
@@ -118,9 +152,9 @@ const comparisonPoints = [
     competitor: "Separate training provider",
   },
   {
-    label: "Per-consultation fees",
-    grh: "£0 — always",
-    competitor: "£5–£7 per consultation",
+    label: "Per-pharmacist training fees",
+    grh: "£0, training included for every pharmacist",
+    competitor: "Charged separately, per pharmacist",
   },
   {
     label: "Pricing model",
@@ -222,7 +256,7 @@ export default function PlatformPage() {
                   className="group block bg-gradient-to-br from-navy-900 to-navy-950 hover:from-navy-800 hover:to-navy-900 border border-navy-200 rounded-xl aspect-video flex items-center justify-center transition-colors shadow-md"
                 >
                   <div className="text-center px-6">
-                    <div className="w-14 h-14 mx-auto rounded-full bg-[color:var(--tenant-primary)]/100 group-hover:bg-[color:var(--tenant-primary)]/15 flex items-center justify-center mb-3 transition-colors">
+                    <div className="w-14 h-14 mx-auto rounded-full bg-[color:var(--tenant-primary)] group-hover:opacity-90 flex items-center justify-center mb-3 transition-opacity">
                       <svg className="w-7 h-7 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M8 5v14l11-7z" />
                       </svg>
@@ -232,6 +266,51 @@ export default function PlatformPage() {
                   </div>
                 </Link>
               </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Now live */}
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+        <h2 className="text-2xl sm:text-3xl font-bold text-navy-900 mb-2 text-center">
+          Also in the platform
+        </h2>
+        <p className="text-gray-500 text-center mb-8">
+          Live now and included in the same monthly fee.
+        </p>
+        <div className="grid sm:grid-cols-2 gap-6">
+          {liveFeatures.map((feature) => (
+            <div
+              key={feature.title}
+              className="bg-white rounded-xl border border-gray-200 shadow-sm p-6"
+            >
+              <h3 className="text-lg font-bold text-navy-900 mb-3">
+                {feature.title}
+              </h3>
+              <ul className="space-y-2">
+                {feature.details.map((detail) => (
+                  <li
+                    key={detail}
+                    className="flex items-start gap-2 text-sm text-gray-700"
+                  >
+                    <svg
+                      className="w-4 h-4 text-[color:var(--tenant-primary)] mt-0.5 shrink-0"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2.5}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                    {detail}
+                  </li>
+                ))}
+              </ul>
             </div>
           ))}
         </div>
@@ -359,16 +438,15 @@ export default function PlatformPage() {
           See it in action
         </h2>
         <p className="text-gray-600 mb-8 max-w-xl mx-auto">
-          Book a 20-minute demo and we&apos;ll walk you through the full
-          platform — consultations, patient
-          records, the superintendent dashboard, everything.
+          Watch the 5-minute demo video of the full platform: consultations,
+          patient records, the superintendent dashboard and more.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link
             href="/demo"
-            className="px-8 py-3 bg-[color:var(--tenant-primary)]/100 hover:bg-[color:var(--tenant-primary)]/15 text-white font-semibold rounded-lg transition-colors text-sm"
+            className="px-8 py-3 bg-[color:var(--tenant-primary)] hover:opacity-90 text-white font-semibold rounded-lg transition-opacity text-sm"
           >
-            See a demo
+            Watch the demo video
           </Link>
           <Link
             href="/for-pharmacies/pricing"

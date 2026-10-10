@@ -36,7 +36,7 @@ export interface ServicePage {
 
 const COMMON_INCLUDED = [
   "Full clinical PGD document (signed off by our medical director and clinical pharmacist)",
-  "Online training module with CPD certificate",
+  "Optional online training module with CPD certificate",
   "Built-in ePGD consultation tool with prompts, contraindication checks and dose calculators",
   "Editable patient consent and information leaflets",
   "Monitoring schedule template and follow-up reminders",
@@ -46,19 +46,19 @@ const COMMON_INCLUDED = [
 ];
 
 const COMMON_HOW_IT_WORKS = [
-  { step: "01", title: "Sign up", body: "Onboard online in ~10 minutes. Direct Debit via GoCardless. £100 per pharmacy per month — flat. No setup fee, no per-consult charge." },
-  { step: "02", title: "Complete training", body: "Online module + written competency check for this PGD. CPD certificate issued automatically. Locums and additional pharmacists are covered under your store fee." },
-  { step: "03", title: "Sign the PGD", body: "Authorising pharmacist signs the PGD electronically. You're cleared to start seeing patients the same day training completes." },
-  { step: "04", title: "See patients", body: "Use the ePGD tool to run consultations on iPad, laptop or phone. Records save automatically. Patients book direct via your store's GRH listing page or walk in." },
+  { step: "01", title: "Sign up", body: "Sign up in about 10 minutes; we usually approve the same working day. Direct Debit via GoCardless. £100 per pharmacy per month, flat. No setup fee, no per-consult charge." },
+  { step: "02", title: "Optional training", body: "Pharmacists must be trained and competent to work under each PGD. Our online training modules, with CPD certificates, are an optional way to do that. Locums and additional pharmacists are covered under your store fee." },
+  { step: "03", title: "Sign the PGD and start seeing patients", body: "Each pharmacist signs the PGD electronically to confirm they are competent and authorised to work under it, and can then start seeing patients." },
+  { step: "04", title: "See patients", body: "Use the ePGD tool to run consultations on iPad, laptop or phone. Records save automatically. Patients can book online via your GRH booking page, or by phone and walk-in." },
 ];
 
 export const SERVICE_PAGES: ServicePage[] = [
   // ── Wegovy ──────────────────────────────────────────────────────
   {
     slug: "wegovy",
-    title: "Wegovy PGD for UK Pharmacies | Semaglutide 2.4mg",
+    title: "Wegovy PGD for Pharmacies in England and Wales | Semaglutide 2.4mg",
     description:
-      "Wegovy (semaglutide 2.4mg) Patient Group Direction for UK community pharmacy. Includes ePGD consultation tool, training, clinical governance, patient consent forms. £100/month flat — all PGDs included.",
+      "Wegovy (semaglutide 2.4mg) Patient Group Direction for community pharmacy in England and Wales. Includes ePGD consultation tool, training, clinical governance, patient consent forms. £100/month flat — all PGDs included.",
     keywords: [
       "Wegovy PGD",
       "Wegovy pharmacy",
@@ -68,9 +68,9 @@ export const SERVICE_PAGES: ServicePage[] = [
       "Wegovy training pharmacy",
       "private Wegovy pharmacy",
     ],
-    h1: "Wegovy PGD for UK Pharmacies",
+    h1: "Wegovy PGD for Pharmacies in England and Wales",
     subhead:
-      "Run a private Wegovy (semaglutide 2.4mg) weight-management service with full clinical governance, written training and a ready-to-launch ePGD consultation tool. £100 per pharmacy per month — every PGD included.",
+      "Run a private Wegovy (semaglutide 2.4mg) weight-management service with full clinical governance, optional online training and a ready-to-launch ePGD consultation tool. £100 per pharmacy per month — every PGD included.",
     category: "Weight Management",
     drug: "Semaglutide 2.4mg (Wegovy)",
     intro:
@@ -78,13 +78,13 @@ export const SERVICE_PAGES: ServicePage[] = [
     whatsIncluded: [
       "Wegovy PGD — full clinical document with eligibility criteria (BMI ≥30, or ≥27 with comorbidity), contraindications, exclusions and dose-escalation schedule",
       ...COMMON_INCLUDED.slice(1),
-      "Dose-escalation calculator built into the ePGD tool (0.25mg → 0.5mg → 1mg → 1.7mg → 2.4mg)",
+      "Dose-escalation calculator built into the ePGD tool (0.25mg → 0.5mg → 1mg → 1.7mg → 2.4mg, then 7.2mg where the starting BMI was 30 or above)",
       "BP, weight and BMI tracking with automated trend chart for each patient",
     ],
     differentiators: [
       {
-        title: "Training is included — not an extra",
-        body: "Every pharmacist (and locum) at your store is covered under one fee. Most other providers charge separately for Wegovy training, then again per pharmacist.",
+        title: "Optional training included, not an extra",
+        body: "Every pharmacist (and locum) at your store is covered under one fee, including our optional online training modules with CPD certificates. Most other providers charge separately for Wegovy training, then again per pharmacist.",
       },
       {
         title: "ePGD tool — not paper forms",
@@ -92,14 +92,14 @@ export const SERVICE_PAGES: ServicePage[] = [
       },
       {
         title: "Flat £100/month, all PGDs",
-        body: "Pharmadoctor and ECG charge per service or per pharmacist. We don't. Add Wegovy, Mounjaro, HRT, TRT and 60+ others — same fee.",
+        body: "Pharmadoctor and ECG charge per service or per pharmacist. We don't. Add Wegovy, Mounjaro, Wegovy tablets, Foundayo and 65+ PGDs in total, all for the same fee.",
       },
     ],
     howItWorks: COMMON_HOW_IT_WORKS,
     faqs: [
       {
         q: "Do I need a separate Wegovy PGD or is it included?",
-        a: "It's included. Every PGD on our platform is part of the £100/month per pharmacy fee. Wegovy, Mounjaro, the new ongoing GLP-1 monitoring PGD, HRT, TRT — all included. No tiered pricing.",
+        a: "It's included. Every PGD on our platform is part of the £100/month per pharmacy fee. Wegovy, Wegovy tablets, Foundayo, Mounjaro and every other PGD are all included. No tiered pricing.",
       },
       {
         q: "Who signs off the Wegovy PGD?",
@@ -107,7 +107,7 @@ export const SERVICE_PAGES: ServicePage[] = [
       },
       {
         q: "What training is required to supply Wegovy under PGD?",
-        a: "Pharmacists must complete the GRH Wegovy training module (covers patient selection, BMI thresholds, contraindications, lifestyle counselling, dose escalation, and red flags) plus the written competency assessment. The module is online, can be completed in roughly an hour, and generates a CPD certificate automatically. The competency record is stored against each pharmacist's profile.",
+        a: "Pharmacists must be trained and competent to work under each PGD. Our online training modules, with CPD certificates, are an optional way to do that. The GRH Wegovy module covers patient selection, BMI thresholds, contraindications, lifestyle counselling, dose escalation and red flags. It is online, takes roughly an hour, and generates a CPD certificate automatically.",
       },
       {
         q: "How is Wegovy supplied — do you ship the drug?",
@@ -119,7 +119,7 @@ export const SERVICE_PAGES: ServicePage[] = [
       },
       {
         q: "Can a locum pharmacist provide Wegovy at my store?",
-        a: "Yes — provided they have completed the Wegovy training module and competency assessment, and signed the PGD as an authorised pharmacist. Locum logins are included in your store fee at no extra cost.",
+        a: "Yes, provided they are trained and competent to work under the Wegovy PGD and have signed it as an authorised pharmacist. Our online training module, with a CPD certificate, is an optional way to meet the training part. Locum logins are included in your store fee at no extra cost.",
       },
       {
         q: "How does this compare to Pharmadoctor or ECG Training?",
@@ -127,15 +127,15 @@ export const SERVICE_PAGES: ServicePage[] = [
       },
     ],
     ctaHeadline: "Add Wegovy to your private services in days, not months",
-    ctaSubhead: "Onboard online, complete training, and start seeing Wegovy patients the same week. £100/month per pharmacy, every PGD included.",
+    ctaSubhead: "Sign up in about 10 minutes; we usually approve the same working day. Sign the PGD and start seeing Wegovy patients. £100/month per pharmacy, every PGD included.",
   },
 
   // ── Mounjaro ────────────────────────────────────────────────────
   {
     slug: "mounjaro",
-    title: "Mounjaro PGD for UK Pharmacies | Tirzepatide",
+    title: "Mounjaro PGD for Pharmacies in England and Wales | Tirzepatide",
     description:
-      "Mounjaro (tirzepatide) Patient Group Direction for UK community pharmacy weight-management services. ePGD consultation tool, dose-escalation calculator, training, clinical governance — all included for £100/month per pharmacy.",
+      "Mounjaro (tirzepatide) Patient Group Direction for weight-management services in community pharmacies in England and Wales. ePGD consultation tool, dose-escalation calculator, training, clinical governance — all included for £100/month per pharmacy.",
     keywords: [
       "Mounjaro PGD",
       "Mounjaro pharmacy",
@@ -145,7 +145,7 @@ export const SERVICE_PAGES: ServicePage[] = [
       "Mounjaro training pharmacy",
       "private Mounjaro pharmacy",
     ],
-    h1: "Mounjaro PGD for UK Pharmacies",
+    h1: "Mounjaro PGD for Pharmacies in England and Wales",
     subhead:
       "Offer a private Mounjaro (tirzepatide) weight-management service with the PGD, training, electronic consultation tool and dose-escalation logic built in. £100 per pharmacy per month — flat.",
     category: "Weight Management",
@@ -161,7 +161,7 @@ export const SERVICE_PAGES: ServicePage[] = [
     differentiators: [
       {
         title: "One PGD covers initiation, escalation and maintenance",
-        body: "No separate add-ons for monitoring, escalation reviews or 'maintenance' supply. The Mounjaro PGD plus our GLP-1 monitoring PGD cover the full patient journey.",
+        body: "No separate add-ons for monitoring, escalation reviews or maintenance supply. The Mounjaro PGD covers the patient journey from initiation through dose escalation to maintenance.",
       },
       {
         title: "Audit-ready out of the box",
@@ -169,14 +169,14 @@ export const SERVICE_PAGES: ServicePage[] = [
       },
       {
         title: "Locums included",
-        body: "Pharmacy is built on locum cover. Our pricing reflects that: every pharmacist who works at your store can operate under the PGD at no extra cost once they've completed training.",
+        body: "Pharmacy is built on locum cover. Our pricing reflects that: every pharmacist who works at your store can operate under the PGD at no extra cost, once they are competent and have signed it.",
       },
     ],
     howItWorks: COMMON_HOW_IT_WORKS,
     faqs: [
       {
         q: "Is the Mounjaro PGD included or is it an add-on?",
-        a: "Included. All 60+ PGDs on our platform — Mounjaro, Wegovy, the GLP-1 monitoring PGD, HRT, TRT and everything else — are covered by the single £100/month per pharmacy fee.",
+        a: "Included. All 65+ PGDs on our platform, Mounjaro, Wegovy and everything else, are covered by the single £100/month per pharmacy fee.",
       },
       {
         q: "What about the dose-escalation logic? Is that automated?",
@@ -184,23 +184,19 @@ export const SERVICE_PAGES: ServicePage[] = [
       },
       {
         q: "Who can supply Mounjaro under the PGD?",
-        a: "Any pharmacist working at a GRH-subscribed pharmacy who has completed the Mounjaro training module + written competency assessment and signed the PGD as an authorised user. Locums are covered.",
+        a: "Any pharmacist working at a GRH-subscribed pharmacy who is trained and competent to work under the Mounjaro PGD and has signed it as an authorised user. Our online training modules, with CPD certificates, are an optional way to do that. Locums are covered.",
       },
       {
         q: "Do you handle the drug supply?",
         a: "No — we never sit in the supply chain. You source Mounjaro from your usual wholesaler, which means your pharmacy keeps the full margin on the drug.",
       },
       {
-        q: "What's the difference between the Mounjaro PGD and the GLP-1 monitoring PGD?",
-        a: "The Mounjaro PGD covers initiation and dose escalation. The GLP-1 monitoring PGD covers ongoing supply and reviews once a patient is stable, including patients who started Mounjaro or Wegovy elsewhere and are transferring care to your pharmacy. Both are included.",
-      },
-      {
         q: "How does this compare with Pharmadoctor or ECG Training?",
-        a: "Pharmadoctor offers a Mounjaro PGD but charges per pharmacist for training and separately for the service pack. ECG sells the PGD and training as separate products. GRH bundles everything — PGD, training, ePGD tool, all 60+ other PGDs — into one flat £100/month per pharmacy fee.",
+        a: "Pharmadoctor offers a Mounjaro PGD but charges per pharmacist for training and separately for the service pack. ECG sells the PGD and training as separate products. GRH bundles everything (PGD, optional training, ePGD tool and 65+ PGDs in total) into one flat £100/month per pharmacy fee.",
       },
     ],
     ctaHeadline: "Launch a Mounjaro service in your pharmacy",
-    ctaSubhead: "Onboard, train, sign the PGD, see patients. Same flat £100/month fee — every PGD included.",
+    ctaSubhead: "Sign up, sign the PGD, see patients. Same flat £100/month fee, every PGD included.",
   },
 
 
@@ -208,9 +204,9 @@ export const SERVICE_PAGES: ServicePage[] = [
   // ── Travel vaccinations ────────────────────────────────────────
   {
     slug: "travel-vaccinations",
-    title: "Travel Vaccination PGDs for UK Pharmacies",
+    title: "Travel Vaccination PGDs for Pharmacies in England and Wales",
     description:
-      "Travel vaccination Patient Group Directions for UK community pharmacy. Hep A/B, Typhoid, Yellow Fever, MenACWY, Rabies, Japanese Encephalitis, Dengue and more — plus anti-malarials and the travel risk assessment workflow. £100/month flat.",
+      "Travel vaccination Patient Group Directions for community pharmacy in England and Wales. Hep A/B, Typhoid, Yellow Fever, MenACWY, Rabies, Japanese Encephalitis, Dengue and more — plus anti-malarials and the travel risk assessment workflow. £100/month flat.",
     keywords: [
       "travel vaccination PGD",
       "travel clinic pharmacy PGD",
@@ -222,7 +218,7 @@ export const SERVICE_PAGES: ServicePage[] = [
       "private travel clinic pharmacy",
       "travel health PGD",
     ],
-    h1: "Travel Vaccination PGDs for UK Pharmacies",
+    h1: "Travel Vaccination PGDs for Pharmacies in England and Wales",
     subhead:
       "Run a full private travel clinic with PGDs covering the entire travel itinerary — vaccines, anti-malarials, country risk assessment, certificate issuing. £100 per pharmacy per month, every PGD included.",
     category: "Travel Health",
@@ -231,7 +227,7 @@ export const SERVICE_PAGES: ServicePage[] = [
       "Travel health is the single most lucrative private service most pharmacies offer — but only if you can cover the whole itinerary. Get Real Health bundles the full travel suite: the travel risk assessment PGD, all common vaccine PGDs (Hep A/B combined, Typhoid, MenACWY, Yellow Fever for registered YFVCs, Rabies, Japanese Encephalitis, Dengue), and the anti-malarial PGD (atovaquone-proguanil, doxycycline). The ePGD tool runs the country risk assessment, recommends the regimen, captures consent and issues the certificate.",
     whatsIncluded: [
       "Travel risk assessment PGD (country-by-country lookup, itinerary review, activity-based risk)",
-      "Vaccine PGDs: Hep A/B (Twinrix / Havrix / Engerix-B), Typhoid (Typhim Vi / Vivotif), MenACWY (MenQuadfi / Nimenrix), Yellow Fever (Stamaril — for registered YFVCs only), Rabies pre-exposure, Japanese Encephalitis (Ixiaro), Dengue (Qdenga)",
+      "Vaccine PGDs: Hep A/B (Twinrix / Havrix / Engerix-B), Typhoid (Typhim Vi), MenACWY (MenQuadfi / Nimenrix), Yellow Fever (Stamaril — for registered YFVCs only), Rabies pre-exposure, Japanese Encephalitis (Ixiaro), Dengue (Qdenga)",
       "Anti-malarials PGD (atovaquone-proguanil / doxycycline)",
       "Country risk lookup integrated into the ePGD tool",
       "Patient certificate templates (including ICVP for Yellow Fever and MenACWY for Hajj)",
@@ -268,14 +264,14 @@ export const SERVICE_PAGES: ServicePage[] = [
       },
       {
         q: "How do patients book a travel appointment?",
-        a: "Through your pharmacy's existing channels — phone, walk-in, or whatever online booking you already use. GRH provides the clinical workflow, PGDs, country risk assessment and certificate issuing once the patient is in front of you; the front-of-shop booking flow stays with your pharmacy.",
+        a: "Patients can book online via your GRH booking page, or by phone and walk-in. GRH provides the clinical workflow, PGDs, country risk assessment and certificate issuing once the patient is in front of you.",
       },
       {
         q: "How does the MenACWY workflow handle Hajj certificates?",
         a: "We capture the passport number on the MenACWY consultation, so when the patient asks for a replacement certificate (which happens) you can re-issue it from the patient record. Saudi MoH require MenACWY certification for all Hajj and Umrah pilgrims.",
       },
       {
-        q: "How does this compare with PharmaDoctor's travel suite?",
+        q: "How does this compare with Pharmadoctor's travel suite?",
         a: "Pharmadoctor sells travel as a service-package add-on, with per-pharmacist training fees. Pharmadoctor is also strong on the consultation tool side. GRH's approach: bundle the entire travel suite (every common vaccine, anti-malarials, country risk lookup, certificate handling) into the same flat £100/month, with our ePGD tool out of the box. If your store has more than one pharmacist or uses locums, GRH typically works out cheaper.",
       },
     ],

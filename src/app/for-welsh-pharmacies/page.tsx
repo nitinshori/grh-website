@@ -35,7 +35,7 @@ const faqs = [
   },
   {
     q: "Does private PGD work clash with the NHS Wales Common Ailment Service?",
-    a: "No. They sit alongside each other. Common Ailment Service (or 'Choose Pharmacy') covers a defined list of minor ailments under NHS funding. GRH's 60+ private PGDs cover the services that fall outside CAS — Wegovy, Mounjaro, travel vaccines, advanced sexual health, dermatology and more. Our PGDs are explicit about not duplicating NHS-funded work; they pick up where CAS leaves off.",
+    a: "No. They sit alongside each other. Common Ailment Service (or 'Choose Pharmacy') covers a defined list of minor ailments under NHS funding. GRH's 65+ private PGDs cover the services that fall outside CAS — Wegovy, Mounjaro, travel vaccines, advanced sexual health, dermatology and more. Our PGDs are explicit about not duplicating NHS-funded work; they pick up where CAS leaves off.",
   },
   {
     q: "Can I run the service in both Welsh and English?",
@@ -47,7 +47,7 @@ const faqs = [
   },
   {
     q: "Who's the medical authority on these PGDs?",
-    a: "Dr Nitin Shori — NHS GP partner, previously Medical Director of Pharmacy2U Online Doctor Service for 10+ years, where he helped build some of the UK's earliest large-scale online prescribing programmes. Every PGD has a named clinician.",
+    a: "Dr Nitin Shori — NHS GP partner, founded the Pharmacy2U Online Doctor service and was its Medical Director for over 10 years, where he helped build some of the UK's earliest large-scale online prescribing programmes. Every PGD has a named clinician.",
   },
 ];
 
@@ -70,7 +70,7 @@ const serviceJsonLd = {
   provider: { "@type": "Organization", name: "Get Real Health", url: BASE_URL },
   areaServed: [
     { "@type": "AdministrativeArea", name: "Wales" },
-    { "@type": "Country", name: "United Kingdom" },
+    { "@type": "AdministrativeArea", name: "England" },
   ],
   audience: { "@type": "Audience", audienceType: "Welsh community pharmacies and pharmacists" },
   serviceType: "Patient Group Direction Services",
@@ -180,7 +180,7 @@ export default function WelshPharmaciesPage() {
             handful of other conditions.
           </p>
           <p className="text-gray-700 leading-relaxed mb-4">
-            GRH&apos;s 60+ private PGDs pick up where CAS leaves off &mdash;
+            GRH&apos;s 65+ private PGDs pick up where CAS leaves off &mdash;
             Wegovy, Mounjaro, travel vaccines, advanced sexual health,
             dermatology, vaccines that aren&apos;t on Welsh NHS rotas. Our PGDs
             are explicit about not duplicating NHS-funded work. Your CAS revenue
@@ -217,7 +217,7 @@ export default function WelshPharmaciesPage() {
             Add a private service to your Welsh pharmacy this week
           </h2>
           <p className="text-blue-200 text-lg mb-8 max-w-2xl mx-auto">
-            HIW-registered. 60+ electronic PGDs. £100 per month, per pharmacy &mdash; no per-pharmacist charge, locums included.
+            HIW-registered. 65+ electronic PGDs. £100 per month, per pharmacy &mdash; no per-pharmacist charge, locums included.
           </p>
           <div className="flex flex-wrap justify-center gap-3">
             <Link

@@ -35,7 +35,7 @@ const demoHighlights = [
   },
   {
     title: "The 10-minute sign-up",
-    body: "End-to-end onboarding from the public form to your first consultation in under 10 minutes — including the GoCardless Direct Debit set-up.",
+    body: "The public sign-up form, including the GoCardless Direct Debit set-up. Sign up in about 10 minutes; we usually approve the same working day, then you can start consultations.",
   },
 ];
 
@@ -53,8 +53,8 @@ export default function DemoPage() {
           </h1>
           <p className="text-lg md:text-xl text-blue-100 max-w-3xl">
             No call needed. Dr Nitin Shori walks through the ePGD tool, training, patient records
-            and clinical governance pack. When you&apos;re ready, sign up &mdash; you can be running
-            consultations within the hour.
+            and clinical governance pack. When you&apos;re ready, sign up in about 10 minutes; we
+            usually approve the same working day, then you can start consultations.
           </p>
         </div>
       </section>
@@ -70,7 +70,7 @@ export default function DemoPage() {
               controls
               playsInline
               preload="metadata"
-              poster="/demo-poster.png"
+              poster="/images/nitin-founder.jpg"
               className="w-full h-full object-cover"
             >
               <source src="/demo-video.mp4" type="video/mp4" />
@@ -104,7 +104,7 @@ export default function DemoPage() {
               </h2>
               <p className="text-gray-700">
                 £100/month per pharmacy &mdash; every PGD, all your locums, included. No setup fee.
-                10-minute onboarding.
+                Sign up in about 10 minutes; we usually approve the same working day.
               </p>
             </div>
             <div className="flex-shrink-0">
@@ -141,10 +141,10 @@ export default function DemoPage() {
       <section className="bg-navy-950 text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-14 md:py-20 text-center">
           <h2 className="text-2xl md:text-3xl font-bold mb-4">
-            Sign up and start seeing private patients this week
+            Sign up today, usually approved the same working day
           </h2>
           <p className="text-blue-200 text-lg mb-8 max-w-2xl mx-auto">
-            60+ PGDs. Training included. Locums included. £100 per pharmacy per month, flat.
+            65+ PGDs. Training included. Locums included. £100 per pharmacy per month, flat.
           </p>
           <div className="flex flex-wrap justify-center gap-3">
             <Link

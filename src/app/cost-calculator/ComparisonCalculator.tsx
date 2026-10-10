@@ -7,7 +7,7 @@ import { useMemo, useState } from "react";
 // GRH — flat £100 per pharmacy per month. Locums covered. No per-pharmacist fees.
 // Pharmadoctor — typical SMB customer-reported price ~£2,639/yr inc. VAT per
 //   pharmacy + per-pharmacist training fees for headline services (Wegovy /
-//   Mounjaro / TRT / HRT). Mid-point of customer-reported training fees: ~£250
+//   Mounjaro). Mid-point of customer-reported training fees: ~£250
 //   per pharmacist per year aggregated across services.
 // ECG — modular PGD pricing typically ~£2,000/yr per pharmacy + per-pharmacist
 //   training fees averaging ~£180/yr aggregated.
@@ -15,7 +15,7 @@ import { useMemo, useState } from "react";
 // These figures are deliberately conservative for the competitors — many
 // customers report higher.
 
-const GRH_MONTHLY = 100; // £/store/month
+const GRH_MONTHLY = 100; // £/store/month. GRH is not VAT registered, no VAT.
 const GRH_PER_LOCUM = 0; // locums included
 
 const PD_ANNUAL_BASE = 2639; // £/store/year
@@ -145,7 +145,7 @@ export function ComparisonCalculator() {
           <p className="text-3xl font-bold text-gray-900 mt-1">{gbp(annual.grh)}</p>
           <p className="text-xs text-gray-700">per year, all in</p>
           <p className="text-[10px] text-gray-500 mt-2">
-            {stores} store{stores === 1 ? "" : "s"} × £100/mo × 12. Locums included at no extra fee.
+            {stores} store{stores === 1 ? "" : "s"} × £100/mo × 12. No VAT is charged. Locums included at no extra fee.
           </p>
         </div>
         <div className="rounded-xl border border-gray-200 bg-white p-5">
@@ -176,7 +176,7 @@ export function ComparisonCalculator() {
           <strong className="text-gray-600">Disclaimer:</strong> Pharmadoctor and ECG Training
           figures are based on customer-reported prices in 2025&ndash;26. Each provider runs
           multiple tiers and per-pharmacist training fees vary by service &mdash; your actual
-          quote may be higher or lower. GRH&apos;s £100/month is exact and applies to every customer.
+          quote may be higher or lower. GRH is £100 per pharmacy per month as standard, and no VAT is charged. Group discounts are agreed case by case when your sign-up is approved.
         </p>
       </div>
 

@@ -7,6 +7,12 @@ export interface Article {
   publishDate: string;
   primaryKeyword: string;
   content: string; // markdown-style plain text — rendered as HTML sections
+  /**
+   * Title shown on public listings (the resources index and related
+   * reading) when the title itself names a prescription-only medicine or
+   * POM treatment category. HCP-gated articles only.
+   */
+  publicTitle?: string;
 }
 
 export const articles: Article[] = [
@@ -29,9 +35,9 @@ For pharmacists, PGDs represent a significant commercial and clinical opportunit
 
 Every PGD has inclusion and exclusion criteria, clinical assessment steps, counselling requirements, and documentation standards. The pharmacist follows a structured protocol for each consultation, ensuring patient safety and creating an auditable record.
 
-There are currently over 100 medicines that can be supplied under PGD in community pharmacy, covering travel health, vaccines, sexual health, weight management, skin conditions, respiratory conditions, and more. The number is growing as NICE and the MHRA approve new pathways.
+The range of medicines is broad; most licensed prescription-only medicines can be included unless excluded by law. In community pharmacy, PGDs cover travel health, vaccines, sexual health, weight management, skin conditions, respiratory conditions, and more.
 
-To use a PGD, a pharmacist must be named on the direction, have completed the relevant training, and be assessed as competent by the authorising body. This is not a one-off process — ongoing CPD and periodic reassessment are standard requirements.
+To use a PGD, a pharmacist must be named on the direction and authorised to work under it. Pharmacists must be trained and competent to work under each PGD, and keeping that competence up to date is an ongoing professional duty, not a one-off. Our online training modules, with CPD certificates, are an optional way to do that.
 
 If you're a pharmacy owner or superintendent considering PGD services, the key question is not whether to offer them — it's which PGDs to prioritise and which provider gives you the best combination of clinical governance, training, technology, and value.`,
   },
@@ -77,15 +83,13 @@ The highest-revenue PGD category in UK community pharmacy is travel health. A si
 
 Weight management is the fastest-growing category. GLP-1 treatments like Wegovy and Mounjaro generate £200–350 per patient per month, with patients typically staying on treatment for 6–12 months. A pharmacy seeing just 10 weight management patients generates £24,000–42,000 annually from this service alone.
 
-Vaccines beyond travel — private flu, shingles (Shingrix), chickenpox, and the newer RSV vaccines — form a strong secondary revenue layer. Shingles vaccination generates £150–200 per two-dose course, and the private market for over-70s is significant since the NHS programme has age caps.
+Vaccines beyond travel — private flu, shingles (Shingrix), chickenpox, and the newer RSV vaccines — form a strong secondary revenue layer. Shingles vaccination generates £150 to £200 per two-dose course, for adults outside NHS eligibility.
 
-Men's and women's health services generate moderate per-consultation revenue but have high volume and strong repeat rates. Erectile dysfunction and hair loss treatments create loyal, returning patients. HRT initiation is a major emerging opportunity — one in three women in menopause receive no treatment, and pharmacy-based HRT under PGD is virtually uncontested.
-
-Sexual health, particularly PrEP for HIV prevention, represents a growing private market. Thousands of patients currently pay £50+ per month through online clinics — pharmacy-based PrEP under PGD is faster, more accessible, and builds local relationships.
+Men's and women's health services generate moderate per-consultation revenue but have high volume and strong repeat rates. Erectile dysfunction and hair loss treatments create loyal, returning patients.
 
 The key to maximising revenue is portfolio breadth combined with smart prioritisation. Launch with high-demand, high-margin services first (travel, weight management, vaccines), then layer in volume-driving services (UTI, ED, skin) that keep footfall high and build patient loyalty.
 
-The critical mistake is limiting your portfolio to what competitors offer. If you only provide the same 20 PGDs as Pharmadoctor, you're competing on price. If you offer 60+ including exclusive services like HRT, TRT, and PrEP, you're competing on access — and winning.`,
+The critical mistake is limiting your portfolio to what competitors offer. If you only provide the same 20 PGDs as Pharmadoctor, you're competing on price. If you offer 65+ including exclusive services like situational anxiety, dental bridging and BPH, you're competing on access, and winning.`,
   },
   {
     slug: "how-to-start-a-travel-clinic-in-your-pharmacy",
@@ -98,9 +102,9 @@ The critical mistake is limiting your portfolio to what competitors offer. If yo
     primaryKeyword: "how to start a travel clinic pharmacy",
     content: `Travel health is the single most profitable PGD service category for UK community pharmacies. Here's how to set one up properly.
 
-Step one is securing your PGDs. You need a PGD provider that covers the full range of travel vaccines — typhoid, hepatitis A, hepatitis B, diphtheria/polio/tetanus, cholera, yellow fever, Japanese encephalitis, rabies, meningitis ACWY, and dengue. You also need anti-malarial PGDs for Malarone, Doxycycline, and Mefloquine, plus supporting PGDs for altitude sickness and traveller's diarrhoea standby packs.
+Step one is securing your PGDs. You need a PGD provider that covers the full range of travel vaccines — typhoid, hepatitis A, hepatitis B, diphtheria/polio/tetanus, cholera, yellow fever, Japanese encephalitis, rabies, meningitis ACWY, and dengue. You also need anti-malarial PGDs for Malarone, Doxycycline, and Mefloquine, plus supporting PGDs for altitude sickness and travellers' diarrhoea standby packs.
 
-Step two is training. Every pharmacist delivering the service must complete accredited training for each PGD. This covers the clinical pathway, inclusion and exclusion criteria, vaccine schedules, cold chain management, anaphylaxis response, and documentation requirements. Good providers include this training as part of the package.
+Step two is training. Pharmacists must be trained and competent to work under each PGD, covering the clinical pathway, inclusion and exclusion criteria, vaccine schedules, cold chain management, anaphylaxis response, and documentation requirements. Our online training modules, with CPD certificates, are an optional way to do that.
 
 Step three is your consultation setup. You need a private consultation room with a clinical waste bin, sharps disposal, anaphylaxis kit (with in-date adrenaline auto-injectors), a fridge with temperature monitoring for vaccine storage, and a digital system for recording consultations.
 
@@ -118,55 +122,27 @@ Revenue expectations: a well-marketed travel clinic in a reasonably busy locatio
     slug: "can-pharmacy-technicians-use-pgds",
     title: "Can Pharmacy Technicians Use PGDs?",
     description:
-      "The regulatory position on pharmacy technicians and PGDs has changed. Here's what the June 2024 update means for your team.",
+      "Where pharmacy technicians stand on PGDs, what to check before anything changes in your team, and why Get Real Health PGDs are written for pharmacists.",
     category: "PGD Fundamentals",
     readTime: "4 min read",
     publishDate: "2025-07-01",
     primaryKeyword: "pharmacy technicians PGDs",
-    content: `The short answer is: it's changing, and the direction of travel is clear.
+    content: `The short answer: check the law in force and the PGD itself before any technician works under one, and note that every Get Real Health PGD is written for registered pharmacists only.
 
-Historically, only specified healthcare professionals could operate under PGDs. For pharmacy, this meant registered pharmacists. Pharmacy technicians — despite being GPhC-registered professionals with significant clinical training — were excluded from the legal framework.
+Historically, only specified registered healthcare professionals could operate under PGDs. For community pharmacy, this meant registered pharmacists. Pharmacy technicians, despite being GPhC-registered professionals with significant clinical training, were not on that list.
 
-In June 2024, the UK government consulted on extending PGD eligibility to pharmacy technicians for specific, lower-risk services. This follows the broader trend of expanding the pharmacy technician role that began with the Pharmacy First programme and the GPhC's revised standards for initial education and training.
+In 2024 the UK government consulted on extending PGD eligibility to registered pharmacy technicians. Whether a technician may work under a PGD depends on the legislation in force at the time and on the PGD itself. A PGD names the professional groups who may use it, and only those groups may supply or administer under it.
 
-The rationale is straightforward: pharmacy technicians are already performing many aspects of clinical service delivery. They take patient histories, conduct screening assessments, and support consultation workflows. Allowing them to supply certain medicines under PGD — with appropriate training and governance — increases capacity without compromising safety.
+Pharmacy technicians already contribute a great deal to clinical service delivery. They take patient histories, run screening steps and support consultation workflows. All of that increases a pharmacy's capacity without the technician supplying the medicine.
 
-For pharmacy owners and superintendents, this has practical implications. If your pharmacists are the bottleneck for PGD services — particularly high-volume, lower-complexity services like flu vaccination, emergency contraception, or minor ailment treatment — technician-delivered PGDs could significantly increase your consultation capacity.
+For Get Real Health customers the position is simple. Every Get Real Health PGD is written for registered pharmacists. A pharmacy technician cannot supply or administer a medicine under one of our PGDs.
 
-The key point to understand is that this won't be a blanket extension. The regulatory change is expected to specify which PGDs technicians can operate under, with requirements for additional training, competency assessment, and clinical supervision. The pharmacist remains the responsible professional — but the delivery model becomes more flexible.
-
-What should you do now? First, make sure your PGD provider is preparing for the change. The best providers are already designing training pathways and updated governance frameworks for technician-delivered PGDs. Second, identify which of your current services would benefit from technician delivery — typically the high-volume, protocol-driven services with clear inclusion and exclusion criteria.
-
-This is not a future consideration. The regulatory wheels are turning and the pharmacies that prepare now will be first to benefit when the change takes effect.`,
-  },
-  {
-    slug: "hrt-through-pharmacy-what-is-possible-under-pgd",
-    title: "HRT Through Pharmacy — What's Possible Under PGD?",
-    description:
-      "One in three menopausal women receive no treatment. Pharmacy-based HRT under PGD could change that — here's how.",
-    category: "Clinical Services",
-    readTime: "7 min read",
-    publishDate: "2025-07-08",
-    primaryKeyword: "HRT pharmacy PGD",
-    content: `HRT is one of the biggest untapped opportunities in UK community pharmacy. The demand is enormous, GP capacity is stretched, and the clinical governance framework for pharmacy-based initiation is maturing rapidly.
-
-The numbers are stark: approximately 13 million women in the UK are currently peri-menopausal or post-menopausal. One in three receive no treatment at all. Among those who do seek help, the average wait for a GP menopause appointment is 4–8 weeks — and many GPs lack confidence in prescribing HRT, leading to further referrals and delays.
-
-This is where pharmacy comes in. A PGD for HRT initiation allows a trained pharmacist to assess menopausal symptoms, confirm eligibility, prescribe appropriate HRT, and provide counselling — all in a single consultation. The patient walks in with symptoms and walks out with treatment.
-
-The clinical pathway under PGD typically covers first-line HRT options: transdermal oestrogen patches or gel (preferred over oral for safety), plus micronised progesterone for women with a uterus. The PGD defines clear inclusion criteria, exclusion criteria (family history of breast cancer, VTE risk factors, etc.), required assessments, and follow-up protocols.
-
-From a revenue perspective, HRT consultations typically command £80–150 for the initial assessment, with follow-up reviews generating additional income. Given the ongoing nature of HRT — most women stay on treatment for years — this creates a loyal, returning patient base.
-
-The competitive landscape is remarkable for what's missing. Pharmadoctor does not offer HRT under PGD. ECG does not offer it either. The online clinic market (Leva, The Menopause Charity) serves some demand but lacks the face-to-face clinical relationship that many women prefer. Pharmacy-based HRT under PGD is virtually uncontested.
-
-For pharmacists, the training requirement is substantial but achievable. Expect 8–12 hours of accredited learning covering menopause physiology, HRT prescribing, risk assessment, and patient counselling. This is specialist clinical work — but it's squarely within pharmacist competence when properly trained and governed.
-
-The first pharmacies to offer this service will build powerful local reputations. Menopause is no longer a taboo subject — women are actively searching for accessible, knowledgeable healthcare providers. Be the pharmacy that shows up.`,
+If you want technicians to take on more of your clinical services, use them for the parts of the workflow that do not need a PGD, and check the current law and the staff groups named in each PGD before changing who supplies.`,
   },
   {
     slug: "glp1-weight-management-pharmacy-complete-guide",
     title: "GLP-1 Weight Management in Pharmacy — A Complete Guide",
+    publicTitle: "Weight Management Services in Pharmacy: A Complete Guide",
     description:
       "Wegovy, Mounjaro, and the GLP-1 revolution — what pharmacy owners need to know about the fastest-growing PGD category.",
     category: "Clinical Services",
@@ -175,7 +151,7 @@ The first pharmacies to offer this service will build powerful local reputations
     primaryKeyword: "GLP-1 pharmacy weight management",
     content: `GLP-1 receptor agonists have transformed weight management. For pharmacy, they represent the fastest-growing revenue opportunity in a generation.
 
-Semaglutide (Wegovy) and tirzepatide (Mounjaro) are the two dominant treatments. Both are injectable, both require clinical assessment before initiation, and both need ongoing monitoring and dose titration — making them ideal for pharmacy-based delivery under PGD.
+Semaglutide (Wegovy) and tirzepatide (Mounjaro) are the two dominant treatments, both given as once-weekly injections. Oral options are now available too: Wegovy tablets (oral semaglutide) and Foundayo (orforglipron). All of them require clinical assessment before initiation and need ongoing monitoring and dose titration, making them ideal for pharmacy-based delivery under PGD.
 
 The patient demand is extraordinary. Obesity affects over 25% of UK adults. NHS waiting lists for weight management services are measured in months. Online clinics have proliferated, but many offer medication without adequate clinical oversight — post it and forget it. Pharmacy fills the gap: accessible, clinical, face-to-face, and ongoing.
 
@@ -185,9 +161,9 @@ Revenue modelling is compelling. GLP-1 treatments generate £200–350 per patie
 
 The key differentiator for pharmacy versus online clinics is the ongoing monitoring. Dose titration for both semaglutide and tirzepatide follows a structured escalation schedule. Side effects (nausea, constipation, injection site reactions) need management. Blood pressure and other parameters need checking. This is clinical work — and it's work that online clinics do poorly.
 
-Stock management requires attention. GLP-1 medications are expensive (wholesale cost £150–250 per month) and require cold chain storage. Start with a manageable patient cohort and scale as your supply chain stabilises. Consider patient pre-payment to manage cash flow.
+Stock management requires attention. GLP-1 medications are expensive (wholesale cost £150 to £250 per month), and the injectable ones need cold chain storage. Start with a manageable patient cohort and scale as your supply chain stabilises. Consider patient pre-payment to manage cash flow.
 
-Training covers GLP-1 pharmacology, patient assessment, injection technique (you'll be teaching patients to self-inject), dose titration protocols, side effect management, and when to refer. Expect 6–10 hours of accredited learning.
+Pharmacists must be trained and competent to work under each PGD. Our online training modules, with CPD certificates, are an optional way to do that, covering GLP-1 pharmacology, patient assessment, injection technique (you'll be teaching patients to self-inject), dose titration, side effect management, and when to refer.
 
 Do not launch your PGD service portfolio without weight management. It is the service patients are actively searching for, and the pharmacy that offers it locally will capture significant market share.`,
   },
@@ -206,13 +182,13 @@ The first thing to understand is that PGDs are not transferable between provider
 
 Step one: review your current contract. Most PGD providers operate on annual subscriptions. Check your notice period and renewal date. Many pharmacies time their switch to coincide with renewal to avoid paying two providers simultaneously.
 
-Step two: assess what you're getting from your current provider versus what you need. Common reasons pharmacies switch include limited PGD range (providers offering 20–30 PGDs when 60+ are available), per-consultation fees eating into margins, outdated or clunky consultation technology, poor training quality, and lack of superintendent oversight tools.
+Step two: assess what you're getting from your current provider versus what you need. Common reasons pharmacies switch include limited PGD range (providers offering 20 to 30 PGDs when 65+ are available), per-consultation fees eating into margins, outdated or clunky consultation technology, poor training quality, and lack of superintendent oversight tools.
 
-Step three: onboarding with your new provider. A good provider should have you operational within 48 hours. This includes issuing your new PGDs, setting up platform access, completing initial training (or recognising equivalent prior learning), and verifying competency assessments.
+Step three: onboarding with your new provider. With Get Real Health you sign up in about 10 minutes, and we usually approve the same working day. Onboarding covers issuing your new PGDs and setting up platform access. Pharmacists must be trained and competent to work under each PGD, and relevant prior learning counts towards that; our online training modules, with CPD certificates, are an optional way to fill any gaps.
 
 Step four: the transition. In practice, most pharmacies run a brief overlap period — typically one to two weeks — where they wind down services under the old provider while ramping up under the new one. Patient records belong to the pharmacy, not the provider, so there's no data migration issue if you've been maintaining your own records.
 
-Step five: notify your patients. For ongoing services (weight management, HRT, repeat prescriptions), let patients know you've upgraded your service provider. Frame it positively — more services, better technology, same clinical team.
+Step five: notify your patients. For ongoing services (weight management, travel courses), let patients know you've upgraded your service provider. Frame it positively — more services, better technology, same clinical team.
 
 Common concerns that turn out to be non-issues: training recognition (good providers don't make you repeat training you've already done), CQC notification (switching providers doesn't change your CQC registration status), and service continuity (if your new provider covers the same PGDs, there's no gap).
 
@@ -231,7 +207,7 @@ The real question isn't whether switching is difficult — it isn't. The questio
 
 The numbers tell the story. The Community Pharmacy Contractual Framework (CPCF) delivered a funding settlement that many pharmacy bodies have described as inadequate. When adjusted for inflation, real-terms funding per pharmacy has declined consistently over the past decade. The average independent pharmacy now operates on margins that would be unsustainable in most other healthcare settings.
 
-Meanwhile, costs have risen. Energy bills, staff wages (following National Living Wage increases), drug tariff fluctuations, and property costs have all increased. The Pharmaceutical Services Negotiating Committee (PSNC) has repeatedly highlighted the growing gap between what pharmacies receive and what it costs to operate.
+Meanwhile, costs have risen. Energy bills, staff wages (following National Living Wage increases), drug tariff fluctuations, and property costs have all increased. Community Pharmacy England (formerly PSNC) has repeatedly highlighted the growing gap between what pharmacies receive and what it costs to operate.
 
 Dispensing volume — historically the core revenue driver — is under structural pressure. Repeat dispensing hubs, online pharmacies, and GP-direct dispensing are all reducing footfall. The number of pharmacies in England has been declining year on year.
 
@@ -258,7 +234,7 @@ This is not a theoretical argument. The pharmacies already offering comprehensiv
 
 Legal and Governance: Your PGDs must be authorised by a body legally permitted to do so. Each PGD must be signed by a doctor and a pharmacist. The PGD must be in date — expired PGDs are not valid. Every pharmacist delivering under the PGD must be individually named on the direction. Your pharmacy must have appropriate indemnity insurance covering PGD service delivery.
 
-Training and Competency: Every named pharmacist must have completed accredited training for each PGD they will operate under. Competency assessments must be documented and dated. Records of training completion must be accessible for audit. Ongoing CPD requirements must be met — PGD competence is not a one-off assessment.
+Training and Competency: Every named pharmacist must be trained and competent to work under each PGD they will operate under, and authorised to do so. Keep a dated record of how competence was established, accessible for audit. Keeping competence up to date is an ongoing duty, not a one-off. Our online training modules, with CPD certificates, are an optional way to do that.
 
 Consultation Environment: You need a private consultation room that meets GPhC standards. The room must have appropriate clinical waste disposal (yellow bins for clinical waste, sharps containers for needles). An anaphylaxis kit must be present and in date — this includes adrenaline auto-injectors, and the pharmacist must be trained in their use. For vaccine services, you need a pharmaceutical-grade fridge with continuous temperature monitoring and documented logs.
 
@@ -289,19 +265,17 @@ This guide answers the question UK pharmacy owners and superintendents are incre
 
 What are private pharmacy services under PGD?
 
-A Patient Group Direction is a written instruction that allows a named, trained pharmacist to supply or administer a specific medicine to any patient who meets defined inclusion criteria — without an individual prescription. Under PGD, a pharmacist can run a travel clinic, prescribe weight-management medication, supply HRT or TRT, treat UTIs, manage hair loss, deliver flu and COVID vaccinations privately, treat erectile dysfunction, supply emergency contraception, and many more — all directly from the pharmacy, all paid for by the patient.
+A Patient Group Direction is a written instruction that allows a named, trained pharmacist to supply or administer a specific medicine to any patient who meets defined inclusion criteria — without an individual prescription. Under PGD, a pharmacist can run a travel clinic, supply weight-management medication, treat UTIs, manage hair loss, deliver flu and COVID vaccinations privately, treat erectile dysfunction, supply emergency contraception, and many more, all directly from the pharmacy, all paid for by the patient.
 
-The legal framework sits under the Human Medicines Regulations 2012. A PGD must be authorised by a registered organisation (typically a CQC-registered private healthcare provider) and signed by both a doctor and a pharmacist. The pharmacist then completes structured training and a competency assessment before being named on the PGD.
+The legal framework sits under the Human Medicines Regulations 2012. A PGD must be authorised by a registered organisation (typically a CQC-registered private healthcare provider) and signed by both a doctor and a pharmacist. Each pharmacist must be trained and competent to work under each PGD, and is then named and authorised to use it.
 
 Which private services should you offer first?
 
-The right starting set depends on your patient demographics, but five categories consistently produce the strongest early revenue for new entrants:
+The right starting set depends on your patient demographics, but three categories consistently produce the strongest early revenue for new entrants:
 
 Weight management — GLP-1 services (Wegovy, Mounjaro), plus older agents like Saxenda, Mysimba, and Orlistat. High patient demand, high revenue per consultation, and recurring revenue once a patient starts a programme.
 
 Travel health — pre-travel consultations and vaccinations (yellow fever, hepatitis A and B, typhoid, rabies, Japanese encephalitis, anti-malarials). Seasonal but margin-rich. A single family booking can generate £400–£600.
-
-Hormone therapy — HRT for menopausal women, TRT for men with clinical testosterone deficiency. Long-duration relationships, predictable repeat consultations, and a route to PMR-style ongoing care.
 
 Sexual health — ED, contraception, emergency contraception, UTI treatment, STI testing. High volume, fast consultations, and meaningful walk-in convenience for patients.
 
@@ -315,25 +289,25 @@ A PGD provider. You can author PGDs in-house, but it's a significant clinical-go
 
 CQC registration (England) or HIW registration (Wales). Required for private clinical services delivered in pharmacy. The registration is for the activity, not the building — your PGD provider's registration may cover you depending on the arrangement, or you may register yourself.
 
-Trained, named pharmacists. Every pharmacist using a PGD must be named on it, have completed the relevant training, and have passed a competency assessment. Locums working in your branch must be onboarded the same way.
+Trained, competent, named pharmacists. Every pharmacist using a PGD must be trained and competent to work under it, and named and authorised to use it. That is the legal duty. Our online training modules, with CPD certificates, are an optional way to meet it. Locums working in your branch must be authorised the same way.
 
 A consultation tool that creates auditable records. Paper records are technically allowed but practically dangerous — for audit, for governance, and for managing locums consistently. A purpose-built ePGD tool walks the pharmacist through the same structured assessment every time and produces a defensible record.
 
-An appointment-booking workflow. You can run drop-in for some services, but appointment-led services (travel clinic, GLP-1, HRT, TRT) need a diary so patients can book themselves and your team isn't constantly answering the phone.
+An appointment-booking workflow. You can run drop-in for some services, but appointment-led services (travel clinic, weight management) need a diary so patients can book themselves and your team isn't constantly answering the phone.
 
 How long does it take?
 
 Onboarding to a good PGD provider should take days, not weeks. A typical timeline:
 
-Day 1–2: Sign-up, contract, payment mandate, account creation. PGDs available in your platform on day one.
+Day 1: Sign up in about 10 minutes (contract, payment mandate, account creation). We usually approve the same working day, and your PGDs are then available in the platform.
 
-Day 2–5: Each pharmacist on your team completes the online training and competency assessment for the PGDs you want to offer. Most experienced pharmacists complete a single PGD's training in 30–60 minutes. The bottleneck is staff time, not the platform.
+Day 2 to 5: Each pharmacist on your team confirms they are trained and competent for the PGDs you want to offer, and signs to be authorised under them. Anyone who wants it can use our optional online training modules, with CPD certificates; most experienced pharmacists complete a single module in 30 to 60 minutes. The bottleneck is staff time, not the platform.
 
 Day 3–5: Add the new private services to your shop signage and patient-facing communications. Run a soft-launch to staff and family members to test the workflow end-to-end.
 
 Day 5+: Start consulting paying patients.
 
-Pharmacies stuck in months-long onboardings are almost always blocked on internal training scheduling, not on the PGD provider. Front-load training and you'll be running paying consultations within a week of signing.
+Pharmacies stuck in months-long onboardings are almost always blocked on internal scheduling, not on the PGD provider. Sort out your team's PGD sign-off early and you'll be running paying consultations within a week of signing.
 
 What does it cost?
 
@@ -349,17 +323,17 @@ Most pharmacies break even on PGD services in their first month — a single GLP
 
 What about insurance and indemnity?
 
-You need clinical-negligence cover that explicitly covers private prescribing under PGD. Standard NPA cover does not always extend automatically to private services — check with your insurer before going live. Your PGD provider should have its own professional-indemnity policy covering the PGD authoring itself.
+You need clinical-negligence cover that explicitly covers private supply under PGD. Standard NPA cover does not always extend automatically to private services — check with your insurer before going live. Your PGD provider should have its own professional-indemnity policy covering the PGD authoring itself.
 
 For clinical edge cases, build a relationship with a friendly GP or pharmacist independent prescriber who can take calls. Many independent owners use their local GP partner; others use a paid clinical-advisor service.
 
 What the leading PGD platforms have in common
 
-Look for: a single flat fee, complete PGD coverage from day one (not "available in 6 weeks"), genuine clinical authorship (a named doctor on every PGD, not white-labelled templates), CQC and HIW registration, an ePGD consultation tool that walks the pharmacist through a structured assessment, online training and competency assessment included, an appointment diary built into the platform (not bolted on), audit logging and superintendent oversight, and onboarding in days not months.
+Look for: a single flat fee, complete PGD coverage from day one (not "available in 6 weeks"), genuine clinical authorship (a named doctor on every PGD, not white-labelled templates), CQC and HIW registration, an ePGD consultation tool that walks the pharmacist through a structured assessment, optional online training with CPD certificates included, an appointment diary built into the platform (not bolted on), audit logging and superintendent oversight, and onboarding in days not months.
 
 Avoid: per-pharmacist licensing, per-consultation fees, "platform fees" on top of the licence fee, providers without CQC/HIW registration, providers without a named clinician on each PGD, providers that require you to author your own PGDs as part of "white-labelling".
 
-Get Real Health is built around this checklist — 60+ PGDs, £100 per pharmacy per month, CQC and HIW registered, Dr Nitin Shori (NHS GP and ex-Medical Director of Pharmacy2U) named on every PGD, onboarding in 10 minutes, no per-consultation fees, locums included. Watch a 5-minute demo at getrealhealthpgd.co.uk/demo or sign up at getrealhealthpgd.co.uk/onboard.
+Get Real Health is built around this checklist: 65+ PGDs, £100 per pharmacy per month, CQC and HIW registered, Dr Nitin Shori (NHS GP and ex-Medical Director of Pharmacy2U) named on every PGD, sign-up in about 10 minutes with approval usually the same working day, no per-consultation fees, locums included. Watch a 5-minute demo at getrealhealthpgd.co.uk/demo or sign up at getrealhealthpgd.co.uk/onboard.
 
 The bigger picture
 
@@ -376,7 +350,7 @@ The community pharmacy operating model is changing whether owners want it to or 
     primaryKeyword: "best pgd provider uk",
     content: `Search for "best PGD provider UK" and you'll find every provider claiming to be it. This guide gives you something more useful: the five dimensions on which PGD providers genuinely differ, the questions to ask each one, and the red flags that cost pharmacies real money.
 
-Dimension 1 — Pricing model
+Dimension 1: Pricing model
 
 This is where the biggest differences hide. There are three models in the UK market:
 
@@ -388,33 +362,33 @@ Per-consultation fees or revenue share: the provider takes a cut of every consul
 
 Typical incumbent pricing runs £2,500–£2,700 per pharmacy per year, often with per-consultation or per-pharmacist charges on top. Always model your year-two cost at realistic consultation volumes, not the headline price.
 
-Dimension 2 — Clinical authorship and governance
+Dimension 2: Clinical authorship and governance
 
 A PGD is a legal instrument. Ask: who is the named doctor on each PGD, what is their prescribing background, and are they accessible when your pharmacists have clinical questions? Is the provider registered with the CQC (England) or HIW (Wales)? How are PGD updates handled when guidance changes — and how quickly did the provider act the last time NICE or the MHRA moved?
 
 Providers differ enormously here. Some license documents written elsewhere; some have a named clinician who authors, signs, and stands behind every PGD. Get Real Health's PGDs are authored and signed by Dr Nitin Shori (NHS GP partner, former Medical Director of the Pharmacy2U Online Doctor service) with Head Pharmacist Christopher Pilkington as the pharmacist signatory — and every document, consultation tool and training module goes through a recorded digital sign-off.
 
-Dimension 3 — What's actually included
+Dimension 3: What's actually included
 
-Make a checklist and tick it against each provider: the PGD documents themselves; structured training with competency assessment for each service; an electronic consultation tool that enforces the inclusion/exclusion criteria; record keeping with an audit trail; a superintendent/owner dashboard; a booking system; marketing support. Then ask what each missing item costs to add.
+Make a checklist and tick it against each provider: the PGD documents themselves; structured training for each service (optional for pharmacists who are already competent); an electronic consultation tool that enforces the inclusion/exclusion criteria; record keeping with an audit trail; a superintendent/owner dashboard; a booking system; marketing support. Then ask what each missing item costs to add.
 
 The commonest hidden cost is the consultation workflow: if the "platform" is a folder of PDFs, your pharmacists carry the compliance burden manually on paper, and your superintendent has no oversight of what was recorded.
 
-Dimension 4 — Technology
+Dimension 4: Technology
 
 An ePGD tool matters more than most owners expect. Enforced criteria mean a pharmacist physically cannot proceed with an out-of-criteria patient — which is what keeps your governance file defensible. Automatic consultation records, printable reports, GP letters, and a live audit trail turn an inspection from a week of panic into a login. Ask for a demo of an actual consultation, not a slide deck.
 
-Dimension 5 — Onboarding speed
+Dimension 5: Onboarding speed
 
 The difference between go-live in days versus months is real revenue. Ask: how long from signup to first consultation? Is training online and self-paced? Are competency sign-offs handled in-platform? Can new locums be added same-day?
 
-The scoring shortcut
+The scoring shortcut: five questions
 
 If you only ask five questions, ask these: (1) What is my all-in cost per pharmacy per year at 50 consultations a month? (2) Who is the named doctor and how do I reach them? (3) Show me a live consultation in your tool. (4) What happens when a PGD needs a clinical update? (5) How fast can a locum start using the service?
 
-Where Get Real Health sits
+Summary: where Get Real Health sits
 
-We built Get Real Health to score well on exactly this framework, because it's the framework we'd use ourselves: 70+ PGD services, £100 per pharmacy per month flat with no per-consultation or per-pharmacist fees, CQC and HIW registered, a named GP medical director who wrote and signed every PGD, built-in training with competency assessments, an ePGD consultation tool that enforces every criterion and records every consultation, and onboarding measured in days. Compare us against anyone — the checklist above is the fairest test we know.`,
+We built Get Real Health to score well on exactly this framework, because it's the framework we'd use ourselves: 65+ PGD services, £100 per pharmacy per month flat with no per-consultation or per-pharmacist fees, CQC and HIW registered, a named GP medical director who wrote and signed every PGD, optional online training with CPD certificates, an ePGD consultation tool that enforces every criterion and records every consultation, and sign-up in about 10 minutes with approval usually the same working day. Compare us against anyone: the checklist above is the fairest test we know.`,
   },
 ];
 
