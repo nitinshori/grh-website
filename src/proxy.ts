@@ -68,6 +68,9 @@ const HCP_GATED_PREFIXES = [
   '/for-pharmacies/pgd-catalogue',
   '/for-pharmacies/epgd',
   '/pharmacy-plus-health',
+  // /services, /services/[slug] and /services/comparison name
+  // prescription-only medicines, so they sit behind the same gate.
+  '/services',
 ]
 
 // /resources used to sit in the list above, which meant the whole education
