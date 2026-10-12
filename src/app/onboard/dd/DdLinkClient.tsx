@@ -44,7 +44,7 @@ export default function DdLinkClient({ id, companyName, contactName, pharmacies,
       </ul>
       {feeLine && (
         <div className="rounded-lg bg-teal-50 border border-teal-200 p-3 text-sm text-teal-900">
-          <span className="font-semibold">Agreed fee:</span> {feeLine}. Every PGD, ePGD tool and training module is included; no per-consultation charges. Twelve month minimum term, then 30 days&apos; notice.
+          <span className="font-semibold">Agreed fee:</span> {feeLine}. Every PGD, ePGD tool and training module is included; no per-consultation charges. 12-month minimum term, then 30 days&apos; notice to cancel.
         </div>
       )}
       {approved ? (

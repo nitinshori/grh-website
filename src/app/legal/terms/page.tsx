@@ -90,7 +90,9 @@ export default function TermsPage() {
         If your pharmacy subscribes, the fee is £100 per pharmacy per month
         unless we agree a different rate in writing. We are not VAT
         registered, so no VAT is added. Fees are collected monthly by Direct
-        Debit, or by invoice and bank transfer if agreed.
+        Debit, or by invoice and bank transfer if agreed. There is a 12-month
+        minimum term, after which either side can cancel with 30 days&apos;
+        notice.
       </p>
 
       <h2>5. Intellectual property</h2>

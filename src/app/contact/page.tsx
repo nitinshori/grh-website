@@ -145,7 +145,7 @@ export default function ContactPage() {
                     Is there a contract?
                   </p>
                   <p className="text-gray-500">
-                    Minimum 12-month contract. Simple monthly subscription.
+                    12-month minimum term, then 30 days&apos; notice to cancel. Paid monthly.
                   </p>
                 </div>
                 <div>

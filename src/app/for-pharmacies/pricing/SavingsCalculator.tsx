@@ -223,7 +223,7 @@ export function SavingsCalculator({ compact = false }: { compact?: boolean }) {
               <div className="flex justify-between items-baseline gap-2">
                 <span className="text-xs text-blue-200">Payment</span>
                 <span className="text-xs text-[color:var(--tenant-primary)]">
-                  12-month contract
+                  12-month minimum term
                 </span>
               </div>
               <div className="flex justify-between items-baseline gap-2">

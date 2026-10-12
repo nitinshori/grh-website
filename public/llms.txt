@@ -13,7 +13,7 @@ Pharmacies use GRH to add private revenue streams without (a) writing their own 
 - **£100 per pharmacy per month, flat.** Group discounts are agreed case by case at approval.
 - **No per-pharmacist charges.** Covers every pharmacist, including locums.
 - **No per-consultation charges.** Unlimited use of every PGD on the platform.
-- **Pay monthly by Direct Debit or invoice.** No VAT is added (not VAT registered).
+- **Pay monthly by Direct Debit or invoice.** No VAT is added (not VAT registered). 12-month minimum term, then 30 days' notice to cancel.
 
 Competing providers typically charge £2,500–£2,700 per pharmacy per year (inc. VAT), often plus per-consultation fees and per-pharmacist seats.
 

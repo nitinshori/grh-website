@@ -53,7 +53,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         `<p>Hi ${escapeHtml(req.contactFirstName || '')},</p>` +
         `<p>We have set up the Get Real Health subscription for <strong>${escapeHtml(company)}</strong>, covering ${n === 1 ? 'this pharmacy' : `these ${n} pharmacies`}:</p>` +
         `<ul>${names.map((x) => `<li>${escapeHtml(x)}</li>`).join('')}</ul>` +
-        (feeLine ? `<p>Agreed fee: ${escapeHtml(feeLine)}. Every PGD, ePGD tool and training module is included; no per-consultation charges.</p>` : '') +
+        (feeLine ? `<p>Agreed fee: ${escapeHtml(feeLine)}. Every PGD, ePGD tool and training module is included; no per-consultation charges. 12-month minimum term, then 30 days' notice to cancel.</p>` : '') +
         `<p>The last step is the Direct Debit for ${escapeHtml(company)}. Open this link, check the details and press the button to enter the company bank details on the secure GoCardless page. Nothing is collected until the account is approved.</p>` +
         `<p><a href="${link}">${link}</a></p>` +
         `<p>We usually approve accounts the same working day, then email your login link.</p>` +

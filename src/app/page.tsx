@@ -937,7 +937,7 @@ export default function HomePage() {
             <p className="text-gray-500 max-w-2xl mx-auto">
               Other providers charge around &pound;2,000 to &pound;2,639 per
               pharmacy per year, often paid upfront. With GRH you pay a lower
-              flat monthly fee with no VAT: minimum 12-month contract, no upfront lump sum.
+              flat monthly fee with no VAT: 12-month minimum term, no upfront lump sum.
             </p>
           </div>
           <SavingsCalculator compact />

@@ -132,6 +132,7 @@ export const TOPICS: Topic[] = [
       "<li>No per-consultation or per-pharmacist fees</li>" +
       "<li>No revenue-sharing</li>" +
       "<li>Pay monthly by Direct Debit (GoCardless), or monthly invoice and bank transfer</li>" +
+      "<li>12-month minimum term, then 30 days' notice to cancel</li>" +
       "</ul>" +
       "<p>We are not VAT registered, so no VAT is added. Group discounts are agreed case by case at approval.</p>" +
       "<p>Full pricing details at <a href=\"/for-pharmacies/pricing\">getrealhealthpgd.co.uk/for-pharmacies/pricing</a>.</p>",
