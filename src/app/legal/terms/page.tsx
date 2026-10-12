@@ -91,8 +91,7 @@ export default function TermsPage() {
         unless we agree a different rate in writing. We are not VAT
         registered, so no VAT is added. Fees are collected monthly by Direct
         Debit, or by invoice and bank transfer if agreed. There is a 12-month
-        minimum term, after which either side can cancel with 30 days&apos;
-        notice.
+        minimum term, after which you can cancel with 30 days&apos; notice.
       </p>
 
       <h2>5. Intellectual property</h2>
