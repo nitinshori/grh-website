@@ -43,6 +43,8 @@ interface ApproveForm {
   note: string;
   /** Existing pharmacies.group_slug to attach this sign-up to, or ''. */
   joinGroupSlug: string;
+  /** Extra branches the customer does not want set up after all. */
+  leaveOut: string[];
 }
 
 const STANDARD_FEE_POUNDS = 100;
@@ -102,7 +104,7 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
   // looked dead (3 Oct 2026). Nothing here depends on a browser dialog.
   const [confirmText, setConfirmText] = useState<string[] | null>(null);
   const [notice, setNotice] = useState<{ kind: 'error' | 'ok'; text: string } | null>(null);
-  const [af, setAf] = useState<ApproveForm>({ feePounds: String(STANDARD_FEE_POUNDS), changePounds: '', changeOn: '', note: '', joinGroupSlug: '' });
+  const [af, setAf] = useState<ApproveForm>({ feePounds: String(STANDARD_FEE_POUNDS), changePounds: '', changeOn: '', note: '', joinGroupSlug: '', leaveOut: [] });
 
   function openApprove(r: Row) {
     setApproving(r.id);
@@ -115,6 +117,7 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
       changeOn: r.feeChangeOn || '',
       note: r.feeNote || '',
       joinGroupSlug: '',
+      leaveOut: [],
     });
   }
 
@@ -132,13 +135,15 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
       feeChangePence = Math.round(cp * 100);
       feeChangeOn = af.changeOn.trim();
     }
-    const n = r.branchNames.length + 1;
+    const kept = r.branchNames.filter((b) => !af.leaveOut.includes(b));
+    const n = kept.length + 1;
     const joining = af.joinGroupSlug.trim();
     if (joining && !/^[a-z0-9-]{3,100}$/.test(joining)) return { error: 'Group slug: lower-case letters, digits and hyphens only' };
     const lines = [
       `Approve ${r.groupName || r.pharmacyName} (${n} ${n === 1 ? 'pharmacy' : 'pharmacies'}) at ${gbp(monthlyFeePence)} per pharmacy per month?`,
       '',
       `Total ${gbp(monthlyFeePence * n)}/month on the customer's mandate (${n} GoCardless ${n === 1 ? 'subscription' : 'subscriptions'}).`,
+      af.leaveOut.length ? `Leaves out: ${af.leaveOut.join(', ')} (not created, not billed).` : '',
       feeChangePence != null ? `Changes to ${gbp(feeChangePence)} per pharmacy on ${feeChangeOn}.` : 'No scheduled change.',
       '',
       joining
@@ -167,7 +172,7 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
       const res = await fetch(`/api/admin/onboarding/${r.id}/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ monthlyFeePence, feeChangePence, feeChangeOn, feeNote: af.note.trim() || null, joinGroupSlug: joining || null }),
+        body: JSON.stringify({ monthlyFeePence, feeChangePence, feeChangeOn, feeNote: af.note.trim() || null, joinGroupSlug: joining || null, leaveOutBranches: af.leaveOut }),
       });
       const body = await res.json();
       if (!res.ok) {
@@ -407,14 +412,14 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
             {approving === r.id && r.status === 'awaiting_approval' && (
               <div className="mt-4 border-t border-gray-200 pt-4 grid sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-700">Monthly fee per pharmacy (£, ex VAT)</label>
+                  <label className="block text-xs font-medium text-gray-700">Monthly fee per pharmacy (£)</label>
                   <input
                     type="number" min={1} step="0.01" value={af.feePounds}
                     onChange={(e) => setAf((f) => ({ ...f, feePounds: e.target.value }))}
                     className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                   />
                   <p className="text-[11px] text-gray-500 mt-1">
-                    Standard {gbp(STANDARD_FEE_POUNDS * 100)}. {r.branchNames.length + 1} {r.branchNames.length ? 'pharmacies' : 'pharmacy'}: total {gbp(Math.round((parseFloat(af.feePounds) || 0) * 100) * (r.branchNames.length + 1))}/month.
+                    Standard {gbp(STANDARD_FEE_POUNDS * 100)}. {r.branchNames.length + 1 - af.leaveOut.length} {r.branchNames.length - af.leaveOut.length ? 'pharmacies' : 'pharmacy'}: total {gbp(Math.round((parseFloat(af.feePounds) || 0) * 100) * (r.branchNames.length + 1 - af.leaveOut.length))}/month.
                   </p>
                 </div>
                 <div>
@@ -438,6 +443,23 @@ export default function OnboardingQueueClient({ rows }: { rows: Row[] }) {
                     </button>
                   </p>
                 </div>
+                {r.branchNames.length > 0 && (
+                  <div className="sm:col-span-2">
+                    <p className="block text-xs font-medium text-gray-700">Pharmacies to set up</p>
+                    <p className="text-sm text-gray-700 mt-1">{r.pharmacyName} (main pharmacy, always included)</p>
+                    {r.branchNames.map((b) => (
+                      <label key={b} className="mt-1 flex items-center gap-2 text-sm text-gray-700">
+                        <input
+                          type="checkbox"
+                          checked={!af.leaveOut.includes(b)}
+                          onChange={(e) => setAf((f) => ({ ...f, leaveOut: e.target.checked ? f.leaveOut.filter((x) => x !== b) : [...f.leaveOut, b] }))}
+                        />
+                        {b}
+                      </label>
+                    ))}
+                    <p className="text-[11px] text-gray-500 mt-1">Untick a branch the customer does not want after all; it is not created or billed.</p>
+                  </div>
+                )}
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-medium text-gray-700">Attach to an existing group (optional)</label>
                   <input

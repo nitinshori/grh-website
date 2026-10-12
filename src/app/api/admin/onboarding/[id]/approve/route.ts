@@ -40,6 +40,14 @@ interface ApproveBody {
    * 2026, before the multi-branch wizard existed).
    */
   joinGroupSlug?: string | null
+  /**
+   * Names of extra branches to leave out of this approval. For a customer
+   * whose sign-up listed more branches than they want (Audley Pharmacy,
+   * 12 Oct 2026: the sign-up named two shops, the customer wanted one).
+   * The request's branch list is updated to match, so the record shows
+   * what was actually set up.
+   */
+  leaveOutBranches?: string[] | null
 }
 
 function slugify(name: string): string {
@@ -151,7 +159,16 @@ export async function POST(
   }
   const contactEmail = req.contactEmail
   const mandateId = req.gocardlessMandateId
-  const extraBranches: OnboardingBranch[] = Array.isArray(req.branches) ? req.branches : []
+  const leaveOut = new Set(
+    (Array.isArray(body.leaveOutBranches) ? body.leaveOutBranches : [])
+      .filter((x): x is string => typeof x === 'string')
+      .map((x) => x.trim().toLowerCase()),
+  )
+  const listedBranches: OnboardingBranch[] = Array.isArray(req.branches) ? req.branches : []
+  const extraBranches = listedBranches.filter((b) => !leaveOut.has(b.name.trim().toLowerCase()))
+  if (extraBranches.length !== listedBranches.length) {
+    await db.update(onboardingRequests).set({ branches: extraBranches, updatedAt: new Date() }).where(eq(onboardingRequests.id, id))
+  }
   const isGroup = extraBranches.length > 0 || !!joinGroupSlug
 
   // 1. Create the pharmacy rows. A single site keeps the old behaviour
