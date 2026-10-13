@@ -38,9 +38,7 @@ export function validatePatientDetails(
   if (age !== null && age < 18) {
     errors.push('This PGD applies to adults aged 18 years and over');
   }
-  if (!patient.nhsNumber?.trim()) {
-    errors.push('NHS number: required on this tool, although the field is marked optional. Enter it in "NHS number"');
-  }
+  // NHS number is optional on this tool.
   // PGD v007 records: name, address, date of birth and GP.
   if (!patient.address?.trim()) {
     errors.push('Patient address: required on this tool (the PGD requires it to be recorded). Enter it in "Patient address"');

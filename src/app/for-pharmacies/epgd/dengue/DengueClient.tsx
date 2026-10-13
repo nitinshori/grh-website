@@ -690,7 +690,7 @@ export default function DengueClient({
             <>
               <p className="mb-4 text-xs text-gray-600">
                 Required on this tool as well as the starred fields: patient address, GP practice (or
-                &quot;Not registered&quot; as the GP name) and NHS number. Adults aged 18 years and over only.
+                &quot;Not registered&quot; as the GP name). NHS number is optional. Adults aged 18 years and over only.
               </p>
               <PatientDetailsStep
                 patient={state.patient}

@@ -46,9 +46,7 @@ export function validatePatientDetails(
   } else if (patient.dateOfBirth && patientAge !== undefined && patientAge < 2) {
     errors.push('Aged under 2 years: excluded. Refer to the NHS childhood programme, the GP or a service commissioned to vaccinate this age group');
   }
-  if (!patient.nhsNumber?.trim()) {
-    errors.push('NHS number is required');
-  }
+  // NHS number is optional (private patients may not know it).
 
   return { isValid: errors.length === 0, errors };
 }

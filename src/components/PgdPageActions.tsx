@@ -3,11 +3,14 @@
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { getPgdDocumentUrl } from "@/lib/pgd-documents";
+import { PATIENT_FORM_SLUGS } from "@/data/patient-forms";
 
 /**
- * Renders "Back to Dashboard" and "Download Written PGD" links.
+ * Renders "Back to Dashboard", "Print blank patient form" (where a form
+ * exists for the slug) and "Download Written PGD" links.
  * Auto-detects the PGD slug from the current URL path.
- * Hides the download link for prospect-role users (preview accounts).
+ * Hides the download and patient form links for prospect-role users
+ * (preview accounts).
  */
 export function PgdPageActions() {
   const pathname = usePathname();
@@ -17,6 +20,10 @@ export function PgdPageActions() {
   const segments = pathname.split("/");
   const slug = segments[segments.indexOf("epgd") + 1] || "";
   const pdfUrl = role === "prospect" ? null : getPgdDocumentUrl(slug);
+  const formUrl =
+    role !== "prospect" && PATIENT_FORM_SLUGS.has(slug)
+      ? `/for-pharmacies/dashboard/patient-forms/${slug}`
+      : null;
 
   return (
     <div className="flex items-center justify-between mb-4 print:hidden">
@@ -39,6 +46,30 @@ export function PgdPageActions() {
         </svg>
         Back to Dashboard
       </a>
+      <div className="flex items-center gap-4">
+      {formUrl && (
+        <a
+          href={formUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-xs text-teal-600 hover:text-teal-700 transition-colors"
+        >
+          <svg
+            className="w-3.5 h-3.5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
+            />
+          </svg>
+          Print blank patient form
+        </a>
+      )}
       {pdfUrl && (
         <a
           href={pdfUrl}
@@ -62,6 +93,7 @@ export function PgdPageActions() {
           Download Written PGD
         </a>
       )}
+      </div>
     </div>
   );
 }

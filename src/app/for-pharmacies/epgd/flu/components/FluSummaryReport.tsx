@@ -41,7 +41,7 @@ export default function FluSummaryReport({
             </div>
             <div>
               <p className="text-sm font-medium text-gray-600">NHS Number</p>
-              <p className="text-gray-900">{state.patient.nhsNumber}</p>
+              <p className="text-gray-900">{state.patient.nhsNumber?.trim() || 'Not given'}</p>
             </div>
             <div>
               <p className="text-sm font-medium text-gray-600">Date of Birth</p>

@@ -90,9 +90,9 @@ export function CovidBoosterSummaryReport({
           label="NHS entitlement"
           value={
             state.assessment.nhsStatus === "not-eligible"
-              ? "Does not qualify for NHS vaccination"
+              ? "Not in an NHS-eligible group (private vaccination)"
               : state.assessment.nhsStatus === "eligible-prefers-private"
-                ? "Qualifies for NHS vaccination, told of entitlement, prefers private"
+                ? "Aged 75 or over, care home resident or immunosuppressed: told about the free NHS vaccine and chose to pay privately"
                 : "Not recorded"
           }
         />
@@ -201,7 +201,7 @@ export function CovidBoosterSummaryReport({
           <Row label="Hypersensitivity to polysorbate 80" value={answer(state.assessment.anaphylaxisToPolysorbate, "Yes (excluded)")} />
           <Row label="Acute severe febrile illness" value={answer(state.assessment.severeFebrilIllness, "Yes (postponed)")} />
           <Row label="Current COVID-19 infection" value={state.assessment.currentCovidInfection ? "Yes (deferred)" : "No"} />
-          <Row label="Myocarditis or pericarditis after mRNA dose" value={state.assessment.myocarditisHistory ? "Yes (excluded)" : "No"} />
+          <Row label="Myocarditis or pericarditis after any previous COVID-19 vaccine dose" value={state.assessment.myocarditisHistory ? "Yes (excluded)" : "No"} />
           <Row
             label="Bleeding disorder"
             value={

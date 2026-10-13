@@ -3,7 +3,7 @@
 import { useReducer, useMemo, useState, useCallback, useEffect } from "react";
 import type { CovidBoosterConsultationState, CovidBoosterAction } from "./lib/covid-booster-types";
 import { STEP_LABELS, TOTAL_STEPS, createInitialConsultationState } from "./lib/covid-booster-types";
-import { getAllAlerts, hasHardStops, calculateDoseRecommendation, intervalTooShort } from "./lib/covid-booster-clinical-logic";
+import { getAllAlerts, hasHardStops, calculateDoseRecommendation, intervalTooShort, nhsEligible } from "./lib/covid-booster-clinical-logic";
 import { validateStep } from "./lib/covid-booster-validation";
 import { calculateAge } from "../shared/types";
 import { ProgressBar } from "../shared/components/ProgressBar";
@@ -61,6 +61,21 @@ function reducer(state: CovidBoosterConsultationState, action: CovidBoosterActio
 
     case "RESET":
       return createInitialConsultationState();
+  }
+
+  // NHS entitlement follows the eligible groups (75 and over, care home
+  // resident, immunosuppressed). Each group sees only its own option and the
+  // pharmacist must pick it; nothing is filled in automatically. If a
+  // correction moves the patient into or out of the eligible groups, an answer
+  // that no longer matches is cleared (never converted), so it must be chosen
+  // again. This runs inside the reducer, so there is no effect loop.
+  const isEligible = nhsEligible(newState);
+  const status = newState.assessment.nhsStatus;
+  if (
+    (isEligible && status === "not-eligible") ||
+    (!isEligible && status === "eligible-prefers-private")
+  ) {
+    newState.assessment = { ...newState.assessment, nhsStatus: "" };
   }
 
   return newState;
@@ -353,12 +368,24 @@ export default function CovidBoosterClient() {
                   value: v,
                 })
               }
-              options={[
-                { value: "not-eligible", label: "Requires vaccination and does not qualify for NHS vaccination" },
-                { value: "eligible-prefers-private", label: "Qualifies for NHS vaccination but prefers to be vaccinated privately, having been told of their NHS entitlement" },
-              ]}
+              options={
+                nhsEligible(state)
+                  ? [
+                      {
+                        value: "eligible-prefers-private",
+                        label:
+                          "Aged 75 or over, care home resident or immunosuppressed: I have told the patient about the free NHS vaccine and they choose to pay privately",
+                      },
+                    ]
+                  : [{ value: "not-eligible", label: "Not in an NHS-eligible group (private vaccination)" }]
+              }
               required
             />
+            {nhsEligible(state) && (
+              <p className="text-xs text-blue-900">
+                This patient is in an NHS-eligible group: tell them they can have the vaccine free of charge on the NHS before any private supply.
+              </p>
+            )}
             <Checkbox
               label="At least 3 months since the last COVID-19 vaccine dose, or this is a first dose"
               checked={state.assessment.timelinessEligible}
@@ -441,7 +468,7 @@ export default function CovidBoosterClient() {
               description="Exclusion: defer until recovered (4 weeks from a positive test or symptom onset is commonly applied; 12 weeks in 5 to 17 year olds not in a risk group)."
             />
             <Checkbox
-              label="History of myocarditis or pericarditis after a previous mRNA COVID-19 vaccine"
+              label="History of myocarditis or pericarditis following a previous dose of any COVID-19 vaccine"
               checked={state.assessment.myocarditisHistory}
               onChange={(v) =>
                 dispatch({
@@ -450,7 +477,7 @@ export default function CovidBoosterClient() {
                   value: v,
                 })
               }
-              description="Exclusion: refer for specialist advice. Do not give a further mRNA dose under this PGD."
+              description="Exclusion: refer for specialist advice. No further dose of any product, mRNA or Nuvaxovid, is given under this PGD."
             />
             <Checkbox
               label="Bleeding disorder"

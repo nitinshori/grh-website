@@ -884,8 +884,7 @@ gpOdsCode: '',
                   onChange={handleDOBChange}
                 />
                 <TextInput
-                  label="NHS Number"
-                  required
+                  label="NHS number (optional)"
                   value={state.patient.nhsNumber}
                   onChange={handleNHSNumberChange}
                   placeholder="XXX XXX XXXX"

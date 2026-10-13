@@ -1,6 +1,7 @@
 "use client";
 
 import { useReducer, useMemo, useState, useCallback, useEffect } from "react";
+import Link from "next/link";
 import type {
   SkinInfectionConsultationState,
   SkinInfectionAction,
@@ -356,19 +357,37 @@ export default function SkinInfectionClient({ variant = "skin-infection" }: { va
                   Cellulitis PGD: MILD cellulitis (Eron class I) of a limb or the trunk in adults aged 18 and over. Localised erythema, warmth, swelling and pain, with NO fever, NO tachycardia, NO hypotension, NO confusion and NO rapidly spreading margin. Moderate or severe cellulitis (Eron class II to IV) is not covered.
                 </p>
               ) : (
-                <SelectInput
-                  label="Infection type"
-                  value={a.infectionType}
-                  onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "infectionType", value: v })}
-                  options={[
-                    { value: "impetigo", label: "Impetigo" },
-                    { value: "folliculitis", label: "Folliculitis" },
-                    { value: "infected-eczema", label: "Infected eczema (weeping, crusting or worsening inflammation not responding to emollients and topical steroid)" },
-                    { value: "infected-wound", label: "Infected wound" },
-                    { value: "cellulitis", label: "Cellulitis (12 years and over only)" },
-                  ]}
-                  required
-                />
+                <>
+                  <p className="text-xs text-gray-600">
+                    Topical fusidic acid (Fucidin) is not in this PGD; for localised impetigo use the{" "}
+                    <Link href="/for-pharmacies/epgd/impetigo" target="_blank" rel="noopener noreferrer" className="underline font-medium">
+                      Impetigo PGD (opens in a new tab)
+                    </Link>
+                    .
+                  </p>
+                  <SelectInput
+                    label="Infection type"
+                    value={a.infectionType}
+                    onChange={(v) => dispatch({ type: "UPDATE_ASSESSMENT", field: "infectionType", value: v })}
+                    options={[
+                      { value: "impetigo", label: "Impetigo" },
+                      { value: "folliculitis", label: "Folliculitis" },
+                      { value: "infected-eczema", label: "Infected eczema (weeping, crusting or worsening inflammation not responding to emollients and topical steroid)" },
+                      { value: "infected-wound", label: "Infected wound" },
+                      { value: "cellulitis", label: "Cellulitis (12 years and over only)" },
+                    ]}
+                    required
+                  />
+                  {a.infectionType === "impetigo" && (
+                    <div className="p-3 bg-blue-50 border border-blue-300 rounded-lg text-sm text-blue-900">
+                      Localised non-bullous impetigo: use the{" "}
+                      <Link href="/for-pharmacies/epgd/impetigo" target="_blank" rel="noopener noreferrer" className="underline font-medium">
+                        Impetigo PGD (opens in a new tab)
+                      </Link>
+                      , which includes fusidic acid 2% cream (Fucidin). This PGD covers oral antibiotics only, for widespread or bullous impetigo, or where the skin is extensively broken.
+                    </div>
+                  )}
+                </>
               )}
               <SelectInput
                 label="Severity"

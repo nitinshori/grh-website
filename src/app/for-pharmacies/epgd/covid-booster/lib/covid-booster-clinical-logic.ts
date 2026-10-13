@@ -177,20 +177,19 @@ export function getAllAlerts(state: CovidBoosterConsultationState): ClinicalAler
     });
   }
 
-  // Myocarditis or pericarditis after a previous mRNA dose.
+  // Myocarditis or pericarditis after a previous dose of any COVID-19 vaccine.
   //
-  // This was a "caution" in v003 of the tool while the PGD listed it under
-  // EXCLUSION criteria: "History of myocarditis or pericarditis following a
-  // previous dose of an mRNA COVID-19 vaccine. Refer for specialist advice;
-  // do not give a further mRNA dose under this PGD." The tool was softer than
-  // the document it operates under. It is a stop.
+  // PGD v009 EXCLUSION criteria: "History of myocarditis or pericarditis
+  // following a previous dose of any COVID-19 vaccine. Refer for specialist
+  // advice. No further dose of any product, mRNA or Nuvaxovid, is given under
+  // this PGD." It is a stop.
   if (state.assessment.myocarditisHistory) {
     alerts.push({
       severity: "stop",
       code: "COVID_MYOCARDITIS",
-      message: "Myocarditis or pericarditis after a previous mRNA COVID-19 vaccine",
+      message: "Myocarditis or pericarditis following a previous dose of any COVID-19 vaccine",
       detail:
-        "Excluded under this PGD. Do not give a further mRNA dose (Comirnaty or Spikevax). Refer for specialist advice.",
+        "Excluded under this PGD. Refer for specialist advice. No further dose of any product (mRNA or Nuvaxovid) is given under this PGD.",
     });
   }
 

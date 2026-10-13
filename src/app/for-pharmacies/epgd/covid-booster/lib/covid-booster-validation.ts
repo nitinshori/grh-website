@@ -38,10 +38,15 @@ export function validateStep(state: CovidBoosterConsultationState, step: number)
         return "Tick \"Confirmed aged 12 years or over\"";
       }
       if (!state.assessment.nhsStatus) {
-        return "Record whether the patient does not qualify for NHS vaccination, or qualifies but prefers to be vaccinated privately having been told of their NHS entitlement";
+        return nhsEligible(state)
+          ? "Record the NHS entitlement: confirm you have told the patient about the free NHS vaccine and they choose to pay privately"
+          : "Record the NHS entitlement: not in an NHS-eligible group (private vaccination)";
       }
       if (nhsEligible(state) && state.assessment.nhsStatus === "not-eligible") {
         return "This patient is eligible for NHS vaccination (75 and over, care home resident or immunosuppressed) and must be told they can have it free of charge before any private supply";
+      }
+      if (!nhsEligible(state) && state.assessment.nhsStatus === "eligible-prefers-private") {
+        return "This patient is not in an NHS-eligible group (75 and over, care home resident or immunosuppressed). Record the NHS entitlement as not in an NHS-eligible group";
       }
       // A previous dose is NOT required. The SPC states the vaccine is given
       // regardless of prior vaccination status, and the PGD only excludes a
@@ -109,11 +114,8 @@ export function validateStep(state: CovidBoosterConsultationState, step: number)
       }
       if (!s.administrationSite) return "Administration site is required";
       if (!s.administrationTime) return "Time administered is required";
-      if (
-        state.assessment.myocarditisHistory &&
-        (s.vaccineProduct === "comirnaty-xfg" || s.vaccineProduct === "comirnaty-lp81" || s.vaccineProduct === "spikevax-lp81")
-      ) {
-        return "Myocarditis or pericarditis after a previous mRNA dose: do not give a further mRNA dose under this PGD";
+      if (state.assessment.myocarditisHistory && s.vaccineProduct) {
+        return "Myocarditis or pericarditis following a previous dose of any COVID-19 vaccine: excluded under this PGD. Refer for specialist advice";
       }
       if (state.assessment.pregnant && s.vaccineProduct === "nuvaxovid-jn1") {
         return "Pregnant: give an mRNA vaccine (Comirnaty XFG in preference). Nuvaxovid is not selected in pregnancy under this tool.";
