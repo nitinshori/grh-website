@@ -4,17 +4,20 @@
  * Each form is a paper version of the questions a patient can answer for
  * themselves before an ePGD consultation. The questions are derived ONLY
  * from the inclusion criteria, exclusion criteria and cautions of the LIVE
- * signed PGD named in `pgdDocument` (the file in the committed PGD document
- * manifest at the time of writing). Clinical judgements the patient cannot
+ * signed PGD named in `pgdDocument`, which is read from the PGD document
+ * manifest (PGD_MASTER_FILES) by slug, so a printed form always cites the
+ * current file. Clinical judgements the patient cannot
  * make (examination, observations, weighing, competence) are listed in
  * `pharmacyChecks` for the pharmacist to tick.
  *
  * The paper form never makes the decision. The completed form must be
  * entered into the ePGD tool, which applies the PGD and records the outcome.
  *
- * When a PGD is reissued, re-check its criteria against these questions and
- * update `pgdDocument`.
+ * When a PGD is reissued, re-check its criteria against these questions.
+ * `pgdDocument` follows the manifest and needs no edit.
  */
+
+import { PGD_MASTER_FILES } from "@/lib/pgd-document-manifest";
 
 export type PatientFormQuestionType = "yesno" | "text";
 
@@ -73,6 +76,11 @@ const EC_CONSENT =
 const VACCINE_CONSENT =
   "The information I have given on this form is correct to the best of my knowledge. I understand the pharmacist will go through my answers with me and decide whether the vaccine is suitable. If it is, I agree to have it and to wait in the pharmacy for 15 minutes afterwards. I agree to the pharmacy keeping a record of this vaccination and, where needed, sharing it with my GP.";
 
+// COVID-19 PGD v011 (Green Book chapter 14a): routine 15-minute observation is
+// suspended, so the COVID form does not ask everyone to wait.
+const COVID_VACCINE_CONSENT =
+  "The information I have given on this form is correct to the best of my knowledge. I understand the pharmacist will go through my answers with me and decide whether the vaccine is suitable. If it is, I agree to have it. The pharmacist will tell me if I need to wait in the pharmacy afterwards. I agree to the pharmacy keeping a record of this vaccination and, where needed, sharing it with my GP.";
+
 export const PATIENT_FORMS: PatientFormConfig[] = [
   // ── Flu ─────────────────────────────────────────────────────────────
   {
@@ -80,7 +88,7 @@ export const PATIENT_FORMS: PatientFormConfig[] = [
     title: "Flu vaccination (2026/27 season)",
     intro:
       "Please answer these questions before your flu vaccination. If you are filling this in for a child, answer for the child.",
-    pgdDocument: "flu-2026-27-v006.pdf",
+    pgdDocument: PGD_MASTER_FILES["flu"],
     ageNote: "For people aged 2 years and over.",
     isVaccine: true,
     guardianLine: true,
@@ -171,7 +179,7 @@ export const PATIENT_FORMS: PatientFormConfig[] = [
     title: "COVID-19 vaccination (2026/27)",
     intro:
       "Please answer these questions before your COVID-19 vaccination. If you are filling this in for a young person, answer for them.",
-    pgdDocument: "covid-2026-27-v009.pdf",
+    pgdDocument: PGD_MASTER_FILES["covid-booster"],
     ageNote: "For people aged 12 years and over.",
     isVaccine: true,
     guardianLine: true,
@@ -266,7 +274,7 @@ export const PATIENT_FORMS: PatientFormConfig[] = [
         ],
       },
     ],
-    consent: VACCINE_CONSENT,
+    consent: COVID_VACCINE_CONSENT,
     pharmacyChecks: [
       "Told of NHS entitlement where eligible",
       "At least 3 months since last dose",
@@ -275,7 +283,7 @@ export const PATIENT_FORMS: PatientFormConfig[] = [
       "Comirnaty XFG used where immunosuppressed or aged 75 and over",
       "Bleeding risk or anticoagulation assessed",
       "Consent and, where under 16, Gillick competence or parental consent recorded",
-      "15 minute observation completed",
+      "Observation needed: none / 15 min / 30 min; completed",
     ],
   },
 
@@ -285,7 +293,7 @@ export const PATIENT_FORMS: PatientFormConfig[] = [
     title: "Travel vaccinations: hepatitis A, typhoid and cholera",
     intro:
       "Please answer these questions before your travel vaccination appointment.",
-    pgdDocument: "travel-core-v007.pdf",
+    pgdDocument: PGD_MASTER_FILES["travel-core"],
     ageNote: "For adults aged 18 years and over.",
     isVaccine: true,
     guardianLine: false,
@@ -410,7 +418,7 @@ export const PATIENT_FORMS: PatientFormConfig[] = [
     title: "Impetigo treatment",
     intro:
       "Please answer these questions before your consultation. If you are filling this in for a child, answer for the child.",
-    pgdDocument: "impetigo-v010.pdf",
+    pgdDocument: PGD_MASTER_FILES["impetigo"],
     ageNote:
       "For children and adults. Which treatment is suitable depends on age; the pharmacist will explain.",
     isVaccine: false,
@@ -549,7 +557,7 @@ export const PATIENT_FORMS: PatientFormConfig[] = [
     title: "Skin infection treatment",
     intro:
       "Please answer these questions before your consultation. If you are filling this in for a child, answer for the child.",
-    pgdDocument: "skin-infection-v008.pdf",
+    pgdDocument: PGD_MASTER_FILES["skin-infection"],
     ageNote:
       "For people aged 2 years and over. Cellulitis can only be treated here from age 12.",
     isVaccine: false,
@@ -699,7 +707,7 @@ export const PATIENT_FORMS: PatientFormConfig[] = [
     title: "Urinary tract infection (UTI) treatment",
     intro:
       "Please answer these questions before your consultation. Your answers are confidential.",
-    pgdDocument: "uti-v009.pdf",
+    pgdDocument: PGD_MASTER_FILES["uti"],
     ageNote:
       "This service is for women aged 16 to 64 who are not pregnant. Men, and women outside this age range, need to see their GP.",
     isVaccine: false,
@@ -858,7 +866,7 @@ export const PATIENT_FORMS: PatientFormConfig[] = [
     title: "Emergency contraception",
     intro:
       "Your answers are confidential. The pharmacist will go through them with you in private. The copper coil (IUD) is the most effective emergency contraception, and you can ask about it.",
-    pgdDocument: "emergency-contraception-v005.pdf",
+    pgdDocument: PGD_MASTER_FILES["emergency-contraception"],
     ageNote:
       "If you are under 16, you can still be seen. The pharmacist will talk with you privately before deciding.",
     isVaccine: false,

@@ -13,6 +13,7 @@ import {
   getVaccineSafety,
   clearVaccineSafety,
   vaccineSafetySatisfied,
+  type VaccineObservationControl,
 } from "./VaccineSafetyChecks";
 import { AttachmentUploader } from "@/components/consultation-attachments/AttachmentUploader";
 
@@ -31,6 +32,11 @@ interface StepWrapperProps {
   getConsultationData?: () => ConsultationRecordData | null;
   /** Called after a successful save+print or new-consultation reset */
   onNewConsultation?: () => void;
+  /**
+   * Tool-controlled observation tick for the safety panel. Omit for the
+   * standard 15 minute tick. COVID-19 (PGD v011) passes 0, 15 or 30 minutes.
+   */
+  vaccineObservation?: VaccineObservationControl;
 }
 
 export function StepWrapper({
@@ -46,6 +52,7 @@ export function StepWrapper({
   children,
   getConsultationData,
   onNewConsultation,
+  vaccineObservation,
 }: StepWrapperProps) {
   const [hasAttemptedNext, setHasAttemptedNext] = useState(false);
   const [saveStatus, setSaveStatus] = useState<
@@ -185,7 +192,7 @@ export function StepWrapper({
       <div className="px-6 py-6">{children}</div>
 
       {/* Validation error — only shown after user has attempted to proceed */}
-      <VaccineSafetyChecks slug={pgdSlug} />
+      <VaccineSafetyChecks slug={pgdSlug} observation={vaccineObservation} />
 
       {hasAttemptedNext && !vaccineSafetySatisfied(pgdSlug) && (
         <div className="mx-6 mb-3 rounded-lg border border-red-400 bg-red-100 px-4 py-2 text-sm text-red-900 print:hidden">

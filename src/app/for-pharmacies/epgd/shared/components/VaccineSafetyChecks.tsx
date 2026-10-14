@@ -57,7 +57,13 @@ export const NON_STEPWRAPPER = ["dengue", "japanese-encephalitis", "flu", "rabie
 
 export interface VaccineSafetyState {
   adrenalineAvailable: boolean;
+  /** Observation completed. Field name kept for saved records. */
   observedFifteenMinutes: boolean;
+  /**
+   * Observation period required, in minutes, where the tool sets it (COVID-19
+   * PGD v011: 0, 15 or 30). Absent means the standard 15 minutes.
+   */
+  observationMinutes?: number;
   batchNumber: string;
   expiryDate: string;
   site: string;
@@ -95,14 +101,45 @@ export function vaccineSafetySatisfied(slug: string): boolean {
   return getVaccineSafety(slug).adrenalineAvailable;
 }
 
-export function VaccineSafetyChecks({ slug }: { slug: string }) {
+/**
+ * Lets a tool own the observation tick. COVID-19 PGD v011 removed routine
+ * observation: the period is chosen at counselling (0, 15 or 30 minutes) and
+ * the completed tick is held in the tool's own state, so the tool's
+ * validation and summary read a single value. With minutes 0 the tick is
+ * hidden. Tools that pass nothing keep the standard 15 minute tick.
+ */
+export interface VaccineObservationControl {
+  minutes: 0 | 15 | 30;
+  observed: boolean;
+  onObservedChange: (observed: boolean) => void;
+}
+
+export function VaccineSafetyChecks({
+  slug,
+  observation,
+}: {
+  slug: string;
+  observation?: VaccineObservationControl;
+}) {
   const [state, setState] = useState<VaccineSafetyState>(
     () => store.get(slug) ?? EMPTY
   );
 
+  const controlledMinutes = observation?.minutes;
+  const controlledObserved = observation?.observed;
+
   useEffect(() => {
-    store.set(slug, state);
-  }, [slug, state]);
+    store.set(
+      slug,
+      controlledMinutes === undefined
+        ? state
+        : {
+            ...state,
+            observedFifteenMinutes: controlledMinutes > 0 && !!controlledObserved,
+            observationMinutes: controlledMinutes,
+          }
+    );
+  }, [slug, state, controlledMinutes, controlledObserved]);
 
   if (!VACCINE_SLUGS.has(slug)) return null;
 
@@ -110,6 +147,11 @@ export function VaccineSafetyChecks({ slug }: { slug: string }) {
     k: K,
     v: VaccineSafetyState[K]
   ) => setState((p) => ({ ...p, [k]: v }));
+
+  const observationMinutes = observation ? observation.minutes : 15;
+  const observed = observation ? observation.observed : state.observedFifteenMinutes;
+  const setObserved = (v: boolean) =>
+    observation ? observation.onObservedChange(v) : set("observedFifteenMinutes", v);
 
   return (
     <div className="mx-6 mb-4 rounded-lg border border-red-300 bg-red-50 p-4 print:border-gray-400 print:bg-white">
@@ -142,18 +184,21 @@ export function VaccineSafetyChecks({ slug }: { slug: string }) {
         </span>
       </label>
 
-      <label className="mt-3 flex items-start gap-2 text-sm text-gray-800">
-        <input
-          type="checkbox"
-          className="mt-0.5"
-          checked={state.observedFifteenMinutes}
-          onChange={(e) => set("observedFifteenMinutes", e.target.checked)}
-        />
-        <span>
-          Patient observed, seated, for <strong>15 minutes</strong> after
-          vaccination. Tick only once the period has actually been completed.
-        </span>
-      </label>
+      {observationMinutes > 0 && (
+        <label className="mt-3 flex items-start gap-2 text-sm text-gray-800">
+          <input
+            type="checkbox"
+            className="mt-0.5"
+            checked={observed}
+            onChange={(e) => setObserved(e.target.checked)}
+          />
+          <span>
+            Patient observed, seated, for{" "}
+            <strong>{observationMinutes} minutes</strong> after vaccination.
+            Tick only once the period has actually been completed.
+          </span>
+        </label>
+      )}
 
       <div className="mt-3 grid gap-3 sm:grid-cols-3">
         <label className="text-xs text-gray-700">

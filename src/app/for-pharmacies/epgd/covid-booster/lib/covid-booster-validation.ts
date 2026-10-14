@@ -1,12 +1,13 @@
 import type { CovidBoosterConsultationState } from "./covid-booster-types";
+import { covidObservationMinutes } from "./covid-booster-types";
 import { validatePatientStep, validateConsentStep, validateSummaryStep } from "../../shared/types";
 import { intervalTooShort, nhsEligible } from "./covid-booster-clinical-logic";
 
-// Aligned to the COVID-19 Vaccination 2026/27 PGD version 009, issued 14 September 2026.
+// Aligned to the COVID-19 Vaccination 2026/27 PGD version 011, issued 14 October 2026.
 
 export function validateStep(state: CovidBoosterConsultationState, step: number): string | null {
   switch (step) {
-    // PGD v009 covers 12 years and over. This tool previously enforced 18,
+    // PGD v011 covers 12 years and over. This tool previously enforced 18,
     // which turned away patients the PGD authorises.
     case 0: {
       const base = validatePatientStep(state.patient, { minAge: 12 });
@@ -97,7 +98,8 @@ export function validateStep(state: CovidBoosterConsultationState, step: number)
       const c = state.counselling;
       if (!c.explainedBoosterRationale) return "Tick \"Explained booster rationale\"";
       if (!c.discussedCommonReactions) return "Tick \"Discussed common reactions\"";
-      if (!c.explainedObservationPeriod) return "Tick \"Explained 15-minute observation period\"";
+      if (!c.observationNeeded) return "Answer \"Does this person need an observation period after vaccination?\"";
+      if (covidObservationMinutes(c.observationNeeded) > 0 && !c.explainedObservationPeriod) return "Tick \"Explained observation period\"";
       if (!c.discussedSeriousReactions) return "Tick \"Discussed serious reactions and reporting\" (the cardiac warning signs)";
       if (!c.explainedYellowCard) return "Tick \"Explained Yellow Card self-reporting\"";
       if (!c.providedWrittenInfo) return "Tick \"Provided written information for the product and variant given\"";
@@ -130,6 +132,12 @@ export function validateStep(state: CovidBoosterConsultationState, step: number)
         }
         if (!s.lp81FormulationExplained) {
           return "Tick \"Patient told this is the previous seasonal formulation and that Comirnaty XFG is the current one\"";
+        }
+      }
+      {
+        const mins = covidObservationMinutes(state.counselling.observationNeeded);
+        if (mins > 0 && !s.observedFifteenMinutes) {
+          return `Tick "Patient observed, seated, for ${mins} minutes" in the pre-vaccination safety checks once the period has been completed`;
         }
       }
       if (s.adverseReaction.trim() && !s.adverseReactionAction.trim()) {

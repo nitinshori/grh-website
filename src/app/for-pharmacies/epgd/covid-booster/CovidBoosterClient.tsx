@@ -14,7 +14,7 @@ import { PatientDetailsStep } from "../shared/steps/PatientDetailsStep";
 import { ConsentStep } from "../shared/steps/ConsentStep";
 import { CovidBoosterSummaryReport } from "./components/CovidBoosterSummaryReport";
 import { TextInput, Checkbox, TextArea, SelectInput } from "../shared/components/FormInputs";
-import { COVID_PRODUCTS } from "./lib/covid-booster-types";
+import { COVID_PRODUCTS, covidObservationMinutes } from "./lib/covid-booster-types";
 import type { CovidVaccineProduct, CovidBoosterSupply } from "./lib/covid-booster-types";
 
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
@@ -45,6 +45,13 @@ function reducer(state: CovidBoosterConsultationState, action: CovidBoosterActio
         ...newState.counselling,
         [action.field]: action.value,
       };
+      // Observation period changed: clear anything recorded against the old
+      // answer, so the explanation and completion are confirmed for the
+      // period now chosen.
+      if (action.field === "observationNeeded" && action.value !== state.counselling.observationNeeded) {
+        newState.counselling.explainedObservationPeriod = false;
+        newState.supply = { ...newState.supply, observedFifteenMinutes: false };
+      }
       break;
 
     case "UPDATE_SUPPLY":
@@ -98,6 +105,8 @@ export default function CovidBoosterClient() {
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
 
   const alerts = useMemo(() => getAllAlerts(state), [state]);
+  // PGD v011: observation is 0, 15 or 30 minutes, chosen at counselling.
+  const obsMins = covidObservationMinutes(state.counselling.observationNeeded);
   const hardStops = useMemo(() => hasHardStops(state), [state]);
   const doseRecommendation = useMemo(() => calculateDoseRecommendation(state), [state]);
 
@@ -168,7 +177,7 @@ export default function CovidBoosterClient() {
       },
       clinicalData: state as unknown as Record<string, unknown>,
       outcome: hardStops ? "not_supplied" : "completed",
-      // Brand AND variant designation, written in full (PGD v009 records row).
+      // Brand AND variant designation, written in full (PGD v011 records row).
       medicine:
         !hardStops && state.supply.vaccineProduct
           ? {
@@ -576,18 +585,45 @@ export default function CovidBoosterClient() {
               }
               description="Injection site soreness, tiredness, headache, aching muscles, chills and mild fever are common in the first day or two and settle on their own"
             />
-            <Checkbox
-              label="Explained 15-minute observation period"
-              checked={state.counselling.explainedObservationPeriod}
+            <SelectInput
+              label="Does this person need an observation period after vaccination?"
+              value={state.counselling.observationNeeded}
               onChange={(v) =>
                 dispatch({
                   type: "UPDATE_COUNSELLING",
-                  field: "explainedObservationPeriod",
+                  field: "observationNeeded",
                   value: v,
                 })
               }
-              description="Remain in pharmacy for 15 minutes post-injection"
+              options={[
+                { value: "none", label: "No observation needed" },
+                { value: "15", label: "15 minutes" },
+                { value: "30", label: "30 minutes (where chapter 14a says so)" },
+              ]}
+              required
             />
+            <p className="text-xs text-gray-500 -mt-2">
+              Routine observation is not required after a COVID-19 vaccine (Green Book chapter 14a,
+              PGD v011). Observe for 15 minutes for: a history of allergy where chapter 14a Table 5
+              advises it; an allergic-type reaction to a previous dose; a non-allergic reaction to a
+              previous dose (vasovagal episode, non-urticarial skin reaction or non-specific symptoms);
+              or where you judge it is needed. Choose 30 minutes where Table 5 or the chapter 14a
+              flowchart for reactions to a previous dose says so.
+            </p>
+            {obsMins > 0 && (
+              <Checkbox
+                label="Explained observation period"
+                checked={state.counselling.explainedObservationPeriod}
+                onChange={(v) =>
+                  dispatch({
+                    type: "UPDATE_COUNSELLING",
+                    field: "explainedObservationPeriod",
+                    value: v,
+                  })
+                }
+                description={`Stay in the pharmacy, seated, for ${obsMins} minutes after the injection`}
+              />
+            )}
             <Checkbox
               label="Discussed serious reactions and reporting"
               checked={state.counselling.discussedSeriousReactions}
@@ -670,8 +706,9 @@ export default function CovidBoosterClient() {
                   the deltoid. Single dose for the 2026/27 season.
                 </p>
                 <p className="text-xs text-[color:var(--tenant-primary)] mt-2">
-                  Observe for 15 minutes where there is a history of allergy or previous vaccine
-                  reaction. Vaccinate seated.
+                  {obsMins > 0
+                    ? `Observe for ${obsMins} minutes after the injection. Vaccinate seated.`
+                    : "No routine observation needed. Vaccinate seated."}
                 </p>
               </div>
             )}
@@ -747,13 +784,15 @@ export default function CovidBoosterClient() {
             />
 
             <div className="border-t pt-4 space-y-4">
-              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Observation and adverse reactions (PGD v009)</p>
-              <Checkbox
-                label="Patient observed, seated, for 15 minutes after vaccination and the observation period has been completed"
-                checked={state.supply.observedFifteenMinutes}
-                onChange={(v) => dispatch({ type: "UPDATE_SUPPLY", field: "observedFifteenMinutes", value: v })}
-                description="Required by the PGD where there is a history of allergy or previous vaccine reaction. Tick only once the period has actually been completed."
-              />
+              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Observation and adverse reactions</p>
+              {obsMins > 0 ? (
+                <p className="text-xs text-gray-600">
+                  {obsMins}-minute observation needed: tick &quot;Patient observed, seated, for {obsMins} minutes&quot; in
+                  the pre-vaccination safety checks below once the period has been completed.
+                </p>
+              ) : (
+                <p className="text-xs text-gray-500">No observation period needed (recorded at counselling).</p>
+              )}
               <TextArea
                 label="Adverse reaction observed (leave blank if none)"
                 value={state.supply.adverseReaction}
@@ -902,6 +941,12 @@ export default function CovidBoosterClient() {
         isBlocked={hardStops}
         getConsultationData={getConsultationData}
         onNewConsultation={handleNewConsultation}
+        vaccineObservation={{
+          minutes: obsMins,
+          observed: state.supply.observedFifteenMinutes,
+          onObservedChange: (v) =>
+            dispatch({ type: "UPDATE_SUPPLY", field: "observedFifteenMinutes", value: v }),
+        }}
       >
         {renderStep()}
         {/* The PGD requires the advice given to an excluded patient to be

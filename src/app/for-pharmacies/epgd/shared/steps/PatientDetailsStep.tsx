@@ -221,7 +221,7 @@ export function PatientDetailsStep({ patient, onChange, genderOption, requireAdu
       </div>
       <div className="grid sm:grid-cols-2 gap-4">
         <TextInput
-          label="GP name (the doctor)"
+          label="GP name (the doctor), or 'not registered'"
           value={patient.gpName}
           onChange={(v) => onChange("gpName", v)}
           placeholder="Dr. Jane Doe"

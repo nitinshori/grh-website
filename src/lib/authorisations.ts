@@ -6,6 +6,7 @@ import { pharmacies, practitionerAuthorisations, userPharmacyAccess, users } fro
 import { ALL_PGDS, WITHDRAWN_SLUGS } from '@/lib/pgd-access'
 import { getPharmacyPgdSlugs } from '@/lib/pgd-queries'
 import { currentPgdVersions, type CurrentPgdVersion } from '@/lib/pgd-version'
+import { isEquivalentMasterFile } from '@/lib/pgd-minor-reissues'
 
 /**
  * Practitioner authorisation (migration 075).
@@ -16,7 +17,8 @@ import { currentPgdVersions, type CurrentPgdVersion } from '@/lib/pgd-version'
  * manager (pharmacy_admin) countersigns, in bulk if they like. A
  * signature is tied to the document version the pharmacy sees
  * (src/lib/pgd-version.ts), so a reissue lapses it and the pharmacist is
- * asked again. None of this gates the ePGD tools; it is the register NICE
+ * asked again, unless the Medical Director ruled the reissue minor
+ * (src/lib/pgd-minor-reissues.ts), when the signature carries over. None of this gates the ePGD tools; it is the register NICE
  * MPG2 expects the organisation to hold.
  */
 
@@ -35,7 +37,10 @@ export interface PgdAuthRow {
   version: CurrentPgdVersion
   state: AuthState
   authorisationId: string | null
+  /** Version actually signed (may be earlier than version.version when carried over). */
   signedVersion: string | null
+  /** Signed on an earlier file that a minor reissue carries over to the current one. */
+  carriedOver: boolean
   signedAt: string | null
   countersignedAt: string | null
   countersignedName: string | null
@@ -65,16 +70,28 @@ async function liveByUser(userId: string): Promise<Map<string, AuthRowDb[]>> {
 }
 
 /**
+ * A live signature on an earlier master file that a minor reissue carries
+ * over to the current one (src/lib/pgd-minor-reissues.ts).
+ */
+function carriedSignature(v: CurrentPgdVersion, live: AuthRowDb[]): AuthRowDb | undefined {
+  if (v.source !== 'master') return undefined
+  return live.find((r) => r.documentSource === 'master' && r.documentRef !== v.ref && isEquivalentMasterFile(v.ref, r.documentRef))
+}
+
+/**
  * A signature counts for the document the branch currently shows
- * (same document_ref: the master filename, or the branch's own upload).
+ * (same document_ref: the master filename, or the branch's own upload),
+ * or for an earlier master file carried over by a minor reissue.
  * Any other live signature for the slug only tells us they signed an
  * earlier or different document ("updated").
  */
 function toRow(slug: string, v: CurrentPgdVersion, live: AuthRowDb[] = []): PgdAuthRow {
   const p = TITLE.get(slug)!
-  const latest = live.find((r) => r.documentRef === v.ref) ?? live[0]
+  const exact = live.find((r) => r.documentRef === v.ref)
+  const carried = exact ? undefined : carriedSignature(v, live)
+  const latest = exact ?? carried ?? live[0]
   let state: AuthState = 'unsigned'
-  if (latest) state = latest.documentRef === v.ref ? 'signed' : 'updated'
+  if (latest) state = exact || carried ? 'signed' : 'updated'
   return {
     slug,
     title: p.title,
@@ -83,6 +100,7 @@ function toRow(slug: string, v: CurrentPgdVersion, live: AuthRowDb[] = []): PgdA
     state,
     authorisationId: latest?.id ?? null,
     signedVersion: latest?.pgdVersion ?? null,
+    carriedOver: !!carried,
     signedAt: latest?.signedAt.toISOString() ?? null,
     countersignedAt: latest?.countersignedAt?.toISOString() ?? null,
     countersignedName: latest?.countersignedName ?? null,
@@ -108,7 +126,8 @@ export interface SignInput {
 /**
  * Record signatures for the current version of each slug. A slug the
  * branch does not hold, or that has no document, is refused; a slug
- * already signed at this version is skipped (unique live index).
+ * already signed at this version is skipped (unique live index), and so is
+ * one whose earlier signature a minor reissue carries over.
  */
 export async function signAuthorisations(input: SignInput): Promise<{ ok: true; signed: Array<{ id: string; slug: string; version: string }>; skipped: string[] } | { ok: false; error: string }> {
   const name = input.signedName.trim()
@@ -123,12 +142,14 @@ export async function signAuthorisations(input: SignInput): Promise<{ ok: true; 
 
   const signed: Array<{ id: string; slug: string; version: string }> = []
   const skipped: string[] = []
+  const live = await liveByUser(input.userId)
   // No transaction: the neon-http driver has none (a wrapped version of
   // this threw 500 on the first real signing, Delmergate, 8 Oct 2026).
   // Each insert is idempotent through the partial unique index, so a
   // failure part-way leaves a correct, re-runnable state.
   for (const slug of wanted) {
     const v = versions.get(slug)!
+    if (carriedSignature(v, live.get(slug) ?? [])) { skipped.push(slug); continue }
     const [row] = await db
       .insert(practitionerAuthorisations)
       .values({

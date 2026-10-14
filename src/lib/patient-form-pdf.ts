@@ -160,7 +160,7 @@ export async function renderPatientFormPdf(form: PatientFormConfig): Promise<Uin
   fieldRow([{ label: 'Address:' }])
   fieldRow([{ label: ' ', weight: 2.2 }, { label: 'Postcode:', weight: 1 }])
   fieldRow([{ label: 'Email:' }])
-  fieldRow([{ label: 'GP practice:' }])
+  fieldRow([{ label: "GP surgery (or write 'not registered'):" }])
   fieldRow([{ label: 'NHS number (if known):' }])
 
   // ── PGD questions ────────────────────────────────────────────────
@@ -216,10 +216,13 @@ export async function renderPatientFormPdf(form: PatientFormConfig): Promise<Uin
   writingLines(2)
 
   // ── Consent ──────────────────────────────────────────────────────
-  sectionHeading('Your agreement', textHeight(form.consent, font, 10, W) + FIELD_H + 10)
+  sectionHeading('Your agreement', textHeight(form.consent, font, 10, W) + FIELD_H * 2 + 10)
   para(form.consent, { size: 10 })
   y -= 4
-  fieldRow([{ label: 'Signature:', weight: 2.2 }, { label: 'Date:', weight: 1 }])
+  fieldRow([{ label: 'Signature (optional; the pharmacist will record your consent):' }])
+  // Date sits in the right-hand column under the signature, as on the
+  // on-screen sheet (PatientFormSheet: grid-cols-[1fr_12rem], col-start-2).
+  fieldRow([{ label: 'Date:' }], M + W * 0.7, W * 0.3)
   if (form.guardianLine) {
     ensure(14 + FIELD_H * 2)
     y -= 4

@@ -64,7 +64,7 @@ export async function renderAuthorisationRegister(opts: { pharmacyName: string; 
   y -= 14
   if (opts.pharmacyAddress) { text(opts.pharmacyAddress.replace(/\s*\n+\s*/g, ', '), margin, 9, regular, GREY); y -= 12 }
   y -= 4
-  const intro = `Each Patient Group Direction is authorised by ${legal.companyName} (authorising doctor, pharmacist and organisation). This register records, for every practitioner at this pharmacy, the PGDs they have signed to work under, the document version signed, and the manager's countersignature. A signature lapses when the document is reissued and must be renewed. Practitioner declaration: "${PRACTITIONER_DECLARATION}" Manager declaration: "${MANAGER_DECLARATION}"`
+  const intro = `Each Patient Group Direction is authorised by ${legal.companyName} (authorising doctor, pharmacist and organisation). This register records, for every practitioner at this pharmacy, the PGDs they have signed to work under, the document version signed, and the manager's countersignature. A signature lapses when the document is reissued and must be renewed, unless the Medical Director has ruled the reissue minor, when it carries over and the version actually signed is shown. Practitioner declaration: "${PRACTITIONER_DECLARATION}" Manager declaration: "${MANAGER_DECLARATION}"`
   for (const line of wrapText(intro, regular, 8, width)) { text(line, margin, 8, regular, GREY); y -= 10 }
   y -= 8
 
@@ -98,12 +98,17 @@ export async function renderAuthorisationRegister(opts: { pharmacyName: string; 
     for (const r of m.rows) {
       ensure(14)
       text(clip(r.title, regular, 8.5, 290), cols.pgd, 8.5)
-      text(r.version.version, cols.ver, 8.5)
+      text(r.carriedOver && r.signedVersion ? r.signedVersion : r.version.version, cols.ver, 8.5)
       const label = r.state === 'signed' ? 'Signed' : r.state === 'updated' ? `Reissued since ${r.signedVersion}` : 'Not signed'
       text(label, cols.state, 8.5, r.state === 'signed' ? regular : bold, r.state === 'signed' ? BLACK : r.state === 'updated' ? AMBER : RED)
       text(r.state === 'signed' ? ukDateTime(r.signedAt) : '', cols.signed, 8.5)
       text(r.state === 'signed' ? (r.countersignedAt ? `${clip(r.countersignedName ?? '', regular, 8.5, 110)} ${ukDateTime(r.countersignedAt)}` : 'awaiting') : '', cols.counter, 8.5, regular, r.state === 'signed' && !r.countersignedAt ? AMBER : BLACK)
       y -= 12
+      if (r.carriedOver) {
+        ensure(12)
+        text(`Signed ${r.signedVersion ?? ''}, carried over to ${r.version.version} (minor reissue)`, cols.ver, 7, regular, GREY)
+        y -= 10
+      }
     }
     y -= 6
   }

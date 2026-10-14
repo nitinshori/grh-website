@@ -8,6 +8,7 @@ import { db } from '@/lib/db'
 import { clinicalSignoffs, pharmacyPgdDocuments, pharmacies } from '@/lib/db/schema'
 import { ALL_PGDS, withReissueVersion } from '@/lib/pgd-access'
 import { PGD_MASTER_FILES } from '@/lib/pgd-document-manifest'
+import { equivalentMasterFiles } from '@/lib/pgd-minor-reissues'
 import { getPharmacyPgdSlugs, getPharmacyNonApprovedSlugs } from '@/lib/pgd-queries'
 import { getPgdDocumentUrl } from '@/lib/pgd-documents'
 import { PGD_DRAFTS } from '@/lib/pgd-drafts'
@@ -105,6 +106,7 @@ function Cell({
   version,
   viewHref,
   latest,
+  accepts = [],
 }: {
   itemType: string
   slug: string | null
@@ -112,6 +114,8 @@ function Cell({
   version: string | null
   viewHref: string | null
   latest: Latest
+  /** Earlier version strings a minor reissue carries over (see pgd-minor-reissues). */
+  accepts?: string[]
 }) {
   if (!slug || !viewHref) {
     return <span className="text-xs text-gray-300">—</span>
@@ -121,7 +125,7 @@ function Cell({
   // has since been reissued (new document version), the previous signature
   // is shown but the item is presented for re-signing.
   const superseded =
-    !!s && !!version && !!s.itemVersion && s.itemVersion !== version
+    !!s && !!version && !!s.itemVersion && s.itemVersion !== version && !accepts.includes(s.itemVersion)
   return (
     <div className="flex flex-col items-start gap-1">
       <a
@@ -420,6 +424,9 @@ export default async function ClinicalSignOffPage() {
         : docHref
           ? 'uploaded document'
           : null,
+      // Minor reissues (Medical Director ruling) carry a sign-off over: a
+      // signature on an earlier listed file, built the same way, still counts.
+      docAccepts: master ? equivalentMasterFiles(master).map((f) => withReissueVersion(p.slug, f)) : [],
       mod,
     }
   })
@@ -432,7 +439,7 @@ export default async function ClinicalSignOffPage() {
   // whatever version it was given against.
   const supersededDocs = pgdRows.filter((r) => {
     const s = latest.get(`pgd_document:${r.pgd.slug}`)
-    return !!s && !!r.docVersion && !!s.itemVersion && s.itemVersion !== r.docVersion
+    return !!s && !!r.docVersion && !!s.itemVersion && s.itemVersion !== r.docVersion && !r.docAccepts.includes(s.itemVersion)
   })
   const done = latest.size - supersededDocs.length
 
@@ -486,7 +493,7 @@ export default async function ClinicalSignOffPage() {
               </tr>
             </thead>
             <tbody>
-              {pgdRows.map(({ pgd, docHref, docVersion, mod }) => (
+              {pgdRows.map(({ pgd, docHref, docVersion, docAccepts, mod }) => (
                 <tr key={pgd.slug} className="border-b border-gray-100 last:border-0 align-top">
                   <td className="px-4 py-3">
                     <p className="text-sm font-semibold text-gray-900">{pgd.title}</p>
@@ -500,6 +507,7 @@ export default async function ClinicalSignOffPage() {
                       version={docVersion}
                       viewHref={docHref}
                       latest={latest}
+                      accepts={docAccepts}
                     />
                   </td>
                   <td className="px-4 py-3">

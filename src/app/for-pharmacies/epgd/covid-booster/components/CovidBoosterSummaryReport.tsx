@@ -1,7 +1,7 @@
 "use client";
 
 import type { CovidBoosterConsultationState } from "../lib/covid-booster-types";
-import { COVID_PRODUCTS } from "../lib/covid-booster-types";
+import { COVID_PRODUCTS, covidObservationMinutes } from "../lib/covid-booster-types";
 import { nhsEligible } from "../lib/covid-booster-clinical-logic";
 import type { ClinicalAlert } from "../../shared/types";
 import {
@@ -25,6 +25,8 @@ export function CovidBoosterSummaryReport({
   doseRecommendation,
 }: CovidBoosterSummaryReportProps) {
   const hasStop = alerts.some((a) => a.severity === "stop");
+  // Any stored value is read: older records hold "yes" (15 minutes) or "no".
+  const observationMins = covidObservationMinutes(state.counselling.observationNeeded as string);
   const answer = (v: "" | "yes" | "no", yesText: string) =>
     v === "yes" ? yesText : v === "no" ? "No" : "NOT ANSWERED";
   return (
@@ -178,7 +180,18 @@ export function CovidBoosterSummaryReport({
             }
           />
         )}
-        <Row label="15 minute observation" value={state.supply.observedFifteenMinutes ? "Completed" : "Not recorded"} />
+        <Row
+          label="Observation"
+          value={
+            observationMins > 0
+              ? state.supply.observedFifteenMinutes
+                ? `${observationMins} minutes, completed`
+                : `${observationMins} minutes, completion NOT RECORDED`
+              : state.counselling.observationNeeded
+                ? "not needed"
+                : "NOT RECORDED"
+          }
+        />
       </div>
       )}
 
@@ -234,7 +247,9 @@ export function CovidBoosterSummaryReport({
         items={[
           ["Explained booster rationale (variant coverage)", state.counselling.explainedBoosterRationale],
           ["Discussed common reactions (arm soreness, fever)", state.counselling.discussedCommonReactions],
-          ["Explained 15-minute observation requirement", state.counselling.explainedObservationPeriod],
+          ...(observationMins > 0
+            ? [[`Explained ${observationMins}-minute observation`, state.counselling.explainedObservationPeriod] as [string, boolean]]
+            : []),
           ["Cardiac warning signs and serious reactions: seek urgent medical attention", state.counselling.discussedSeriousReactions],
           ["Yellow Card self-reporting explained", state.counselling.explainedYellowCard],
           ["Leaflet for the product and variant given, plus written record", state.counselling.providedWrittenInfo],
@@ -261,7 +276,7 @@ export function CovidBoosterSummaryReport({
       </p>
 
       <p className="text-[10px] text-gray-500 mt-4">
-        Administered under the COVID-19 Vaccination 2026/27 Season Patient Group Direction, version 009, issued 14 September 2026.
+        Administered under the COVID-19 Vaccination 2026/27 Season Patient Group Direction, version 011, issued 14 October 2026.
       </p>
 
       {hasStop ? (

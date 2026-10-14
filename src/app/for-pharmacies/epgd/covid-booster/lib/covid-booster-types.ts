@@ -1,7 +1,7 @@
 import { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/types";
 
 export interface CovidBoosterAssessment {
-  /** PGD v009 covers 12 years and over, not 18 and over. */
+  /** PGD v011 covers 12 years and over, not 18 and over. */
   ageConfirmed: boolean;
   /**
    * Explicit answer to "Has the patient received a COVID-19 vaccine before?".
@@ -12,14 +12,14 @@ export interface CovidBoosterAssessment {
    */
   previousCovidVaccineAnswer: "" | "yes" | "no";
   previousCovidVaccine: boolean;
-  /** Date of the previous COVID-19 vaccine dose, where known (PGD v009 records row). */
+  /** Date of the previous COVID-19 vaccine dose, where known (PGD v011 records row). */
   previousDoseDate: string;
   /** Date not known: the individual states the last dose was more than 3 months ago. Printed on the record. */
   previousDoseDateUnknown: boolean;
   timelinessEligible: boolean;
   /** Under 3 months since the last dose but a shorter interval is specifically advised in national guidance for this individual. */
   shorterIntervalNationalGuidance: boolean;
-  /** PGD v009 inclusion: NHS entitlement. */
+  /** PGD v011 inclusion: NHS entitlement. */
   nhsStatus: '' | 'not-eligible' | 'eligible-prefers-private';
   /** Resident in a care home for older adults (NHS-eligible cohort). */
   careHomeResident: boolean;
@@ -51,7 +51,7 @@ export interface CovidBoosterAssessment {
   /** Caution: history of capillary leak syndrome (Spikevax). */
   capillaryLeakHistory: boolean;
   /**
-   * Needed for two separate rules in PGD v009: a primary course in someone
+   * Needed for two separate rules in PGD v011: a primary course in someone
    * unvaccinated AND immunosuppressed is excluded, and Comirnaty XFG must be
    * given in preference to LP.8.1 for anyone immunosuppressed or aged 75+.
    */
@@ -79,15 +79,20 @@ export interface CovidBoosterSupply {
   administrationTime: string;
   /** Required when Comirnaty LP.8.1 is given in place of XFG. */
   lp81FormulationExplained: boolean;
-  /** Other vaccine given at the same visit and its site (PGD v009: record the site of each). */
+  /** Other vaccine given at the same visit and its site (PGD v011: record the site of each). */
   coAdministeredVaccine: string;
-  /** Observed for 15 minutes after vaccination (required by the PGD where there is a history of allergy or previous vaccine reaction). */
+  /**
+   * Observation completed for the period chosen at counselling (15 or 30
+   * minutes; PGD v011). Field name kept for saved records. This is the single
+   * source: it is ticked in the shared pre-vaccination safety panel, which
+   * shows the tick only when an observation period was chosen.
+   */
   observedFifteenMinutes: boolean;
   /** Records row: details of any adverse reaction and the action taken. */
   adverseReaction: string;
   adverseReactionAction: string;
   yellowCardSubmitted: boolean;
-  /** PGD v009 consent block, under 16 only. */
+  /** PGD v011 consent block, under 16 only. */
   consentBasis: '' | 'parental' | 'gillick';
   parentName: string;
   parentRelationship: string;
@@ -121,13 +126,34 @@ export const COVID_PRODUCTS: Record<
   },
 };
 
+/**
+ * Observation minutes for a counselling answer. Accepts any stored value so
+ * older records ("yes" meant 15 minutes, "no" meant none) still read correctly.
+ */
+export function covidObservationMinutes(value: string | null | undefined): 0 | 15 | 30 {
+  if (value === "30") return 30;
+  if (value === "15" || value === "yes") return 15;
+  return 0;
+}
+
 export interface CovidBoosterCounselling {
   explainedBoosterRationale: boolean;
   discussedCommonReactions: boolean;
+  /**
+   * PGD v011 (Green Book chapter 14a): routine 15-minute observation is
+   * suspended for all COVID-19 vaccines. It is still needed for a history of
+   * allergy (Green Book Table 5), an allergic-type or non-allergic reaction
+   * (such as fainting) to a previous dose, or where the vaccinator judges it
+   * necessary, with 30 minutes where chapter 14a Table 5 or its flowchart for
+   * reactions to a previous dose says so. No default: the pharmacist must
+   * choose. Older saved records may hold "yes" (15 minutes) or "no".
+   */
+  observationNeeded: "" | "none" | "15" | "30";
+  /** Only required when an observation period (15 or 30) is chosen. */
   explainedObservationPeriod: boolean;
   discussedSeriousReactions: boolean;
   providedWrittenInfo: boolean;
-  /** PGD v009 counselling: report any suspected side effect via the Yellow Card scheme. */
+  /** PGD v011 counselling: report any suspected side effect via the Yellow Card scheme. */
   explainedYellowCard: boolean;
 }
 
@@ -145,7 +171,7 @@ export type CovidBoosterAction =
   | { type: "UPDATE_PATIENT"; field: keyof BasePatientDetails; value: string | number | boolean | null }
   | { type: "UPDATE_CONSENT"; field: keyof BaseConsent; value: string | boolean | undefined }
   | { type: "UPDATE_ASSESSMENT"; field: keyof CovidBoosterAssessment; value: boolean | string }
-  | { type: "UPDATE_COUNSELLING"; field: keyof CovidBoosterCounselling; value: boolean }
+  | { type: "UPDATE_COUNSELLING"; field: keyof CovidBoosterCounselling; value: boolean | string }
   | { type: "UPDATE_SUPPLY"; field: keyof CovidBoosterSupply; value: string | boolean }
   | { type: "UPDATE_SUMMARY"; field: keyof BaseSummary; value: string }
   | { type: "SET_STEP"; step: number }
@@ -233,6 +259,7 @@ gpEmail: "",
     counselling: {
       explainedBoosterRationale: false,
       discussedCommonReactions: false,
+      observationNeeded: "",
       explainedObservationPeriod: false,
       discussedSeriousReactions: false,
       providedWrittenInfo: false,

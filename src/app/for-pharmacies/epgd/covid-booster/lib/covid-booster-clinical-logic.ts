@@ -2,7 +2,7 @@ import type { CovidBoosterConsultationState } from "./covid-booster-types";
 import { COVID_PRODUCTS } from "./covid-booster-types";
 import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
 
-// Aligned to the COVID-19 Vaccination 2026/27 PGD version 009, issued 14 September 2026.
+// Aligned to the COVID-19 Vaccination 2026/27 PGD version 011, issued 14 October 2026.
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** Minimum interval between COVID-19 vaccine doses: 3 months, operationalised as 91 days (13 weeks) as in the NHS programme. */
@@ -23,7 +23,7 @@ export function intervalTooShort(state: CovidBoosterConsultationState): boolean 
   return d !== null && d < MIN_INTERVAL_DAYS;
 }
 
-/** NHS-eligible cohorts for autumn 2026 (PGD v009 guideline summary). */
+/** NHS-eligible cohorts for autumn 2026 (PGD v011 guideline summary). */
 export function nhsEligible(state: CovidBoosterConsultationState): boolean {
   const age = state.patient.age;
   return (
@@ -179,7 +179,7 @@ export function getAllAlerts(state: CovidBoosterConsultationState): ClinicalAler
 
   // Myocarditis or pericarditis after a previous dose of any COVID-19 vaccine.
   //
-  // PGD v009 EXCLUSION criteria: "History of myocarditis or pericarditis
+  // PGD v011 EXCLUSION criteria: "History of myocarditis or pericarditis
   // following a previous dose of any COVID-19 vaccine. Refer for specialist
   // advice. No further dose of any product, mRNA or Nuvaxovid, is given under
   // this PGD." It is a stop.
@@ -217,7 +217,7 @@ export function getAllAlerts(state: CovidBoosterConsultationState): ClinicalAler
       code: "COVID_LP81_HIGH_RISK",
       message: "Comirnaty LP.8.1 selected for a high-risk patient",
       detail:
-        "PGD v009 requires Comirnaty XFG, the current 2026/27 formulation, for anyone immunosuppressed or aged 75 and over. Use XFG stock, or rebook rather than substitute.",
+        "PGD v011 requires Comirnaty XFG, the current 2026/27 formulation, for anyone immunosuppressed or aged 75 and over. Use XFG stock, or rebook rather than substitute.",
     });
   }
 
@@ -227,7 +227,7 @@ export function getAllAlerts(state: CovidBoosterConsultationState): ClinicalAler
       code: "COVID_LP81_RUNOUT",
       message: "Comirnaty LP.8.1 is the previous seasonal formulation",
       detail:
-        "Permitted under PGD v009 from existing stock only, until that stock is used up or reaches its expiry date. Tell the patient this is the previous formulation and that XFG is the current one, and record that you did. Check the variant printed on the syringe label before injecting.",
+        "Permitted under PGD v011 from existing stock only, until that stock is used up or reaches its expiry date. Tell the patient this is the previous formulation and that XFG is the current one, and record that you did. Check the variant printed on the syringe label before injecting.",
     });
   }
 
@@ -270,7 +270,7 @@ export function calculateDoseRecommendation(state: CovidBoosterConsultationState
       frequency: "Single dose",
       duration: "One dose for the 2026/27 season",
       reason:
-        "Comirnaty XFG is the vaccine of choice under PGD v009. Comirnaty LP.8.1 may be used from existing stock only, and not for patients who are immunosuppressed or aged 75 and over. Spikevax LP.8.1 where Comirnaty is unavailable; Nuvaxovid JN.1 where the mRNA vaccines are unavailable or unsuitable.",
+        "Comirnaty XFG is the vaccine of choice under PGD v011. Comirnaty LP.8.1 may be used from existing stock only, and not for patients who are immunosuppressed or aged 75 and over. Spikevax LP.8.1 where Comirnaty is unavailable; Nuvaxovid JN.1 where the mRNA vaccines are unavailable or unsuitable.",
     };
   }
 
@@ -282,7 +282,7 @@ export function calculateDoseRecommendation(state: CovidBoosterConsultationState
     duration: "One dose for the 2026/27 season",
     reason:
       chosen === "comirnaty-lp81"
-        ? "Existing stock of the previous seasonal formulation. Permitted under PGD v009 until stock is exhausted or expires. The patient must be told."
-        : "Administered under COVID-19 PGD v009, 2026/27 season.",
+        ? "Existing stock of the previous seasonal formulation. Permitted under PGD v011 until stock is exhausted or expires. The patient must be told."
+        : "Administered under COVID-19 PGD v011, 2026/27 season.",
   };
 }

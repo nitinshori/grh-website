@@ -101,7 +101,7 @@ export function AuthorisationsClient({ rows, defaultName, defaultGphc, pharmacyN
                   <div className="text-sm text-gray-900 font-medium truncate">{r.title}</div>
                   <div className="text-[11px] text-gray-500">
                     Current {r.version.version}{r.version.source === 'override' ? ' (your pharmacy’s signed copy)' : ''}
-                    {r.state === 'signed' && <> · signed {ukDate(r.signedAt)}{r.countersignedAt ? `, countersigned by ${r.countersignedName} ${ukDate(r.countersignedAt)}` : ', awaiting countersignature'}</>}
+                    {r.state === 'signed' && <> · signed{r.carriedOver ? ` ${r.signedVersion}` : ''} {ukDate(r.signedAt)}{r.countersignedAt ? `, countersigned by ${r.countersignedName} ${ukDate(r.countersignedAt)}` : ', awaiting countersignature'}{r.carriedOver ? `; carried over to ${r.version.version} (minor reissue)` : ''}</>}
                     {r.state === 'updated' && <> · you signed {r.signedVersion} on {ukDate(r.signedAt)}; the PGD has been reissued since</>}
                   </div>
                 </div>

@@ -128,7 +128,7 @@ export function TeamClient({ members, branches, anchorPharmacyId, isSuperAdmin, 
                         <td className="py-1 pr-2">
                           <span className={`px-1.5 py-0.5 rounded ${r.state === 'signed' ? 'bg-green-100 text-green-800' : r.state === 'updated' ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-700'}`}>{r.state === 'signed' ? 'Signed' : r.state === 'updated' ? `Reissued since ${r.signedVersion}` : 'Not signed'}</span>
                         </td>
-                        <td className="py-1 pr-2 text-gray-600">{r.state === 'signed' ? ukDate(r.signedAt) : ''}</td>
+                        <td className="py-1 pr-2 text-gray-600">{r.state === 'signed' ? ukDate(r.signedAt) : ''}{r.state === 'signed' && r.carriedOver ? <span className="block text-[10px] text-gray-500">{r.signedVersion}, carried over (minor reissue)</span> : null}</td>
                         <td className="py-1 pr-2 text-gray-600">{r.state === 'signed' ? (r.countersignedAt ? `${r.countersignedName}, ${ukDate(r.countersignedAt)}` : <span className="text-indigo-700">awaiting</span>) : ''}</td>
                         <td className="py-1 text-right">
                           {r.state === 'signed' && r.authorisationId && (

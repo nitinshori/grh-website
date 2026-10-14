@@ -202,7 +202,7 @@ export function PatientFormSheet({ form }: { form: PatientFormConfig }) {
               <Field label="Postcode:" />
             </div>
             <Field label="Email:" />
-            <Field label="GP practice:" />
+            <Field label="GP surgery (or write 'not registered'):" />
             <Field label="NHS number (if known):" />
           </div>
         </div>
@@ -238,8 +238,8 @@ export function PatientFormSheet({ form }: { form: PatientFormConfig }) {
           <SectionHeading>Your agreement</SectionHeading>
           <p className="text-sm">{form.consent}</p>
           <div className="grid grid-cols-[1fr_12rem] gap-x-6 gap-y-3 mt-3">
-            <Field label="Signature:" />
-            <Field label="Date:" />
+            <Field label="Signature (optional; the pharmacist will record your consent):" className="col-span-2" />
+            <Field label="Date:" className="col-start-2" />
           </div>
           {form.guardianLine && (
             <div className="mt-3 space-y-2">
