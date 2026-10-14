@@ -3,9 +3,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import DateInput from '@/components/DateInput'
+import { paperOutcomeLabel } from '@/lib/paper-consultations-shared'
 
 interface PatientRecord {
   id: string
+  /** 'tool' = saved from an ePGD tool; 'paper' = paper consultation (migration 077). */
+  kind?: 'tool' | 'paper'
+  attachmentCount?: number
   pgdSlug: string
   patientFirstName: string
   patientLastName: string
@@ -33,6 +37,7 @@ export default function PatientRecordsClient({ pgdTitles }: PatientRecordsClient
   const [outcome, setOutcome] = useState('')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
+  const [source, setSource] = useState('')
   const [loading, setLoading] = useState(true)
   const [showFilters, setShowFilters] = useState(false)
 
@@ -43,8 +48,9 @@ export default function PatientRecordsClient({ pgdTitles }: PatientRecordsClient
     if (outcome) params.set('outcome', outcome)
     if (dateFrom) params.set('dateFrom', dateFrom)
     if (dateTo) params.set('dateTo', dateTo)
+    if (source) params.set('source', source)
     return params
-  }, [page, search, pgdSlug, outcome, dateFrom, dateTo])
+  }, [page, search, pgdSlug, outcome, dateFrom, dateTo, source])
 
   const fetchRecords = useCallback(async () => {
     setLoading(true)
@@ -80,10 +86,11 @@ export default function PatientRecordsClient({ pgdTitles }: PatientRecordsClient
     setOutcome('')
     setDateFrom('')
     setDateTo('')
+    setSource('')
     setPage(1)
   }
 
-  const hasActiveFilters = !!(search || pgdSlug || outcome || dateFrom || dateTo)
+  const hasActiveFilters = !!(search || pgdSlug || outcome || dateFrom || dateTo || source)
 
   const downloadCsv = () => {
     const params = buildParams()
@@ -146,7 +153,7 @@ export default function PatientRecordsClient({ pgdTitles }: PatientRecordsClient
 
       {/* Advanced filters */}
       {showFilters && (
-        <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">PGD</label>
             <select
@@ -173,6 +180,18 @@ export default function PatientRecordsClient({ pgdTitles }: PatientRecordsClient
               <option value="completed">Supplied</option>
               <option value="referred">Referred</option>
               <option value="not_supplied">Not supplied</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Recorded in</label>
+            <select
+              value={source}
+              onChange={(e) => { setSource(e.target.value); setPage(1) }}
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm bg-white"
+            >
+              <option value="">Tool and paper</option>
+              <option value="tool">ePGD tool only</option>
+              <option value="paper">Paper only</option>
             </select>
           </div>
           <div>
@@ -225,7 +244,7 @@ export default function PatientRecordsClient({ pgdTitles }: PatientRecordsClient
             <p className="text-gray-500">
               {hasActiveFilters
                 ? 'No records match your filters.'
-                : 'No consultation records yet. Records are automatically saved when you complete an ePGD consultation.'}
+                : 'No consultation records yet. Records are automatically saved when you complete an ePGD consultation, and you can record a paper consultation with the button above.'}
             </p>
           </div>
         ) : (
@@ -247,11 +266,23 @@ export default function PatientRecordsClient({ pgdTitles }: PatientRecordsClient
                     <tr key={r.id} className="group hover:bg-gray-50 transition-colors">
                       <td className="py-3 px-4">
                         <Link
-                          href={`/for-pharmacies/dashboard/records/${r.id}`}
+                          href={r.kind === 'paper'
+                            ? `/for-pharmacies/dashboard/records/paper/${r.id}`
+                            : `/for-pharmacies/dashboard/records/${r.id}`}
                           className="text-gray-900 font-medium group-hover:text-teal-600 transition-colors"
                         >
                           {r.patientFirstName} {r.patientLastName}
                         </Link>
+                        {r.kind === 'paper' && (
+                          <span className="ml-2 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 border border-gray-300">
+                            Paper
+                          </span>
+                        )}
+                        {!!r.attachmentCount && (
+                          <span className="ml-2 text-[10px] text-gray-500" title="Paper forms attached">
+                            {r.attachmentCount} attachment{r.attachmentCount === 1 ? '' : 's'}
+                          </span>
+                        )}
                         <p className="text-xs text-gray-400">
                           DOB: {r.patientDob}
                           {r.patientNhsNumber && ` | NHS: ${r.patientNhsNumber}`}
@@ -275,13 +306,15 @@ export default function PatientRecordsClient({ pgdTitles }: PatientRecordsClient
                       </td>
                       <td className="py-3 px-4">
                         <span className={`text-xs px-2 py-0.5 rounded-full ${
-                          r.outcome === 'completed'
+                          r.outcome === 'completed' || r.outcome === 'supplied' || r.outcome === 'administered'
                             ? 'bg-emerald-50 text-emerald-700'
                             : r.outcome === 'referred'
                             ? 'bg-blue-50 text-blue-700'
                             : 'bg-amber-50 text-amber-700'
                         }`}>
-                          {r.outcome === 'completed' ? 'Supplied' : r.outcome === 'referred' ? 'Referred' : 'Not supplied'}
+                          {r.kind === 'paper'
+                            ? paperOutcomeLabel(r.outcome)
+                            : r.outcome === 'completed' ? 'Supplied' : r.outcome === 'referred' ? 'Referred' : 'Not supplied'}
                         </span>
                       </td>
                     </tr>

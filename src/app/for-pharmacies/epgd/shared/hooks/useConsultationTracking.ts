@@ -81,6 +81,8 @@ interface TrackingEntry {
   completed: boolean
   saved: boolean
   saving: boolean
+  /** consultation_records.id once saved, so a scan of the paper form can be attached. */
+  recordId?: string | null
 }
 
 const store = new Map<string, TrackingEntry>()
@@ -177,6 +179,8 @@ export function useConsultationTracking(pgdSlug: string, currentStep: number) {
 
         if (response.ok) {
           entry.saved = true
+          const body = await response.json().catch(() => null)
+          entry.recordId = typeof body?.recordId === 'string' ? body.recordId : null
           return true
         }
 
@@ -207,5 +211,7 @@ export function useConsultationTracking(pgdSlug: string, currentStep: number) {
     saveRecord,
     reset,
     consultationId: entryFor(pgdSlug).consultationId,
+    /** Id of the saved record (null until saved). */
+    recordId: store.get(pgdSlug)?.recordId ?? null,
   }
 }

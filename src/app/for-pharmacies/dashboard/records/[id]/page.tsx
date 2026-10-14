@@ -6,6 +6,9 @@ import { consultationRecords } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { ALL_PGDS } from '@/lib/pgd-access'
 import { tryDecrypt } from '@/lib/encryption'
+import { attachmentsForRecord } from '@/lib/consultation-attachments'
+import { AttachmentList } from '@/components/consultation-attachments/AttachmentList'
+import { AttachmentUploader } from '@/components/consultation-attachments/AttachmentUploader'
 
 const pgdTitleMap = new Map(ALL_PGDS.map((p) => [p.slug, p.title]))
 
@@ -50,6 +53,7 @@ export default async function RecordDetailPage({
   }
 
   const pgdTitle = pgdTitleMap.get(record.pgdSlug) || record.pgdSlug
+  const attachments = await attachmentsForRecord(record.id)
 
   return (
     <div className="px-6 py-8 max-w-4xl mx-auto">
@@ -150,6 +154,20 @@ export default async function RecordDetailPage({
             })
           } />
         </div>
+      </div>
+
+      {/* Signed paper forms (migration 077) */}
+      <div id="attachments" className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-1">Signed paper forms</h2>
+        <p className="text-xs text-gray-400 mb-4">
+          Scans or photos of the completed paper patient form for this consultation.
+        </p>
+        <AttachmentList attachments={attachments} role={session.user.role} />
+        {!record.deletedAt && (
+          <div className="mt-4">
+            <AttachmentUploader consultationRecordId={record.id} />
+          </div>
+        )}
       </div>
 
       {/* Clinical Data (expandable) */}

@@ -468,6 +468,9 @@ export const auditActionEnum = pgEnum('audit_action', [
   'authorisation_register_export',
   // migration 076
   'patient_invite_sent',
+  // migration 077
+  'paper_consultation_recorded',
+  'consultation_attachment_added',
 ])
 
 export const auditLogs = pgTable('audit_logs', {
@@ -958,3 +961,53 @@ export const patientInvites = pgTable('patient_invites', {
   sentAt: timestamp('sent_at', { withTimezone: true }).defaultNow().notNull(),
   error: text('error'),
 }, (t) => [index('patient_invites_pharmacy_idx').on(t.pharmacyId, t.sentAt.desc())])
+
+// ── Paper consultations and attachments (migration 077) ──────────
+// A consultation done on the printed patient form rather than in an ePGD
+// tool. Not checked against the PGD by the tool; at least one scan of the
+// paper form is attached. Soft delete on the same rules as
+// consultation_records.
+export const paperConsultations = pgTable('paper_consultations', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  pharmacyId: uuid('pharmacy_id').notNull().references(() => pharmacies.id, { onDelete: 'cascade' }),
+  createdByUserId: uuid('created_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+  pgdSlug: varchar('pgd_slug', { length: 255 }).notNull(),
+  consultationDate: date('consultation_date').notNull(),
+  patientName: varchar('patient_name', { length: 255 }).notNull(),
+  patientDob: date('patient_dob').notNull(),
+  outcome: varchar('outcome', { length: 20 }).notNull(), // supplied | administered | referred | not_supplied
+  product: varchar('product', { length: 255 }),
+  dose: varchar('dose', { length: 255 }),
+  batch: varchar('batch', { length: 100 }),
+  batchExpiry: date('batch_expiry'),
+  pharmacistName: varchar('pharmacist_name', { length: 255 }).notNull(),
+  pharmacistGphc: varchar('pharmacist_gphc', { length: 50 }).notNull(),
+  notes: text('notes'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  deletedBy: uuid('deleted_by').references(() => users.id, { onDelete: 'set null' }),
+  deletedReason: varchar('deleted_reason', { length: 255 }),
+}, (t) => [index('paper_consultations_pharmacy_idx').on(t.pharmacyId, t.consultationDate.desc()).where(sql`deleted_at IS NULL`)])
+
+export type PaperConsultation = typeof paperConsultations.$inferSelect
+
+// A scan or photo of a completed paper form, in the PRIVATE Blob store,
+// served only by /api/consultation-attachments/[id]/file. Exactly one of
+// consultationRecordId / paperConsultationId is set (CHECK in 077).
+export const consultationAttachments = pgTable('consultation_attachments', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  pharmacyId: uuid('pharmacy_id').notNull().references(() => pharmacies.id, { onDelete: 'cascade' }),
+  consultationRecordId: uuid('consultation_record_id').references(() => consultationRecords.id, { onDelete: 'cascade' }),
+  paperConsultationId: uuid('paper_consultation_id').references(() => paperConsultations.id, { onDelete: 'cascade' }),
+  blobUrl: text('blob_url').notNull(),
+  fileName: varchar('file_name', { length: 255 }).notNull(),
+  contentType: varchar('content_type', { length: 100 }).notNull(),
+  sizeBytes: integer('size_bytes').notNull(),
+  uploadedByUserId: uuid('uploaded_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [
+  index('consultation_attachments_record_idx').on(t.consultationRecordId).where(sql`consultation_record_id IS NOT NULL`),
+  index('consultation_attachments_paper_idx').on(t.paperConsultationId).where(sql`paper_consultation_id IS NOT NULL`),
+])
+
+export type ConsultationAttachment = typeof consultationAttachments.$inferSelect

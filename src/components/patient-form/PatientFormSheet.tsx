@@ -144,8 +144,29 @@ export function PatientFormSheet({ form }: { form: PatientFormConfig }) {
               paper form with your records.
             </p>
           </div>
-          <PrintFormButton />
+          <div className="flex flex-col gap-2 shrink-0">
+            <PrintFormButton />
+            <a
+              href={`/api/patient-forms/${form.slug}/pdf`}
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border border-teal-600 bg-white text-teal-700 text-sm font-semibold hover:bg-teal-50 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" />
+              </svg>
+              Download PDF
+            </a>
+          </div>
         </div>
+        <p className="mt-3 text-xs text-gray-600">
+          Did the consultation on paper?{" "}
+          <Link
+            href={`/for-pharmacies/dashboard/records/paper/new?pgd=${form.slug}`}
+            className="font-medium text-teal-600 hover:text-teal-700"
+          >
+            Record a paper consultation
+          </Link>{" "}
+          and attach a scan of the completed form.
+        </p>
       </div>
 
       {/* The printable sheet */}

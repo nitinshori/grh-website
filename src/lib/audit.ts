@@ -28,6 +28,8 @@ export type AuditAction =
   | 'practitioner_authorisation_revoked'
   | 'authorisation_register_export'
   | 'patient_invite_sent'
+  | 'paper_consultation_recorded'
+  | 'consultation_attachment_added'
 
 export interface AuditEntry {
   pharmacyId?: string | null

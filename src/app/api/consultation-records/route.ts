@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { consultationRecords, pharmacies, clinicians } from '@/lib/db/schema'
-import { eq, and, or, desc, ilike, sql, isNull, gte, lte } from 'drizzle-orm'
+import { consultationRecords, pharmacies, clinicians, paperConsultations } from '@/lib/db/schema'
+import { eq, and, or, ilike, sql, isNull, gte, lte } from 'drizzle-orm'
 import { audit } from '@/lib/audit'
 import { rateLimit } from '@/lib/rate-limit'
 import { sendGpNotification } from '@/lib/gp-notification'
 import { tryEncrypt } from '@/lib/encryption'
+import { attachmentCounts } from '@/lib/consultation-attachments'
+import { paperListConditions } from '@/lib/paper-consultations'
 
 /**
  * POST /api/consultation-records — save a completed consultation record
@@ -221,8 +223,10 @@ export async function GET(request: Request) {
     const dateFrom = searchParams.get('dateFrom')
     const dateTo = searchParams.get('dateTo')
     const outcome = searchParams.get('outcome')
-    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10))
-    const limit = Math.min(50, Math.max(1, parseInt(searchParams.get('limit') || '20', 10)))
+    const rawPage = parseInt(searchParams.get('page') || '1', 10)
+    const rawLimit = parseInt(searchParams.get('limit') || '20', 10)
+    const page = Number.isFinite(rawPage) ? Math.min(100_000, Math.max(1, rawPage)) : 1
+    const limit = Number.isFinite(rawLimit) ? Math.min(50, Math.max(1, rawLimit)) : 20
     const offset = (page - 1) * limit
 
     const conditions = [
@@ -268,30 +272,68 @@ export async function GET(request: Request) {
 
     const whereClause = and(...conditions)
 
-    const [countResult] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(consultationRecords)
-      .where(whereClause)
+    // Paper consultations (migration 077) are listed alongside tool records,
+    // same pharmacy scoping, same filters where they apply.
+    const source = searchParams.get('source')
+    const paperWhere = and(...paperListConditions(session.user.pharmacyId, { search, pgdSlug, outcome, dateFrom, dateTo }))
+    const parts = []
+    if (source !== 'paper') {
+      parts.push(sql`SELECT id, 'tool' AS kind, pgd_slug, patient_first_name, patient_last_name,
+        patient_dob, patient_nhs_number, outcome::text AS outcome, medicine_supplied, pharmacist_name,
+        consultation_date, created_at
+        FROM ${consultationRecords} WHERE ${whereClause}`)
+    }
+    if (source !== 'tool') {
+      parts.push(sql`SELECT id, 'paper' AS kind, pgd_slug, patient_name AS patient_first_name, '' AS patient_last_name,
+        to_char(patient_dob, 'YYYY-MM-DD') AS patient_dob, NULL AS patient_nhs_number, outcome, product AS medicine_supplied, pharmacist_name,
+        consultation_date::timestamp AS consultation_date, (created_at AT TIME ZONE 'UTC') AS created_at
+        FROM ${paperConsultations} WHERE ${paperWhere}`)
+    }
+    const unioned = sql.join(parts, sql` UNION ALL `)
 
-    const records = await db
-      .select({
-        id: consultationRecords.id,
-        pgdSlug: consultationRecords.pgdSlug,
-        patientFirstName: consultationRecords.patientFirstName,
-        patientLastName: consultationRecords.patientLastName,
-        patientDob: consultationRecords.patientDob,
-        patientNhsNumber: consultationRecords.patientNhsNumber,
-        outcome: consultationRecords.outcome,
-        medicineSupplied: consultationRecords.medicineSupplied,
-        pharmacistName: consultationRecords.pharmacistName,
-        consultationDate: consultationRecords.consultationDate,
-        createdAt: consultationRecords.createdAt,
-      })
-      .from(consultationRecords)
-      .where(whereClause)
-      .orderBy(desc(consultationRecords.consultationDate))
-      .limit(limit)
-      .offset(offset)
+    type Row = {
+      id: string; kind: 'tool' | 'paper'; pgd_slug: string; patient_first_name: string; patient_last_name: string
+      patient_dob: string; patient_nhs_number: string | null; outcome: string; medicine_supplied: string | null
+      pharmacist_name: string; consultation_date: string; created_at: string
+    }
+    const rowsOf = <T,>(r: unknown): T[] =>
+      Array.isArray(r) ? (r as T[]) : ((r as { rows?: T[] }).rows ?? [])
+
+    const countRows = rowsOf<{ n: number }>(
+      await db.execute(sql`SELECT count(*)::int AS n FROM (${unioned}) u`)
+    )
+    const countResult = { count: Number(countRows[0]?.n ?? 0) }
+
+    const listRows = rowsOf<Row>(
+      await db.execute(sql`SELECT id::text AS id, kind, pgd_slug, patient_first_name, patient_last_name, patient_dob,
+        patient_nhs_number, outcome, medicine_supplied, pharmacist_name,
+        to_char(consultation_date, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS consultation_date,
+        to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at
+        FROM (${unioned}) u
+        ORDER BY u.consultation_date DESC, u.created_at DESC
+        LIMIT ${limit} OFFSET ${offset}`)
+    )
+
+    const counts = await attachmentCounts(
+      listRows.filter((r) => r.kind === 'tool').map((r) => r.id),
+      listRows.filter((r) => r.kind === 'paper').map((r) => r.id),
+    )
+
+    const records = listRows.map((r) => ({
+      id: r.id,
+      kind: r.kind,
+      pgdSlug: r.pgd_slug,
+      patientFirstName: r.patient_first_name,
+      patientLastName: r.patient_last_name,
+      patientDob: r.patient_dob,
+      patientNhsNumber: r.patient_nhs_number,
+      outcome: r.outcome,
+      medicineSupplied: r.medicine_supplied,
+      pharmacistName: r.pharmacist_name,
+      consultationDate: r.consultation_date,
+      createdAt: r.created_at,
+      attachmentCount: counts.get(r.id) ?? 0,
+    }))
 
     await audit({
       pharmacyId: session.user.pharmacyId,
@@ -299,7 +341,7 @@ export async function GET(request: Request) {
       userEmail: session.user.email || null,
       action: 'record_list',
       recordCount: records.length,
-      details: { search, pgdSlug, outcome, dateFrom, dateTo, page },
+      details: { search, pgdSlug, outcome, dateFrom, dateTo, page, source },
       request,
     })
 

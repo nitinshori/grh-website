@@ -35,10 +35,20 @@ export default async function PatientRecordsPage() {
           </svg>
           Back to Dashboard
         </Link>
-        <h1 className="text-2xl font-bold text-gray-900">Patient Records</h1>
-        <p className="text-gray-500 mt-1">
-          Search and view completed consultation records for your pharmacy.
-        </p>
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Patient Records</h1>
+            <p className="text-gray-500 mt-1">
+              Search and view completed consultation records for your pharmacy.
+            </p>
+          </div>
+          <Link
+            href="/for-pharmacies/dashboard/records/paper/new"
+            className="inline-flex items-center justify-center px-4 py-2.5 rounded-lg text-sm font-semibold border border-teal-600 text-teal-700 bg-white hover:bg-teal-50 transition-colors"
+          >
+            Record a paper consultation
+          </Link>
+        </div>
       </div>
 
       <PatientRecordsClient pgdTitles={pgdTitles} />

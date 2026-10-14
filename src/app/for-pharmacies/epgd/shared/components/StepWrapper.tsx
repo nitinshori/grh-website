@@ -14,6 +14,7 @@ import {
   clearVaccineSafety,
   vaccineSafetySatisfied,
 } from "./VaccineSafetyChecks";
+import { AttachmentUploader } from "@/components/consultation-attachments/AttachmentUploader";
 
 interface StepWrapperProps {
   title: string;
@@ -62,7 +63,7 @@ export function StepWrapper({
   // Extract pgdSlug from URL: /for-pharmacies/epgd/{slug}
   const pathname = usePathname();
   const pgdSlug = pathname.split("/").pop() || "";
-  const { markComplete, saveRecord, reset } = useConsultationTracking(
+  const { markComplete, saveRecord, reset, recordId } = useConsultationTracking(
     pgdSlug,
     currentStep
   );
@@ -236,6 +237,14 @@ export function StepWrapper({
             {saveStatus === "error" &&
               "Could not save consultation record. Please print this page as a backup."}
           </p>
+          {saveStatus === "saved" && recordId && (
+            <div className="mt-3 pt-3 border-t border-green-200">
+              <p className="text-xs text-green-800 mb-2">
+                Did the patient fill in a paper form? Attach a scan or photo of it to this record.
+              </p>
+              <AttachmentUploader consultationRecordId={recordId} refreshOnUpload={false} />
+            </div>
+          )}
         </div>
       )}
 

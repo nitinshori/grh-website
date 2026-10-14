@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { consultationRecords } from '@/lib/db/schema'
+import { consultationRecords, paperConsultations } from '@/lib/db/schema'
+import { paperListConditions, splitName } from '@/lib/paper-consultations'
 import { eq, and, or, desc, ilike, isNull, gte, lte } from 'drizzle-orm'
 import { audit } from '@/lib/audit'
 import { rateLimit } from '@/lib/rate-limit'
@@ -60,7 +61,8 @@ export async function GET(request: Request) {
     )
   }
 
-  const rows = await db
+  const source = searchParams.get('source')
+  const rows = source === 'paper' ? [] : await db
     .select({
       consultationDate: consultationRecords.consultationDate,
       pgdSlug: consultationRecords.pgdSlug,
@@ -85,6 +87,73 @@ export async function GET(request: Request) {
     .orderBy(desc(consultationRecords.consultationDate))
     .limit(5000)
 
+  // Paper consultations (migration 077), same filters, merged by date.
+  const paperRows = source === 'tool' ? [] : await db
+    .select()
+    .from(paperConsultations)
+    .where(and(...paperListConditions(session.user.pharmacyId, { search, pgdSlug, outcome, dateFrom, dateTo })))
+    .orderBy(desc(paperConsultations.consultationDate))
+    .limit(5000)
+
+  type Line = { date: Date; cells: unknown[] }
+  const lines: Line[] = [
+    ...rows.map((r) => ({
+      date: r.consultationDate,
+      cells: [
+        r.consultationDate,
+        r.pgdSlug,
+        r.patientFirstName,
+        r.patientLastName,
+        r.patientDob,
+        r.patientNhsNumber,
+        r.patientPhone,
+        r.patientEmail,
+        r.patientGpName,
+        r.patientGpPractice,
+        r.outcome,
+        r.medicineSupplied,
+        r.medicineDose,
+        r.medicineDuration,
+        r.medicineQuantity,
+        r.pharmacistName,
+        r.pharmacistGphc,
+        'Tool',
+        '',
+        '',
+      ],
+    })),
+    ...paperRows.map((p) => {
+      const n = splitName(p.patientName)
+      return {
+        date: new Date(`${p.consultationDate}T00:00:00Z`),
+        cells: [
+          p.consultationDate,
+          p.pgdSlug,
+          n.first,
+          n.last,
+          p.patientDob,
+          '',
+          '',
+          '',
+          '',
+          '',
+          p.outcome,
+          p.product,
+          p.dose,
+          '',
+          '',
+          p.pharmacistName,
+          p.pharmacistGphc,
+          'Paper',
+          p.batch,
+          p.batchExpiry,
+        ],
+      }
+    }),
+  ]
+    .sort((a, b) => b.date.getTime() - a.date.getTime())
+    .slice(0, 5000)
+
   const headers = [
     'Consultation date',
     'PGD',
@@ -103,40 +172,23 @@ export async function GET(request: Request) {
     'Quantity',
     'Pharmacist',
     'GPhC',
+    'Source',
+    'Batch',
+    'Batch expiry',
   ]
 
   const csvEscape = (v: unknown) => {
     if (v === null || v === undefined) return ''
-    const s = v instanceof Date ? v.toISOString() : String(v)
+    let s = v instanceof Date ? v.toISOString() : String(v)
+    // Stop spreadsheets treating patient-entered text as a formula.
+    if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`
     if (/[",\r\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`
     return s
   }
 
   const csvRows = [
     headers.join(','),
-    ...rows.map((r) =>
-      [
-        r.consultationDate,
-        r.pgdSlug,
-        r.patientFirstName,
-        r.patientLastName,
-        r.patientDob,
-        r.patientNhsNumber,
-        r.patientPhone,
-        r.patientEmail,
-        r.patientGpName,
-        r.patientGpPractice,
-        r.outcome,
-        r.medicineSupplied,
-        r.medicineDose,
-        r.medicineDuration,
-        r.medicineQuantity,
-        r.pharmacistName,
-        r.pharmacistGphc,
-      ]
-        .map(csvEscape)
-        .join(',')
-    ),
+    ...lines.map((l) => l.cells.map(csvEscape).join(',')),
   ]
 
   const csv = csvRows.join('\r\n')
@@ -146,8 +198,8 @@ export async function GET(request: Request) {
     userId: session.user.id,
     userEmail: session.user.email || null,
     action: 'record_export',
-    recordCount: rows.length,
-    details: { search, pgdSlug, outcome, dateFrom, dateTo },
+    recordCount: lines.length,
+    details: { search, pgdSlug, outcome, dateFrom, dateTo, source, paperRows: paperRows.length },
     request,
   })
 
