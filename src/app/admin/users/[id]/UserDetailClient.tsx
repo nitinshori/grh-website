@@ -514,7 +514,8 @@ export default function UserDetailClient({ user, pharmacies }: UserDetailClientP
               Created
             </label>
             <p className="px-3 py-2 text-gray-900">
-              {new Date(user.createdAt).toLocaleDateString('en-US', {
+              {new Date(user.createdAt).toLocaleString('en-GB', {
+                timeZone: 'Europe/London',
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric',
