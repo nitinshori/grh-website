@@ -19,10 +19,12 @@ import { PGD_MASTER_FILES } from '@/lib/pgd-document-manifest'
  * Slugs whose PDF on disk is known to be the WRONG document — download
  * stays hidden until the correct source PGD is supplied.
  *
- *   - ear-infection: the PDF is a Dexamethasone/Neomycin/Acetic acid ear
- *     SPRAY for otitis externa. The ePGD tool is Cetraxal (ciprofloxacin
- *     ear drops). Different preparation, different condition, so there is
- *     no document authorising what the tool does. Still hidden.
+ * ear-infection was removed from this list on 15 Oct 2026. It was here
+ * because an early PDF covered only the dexamethasone/neomycin/acetic acid
+ * spray; since version 007 (14 Sep 2026) the Acute Otitis Externa PGD
+ * authorises ciprofloxacin 2mg/ml ear drops as well, so the download is
+ * correct. Leaving it excluded gave pharmacies an error when they tried to
+ * read and sign it (reported by a PPH pharmacy, 15 Oct 2026).
  *
  * shingles-treatment was removed from this list on 21 Aug 2026. It was
  * here because the PDF was the Shingrix VACCINE document; a proper
@@ -30,7 +32,7 @@ import { PGD_MASTER_FILES } from '@/lib/pgd-document-manifest'
  * famciclovir was signed that day, so the download is now correct and
  * should be visible. Leaving it excluded would have hidden the fix.
  */
-const EXCLUDED_SLUGS = new Set(['ear-infection'])
+const EXCLUDED_SLUGS = new Set<string>([])
 
 /** Set of slugs that have a written PGD PDF available */
 export const PGD_DOCUMENT_SLUGS = new Set(
