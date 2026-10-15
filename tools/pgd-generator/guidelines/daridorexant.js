@@ -1,0 +1,62 @@
+// Part 2 of the daridorexant PGD: a summary of the guidance that governs
+// the service.
+//
+// Summarised on 15 October 2026 from: the QUVIVIQ 25 mg and 50 mg SmPCs on
+// emc (text revised 12 May 2025, PLGB 48711/0002 and 48711/0003, black
+// triangle), NICE TA922 (Daridorexant for treating long-term insomnia,
+// published 18 October 2023), SMC2611 (8 March 2024, published 8 April 2024), NICE MPG2
+// (Patient Group Directions), and NICE CKS Insomnia as quoted in NHS
+// Derbyshire JAPC's daridorexant prescribing guideline. Revised 15 October
+// 2026: TA922 date verified on nice.org.uk, SMC2611 wording checked against
+// the detailed advice PDF, NHS digital CBT-I offers in Scotland and Wales
+// verified on NHS Grampian and NHS Wales (Powys) pages, MPG2 1.1.1 added. Written independently
+// of the manufacturer. Nothing has been added from memory that is not in
+// those sources, other than the standard screening instruments named in
+// Appendix 2 of the PGD.
+module.exports = {
+ title:'Summary of the governing guidance for daridorexant in long-term insomnia',
+ source:'QUVIVIQ 25 mg and 50 mg film-coated tablets SmPC (Idorsia, PLGB 48711/0002 and PLGB 48711/0003, text revised 12 May 2025, black triangle), medicines.org.uk; NICE Technology Appraisal TA922, Daridorexant for treating long-term insomnia, published 18 October 2023; Scottish Medicines Consortium SMC2611, daridorexant (Quviviq), advice 8 March 2024, published 8 April 2024; NICE Medicines Practice Guideline MPG2, Patient Group Directions; NICE Clinical Knowledge Summary, Insomnia; NHS Grampian (Sleepio in Scotland) and NHS Wales SilverCloud self-referral guide. Summarised 15 October 2026.',
+ sections:[
+  {h:'The condition',body:[
+   'Insomnia is difficulty getting to sleep, difficulty staying asleep, early waking or non-restorative sleep, despite adequate opportunity for sleep, that impairs daytime functioning (poor concentration, mood disturbance, fatigue). Sleep disturbance without daytime impairment is not insomnia disorder. Symptoms on at least 3 nights a week for 3 months or more is long-term (chronic) insomnia (NICE CKS).',
+   'Before any treatment, identify and manage what may be causing or maintaining it: medical conditions (for example chronic pain, hot flushes, obstructive sleep apnoea), mental health conditions (for example depression), medicines that disturb sleep (for example stimulants, some antidepressants, corticosteroids, diuretics), alcohol, caffeine and other substances, and circadian or other sleep disorders (NICE CKS).',
+   'Sleep hygiene advice is offered first. Cognitive behavioural therapy for insomnia (CBT-I), face to face or digital, is the standard first treatment for long-term insomnia after sleep hygiene advice (NICE TA922, NICE CKS, SMC2611). NICE medical technologies guidance MTG70 recommends the digital CBT-I programme Sleepio in primary care for people who would otherwise be offered sleep hygiene advice or sleeping pills.',
+   'NHS digital CBT-I access differs across the UK. Sleepio is free to anyone living in Scotland, funded by the Scottish Government (NHS Grampian). In Wales, SilverCloud programmes, including Space for Sleep (based on CBT-I), are free by self-referral for people aged 16 and over living in Wales (NHS Wales SilverCloud guide). In England, access depends on local commissioning and NHS Talking Therapies. NICE TA922 notes that access to CBT-I varies across the UK.',
+  ]},
+  {h:'NICE TA922 and SMC2611: who daridorexant is for',body:[
+   'NICE TA922 recommends daridorexant for insomnia in adults with symptoms on 3 or more nights a week for at least 3 months, whose daytime functioning is considerably affected, ONLY IF cognitive behavioural therapy for insomnia has been tried but not worked, or is not available or is unsuitable.',
+   'Treatment should be as short as possible. It should be assessed within 3 months of starting and STOPPED in people whose long-term insomnia has not responded adequately. If it is continued, whether it is still working is assessed at regular intervals (TA922 1.2).',
+   'The committee noted trial evidence of benefit over placebo for up to 12 months; effects beyond 12 months are unknown.',
+   'SMC2611 accepts daridorexant for restricted use in NHSScotland on the same basis: patients who have failed CBT-I, or for whom CBT-I is unsuitable or unavailable. SMC noted that most trial patients had never received or been offered CBT-I, so the trials give evidence where CBT-I is unavailable or unsuitable but minimal evidence in people who have failed it. On sleep measures, the European regulator considered the 50 mg results clinically relevant and the 25 mg results questionable. Effects on daytime functioning appeared modest, and the European regulator noted that their clinical relevance is questionable. About 10 per cent more patients than placebo reached an Insomnia Severity Index below 10 at 3 months.',
+   'ISI CHANGE (SMC2611 Table 2.2, an exploratory outcome): mean fall from baseline at month 3 was 7.2 points on 50 mg, 6.0 on 25 mg and 5.4 on placebo in Study 301 (6.9 on 25 mg and 5.4 on placebo in Study 302). Clinical experts consulted by SMC noted that benzodiazepines, Z-drugs and melatonin are used off-label for prolonged periods in insomnia.',
+  ]},
+  {h:'The licence (SmPC)',body:[
+   'INDICATION: adults with insomnia characterised by symptoms present for at least 3 months and considerable impact on daytime functioning.',
+   'DOSE: 50 mg once a night, taken in the evening within 30 minutes before going to bed. Maximum 50 mg a day. 25 mg once a night with a moderate CYP3A4 inhibitor, in moderate hepatic impairment, and for some patients on clinical judgement. Not taken during the night if forgotten at bedtime. Taking it soon after a large meal may delay the effect. Grapefruit or grapefruit juice in the evening should be avoided. Can be stopped without tapering; no rebound insomnia was seen after 3 months.',
+   'DURATION: as short as possible; appropriateness of continued treatment assessed within 3 months and periodically thereafter. Clinical data cover up to 12 months of continuous treatment.',
+   'CONTRAINDICATIONS: hypersensitivity to daridorexant or an excipient; narcolepsy; concomitant strong CYP3A4 inhibitors (for example itraconazole, clarithromycin, ritonavir).',
+   'WARNINGS: caution in the elderly because of falls, and in those over 75 (limited data; no data over 85). CNS depressant effect: caution with other CNS depressants and alcohol, and about driving or hazardous activity until fully alert, especially in the first few days. Sleep paralysis, hypnagogic and hypnopompic hallucinations, and cataplexy-like symptoms (dual orexin receptor antagonist class) can occur, mainly in the first weeks: patients need further evaluation and discontinuation should be considered. Worsening of depression and suicidal thoughts have been reported with hypnotics in primarily depressed patients; caution with symptoms of depression and with psychiatric co-morbidity (limited data). Increased body sway on being woken 4 hours after a 25 or 50 mg dose was measured in healthy adults under 65 (SmPC 5.1). No worsening of sleep apnoea or oxygen saturation in mild to severe obstructive sleep apnoea or moderate COPD; not studied in severe COPD (FEV1 below 40 per cent predicted), where caution is needed. In an abuse liability study, 100 mg and 150 mg produced drug liking similar to zolpidem 30 mg; people with a history of alcohol or substance misuse need careful follow-up. No withdrawal syndrome on stopping. Not recommended in severe hepatic impairment.',
+   'DRIVING: in a simulator study, driving was impaired the morning after the first dose (9 hours after 50 mg) but not after 4 nights. About 9 hours should pass between taking a dose and driving or using machines.',
+   'PREGNANCY AND BREASTFEEDING: no human pregnancy data; use only if the clinical condition requires it. Excreted in breast milk in small amounts; a risk of excessive sleepiness in the breastfed infant cannot be excluded.',
+   'ADVERSE REACTIONS: common headache, somnolence, dizziness, fatigue, nausea; uncommon hypersensitivity (rash, urticaria), hallucinations, abnormal dreams and nightmares, sleepwalking (somnambulism), sleep paralysis. No dose relationship; the profile in older adults matched younger adults. The GB SmPC does not carry a separate complex sleep behaviour warning; sleepwalking is listed as an adverse reaction, and this PGD treats any complex sleep behaviour as a stop symptom.',
+   'BLACK TRIANGLE: subject to additional monitoring. Report every suspected adverse reaction to the MHRA Yellow Card scheme.',
+  ]},
+  {h:'Interactions (SmPC section 4.5)',body:[
+   'Daridorexant is about 89 per cent metabolised by CYP3A4. Strong CYP3A4 inhibitors: contraindicated. Moderate inhibitors (for example diltiazem, which raised exposure 2.4 times, erythromycin, ciprofloxacin, ciclosporin): 25 mg. Moderate or strong inducers (for example efavirenz, which cut exposure by 61 per cent): substantially reduced exposure and possible loss of effect.',
+   'At 50 mg daridorexant is a mild CYP3A4 inhibitor (midazolam exposure up 42 per cent) and a mild P-gp inhibitor (dabigatran exposure up 42 per cent): caution with narrow therapeutic index CYP3A4 substrates (for example high-dose simvastatin, tacrolimus) and P-gp substrates (for example digoxin). No effect on warfarin, rosuvastatin or hormonal contraceptives; no clinically relevant interaction with citalopram; acid-reducing medicines need no dose change.',
+   'Alcohol has additive effects on psychomotor performance. Other CNS depressants may need a dose change of either medicine on clinical evaluation.',
+  ]},
+  {h:'Legal status and use under a PGD',body:[
+   'QUVIVIQ is a prescription only medicine (emc). It is not a controlled drug in the UK: daridorexant is not named in the Misuse of Drugs Regulations 2001 or any amending instrument (legislation.gov.uk full-text search, 15 October 2026), and emc lists it as POM only. It is a Schedule IV controlled substance in the United States, which has no effect on UK status.',
+   'NICE MPG2: most supply should be on an individual, patient-specific basis, with PGDs reserved for limited situations in which they offer an advantage for patient care without compromising safety, with clear governance (1.1.1). A black triangle medicine may be included only when clearly justified by best clinical practice, with the black triangle status clearly shown (1.1.8). Doses of a medicine already in the patient’s possession are not adjusted (1.1.12). PGDs are not used for managing long-term conditions, or when uncertainty remains about the differential diagnosis (1.1.14).',
+   'The Medical Director’s decision of 15 October 2026 to proceed with this PGD, and his reasons against each of these recommendations, are recorded in Why this is a PGD (How to use this PGD): an initiation course only, with mandatory prescriber handover; structured screens, a sleep diary, a Summary Care Record check and referral rules for the differential diagnosis; Yellow Card reporting of every suspected reaction; and an audit he reviews.',
+  ]},
+  {h:'What to tell the patient',body:[
+   'Daridorexant blocks orexin, a brain chemical that keeps you awake; it is not a benzodiazepine or a "Z-drug". It is taken every night, within 30 minutes of going to bed, not as and when.',
+   'It works alongside, not instead of, good sleep habits and CBT-I. The improvement in trials was modest on average: at 3 months on 50 mg, falling asleep about 12 minutes sooner and about 18 minutes less time awake in the night than with a dummy tablet, measured in a sleep laboratory, with smaller differences in what patients themselves noticed.',
+   'Do not drive the morning after the first dose; take the first 4 doses only before days with no driving; after that allow at least 9 hours between a dose and driving, and drive only when fully alert. Avoid alcohol in the evening, and grapefruit in the evening.',
+   'Report sleep paralysis, vivid frightening hallucinations on falling asleep or waking, sudden muscle weakness with laughter or strong emotion, sleepwalking or doing things in your sleep, and any low mood or thoughts of self-harm.',
+   'It is reviewed within 3 months and stopped if it has not helped enough. Any continuation is for a prescriber, who may decide not to continue it.',
+  ]},
+ ],
+};

@@ -53,21 +53,28 @@ const tbl=(rows)=>new Table({columnWidths:[L,R],width:{size:W,type:WidthType.DXA
 // forgotten again by anyone writing a new document script. An arm that
 // genuinely needs to vary one can pass `training` ending with its own
 // wording; these are additive, not a replacement.
+const CAPACITY_ALL='All users must understand capacity and consent, including the Mental Capacity Act 2005, and must be able to assess consent in children and young people where this PGD covers them.';
+// build({..., adultsOnly:true}) for a PGD that covers adults only: the
+// children and young people clause is omitted. Default unchanged.
+const CAPACITY_ADULT='All users must understand capacity and consent, including the Mental Capacity Act 2005.';
 const STANDARD_TRAINING=[
+ // Training before first use (30 Sep 2026): same wording as SERVICE_TRAINING in grh_reissue.py.
+ 'All users should complete the Get Real Health training for this PGD before first working under it, or have completed equivalent training elsewhere, for example another provider\'s training for the same service or substantial recent experience of delivering it under a PGD, and must read this PGD in full before first working under it. The date the training was completed, and for equivalent training what it was, is to be recorded in the Get Real Health training record or in the employing organisation\'s own training record. The employing organisation remains responsible for being satisfied that each practitioner it authorises under this PGD is competent to do so.',
  'All users must be familiar with the current Summary of Product Characteristics for every product named in this PGD, and with current BNF and national guidance for the condition.',
  'All users must be up to date with MHRA drug safety alerts and recalls relevant to these products.',
  'All users must be up to date with their CPD requirements and appraisal.',
  'All users must hold appropriate professional indemnity covering this service.',
- 'All users must understand capacity and consent, including the Mental Capacity Act 2005, and must be able to assess consent in children and young people where this PGD covers them.',
+ CAPACITY_ALL,
 ];
+const STANDARD_TRAINING_ADULT=STANDARD_TRAINING.slice(0,-1).concat([CAPACITY_ADULT]);
 
-function armBlock(a){
+function armBlock(a,d){
   const out=[new Paragraph({children:[new PageBreak()]}),
     h(a.title,HeadingLevel.HEADING_1),
     p(a.subtitle,{b:true})];
   if(a.note) out.push(p(a.note,{i:true,color:AMB}));
   out.push(h('Healthcare professionals covered, and training',HeadingLevel.HEADING_2));
-  a.training.concat(a.skipStandardTraining?[]:STANDARD_TRAINING).forEach(t=>out.push(bl(t)));
+  a.training.concat(a.skipStandardTraining?[]:((d&&d.adultsOnly)?STANDARD_TRAINING_ADULT:STANDARD_TRAINING)).forEach(t=>out.push(bl(t)));
   out.push(h('The PGD',HeadingLevel.HEADING_2));
   out.push(tbl(a.pgd.map(r=>row(r[0],r[1]))));
   out.push(h('The medicine',HeadingLevel.HEADING_2));
@@ -385,7 +392,7 @@ function build(d){
   preambleBlock(d).forEach(k=>kids.push(k));
   d.arms.forEach(a=>{
     armCover(d,a).forEach(k=>kids.push(k));
-    armBlock(a).slice(2).forEach(k=>kids.push(k));   // skip the arm's own page break and H1: the cover replaces them; the subtitle stays
+    armBlock(a,d).slice(2).forEach(k=>kids.push(k));   // skip the arm's own page break and H1: the cover replaces them; the subtitle stays
     referencesBlock(d,a).forEach(k=>kids.push(k));
     sig(d).forEach(k=>kids.push(k));
   });
