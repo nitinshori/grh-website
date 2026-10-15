@@ -4,6 +4,7 @@ import type { ShinglesConsultationState } from "./shingles-types";
 import { SEVERE_IMMUNOSUPPRESSION_QUALIFYING } from "./shingles-types";
 import { validatePatientStep, validateConsentStep, validateSummaryStep } from "../../shared/types";
 import { daysBetween, getArm, nhsEligibleGroup, MIN_INTERVAL_DAYS, MAX_INTERVAL_DAYS } from "./shingles-clinical-logic";
+import { todayLocalIso } from "../../shared/late-entry";
 
 export function validateStep(state: ShinglesConsultationState, step: number): string | null {
   switch (step) {
@@ -102,7 +103,7 @@ export function validateStep(state: ShinglesConsultationState, step: number): st
         return "A previous Shingrix dose is recorded: this should be dose 2";
       }
       if (!state.supply.vaccinationDate) return "Vaccination date is required";
-      if (state.supply.vaccinationDate > new Date().toISOString().split("T")[0]) {
+      if (state.supply.vaccinationDate > todayLocalIso()) {
         return "Vaccination date cannot be in the future";
       }
       if (state.supply.doseNumber === "2") {
@@ -118,7 +119,7 @@ export function validateStep(state: ShinglesConsultationState, step: number): st
       }
       if (state.supply.doseNumber === "1") {
         if (!state.supply.nextDoseDue) {
-          return `Record the date the second dose is due (${intervalText} after today)`;
+          return `Record the date the second dose is due (${intervalText} after the vaccination date)`;
         }
         const gap = daysBetween(state.supply.vaccinationDate, state.supply.nextDoseDue);
         if (gap === null || gap < MIN_INTERVAL_DAYS || gap > MAX_INTERVAL_DAYS) {

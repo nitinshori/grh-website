@@ -96,10 +96,13 @@ export function validateRSVAdministrationStep(
   if (!summary.batchNumber?.trim()) return 'Batch number is required';
   if (!summary.expiryDate) return 'Expiry date is required';
   {
+    // In date on the administration date (late entry aware), else today.
     const exp = new Date(summary.expiryDate);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    if (!isNaN(exp.getTime()) && exp < today) return 'This batch has expired. Do not use it.';
+    if (summary.consultationDate) {
+      if (!isNaN(exp.getTime()) && summary.expiryDate < summary.consultationDate) return 'This batch has expired. Do not use it.';
+    } else if (!isNaN(exp.getTime()) && exp < today) return 'This batch has expired. Do not use it.';
   }
   if (!summary.administrationSite) return 'Administration site must be selected';
   if (!summary.administrationTime) return 'Time of administration is required';

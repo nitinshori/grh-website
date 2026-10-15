@@ -8,6 +8,7 @@ import {
   ReportFooter,
 } from "../../shared/components/SummaryReportShell"
 import { PGD_VERSION, PRODUCT_LABEL, SCHEDULE_LABEL, type HepABState } from "../hep-ab-travel-types"
+import { LateEntrySummaryLine } from "../../shared/components/LateEntry"
 
 const PGD_NAME = "Hepatitis A and Hepatitis B Vaccination (Havrix, Avaxim, Engerix B and Twinrix)"
 
@@ -59,6 +60,7 @@ export function HepABSummaryReport({ state, blocked, blockReason, nextDoseDueDat
       <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50 print:bg-white print:border-0 print:pb-4">
         <h2 className="text-lg font-bold text-navy-900">Consultation Record</h2>
         <p className="text-sm text-gray-500 mt-1">Hepatitis A / B Travel ePGD. {PGD_VERSION}</p>
+        <LateEntrySummaryLine slug="hep-ab-travel" className="mt-2" />
         {blocked && (
           <p className="mt-2 text-sm font-semibold text-red-700">NOT SUPPLIED: exclusion criteria met. No vaccine was administered under this PGD.</p>
         )}

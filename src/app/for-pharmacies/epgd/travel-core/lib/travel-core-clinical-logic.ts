@@ -4,6 +4,7 @@ import type {
   TravelCoreMalariaRisk,
   TravelCoreVaccineAdministration,
 } from "./travel-core-types";
+import { todayLocalIso } from "../../shared/late-entry";
 
 // ─── Date helpers: calendar days, local midnight to local midnight ───
 
@@ -24,25 +25,44 @@ function todayLocal(): Date {
   return new Date(n.getFullYear(), n.getMonth(), n.getDate());
 }
 
+/** True when asOf is a late-entry date (not today), for the wording of messages. */
+function isLateEntryDate(asOf?: string): boolean {
+  return !!asOf && asOf !== todayLocalIso();
+}
+
 export function daysBetween(from: Date, to: Date): number {
   return Math.round((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-export function daysUntilDeparture(departureDate: string): number | null {
+/**
+ * The administration date (YYYY-MM-DD) as a local-midnight Date, or today
+ * when not given. Late entry: a dose recorded on a later day is worked out
+ * from the date it was given.
+ */
+function dayOf(asOf?: string): Date {
+  return (asOf && parseLocalDate(asOf)) || todayLocal();
+}
+
+/** Days from the administration date (default today) to the departure date. */
+export function daysUntilDeparture(departureDate: string, asOf?: string): number | null {
   const d = parseLocalDate(departureDate);
   if (!d) return null;
-  return daysBetween(todayLocal(), d);
+  return daysBetween(dayOf(asOf), d);
 }
 
-/** Days from the given date to today, or null when the date is missing or invalid. */
-export function daysSince(iso: string): number | null {
+/**
+ * Days from the given date to the administration date (default today), or
+ * null when the date is missing or invalid.
+ */
+export function daysSince(iso: string, asOf?: string): number | null {
   const d = parseLocalDate(iso);
   if (!d) return null;
-  return daysBetween(d, todayLocal());
+  return daysBetween(d, dayOf(asOf));
 }
 
-export function isExpired(expiry: string): boolean {
-  const d = daysUntilDeparture(expiry);
+/** Expired when the expiry date is before the administration date (default today). */
+export function isExpired(expiry: string, asOf?: string): boolean {
+  const d = daysUntilDeparture(expiry, asOf);
   return d !== null && d < 0;
 }
 
@@ -80,24 +100,31 @@ export interface BoosterDue {
   note: string;
 }
 
-/** Next dose or booster due for each vaccine given today. */
-export function getBoosterDueDates(v: TravelCoreVaccineAdministration): BoosterDue[] {
+/**
+ * Next dose or booster due for each vaccine given, counted from the
+ * administration date (default today).
+ */
+export function getBoosterDueDates(v: TravelCoreVaccineAdministration, asOf?: string): BoosterDue[] {
+  const from = dayOf(asOf);
+  const late = isLateEntryDate(asOf);
   const out: BoosterDue[] = [];
   if (v.hepAGiven) {
     if (v.hepADose === "primary") {
-      out.push({ vaccine: "Hepatitis A", due: addMonths(6), note: "Booster due 6 to 12 months after today's primary dose for long-term protection" });
+      out.push({ vaccine: "Hepatitis A", due: addMonths(6, from), note: late
+        ? "Booster due 6 to 12 months after the date this dose was given for long-term protection"
+        : "Booster due 6 to 12 months after today's primary dose for long-term protection" });
     } else if (v.hepADose === "booster") {
       out.push({ vaccine: "Hepatitis A", due: "", note: "Course complete: long-term protection (10 years or more); no further routine booster" });
     }
   }
   if (v.typhoidGiven) {
-    out.push({ vaccine: "Typhoid", due: addYears(3), note: "Revaccination every 3 years if continuing risk" });
+    out.push({ vaccine: "Typhoid", due: addYears(3, from), note: "Revaccination every 3 years if continuing risk" });
   }
   if (v.choleraGiven) {
     if (v.choleraDose === "1") {
-      out.push({ vaccine: "Cholera", due: addDays(7), note: "Dose 2 due 1 to 6 weeks after today (from the date shown, and no later than 6 weeks); complete at least 1 week before exposure" });
+      out.push({ vaccine: "Cholera", due: addDays(7, from), note: `Dose 2 due 1 to 6 weeks after ${late ? "the date this dose was given" : "today"} (from the date shown, and no later than 6 weeks); complete at least 1 week before exposure` });
     } else if (v.choleraDose === "2" || v.choleraDose === "booster") {
-      out.push({ vaccine: "Cholera", due: addYears(2), note: "Booster every 2 years if continuing risk; after 2 years the primary course is repeated" });
+      out.push({ vaccine: "Cholera", due: addYears(2, from), note: "Booster every 2 years if continuing risk; after 2 years the primary course is repeated" });
     }
   }
   return out;
@@ -133,7 +160,8 @@ export function getVaccineDoseText(v: TravelCoreVaccineAdministration): string[]
 export function getVaccineAlerts(
   v: TravelCoreVaccineAdministration,
   age: number | null,
-  departureDate: string
+  departureDate: string,
+  asOf?: string
 ): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
   const anyGiven = v.hepAGiven || v.typhoidGiven || v.choleraGiven;
@@ -216,7 +244,7 @@ export function getVaccineAlerts(
     });
   }
   if (v.hepAGiven && v.hepADose === "booster") {
-    const gap = daysSince(v.hepAPrimaryDoseDate);
+    const gap = daysSince(v.hepAPrimaryDoseDate, asOf);
     if (gap !== null) {
       const maxGap = v.hepAPrimaryProduct === "avaxim" ? HEPA_BOOSTER_MAX_DAYS_AVAXIM : HEPA_BOOSTER_MAX_DAYS_HAVRIX;
       if (gap < 0) {
@@ -249,7 +277,7 @@ export function getVaccineAlerts(
     });
   }
   if (v.typhoidGiven && v.typhoidPreviousDose) {
-    const gap = daysSince(v.typhoidPreviousDoseDate);
+    const gap = daysSince(v.typhoidPreviousDoseDate, asOf);
     if (gap !== null && gap >= 0 && gap < TYPHOID_REVACCINATION_DAYS) {
       alerts.push({
         severity: "stop",
@@ -270,7 +298,7 @@ export function getVaccineAlerts(
     });
   }
   if (v.choleraGiven && v.choleraDose === "2") {
-    const gap = daysSince(v.choleraDose1Date);
+    const gap = daysSince(v.choleraDose1Date, asOf);
     if (gap !== null) {
       if (gap < 0) {
         alerts.push({ severity: "stop", code: "CHOLERA_DOSE1_FUTURE", message: "Dukoral dose 1 date is in the future", detail: "Check the date of dose 1." });
@@ -292,7 +320,7 @@ export function getVaccineAlerts(
     }
   }
   if (v.choleraGiven && v.choleraDose === "booster") {
-    const gap = daysSince(v.choleraLastCourseDate);
+    const gap = daysSince(v.choleraLastCourseDate, asOf);
     if (gap !== null && gap > CHOLERA_BOOSTER_MAX_DAYS) {
       alerts.push({
         severity: "caution",
@@ -304,11 +332,11 @@ export function getVaccineAlerts(
   }
 
   // Expired stock
-  if (v.hepAGiven && isExpired(v.hepAExpiry))
+  if (v.hepAGiven && isExpired(v.hepAExpiry, asOf))
     alerts.push({ severity: "stop", code: "HEPA_EXPIRED", message: "Hepatitis A vaccine batch has expired", detail: "Do not administer. Quarantine the stock and select an in-date batch." });
-  if (v.typhoidGiven && isExpired(v.typhoidExpiry))
+  if (v.typhoidGiven && isExpired(v.typhoidExpiry, asOf))
     alerts.push({ severity: "stop", code: "TYPHOID_EXPIRED", message: "Typhim Vi batch has expired", detail: "Do not administer. Quarantine the stock and select an in-date batch." });
-  if (v.choleraGiven && isExpired(v.choleraExpiry))
+  if (v.choleraGiven && isExpired(v.choleraExpiry, asOf))
     alerts.push({ severity: "stop", code: "CHOLERA_EXPIRED", message: "Dukoral batch has expired", detail: "Do not administer. Quarantine the stock and select an in-date batch." });
 
   if (anyGiven && v.immunocompromised) {
@@ -335,12 +363,12 @@ export function getVaccineAlerts(
       detail: "Antibiotics (if recently prescribed for enteric infection) may reduce Dukoral effectiveness.",
     });
   }
-  const days = daysUntilDeparture(departureDate);
+  const days = daysUntilDeparture(departureDate, asOf);
   if (anyGiven && days !== null && days < 0) {
     alerts.push({
       severity: "caution",
       code: "DEPARTURE_PAST",
-      message: "The departure date is in the past",
+      message: isLateEntryDate(asOf) ? "The departure date is before the date this dose was given" : "The departure date is in the past",
       detail: "Check the travel dates. If the traveller has already departed, record why vaccination is being given now (for example completing a course).",
     });
   }
@@ -416,12 +444,13 @@ export function getAllAlerts(
   destination: TravelCoreDestinationAssessment,
   malariaRisk: TravelCoreMalariaRisk,
   vaccines?: TravelCoreVaccineAdministration,
-  age: number | null = null
+  age: number | null = null,
+  asOf?: string
 ): ClinicalAlert[] {
   return [
     ...getDestinationAlerts(destination),
     ...getMalariaRiskAlerts(malariaRisk),
-    ...(vaccines ? getVaccineAlerts(vaccines, age, destination.departureDate) : []),
+    ...(vaccines ? getVaccineAlerts(vaccines, age, destination.departureDate, asOf) : []),
   ];
 }
 

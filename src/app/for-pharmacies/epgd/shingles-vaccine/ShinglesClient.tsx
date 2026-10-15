@@ -14,6 +14,8 @@ import { PatientDetailsStep } from "../shared/steps/PatientDetailsStep";
 import { ConsentStep } from "../shared/steps/ConsentStep";
 import { ShinglesSummaryReport } from "./components/ShinglesSummaryReport";
 import { TextInput, Checkbox, SelectInput, TextArea } from "../shared/components/FormInputs";
+import { useAdministrationDate, useLateEntry } from "../shared/components/LateEntry";
+import { lateEntryError } from "../shared/late-entry";
 
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 function reducer(state: ShinglesConsultationState, action: ShinglesAction): ShinglesConsultationState {
@@ -44,6 +46,24 @@ function reducer(state: ShinglesConsultationState, action: ShinglesAction): Shin
     case "SET_STEP":
       newState.currentStep = action.step;
       break;
+    case "SYNC_ADMINISTRATION_DATE": {
+      const reason = action.lateEntry ? action.lateEntryReason : undefined;
+      if (
+        state.supply.vaccinationDate === action.date &&
+        state.summary.consultationDate === action.date &&
+        (state.summary.lateEntry ?? false) === action.lateEntry &&
+        state.summary.lateEntryReason === reason &&
+        state.patient.age === action.age
+      ) {
+        return state;
+      }
+      return {
+        ...state,
+        patient: { ...state.patient, age: action.age },
+        supply: { ...state.supply, vaccinationDate: action.date },
+        summary: { ...state.summary, consultationDate: action.date, lateEntry: action.lateEntry, lateEntryReason: reason },
+      };
+    }
     case "RESET":
       return createInitialConsultationState();
   }
@@ -65,6 +85,22 @@ export default function ShinglesClient() {
   }, [__pharmProfile, state.summary.pharmacistName, state.summary.pharmacistGPhC]);
 
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
+
+  // Late entry: the dose may have been given on an earlier day. The vaccination
+  // date, the age at vaccination and the consultation date all follow the date
+  // given (today when no late entry is ticked).
+  const adminDate = useAdministrationDate("shingles-vaccine");
+  const lateEntryState = useLateEntry("shingles-vaccine");
+  const lateEntryValid = lateEntryState.lateEntry && lateEntryError(lateEntryState) === null;
+  useEffect(() => {
+    dispatch({
+      type: "SYNC_ADMINISTRATION_DATE",
+      date: adminDate,
+      lateEntry: lateEntryValid,
+      lateEntryReason: lateEntryValid ? lateEntryState.reason.trim() : undefined,
+      age: state.patient.dateOfBirth ? calculateAge(state.patient.dateOfBirth, adminDate) : state.patient.age,
+    });
+  }, [adminDate, lateEntryValid, lateEntryState.reason, state.patient.dateOfBirth, state.patient.age]);
 
   const alerts = useMemo(() => getAllAlerts(state), [state]);
   const hardStops = useMemo(() => hasHardStops(state), [state]);
@@ -600,15 +636,16 @@ export default function ShinglesClient() {
               required
             />
             <TextInput
-              label="Vaccination date"
+              label="Vaccination date (today, or the date given in the late-entry panel)"
               value={state.supply.vaccinationDate}
               onChange={(v) => dispatch({ type: "UPDATE_SUPPLY", field: "vaccinationDate", value: v })}
               type="date"
+              disabled
               required
             />
             {state.supply.doseNumber === "1" && (
               <TextInput
-                label={`Second dose due (${intervalText} after today)`}
+                label={`Second dose due (${intervalText} after the vaccination date)`}
                 value={state.supply.nextDoseDue}
                 onChange={(v) => dispatch({ type: "UPDATE_SUPPLY", field: "nextDoseDue", value: v })}
                 type="date"

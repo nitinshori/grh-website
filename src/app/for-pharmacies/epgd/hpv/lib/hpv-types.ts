@@ -117,6 +117,7 @@ export type HPVAction =
   | { type: "UPDATE_ADMINISTRATION"; field: keyof HPVAdministration; value: string | boolean }
   | { type: "UPDATE_SUMMARY"; field: keyof BaseSummary; value: string }
   | { type: "SET_STEP"; step: number }
+  | { type: "SYNC_ADMIN_DATE"; date: string; lateEntry: boolean; reason: string }
   | { type: "RESET" };
 
 // General informed consent is taken on the Schedule & Consent step, before

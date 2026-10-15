@@ -126,6 +126,8 @@ export type ShinglesAction =
   | { type: "UPDATE_COUNSELLING"; field: keyof ShinglesCounselling; value: boolean }
   | { type: "UPDATE_SUMMARY"; field: keyof BaseSummary; value: string }
   | { type: "SET_STEP"; step: number }
+  /** Keeps the dose date, age at vaccination and summary in step with the late-entry panel. */
+  | { type: "SYNC_ADMINISTRATION_DATE"; date: string; lateEntry: boolean; lateEntryReason?: string; age: number | null }
   | { type: "RESET" };
 
 // Consent is taken before the vaccine is drawn up: the PGD lists informed

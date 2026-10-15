@@ -3,6 +3,7 @@
 import type { CovidBoosterConsultationState } from "../lib/covid-booster-types";
 import { COVID_PRODUCTS, covidObservationMinutes } from "../lib/covid-booster-types";
 import { nhsEligible } from "../lib/covid-booster-clinical-logic";
+import { LateEntrySummaryLine } from "../../shared/components/LateEntry";
 import type { ClinicalAlert } from "../../shared/types";
 import {
   SectionHeader,
@@ -39,6 +40,7 @@ export function CovidBoosterSummaryReport({
           Consultation Date: {state.summary.consultationDate} |{" "}
           {state.summary.consultationTime}
         </p>
+        <LateEntrySummaryLine slug="covid-booster" className="mt-1" />
       </div>
 
       <SectionHeader>Patient Details</SectionHeader>

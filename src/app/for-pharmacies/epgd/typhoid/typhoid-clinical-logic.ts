@@ -1,4 +1,5 @@
 import type { ClinicalAlert } from '../shared/types';
+import { calendarYearsBetween, getAdministrationDate } from '../shared/late-entry';
 import type {
   TyphoidPatientDetails,
   TyphoidConsent,
@@ -37,19 +38,29 @@ export function formatLocalDate(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-/** Calendar days from today to the departure date, local midnight to local
- *  midnight, so a departure exactly 14 days away is 14, not 13. */
-export function daysUntilDeparture(departureDate: string): number | null {
+/** The day the dose is given, local midnight: `asOf` (yyyy-mm-dd) when
+ *  passed, otherwise the late-entry date when one is ticked and valid,
+ *  otherwise today. Every date check tied to the dose counts from this. */
+export function administrationDay(asOf?: string): Date {
+  const d = parseLocalDate(asOf || getAdministrationDate('typhoid'));
+  if (d) return d;
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
+/** Calendar days from the administration date to the departure date, local
+ *  midnight to local midnight, so a departure exactly 14 days away is 14,
+ *  not 13. */
+export function daysUntilDeparture(departureDate: string, asOf?: string): number | null {
   const departure = parseLocalDate(departureDate);
   if (!departure) return null;
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const today = administrationDay(asOf);
   return Math.round((departure.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-/** True when the expiry date (yyyy-mm-dd) is before today. */
-export function isExpired(expiryDate: string): boolean {
-  const d = daysUntilDeparture(expiryDate);
+/** True when the expiry date (yyyy-mm-dd) is before the administration date. */
+export function isExpired(expiryDate: string, asOf?: string): boolean {
+  const d = daysUntilDeparture(expiryDate, asOf);
   return d !== null && d < 0;
 }
 
@@ -59,16 +70,16 @@ export function isExpired(expiryDate: string): boolean {
  *  stands and the route is exclusion and referral. */
 export const RENEWAL_WINDOW_YEARS = 2.5;
 
-export function yearsSincePreviousDose(previousDoseDate?: string): number | null {
+/** Years from the previous dose to the administration date, counted on the
+ *  calendar (the anniversary day is a whole year). */
+export function yearsSincePreviousDose(previousDoseDate?: string, asOf?: string): number | null {
   if (!previousDoseDate) return null;
-  const previousDose = new Date(previousDoseDate);
-  if (Number.isNaN(previousDose.getTime())) return null;
-  const today = new Date();
-  return (today.getTime() - previousDose.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+  return calendarYearsBetween(previousDoseDate, formatLocalDate(administrationDay(asOf)));
 }
 
-/** Booster every 3 years: the date the next booster is due, ISO yyyy-mm-dd. */
-export function nextBoosterDueDate(from: Date = new Date()): string {
+/** Booster every 3 years from the administration date: the date the next
+ *  booster is due, ISO yyyy-mm-dd. */
+export function nextBoosterDueDate(from: Date = administrationDay()): string {
   const d = new Date(from.getFullYear() + 3, from.getMonth(), from.getDate());
   return formatLocalDate(d);
 }

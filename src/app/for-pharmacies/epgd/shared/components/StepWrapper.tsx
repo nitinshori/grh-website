@@ -15,6 +15,8 @@ import {
   vaccineSafetySatisfied,
   type VaccineObservationControl,
 } from "./VaccineSafetyChecks";
+import { LateEntry, useLateEntry } from "./LateEntry";
+import { clearLateEntry, lateEntryError, LATE_ENTRY_SLUGS } from "../late-entry";
 import { AttachmentUploader } from "@/components/consultation-attachments/AttachmentUploader";
 
 interface StepWrapperProps {
@@ -70,10 +72,15 @@ export function StepWrapper({
   // Extract pgdSlug from URL: /for-pharmacies/epgd/{slug}
   const pathname = usePathname();
   const pgdSlug = pathname.split("/").pop() || "";
-  const { markComplete, saveRecord, reset, recordId } = useConsultationTracking(
+  const { markComplete, saveRecord, reset, recordId, saveError } = useConsultationTracking(
     pgdSlug,
     currentStep
   );
+
+  // Late entry (dose given on an earlier day): a ticked but incomplete or
+  // out-of-range entry blocks Next and Save, like the adrenaline tick.
+  const lateEntry = useLateEntry(pgdSlug);
+  const lateEntryProblem = LATE_ENTRY_SLUGS.has(pgdSlug) ? lateEntryError(lateEntry) : null;
 
   // A saved consultation that goes back to the first step is a new patient
   // in tools that have no "New Consultation" button: forget the save so the
@@ -90,7 +97,7 @@ export function StepWrapper({
     // could be saved and printed with the pharmacist's name blank, an
     // observation period unticked, or an exclusion on screen (adversarial
     // review, 11 Sep 2026). Same rules as Next.
-    if (!canProceed || isBlocked || validationError || !vaccineSafetySatisfied(pgdSlug)) {
+    if (!canProceed || isBlocked || validationError || !vaccineSafetySatisfied(pgdSlug) || lateEntryProblem) {
       setHasAttemptedNext(true);
       return;
     }
@@ -119,12 +126,14 @@ export function StepWrapper({
 
     // Print
     window.print();
-  }, [markComplete, getConsultationData, saveRecord, canProceed, isBlocked, validationError, pgdSlug]);
+  }, [markComplete, getConsultationData, saveRecord, canProceed, isBlocked, validationError, pgdSlug, lateEntryProblem]);
 
   // Every PGD requires the advice given to an excluded patient to be
   // recorded, and until now no tool could save a consultation once a stop
   // was on screen: Next was disabled and Save only existed on the last step.
   // Any step with a stop can now be saved as "not supplied", without a print.
+  // No dose is given, so the late-entry panel plays no part: the record is
+  // dated today with no late-entry line (useConsultationTracking.saveRecord).
   const handleSaveNotSupplied = useCallback(async () => {
     if (!getConsultationData) return;
     setSaveStatus("saving");
@@ -149,6 +158,7 @@ export function StepWrapper({
       setSaveStatus("idle");
       reset();
       clearVaccineSafety(pgdSlug);
+      clearLateEntry(pgdSlug);
       onNewConsultation?.();
     }
   }, [onNewConsultation, pgdSlug, reset]);
@@ -190,6 +200,15 @@ export function StepWrapper({
 
       {/* Step content */}
       <div className="px-6 py-6">{children}</div>
+
+      {/* Late entry: a dose given on an earlier day (vaccination tools only) */}
+      <LateEntry slug={pgdSlug} />
+
+      {hasAttemptedNext && lateEntryProblem && (
+        <div className="mx-6 mb-3 rounded-lg border border-red-400 bg-red-100 px-4 py-2 text-sm text-red-900 print:hidden">
+          {lateEntryProblem}
+        </div>
+      )}
 
       {/* Validation error — only shown after user has attempted to proceed */}
       <VaccineSafetyChecks slug={pgdSlug} observation={vaccineObservation} />
@@ -242,7 +261,7 @@ export function StepWrapper({
             {saveStatus === "saved" &&
               "Consultation record saved. You can access it from Patient Records on your dashboard."}
             {saveStatus === "error" &&
-              "Could not save consultation record. Please print this page as a backup."}
+              (saveError ?? "Could not save consultation record. Please print this page as a backup.")}
           </p>
           {saveStatus === "saved" && recordId && (
             <div className="mt-3 pt-3 border-t border-green-200">
@@ -290,7 +309,7 @@ export function StepWrapper({
           {!isLastStep ? (
             <button
               onClick={() => {
-                if (!canProceed || isBlocked || !vaccineSafetySatisfied(pgdSlug)) {
+                if (!canProceed || isBlocked || !vaccineSafetySatisfied(pgdSlug) || lateEntryProblem) {
                   setHasAttemptedNext(true);
                 } else {
                   onNext();
@@ -299,7 +318,7 @@ export function StepWrapper({
               className={`
                 px-6 py-2.5 rounded-lg text-sm font-semibold transition-colors
                 ${
-                  canProceed && !isBlocked && vaccineSafetySatisfied(pgdSlug)
+                  canProceed && !isBlocked && vaccineSafetySatisfied(pgdSlug) && !lateEntryProblem
                     ? "bg-[color:var(--tenant-primary)]/100 hover:bg-[color:var(--tenant-primary)]/15 text-white"
                     : "bg-gray-200 text-gray-400 cursor-not-allowed"
                 }

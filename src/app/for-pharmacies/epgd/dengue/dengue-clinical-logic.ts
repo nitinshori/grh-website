@@ -249,15 +249,19 @@ export function todayIso(): string {
 
 /**
  * Is the second dose due yet? True when firstDoseDate + 3 calendar months is
- * on or before today. Null when the date is missing or unreadable.
+ * on or before the administration date (asOf, YYYY-MM-DD, default today).
+ * Null when the date is missing or unreadable.
  */
-export function secondDoseIntervalMet(firstDoseDate: string): boolean | null {
+export function secondDoseIntervalMet(firstDoseDate: string, asOf?: string): boolean | null {
   if (!firstDoseDate) return null;
   const first = new Date(firstDoseDate);
   if (isNaN(first.getTime())) return null;
   first.setHours(0, 0, 0, 0);
   const due = addMonthsClamped(first, DOSE_INTERVAL_MONTHS);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return due.getTime() <= today.getTime();
+  // YYYY-MM-DD parsed as local midnight so the comparison is by calendar day.
+  const m = asOf ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(asOf) : null;
+  if (asOf && !m) return null;
+  const ref = m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date();
+  ref.setHours(0, 0, 0, 0);
+  return due.getTime() <= ref.getTime();
 }

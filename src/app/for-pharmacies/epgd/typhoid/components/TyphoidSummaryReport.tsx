@@ -10,6 +10,7 @@ import {
   ReportFooter,
 } from '../../shared/components/SummaryReportShell';
 import type { ClinicalAlert } from '../../shared/types';
+import { LateEntrySummaryLine } from '../../shared/components/LateEntry';
 import type {
   TyphoidPatientDetails,
   TyphoidConsent,
@@ -82,6 +83,7 @@ export default function TyphoidSummaryReport({
       <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50 print:bg-white print:border-0 print:pb-4">
         <h2 className="text-lg font-bold text-navy-900">Consultation Record</h2>
         <p className="text-sm text-gray-500 mt-1">Typhoid ePGD. Typhoid (Vi Polysaccharide Vaccine) PGD v007, issued 14 September 2026</p>
+        <LateEntrySummaryLine slug="typhoid" className="mt-2" />
         {isBlocked && (
           <p className="mt-2 text-sm font-semibold text-red-700">NOT SUPPLIED: exclusion criteria met. No vaccine was administered under this PGD.</p>
         )}

@@ -5,6 +5,7 @@ import type {
   MeningitisACWYMedicalHistory,
   MeningitisACWYPostVaccineAdvice,
 } from './meningitis-acwy-travel-types';
+import { todayLocalIso } from '../shared/late-entry';
 import {
   calculateAgeInDays,
   calculateAgeInMonths,
@@ -19,13 +20,15 @@ import {
 const TWO_MONTHS_DAYS = 61;
 
 export function validateMeningitisACWYPatientStep(
-  patient: MeningitisACWYPatientDetails
+  patient: MeningitisACWYPatientDetails,
+  /** Date the dose is given, YYYY-MM-DD (late-entry date or today). */
+  asOf?: string
 ): string | null {
   if (!patient.firstName.trim()) return 'Patient first name is required';
   if (!patient.lastName.trim()) return 'Patient last name is required';
   if (!patient.dateOfBirth) return 'Date of birth is required';
   if (patient.age === null) return 'Unable to calculate age';
-  const ageDays = calculateAgeInDays(patient.dateOfBirth);
+  const ageDays = calculateAgeInDays(patient.dateOfBirth, asOf);
   if (ageDays !== null && ageDays < 42) {
     return 'Patient must be at least 6 weeks old (Nimenrix minimum age; MenQuadfi from 12 months, Menveo from 2 years)';
   }
@@ -38,7 +41,9 @@ export function validateMeningitisACWYTravelStep(
     travelDestinationConfirmed: boolean;
     travelReasonConfirmed: boolean;
     timingConfirmed: boolean;
-  }
+  },
+  /** Date the dose is given, YYYY-MM-DD (late-entry date or today). */
+  asOf?: string
 ): string | null {
   if (!patient.travelDestination.trim()) return 'Travel destination is required';
   if (!patient.travelReason) return 'Select the reason for travel';
@@ -47,7 +52,7 @@ export function validateMeningitisACWYTravelStep(
     return 'Record the date of the previous MenACWY dose';
   }
   if (patient.previousMenACWYDose && patient.previousDoseDate) {
-    const since = daysSince(patient.previousDoseDate);
+    const since = daysSince(patient.previousDoseDate, asOf);
     if (since === null) return 'Previous dose date is not a valid date';
     if (since < 0) return 'Previous dose date cannot be in the future';
     const ageAt = ageInMonthsAt(patient.dateOfBirth, patient.previousDoseDate);
@@ -115,11 +120,13 @@ const PRODUCT_LABEL: Record<string, string> = {
 export function validateMeningitisACWYAdministrationStep(
   summary: Partial<MeningitisACWYSummary>,
   patient: MeningitisACWYPatientDetails,
-  medicalHistory: MeningitisACWYMedicalHistory
+  medicalHistory: MeningitisACWYMedicalHistory,
+  /** Date the dose is given, YYYY-MM-DD (late-entry date or today). */
+  asOf?: string
 ): string | null {
   if (!summary.vaccineType) return 'Select the vaccine type';
-  const ageDays = calculateAgeInDays(patient.dateOfBirth);
-  const ageMonths = calculateAgeInMonths(patient.dateOfBirth);
+  const ageDays = calculateAgeInDays(patient.dateOfBirth, asOf);
+  const ageMonths = calculateAgeInMonths(patient.dateOfBirth, asOf);
   const min = MENACWY_MIN_AGE_MONTHS[summary.vaccineType];
   if (summary.vaccineType === 'nimenrix' && ageDays !== null && ageDays < 42) {
     return 'Nimenrix is licensed from 6 weeks; this patient is younger. Do not vaccinate under this PGD.';
@@ -143,14 +150,15 @@ export function validateMeningitisACWYAdministrationStep(
   if (!summary.doseNumber) return 'Select the dose number';
   if (!summary.expiryDate) return 'Expiry date is required';
   {
-    const exp = daysFromToday(summary.expiryDate);
+    // In date on the day the dose is given.
+    const exp = daysFromToday(summary.expiryDate, asOf);
     if (exp === null) return 'Expiry date is not a valid date';
     if (exp < 0) return 'This batch has expired. Do not use it.';
   }
 
-  const since = daysSince(patient.previousDoseDate);
+  const since = daysSince(patient.previousDoseDate, asOf);
   const ageAtPrevious = ageInMonthsAt(patient.dateOfBirth, patient.previousDoseDate);
-  const infantBooster = isInfantBoosterCandidate(patient);
+  const infantBooster = isInfantBoosterCandidate(patient, asOf);
   const infantCourseContinuing =
     patient.previousMenACWYDose && ageMonths !== null && ageMonths < 12 && ageAtPrevious !== null && ageAtPrevious < 6;
 
@@ -187,12 +195,14 @@ export function validateMeningitisACWYAdministrationStep(
   // Intervals. Every infant schedule in the PGD is defined by a gap of at
   // least 2 months; until now the tool checked which label was allowed but
   // never the gap.
+  // "days ago" unless a late entry has moved the date the dose was given.
+  const agoText = asOf && asOf !== todayLocalIso() ? 'days before the date this dose was given' : 'days ago';
   if (summary.doseNumber === '2nd') {
     if (!patient.previousMenACWYDose || !patient.previousDoseDate) {
       return '2nd dose: tick "Previous MenACWY dose received" on the travel step and record the date of the 1st dose';
     }
     if (since !== null && since < TWO_MONTHS_DAYS) {
-      return `2nd dose: the two doses must be at least 2 months apart. The 1st dose was ${since} days ago; not due until ${TWO_MONTHS_DAYS} days`;
+      return `2nd dose: the two doses must be at least 2 months apart. The 1st dose was ${since} ${agoText}; not due until ${TWO_MONTHS_DAYS} days`;
     }
   }
   if (summary.doseNumber === 'booster-12-months') {
@@ -209,7 +219,7 @@ export function validateMeningitisACWYAdministrationStep(
       return 'Booster at 12 months applies only where the primary dose was given before 12 months of age';
     }
     if (since !== null && since < TWO_MONTHS_DAYS) {
-      return `Booster at 12 months: must be at least 2 months after the primary dose. The primary dose was ${since} days ago; not due until ${TWO_MONTHS_DAYS} days`;
+      return `Booster at 12 months: must be at least 2 months after the primary dose. The primary dose was ${since} ${agoText}; not due until ${TWO_MONTHS_DAYS} days`;
     }
   }
   if (summary.doseNumber === 'repeat-certificate') {

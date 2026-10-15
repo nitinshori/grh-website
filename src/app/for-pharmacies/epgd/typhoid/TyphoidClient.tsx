@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { TextInput, Checkbox, SelectInput, TextArea } from '../shared/components/FormInputs';
 import { ProgressBar } from '../shared/components/ProgressBar';
 import { StepWrapper } from '../shared/components/StepWrapper';
@@ -26,6 +26,7 @@ import {
   daysUntilDeparture,
   yearsSincePreviousDose,
   nextBoosterDueDate,
+  administrationDay,
   RENEWAL_WINDOW_YEARS,
   TYPHOID_PGD_VERSION,
 } from './typhoid-clinical-logic';
@@ -40,6 +41,8 @@ import {
   GILLICK_MIN_AGE,
 } from './typhoid-validation';
 import { calculateAge } from '../shared/types';
+import { useAdministrationDate, useLateEntry } from '../shared/components/LateEntry';
+import { getAdministrationDate, lateEntryError } from '../shared/late-entry';
 import { usePharmacistProfile } from '../shared/hooks/usePharmacistProfile';
 import { useFormPersistence } from '../shared/hooks/useFormPersistence';
 import TyphoidSummaryReport from './components/TyphoidSummaryReport';
@@ -186,7 +189,7 @@ export function TyphoidClient() {
       setPatientDetails((prev) => {
         const updated = { ...prev, [field]: value };
         if (field === 'dateOfBirth') {
-          updated.age = calculateAge(value);
+          updated.age = calculateAge(value, getAdministrationDate('typhoid'));
         }
         return updated;
       });
@@ -194,10 +197,49 @@ export function TyphoidClient() {
     []
   );
 
+  // Late entry: every date tied to the dose (age, days to departure, years
+  // since the previous dose, batch expiry, next booster due) counts from the
+  // date the dose was given, not the day the record is typed.
+  const adminDate = useAdministrationDate('typhoid');
+  const lateEntryState = useLateEntry('typhoid');
+  const lateEntryValid = lateEntryState.lateEntry && lateEntryError(lateEntryState) === null;
+  const lateEntryReason = lateEntryValid ? lateEntryState.reason.trim() : undefined;
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- late-entry sync; returns prev when unchanged
+    setSummary((prev) =>
+      prev.consultationDate === adminDate &&
+      !!prev.lateEntry === lateEntryValid &&
+      prev.lateEntryReason === lateEntryReason
+        ? prev
+        : { ...prev, consultationDate: adminDate, lateEntry: lateEntryValid, lateEntryReason }
+    );
+  }, [adminDate, lateEntryValid, lateEntryReason, summary.consultationDate, summary.lateEntry, summary.lateEntryReason]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- late-entry sync; returns prev when unchanged
+    setPatientDetails((prev) => {
+      const age = calculateAge(prev.dateOfBirth, adminDate);
+      return prev.age === age ? prev : { ...prev, age };
+    });
+  }, [adminDate, patientDetails.dateOfBirth]);
+  // The next booster date is pre-filled 3 years from the administration
+  // date. When the late-entry date changes, a pre-filled date follows it; a
+  // date the pharmacist typed is left alone.
+  const prevAdminDate = useRef(adminDate);
+  useEffect(() => {
+    const before = prevAdminDate.current;
+    prevAdminDate.current = adminDate;
+    if (before === adminDate) return;
+    const oldDefault = nextBoosterDueDate(administrationDay(before));
+    const newDefault = nextBoosterDueDate(administrationDay(adminDate));
+    setSummary((prev) => (prev.nextBoosterDue === oldDefault ? { ...prev, nextBoosterDue: newDefault } : prev));
+  }, [adminDate]);
+
   // Get clinical alerts
   const clinicalAlerts = useMemo(() => {
     return getTyphoidClinicalAlerts(patientDetails, medicalHistory);
-  }, [patientDetails, medicalHistory]);
+    // adminDate: the alerts read the administration date from the late-entry store.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patientDetails, medicalHistory, adminDate]);
 
   const isBlocked = useMemo(() => {
     return shouldBlockConsultation(clinicalAlerts);
@@ -214,7 +256,8 @@ export function TyphoidClient() {
 
   const administrationValidationError = useMemo(() => {
     return validateTyphoidAdministrationStep(summary);
-  }, [summary]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [summary, adminDate]);
 
   const summaryValidationError = useMemo(() => {
     return validateTyphoidSummaryStep(summary);
@@ -222,7 +265,8 @@ export function TyphoidClient() {
 
   const travelValidationError = useMemo(() => {
     return validateTyphoidStep(patientDetails, travelAssessment);
-  }, [patientDetails, travelAssessment]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patientDetails, travelAssessment, adminDate]);
 
   const medicalHistoryValidationError = useMemo(() => {
     return validateTyphoidMedicalHistoryStep(medicalHistory);
@@ -232,7 +276,7 @@ export function TyphoidClient() {
     return validateTyphoidPostVaccineStep(postVaccineAdvice);
   }, [postVaccineAdvice]);
 
-  const daysToDeparture = useMemo(() => daysUntilDeparture(patientDetails.departureDate), [patientDetails.departureDate]);
+  const daysToDeparture = useMemo(() => daysUntilDeparture(patientDetails.departureDate, adminDate), [patientDetails.departureDate, adminDate]);
   const isUnder16 = patientDetails.age !== null && patientDetails.age < 16;
 
   // Step can proceed checks
@@ -247,7 +291,7 @@ export function TyphoidClient() {
   const canProceedStep5 = administrationValidationError === null && !isBlocked;
   const canProceedStep6 = postVaccineValidationError === null && !isBlocked;
   const canProceedStep7 = summaryValidationError === null && !isBlocked;
-  const yearsSincePrevious = useMemo(() => yearsSincePreviousDose(patientDetails.previousDoseDate), [patientDetails.previousDoseDate]);
+  const yearsSincePrevious = useMemo(() => yearsSincePreviousDose(patientDetails.previousDoseDate, adminDate), [patientDetails.previousDoseDate, adminDate]);
   const renewalWindow = yearsSincePrevious !== null && yearsSincePrevious >= RENEWAL_WINDOW_YEARS && yearsSincePrevious < 3;
 
   const canProceedByStep = [
@@ -874,7 +918,7 @@ export function TyphoidClient() {
                 setSummary({
                   ...summary,
                   vaccineType: v as TyphoidSummary['vaccineType'],
-                  nextBoosterDue: summary.nextBoosterDue || nextBoosterDueDate(),
+                  nextBoosterDue: summary.nextBoosterDue || nextBoosterDueDate(administrationDay(adminDate)),
                 })
               }
               options={[
@@ -970,7 +1014,7 @@ export function TyphoidClient() {
                 onChange={(e) => setSummary({ ...summary, nextBoosterDue: e.target.value })}
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)] focus:border-transparent"
               />
-              <p className="text-xs text-gray-500 mt-1">Pre-filled as 3 years from today when the vaccine is selected; record the date the next booster is due.</p>
+              <p className="text-xs text-gray-500 mt-1">Pre-filled as 3 years from the date the dose is given when the vaccine is selected; record the date the next booster is due.</p>
             </div>
           </div>
         </StepWrapper>

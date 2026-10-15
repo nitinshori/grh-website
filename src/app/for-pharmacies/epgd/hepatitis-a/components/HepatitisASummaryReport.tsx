@@ -10,6 +10,7 @@ import {
   ReportFooter,
 } from '../../shared/components/SummaryReportShell';
 import type { ClinicalAlert } from '../../shared/types';
+import { LateEntrySummaryLine } from '../../shared/components/LateEntry';
 import type {
   HepatitisAPatientDetails,
   HepatitisAConsent,
@@ -110,6 +111,7 @@ export default function HepatitisASummaryReport({
       <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50 print:bg-white print:border-0 print:pb-4">
         <h2 className="text-lg font-bold text-navy-900">Consultation Record</h2>
         <p className="text-sm text-gray-500 mt-1">Hepatitis A Vaccination ePGD. {HEPATITIS_A_PGD_VERSION}</p>
+        <LateEntrySummaryLine slug="hepatitis-a" className="mt-2" />
         {isBlocked && (
           <p className="mt-2 text-sm font-semibold text-red-700">
             {consent.patientDeclined

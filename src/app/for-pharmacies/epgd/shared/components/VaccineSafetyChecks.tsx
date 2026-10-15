@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { VACCINE_SLUGS } from "../vaccine-slugs";
 
 /**
  * Pre-vaccination safety checks, shown on every vaccination ePGD.
@@ -27,30 +28,9 @@ import { useEffect, useState } from "react";
  * only partly covered is part of the check.
  */
 
-/** Vaccination PGD slugs. A tool not in this list renders nothing extra. */
-export const VACCINE_SLUGS = new Set([
-  "covid-booster",
-  "flu",
-  "hpv",
-  "mmr",
-  "pneumococcal",
-  "rsv",
-  "shingles-vaccine",
-  "chickenpox",
-  "dengue",
-  "hep-ab-travel",
-  "hepatitis-a",
-  "hep-b-occupational",
-  "japanese-encephalitis",
-  "junior-travel",
-  "meningitis-acwy-travel",
-  "meningitis-b",
-  "rabies",
-  "tetanus",
-  "travel-core",
-  "typhoid",
-  "yellow-fever",
-]);
+// The slug list lives in a plain module (no "use client") so the
+// consultation-records API route can share it through late-entry.ts.
+export { VACCINE_SLUGS } from "../vaccine-slugs";
 
 /** Do not use StepWrapper, so this component must be added to them directly. */
 export const NON_STEPWRAPPER = ["dengue", "japanese-encephalitis", "flu", "rabies"];

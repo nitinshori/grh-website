@@ -11,6 +11,10 @@ import {
   clearVaccineSafety,
   vaccineSafetySatisfied,
 } from "../shared/components/VaccineSafetyChecks";
+// Late entry (dose given on an earlier day): mounted directly for the same
+// reason as the safety panel above.
+import { LateEntry, useLateEntry, useAdministrationDate } from "../shared/components/LateEntry";
+import { lateEntrySatisfied, lateEntryError, getLateEntry, clearLateEntry } from "../shared/late-entry";
 import {
   JapaneseEncephalitisConsultationState,
   JapaneseEncephalitisScreening,
@@ -106,27 +110,58 @@ export default function JapaneseEncephalitisClient({
     new Map<number, string[]>()
   );
 
-  const patientAge = calculateAge(state.patient.dateOfBirth);
-  const patientAgeMonths = calculateAgeInMonths(state.patient.dateOfBirth);
+  // Date the dose was given: today, or the late-entry date when one is
+  // ticked and valid. Age, days to departure, the next-dose schedule and the
+  // batch expiry check all run from this date.
+  const adminDate = useAdministrationDate('japanese-encephalitis');
+  const lateEntryState = useLateEntry('japanese-encephalitis');
+  const lateEntryValid = lateEntryState.lateEntry && lateEntryError(lateEntryState) === null;
+  const lateEntryReason = lateEntryValid ? lateEntryState.reason.trim() : undefined;
+
+  // Keep the summary's consultation date and late-entry flag in step with the date given.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs from the external late-entry store; returns prev unchanged when already equal
+    setState((prev) => {
+      if (
+        prev.summary.consultationDate === adminDate &&
+        !!prev.summary.lateEntry === lateEntryValid &&
+        prev.summary.lateEntryReason === lateEntryReason
+      ) {
+        return prev;
+      }
+      return {
+        ...prev,
+        summary: {
+          ...prev.summary,
+          consultationDate: adminDate,
+          lateEntry: lateEntryValid ? true : undefined,
+          lateEntryReason,
+        },
+      };
+    });
+  }, [adminDate, lateEntryValid, lateEntryReason]);
+
+  const patientAge = calculateAge(state.patient.dateOfBirth, adminDate);
+  const patientAgeMonths = calculateAgeInMonths(state.patient.dateOfBirth, adminDate);
   const underSixteen = patientAge !== null && patientAge < 16;
   const doseVolume = getDoseVolume(patientAgeMonths);
   const rapidOffLabel = isRapidScheduleOffLabel(patientAge);
-  const daysToDeparture = daysUntil(state.screening.departureDate);
+  const daysToDeparture = daysUntil(state.screening.departureDate, adminDate);
   const latePresenter = daysToDeparture !== null && daysToDeparture >= 0 && daysToDeparture < 14;
 
   // Contraindications and alerts are derived live from what is on screen, so
   // a stop raised on any step is enforced on that step and every later one,
   // never against a copy taken when a step was left.
   const live = useMemo(
-    () => evaluateJapaneseEncephalitisContraindications(state.screening, patientAgeMonths, patientAge),
-    [state.screening, patientAgeMonths, patientAge]
+    () => evaluateJapaneseEncephalitisContraindications(state.screening, patientAgeMonths, patientAge, adminDate),
+    [state.screening, patientAgeMonths, patientAge, adminDate]
   );
   const hasStops = hasHardStopContraindications(live.contraindications);
 
   // Next dose is computed from the schedule and the dose number together.
   const nextDose = useMemo(
-    () => calculateNextDose(state.administration.schedule, state.administration.doseNumber, patientAge),
-    [state.administration.schedule, state.administration.doseNumber, patientAge]
+    () => calculateNextDose(state.administration.schedule, state.administration.doseNumber, patientAge, adminDate),
+    [state.administration.schedule, state.administration.doseNumber, patientAge, adminDate]
   );
   /** State as it is recorded and printed: live alerts and the computed next-due date folded in. */
   const recordState = useMemo<JapaneseEncephalitisConsultationState>(
@@ -431,7 +466,7 @@ export default function JapaneseEncephalitisClient({
 
     switch (stepNum) {
       case 0: {
-        const result = validatePatientDetails(state.patient);
+        const result = validatePatientDetails(state.patient, adminDate);
         errors.push(...result.errors);
         break;
       }
@@ -441,7 +476,7 @@ export default function JapaneseEncephalitisClient({
         break;
       }
       case 2: {
-        const result = validateScreening(state.screening);
+        const result = validateScreening(state.screening, adminDate);
         errors.push(...result.errors);
         break;
       }
@@ -458,7 +493,7 @@ export default function JapaneseEncephalitisClient({
         break;
       }
       case 5: {
-        const result = validateAdministration(state.administration, state.screening, patientAge);
+        const result = validateAdministration(state.administration, state.screening, patientAge, adminDate);
         errors.push(...result.errors);
         break;
       }
@@ -486,6 +521,10 @@ export default function JapaneseEncephalitisClient({
     if (!vaccineSafetySatisfied('japanese-encephalitis')) {
       errors.push('Confirm in the pre-vaccination safety checks that adrenaline 1 in 1,000 is immediately available');
     }
+    // A ticked late entry must be complete (date given and reason) first.
+    if (!lateEntrySatisfied('japanese-encephalitis')) {
+      errors.push(lateEntryError(getLateEntry('japanese-encephalitis')) ?? 'Complete the late entry panel');
+    }
 
     if (errors.length > 0) {
       setValidationErrors(new Map(validationErrors).set(stepNum, errors));
@@ -498,7 +537,7 @@ export default function JapaneseEncephalitisClient({
       return newErrors;
     });
     return true;
-  }, [state, validationErrors, patientAge, live.alerts, live.contraindications]);
+  }, [state, validationErrors, patientAge, live.alerts, live.contraindications, adminDate]);
 
   const handleNextStep = useCallback((): void => {
     if (!validateStep(state.step)) {
@@ -608,6 +647,7 @@ export default function JapaneseEncephalitisClient({
     const errors: string[] = [];
     if (!state.screening.exclusionAdvice.trim()) errors.push('Record the advice given and the decision reached');
     if (!state.screening.exclusionReferral) errors.push('Record whether the GP was informed or a referral made');
+    // No dose given: the late-entry panel plays no part here.
     // Pharmacist name and GPhC come from the profile autofill; an exclusion
     // record with them blank is still better than none, so they are not
     // required here (the summary step is unreachable while a stop exists).
@@ -630,6 +670,7 @@ export default function JapaneseEncephalitisClient({
     // next patient is never written and inherits this one's batch number.
     resetTracking();
     clearVaccineSafety('japanese-encephalitis');
+    clearLateEntry('japanese-encephalitis');
     setExcludedRecord(false);
     setState({
       patient: { ...(initialPatient || initialPatientDetails) },
@@ -717,6 +758,9 @@ export default function JapaneseEncephalitisClient({
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <VaccineSafetyChecks slug="japanese-encephalitis" />
+      <div className="max-w-4xl mx-auto print:hidden">
+        <LateEntry slug="japanese-encephalitis" />
+      </div>
       <div className="max-w-4xl mx-auto">
         {state.step === 0 && (
           <div className="mb-4 print:hidden">

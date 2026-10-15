@@ -9,6 +9,8 @@ import { ConsentStep } from "../shared/steps/ConsentStep"
 import { TextInput, TextArea, Checkbox } from "../shared/components/FormInputs"
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile"
 import DateInput from '@/components/DateInput'
+import { LateEntrySummaryLine, useAdministrationDate, useLateEntry } from "../shared/components/LateEntry"
+import { lateEntryError } from "../shared/late-entry"
 
 const STEP_TITLES = [
   "Patient Details",
@@ -67,8 +69,29 @@ export function ChikungunyaClient() {
       anaphylaxisKitChecked: false,
       yellowCardDiscussed: false,
     },
-    summary: { pharmacistName: "", pharmacistGPhC: "", pharmacyName: "", pharmacyAddress: "", consultationDate: new Date().toISOString().split("T")[0], consultationTime: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }), clinicalNotes: "" },
+    summary: { pharmacistName: "", pharmacistGPhC: "", pharmacyName: "", pharmacyAddress: "", consultationDate: new Date().toISOString().split("T")[0], consultationTime: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }), clinicalNotes: "", lateEntry: undefined as boolean | undefined, lateEntryReason: undefined as string | undefined },
   })
+
+  // Administration date: today, or the date the dose was given for a late entry.
+  const adminDate = useAdministrationDate("chikungunya")
+  const lateEntryState = useLateEntry("chikungunya")
+  const lateEntryValid = lateEntryState.lateEntry && lateEntryError(lateEntryState) === null
+  const lateEntryReason = lateEntryValid ? lateEntryState.reason : undefined
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs from the external late-entry store; returns prev unchanged when already equal
+    setState((prev) => {
+      const nextLate = lateEntryValid ? true : undefined
+      if (
+        prev.summary.consultationDate === adminDate &&
+        prev.summary.lateEntry === nextLate &&
+        prev.summary.lateEntryReason === lateEntryReason
+      ) {
+        return prev
+      }
+      return { ...prev, summary: { ...prev.summary, consultationDate: adminDate, lateEntry: nextLate, lateEntryReason } }
+    })
+  }, [adminDate, lateEntryValid, lateEntryReason])
 
   const pharmProfile = usePharmacistProfile()
   useEffect(() => {
@@ -323,7 +346,7 @@ export function ChikungunyaClient() {
                 <DateInput
                   value={state.administration.expiryDate}
                   onChange={(e) => updateAdmin("expiryDate", e.target.value)}
-                  min={new Date().toISOString().split("T")[0]}
+                  min={adminDate}
                   className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--tenant-primary)]"
                 />
               </div>
@@ -385,6 +408,8 @@ export function ChikungunyaClient() {
         )}
 
         {currentStep === 6 && (
+          <div className="space-y-3">
+          <LateEntrySummaryLine slug="chikungunya" />
           <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
             <p className="text-sm font-semibold text-green-900">Consultation record complete</p>
             <p className="text-sm text-green-800 mt-1">
@@ -392,6 +417,7 @@ export function ChikungunyaClient() {
               vaccine takes ~14 days to achieve adequate protection — they
               should bite-avoid carefully in the meantime.
             </p>
+          </div>
           </div>
         )}
       </StepWrapper>

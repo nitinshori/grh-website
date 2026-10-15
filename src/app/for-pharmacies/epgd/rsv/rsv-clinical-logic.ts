@@ -4,7 +4,9 @@ import type { RSVPatientDetails, RSVMedicalHistory } from './rsv-types';
 
 export function getRSVClinicalAlerts(
   patient: RSVPatientDetails,
-  medicalHistory: RSVMedicalHistory
+  medicalHistory: RSVMedicalHistory,
+  /** Administration date, YYYY-MM-DD (late entry aware). Defaults to today. */
+  asOf?: string
 ): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
 
@@ -77,7 +79,7 @@ export function getRSVClinicalAlerts(
     }
 
     // Tool's own timing note (the document is silent on season for adults); caution only
-    if (!patient.atIncreasedrisk && !isCurrentRSVSeason()) {
+    if (!patient.atIncreasedrisk && !isCurrentRSVSeason(asOf)) {
       alerts.push({
         severity: 'caution',
         code: 'OUTSIDE_SEASON_STANDARD_RISK',
@@ -182,9 +184,10 @@ export function shouldBlockConsultation(alerts: ClinicalAlert[]): boolean {
   return alerts.some((a) => a.severity === 'stop');
 }
 
-export function isCurrentRSVSeason(): boolean {
-  const today = new Date();
-  const month = today.getMonth();
+/** Season on the administration date (asOf, YYYY-MM-DD, late entry aware), else today. */
+export function isCurrentRSVSeason(asOf?: string): boolean {
+  const m = /^\d{4}-(\d{2})-\d{2}$/.exec(asOf || '');
+  const month = m ? Number(m[1]) - 1 : new Date().getMonth();
   // RSV season is Sep-Jan (months 8, 9, 10, 11, 0)
   return month >= 8 || month <= 0;
 }

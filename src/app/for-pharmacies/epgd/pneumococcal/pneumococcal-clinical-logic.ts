@@ -24,6 +24,7 @@
  * chemotherapy or radiotherapy are referrals in both arms.
  */
 import type { ClinicalAlert } from '../shared/types';
+import { calendarYearsBetween, daysBetweenIso, toCalendarIso, todayLocalIso } from '../shared/late-entry';
 import type { PneumococcalPatientDetails } from './pneumococcal-types';
 
 export interface PneumococcalMedicalHistoryInput {
@@ -80,25 +81,29 @@ export interface PneumococcalMedicalHistoryInput {
   patientDeclined?: boolean;
 }
 
-const WEEK_MS = 1000 * 60 * 60 * 24 * 7;
-const YEAR_MS = 1000 * 60 * 60 * 24 * 365.25;
-
 /** The three groups the PGD revaccinates every 5 years, as it defines them. */
 export const REVACCINATION_GROUPS_TEXT =
   'asplenia, splenic dysfunction or chronic kidney disease (nephrotic syndrome, CKD stage 4 or 5, dialysis or kidney transplant)';
 
-export function weeksSince(date?: string): number | null {
-  if (!date) return null;
-  const d = new Date(date);
-  if (isNaN(d.getTime())) return null;
-  return (Date.now() - d.getTime()) / WEEK_MS;
+/**
+ * Reference date for interval checks: the administration date (asOf,
+ * YYYY-MM-DD, late entry aware) when given, otherwise today (London local).
+ * Intervals are counted between calendar dates, with no time of day.
+ */
+function referenceDate(asOf?: string): string {
+  return (asOf && toCalendarIso(asOf)) || todayLocalIso();
 }
 
-export function yearsSince(date?: string): number | null {
-  if (!date) return null;
-  const d = new Date(date);
-  if (isNaN(d.getTime())) return null;
-  return (Date.now() - d.getTime()) / YEAR_MS;
+export function weeksSince(date?: string, asOf?: string): number | null {
+  const d = toCalendarIso(date);
+  if (!d) return null;
+  const days = daysBetweenIso(d, referenceDate(asOf));
+  return days === null ? null : days / 7;
+}
+
+/** Calendar years since a date: the anniversary day counts as a whole year. */
+export function yearsSince(date?: string, asOf?: string): number | null {
+  return calendarYearsBetween(date, referenceDate(asOf));
 }
 
 /** Groups in which the PGD permits 5-yearly revaccination (Green Book chapter 25). */
@@ -121,19 +126,20 @@ export function weeksSinceLastConjugate(
     | 'previousPCV20Date'
     | 'previousOtherPCV'
     | 'previousOtherPCVDate'
-  >
+  >,
+  asOf?: string
 ): number | null {
   const values: number[] = [];
   if (history.previousPCV13) {
-    const w = weeksSince(history.previousPCV13Date);
+    const w = weeksSince(history.previousPCV13Date, asOf);
     if (w !== null) values.push(w);
   }
   if (history.previousPCV20) {
-    const w = weeksSince(history.previousPCV20Date);
+    const w = weeksSince(history.previousPCV20Date, asOf);
     if (w !== null) values.push(w);
   }
   if (history.previousOtherPCV) {
-    const w = weeksSince(history.previousOtherPCVDate);
+    const w = weeksSince(history.previousOtherPCVDate, asOf);
     if (w !== null) values.push(w);
   }
   if (!values.length) return null;
@@ -145,15 +151,16 @@ export function weeksSinceLastConjugate(
  * The 5-yearly revaccination is counted from whichever was last (PGD v008).
  */
 export function yearsSinceLastPolysaccharideOrPCV20(
-  history: Pick<PneumococcalMedicalHistoryInput, 'previousPPV23' | 'previousPPV23Date' | 'previousPCV20' | 'previousPCV20Date'>
+  history: Pick<PneumococcalMedicalHistoryInput, 'previousPPV23' | 'previousPPV23Date' | 'previousPCV20' | 'previousPCV20Date'>,
+  asOf?: string
 ): number | null {
   const values: number[] = [];
   if (history.previousPPV23) {
-    const y = yearsSince(history.previousPPV23Date);
+    const y = yearsSince(history.previousPPV23Date, asOf);
     if (y !== null) values.push(y);
   }
   if (history.previousPCV20) {
-    const y = yearsSince(history.previousPCV20Date);
+    const y = yearsSince(history.previousPCV20Date, asOf);
     if (y !== null) values.push(y);
   }
   if (!values.length) return null;
@@ -169,16 +176,18 @@ export function yearsSinceLastPolysaccharideOrPCV20(
  */
 export function getPneumococcalProductAvailability(
   patient: PneumococcalPatientDetails,
-  history: PneumococcalMedicalHistoryInput
+  history: PneumococcalMedicalHistoryInput,
+  /** Administration date, YYYY-MM-DD (late entry aware). Defaults to today. */
+  asOf?: string
 ): {
   pcv20Possible: boolean;
   pcv20Reason: string;
   ppv23Possible: boolean;
   ppv23Reason: string;
 } {
-  const conjugateWeeks = weeksSinceLastConjugate(history);
+  const conjugateWeeks = weeksSinceLastConjugate(history, asOf);
   const conjugateTooSoon = conjugateWeeks !== null && conjugateWeeks < 8;
-  const lastPolyYears = yearsSinceLastPolysaccharideOrPCV20(history);
+  const lastPolyYears = yearsSinceLastPolysaccharideOrPCV20(history, asOf);
   const otherPCV = Boolean(history.previousOtherPCV);
 
   // Prevenar 20: single lifetime dose. Given as the 5-yearly revaccination
@@ -235,7 +244,9 @@ export function getPneumococcalProductAvailability(
 
 export function getPneumococcalClinicalAlerts(
   patient: PneumococcalPatientDetails,
-  medicalHistory: PneumococcalMedicalHistoryInput
+  medicalHistory: PneumococcalMedicalHistoryInput,
+  /** Administration date, YYYY-MM-DD (late entry aware). Defaults to today. */
+  asOf?: string
 ): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
 
@@ -385,7 +396,7 @@ export function getPneumococcalClinicalAlerts(
 
   // Conjugate vaccine interval: both arms require at least 8 weeks after any
   // pneumococcal conjugate vaccine (PGD v008 inclusion and exclusion rows).
-  const conjugateWeeks = weeksSinceLastConjugate(medicalHistory);
+  const conjugateWeeks = weeksSinceLastConjugate(medicalHistory, asOf);
   if (conjugateWeeks !== null && conjugateWeeks < 8) {
     alerts.push({
       severity: 'caution',
@@ -418,7 +429,7 @@ export function getPneumococcalClinicalAlerts(
   }
 
   // Revaccination rule (PGD v008 both arms)
-  const lastPolyYears = yearsSinceLastPolysaccharideOrPCV20(medicalHistory);
+  const lastPolyYears = yearsSinceLastPolysaccharideOrPCV20(medicalHistory, asOf);
   if ((medicalHistory.previousPPV23 || medicalHistory.previousPCV20) && !medicalHistory.previousOtherPCV) {
     if (!revaccinationGroup(patient)) {
       alerts.push({
@@ -464,7 +475,7 @@ export function getPneumococcalClinicalAlerts(
   // no stop and no way to save the referral (walkthrough review, 11 Sep 2026).
   {
     const { pcv20Possible, pcv20Reason, ppv23Possible, ppv23Reason } =
-      getPneumococcalProductAvailability(patient, medicalHistory);
+      getPneumococcalProductAvailability(patient, medicalHistory, asOf);
     if (!pcv20Possible && !ppv23Possible) {
       alerts.push({
         severity: 'stop',

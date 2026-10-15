@@ -7,6 +7,7 @@ import {
   validateSummaryStep,
 } from "../../shared/types";
 import { daysBetween } from "./chickenpox-clinical-logic";
+import { todayLocalIso } from "../../shared/late-entry";
 
 export function validateStep(step: number, state: ChickenpoxConsultationState): string | null {
   const underSixteen = state.patient.age !== null && state.patient.age < 16;
@@ -41,7 +42,7 @@ export function validateStep(step: number, state: ChickenpoxConsultationState): 
           return "Dose 1 already given: record the date of dose 1";
         }
         {
-          const ahead = daysBetween(new Date().toISOString().split("T")[0], state.eligibility.dose1ElsewhereDate);
+          const ahead = daysBetween(todayLocalIso(), state.eligibility.dose1ElsewhereDate);
           if (ahead !== null && ahead > 0) {
             return "Date of dose 1 cannot be in the future";
           }
@@ -85,7 +86,7 @@ export function validateStep(step: number, state: ChickenpoxConsultationState): 
         return "Date of administration is required";
       }
       {
-        const today = new Date().toISOString().split("T")[0];
+        const today = todayLocalIso();
         const ahead = daysBetween(today, a.dose1Date);
         if (ahead !== null && ahead > 0) {
           return "Date of administration cannot be in the future";
@@ -110,8 +111,9 @@ export function validateStep(step: number, state: ChickenpoxConsultationState): 
         return "Expiry date is required";
       }
       {
-        const today = new Date().toISOString().split("T")[0];
-        const untilExpiry = daysBetween(today, a.expiryDate);
+        // In date on the day the dose was given (the late-entry date, if any).
+        const givenOn = a.dose1Date || todayLocalIso();
+        const untilExpiry = daysBetween(givenOn, a.expiryDate);
         if (untilExpiry !== null && untilExpiry < 0) {
           return "This batch has expired. Do not use it.";
         }

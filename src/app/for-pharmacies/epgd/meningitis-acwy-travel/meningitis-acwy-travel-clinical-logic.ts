@@ -1,4 +1,5 @@
 import type { ClinicalAlert } from '../shared/types';
+import { calendarYearsBetween, daysBetweenIso, toCalendarIso, todayLocalIso } from '../shared/late-entry';
 import type {
   MeningitisACWYPatientDetails,
   MeningitisACWYMedicalHistory,
@@ -7,40 +8,56 @@ import type {
 /** PGD strapline shown wherever the tool cites its authority. */
 export const MENACWY_PGD_VERSION = 'Meningococcal ACWY (Travel and Hajj/Umrah) PGD v008, issued 14 September 2026';
 
-/** Whole months between the date of birth and today. Null when missing or invalid. */
-export function calculateAgeInMonths(dob: string): number | null {
+/**
+ * The date the dose is given (asOf, YYYY-MM-DD) as a local-midnight Date;
+ * today when not given. asOf is the late-entry date where one is recorded.
+ */
+function localDate(asOf?: string): Date {
+  const m = asOf ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(asOf) : null;
+  return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date();
+}
+
+/** Whole months between the date of birth and the date given (default today). Null when missing or invalid. */
+export function calculateAgeInMonths(dob: string, asOf?: string): number | null {
   if (!dob) return null;
   const birth = new Date(dob);
   if (isNaN(birth.getTime())) return null;
-  const today = new Date();
+  const today = localDate(asOf);
   let months = (today.getFullYear() - birth.getFullYear()) * 12 + (today.getMonth() - birth.getMonth());
   if (today.getDate() < birth.getDate()) months--;
   return months;
 }
 
-/** Whole days between the date of birth and today. Null when missing or invalid. */
-export function calculateAgeInDays(dob: string): number | null {
-  if (!dob) return null;
-  const birth = new Date(dob);
-  if (isNaN(birth.getTime())) return null;
-  return Math.floor((Date.now() - birth.getTime()) / (1000 * 60 * 60 * 24));
+/**
+ * Whole calendar days from the date of birth to the date given (asOf,
+ * YYYY-MM-DD; default today, London local). Both are counted as calendar
+ * dates with no time of day, so a baby born 42 days before the date given
+ * is 42 days old. Null when missing or invalid.
+ */
+export function calculateAgeInDays(dob: string, asOf?: string): number | null {
+  const birth = toCalendarIso(dob);
+  if (!birth) return null;
+  return daysBetweenIso(birth, asOf || todayLocalIso());
 }
 
-/** Whole calendar days from today to an ISO date (negative when past). Null when blank or invalid. */
-export function daysFromToday(iso: string): number | null {
+/**
+ * Whole calendar days from the date given (default today) to an ISO date
+ * (negative when earlier). Null when blank or invalid.
+ */
+export function daysFromToday(iso: string, asOf?: string): number | null {
   if (!iso) return null;
   const d = new Date(iso);
   if (isNaN(d.getTime())) return null;
-  const today = new Date();
+  const today = localDate(asOf);
   const a = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
   const b = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
   return Math.round((a - b) / 86400000);
 }
 
-/** Whole days since a previous dose. Null when blank or invalid. */
-export function daysSince(iso: string | undefined): number | null {
+/** Whole days from a previous dose to the date given (default today). Null when blank or invalid. */
+export function daysSince(iso: string | undefined, asOf?: string): number | null {
   if (!iso) return null;
-  const d = daysFromToday(iso);
+  const d = daysFromToday(iso, asOf);
   return d === null ? null : -d;
 }
 
@@ -66,8 +83,8 @@ export function isSaudiTravel(patient: MeningitisACWYPatientDetails): boolean {
  * at least 2 months after the primary dose), not repeating one. The 5 year
  * repeat rule does not apply.
  */
-export function isInfantBoosterCandidate(patient: MeningitisACWYPatientDetails): boolean {
-  const ageMonths = calculateAgeInMonths(patient.dateOfBirth);
+export function isInfantBoosterCandidate(patient: MeningitisACWYPatientDetails, asOf?: string): boolean {
+  const ageMonths = calculateAgeInMonths(patient.dateOfBirth, asOf);
   const ageAtPrevious = ageInMonthsAt(patient.dateOfBirth, patient.previousDoseDate);
   return (
     patient.previousMenACWYDose &&
@@ -81,10 +98,12 @@ export function isInfantBoosterCandidate(patient: MeningitisACWYPatientDetails):
 
 export function getMeningitisACWYClinicalAlerts(
   patient: MeningitisACWYPatientDetails,
-  medicalHistory: MeningitisACWYMedicalHistory
+  medicalHistory: MeningitisACWYMedicalHistory,
+  /** Date the dose is given, YYYY-MM-DD (late-entry date or today). */
+  asOf?: string
 ): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
-  const ageMonths = calculateAgeInMonths(patient.dateOfBirth);
+  const ageMonths = calculateAgeInMonths(patient.dateOfBirth, asOf);
 
   if (medicalHistory.anaphylaxisToVaccine) {
     alerts.push({
@@ -145,7 +164,9 @@ export function getMeningitisACWYClinicalAlerts(
   } else {
     // Calendar days, so a departure exactly 10 days ahead is 10, not 9.x
     // floored to 9 (which used to alarm the pharmacist a day early).
-    const daysUntilTravel = daysFromToday(patient.departureDate) ?? 0;
+    // Counted from the date the dose is given, which is earlier than today
+    // for a late entry.
+    const daysUntilTravel = daysFromToday(patient.departureDate, asOf) ?? 0;
 
     if (daysUntilTravel < 10 && daysUntilTravel >= 0) {
       alerts.push({
@@ -171,7 +192,7 @@ export function getMeningitisACWYClinicalAlerts(
   // certificate is required for travel to Saudi Arabia. An infant under 12 months with
   // a previous dose is completing a course, not repeating one, and so is a 12 to 23
   // month old whose primary dose was given under 12 months (booster at 12 months).
-  if (patient.previousMenACWYDose && (ageMonths === null || ageMonths >= 12) && !isInfantBoosterCandidate(patient)) {
+  if (patient.previousMenACWYDose && (ageMonths === null || ageMonths >= 12) && !isInfantBoosterCandidate(patient, asOf)) {
     if (!patient.previousDoseDate) {
       // A caution, not a stop: the travel step already refuses Next until
       // the date is typed, and a stop here put "exclusion criteria met" on
@@ -183,9 +204,9 @@ export function getMeningitisACWYClinicalAlerts(
         detail: 'Record the date of the previous dose. A repeat is authorised only where it was more than 5 years ago and a valid certificate is required for travel to Saudi Arabia.',
       });
     } else {
-      const previousDose = new Date(patient.previousDoseDate);
-      const today = new Date();
-      const yearsElapsed = (today.getTime() - previousDose.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+      // Calendar years: the fifth anniversary of the previous dose counts as
+      // 5 years.
+      const yearsElapsed = calendarYearsBetween(patient.previousDoseDate, asOf || todayLocalIso()) ?? NaN;
 
       if (yearsElapsed < 5) {
         alerts.push({
@@ -264,10 +285,11 @@ export function getMeningitisACWYClinicalAlerts(
 
 /** Product schedule per the PGD, by age. */
 export function getMeningitisACWYDoseRecommendation(
-  patient: MeningitisACWYPatientDetails
+  patient: MeningitisACWYPatientDetails,
+  asOf?: string
 ): string {
-  const ageDays = calculateAgeInDays(patient.dateOfBirth);
-  const ageMonths = calculateAgeInMonths(patient.dateOfBirth);
+  const ageDays = calculateAgeInDays(patient.dateOfBirth, asOf);
+  const ageMonths = calculateAgeInMonths(patient.dateOfBirth, asOf);
   if (ageDays === null || ageMonths === null) return 'Age required to determine dose';
 
   if (ageDays < 42) {

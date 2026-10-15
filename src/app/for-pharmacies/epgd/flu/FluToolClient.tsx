@@ -55,6 +55,14 @@ import VaccineAdminFields from './components/VaccineAdminFields';
 import FluSummaryReport from './components/FluSummaryReport';
 import { BasePatientDetails, BaseConsent, BaseSummary, calculateAge } from '../shared/types';
 import { useConsultationTracking, type ConsultationRecordData } from '../shared/hooks/useConsultationTracking';
+import { LateEntry, useAdministrationDate, useLateEntry } from '../shared/components/LateEntry';
+import {
+  clearLateEntry,
+  getAdministrationDate,
+  getLateEntry,
+  lateEntryError,
+  lateEntrySatisfied,
+} from '../shared/late-entry';
 
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 
@@ -149,7 +157,35 @@ gpOdsCode: '',
 
   // Shared age calculation. A blank or unparseable date of birth gives -1,
   // which fails every age gate rather than passing them (adversarial review).
-  const patientAge = calculateAge(state.patient.dateOfBirth) ?? -1;
+  // Late entry: the date the dose was given (today unless a valid earlier
+  // date is recorded). Age, expiry and the dose interval use this date.
+  const adminDate = useAdministrationDate('flu');
+  const lateEntryState = useLateEntry('flu');
+  const lateEntryValid = lateEntryState.lateEntry && lateEntryError(lateEntryState) === null;
+
+  const patientAge = calculateAge(state.patient.dateOfBirth, adminDate) ?? -1;
+
+  // Keep the record's consultation date, late-entry flag and stored age in
+  // step with the administration date.
+  useEffect(() => {
+    setState((prev) => {
+      const reason = lateEntryValid ? lateEntryState.reason.trim() : undefined;
+      const age = prev.patient.dateOfBirth ? calculateAge(prev.patient.dateOfBirth, adminDate) : prev.patient.age;
+      const summarySame =
+        prev.summary.consultationDate === adminDate &&
+        (prev.summary.lateEntry ?? false) === lateEntryValid &&
+        prev.summary.lateEntryReason === reason;
+      const ageSame = prev.patient.age === age;
+      if (summarySame && ageSame) return prev;
+      return {
+        ...prev,
+        patient: ageSame ? prev.patient : { ...prev.patient, age },
+        summary: summarySame
+          ? prev.summary
+          : { ...prev.summary, consultationDate: adminDate, lateEntry: lateEntryValid, lateEntryReason: reason },
+      };
+    });
+  }, [adminDate, lateEntryValid, lateEntryState.reason]);
 
   // Patient Details handlers
   const handleFirstNameChange = useCallback((value: string): void => {
@@ -176,7 +212,7 @@ gpOdsCode: '',
   const handleDOBChange = useCallback((value: string): void => {
     setState((prev) => ({
       ...prev,
-      patient: { ...prev.patient, dateOfBirth: value, age: calculateAge(value) },
+      patient: { ...prev.patient, dateOfBirth: value, age: calculateAge(value, getAdministrationDate('flu')) },
     }));
   }, []);
 
@@ -532,7 +568,7 @@ gpOdsCode: '',
         break;
       }
       case 4: {
-        const result = validateAdministration(state.administration, patientAge, state.screening);
+        const result = validateAdministration(state.administration, patientAge, state.screening, adminDate);
         errors.push(...result.errors);
         break;
       }
@@ -556,6 +592,13 @@ gpOdsCode: '',
       }
     }
 
+    // A ticked late entry must have a valid date given and reason before
+    // moving on or saving.
+    if (!lateEntrySatisfied('flu')) {
+      const leError = lateEntryError(getLateEntry('flu'));
+      if (leError) errors.push(leError);
+    }
+
     if (errors.length > 0) {
       setValidationErrors(new Map(validationErrors).set(stepNum, errors));
       return false;
@@ -567,7 +610,7 @@ gpOdsCode: '',
       return newErrors;
     });
     return true;
-  }, [state, validationErrors, patientAge]);
+  }, [state, validationErrors, patientAge, adminDate]);
 
   // Contraindications used to be evaluated only when leaving the screening
   // step, so a stop introduced by going back (a corrected date of birth, a
@@ -709,6 +752,7 @@ gpOdsCode: '',
 
   // Every PGD requires the advice given to an excluded patient to be recorded.
   const handleSaveNotSupplied = useCallback(async (): Promise<void> => {
+    // No dose given: the late-entry panel plays no part here.
     setSaveStatus('saving');
     const data = getConsultationData();
     data.outcome = 'not_supplied';
@@ -722,6 +766,7 @@ gpOdsCode: '',
     // Forget the saved consultation, or the next patient's save is skipped
     // and reported as saved (adversarial review, 11 Sep 2026).
     resetTracking();
+    clearLateEntry('flu');
     setState({
       patient: {
         firstName: '',
@@ -827,8 +872,12 @@ gpOdsCode: '',
           hasErrors={validationErrors.has(state.step)}
         />
 
+        <div className="mt-8 -mx-6">
+          <LateEntry slug="flu" />
+        </div>
+
         {/* Main Content */}
-        <div className="bg-white rounded-lg shadow mt-8 p-8">
+        <div className="bg-white rounded-lg shadow mt-4 p-8">
           {/* Validation Errors */}
           {validationErrors.has(state.step) && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">

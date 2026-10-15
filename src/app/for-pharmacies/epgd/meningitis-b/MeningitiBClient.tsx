@@ -9,6 +9,8 @@ import { STEP_LABELS, TOTAL_STEPS, MENB_PGD_VERSION, createInitialMeningitiBStat
 import type { MeningitiBVaccineAdmin, MeningitiBMedicalHistory } from "./lib/meningitis-b-types";
 import { getAllAlerts, hasHardStops, calculateAgeInMonths, getScheduleText } from "./lib/meningitis-b-clinical-logic";
 import { validateStep } from "./lib/meningitis-b-validation";
+import { LateEntrySummaryLine, useAdministrationDate, useLateEntry } from "../shared/components/LateEntry";
+import { lateEntryError } from "../shared/late-entry";
 import { calculateAge } from "../shared/types";
 import { ProgressBar } from "../shared/components/ProgressBar";
 import { StepWrapper } from "../shared/components/StepWrapper";
@@ -88,6 +90,25 @@ function reducer(
       newState.currentStep = Math.max(newState.currentStep - 1, 0);
       break;
 
+    case "SYNC_ADMINISTRATION_DATE": {
+      const reason = action.lateEntry ? action.lateEntryReason : undefined;
+      if (
+        state.vaccineAdmin.vaccinationDate1 === action.date &&
+        state.summary.consultationDate === action.date &&
+        (state.summary.lateEntry ?? false) === action.lateEntry &&
+        state.summary.lateEntryReason === reason &&
+        state.patient.age === action.age
+      ) {
+        return state;
+      }
+      return {
+        ...state,
+        patient: { ...state.patient, age: action.age },
+        vaccineAdmin: { ...state.vaccineAdmin, vaccinationDate1: action.date },
+        summary: { ...state.summary, consultationDate: action.date, lateEntry: action.lateEntry, lateEntryReason: reason },
+      };
+    }
+
     case "RESET":
       return createInitialMeningitiBState();
 
@@ -116,8 +137,24 @@ export default function MeningitiBClient() {
 
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
 
+  // Late entry: the dose may have been given on an earlier day. The date of
+  // administration, ages, intervals, the expiry check and the consultation
+  // date all follow the date given (today when no late entry is ticked).
+  const adminDate = useAdministrationDate("meningitis-b");
+  const lateEntryState = useLateEntry("meningitis-b");
+  const lateEntryValid = lateEntryState.lateEntry && lateEntryError(lateEntryState) === null;
+  useEffect(() => {
+    dispatch({
+      type: "SYNC_ADMINISTRATION_DATE",
+      date: adminDate,
+      lateEntry: lateEntryValid,
+      lateEntryReason: lateEntryValid ? lateEntryState.reason.trim() : undefined,
+      age: state.patient.dateOfBirth ? calculateAge(state.patient.dateOfBirth, adminDate) : state.patient.age,
+    });
+  }, [adminDate, lateEntryValid, lateEntryState.reason, state.patient.dateOfBirth, state.patient.age]);
+
   // Compute alerts
-  const alerts = useMemo(() => getAllAlerts(state), [state]);
+  const alerts = useMemo(() => getAllAlerts(state, adminDate), [state, adminDate]);
   const hasStops = useMemo(() => hasHardStops(alerts), [alerts]);
 
   // Update alerts in state
@@ -128,8 +165,8 @@ export default function MeningitiBClient() {
   }, [state, alerts]);
 
   // Validation
-  const validationError = useMemo(() => validateStep(state.currentStep, state), [state.currentStep, state]);
-  const ageMonths = calculateAgeInMonths(state.patient.dateOfBirth);
+  const validationError = useMemo(() => validateStep(state.currentStep, state, adminDate), [state.currentStep, state, adminDate]);
+  const ageMonths = calculateAgeInMonths(state.patient.dateOfBirth, adminDate);
   const underSixteen = state.patient.age !== null && state.patient.age < 16;
   const infantUnderOne = ageMonths !== null && ageMonths < 12;
 
@@ -667,7 +704,7 @@ export default function MeningitiBClient() {
                 <h4 className="font-semibold text-sm text-navy-900 mb-4">This dose: 0.5 ml intramuscular</h4>
                 <div className="space-y-4">
                   <TextInput
-                    label="Date of administration"
+                    label="Date of administration (today, or the date given in the late-entry panel)"
                     value={state.vaccineAdmin.vaccinationDate1}
                     onChange={(v) =>
                       dispatch({
@@ -677,6 +714,7 @@ export default function MeningitiBClient() {
                       })
                     }
                     type="date"
+                    disabled
                     required
                   />
 
@@ -1079,6 +1117,7 @@ function MeningitiBSummaryReport({
 }) {
   return (
     <div className="space-y-4 text-xs print:text-[10px]">
+      <LateEntrySummaryLine slug="meningitis-b" />
       <SectionHeader>Patient Information</SectionHeader>
       <Row
         label="Name"

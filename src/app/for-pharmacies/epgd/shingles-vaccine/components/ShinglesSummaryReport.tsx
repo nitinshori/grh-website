@@ -4,6 +4,7 @@ import type { ShinglesConsultationState } from "../lib/shingles-types";
 import { SEVERE_IMMUNOSUPPRESSION_OPTIONS } from "../lib/shingles-types";
 import { getArm, nhsEligibleGroup, daysBetween, MAX_INTERVAL_DAYS } from "../lib/shingles-clinical-logic";
 import type { ClinicalAlert } from "../../shared/types";
+import { LateEntrySummaryLine } from "../../shared/components/LateEntry";
 import {
   SectionHeader,
   Row,
@@ -41,6 +42,7 @@ export function ShinglesSummaryReport({
           Consultation Date: {state.summary.consultationDate} |{" "}
           {state.summary.consultationTime}
         </p>
+        <LateEntrySummaryLine slug="shingles-vaccine" className="mt-1" />
       </div>
 
       <SectionHeader>Patient Details</SectionHeader>

@@ -134,6 +134,7 @@ export type MMRAction =
   | { type: "SET_STEP"; step: number }
   | { type: "NEXT_STEP" }
   | { type: "PREV_STEP" }
+  | { type: "SYNC_ADMIN_DATE"; date: string; lateEntry: boolean; reason: string }
   | { type: "RESET" };
 
 // ─── Constants ───

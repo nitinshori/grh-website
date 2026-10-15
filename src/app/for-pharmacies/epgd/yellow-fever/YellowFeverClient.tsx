@@ -17,6 +17,8 @@ import {
 } from "../shared/types";
 import { ProgressBar } from "../shared/components/ProgressBar";
 import { StepWrapper } from "../shared/components/StepWrapper";
+import { useAdministrationDate, useLateEntry } from "../shared/components/LateEntry";
+import { lateEntryError, parseIsoLocal } from "../shared/late-entry";
 import { AlertBanner } from "../shared/components/AlertBanner";
 import { PatientDetailsStep } from "../shared/steps/PatientDetailsStep";
 import { ConsentStep } from "../shared/steps/ConsentStep";
@@ -54,12 +56,15 @@ import { YellowFeverSummaryReport } from "./components/YellowFeverSummaryReport"
  * vaccinated without recorded specialist advice.
  */
 
-/** Whole days from today until the departure date (YYYY-MM-DD), or null. */
-function daysUntil(dateStr: string): number | null {
+/**
+ * Whole days from the administration date (default today) until the
+ * departure date (YYYY-MM-DD), or null.
+ */
+function daysUntil(dateStr: string, asOf?: string): number | null {
   if (!dateStr) return null;
   const d = new Date(dateStr);
   if (Number.isNaN(d.getTime())) return null;
-  const today = new Date();
+  const today = (asOf && parseIsoLocal(asOf)) || new Date();
   today.setHours(0, 0, 0, 0);
   d.setHours(0, 0, 0, 0);
   return Math.round((d.getTime() - today.getTime()) / 86400000);
@@ -90,9 +95,32 @@ export function YellowFeverClient() {
     });
   }, [profile, summary.pharmacistName, summary.pharmacistGPhC]);
 
-  /** Today plus n days as YYYY-MM-DD, local time. */
+  // Late entry: age at vaccination, days to departure, batch expiry, the
+  // certificate valid-from date and the recorded date of administration are
+  // all worked out from the date the dose was given.
+  const adminDate = useAdministrationDate("yellow-fever");
+  const le = useLateEntry("yellow-fever");
+  const leValid = le.lateEntry && lateEntryError(le) === null;
+  const leReason = leValid ? le.reason.trim() : undefined;
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs from the external late-entry store; returns prev unchanged when already equal
+    setSummary((p) =>
+      p.consultationDate === adminDate && !!p.lateEntry === leValid && p.lateEntryReason === leReason
+        ? p
+        : { ...p, consultationDate: adminDate, lateEntry: leValid, lateEntryReason: leReason }
+    );
+  }, [adminDate, leValid, leReason, summary.consultationDate]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- recomputes age when the late-entry date changes; returns prev unchanged when already equal
+    setPatient((p) => {
+      const age = calculateAge(p.dateOfBirth, adminDate);
+      return age === p.age ? p : { ...p, age };
+    });
+  }, [adminDate, patient.dateOfBirth]);
+
+  /** Administration date plus n days as YYYY-MM-DD, local time. */
   const plusDaysIso = (n: number): string => {
-    const d = new Date();
+    const d = parseIsoLocal(adminDate) ?? new Date();
     d.setDate(d.getDate() + n);
     const m = String(d.getMonth() + 1).padStart(2, "0");
     const day = String(d.getDate()).padStart(2, "0");
@@ -105,11 +133,24 @@ export function YellowFeverClient() {
     if (!patient.dateOfBirth) return null;
     const dob = new Date(patient.dateOfBirth);
     if (Number.isNaN(dob.getTime())) return null;
-    const now = new Date();
+    const now = parseIsoLocal(adminDate) ?? new Date();
     let m = (now.getFullYear() - dob.getFullYear()) * 12 + (now.getMonth() - dob.getMonth());
     if (now.getDate() < dob.getDate()) m -= 1;
     return m;
-  }, [patient.dateOfBirth]);
+  }, [patient.dateOfBirth, adminDate]);
+
+  // The certificate is valid from 10 days after the dose: when the date the
+  // dose was given changes, move an issued certificate's valid-from date with it.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- moves the certificate date when the late-entry date changes; returns prev unchanged when already equal
+    setC((prev) => {
+      if (!prev.certificateIssued) return prev;
+      const d = parseIsoLocal(adminDate) ?? new Date();
+      d.setDate(d.getDate() + 10);
+      const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      return prev.certificateValidFrom === iso ? prev : { ...prev, certificateValidFrom: iso };
+    });
+  }, [adminDate]);
 
   const alerts = useMemo<ClinicalAlert[]>(() => {
     const a: ClinicalAlert[] = [];
@@ -208,7 +249,7 @@ export function YellowFeverClient() {
         detail: "The risk of YEL-AND and YEL-AVD rises with age, and almost all cases occur with a first dose. Vaccinate only where there is significant and unavoidable risk after a detailed risk assessment, and record it.",
       });
     {
-      const days = daysUntil(c.departureDate);
+      const days = daysUntil(c.departureDate, adminDate);
       if (c.certificateRequired === "required" && days !== null && days < 10)
         a.push({
           code: "late-traveller",
@@ -273,10 +314,10 @@ export function YellowFeverClient() {
     // simply because the box has not been reached yet.
 
     return a;
-  }, [patient.age, ageMonths, c]);
+  }, [patient.age, ageMonths, c, adminDate]);
 
   const hasStops = alerts.some((x) => x.severity === "stop");
-  const lateTraveller = (() => { const d = daysUntil(c.departureDate); return c.certificateRequired === "required" && d !== null && d < 10; })();
+  const lateTraveller = (() => { const d = daysUntil(c.departureDate, adminDate); return c.certificateRequired === "required" && d !== null && d < 10; })();
   const underSixteen = patient.age !== null && patient.age < 16;
   // Gillick competence is offered from age 10; an infant cannot be Gillick competent.
   const gillickPossible = patient.age !== null && patient.age >= 10;
@@ -290,7 +331,7 @@ export function YellowFeverClient() {
         const base = validatePatientStep(patient);
         if (base) return base;
         // Never trust a stale age: recompute from the DOB here.
-        if (calculateAge(patient.dateOfBirth) === null) return "Unable to calculate age from the date of birth";
+        if (calculateAge(patient.dateOfBirth, adminDate) === null) return "Unable to calculate age from the date of birth";
         // PGD v006 records: name, address, date of birth and GP with whom the individual is registered.
         if (!patient.address.trim()) return "Patient address is required (the PGD requires it to be recorded)";
         if (!patient.gpPractice.trim() && !patient.gpName.trim()) return "The GP with whom the patient is registered is required: search for the practice, or enter \"Not registered\" as the GP name";
@@ -322,7 +363,7 @@ export function YellowFeverClient() {
         if (c.doseType === "reinforcing" && !c.reinforcingReason) return "Record which Green Book reinforcing-dose group applies";
         if (!c.batchNumber.trim()) return "Please record the batch number";
         if (!c.expiryDate.trim()) return "Please record the expiry date";
-        if (!expiryMonthIsCurrent(c.expiryDate)) return "Expiry date must be MM/YYYY and must not be in the past";
+        if (!expiryMonthIsCurrent(c.expiryDate, adminDate)) return leValid ? "Expiry date must be MM/YYYY and the vaccine must have been in date on the date this dose was given" : "Expiry date must be MM/YYYY and must not be in the past";
         if (!c.route) return "Please record the route of administration";
         if (!c.site.trim()) return "Please record the anatomical site";
         return null;
@@ -343,7 +384,7 @@ export function YellowFeverClient() {
         return validateSummaryStep(summary);
       default: return null;
     }
-  }, [step, patient, consent, c, summary, underSixteen, lateTraveller, hasStops]);
+  }, [step, patient, consent, c, summary, underSixteen, lateTraveller, hasStops, adminDate, leValid]);
 
   // A stop anywhere disables Next on every step; an excluded patient is
   // recorded through the "not vaccinated" panel and "Save as not supplied".
@@ -383,7 +424,7 @@ export function YellowFeverClient() {
   };
 
   const onPatientChange = (field: keyof BasePatientDetails, value: unknown) =>
-    setPatient((p) => ({ ...p, [field]: value, ...(field === "dateOfBirth" ? { age: calculateAge(value as string) } : {}) }));
+    setPatient((p) => ({ ...p, [field]: value, ...(field === "dateOfBirth" ? { age: calculateAge(value as string, adminDate) } : {}) }));
 
   const stepBody = () => {
     switch (step) {
@@ -459,7 +500,7 @@ export function YellowFeverClient() {
             <AlertBanner alerts={alerts} />
             <TextInput label="Destination" value={c.destination} onChange={(v) => set({ destination: v })} placeholder="e.g. Ghana, Brazil (Minas Gerais)" required />
             <TextInput label="Departure date" type="date" value={c.departureDate} onChange={(v) => set({ departureDate: v })} required />
-            {(() => { const d = daysUntil(c.departureDate); return d !== null && d < 0 ? <p className="text-xs text-amber-700">Departure date is in the past: check the date.</p> : null; })()}
+            {(() => { const d = daysUntil(c.departureDate, adminDate); return d !== null && d < 0 ? <p className="text-xs text-amber-700">{leValid ? "Departure date is before the date this dose was given: check the date." : "Departure date is in the past: check the date."}</p> : null; })()}
             <SelectInput
               label="Certificate requirement for this destination"
               value={c.certificateRequired}

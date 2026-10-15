@@ -8,6 +8,7 @@ import {
   validateSummaryStep,
 } from "../../shared/types";
 import { ageInMonths } from "./mmr-clinical-logic";
+import { todayLocalIso } from "../../shared/late-entry";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -26,7 +27,7 @@ export function validateStep(step: number, state: MMRConsultationState): string 
       // Patient Details
       const base = validatePatientStep(state.patient);
       if (base) return base;
-      const months = ageInMonths(state.patient.dateOfBirth);
+      const months = ageInMonths(state.patient.dateOfBirth, state.summary.consultationDate);
       if (months !== null && months < 12) {
         return "This PGD is for individuals aged 12 months and over";
       }
@@ -108,10 +109,16 @@ export function validateStep(step: number, state: MMRConsultationState): string 
         return "Vaccination date is required";
       }
       {
-        const ahead = daysBetween(new Date().toISOString().split("T")[0], state.vaccineAdmin.vaccinationDate);
+        const ahead = daysBetween(todayLocalIso(), state.vaccineAdmin.vaccinationDate);
         if (ahead !== null && ahead > 0) {
           return "Vaccination date cannot be in the future";
         }
+      }
+      // The vaccination date is the administration date. A dose given on an
+      // earlier day is recorded through the late entry panel, so the saved
+      // record, the age and every interval agree on one date.
+      if (state.summary.consultationDate && state.vaccineAdmin.vaccinationDate !== state.summary.consultationDate) {
+        return "The vaccination date must be the date the dose is given. To record a dose given on an earlier day, tick the late entry box at the top of the page.";
       }
       if (state.vaccineAdmin.doseNumber === "2") {
         if (!state.vaccineAdmin.previousDoseDate) {
@@ -165,8 +172,8 @@ export function validateStep(step: number, state: MMRConsultationState): string 
         return "Expiry date is required";
       }
       {
-        const today = new Date().toISOString().split("T")[0];
-        const untilExpiry = daysBetween(today, state.vaccineAdmin.expiryDate);
+        // In date on the administration date (late entry aware).
+        const untilExpiry = daysBetween(state.summary.consultationDate, state.vaccineAdmin.expiryDate);
         if (untilExpiry !== null && untilExpiry < 0) {
           return "This batch has expired. Do not use it.";
         }

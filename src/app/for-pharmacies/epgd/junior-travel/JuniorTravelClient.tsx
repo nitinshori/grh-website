@@ -16,6 +16,8 @@ import {
 } from "../shared/types";
 import { ProgressBar } from "../shared/components/ProgressBar";
 import { StepWrapper } from "../shared/components/StepWrapper";
+import { useAdministrationDate, useLateEntry } from "../shared/components/LateEntry";
+import { lateEntryError } from "../shared/late-entry";
 import { AlertBanner } from "../shared/components/AlertBanner";
 import { PatientDetailsStep } from "../shared/steps/PatientDetailsStep";
 import { ConsentStep } from "../shared/steps/ConsentStep";
@@ -82,7 +84,7 @@ export interface VaccineDef {
   /** Maximum days since the previous dose before the course must be restarted
    *  (caution only), or null when none applies. */
   maxIntervalDays: (doseValue: string) => number | null;
-  /** Next dose: days from today and the wording for the record, or null when
+  /** Next dose: days from the date this dose is given and the wording for the record, or null when
    *  the course is complete after this dose. */
   nextDose: (doseValue: string) => { days: number; label: string } | null;
   /** Days before departure needed for this vaccine to give protection
@@ -312,11 +314,14 @@ function addDays(d: Date, n: number): Date {
   return r;
 }
 
-/** Expiry entered as YYYY-MM-DD (date input). Expired when before today. */
-function isExpired(expiry: string): boolean {
+/**
+ * Expiry entered as YYYY-MM-DD (date input). Expired when before the
+ * administration date (default today).
+ */
+function isExpired(expiry: string, asOf?: string): boolean {
   const d = parseLocalDate(expiry);
   if (!d) return false;
-  return daysBetween(new Date(), d) < 0;
+  return daysBetween((asOf && parseLocalDate(asOf)) || new Date(), d) < 0;
 }
 
 export interface PlannedDose {
@@ -346,6 +351,30 @@ export default function JuniorTravelClient() {
   const setDose = (id: string, patch: Partial<DoseEntry>) =>
     setC((prev) => ({ ...prev, doses: { ...prev.doses, [id]: { ...(prev.doses[id] ?? emptyDose), ...patch } } }));
 
+  // Late entry: age at vaccination (and so the age bands), intervals since
+  // previous doses, next-due dates, batch expiry, days to departure and the
+  // recorded date of administration all use the date the dose was given.
+  const adminDate = useAdministrationDate("junior-travel");
+  const adminDay = useMemo(() => parseLocalDate(adminDate) ?? localMidnight(new Date()), [adminDate]);
+  const le = useLateEntry("junior-travel");
+  const leValid = le.lateEntry && lateEntryError(le) === null;
+  const leReason = leValid ? le.reason.trim() : undefined;
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs from the external late-entry store; returns prev unchanged when already equal
+    setSummary((p) =>
+      p.consultationDate === adminDate && !!p.lateEntry === leValid && p.lateEntryReason === leReason
+        ? p
+        : { ...p, consultationDate: adminDate, lateEntry: leValid, lateEntryReason: leReason }
+    );
+  }, [adminDate, leValid, leReason, summary.consultationDate]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- recomputes age when the late-entry date changes; returns prev unchanged when already equal
+    setPatient((p) => {
+      const age = calculateAge(p.dateOfBirth, adminDate);
+      return age === p.age ? p : { ...p, age };
+    });
+  }, [adminDate, patient.dateOfBirth]);
+
   // Pharmacist name and GPhC number from the logged-in profile, so the record
   // does not depend on them being typed. Refires after a reset.
   const profile = usePharmacistProfile();
@@ -367,11 +396,11 @@ export default function JuniorTravelClient() {
     if (!patient.dateOfBirth) return null;
     const dob = new Date(patient.dateOfBirth);
     if (Number.isNaN(dob.getTime())) return null;
-    const now = new Date();
+    const now = adminDay;
     let m = (now.getFullYear() - dob.getFullYear()) * 12 + (now.getMonth() - dob.getMonth());
     if (now.getDate() < dob.getDate()) m -= 1;
     return m;
-  }, [patient.dateOfBirth]);
+  }, [patient.dateOfBirth, adminDay]);
 
   const toggleVaccine = (id: string) =>
     setC((prev) => {
@@ -386,8 +415,8 @@ export default function JuniorTravelClient() {
 
   const daysToDeparture = useMemo(() => {
     const d = parseLocalDate(c.departureDate);
-    return d ? daysBetween(new Date(), d) : null;
-  }, [c.departureDate]);
+    return d ? daysBetween(adminDay, d) : null;
+  }, [c.departureDate, adminDay]);
 
   /** Per-vaccine planned dose, with the next due date computed from the schedule. */
   const planned = useMemo<PlannedDose[]>(
@@ -399,11 +428,11 @@ export default function JuniorTravelClient() {
           def,
           entry,
           doseText: ageMonths !== null ? def.dose(ageMonths) : "",
-          nextDueDate: nd ? formatLocalDate(addDays(new Date(), nd.days)) : null,
+          nextDueDate: nd ? formatLocalDate(addDays(adminDay, nd.days)) : null,
           nextDueLabel: nd ? nd.label : null,
         };
       }),
-    [selectedDefs, c.doses, ageMonths]
+    [selectedDefs, c.doses, ageMonths, adminDay]
   );
 
   const alerts = useMemo<ClinicalAlert[]>(() => {
@@ -455,12 +484,12 @@ export default function JuniorTravelClient() {
       const minGap = p.entry.doseNumber ? v.minIntervalDays(p.entry.doseNumber) : null;
       const prevDate = parseLocalDate(p.entry.previousDoseDate);
       if (minGap !== null && prevDate) {
-        const gap = daysBetween(prevDate, new Date());
+        const gap = daysBetween(prevDate, adminDay);
         if (gap < 0)
           a.push({
             code: `future-prev-${v.id}`,
             severity: "stop",
-            message: `${v.name}: the previous dose date is in the future`,
+            message: leValid ? `${v.name}: the previous dose date is after the date this dose was given` : `${v.name}: the previous dose date is in the future`,
             detail: "Check the date of the previous dose.",
           });
         else if (gap < minGap)
@@ -479,7 +508,7 @@ export default function JuniorTravelClient() {
             detail: "The SPC requires the primary course to be restarted. Record this as dose 1 of a new course.",
           });
       }
-      if (p.entry.expiryDate && isExpired(p.entry.expiryDate))
+      if (p.entry.expiryDate && isExpired(p.entry.expiryDate, adminDate))
         a.push({
           code: `expired-${v.id}`,
           severity: "stop",
@@ -595,7 +624,7 @@ export default function JuniorTravelClient() {
         a.push({
           code: "departed",
           severity: "caution",
-          message: "The departure date is in the past",
+          message: leValid ? "The departure date is before the date this dose was given" : "The departure date is in the past",
           detail: "Check the date. If the child has already travelled, record why vaccination is being given now (for example completing a course).",
         });
       for (const p of planned) {
@@ -624,7 +653,7 @@ export default function JuniorTravelClient() {
     // raises a red flag simply because the box has not been reached yet.
 
     return a;
-  }, [patient.age, ageMonths, planned, c, daysToDeparture]);
+  }, [patient.age, ageMonths, planned, c, daysToDeparture, adminDay, adminDate, leValid]);
 
   const hasStops = alerts.some((x) => x.severity === "stop");
   const isUnder16 = patient.age !== null && patient.age < 16;
@@ -756,7 +785,7 @@ export default function JuniorTravelClient() {
   });
 
   const onPatientChange = (field: keyof BasePatientDetails, value: unknown) =>
-    setPatient((p) => ({ ...p, [field]: value, ...(field === "dateOfBirth" ? { age: calculateAge(value as string) } : {}) }));
+    setPatient((p) => ({ ...p, [field]: value, ...(field === "dateOfBirth" ? { age: calculateAge(value as string, adminDate) } : {}) }));
 
   const ageLabel = (v: VaccineDef) =>
     v.minAgeMonths >= 24 ? `from ${v.minAgeMonths / 12} years` : `from ${v.minAgeMonths} months`;
@@ -810,7 +839,7 @@ export default function JuniorTravelClient() {
             <TextInput label="Destination" value={c.destination} onChange={(v) => set({ destination: v })} placeholder="e.g. rural Kenya" required />
             <TextInput label="Departure date" type="date" value={c.departureDate} onChange={(v) => set({ departureDate: v })} required />
             {daysToDeparture !== null && (
-              <p className="text-xs text-gray-600">{daysToDeparture < 0 ? `Departure date is ${-daysToDeparture} days in the past` : `${daysToDeparture} days to departure`}</p>
+              <p className="text-xs text-gray-600">{daysToDeparture < 0 ? (leValid ? `Departure date is ${-daysToDeparture} days before the date this dose was given` : `Departure date is ${-daysToDeparture} days in the past`) : `${daysToDeparture} days to departure`}</p>
             )}
             <TextArea label="Itinerary, duration and planned activities" value={c.itinerary} onChange={(v) => set({ itinerary: v })} placeholder="Rural or urban, length of stay, animal contact, accommodation, season" />
             <div className="space-y-3 p-4 bg-gray-50 rounded-lg">

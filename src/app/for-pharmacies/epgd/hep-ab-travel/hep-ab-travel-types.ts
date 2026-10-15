@@ -136,8 +136,10 @@ export function daysBetween(from: Date, to: Date): number {
 export function formatLocalDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
 }
-export function addDays(n: number): string {
-  const t = todayLocal()
+/** The date `n` days after the administration date (`from`, yyyy-mm-dd;
+ *  today when not passed). */
+export function addDays(n: number, from?: string): string {
+  const t = (from && parseLocalDate(from)) || todayLocal()
   return formatLocalDate(new Date(t.getFullYear(), t.getMonth(), t.getDate() + n))
 }
 
@@ -275,6 +277,9 @@ export function createInitialState() {
         minute: "2-digit",
       }),
       clinicalNotes: "",
+      // Late entry (dose given on an earlier day), synced by the client.
+      lateEntry: false as boolean,
+      lateEntryReason: undefined as string | undefined,
     },
   }
 }

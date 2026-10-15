@@ -3,6 +3,7 @@
 import type { TravelCoreConsultationState } from "../lib/travel-core-types";
 import { TRAVEL_CORE_PGD_VERSION } from "../lib/travel-core-types";
 import { getVaccineDoseText, type BoosterDue } from "../lib/travel-core-clinical-logic";
+import { LateEntrySummaryLine } from "../../shared/components/LateEntry";
 
 const PGD_NAME = "Hepatitis A (Havrix/Avaxim), Typhoid (Typhim Vi) and Cholera (Dukoral) Travel Health";
 
@@ -72,6 +73,8 @@ export function TravelCoreSummaryReport({
           <p className="mt-2 text-sm font-semibold text-red-700">NOT SUPPLIED: exclusion criteria met. No vaccine was administered under this PGD.</p>
         )}
       </div>
+
+      <LateEntrySummaryLine slug="travel-core" className="mb-6" />
 
       {/* Patient Details */}
       <SectionHeader>Patient Details</SectionHeader>

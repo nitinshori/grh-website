@@ -9,6 +9,7 @@ import {
   ReportFooter,
 } from "../../shared/components/SummaryReportShell";
 import type { ClinicalAlert } from "../../shared/types";
+import { LateEntrySummaryLine } from "../../shared/components/LateEntry";
 import { PGD_VERSION, VACCINE_LABEL, type HepBState } from "../lib/hep_b_occupational-types";
 
 const PGD_NAME = "Hepatitis B (Engerix B / HBvaxPRO)";
@@ -62,6 +63,7 @@ export function HepBOccupationalSummaryReport({ state, alerts, blocked, nextDose
       <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50 print:bg-white print:border-0 print:pb-4">
         <h2 className="text-lg font-bold text-navy-900">Consultation Record</h2>
         <p className="text-sm text-gray-500 mt-1">Hepatitis B (Engerix B / HBvaxPRO) ePGD. {PGD_VERSION}</p>
+        <LateEntrySummaryLine slug="hep-b-occupational" className="mt-2" />
         {blocked && (
           <p className="mt-2 text-sm font-semibold text-red-700">NOT SUPPLIED: exclusion criteria met. No vaccine was administered under this PGD.</p>
         )}

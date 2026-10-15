@@ -7,9 +7,17 @@ import {
   validateSummaryStep,
 } from "../../shared/types";
 import { calculateAgeInMonths, hasIndication, daysSince, isIncreasedRisk, minimumIntervalDays, monthsBetween } from "./meningitis-b-clinical-logic";
+import { todayLocalIso } from "../../shared/late-entry";
 
-export function validateStep(step: number, state: MeningitiBConsultationState): string | null {
-  const ageMonths = calculateAgeInMonths(state.patient.dateOfBirth);
+/**
+ * asOf is the date the dose was given (YYYY-MM-DD): the late-entry date when
+ * one is recorded, otherwise today. Ages, intervals since the previous dose
+ * and the batch expiry check are all worked out on that date.
+ */
+export function validateStep(step: number, state: MeningitiBConsultationState, asOf?: string): string | null {
+  const ageMonths = calculateAgeInMonths(state.patient.dateOfBirth, asOf);
+  // Wording: "today" unless a late entry has moved the date the dose was given.
+  const lateActive = !!asOf && asOf !== todayLocalIso();
   const ageYears = state.patient.age;
   const underSixteen = ageYears !== null && ageYears < 16;
 
@@ -109,19 +117,19 @@ export function validateStep(step: number, state: MeningitiBConsultationState): 
         if (!a.previousDoseDate) {
           return "Complete \"Date of the previous dose in this course\"";
         }
-        const since = daysSince(a.previousDoseDate);
+        const since = daysSince(a.previousDoseDate, asOf);
         if (since === null) return "Previous dose date is not a valid date";
         if (since < 0) return "Previous dose date cannot be in the future";
         const min = minimumIntervalDays(a.product, a.trumenbaSchedule, a.doseNumber, ageMonths);
         if (min && since < min.days) {
-          return `Too soon: this dose is due ${min.label}. The previous dose was ${since} days ago; not before ${min.days} days.`;
+          return `Too soon: this dose is due ${min.label}. The previous dose was ${since} ${lateActive ? "days before the date this dose was given" : "days ago"}; not before ${min.days} days.`;
         }
         if (a.product === "bexsero" && a.doseNumber === "booster-after-toddler-course") {
           const ageAtPrevious = monthsBetween(state.patient.dateOfBirth, a.previousDoseDate);
           if (ageAtPrevious !== null && (ageAtPrevious < 12 || ageAtPrevious >= 24)) {
             return "This booster is for a child whose second primary dose was given at 12 to 23 months of age (Bexsero SmPC Table 1). The previous dose date puts that dose outside 12 to 23 months: check the history, or select Booster at 12 months for an infant course.";
           }
-          const monthsSincePrevious = monthsBetween(a.previousDoseDate, new Date().toISOString().slice(0, 10));
+          const monthsSincePrevious = monthsBetween(a.previousDoseDate, asOf || todayLocalIso());
           if (monthsSincePrevious !== null && monthsSincePrevious > 23) {
             return "More than 23 months have passed since the second primary dose, which is outside the SmPC booster interval of 12 to 23 months. This PGD does not authorise off-label use: refer to the GP or specialist.";
           }
@@ -137,7 +145,9 @@ export function validateStep(step: number, state: MeningitiBConsultationState): 
         }
       }
       if (!a.vaccinationDate1) {
-        return "Date of administration is required (today's date for this dose)";
+        return lateActive
+          ? "Date of administration is required (the date this dose was given)"
+          : "Date of administration is required (today's date for this dose)";
       }
       if (!a.injectionSite1.trim()) {
         return "Anatomical site is required";
@@ -155,7 +165,7 @@ export function validateStep(step: number, state: MeningitiBConsultationState): 
         return "Expiry date is required";
       }
       {
-        const exp = daysSince(a.expiryDate);
+        const exp = daysSince(a.expiryDate, asOf);
         if (exp === null) return "Expiry date is not a valid date";
         if (exp > 0) return "This batch has expired. Do not use it.";
       }

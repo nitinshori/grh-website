@@ -5,6 +5,7 @@ import { DengueConsultationState } from '../dengue-types';
 import { calculateAge, type ClinicalAlert } from '../../shared/types';
 import { DENGUE_PGD_VERSION } from '../dengue-clinical-logic';
 import { CounsellingGrid } from '../../shared/components/SummaryReportShell';
+import { LateEntrySummaryLine } from '../../shared/components/LateEntry';
 
 interface DengueSummaryReportProps {
   state: DengueConsultationState;
@@ -20,7 +21,8 @@ export default function DengueSummaryReport({
   alerts,
   onPrint,
 }: DengueSummaryReportProps): React.ReactNode {
-  const patientAge = calculateAge(state.patient.dateOfBirth);
+  // Age on the date the dose was given (consultationDate follows the late-entry date).
+  const patientAge = calculateAge(state.patient.dateOfBirth, state.summary.consultationDate || undefined);
   const hasStops = alerts.some((a) => a.severity === 'stop');
 
   return (
@@ -40,6 +42,8 @@ export default function DengueSummaryReport({
             Save &amp; Print Record
           </button>
         </div>
+
+        <LateEntrySummaryLine slug="dengue" className="mb-6" />
 
         {/* Patient Details Section */}
         <section className="mb-8 pb-8 border-b border-gray-200">

@@ -25,19 +25,30 @@ export function formatLocalDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-/** Calendar days from today to the date (local midnight to local midnight). */
-export function daysUntil(iso: string): number | null {
-  const d = parseLocalDate(iso);
-  if (!d) return null;
-  return Math.round((d.getTime() - todayLocal().getTime()) / 86400000);
+/** Local midnight of asOf (yyyy-mm-dd, the administration date), or today when not given. */
+function refDate(asOf?: string): Date {
+  return (asOf && parseLocalDate(asOf)) || todayLocal();
 }
 
-/** Whole months between the date of birth and today. Null when the date is missing or invalid. */
-export function calculateAgeInMonths(dob: string): number | null {
+/**
+ * Calendar days from today (or from asOf, the administration date) to the
+ * date (local midnight to local midnight).
+ */
+export function daysUntil(iso: string, asOf?: string): number | null {
+  const d = parseLocalDate(iso);
+  if (!d) return null;
+  return Math.round((d.getTime() - refDate(asOf).getTime()) / 86400000);
+}
+
+/**
+ * Whole months between the date of birth and today (or asOf, the
+ * administration date). Null when the date is missing or invalid.
+ */
+export function calculateAgeInMonths(dob: string, asOf?: string): number | null {
   if (!dob) return null;
   const birth = new Date(dob);
   if (isNaN(birth.getTime())) return null;
-  const today = new Date();
+  const today = refDate(asOf);
   let months = (today.getFullYear() - birth.getFullYear()) * 12 + (today.getMonth() - birth.getMonth());
   if (today.getDate() < birth.getDate()) months--;
   return months;
@@ -58,7 +69,9 @@ export function isRapidScheduleOffLabel(ageYears: number | null): boolean {
 export function evaluateJapaneseEncephalitisContraindications(
   screening: JapaneseEncephalitisScreening,
   ageInMonths: number | null,
-  ageYears: number | null
+  ageYears: number | null,
+  /** Administration date (yyyy-mm-dd); today when not given. */
+  asOf?: string
 ): { contraindications: JapaneseEncephalitisContraindications; alerts: ClinicalAlert[] } {
   const alerts: ClinicalAlert[] = [];
   const contraindications: JapaneseEncephalitisContraindications = {
@@ -189,7 +202,7 @@ export function evaluateJapaneseEncephalitisContraindications(
   // Caution: time before travel (calendar days, so exactly 14 or 35 days away
   // does not fire a day early)
   if (screening.departureDate) {
-    const daysToDeparture = daysUntil(screening.departureDate);
+    const daysToDeparture = daysUntil(screening.departureDate, asOf);
     if (daysToDeparture !== null) {
       if (daysToDeparture < 0) {
         alerts.push({
@@ -280,9 +293,11 @@ export type JeDoseNumber = '1st' | '2nd' | 'booster' | 'second-booster' | '';
 export function calculateNextDose(
   schedule: JeSchedule,
   doseNumber: JeDoseNumber,
-  ageYears: number | null
+  ageYears: number | null,
+  /** Administration date (yyyy-mm-dd) the schedule runs from; today when not given. */
+  asOf?: string
 ): { date: string; note: string } {
-  const t = todayLocal();
+  const t = refDate(asOf);
   const plusDays = (n: number) => formatLocalDate(new Date(t.getFullYear(), t.getMonth(), t.getDate() + n));
   const plusMonths = (n: number) => formatLocalDate(new Date(t.getFullYear(), t.getMonth() + n, t.getDate()));
   const plusYears = (n: number) => formatLocalDate(new Date(t.getFullYear() + n, t.getMonth(), t.getDate()));

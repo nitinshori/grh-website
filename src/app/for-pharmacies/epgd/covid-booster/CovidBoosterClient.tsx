@@ -6,6 +6,8 @@ import { STEP_LABELS, TOTAL_STEPS, createInitialConsultationState } from "./lib/
 import { getAllAlerts, hasHardStops, calculateDoseRecommendation, intervalTooShort, nhsEligible } from "./lib/covid-booster-clinical-logic";
 import { validateStep } from "./lib/covid-booster-validation";
 import { calculateAge } from "../shared/types";
+import { useAdministrationDate, useLateEntry } from "../shared/components/LateEntry";
+import { lateEntryError } from "../shared/late-entry";
 import { ProgressBar } from "../shared/components/ProgressBar";
 import { StepWrapper } from "../shared/components/StepWrapper";
 import type { ConsultationRecordData } from "../shared/hooks/useConsultationTracking";
@@ -25,7 +27,8 @@ function reducer(state: CovidBoosterConsultationState, action: CovidBoosterActio
     case "UPDATE_PATIENT":
       newState.patient = { ...newState.patient, [action.field]: action.value };
       if (action.field === "dateOfBirth") {
-        newState.patient.age = calculateAge(action.value as string);
+        // Age on the administration date (late entry aware).
+        newState.patient.age = calculateAge(action.value as string, state.summary.consultationDate);
       }
       break;
 
@@ -66,6 +69,28 @@ function reducer(state: CovidBoosterConsultationState, action: CovidBoosterActio
       newState.currentStep = action.step;
       break;
 
+    case "SYNC_ADMIN_DATE": {
+      // Late entry: the record is dated the day the dose was given, and the
+      // age is recalculated for that day. No change returns the same state.
+      const age = state.patient.dateOfBirth ? calculateAge(state.patient.dateOfBirth, action.date) : state.patient.age;
+      if (
+        state.summary.consultationDate === action.date &&
+        !!state.summary.lateEntry === action.lateEntry &&
+        (state.summary.lateEntryReason ?? "") === action.reason &&
+        state.patient.age === age
+      ) {
+        return state;
+      }
+      newState.summary = {
+        ...newState.summary,
+        consultationDate: action.date,
+        lateEntry: action.lateEntry,
+        lateEntryReason: action.reason,
+      };
+      newState.patient = { ...newState.patient, age };
+      break;
+    }
+
     case "RESET":
       return createInitialConsultationState();
   }
@@ -103,6 +128,15 @@ export default function CovidBoosterClient() {
   }, [__pharmProfile, state.summary.pharmacistName, state.summary.pharmacistGPhC]);
 
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
+
+  // Late entry: every date tied to the dose uses the date it was given.
+  const adminDate = useAdministrationDate("covid-booster");
+  const le = useLateEntry("covid-booster");
+  const leValid = le.lateEntry && lateEntryError(le) === null;
+  const leReason = leValid ? le.reason.trim() : "";
+  useEffect(() => {
+    dispatch({ type: "SYNC_ADMIN_DATE", date: adminDate, lateEntry: leValid, reason: leReason });
+  }, [adminDate, leValid, leReason, state.summary.consultationDate, state.patient.dateOfBirth]);
 
   const alerts = useMemo(() => getAllAlerts(state), [state]);
   // PGD v011: observation is 0, 15 or 30 minutes, chosen at counselling.

@@ -15,7 +15,8 @@ export interface ValidationResult {
 }
 
 export function validatePatientDetails(
-  patient: BasePatientDetails
+  patient: BasePatientDetails,
+  asOf?: string
 ): ValidationResult {
   const errors: string[] = [];
 
@@ -31,7 +32,7 @@ export function validatePatientDetails(
 
   // Age gate per signed PGD (v007): adults 18+. Recomputed from the DOB so a
   // blank or stale age can never pass.
-  const age = patient.dateOfBirth ? calculateAge(patient.dateOfBirth) : null;
+  const age = patient.dateOfBirth ? calculateAge(patient.dateOfBirth, asOf) : null;
   if (patient.dateOfBirth && age === null) {
     errors.push('Unable to calculate age from the date of birth');
   }
@@ -133,9 +134,14 @@ export function validateContraindications(
 }
 
 export function validateAdministration(
-  administration: DengueVaccineAdministration
+  administration: DengueVaccineAdministration,
+  asOf?: string
 ): ValidationResult {
   const errors: string[] = [];
+  // Date the dose was given (late entry aware); today when not supplied.
+  const adminDate = asOf || todayIso();
+  // Wording: "today" unless a late entry has moved the date the dose was given.
+  const lateActive = adminDate !== todayIso();
 
   // Adrenaline must be in place before the vaccine is given, so it is
   // confirmed on this step, before the batch is recorded.
@@ -151,7 +157,8 @@ export function validateAdministration(
 
   if (administration.expiryDate?.trim()) {
     // Day granularity: a batch expiring today is still in date today.
-    if (administration.expiryDate < todayIso()) {
+    // Must be in date on the day the dose was given (late entry aware).
+    if (administration.expiryDate < adminDate) {
       errors.push('Vaccine batch has expired');
     }
   }
@@ -176,10 +183,14 @@ export function validateAdministration(
     // a fortnight after the first used to be accepted without a question.
     if (!administration.firstDoseDate?.trim()) {
       errors.push('Date of the first dose is required for a second dose');
-    } else if (administration.firstDoseDate > todayIso()) {
-      errors.push('Date of the first dose cannot be in the future');
-    } else if (secondDoseIntervalMet(administration.firstDoseDate) === false) {
-      errors.push(`The second dose is due ${DOSE_INTERVAL_MONTHS} months after the first: the interval has not yet elapsed. Do not give the second dose today`);
+    } else if (administration.firstDoseDate > adminDate) {
+      errors.push(lateActive
+        ? 'Date of the first dose cannot be after the date this dose was given'
+        : 'Date of the first dose cannot be in the future');
+    } else if (secondDoseIntervalMet(administration.firstDoseDate, adminDate) === false) {
+      errors.push(lateActive
+        ? `The second dose is due ${DOSE_INTERVAL_MONTHS} months after the first: the interval had not elapsed on the date this dose was given. It cannot be recorded as the second dose`
+        : `The second dose is due ${DOSE_INTERVAL_MONTHS} months after the first: the interval has not yet elapsed. Do not give the second dose today`);
     }
   }
 

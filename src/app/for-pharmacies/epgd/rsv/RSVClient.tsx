@@ -38,6 +38,8 @@ import {
   validateRSVSummaryStep,
 } from './rsv-validation';
 import { calculateAge } from '../shared/types';
+import { useAdministrationDate, useLateEntry } from '../shared/components/LateEntry';
+import { getAdministrationDate, lateEntryError } from '../shared/late-entry';
 import RSVSummaryReport from './components/RSVSummaryReport';
 import DateInput from '@/components/DateInput'
 
@@ -110,6 +112,28 @@ export function RSVClient() {
     initialRSVPostVaccineAdvice()
   );
 
+  // Late entry: every date tied to the dose uses the date it was given. The
+  // record date, the age and the late-entry flag follow it.
+  const adminDate = useAdministrationDate('rsv');
+  const le = useLateEntry('rsv');
+  const leValid = le.lateEntry && lateEntryError(le) === null;
+  const leReason = leValid ? le.reason.trim() : '';
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs the record to the shared late-entry store
+    setSummary((prev) =>
+      prev.consultationDate === adminDate &&
+      !!prev.lateEntry === leValid &&
+      (prev.lateEntryReason ?? '') === leReason
+        ? prev
+        : { ...prev, consultationDate: adminDate, lateEntry: leValid, lateEntryReason: leReason }
+    );
+    setPatientDetails((prev) => {
+      if (!prev.dateOfBirth) return prev;
+      const age = calculateAge(prev.dateOfBirth, adminDate);
+      return age === prev.age ? prev : { ...prev, age };
+    });
+  }, [adminDate, leValid, leReason, summary.consultationDate]);
+
   // Calculate age when DOB changes
   const handlePatientDetailsChange = useCallback(
     (field: keyof RSVPatientDetails, value: any) => {
@@ -118,7 +142,8 @@ export function RSVClient() {
       setPatientDetails((prev) => {
         const updated = { ...prev, [field]: value };
         if (field === 'dateOfBirth') {
-          updated.age = calculateAge(value);
+          // Age on the administration date (late entry aware).
+          updated.age = calculateAge(value, getAdministrationDate('rsv'));
         }
         return updated;
       });
@@ -128,16 +153,16 @@ export function RSVClient() {
 
   // Get clinical alerts
   const clinicalAlerts = useMemo(() => {
-    return getRSVClinicalAlerts(patientDetails, medicalHistory);
-  }, [patientDetails, medicalHistory]);
+    return getRSVClinicalAlerts(patientDetails, medicalHistory, adminDate);
+  }, [patientDetails, medicalHistory, adminDate]);
 
   const isBlocked = useMemo(() => {
     return shouldBlockConsultation(clinicalAlerts);
   }, [clinicalAlerts]);
 
   const rsvSeasonStatus = useMemo(() => {
-    return isCurrentRSVSeason();
-  }, []);
+    return isCurrentRSVSeason(adminDate);
+  }, [adminDate]);
 
   // Validation
   const patientValidationError = useMemo(() => {

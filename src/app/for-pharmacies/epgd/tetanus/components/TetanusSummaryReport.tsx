@@ -3,6 +3,7 @@
 import type { ClinicalAlert, BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/types";
 import { SectionHeader, Row, CounsellingGrid, ReportFooter } from "../../shared/components/SummaryReportShell";
 import { PGD_VERSION, type Clinical } from "../tetanus-types";
+import { LateEntrySummaryLine } from "../../shared/components/LateEntry";
 
 /**
  * Printed record for the Td/IPV ePGD. Until this existed, Save & Print
@@ -78,6 +79,8 @@ export function TetanusSummaryReport({
           <p>{summary.consultationTime}</p>
         </div>
       </div>
+
+      <LateEntrySummaryLine slug="tetanus" className="mb-6" />
 
       <SectionHeader>Patient</SectionHeader>
       <div className="grid grid-cols-2 gap-4 mb-6">

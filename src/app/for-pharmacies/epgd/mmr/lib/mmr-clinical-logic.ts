@@ -22,7 +22,8 @@ export function getAllAlerts(state: MMRConsultationState): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
 
   // Age: indicated from 12 months of age (PGD v006 inclusion)
-  const months = ageInMonths(state.patient.dateOfBirth);
+  // Age on the administration date (late entry aware).
+  const months = ageInMonths(state.patient.dateOfBirth, state.summary.consultationDate);
   if (months !== null && months < 12) {
     alerts.push({
       severity: "stop",

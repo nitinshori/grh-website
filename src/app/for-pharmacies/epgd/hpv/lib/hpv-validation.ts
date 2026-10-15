@@ -108,6 +108,8 @@ export function validateStep(state: HPVConsultationState, step: number): string 
       }
       // Minimum intervals (PGD v007): a dose given early must be discounted
       // and repeated, so it is refused here rather than recorded.
+      // "today" unless a late entry has moved the date the dose was given.
+      const doseDayText = state.summary.lateEntry ? "the date this dose was given" : "today";
       const minDays = minimumIntervalDays(schedule, a.doseNumber);
       if (minDays !== null) {
         if (!a.previousDoseDate) {
@@ -115,7 +117,7 @@ export function validateStep(state: HPVConsultationState, step: number): string 
         }
         const gap = daysBetween(a.previousDoseDate, state.summary.consultationDate);
         if (gap === null) return "The previous dose date is not a valid date";
-        if (gap < 0) return "Date of the previous dose cannot be after today";
+        if (gap < 0) return `Date of the previous dose cannot be after ${doseDayText}`;
         if (gap < minDays) {
           return `Too early: dose ${a.doseNumber} must be at least ${minimumIntervalLabel(schedule, a.doseNumber)} after the previous dose (given ${a.previousDoseDate}). Do not give today; rebook.`;
         }
@@ -130,9 +132,9 @@ export function validateStep(state: HPVConsultationState, step: number): string 
         }
         const ahead = daysBetween(state.summary.consultationDate, a.nextDoseDue);
         const nextMin = minimumIntervalDays(schedule, String(doseNo + 1));
-        if (ahead === null || ahead <= 0) return "The next dose due date must be after today";
+        if (ahead === null || ahead <= 0) return `The next dose due date must be after ${doseDayText}`;
         if (nextMin !== null && ahead < nextMin) {
-          return `The next dose is due at least ${minimumIntervalLabel(schedule, String(doseNo + 1))} after today`;
+          return `The next dose is due at least ${minimumIntervalLabel(schedule, String(doseNo + 1))} after ${doseDayText}`;
         }
       }
       if (!a.observedFifteenMinutes) {

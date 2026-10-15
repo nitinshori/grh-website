@@ -4,6 +4,7 @@ import React from 'react';
 import { JapaneseEncephalitisConsultationState } from '../japanese-encephalitis-types';
 import { calculateAge } from '../../shared/types';
 import { calculateAgeInMonths, getDoseVolume, JE_PGD_VERSION } from '../japanese-encephalitis-clinical-logic';
+import { LateEntrySummaryLine } from '../../shared/components/LateEntry';
 
 const RISK_CATEGORY_LABELS: Record<string, string> = {
   'recommended-residence': 'Recommended: residence in an endemic or epidemic area',
@@ -45,8 +46,10 @@ export default function JapaneseEncephalitisSummaryReport({
   blocked = false,
   nextDoseNote = '',
 }: JapaneseEncephalitisSummaryReportProps): React.ReactNode {
-  const patientAge = calculateAge(state.patient.dateOfBirth);
-  const patientAgeMonths = calculateAgeInMonths(state.patient.dateOfBirth);
+  // Age on the date the dose was given (consultationDate follows the late-entry date).
+  const asOf = state.summary.consultationDate || undefined;
+  const patientAge = calculateAge(state.patient.dateOfBirth, asOf);
+  const patientAgeMonths = calculateAgeInMonths(state.patient.dateOfBirth, asOf);
   const doseVolume = getDoseVolume(patientAgeMonths);
   const stopMessages = state.alerts.filter((a) => a.severity === 'stop').map((a) => a.message);
 
@@ -64,6 +67,7 @@ export default function JapaneseEncephalitisSummaryReport({
             {blocked ? 'Print Exclusion Record' : 'Save & Print Record'}
           </button>
         </div>
+        <LateEntrySummaryLine slug="japanese-encephalitis" className="mb-6" />
         {blocked && (
           <div className="mb-6 p-4 bg-red-50 border border-red-300 rounded-lg">
             <p className="text-sm font-semibold text-red-800">NOT SUPPLIED: exclusion criteria met. No vaccine was administered under this PGD.</p>

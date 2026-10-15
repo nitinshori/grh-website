@@ -10,6 +10,8 @@ import { TextInput, TextArea, Checkbox, SelectInput } from "../shared/components
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile"
 import { validatePatientStep, validateConsentStep, validateSummaryStep, calculateAge } from "../shared/types"
 import { HepABSummaryReport } from "./components/HepABSummaryReport"
+import { useAdministrationDate, useLateEntry } from "../shared/components/LateEntry"
+import { lateEntryError } from "../shared/late-entry"
 
 // ─────────────────────────────────────────────────────────────────────────
 // Hepatitis A / B Travel ePGD
@@ -69,6 +71,32 @@ export function HepABClient() {
     setState(createInitialState())
     setCurrentStep(0)
   }, [])
+
+  // Late entry: every date tied to the dose (age, interval since the previous
+  // dose, next dose due, batch expiry) counts from the date the dose was
+  // given, not the day the record is typed.
+  const adminDate = useAdministrationDate("hep-ab-travel")
+  const lateEntryState = useLateEntry("hep-ab-travel")
+  const lateEntryValid = lateEntryState.lateEntry && lateEntryError(lateEntryState) === null
+  const lateEntryReason = lateEntryValid ? lateEntryState.reason.trim() : undefined
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- late-entry sync; returns prev when unchanged
+    setState((prev) => {
+      const age = calculateAge(prev.patient.dateOfBirth, adminDate)
+      const summarySame =
+        prev.summary.consultationDate === adminDate &&
+        !!prev.summary.lateEntry === lateEntryValid &&
+        prev.summary.lateEntryReason === lateEntryReason
+      if (summarySame && prev.patient.age === age) return prev
+      return {
+        ...prev,
+        patient: prev.patient.age === age ? prev.patient : { ...prev.patient, age },
+        summary: summarySame
+          ? prev.summary
+          : { ...prev.summary, consultationDate: adminDate, lateEntry: lateEntryValid, lateEntryReason },
+      }
+    })
+  }, [adminDate, lateEntryValid, lateEntryReason, state.summary.consultationDate, state.summary.lateEntry, state.summary.lateEntryReason, state.patient.dateOfBirth])
 
   const pharmProfile = usePharmacistProfile()
   useEffect(() => {
@@ -236,14 +264,14 @@ export function HepABClient() {
   const interval = scheduleAllowed && doseAllowed ? SCHEDULE_INTERVALS[schedule as Exclude<Schedule, "">][doseNumber as Exclude<DoseNumber, "">] : null
   const previousDoseRequired = interval !== null && interval.minDays !== null
   const previousDoseDate = parseLocalDate(state.administration.previousDoseDate)
-  const daysSincePrevious = previousDoseDate ? daysBetween(previousDoseDate, todayLocal()) : null
+  const daysSincePrevious = previousDoseDate ? daysBetween(previousDoseDate, parseLocalDate(adminDate) ?? todayLocal()) : null
   const intervalTooShort =
     interval !== null && interval.minDays !== null && daysSincePrevious !== null && daysSincePrevious < interval.minDays
   const previousDoseInFuture = daysSincePrevious !== null && daysSincePrevious < 0
-  const computedNextDue = interval !== null && interval.nextDays !== null ? addDays(interval.nextDays) : ""
+  const computedNextDue = interval !== null && interval.nextDays !== null ? addDays(interval.nextDays, adminDate) : ""
   const courseCompleteWithThisDose = interval !== null && interval.nextDays === null
   const expiryDate = parseLocalDate(state.administration.expiryDate)
-  const batchExpired = expiryDate !== null && daysBetween(todayLocal(), expiryDate) < 0
+  const batchExpired = expiryDate !== null && daysBetween(parseLocalDate(adminDate) ?? todayLocal(), expiryDate) < 0
 
   // The next-due date and course-complete flag are derived from the schedule
   // and dose number (computedNextDue, courseCompleteWithThisDose) and written
@@ -276,7 +304,7 @@ export function HepABClient() {
     if (!doseAllowed) return `${DOSE_LABEL[doseNumber]} is not part of the ${SCHEDULE_LABEL[schedule as Exclude<Schedule, "">]} schedule`
     if (previousDoseRequired && !previousDoseDate) return "Record the date of the previous dose"
     if (previousDoseInFuture) return "The previous dose date is in the future: check the date"
-    if (intervalTooShort && interval && interval.minDays !== null) return `Only ${daysSincePrevious} days since the previous dose; the schedule minimum before ${DOSE_LABEL[doseNumber as Exclude<DoseNumber, "">].toLowerCase()} is ${interval.minDays} days. This dose is not due: rebook for ${addDays(interval.minDays - (daysSincePrevious ?? 0))}`
+    if (intervalTooShort && interval && interval.minDays !== null) return `Only ${daysSincePrevious} days since the previous dose; the schedule minimum before ${DOSE_LABEL[doseNumber as Exclude<DoseNumber, "">].toLowerCase()} is ${interval.minDays} days. This dose is not due: rebook for ${addDays(interval.minDays - (daysSincePrevious ?? 0), adminDate)}`
     if (!state.administration.batchNumber) return "Record the batch number"
     if (!expiryDate) return "Record the expiry date"
     if (batchExpired) return "Vaccine batch has expired: do not administer, quarantine the stock and select an in-date batch"
@@ -476,7 +504,7 @@ export function HepABClient() {
                   [field]: value,
                   // Age is what every gate in this tool reads. It was never
                   // computed before (adversarial review, 11 Sep 2026).
-                  ...(field === "dateOfBirth" ? { age: calculateAge(value as string) } : {}),
+                  ...(field === "dateOfBirth" ? { age: calculateAge(value as string, adminDate) } : {}),
                 },
               }))
             }

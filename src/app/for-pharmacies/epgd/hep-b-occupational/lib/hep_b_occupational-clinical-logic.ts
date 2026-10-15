@@ -25,9 +25,17 @@ export function addMonths(n: number, from: Date = todayLocal()): string {
   return formatLocalDate(new Date(from.getFullYear(), from.getMonth() + n, from.getDate()));
 }
 
-export function isExpired(expiry: string): boolean {
+/** The administration date (`asOf`, yyyy-mm-dd) as local midnight; today
+ *  when not passed or invalid. */
+export function administrationDay(asOf?: string): Date {
+  return (asOf && parseLocalDate(asOf)) || todayLocal();
+}
+
+/** True when the expiry date is before the administration date (`asOf`,
+ *  today when not passed). */
+export function isExpired(expiry: string, asOf?: string): boolean {
   const d = parseLocalDate(expiry);
-  return d !== null && daysBetween(todayLocal(), d) < 0;
+  return d !== null && daysBetween(administrationDay(asOf), d) < 0;
 }
 
 // ─── Schedules from the signed PGD (v006) ───
@@ -83,13 +91,14 @@ export function getDoseRule(schedule: Schedule, dose: DoseNumber): DoseRule | nu
 }
 
 /** Next dose date computed from the schedule and dose number ("" when the course is complete). */
-export function computeNextDoseDate(schedule: Schedule, dose: DoseNumber): string {
+export function computeNextDoseDate(schedule: Schedule, dose: DoseNumber, asOf?: string): string {
   const rule = getDoseRule(schedule, dose);
   if (!rule || rule.nextMonths === null) return "";
-  return addMonths(rule.nextMonths);
+  return addMonths(rule.nextMonths, administrationDay(asOf));
 }
 
-export function getAllAlerts(state: HepBState): ClinicalAlert[] {
+/** `asOf`: the administration date (yyyy-mm-dd), today when not passed. */
+export function getAllAlerts(state: HepBState, asOf?: string): ClinicalAlert[] {
   const a: ClinicalAlert[] = [];
   const { assessment, treatment, patient } = state;
   const isUnder16 = patient.age !== null && patient.age < 16;
@@ -136,7 +145,7 @@ export function getAllAlerts(state: HepBState): ClinicalAlert[] {
   if (rule && rule.minDays !== null) {
     const prevDate = parseLocalDate(treatment.previousDoseDate);
     if (prevDate) {
-      const gap = daysBetween(prevDate, todayLocal());
+      const gap = daysBetween(prevDate, administrationDay(asOf));
       if (gap < 0) {
         a.push({ severity: "stop", code: "PREV_DOSE_FUTURE", message: "The previous dose date is in the future", detail: "Check the date of the previous dose." });
       } else if (gap < rule.minDays) {
@@ -147,7 +156,7 @@ export function getAllAlerts(state: HepBState): ClinicalAlert[] {
     }
   }
 
-  if (treatment.vaccine && isExpired(treatment.expiryDate)) {
+  if (treatment.vaccine && isExpired(treatment.expiryDate, asOf)) {
     a.push({ severity: "stop", code: "EXPIRED", message: "Vaccine batch has expired", detail: "Do not administer. Quarantine the stock and select an in-date batch." });
   }
 

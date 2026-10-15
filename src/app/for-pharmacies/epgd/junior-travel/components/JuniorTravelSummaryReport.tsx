@@ -11,6 +11,7 @@ import {
 } from "../../shared/components/SummaryReportShell";
 import type { ClinicalAlert, BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/types";
 import { PGD_VERSION, EXCLUSION_REFERRAL_LABEL, type Clinical } from "../junior-travel-types";
+import { LateEntrySummaryLine } from "../../shared/components/LateEntry";
 
 export interface VaccineGivenRow {
   id: string;
@@ -69,6 +70,7 @@ export default function JuniorTravelSummaryReport({
       </div>
 
       <div className="px-6 py-6 space-y-6 print:space-y-4">
+        <LateEntrySummaryLine slug="junior-travel" />
         <div>
           <SectionHeader>Patient Details</SectionHeader>
           <div className="space-y-1.5">

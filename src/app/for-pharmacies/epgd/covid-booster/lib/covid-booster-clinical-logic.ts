@@ -1,25 +1,30 @@
 import type { CovidBoosterConsultationState } from "./covid-booster-types";
 import { COVID_PRODUCTS } from "./covid-booster-types";
 import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
+import { daysBetweenIso, parseIsoLocal, toCalendarIso, todayLocalIso } from "../../shared/late-entry";
 
 // Aligned to the COVID-19 Vaccination 2026/27 PGD version 011, issued 14 October 2026.
 
-const DAY_MS = 24 * 60 * 60 * 1000;
 /** Minimum interval between COVID-19 vaccine doses: 3 months, operationalised as 91 days (13 weeks) as in the NHS programme. */
 export const MIN_INTERVAL_DAYS = 91;
 
-/** Days since an ISO date, or null when missing or invalid. */
-export function daysSince(date: string): number | null {
-  if (!date) return null;
-  const d = new Date(date);
-  if (isNaN(d.getTime())) return null;
-  return Math.floor((Date.now() - d.getTime()) / DAY_MS);
+/**
+ * Days from an ISO date to the administration date (asOf, YYYY-MM-DD), or to
+ * now when asOf is not given. Null when missing or invalid.
+ */
+export function daysSince(date: string, asOf?: string): number | null {
+  // Calendar dates (London local), no time of day.
+  const d = toCalendarIso(date);
+  if (!d) return null;
+  if (asOf && !parseIsoLocal(asOf)) return null;
+  return daysBetweenIso(d, asOf || todayLocalIso());
 }
 
 /** True when the interval since the previous dose is known and under 3 months. */
 export function intervalTooShort(state: CovidBoosterConsultationState): boolean {
   if (!state.assessment.previousCovidVaccine) return false;
-  const d = daysSince(state.assessment.previousDoseDate);
+  // Measured to the administration date (late entry aware), not the day typed.
+  const d = daysSince(state.assessment.previousDoseDate, state.summary.consultationDate);
   return d !== null && d < MIN_INTERVAL_DAYS;
 }
 

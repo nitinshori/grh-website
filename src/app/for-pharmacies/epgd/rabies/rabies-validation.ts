@@ -64,7 +64,7 @@ export function validateConsent(
   return { isValid: errors.length === 0, errors };
 }
 
-export function validateScreening(screening: RabiesScreening): ValidationResult {
+export function validateScreening(screening: RabiesScreening, asOf?: string): ValidationResult {
   const errors: string[] = [];
 
   if (!screening.indication) {
@@ -83,7 +83,7 @@ export function validateScreening(screening: RabiesScreening): ValidationResult 
     if (!screening.sufficientTimeBeforeTravel) {
       errors.push('Tick "Sufficient time before travel to complete the chosen course" (inclusion criterion)');
     }
-    const days = daysFromToday(screening.departureDate);
+    const days = daysFromToday(screening.departureDate, asOf);
     if (days !== null && days < 0) {
       errors.push('Departure date is in the past');
     }
@@ -140,7 +140,8 @@ export function validateAdministration(
   screening: RabiesScreening,
   contraindications: RabiesContraindications,
   ageYears: number | null,
-  adrenalineConfirmed: boolean = true
+  adrenalineConfirmed: boolean = true,
+  asOf?: string
 ): ValidationResult {
   const errors: string[] = [];
 
@@ -171,8 +172,9 @@ export function validateAdministration(
   }
 
   if (administration.expiryDate?.trim()) {
-    // Calendar days: a batch expiring today is still in date today.
-    const d = daysFromToday(administration.expiryDate);
+    // Calendar days: a batch expiring on the day of administration is still in
+    // date that day. `asOf` is the administration date (late entry), else today.
+    const d = daysFromToday(administration.expiryDate, asOf);
     if (d !== null && d < 0) {
       errors.push('Vaccine batch has expired: do not administer, quarantine the stock and select an in-date batch');
     }
@@ -217,8 +219,8 @@ export function validateAdministration(
     if (!administration.previousDoseDate) {
       errors.push('Record the date of the previous dose in this course');
     } else {
-      const daysSincePrevious = -(daysFromToday(administration.previousDoseDate) ?? 0);
-      if (daysFromToday(administration.previousDoseDate) === null) {
+      const daysSincePrevious = -(daysFromToday(administration.previousDoseDate, asOf) ?? 0);
+      if (daysFromToday(administration.previousDoseDate, asOf) === null) {
         errors.push('Previous dose date is not a valid date');
       } else if (daysSincePrevious < 0) {
         errors.push('Previous dose date cannot be in the future');
@@ -232,7 +234,7 @@ export function validateAdministration(
   // criterion), and the accelerated course only where the conventional one
   // genuinely cannot be completed.
   if (screening.indication !== 'occupational-uk' && screening.departureDate) {
-    const daysToDeparture = daysFromToday(screening.departureDate);
+    const daysToDeparture = daysFromToday(screening.departureDate, asOf);
     if (daysToDeparture !== null) {
       if (administration.doseNumber === '1st') {
         if (administration.schedule === 'standard' && daysToDeparture < 21) {
@@ -246,7 +248,7 @@ export function validateAdministration(
         }
       }
       if (administration.doseNumber === '2nd' && administration.previousDoseDate) {
-        const sinceDay0 = -(daysFromToday(administration.previousDoseDate) ?? 0);
+        const sinceDay0 = -(daysFromToday(administration.previousDoseDate, asOf) ?? 0);
         const daysNeeded = administration.schedule === 'accelerated' ? 7 : 21;
         if (sinceDay0 + daysToDeparture < daysNeeded) {
           errors.push('The third dose of the chosen course cannot be given before departure. Record the plan for completing the course, or refer.');

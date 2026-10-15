@@ -2,6 +2,7 @@
 
 import type { HPVConsultationState } from "../lib/hpv-types";
 import type { ClinicalAlert } from "../../shared/types";
+import { LateEntrySummaryLine } from "../../shared/components/LateEntry";
 import {
   SectionHeader,
   Row,
@@ -35,6 +36,7 @@ export function HPVSummaryReport({
           Consultation Date: {state.summary.consultationDate} |{" "}
           {state.summary.consultationTime}
         </p>
+        <LateEntrySummaryLine slug="hpv" className="mt-1" />
         <p className="text-xs text-gray-500 mt-1">
           Administered under the Get Real Health Gardasil 9 PGD, version 007, issued 14 September 2026.
         </p>

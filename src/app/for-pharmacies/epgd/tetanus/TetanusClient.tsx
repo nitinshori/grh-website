@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import type { ClinicalAlert } from "../shared/types";
 import {
   calculateAge,
@@ -16,6 +16,8 @@ import {
 } from "../shared/types";
 import { ProgressBar } from "../shared/components/ProgressBar";
 import { StepWrapper } from "../shared/components/StepWrapper";
+import { useAdministrationDate, useLateEntry } from "../shared/components/LateEntry";
+import { lateEntryError } from "../shared/late-entry";
 import { AlertBanner } from "../shared/components/AlertBanner";
 import { PatientDetailsStep } from "../shared/steps/PatientDetailsStep";
 import { ConsentStep } from "../shared/steps/ConsentStep";
@@ -58,6 +60,29 @@ export default function TetanusClient() {
   const [summary, setSummary] = useState<BaseSummary>(initialSummary());
   const [c, setC] = useState<Clinical>(createEmptyClinical());
   const set = (patch: Partial<Clinical>) => setC((prev) => ({ ...prev, ...patch }));
+
+  // Late entry: every date tied to the dose (age at vaccination, interval
+  // since the prior primary dose, batch expiry, the recorded date of
+  // administration) is worked out from the date the dose was given.
+  const adminDate = useAdministrationDate("tetanus");
+  const le = useLateEntry("tetanus");
+  const leValid = le.lateEntry && lateEntryError(le) === null;
+  const leReason = leValid ? le.reason.trim() : undefined;
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs from the external late-entry store; returns prev unchanged when already equal
+    setSummary((p) =>
+      p.consultationDate === adminDate && !!p.lateEntry === leValid && p.lateEntryReason === leReason
+        ? p
+        : { ...p, consultationDate: adminDate, lateEntry: leValid, lateEntryReason: leReason }
+    );
+  }, [adminDate, leValid, leReason, summary.consultationDate]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- recomputes age when the late-entry date changes; returns prev unchanged when already equal
+    setPatient((p) => {
+      const age = calculateAge(p.dateOfBirth, adminDate);
+      return age === p.age ? p : { ...p, age };
+    });
+  }, [adminDate, patient.dateOfBirth]);
 
   const isUnder16 = patient.age !== null && patient.age < 16;
 
@@ -232,7 +257,7 @@ export default function TetanusClient() {
     {
       // The 12-month exception is only for the scheduled second or third
       // primary dose: the prior dose must have been about a month ago.
-      const d = daysSince(c.priorPrimaryDoseDate);
+      const d = daysSince(c.priorPrimaryDoseDate, adminDate);
       if (c.indication === "incomplete-history" && c.primaryCourseContinuation && d !== null && (d < 21 || d > 365))
         a.push({
           code: "primary-interval",
@@ -260,7 +285,7 @@ export default function TetanusClient() {
     // raises a red flag simply because the box has not been reached yet.
 
     return a;
-  }, [patient.age, c, wound, uncertainHistory, primedWithin10, immunoglobulinIndicated]);
+  }, [patient.age, c, wound, uncertainHistory, primedWithin10, immunoglobulinIndicated, adminDate]);
 
   const hasStops = alerts.some((x) => x.severity === "stop");
 
@@ -281,7 +306,7 @@ export default function TetanusClient() {
         const base = validatePatientStep(patient, { minAge: 10 });
         if (base) return base;
         // Never trust a stale age: recompute from the DOB here.
-        const age = calculateAge(patient.dateOfBirth);
+        const age = calculateAge(patient.dateOfBirth, adminDate);
         if (age === null) return "Unable to calculate age from the date of birth";
         if (age < 10) return "Patient must be 10 years or older";
         // PGD v010 records: patient name, address, date of birth and the GP with whom they are registered.
@@ -323,7 +348,7 @@ export default function TetanusClient() {
         if (immunoglobulinIndicated && !c.immunoglobulinReferralArranged) return "Tick \"Same-day referral for tetanus immunoglobulin arranged\" once it has been arranged";
         if (!c.batchNumber.trim()) return "Please record the batch number";
         if (!c.expiryDate.trim()) return "Please record the expiry date";
-        if (!expiryMonthIsCurrent(c.expiryDate)) return "Expiry date must be MM/YYYY and must not be in the past";
+        if (!expiryMonthIsCurrent(c.expiryDate, adminDate)) return leValid ? "Expiry date must be MM/YYYY and the vaccine must have been in date on the date this dose was given" : "Expiry date must be MM/YYYY and must not be in the past";
         if (!c.route) return "Please record the route (intramuscular, or deep subcutaneous where the intramuscular route is not suitable)";
         if (!c.site.trim()) return "Please record the anatomical site";
         return null;
@@ -336,7 +361,7 @@ export default function TetanusClient() {
         return validateSummaryStep(summary);
       default: return null;
     }
-  }, [step, patient, consent, c, summary, isUnder16, wound, offLabel, immunoglobulinIndicated, courseInvolved]);
+  }, [step, patient, consent, c, summary, isUnder16, wound, offLabel, immunoglobulinIndicated, courseInvolved, adminDate, leValid]);
 
   // A stop anywhere disables Next on every step; an excluded patient is
   // recorded through the "not vaccinated" panel and "Save as not supplied".
@@ -385,7 +410,7 @@ export default function TetanusClient() {
   };
 
   const onPatientChange = (field: keyof BasePatientDetails, value: unknown) =>
-    setPatient((p) => ({ ...p, [field]: value, ...(field === "dateOfBirth" ? { age: calculateAge(value as string) } : {}) }));
+    setPatient((p) => ({ ...p, [field]: value, ...(field === "dateOfBirth" ? { age: calculateAge(value as string, adminDate) } : {}) }));
 
   const stepBody = () => {
     switch (step) {

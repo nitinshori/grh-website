@@ -51,6 +51,14 @@ import { PatientDetailsStep } from '../shared/steps/PatientDetailsStep';
 import { ConsentStep } from '../shared/steps/ConsentStep';
 import RabiesSummaryReport from './components/RabiesSummaryReport';
 import { calculateAge, initialPatientDetails, initialConsent, initialSummary } from '../shared/types';
+import { LateEntry, useAdministrationDate, useLateEntry } from '../shared/components/LateEntry';
+import {
+  clearLateEntry,
+  getAdministrationDate,
+  getLateEntry,
+  lateEntryError,
+  lateEntrySatisfied,
+} from '../shared/late-entry';
 
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 const STEP_LABELS = [
@@ -108,7 +116,48 @@ export default function RabiesClient({
     new Map<number, string[]>()
   );
 
-  const patientAge = calculateAge(state.patient.dateOfBirth);
+  // Late entry: the date the dose was given (today unless a valid earlier
+  // date is recorded). Age, intervals, expiry, departure and next-due dates
+  // are all worked out from this date.
+  const adminDate = useAdministrationDate('rabies');
+  const lateEntryState = useLateEntry('rabies');
+  const lateEntryValid = lateEntryState.lateEntry && lateEntryError(lateEntryState) === null;
+
+  const patientAge = calculateAge(state.patient.dateOfBirth, adminDate);
+
+  // Keep the record's consultation date, late-entry flag and stored age in
+  // step with the administration date.
+  useEffect(() => {
+    setState((prev) => {
+      const reason = lateEntryValid ? lateEntryState.reason.trim() : undefined;
+      const age = prev.patient.dateOfBirth ? calculateAge(prev.patient.dateOfBirth, adminDate) : prev.patient.age;
+      const summarySame =
+        prev.summary.consultationDate === adminDate &&
+        (prev.summary.lateEntry ?? false) === lateEntryValid &&
+        prev.summary.lateEntryReason === reason;
+      const ageSame = prev.patient.age === age;
+      if (summarySame && ageSame) return prev;
+      return {
+        ...prev,
+        patient: ageSame ? prev.patient : { ...prev.patient, age },
+        summary: summarySame
+          ? prev.summary
+          : { ...prev.summary, consultationDate: adminDate, lateEntry: lateEntryValid, lateEntryReason: reason },
+      };
+    });
+  }, [adminDate, lateEntryValid, lateEntryState.reason]);
+
+  // Next due dates are counted from the administration date: recompute them
+  // when the late-entry date changes.
+  useEffect(() => {
+    setState((prev) => {
+      const { schedule, doseNumber, previousDoseDate } = prev.administration;
+      if (!schedule || !doseNumber) return prev;
+      const nextDueDates = calculateNextDueDates(adminDate, schedule, doseNumber, previousDoseDate);
+      if (nextDueDates === prev.administration.nextDueDates) return prev;
+      return { ...prev, administration: { ...prev.administration, nextDueDates } };
+    });
+  }, [adminDate]);
   const underSixteen = patientAge !== null && patientAge < 16;
   const underEighteen = patientAge !== null && patientAge < 18;
 
@@ -152,7 +201,7 @@ export default function RabiesClient({
           [field]: value,
           // Age is recomputed on every DOB change so the under-2 gate on the
           // patient step is live, not dead code.
-          ...(field === 'dateOfBirth' ? { age: calculateAge(String(value ?? '')) } : {}),
+          ...(field === 'dateOfBirth' ? { age: calculateAge(String(value ?? ''), getAdministrationDate('rabies')) } : {}),
         },
       }));
     },
@@ -320,7 +369,8 @@ export default function RabiesClient({
     }));
   }, []);
 
-  const todayIso = (): string => new Date().toISOString().split('T')[0];
+  // Date of the dose being given: today, or the late-entry date.
+  const todayIso = (): string => getAdministrationDate('rabies');
 
   const handleDoseNumberChange = useCallback((value: string): void => {
     setState((prev) => {
@@ -451,7 +501,7 @@ export default function RabiesClient({
         break;
       }
       case 2: {
-        const result = validateScreening(state.screening);
+        const result = validateScreening(state.screening, adminDate);
         errors.push(...result.errors);
         break;
       }
@@ -471,7 +521,8 @@ export default function RabiesClient({
           state.screening,
           state.contraindications,
           patientAge,
-          state.postVaccineObs.anaphylaxisKitChecked
+          state.postVaccineObs.anaphylaxisKitChecked,
+          adminDate
         );
         errors.push(...result.errors);
         break;
@@ -492,6 +543,13 @@ export default function RabiesClient({
       }
     }
 
+    // A ticked late entry must have a valid date given and reason before
+    // moving on or saving.
+    if (!lateEntrySatisfied('rabies')) {
+      const leError = lateEntryError(getLateEntry('rabies'));
+      if (leError) errors.push(leError);
+    }
+
     if (errors.length > 0) {
       setValidationErrors(new Map(validationErrors).set(stepNum, errors));
       return false;
@@ -503,7 +561,7 @@ export default function RabiesClient({
       return newErrors;
     });
     return true;
-  }, [state, validationErrors, patientAge]);
+  }, [state, validationErrors, patientAge, adminDate]);
 
   const handleNextStep = useCallback((): void => {
     if (!validateStep(state.step)) {
@@ -603,6 +661,7 @@ export default function RabiesClient({
   // PGD requires the reason for exclusion, the advice given and the decision
   // reached to be documented.
   const handleSaveExclusion = useCallback(async (): Promise<void> => {
+    // No dose given: the late-entry panel plays no part here.
     const result = validateExclusionRecord(state.screening);
     if (!result.isValid) {
       setValidationErrors((prev) => new Map(prev).set(state.step, result.errors));
@@ -632,6 +691,7 @@ export default function RabiesClient({
     // and clear any stale values in the shared vaccine safety store.
     resetTracking();
     clearVaccineSafety('rabies');
+    clearLateEntry('rabies');
     setState({
       patient: initialPatient || initialPatientDetails,
       consent: initialConsent,
@@ -670,7 +730,7 @@ export default function RabiesClient({
   // exclusion record below.
   const canProceedFromStep = useCallback((): boolean => !hasStop, [hasStop]);
 
-  const daysToDeparture = daysFromToday(state.screening.departureDate);
+  const daysToDeparture = daysFromToday(state.screening.departureDate, adminDate);
   const isTravelIndication = state.screening.indication !== 'occupational-uk';
 
   const exclusionOutcomeBlock = hasStop && state.step < 7 ? (
@@ -741,7 +801,11 @@ export default function RabiesClient({
           hasErrors={validationErrors.has(state.step)}
         />
 
-        <div className="bg-white rounded-lg shadow mt-8 p-8">
+        <div className="mt-8 -mx-6">
+          <LateEntry slug="rabies" />
+        </div>
+
+        <div className="bg-white rounded-lg shadow mt-4 p-8">
           {validationErrors.has(state.step) && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
               <p className="text-sm font-semibold text-red-900 mb-2">
@@ -1297,7 +1361,7 @@ export default function RabiesClient({
                 )}
                 {state.administration.doseNumber && state.administration.doseNumber !== '1st' && state.administration.previousDoseDate && (
                   <p className="text-sm text-gray-700">
-                    Previous dose {-(daysFromToday(state.administration.previousDoseDate) ?? 0)} days ago.
+                    Previous dose {-(daysFromToday(state.administration.previousDoseDate, adminDate) ?? 0)} days {lateEntryValid ? 'before the date given' : 'ago'}.
                     Minimum interval for this dose: conventional 2nd dose 7 days, 3rd dose 14 days; accelerated 2nd dose 3 days, 3rd dose 4 days.
                   </p>
                 )}

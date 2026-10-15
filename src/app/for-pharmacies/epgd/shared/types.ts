@@ -61,9 +61,13 @@ export interface BaseSummary {
   pharmacistGPhC: string;
   pharmacyName: string;
   pharmacyAddress: string;
+  /** Date of the consultation. For a vaccine late entry, the date the dose was given. */
   consultationDate: string;
   consultationTime: string;
   clinicalNotes: string;
+  /** Vaccination tools: the dose was given on an earlier day (see shared/late-entry.ts). */
+  lateEntry?: boolean;
+  lateEntryReason?: string;
 }
 
 // ─── Dose Recommendation (generic shape) ───
@@ -150,11 +154,18 @@ export function validateSummaryStep(summary: BaseSummary): string | null {
 
 // ─── Age calculation ───
 
-export function calculateAge(dob: string): number | null {
+/**
+ * Completed years of age. Pass asOf (YYYY-MM-DD) for the age on another day,
+ * e.g. the date a vaccine was given when recording a late entry.
+ */
+export function calculateAge(dob: string, asOf?: string): number | null {
   if (!dob) return null;
   const birthDate = new Date(dob);
   if (isNaN(birthDate.getTime())) return null;
-  const today = new Date();
+  const asOfMatch = asOf ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(asOf) : null;
+  const today = asOfMatch
+    ? new Date(Number(asOfMatch[1]), Number(asOfMatch[2]) - 1, Number(asOfMatch[3]))
+    : new Date();
   let age = today.getFullYear() - birthDate.getFullYear();
   const monthDiff = today.getMonth() - birthDate.getMonth();
   if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {

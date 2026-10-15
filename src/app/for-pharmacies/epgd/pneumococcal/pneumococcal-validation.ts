@@ -7,6 +7,7 @@ import {
   getPneumococcalProductAvailability,
   type PneumococcalMedicalHistoryInput,
 } from './pneumococcal-clinical-logic';
+import { todayLocalIso } from '../shared/late-entry';
 
 // Aligned to the Pneumovax 23 / Prevenar 20 PGD version 008, issued 24 September 2026.
 
@@ -82,17 +83,20 @@ export function validatePneumococcalRiskAssessmentStep(data: {
   previousPPV23Date: string;
   previousOtherPCV?: boolean;
   previousOtherPCVDate?: string;
-}): string | null {
+}, asOf?: string): string | null {
   if (!data.confirmedRiskCategory) return 'Tick "Risk category confirmed as documented"';
-  const today = new Date().toISOString().split('T')[0];
+  // A previous dose cannot be after the administration date (late entry
+  // aware); with no date given this is today, as before.
+  const now = todayLocalIso();
+  const today = asOf || now;
   if (data.previousPCV13 && !data.previousPCV13Date) return 'Enter the date of the PCV13 dose';
-  if (data.previousPCV13 && data.previousPCV13Date > today) return 'Date of PCV13 dose cannot be in the future';
+  if (data.previousPCV13 && data.previousPCV13Date > today) return 'Date of PCV13 dose cannot be in the future' + (today !== now ? ' or after the date this dose was given' : '');
   if (data.previousPCV20 && !data.previousPCV20Date) return 'Enter the date of the PCV20 dose';
-  if (data.previousPCV20 && data.previousPCV20Date > today) return 'Date of PCV20 dose cannot be in the future';
+  if (data.previousPCV20 && data.previousPCV20Date > today) return 'Date of PCV20 dose cannot be in the future' + (today !== now ? ' or after the date this dose was given' : '');
   if (data.previousPPV23 && !data.previousPPV23Date) return 'Enter the date of the PPV23 dose';
-  if (data.previousPPV23 && data.previousPPV23Date > today) return 'Date of PPV23 dose cannot be in the future';
+  if (data.previousPPV23 && data.previousPPV23Date > today) return 'Date of PPV23 dose cannot be in the future' + (today !== now ? ' or after the date this dose was given' : '');
   if (data.previousOtherPCV && !data.previousOtherPCVDate) return 'Enter the date of the Vaxneuvance or Capvaxive dose';
-  if (data.previousOtherPCV && (data.previousOtherPCVDate ?? '') > today) return 'Date of the Vaxneuvance or Capvaxive dose cannot be in the future';
+  if (data.previousOtherPCV && (data.previousOtherPCVDate ?? '') > today) return 'Date of the Vaxneuvance or Capvaxive dose cannot be in the future' + (today !== now ? ' or after the date this dose was given' : '');
   if (!data.reviewedVaccineHistory)
     return 'Tick "Vaccine history reviewed"';
   return null;
@@ -133,7 +137,8 @@ export function validatePneumococcalAdministrationStep(
 ): string | null {
   if (!summary.vaccineType) return 'Vaccine type must be selected';
   if (patient && history) {
-    const availability = getPneumococcalProductAvailability(patient, history);
+    // Intervals are measured to the administration date (late entry aware).
+    const availability = getPneumococcalProductAvailability(patient, history, summary.consultationDate || undefined);
     if (summary.vaccineType === 'pcv20') {
       if (!availability.pcv20Possible)
         return `Prevenar 20 cannot be given: ${availability.pcv20Reason}`;
@@ -161,10 +166,13 @@ export function validatePneumococcalAdministrationStep(
   if (!summary.batchNumber?.trim()) return 'Batch number is required';
   if (!summary.expiryDate) return 'Expiry date is required';
   {
+    // In date on the administration date (late entry aware), else today.
     const exp = new Date(summary.expiryDate);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    if (!isNaN(exp.getTime()) && exp < today) return 'This batch has expired. Do not use it.';
+    if (summary.consultationDate) {
+      if (!isNaN(exp.getTime()) && summary.expiryDate < summary.consultationDate) return 'This batch has expired. Do not use it.';
+    } else if (!isNaN(exp.getTime()) && exp < today) return 'This batch has expired. Do not use it.';
   }
   if (!summary.administrationSite) return 'Administration site must be selected';
   if (!summary.administrationTime) return 'Time of administration is required';

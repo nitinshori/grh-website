@@ -3,6 +3,7 @@
 import React from 'react';
 import { RabiesConsultationState } from '../rabies-types';
 import { calculateAge } from '../../shared/types';
+import { LateEntrySummaryLine } from '../../shared/components/LateEntry';
 import { getDoseVolume, getProductLabel, RABIES_PGD_VERSION, hasHardStopContraindications } from '../rabies-clinical-logic';
 
 function fmtDate(iso: string): string {
@@ -34,7 +35,8 @@ export default function RabiesSummaryReport({
   state,
   onPrint,
 }: RabiesSummaryReportProps): React.ReactNode {
-  const patientAge = calculateAge(state.patient.dateOfBirth);
+  // Age on the day the dose was given (consultationDate is the administration date).
+  const patientAge = calculateAge(state.patient.dateOfBirth, state.summary.consultationDate);
   const stopped = hasHardStopContraindications(state.contraindications);
   const isTravel = state.screening.indication !== 'occupational-uk';
   const stopReasons = state.alerts.filter((a) => a.severity === 'stop').map((a) => a.message);
@@ -52,6 +54,10 @@ export default function RabiesSummaryReport({
           >
             Print Report
           </button>
+        </div>
+
+        <div className="mb-6">
+          <LateEntrySummaryLine slug="rabies" />
         </div>
 
         {/* Patient Details Section */}

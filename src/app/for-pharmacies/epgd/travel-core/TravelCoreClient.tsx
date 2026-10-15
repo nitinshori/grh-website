@@ -31,6 +31,8 @@ import { validateStep } from "./lib/travel-core-validation";
 import { calculateAge } from "../shared/types";
 import { ProgressBar } from "../shared/components/ProgressBar";
 import { StepWrapper } from "../shared/components/StepWrapper";
+import { useAdministrationDate, useLateEntry } from "../shared/components/LateEntry";
+import { getAdministrationDate, lateEntryError } from "../shared/late-entry";
 import type { ConsultationRecordData } from "../shared/hooks/useConsultationTracking";
 import { AlertBanner } from "../shared/components/AlertBanner";
 import { PatientDetailsStep } from "../shared/steps/PatientDetailsStep";
@@ -56,7 +58,7 @@ function reducer(
     case "UPDATE_PATIENT":
       newState.patient = { ...newState.patient, [action.field]: action.value };
       if (action.field === "dateOfBirth") {
-        newState.patient.age = calculateAge(action.value as string);
+        newState.patient.age = calculateAge(action.value as string, getAdministrationDate("travel-core"));
       }
       break;
 
@@ -121,6 +123,21 @@ function reducer(
       newState.currentStep = action.step;
       break;
 
+    case "SYNC_ADMINISTRATION_DATE": {
+      const age = calculateAge(state.patient.dateOfBirth, action.adminDate);
+      const sm = state.summary;
+      if (
+        sm.consultationDate === action.adminDate &&
+        !!sm.lateEntry === action.lateEntry &&
+        sm.lateEntryReason === action.lateEntryReason &&
+        state.patient.age === age
+      )
+        return state;
+      newState.summary = { ...sm, consultationDate: action.adminDate, lateEntry: action.lateEntry, lateEntryReason: action.lateEntryReason };
+      if (state.patient.age !== age) newState.patient = { ...state.patient, age };
+      break;
+    }
+
     case "RESET":
       return createInitialTravelCoreState();
   }
@@ -149,9 +166,20 @@ export default function TravelCoreClient() {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
 
+  // Late entry: age at vaccination, intervals since previous doses, batch
+  // expiry, days to departure, booster due dates and the recorded date of
+  // administration are all worked out from the date the dose was given.
+  const adminDate = useAdministrationDate("travel-core");
+  const le = useLateEntry("travel-core");
+  const leValid = le.lateEntry && lateEntryError(le) === null;
+  const leReason = leValid ? le.reason.trim() : undefined;
+  useEffect(() => {
+    dispatch({ type: "SYNC_ADMINISTRATION_DATE", adminDate, lateEntry: leValid, lateEntryReason: leReason });
+  }, [adminDate, leValid, leReason, state.summary.consultationDate, state.patient.dateOfBirth]);
+
   const alerts = useMemo(
-    () => getAllAlerts(state.destination, state.malariaRisk, state.vaccines, state.patient.age),
-    [state.destination, state.malariaRisk, state.vaccines, state.patient.age]
+    () => getAllAlerts(state.destination, state.malariaRisk, state.vaccines, state.patient.age, adminDate),
+    [state.destination, state.malariaRisk, state.vaccines, state.patient.age, adminDate]
   );
   const anyVaccineGiven = state.vaccines.hepAGiven || state.vaccines.typhoidGiven || state.vaccines.choleraGiven;
   const vaccineStops = alerts.some((a) => a.severity === "stop");
@@ -166,7 +194,7 @@ export default function TravelCoreClient() {
       setValidationError(`Exclusion present: ${stop.message}. Record the advice given and save as not supplied, or resolve the exclusion.`);
       return;
     }
-    const error = validateStep(state.currentStep, state);
+    const error = validateStep(state.currentStep, state, adminDate);
     if (error) {
       setValidationError(error);
       return;
@@ -177,7 +205,7 @@ export default function TravelCoreClient() {
       type: "SET_STEP",
       step: Math.min(state.currentStep + 1, TOTAL_STEPS - 1),
     });
-  }, [state, alerts]);
+  }, [state, alerts, adminDate]);
 
   const handlePrev = useCallback(() => {
     setValidationError(null);
@@ -203,9 +231,9 @@ export default function TravelCoreClient() {
     dispatch({ type: "RESET" });
   }, []);
 
-  const canProceed = validateStep(state.currentStep, state) === null && !vaccineStops;
-  const daysToDeparture = daysUntilDeparture(state.destination.departureDate);
-  const boosterDue = useMemo(() => getBoosterDueDates(state.vaccines), [state.vaccines]);
+  const canProceed = validateStep(state.currentStep, state, adminDate) === null && !vaccineStops;
+  const daysToDeparture = daysUntilDeparture(state.destination.departureDate, adminDate);
+  const boosterDue = useMemo(() => getBoosterDueDates(state.vaccines, adminDate), [state.vaccines, adminDate]);
 
   // ─── Consultation Record Data (for saving to database) ───
   const getConsultationData = useCallback((): ConsultationRecordData | null => {
@@ -417,7 +445,7 @@ export default function TravelCoreClient() {
               </div>
             </div>
             {daysToDeparture !== null && (
-              <p className="text-xs text-gray-600">{daysToDeparture < 0 ? `Departure date is ${-daysToDeparture} days in the past: check the dates` : `${daysToDeparture} days to departure`}</p>
+              <p className="text-xs text-gray-600">{daysToDeparture < 0 ? (leValid ? `Departure date is ${-daysToDeparture} days before the date this dose was given: check the dates` : `Departure date is ${-daysToDeparture} days in the past: check the dates`) : `${daysToDeparture} days to departure`}</p>
             )}
             <div className="grid sm:grid-cols-2 gap-4">
               <Checkbox

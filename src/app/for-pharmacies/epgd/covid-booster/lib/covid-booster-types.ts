@@ -175,6 +175,7 @@ export type CovidBoosterAction =
   | { type: "UPDATE_SUPPLY"; field: keyof CovidBoosterSupply; value: string | boolean }
   | { type: "UPDATE_SUMMARY"; field: keyof BaseSummary; value: string }
   | { type: "SET_STEP"; step: number }
+  | { type: "SYNC_ADMIN_DATE"; date: string; lateEntry: boolean; reason: string }
   | { type: "RESET" };
 
 // Consent is taken before the vaccine is drawn up: the PGD lists valid

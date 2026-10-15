@@ -42,6 +42,8 @@ import {
 import { calculateAge } from '../shared/types';
 import { usePharmacistProfile } from '../shared/hooks/usePharmacistProfile';
 import { useFormPersistence } from '../shared/hooks/useFormPersistence';
+import { useAdministrationDate, useLateEntry } from '../shared/components/LateEntry';
+import { lateEntryError } from '../shared/late-entry';
 import MeningitisACWYSummaryReport from './components/MeningitisACWYSummaryReport';
 import DateInput from '@/components/DateInput'
 
@@ -106,6 +108,33 @@ export function MeningitisACWYClient() {
   const [postVaccineAdvice, setPostVaccineAdvice] = useState<MeningitisACWYPostVaccineAdvice>(
     initialMeningitisACWYPostVaccineAdvice
   );
+
+  // Late entry: the dose may have been given on an earlier day. Ages, the
+  // days before departure, intervals since a previous dose, the expiry check
+  // and the consultation (certificate) date all follow the date given (today
+  // when no late entry is ticked).
+  const adminDate = useAdministrationDate('meningitis-acwy-travel');
+  const lateEntryState = useLateEntry('meningitis-acwy-travel');
+  const lateEntryValid = lateEntryState.lateEntry && lateEntryError(lateEntryState) === null;
+  const lateEntryReason = lateEntryValid ? lateEntryState.reason.trim() : undefined;
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs from the external late-entry store; returns prev unchanged when already equal
+    setSummary((prev) =>
+      prev.consultationDate === adminDate &&
+      (prev.lateEntry ?? false) === lateEntryValid &&
+      prev.lateEntryReason === lateEntryReason
+        ? prev
+        : { ...prev, consultationDate: adminDate, lateEntry: lateEntryValid, lateEntryReason }
+    );
+  }, [adminDate, lateEntryValid, lateEntryReason, summary.consultationDate, summary.lateEntry, summary.lateEntryReason]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs from the external late-entry store; returns prev unchanged when already equal
+    setPatientDetails((prev) => {
+      if (!prev.dateOfBirth) return prev;
+      const age = calculateAge(prev.dateOfBirth, adminDate);
+      return age === prev.age ? prev : { ...prev, age };
+    });
+  }, [adminDate, patientDetails.dateOfBirth, patientDetails.age]);
 
   // Persist form data to sessionStorage so it survives accidental navigation
   const formState = useMemo(() => ({
@@ -190,8 +219,8 @@ export function MeningitisACWYClient() {
 
   // Get clinical alerts
   const clinicalAlerts = useMemo(() => {
-    return getMeningitisACWYClinicalAlerts(patientDetails, medicalHistory);
-  }, [patientDetails, medicalHistory]);
+    return getMeningitisACWYClinicalAlerts(patientDetails, medicalHistory, adminDate);
+  }, [patientDetails, medicalHistory, adminDate]);
 
   const isBlocked = useMemo(() => {
     return shouldBlockConsultation(clinicalAlerts);
@@ -199,19 +228,19 @@ export function MeningitisACWYClient() {
 
   // Validation
   const patientValidationError = useMemo(() => {
-    return validateMeningitisACWYPatientStep(patientDetails);
-  }, [patientDetails]);
+    return validateMeningitisACWYPatientStep(patientDetails, adminDate);
+  }, [patientDetails, adminDate]);
 
   const consentValidationError = useMemo(() => {
     return validateMeningitisACWYConsentStep(consent, patientDetails.age);
   }, [consent, patientDetails.age]);
 
   const administrationValidationError = useMemo(() => {
-    return validateMeningitisACWYAdministrationStep(summary, patientDetails, medicalHistory);
-  }, [summary, patientDetails, medicalHistory]);
+    return validateMeningitisACWYAdministrationStep(summary, patientDetails, medicalHistory, adminDate);
+  }, [summary, patientDetails, medicalHistory, adminDate]);
 
   const underSixteen = patientDetails.age !== null && patientDetails.age < 16;
-  const ageMonths = calculateAgeInMonths(patientDetails.dateOfBirth);
+  const ageMonths = calculateAgeInMonths(patientDetails.dateOfBirth, adminDate);
   const courseInvolved =
     summary.doseNumber === '1st' ||
     (ageMonths !== null && ageMonths < 12 && (summary.doseNumber === 'single' || summary.doseNumber === '2nd'));
@@ -225,8 +254,8 @@ export function MeningitisACWYClient() {
   }, [summary]);
 
   const travelValidationError = useMemo(() => {
-    return validateMeningitisACWYTravelStep(patientDetails, travelAssessment);
-  }, [patientDetails, travelAssessment]);
+    return validateMeningitisACWYTravelStep(patientDetails, travelAssessment, adminDate);
+  }, [patientDetails, travelAssessment, adminDate]);
 
   // Step can proceed checks
   const canProceedStep0 = patientValidationError === null;
@@ -840,7 +869,7 @@ export function MeningitisACWYClient() {
 
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm">
               <p className="font-semibold text-blue-900">Schedule for this patient's age</p>
-              <p className="text-blue-800 text-xs mt-1">{getMeningitisACWYDoseRecommendation(patientDetails)}</p>
+              <p className="text-blue-800 text-xs mt-1">{getMeningitisACWYDoseRecommendation(patientDetails, adminDate)}</p>
               <p className="text-blue-800 text-xs mt-1">Choose the product first, then follow that product's schedule. Do not mix schedules between products. Where a course has been started with one product, complete it with the same product wherever possible. 0.5 mL intramuscular whichever product is used.</p>
             </div>
 

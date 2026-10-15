@@ -9,6 +9,8 @@ import { STEP_LABELS, TOTAL_STEPS, createInitialMMRState } from "./lib/mmr-types
 import { getAllAlerts, hasHardStops } from "./lib/mmr-clinical-logic";
 import { validateStep } from "./lib/mmr-validation";
 import { calculateAge } from "../shared/types";
+import { useAdministrationDate, useLateEntry, LateEntrySummaryLine } from "../shared/components/LateEntry";
+import { lateEntryError } from "../shared/late-entry";
 import { ProgressBar } from "../shared/components/ProgressBar";
 import { StepWrapper } from "../shared/components/StepWrapper";
 import type { ConsultationRecordData } from "../shared/hooks/useConsultationTracking";
@@ -43,7 +45,8 @@ function reducer(
     case "UPDATE_PATIENT":
       newState.patient = { ...newState.patient, [action.field]: action.value };
       if (action.field === "dateOfBirth") {
-        newState.patient.age = calculateAge(action.value as string);
+        // Age on the administration date (late entry aware).
+        newState.patient.age = calculateAge(action.value as string, state.summary.consultationDate);
       }
       break;
 
@@ -91,6 +94,34 @@ function reducer(
       newState.currentStep = Math.max(newState.currentStep - 1, 0);
       break;
 
+    case "SYNC_ADMIN_DATE": {
+      // Late entry: the record and the vaccination date are the day the dose
+      // was given, and the age is recalculated for that day. The vaccination
+      // date follows the administration date when that changes (or is blank).
+      const age = state.patient.dateOfBirth ? calculateAge(state.patient.dateOfBirth, action.date) : state.patient.age;
+      const dateChanged = state.summary.consultationDate !== action.date;
+      const vaccinationDate =
+        dateChanged || !state.vaccineAdmin.vaccinationDate ? action.date : state.vaccineAdmin.vaccinationDate;
+      if (
+        !dateChanged &&
+        !!state.summary.lateEntry === action.lateEntry &&
+        (state.summary.lateEntryReason ?? "") === action.reason &&
+        state.patient.age === age &&
+        state.vaccineAdmin.vaccinationDate === vaccinationDate
+      ) {
+        return state;
+      }
+      newState.summary = {
+        ...newState.summary,
+        consultationDate: action.date,
+        lateEntry: action.lateEntry,
+        lateEntryReason: action.reason,
+      };
+      newState.patient = { ...newState.patient, age };
+      newState.vaccineAdmin = { ...newState.vaccineAdmin, vaccinationDate };
+      break;
+    }
+
     case "RESET":
       return createInitialMMRState();
 
@@ -118,6 +149,15 @@ export default function MMRClient() {
   }, [__pharmProfile, state.summary.pharmacistName, state.summary.pharmacistGPhC]);
 
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
+
+  // Late entry: every date tied to the dose uses the date it was given.
+  const adminDate = useAdministrationDate("mmr");
+  const le = useLateEntry("mmr");
+  const leValid = le.lateEntry && lateEntryError(le) === null;
+  const leReason = leValid ? le.reason.trim() : "";
+  useEffect(() => {
+    dispatch({ type: "SYNC_ADMIN_DATE", date: adminDate, lateEntry: leValid, reason: leReason });
+  }, [adminDate, leValid, leReason, state.summary.consultationDate, state.patient.dateOfBirth]);
 
   // Compute alerts
   const alerts = useMemo(() => getAllAlerts(state), [state]);
@@ -1109,6 +1149,7 @@ export default function MMRClient() {
               <p className="text-sm text-gray-600 mb-4 print:hidden">
                 Review the summary below before saving and printing the consultation record.
               </p>
+              <LateEntrySummaryLine slug="mmr" />
               <MMRSummaryReport state={updatedState} />
             </div>
           </StepWrapper>

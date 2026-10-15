@@ -10,6 +10,7 @@ import {
   ReportFooter,
 } from '../../shared/components/SummaryReportShell';
 import type { ClinicalAlert } from '../../shared/types';
+import { LateEntrySummaryLine } from '../../shared/components/LateEntry';
 import type {
   MeningitisACWYPatientDetails,
   MeningitisACWYConsent,
@@ -69,6 +70,7 @@ export default function MeningitisACWYSummaryReport({
       <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50 print:bg-white print:border-0 print:pb-4">
         <h2 className="text-lg font-bold text-navy-900">Consultation Summary Report</h2>
         <p className="text-sm text-gray-500 mt-1">Meningitis ACWY Travel ePGD{pgdVersion ? `, ${pgdVersion}` : ''}</p>
+        <LateEntrySummaryLine slug="meningitis-acwy-travel" />
       </div>
 
       {/* Report content */}

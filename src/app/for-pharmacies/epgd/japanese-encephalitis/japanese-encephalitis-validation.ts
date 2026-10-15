@@ -14,7 +14,8 @@ export interface ValidationResult {
 }
 
 export function validatePatientDetails(
-  patient: BasePatientDetails
+  patient: BasePatientDetails,
+  asOf?: string
 ): ValidationResult {
   const errors: string[] = [];
 
@@ -29,7 +30,7 @@ export function validatePatientDetails(
   }
 
   // Age gate per PGD v007: aged 2 months or over, no upper limit
-  const ageInMonths = calculateAgeInMonths(patient.dateOfBirth);
+  const ageInMonths = calculateAgeInMonths(patient.dateOfBirth, asOf);
   if (ageInMonths !== null && ageInMonths < 2) {
     errors.push('This PGD applies to individuals aged 2 months or over');
   }
@@ -66,7 +67,7 @@ export function validateConsent(
   return { isValid: errors.length === 0, errors };
 }
 
-export function validateScreening(screening: JapaneseEncephalitisScreening): ValidationResult {
+export function validateScreening(screening: JapaneseEncephalitisScreening, asOf?: string): ValidationResult {
   const errors: string[] = [];
 
   if (!screening.destinationCountry?.trim()) {
@@ -87,7 +88,8 @@ export function validateScreening(screening: JapaneseEncephalitisScreening): Val
   // Under 14 days to departure the course cannot be completed before travel,
   // so the inclusion tick would be a false statement in the record. The late
   // presenter acknowledges the risk assessment instead.
-  const days = daysUntil(screening.departureDate);
+  // Days from the date the dose was given (late entry aware) to departure.
+  const days = daysUntil(screening.departureDate, asOf);
   if (days !== null && days >= 0 && days < 14) {
     if (!screening.insufficientTimeAcknowledged) {
       errors.push('Under 14 days to departure: tick "Insufficient time to complete the primary course before travel" once the risk has been assessed and the patient told protection will be incomplete');
@@ -137,7 +139,8 @@ export function validateContraindications(
 export function validateAdministration(
   administration: JapaneseEncephalitisVaccineAdministration,
   screening: JapaneseEncephalitisScreening,
-  ageYears: number | null
+  ageYears: number | null,
+  asOf?: string
 ): ValidationResult {
   const errors: string[] = [];
 
@@ -152,7 +155,8 @@ export function validateAdministration(
   if (!parseLocalDate(administration.expiryDate)) {
     errors.push('Expiry date is required');
   } else {
-    const d = daysUntil(administration.expiryDate);
+    // Must be in date on the day the dose was given (late entry aware).
+    const d = daysUntil(administration.expiryDate, asOf);
     if (d !== null && d < 0) {
       errors.push('Vaccine batch has expired');
     }

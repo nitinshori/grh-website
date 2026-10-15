@@ -1,5 +1,7 @@
 // Yellow fever ePGD: clinical state shared by the client and the printed record.
 
+import { parseIsoLocal } from "../shared/late-entry";
+
 export const YF_PGD_VERSION = "Yellow fever vaccine (Stamaril) PGD v006, issued 14 September 2026";
 
 export const STEP_LABELS = [
@@ -111,14 +113,15 @@ export function createEmptyClinical(): Clinical {
 
 /**
  * Expiry is entered as MM/YYYY. Valid when well-formed and the last day of
- * that month is today or later.
+ * that month is on or after the administration date (default today).
  */
-export function expiryMonthIsCurrent(expiry: string): boolean {
+export function expiryMonthIsCurrent(expiry: string, asOf?: string): boolean {
   const m = /^(0[1-9]|1[0-2])\/(\d{4})$/.exec(expiry.trim());
   if (!m) return false;
   const month = Number(m[1]);
   const year = Number(m[2]);
   const lastDay = new Date(year, month, 0); // day 0 of next month = last day of this month
   lastDay.setHours(23, 59, 59, 999);
-  return lastDay.getTime() >= Date.now();
+  const on = asOf ? parseIsoLocal(asOf) : null;
+  return lastDay.getTime() >= (on ? on.getTime() : Date.now());
 }

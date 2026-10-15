@@ -36,6 +36,8 @@ import {
   validatePneumococcalSummaryStep,
 } from './pneumococcal-validation';
 import { calculateAge } from '../shared/types';
+import { useAdministrationDate, useLateEntry } from '../shared/components/LateEntry';
+import { getAdministrationDate, lateEntryError } from '../shared/late-entry';
 import PneumococcalSummaryReport from './components/PneumococcalSummaryReport';
 import DateInput from '@/components/DateInput'
 
@@ -125,6 +127,28 @@ export function PneumococcalClient() {
     observationCompleted: false,
   });
 
+  // Late entry: every date tied to the dose uses the date it was given. The
+  // record date, the age and the late-entry flag follow it.
+  const adminDate = useAdministrationDate('pneumococcal');
+  const le = useLateEntry('pneumococcal');
+  const leValid = le.lateEntry && lateEntryError(le) === null;
+  const leReason = leValid ? le.reason.trim() : '';
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs the record to the shared late-entry store
+    setSummary((prev) =>
+      prev.consultationDate === adminDate &&
+      !!prev.lateEntry === leValid &&
+      (prev.lateEntryReason ?? '') === leReason
+        ? prev
+        : { ...prev, consultationDate: adminDate, lateEntry: leValid, lateEntryReason: leReason }
+    );
+    setPatientDetails((prev) => {
+      if (!prev.dateOfBirth) return prev;
+      const age = calculateAge(prev.dateOfBirth, adminDate);
+      return age === prev.age ? prev : { ...prev, age };
+    });
+  }, [adminDate, leValid, leReason, summary.consultationDate]);
+
   // Calculate age when DOB changes
   const handlePatientDetailsChange = useCallback(
     (field: keyof PneumococcalPatientDetails, value: PneumococcalPatientDetails[keyof PneumococcalPatientDetails]) => {
@@ -133,7 +157,8 @@ export function PneumococcalClient() {
       setPatientDetails((prev) => {
         const updated = { ...prev, [field]: value };
         if (field === 'dateOfBirth') {
-          updated.age = calculateAge(String(value ?? ''));
+          // Age on the administration date (late entry aware).
+          updated.age = calculateAge(String(value ?? ''), getAdministrationDate('pneumococcal'));
         }
         return updated;
       });
@@ -168,8 +193,8 @@ export function PneumococcalClient() {
   );
 
   const clinicalAlerts = useMemo(() => {
-    return getPneumococcalClinicalAlerts(patientDetails, historyInput);
-  }, [patientDetails, historyInput]);
+    return getPneumococcalClinicalAlerts(patientDetails, historyInput, adminDate);
+  }, [patientDetails, historyInput, adminDate]);
 
   const isBlocked = useMemo(() => {
     return shouldBlockConsultation(clinicalAlerts);
@@ -179,8 +204,8 @@ export function PneumococcalClient() {
   // dropdown hides a product that cannot be given and says why; the
   // administration validation keeps the same rule as a backstop.
   const productAvailability = useMemo(() => {
-    return getPneumococcalProductAvailability(patientDetails, historyInput);
-  }, [patientDetails, historyInput]);
+    return getPneumococcalProductAvailability(patientDetails, historyInput, adminDate);
+  }, [patientDetails, historyInput, adminDate]);
 
   // Determine recommended dose
   const doseSchedule = useMemo(() => {
@@ -203,8 +228,8 @@ export function PneumococcalClient() {
   }, [consent, patientDetails.age]);
 
   const riskValidationError = useMemo(() => {
-    return validatePneumococcalRiskAssessmentStep(riskAssessment);
-  }, [riskAssessment]);
+    return validatePneumococcalRiskAssessmentStep(riskAssessment, adminDate);
+  }, [riskAssessment, adminDate]);
 
   const administrationValidationError = useMemo(() => {
     return validatePneumococcalAdministrationStep(summary, patientDetails, historyInput);

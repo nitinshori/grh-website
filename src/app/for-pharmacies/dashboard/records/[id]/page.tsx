@@ -53,6 +53,22 @@ export default async function RecordDetailPage({
   }
 
   const pgdTitle = pgdTitleMap.get(record.pgdSlug) || record.pgdSlug
+
+  // Late entry: a vaccine dose given on an earlier day (clinicalData.lateEntry)
+  const late = clinicalData.lateEntry as
+    | { lateEntry?: boolean; dateGiven?: string; recordedOn?: string; reason?: string }
+    | undefined
+  const ukDate = (iso: string) => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso)
+    return m ? `${m[3]}/${m[2]}/${m[1]}` : iso
+  }
+  const lateEntryText = late?.lateEntry && late.dateGiven
+    ? `Late entry: dose given ${ukDate(late.dateGiven)}, recorded ${
+        late.recordedOn
+          ? ukDate(late.recordedOn)
+          : new Date(record.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/London' })
+      }. Reason: ${late.reason || 'not given'}`
+    : null
   const attachments = await attachmentsForRecord(record.id)
 
   return (
@@ -100,6 +116,12 @@ export default async function RecordDetailPage({
           </div>
         </div>
       </div>
+
+      {lateEntryText && (
+        <div className="bg-amber-50 border border-amber-300 rounded-xl p-4 mb-6 print:bg-white print:border-gray-400">
+          <p className="text-sm font-semibold text-amber-900 print:text-black">{lateEntryText}</p>
+        </div>
+      )}
 
       {/* Patient Details */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-6">
@@ -176,7 +198,10 @@ export default async function RecordDetailPage({
         <p className="text-xs text-gray-400 mb-4">
           Complete consultation data as recorded during the ePGD assessment.
         </p>
-        <ClinicalDataDisplay data={clinicalData} />
+        {/* lateEntry is shown on its own line above, not repeated here */}
+        <ClinicalDataDisplay
+          data={Object.fromEntries(Object.entries(clinicalData).filter(([key]) => key !== 'lateEntry'))}
+        />
       </div>
 
       {/* Print button */}

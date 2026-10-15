@@ -1,4 +1,5 @@
 import { ClinicalAlert } from '../shared/types';
+import { daysBetweenIso, parseIsoLocal, toCalendarIso, todayLocalIso } from '../shared/late-entry';
 import {
   RabiesScreening,
   RabiesContraindications,
@@ -223,15 +224,18 @@ export function getObservationPeriodRecommendation(
   return '15-min';
 }
 
-/** Whole calendar days from today to an ISO date (negative when in the past). null when blank or invalid. */
-export function daysFromToday(isoDate: string): number | null {
-  if (!isoDate) return null;
-  const target = new Date(isoDate);
-  if (isNaN(target.getTime())) return null;
-  const today = new Date();
-  const a = Date.UTC(target.getFullYear(), target.getMonth(), target.getDate());
-  const b = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
-  return Math.round((a - b) / 86400000);
+/**
+ * Whole calendar days from today to an ISO date (negative when in the past).
+ * null when blank or invalid. Pass `asOf` (YYYY-MM-DD, e.g. the administration
+ * date of a late entry) to count from that day instead of today.
+ */
+export function daysFromToday(isoDate: string, asOf?: string): number | null {
+  // Calendar dates (London local), parsed with parseIsoLocal: new Date(iso)
+  // reads YYYY-MM-DD as UTC midnight.
+  const target = toCalendarIso(isoDate);
+  if (!target) return null;
+  const from = asOf && parseIsoLocal(asOf) ? asOf : todayLocalIso();
+  return daysBetweenIso(from, target);
 }
 
 /** Minimum days between the previous dose and this one, per schedule and dose number. */

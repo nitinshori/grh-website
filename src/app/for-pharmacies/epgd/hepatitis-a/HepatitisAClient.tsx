@@ -1,7 +1,7 @@
 'use client';
 import DateInput from '@/components/DateInput'
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { TextInput, Checkbox, SelectInput, TextArea } from '../shared/components/FormInputs';
 import { ProgressBar } from '../shared/components/ProgressBar';
@@ -57,6 +57,7 @@ import {
   daysUntil,
   monthsSinceFirstDose,
   secondDoseWindow,
+  administrationDay,
   productsForAge,
   ageBandFor,
   doseNumberFor,
@@ -84,6 +85,8 @@ import {
   GILLICK_MIN_AGE,
 } from './hepatitis-a-validation';
 import { calculateAge } from '../shared/types';
+import { useAdministrationDate, useLateEntry } from '../shared/components/LateEntry';
+import { getAdministrationDate, lateEntryError } from '../shared/late-entry';
 import { usePharmacistProfile } from '../shared/hooks/usePharmacistProfile';
 import { useFormPersistence } from '../shared/hooks/useFormPersistence';
 import HepatitisASummaryReport from './components/HepatitisASummaryReport';
@@ -137,7 +140,7 @@ export function HepatitisAClient() {
     if (s.currentStep !== undefined) setCurrentStep(s.currentStep);
     if (s.patientDetails) {
       const p = { ...initialHepatitisAPatientDetails, ...s.patientDetails };
-      setPatientDetails({ ...p, age: calculateAge(p.dateOfBirth) });
+      setPatientDetails({ ...p, age: calculateAge(p.dateOfBirth, getAdministrationDate('hepatitis-a')) });
     }
     if (s.consent) setConsent({ ...initialHepatitisAConsent, ...s.consent });
     if (s.indication) setIndication({ ...initialHepatitisAIndication, ...s.indication });
@@ -145,8 +148,9 @@ export function HepatitisAClient() {
     if (s.medicalHistory) setMedicalHistory({ ...initialHepatitisAMedicalHistory, ...s.medicalHistory });
     if (s.contraIndicationsReviewed) setContraIndicationsReviewed(s.contraIndicationsReviewed);
     if (s.summary) {
-      // A draft resumed on a later day is administered today, not on the day
-      // it was started: the record's date of administration must be today's.
+      // A draft resumed on a later day is administered today (or on the
+      // late-entry date), not on the day it was started. The late-entry sync
+      // below then sets the date of administration.
       const fresh = initialHepatitisASummary();
       setSummary({ ...fresh, ...s.summary, consultationDate: fresh.consultationDate, consultationTime: fresh.consultationTime });
     }
@@ -194,7 +198,7 @@ export function HepatitisAClient() {
       setPatientDetails((prev) => {
         const updated = { ...prev, [field]: value };
         if (field === 'dateOfBirth') {
-          updated.age = calculateAge(value);
+          updated.age = calculateAge(value, getAdministrationDate('hepatitis-a'));
         }
         return updated;
       });
@@ -202,9 +206,36 @@ export function HepatitisAClient() {
     []
   );
 
+  // Late entry: every date tied to the dose (age, months since the first
+  // dose, days to departure, batch expiry, second dose due) counts from the
+  // date the dose was given, not the day the record is typed.
+  const adminDate = useAdministrationDate('hepatitis-a');
+  const lateEntryState = useLateEntry('hepatitis-a');
+  const lateEntryValid = lateEntryState.lateEntry && lateEntryError(lateEntryState) === null;
+  const lateEntryReason = lateEntryValid ? lateEntryState.reason.trim() : undefined;
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- late-entry sync; returns prev when unchanged
+    setSummary((prev) =>
+      prev.consultationDate === adminDate &&
+      !!prev.lateEntry === lateEntryValid &&
+      prev.lateEntryReason === lateEntryReason
+        ? prev
+        : { ...prev, consultationDate: adminDate, lateEntry: lateEntryValid, lateEntryReason }
+    );
+  }, [adminDate, lateEntryValid, lateEntryReason, summary.consultationDate, summary.lateEntry, summary.lateEntryReason]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- late-entry sync; returns prev when unchanged
+    setPatientDetails((prev) => {
+      const age = calculateAge(prev.dateOfBirth, adminDate);
+      return prev.age === age ? prev : { ...prev, age };
+    });
+  }, [adminDate, patientDetails.dateOfBirth]);
+
   const clinicalAlerts = useMemo(
     () => getHepatitisAClinicalAlerts(patientDetails, consent, indication, course, medicalHistory, summary),
-    [patientDetails, consent, indication, course, medicalHistory, summary]
+    // adminDate: the alerts read the administration date from the late-entry store.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [patientDetails, consent, indication, course, medicalHistory, summary, adminDate]
   );
   const isBlocked = useMemo(() => shouldBlockConsultation(clinicalAlerts), [clinicalAlerts]);
 
@@ -218,14 +249,17 @@ export function HepatitisAClient() {
   // Validation
   const patientValidationError = useMemo(() => validateHepatitisAPatientStep(patientDetails), [patientDetails]);
   const consentValidationError = useMemo(() => validateHepatitisAConsentStep(consent, patientDetails), [consent, patientDetails]);
-  const indicationValidationError = useMemo(() => validateHepatitisAIndicationStep(indication, course), [indication, course]);
+  // adminDate: the checks read the administration date from the late-entry store.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const indicationValidationError = useMemo(() => validateHepatitisAIndicationStep(indication, course), [indication, course, adminDate]);
   const medicalHistoryValidationError = useMemo(
     () => validateHepatitisAMedicalHistoryStep(medicalHistory, consent),
     [medicalHistory, consent]
   );
   const administrationValidationError = useMemo(
     () => validateHepatitisAAdministrationStep(summary, patientDetails, indication, course, medicalHistory),
-    [summary, patientDetails, indication, course, medicalHistory]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [summary, patientDetails, indication, course, medicalHistory, adminDate]
   );
   const postVaccineValidationError = useMemo(
     () => validateHepatitisAPostVaccineStep(postVaccineAdvice, indication, course),
@@ -233,26 +267,42 @@ export function HepatitisAClient() {
   );
   const summaryValidationError = useMemo(() => validateHepatitisASummaryStep(summary), [summary]);
 
-  const daysToDeparture = useMemo(() => daysUntil(indication.departureDate), [indication.departureDate]);
+  const daysToDeparture = useMemo(() => daysUntil(indication.departureDate, adminDate), [indication.departureDate, adminDate]);
   const isUnder16 = patientDetails.age !== null && patientDetails.age < 16;
   const ageBand = ageBandFor(patientDetails.age);
   const productOptions = useMemo(() => productsForAge(patientDetails.age), [patientDetails.age]);
   const doseNumber = doseNumberFor(course);
   const monthsSinceFirst = useMemo(
-    () => (course.firstDoseDateKnown === 'known' ? monthsSinceFirstDose(course.firstDoseDate) : null),
-    [course.firstDoseDateKnown, course.firstDoseDate]
+    () => (course.firstDoseDateKnown === 'known' ? monthsSinceFirstDose(course.firstDoseDate, adminDate) : null),
+    [course.firstDoseDateKnown, course.firstDoseDate, adminDate]
   );
   const secondDoseTiming = useMemo(
     () => assessSecondDoseTiming(course, summary.product),
-    [course, summary.product]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [course, summary.product, adminDate]
   );
-  const dueWindow = useMemo(() => secondDoseWindow(), []);
+  const dueWindow = useMemo(() => secondDoseWindow(administrationDay(adminDate)), [adminDate]);
+  // A second dose due date picked before the late-entry date was changed is
+  // moved to the start of the new window when it falls outside it. Only when
+  // the administration date actually changes: never on the first run or when
+  // a draft is restored, so a saved due date is left as it was.
+  const prevAdminDateRef = useRef(adminDate);
+  useEffect(() => {
+    if (prevAdminDateRef.current === adminDate) return;
+    prevAdminDateRef.current = adminDate;
+    setSummary((prev) =>
+      prev.secondDoseDue && (prev.secondDoseDue < dueWindow.earliest || prev.secondDoseDue > dueWindow.latest)
+        ? { ...prev, secondDoseDue: dueWindow.earliest }
+        : prev
+    );
+  }, [adminDate, dueWindow]);
   const bleedingDisorder = bleedingDisorderApplies(indication, medicalHistory);
   const anticoagulation = anticoagulationApplies(medicalHistory);
   const bleedingCaution = bleedingDisorder || anticoagulation;
   const travelIndication = indication.indicationType === 'travel' || indication.indicationType === 'both';
   const nonTravelIndication = indication.indicationType === 'non-travel' || indication.indicationType === 'both';
-  const hepBSteerResult = useMemo(() => hepBSteer(indication), [indication]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const hepBSteerResult = useMemo(() => hepBSteer(indication), [indication, adminDate]);
   // Off-label second dose: outside the licensed window of the product being
   // given today, or first-dose product not known.
   const offLabel = doseNumber === 'second' && secondDoseTiming.offLabel;
@@ -1619,7 +1669,7 @@ export function HepatitisAClient() {
                   className={DATE_INPUT_CLASS}
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  6 to 12 months from today: {dueWindow.earliest} to {dueWindow.latest}. Pre-filled at 6 months when the vaccine is selected. Book the second dose at this appointment; the patient is given a written record with this date.
+                  6 to 12 months from the date this dose is given: {dueWindow.earliest} to {dueWindow.latest}. Pre-filled at 6 months when the vaccine is selected. Book the second dose at this appointment; the patient is given a written record with this date.
                 </p>
               </div>
             )}

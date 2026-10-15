@@ -3,15 +3,24 @@
 import type { MeningitiBConsultationState } from "./meningitis-b-types";
 import type { ClinicalAlert } from "../../shared/types";
 
-/** Whole months between the date of birth and today. Null when missing or invalid. */
-export function calculateAgeInMonths(dob: string): number | null {
+/**
+ * Whole months between the date of birth and the date of administration
+ * (asOf, YYYY-MM-DD; today when not given). Null when missing or invalid.
+ */
+export function calculateAgeInMonths(dob: string, asOf?: string): number | null {
   if (!dob) return null;
   const birth = new Date(dob);
   if (isNaN(birth.getTime())) return null;
-  const today = new Date();
+  const today = localDate(asOf);
   let months = (today.getFullYear() - birth.getFullYear()) * 12 + (today.getMonth() - birth.getMonth());
   if (today.getDate() < birth.getDate()) months--;
   return months;
+}
+
+/** YYYY-MM-DD as a local-midnight Date; today when blank or not a date. */
+function localDate(iso?: string): Date {
+  const m = iso ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso) : null;
+  return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date();
 }
 
 /** Whole months between two ISO dates (from -> to). Null when either is blank or invalid. */
@@ -25,12 +34,15 @@ export function monthsBetween(fromIso: string, toIso: string): number | null {
   return months;
 }
 
-/** Whole days since an ISO date. Null when blank or invalid. */
-export function daysSince(iso: string): number | null {
+/**
+ * Whole days from an ISO date to the date of administration (asOf,
+ * YYYY-MM-DD; today when not given). Null when blank or invalid.
+ */
+export function daysSince(iso: string, asOf?: string): number | null {
   if (!iso) return null;
   const d = new Date(iso);
   if (isNaN(d.getTime())) return null;
-  const today = new Date();
+  const today = localDate(asOf);
   const a = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
   const b = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
   return Math.round((b - a) / 86400000);
@@ -105,9 +117,9 @@ export function getScheduleText(product: "bexsero" | "trumenba" | "", ageMonths:
   return "Choose the product first, then follow that product's schedule. Do not mix schedules between products. Where a course has been started with one product, complete it with the same product wherever possible.";
 }
 
-export function getAllAlerts(state: MeningitiBConsultationState): ClinicalAlert[] {
+export function getAllAlerts(state: MeningitiBConsultationState, asOf?: string): ClinicalAlert[] {
   const alerts: ClinicalAlert[] = [];
-  const ageMonths = calculateAgeInMonths(state.patient.dateOfBirth);
+  const ageMonths = calculateAgeInMonths(state.patient.dateOfBirth, asOf);
 
   // Exclusion: aged under 2 months
   if (ageMonths !== null && ageMonths < 2) {

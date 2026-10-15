@@ -1,4 +1,5 @@
 import type { ClinicalAlert } from '../shared/types';
+import { getAdministrationDate } from '../shared/late-entry';
 import type {
   AgeBand,
   DoseNumber,
@@ -17,6 +18,8 @@ import { PRODUCTS, FIRST_DOSE_PRODUCT_LABEL, OCCUPATIONAL_GROUP_LABEL, HEPATITIS
 } from './hepatitis-a-types';
 
 export { HEPATITIS_A_PGD_VERSION };
+
+const HEPATITIS_A_SLUG = 'hepatitis-a';
 
 // ─── Dates ───
 
@@ -43,17 +46,24 @@ export function todayLocal(): Date {
   return new Date(n.getFullYear(), n.getMonth(), n.getDate());
 }
 
-/** Calendar days from today to the date, local midnight to local midnight,
- *  so a departure exactly 14 days away is 14, not 13. */
-export function daysUntil(iso: string): number | null {
-  const target = parseLocalDate(iso);
-  if (!target) return null;
-  return Math.round((target.getTime() - todayLocal().getTime()) / (1000 * 60 * 60 * 24));
+/** The day the dose is given, local midnight: `asOf` (yyyy-mm-dd) when
+ *  passed, otherwise the late-entry date when one is ticked and valid,
+ *  otherwise today. Every date check tied to the dose counts from this. */
+export function administrationDay(asOf?: string): Date {
+  return parseLocalDate(asOf || getAdministrationDate(HEPATITIS_A_SLUG)) ?? todayLocal();
 }
 
-/** True when the expiry date (yyyy-mm-dd) is before today. */
-export function isExpired(expiryDate: string): boolean {
-  const d = daysUntil(expiryDate);
+/** Calendar days from the administration date to the date, local midnight
+ *  to local midnight, so a departure exactly 14 days away is 14, not 13. */
+export function daysUntil(iso: string, asOf?: string): number | null {
+  const target = parseLocalDate(iso);
+  if (!target) return null;
+  return Math.round((target.getTime() - administrationDay(asOf).getTime()) / (1000 * 60 * 60 * 24));
+}
+
+/** True when the expiry date (yyyy-mm-dd) is before the administration date. */
+export function isExpired(expiryDate: string, asOf?: string): boolean {
+  const d = daysUntil(expiryDate, asOf);
   return d !== null && d < 0;
 }
 
@@ -73,11 +83,12 @@ export function addMonths(d: Date, months: number): Date {
   return result;
 }
 
-/** Months since the first dose, or null when the date is blank or invalid. */
-export function monthsSinceFirstDose(firstDoseDate: string): number | null {
+/** Months from the first dose to the administration date, or null when the
+ *  date is blank or invalid. */
+export function monthsSinceFirstDose(firstDoseDate: string, asOf?: string): number | null {
   const first = parseLocalDate(firstDoseDate);
   if (!first) return null;
-  return monthsBetween(first, todayLocal());
+  return monthsBetween(first, administrationDay(asOf));
 }
 
 // ─── Schedule ───
@@ -90,9 +101,9 @@ export const SECOND_DOSE_MAX_MONTHS = 12;
  *  "The patient also needs hepatitis B protection"). */
 export const HEP_B_MONOVALENT_DAYS = 35;
 
-/** The window in which the second dose is due, counted from today (a first
- *  dose given today). */
-export function secondDoseWindow(from: Date = todayLocal()): { earliest: string; latest: string } {
+/** The window in which the second dose is due, counted from the date the
+ *  first dose is given (today, or the late-entry date). */
+export function secondDoseWindow(from: Date = administrationDay()): { earliest: string; latest: string } {
   return {
     earliest: formatLocalDate(addMonths(from, SECOND_DOSE_MIN_MONTHS)),
     latest: formatLocalDate(addMonths(from, SECOND_DOSE_MAX_MONTHS)),

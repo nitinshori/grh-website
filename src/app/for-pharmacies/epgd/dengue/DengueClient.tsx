@@ -11,6 +11,10 @@ import {
   getVaccineSafety,
   clearVaccineSafety,
 } from "../shared/components/VaccineSafetyChecks";
+// Late entry (dose given on an earlier day): mounted directly for the same
+// reason as the safety panel above.
+import { LateEntry, useLateEntry, useAdministrationDate } from "../shared/components/LateEntry";
+import { getAdministrationDate, lateEntrySatisfied, lateEntryError, getLateEntry, clearLateEntry } from "../shared/late-entry";
 import {
   DengueConsultationState,
   DengueScreening,
@@ -27,7 +31,6 @@ import {
   hasHardStopContraindications,
   getObservationPeriodRecommendation,
   calculateNextDoseDate,
-  todayIso,
   DENGUE_PGD_VERSION,
   FEVER_THRESHOLD_C,
 } from './dengue-clinical-logic';
@@ -102,7 +105,51 @@ export default function DengueClient({
     new Map<number, string[]>()
   );
 
-  const patientAge = calculateAge(state.patient.dateOfBirth);
+  // Date the dose was given: today, or the late-entry date when one is
+  // ticked and valid. Used for every date tied to the administration.
+  const adminDate = useAdministrationDate('dengue');
+  const lateEntryState = useLateEntry('dengue');
+  const lateEntryValid = lateEntryState.lateEntry && lateEntryError(lateEntryState) === null;
+  const lateEntryReason = lateEntryValid ? lateEntryState.reason.trim() : undefined;
+
+  // Keep the summary's consultation date and late-entry flag in step with
+  // the date given, and the stored age as the age on that date.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs from the external late-entry store; returns prev unchanged when already equal
+    setState((prev) => {
+      const age = calculateAge(prev.patient.dateOfBirth, adminDate);
+      const same =
+        prev.summary.consultationDate === adminDate &&
+        !!prev.summary.lateEntry === lateEntryValid &&
+        prev.summary.lateEntryReason === lateEntryReason &&
+        (!prev.patient.dateOfBirth || prev.patient.age === age);
+      if (same) return prev;
+      return {
+        ...prev,
+        patient: prev.patient.dateOfBirth ? { ...prev.patient, age } : prev.patient,
+        summary: {
+          ...prev.summary,
+          consultationDate: adminDate,
+          lateEntry: lateEntryValid ? true : undefined,
+          lateEntryReason,
+        },
+      };
+    });
+  }, [adminDate, lateEntryValid, lateEntryReason]);
+
+  // A first dose's next-due date is 3 months from the date given. Recomputed
+  // when the date given changes (a manual change stands until then).
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs from the external late-entry store; returns prev unchanged when already equal
+    setState((prev) => {
+      if (prev.administration.doseNumber !== '1st') return prev;
+      const next = calculateNextDoseDate(adminDate);
+      if (prev.administration.nextDueDate === next) return prev;
+      return { ...prev, administration: { ...prev.administration, nextDueDate: next } };
+    });
+  }, [adminDate]);
+
+  const patientAge = calculateAge(state.patient.dateOfBirth, adminDate);
 
   // Contraindications and alerts are derived from the current answers, so a
   // stop raised by going back and ticking an exclusion is enforced at once
@@ -126,7 +173,7 @@ export default function DengueClient({
           ...prev.patient,
           [field]: value,
           // Age is computed on every DOB change; it used never to be set.
-          ...(field === 'dateOfBirth' ? { age: calculateAge(value as string) } : {}),
+          ...(field === 'dateOfBirth' ? { age: calculateAge(value as string, getAdministrationDate('dengue')) } : {}),
         },
       }));
     },
@@ -306,7 +353,7 @@ export default function DengueClient({
       administration: {
         ...prev.administration,
         doseNumber: value as any,
-        nextDueDate: value === '1st' ? calculateNextDoseDate(todayIso()) : '',
+        nextDueDate: value === '1st' ? calculateNextDoseDate(getAdministrationDate('dengue')) : '',
         firstDoseDate: value === '2nd' ? prev.administration.firstDoseDate : '',
       },
     }));
@@ -411,7 +458,7 @@ export default function DengueClient({
 
     switch (stepNum) {
       case 0: {
-        errors.push(...validatePatientDetails(state.patient).errors);
+        errors.push(...validatePatientDetails(state.patient, adminDate).errors);
         break;
       }
       case 1: {
@@ -431,7 +478,7 @@ export default function DengueClient({
         break;
       }
       case 5: {
-        errors.push(...validateAdministration(state.administration).errors);
+        errors.push(...validateAdministration(state.administration, adminDate).errors);
         break;
       }
       case 6: {
@@ -455,8 +502,12 @@ export default function DengueClient({
     if (!vaccineSafetySatisfied('dengue')) {
       errors.push('Confirm on the pre-vaccination safety panel that adrenaline 1 in 1,000 is immediately available');
     }
+    // A ticked late entry must be complete (date given and reason) first.
+    if (!lateEntrySatisfied('dengue')) {
+      errors.push(lateEntryError(getLateEntry('dengue')) ?? 'Complete the late entry panel');
+    }
     return errors;
-  }, [state, evaluation, hasStops]);
+  }, [state, evaluation, hasStops, adminDate]);
 
   const validateStep = useCallback((stepNum: number): boolean => {
     const errors = errorsForStep(stepNum);
@@ -588,6 +639,8 @@ export default function DengueClient({
   // An excluded patient is saved as "not vaccinated" from any step; the
   // document requires the advice given to an excluded patient to be recorded.
   const handleSaveNotVaccinated = useCallback(async (): Promise<void> => {
+    // No dose given: the late-entry panel plays no part (saveRecord dates
+    // a not-supplied record today, with no late-entry line).
     setSaveStatus('saving');
     const data = getConsultationData();
     data.outcome = 'not_supplied';
@@ -619,6 +672,7 @@ export default function DengueClient({
     setSaveStatus('idle');
     reset();
     clearVaccineSafety('dengue');
+    clearLateEntry('dengue');
   }, [reset]);
 
   const getStepAlerts = useCallback((): React.ReactNode => {
@@ -644,6 +698,9 @@ export default function DengueClient({
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <VaccineSafetyChecks slug="dengue" />
+      <div className="max-w-4xl mx-auto print:hidden">
+        <LateEntry slug="dengue" />
+      </div>
       <div className="max-w-4xl mx-auto">
         {state.step === 0 && (
           <div className="mb-4 print:hidden">
@@ -743,7 +800,7 @@ export default function DengueClient({
                     onChange={handleDepartureDateChange}
                     required
                   />
-                  {state.screening.departureDate && state.screening.departureDate < todayIso() && (
+                  {state.screening.departureDate && state.screening.departureDate < adminDate && (
                     <p className="text-xs text-amber-700 -mt-2">
                       Departure date is in the past: check the date. (A second dose may be given after travel has started.)
                     </p>
@@ -1038,7 +1095,7 @@ export default function DengueClient({
                       required
                     />
                     <p className="text-xs text-gray-600 mt-1">
-                      Filled in automatically as 3 months from today. Change it if a different date is agreed.
+                      Filled in automatically as 3 months from the date the dose was given. Change it if a different date is agreed.
                     </p>
                   </div>
                 )}

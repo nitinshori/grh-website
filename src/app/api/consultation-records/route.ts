@@ -9,6 +9,13 @@ import { sendGpNotification } from '@/lib/gp-notification'
 import { tryEncrypt } from '@/lib/encryption'
 import { attachmentCounts } from '@/lib/consultation-attachments'
 import { paperListConditions } from '@/lib/paper-consultations'
+import {
+  LATE_ENTRY_MAX_DAYS,
+  LATE_ENTRY_MIN_REASON,
+  LATE_ENTRY_SLUGS,
+  daysBetweenIso,
+  todayLocalIso,
+} from '@/app/for-pharmacies/epgd/shared/late-entry'
 
 /**
  * POST /api/consultation-records — save a completed consultation record
@@ -60,6 +67,42 @@ export async function POST(request: Request) {
     const consultationDate = summary.consultationDate
       ? new Date(summary.consultationDate)
       : new Date()
+
+    // Late entry (vaccine dose given on an earlier day). The client sends the
+    // date given as summary.consultationDate and the details in
+    // clinicalData.lateEntry; check the date here too, so a record can never
+    // be back-dated into the future or more than 90 days.
+    const late =
+      typeof clinicalData === 'object' && clinicalData !== null
+        ? (clinicalData as { lateEntry?: { lateEntry?: boolean; dateGiven?: string; reason?: string; line?: string } }).lateEntry
+        : undefined
+    if ((late?.lateEntry || summary.lateEntry) && !LATE_ENTRY_SLUGS.has(String(pgdSlug))) {
+      return NextResponse.json(
+        { error: 'Late entry is only available for vaccination records' },
+        { status: 400 }
+      )
+    }
+    if (late?.lateEntry) {
+      // Calendar days in London time, the same rule as the tool: today back
+      // to exactly LATE_ENTRY_MAX_DAYS days ago.
+      const ageDays =
+        typeof late.dateGiven === 'string' ? daysBetweenIso(late.dateGiven, todayLocalIso()) : null
+      if (ageDays === null || ageDays < 0 || ageDays > LATE_ENTRY_MAX_DAYS) {
+        return NextResponse.json(
+          { error: `Late entry date must not be in the future or more than ${LATE_ENTRY_MAX_DAYS} days ago` },
+          { status: 400 }
+        )
+      }
+      if (!late.reason || String(late.reason).trim().length < LATE_ENTRY_MIN_REASON) {
+        return NextResponse.json({ error: 'A reason for the late entry is required' }, { status: 400 })
+      }
+      if (summary.consultationDate !== late.dateGiven) {
+        return NextResponse.json(
+          { error: 'Late entry date does not match the consultation date' },
+          { status: 400 }
+        )
+      }
+    }
 
     // Remember the GPhC number the practitioner typed, so /api/me can
     // autofill it next time. Autofill matches a clinicians row on the
@@ -178,7 +221,9 @@ export async function POST(request: Request) {
         pharmacistGphc: summary.pharmacistGPhC.trim(),
         pharmacyName: pharmacy?.name || summary.pharmacyName || '',
         pharmacyAddress: pharmacy?.address || summary.pharmacyAddress || '',
-        clinicalNotes: summary.clinicalNotes,
+        clinicalNotes: late?.lateEntry && late.line
+          ? [late.line, summary.clinicalNotes].filter(Boolean).join('\n\n')
+          : summary.clinicalNotes,
       })
       gpNotified = result.ok
       gpNotifyError = result.error

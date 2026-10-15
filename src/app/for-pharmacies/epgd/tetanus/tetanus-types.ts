@@ -1,5 +1,7 @@
 // Tetanus, Diphtheria and Polio ePGD: clinical state shared by the client and the printed record.
 
+import { parseIsoLocal } from "../shared/late-entry";
+
 export const PGD_VERSION = "Tetanus, Diphtheria and Polio (Revaxis, Td/IPV) PGD v010, issued 14 September 2026";
 
 export const STEP_LABELS = [
@@ -92,24 +94,28 @@ export const WITHIN_10_YEARS: LastDose[] = ["under-12-months", "under-5", "5-to-
 
 /**
  * Expiry is entered as MM/YYYY. Valid when well-formed and the last day of
- * that month is today or later.
+ * that month is on or after the administration date (default today).
  */
-export function expiryMonthIsCurrent(expiry: string): boolean {
+export function expiryMonthIsCurrent(expiry: string, asOf?: string): boolean {
   const m = /^(0[1-9]|1[0-2])\/(\d{4})$/.exec(expiry.trim());
   if (!m) return false;
   const month = Number(m[1]);
   const year = Number(m[2]);
   const lastDay = new Date(year, month, 0);
   lastDay.setHours(23, 59, 59, 999);
-  return lastDay.getTime() >= Date.now();
+  const on = asOf ? parseIsoLocal(asOf) : null;
+  return lastDay.getTime() >= (on ? on.getTime() : Date.now());
 }
 
-/** Whole days between a YYYY-MM-DD date and today; null if unreadable. */
-export function daysSince(dateStr: string): number | null {
+/**
+ * Whole days between a YYYY-MM-DD date and the administration date (default
+ * today); null if unreadable.
+ */
+export function daysSince(dateStr: string, asOf?: string): number | null {
   if (!dateStr) return null;
   const d = new Date(dateStr);
   if (Number.isNaN(d.getTime())) return null;
-  const today = new Date();
+  const today = (asOf && parseIsoLocal(asOf)) || new Date();
   today.setHours(0, 0, 0, 0);
   d.setHours(0, 0, 0, 0);
   return Math.round((today.getTime() - d.getTime()) / 86400000);

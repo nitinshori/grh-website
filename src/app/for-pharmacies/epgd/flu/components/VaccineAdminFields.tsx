@@ -3,6 +3,8 @@
 import React from 'react';
 import { FluVaccineAdministration, FluVaccineType, FLU_VACCINES } from '../lib/flu-types';
 import { TextInput, SelectInput, Checkbox } from '../../shared/components/FormInputs';
+import { useLateEntry } from '../../shared/components/LateEntry';
+import { lateEntryError } from '../../shared/late-entry';
 
 // Aligned to the seasonal influenza vaccines PGD (IIVc, aIIV, IIVr, IIVe), 2026/27 season,
 // version 006, issued 14 September 2026.
@@ -59,6 +61,9 @@ export default function VaccineAdminFields({
 }: VaccineAdminFieldsProps): React.ReactNode {
   const vaccineOptions = permittedTypes.map((t) => ({ value: t, label: FLU_VACCINES[t].label }));
   const chosen = administration.vaccineName ? FLU_VACCINES[administration.vaccineName] : null;
+  // "today" unless a late entry has moved the date the dose was given.
+  const lateEntry = useLateEntry('flu');
+  const lateEntryActive = lateEntry.lateEntry && lateEntryError(lateEntry) === null;
 
   return (
     <div className="space-y-6">
@@ -124,7 +129,7 @@ export default function VaccineAdminFields({
           </p>
           {administration.doseNumber === '1' && (
             <TextInput
-              label="Second dose booked for (at least 4 weeks from today)"
+              label={`Second dose booked for (at least 4 weeks from ${lateEntryActive ? "the date this dose was given" : "today"})`}
               type="date"
               value={administration.nextDoseDue}
               onChange={onNextDoseDueChange}

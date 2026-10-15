@@ -16,7 +16,7 @@ export function validateAssessment(state: HepBState, alerts: ClinicalAlert[]): s
   return null;
 }
 
-export function validateTreatment(state: HepBState, alerts: ClinicalAlert[]): string | null {
+export function validateTreatment(state: HepBState, alerts: ClinicalAlert[], asOf?: string): string | null {
   const t = state.treatment;
   const stopFirst = alerts.find((a) => a.severity === "stop");
   if (stopFirst) return `Exclusion present: ${stopFirst.message}. Record the advice given and save as not supplied.`;
@@ -31,7 +31,7 @@ export function validateTreatment(state: HepBState, alerts: ClinicalAlert[]): st
   if (!t.injectionSite) return "Record the injection site";
   if (!t.batchNumber) return "Record the batch number";
   if (!parseLocalDate(t.expiryDate)) return "Record the expiry date";
-  if (isExpired(t.expiryDate)) return "Vaccine batch has expired: do not administer, quarantine the stock and select an in-date batch";
+  if (isExpired(t.expiryDate, asOf)) return "Vaccine batch has expired: do not administer, quarantine the stock and select an in-date batch";
   if (!t.observationPeriodCompleted) return "Confirm the 15 minute post-vaccination observation was completed";
   if (t.adverseReaction && !t.adverseReactionDetails.trim()) return "Record the adverse reaction and the action taken";
   return null;
@@ -54,7 +54,7 @@ export function validateSummary(state: HepBState): string | null {
   return null;
 }
 
-export function validateStep(step: number, state: HepBState, alerts: ClinicalAlert[]): string | null {
+export function validateStep(step: number, state: HepBState, alerts: ClinicalAlert[], asOf?: string): string | null {
   switch (step) {
     case 0:
       return validatePatientStep(state.patient, { minAge: 16 });
@@ -63,7 +63,7 @@ export function validateStep(step: number, state: HepBState, alerts: ClinicalAle
     case 2:
       return validateAssessment(state, alerts);
     case 3:
-      return validateTreatment(state, alerts);
+      return validateTreatment(state, alerts, asOf);
     case 4:
       return validateCounselling(state);
     case 5:

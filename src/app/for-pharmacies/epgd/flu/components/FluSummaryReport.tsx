@@ -3,6 +3,7 @@
 import React from 'react';
 import { FluConsultationState, FLU_VACCINES, FLU_SEASON } from '../lib/flu-types';
 import { calculateAge } from '../../shared/types';
+import { LateEntrySummaryLine } from '../../shared/components/LateEntry';
 import { hasHardStopContraindications } from '../lib/flu-clinical-logic';
 
 interface FluSummaryReportProps {
@@ -14,7 +15,8 @@ export default function FluSummaryReport({
   state,
   onPrint,
 }: FluSummaryReportProps): React.ReactNode {
-  const patientAge = calculateAge(state.patient.dateOfBirth);
+  // Age on the day the dose was given (consultationDate is the administration date).
+  const patientAge = calculateAge(state.patient.dateOfBirth, state.summary.consultationDate);
   const hasStop = hasHardStopContraindications(state.contraindications);
 
   return (
@@ -26,6 +28,10 @@ export default function FluSummaryReport({
         <p className="text-xs text-gray-500 mb-6">
           Administered via the Patient Group Direction for seasonal influenza vaccines (IIVc, aIIV, IIVr and IIVe), version 006, issued 14 September 2026.
         </p>
+
+        <div className="mb-6">
+          <LateEntrySummaryLine slug="flu" />
+        </div>
 
         {/* Patient Details Section */}
         <section className="mb-8 pb-8 border-b border-gray-200">

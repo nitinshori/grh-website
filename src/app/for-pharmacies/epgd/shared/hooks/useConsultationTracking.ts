@@ -1,6 +1,14 @@
 'use client'
 
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import {
+  clearLateEntry,
+  getLateEntry,
+  lateEntryError,
+  lateEntryRecord,
+  lateEntrySatisfied,
+  todayLocalIso,
+} from '../late-entry'
 
 /**
  * Data shape for saving a consultation record.
@@ -39,6 +47,9 @@ export interface ConsultationRecordData {
     consultationDate?: string
     consultationTime?: string
     clinicalNotes?: string
+    /** Dose given on an earlier day (vaccination tools). */
+    lateEntry?: boolean
+    lateEntryReason?: string
   }
   /** Optional top-level consent — surfaced so the server can read notifyGp etc.
    *  Each ePGD should pass at minimum { notifyGp } when the patient consented. */
@@ -97,6 +108,10 @@ function entryFor(pgdSlug: string): TrackingEntry {
 }
 
 export function useConsultationTracking(pgdSlug: string, currentStep: number) {
+  // A reason the last save was refused before it reached the server (for
+  // example an incomplete late entry), for the tool to show on screen.
+  const [saveError, setSaveError] = useState<string | null>(null)
+
   // Back at step 0 after a consultation was completed or saved means the next
   // patient, so the entry is cleared here rather than relying on the "New
   // Consultation" button: in a tool with one StepWrapper per step, the button
@@ -105,7 +120,10 @@ export function useConsultationTracking(pgdSlug: string, currentStep: number) {
   useEffect(() => {
     if (currentStep === 0) {
       const entry = store.get(pgdSlug)
-      if (entry && (entry.completed || entry.saved)) store.delete(pgdSlug)
+      if (entry && (entry.completed || entry.saved)) {
+        store.delete(pgdSlug)
+        clearLateEntry(pgdSlug)
+      }
     }
   }, [currentStep, pgdSlug])
 
@@ -159,6 +177,65 @@ export function useConsultationTracking(pgdSlug: string, currentStep: number) {
     async (data: ConsultationRecordData): Promise<boolean> => {
       const entry = entryFor(pgdSlug)
       if (entry.saved || entry.saving) return entry.saved
+
+      setSaveError(null)
+
+      // Late entry: a vaccine dose given on an earlier day. The date given
+      // becomes the consultation date, and the flag, reason and the date the
+      // entry was made go into the clinical record so they show on it. A
+      // ticked but incomplete entry is never saved as if given today.
+      //
+      // A record with no dose given (not supplied, or referred from an
+      // exclusion) ignores the late entry entirely: it is dated today and
+      // carries no late-entry line.
+      const doseGiven = (data.outcome || 'completed') === 'completed'
+      if (doseGiven) {
+        if (!lateEntrySatisfied(pgdSlug)) {
+          const msg =
+            lateEntryError(getLateEntry(pgdSlug)) ??
+            'The late entry panel is ticked but not complete.'
+          setSaveError(`Record not saved. ${msg}`)
+          return false
+        }
+        const late = lateEntryRecord(pgdSlug)
+        if (late) {
+          data = {
+            ...data,
+            clinicalData: { ...data.clinicalData, lateEntry: late },
+            summary: {
+              ...data.summary,
+              consultationDate: late.dateGiven,
+              lateEntry: true,
+              lateEntryReason: late.reason,
+            },
+          }
+        }
+      } else if (getLateEntry(pgdSlug).lateEntry || data.summary.lateEntry) {
+        // The tools put the late-entry date into summary.consultationDate
+        // while the panel is ticked; a no-dose record is dated today.
+        const clinicalRest = { ...(data.clinicalData as Record<string, unknown>) }
+        delete clinicalRest.lateEntry
+        const nested = clinicalRest.summary
+        if (nested && typeof nested === 'object' && 'lateEntry' in nested) {
+          clinicalRest.summary = {
+            ...(nested as Record<string, unknown>),
+            consultationDate: todayLocalIso(),
+            lateEntry: false,
+            lateEntryReason: '',
+          }
+        }
+        data = {
+          ...data,
+          clinicalData: clinicalRest,
+          summary: {
+            ...data.summary,
+            consultationDate: todayLocalIso(),
+            lateEntry: false,
+            lateEntryReason: undefined,
+          },
+        }
+      }
+
       entry.saving = true
 
       try {
@@ -210,6 +287,8 @@ export function useConsultationTracking(pgdSlug: string, currentStep: number) {
     markComplete,
     saveRecord,
     reset,
+    /** Why the last save was refused before reaching the server, or null. */
+    saveError,
     consultationId: entryFor(pgdSlug).consultationId,
     /** Id of the saved record (null until saved). */
     recordId: store.get(pgdSlug)?.recordId ?? null,

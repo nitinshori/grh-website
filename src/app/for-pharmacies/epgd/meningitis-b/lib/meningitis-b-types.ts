@@ -132,6 +132,8 @@ export type MeningitiBAction =
   | { type: "SET_STEP"; step: number }
   | { type: "NEXT_STEP" }
   | { type: "PREV_STEP" }
+  /** Keeps the dose date, age at vaccination and summary in step with the late-entry panel. */
+  | { type: "SYNC_ADMINISTRATION_DATE"; date: string; lateEntry: boolean; lateEntryReason?: string; age: number | null }
   | { type: "RESET" };
 
 // ─── Constants ───

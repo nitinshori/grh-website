@@ -12,14 +12,15 @@ import { getVaccineAlerts, parseLocalDate } from "./travel-core-clinical-logic";
 export function validateVaccines(
   v: TravelCoreVaccineAdministration,
   age: number | null,
-  departureDate: string
+  departureDate: string,
+  asOf?: string
 ): string | null {
   const anyGiven = v.hepAGiven || v.typhoidGiven || v.choleraGiven;
   if (!anyGiven) {
     if (!v.noVaccineToday) return "Select the vaccine(s) administered, or confirm that no vaccine was administered at this visit";
     return null;
   }
-  const stops = getVaccineAlerts(v, age, departureDate).filter((a) => a.severity === "stop");
+  const stops = getVaccineAlerts(v, age, departureDate, asOf).filter((a) => a.severity === "stop");
   if (stops.length > 0) return `Exclusion present: ${stops[0].message}. Record the advice given and save as not supplied, or resolve the exclusion.`;
   if (v.hepAGiven && !v.hepAInclusionAnswer) return "Hepatitis A: answer \"Does the destination have high or intermediate hepatitis A prevalence...?\" (Yes or No)";
   if (v.typhoidGiven && !v.typhoidInclusionAnswer) return "Typhoid: answer \"Does the destination have high or intermediate typhoid prevalence...?\" (Yes or No)";
@@ -121,7 +122,9 @@ export function validateStep(
     medicinesSupplied: TravelCoreMedicinesSupplied;
     vaccines: TravelCoreVaccineAdministration;
     summary: BaseSummary;
-  }
+  },
+  /** Administration date (YYYY-MM-DD), default today. */
+  asOf?: string
 ): string | null {
   switch (step) {
     case 0:
@@ -137,7 +140,7 @@ export function validateStep(
     case 5:
       return validateMedicinesSupplied(state.medicinesSupplied);
     case 6:
-      return validateVaccines(state.vaccines, state.patient.age, state.destination.departureDate);
+      return validateVaccines(state.vaccines, state.patient.age, state.destination.departureDate, asOf);
     case 7:
       return validateSummary(state.summary);
     default:

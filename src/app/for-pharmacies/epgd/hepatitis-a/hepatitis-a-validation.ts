@@ -218,10 +218,10 @@ export function validateHepatitisAAdministrationStep(
     return 'Record the other vaccine given at this visit and its site';
   if (!summary.administrationTime) return '"Time of administration" is required';
   if (doseNumber === 'first') {
-    if (!summary.secondDoseDue) return '"Second dose due" is required (6 to 12 months from today)';
+    if (!summary.secondDoseDue) return '"Second dose due" is required (6 to 12 months from the date this dose is given)';
     const win = secondDoseWindow();
     if (summary.secondDoseDue < win.earliest || summary.secondDoseDue > win.latest)
-      return `"Second dose due" must be 6 to 12 months from today (${win.earliest} to ${win.latest})`;
+      return `"Second dose due" must be 6 to 12 months from the date this dose is given (${win.earliest} to ${win.latest})`;
   }
   return null;
 }

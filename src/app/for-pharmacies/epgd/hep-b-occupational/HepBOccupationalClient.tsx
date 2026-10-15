@@ -9,6 +9,8 @@ import { PatientDetailsStep } from "../shared/steps/PatientDetailsStep";
 import { ConsentStep } from "../shared/steps/ConsentStep";
 import { TextInput, Checkbox, SelectInput, TextArea } from "../shared/components/FormInputs";
 import { calculateAge } from "../shared/types";
+import { useAdministrationDate, useLateEntry } from "../shared/components/LateEntry";
+import { lateEntryError } from "../shared/late-entry";
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 import {
   PGD_VERSION,
@@ -72,26 +74,52 @@ export default function HepBOccupationalClient() {
     }));
   }, [profile, state.summary.pharmacistName, state.summary.pharmacistGPhC]);
 
+  // Late entry: every date tied to the dose (age, interval since the previous
+  // dose, next dose due, batch expiry) counts from the date the dose was
+  // given, not the day the record is typed.
+  const adminDate = useAdministrationDate("hep-b-occupational");
+  const lateEntryState = useLateEntry("hep-b-occupational");
+  const lateEntryValid = lateEntryState.lateEntry && lateEntryError(lateEntryState) === null;
+  const lateEntryReason = lateEntryValid ? lateEntryState.reason.trim() : undefined;
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- late-entry sync; returns prev when unchanged
+    setState((prev) => {
+      const age = calculateAge(prev.patient.dateOfBirth, adminDate);
+      const summarySame =
+        prev.summary.consultationDate === adminDate &&
+        !!prev.summary.lateEntry === lateEntryValid &&
+        prev.summary.lateEntryReason === lateEntryReason;
+      if (summarySame && prev.patient.age === age) return prev;
+      return {
+        ...prev,
+        patient: prev.patient.age === age ? prev.patient : { ...prev.patient, age },
+        summary: summarySame
+          ? prev.summary
+          : { ...prev.summary, consultationDate: adminDate, lateEntry: lateEntryValid, lateEntryReason },
+      };
+    });
+  }, [adminDate, lateEntryValid, lateEntryReason, state.summary.consultationDate, state.summary.lateEntry, state.summary.lateEntryReason, state.patient.dateOfBirth]);
+
   const isUnder16 = state.patient.age !== null && state.patient.age < 16;
 
-  const alerts = useMemo(() => getAllAlerts(state), [state]);
+  const alerts = useMemo(() => getAllAlerts(state, adminDate), [state, adminDate]);
   const hasStopAlerts = hasHardStops(alerts);
   const stopReason = alerts.find((a) => a.severity === "stop");
 
   // Next dose date and course-complete flag are derived from the schedule and
   // dose number, never typed: the document requires "the date the next dose is
   // due" to be recorded, and a typed date is whatever was typed.
-  const nextDoseDate = computeNextDoseDate(state.treatment.schedule, state.treatment.doseNumber);
+  const nextDoseDate = computeNextDoseDate(state.treatment.schedule, state.treatment.doseNumber, adminDate);
   const doseRule = getDoseRule(state.treatment.schedule, state.treatment.doseNumber);
   const courseComplete = doseRule !== null && doseRule.nextMonths === null;
 
   const previousDoseRequired = doseRule !== null && doseRule.minDays !== null;
   const prevDate = parseLocalDate(state.treatment.previousDoseDate);
-  const daysSincePrevious = prevDate ? daysBetween(prevDate, todayLocal()) : null;
+  const daysSincePrevious = prevDate ? daysBetween(prevDate, parseLocalDate(adminDate) ?? todayLocal()) : null;
 
   const validationError = hasStopAlerts && currentStep !== 2 && currentStep !== 3 && stopReason
     ? `Exclusion criteria met: ${stopReason.message}. Record the advice given and save as not supplied.`
-    : validateStep(currentStep, state, alerts);
+    : validateStep(currentStep, state, alerts, adminDate);
   // A stop anywhere disables Next on every step and Save & Print on the last.
   const canProceed = validationError === null && !hasStopAlerts;
 
@@ -223,7 +251,7 @@ export default function HepBOccupationalClient() {
         {currentStep === 0 && (
           <PatientDetailsStep
             patient={state.patient}
-            onChange={(field, value) => setState((prev) => ({ ...prev, patient: { ...prev.patient, [field]: value, ...(field === "dateOfBirth" ? { age: calculateAge(value as string) } : {}) } }))}
+            onChange={(field, value) => setState((prev) => ({ ...prev, patient: { ...prev.patient, [field]: value, ...(field === "dateOfBirth" ? { age: calculateAge(value as string, adminDate) } : {}) } }))}
             requireAdult={false}
           />
         )}

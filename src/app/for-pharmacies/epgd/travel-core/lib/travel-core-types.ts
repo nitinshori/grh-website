@@ -162,6 +162,8 @@ export type TravelCoreAction =
   | { type: "UPDATE_VACCINES"; field: keyof TravelCoreVaccineAdministration; value: unknown }
   | { type: "UPDATE_SUMMARY"; field: keyof TravelCoreConsultationSummary; value: unknown }
   | { type: "SET_STEP"; step: number }
+  /** Late entry: keep the consultation date, late-entry flag and age at vaccination in line with the date the dose was given. */
+  | { type: "SYNC_ADMINISTRATION_DATE"; adminDate: string; lateEntry: boolean; lateEntryReason?: string }
   | { type: "RESET" };
 
 export const STEP_LABELS = [

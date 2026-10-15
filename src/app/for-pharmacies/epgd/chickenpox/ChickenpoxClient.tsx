@@ -17,6 +17,8 @@ import { AlertBanner } from "../shared/components/AlertBanner";
 import { PatientDetailsStep } from "../shared/steps/PatientDetailsStep";
 import { ConsentStep } from "../shared/steps/ConsentStep";
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
+import { LateEntrySummaryLine, useAdministrationDate, useLateEntry } from "../shared/components/LateEntry";
+import { lateEntryError } from "../shared/late-entry";
 import {
   TextInput,
   Checkbox,
@@ -88,6 +90,25 @@ function reducer(
       newState.currentStep = Math.max(newState.currentStep - 1, 0);
       break;
 
+    case "SYNC_ADMINISTRATION_DATE": {
+      const reason = action.lateEntry ? action.lateEntryReason : undefined;
+      if (
+        state.vaccineAdmin.dose1Date === action.date &&
+        state.summary.consultationDate === action.date &&
+        (state.summary.lateEntry ?? false) === action.lateEntry &&
+        state.summary.lateEntryReason === reason &&
+        state.patient.age === action.age
+      ) {
+        return state;
+      }
+      return {
+        ...state,
+        patient: { ...state.patient, age: action.age },
+        vaccineAdmin: { ...state.vaccineAdmin, dose1Date: action.date },
+        summary: { ...state.summary, consultationDate: action.date, lateEntry: action.lateEntry, lateEntryReason: reason },
+      };
+    }
+
     case "RESET":
       return createInitialChickenpoxState();
 
@@ -115,6 +136,22 @@ export default function ChickenpoxClient() {
   }, [__pharmProfile, state.summary.pharmacistName, state.summary.pharmacistGPhC]);
 
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
+
+  // Late entry: the dose may have been given on an earlier day. The date of
+  // administration, the age at vaccination and the consultation date all
+  // follow the date given (today when no late entry is ticked).
+  const adminDate = useAdministrationDate("chickenpox");
+  const lateEntryState = useLateEntry("chickenpox");
+  const lateEntryValid = lateEntryState.lateEntry && lateEntryError(lateEntryState) === null;
+  useEffect(() => {
+    dispatch({
+      type: "SYNC_ADMINISTRATION_DATE",
+      date: adminDate,
+      lateEntry: lateEntryValid,
+      lateEntryReason: lateEntryValid ? lateEntryState.reason.trim() : undefined,
+      age: state.patient.dateOfBirth ? calculateAge(state.patient.dateOfBirth, adminDate) : state.patient.age,
+    });
+  }, [adminDate, lateEntryValid, lateEntryState.reason, state.patient.dateOfBirth, state.patient.age]);
 
   // Compute alerts
   const alerts = useMemo(() => getAllAlerts(state), [state]);
@@ -655,7 +692,7 @@ export default function ChickenpoxClient() {
               />
 
               <TextInput
-                label="Date of administration"
+                label="Date of administration (today, or the date given in the late-entry panel)"
                 value={state.vaccineAdmin.dose1Date}
                 onChange={(v) =>
                   dispatch({
@@ -665,6 +702,7 @@ export default function ChickenpoxClient() {
                   })
                 }
                 type="date"
+                disabled
                 required
               />
 
@@ -995,6 +1033,7 @@ function ChickenpoxSummaryReport({
 }) {
   return (
     <div className="space-y-4 text-xs print:text-[10px]">
+      <LateEntrySummaryLine slug="chickenpox" />
       <SectionHeader>Patient Information</SectionHeader>
       <Row
         label="Name"

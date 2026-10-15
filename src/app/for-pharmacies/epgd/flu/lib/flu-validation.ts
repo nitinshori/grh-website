@@ -10,6 +10,7 @@ import {
 } from './flu-types';
 import { BasePatientDetails, BaseConsent } from '../../shared/types';
 import { needsTwoDoses, vaccineTypeRefusal, twoDoseCourseDoseNumber } from './flu-clinical-logic';
+import { todayLocalIso } from '../../shared/late-entry';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -153,8 +154,14 @@ export function validateContraindications(
 export function validateAdministration(
   administration: FluVaccineAdministration,
   patientAge?: number,
-  screening?: FluScreening
+  screening?: FluScreening,
+  asOf?: string
 ): ValidationResult {
+  // Administration date: the late-entry date when recording a dose given on
+  // an earlier day, otherwise today.
+  const adminDate = asOf || todayLocalIso();
+  // Wording: "today" unless a late entry has moved the date the dose was given.
+  const doseDayText = adminDate !== todayLocalIso() ? 'the date this dose was given' : 'today';
   const errors: string[] = [];
 
   if (!administration.adrenalineAvailable) {
@@ -178,11 +185,10 @@ export function validateAdministration(
     errors.push('Expiry date is required');
   }
 
-  // Expired stock: compare the labelled date with the start of today, so a
-  // vaccine expiring today is still in date (adversarial review, 11 Sep 2026).
+  // Expired stock: compare the labelled date with the administration date, so
+  // a vaccine expiring that day is still in date (adversarial review, 11 Sep 2026).
   if (administration.expiryDate?.trim()) {
-    const today = new Date().toISOString().split('T')[0];
-    if (administration.expiryDate < today) {
+    if (administration.expiryDate < adminDate) {
       errors.push('Vaccine batch has passed its labelled expiry date: do not administer');
     }
   }
@@ -218,14 +224,13 @@ export function validateAdministration(
       );
     }
     if (administration.doseNumber === '1' && !administration.nextDoseDue) {
-      errors.push('Book the second dose at this appointment and record the date it is due (at least 4 weeks after today)');
+      errors.push(`Book the second dose at this appointment and record the date it is due (at least 4 weeks after ${doseDayText})`);
     }
     if (administration.doseNumber === '2') {
       if (!administration.previousDoseDate) {
         errors.push('Record the date of dose 1');
       } else {
-        const today = new Date().toISOString().split('T')[0];
-        const days = daysBetween(administration.previousDoseDate, today);
+        const days = daysBetween(administration.previousDoseDate, adminDate);
         if (days !== null && days < 28) {
           errors.push('The second dose must be given at least 4 weeks after the first');
         }
