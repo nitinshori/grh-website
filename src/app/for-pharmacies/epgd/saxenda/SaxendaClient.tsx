@@ -13,10 +13,10 @@ import { calculateAge, validatePatientStep, validateConsentStep, validateSummary
 import { PrintedRecord } from "./components/PrintedRecord"
 import DateInput from '@/components/DateInput'
 
-// Saxenda PGD v005, issued 14 September 2026. Adults 18 years and over; aged 75 or over excludes.
+// Saxenda PGD v006, issued 30 September 2026. Adults 18 years and over; aged 75 or over excludes.
 const PGD_MIN_AGE = 18
 const PGD_MAX_AGE = 74
-const PGD_VERSION_LINE = "Saxenda PGD v005, issued 14 September 2026"
+const PGD_VERSION_LINE = "Saxenda PGD v006, issued 30 September 2026"
 const PRODUCT_NAME = "Saxenda (liraglutide 6 mg/ml) solution for injection in pre-filled pen"
 
 // Document: review at 12 weeks on the maintenance dose (3.0 mg daily);

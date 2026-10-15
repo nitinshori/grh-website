@@ -2,7 +2,7 @@
 
 import { parseIsoLocal } from "../shared/late-entry";
 
-export const PGD_VERSION = "Tetanus, Diphtheria and Polio (Revaxis, Td/IPV) PGD v010, issued 14 September 2026";
+export const PGD_VERSION = "Tetanus, Diphtheria and Polio (Revaxis, Td/IPV) PGD v011, issued 30 September 2026";
 
 export const STEP_LABELS = [
   "Patient Details",

@@ -4,8 +4,8 @@ import {
   BaseSummary,
 } from '../shared/types';
 
-/** Hepatitis A Vaccination PGD v001, issued 20 September 2026. */
-export const HEPATITIS_A_PGD_VERSION = 'Hepatitis A Vaccination PGD v001, issued 20 September 2026';
+/** Hepatitis A Vaccination PGD v002, issued 30 September 2026. */
+export const HEPATITIS_A_PGD_VERSION = 'Hepatitis A Vaccination PGD v002, issued 30 September 2026';
 
 // ─── Products ───
 // Four products, two strengths by age. Havrix Monodose is 1.0 mL; every

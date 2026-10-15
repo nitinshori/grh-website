@@ -98,7 +98,7 @@ export default function JapaneseEncephalitisSummaryReport({
             <div>
               <p className="text-sm font-medium text-gray-600">Date of Birth</p>
               <p className="text-gray-900">
-                {new Date(state.patient.dateOfBirth).toLocaleDateString()} (Age:{' '}
+                {new Date(state.patient.dateOfBirth).toLocaleDateString('en-GB')} (Age:{' '}
                 {patientAge})
               </p>
             </div>
@@ -148,7 +148,7 @@ export default function JapaneseEncephalitisSummaryReport({
             <div className="flex justify-between">
               <span className="text-gray-600">Departure date:</span>
               <span className="font-medium text-gray-900">
-                {new Date(state.screening.departureDate).toLocaleDateString()}
+                {new Date(state.screening.departureDate).toLocaleDateString('en-GB')}
               </span>
             </div>
             <div className="flex justify-between">
@@ -275,7 +275,7 @@ export default function JapaneseEncephalitisSummaryReport({
             <div className="flex justify-between">
               <span className="text-gray-600">Expiry date:</span>
               <span className="font-medium text-gray-900">
-                {state.administration.expiryDate ? new Date(state.administration.expiryDate).toLocaleDateString() : 'Not recorded'}
+                {state.administration.expiryDate ? new Date(state.administration.expiryDate).toLocaleDateString('en-GB') : 'Not recorded'}
               </span>
             </div>
             <div className="flex justify-between">
@@ -321,7 +321,7 @@ export default function JapaneseEncephalitisSummaryReport({
             <div className="flex justify-between">
               <span className="text-gray-600">Next dose due:</span>
               <span className="font-medium text-gray-900 text-right">
-                {state.administration.nextDueDate ? new Date(state.administration.nextDueDate).toLocaleDateString() : 'No further dose scheduled'}
+                {state.administration.nextDueDate ? new Date(state.administration.nextDueDate).toLocaleDateString('en-GB') : 'No further dose scheduled'}
                 {nextDoseNote ? <span className="block text-xs font-normal text-gray-600">{nextDoseNote}</span> : null}
               </span>
             </div>
@@ -433,7 +433,7 @@ export default function JapaneseEncephalitisSummaryReport({
             <div className="flex justify-between">
               <span className="text-gray-600">Date:</span>
               <span className="font-medium text-gray-900">
-                {new Date(state.summary.consultationDate).toLocaleDateString()}
+                {new Date(state.summary.consultationDate).toLocaleDateString('en-GB')}
               </span>
             </div>
             <div className="flex justify-between">
@@ -458,7 +458,7 @@ export default function JapaneseEncephalitisSummaryReport({
 
         <section className="text-center text-xs text-gray-500 py-4 border-t border-gray-200">
           <p>Japanese Encephalitis Vaccination ePGD | {JE_PGD_VERSION} | Confidential Patient Information</p>
-          <p>Generated: {new Date().toLocaleString()}</p>
+          <p>Generated: {new Date().toLocaleString('en-GB')}</p>
         </section>
       </div>
     </div>

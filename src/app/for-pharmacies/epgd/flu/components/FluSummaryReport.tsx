@@ -52,7 +52,7 @@ export default function FluSummaryReport({
             <div>
               <p className="text-sm font-medium text-gray-600">Date of Birth</p>
               <p className="text-gray-900">
-                {state.patient.dateOfBirth ? new Date(state.patient.dateOfBirth).toLocaleDateString() : 'Not recorded'} (Age:{' '}
+                {state.patient.dateOfBirth ? new Date(state.patient.dateOfBirth).toLocaleDateString('en-GB') : 'Not recorded'} (Age:{' '}
                 {patientAge !== null ? patientAge : 'unknown'})
               </p>
             </div>

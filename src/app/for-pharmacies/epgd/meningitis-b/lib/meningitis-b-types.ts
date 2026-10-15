@@ -153,7 +153,7 @@ export const TOTAL_STEPS = STEP_LABELS.length;
 
 /** PGD strapline shown wherever the tool cites its authority. */
 export const MENB_PGD_VERSION =
-  "Meningococcal group B vaccine (Bexsero and Trumenba) PGD v007, issued 14 September 2026";
+  "Meningococcal group B vaccine (Bexsero and Trumenba) PGD v008, issued 30 September 2026";
 
 // ─── Initial State ───
 

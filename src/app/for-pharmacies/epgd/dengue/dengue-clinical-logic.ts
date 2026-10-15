@@ -5,7 +5,7 @@ import {
   DengueContraindications,
 } from './dengue-types';
 
-export const DENGUE_PGD_VERSION = 'Qdenga (TAK-003) Dengue PGD v007, issued 14 September 2026';
+export const DENGUE_PGD_VERSION = 'Qdenga (TAK-003) Dengue PGD v008, issued 30 September 2026';
 
 /** Temperature at or above which the tool treats the patient as having an acute fever (exclusion). */
 export const FEVER_THRESHOLD_C = 38.0;

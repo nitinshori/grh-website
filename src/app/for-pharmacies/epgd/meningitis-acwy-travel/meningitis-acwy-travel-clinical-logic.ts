@@ -6,7 +6,7 @@ import type {
 } from './meningitis-acwy-travel-types';
 
 /** PGD strapline shown wherever the tool cites its authority. */
-export const MENACWY_PGD_VERSION = 'Meningococcal ACWY (Travel and Hajj/Umrah) PGD v008, issued 14 September 2026';
+export const MENACWY_PGD_VERSION = 'Meningococcal ACWY (Travel and Hajj/Umrah) PGD v009, issued 30 September 2026';
 
 /**
  * The date the dose is given (asOf, YYYY-MM-DD) as a local-midnight Date;

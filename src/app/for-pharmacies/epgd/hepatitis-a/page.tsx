@@ -4,7 +4,7 @@ import { PgdPageActions } from "@/components/PgdPageActions";
 export const metadata = {
   title: 'Hepatitis A Vaccination ePGD | Pharmacy PGD',
   description:
-    'UK Pharmacy Patient Group Direction (PGD) consultation tool for hepatitis A vaccination with Havrix Monodose, Havrix Junior Monodose, Avaxim or Avaxim Junior, in line with the Hepatitis A Vaccination PGD v001, issued 20 September 2026',
+    'UK Pharmacy Patient Group Direction (PGD) consultation tool for hepatitis A vaccination with Havrix Monodose, Havrix Junior Monodose, Avaxim or Avaxim Junior, in line with the Hepatitis A Vaccination PGD v002, issued 30 September 2026',
 };
 
 export default function HepatitisAPage() {
@@ -22,7 +22,7 @@ export default function HepatitisAPage() {
             <p className="text-gray-600 mb-4">PGD Consultation for UK Pharmacies</p>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-900">
-                This ePGD guides pharmacists and pharmacy technicians in the administration of inactivated hepatitis A vaccine (Havrix Monodose or Avaxim at 16 years and over; Havrix Junior Monodose or Avaxim Junior from 1 year to 15 years inclusive) to individuals aged 1 year and over at increased risk through travel, lifestyle, a medical condition or occupation, in line with the Hepatitis A Vaccination PGD v001, issued 20 September 2026. It does not cover hepatitis B, the combined hepatitis A and B vaccine (Twinrix), the combined hepatitis A and typhoid vaccine (ViATIM), post-exposure use, or serology.
+                This ePGD guides pharmacists and pharmacy technicians in the administration of inactivated hepatitis A vaccine (Havrix Monodose or Avaxim at 16 years and over; Havrix Junior Monodose or Avaxim Junior from 1 year to 15 years inclusive) to individuals aged 1 year and over at increased risk through travel, lifestyle, a medical condition or occupation, in line with the Hepatitis A Vaccination PGD v002, issued 30 September 2026. It does not cover hepatitis B, the combined hepatitis A and B vaccine (Twinrix), the combined hepatitis A and typhoid vaccine (ViATIM), post-exposure use, or serology.
               </p>
             </div>
           </div>

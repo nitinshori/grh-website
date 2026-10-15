@@ -12,7 +12,7 @@ import type {
  *     14 September 2026. From 2 years; cellulitis from 12 years. Observations
  *     are AGE-BANDED (Appendix 1). Flucloxacillin may be supplied in pregnancy
  *     and breastfeeding; clarithromycin and doxycycline may not.
- *   "cellulitis": Cellulitis PGD v006, issued 14 September 2026. Adults 18 and
+ *   "cellulitis": Cellulitis PGD v007, issued 30 September 2026. Adults 18 and
  *     over, MILD cellulitis (Eron class I) of a limb or the trunk only. Adult
  *     sepsis thresholds. Flucloxacillin may be supplied in pregnancy and
  *     breastfeeding (decision 26, 11 September 2026); clarithromycin and

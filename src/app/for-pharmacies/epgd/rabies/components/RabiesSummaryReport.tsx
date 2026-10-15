@@ -9,7 +9,7 @@ import { getDoseVolume, getProductLabel, RABIES_PGD_VERSION, hasHardStopContrain
 function fmtDate(iso: string): string {
   if (!iso) return 'Not recorded';
   const d = new Date(iso);
-  return isNaN(d.getTime()) ? 'Not recorded' : d.toLocaleDateString();
+  return isNaN(d.getTime()) ? 'Not recorded' : d.toLocaleDateString('en-GB');
 }
 
 const INDICATION_LABELS: Record<string, string> = {
@@ -79,7 +79,7 @@ export default function RabiesSummaryReport({
             <div>
               <p className="text-sm font-medium text-gray-600">Date of Birth</p>
               <p className="text-gray-900">
-                {new Date(state.patient.dateOfBirth).toLocaleDateString()} (Age:{' '}
+                {new Date(state.patient.dateOfBirth).toLocaleDateString('en-GB')} (Age:{' '}
                 {patientAge})
               </p>
             </div>
@@ -474,7 +474,7 @@ export default function RabiesSummaryReport({
             <div className="flex justify-between">
               <span className="text-gray-600">Date:</span>
               <span className="font-medium text-gray-900">
-                {new Date(state.summary.consultationDate).toLocaleDateString()}
+                {new Date(state.summary.consultationDate).toLocaleDateString('en-GB')}
               </span>
             </div>
             <div className="flex justify-between">
@@ -499,7 +499,7 @@ export default function RabiesSummaryReport({
 
         <section className="text-center text-xs text-gray-500 py-4 border-t border-gray-200">
           <p>Rabies Pre-exposure Vaccination ePGD | {RABIES_PGD_VERSION} | Confidential Patient Information</p>
-          <p>Generated: {new Date().toLocaleString()}</p>
+          <p>Generated: {new Date().toLocaleString('en-GB')}</p>
         </section>
       </div>
     </div>

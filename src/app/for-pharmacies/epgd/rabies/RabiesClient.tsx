@@ -1580,13 +1580,22 @@ export default function RabiesClient({
             >
               Previous
             </button>
-            <button
-              onClick={handleNextStep}
-              disabled={state.step === STEP_LABELS.length - 1 || !canProceedFromStep()}
-              className="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
-            >
-              {state.step === STEP_LABELS.length - 1 ? 'Complete' : 'Next'}
-            </button>
+            {state.step === STEP_LABELS.length - 1 ? (
+              <button
+                onClick={() => { void handlePrint(); }}
+                className="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              >
+                Save &amp; Print record
+              </button>
+            ) : (
+              <button
+                onClick={handleNextStep}
+                disabled={!canProceedFromStep()}
+                className="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              >
+                Next
+              </button>
+            )}
           </div>
         </div>
       </div>

@@ -40,7 +40,7 @@ export default function SaxendaPage(): React.ReactNode {
         </div>
         <SaxendaClient />
         <div className="mt-8 text-center text-xs text-gray-500">
-          <p>Get Real Health ePGD: Saxenda (Liraglutide) PGD v005, issued 14 September 2026 | Confidential Patient Information</p>
+          <p>Get Real Health ePGD: Saxenda (Liraglutide) PGD v006, issued 30 September 2026 | Confidential Patient Information</p>
         </div>
       </div>
     </div>

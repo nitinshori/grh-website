@@ -6,8 +6,8 @@ import type {
   TyphoidSummary,
 } from './typhoid-types';
 
-/** Typhoid (Vi Polysaccharide Vaccine) PGD v007, issued 14 September 2026. */
-export const TYPHOID_PGD_VERSION = 'Typhoid (Vi Polysaccharide Vaccine) PGD v007, issued 14 September 2026';
+/** Typhoid (Vi Polysaccharide Vaccine) PGD v008, issued 30 September 2026. */
+export const TYPHOID_PGD_VERSION = 'Typhoid (Vi Polysaccharide Vaccine) PGD v008, issued 30 September 2026';
 
 export interface TyphoidMedicalHistory {
   anaphylaxisToVaccine: boolean;

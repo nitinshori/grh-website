@@ -403,7 +403,7 @@ export default function DengueSummaryReport({
 
         <section className="text-center text-xs text-gray-500 py-4 border-t border-gray-200">
           <p>Dengue Vaccination ePGD | Confidential Patient Information</p>
-          <p>Generated: {new Date().toLocaleString()}</p>
+          <p>Generated: {new Date().toLocaleString('en-GB')}</p>
         </section>
       </div>
     </div>

@@ -9,7 +9,7 @@ import type {
   TDMedications,
 } from './travellers-diarrhoea-types';
 
-export const TD_PGD_VERSION = "Azithromycin for Traveller's Diarrhoea PGD v006, issued 14 September 2026";
+export const TD_PGD_VERSION = "Azithromycin for Traveller's Diarrhoea PGD v007, issued 30 September 2026";
 
 // ─── Generate clinical alerts ───
 

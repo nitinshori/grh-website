@@ -9,7 +9,7 @@ import type {
   ASMedications,
 } from './altitude-sickness-types';
 
-export const AS_PGD_VERSION = 'Acetazolamide for Altitude Sickness PGD v005, issued 14 September 2026';
+export const AS_PGD_VERSION = 'Acetazolamide for Altitude Sickness PGD v006, issued 30 September 2026';
 
 // PGD v005 quantity limits (tablets per supply)
 export const AS_MAX_PREVENTION_TABLETS = 14;

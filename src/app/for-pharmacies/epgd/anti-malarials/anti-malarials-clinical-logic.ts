@@ -15,7 +15,7 @@ import type {
   AMMedicineChoice,
 } from './anti-malarials-types';
 
-export const AM_PGD_VERSION = 'Malaria Chemoprophylaxis PGD v011, issued 14 September 2026';
+export const AM_PGD_VERSION = 'Malaria Chemoprophylaxis PGD v012, issued 30 September 2026';
 
 // ─── Calculate trip duration ───
 //

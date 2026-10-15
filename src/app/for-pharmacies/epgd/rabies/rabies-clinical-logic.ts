@@ -7,7 +7,7 @@ import {
 } from './rabies-types';
 
 /** PGD strapline shown wherever the tool cites its authority. */
-export const RABIES_PGD_VERSION = 'Rabies Vaccine (Rabipur or Verorab) Pre-exposure Prophylaxis PGD v007, issued 14 September 2026';
+export const RABIES_PGD_VERSION = 'Rabies Vaccine (Rabipur or Verorab) Pre-exposure Prophylaxis PGD v008, issued 30 September 2026';
 
 /** The dose volumes differ: 1.0 mL for Rabipur, 0.5 mL for Verorab. */
 export function getDoseVolume(product: RabiesVaccineAdministration['product']): string {
@@ -257,7 +257,7 @@ export function minimumIntervalDays(
 function addDays(base: Date, days: number): string {
   const d = new Date(base);
   d.setDate(d.getDate() + days);
-  return d.toLocaleDateString();
+  return d.toLocaleDateString('en-GB');
 }
 
 /**
@@ -303,7 +303,7 @@ export function calculateNextDueDates(
     return `Day 7: ${addDays(day0, 7)}; further dose at one year if travel to high risk areas continues: ${addDays(day0, 365)}`;
   }
   if (doseNumber === '3rd') {
-    return `Accelerated primary course complete. Further dose at one year if travel to high risk areas continues: ${oneYear.toLocaleDateString()}`;
+    return `Accelerated primary course complete. Further dose at one year if travel to high risk areas continues: ${oneYear.toLocaleDateString('en-GB')}`;
   }
   return 'One year dose given. Further boosters per risk assessment or serology.';
 }

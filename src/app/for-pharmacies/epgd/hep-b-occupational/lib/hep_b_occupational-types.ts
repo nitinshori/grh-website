@@ -6,7 +6,7 @@ import type { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/
  * Standard (0, 1, 6 months) and accelerated (0, 1, 2, 12 months) schedules
  * only. The 40 microgram presentations (Fendrix, HBvaxPRO 40) are not covered.
  */
-export const PGD_VERSION = "Hepatitis B (Engerix B / HBvaxPRO) PGD v006, issued 14 September 2026";
+export const PGD_VERSION = "Hepatitis B (Engerix B / HBvaxPRO) PGD v007, issued 30 September 2026";
 
 export type Vaccine = "" | "engerix-20" | "hbvaxpro-10";
 export const VACCINE_LABEL: Record<Exclude<Vaccine, "">, string> = {

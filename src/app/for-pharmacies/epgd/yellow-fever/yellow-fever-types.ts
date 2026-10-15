@@ -2,7 +2,7 @@
 
 import { parseIsoLocal } from "../shared/late-entry";
 
-export const YF_PGD_VERSION = "Yellow fever vaccine (Stamaril) PGD v006, issued 14 September 2026";
+export const YF_PGD_VERSION = "Yellow fever vaccine (Stamaril) PGD v007, issued 30 September 2026";
 
 export const STEP_LABELS = [
   "Centre & Patient",
