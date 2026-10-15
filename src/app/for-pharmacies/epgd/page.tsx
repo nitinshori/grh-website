@@ -75,6 +75,8 @@ const epgds = [
   { slug: 'smoking-nrt', title: 'Smoking Cessation (NRT)', subtitle: 'Patches, Gum & Inhalators', category: 'Mental Health', color: 'bg-teal-500' },
   { slug: 'anxiety-propranolol', title: 'Anxiety (Propranolol)', subtitle: 'Situational Anxiety / Performance', category: 'Mental Health', color: 'bg-teal-500' },
   { slug: 'sleep-melatonin', title: 'Sleep (Melatonin)', subtitle: 'Short-Term Insomnia Management', category: 'Mental Health', color: 'bg-teal-500' },
+  { slug: 'melatonin', title: 'Melatonin 5 mg for Adults (Insomnia and Jet Lag)', subtitle: 'Insomnia off-label, pharmacists only. Jet lag licensed', category: 'Mental Health', color: 'bg-teal-600' },
+  { slug: 'daridorexant', title: 'Long-Term Insomnia (Daridorexant)', subtitle: 'QUVIVIQ initiation course. Pharmacists only', category: 'Mental Health', color: 'bg-teal-600' },
 
   // ── Vaccines ──
   { slug: 'flu', title: 'Flu Vaccination', subtitle: 'Private Flu Vaccine Administration', category: 'Vaccines', color: 'bg-sky-500' },

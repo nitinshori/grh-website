@@ -10,6 +10,7 @@ import { tenantFromHost, tenantLaunchUrl } from '@/lib/tenants'
 import { TENANT_HEADER } from '@/lib/tenant-context'
 import {
   ALL_PGDS,
+  NOT_IN_FULL_CATALOGUE_SLUGS,
   EPGD_UNGATED_SEGMENTS,
   EPGD_SEGMENT_ALIASES,
   WITHDRAWN_SLUGS,
@@ -189,7 +190,7 @@ async function mayStillWorkAt(userId: string, pharmacyId: string): Promise<boole
 // One query per pharmacy per minute, cached like the is_active check above,
 // and it fails open for the same reason: a Neon hiccup must not take every
 // pharmacy's tools away mid-consultation.
-const CATALOGUE_SLUGS = new Set(ALL_PGDS.map((p) => p.slug))
+const CATALOGUE_SLUGS = new Set(ALL_PGDS.map((p) => p.slug).filter((s) => !NOT_IN_FULL_CATALOGUE_SLUGS.has(s)))
 
 /** Slugs that resolve to a signed master PDF. See the guard in mayUseEpgdTool. */
 const DOCUMENTED_SLUGS = new Set(Object.keys(PGD_MASTER_FILES))

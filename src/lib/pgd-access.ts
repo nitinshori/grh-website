@@ -93,6 +93,8 @@ export const ALL_PGDS: { slug: string; title: string; subtitle: string; category
   // Mental Health & Wellbeing
   { slug: 'smoking-varenicline', title: 'Smoking Cessation (Varenicline)', subtitle: 'Champix', category: 'Mental Health & Wellbeing' },
   { slug: 'sleep-melatonin', title: 'Insomnia (Circadin)', subtitle: 'Melatonin 2mg prolonged-release, primary insomnia, 55 and over', category: 'Mental Health & Wellbeing' },
+  { slug: 'melatonin', title: 'Melatonin 5 mg for Adults: Insomnia and Jet Lag', subtitle: 'Adults: insomnia (off-label, pharmacists only) and jet lag', category: 'Mental Health & Wellbeing' },
+  { slug: 'daridorexant', title: 'Long-Term Insomnia (Daridorexant)', subtitle: 'QUVIVIQ initiation course, pharmacists only', category: 'Mental Health & Wellbeing' },
   // adhd-monitoring removed from public catalogue — clinical review (Apr 2026)
   { slug: 'anxiety-propranolol', title: 'Situational Anxiety', subtitle: 'Propranolol', category: 'Mental Health & Wellbeing' },
   { slug: 'hayfever', title: 'Hayfever (Severe)', subtitle: 'Fexofenadine / Dymista (azelastine and fluticasone)', category: 'Mental Health & Wellbeing' },
@@ -362,7 +364,17 @@ export const NOT_PUBLICLY_LISTED_SLUGS = new Set([
   'cholera',
   'tick-borne-encephalitis',
   'ear-infection',
+  // melatonin, daridorexant: v001 issued 15 Oct 2026, approved per pharmacy
+  // in Admin, PGD Matrix; not on the public catalogue until released.
+  'melatonin',
+  'daridorexant',
 ])
+
+/**
+ * Not given to full-catalogue (HubRx) pharmacies automatically: these are
+ * approved one pharmacy at a time in Admin, PGD Matrix (16 Oct 2026).
+ */
+export const NOT_IN_FULL_CATALOGUE_SLUGS = new Set(['melatonin', 'daridorexant'])
 
 /**
  * The enforcement set. Union of the three above; do not add slugs here

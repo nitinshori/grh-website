@@ -775,6 +775,30 @@ export const pgds: PGD[] = [
       "DIFFERENTIATION. Circadin 2 mg prolonged-release melatonin for the short-term treatment of primary insomnia in adults aged 55 and over. Melatonin is prescription-only in the UK, so a private PGD route fills a real gap.",
     pharmadoctor: "No",
   },
+  {
+    id: "melatonin",
+    title: "Melatonin 5 mg for Adults: Insomnia and Jet Lag",
+    category: "Mental Health",
+    priority: 2,
+    isNew: true,
+    revenueEstimate: "Private fee set by the pharmacy",
+    consultTime: "20 to 30 min (insomnia); 10 to 15 min (jet lag)",
+    description:
+      "Licensed Adaflex 3 mg and 5 mg melatonin tablets for adults aged 18 and over. Arm A: insomnia, off-label, pharmacists only, a reviewed course of up to three 30-tablet supplies. Arm B: jet lag (licensed), up to 5 nights per journey, pharmacists or pharmacy technicians.",
+    pharmadoctor: "No",
+  },
+  {
+    id: "daridorexant",
+    title: "Long-Term Insomnia (Daridorexant)",
+    category: "Mental Health",
+    priority: 2,
+    isNew: true,
+    revenueEstimate: "Private fee set by the pharmacy",
+    consultTime: "30 to 40 min (first supply)",
+    description:
+      "QUVIVIQ (daridorexant, black triangle) for adults aged 18 to 75 with long-term insomnia meeting NICE TA922: an initiation course of up to three 30-tablet supplies with an effectiveness assessment, then handover to a prescriber. Pharmacists only.",
+    pharmadoctor: "No",
+  },
   // ADHD monitoring removed from public catalogue per head-pharmacist
   // clinical review (Apr 2026). Consultation-record code retained in
   // /epgd/adhd-monitoring for potential future reinstatement.

@@ -2,7 +2,7 @@ import "server-only";
 import { db } from "@/lib/db";
 import { pharmacyPgds, pharmacies, users } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
-import { ALL_PGDS } from "@/lib/pgd-access";
+import { ALL_PGDS, NOT_IN_FULL_CATALOGUE_SLUGS } from "@/lib/pgd-access";
 
 /**
  * Partner tenants whose pharmacies get the whole catalogue automatically.
@@ -43,7 +43,7 @@ export async function hasPharmacyPgdAccess(
   pgdSlug: string,
 ): Promise<boolean> {
   if (await hasFullCatalogue(pharmacyId)) {
-    return ALL_PGDS.some((p) => p.slug === pgdSlug);
+    return ALL_PGDS.some((p) => p.slug === pgdSlug) && !NOT_IN_FULL_CATALOGUE_SLUGS.has(pgdSlug);
   }
 
   const [assignment] = await db
@@ -65,7 +65,7 @@ export async function hasPharmacyPgdAccess(
 
 export async function getPharmacyPgdSlugs(pharmacyId: string): Promise<string[]> {
   if (await hasFullCatalogue(pharmacyId)) {
-    return ALL_PGDS.map((p) => p.slug);
+    return ALL_PGDS.map((p) => p.slug).filter((s) => !NOT_IN_FULL_CATALOGUE_SLUGS.has(s));
   }
 
   const assignments = await db

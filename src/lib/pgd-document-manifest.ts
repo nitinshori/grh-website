@@ -105,6 +105,10 @@ export const PGD_MASTER_FILES: Record<string, string> = {
   "shingles-treatment": "shingles-treatment-v009.pdf",
   "shingles-vaccine": "shingles-vaccine-v010.pdf",
   "sleep-melatonin": "sleep-melatonin-v010.pdf",
+  // v001 drafts issued 15 Oct 2026 (melatonin: adult insomnia off-label and
+  // jet lag; daridorexant: QUVIVIQ initiation course). Master map only.
+  "melatonin": "melatonin-v001.pdf",
+  "daridorexant": "daridorexant-v001.pdf",
   "smoking-nrt": "smoking-nrt-v005.pdf",
   "smoking-varenicline": "smoking-varenicline-v006.pdf",
   "sore-throat": "sore-throat-v007.pdf",
