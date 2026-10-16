@@ -29,7 +29,7 @@ export function PeriodDelaySummaryReport({ state }: { state: PeriodDelayConsulta
     <div className="space-y-4 print:text-xs print:space-y-2">
       <div className="border-b-2 border-navy-900 pb-2 mb-4">
         <h2 className="text-lg font-bold text-navy-900 print:text-base">Period Delay ePGD Consultation Record</h2>
-        <p className="text-xs text-gray-500">Period Delay (Norethisterone) PGD, version 011, issued 24 September 2026. Norethisterone 5mg tablets, short-term delay of menstruation</p>
+        <p className="text-xs text-gray-500">Period Delay (Norethisterone) PGD, version 012, issued 30 September 2026. Norethisterone 5mg tablets, short-term delay of menstruation</p>
       </div>
       <SectionHeader>Patient Details</SectionHeader>
       <div className="space-y-1.5">

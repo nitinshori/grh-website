@@ -4,7 +4,7 @@ import {
   BaseSummary,
 } from '../shared/types';
 
-// Aligned to the Pneumovax 23 / Prevenar 20 PGD version 008, issued 24 September 2026.
+// Aligned to the Pneumovax 23 / Prevenar 20 PGD version 009, issued 30 September 2026.
 
 export type PneumococcalRiskCategory =
   | 'asplenia'

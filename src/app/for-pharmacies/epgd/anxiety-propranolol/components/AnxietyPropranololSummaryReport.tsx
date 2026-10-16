@@ -12,7 +12,7 @@ import {
 } from "../../shared/components/SummaryReportShell";
 
 const PGD_NAME = "Anxiety (Situational and Somatic Symptoms), Propranolol";
-const PGD_VERSION = "PGD version 007, issued 14 September 2026 (valid to 31 July 2027)";
+const PGD_VERSION = "PGD version 008, issued 30 September 2026 (valid to 31 July 2027)";
 
 interface AnxietyPropranololSummaryReportProps {
   state: AnxietyPropranololConsultationState;

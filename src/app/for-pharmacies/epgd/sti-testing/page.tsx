@@ -31,7 +31,7 @@ export default function STIToolPage() {
             STI Testing and Chlamydia Treatment: Consultation
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Risk assessment, test selection, chlamydia treatment (doxycycline or azithromycin) and counselling under Patient Group Direction, version 004, issued 14 September 2026
+            Risk assessment, test selection, chlamydia treatment (doxycycline or azithromycin) and counselling under Patient Group Direction, version 005, issued 30 September 2026
           </p>
         </div>
 
@@ -44,7 +44,7 @@ export default function STIToolPage() {
             This ePGD is provided as a clinical decision support aid and does
             not replace professional clinical judgement. The pharmacist retains
             full responsibility for each consultation. Based on UK sexual health
-            guidance and the Get Real Health PGD for the treatment of Chlamydia (doxycycline or azithromycin), version 004, issued 14 September 2026.
+            guidance and the Get Real Health PGD for the treatment of Chlamydia (doxycycline or azithromycin), version 005, issued 30 September 2026.
           </p>
         </div>
       </div>

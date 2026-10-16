@@ -14,7 +14,7 @@ export default function Page() {
             <span className="text-navy-900 font-medium">Acute Dental Infection Bridging Antibiotic ePGD</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-navy-900">Acute Dental Infection, Bridging Antibiotic: PGD Consultation</h1>
-          <p className="text-sm text-gray-600 mt-1">Amoxicillin or metronidazole, adults 18 and over, spreading or systemic dental infection only. PGD version 009, issued 14 September 2026.</p>
+          <p className="text-sm text-gray-600 mt-1">Amoxicillin or metronidazole, adults 18 and over, spreading or systemic dental infection only. PGD version 010, issued 30 September 2026.</p>
         </div>
         <DentalBridgingClient />
         <div className="mt-8 text-center">

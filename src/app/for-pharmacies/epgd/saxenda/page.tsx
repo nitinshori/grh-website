@@ -20,7 +20,7 @@ export default function SaxendaPage(): React.ReactNode {
             </h1>
             <p className="text-gray-600 mb-4">
               Daily subcutaneous liraglutide for weight management under the Patient
-              Group Direction (version 005, issued 14 September 2026). Adults aged 18
+              Group Direction (version 006, issued 30 September 2026). Adults aged 18
               years and over (aged 75 years or over excludes) with BMI ≥30, or ≥27 with
               at least one weight-related comorbidity, who are willing and motivated to
               undertake lifestyle modifications.

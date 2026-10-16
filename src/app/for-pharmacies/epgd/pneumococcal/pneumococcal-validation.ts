@@ -9,7 +9,7 @@ import {
 } from './pneumococcal-clinical-logic';
 import { todayLocalIso } from '../shared/late-entry';
 
-// Aligned to the Pneumovax 23 / Prevenar 20 PGD version 008, issued 24 September 2026.
+// Aligned to the Pneumovax 23 / Prevenar 20 PGD version 009, issued 30 September 2026.
 
 export function validatePneumococcalPatientStep(
   patient: PneumococcalPatientDetails

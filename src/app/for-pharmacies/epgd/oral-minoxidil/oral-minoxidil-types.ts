@@ -1,7 +1,7 @@
 import type { BasePatientDetails, BaseConsent, BaseSummary } from '../shared/types';
 
-/** Pattern Hair Loss (Low-Dose Oral Minoxidil) PGD, version 001, issued 28 September 2026. */
-export const ORAL_MINOXIDIL_PGD_VERSION = 'PGD version 001, issued 28 September 2026';
+/** Pattern Hair Loss (Low-Dose Oral Minoxidil) PGD, version 002, issued 30 September 2026. */
+export const ORAL_MINOXIDIL_PGD_VERSION = 'PGD version 002, issued 30 September 2026';
 export const ORAL_MINOXIDIL_PGD_NAME = 'Pattern Hair Loss (Low-Dose Oral Minoxidil)';
 
 /** The words the document requires on every record ("Records to be kept"). */

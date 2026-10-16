@@ -65,7 +65,7 @@ export function SoreThroatSummaryReport({
           Sore Throat Test & Treat Consultation Record
         </h2>
         <p className="text-xs mt-2 opacity-80 print:text-gray-600">
-          Patient Group Direction: Sore Throat Test & Treat, version 006, issued 14 September 2026
+          Patient Group Direction: Sore Throat Test & Treat, version 007, issued 30 September 2026
         </p>
       </div>
 

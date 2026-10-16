@@ -3,7 +3,7 @@ import { DOSE_BY_STAGE } from "./mounjaro-types";
 import type { ClinicalAlert, DoseRecommendation } from "../../shared/types";
 
 // Alerts follow the Mounjaro (tirzepatide) Injection for weight management PGD,
-// version 010, issued 14 September 2026. "stop" = exclusion criterion (do not
+// version 011, issued 30 September 2026. "stop" = exclusion criterion (do not
 // supply, refer); "caution" = caution row; "red-flag" = monitoring point.
 
 export function getAllAlerts(state: MounjaroConsultationState): ClinicalAlert[] {

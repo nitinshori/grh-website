@@ -25,7 +25,7 @@ export default function MysimbaPage(): React.ReactNode {
               74 with BMI ≥30, or ≥27 with at least one weight-related comorbidity.
             </p>
             <p className="text-xs text-gray-500 mb-4">
-              Patient Group Direction version 006, issued 14 September 2026. Valid from
+              Patient Group Direction version 007, issued 30 September 2026. Valid from
               14 September 2026, expiry 31 July 2027.
             </p>
             <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">

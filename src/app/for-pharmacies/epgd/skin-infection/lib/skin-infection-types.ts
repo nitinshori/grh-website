@@ -202,8 +202,8 @@ export const TOTAL_STEPS = STEP_LABELS.length;
 /** Document strapline shown on the record, per variant. */
 export const PGD_VERSION_LABEL: Record<SkinInfectionVariant, string> = {
   "skin-infection":
-    "Skin and Soft Tissue Infection PGD, version 008, issued 14 September 2026",
-  cellulitis: "Cellulitis PGD, version 006, issued 14 September 2026",
+    "Skin and Soft Tissue Infection PGD, version 009, issued 30 September 2026",
+  cellulitis: "Cellulitis PGD, version 009, issued 30 September 2026",
 };
 
 export function createInitialConsultationState(

@@ -845,7 +845,7 @@ gpOdsCode: '',
             Flu Vaccination ePGD, 2026/27 season
           </h1>
           <p className="text-gray-600">
-            Seasonal influenza vaccines (IIVc, aIIV, IIVr and IIVe) under the Patient Group Direction, version 006, issued 14 September 2026. Privately funded vaccination, aged 2 years and over; single 0.5 ml intramuscular dose.
+            Seasonal influenza vaccines (IIVc, aIIV, IIVr and IIVe) under the Patient Group Direction, version 007, issued 30 September 2026. Privately funded vaccination, aged 2 years and over; single 0.5 ml intramuscular dose.
           </p>
         </div>
 

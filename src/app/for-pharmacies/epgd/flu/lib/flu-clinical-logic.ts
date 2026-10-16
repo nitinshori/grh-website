@@ -1,5 +1,5 @@
 // Aligned to the seasonal influenza vaccines PGD (IIVc, aIIV, IIVr, IIVe), 2026/27 season,
-// version 006, issued 14 September 2026.
+// version 007, issued 30 September 2026.
 import { ClinicalAlert } from '../../shared/types';
 import {
   FluScreening,

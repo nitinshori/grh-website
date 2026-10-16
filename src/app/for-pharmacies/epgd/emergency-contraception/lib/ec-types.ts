@@ -23,7 +23,7 @@ export interface ECPatientDetails extends BasePatientDetails {
 }
 
 export const PGD_VERSION_LABEL =
-  "Emergency Contraception PGD (levonorgestrel 1.5 mg, Levonelle / ulipristal acetate 30 mg, ellaOne), version 005, issued 14 September 2026";
+  "Emergency Contraception PGD (levonorgestrel 1.5 mg, Levonelle / ulipristal acetate 30 mg, ellaOne), version 006, issued 30 September 2026";
 
 // ─── Clinical Assessment ───
 

@@ -1,11 +1,11 @@
 // ─── COPD Management ePGD Types ───
-// Aligned to the signed PGD version 005, issued 14 September 2026:
+// Aligned to the signed PGD version 006, issued 30 September 2026:
 // salbutamol 100mcg MDI (acute symptom relief) and amoxicillin 500mg capsules
 // (infective exacerbation with purulent sputum), adults 18 and over.
 
 import type { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/types";
 
-export const PGD_STRAPLINE = "COPD Management PGD version 005, issued 14 September 2026";
+export const PGD_STRAPLINE = "COPD Management PGD version 006, issued 30 September 2026";
 
 export type COPDPatientDetails = BasePatientDetails;
 

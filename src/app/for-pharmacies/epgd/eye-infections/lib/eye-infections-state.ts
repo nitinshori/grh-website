@@ -5,7 +5,7 @@
 import type { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/types";
 
 export const PGD_STRAPLINE =
-  "Chloramphenicol eye drops and eye ointment (Bacterial Conjunctivitis) PGD, version 004, issued 14 September 2026";
+  "Chloramphenicol eye drops and eye ointment (Bacterial Conjunctivitis) PGD, version 005, issued 30 September 2026";
 
 export type ConsentBasis = "" | "patient" | "gillick" | "parental";
 

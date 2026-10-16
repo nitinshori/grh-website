@@ -1,4 +1,4 @@
-// Aligned to the Shingrix PGD version 009, issued 14 September 2026, as amended by
+// Aligned to the Shingrix PGD version 010, issued 30 September 2026, as amended by
 // the signatories' decisions 13, 14 and 15 of 11 September 2026 (two arms: aged 50
 // and over, and aged 18 to 49 severely immunosuppressed; late second dose given
 // without restarting; NHS-eligible patients told before a private supply).
@@ -130,8 +130,8 @@ export function getAllAlerts(state: ShinglesConsultationState): ClinicalAlert[] 
     alerts.push({
       severity: "caution",
       code: "SHINGLES_NHS_ENTITLEMENT",
-      message: "Patient is eligible for Shingrix on the NHS: tell them before any private supply",
-      detail: `This patient is NHS-eligible (${nhsGroup}). The PGD requires that they are told Shingrix is free of charge on the NHS before any private supply proceeds, and that this is recorded on the Eligibility step.${state.assessment.nhsEntitlementExplained ? " Recorded: told before this private supply." : ""}`,
+      message: "NHS-eligible: a private supply is allowed once they have been told it is free on the NHS",
+      detail: `This patient is NHS-eligible (${nhsGroup}). A patient who knows and still wants a private vaccination can have one. Tell them Shingrix is free of charge on the NHS, then tick the confirmation on the Eligibility step (step 3) and carry on.${state.assessment.nhsEntitlementExplained ? " Recorded: told before this private supply." : ""}`,
     });
   }
 

@@ -38,7 +38,7 @@ export function HPVSummaryReport({
         </p>
         <LateEntrySummaryLine slug="hpv" className="mt-1" />
         <p className="text-xs text-gray-500 mt-1">
-          Administered under the Get Real Health Gardasil 9 PGD, version 007, issued 14 September 2026.
+          Administered under the Get Real Health Gardasil 9 PGD, version 008, issued 30 September 2026.
         </p>
       </div>
 

@@ -7,7 +7,7 @@ import { useLateEntry } from '../../shared/components/LateEntry';
 import { lateEntryError } from '../../shared/late-entry';
 
 // Aligned to the seasonal influenza vaccines PGD (IIVc, aIIV, IIVr, IIVe), 2026/27 season,
-// version 006, issued 14 September 2026.
+// version 007, issued 30 September 2026.
 
 const INJECTION_SITE_OPTIONS = [
   { value: 'left-deltoid', label: 'Left deltoid (upper arm)' },

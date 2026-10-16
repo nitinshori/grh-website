@@ -8,7 +8,7 @@
  * a PGD arm. Courses are 5 days, extended to 7 only with the reason recorded.
  */
 
-export const IMPETIGO_PGD_VERSION = 'Impetigo PGD, version 010, issued 14 September 2026';
+export const IMPETIGO_PGD_VERSION = 'Impetigo PGD, version 011, issued 30 September 2026';
 
 export interface ImpetigoLesionAssessment {
   lesionType: 'non-bullous' | 'bullous' | '';

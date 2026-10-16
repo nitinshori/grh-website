@@ -151,7 +151,7 @@ export const TOTAL_STEPS = STEP_LABELS.length;
 
 // PGD strapline shown on the record
 export const PGD_VERSION_LABEL =
-  "Chlamydia treatment PGD (doxycycline 100 mg / azithromycin 500 mg), version 004, issued 14 September 2026";
+  "Chlamydia treatment PGD (doxycycline 100 mg / azithromycin 500 mg), version 005, issued 30 September 2026";
 
 // ─── Initial state ───
 

@@ -15,7 +15,7 @@ import { ClinicalAlert } from '../../shared/types';
 import { calculateAge } from '../../shared/types';
 import { getTreatmentWindow, describeTreatmentWindow } from '../shingles-clinical-logic';
 
-const PGD_VERSION_LINE = 'Shingles (Herpes Zoster) Treatment PGD, version 008, issued 14 September 2026';
+const PGD_VERSION_LINE = 'Shingles (Herpes Zoster) Treatment PGD, version 009, issued 30 September 2026';
 
 interface SummaryStepProps {
   summary: ShinglesSummary;

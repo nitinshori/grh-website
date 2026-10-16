@@ -93,7 +93,7 @@ export function EDSummaryReport({ state }: EDSummaryReportProps) {
           Get Real Health, ED Consultation Record
         </h1>
         <p className="text-xs text-gray-500 mt-1">
-          Erectile Dysfunction Patient Group Direction (sildenafil and tadalafil), version 009, issued 14 September 2026
+          Erectile Dysfunction Patient Group Direction (sildenafil and tadalafil), version 010, issued 30 September 2026
         </p>
         <p className="text-xs text-gray-400">
           Date: {state.summary.consultationDate || new Date().toLocaleDateString("en-GB")} | Time:{" "}

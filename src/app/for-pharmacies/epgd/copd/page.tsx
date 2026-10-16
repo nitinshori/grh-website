@@ -30,7 +30,7 @@ export default function COPDToolPage() {
             COPD Management PGD Consultation
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Salbutamol 100mcg MDI for acute symptom relief, and amoxicillin 500mg capsules for infective exacerbation with purulent sputum, in adults with confirmed COPD. PGD version 005, issued 14 September 2026.
+            Salbutamol 100mcg MDI for acute symptom relief, and amoxicillin 500mg capsules for infective exacerbation with purulent sputum, in adults with confirmed COPD. PGD version 006, issued 30 September 2026.
           </p>
         </div>
 

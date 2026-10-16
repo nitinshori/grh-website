@@ -1348,7 +1348,7 @@ function MMRSummaryReport({
       />
 
       <p className="text-[10px] text-gray-500">
-        Patient Group Direction for MMRVaxPRO or Priorix (MMR), version 006, issued 14 September 2026.
+        Patient Group Direction for MMRVaxPRO or Priorix (MMR), version 007, issued 30 September 2026.
       </p>
 
       <PharmacistDeclaration

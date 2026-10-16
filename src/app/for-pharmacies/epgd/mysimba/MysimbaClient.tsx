@@ -13,7 +13,7 @@ import { PrintedRecord } from "./components/PrintedRecord"
 import DateInput from '@/components/DateInput'
 
 // Aligned to: Mysimba (Naltrexone 8mg / Bupropion 90mg) prolonged-release
-// tablets PGD, version 006, issued 14 September 2026.
+// tablets PGD, version 007, issued 30 September 2026.
 const PGD_VERSION_LINE = "Mysimba PGD v007, issued 30 September 2026"
 const PRODUCT_NAME = "Mysimba (naltrexone hydrochloride 8 mg / bupropion hydrochloride 90 mg) prolonged-release tablets"
 const DOSE_STAGE_LABELS: Record<string, string> = {

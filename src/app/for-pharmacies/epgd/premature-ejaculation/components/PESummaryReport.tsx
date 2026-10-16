@@ -30,7 +30,7 @@ export function PESummaryReport({ state, alerts }: PESummaryReportProps) {
           Premature Ejaculation, Dapoxetine Consultation
         </h2>
         <p className="text-xs text-gray-500 mt-1">
-          ePGD Consultation Record. Dapoxetine 30mg/60mg tablets (Priligy) for Premature Ejaculation PGD, version 006, issued 14 September 2026
+          ePGD Consultation Record. Dapoxetine 30mg/60mg tablets (Priligy) for Premature Ejaculation PGD, version 007, issued 30 September 2026
         </p>
       </div>
 

@@ -27,7 +27,7 @@ import { PsoriasisSummaryReport } from "./components/PsoriasisSummaryReport";
  * course only after GP review; maximum three courses in any 12 months.
  * Erythrodermic, pustular, exfoliative and guttate psoriasis are excluded.
  */
-export const PSORIASIS_PGD_VERSION = "Plaque Psoriasis PGD, version 007, issued 14 September 2026";
+export const PSORIASIS_PGD_VERSION = "Plaque Psoriasis PGD, version 008, issued 30 September 2026";
 
 const STEP_LABELS = ["Patient Details", "Consent", "Assessment & History", "Treatment", "Counselling & Summary"] as const;
 

@@ -1,5 +1,5 @@
 // ─── MMR Clinical Logic ───
-// Aligned to the MMRVaxPRO / Priorix PGD version 006, issued 14 September 2026.
+// Aligned to the MMRVaxPRO / Priorix PGD version 007, issued 30 September 2026.
 
 import type { MMRConsultationState } from "./mmr-types";
 import type { ClinicalAlert } from "../../shared/types";

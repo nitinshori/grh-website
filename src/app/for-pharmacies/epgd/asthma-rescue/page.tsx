@@ -31,7 +31,7 @@ export default function AsthmaToolPage() {
             Asthma Rescue PGD Consultation
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Salbutamol 100mcg MDI and prednisolone 5mg tablets for an acute exacerbation of diagnosed asthma in adults. PGD version 008, issued 14 September 2026.
+            Salbutamol 100mcg MDI and prednisolone 5mg tablets for an acute exacerbation of diagnosed asthma in adults. PGD version 009, issued 30 September 2026.
           </p>
         </div>
 

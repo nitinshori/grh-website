@@ -32,7 +32,7 @@ import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 // ─────────────────────────────────────────────────────────────────────────
 // Chest Infection Service, acute bacterial bronchitis.
 //
-// Aligned to the signed PGD version 009, issued 14 September 2026 (three
+// Aligned to the signed PGD version 010, issued 30 September 2026 (three
 // arms: doxycycline, amoxicillin, clarithromycin; from age 12).
 //
 // Two things this tool takes seriously that a checklist would not:
@@ -54,7 +54,7 @@ import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 // ─────────────────────────────────────────────────────────────────────────
 
 export const PGD_STRAPLINE =
-  "Acute Bacterial Bronchitis PGD version 009, issued 14 September 2026";
+  "Acute Bacterial Bronchitis PGD version 010, issued 30 September 2026";
 
 export type Antibiotic = "" | "amoxicillin" | "doxycycline" | "clarithromycin";
 

@@ -89,7 +89,7 @@ export interface HerpesConsultationState {
   currentStep: number;
 }
 
-export const PGD_VERSION_LINE = "Genital Herpes Management PGD, version 006, issued 14 September 2026";
+export const PGD_VERSION_LINE = "Genital Herpes Management PGD, version 007, issued 30 September 2026";
 
 export const STEP_LABELS = ["Patient Details", "Herpes Assessment", "Episode Type", "Contraindications", "Counselling", "Treatment", "Summary", "Review"];
 export const TOTAL_STEPS = STEP_LABELS.length;

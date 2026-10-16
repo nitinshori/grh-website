@@ -30,7 +30,7 @@ import type { ConsultationRecordData } from "../shared/hooks/useConsultationTrac
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 
 /** Strapline of the document this tool follows. */
-export const PGD_VERSION_LABEL = "Wegovy (semaglutide) Tablets PGD version 012, issued 14 September 2026";
+export const PGD_VERSION_LABEL = "Wegovy (semaglutide) Tablets PGD version 013, issued 30 September 2026";
 
 // ── State shape ────────────────────────────────────────────────
 

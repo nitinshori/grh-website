@@ -31,7 +31,7 @@ export default function HLToolPage() {
             Hair Loss, Finasteride PGD Consultation
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Finasteride 1 mg tablets for androgenetic alopecia (male pattern hair loss) in men aged 18 to 65 years. PGD version 004, issued 14 September 2026.
+            Finasteride 1 mg tablets for androgenetic alopecia (male pattern hair loss) in men aged 18 to 65 years. PGD version 005, issued 30 September 2026.
           </p>
         </div>
 

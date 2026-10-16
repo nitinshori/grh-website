@@ -1,6 +1,6 @@
 import { BasePatientDetails, BaseConsent, BaseSummary } from "../../shared/types";
 
-// Aligned to the Shingrix PGD version 009, issued 14 September 2026.
+// Aligned to the Shingrix PGD version 010, issued 30 September 2026.
 
 /**
  * Green Book chapter 28a, Box 1: definition of severe immunosuppression for

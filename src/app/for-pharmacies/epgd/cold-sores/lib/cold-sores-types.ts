@@ -130,7 +130,7 @@ export const STEP_LABELS = [
 export const TOTAL_STEPS = STEP_LABELS.length;
 
 export const PGD_VERSION_LINE =
-  "Cold Sores (Herpes Labialis) PGD, aciclovir cream and tablets, version 004, issued 14 September 2026";
+  "Cold Sores (Herpes Labialis) PGD, aciclovir cream and tablets, version 005, issued 30 September 2026";
 
 export function createInitialConsultationState(): ColdSoresConsultationState {
   return {

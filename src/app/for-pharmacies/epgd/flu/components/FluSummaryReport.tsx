@@ -26,7 +26,7 @@ export default function FluSummaryReport({
           Flu Vaccination Consultation Summary, {FLU_SEASON} season
         </h2>
         <p className="text-xs text-gray-500 mb-6">
-          Administered via the Patient Group Direction for seasonal influenza vaccines (IIVc, aIIV, IIVr and IIVe), version 006, issued 14 September 2026.
+          Administered via the Patient Group Direction for seasonal influenza vaccines (IIVc, aIIV, IIVr and IIVe), version 007, issued 30 September 2026.
         </p>
 
         <div className="mb-6">

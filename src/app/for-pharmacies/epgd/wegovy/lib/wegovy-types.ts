@@ -272,7 +272,7 @@ export type WegovyAction =
 // ─── PGD version (document strapline) ───
 
 export const WEGOVY_PGD_VERSION =
-  "Wegovy (semaglutide) Injection PGD version 010, issued 14 September 2026";
+  "Wegovy (semaglutide) Injection PGD version 011, issued 30 September 2026";
 
 // ─── Step Labels ───
 

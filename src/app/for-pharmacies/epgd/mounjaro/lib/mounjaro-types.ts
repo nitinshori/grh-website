@@ -202,8 +202,8 @@ export const STEP_LABELS = [
 
 export const TOTAL_STEPS = STEP_LABELS.length;
 
-// PGD strapline (document wins): version 010, issued 14 September 2026
-export const PGD_VERSION_LABEL = "Mounjaro (tirzepatide) Injection for weight management PGD, version 010, issued 14 September 2026";
+// PGD strapline (document wins): version 011, issued 30 September 2026
+export const PGD_VERSION_LABEL = "Mounjaro (tirzepatide) Injection for weight management PGD, version 011, issued 30 September 2026";
 
 // Weight-related comorbidities named in the PGD indication and inclusion criteria
 export const COMORBIDITY_OPTIONS: { id: string; label: string }[] = [

@@ -18,7 +18,7 @@ export default function Page() {
             For registered pharmacy professionals only
           </p>
           <h1 className="text-2xl sm:text-3xl font-bold text-navy-900">Acute Otitis Externa: PGD Consultation</h1>
-          <p className="text-sm text-gray-500 mt-1">Ciprofloxacin 2mg/ml single-dose ear drops, or dexamethasone with neomycin and acetic acid ear spray. Otitis externa only; otoscopy required. PGD version 007, issued 14 September 2026.</p>
+          <p className="text-sm text-gray-500 mt-1">Ciprofloxacin 2mg/ml single-dose ear drops, or dexamethasone with neomycin and acetic acid ear spray. Otitis externa only; otoscopy required. PGD version 008, issued 30 September 2026.</p>
         </div>
         <EarInfectionClient />
         <div className="mt-8 text-center">

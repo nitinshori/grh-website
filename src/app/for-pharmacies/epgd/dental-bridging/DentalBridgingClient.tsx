@@ -14,10 +14,10 @@ import { DentalBridgingSummaryReport } from "./components/DentalBridgingSummaryR
 
 import { usePharmacistProfile } from "../shared/hooks/usePharmacistProfile";
 
-// Aligned to the signed PGD version 009, issued 14 September 2026:
+// Aligned to the signed PGD version 010, issued 30 September 2026:
 // amoxicillin 500mg capsules first line, metronidazole 200mg tablets for
 // penicillin allergy; adults 18 and over; spreading or systemic infection only.
-export const PGD_STRAPLINE = "Acute Dental Infection (bridging antibiotic) PGD version 009, issued 14 September 2026";
+export const PGD_STRAPLINE = "Acute Dental Infection (bridging antibiotic) PGD version 010, issued 30 September 2026";
 const COURSE_QUANTITY = 15;
 
 export const AMOXICILLIN_ARM = "Amoxicillin 500mg TDS";

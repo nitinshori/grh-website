@@ -233,7 +233,7 @@ export default function RSVSummaryReport({
         </div>
 
         <p className="text-[10px] text-gray-500">
-          Patient Group Direction for Abrysvo or Arexvy (RSV), version 007, issued 14 September 2026.
+          Patient Group Direction for Abrysvo or Arexvy (RSV), version 008, issued 30 September 2026.
         </p>
 
         {/* Clinical Notes */}

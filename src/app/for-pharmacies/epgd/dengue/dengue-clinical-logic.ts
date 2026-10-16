@@ -1,4 +1,4 @@
-// Aligned to the Qdenga (TAK-003) Dengue PGD, version 007, issued 14 September 2026.
+// Aligned to the Qdenga (TAK-003) Dengue PGD, version 008, issued 30 September 2026.
 import { ClinicalAlert } from '../shared/types';
 import {
   DengueScreening,

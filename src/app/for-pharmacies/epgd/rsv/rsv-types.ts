@@ -4,7 +4,7 @@ import {
   BaseSummary,
 } from '../shared/types';
 
-// Aligned to the Abrysvo / Arexvy RSV PGD version 007, issued 14 September 2026.
+// Aligned to the Abrysvo / Arexvy RSV PGD version 008, issued 30 September 2026.
 
 export interface RSVPatientDetails extends BasePatientDetails {
   patientCategory: 'adult-60-plus' | 'pregnant-woman' | '';
