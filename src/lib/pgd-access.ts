@@ -364,17 +364,19 @@ export const NOT_PUBLICLY_LISTED_SLUGS = new Set([
   'cholera',
   'tick-borne-encephalitis',
   'ear-infection',
-  // melatonin, daridorexant: v001 issued 15 Oct 2026, approved per pharmacy
-  // in Admin, PGD Matrix; not on the public catalogue until released.
+  // melatonin, daridorexant: v001 signed 16 Oct 2026 and released to every
+  // pharmacy (Pharmacy Plus Health awaiting Jane); not on the public catalogue.
   'melatonin',
   'daridorexant',
 ])
 
 /**
- * Not given to full-catalogue (HubRx) pharmacies automatically: these are
- * approved one pharmacy at a time in Admin, PGD Matrix (16 Oct 2026).
+ * Slugs NOT given to full-catalogue (HubRx) pharmacies automatically, for a
+ * PGD that must be approved one pharmacy at a time in Admin, PGD Matrix.
+ * Empty: melatonin and daridorexant were released to all pharmacies on
+ * 16 Oct 2026 once both signatories had signed them.
  */
-export const NOT_IN_FULL_CATALOGUE_SLUGS = new Set(['melatonin', 'daridorexant'])
+export const NOT_IN_FULL_CATALOGUE_SLUGS = new Set<string>([])
 
 /**
  * The enforcement set. Union of the three above; do not add slugs here
